@@ -46,7 +46,7 @@ data class StartStages(val contentLoading: Boolean, val contentReady: Boolean, v
     LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
     // The stages are shown once, at the start: a content read later in the game is the banner's.
     var started by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(s.verified, stages.contentLoading) { if (s.verified && !stages.contentLoading) started = true }
+    LaunchedEffect(s.opened, stages.contentLoading) { if (s.opened && !stages.contentLoading) started = true }
     when {
         s.update != null && !busy -> Locked {
             StageList(s, stages)
@@ -54,7 +54,8 @@ data class StartStages(val contentLoading: Boolean, val contentReady: Boolean, v
         }
 
         // The start waits for one check to pass (3.76.0) and, since 3.81.0, for the content on its way.
-        !s.verified || (!started && stages.contentLoading) -> Locked { CheckingBody(s, stages, updates) }
+        // 3.81.1: no longer than the first check's grace when GitHub does not answer.
+        !s.opened || (!started && stages.contentLoading) -> Locked { CheckingBody(s, stages, updates) }
 
         s.askSources -> SourcesPrompt(updates)
     }

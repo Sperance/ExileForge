@@ -81,7 +81,7 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     /** [fresh] - the snapshot is the server's answer just now, not the copy kept on the device. */
     fun merge(snapshot: HeroSnapshot, fresh: Boolean = true): HeroParts {
         // A fresh pets part brings the server's clock: the one moment its offset can be measured.
-        if (fresh) snapshot.parts[PETS]?.let { part -> WireJson.decodeFromJsonElement(PetState.serializer(), part.data).incubator.now.let(ServerClock::heard) }
+        if (fresh) snapshot.parts[PETS]?.let { part -> runCatching { WireJson.decodeFromJsonElement(PetState.serializer(), part.data) }.getOrNull()?.incubator?.now?.let(ServerClock::heard) }
         return HeroParts(heroId, snapshot.version, parts + snapshot.parts)
     }
 

@@ -64,6 +64,9 @@ class Updates(
     private val http = client.newBuilder().followRedirects(true).followSslRedirects(true)
         .readTimeout(60, TimeUnit.SECONDS).callTimeout(0, TimeUnit.SECONDS).build()
 
+    // The list of releases and `update.json` are small (3.81.1): a call that trickles on is cut, so a check always comes back.
+    private val small = http.newBuilder().callTimeout(SMALL_CALL_S, TimeUnit.SECONDS).build()
+
     /** The update for build [versionCode] named [versionName] against [server]; null - this build is the one. Throws when GitHub is out of reach. */
     suspend fun check(versionCode: Int, versionName: String, server: StaticManifest?): AvailableUpdate? = withContext(Dispatchers.IO) {
         val releases = WireJson.decodeFromString(ListSerializer(GitRelease.serializer()), text("https://api.github.com/repos/$repo/releases?per_page=$PAGE", api = true))
@@ -118,7 +121,7 @@ class Updates(
 
     private fun text(url: String, api: Boolean = false): String {
         val request = Request.Builder().url(url).apply { if (api) header("Accept", "application/vnd.github+json").header("X-GitHub-Api-Version", "2022-11-28") }.build()
-        return http.newCall(request).execute().use { response ->
+        return small.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
@@ -126,6 +129,9 @@ class Updates(
 
     companion object {
         const val REPO = "Sperance/ExileForge"
+
+        /** The longest a small call to GitHub may take, s. */
+        private const val SMALL_CALL_S = 20L
 
         /** The asset CI publishes beside the APK. */
         const val META = "update.json"

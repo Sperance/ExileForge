@@ -43,6 +43,11 @@ data class UpdateState(
     /** The answer of a check asked for by hand: this build is the latest. */
     val upToDate: Boolean = false,
     val askSources: Boolean = false,
+    /**
+     * The start's window may let the game in (3.81.1): a check passed, or the first one has not come back within
+     * [UpdateViewModel.FIRST_GATE_MS] — a GitHub out of reach no longer holds the game shut; a newer build found later still locks it.
+     */
+    val opened: Boolean = false,
 )
 
 /**
@@ -60,7 +65,7 @@ class UpdateViewModel(
     private val updates = Updates(client = http)
 
     // A build that does not update itself (debug, the tested shrunk one) is never closed: only a check by hand runs.
-    private val mutable = MutableStateFlow(if (BuildConfig.UPDATES) UpdateState() else UpdateState(checking = false, verified = true))
+    private val mutable = MutableStateFlow(if (BuildConfig.UPDATES) UpdateState() else UpdateState(checking = false, verified = true, opened = true))
     val state: StateFlow<UpdateState> = mutable.asStateFlow()
     private val checks = Mutex()
     private var download: Job? = null
@@ -68,6 +73,10 @@ class UpdateViewModel(
     init {
         // Until one check has passed the game stays shut (3.76.0), so a failed one is tried again soon; after that, hourly.
         if (BuildConfig.UPDATES) {
+            viewModelScope.launch {
+                delay(FIRST_GATE_MS)
+                mutable.update { it.copy(opened = true) }
+            }
             viewModelScope.launch {
                 while (true) {
                     delay(
@@ -137,6 +146,7 @@ class UpdateViewModel(
                 s.copy(
                     checking = false,
                     verified = true,
+                    opened = true,
                     failure = null,
                     update = if (s.progress != null || s.installing) s.update else found,
                     upToDate = manual && found == null,
@@ -178,19 +188,22 @@ class UpdateViewModel(
     /** The permission screen was left: the player tries again. */
     fun permissionAsked() = mutable.update { it.copy(needsPermission = false) }
 
-    private companion object {
-        const val DIR = "updates"
+    companion object {
+        /** How long the start's window waits for the first check before it lets the game in regardless. */
+        const val FIRST_GATE_MS = 12_000L
+
+        private const val DIR = "updates"
 
         /** A failed check is tried again this soon, unseen. */
-        const val RETRY_MS = 60_000L
+        private const val RETRY_MS = 60_000L
 
         /** Before the first check has passed, with the game shut behind it: tried again this soon. */
-        const val FIRST_RETRY_MS = 10_000L
+        private const val FIRST_RETRY_MS = 10_000L
 
         /** Coming back to the app asks again no sooner than this after the last check. */
-        const val RESUME_GAP_MS = 60_000L
+        private const val RESUME_GAP_MS = 60_000L
 
         /** The first-start question about unknown sources, as the device's guides remember it. */
-        const val SOURCES = "install_sources"
+        private const val SOURCES = "install_sources"
     }
 }

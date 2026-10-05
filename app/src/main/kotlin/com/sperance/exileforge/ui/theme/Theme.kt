@@ -5,11 +5,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -93,10 +96,30 @@ fun panelBrush(accent: Color = Gold) = Brush.verticalGradient(listOf(Color(0xFF1
 fun voidBrush() = Brush.verticalGradient(listOf(Color(0xFF0E151A), Ink, Abyss))
 
 /**
- * Light around what is alive (2.80.0): a coloured halo under the shape, nothing drawn when [on] is false.
- * On Android 9+ the halo takes the colour; below it falls back to a soft dark shadow.
+ * Light around what is alive (2.80.0): a coloured halo around the shape, nothing drawn when [on] is false.
+ * Рисуется сам, а не тенью: цветная тень `shadow` ниже Android 9 и у части прошивок выходит чёрной. Ореол - [GLOW_LAYERS]
+ * полупрозрачных копий формы, каждая шире прежней до [radius]: наложение даёт мягкий спад цвета к краю на любом API.
+ * Рисуется за содержимым и без обрезки - за границы элемента, как прежняя тень.
  */
-fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, shape: Shape = RoundedCornerShape(8.dp)): Modifier = if (!on) this else this.shadow(radius, shape, clip = false, ambientColor = color, spotColor = color)
+fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, shape: Shape = RoundedCornerShape(8.dp)): Modifier = if (!on || radius <= 0.dp) {
+    this
+} else {
+    drawWithCache {
+        val spread = radius.toPx()
+        val layer = color.copy(alpha = color.alpha * GLOW_ALPHA)
+        val halo = (1..GLOW_LAYERS).map { step ->
+            val grow = spread * step / GLOW_LAYERS
+            grow to shape.createOutline(Size(size.width + 2 * grow, size.height + 2 * grow), layoutDirection, this)
+        }
+        onDrawBehind { halo.forEach { (grow, outline) -> translate(-grow, -grow) { drawOutline(outline, layer) } } }
+    }
+}
+
+/** Слоёв в ореоле [glow]: больше - мягче спад, дороже рисунок. */
+private const val GLOW_LAYERS = 8
+
+/** Непрозрачность одного слоя ореола от цвета: у края формы набирается около половины цвета. */
+private const val GLOW_ALPHA = .09f
 
 @Composable fun ForgeTheme(content: @Composable () -> Unit) {
     fun text(family: FontFamily, size: Float, weight: FontWeight = FontWeight.Normal, tracking: Float = 0f, line: Float = size * 1.35f) = TextStyle(fontFamily = family, fontSize = size.sp, fontWeight = weight, letterSpacing = tracking.sp, lineHeight = line.sp)

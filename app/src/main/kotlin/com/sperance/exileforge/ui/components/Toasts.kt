@@ -7,22 +7,17 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
@@ -32,7 +27,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 
 /** One toast on screen: its words, its colour, and how it is sent away. */
-private data class Toast(val text: String, val tint: Color, val key: Any, val onDismiss: () -> Unit)
+private data class Toast(val text: String, val tint: Color, val mark: String, val key: Any, val onDismiss: () -> Unit)
 
 /** How long a toast stays before it leaves by itself. */
 private const val TOAST_MS = 4_000L
@@ -43,8 +38,8 @@ private const val TOAST_MS = 4_000L
  * and leaves by itself; a tap sends it away sooner. A refusal outranks a success.
  */
 @Composable fun ToastHost(game: GameUi, onRefusal: () -> Unit, onNotice: () -> Unit, modifier: Modifier = Modifier) {
-    val toast = game.refusal?.let { Toast(it.read(), LifeRed, it, onRefusal) }
-        ?: game.notice?.let { Toast(it.text, it.kind.tint(), it.at, onNotice) }
+    val toast = game.refusal?.let { Toast(it.read(), LifeRed, "!", it, onRefusal) }
+        ?: game.notice?.let { Toast(it.text, it.kind.tint(), it.kind.mark(), it.at, onNotice) }
     toast?.let {
         LaunchedEffect(it.key) {
             delay(TOAST_MS)
@@ -62,6 +57,12 @@ private const val TOAST_MS = 4_000L
     }
 }
 
+/** Значок в кружке тоста (3.88.3): ✓ - сделано, i - сообщение; отказ - «!». */
+private fun NoticeKind.mark(): String = when (this) {
+    NoticeKind.ATLAS -> "i"
+    else -> "✓"
+}
+
 private fun NoticeKind.tint(): Color = when (this) {
     NoticeKind.DONE -> Gold
     NoticeKind.LOOT -> rarityColor("RARE")
@@ -69,19 +70,24 @@ private fun NoticeKind.tint(): Color = when (this) {
     NoticeKind.ATLAS -> GoldBright
 }
 
+/** Тост «Мягкого» стиля (3.88.3): капсула по центру, значок в кружке цвета тоста; касание убирает его. */
 @Composable private fun ToastCard(toast: Toast) {
-    val shape = RoundedCornerShape(12.dp)
-    Row(
-        Modifier.fillMaxWidth().glow(toast.tint.copy(alpha = .6f), radius = 12.dp, shape = shape)
-            .background(PanelRaised, shape).border(1.dp, toast.tint.copy(alpha = .35f), shape)
-            .drawBehind { drawLine(toast.tint, Offset(0f, 10f), Offset(0f, size.height - 10f), 5f) }
-            .clickable(onClickLabel = ui("common.close"), onClick = toast.onDismiss)
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Box(Modifier.size(10.dp).glow(toast.tint, radius = 6.dp, shape = CircleShape).background(toast.tint, CircleShape))
-        Text(toast.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        Icon(Icons.Outlined.Close, null, tint = Muted, modifier = Modifier.size(14.dp))
+    val shape = RoundedCornerShape(50)
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+        Row(
+            Modifier.clip(shape).background(ToastFill, shape)
+                .clickable(onClickLabel = ui("common.close"), onClick = toast.onDismiss)
+                .padding(start = 9.dp, end = 16.dp, top = 9.dp, bottom = 9.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(22.dp).background(toast.tint, CircleShape), contentAlignment = Alignment.Center) {
+                Text(toast.mark, color = Ink, style = MaterialTheme.typography.labelLarge)
+            }
+            Text(toast.text, color = Parchment, style = MaterialTheme.typography.bodyMedium)
+        }
     }
 }
+
+/** Фон капсулы тоста: чуть светлее приподнятой панели, чтобы тост читался над любым экраном. */
+private val ToastFill = Color(0xFF1D2B35)

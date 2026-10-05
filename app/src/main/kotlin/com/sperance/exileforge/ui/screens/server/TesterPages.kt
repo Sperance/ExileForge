@@ -178,7 +178,9 @@ private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
     val clipboard = LocalClipboardManager.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Panel,
+        containerColor = PanelRaised,
+        shape = DialogShape,
+        tonalElevation = 0.dp,
         title = { Text(ui("tester.credentials"), color = GoldBright) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {

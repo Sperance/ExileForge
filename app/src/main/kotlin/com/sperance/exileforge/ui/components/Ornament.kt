@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -14,26 +13,21 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
 
-/** «Эфир» panel (2.80.0): a hairline frame, a soft lift at the top and a thread of light along the top edge. */
+/**
+ * Панель «Мягкого» стиля (3.88.3): ровный приподнятый фон, скругление 18 dp, без рамки и линии света. Свой [accent]
+ * (гильдия, роль, опасность) лишь чуть окрашивает фон; у обычной панели, с акцентом по умолчанию, фон чистый.
+ */
 @Composable fun ForgePanel(modifier: Modifier = Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(18.dp)
+    val fill = if (accent == Gold) PanelRaised else accent.copy(alpha = .06f).compositeOver(PanelRaised)
     Column(
-        modifier.fillMaxWidth().background(panelBrush(accent), shape).border(1.dp, Bronze, shape)
-            .drawBehind {
-                val edge = size.width * .18f
-                drawLine(
-                    Brush.horizontalGradient(listOf(Color.Transparent, accent.copy(alpha = .45f), Color.Transparent), edge, size.width - edge),
-                    Offset(edge, .5f),
-                    Offset(size.width - edge, .5f),
-                    1f,
-                )
-            }
-            .padding(14.dp),
+        modifier.fillMaxWidth().background(fill, shape).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,
     )

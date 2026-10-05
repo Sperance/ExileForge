@@ -76,9 +76,9 @@ import com.sperance.exileforge.ui.theme.*
 private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onInfo: () -> Unit, onTap: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val ready = view.ready >= 1f
-    // A skill that can go now glows (2.80.0, «Эфир»): the light is the readiness.
+    // Готовое умение (3.88.3): зелёная рамка, без свечения.
     Box(
-        modifier.height(52.dp).glow(Gold, on = ready && view.affordable, radius = 10.dp, shape = shape).clip(shape).background(PanelRaised, shape)
+        modifier.height(52.dp).clip(shape).background(PanelRaised, shape)
             .border(if (ready && view.affordable) 1.5.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
             .combinedClickable(onLongClick = onInfo) { if (live && ready && view.affordable) onTap() }
             .semantics { contentDescription = SkillText.title(view.code) },
@@ -149,7 +149,7 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
 @Composable private fun FlaskButton(view: FlaskView, live: Boolean, onTap: () -> Unit) {
     val tint = flaskTint(view.kind)
     Box(
-        Modifier.size(44.dp).glow(tint, on = view.active > 0f, radius = 10.dp, shape = CircleShape).clip(CircleShape).background(Color(0xE60A0D12))
+        Modifier.size(44.dp).clip(CircleShape).background(Color(0xE60A0D12))
             .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
             .clickable(enabled = live && view.usable, onClick = onTap),
         contentAlignment = Alignment.Center,

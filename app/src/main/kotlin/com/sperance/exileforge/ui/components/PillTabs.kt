@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,8 +19,8 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * A screen's few tabs as pills: the open one filled in gold. [segmented] lays them as halves of one track instead —
- * the open one raised — for two views of the same shelf; [trailing] closes the row (a screen's «?»).
+ * Вкладки экрана таблетками (3.88.3, «Мягкий»): открытая - на приподнятом фоне светлым текстом, зелёный остаётся главной
+ * кнопке. [segmented] кладёт их долями одной капсулы-дорожки - два вида одной полки; [trailing] замыкает ряд («?» экрана).
  */
 @Composable fun PillTabs(
     labels: List<String>,
@@ -32,9 +31,9 @@ import com.sperance.exileforge.ui.theme.*
     segmented: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
-    val pill = RoundedCornerShape(if (segmented) 9.dp else 16.dp)
+    val pill = RoundedCornerShape(50)
     val track = if (segmented) {
-        Modifier.background(Panel, RoundedCornerShape(12.dp)).border(1.dp, PanelRaised, RoundedCornerShape(12.dp)).padding(3.dp)
+        Modifier.background(TabTrack, pill).padding(4.dp)
     } else {
         Modifier
     }
@@ -43,17 +42,13 @@ import com.sperance.exileforge.ui.theme.*
             labels.forEachIndexed { index, label ->
                 val on = index == selected
                 val fill = when {
-                    !on -> if (segmented) Color.Transparent else Panel
-                    segmented -> PanelRaised
-                    else -> Gold
+                    on -> PanelRaised
+                    segmented -> Color.Transparent
+                    else -> TabTrack
                 }
                 Text(
                     label,
-                    color = when {
-                        !on -> Muted
-                        segmented -> GoldBright
-                        else -> Ink
-                    },
+                    color = if (on) GoldBright else Muted,
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
                     maxLines = 1,
@@ -61,7 +56,7 @@ import com.sperance.exileforge.ui.theme.*
                     textAlign = TextAlign.Center,
                     modifier = (if (segmented) Modifier.weight(1f) else Modifier).clip(pill).background(fill, pill)
                         .selectable(selected = on, enabled = enabled, role = Role.Tab) { if (!on) onSelect(index) }
-                        .padding(horizontal = 12.dp, vertical = 7.dp),
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                 )
             }
         }
@@ -69,3 +64,6 @@ import com.sperance.exileforge.ui.theme.*
         trailing()
     }
 }
+
+/** Фон дорожки и невыбранных таблеток: темнее панели, чтобы открытая вкладка поднималась над ним. */
+private val TabTrack = Color(0xFF0D1419)

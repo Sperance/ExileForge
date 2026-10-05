@@ -1,6 +1,8 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,9 +22,14 @@ import com.sperance.exileforge.ui.theme.Gold
 ) {
     val accent = if (failure) MaterialTheme.colorScheme.error else Gold
     ForgePanel(accent = accent) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            GlyphIcon(glyph, accent, Modifier.size(18.dp))
-            Text(title, color = accent, style = MaterialTheme.typography.titleMedium)
+        // Заголовок - чип цвета акцента (3.88.3): обычный, ошибка, Бездна различаются им, а не рамкой.
+        Row(
+            Modifier.background(accent.copy(alpha = .14f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            GlyphIcon(glyph, accent, Modifier.size(14.dp))
+            Text(title, color = accent, style = MaterialTheme.typography.labelLarge)
         }
         SelectionContainer { MutedText(body) }
     }

@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -15,6 +16,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.PanelRaised
 
 /**
  * A picker: [glyph] says what is being picked, and [optionGlyph], when given, draws each option —
@@ -70,13 +72,17 @@ import com.sperance.exileforge.ui.theme.Muted
     }
 }
 
-/** Every picker opens in the same stone-framed dialog. */
+/** Диалог «Мягкого» стиля (3.88.3): по центру, приподнятый фон, скругление 22 dp, без рамки и тени. */
+val DialogShape = RoundedCornerShape(22.dp)
+
+/** Every picker opens in the same dialog. */
 @Composable internal fun ForgeDialog(title: String, onDismiss: () -> Unit, body: @Composable ColumnScope.() -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
+        containerColor = PanelRaised,
         titleContentColor = Gold,
-        shape = MaterialTheme.shapes.medium,
+        shape = DialogShape,
+        tonalElevation = 0.dp,
         title = { Text(title.uppercase(), style = MaterialTheme.typography.titleMedium) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = body) },
         confirmButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.close")) } },

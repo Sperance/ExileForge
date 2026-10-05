@@ -194,7 +194,9 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
 
         ItemAction.WORN -> AlertDialog(
             onDismissRequest = { open = null },
-            containerColor = Panel,
+            containerColor = PanelRaised,
+            shape = DialogShape,
+            tonalElevation = 0.dp,
             title = { Text(ui("hero.worn_title"), color = Gold) },
             text = { Text(ui("hero.worn_note"), color = Parchment) },
             confirmButton = {

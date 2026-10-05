@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
@@ -31,7 +32,10 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.ui.theme.Panel
+import com.sperance.exileforge.ui.theme.PanelRaised
+
+/** Шторка «Мягкого» стиля (3.88.3): скругление 22 dp сверху. */
+val SheetShape: Shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
 
 /**
  * Every bottom sheet of the app: Material's own `ModalBottomSheet` (back since 3.75.5), held in by three bounds.
@@ -54,8 +58,8 @@ import com.sperance.exileforge.ui.theme.Panel
 fun ForgeSheet(
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
-    shape: Shape = BottomSheetDefaults.ExpandedShape,
-    containerColor: Color = Panel,
+    shape: Shape = SheetShape,
+    containerColor: Color = PanelRaised,
     dragHandle: (@Composable () -> Unit)? = { BottomSheetDefaults.DragHandle() },
     content: @Composable ColumnScope.() -> Unit,
 ) {

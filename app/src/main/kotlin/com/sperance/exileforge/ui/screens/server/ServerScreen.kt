@@ -305,7 +305,9 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     var code by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Panel,
+        containerColor = PanelRaised,
+        shape = DialogShape,
+        tonalElevation = 0.dp,
         titleContentColor = Gold,
         title = { Text(ui("account.promo")) },
         text = {

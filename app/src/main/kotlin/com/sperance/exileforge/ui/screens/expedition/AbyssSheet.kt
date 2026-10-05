@@ -42,8 +42,9 @@ import com.sperance.exileforge.ui.theme.*
 @Composable internal fun AbyssSheet(game: GameUi, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp).glow(AbyssGlow, radius = 14.dp, shape = RoundedCornerShape(12.dp))
-                .background(Panel.copy(alpha = .97f), RoundedCornerShape(12.dp)).border(1.dp, AbyssGlow.copy(alpha = .7f), RoundedCornerShape(12.dp))
+            // «Мягкий» (3.88.3): приподнятый фон и скругление 22 dp, без рамки и свечения.
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp)
+                .background(PanelRaised.copy(alpha = .97f), RoundedCornerShape(22.dp))
                 .padding(16.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

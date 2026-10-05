@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -79,7 +78,7 @@ fun ConfirmSheet(
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
-    ForgeSheet(onDismissRequest = onDismiss, shape = RectangleShape, dragHandle = null) {
+    ForgeSheet(onDismissRequest = onDismiss, dragHandle = null) {
         Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             RaritySpine(accent, 5.dp)
             Column(
@@ -192,12 +191,11 @@ fun ConfirmSheet(
     }
     val tint = if (enabled) accent else Muted.copy(alpha = .45f)
     val ribbon = icon != null || figure != null
-    // «Эфир» (2.80.0): one rounded shape for both kinds, lower, and a halo while it can be held.
-    val shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+    // «Мягкий» (3.88.3): таблетка 44 dp на полупрозрачном цвете действия, без рамки и свечения; удержание заливает её.
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
     Box(
-        modifier.fillMaxWidth().height(44.dp).glow(accent, on = enabled, radius = 8.dp, shape = shape).clip(shape)
-            .background(Brush.verticalGradient(listOf(tint.copy(alpha = if (ribbon) .16f else .10f), Panel)))
-            .border(1.dp, Brush.horizontalGradient(listOf(tint.copy(alpha = .5f), tint, tint.copy(alpha = .5f))), shape)
+        modifier.fillMaxWidth().height(44.dp).clip(shape)
+            .background(tint.copy(alpha = if (ribbon) .18f else .14f))
             .drawBehind {
                 drawRect(
                     Brush.horizontalGradient(listOf(accent.copy(alpha = .55f), accent.copy(alpha = .25f))),

@@ -3,10 +3,8 @@ package com.sperance.exileforge.ui.components
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -190,8 +188,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
 @Composable private fun Locked(content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false)) {
         Column(
-            Modifier.fillMaxWidth().padding(20.dp).background(Panel, RoundedCornerShape(12.dp))
-                .border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp)).padding(20.dp),
+            Modifier.fillMaxWidth().padding(20.dp).background(PanelRaised, DialogShape).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content,
         )

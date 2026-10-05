@@ -51,10 +51,18 @@ import kotlin.random.Random
 internal fun ExpeditionRun.settle(answer: RunCommand.Settled) {
     answered = maxOf(answered, answer.applied)
     refused += answer.rejected
+    // Добыча начатых боёв (3.88.0) - раньше наград: убийства, что уже случились, показывают её сразу.
+    answer.pending.forEach { (n, loot) ->
+        val key = engaged[n] ?: return@forEach
+        pendingLoot[key] = loot
+        killsOf.filterValues { it.first == key }.keys.sorted().forEach(::preview)
+    }
     answer.rewards.forEach { (n, gained) ->
         if (n !in mine || n in earned) return@forEach
         earned[n] = gained
         granted += gained
+        // Показанная по ENGAGE добыча - ровно эта (сервер выдаёт её без нового броска): в отчёт боя она не ложится дважды.
+        if (n in previewed) return@forEach
         if (n in fightEvents) reward = (reward ?: Reward.NONE) + gained
         if (n in autoEvents) autoReward = (autoReward ?: Reward.NONE) + gained
     }

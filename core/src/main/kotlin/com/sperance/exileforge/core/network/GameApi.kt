@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ApiCapabilities
 import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.model.command.ClientIdentity
 import com.sperance.exileforge.core.model.command.DeviceCredentials
 import com.sperance.exileforge.core.model.command.LoginCredentials
 import com.sperance.exileforge.core.model.command.PasswordChange
@@ -71,8 +72,19 @@ class GameApi(
     /** Credentials travel in the body: a query string settles in every proxy log on the way. */
     suspend fun login(login: String, password: String): UserProfile {
         logout()
-        require(login.isNotBlank() && password.isNotEmpty()) { ui("api.credentials") }
-        return signedIn(http.request("POST", "api/v1/user/login", body = WireJson.encodeToJsonElement(LoginCredentials(login, password)), sensitive = true))
+        // Логин без регистра на сервере (1.80.0); пробелы по краям - опечатка, а не часть логина.
+        val name = login.trim()
+        require(name.isNotBlank() && password.isNotEmpty()) { ui("api.credentials") }
+        return signedIn(http.request("POST", "api/v1/user/login", body = WireJson.encodeToJsonElement(LoginCredentials(name, password)), sensitive = true))
+    }
+
+    /**
+     * Гостевой аккаунт (вход по устройству) получает логин и пароль (server 1.80.0): ответ - аккаунт, как `/me`; вход по
+     * устройству остаётся. Отказы: `US_017` логин уже есть, `US_016`/`US_019` длина, `US_018` символы, `US_006` занят.
+     */
+    suspend fun bind(login: String, password: String): UserProfile {
+        val answer = http.request("POST", "api/v1/user/bind", body = WireJson.encodeToJsonElement(LoginCredentials(login.trim(), password)), authenticated = true, sensitive = true)
+        return WireJson.decodeFromJsonElement(UserProfile.serializer(), answer).also { account = it }
     }
 
     /**
@@ -92,9 +104,16 @@ class GameApi(
         return signedIn(answer)
     }
 
-    /** Files a bug report (server 1.46.0): open before the sign-in too, signed when there is a session. */
+    /** Кто шлёт отчёты (3.88.0): устройство, версия и герой; null - отчёт уходит как собран. */
+    var identity: ClientIdentity? = null
+
+    /**
+     * Files a bug report (server 1.46.0): open before the sign-in too, signed when there is a session. Подписан
+     * [identity] (3.88.0): устройство, версия клиента и активный герой.
+     */
     suspend fun reportBug(report: BugReportRequest) {
-        http.request("POST", "api/v1/bugreport", body = WireJson.encodeToJsonElement(report), authenticated = http.token != null)
+        val stamped = identity?.stamp(report) ?: report
+        http.request("POST", "api/v1/bugreport", body = WireJson.encodeToJsonElement(stamped), authenticated = http.token != null)
     }
 
     /** The secret a device registration just brought, or null: read once and kept by the app. */
@@ -220,6 +239,13 @@ class GameApi(
 
     /** The server speaks a newer wire than this build (3.74.0): the app looks for the build that speaks it at once. */
     var onNewerServer: () -> Unit = {}
+
+    /** Герой запроса заблокирован (`CH_034`, 3.88.0): id героя и отказ с причиной; приложение уводит к выбору героя. */
+    var onHeroBlocked: (heroId: String, failure: ApiFailure) -> Unit
+        get() = http.onHeroBlocked
+        set(value) {
+            http.onHeroBlocked = value
+        }
 
     /** `static/index.json` as served right now (3.74.0): never the kept copy, and kept nowhere — what the update check compares against. */
     suspend fun liveManifest(): StaticManifest = WireJson.decodeFromString(StaticManifest.serializer(), files.manifestText())

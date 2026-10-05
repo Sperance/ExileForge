@@ -118,7 +118,7 @@ internal fun ExpeditionRun.adopt(zone: ZoneShare) {
 }
 
 /** Event [n] is not answered yet. */
-internal fun ExpeditionRun.awaits(n: Int): Boolean = n >= answered
+internal fun ExpeditionRun.awaits(n: Int): Boolean = n >= answered && n !in previewed
 
 internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
     flask?.let {

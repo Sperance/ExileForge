@@ -155,6 +155,15 @@ class ExpeditionRun(
     internal val mine = HashSet<Int>()
     internal var granted = Reward.NONE
 
+    /**
+     * Добыча начатых боёв (3.88.0, server 1.80.0): бой - по номеру его ENGAGE, добыча боя по членам, когда сервер её ответил,
+     * убийство - по своему номеру, и убийства, чья добыча уже показана до ответа на них самих.
+     */
+    internal val engaged = HashMap<Int, FightKey>()
+    internal val pendingLoot = HashMap<FightKey, Map<Int, Reward>>()
+    internal val killsOf = HashMap<Int, Pair<FightKey, Int>>()
+    internal val previewed = HashSet<Int>()
+
     /** The events of the fight on the report, and what they brought so far; null before the fight's first kill. */
     internal val fightEvents = mutableListOf<Int>()
     internal var reward: Reward? = null
@@ -420,3 +429,10 @@ internal class FightMember(val agent: MonsterAgent, val index: Int) {
 
 /** A Vaal orb on a crystal whose outcome is still the server's to tell: the spot and its place among the standing ones. */
 internal class Vaaling(val spot: CrystalSpot, val place: Int)
+
+/** Бой, как его называет сервер (3.88.0): пак жетона [pack] ([vaal] - в Ваал-зоне) или босс зоны. */
+internal data class FightKey(val pack: Int, val vaal: Boolean, val boss: Boolean) {
+    companion object {
+        val BOSS = FightKey(0, vaal = false, boss = true)
+    }
+}

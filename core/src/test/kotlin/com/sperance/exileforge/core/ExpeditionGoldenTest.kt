@@ -112,9 +112,12 @@ class ExpeditionGoldenTest {
             is RunEvent.AbyssOpen -> index
             else -> 0
         }
-        val vaal = (this as? RunEvent.Kill)?.vaal ?: (this as? RunEvent.Fall)?.vaal ?: false
+        val engage = this as? RunEvent.Engage
+        val vaal = (this as? RunEvent.Kill)?.vaal ?: (this as? RunEvent.Fall)?.vaal ?: engage?.vaal ?: false
         val claim = this as? RunEvent.AbyssClaim
-        return listOf(n, kind, (this as? RunEvent.Kill)?.i ?: 0, (this as? RunEvent.Kill)?.m ?: 0, index, claim?.depth ?: 0, claim?.fallen ?: false, vaal)
+        // Начало боя (3.88.0): пак - как у убийства, босс - флагом на месте «пал ли» Бездны.
+        val pack = (this as? RunEvent.Kill)?.i ?: engage?.i ?: 0
+        return listOf(n, kind, pack, (this as? RunEvent.Kill)?.m ?: 0, index, claim?.depth ?: 0, claim?.fallen ?: engage?.boss ?: false, vaal)
     }
 
     private fun Double.f() = "%.4f".format(java.util.Locale.ROOT, this)

@@ -302,7 +302,9 @@ class ExpeditionActions(
             settle(j, pending, report)
             j.confirm(report.applied, report.rejected)
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
-            if (report.rejected.isNotEmpty()) notices.toast(ui("expedition.rejected", report.rejected.size))
+            // Отклонённое начало боя (бой, который сервер не начал) - не потеря игрока: о нём не говорят.
+            val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
+            report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
             report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
             if (!report.open && j.settled) done(j) else store.saveJournal(j.heroId, j.encode())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
@@ -344,6 +346,8 @@ class ExpeditionActions(
             report.lost.takeIf { fell },
             crystals,
             report.rewards.mapNotNull { r -> r.rank?.let { r.n to it } }.toMap(),
+            // Добыча начатых боёв (3.88.0): только показывается, выдаст её убийство - в «Новый лут» она не идёт.
+            report.rewards.mapNotNull { r -> r.pending?.let { drops -> r.n to drops.associate { it.m to it.reward.toReward() } } }.toMap(),
         )
         runs().forEach { it.send(answer) }
         campaign()
@@ -516,6 +520,8 @@ class ExpeditionActions(
         val CHECKPOINTS = setOf(
             RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL, RunEventKind.CRYSTAL_VAAL, RunEventKind.VAAL_OPEN, RunEventKind.VAAL_LEAVE,
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE,
+            // Начало боя (3.88.0): его добыча нужна до первого убийства.
+            RunEventKind.ENGAGE,
         )
         const val BATCH = 6
         const val FLUSH_EVERY = 20_000L

@@ -1,6 +1,9 @@
 package com.sperance.exileforge.presentation.app
 
+import com.sperance.exileforge.core.i18n.Phrase
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
@@ -13,6 +16,7 @@ import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -81,6 +85,19 @@ class CharacterActions(
             warmupActions.clear()
             read(Reads.CHARACTERS) { readCharacters() }
             scope.launch { store.saveLastHero(sessions.state.value.server, null) }
+        }
+    }
+
+    /**
+     * Сервер отказал активному герою как заблокированному (`CH_034`, 3.88.0): когда команда, встретившая отказ, кончится,
+     * игрок уходит к выбору героя, и там - причина словами сервера. Отказ про другого героя ничего не меняет.
+     */
+    fun blocked(heroId: String, failure: ApiFailure) {
+        scope.launch {
+            commands.state.first { !it.busy }
+            if (heroes.heroId != heroId) return@launch
+            leaveGame()
+            commands.refuse(Phrase { refusalLine(failure) })
         }
     }
 

@@ -142,7 +142,10 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
             "api/v1/hero/chest/open",
         )
 
-        fun queues(path: String): Boolean = OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
+        /** Команды администратора (3.88.0) не ждут сети: уходят сразу или падают видимой ошибкой - блок героя не ложится вслепую. */
+        private const val ADMIN = "api/v1/admin/"
+
+        fun queues(path: String): Boolean = !path.startsWith(ADMIN) && OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
 
         /**
          * Whether an answer means "not yet" rather than "no": a duplicate still running (409), a throttle or

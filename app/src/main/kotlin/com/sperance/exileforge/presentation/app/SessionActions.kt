@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.app
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.command.ClientIdentity
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.ApiFailure
@@ -396,6 +397,19 @@ class SessionActions(
         }
     }
 
+    /**
+     * Гостевой аккаунт получает логин и пароль (3.88.0, server 1.80.0): ответ - аккаунт с логином, он и становится профилем
+     * сессии; токен и вход по устройству остаются. Занятый раннер не глотает нажатие: «занято, повторите».
+     */
+    fun bind(login: String, password: String) {
+        val started = task(writing = true) {
+            val profile = api.bind(login, password)
+            sessions.update { it.copy(profile = profile) }
+            notices.toast(ui("account.bound", profile.login))
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
+
     fun changePassword(current: String, replacement: String) {
         run {
             task(writing = true) {
@@ -442,6 +456,9 @@ class SessionActions(
         })
         created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
+        // Отчёты подписаны устройством, версией и активным героем (3.88.0); заблокированный герой уводит к выбору (3.88.0).
+        created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint) { heroes.heroId }
+        created.onHeroBlocked = { heroId, failure -> if (api === created) characterActions.blocked(heroId, failure) }
         created.manifestCache = object : ManifestCache {
             override suspend fun read(): String? = store.manifest(server)
             override suspend fun write(text: String) = store.saveManifest(server, text)

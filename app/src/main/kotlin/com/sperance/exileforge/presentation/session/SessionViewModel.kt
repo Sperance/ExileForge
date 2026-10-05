@@ -43,6 +43,7 @@ class SessionViewModel(
     fun dismissNotice() = notices.dismiss()
 
     fun changePassword(current: String, replacement: String) = sessionActions.changePassword(current, replacement)
+    fun bind(login: String, password: String) = sessionActions.bind(login, password)
     fun mode(mode: AppMode) = sessionActions.mode(mode)
 
     /** Тестовые учётки администратора (3.80.30), как их просят страницы настроек. */

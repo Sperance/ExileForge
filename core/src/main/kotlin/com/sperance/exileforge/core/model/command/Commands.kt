@@ -84,4 +84,20 @@ data class ApiCapabilities(val routes: Set<String>) {
     val requests: List<String>,
     /** A bug or a player's suggestion (3.73.0, server 1.69.0). */
     val kind: FeedbackKind = FeedbackKind.BUG,
+    /** Герой отправителя, отпечаток устройства и версия клиента (3.88.0, server 1.80.0): ставит [ClientIdentity]. */
+    val heroId: String? = null,
+    val device: String = "",
+    val clientVersion: String = "",
 )
+
+/**
+ * Кто шлёт отчёт (3.88.0): версия сборки и отпечаток устройства от приложения, активный герой - если он есть. Каждый
+ * отчёт ([com.sperance.exileforge.core.network.GameApi.reportBug]) подписывается им, кто бы его ни собрал.
+ */
+class ClientIdentity(val version: String, private val device: () -> String, private val heroId: () -> String?) {
+    fun stamp(report: BugReportRequest): BugReportRequest = report.copy(
+        heroId = report.heroId ?: heroId()?.takeIf { it.isNotBlank() },
+        device = report.device.ifBlank { runCatching(device).getOrDefault("") },
+        clientVersion = report.clientVersion.ifBlank { version },
+    )
+}

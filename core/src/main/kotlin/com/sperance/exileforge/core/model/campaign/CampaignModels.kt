@@ -75,7 +75,18 @@ import kotlinx.serialization.Serializable
  * [crystal] (server 1.30.2) is what an event that changes a crystal rather than takes it (a Vaal orb) made of it; null otherwise.
  * [rank] (server 1.76.0): a hero's first win over a guardian - how many heroes had won it before, counting this one.
  */
-@Serializable data class EventReward(val n: Int, val kind: RunEventKind, val reward: RewardView = RewardView(), val crystal: CrystalOutcome? = null, val rank: Long? = null)
+@Serializable data class EventReward(
+    val n: Int,
+    val kind: RunEventKind,
+    val reward: RewardView = RewardView(),
+    val crystal: CrystalOutcome? = null,
+    val rank: Long? = null,
+    /** Добыча начатого боя (server 1.80.0), только у ENGAGE: не выдана и в итог не входит - её выдаст убийство каждого члена. */
+    val pending: List<PendingDrop>? = null,
+)
+
+/** Что даст убийство члена [m] начатого боя (у босса - 0): добыча, выкаченная на ENGAGE (server 1.80.0). */
+@Serializable data class PendingDrop(val m: Int, val reward: RewardView)
 
 /** A crystal after an event: its [index] in the zone's window, as the event named it, and the [crystal] it became. */
 @Serializable data class CrystalOutcome(val index: Int = 0, val crystal: Crystal)

@@ -22,6 +22,7 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Запуск приложения (3.80.44, из `ForgeRuntime`): связи ядра с сервисами приложения, поход и испытание, тихое
@@ -106,11 +107,15 @@ class AppStartup(
         }
     }
 
-    /** Прошлый запуск завис (3.82.0): отчёт сторожа уходит баг-репортом в фоне, отправленный стирается. */
+    /**
+     * Прошлый запуск завис (3.82.0): отчёт сторожа уходит баг-репортом в фоне, отправленный стирается. Ждёт входа (3.88.0) -
+     * тогда он подписан аккаунтом и героем; вход не случился за [STALL_REPORT_WAIT_MS] - уходит без них, с устройством и версией.
+     */
     private fun reportStall() {
         scope.launch {
             try {
                 val report = watchdog.pending() ?: return@launch
+                withTimeoutOrNull(STALL_REPORT_WAIT_MS) { sessions.state.first { it.signedIn } }
                 api.reportBug(report)
                 watchdog.sent()
             } catch (e: CancellationException) {
@@ -119,3 +124,6 @@ class AppStartup(
         }
     }
 }
+
+/** Дольше этого отчёт о прошлом зависании не ждёт входа, мс. */
+private const val STALL_REPORT_WAIT_MS = 30_000L

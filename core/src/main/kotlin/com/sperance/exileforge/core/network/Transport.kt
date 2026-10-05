@@ -62,6 +62,9 @@ class Transport(
     /** A session taken from the device but not yet confirmed by the server: every command that may wait, waits. */
     internal var holding = false
 
+    /** Сервер отказал герою запроса как заблокированному (`CH_034`, 3.88.0): id героя из запроса и сам отказ. */
+    internal var onHeroBlocked: (String, ApiFailure) -> Unit = { _, _ -> }
+
     /** Whose session is signed in, so a kept command is never replayed for another account. */
     internal var account: () -> String? = { null }
 
@@ -194,12 +197,14 @@ class Transport(
             }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
-                throw ApiFailure(
+                val failure = ApiFailure(
                     status,
                     error?.text("errorCode"),
                     error?.text("message")?.takeIf { it.isNotBlank() } ?: ui("api.rejected", status),
                     (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull },
                 )
+                if (failure.code == HERO_BLOCKED) (query["heroId"] ?: query["id"])?.let { hero -> runCatching { onHeroBlocked(hero, failure) } }
+                throw failure
             }
             success = true
             // The command has landed: a snapshot that cannot be read only means the hero is read again — and so
@@ -260,3 +265,6 @@ internal fun heroQuery(heroId: String, vararg more: Pair<String, String?>): Map<
         more.forEach { (name, value) -> if (value != null) put(name, value) }
     }
 }
+
+/** Отказ заблокированному герою (server 1.80.0): аргумент - причина блокировки. */
+const val HERO_BLOCKED = "CH_034"

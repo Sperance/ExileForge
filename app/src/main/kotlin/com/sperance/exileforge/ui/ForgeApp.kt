@@ -132,12 +132,13 @@ import org.koin.compose.viewmodel.koinViewModel
         ForgeScreens()
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
         // 3.86.0: the start window holds only until the server answers.
-        val reach by shell.reach.state.collectAsStateWithLifecycle()
+        // 3.87.0: the window reads the model without the lifecycle's gate - a frozen collection held it forever.
+        val window by shell.reach.window.collectAsState()
         val stages by remember(shell) {
             shell.game.map { g -> StartStages(g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0) }.distinctUntilChanged()
-        }.collectAsStateWithLifecycle(StartStages(contentReady = false, dictionaryReady = false, iconsReady = false))
+        }.collectAsState(StartStages(contentReady = false, dictionaryReady = false, iconsReady = false))
         val watchdog = koinInject<StallWatchdog>()
-        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages, reach = reach, onRetry = shell.reach::retry, diagnostics = watchdog::diagnostics)
+        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages, window = window, onRetry = shell.reach::retry, diagnostics = watchdog::diagnostics)
     }
 }
 

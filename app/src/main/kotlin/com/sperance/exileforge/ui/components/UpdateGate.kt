@@ -22,6 +22,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
@@ -29,6 +30,7 @@ import com.sperance.exileforge.core.session.Reach
 import com.sperance.exileforge.core.session.StartGate
 import com.sperance.exileforge.core.session.StartVerdict
 import com.sperance.exileforge.presentation.app.ReachState
+import com.sperance.exileforge.presentation.app.StartWindow
 import com.sperance.exileforge.presentation.features.UpdateState
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.theme.*
@@ -53,18 +55,26 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     updates: UpdateViewModel,
     busy: Boolean,
     stages: StartStages,
-    reach: ReachState,
+    window: StartWindow,
     onRetry: () -> Unit,
     diagnostics: () -> String,
 ) {
-    val s by updates.state.collectAsStateWithLifecycle()
+    // Не привязано к жизненному циклу (3.87.0): окно запуска обязано видеть каждое изменение, пока оно на экране.
+    val s by updates.state.collectAsState()
+    val reach = window.reach
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
     // Back in the app (3.76.0): the build is asked again, unless a run is under way.
     val idle by rememberUpdatedState(!busy)
     LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
     // The window is the start's, once: a server lost later in the game is the banner's.
     var released by rememberSaveable { mutableStateOf(false) }
-    val verdict = StartGate.verdict(reach.reach, s.mandatory && !busy)
+    val verdict = StartGate.verdict(reach.reach, s.mandatory && !busy, window.elapsedMs)
     LaunchedEffect(verdict) { if (verdict == StartVerdict.RELEASE) released = true }
+    // Предел окна и на стороне экрана: даже если модель не дошла до него, окно уходит само.
+    LaunchedEffect(Unit) {
+        delay(StartGate.LIMIT_MS)
+        released = true
+    }
     var waited by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(CONTINUE_AFTER_MS)
@@ -82,7 +92,10 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
             }
             if (verdict == StartVerdict.UNREACHABLE || waited) {
                 ForgeOutlinedButton(onClick = { released = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("start.offline")) }
-                CopyLog { diagnostics() + "\n--- window\n$stages reach=$reach verdict=$verdict update=${s.update?.info?.versionName} busy=$busy" }
+                CopyLog {
+                    "--- window\nlifecycle=${lifecycle.currentState} verdict=$verdict released=$released busy=$busy\nseen $window\nseen update checking=${s.checking} " +
+                        "update=${s.update?.info?.versionName} failure=${s.failure}\nlive update checking=${updates.state.value.checking}\n$stages\n" + diagnostics()
+                }
             }
         }
 

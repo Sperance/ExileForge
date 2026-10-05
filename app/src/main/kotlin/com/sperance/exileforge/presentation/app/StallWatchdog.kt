@@ -103,15 +103,22 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         }
     }
 
-    /** Стеки потоков: главный первым, дальше те, что не простаивают в ожидании, затем остальные. */
+    /**
+     * Стеки потоков: главный первым, затем занятые. Простаивающие (ждут очередь, сообщений или сокета пула) сведены в одну
+     * строку именами (3.87.0): журнал, вставленный в чат, не обрезается на них.
+     */
     private fun threads(): String {
         val main = Looper.getMainLooper().thread
-        return Thread.getAllStackTraces().entries
-            .sortedWith(compareBy({ it.key !== main }, { it.key.state == Thread.State.WAITING || it.key.state == Thread.State.TIMED_WAITING }, { it.key.name }))
+        val (busy, idle) = Thread.getAllStackTraces().entries.partition { (thread, frames) -> thread === main || !resting(thread, frames) }
+        return busy.sortedWith(compareBy({ it.key !== main }, { it.key.name }))
             .joinToString("\n") { (thread, frames) ->
                 "\"${thread.name}\" ${thread.state}" + frames.take(THREAD_FRAMES).joinToString("") { "\n  at $it" }
-            }
+            } + "\nidle: " + idle.joinToString(", ") { it.key.name }
     }
+
+    private fun resting(thread: Thread, frames: Array<StackTraceElement>): Boolean = frames.isEmpty() ||
+        thread.state == Thread.State.WAITING || thread.state == Thread.State.TIMED_WAITING ||
+        frames.first().methodName == "nativePollOnce"
 
     private fun pack(lines: List<String>, entries: Int): List<String> {
         val out = mutableListOf<String>()
@@ -132,7 +139,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
     private companion object {
         const val FILE = "stall.txt"
         const val LAST_FILE = "stall-last.txt"
-        const val THREAD_FRAMES = 40
+        const val THREAD_FRAMES = 25
         const val SCREEN = "stall"
         const val STALL_MS = 5_000L
         const val TICK_MS = 1_000L

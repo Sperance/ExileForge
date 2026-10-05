@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -16,9 +15,16 @@ import java.io.IOException
 import java.security.MessageDigest
 import java.util.concurrent.TimeUnit
 
+/** Провод сборки или сервера: ревизия API и версия правил. Разные - друг с другом не играют. */
+data class Wire(val api: Int, val rules: Int) {
+    companion object {
+        /** Провод этой сборки. */
+        val OWN = Wire(API_REVISION, RULES_VERSION)
+    }
+}
+
 /**
- * Сборка, выложенная на сервере (3.82.0): `app/latest.json` - его пишет `scripts/apk.sh` сервера из `update.json` релиза
- * GitHub, дополнив заметками релиза. Версия сборки, провод и правила, на которых она говорит, имя APK, размер и SHA-256.
+ * Сборка из релиза GitHub (3.86.0): `update.json` релиза - версия, провод, имя APK, размер, SHA-256 и заметки.
  */
 @Serializable data class AppBuild(
     val versionCode: Int,
@@ -29,38 +35,57 @@ import java.util.concurrent.TimeUnit
     val size: Long = 0,
     val sha256: String,
     val notes: String = "",
-)
+) {
+    val wire: Wire get() = Wire(apiRevision, rules)
+}
 
-/** Обновление, которое клиент обязан взять: сборка и адрес её APK на сервере. */
-data class AvailableUpdate(val info: AppBuild, val apkUrl: String)
+/** Найденная сборка: что это, откуда качать APK, страница релиза для браузера и обязательна ли она. */
+data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: String, val mandatory: Boolean)
 
 /**
- * Обновления только с сервера игры (3.82.0): GitHub приложение больше не спрашивает - сборку туда кладёт администратор
- * командой `apk.sh`. Сервер без выложенной сборки отвечает 404: обновлений нет. Сборка на чужом проводе или правилах
- * (выложенная с `--force` раньше сервера) не предлагается, пока сервер её не догонит.
+ * Что делать со сборкой (3.86.0). Обязательна - когда сервер говорит на другом проводе, чем эта сборка, а найденная
+ * говорит на его: старая играть не может. По желанию - новее и на проводе сервера (или этой сборки, пока сервер не
+ * ответил). Сборка на проводе, которого сервер ещё не знает, не предлагается: она не войдёт.
+ */
+object UpdatePolicy {
+    enum class Kind { NONE, OPTIONAL, MANDATORY }
+
+    fun decide(build: AppBuild, versionCode: Int, own: Wire, server: Wire?): Kind = when {
+        build.versionCode <= versionCode -> Kind.NONE
+        server != null && server != own -> if (build.wire == server) Kind.MANDATORY else Kind.NONE
+        build.wire == (server ?: own) -> Kind.OPTIONAL
+        else -> Kind.NONE
+    }
+}
+
+/**
+ * Обновления только с GitHub Releases (3.86.0): последний релиз отдаёт `update.json` и APK по постоянным адресам,
+ * GitHub уводит их редиректом на свой CDN. Нет релиза (404) - обновлений нет.
  */
 class Updates(client: OkHttpClient = ForgeHttp.client) {
-    // APK качается долго: без общего предела вызова, но с пределом молчания между байтами.
-    private val http = client.newBuilder().readTimeout(60, TimeUnit.SECONDS).callTimeout(0, TimeUnit.SECONDS).build()
+    // APK качается долго: без общего предела вызова, но с пределом молчания между байтами. Редиректы GitHub - свои.
+    private val http = client.newBuilder().followRedirects(true).followSslRedirects(true)
+        .readTimeout(60, TimeUnit.SECONDS).callTimeout(0, TimeUnit.SECONDS).build()
 
-    // Описание сборки маленькое (3.81.1): вызов, который тянется, обрывается - проверка всегда возвращается.
+    // Описание сборки маленькое: вызов, который тянется, обрывается - проверка всегда возвращается.
     private val small = http.newBuilder().callTimeout(SMALL_CALL_S, TimeUnit.SECONDS).build()
 
-    /**
-     * Обновление сборки [versionCode] с сервера [server] (адрес с `/` на конце); [wire] - провод и правила живого сервера,
-     * null - этой сборки. null - обновляться не на что. Бросает, когда сервер недоступен.
-     */
-    suspend fun check(server: String, versionCode: Int, wire: Pair<Int, Int>?): AvailableUpdate? = withContext(Dispatchers.IO) {
-        val base = server.toHttpUrl()
-        val text = small.newCall(Request.Builder().url(base.resolve(LATEST)!!).build()).execute().use { response ->
+    /** Обновление сборки [versionCode] для сервера на проводе [server] (null - не ответил); null - обновляться не на что. */
+    suspend fun check(versionCode: Int, server: Wire?): AvailableUpdate? = withContext(Dispatchers.IO) {
+        val text = small.newCall(Request.Builder().url(LATEST).build()).execute().use { response ->
             if (response.code == 404) return@withContext null
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
         val info = WireJson.decodeFromString(AppBuild.serializer(), text)
-        if (info.versionCode <= versionCode || (info.apiRevision to info.rules) != (wire ?: (API_REVISION to RULES_VERSION))) return@withContext null
-        AvailableUpdate(info, base.resolve("$FOLDER/${info.apk}")!!.toString())
+        when (UpdatePolicy.decide(info, versionCode, Wire.OWN, server)) {
+            UpdatePolicy.Kind.NONE -> null
+            UpdatePolicy.Kind.OPTIONAL -> info.available(mandatory = false)
+            UpdatePolicy.Kind.MANDATORY -> info.available(mandatory = true)
+        }
     }
+
+    private fun AppBuild.available(mandatory: Boolean) = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName", mandatory)
 
     /**
      * APK [update] в [target], [progress] - прочитано байт из всех. Начатый файл докачивается с места обрыва (`Range`);
@@ -73,7 +98,7 @@ class Updates(client: OkHttpClient = ForgeHttp.client) {
         val request = Request.Builder().url(update.apkUrl).apply { if (have > 0) header("Range", "bytes=$have-") }.build()
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            // Сервер не докачивает (200 вместо 206) - файл пишется заново.
+            // Докачки нет (200 вместо 206) - файл пишется заново.
             val resumed = response.code == 206
             val start = if (resumed) have else 0L
             val total = update.info.size.takeIf { it > 0 } ?: (start + response.body.contentLength())
@@ -112,9 +137,11 @@ class Updates(client: OkHttpClient = ForgeHttp.client) {
     }
 
     companion object {
-        /** Каталог сборок на сервере и их описание. */
-        const val FOLDER = "app"
-        const val LATEST = "$FOLDER/latest.json"
+        /** Релизы приложения. */
+        const val RELEASES = "https://github.com/Sperance/ExileForge/releases"
+
+        /** Описание последнего релиза. */
+        const val LATEST = "$RELEASES/latest/download/update.json"
 
         /** Дольше этого описание сборки не ждётся, с. */
         private const val SMALL_CALL_S = 20L

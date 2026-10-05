@@ -11,7 +11,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -23,12 +25,10 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.session.Reach
 import com.sperance.exileforge.core.session.StartGate
-import com.sperance.exileforge.core.session.StartSignals
 import com.sperance.exileforge.core.session.StartVerdict
-import com.sperance.exileforge.presentation.app.StartStage
-import com.sperance.exileforge.presentation.app.StartStep
-import com.sperance.exileforge.presentation.app.StepState
+import com.sperance.exileforge.presentation.app.ReachState
 import com.sperance.exileforge.presentation.features.UpdateState
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.theme.*
@@ -38,44 +38,32 @@ import kotlinx.coroutines.delay
 /** The update model of the activity (3.72.0), for the screens that show the version and check by hand. */
 val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
 
-/**
- * Where the start stands (3.81.0): the server's content read or on its way, the dictionary and the icons in. 3.82.0:
- * [sessionBusy] - a command (the sign-in, the session's check) is under way, [startupDone] - the start's own steps are over.
- */
-data class StartStages(
-    val contentLoading: Boolean,
-    val contentReady: Boolean,
-    val dictionaryReady: Boolean,
-    val iconsReady: Boolean,
-    val sessionBusy: Boolean = false,
-    val startupDone: Boolean = true,
-) {
-    /** The start no longer holds the window: its steps are over, nothing signs in, no content is on its way. */
-    val settled: Boolean get() = startupDone && !sessionBusy && !contentLoading
+/** Что из сохранённого на устройстве уже прочитано: мир, словарь, иконки. */
+data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, val iconsReady: Boolean) {
+    val deviceReady: Boolean get() = contentReady && dictionaryReady && iconsReady
 }
 
 /**
- * The update gate (3.72.0), over everything: a newer build found is required — its window cannot be dismissed. [busy] - a
- * run or a trial is under way: the window waits for its end. Since 3.73.0 the check itself is unseen, and the first start
- * asks once to allow installing from this game. Since 3.81.0 the start is one window of stages; since 3.82.0 it holds only
- * for the start itself — the sign-in and the content on its way, never the version check — shows under every active stage
- * its steps with their time, so a stall is seen where it is, and after [CONTINUE_AFTER_MS] offers to go on without waiting.
- * С 3.84.0 там же [diagnostics] - журнал запуска со стеками потоков: долгий запуск копируется и уходит разработчику.
+ * Окно запуска и обновлений (3.86.0). Пока сервер не ответил - несколько строк: связь, версия, данные устройства. Ответил -
+ * окна нет ([StartGate]), догрузка видна на экранах. Сервер молчит - так и написано, повтор сам через 10 с, «Повторить
+ * сейчас» и «Играть без связи». Обязательная сборка закрывает игру до установки; сборка по желанию предлагается один раз.
+ * [busy] - идёт поход или испытание: обновление ждёт его конца.
  */
-@Composable fun UpdateGate(updates: UpdateViewModel, busy: Boolean, stages: StartStages, steps: List<StartStep>, diagnostics: () -> String) {
+@Composable fun UpdateGate(
+    updates: UpdateViewModel,
+    busy: Boolean,
+    stages: StartStages,
+    reach: ReachState,
+    onRetry: () -> Unit,
+    diagnostics: () -> String,
+) {
     val s by updates.state.collectAsStateWithLifecycle()
-    // Back in the app (3.76.0): the server is asked again, unless a run is under way.
+    // Back in the app (3.76.0): the build is asked again, unless a run is under way.
     val idle by rememberUpdatedState(!busy)
     LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
-    // The window is the start's, once: a content read later in the game is the banner's.
+    // The window is the start's, once: a server lost later in the game is the banner's.
     var released by rememberSaveable { mutableStateOf(false) }
-    val clock by produceState(System.currentTimeMillis()) {
-        while (true) {
-            delay(TICK_MS)
-            value = System.currentTimeMillis()
-        }
-    }
-    val verdict = StartGate.verdict(stages.signals(steps, clock))
+    val verdict = StartGate.verdict(reach.reach, s.mandatory && !busy)
     LaunchedEffect(verdict) { if (verdict == StartVerdict.RELEASE) released = true }
     var waited by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -83,25 +71,83 @@ data class StartStages(
         waited = true
     }
     when {
-        s.update != null && !busy -> Locked {
-            StageList(s, stages, steps)
-            UpdateBody(s, updates)
-        }
+        verdict == StartVerdict.UPDATE -> Locked { UpdateBody(s, updates) }
 
         !released -> Locked {
             Text(ui("start.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            StageList(s, stages, steps)
-            LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
-            // Сервер молчит (3.84.4) - это видно сразу, и войти с тем, что есть на устройстве, можно не дожидаясь.
-            if (verdict == StartVerdict.UNREACHABLE) Text(ui("start.unreachable"), color = Ember, style = MaterialTheme.typography.bodyMedium)
-            if (waited || verdict == StartVerdict.UNREACHABLE) {
-                if (verdict != StartVerdict.UNREACHABLE) MutedText(ui("start.slow"))
-                ForgeOutlinedButton(onClick = { released = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("start.continue")) }
-                CopyLog { diagnostics() + "\n--- window\n$stages verdict=$verdict released=$released update=${s.update != null} busy=$busy" }
+            StartRows(s, stages, reach)
+            if (verdict == StartVerdict.UNREACHABLE) {
+                Text(ui("start.unreachable"), color = Ember, style = MaterialTheme.typography.bodyMedium)
+                ForgeButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) { Text(ui("start.retry")) }
+            }
+            if (verdict == StartVerdict.UNREACHABLE || waited) {
+                ForgeOutlinedButton(onClick = { released = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("start.offline")) }
+                CopyLog { diagnostics() + "\n--- window\n$stages reach=$reach verdict=$verdict update=${s.update?.info?.versionName} busy=$busy" }
             }
         }
 
+        s.offered && !busy -> Offered(updates) { UpdateBody(s, updates) }
+
         s.askSources -> SourcesPrompt(updates)
+    }
+}
+
+/** Строки окна запуска: что проверяется или качается сейчас, по пункту на строку. */
+@Composable private fun StartRows(s: UpdateState, stages: StartStages, reach: ReachState) {
+    val now by produceState(System.currentTimeMillis()) {
+        while (true) {
+            delay(TICK_MS)
+            value = System.currentTimeMillis()
+        }
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        when (reach.reach) {
+            Reach.CONNECTING -> StartRow(ui("start.row.server"), RowState.RUN, ui("start.state.connecting"))
+            Reach.ANSWERED -> StartRow(ui("start.row.server"), RowState.DONE, ui("start.state.answered"))
+            Reach.UNREACHABLE -> StartRow(ui("start.row.server"), RowState.FAIL, ui("start.state.retry_in", ((reach.retryAt - now + 999) / 1000).coerceAtLeast(0)))
+        }
+        when {
+            s.progress != null -> StartRow(ui("start.row.version"), RowState.RUN, ui("start.state.downloading", (s.progress * 100).toInt()))
+            s.checking -> StartRow(ui("start.row.version"), RowState.RUN, ui("start.state.checking"))
+            s.update != null -> StartRow(ui("start.row.version"), RowState.DONE, ui("start.state.found", s.update.info.versionName))
+            s.failure != null -> StartRow(ui("start.row.version"), RowState.FAIL, ui("start.state.unchecked"))
+            else -> StartRow(ui("start.row.version"), RowState.DONE, ui("start.state.latest", BuildConfig.VERSION_NAME))
+        }
+        StartRow(ui("start.row.device"), if (stages.deviceReady) RowState.DONE else RowState.RUN, ui(if (stages.deviceReady) "start.state.ready" else "start.state.reading"))
+    }
+}
+
+private enum class RowState { RUN, DONE, FAIL }
+
+/** Пункт: значок состояния, что это и коротко - где оно. */
+@Composable private fun StartRow(title: String, state: RowState, status: String) {
+    val color: Color = when (state) {
+        RowState.RUN -> Gold
+        RowState.DONE -> Vital
+        RowState.FAIL -> Ember
+    }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Box(Modifier.size(18.dp), contentAlignment = Alignment.Center) {
+            when (state) {
+                RowState.RUN -> CircularProgressIndicator(Modifier.size(16.dp), color = color, strokeWidth = 2.dp)
+                RowState.DONE -> Text("✓", color = color, style = MaterialTheme.typography.titleSmall)
+                RowState.FAIL -> Text("✕", color = color, style = MaterialTheme.typography.titleSmall)
+            }
+        }
+        Text(title, color = Parchment, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(status, color = color, style = MaterialTheme.typography.labelLarge)
+    }
+}
+
+/** Сборка по желанию: окно закрывается, «Позже» не предлагает её до новой. */
+@Composable private fun Offered(updates: UpdateViewModel, content: @Composable ColumnScope.() -> Unit) {
+    Dialog(onDismissRequest = updates::later) {
+        Column(
+            Modifier.fillMaxWidth().background(Panel, RoundedCornerShape(12.dp)).border(1.dp, Gold.copy(alpha = .4f), RoundedCornerShape(12.dp))
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            content = content,
+        )
     }
 }
 
@@ -123,138 +169,12 @@ data class StartStages(
 
 private const val COPIED_MS = 2_000L
 
-/** Сетевые шаги старта: их DONE - сервер ответил, FAIL - не ответил. Манифест мира не в счёт: без сети его даёт копия устройства. */
-private val SERVER_STEPS = setOf("start.step.server_manifest", "start.step.workbench", "start.step.resume", "start.step.device")
-
-/** Сигналы старта для [StartGate]: флаги стадий и журнал шагов на миг [now]. */
-private fun StartStages.signals(steps: List<StartStep>, now: Long) = StartSignals(
-    startupDone = startupDone,
-    sessionBusy = sessionBusy,
-    contentLoading = contentLoading,
-    contentReady = contentReady,
-    serverAnswered = steps.any { it.key in SERVER_STEPS && it.state == StepState.DONE },
-    serverFailed = steps.any { it.key in SERVER_STEPS && it.state == StepState.FAIL },
-    running = steps.count { it.state == StepState.RUN },
-    elapsedMs = steps.firstOrNull()?.let { now - it.startedAt } ?: 0,
-)
-
-/** Как часто окно пересматривает решение. */
+/** Как часто окно пересчитывает отсчёт до повтора. */
 private const val TICK_MS = 500L
 
-/** How long the start's window waits before it offers to go on without the rest. */
+/** Сколько окно ждёт, прежде чем предложить войти, не дожидаясь. */
 private const val CONTINUE_AFTER_MS = 15_000L
 
-/** A stage's state: waiting, under way, done, or failed. */
-private enum class Stage { WAIT, RUN, DONE, FAIL }
-
-/** A stage by its own steps: one running - under way, the last one failed - failed, any - done. */
-private fun List<StartStep>.state(): Stage? = when {
-    isEmpty() -> null
-    any { it.state == StepState.RUN } -> Stage.RUN
-    last().state == StepState.FAIL -> Stage.FAIL
-    else -> Stage.DONE
-}
-
-@Composable private fun StageList(s: UpdateState, stages: StartStages, steps: List<StartStep>) {
-    val of = steps.groupBy { it.stage }
-    fun traced(stage: StartStage) = of[stage].orEmpty()
-    val rows = StartStage.entries.associateWith { stage ->
-        val own = traced(stage).state()
-        when (stage) {
-            StartStage.VERSION -> when {
-                s.update != null -> Stage.DONE
-                s.checking -> Stage.RUN
-                s.failure != null -> Stage.FAIL
-                else -> Stage.DONE
-            }
-
-            StartStage.SESSION -> when {
-                stages.sessionBusy || own == Stage.RUN || !stages.startupDone -> Stage.RUN
-                own == Stage.FAIL -> Stage.FAIL
-                else -> Stage.DONE
-            }
-
-            StartStage.CONTENT -> when {
-                stages.contentLoading || own == Stage.RUN -> Stage.RUN
-                stages.contentReady -> Stage.DONE
-                own == Stage.FAIL -> Stage.FAIL
-                else -> Stage.WAIT
-            }
-
-            StartStage.DICTIONARY -> if (stages.dictionaryReady && own != Stage.RUN) Stage.DONE else own ?: Stage.RUN
-
-            StartStage.ICONS -> if (stages.iconsReady && own != Stage.RUN) Stage.DONE else own ?: Stage.RUN
-        }
-    }
-    // The clock of the running steps: their seconds tick while the window stands.
-    val now by produceState(System.currentTimeMillis()) {
-        while (true) {
-            delay(250)
-            value = System.currentTimeMillis()
-        }
-    }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        rows.forEach { (stage, state) ->
-            val note = if (stage == StartStage.VERSION) s.update?.let { ui("update.versions", BuildConfig.VERSION_NAME, it.info.versionName) } else null
-            StageRow(ui(stage.title), state, note)
-            // The steps of an active stage (3.82.0): where it stands now, and how long each took.
-            if (state == Stage.RUN || state == Stage.FAIL) traced(stage).takeLast(STEPS_SHOWN).forEach { StepRow(it, now) }
-        }
-    }
-}
-
-/** Steps shown under an active stage: the latest. */
-private const val STEPS_SHOWN = 5
-
-@Composable private fun StepRow(step: StartStep, now: Long) {
-    val color = when (step.state) {
-        StepState.RUN -> Parchment
-        StepState.DONE -> Muted
-        StepState.FAIL -> LifeRed
-    }
-    Row(Modifier.padding(start = 26.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            when (step.state) {
-                StepState.RUN -> "…"
-                StepState.DONE -> "✓"
-                StepState.FAIL -> "✕"
-            },
-            color = color,
-            style = MaterialTheme.typography.labelMedium,
-        )
-        Column(Modifier.weight(1f)) {
-            Text(ui(step.key, *step.args.toTypedArray()), color = color, style = MaterialTheme.typography.labelMedium)
-            step.error?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.labelSmall) }
-        }
-        Text(ui("start.seconds", "%.1f".format(step.millis(now) / 1000.0)), color = color, style = MaterialTheme.typography.labelSmall)
-    }
-}
-
-@Composable private fun StageRow(title: String, stage: Stage, note: String? = null) {
-    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        when (stage) {
-            Stage.RUN -> CircularProgressIndicator(Modifier.size(16.dp), color = Gold, strokeWidth = 2.dp)
-
-            else -> Text(
-                when (stage) {
-                    Stage.DONE -> "✓"
-                    Stage.FAIL -> "✕"
-                    else -> "•"
-                },
-                color = when (stage) {
-                    Stage.DONE -> Vital
-                    Stage.FAIL -> LifeRed
-                    else -> Muted
-                },
-                modifier = Modifier.width(16.dp),
-            )
-        }
-        Text(title, color = if (stage == Stage.WAIT) Muted else Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        note?.let { Text(it, color = Gold, style = MaterialTheme.typography.labelMedium) }
-    }
-}
-
-/** The first start (3.73.0): why the game wants «install unknown apps», the way to the setting, and «later». */
 @Composable private fun SourcesPrompt(updates: UpdateViewModel) {
     val context = LocalContext.current
     Dialog(onDismissRequest = updates::sourcesAsked) {
@@ -292,11 +212,10 @@ private const val STEPS_SHOWN = 5
 @Composable private fun ColumnScope.UpdateBody(s: UpdateState, updates: UpdateViewModel) {
     val update = s.update ?: return
     val context = LocalContext.current
-    Text(ui("update.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+    Text(ui(if (update.mandatory) "update.title" else "update.optional_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
     if (update.info.size > 0) MutedText(ui("update.size", "%.1f".format(update.info.size / 1_048_576.0)))
     Text(ui("update.notes"), color = Parchment, style = MaterialTheme.typography.labelLarge)
     Column(Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Заметки только выложенной сборки (3.82.0): сервер хранит одну.
         Text(update.info.versionName, color = GoldBright, style = MaterialTheme.typography.labelLarge)
         if (update.info.notes.isNotBlank()) MutedText(update.info.notes)
     }
@@ -325,12 +244,13 @@ private const val STEPS_SHOWN = 5
         else -> {
             s.error?.let { InfoCard(ui("update.failed_title"), it, failure = true) }
             ForgeButton(onClick = updates::install, modifier = Modifier.fillMaxWidth()) { Text(ui(if (s.error != null) "update.retry" else "update.install")) }
-            // The way around the installer: the release page, the APK by hand.
+            // The way around the installer: the release page on GitHub, the APK by hand.
             if (s.error != null) {
                 ForgeOutlinedButton(onClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.apkUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }, modifier = Modifier.fillMaxWidth()) { Text(ui("update.browser")) }
             }
+            if (!update.mandatory) ForgeOutlinedButton(onClick = updates::later, modifier = Modifier.fillMaxWidth()) { Text(ui("update.later")) }
         }
     }
 }

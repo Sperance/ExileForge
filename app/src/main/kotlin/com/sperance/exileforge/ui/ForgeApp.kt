@@ -44,11 +44,9 @@ import androidx.navigation3.ui.NavDisplay
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.RequestLog
-import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.app.StallWatchdog
-import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
@@ -133,17 +131,13 @@ import org.koin.compose.viewmodel.koinViewModel
     ) {
         ForgeScreens()
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
-        // 3.82.0: the start's steps and whether it is over join the stages, so the window shows where it stands.
-        val trace = koinInject<StartupTrace>()
-        val startupDone by trace.startupDone.collectAsStateWithLifecycle()
-        val steps by trace.steps.collectAsStateWithLifecycle()
+        // 3.86.0: the start window holds only until the server answers.
+        val reach by shell.reach.state.collectAsStateWithLifecycle()
         val stages by remember(shell) {
-            shell.game.map { g ->
-                StartStages(Reads.CONTENT in g.loading, g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0, sessionBusy = g.busy)
-            }.distinctUntilChanged()
-        }.collectAsStateWithLifecycle(StartStages(contentLoading = false, contentReady = false, dictionaryReady = false, iconsReady = false))
+            shell.game.map { g -> StartStages(g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0) }.distinctUntilChanged()
+        }.collectAsStateWithLifecycle(StartStages(contentReady = false, dictionaryReady = false, iconsReady = false))
         val watchdog = koinInject<StallWatchdog>()
-        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages.copy(startupDone = startupDone), steps = steps, diagnostics = watchdog::diagnostics)
+        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages, reach = reach, onRetry = shell.reach::retry, diagnostics = watchdog::diagnostics)
     }
 }
 

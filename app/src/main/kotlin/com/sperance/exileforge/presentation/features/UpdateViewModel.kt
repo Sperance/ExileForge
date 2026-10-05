@@ -8,7 +8,9 @@ import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.update.AvailableUpdate
 import com.sperance.exileforge.core.update.Updates
+import com.sperance.exileforge.core.update.Wire
 import com.sperance.exileforge.data.settings.GuideStore
+import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.StartStage
 import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.update.InstallResult
@@ -19,7 +21,10 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -27,18 +32,17 @@ import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import java.io.File
 
-/** Откуда проверять обновления (3.82.0): адрес сервера игры и провод с правилами живого сервера; null - он не ответил. */
-data class UpdateSource(val server: String, val wire: Pair<Int, Int>?)
-
 /**
- * Where the update stands (3.72.0). [checking]/[failure] - the check under way or why it failed: since 3.82.0 the game never
- * waits for it. [update] - the build the player must take; [progress] - its download, 0..1; [installing] - in the system
- * installer. [askSources] - the first start asks once for «install unknown apps» (3.73.0), so an update later installs at once.
+ * Where the update stands (3.86.0). [checking]/[failure] - the check under way or why it failed. [update] - the build found:
+ * [AvailableUpdate.mandatory] locks the game until it is installed, otherwise it is offered once ([dismissed] - «Позже»).
+ * [progress] - its download, 0..1; [installing] - in the system installer. [askSources] - the first start asks once for
+ * «install unknown apps», so an update later installs at once.
  */
 data class UpdateState(
     val checking: Boolean = true,
     val failure: String? = null,
     val update: AvailableUpdate? = null,
+    val dismissed: Boolean = false,
     val progress: Float? = null,
     val installing: Boolean = false,
     val needsPermission: Boolean = false,
@@ -46,16 +50,21 @@ data class UpdateState(
     /** The answer of a check asked for by hand: this build is the latest. */
     val upToDate: Boolean = false,
     val askSources: Boolean = false,
-)
+) {
+    /** The build the game must take before anything else. */
+    val mandatory: Boolean get() = update?.mandatory == true
+
+    /** An optional build the player has not yet said «Позже» to. */
+    val offered: Boolean get() = update != null && !mandatory && !dismissed
+}
 
 /**
- * Updates without a store (3.72.0): at start, by hand and every hour the game's own server is asked (3.82.0, not GitHub)
- * for a build newer than this one that speaks its wire. Any such build is required: the game stays closed until it is
- * installed. The check never holds the start: a failed one is quietly tried again a minute later.
+ * Updates from GitHub Releases (3.86.0): at start, when the server answers (its wire decides whether a build is required),
+ * by hand and every hour. A failed check is quietly tried again a minute later and never holds the start.
  */
 class UpdateViewModel(
     app: Application,
-    private val source: suspend () -> UpdateSource,
+    private val reach: ServerReach,
     newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow(),
     private val guides: GuideStore,
     http: OkHttpClient,
@@ -76,6 +85,8 @@ class UpdateViewModel(
             viewModelScope.launch {
                 while (true) delay(if (check()) Updates.PERIOD_MS else RETRY_MS)
             }
+            // The server answered: its wire may make a build required, so the check runs again with it.
+            viewModelScope.launch { reach.state.map { it.wire }.filterNotNull().distinctUntilChanged().collect { check() } }
             // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour.
             viewModelScope.launch { newerServer.collect { check() } }
         }
@@ -94,19 +105,19 @@ class UpdateViewModel(
         }
     }
 
-    /** «Проверить обновления»: asked by hand, the answer is said either way. */
+    /** «Проверить обновления»: asked by hand, the answer is said either way, and a dismissed build is offered again. */
     fun checkNow() {
         viewModelScope.launch { check(manual = true) }
     }
 
-    /**
-     * The player came back to the app (3.76.0): the server is asked again, at most once a minute — a build put out
-     * meanwhile locks the game at once. The caller does not ask during a run.
-     */
+    /** The player came back to the app: the build is asked again, at most once a minute. The caller does not ask during a run. */
     fun resumed() {
         if (!BuildConfig.UPDATES || System.currentTimeMillis() - lastCheck < RESUME_GAP_MS) return
         viewModelScope.launch { check() }
     }
+
+    /** «Позже» on an optional build: not offered again until a newer one or a check by hand. */
+    fun later() = mutable.update { it.copy(dismissed = true) }
 
     /** The first-start question about unknown sources is answered, either way: it is not asked again. */
     fun sourcesAsked() {
@@ -114,19 +125,21 @@ class UpdateViewModel(
         viewModelScope.launch { guides.markRead(SOURCES) }
     }
 
-    /** One check; whether the server answered. */
+    /** One check; whether GitHub answered. */
     private suspend fun check(manual: Boolean = false): Boolean = checks.withLock {
         lastCheck = System.currentTimeMillis()
         mutable.update { it.copy(checking = true, upToDate = false) }
         try {
-            val from = source()
-            val found = trace.step(StartStage.VERSION, "start.step.latest") { updates.check(from.server, BuildConfig.VERSION_CODE, from.wire) }
+            val wire: Wire? = reach.state.value.wire
+            val found = trace.step(StartStage.VERSION, "start.step.latest") { updates.check(BuildConfig.VERSION_CODE, wire) }
             mutable.update { s ->
                 // The update being downloaded is kept: a newer one waits for the next check after it.
+                val next = if (s.progress != null || s.installing) s.update else found
                 s.copy(
                     checking = false,
                     failure = null,
-                    update = if (s.progress != null || s.installing) s.update else found,
+                    update = next,
+                    dismissed = s.dismissed && !manual && next?.info?.versionCode == s.update?.info?.versionCode,
                     upToDate = manual && found == null,
                 )
             }
@@ -139,7 +152,7 @@ class UpdateViewModel(
         }
     }
 
-    /** «Обновить»: the APK is downloaded from the server (resumed where it broke off), its SHA-256 checked, the installer asked. */
+    /** «Обновить»: the APK is downloaded from GitHub (resumed where it broke off), its SHA-256 checked, the installer asked. */
     fun install() {
         val update = state.value.update ?: return
         if (download?.isActive == true) return

@@ -17,14 +17,13 @@ import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.ConnectionActions
+import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.SessionActions
-import com.sperance.exileforge.presentation.app.StartStage
 import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.presentation.app.WarmupActions
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
 import com.sperance.exileforge.presentation.expedition.TrialActions
-import com.sperance.exileforge.presentation.features.UpdateSource
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.ADMIN_TABS
@@ -35,12 +34,10 @@ import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StashSort
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Оболочка приложения (3.80.30): вкладки и здания по прежнему номеру, «Настройки» поверх экрана, строка в тосты,
@@ -64,8 +61,11 @@ class ShellViewModel(
     private val expedition: ExpeditionActions,
     trial: TrialActions,
     private val trace: StartupTrace,
+    /** Связь с сервером на старте (3.86.0): окно запуска уходит по её ответу. */
+    val reach: ServerReach,
 ) : ViewModel() {
     init {
+        reach.start()
         // Приложение запускается один раз, кто бы из оболочки или активности ни попросил первым.
         startup.start()
     }
@@ -157,26 +157,7 @@ class ShellViewModel(
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer: Flow<Unit> get() = session.newerServer
 
-    /**
-     * Откуда проверять обновления (3.82.0): сервер игры и провод живого сервера; провода нет, пока сервер не отвечает.
-     * Ожидание сервера и его манифест - подпункты «Версии» в окне запуска.
-     */
-    suspend fun updateSource(): UpdateSource {
-        trace.step(StartStage.VERSION, "start.step.wait_server") { withTimeoutOrNull(API_WAIT_MS) { session.apiReady.await() } }
-        val live = try {
-            trace.step(StartStage.VERSION, "start.step.server_manifest") { connection.api.liveManifest() }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            null
-        }
-        return UpdateSource(sessions.state.value.server, live?.let { it.revision to it.rules })
-    }
-
     private companion object {
-        /** Сколько проверка обновлений ждёт, пока у приложения появится сервер. */
-        const val API_WAIT_MS = 10_000L
-
         /** Последние шаги запуска в баг-репорте и сколько строк в одной записи (сервер берёт записи до 400 знаков). */
         const val STARTUP_LINES = 40
         const val STARTUP_CHUNK = 5

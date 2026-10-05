@@ -184,8 +184,14 @@ jobs:
           [ -n "$code" ] && [ -n "$api" ] && [ -n "$rules" ] || { echo "::error::update.json: versionCode '$code', API '$api' or rules '$rules' not found"; exit 1; }
           sha=$(sha256sum "$apk" | cut -d' ' -f1)
           size=$(stat -c %s "$apk")
-          printf '{"versionCode":%s,"versionName":"%s","apiRevision":%s,"rules":%s,"apk":"%s","size":%s,"sha256":"%s"}\n' \
-            "$code" "${tag#v}" "$api" "$rules" "$apk" "$size" "$sha" > update.json
+          # Заметки релиза (3.86.0) - тело RELEASE_NOTES.md под заголовком: сборки берутся с GitHub, сервер их больше не дописывает.
+          CODE="$code" NAME="${tag#v}" API="$api" RULES="$rules" APK="$apk" SIZE="$size" SHA="$sha" python3 -c '
+          import json, os
+          notes = open("RELEASE_NOTES.md", encoding="utf-8").read().split("\n", 1)[1].strip()
+          e = os.environ
+          print(json.dumps({"versionCode": int(e["CODE"]), "versionName": e["NAME"], "apiRevision": int(e["API"]), "rules": int(e["RULES"]),
+                            "apk": e["APK"], "size": int(e["SIZE"]), "sha256": e["SHA"], "notes": notes}, ensure_ascii=False))
+          ' > update.json
           cat update.json
           # Карта R8 (3.84.2): стеки из журнала запуска расшифровываются ею; её нет - релиз без неё.
           mapping=app/build/outputs/mapping/release/mapping.txt

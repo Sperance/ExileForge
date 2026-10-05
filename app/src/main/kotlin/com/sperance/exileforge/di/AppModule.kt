@@ -35,6 +35,7 @@ import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.CharacterActions
 import com.sperance.exileforge.presentation.app.ConnectionActions
 import com.sperance.exileforge.presentation.app.RedemptionActions
+import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.SessionActions
 import com.sperance.exileforge.presentation.app.StallWatchdog
 import com.sperance.exileforge.presentation.app.StartupTrace
@@ -96,6 +97,7 @@ val appModule = module {
     single { SessionRepository(DEFAULT_SERVER) }
     single { WorldRepository() }
     single { ServerConnection() }
+    single { ServerReach(get(), lazy { get<ConnectionActions>() }, get(named(APP_SCOPE)), get()) }
     // Один HTTP-клиент на процесс (3.80.45): пул соединений, потоки и TLS-сессии общие у всех серверов и обновлений.
     single<OkHttpClient> { ForgeHttp.client }
     singleOf(::Navigator)
@@ -157,5 +159,5 @@ val appModule = module {
     viewModel { SettingsViewModel(get()) }
     viewModelOf(::ServerViewModel)
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
-    viewModel { params -> UpdateViewModel(androidApplication(), params.get(1), params.get(0), get(), get(), get()) }
+    viewModel { params -> UpdateViewModel(androidApplication(), get(), params.get(0), get(), get(), get()) }
 }

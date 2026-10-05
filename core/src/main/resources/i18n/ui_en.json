@@ -691,6 +691,8 @@
   "fight.no_states": "No states",
   "stall.title": "Main thread stall",
   "start.continue": "Continue without waiting",
+  "start.copy_log": "Copy the start log",
+  "start.copied": "Log copied",
   "start.seconds": "{0} s",
   "start.session": "Sign-in",
   "start.slow": "The start is taking longer than usual — the step it is on is shown. You can go in without waiting.",

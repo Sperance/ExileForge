@@ -16,9 +16,11 @@ import java.util.concurrent.atomic.AtomicBoolean
  * Сторож главного потока (3.82.0). Фоновый поток раз в секунду ставит в очередь главного потока отметку; не выполнилась
  * за [STALL_MS] - поток завис: его стек, шаги запуска ([StartupTrace]) и версия пишутся в файл. Завис намертво - отчёт
  * всё равно на диске, и следующий запуск сам отправляет его баг-репортом ([pending]/[sent]). Одно зависание - один отчёт.
+ * Отправленный отчёт остаётся последним ([diagnostics]): игрок копирует его из окна запуска вместе со стеками всех потоков.
  */
 class StallWatchdog(context: Context, private val trace: StartupTrace) {
     private val file = File(context.filesDir, FILE)
+    private val last = File(context.filesDir, LAST_FILE)
     private val main = Handler(Looper.getMainLooper())
 
     @Volatile private var started = false
@@ -49,7 +51,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace) {
 
     private fun write(stalled: Long) {
         runCatching {
-            val stack = Looper.getMainLooper().thread.stackTrace.joinToString("\n") { "at $it" }
+            val stack = threads()
             file.writeText("${BuildConfig.VERSION_NAME}\n$stalled\n${System.currentTimeMillis()}\n---\n$stack\n---\n${trace.journal()}")
         }
     }
@@ -70,7 +72,36 @@ class StallWatchdog(context: Context, private val trace: StartupTrace) {
         )
     }
 
-    suspend fun sent() = withContext(Dispatchers.IO) { file.delete() }
+    suspend fun sent() = withContext(Dispatchers.IO) {
+        last.delete()
+        if (!file.renameTo(last)) file.delete()
+    }
+
+    /**
+     * Журнал для разработчика: версия, шаги запуска, стеки всех потоков сейчас и отчёт о прошлом зависании, если он был.
+     * Стеки снимаются в момент вызова - зависший фон виден, пока окно запуска ещё отвечает.
+     */
+    fun diagnostics(): String = buildString {
+        appendLine("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) uptime=${SystemClock.uptimeMillis()}ms at=${System.currentTimeMillis()}")
+        appendLine("--- start")
+        appendLine(trace.journal())
+        appendLine("--- threads")
+        appendLine(threads())
+        (file.takeIf { it.isFile } ?: last.takeIf { it.isFile })?.let { stall ->
+            appendLine("--- previous stall")
+            append(runCatching { stall.readText() }.getOrDefault(""))
+        }
+    }
+
+    /** Стеки потоков: главный первым, дальше те, что не простаивают в ожидании, затем остальные. */
+    private fun threads(): String {
+        val main = Looper.getMainLooper().thread
+        return Thread.getAllStackTraces().entries
+            .sortedWith(compareBy({ it.key !== main }, { it.key.state == Thread.State.WAITING || it.key.state == Thread.State.TIMED_WAITING }, { it.key.name }))
+            .joinToString("\n") { (thread, frames) ->
+                "\"${thread.name}\" ${thread.state}" + frames.take(THREAD_FRAMES).joinToString("") { "\n  at $it" }
+            }
+    }
 
     private fun pack(lines: List<String>, entries: Int): List<String> {
         val out = mutableListOf<String>()
@@ -90,6 +121,8 @@ class StallWatchdog(context: Context, private val trace: StartupTrace) {
 
     private companion object {
         const val FILE = "stall.txt"
+        const val LAST_FILE = "stall-last.txt"
+        const val THREAD_FRAMES = 40
         const val SCREEN = "stall"
         const val STALL_MS = 5_000L
         const val TICK_MS = 1_000L

@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.app.StallWatchdog
 import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
@@ -141,7 +142,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 StartStages(Reads.CONTENT in g.loading, g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0, sessionBusy = g.busy)
             }.distinctUntilChanged()
         }.collectAsStateWithLifecycle(StartStages(contentLoading = false, contentReady = false, dictionaryReady = false, iconsReady = false))
-        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages.copy(startupDone = startupDone), steps = steps)
+        val watchdog = koinInject<StallWatchdog>()
+        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages.copy(startupDone = startupDone), steps = steps, diagnostics = watchdog::diagnostics)
     }
 }
 

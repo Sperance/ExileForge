@@ -12,7 +12,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -55,8 +57,9 @@ data class StartStages(
  * asks once to allow installing from this game. Since 3.81.0 the start is one window of stages; since 3.82.0 it holds only
  * for the start itself — the sign-in and the content on its way, never the version check — shows under every active stage
  * its steps with their time, so a stall is seen where it is, and after [CONTINUE_AFTER_MS] offers to go on without waiting.
+ * С 3.84.0 там же [diagnostics] - журнал запуска со стеками потоков: долгий запуск копируется и уходит разработчику.
  */
-@Composable fun UpdateGate(updates: UpdateViewModel, busy: Boolean, stages: StartStages, steps: List<StartStep>) {
+@Composable fun UpdateGate(updates: UpdateViewModel, busy: Boolean, stages: StartStages, steps: List<StartStep>, diagnostics: () -> String) {
     val s by updates.state.collectAsStateWithLifecycle()
     // Back in the app (3.76.0): the server is asked again, unless a run is under way.
     val idle by rememberUpdatedState(!busy)
@@ -82,12 +85,31 @@ data class StartStages(
             if (waited) {
                 MutedText(ui("start.slow"))
                 ForgeOutlinedButton(onClick = { released = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("start.continue")) }
+                CopyLog(diagnostics)
             }
         }
 
         s.askSources -> SourcesPrompt(updates)
     }
 }
+
+/** Журнал запуска в буфер обмена: метка «скопировано» держится пару секунд. */
+@Composable private fun CopyLog(diagnostics: () -> String) {
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    LaunchedEffect(copied) {
+        if (copied) {
+            delay(COPIED_MS)
+            copied = false
+        }
+    }
+    TextButton(onClick = {
+        clipboard.setText(AnnotatedString(diagnostics()))
+        copied = true
+    }, modifier = Modifier.fillMaxWidth()) { Text(ui(if (copied) "start.copied" else "start.copy_log"), color = Gold) }
+}
+
+private const val COPIED_MS = 2_000L
 
 /** How long the start's window waits before it offers to go on without the rest. */
 private const val CONTINUE_AFTER_MS = 15_000L

@@ -20,6 +20,10 @@ data class World(
     val iconKeys: Int = 0,
     val iconSprites: Int = 0,
     val portraits: Int = 0,
+    /** Работающий сервер по его манифесту (3.88.2): версия, ревизия API и коммит; пусто, пока манифест не прочитан. */
+    val serverVersion: String = "",
+    val serverRevision: Int = 0,
+    val serverCommit: String = "",
 )
 
 /** Единственный источник правды о мире сервера (3.80.7). */

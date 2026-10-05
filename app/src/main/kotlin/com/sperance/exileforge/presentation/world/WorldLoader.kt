@@ -17,6 +17,7 @@ import com.sperance.exileforge.core.model.sync.StaticManifest
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.app.StartStage
@@ -190,7 +191,9 @@ class WorldLoader(
      */
     suspend fun ensureContent(fresh: Boolean = false) = locked {
         val server = sessions.state.value.server
-        val manifest = trace.step(StartStage.CONTENT, "start.step.manifest") { api.manifest(fresh).content }
+        val served = trace.step(StartStage.CONTENT, "start.step.manifest") { api.manifest(fresh) }
+        world.update { it.server(served) }
+        val manifest = served.content
         if (manifest.hash == world.state.value.contentHash && world.state.value.content != null) return@locked
         // Each chunk says whether it came from the device or the network; the downloads are kept only once
         // the whole world has read, so a broken download is fetched again rather than stored.
@@ -258,7 +261,7 @@ class WorldLoader(
             } catch (_: Exception) {
                 return false
             }
-            world.update { it.copy(content = index, contentHash = manifest.content.hash) }
+            world.update { it.copy(content = index, contentHash = manifest.content.hash).server(manifest) }
             return true
         }
     }
@@ -266,3 +269,6 @@ class WorldLoader(
 
 /** Дольше этого чтение не ждёт замок контента, мс: меньше предела раннера, чтобы упасть своей ошибкой раньше сторожа. */
 private const val LOCK_WAIT_MS = 20_000L
+
+/** Что сервер сказал о себе в манифесте (3.88.2) - экран «Контракт сервера» показывает это рядом с закреплённым сервером. */
+private fun World.server(manifest: StaticManifest) = copy(serverVersion = manifest.version, serverRevision = manifest.revision, serverCommit = manifest.commit)

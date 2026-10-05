@@ -46,6 +46,8 @@ const val API_REVISION = 47
     val content: ContentManifest = ContentManifest(),
     /** The server's rules version (server 1.62.0): other rules roll runs differently, so the client needs a new build, not new content. */
     val rules: Int = 0,
+    /** Коммит работающего сервера (server 1.80.5): экран «Контракт сервера» показывает его рядом с закреплённым. */
+    val commit: String = "",
 ) {
     val capabilities: ApiCapabilities get() = ApiCapabilities.of(routes)
 

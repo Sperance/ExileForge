@@ -282,10 +282,15 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     }
     // The build and its updates (3.72.0): the version, and a check by hand.
     UpdateCard()
-    // The wire this client speaks: the API revision it refuses to differ from, and the server it was built against.
+    // Работающий сервер - из его манифеста, закреплённый - из сборки (3.88.2): расхождение видно сразу.
+    val live = if (world.serverVersion.isNotBlank()) {
+        ui("account.contract_live", world.serverVersion, world.serverRevision, world.serverCommit.take(12).ifBlank { "-" })
+    } else {
+        ui("account.contract_live_unknown")
+    }
     InfoCard(
         ui("account.contract"),
-        "API $API_REVISION · $SERVER_VERSION · $SERVER_BRANCH · ${SERVER_COMMIT.take(12)}\n" +
+        live + "\n" + ui("account.contract_built", SERVER_VERSION, API_REVISION, SERVER_BRANCH, SERVER_COMMIT.take(12)) + "\n" +
             ui("account.contract_note"),
     )
 }

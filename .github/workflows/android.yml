@@ -10,6 +10,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -70,10 +72,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      # The server under test is the pinned `backend/` submodule: the commit `SERVER_COMMIT` in Contract.kt names.
+      # The server under test is the pinned `backend/` submodule: its HEAD is the generated `SERVER_COMMIT`.
       - uses: actions/checkout@v4
         with:
           submodules: true
+          # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -132,6 +136,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
+          # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
+          fetch-depth: 0
       - id: version
         run: |
           version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)

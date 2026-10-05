@@ -691,6 +691,7 @@
   "fight.no_states": "No states",
   "stall.title": "Main thread stall",
   "start.continue": "Continue without waiting",
+  "start.unreachable": "The server is not answering — check the connection. The game keeps trying; you can go in with what the device has.",
   "start.copy_log": "Copy the start log",
   "start.copied": "Log copied",
   "start.seconds": "{0} s",

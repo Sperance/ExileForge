@@ -23,6 +23,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.session.StartGate
+import com.sperance.exileforge.core.session.StartSignals
+import com.sperance.exileforge.core.session.StartVerdict
 import com.sperance.exileforge.presentation.app.StartStage
 import com.sperance.exileforge.presentation.app.StartStep
 import com.sperance.exileforge.presentation.app.StepState
@@ -66,7 +69,14 @@ data class StartStages(
     LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
     // The window is the start's, once: a content read later in the game is the banner's.
     var released by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(stages.settled) { if (stages.settled) released = true }
+    val clock by produceState(System.currentTimeMillis()) {
+        while (true) {
+            delay(TICK_MS)
+            value = System.currentTimeMillis()
+        }
+    }
+    val verdict = StartGate.verdict(stages.signals(steps, clock))
+    LaunchedEffect(verdict) { if (verdict == StartVerdict.RELEASE) released = true }
     var waited by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(CONTINUE_AFTER_MS)
@@ -82,10 +92,12 @@ data class StartStages(
             Text(ui("start.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             StageList(s, stages, steps)
             LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
-            if (waited) {
-                MutedText(ui("start.slow"))
+            // Сервер молчит (3.84.4) - это видно сразу, и войти с тем, что есть на устройстве, можно не дожидаясь.
+            if (verdict == StartVerdict.UNREACHABLE) Text(ui("start.unreachable"), color = Ember, style = MaterialTheme.typography.bodyMedium)
+            if (waited || verdict == StartVerdict.UNREACHABLE) {
+                if (verdict != StartVerdict.UNREACHABLE) MutedText(ui("start.slow"))
                 ForgeOutlinedButton(onClick = { released = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("start.continue")) }
-                CopyLog { diagnostics() + "\n--- window\n$stages settled=${stages.settled} released=$released update=${s.update != null} busy=$busy" }
+                CopyLog { diagnostics() + "\n--- window\n$stages verdict=$verdict released=$released update=${s.update != null} busy=$busy" }
             }
         }
 
@@ -110,6 +122,24 @@ data class StartStages(
 }
 
 private const val COPIED_MS = 2_000L
+
+/** Сетевые шаги старта: их DONE - сервер ответил, FAIL - не ответил. Манифест мира не в счёт: без сети его даёт копия устройства. */
+private val SERVER_STEPS = setOf("start.step.server_manifest", "start.step.workbench", "start.step.resume", "start.step.device")
+
+/** Сигналы старта для [StartGate]: флаги стадий и журнал шагов на миг [now]. */
+private fun StartStages.signals(steps: List<StartStep>, now: Long) = StartSignals(
+    startupDone = startupDone,
+    sessionBusy = sessionBusy,
+    contentLoading = contentLoading,
+    contentReady = contentReady,
+    serverAnswered = steps.any { it.key in SERVER_STEPS && it.state == StepState.DONE },
+    serverFailed = steps.any { it.key in SERVER_STEPS && it.state == StepState.FAIL },
+    running = steps.count { it.state == StepState.RUN },
+    elapsedMs = steps.firstOrNull()?.let { now - it.startedAt } ?: 0,
+)
+
+/** Как часто окно пересматривает решение. */
+private const val TICK_MS = 500L
 
 /** How long the start's window waits before it offers to go on without the rest. */
 private const val CONTINUE_AFTER_MS = 15_000L

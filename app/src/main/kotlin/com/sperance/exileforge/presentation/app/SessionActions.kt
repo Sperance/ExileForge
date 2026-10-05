@@ -208,6 +208,9 @@ class SessionActions(
             modes.set(AppMode.PLAYER)
             warmupActions.clear()
             heroSync.restore(heroId, copy.snapshot)
+            // Лист героя складывается вне главного потока (3.55.0): без ожидания рисунка герой здесь ещё пуст, и быстрый
+            // старт всякий раз падал в обычный вход (3.84.3).
+            heroSync.drawn()
             val foreign = heroes.state.value.owner.let { it.isNotEmpty() && it != copy.account.id }
             if (heroes.state.value.hero == null || foreign) {
                 clearSession()

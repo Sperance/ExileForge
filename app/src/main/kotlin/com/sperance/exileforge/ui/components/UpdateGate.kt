@@ -85,7 +85,7 @@ data class StartStages(
             if (waited) {
                 MutedText(ui("start.slow"))
                 ForgeOutlinedButton(onClick = { released = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("start.continue")) }
-                CopyLog(diagnostics)
+                CopyLog { diagnostics() + "\n--- window\n$stages settled=${stages.settled} released=$released update=${s.update != null} busy=$busy" }
             }
         }
 

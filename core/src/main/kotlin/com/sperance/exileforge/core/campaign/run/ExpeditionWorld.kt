@@ -70,7 +70,7 @@ class ExpeditionWorld(
     /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
     internal var portalArmed = true
 
-    /** Монстры карты: жетоны, босс и стаи подкрепления алтаря (3.89.1), что встают посреди захода ([summon]). */
+    /** Монстры карты: жетоны, босс и стаи подкрепления алтаря (3.90.0), что встают посреди захода ([summon]). */
     private val roster: MutableList<MonsterAgent> = (
         packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
             MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
@@ -81,7 +81,7 @@ class ExpeditionWorld(
     val agents: List<MonsterAgent> get() = roster
 
     /**
-     * Стая подкрепления жетона [token] встаёт рядом с [near] (3.89.1, сделка алтаря): в паре шагов от клетки, на полу. Один
+     * Стая подкрепления жетона [token] встаёт рядом с [near] (3.90.0, сделка алтаря): в паре шагов от клетки, на полу. Один
      * жетон встаёт один раз.
      */
     fun summon(token: Int, pack: List<RolledMonster>, near: Cell) {
@@ -163,7 +163,7 @@ class ExpeditionWorld(
     /** The crack the hero stands at, until they step off it. */
     internal var atCrack: AbyssSpot? = null
 
-    /** Объекты карты (3.89.1): алтари, торговец, ловушки, комнаты, узлы - ставит [placeFeatures]. */
+    /** Объекты карты (3.90.0): алтари, торговец, ловушки, комнаты, узлы - ставит [placeFeatures]. */
     val features = mutableListOf<FeatureSpot>()
 
     init {

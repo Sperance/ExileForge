@@ -50,7 +50,7 @@ import kotlin.random.Random
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
     wound(dt)
-    // Горение и яд ловушек (3.89.1) - на дороге, и они убивают
+    // Горение и яд ловушек (3.90.0) - на дороге, и они убивают
     burn(dt)
     if (phase != RunPhase.MAP) return
     val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)

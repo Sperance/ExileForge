@@ -340,7 +340,7 @@ fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>)
     return fillTemplate(template, ranges)
 }
 
-/** A monster's or a map's summed effect as a short line: «Здоровье: +40%», by operation; знак - из числа (3.89.1), «−51%», не «+-51%». */
+/** A monster's or a map's summed effect as a short line: «Здоровье: +40%», by operation; знак - из числа (3.90.0), «−51%», не «+-51%». */
 fun effectText(stat: String, op: Op, value: Double, index: ContentIndex? = null): String {
     val title = statTitle(stat)
     val size = signedNumber(value) { modNumber(stat, it) }

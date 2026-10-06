@@ -143,7 +143,7 @@ import kotlin.math.roundToInt
                 }
                 hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
                 hud.chest?.let { ChestLoot(game, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
-                // Лист объекта карты (3.89.1): алтарь, торговец, узел ремесла
+                // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
                 hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
                 if (leaving) {
                     ConfirmSheet(
@@ -237,7 +237,7 @@ import kotlin.math.roundToInt
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
-                // Удар ловушки и простой у трещины (3.89.1)
+                // Удар ловушки и простой у трещины (3.90.0)
                 HazardLine(hud.hazard, hud.opening)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
             }

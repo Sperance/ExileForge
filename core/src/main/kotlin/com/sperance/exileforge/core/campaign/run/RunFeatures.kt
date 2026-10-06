@@ -15,7 +15,7 @@ import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 
-// ==================== Объекты карты (3.89.1, сервер 1.81.3) ====================
+// ==================== Объекты карты (3.90.0, сервер 1.81.3) ====================
 
 /** Сбор узла [spot]: прошло [elapsed] секунд из его [MapFeature.Node.seconds]. */
 internal class Channel(val spot: NodeSpot, var elapsed: Double = 0.0)
@@ -131,7 +131,7 @@ internal fun ExpeditionRun.guard() {
  * строки на своём потоке. Без сделок - как стоит.
  */
 internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
-    // Ловушки ранят монстров (3.89.1, сила уникалки): на карте с ловушками стая встаёт в бой с меньшим здоровьем
+    // Ловушки ранят монстров (3.90.0, сила уникалки): на карте с ловушками стая встаёт в бой с меньшим здоровьем
     val strike = run.context.feature(FeatureStat.TRAP_STRIKE).takeIf { it > 0 && world.features.any { spot -> spot is TrapSpot } }
     if (pacts.isEmpty() && strike == null) return member.monster
     val buffs = MapEffects.buffs(pacts) + (if (member.agent === world.boss) MapEffects.bossBuffs(pacts) else emptyList()) +
@@ -148,7 +148,7 @@ internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
 internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
     val trap = feature.trap
     val type = DamageType.element(trap.element) ?: DamageType.PHYSICAL
-    // Сила ловушек карты и защита героя от её стихии (3.89.1): 100% защиты - ловушка не ранит
+    // Сила ловушек карты и защита героя от её стихии (3.90.0): 100% защиты - ловушка не ранит
     val ward = FeatureStat.ward(trap.element)?.let { run.context.feature(it) } ?: 0.0
     val share = feature.power * (1 - ward / 100).coerceAtLeast(0.0)
     val raw = hero.maxLife * trap.hit / 100 * share

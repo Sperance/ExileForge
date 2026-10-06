@@ -284,7 +284,7 @@ internal fun SessionTally(totals: WorkGains) {
  * A cycle's bar, filled smoothly (2.47.0): it reads the device's clock every frame, set by the
  * server's through [offset], and only the bar is redrawn — the screen around it is not recomposed.
  * Under it (3.24.0) the time the cycle has run of its whole, and what the work brings in an hour on average.
- * С 3.89.1 полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
+ * С 3.90.0 полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
  * всплывает, что принёс пересчёт на границе цикла ([last]).
  */
 @Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6, hourly: String? = null) {
@@ -314,7 +314,7 @@ internal fun SessionTally(totals: WorkGains) {
 }
 
 /**
- * Всплывашка сбора над полосой цикла (3.89.1): что принёс пересчёт сервера - «+1 Медная руда · +2 опыта» или «пусто» -
+ * Всплывашка сбора над полосой цикла (3.90.0): что принёс пересчёт сервера - «+1 Медная руда · +2 опыта» или «пусто» -
  * на [HARVEST_SHOWN] мс. Сбор, что уже был при открытии экрана, не всплывает; без анимаций в настройках - без плавности.
  */
 @Composable private fun HarvestPopup(last: Harvest?) {

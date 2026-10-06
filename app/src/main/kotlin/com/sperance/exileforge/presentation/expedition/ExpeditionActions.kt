@@ -563,7 +563,7 @@ class ExpeditionActions(
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE,
             // Начало боя (3.88.0): его добыча нужна до первого убийства.
             RunEventKind.ENGAGE,
-            // Объект карты (3.89.1): золото торговца, сделка алтаря и добыча комнаты - ответ нужен сразу.
+            // Объект карты (3.90.0): золото торговца, сделка алтаря и добыча комнаты - ответ нужен сразу.
             RunEventKind.FEATURE,
         )
         const val BATCH = 6

@@ -34,7 +34,7 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * «Надеть» над выпавшей вещью (3.89.0): одно действие для карточки лута и строки сундука - где вещь стоит, можно ли
  * надеть её сейчас и само надевание. Вещь из ролла попадает в тайник с ответом журнала, до того кнопка ждёт.
- * Положение вещи с 3.89.1 - общее правило списков лута [lootPresence].
+ * Положение вещи с 3.90.0 - общее правило списков лута [lootPresence].
  */
 internal class LootWear(private val game: GameUi, private val vm: ExpeditionViewModel, private val pending: Int) {
     /** Журнал ещё несёт ответы: вещи, которой нет у героя, ждут. */

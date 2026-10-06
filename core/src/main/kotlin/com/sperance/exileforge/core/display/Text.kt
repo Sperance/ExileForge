@@ -99,7 +99,7 @@ fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code
 
 /**
  * A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. Плюс шаблона перед
- * плейсхолдером (`+{0}`) - лишь место знака (3.89.1): знак даёт само число, отрицательное печатается «−51», а не «+-51».
+ * плейсхолдером (`+{0}`) - лишь место знака (3.90.0): знак даёт само число, отрицательное печатается «−51», а не «+-51».
  */
 fun fillTemplate(template: String, values: List<String>): String = values.foldIndexed(template) { index, text, value ->
     val size = value.removePrefix("-").removePrefix(ModifierText.MINUS)
@@ -109,7 +109,7 @@ fun fillTemplate(template: String, values: List<String>): String = values.foldIn
 }
 
 /**
- * Число со знаком (3.89.1) - единственный путь знака в строки эффектов, монстров, карт и атласа: «+12», «−51» (типографский
+ * Число со знаком (3.90.0) - единственный путь знака в строки эффектов, монстров, карт и атласа: «+12», «−51» (типографский
  * минус). Знак берётся из числа, шаблоны словаря его не пишут; [format] печатает модуль. Ноль - с плюсом.
  */
 fun signedNumber(value: Double, format: (Double) -> String = ::number): String = (if (value < 0) ModifierText.MINUS else "+") + format(kotlin.math.abs(value))
@@ -128,7 +128,7 @@ fun statNumber(stat: String, value: Double): String = if (stat in preciseStats) 
 
 fun number(value: Double): String = statNumber("", value)
 
-/** Целое с разрядами через неразрывный пробел (3.89.1): «1 240», «2 950» - крупные счётчики вроде опыта. */
+/** Целое с разрядами через неразрывный пробел (3.90.0): «1 240», «2 950» - крупные счётчики вроде опыта. */
 fun groupedNumber(value: Long): String = String.format(java.util.Locale.ROOT, "%,d", value).replace(',', '\u00A0')
 
 /** Число строки модификатора: увеличение - доля без хвостовых нулей, прочее - как бросок. */

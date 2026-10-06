@@ -150,7 +150,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     val crafts = held.state
     var additives by remember(work.code) { mutableStateOf(emptyList<String>()) }
     // A choosing work (3.45.0) is started as one of its variants: the sheet shows the one picked.
-    // С 3.89.1 варианты не прячутся по уровню: недоступный виден с замком, а причину называет низ листа.
+    // С 3.90.0 варианты не прячутся по уровню: недоступный виден с замком, а причину называет низ листа.
     val choices = choices(game, work)
     // Кузнец (3.89.0) открывается в режиме, последний раз запущенном этим героем на устройстве; ничего не было - «Случайно».
     val smith = work.kind == JobKind.EQUIPMENT
@@ -219,7 +219,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                     vm.stop()
                 }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
 
-                // Одна точная причина вместо кнопки (3.89.1): уровень, вариант, регион, инструмент или нехватка на цикл.
+                // Одна точная причина вместо кнопки (3.90.0): уровень, вариант, регион, инструмент или нехватка на цикл.
                 block != null -> Text(block.text, color = LifeRed, style = MaterialTheme.typography.bodyMedium)
 
                 else -> ForgeButton(enabled = !game.busy, onClick = {

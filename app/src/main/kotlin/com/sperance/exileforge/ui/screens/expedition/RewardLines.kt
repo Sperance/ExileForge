@@ -31,7 +31,7 @@ import com.sperance.exileforge.ui.theme.*
  * [awaiting]: some of it is still on its way, and the sheet says so instead of «nothing else».
  * With [onItem] a card opens its comparison with what is worn (3.24.0). Каждая надеваемая вещь несёт стрелки урона и
  * защиты (3.89.0), а с [wear] - и «Надеть» прямо в строке, не открывая карточки. Вещь показывается по её положению у
- * героя (3.89.1, [presentLoot]): проданной нет, надетая - с меткой «Надето» и без действий; окно при этом не закрывается.
+ * героя (3.90.0, [presentLoot]): проданной нет, надетая - с меткой «Надето» и без действий; окно при этом не закрывается.
  */
 @Composable internal fun RewardLines(game: GameUi, reward: Reward, onItem: ((ItemView) -> Unit)? = null, awaiting: Boolean = false, wear: LootWear? = null) {
     val gear = game.presentLoot(reward.equipment, arriving = awaiting || wear?.arriving == true)
@@ -82,7 +82,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Надетая вещь лута (3.89.1): строка с меткой «Надето», без цены и действий - во всех списках лута одна. */
+/** Надетая вещь лута (3.90.0): строка с меткой «Надето», без цены и действий - во всех списках лута одна. */
 @Composable internal fun WornLootRow(piece: ItemView) = ItemRow(piece, compact = true, enabled = false, worn = true, onClick = {})
 
 /** «Надеть» в строке лута (3.89.0): та же команда, что в карточке; надетая или пропавшая вещь кнопки не несёт. */

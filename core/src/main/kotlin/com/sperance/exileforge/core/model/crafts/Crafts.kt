@@ -76,12 +76,12 @@ import kotlinx.serialization.Serializable
     val choice: String = "",
 ) {
     /**
-     * Сколько прошло текущего цикла на часах сервера [now] (3.89.1): по кругу от [settledAt], так что полоса идёт
+     * Сколько прошло текущего цикла на часах сервера [now] (3.90.0): по кругу от [settledAt], так что полоса идёт
      * дальше, даже пока сервер не пересчитал работу, а не стоит на 100%. До [settledAt] - ноль.
      */
     fun phase(now: Long): Long = if (cycleMillis > 0) (now - settledAt).coerceAtLeast(0L) % cycleMillis else 0L
 
-    /** Ближайшая граница цикла позже [now] на часах сервера (3.89.1): на ней работа пересчитывается с сервера. */
+    /** Ближайшая граница цикла позже [now] на часах сервера (3.90.0): на ней работа пересчитывается с сервера. */
     fun nextBoundary(now: Long): Long = maxOf(now, settledAt) - phase(now) + cycleMillis
 }
 

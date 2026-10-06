@@ -188,7 +188,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         Caption(ui("expedition.report_recipe"))
         Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
     }
-    // По положению у героя (3.89.1): проданная вещь уходит из списка, надетая остаётся с меткой «Надето».
+    // По положению у героя (3.90.0): проданная вещь уходит из списка, надетая остаётся с меткой «Надето».
     val gear = game.presentLoot(reward.equipment, arriving = hud.rewardAwaiting > 0).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))

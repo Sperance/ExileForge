@@ -34,7 +34,7 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Лист объекта карты (3.89.1, сервер 1.81.3), по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
+ * Лист объекта карты (3.90.0, сервер 1.81.3), по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
  * открывают - они срабатывают сами.
  */
 @Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, onCommand: (RunCommand) -> Unit) {

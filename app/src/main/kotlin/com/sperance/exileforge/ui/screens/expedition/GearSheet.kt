@@ -39,7 +39,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * «Новый лут» (2.45.0): the gear this run brought, maps aside. Each piece is its view over the content (3.0.0): the hero's
- * copy of it when the hero holds it, the roll's otherwise. Положение - общее правило лута (3.89.1, [lootPresence]): проданной
+ * copy of it when the hero holds it, the roll's otherwise. Положение - общее правило лута (3.90.0, [lootPresence]): проданной
  * вещи нет, надетая остаётся с меткой «Надето»; до чтения героя после её выпадения вещь ждёт, а не пропадает.
  */
 fun newLoot(game: GameUi, runLoot: List<LootEntry>): List<Pair<ItemView, LootPresence>> = runLoot.mapNotNull { entry ->
@@ -52,7 +52,7 @@ fun newLoot(game: GameUi, runLoot: List<LootEntry>): List<Pair<ItemView, LootPre
  * walking map. An empty place opens the stash narrowed to what fits it; a worn one shows its card
  * with «Снять» and «Заменить». The server decides, the hero is re-read, and the run takes the new
  * sheet before its next fight — life and mana keep their share.
- * Вкладка «Подходящее» (3.89.1) между надетым и лутом заменила отдельный лист смены снаряжения.
+ * Вкладка «Подходящее» (3.90.0) между надетым и лутом заменила отдельный лист смены снаряжения.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,7 +98,7 @@ fun GearSheet(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
                     }
                 }
             }
-            // The tabs sit at the foot (2.45.0): the body's ledger, what the stash offers to wear (3.89.1), and what this run brought.
+            // The tabs sit at the foot (2.45.0): the body's ledger, what the stash offers to wear (3.90.0), and what this run brought.
             TabRow(selectedTabIndex = tab.ordinal, containerColor = Abyss, contentColor = Gold) {
                 GearTab.entries.forEach { one ->
                     Tab(selected = tab == one, onClick = { tab = one }, text = { Text(one.title(loot.size)) })
@@ -135,7 +135,7 @@ fun GearSheet(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
     }
 }
 
-/** Вкладки листа снаряжения (3.89.1): надетое, подходящее из тайника и лут забега - со счётчиком. */
+/** Вкладки листа снаряжения (3.90.0): надетое, подходящее из тайника и лут забега - со счётчиком. */
 private enum class GearTab {
     WORN,
     FITTING,
@@ -150,7 +150,7 @@ private enum class GearTab {
 }
 
 /**
- * «Подходящее» (3.89.1): всё из тайника, что герой может надеть, улучшения первыми по сумме изменений урона и защиты, -
+ * «Подходящее» (3.90.0): всё из тайника, что герой может надеть, улучшения первыми по сумме изменений урона и защиты, -
  * плитка вещи в облике её редкости, итог «Урон ▲ · Защита ▼» и «Надеть» одним нажатием. Сменённая вещь действует со
  * следующего боя; [fits] null - вердикты ещё считаются.
  */

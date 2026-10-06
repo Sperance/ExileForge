@@ -123,11 +123,11 @@ fun relicLook(rarity: Rarity): RelicLook {
     }
 }
 
-/** Имя вещи серифами размера [size] в цвете редкости; у легенды - с ореолом её свечения (3.89.1). */
+/** Имя вещи серифами размера [size] в цвете редкости; у легенды - с ореолом её свечения (3.90.0). */
 fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = name, shadow = if (legend != null) Shadow(glow.copy(alpha = .6f), blurRadius = 18f) else null)
 
 /**
- * Подложка вещи в облике редкости (3.89.1) - общая для полной карточки и плитки: градиент [RelicLook.top] → [RelicLook.bottom],
+ * Подложка вещи в облике редкости (3.90.0) - общая для полной карточки и плитки: градиент [RelicLook.top] → [RelicLook.bottom],
  * свечение редкости от верхнего края, небо легенды, завитки по углам у легенды и рамка - нить [RelicLook.gold], у выбранной - золото.
  */
 @Composable fun Modifier.relicGround(look: RelicLook, shape: Shape, selected: Boolean = false): Modifier {
@@ -147,7 +147,7 @@ fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = nam
 }
 
 /**
- * Гнездо иконки размера [size] (3.89.1): у обычной, волшебной и редкой - скруглённый квадрат басальта в нити редкости,
+ * Гнездо иконки размера [size] (3.90.0): у обычной, волшебной и редкой - скруглённый квадрат басальта в нити редкости,
  * у легенды - круг её неба в золотой нити с ореолом, как гнездо «Астролябии».
  */
 @Composable fun RelicSocket(item: ItemView, look: RelicLook, size: Dp) {

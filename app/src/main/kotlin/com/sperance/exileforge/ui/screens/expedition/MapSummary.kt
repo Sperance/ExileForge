@@ -192,7 +192,7 @@ private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onSt
 
 /**
  * Добытая вещь «Полем боя» (3.88.6): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
- * Надетая (3.89.1, [presence]) - строкой с меткой «Надето», без действий.
+ * Надетая (3.90.0, [presence]) - строкой с меткой «Надето», без действий.
  */
 @Composable internal fun PieceLine(item: ItemView, presence: LootPresence, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, onClick = onClick)
 

@@ -199,7 +199,7 @@ class UiStringsTest {
             com.sperance.exileforge.rules.content.Stat.COMBAT.forEach { add("stats.$it") }
             com.sperance.exileforge.rules.content.Stat.GROUPS.forEach { add("stats.group.$it") }
             com.sperance.exileforge.rules.content.QuestCondition.entries.forEach { add("quest.condition.${it.name}") }
-            // Ловушки карты (3.89.1): полоса карты называет удар по коду ловушки контента.
+            // Ловушки карты (3.90.0): полоса карты называет удар по коду ловушки контента.
             TestContent.index.campaign.features?.traps?.kinds?.forEach { add("trap.${it.code}") }
         }
 

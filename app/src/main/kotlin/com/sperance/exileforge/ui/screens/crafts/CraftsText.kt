@@ -85,7 +85,7 @@ fun workTitle(work: WorkView): String = com.sperance.exileforge.core.display.wor
  */
 fun gainsLine(gains: WorkGains): String = gainParts(gains).joinToString(" · ").ifBlank { ui("crafts.gain_nothing", gains.cycles) }
 
-/** Всплывашка сбора у полосы цикла (3.89.1): то же, что [gainsLine], с опытом - «+1 Медная руда · +2 опыта», а без добычи - «пусто». */
+/** Всплывашка сбора у полосы цикла (3.90.0): то же, что [gainsLine], с опытом - «+1 Медная руда · +2 опыта», а без добычи - «пусто». */
 fun harvestLine(gains: WorkGains): String = (gainParts(gains) + listOfNotNull(gains.experience.takeIf { it > 0 }?.let { ui("crafts.experience_gain", number(it)) }))
     .joinToString(" · ").ifBlank { ui("crafts.harvest_empty") }
 
@@ -227,7 +227,7 @@ internal fun cycleCost(game: GameUi, job: JobView): AnnotatedString = buildAnnot
 internal const val TILES = 3
 
 /**
- * The variants a choosing work offers: every one, whatever the profession's level (3.89.1: a locked one shows its lock and
+ * The variants a choosing work offers: every one, whatever the profession's level (3.90.0: a locked one shows its lock and
  * the sheet names the level) — but for the condensing only the essences the bag can feed a cycle of, else a hundred and
  * forty chips would bury the few that can run.
  */

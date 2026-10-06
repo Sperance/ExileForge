@@ -10,7 +10,7 @@ import com.sperance.exileforge.rules.run.MapFeature
 import kotlin.math.hypot
 import kotlin.random.Random
 
-/** Что шаг героя сделал с объектом карты (3.89.1, сервер 1.81.3). */
+/** Что шаг героя сделал с объектом карты (3.90.0, сервер 1.81.3). */
 sealed interface FeatureAction {
     val spot: FeatureSpot
 
@@ -22,7 +22,7 @@ sealed interface FeatureAction {
 }
 
 /**
- * Объект карты на земле (3.89.1, сервер 1.81.3) - общая абстракция всего, что стоит на карте и ждёт героя: объект правил
+ * Объект карты на земле (3.90.0, сервер 1.81.3) - общая абстракция всего, что стоит на карте и ждёт героя: объект правил
  * [feature] (что он и что в нём - бросок семени, тот же, что проверяет сервер) и клетка [cell], где его поставило семя. Мир
  * спрашивает каждый объект, что с ним сделал шаг героя ([touch]); выборы, уже записанные в журнал, - [taken], по ним объект
  * исчерпан ([spent]). Новый объект - подкласс, а не ветка в шаге мира.
@@ -67,7 +67,7 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
 }
 
 /**
- * Объект с выбором на листе (3.89.1) - алтарь, торговец, узел ремесла: шагнувший к нему герой видит его лист, отошедший - может
+ * Объект с выбором на листе (3.90.0) - алтарь, торговец, узел ремесла: шагнувший к нему герой видит его лист, отошедший - может
  * вернуться; отказ под ногами не открывает лист снова, пока герой не сошёл с клетки.
  */
 sealed class OfferSpot(feature: MapFeature, cell: Cell) : FeatureSpot(feature, cell) {
@@ -83,17 +83,17 @@ sealed class OfferSpot(feature: MapFeature, cell: Cell) : FeatureSpot(feature, c
     }
 }
 
-/** Алтарь сделки (3.89.1): выбранная пара ложится на героя и бои сразу; отказаться нельзя - лист не закрывается без выбора. */
+/** Алтарь сделки (3.90.0): выбранная пара ложится на героя и бои сразу; отказаться нельзя - лист не закрывается без выбора. */
 class AltarSpot(feature: MapFeature.Altar, cell: Cell) : OfferSpot(feature, cell) {
     val altar: MapFeature.Altar get() = feature as MapFeature.Altar
 }
 
-/** Странствующий торговец (3.89.1): лист открыт, пока игрок покупает; купленное помечено, золото спишет сервер. */
+/** Странствующий торговец (3.90.0): лист открыт, пока игрок покупает; купленное помечено, золото спишет сервер. */
 class MerchantSpot(feature: MapFeature.Merchant, cell: Cell) : OfferSpot(feature, cell) {
     val merchant: MapFeature.Merchant get() = feature as MapFeature.Merchant
 }
 
-/** Узел ремесла (3.89.1): собранное сырьё приходит ответом сервера, как добыча сундука. */
+/** Узел ремесла (3.90.0): собранное сырьё приходит ответом сервера, как добыча сундука. */
 class NodeSpot(feature: MapFeature.Node, cell: Cell) : OfferSpot(feature, cell) {
     val node: MapFeature.Node get() = feature as MapFeature.Node
 
@@ -103,7 +103,7 @@ class NodeSpot(feature: MapFeature.Node, cell: Cell) : OfferSpot(feature, cell) 
 }
 
 /**
- * Ловушка (3.89.1): видна только в свете героя - больший радиус света замечает её раньше; однажды замеченная или сработавшая
+ * Ловушка (3.90.0): видна только в свете героя - больший радиус света замечает её раньше; однажды замеченная или сработавшая
  * остаётся на карте. Срабатывает раз, когда герой наступил ближе [reach] к центру клетки.
  */
 class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double) : FeatureSpot(feature, cell) {
@@ -130,7 +130,7 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double) 
 }
 
 /**
- * Комната за стеной (3.89.1): тайная - трещина [entrance], у которой стоят [seconds] секунд; запертая - дверь [entrance], что
+ * Комната за стеной (3.90.0): тайная - трещина [entrance], у которой стоят [seconds] секунд; запертая - дверь [entrance], что
  * открывает рычаг [lever] в другом конце карты. Открытая - сундук сокровищницы [chest] внутри.
  */
 class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, val lever: Cell?, private val seconds: Double) : FeatureSpot(feature, entrance) {
@@ -178,7 +178,7 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
 }
 
 /**
- * Ставит объекты карты, один раз (3.89.1): где - по семени, вдали от входа, выхода, монстров и прочих объектов; комнаты
+ * Ставит объекты карты, один раз (3.90.0): где - по семени, вдали от входа, выхода, монстров и прочих объектов; комнаты
  * вырезаются в скале за стеной, касаясь пола только входом, так что карта остаётся связной, а комната закрыта до открытия.
  * [log] - журнал объектов, с которым герой вернулся в заход: использованное стоит использованным, открытые комнаты открыты.
  */
@@ -224,7 +224,7 @@ fun ExpeditionWorld.openRoom(spot: RoomSpot) {
 private const val TRAP_SPACING = 3.0
 
 /**
- * Комната в скале (3.89.1): вход - стена рядом с достижимым полом, за ней квадрат [size]×[size] пола; всё вокруг квадрата,
+ * Комната в скале (3.90.0): вход - стена рядом с достижимым полом, за ней квадрат [size]×[size] пола; всё вокруг квадрата,
  * кроме входа, - скала, так что до открытия комната отрезана от карты, а после - связана с ней одной клеткой.
  */
 private object RoomCarver {

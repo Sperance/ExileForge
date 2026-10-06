@@ -85,7 +85,7 @@ class ExpeditionRun(
     build: HeroBuild,
     val rules: CombatRules,
     internal val seed: Long,
-    /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. Без сделок алтаря (3.89.1): с ними встали стаи на входе. */
+    /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. Без сделок алтаря (3.90.0): с ними встали стаи на входе. */
     val baseEffects: Map<String, Double>,
     /** This run is the Vaal zone behind the portal. */
     val vaal: Boolean,
@@ -109,11 +109,11 @@ class ExpeditionRun(
     var run: Run = run
         internal set
 
-    /** Сделки алтарей захода (3.89.1, сервер 1.81.3), сложенные по характеристике: герой и бои несут их до конца карты. */
+    /** Сделки алтарей захода (3.90.0, сервер 1.81.3), сложенные по характеристике: герой и бои несут их до конца карты. */
     var pacts: Map<String, Double> = emptyMap()
         internal set
 
-    /** The map's summed effects with the altars' bargains (3.89.1): the hero's sheet and the map's window read these. */
+    /** The map's summed effects with the altars' bargains (3.90.0): the hero's sheet and the map's window read these. */
     var mapEffects: Map<String, Double> = baseEffects
         internal set
     internal val spawns get() = Spawns(index, run)
@@ -145,20 +145,20 @@ class ExpeditionRun(
     /** The fountain offered (3.70.0), until it is drunk or turned down. */
     internal var fountain: Fountain? = null
 
-    /** Объект карты, чей лист открыт (3.89.1): забег ждёт ответа игрока, как у фонтана. */
+    /** Объект карты, чей лист открыт (3.90.0): забег ждёт ответа игрока, как у фонтана. */
     internal var offer: FeatureSpot? = null
 
-    /** Сбор узла ремесла (3.89.1): какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
+    /** Сбор узла ремесла (3.90.0): какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
     internal var channel: Channel? = null
 
-    /** Горение и яд ловушек на герое (3.89.1): тикают на карте, могут убить. */
+    /** Горение и яд ловушек на герое (3.90.0): тикают на карте, могут убить. */
     internal val burns = mutableListOf<Burn>()
 
-    /** Последний удар ловушки на экране (3.89.1) и сколько секунд он ещё висит. */
+    /** Последний удар ловушки на экране (3.90.0) и сколько секунд он ещё висит. */
     internal var hazard: HazardView? = null
     internal var hazardLeft = 0.0
 
-    /** Выборы объектов карты по номеру события (3.89.1): отклонённый сервером объект становится прежним. */
+    /** Выборы объектов карты по номеру события (3.90.0): отклонённый сервером объект становится прежним. */
     internal val featureEvents = HashMap<Int, Pair<FeatureSpot, Int>>()
     internal var crystalOutcome: String? = null
     internal var rift: AbyssSpot? = null
@@ -333,7 +333,7 @@ class ExpeditionRun(
         if (hazardLeft <= 0) hazard = null
         if (holds == 0) {
             when (phase) {
-                // A fountain offered holds the walk until the player answers; так же лист объекта карты и сбор узла (3.89.1).
+                // A fountain offered holds the walk until the player answers; так же лист объекта карты и сбор узла (3.90.0).
                 RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run {
                     channel?.let { gather(it, dt) }
                     if (fountain == null && offer == null && channel == null) walk(dt)
@@ -410,9 +410,9 @@ class ExpeditionRun(
             killed: Collection<Int> = emptyList(),
             /** Chests of the run the server already counts as opened (3.89.0): a run entered again shows them open in their places. */
             opened: Collection<Int> = emptyList(),
-            /** Журнал объектов карты (3.89.1): вернувшийся герой видит их использованными, сделки алтарей действуют. */
+            /** Журнал объектов карты (3.90.0): вернувшийся герой видит их использованными, сделки алтарей действуют. */
             features: Collection<FeatureUse> = emptyList(),
-            /** Сделки алтарей карты, из которой вошли в Ваал-зону (3.89.1): действуют до конца карты и там. */
+            /** Сделки алтарей карты, из которой вошли в Ваал-зону (3.90.0): действуют до конца карты и там. */
             inherited: Map<String, Double> = emptyMap(),
             /** An autorun instead of the stick (3.2.0). */
             auto: AutoPlan? = null,
@@ -446,7 +446,7 @@ class ExpeditionRun(
                 world.placeChests((campaign.chests[location.code.value]?.left ?: 0) + opened.size, opened)
                 world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
-                // Объекты карты (3.89.1) - после прочих: их места не сдвигают ни сундуков, ни кристаллов
+                // Объекты карты (3.90.0) - после прочих: их места не сдвигают ни сундуков, ни кристаллов
                 world.placeFeatures(run.features.all, features, index.campaign.features?.traps?.reach ?: 0.0)
             }
             val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
@@ -457,7 +457,7 @@ class ExpeditionRun(
                 it.atlas = context.atlas.filterValues { value -> value != 0.0 }
                 // Сделки алтарей - до павших: стаи подкрепления встают, и уже убитые из них остаются лежать
                 it.bargain(if (vaal) inherited else run.features.bonuses(features))
-                // Стражи сокровищ (3.89.1, строка карты) - у комнат и узлов, тоже до павших
+                // Стражи сокровищ (3.90.0, строка карты) - у комнат и узлов, тоже до павших
                 if (!vaal) it.guard()
                 world.restore(killed, Run.PACK_SLOTS)
             }

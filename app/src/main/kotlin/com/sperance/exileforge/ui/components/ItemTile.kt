@@ -26,7 +26,7 @@ import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
- * Плитка вещи (3.89.1) - сжатая карточка «Реликвария» в том же облике редкости ([relicGround], [RelicSocket], [RelicLook.nameStyle]):
+ * Плитка вещи (3.90.0) - сжатая карточка «Реликвария» в том же облике редкости ([relicGround], [RelicSocket], [RelicLook.nameStyle]):
  * гнездо и имя в шапке, под ним «что это · редкость», база одной строкой, затем каждая строка вещи мелким шрифтом в цвете её вида -
  * без значков и тиров. [footer] - что добавляет список под строками (вердикт, «Надеть»).
  */

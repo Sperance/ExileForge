@@ -86,7 +86,7 @@ import com.sperance.exileforge.ui.theme.*
  * The classes' experience table says what the next level costs — the client reads it to show what
  * is coming, never to work out a level, which stays the server's to decide. At the last level the
  * bar is whole and says so; without the content there is no scale, and only the total is printed.
- * Подпись (3.89.1) - «1 240 / 2 950 · 42%»: опыт внутри уровня из его размаха до следующего и доля.
+ * Подпись (3.90.0) - «1 240 / 2 950 · 42%»: опыт внутри уровня из его размаха до следующего и доля.
  */
 @Composable private fun ExperienceLine(classes: ClassesFile?, level: Int, experience: Double) {
     val floor = classes?.threshold(level) ?: 0.0

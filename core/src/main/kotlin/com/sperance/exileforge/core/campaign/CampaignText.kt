@@ -34,7 +34,7 @@ fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {
     return effectText(line.stat, line.op, line.value, index)
 }
 
-/** «монстр +20% · карта −15%» (знак - из числа, 3.89.1): where a summed line comes from, when both sources give it. */
+/** «монстр +20% · карта −15%» (знак - из числа, 3.90.0): where a summed line comes from, when both sources give it. */
 fun monsterLineSources(line: MonsterLine, index: ContentIndex? = null): String? = line.takeIf { it.split && it.stat != CoreStat.TAUNT.code }?.let {
     val unit = effectUnit(it.stat, it.op, index)
     ui("fight.line_sources", signedNumber(it.own) { v -> modNumber(it.stat, v) } + unit, signedNumber(it.map) { v -> modNumber(it.stat, v) } + unit)

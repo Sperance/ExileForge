@@ -126,7 +126,7 @@ internal fun ExpeditionRun.begin(number: Int) {
 internal fun ExpeditionRun.battle(): Battle = Battle(
     hero,
     members.map { member ->
-        // Сделки алтаря (3.89.1) ложатся на каждый бой: строки карты, сила босса, лишние строки монстров
+        // Сделки алтаря (3.90.0) ложатся на каждый бой: строки карты, сила босса, лишние строки монстров
         val monster = pactFoe(member)
         // Its own level on a map (3.73.0), the fight's otherwise.
         val level = monster.level.takeIf { it > 0 } ?: fightLevel
@@ -162,7 +162,7 @@ internal fun ExpeditionRun.endFight() {
 /** «Освободить»: the crystal's guardian stands up — the zone's monster, rare, with the lines of the essences it guards — and the fight begins. */
 internal fun ExpeditionRun.release() {
     val spot = crystal ?: return
-    // Строки карты без сделок алтаря (3.89.1): сделки ложатся в самом бою ([pactFoe])
+    // Строки карты без сделок алтаря (3.90.0): сделки ложатся в самом бою ([pactFoe])
     val extra = MapEffects.guardianBuffs(spot.crystal.stronger, index.essences.crystals.stronger, baseEffects)
     val guardian = spawns.crystalGuardian(zone, spot.crystal, spot.id, MapEffects.buffs(baseEffects), extra) ?: return
     crystal = null

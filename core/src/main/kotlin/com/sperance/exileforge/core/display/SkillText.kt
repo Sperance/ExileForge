@@ -154,7 +154,7 @@ object SkillText {
         val negative = locOr("$key.negative", "").takeIf { value < 0 && it.isNotBlank() }
         val template = negative ?: locOr(key, "")
         val shown = if (negative != null) abs(value) else value
-        // Шаблон «+{v}» с отрицательным числом печатается «−5» (3.89.1): знак ставит fillTemplate.
+        // Шаблон «+{v}» с отрицательным числом печатается «−5» (3.90.0): знак ставит fillTemplate.
         if (template.isNotBlank()) return fillTemplate(template.replace("{v}", "{0}"), listOf(if (operation == Op.INCREASED) shareNumber(stat, shown) else statNumber(stat, shown)))
         val size = statNumber(stat, abs(value))
         return when (operation) {

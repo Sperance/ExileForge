@@ -94,10 +94,10 @@ sealed interface RunCommand {
     /** The fountain offered is drunk: life and mana back by its share, the flasks full. */
     data object TakeFountain : RunCommand
 
-    /** Выбор на листе объекта карты (3.89.1): пара алтаря или вещь торговца по номеру. */
+    /** Выбор на листе объекта карты (3.90.0): пара алтаря или вещь торговца по номеру. */
     data class Choose(val choice: Int) : RunCommand
 
-    /** «Собрать» у узла ремесла (3.89.1): сбор идёт его секунды, забег стоит. */
+    /** «Собрать» у узла ремесла (3.90.0): сбор идёт его секунды, забег стоит. */
     data object Gather : RunCommand
 
     /** At a crack of the Abyss: opens it, or goes a depth deeper from the sheet between depths. */

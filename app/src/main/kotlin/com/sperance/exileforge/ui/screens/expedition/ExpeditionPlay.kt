@@ -111,8 +111,8 @@ import kotlin.math.roundToInt
 
             hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> model.runCommand(RunCommand.StepOff)
 
-            // Забег идёт до конца (3.88.8): уйти с карты можно, только когда страж повержен.
-            hud.phase == RunPhase.MAP -> if (!zone && !hud.sealed) leaving = true
+            // С карты вне боя уходят всегда (3.88.9); зона Ваал держит до конца.
+            hud.phase == RunPhase.MAP -> if (!zone) leaving = true
 
             else -> model.runCommand(RunCommand.Leave)
         }
@@ -128,7 +128,7 @@ import kotlin.math.roundToInt
                     game,
                     run,
                     hud,
-                    onLeave = if (zone || hud.sealed) null else ({ leaving = true }),
+                    onLeave = if (zone) null else ({ leaving = true }),
                     onGear = { gear = true },
                     onStats = { sheet = true },
                     onDrink = { model.runCommand(RunCommand.Drink(it)) },

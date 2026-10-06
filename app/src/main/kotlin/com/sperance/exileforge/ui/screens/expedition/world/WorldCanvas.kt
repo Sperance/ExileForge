@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextLayoutResult
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.RoadState
@@ -52,6 +54,7 @@ import com.sperance.exileforge.core.campaign.WorldToken
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
@@ -86,7 +89,8 @@ fun WorldCanvas(
     val march by if (moving) motion.animateFloat(0f, -DASH_PERIOD, infiniteRepeatable(tween(MARCH_MS, easing = LinearEasing)), label = "march") else remember { mutableFloatStateOf(0f) }
     val height = camera.world.height.toFloat()
     val roads = remember(world) { world.roads.map { it.state to road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code.value + it.to.zone.code.value) } }
-    val words = remember(world, measurer) { Words(world, measurer) }
+    val density = LocalDensity.current
+    val words = remember(world, measurer, density) { Words.of(world, measurer, density) }
     // The parchment is recorded once into its own layer (3.77.0) and replayed under the camera: hundreds of sketches and
     // grains are no longer laid out again on every frame of the tokens' pulse.
     val artLayer = rememberGraphicsLayer()
@@ -250,7 +254,17 @@ private fun radius(token: WorldToken): Float = if (token.zone.finale) FINALE_RAD
  * name, the regions the hero knows with their levels, and «Неизведанное» in the fog. Since 3.75.0 a token's words are
  * laid out the first time it comes on screen, and one off screen is not drawn: the map opens without measuring the world.
  */
-private class Words(private val world: WorldMap, private val measurer: TextMeasurer) {
+private class Words(val world: WorldMap, private val measurer: TextMeasurer) {
+    companion object {
+        /** Слова последней карты: возврат на вкладку берёт уже измеренные, а не меряет мир заново (3.88.9). */
+        @Volatile private var last: Pair<List<Any>, Words>? = null
+
+        fun of(world: WorldMap, measurer: TextMeasurer, density: Density): Words {
+            val key = listOf(density.density, density.fontScale, uiLanguage)
+            return last?.takeIf { (k, words) -> words.world === world && k == key }?.second ?: Words(world, measurer).also { last = key to it }
+        }
+    }
+
     private val shade = Shadow(Color.Black, Offset(0f, 1f), 6f)
     private val levels = HashMap<String, TextLayoutResult>()
     private val names = HashMap<String, TextLayoutResult>()

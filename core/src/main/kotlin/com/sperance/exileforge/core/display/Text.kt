@@ -9,10 +9,12 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.Effect
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.ModifierDef
 import com.sperance.exileforge.rules.content.MonsterCode
+import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
@@ -96,7 +98,7 @@ fun statValue(stat: String, value: Double, index: ContentIndex? = null): String 
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
-fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> modNumber(def.effects.getOrNull(i)?.stat.orEmpty(), v) }) }
+fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effects.getOrNull(i), v) }) }
     ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code.value) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
@@ -118,6 +120,12 @@ val preciseStats = setOf(
 fun statNumber(stat: String, value: Double): String = if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else fineNumber(value)
 
 fun number(value: Double): String = statNumber("", value)
+
+/** Число строки модификатора: увеличение - доля без хвостовых нулей, прочее - как бросок. */
+private fun effectNumber(effect: Effect?, value: Double): String = if (effect?.op == Op.INCREASED) shareNumber(effect.stat, value) else modNumber(effect?.stat.orEmpty(), value)
+
+/** Доля в процентах (увеличение, «больше») точной характеристики - без хвостовых нулей: «0.5%», а не «0.50%» (3.88.9). */
+fun shareNumber(stat: String, value: Double): String = statNumber(stat, value).let { if ('.' in it) it.trimEnd('0').removeSuffix(".") else it }
 
 /** A modifier's figure, whatever its size, with the tenth it was rolled to: «+12.3», «+1.8», «+5» — a precise stat keeps its hundredths. */
 fun modNumber(stat: String, value: Double): String = if (stat in preciseStats) statNumber(stat, value) else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")

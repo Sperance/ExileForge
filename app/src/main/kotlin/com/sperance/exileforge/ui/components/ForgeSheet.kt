@@ -101,7 +101,9 @@ private class FlingStaysInList : NestedScrollConnection {
     private var sheetMoved = false
 
     override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = when {
-        source == NestedScrollSource.SideEffect -> available
+        // Пока лист сдвинут пальцем, остаток броска не съедается: иначе бросок списка «крутился» вхолостую секунды, и лист
+        // стоял полузакрытым, пока тот не кончится (3.88.9).
+        source == NestedScrollSource.SideEffect -> if (sheetMoved) Offset.Zero else available
 
         available.y != 0f -> {
             sheetMoved = true

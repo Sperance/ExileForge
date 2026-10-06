@@ -76,18 +76,13 @@ fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
 }
 
 /**
- * The tier among its modifier's tiers, T1 the best: «T3 · худший из 3», then a segment per tier, best first, the
+ * The tier among its modifier's tiers: «T3 из 3», then a segment per tier, T1 first, the
  * line's own lit and those the item's level does not reach dimmed.
  */
 @Composable private fun TierScale(tier: Int, open: List<Boolean>) {
     val count = open.size
-    val key = when (tier) {
-        1 -> "modinfo.tier_best"
-        count -> "modinfo.tier_worst"
-        else -> "modinfo.tier_of"
-    }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Fact(ui("modinfo.tier"), ui(key, tier, count))
+        Fact(ui("modinfo.tier"), ui("modinfo.tier_of", tier, count))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
             open.forEachIndexed { at, reached ->
                 val color = when {
@@ -98,7 +93,6 @@ fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
                 Box(Modifier.weight(1f).height(6.dp).background(color, RoundedCornerShape(3.dp)))
             }
         }
-        MutedText(ui("modinfo.tier_caption"), style = MaterialTheme.typography.labelSmall)
     }
 }
 

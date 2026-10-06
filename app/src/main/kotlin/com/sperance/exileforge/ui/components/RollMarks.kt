@@ -85,12 +85,12 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
 
 /**
  * How well the item rolled (2.72.0; a ring in the card's head since this version): a gauge filling its
- * ring to the share with the figure inside, in its step's colour; a tap names the step and what it measures.
+ * ring to the share with the figure inside, in its step's colour; a tap says «Модификаторы предмета · Хорошие · 72%».
  */
 @Composable fun RollRing(quality: Int, modifier: Modifier = Modifier) {
     val tier = RollTier.of(quality)
     val tint = tier.tint
-    Tipped({ Tip("${ui(tier.key)} · $quality%", ui("card.roll_quality_hint"), tint = tint) }, modifier) {
+    Tipped({ Tip(ui("card.roll_quality", ui(tier.key), quality), tint = tint) }, modifier) {
         Box(Modifier.size(34.dp).glow(tint, on = tier.glow > 0.dp, radius = tier.glow / 2, shape = CircleShape), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
                 val width = 3.5.dp.toPx()

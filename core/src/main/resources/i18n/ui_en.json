@@ -770,7 +770,6 @@
   "card.roll_poor": "Poor",
   "card.roll_perfect": "Perfect",
   "card.roll_modest": "Modest",
-  "card.roll_quality_hint": "how high the values landed in their tiers",
   "card.map_tier_title": "{0} · tier {1}",
   "expedition.zoom_in": "Zoom in",
   "expedition.zoom_out": "Zoom out",
@@ -983,9 +982,6 @@
   "modinfo.kind_other": "Other",
   "modinfo.tier": "Tier",
   "modinfo.tier_of": "T{0} of {1}",
-  "modinfo.tier_best": "T{0} · best of {1}",
-  "modinfo.tier_worst": "T{0} · worst of {1}",
-  "modinfo.tier_caption": "T1 is the best",
   "modinfo.range": "Tier range",
   "modinfo.position": "Position in range",
   "modinfo.position_value": "{0}%",
@@ -3829,5 +3825,6 @@
   "expedition.chest_stored": "Items have been placed in your stash and bag",
   "expedition.log_life": "HP {0} → {1}",
   "expedition.log_by_time": "By time",
-  "expedition.log_by_foe": "By enemy"
+  "expedition.log_by_foe": "By enemy",
+  "card.roll_quality": "Item modifiers · {0} · {1}%"
 }

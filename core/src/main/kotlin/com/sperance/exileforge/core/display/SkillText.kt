@@ -153,7 +153,8 @@ object SkillText {
         val key = "stat.template.$stat.${operation.name}"
         val negative = locOr("$key.negative", "").takeIf { value < 0 && it.isNotBlank() }
         val template = negative ?: locOr(key, "")
-        if (template.isNotBlank()) return template.replace("{v}", statNumber(stat, if (negative != null) abs(value) else value))
+        val shown = if (negative != null) abs(value) else value
+        if (template.isNotBlank()) return template.replace("{v}", if (operation == Op.INCREASED) shareNumber(stat, shown) else statNumber(stat, shown))
         val size = statNumber(stat, abs(value))
         return when (operation) {
             Op.ADD -> ui("skill.stat_add", statTitle(stat), (if (value < 0) "−" else "+") + size)

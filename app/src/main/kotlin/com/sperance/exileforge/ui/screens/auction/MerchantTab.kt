@@ -99,12 +99,17 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
     // A copy whose template the content does not hold cannot be drawn, and is not offered.
     val offers = remember(stock?.offers, game.index, game.world) { stock?.offers.orEmpty().mapNotNull { offer -> game.view(offer.item)?.let { offer to it } } }
     val orbs = stock?.orbs.orEmpty()
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp))
-        Text(ui("merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-        IconButton(onClick = { notes = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Info, ui("merchant.notes"), tint = Muted) }
+    // Шапка и полоса кошелька уходят при прокрутке вниз (3.88.9), вкладки остаются.
+    CollapsibleHeader {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(24.dp))
+                Text(ui("merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                IconButton(onClick = { notes = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Info, ui("merchant.notes"), tint = Muted) }
+            }
+            MerchantStrip(money, stock?.refreshAt?.takeIf { it > 0 }, game.hero?.info?.autoSell) { filtering = true }
+        }
     }
-    MerchantStrip(money, stock?.refreshAt?.takeIf { it > 0 }, game.hero?.info?.autoSell) { filtering = true }
     if (orbs.isNotEmpty()) {
         PillTabs(
             listOf(ui("merchant.wares_n", offers.size), ui("merchant.orbs_n", orbs.size)),

@@ -17,8 +17,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.unlocked
+import com.sperance.exileforge.rules.content.CampaignFile
+import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -58,7 +61,7 @@ private const val CARD_TOP = .48f
         return
     }
     val campaign = index.campaign
-    val world = remember(index, progress.cleared, progress.unlocked) { WorldMap(campaign, index.world, progress) }
+    val world = remember(index, progress.cleared, progress.unlocked) { LastWorld.of(campaign, index.world, progress) }
     // The tab answers the tap at once (3.77.0): its first frame is the bare chart, the map is laid out on the next.
     var settled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -95,6 +98,18 @@ private const val CARD_TOP = .48f
         ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
         launch?.let { ZoneCard(game, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
     }
+}
+
+/**
+ * Последняя карта мира (3.88.9): вход на вкладку с тем же прогрессом берёт её же, и с ней - уже измеренные надписи
+ * холста, так что «Поход» не строит и не меряет мир на каждое нажатие.
+ */
+private object LastWorld {
+    @Volatile private var last: Triple<WorldGraph, CampaignProgress, WorldMap>? = null
+
+    fun of(campaign: CampaignFile, graph: WorldGraph, progress: CampaignProgress): WorldMap = last
+        ?.takeIf { (g, p, map) -> map.campaign === campaign && g === graph && p == progress }?.third
+        ?: WorldMap(campaign, graph, progress).also { last = Triple(graph, progress, it) }
 }
 
 /** The map's head: how much of the world is passed and the way back to the frontier; the atlas and the trials live in «Развитие». */

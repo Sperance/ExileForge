@@ -770,7 +770,6 @@
   "card.roll_poor": "Слабые",
   "card.roll_perfect": "Идеальные",
   "card.roll_modest": "Скромные",
-  "card.roll_quality_hint": "насколько высоко значения легли в своих тирах",
   "card.map_tier_title": "{0} · тир {1}",
   "expedition.zoom_in": "Приблизить",
   "expedition.zoom_out": "Отдалить",
@@ -983,9 +982,6 @@
   "modinfo.kind_other": "Прочее",
   "modinfo.tier": "Тир",
   "modinfo.tier_of": "T{0} из {1}",
-  "modinfo.tier_best": "T{0} · лучший из {1}",
-  "modinfo.tier_worst": "T{0} · худший из {1}",
-  "modinfo.tier_caption": "T1 — лучший",
   "modinfo.range": "Диапазон тира",
   "modinfo.position": "Положение в диапазоне",
   "modinfo.position_value": "{0}%",
@@ -3829,5 +3825,6 @@
   "expedition.chest_stored": "Предметы помещены в тайник и сумку",
   "expedition.log_life": "ХП {0} → {1}",
   "expedition.log_by_time": "По времени",
-  "expedition.log_by_foe": "По противникам"
+  "expedition.log_by_foe": "По противникам",
+  "card.roll_quality": "Модификаторы предмета · {0} · {1}%"
 }

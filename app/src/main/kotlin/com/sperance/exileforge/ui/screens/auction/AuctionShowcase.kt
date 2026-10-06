@@ -105,12 +105,15 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
+        // Нехватку видно сразу (3.88.9): «Купить» гаснет, а под ней - чего не хватает.
+        val own = lot.belongsTo(game.heroId)
+        val short = shortfall(game, lot)
         LotSheet(
             game,
             lot,
             action = ui("auction.buy"),
-            enabled = !game.busy && !lot.belongsTo(game.heroId),
-            note = if (lot.belongsTo(game.heroId)) ui("auction.own_lot") else null,
+            enabled = !game.busy && !own && short == null,
+            note = if (own) ui("auction.own_lot") else short,
             onDismiss = { openLot = null },
         ) {
             openLot = null
@@ -152,6 +155,12 @@ import com.sperance.exileforge.ui.theme.*
         ) { onBuy(lot.id) }
     }
 }
+
+/** Чего не хватает на лот: сфер в сумке и золота на сбор; null - хватает или сумка ещё не прочитана. */
+private fun shortfall(game: GameUi, lot: AuctionLot): String? = listOfNotNull(
+    game.bagAmount(lot.priceOrb)?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
+    game.hero?.money?.takeIf { it < lot.fee }?.let { ui("auction.fee_short", lot.fee) },
+).joinToString("\n").ifBlank { null }
 
 /**
  * The showcase's head: the name to search for, the button to every other filter, and the filters

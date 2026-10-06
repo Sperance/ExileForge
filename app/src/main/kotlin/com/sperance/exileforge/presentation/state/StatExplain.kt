@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.nodeTitle
+import com.sperance.exileforge.core.display.shareNumber
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
@@ -228,7 +229,7 @@ class StatExplainer(private val game: GameUi) {
     /** A figure with its operation: «+20», «+10%», «×1.10», «= 1»; a percent stat carries its sign on the flat too. */
     fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
         val unit = if (percent || statPercent(stat, index)) "%" else ""
-        val size = statNumber(stat, abs(value))
+        val size = if (op == Op.INCREASED) shareNumber(stat, abs(value)) else statNumber(stat, abs(value))
         val mark = if (!sign && value >= 0) {
             ""
         } else if (value < 0) {

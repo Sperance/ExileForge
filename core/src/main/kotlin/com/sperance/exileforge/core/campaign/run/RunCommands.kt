@@ -124,8 +124,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.StopAuto -> autopilot = null
 
-        // Забег идёт до конца (3.88.8): выйти можно мёртвым, пройдя зону или с картой, где страж уже повержен.
-        RunCommand.Leave -> if (phase == RunPhase.DEAD || phase == RunPhase.CLEARED || (phase == RunPhase.MAP && !world.sealed)) {
+        // Вне боя с карты можно уйти всегда (3.88.9): бой идёт до конца, а карта - нет.
+        RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) {
             if (phase == RunPhase.MAP) end = MapEnd.LEFT
             phase = RunPhase.LEFT
         }

@@ -90,10 +90,12 @@ fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boole
                 y.advance()
                 remaining -= 2
             }
+
             gap < 0 -> {
                 x.advance()
                 remaining--
             }
+
             else -> {
                 y.advance()
                 remaining--

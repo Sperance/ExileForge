@@ -44,8 +44,8 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
-import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.crafts.JobView

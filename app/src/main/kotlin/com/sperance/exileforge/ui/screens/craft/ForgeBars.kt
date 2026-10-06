@@ -124,8 +124,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * bar says so in red and the button stays off (2.46.0).
  * Нехватка с 3.89.0 - общей строкой «Не хватает: …».
  */
-internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> =
-    Cost.item(code, need).shortfall({ have }, 0).text()?.let { it to true } ?: (ui("forge.orb_left", have, have - need) to false)
+internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> = Cost.item(code, need).shortfall({ have }, 0).text()?.let { it to true } ?: (ui("forge.orb_left", have, have - need) to false)
 
 @Composable internal fun ForgeBar(content: @Composable ColumnScope.() -> Unit) {
     HorizontalDivider(color = Bronze)

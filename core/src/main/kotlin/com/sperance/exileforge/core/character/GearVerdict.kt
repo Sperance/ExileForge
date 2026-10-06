@@ -111,8 +111,7 @@ class GearVerdicts {
     }
 
     /** Всё из тайника, что герой может надеть, с вердиктами: улучшения первыми, по сумме изменений урона и защиты. */
-    fun upgrades(index: ContentIndex?, hero: HeroView?): List<Pair<ItemInstance, GearVerdict>> =
-        hero?.stash.orEmpty().mapNotNull { item -> of(index, hero, item)?.let { item to it } }.sortedByDescending { it.second.score }
+    fun upgrades(index: ContentIndex?, hero: HeroView?): List<Pair<ItemInstance, GearVerdict>> = hero?.stash.orEmpty().mapNotNull { item -> of(index, hero, item)?.let { item to it } }.sortedByDescending { it.second.score }
 
     private fun weigh(index: ContentIndex, hero: HeroView, item: ItemInstance): GearVerdict? {
         if (item.equipped || item.socketed) return null

@@ -53,9 +53,6 @@ sealed interface RunCommand {
     data object Speed : RunCommand
     data object Leave : RunCommand
 
-    /** Walk out of the fight: the monster gets its free swings first; before it began, simply walk away. */
-    data object Retreat : RunCommand
-
     /** The fight begins: until then the pack is laid open to be studied. Mid-fight it ends a [Pause]. */
     data object Begin : RunCommand
     data object Pause : RunCommand

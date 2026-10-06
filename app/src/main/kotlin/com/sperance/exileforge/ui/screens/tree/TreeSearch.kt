@@ -173,39 +173,3 @@ internal fun nodesMatching(index: ContentIndex, query: String): Set<String> = in
 internal fun nodesTagged(index: ContentIndex, tag: String): Set<String> = index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
     node.code.takeIf { (node.lines + node.options.flatten()).any { line -> index.modifier(line.code)?.tags?.contains(tag) == true } }
 }
-
-/**
- * The chosen node against the plan (3.47.0): out of it, or the rules' shortest way to it — from what is taken and
- * what is planned already — added to its end. A node with options is taken by hand: its choice is the player's.
- */
-internal sealed interface PlanOption {
-    data class Remove(val code: String) : PlanOption
-    data class Add(val way: List<String>) : PlanOption
-
-    /** No button: a [key] of the dictionary says why, or nothing at all when the node is taken. */
-    data class Note(val key: String?) : PlanOption
-}
-
-internal fun planOption(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>, plan: List<TakenNode>, node: TreeNode): PlanOption {
-    if (node.code in taken) return PlanOption.Note(null)
-    if (plan.any { it.code == node.code }) return PlanOption.Remove(node.code)
-    if (node.options.isNotEmpty()) return PlanOption.Note("tree.plan_choice")
-    val start = heroClass?.startNode ?: return PlanOption.Note(null)
-    val from = taken + plan.map { it.code }
-    val way = if (from.isEmpty()) null else TreeAllocation.path(index.tree, from, start, node.code)
-    return way?.let { PlanOption.Add(it) } ?: PlanOption.Note("tree.plan_no_way")
-}
-
-/** The plan as a whole (3.47.0): how many nodes are still to take, what they cost, and what they will give. */
-@Composable internal fun PlanPanel(game: GameUi, index: ContentIndex, taken: Set<String>, plan: List<TakenNode>, enabled: Boolean, onClear: () -> Unit) {
-    val left = plan.filter { it.code !in taken }
-    val cost = left.sumOf { index.tree.node(it.code)?.cost ?: 0 }
-    val totals = remember(index, left) { SheetCalculator(index).let { it.contributions(it.expand(index.tree.lines(left))) } }
-    ForgePanel(accent = Rune) {
-        Engraved(ui("tree.plan_title"), Rune)
-        PropertyRow(ui("tree.plan_left"), ui("tree.plan_cost", left.size, cost), Glyph.LEVEL)
-        MutedText(ui("tree.plan_note"))
-        totals.forEach { total -> PropertyRow(statTitle(total.stat, game.lang), contributionText(total), stat = total.stat) }
-        ForgeOutlinedButton(enabled = enabled, onClick = onClear, modifier = Modifier.fillMaxWidth()) { Text(ui("tree.plan_clear")) }
-    }
-}

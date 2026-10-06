@@ -174,7 +174,7 @@ import org.koin.compose.viewmodel.koinViewModel
     var seen by remember(game.heroId) { mutableStateOf<Int?>(null) }
     LaunchedEffect(game.heroId, level) {
         if (level == null) return@LaunchedEffect
-        seen?.let { before -> if (!game.isTester) Feature.gained(before, level).forEach { shell.announce(ui("unlock.opened", ui(it.title))) } }
+        seen?.let { before -> if (!game.isTester) Feature.gained(before, level, game.index?.rules).forEach { shell.announce(ui("unlock.opened", ui(it.title))) } }
         seen = level
     }
     // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
@@ -287,9 +287,8 @@ import org.koin.compose.viewmodel.koinViewModel
             Column(Modifier.fillMaxSize().voidBackdrop().nestedScroll(collapse.connection)) {
                 // The craft under way is read with the game, so the banner's plaque knows it from the start.
                 LaunchedEffect(game.heroId) { if (game.heroId.isNotBlank()) craftsModel.load(silent = true) }
-                CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
-                    CollapsibleHeader(compact = { CompactBanner(game) }) { ForgeBanner(game, route, onBug) }
-                }
+                // Шапка игры с меню не сворачивается (3.88.8): сворачиваются только шапки экранов.
+                ForgeBanner(game, route, onBug)
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 HeroTab.of(route.tab)?.let { HeroTabStrip(it, locked = { tab -> !game.unlocked(Feature.ofTab(tab)) }, onSelect = shell::tab) }
                 CompositionLocalProvider(LocalHeaderCollapse provides collapse) { screens(Modifier.weight(1f).fillMaxWidth()) }

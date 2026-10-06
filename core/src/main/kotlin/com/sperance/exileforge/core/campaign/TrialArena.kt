@@ -195,7 +195,7 @@ class TrialArena(
             is RunCommand.Drink -> if (started) fight?.useFlask(command.slot)
 
             // Walking away is only between two fights: the trial ends there, what it brought kept.
-            RunCommand.Retreat, RunCommand.Leave -> if (phase == TrialPhase.FIGHT && !started) finish(fallen = false)
+            RunCommand.Leave -> if (phase == TrialPhase.FIGHT && !started) finish(fallen = false)
 
             is RunCommand.Regear -> if (!started) {
                 gear = command.gear
@@ -360,7 +360,7 @@ class TrialArena(
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
         val fightHud = if (fight != null && leader != null) {
             fight.hud(
-                monsters, leader, speed, started, paused, hero.taunt, level, escape = !started,
+                monsters, leader, speed, started, paused, hero.taunt, level,
                 stage = if (trial.kind == TrialKind.RUSH) step + 1 else stage, stages = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else stages,
                 interlude = interlude,
             )

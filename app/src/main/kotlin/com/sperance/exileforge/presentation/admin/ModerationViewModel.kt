@@ -119,11 +119,11 @@ class ModerationViewModel(
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }
 
-    /** Новый аккаунт тестировщика с логином [login] (3.88.7): пароль сервер придумывает сам и отдаёт один раз. */
-    fun createTester(login: String) {
+    /** Новый аккаунт [login] с ролью [role] (3.88.8): пароль сервер придумывает сам и отдаёт один раз. */
+    fun createAccount(login: String, role: AccountRole) {
         val started = commands.task(writing = true) {
             staff()
-            val account = connection.api.admin.createTester(login.trim())
+            val account = connection.api.admin.createTester(login.trim(), role)
             mutable.update { it.copy(createdTester = account) }
             load()
         }

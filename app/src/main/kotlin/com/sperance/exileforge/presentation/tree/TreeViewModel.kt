@@ -43,7 +43,6 @@ class TreeViewModel(
     fun refundBranch(code: String) = hero.refundBranch(code)
     fun rechoose(code: String, choice: Int) = hero.rechooseNode(code, choice)
     fun reset() = hero.resetTree()
-    fun plan(nodes: List<TakenNode>) = hero.planTree(nodes)
     fun socket(itemId: String, nodeCode: String) = hero.socketJewel(itemId, nodeCode)
     fun unsocket(itemId: String) = hero.unsocketJewel(itemId)
 }

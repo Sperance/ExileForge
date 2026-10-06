@@ -11,9 +11,10 @@ private const val TESTERS = "api/v1/admin/testers"
 class AdminClient internal constructor(private val http: Transport) {
     suspend fun testers(): List<TesterAccount> = http.get(TESTERS)
 
-    suspend fun createTester(login: String): TesterAccount {
+    /** Новый аккаунт [login] с ролью [role] - тестировщик или модератор (3.88.8, сервер 1.80.11); пароль - в ответе один раз. */
+    suspend fun createTester(login: String, role: AccountRole = AccountRole.TESTER): TesterAccount {
         require(login.isNotBlank()) { com.sperance.exileforge.core.i18n.ui("api.credentials") }
-        return http.post(TESTERS, mapOf("login" to login.trim()))
+        return http.post(TESTERS, mapOf("login" to login.trim(), "role" to role.name))
     }
 
     suspend fun resetTester(id: String): TesterAccount = http.post("$TESTERS/reset", mapOf("userId" to id))

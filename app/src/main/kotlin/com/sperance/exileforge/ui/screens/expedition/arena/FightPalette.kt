@@ -87,5 +87,4 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
 internal fun outcomeColour(outcome: Outcome) = when (outcome) {
     Outcome.WIN -> Vital
     Outcome.LOSS -> LifeRed
-    Outcome.RETREAT -> Muted
 }

@@ -46,7 +46,6 @@ class ExpeditionViewModel(
     fun runCommand(command: RunCommand) = expedition.send(command)
     fun flushRun() = expedition.flushRun()
     fun enterVaal() = expedition.enterVaal()
-    fun refuseVaal() = expedition.refuseVaal()
     fun closeRun() = expedition.close()
     fun openAtlas() = expedition.openAtlas()
     fun closeAtlas() = expedition.closeAtlas()

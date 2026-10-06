@@ -67,7 +67,6 @@ internal fun Battle.hud(
     paused: Boolean,
     heroTaunt: Boolean,
     level: Int,
-    escape: Boolean,
     stage: Int,
     stages: Int,
     interlude: Double?,
@@ -76,7 +75,7 @@ internal fun Battle.hud(
     val h = heroFighter
     val hits = events.withIndex()
         .filter { (_, event) ->
-            event.time <= time && time - event.time < ExpeditionRun.HIT_LIFETIME && event.action != Action.RETREAT &&
+            event.time <= time && time - event.time < ExpeditionRun.HIT_LIFETIME &&
                 (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK)
         }
         .map { (index, event) ->
@@ -108,20 +107,19 @@ internal fun Battle.hud(
     }
     val foes = foeFighters.map { f ->
         FoeView(
-            f.index, monsters[f.index], f.life.roundToInt(), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
+            f.index, monsters[f.index], shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index),
             reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay, buildup = buildup(f),
         )
     }
     return FightHud(
-        ally = allyFighter?.let { f -> AllyView(ally!!.code, f.life.roundToInt(), f.body.maxLife.roundToInt(), f.alive) },
+        ally = allyFighter?.let { f -> AllyView(ally!!.code, shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.alive) },
         leader = leader, foes = foes,
-        heroLife = h.life.roundToInt(), heroShield = h.shield.roundToInt(),
+        heroLife = shownLife(h.life, h.alive), heroShield = h.shield.roundToInt(),
         hits = hits, speed = speed,
         outcome = outcome,
         heroSwing = swing(h), heroAilments = ailments(h), heroHeld = h.held, heroBuildup = buildup(h),
-        retreating = retreating,
         lunge = lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe, event.pet != null) },
         events = events.toList().asReversed(),
         started = started, paused = paused,
@@ -130,7 +128,13 @@ internal fun Battle.hud(
         heroMana = h.mana.roundToInt(), heroMaxMana = manaCap().roundToInt(), heroReserved = manaReserved().roundToInt(),
         skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(),
         heroBarrier = h.barrier.roundToInt(),
-        level = level, escape = escape,
+        level = level,
         stage = stage, stages = stages, interlude = interlude,
     )
 }
+
+/**
+ * Здоровье на экране (3.88.8): у живого - вверх до целого и не меньше 1, у павшего - 0. «0» у живого противника читалось
+ * как смерть, хотя у него оставалась доля единицы.
+ */
+fun shownLife(life: Double, alive: Boolean): Int = if (alive) kotlin.math.ceil(life).toInt().coerceAtLeast(1) else 0

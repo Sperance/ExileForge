@@ -124,18 +124,10 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.StopAuto -> autopilot = null
 
-        RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) {
+        // Забег идёт до конца (3.88.8): выйти можно мёртвым, пройдя зону или с картой, где страж уже повержен.
+        RunCommand.Leave -> if (phase == RunPhase.DEAD || phase == RunPhase.CLEARED || (phase == RunPhase.MAP && !world.sealed)) {
             if (phase == RunPhase.MAP) end = MapEnd.LEFT
             phase = RunPhase.LEFT
-        }
-
-        RunCommand.Retreat -> if (abyssFight) {
-            Unit
-        } else if (fight != null && !started) {
-            walkAway()
-        } else {
-            paused = false
-            fight?.retreat()
         }
 
         RunCommand.Begin -> if (fight != null) {
@@ -278,19 +270,6 @@ internal fun ExpeditionRun.closeCrystal() {
     crystal = null
     crystalOutcome = null
     if (phase == RunPhase.CRYSTAL) phase = RunPhase.MAP
-}
-
-/**
- * Turning away before the stage began: nothing of it was struck, and the packs still standing stay calm a while;
- * the packs of the stages already won stay dead.
- */
-internal fun ExpeditionRun.walkAway() {
-    fightAgents.filter { it.crystal == null && it.alive }.forEach(world::retreatFrom)
-    endFight()
-    // No report follows: the stages already won must not bring their loot to the next fight's screen.
-    clearSpoils()
-    slain = null
-    phase = RunPhase.MAP
 }
 
 /** A draught on the map: what it gives back comes at once, and what it lays on runs as the hero walks. */

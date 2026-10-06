@@ -209,7 +209,6 @@ class Battle(
 
     /** The foe that struck the hero last — the Templar's answer. */
     internal var lastStriker: Int? = null
-    internal var retreatAt = Double.NaN
     private var carry = 0.0
     internal val log = mutableListOf<CombatEvent>()
     val events: List<CombatEvent> get() = log
@@ -291,7 +290,6 @@ class Battle(
     fun foe(index: Int) = foeFighters[index]
     val heroLife: Double get() = heroFighter.life
     val heroMana: Double get() = heroFighter.mana
-    val retreating: Boolean get() = !retreatAt.isNaN()
 
     /** The hero's mana the auras leave free (2.78.0). */
     fun manaCap(): Double = heroFighter.body.maxMana * (1 - kit.reserved(heroFighter.body) / 100)
@@ -331,14 +329,6 @@ class Battle(
             carry -= STEP
             step(STEP)
         }
-    }
-
-    /** Turns to leave: the hero stops swinging, the pack gets the rule's delay of free swings, then the fight is over. */
-    fun retreat(): Boolean {
-        if (outcome != null || retreating) return false
-        retreatAt = time + rules.retreat.delay
-        record(Side.HERO, Action.RETREAT, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, target()?.index ?: 0)
-        return true
     }
 
     /** Singles out foe [index]; the same foe again, or a fallen one, gives the choice back to the class. */
@@ -395,12 +385,12 @@ class Battle(
 
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(fighter: Fighter): Float = when {
-        outcome != null || !fighter.alive || (fighter.side == Side.HERO && retreating) -> 0f
+        outcome != null || !fighter.alive -> 0f
         else -> (1 - (fighter.nextAttack - time) / fighter.attackInterval).toFloat().coerceIn(0f, 1f)
     }
 
     /** The log as a test or a report reads it, once the fight is over. */
-    fun log(): CombatLog = CombatLog(log.toList(), outcome ?: Outcome.RETREAT, heroLife, duration)
+    fun log(): CombatLog = CombatLog(log.toList(), checkNotNull(outcome) { "the fight is not over" }, heroLife, duration)
 
     /** The draws of the action being worked out; null outside one, so a draw elsewhere is not written anywhere. */
     internal var tape: MutableList<RollTrace>? = null

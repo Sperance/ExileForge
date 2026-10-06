@@ -93,7 +93,7 @@ import kotlin.math.sin
     // strip and the bar, and the rest floats over it. A pannable canvas inside a scroll fights the scroll for every drag.
     SkillTreePanel(
         game, selected, query, vm::select, vm::allocate, vm::refund, vm::reset, vm::query, onPath = vm::allocatePath,
-        onSocket = vm::socket, onUnsocket = vm::unsocket, onRechoose = vm::rechoose, onPlan = vm::plan, onRefundBranch = vm::refundBranch,
+        onSocket = vm::socket, onUnsocket = vm::unsocket, onRechoose = vm::rechoose, onRefundBranch = vm::refundBranch,
         modifier = Modifier.fillMaxSize(),
     )
 }
@@ -106,7 +106,7 @@ import kotlin.math.sin
  * panel draws what it was given and sends one node code at a time.
  *
  * The map takes the whole panel. The point balance is a plaque in its corner; the search, «Итого» and «Ещё»
- * (the details, the plan, the reset) are round buttons down its right edge, the way back to the whole tree under
+ * (the details, the reset) are round buttons down its right edge, the way back to the whole tree under
  * them; a chosen node rises as a card over the map's foot rather than a sheet, so the branch stays in sight.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -124,7 +124,6 @@ fun SkillTreePanel(
     onUnsocket: (String) -> Unit = {},
     onRechoose: (String, Int) -> Unit = { _, _ -> },
     onPath: (String, Int?) -> Unit = { _, _ -> },
-    onPlan: (List<TakenNode>) -> Unit = {},
     onRefundBranch: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -134,7 +133,6 @@ fun SkillTreePanel(
     var detailsOpen by remember { mutableStateOf(false) }
     // «Итого» (3.54.0): the tree's bonuses at once, without the rest of the details.
     var totalsOpen by remember { mutableStateOf(false) }
-    var planOpen by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
     // The node's own card is the question (2.72.0): taking or giving back a node acts at once from
@@ -160,9 +158,6 @@ fun SkillTreePanel(
     val path = remember(index, heroClass, taken, selected) {
         heroClass?.startNode?.takeIf { taken.isNotEmpty() && selected !in reachable }?.let { TreeAllocation.path(index.tree, taken, it, selected) }
     }
-    // The build planner (3.47.0): the plan lives on the server, which takes its nodes itself as the points come.
-    val plan = hero.info.plannedTree
-    val planned = remember(plan) { plan.mapTo(HashSet()) { it.code } }
     // The tag filter (3.47.0): every node whose lines carry the tag lights up.
     var tag by remember { mutableStateOf<String?>(null) }
     // The search (3.54.0): by a node's name or the stats it gives; every match lights up with the tag's.
@@ -175,7 +170,7 @@ fun SkillTreePanel(
     val filtering = tag != null || query.length >= 2
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
-        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), planned, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
+        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
             onSelect(code)
             nodeOpen = true
         }
@@ -205,12 +200,6 @@ fun SkillTreePanel(
                         menuOpen = false
                         detailsOpen = true
                     })
-                    if (plan.isNotEmpty()) {
-                        DropdownMenuItem(text = { Text(ui("tree.plan_title")) }, onClick = {
-                            menuOpen = false
-                            planOpen = true
-                        })
-                    }
                     DropdownMenuItem(
                         text = { Text(ui("tree.reset_all"), color = if (enabled && hero.tree.size > 1) LifeRed else Muted) },
                         enabled = enabled && hero.tree.size > 1,
@@ -234,7 +223,7 @@ fun SkillTreePanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 NodeDetails(
-                    game, index, heroClass, index.tree.node(selected), taken, reachable, enabled, path, tree.available, plan,
+                    game, index, heroClass, index.tree.node(selected), taken, reachable, enabled, path, tree.available,
                     onClose = { nodeOpen = false },
                     onAllocate = { code, choice ->
                         nodeOpen = false
@@ -264,10 +253,6 @@ fun SkillTreePanel(
                         nodeOpen = false
                         onUnsocket(it)
                     },
-                    onPlan = {
-                        nodeOpen = false
-                        onPlan(it)
-                    },
                 )
             }
         }
@@ -284,17 +269,6 @@ fun SkillTreePanel(
     if (totalsOpen) {
         ForgeSheet(onDismissRequest = { totalsOpen = false }) {
             Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) { TreeTotals(game, tree) }
-        }
-    }
-
-    if (planOpen && plan.isNotEmpty()) {
-        ForgeSheet(onDismissRequest = { planOpen = false }) {
-            Column(Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()).padding(16.dp)) {
-                PlanPanel(game, index, taken, plan, enabled) {
-                    planOpen = false
-                    onPlan(emptyList())
-                }
-            }
         }
     }
 

@@ -44,7 +44,7 @@ internal fun Battle.step(dt: Double) {
     if (finished()) return
     val hero = heroFighter
     // A draught goes down even stunned; a skill waits until the hero can move again.
-    if (hero.alive && !retreating) {
+    if (hero.alive) {
         if (!autoDrunk) {
             autoDrunk = true
             if (hero.body.flasksAuto) {
@@ -65,15 +65,14 @@ internal fun Battle.step(dt: Double) {
     if (finished()) return
     // Whoever is due first acts first; several may be due in one slice.
     (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).sortedBy { it.nextAttack }.forEach { me ->
-        if (!me.alive || me.held || (me.side == Side.HERO && retreating) || me.nextAttack > time) return@forEach
+        if (!me.alive || me.held || me.nextAttack > time) return@forEach
         val target = if (me.side == Side.HERO) target() else foeTarget()
         if (target != null) strike(me, target, Blow(firstStrike(me)))
         me.nextAttack = time + me.attackInterval * me.slow()
         if (finished()) return
     }
     watch()
-    // No time limit since 2.74.0: a fight runs until a side falls or the hero walks out.
-    if (retreating && time >= retreatAt) end(Outcome.RETREAT)
+    // Без предела времени (2.74.0) и без отступления (3.88.8): бой идёт, пока не падёт одна из сторон.
 }
 
 private fun Battle.regenerate(me: Fighter, dt: Double) {

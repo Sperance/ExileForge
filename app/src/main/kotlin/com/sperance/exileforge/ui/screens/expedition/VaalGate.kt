@@ -51,7 +51,7 @@ private object Altar {
  * the zone adds to the loot for bearing them — and the choice; until its answer comes, the gate waits. «Войти» closes the portal behind the
  * hero, «Отказаться» closes it for good; the zone is never re-rolled by walking away and back.
  */
-@Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: MonsterCode?, onEnter: () -> Unit, onRefuse: () -> Unit, onBack: () -> Unit) {
+@Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: MonsterCode?, onEnter: () -> Unit, onBack: () -> Unit) {
     val index = game.index
     Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Altar.glow, Altar.night, Altar.deep), radius = 1600f)), contentAlignment = Alignment.Center) {
         Column(
@@ -90,10 +90,11 @@ private object Altar {
             Text(ui("vaal.warning"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ForgeOutlinedButton(
-                    onClick = if (zone != null) onRefuse else onBack,
+                    // «Отказаться» убрана (3.88.8): от портала только отходят, он остаётся и откроется снова.
+                    onClick = onBack,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Altar.muted),
-                ) { Text(ui(if (zone != null) "vaal.refuse" else "common.close")) }
+                ) { Text(ui(if (zone != null) "vaal.later" else "common.close")) }
                 ForgeButton(
                     onClick = onEnter,
                     enabled = zone != null,
@@ -101,7 +102,6 @@ private object Altar {
                     colors = ButtonDefaults.buttonColors(containerColor = Altar.deed, contentColor = Color.White),
                 ) { Text(ui("vaal.enter")) }
             }
-            ForgeTextButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(ui("vaal.later"), color = Altar.muted) }
         }
     }
 }

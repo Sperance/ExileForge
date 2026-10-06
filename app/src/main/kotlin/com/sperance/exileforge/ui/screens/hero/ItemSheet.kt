@@ -132,6 +132,8 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             }
             // Кнопки «Реликвария» (3.88.6): главное действие, кузня и «ещё» с заменой, замком, аукционом и продажей.
             var more by remember(itemId) { mutableStateOf(false) }
+            // Место, где надета вещь (3.88.8): «Заменить» открывает его на всё, что туда идёт.
+            val wornPlace = game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
             Row(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -142,6 +144,8 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         onDismiss()
                         model.unsocketJewel(instance.id)
                     }
+
+                    instance.equipped && wornPlace != null -> PrimaryPill(ui("hero.replace"), can, look) { replacing = wornPlace }
 
                     instance.equipped -> PrimaryPill(ui("hero.unequip"), can, look) {
                         onDismiss()
@@ -167,11 +171,12 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = GoldBright)
                     }
                     DropdownMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
-                        val worn = game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
-                        if (instance.equipped && worn != null) {
-                            MenuLine(Icons.Outlined.SwapHoriz, ui("hero.replace"), can) {
+                        // «Снять» надетую вещь (3.88.8) - в меню: главная кнопка у неё «Заменить».
+                        if (instance.equipped && wornPlace != null) {
+                            MenuLine(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
                                 more = false
-                                replacing = worn
+                                onDismiss()
+                                model.unequip(instance.id)
                             }
                         }
                         MenuLine(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {

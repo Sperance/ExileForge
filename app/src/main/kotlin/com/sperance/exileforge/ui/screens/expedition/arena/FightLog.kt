@@ -4,9 +4,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
@@ -15,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
+import com.sperance.exileforge.core.campaign.shownLife
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -24,24 +30,54 @@ import com.sperance.exileforge.core.display.traitTitle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.screens.hero.petName
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** The blows so far, newest first: when, who, and what came of it, coloured by what it was. */
+/** The blows so far, newest first: when, who, what came of it - and the target's life before and after (3.88.8). */
 @Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier, onOpen: ((CombatEvent) -> Unit)? = null) {
+    val shifts = remember(events) { lifeShifts(events.asReversed()).asReversed() }
     LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        items(events) { EventRow(it, names[it.foe].orEmpty(), onOpen) }
+        itemsIndexed(events) { i, event -> EventRow(event, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
     }
 }
 
 /** A row of a pack's log: a caption naming one of the pack, or one of its lines under that name. */
 private sealed interface PackRow {
     data class Head(val text: String) : PackRow
-    data class Line(val event: CombatEvent, val name: String) : PackRow
+    data class Line(val event: CombatEvent, val name: String, val shift: LifeShift?) : PackRow
 }
+
+/** Здоровье цели строки до удара и после (3.88.8), как его показывает экран боя. */
+internal data class LifeShift(val before: Int, val after: Int)
+
+/**
+ * «ХП было → стало» для каждой строки [events] в порядке времени (3.88.8): «было» - здоровье цели после её прошлой строки
+ * в этом бою, у первой - после удара плюс урон. Строки без урона и лечения, заметки и удары по питомцу - без него.
+ */
+internal fun lifeShifts(events: List<CombatEvent>): List<LifeShift?> {
+    val last = HashMap<Pair<Side, Int>, Double>()
+    return events.map { event ->
+        val target = event.target
+        val key = target to if (target == Side.HERO) HERO_KEY else event.foe
+        val after = if (target == Side.HERO) event.heroLife else event.monsterLife
+        val shift = if (event.action == Action.NOTE || event.pet != null || (event.damage <= 0 && event.healed <= 0)) {
+            null
+        } else {
+            val before = last[key] ?: (after + event.damage - event.healed)
+            LifeShift(shownLife(before, before > 0), shownLife(after, after > 0))
+        }
+        last[Side.HERO to HERO_KEY] = event.heroLife
+        last[Side.MONSTER to event.foe] = event.monsterLife
+        shift
+    }
+}
+
+/** Ключ героя среди противников по индексу. */
+private const val HERO_KEY = -1
 
 /**
  * The log of a whole pack (since 2.54.0): one list, each foe's blows under its own name — a mixed
@@ -56,12 +92,21 @@ private sealed interface PackRow {
     toDeath: Boolean = false,
     onOpen: ((CombatEvent, String) -> Unit)? = null,
 ) {
-    val rows = remember(pack, shown) {
+    // Лента по времени по умолчанию (3.88.8): удары всей стаи по порядку; по противникам - каждый под своим именем.
+    var byFoe by rememberSaveable { mutableStateOf(false) }
+    val rows = remember(pack, shown, byFoe) {
+        val names = pack.map { monsterTitle(it.monster.code) }
         buildList {
-            pack.forEachIndexed { index, hit ->
-                val name = monsterTitle(hit.monster.code)
-                if (pack.size > 1) add(PackRow.Head(ui("expedition.report_pack_enemy", index + 1, pack.size, name)))
-                hit.events.filter { LogKind.of(it) in shown }.forEach { add(PackRow.Line(it, name)) }
+            if (byFoe) {
+                pack.forEachIndexed { index, hit ->
+                    if (pack.size > 1) add(PackRow.Head(ui("expedition.report_pack_enemy", index + 1, pack.size, names[index])))
+                    val shifts = lifeShifts(hit.events)
+                    hit.events.forEachIndexed { i, event -> if (LogKind.of(event) in shown) add(PackRow.Line(event, names[index], shifts[i])) }
+                }
+            } else {
+                val timeline = pack.flatMapIndexed { index, hit -> hit.events.map { it to names[index] } }.sortedBy { it.first.time }
+                val shifts = lifeShifts(timeline.map { it.first })
+                timeline.forEachIndexed { i, (event, name) -> if (LogKind.of(event) in shown) add(PackRow.Line(event, name, shifts[i])) }
             }
         }
     }
@@ -73,16 +118,21 @@ private sealed interface PackRow {
         }
     }
     LazyColumn(modifier.fillMaxWidth(), state = state, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+        if (pack.size > 1) {
+            item {
+                PillTabs(listOf(ui("expedition.log_by_time"), ui("expedition.log_by_foe")), if (byFoe) 1 else 0, { byFoe = it == 1 }, segmented = true)
+            }
+        }
         items(rows) { row ->
             when (row) {
                 is PackRow.Head -> Caption(row.text)
-                is PackRow.Line -> EventRow(row.event, row.name, onOpen?.let { open -> { event: CombatEvent -> open(event, row.name) } })
+                is PackRow.Line -> EventRow(row.event, row.name, row.shift, onOpen?.let { open -> { event: CombatEvent -> open(event, row.name) } })
             }
         }
     }
 }
 
-@Composable private fun EventRow(event: CombatEvent, monster: String, onOpen: ((CombatEvent) -> Unit)? = null) {
+@Composable private fun EventRow(event: CombatEvent, monster: String, shift: LifeShift?, onOpen: ((CombatEvent) -> Unit)? = null) {
     // A line with a trace opens its card (3.37.0); an older one without stays a line.
     val tap = if (onOpen != null && event.trace != null) Modifier.clickable { onOpen(event) } else Modifier
     Row(tap.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -98,7 +148,9 @@ private sealed interface PackRow {
             style = MaterialTheme.typography.bodySmall,
             fontWeight = if (event.kind == HitKind.CRIT) FontWeight.Bold else FontWeight.Normal,
             fontStyle = if (event.action == Action.TICK) FontStyle.Italic else FontStyle.Normal,
+            modifier = Modifier.weight(1f),
         )
+        shift?.let { Text(ui("expedition.log_life", it.before, it.after), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
     }
 }
 
@@ -106,8 +158,6 @@ private fun logLine(event: CombatEvent, monster: String): String {
     val damage = event.damage.roundToInt()
     val hero = event.actor == Side.HERO
     val line = event.pet?.let { petLine(event, monster, petName(it), damage) } ?: when (event.action) {
-        Action.RETREAT -> ui("expedition.log_retreat")
-
         // Thorns and reflect (2.75.0): the one who was struck gives a blow back.
         Action.REFLECT -> if (hero) ui("expedition.log_reflect_you", monster, damage) else ui("expedition.log_reflect_they", monster, damage)
 
@@ -202,7 +252,6 @@ private fun logColour(event: CombatEvent): Color = when {
     event.pet != null -> Vital
     (event.trace as? NoteTrace)?.kind?.recovery == true -> Vital
     event.action == Action.NOTE -> Rune
-    event.action == Action.RETREAT -> Muted
     event.action == Action.FLASK -> Vital
     event.action == Action.SKILL && event.damage <= 0 && event.landed -> if (event.actor == Side.HERO) Gold else Color(0xFFE9A0A0)
     event.action == Action.TICK || event.action == Action.REFLECT -> damageTint(event.type).copy(alpha = .85f)

@@ -19,13 +19,12 @@ enum class Side {
 
 /**
  * What a fighter did: swung a weapon, let an ailment burn on, gave a blow back (thorns and reflect, 2.75.0),
- * turned to leave, used a skill — a class's, a passive's answer or a monster's — or drank a flask (2.78.0).
+ * used a skill — a class's, a passive's answer or a monster's — or drank a flask (2.78.0).
  */
 enum class Action {
     ATTACK,
     TICK,
     REFLECT,
-    RETREAT,
     SKILL,
     FLASK,
 
@@ -36,8 +35,8 @@ enum class Action {
 /** How a blow ended: it landed, landed hard, or never reached. */
 enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
 
-/** How the whole fight ended; a retreat is the hero walking out of it. */
-enum class Outcome { WIN, LOSS, RETREAT }
+/** Чем кончился бой (3.88.8): из боя не уходят - он идёт до победы или поражения. */
+enum class Outcome { WIN, LOSS }
 
 /** Damage by type, as the sheet names it. */
 enum class DamageType(val attack: String, val resist: String?) {

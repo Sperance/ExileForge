@@ -14,7 +14,7 @@ import kotlin.random.Random
 
 internal fun ExpeditionWorld.think(agent: MonsterAgent, toHero: Double, dt: Double) {
     val rule = agent.rule
-    val sees = agent.calm <= 0 && toHero <= rule.sight && sight(agent.x, agent.y, heroX, heroY)
+    val sees = toHero <= rule.sight && sight(agent.x, agent.y, heroX, heroY)
     when (agent.mode) {
         // A sleeper and an ambusher only stir when the hero is right there.
         AgentMode.ASLEEP, AgentMode.LURKING -> if (sees && toHero <= rule.wake) agent.mode = AgentMode.CHASING

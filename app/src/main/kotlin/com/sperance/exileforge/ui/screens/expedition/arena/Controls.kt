@@ -38,8 +38,6 @@ import kotlin.math.ceil
                 Spacer(Modifier.width(8.dp))
                 Text(ui("expedition.begin"), style = MaterialTheme.typography.titleMedium)
             }
-            // The Abyss lets nobody walk away from its wave (2.82.0).
-            if (fight.escape) ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
         }
         return
     }
@@ -54,7 +52,7 @@ import kotlin.math.ceil
     }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeOutlinedButton(
-            enabled = live && !fight.retreating,
+            enabled = live,
             onClick = { onCommand(if (fight.paused) RunCommand.Begin else RunCommand.Pause) },
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp),
@@ -63,16 +61,6 @@ import kotlin.math.ceil
         }
         ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
-        }
-        if (fight.escape) {
-            ForgeOutlinedButton(
-                enabled = live && !fight.retreating,
-                onClick = { onCommand(RunCommand.Retreat) },
-                modifier = Modifier.weight(1f),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Text(ui(if (fight.retreating) "expedition.retreating" else "expedition.retreat"), style = MaterialTheme.typography.labelMedium)
-            }
         }
         if (auto != null) {
             ForgeOutlinedButton(onClick = { onCommand(RunCommand.StopAuto) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
@@ -84,7 +72,7 @@ import kotlin.math.ceil
 
 /**
  * The pause between the stages of a gathered fight (3.28.0): which stage stands up next, the seconds before it does
- * by itself, «Дальше» to begin at once and the way back; the belt above stays open for a draught.
+ * by itself and «Дальше» to begin at once; the belt above stays open for a draught. Отступления нет (3.88.8).
  */
 @Composable private fun StageBreak(fight: FightHud, left: Double, onCommand: (RunCommand) -> Unit) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -100,7 +88,6 @@ import kotlin.math.ceil
                 Spacer(Modifier.width(8.dp))
                 Text(ui("fight.stage_next"), style = MaterialTheme.typography.titleMedium)
             }
-            if (fight.escape) ForgeOutlinedButton(onClick = { onCommand(RunCommand.Retreat) }, modifier = Modifier.height(52.dp)) { Text(ui("fight.walk_away")) }
         }
     }
 }

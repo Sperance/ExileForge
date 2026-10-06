@@ -85,7 +85,6 @@ class SessionActions(
     }
 
     /** A new tester: the server picks the password and says it once, so the window keeps it on screen to be copied. */
-    fun createTester(login: String) = testerCommand { api.admin.createTester(login) }
     fun resetTester(id: String) = testerCommand { api.admin.resetTester(id) }
     fun setTesterActive(id: String, active: Boolean) = testerCommand { api.admin.setTesterActive(id, active) }
     fun closeShownTester() = admins.update { it.copy(shownTester = null) }

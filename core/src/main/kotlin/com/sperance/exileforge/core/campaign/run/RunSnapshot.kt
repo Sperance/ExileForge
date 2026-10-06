@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.hud
+import com.sperance.exileforge.core.campaign.shownLife
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -55,7 +56,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
     val awaiting = mine.count(::awaits)
     return RunHud(
         phase = phase, mapCode = zone.code,
-        heroLife = (battle?.heroLife ?: life).roundToInt(), heroMaxLife = hero.maxLife.roundToInt(),
+        heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0), heroMaxLife = hero.maxLife.roundToInt(),
         heroShield = (battle?.heroFighter?.shield ?: hero.maxShield).roundToInt(), heroMaxShield = hero.maxShield.roundToInt(),
         alive = world.alive, total = world.total, sealed = world.sealed,
         fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),
@@ -141,5 +142,5 @@ internal fun ExpeditionRun.fightLeader(): RolledMonster = members.maxBy { it.mon
 
 internal fun ExpeditionRun.fightHud(battle: Battle): FightHud = battle.hud(
     members.map { it.monster }, fightLeader(), speed, started, paused, hero.taunt,
-    level = fightLevel, escape = !abyssFight, stage = stage, stages = fightStages.size, interlude = interlude,
+    level = fightLevel, stage = stage, stages = fightStages.size, interlude = interlude,
 )

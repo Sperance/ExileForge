@@ -106,9 +106,14 @@ import kotlin.math.roundToInt
     BackHandler {
         when {
             summary -> close()
+
             hud.phase == RunPhase.GATE -> model.runCommand(RunCommand.StepBack)
+
             hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> model.runCommand(RunCommand.StepOff)
-            hud.phase == RunPhase.MAP -> if (!zone) leaving = true
+
+            // Забег идёт до конца (3.88.8): уйти с карты можно, только когда страж повержен.
+            hud.phase == RunPhase.MAP -> if (!zone && !hud.sealed) leaving = true
+
             else -> model.runCommand(RunCommand.Leave)
         }
     }
@@ -123,7 +128,7 @@ import kotlin.math.roundToInt
                     game,
                     run,
                     hud,
-                    onLeave = if (zone) null else ({ leaving = true }),
+                    onLeave = if (zone || hud.sealed) null else ({ leaving = true }),
                     onGear = { gear = true },
                     onStats = { sheet = true },
                     onDrink = { model.runCommand(RunCommand.Drink(it)) },
@@ -163,7 +168,7 @@ import kotlin.math.roundToInt
 
             RunPhase.CLEARED -> MapSummary(game, model, hud, onDone = close)
 
-            RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.value.isNotBlank() }, onEnter = model::enterVaal, onRefuse = model::refuseVaal) { model.runCommand(RunCommand.StepBack) }
+            RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.value.isNotBlank() }, onEnter = model::enterVaal) { model.runCommand(RunCommand.StepBack) }
 
             RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(game, it, onCommand = model::runCommand) }
 
@@ -322,6 +327,10 @@ internal const val PENDING_GRACE = 10_000L
         RunPanel(Modifier, GoldBright) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             RewardLines(game, reward, { looked = it }, awaiting)
+            // Куда ушла добыча (3.88.8): вещи и стопки сундука уже лежат у героя, подбирать нечего.
+            if (!awaiting && (reward.equipment.isNotEmpty() || reward.items.isNotEmpty())) {
+                Text(ui("expedition.chest_stored"), color = Vital, style = MaterialTheme.typography.bodySmall)
+            }
             ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }

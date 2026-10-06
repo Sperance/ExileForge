@@ -33,7 +33,9 @@ data class Session(
     val isModerator: Boolean get() = isAdmin || (signedIn && profile?.role == "MODERATOR")
 
     /** Окно тестирования: тестировщик и администратор. */
-    val isTester: Boolean get() = isAdmin || (signedIn && profile?.role == "TESTER")
+
+    /** Окно тестирования: тестировщику и выше - модератору (3.88.8, сервер 1.80.11) и администратору. */
+    val isTester: Boolean get() = isModerator || (signedIn && profile?.role == "TESTER")
 
     /** Аккаунт без имени: регистрация по устройству оставляет имя и логин пустыми. */
     val title: String get() = profile?.name?.takeIf { it.isNotBlank() }

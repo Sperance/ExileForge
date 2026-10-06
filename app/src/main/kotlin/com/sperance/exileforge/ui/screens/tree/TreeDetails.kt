@@ -87,7 +87,7 @@ import kotlin.math.sin
 
 /** Карточка узла (3.80.16): описание, действия, самоцвет в гнезде, «Итого». */
 /**
- * The chosen node: what it gives, and the commands the server accepts for it — the plan's beside the one that takes.
+ * The chosen node: what it gives, and the commands the server accepts for it.
  *
  * A socket is the exception, because it gives nothing by itself — what it holds is a jewel, and
  * the command there is to put one in or take it out.
@@ -102,7 +102,6 @@ import kotlin.math.sin
     enabled: Boolean,
     path: List<String>?,
     available: Int,
-    plan: List<TakenNode>,
     onClose: () -> Unit,
     onAllocate: (String, Int?) -> Unit,
     onPath: (String, Int?) -> Unit,
@@ -111,7 +110,6 @@ import kotlin.math.sin
     onSocket: (String, String) -> Unit,
     onUnsocket: (String) -> Unit,
     onRechoose: (String, Int) -> Unit,
-    onPlan: (List<TakenNode>) -> Unit,
 ) {
     if (node == null) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -128,7 +126,6 @@ import kotlin.math.sin
     // The option the hero took is theirs: it is read from the snapshot, not from the tree.
     val chosen = game.hero?.tree?.firstOrNull { it.code == node.code }?.choice
     var picked by remember(node.code) { mutableStateOf<Int?>(null) }
-    val planning = remember(index, heroClass, taken, plan, node.code) { planOption(index, heroClass, taken, plan, node) }
     // The node's name heads the card in its own colour, with its kind, its price and whether it is taken under it.
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -210,7 +207,7 @@ import kotlin.math.sin
         // A far node (3.39.0): the whole way at once, for the sum of its steps; short of points, the button says so.
         val cost = path.sumOf { index.tree.node(it)?.cost ?: 0 }
         MutedText("${ui("tree.path")}: ${ui("tree.path_value", path.size, cost)}")
-        NodeActions(planning, enabled, plan, onPlan) {
+        NodeActions {
             ForgeButton(
                 enabled = enabled && cost <= available && (!choosing || picked != null),
                 onClick = { onPath(node.code, picked) },
@@ -221,7 +218,7 @@ import kotlin.math.sin
     } else if (node.code in reachable || taken.isEmpty()) {
         // Short of points the button says so and stays grey: the server would only refuse (ST_008).
         val short = node.cost > available
-        NodeActions(planning, enabled, plan, onPlan) {
+        NodeActions {
             ForgeButton(
                 enabled = enabled && !short && (!choosing || picked != null),
                 onClick = { onAllocate(node.code, picked) },
@@ -232,33 +229,14 @@ import kotlin.math.sin
         }
         if (short) MutedText(ui("tree.path_short", node.cost, available))
     } else {
-        NodeActions(planning, enabled, plan, onPlan) {}
         MutedText(ui("tree.path_none"))
     }
-    (planning as? PlanOption.Note)?.key?.let { MutedText(ui(it)) }
     if (node.type == SkillNodeType.START) MutedText(ui("tree.start_note"))
 }
 
-/** The plan's button, when the node has one, beside the command that takes it. */
-@Composable internal fun NodeActions(
-    planning: PlanOption,
-    enabled: Boolean,
-    plan: List<TakenNode>,
-    onPlan: (List<TakenNode>) -> Unit,
-    take: @Composable RowScope.() -> Unit,
-) {
+/** Ряд команд узла: та, что его берёт. */
+@Composable internal fun NodeActions(take: @Composable RowScope.() -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        when (planning) {
-            is PlanOption.Remove -> ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan.filterNot { it.code == planning.code }) }) {
-                Text(ui("tree.plan_remove"))
-            }
-
-            is PlanOption.Add -> ForgeOutlinedButton(enabled = enabled, onClick = { onPlan(plan + planning.way.map { TakenNode(it) }) }) {
-                Text(ui("tree.plan_add", planning.way.size))
-            }
-
-            is PlanOption.Note -> Unit
-        }
         take()
     }
 }

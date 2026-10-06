@@ -43,8 +43,6 @@ import kotlinx.serialization.Serializable
     val title: String = "",
     /** The loot filter (3.47.0): which rarities of which slot groups the merchant takes from a run's loot at once. */
     val autoSell: com.sperance.exileforge.rules.content.AutoSell = com.sperance.exileforge.rules.content.AutoSell(),
-    /** The tree's plan (3.47.0): the server takes its nodes by itself as the points come. */
-    val plannedTree: List<com.sperance.exileforge.rules.content.TakenNode> = emptyList(),
     /** Tree points beyond the level (3.73.0, server 1.69.0): only the testing window gives them. */
     val bonusPoints: Int = 0,
 )

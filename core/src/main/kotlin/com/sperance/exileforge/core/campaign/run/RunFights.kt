@@ -275,23 +275,6 @@ internal fun ExpeditionRun.play(dt: Double) {
             }
             onFallen()
         }
-
-        // Nothing already looted is lost, but there is no report for a fight cut short: the packs of the stages won stay dead,
-        // the current one and those still waiting go back to their places.
-        Outcome.RETREAT -> {
-            // Walking out of a fight takes the run back into the player's hands
-            autopilot = null
-            fightAgents.filter { it.id >= 0 && it.alive }.forEach(world::retreatFrom)
-            report = null
-            clearSpoils()
-            slain = null
-            if (down != null) {
-                phase = RunPhase.ABYSS
-                take(down, fallen = true)
-            } else {
-                phase = RunPhase.MAP
-            }
-        }
     }
     endFight()
     abyssFight = false

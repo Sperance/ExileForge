@@ -37,6 +37,7 @@ import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_PETS
 import com.sperance.exileforge.presentation.state.TAB_PROGRESS
 import com.sperance.exileforge.presentation.state.TAB_TRIALS
+import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
@@ -237,6 +238,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /** The level a tile's place opens at (3.76.0), while the hero is below it. */
-private fun GameUi.lockOf(feature: Feature): Int? = feature.takeIf { !unlocked(it) }?.level
+private fun GameUi.lockOf(feature: Feature): Int? = feature.takeIf { !unlocked(it) }?.level(index?.rules)
 
 private const val LOCKED_TILE_ALPHA = .45f

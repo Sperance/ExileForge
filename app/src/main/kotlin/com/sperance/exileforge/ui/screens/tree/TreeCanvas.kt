@@ -99,7 +99,6 @@ import kotlin.math.sin
     taken: Set<String>,
     reachable: Set<String>,
     path: List<String>,
-    planned: Set<String>,
     highlight: Set<String>,
     view: TreeView,
     modifier: Modifier = Modifier,
@@ -217,14 +216,10 @@ import kotlin.math.sin
                     pulse,
                 )
             }
-            // The plan's nodes wear a rune ring, the filter's a green one - over the medallion, never instead of it.
+            // Узлы фильтра носят зелёное кольцо поверх медальона, не вместо него.
             nodes.forEach { node ->
-                val ring = when {
-                    node.code in highlight -> Vital
-                    node.code in planned && node.code !in taken -> Rune
-                    else -> return@forEach
-                }
-                drawCircle(ring, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, view.scale, view.pan), style = Stroke(2.5f))
+                if (node.code !in highlight) return@forEach
+                drawCircle(Vital, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, view.scale, view.pan), style = Stroke(2.5f))
             }
         }
     }

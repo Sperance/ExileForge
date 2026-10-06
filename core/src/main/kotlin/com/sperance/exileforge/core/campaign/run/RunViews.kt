@@ -143,7 +143,6 @@ data class FightHud(
     val heroHeld: Boolean = false,
     /** The hero's buildups (3.78.0). */
     val heroBuildup: BuildupView? = null,
-    val retreating: Boolean = false,
     val lunge: LungeView? = null,
     val events: List<CombatEvent> = emptyList(),
     val started: Boolean = true,
@@ -165,8 +164,6 @@ data class FightHud(
     val heroBarrier: Int = 0,
     /** The level the foes stand at: a depth of the Abyss stands deeper than its zone. */
     val level: Int = 0,
-    /** Whether the hero may walk out: the Abyss lets nobody go mid-wave. */
-    val escape: Boolean = true,
     /** The stage of a gathered fight (3.28.0), from 1, of [stages]: small packs in a row share one (3.70.0). */
     val stage: Int = 1,
     val stages: Int = 1,

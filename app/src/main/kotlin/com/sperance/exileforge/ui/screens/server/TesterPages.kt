@@ -125,30 +125,12 @@ import org.koin.compose.viewmodel.koinViewModel
 private val RESETS = listOf("TREE", "ATLAS", "BAG", "STASH", "CAMPAIGN")
 
 /**
- * The administrator's testers (3.73.0): the list with the last sign-in, a new account by login — the server picks the
- * password and it is shown once, to be copied — a new password, switching an account off and on.
+ * The administrator's testers (3.73.0): the list with the last sign-in, a new password, switching an account off and on.
+ * Новый аккаунт - в окне модерации кнопкой «+», с выбором роли (3.88.8).
  */
 @Composable internal fun TestersPage(account: AccountUi) {
     val sessionModel: SessionViewModel = koinViewModel()
     LaunchedEffect(account.session.sessionEpoch) { sessionModel.loadTesters() }
-    var login by remember { mutableStateOf("") }
-    ForgePanel {
-        Engraved(ui("tester.new"))
-        OutlinedTextField(
-            login,
-            { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
-            label = { Text(ui("account.login")) },
-            supportingText = { LengthCounter(login, account.inputs.login) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        ForgeButton(enabled = !account.busy && login.isNotBlank(), onClick = {
-            sessionModel.createTester(login)
-            login = ""
-        }, modifier = Modifier.fillMaxWidth()) {
-            Text(ui("tester.create"))
-        }
-    }
     if (account.admin.testers.isEmpty()) MutedText(ui("tester.none"))
     account.admin.testers.forEach { tester -> TesterRow(account, tester) }
     account.admin.shownTester?.let { CredentialsDialog(it, sessionModel::closeShownTester) }

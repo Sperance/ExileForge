@@ -149,26 +149,6 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Свёрнутая шапка (3.88.7): одна тонкая строка - имя героя и уровень, пока список листают вниз. */
-@Composable internal fun CompactBanner(game: GameUi) {
-    val named = game.heroInfo != null || game.heroRow != null
-    Row(
-        Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
-            .padding(horizontal = 18.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Icon(ForgeGlyphs.Sigil, null, tint = Gold, modifier = Modifier.size(16.dp))
-        Text(
-            if (named) game.heroName + ui("app.hero_level", game.heroLevel) else ui("app.title"),
-            style = MaterialTheme.typography.labelLarge,
-            color = GoldBright,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
 /**
  * The banner's «⋮» (3.75.0, the owner's pick «B» of three mockups): the inbox, the beetle and the account behind one button,
  * so the name of the game fits beside the badges. A letter unread marks the button itself with a dot.

@@ -49,7 +49,7 @@ import com.sperance.exileforge.ui.theme.*
  * opens its page (3.24.0).
  */
 @Composable internal fun ActionBar(fight: FightHud, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
-    val live = fight.started && fight.outcome == null && !fight.retreating
+    val live = fight.started && fight.outcome == null
     // Between stages the belt is open (3.28.0): a draught then is drunk as on the road.
     val drinkable = live || (!fight.started && fight.interlude != null)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

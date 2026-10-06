@@ -277,9 +277,8 @@ class ExpeditionWorld(
             if (!near) portalArmed = true
         }
         agents.filter { it.alive }.forEach { agent ->
-            agent.calm = (agent.calm - dt).coerceAtLeast(0.0)
             val toHero = hypot(heroX - agent.x, heroY - agent.y)
-            if (agent.calm <= 0 && toHero < rules.contact) return WorldEvent.Encounter(agent)
+            if (toHero < rules.contact) return WorldEvent.Encounter(agent)
             think(agent, toHero, dt)
         }
         if (!sealed && hypot(heroX - (map.exit.x + 0.5), heroY - (map.exit.y + 0.5)) < rules.exitReach) return WorldEvent.Exit

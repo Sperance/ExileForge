@@ -85,7 +85,7 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     if (creating || state.createdTester != null) {
-        TesterSheet(account, state.createdTester, onCreate = vm::createTester) {
+        AccountSheet(account, state.createdTester, onCreate = vm::createAccount) {
             creating = false
             vm.forgetTester()
         }
@@ -534,15 +534,19 @@ private const val HARDWARE = 6
 /** Журнал отдаёт страницу без счёта: полная страница - возможно, есть следующая. */
 private const val PAGE_GUESS = 30
 
+/** Роли, что администратор создаёт формой «+». */
+private val CREATABLE = listOf(AccountRole.TESTER, AccountRole.MODERATOR)
+
 /** Роли, что администратор выдаёт в досье. */
 private val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.TESTER, AccountRole.MODERATOR)
 
 /**
- * Новый тестировщик (3.88.7): логин - и сервер создаёт аккаунт с паролем, который показывается один раз, с кнопками
- * скопировать логин и пароль.
+ * Новый аккаунт (3.88.7, роль с 3.88.8): логин и роль - тестировщик или модератор, - и сервер создаёт аккаунт с паролем,
+ * который показывается один раз, с кнопками скопировать логин и пароль.
  */
-@Composable private fun TesterSheet(account: AccountUi, created: TesterAccount?, onCreate: (String) -> Unit, onDismiss: () -> Unit) {
+@Composable private fun AccountSheet(account: AccountUi, created: TesterAccount?, onCreate: (String, AccountRole) -> Unit, onDismiss: () -> Unit) {
     var login by remember { mutableStateOf("") }
+    var role by remember { mutableStateOf(AccountRole.TESTER) }
     val clipboard = LocalClipboardManager.current
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -555,7 +559,10 @@ private val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.TESTER, AccountRol
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                ForgeButton(onClick = { onCreate(login) }, enabled = !account.busy && login.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(ui("moderation.tester_create")) }
+                Chips {
+                    CREATABLE.forEach { option -> Chip(ui("moderation.role.${option.name}"), role == option) { role = option } }
+                }
+                ForgeButton(onClick = { onCreate(login, role) }, enabled = !account.busy && login.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(ui("moderation.tester_create")) }
             } else {
                 MutedText(ui("moderation.tester_once"))
                 listOf(ui("moderation.tester_login") to created.login, ui("moderation.tester_password") to created.password.orEmpty()).forEach { (label, value) ->

@@ -36,6 +36,7 @@ import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -124,7 +125,7 @@ private fun guildNews(guilds: Guilds): String {
 /** One building: its sign, its name and the line of news; the whole card is the door. */
 
 /** The level a building opens at (3.76.0), while the hero is below it. */
-private fun GameUi.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level
+private fun GameUi.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level(index?.rules)
 
 @Composable private fun BuildingCard(title: String, icon: ImageVector, news: String, lockedUntil: Int?, accent: Color = Gold, onOpen: () -> Unit) {
     val shape = RoundedCornerShape(14.dp)

@@ -42,8 +42,6 @@ class MonsterAgent(
     var targetY = homeY
     var idle = 0.0
 
-    /** Seconds it will neither chase nor fight: a monster the hero ran from does not pounce at once. */
-    var calm = 0.0
     var alive = true
     var mode = when (monster.behaviour.type) {
         Behaviours.AMBUSH -> AgentMode.LURKING

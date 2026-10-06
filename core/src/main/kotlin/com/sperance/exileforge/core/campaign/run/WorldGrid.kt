@@ -135,9 +135,3 @@ fun ExpeditionWorld.stages(packs: List<MonsterAgent>): List<List<MonsterAgent>> 
     if (last != null && last.sumOf { it.standing.size } + pack.standing.size <= rules.stageMonsters) last += pack else stages += mutableListOf(pack)
     stages
 }
-
-/** The hero stepped back from a fight nobody won: the monster lets them go for a while, and goes home. */
-fun ExpeditionWorld.retreatFrom(agent: MonsterAgent) {
-    agent.calm = rules.calmAfterRetreat
-    agent.mode = AgentMode.RETURNING
-}

@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.presentation.state.Feature
+import com.sperance.exileforge.presentation.state.level
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -20,6 +21,7 @@ class Navigator(
     private val heroes: HeroRepository,
     private val sessions: SessionRepository,
     private val notices: Notices,
+    private val world: com.sperance.exileforge.core.world.WorldRepository,
 ) {
     val stack: SnapshotStateList<Route> = mutableStateListOf(Route.Auth)
 
@@ -44,8 +46,9 @@ class Navigator(
         if (sessions.state.value.isTester) return true
         val holding = heroes.state.value
         val level = holding.hero?.level ?: sessions.state.value.characters.firstOrNull { it.id == holding.heroId }?.level ?: 1
-        if (level >= feature.level) return true
-        notices.toast(ui("unlock.locked", ui(feature.title), feature.level))
+        val needed = feature.level(world.state.value.content?.rules)
+        if (level >= needed) return true
+        notices.toast(ui("unlock.locked", ui(feature.title), needed))
         return false
     }
 

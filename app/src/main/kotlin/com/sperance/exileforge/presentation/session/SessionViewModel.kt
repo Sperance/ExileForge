@@ -48,7 +48,6 @@ class SessionViewModel(
 
     /** Тестовые учётки администратора (3.80.30), как их просят страницы настроек. */
     fun loadTesters() = sessionActions.loadTesters()
-    fun createTester(login: String) = sessionActions.createTester(login)
     fun resetTester(id: String) = sessionActions.resetTester(id)
     fun setTesterActive(id: String, active: Boolean) = sessionActions.setTesterActive(id, active)
     fun refreshLocale() = loader.refreshLocale()

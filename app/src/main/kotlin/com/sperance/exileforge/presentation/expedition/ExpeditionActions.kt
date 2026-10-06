@@ -430,11 +430,6 @@ class ExpeditionActions(
         mutableRun.value = inner
     }
 
-    /** «Отказаться» у врат Ваал: портала нет, зона закрыта навсегда. */
-    fun refuseVaal() {
-        mutableRun.value?.send(RunCommand.ShutGate(entered = false))
-    }
-
     // ==================== Атлас ====================
 
     fun openAtlas() {

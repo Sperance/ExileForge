@@ -150,7 +150,6 @@ class HeroActions(
     fun refundBranch(code: String) = heroCommand { id -> api.tree.refundBranch(id, code) }
     fun rechooseNode(code: String, choice: Int) = heroCommand { id -> api.tree.rechoose(id, code, choice) }
     fun resetTree() = heroCommand { id -> api.tree.reset(id) }
-    fun planTree(nodes: List<TakenNode>) = heroCommand { id -> api.tree.plan(id, nodes) }
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = heroCommand { id -> api.hero.autoSell(id, rarity, groups) }
 
     /** Админу: опыт герою, уровень решает сервер. */

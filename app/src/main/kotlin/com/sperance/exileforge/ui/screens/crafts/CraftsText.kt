@@ -83,11 +83,17 @@ fun workTitle(work: WorkView): String = com.sperance.exileforge.core.display.wor
  * What an answer brought, as one line: «+2 Iron Ore, +1 Bark», the pieces a smith or a cartographer
  * made, that the bag ran dry, or that the cycles came up empty.
  */
-fun gainsLine(gains: WorkGains): String = listOfNotNull(
+fun gainsLine(gains: WorkGains): String = gainParts(gains).joinToString(" · ").ifBlank { ui("crafts.gain_nothing", gains.cycles) }
+
+/** Всплывашка сбора у полосы цикла (3.89.1): то же, что [gainsLine], с опытом - «+1 Медная руда · +2 опыта», а без добычи - «пусто». */
+fun harvestLine(gains: WorkGains): String = (gainParts(gains) + listOfNotNull(gains.experience.takeIf { it > 0 }?.let { ui("crafts.experience_gain", number(it)) }))
+    .joinToString(" · ").ifBlank { ui("crafts.harvest_empty") }
+
+private fun gainParts(gains: WorkGains): List<String> = listOfNotNull(
     gains.items.entries.joinToString { (code, amount) -> ui("crafts.gain", amount, itemTitle(code)) }.ifBlank { null },
     gains.equipment.takeIf { it.isNotEmpty() }?.let { made -> ui("crafts.made", made.joinToString { equipmentTitle(it.template) }) },
     ui("crafts.starved").takeIf { gains.starved },
-).joinToString(" · ").ifBlank { ui("crafts.gain_nothing", gains.cycles) }
+)
 
 /** How many of a stack the bag holds, by the item's code — a material, an orb, an essence or a book; 0 before the hero is read. */
 fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L
@@ -149,7 +155,7 @@ fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
         }
     }
     val cycles = ceil((next - profession.experience).coerceAtLeast(0.0) / perCycle).toLong()
-    val running = (now + offset - work.settledAt).coerceIn(0L, work.cycleMillis)
+    val running = work.phase(now + offset)
     return ui("crafts.level_eta", profession.level + 1, eta((cycles * work.cycleMillis - running).coerceAtLeast(0L)))
 }
 
@@ -221,7 +227,8 @@ internal fun cycleCost(game: GameUi, job: JobView): AnnotatedString = buildAnnot
 internal const val TILES = 3
 
 /**
- * The variants a choosing work offers now: those the profession's level reaches — and, for the condensing,
- * only the essences the bag can feed a cycle of, else a hundred and forty chips would bury the few that can run.
+ * The variants a choosing work offers: every one, whatever the profession's level (3.89.1: a locked one shows its lock and
+ * the sheet names the level) — but for the condensing only the essences the bag can feed a cycle of, else a hundred and
+ * forty chips would bury the few that can run.
  */
-internal fun choices(game: GameUi, profession: ProfessionView, work: JobView): List<JobView> = work.options.filter { option -> option.level <= profession.level && (work.kind != JobKind.CONDENSE || option.inputs.all { bagCount(game, it.item) >= it.amount }) }
+internal fun choices(game: GameUi, work: JobView): List<JobView> = work.options.filter { option -> work.kind != JobKind.CONDENSE || option.inputs.all { bagCount(game, it.item) >= it.amount } }

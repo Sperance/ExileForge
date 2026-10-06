@@ -21,7 +21,7 @@ import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.monsterTitle
-import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -136,6 +136,6 @@ private fun rollText(index: ContentIndex?, roll: Roll): String = index?.let { i 
     val shape = RoundedCornerShape(6.dp)
     Column(modifier.background(Altar.vein.copy(alpha = .08f), shape).border(1.dp, Altar.vein.copy(alpha = .3f), shape).padding(horizontal = 10.dp, vertical = 7.dp)) {
         Text(label.uppercase(), color = Altar.muted, style = MaterialTheme.typography.labelSmall)
-        Text(ui("vaal.percent", number(value)), color = Altar.figure, style = MaterialTheme.typography.titleMedium)
+        Text(ui("vaal.percent", signedNumber(value)), color = Altar.figure, style = MaterialTheme.typography.titleMedium)
     }
 }

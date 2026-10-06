@@ -8,9 +8,11 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,6 +22,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -27,6 +30,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -47,10 +52,12 @@ import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.AffixMarks
 import com.sperance.exileforge.core.display.ItemLine
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.cos
@@ -114,6 +121,44 @@ fun relicLook(rarity: Rarity): RelicLook {
 
         else -> RelicLook(color, color, DepthTop, DepthBottom, color, color, Color(0xFF8FA0AB), Color(0xFF56636D), Rune, null)
     }
+}
+
+/** Имя вещи серифами размера [size] в цвете редкости; у легенды - с ореолом её свечения (3.89.1). */
+fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = name, shadow = if (legend != null) Shadow(glow.copy(alpha = .6f), blurRadius = 18f) else null)
+
+/**
+ * Подложка вещи в облике редкости (3.89.1) - общая для полной карточки и плитки: градиент [RelicLook.top] → [RelicLook.bottom],
+ * свечение редкости от верхнего края, небо легенды, завитки по углам у легенды и рамка - нить [RelicLook.gold], у выбранной - золото.
+ */
+@Composable fun Modifier.relicGround(look: RelicLook, shape: Shape, selected: Boolean = false): Modifier {
+    val frame = Brush.verticalGradient(
+        if (selected) {
+            listOf(GoldBright, GoldBright)
+        } else {
+            listOf(look.gold.copy(alpha = .6f), look.gold.copy(alpha = .1f), look.gold.copy(alpha = .3f))
+        },
+    )
+    return clip(shape)
+        .background(Brush.verticalGradient(listOf(look.top, look.bottom)))
+        .drawBehind { drawRect(Brush.radialGradient(listOf(look.glow.copy(alpha = .16f), Color.Transparent), Offset(size.width / 2, 0f), size.width * .8f)) }
+        .relicSky(look)
+        .then(if (look.legend != null) Modifier.drawBehind { relicCorners(look.gold) } else Modifier)
+        .border(if (selected) 2.dp else 1.dp, frame, shape)
+}
+
+/**
+ * Гнездо иконки размера [size] (3.89.1): у обычной, волшебной и редкой - скруглённый квадрат басальта в нити редкости,
+ * у легенды - круг её неба в золотой нити с ореолом, как гнездо «Астролябии».
+ */
+@Composable fun RelicSocket(item: ItemView, look: RelicLook, size: Dp) {
+    val legend = look.legend != null
+    val shape = if (legend) CircleShape else RoundedCornerShape(size * .3f)
+    Box(
+        Modifier.size(size).glow(look.glow.copy(alpha = if (legend) .55f else .25f), radius = 8.dp, shape = shape)
+            .background(Brush.radialGradient(if (legend) listOf(look.top, look.bottom) else listOf(Color(0xFF232C2A), Color(0xFF0B1013))), shape)
+            .border(if (legend) 1.5.dp else 1.dp, if (legend) look.gold else look.rarity.copy(alpha = .45f), shape),
+        contentAlignment = Alignment.Center,
+    ) { ItemIcon(item, look.rarity, Modifier.size(size * .66f)) }
 }
 
 /** Цвета значков тира: первый тир - янтарь, второй - мята, третий - лёд, ниже - серый. */

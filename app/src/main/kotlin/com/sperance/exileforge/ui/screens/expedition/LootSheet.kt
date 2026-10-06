@@ -15,6 +15,8 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.LootPresence
+import com.sperance.exileforge.presentation.state.lootPresence
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -29,28 +31,22 @@ import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Panel
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Where a dropped piece stands for «Надеть»: the server holds it loose, wears it already, has it on the way, or never got it. */
-internal enum class LootStand { LOOSE, WORN, ARRIVING, GONE }
-
 /**
  * «Надеть» над выпавшей вещью (3.89.0): одно действие для карточки лута и строки сундука - где вещь стоит, можно ли
  * надеть её сейчас и само надевание. Вещь из ролла попадает в тайник с ответом журнала, до того кнопка ждёт.
+ * Положение вещи с 3.89.1 - общее правило списков лута [lootPresence].
  */
 internal class LootWear(private val game: GameUi, private val vm: ExpeditionViewModel, private val pending: Int) {
-    fun stand(item: ItemView): LootStand {
-        val held = game.hero?.item(item.id)
-        return when {
-            held == null -> if (pending > 0) LootStand.ARRIVING else LootStand.GONE
-            held.equipped || held.socketed -> LootStand.WORN
-            else -> LootStand.LOOSE
-        }
-    }
+    /** Журнал ещё несёт ответы: вещи, которой нет у героя, ждут. */
+    val arriving: Boolean get() = pending > 0
+
+    fun stand(item: ItemView): LootPresence = game.lootPresence(item.id, arriving)
 
     /** Вещь в тайнике, команда не ждёт сети, требования выполнены. */
-    fun ready(item: ItemView): Boolean = stand(item) == LootStand.LOOSE && !game.busy && game.unmetFor(item.code).isEmpty()
+    fun ready(item: ItemView): Boolean = stand(item) == LootPresence.HELD && !game.busy && game.unmetFor(item.code).isEmpty()
 
     /** Подпись кнопки: «Надеть» или «в пути», пока сервер не принял вещь. */
-    fun label(item: ItemView): String = ui(if (stand(item) == LootStand.ARRIVING) "expedition.loot_arriving" else "hero.equip")
+    fun label(item: ItemView): String = ui(if (stand(item) == LootPresence.ARRIVING) "expedition.loot_arriving" else "hero.equip")
 
     fun wear(item: ItemView) = vm.equip(item.id)
 
@@ -81,14 +77,14 @@ internal fun LootSheet(
 ) {
     val wear = rememberLootWear(game, vm)
     val stand = wear.stand(item)
-    LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) wear.hurry() }
+    LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) wear.hurry() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item), requirementsMet = game.unmetFor(item.code).isEmpty())
             when {
-                stand == LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
+                stand == LootPresence.WORN -> MutedText(ui("expedition.loot_worn"))
 
-                stand == LootStand.GONE -> MutedText(ui("expedition.loot_gone"))
+                stand == LootPresence.GONE -> MutedText(ui("expedition.loot_gone"))
 
                 // A map or a jewel is not worn (3.73.0): no «Надеть» under it.
                 item.slot.isJewelLike -> Unit
@@ -106,7 +102,7 @@ internal fun LootSheet(
             }
             // Sold to the merchant right here (3.81.0), wherever the piece is opened on a run: a gilt ribbon with the coin and
             // the price in a chip, held as before. A locked piece (3.30.0) is not sold: the ribbon stays, dimmed, with the reason.
-            if (stand == LootStand.LOOSE) {
+            if (stand == LootPresence.HELD) {
                 val locked = game.hero?.item(item.id)?.locked == true
                 HoldButton(
                     ui("expedition.loot_sell"),

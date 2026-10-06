@@ -38,6 +38,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.presentLoot
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -187,12 +188,12 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         Caption(ui("expedition.report_recipe"))
         Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
     }
-    // A piece put on from here (3.24.0) leaves the list: it is worn now, no longer loot.
-    val gear = reward.equipment.filterNot { game.hero?.item(it.id)?.let { held -> held.equipped || held.socketed } == true }.mapNotNull { game.view(it) }
+    // По положению у героя (3.89.1): проданная вещь уходит из списка, надетая остаётся с меткой «Надето».
+    val gear = game.presentLoot(reward.equipment, arriving = hud.rewardAwaiting > 0).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
         // A line a piece, as the map's summary has it: the whole card is one tap behind each.
-        gear.forEach { PieceLine(it) { onItem(it) } }
+        gear.forEach { (piece, presence) -> PieceLine(piece, presence) { onItem(piece) } }
     }
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))

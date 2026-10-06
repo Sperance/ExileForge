@@ -47,6 +47,7 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
@@ -125,7 +126,7 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
         MapLineKind.REWARD in kinds -> MapLineKind.REWARD
         else -> MapLineKind.CONTENT
     }
-    val risk = effects.withIndex().sumOf { (i, effect) -> MapStats.riskOf(index, effect.stat, line.values.getOrElse(i) { 0.0 }) }
+    val risk = line.definition?.bind(line.values).orEmpty().sumOf { (effect, value) -> MapStats.riskOf(index, effect.stat, value) }
     MapLine(line.text, kind, risk)
 }
 
@@ -148,7 +149,7 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
 
 @Composable internal fun Figure(value: Double, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(ui("expedition.launch_percent", number(value)), color = if (value > 0) GoldBright else Muted, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
+        Text(ui("expedition.launch_percent", signedNumber(value)), color = if (value > 0) GoldBright else Muted, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)
         MutedText(label, style = MaterialTheme.typography.labelSmall)
     }
 }

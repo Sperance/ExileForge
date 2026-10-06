@@ -42,6 +42,7 @@ import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.roll.VaalZone
+import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
@@ -264,6 +265,12 @@ data class RunHud(
     val rejected: Int = 0,
     /** What the map came to so far: its summary before the camp. */
     val tally: MapTally = MapTally(),
+    /** Лист объекта карты (3.89.1): алтарь, торговец или узел, к которому подошёл герой. */
+    val feature: FeatureView? = null,
+    /** Последний удар ловушки (3.89.1), пока он висит на полосе карты. */
+    val hazard: HazardView? = null,
+    /** Доля простоя у трещины тайной комнаты (3.89.1); null - герой не стоит у неё. */
+    val opening: Float? = null,
 )
 
 /** The Abyss as its sheet shows it: how many depths the crack leads down, how many are cleared, every depth's wave and hoard, and the share a fall keeps. */
@@ -279,6 +286,12 @@ data class AbyssView(
     val current: AbyssDepth? get() = depths.getOrNull(cleared - 1)
     val next: AbyssDepth? get() = if (cleared < depth) depths.getOrNull(cleared) else null
 }
+
+/**
+ * Объект карты, чей лист открыт (3.89.1, сервер 1.81.3): объект правил - что в нём, - выборы, уже сделанные на нём, и доля
+ * идущего сбора узла (null - сбор не идёт).
+ */
+data class FeatureView(val feature: MapFeature, val taken: List<Int>, val gathering: Float? = null)
 
 /** A fountain as its offer reads: which one, and the share of life and mana it gives back. */
 data class FountainView(val id: Int, val heal: Double)

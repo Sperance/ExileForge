@@ -1,6 +1,12 @@
 package com.sperance.exileforge.ui.screens.crafts
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,6 +31,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -33,9 +40,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.crafts.Crafts
+import com.sperance.exileforge.core.crafts.Harvest
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.equipmentIcon
@@ -151,11 +161,11 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             }
             ForgeOutlinedButton(enabled = !game.busy, onClick = vm::stop) { Text(ui("crafts.stop")) }
         }
-        CycleBar(work.settledAt, work.cycleMillis, offset, hourly = hourlyLine(crafts, work))
+        CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
         levelLine(crafts, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
-        // The server's tally with the cycles this device threw ahead of its count: the rules' own sum.
-        WorkTotals(work.startedAt, work.totals + crafts.pending, offset)
-        crafts.last?.let { Text(gainsLine(it), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        // The server's tally: the rules' own sum.
+        WorkTotals(work.startedAt, work.totals, offset)
+        crafts.last?.let { Text(gainsLine(it.gains), color = Parchment, style = MaterialTheme.typography.bodySmall) }
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
@@ -274,27 +284,69 @@ internal fun SessionTally(totals: WorkGains) {
  * A cycle's bar, filled smoothly (2.47.0): it reads the device's clock every frame, set by the
  * server's through [offset], and only the bar is redrawn — the screen around it is not recomposed.
  * Under it (3.24.0) the time the cycle has run of its whole, and what the work brings in an hour on average.
+ * С 3.89.1 полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
+ * всплывает, что принёс пересчёт на границе цикла ([last]).
  */
-@Composable internal fun CycleBar(settledAt: Long, cycleMillis: Long, offset: Long, height: Int = 6, hourly: String? = null) {
+@Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6, hourly: String? = null) {
     val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
-    LinearProgressIndicator(
-        progress = { if (cycleMillis > 0) ((now + offset - settledAt).toFloat() / cycleMillis).coerceIn(0f, 1f) else 0f },
-        modifier = Modifier.fillMaxWidth().height(height.dp),
-        color = Gold,
-        trackColor = PanelRaised,
-    )
-    CycleClock(settledAt, cycleMillis, offset, Modifier.fillMaxWidth())
+    Box(Modifier.fillMaxWidth()) {
+        LinearProgressIndicator(
+            progress = { if (work.cycleMillis > 0) work.phase(now + offset).toFloat() / work.cycleMillis else 0f },
+            modifier = Modifier.fillMaxWidth().height(height.dp),
+            color = Gold,
+            trackColor = PanelRaised,
+        )
+        HarvestPopup(last)
+    }
+    CycleClock(work, offset, Modifier.fillMaxWidth())
     hourly?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelSmall) }
 }
 
 /** The running cycle as figures — «12.4 / 30 s» — a few times a second, so the text alone is redrawn, not the bar's frame. */
-@Composable internal fun CycleClock(settledAt: Long, cycleMillis: Long, offset: Long, modifier: Modifier) {
+@Composable internal fun CycleClock(work: WorkView, offset: Long, modifier: Modifier) {
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
             value = System.currentTimeMillis()
             delay(CLOCK_TICK)
         }
     }
-    val elapsed = (now + offset - settledAt).coerceIn(0L, cycleMillis.coerceAtLeast(0L))
-    MutedText(ui("crafts.cycle_progress", fineNumber(elapsed / 1000.0), number(cycleMillis / 1000.0)), modifier, style = MaterialTheme.typography.labelSmall)
+    MutedText(ui("crafts.cycle_progress", fineNumber(work.phase(now + offset) / 1000.0), number(work.cycleMillis / 1000.0)), modifier, style = MaterialTheme.typography.labelSmall)
 }
+
+/**
+ * Всплывашка сбора над полосой цикла (3.89.1): что принёс пересчёт сервера - «+1 Медная руда · +2 опыта» или «пусто» -
+ * на [HARVEST_SHOWN] мс. Сбор, что уже был при открытии экрана, не всплывает; без анимаций в настройках - без плавности.
+ */
+@Composable private fun HarvestPopup(last: Harvest?) {
+    val seen = remember { last?.seq ?: 0L }
+    var text by remember { mutableStateOf("") }
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(last?.seq) {
+        val fresh = last?.takeIf { it.seq > seen } ?: return@LaunchedEffect
+        text = harvestLine(fresh.gains)
+        visible = true
+        delay(HARVEST_SHOWN)
+        visible = false
+    }
+    val motion = LocalMotion.current
+    val lift = with(LocalDensity.current) { 30.dp.roundToPx() }
+    Popup(alignment = Alignment.TopCenter, offset = IntOffset(0, -lift)) {
+        AnimatedVisibility(
+            visible,
+            enter = if (motion) fadeIn() + slideInVertically { it / 2 } else EnterTransition.None,
+            exit = if (motion) fadeOut() else ExitTransition.None,
+        ) {
+            Text(
+                text,
+                color = Vital,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                modifier = Modifier.background(Abyss, RoundedCornerShape(50)).border(1.dp, Vital.copy(alpha = .5f), RoundedCornerShape(50))
+                    .padding(horizontal = 10.dp, vertical = 3.dp),
+            )
+        }
+    }
+}
+
+/** Сколько всплывашка сбора держится над полосой цикла. */
+private const val HARVEST_SHOWN = 2_500L

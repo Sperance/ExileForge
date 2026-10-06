@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.display.effectText
 import com.sperance.exileforge.core.display.effectUnit
 import com.sperance.exileforge.core.display.modNumber
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.traitText
 import com.sperance.exileforge.core.display.traitTitle
@@ -33,10 +34,10 @@ fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {
     return effectText(line.stat, line.op, line.value, index)
 }
 
-/** «монстр 20% · карта 15%»: where a summed line comes from, when both sources give it. */
+/** «монстр +20% · карта −15%» (знак - из числа, 3.89.1): where a summed line comes from, when both sources give it. */
 fun monsterLineSources(line: MonsterLine, index: ContentIndex? = null): String? = line.takeIf { it.split && it.stat != CoreStat.TAUNT.code }?.let {
     val unit = effectUnit(it.stat, it.op, index)
-    ui("fight.line_sources", modNumber(it.stat, it.own) + unit, modNumber(it.stat, it.map) + unit)
+    ui("fight.line_sources", signedNumber(it.own) { v -> modNumber(it.stat, v) } + unit, signedNumber(it.map) { v -> modNumber(it.stat, v) } + unit)
 }
 
 /** A monster's trait as the scout panel reads it (3.73.0): its drawing, name, what it does and its lines, at the roll's strength. */

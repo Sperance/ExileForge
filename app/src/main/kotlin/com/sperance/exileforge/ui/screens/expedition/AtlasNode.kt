@@ -36,6 +36,7 @@ import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.AtlasNode
@@ -48,7 +49,6 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
-import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.min
@@ -132,12 +132,10 @@ import kotlin.math.sin
  */
 internal fun effectLines(index: ContentIndex, line: Line): List<String> {
     val def = index.modifier(line.code) ?: return listOf(lineText(index, line))
-    return def.effects.mapIndexed { i, effect ->
-        val value = line.values.getOrElse(i) { 0.0 }
-        val sign = if (value >= 0) "+" else "−"
+    return def.bind(line.values).map { (effect, value) ->
         val unit = if (effect.stat in AtlasEffects.flat) "" else "%"
         // The dictionary's «Атлас: …» prefix is the screen's own title here (2.73.0).
-        "$sign${number(abs(value))}$unit ${statTitle(effect.stat).substringAfter(": ")}"
+        "${signedNumber(value)}$unit ${statTitle(effect.stat).substringAfter(": ")}"
     }
 }
 

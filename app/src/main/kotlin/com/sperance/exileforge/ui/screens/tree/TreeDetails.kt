@@ -51,6 +51,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.display.requirementReason
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
@@ -320,7 +321,7 @@ internal fun nodes(n: Int) = plural("tree.node", n)
  */
 internal fun contributionText(total: StatContribution): String {
     val number = statNumber(total.stat, total.value)
-    val signed = if (total.value > 0) "+$number" else number
+    val signed = signedNumber(total.value) { statNumber(total.stat, it) }
     return when (total.op) {
         Op.INCREASED, Op.MORE -> "$signed%"
 

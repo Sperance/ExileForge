@@ -69,11 +69,26 @@ class ExpeditionWorld(
 
     /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
     internal var portalArmed = true
-    val agents: List<MonsterAgent> = packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
-        MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
-            if (agent.monster.behaviour.type == Behaviours.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
-        }
-    } + listOfNotNull(boss)
+
+    /** Монстры карты: жетоны, босс и стаи подкрепления алтаря (3.89.1), что встают посреди захода ([summon]). */
+    private val roster: MutableList<MonsterAgent> = (
+        packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
+            MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
+                if (agent.monster.behaviour.type == Behaviours.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
+            }
+        } + listOfNotNull(boss)
+        ).toMutableList()
+    val agents: List<MonsterAgent> get() = roster
+
+    /**
+     * Стая подкрепления жетона [token] встаёт рядом с [near] (3.89.1, сделка алтаря): в паре шагов от клетки, на полу. Один
+     * жетон встаёт один раз.
+     */
+    fun summon(token: Int, pack: List<RolledMonster>, near: Cell) {
+        if (pack.isEmpty() || roster.any { it.id == token }) return
+        val cell = distances(near, SUMMON_STEPS).entries.filter { it.value >= 2 }.maxByOrNull { it.value }?.key ?: near
+        roster += MonsterAgent(token, pack, cell.x + 0.5, cell.y + 0.5)
+    }
 
     /** The exit does not open while its guardian lives. */
     val sealed: Boolean get() = boss?.alive == true
@@ -147,6 +162,9 @@ class ExpeditionWorld(
 
     /** The crack the hero stands at, until they step off it. */
     internal var atCrack: AbyssSpot? = null
+
+    /** Объекты карты (3.89.1): алтари, торговец, ловушки, комнаты, узлы - ставит [placeFeatures]. */
+    val features = mutableListOf<FeatureSpot>()
 
     init {
         light()
@@ -270,6 +288,8 @@ class ExpeditionWorld(
             atCrack = crack
             return WorldEvent.Abyss(crack)
         }
+        // Каждый объект карты слышит шаг (ловушка замечается светом, трещина считает простой); отвечает первый, кому есть что сказать.
+        features.map { it.touch(this, dt) }.firstOrNull { it != null }?.let { return WorldEvent.Feature(it) }
         portal?.let { cell ->
             val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < rules.chestReach
             if (near && portalArmed) {
@@ -303,6 +323,9 @@ class ExpeditionWorld(
 
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
         internal const val MIN_WALK = 0.8
+
+        /** Как далеко от алтаря встаёт стая подкрепления, в шагах. */
+        private const val SUMMON_STEPS = 3
         internal const val REPATH = 0.4
         internal val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, 1 to -1, -1 to 1, -1 to -1)
 

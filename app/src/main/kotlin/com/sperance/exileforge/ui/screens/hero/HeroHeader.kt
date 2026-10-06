@@ -12,6 +12,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
@@ -85,16 +86,18 @@ import com.sperance.exileforge.ui.theme.*
  * The classes' experience table says what the next level costs — the client reads it to show what
  * is coming, never to work out a level, which stays the server's to decide. At the last level the
  * bar is whole and says so; without the content there is no scale, and only the total is printed.
+ * Подпись (3.89.1) - «1 240 / 2 950 · 42%»: опыт внутри уровня из его размаха до следующего и доля.
  */
 @Composable private fun ExperienceLine(classes: ClassesFile?, level: Int, experience: Double) {
     val floor = classes?.threshold(level) ?: 0.0
     val next = classes?.nextThreshold(level)
     val span = next?.let { it - floor } ?: 0.0
-    val fraction = if (span > 0.0) ((experience - floor).coerceAtLeast(0.0) / span).toFloat().coerceIn(0f, 1f) else 1f
+    val inLevel = (experience - floor).coerceIn(0.0, span)
+    val fraction = if (span > 0.0) (inLevel / span).toFloat() else 1f
     val label = when {
         classes == null -> ui("hero.xp_total", number(experience))
         next == null -> ui("hero.xp_last")
-        else -> ui("hero.xp_to_next", Math.round(fraction * 100), level + 1)
+        else -> ui("hero.xp_progress", groupedNumber(inLevel.toLong()), groupedNumber(span.toLong()), Math.round(fraction * 100))
     }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row {

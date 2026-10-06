@@ -36,6 +36,8 @@ import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.LootPresence
+import com.sperance.exileforge.presentation.state.presentLoot
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ForgeButton
@@ -173,7 +175,7 @@ private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onSt
         val text = game.index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code)
         Text(ui("summary.recipe", text), color = Rune, style = MaterialTheme.typography.bodySmall)
     }
-    loot.equipment.mapNotNull { game.view(it) }.forEach { PieceLine(it) { onItem(it) } }
+    game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) -> game.view(instance)?.let { PieceLine(it, presence) { onItem(it) } } }
     if (loot.items.isNotEmpty()) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             loot.items.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
@@ -188,8 +190,11 @@ private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onSt
     }
 }
 
-/** Добытая вещь «Полем боя» (3.88.6): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию. */
-@Composable internal fun PieceLine(item: ItemView, onClick: () -> Unit) = ItemRow(item, compact = true, onClick = onClick)
+/**
+ * Добытая вещь «Полем боя» (3.88.6): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
+ * Надетая (3.89.1, [presence]) - строкой с меткой «Надето», без действий.
+ */
+@Composable internal fun PieceLine(item: ItemView, presence: LootPresence, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, onClick = onClick)
 
 /** A stack of the bag as a chip: its icon, its name and how many. */
 @Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {

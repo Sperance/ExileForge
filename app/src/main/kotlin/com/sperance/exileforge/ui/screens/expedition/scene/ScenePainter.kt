@@ -142,6 +142,8 @@ internal class ScenePainter {
             world.cracks.filter { world.explored(it.cell.x, it.cell.y) }.forEach { spot ->
                 standing += (spot.cell.x + spot.cell.y + .5) to { drawCrack(spot.cell.x + .5, spot.cell.y + .5, spot.opened, spot.id, glow(spot.cell.x, spot.cell.y)) }
             }
+            // Объекты карты (3.89.1): каждый своим знаком, когда виден; ловушка - только замеченная светом.
+            world.features.filter { it.shown(world) }.forEach { spot -> standing += featureParts(spot, { x, y -> glow(x, y) }, { x, y -> world.explored(x, y) }) }
             // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
             // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
             // Since 2.32.0 a monster is drawn only where the hero's light reaches.

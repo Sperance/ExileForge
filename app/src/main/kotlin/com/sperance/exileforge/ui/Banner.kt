@@ -244,7 +244,8 @@ import org.koin.compose.viewmodel.koinViewModel
             Text(workTitle(work.job, work.choice), color = Parchment, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         LinearProgressIndicator(
-            progress = { if (work.cycleMillis > 0) ((now + offset - work.settledAt).toFloat() / work.cycleMillis).coerceIn(0f, 1f) else 0f },
+            // По кругу, как полоса вкладки ремёсел (3.89.1): не стоит на 100%, пока сервер не пересчитал работу.
+            progress = { if (work.cycleMillis > 0) work.phase(now + offset).toFloat() / work.cycleMillis else 0f },
             modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 1.dp),
             color = Gold,
             trackColor = PanelRaised,

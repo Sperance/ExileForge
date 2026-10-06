@@ -81,8 +81,7 @@ data class Flask(
             val increased = mutableMapOf<String, Double>()
             val lines = mutableListOf<StatLine>()
             fun take(code: ModifierCode, values: List<Double>) {
-                index.modifier(code)?.effects?.forEachIndexed { i, effect ->
-                    val value = values.getOrNull(i) ?: return@forEachIndexed
+                index.modifier(code)?.bind(values)?.forEach { (effect, value) ->
                     when {
                         !mechanic(effect.stat) -> lines += StatLine(effect.stat, effect.op, value)
                         effect.op == Op.INCREASED -> increased.merge(effect.stat, value, Double::plus)

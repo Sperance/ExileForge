@@ -58,7 +58,7 @@ enum class AffixKind(val letter: Char) {
                 Source.ALCHEMY -> ALCHEMY
                 Source.UNIQUE -> UNIQUE
                 Source.ESSENCE -> ESSENCE
-                Source.PASSIVE, Source.MONSTER, Source.ATLAS, Source.RULE, null -> null
+                Source.PASSIVE, Source.MONSTER, Source.ATLAS, Source.RULE, Source.ALTAR, null -> null
             }
         }
     }
@@ -208,7 +208,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
             template.base.mapNotNull { line ->
                 val def = index.modifier(line.code) ?: return@mapNotNull null
                 val values = line.values.mapIndexed { i, own ->
-                    val stat = def.effects.getOrNull(i)?.stat.orEmpty()
+                    val stat = def.effectOf(i)?.stat.orEmpty()
                     PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own)
                 }
                 BaseProperty(line.code.value, text.template(def).orEmpty(), values)
@@ -252,8 +252,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         val effects = mutableMapOf<String, Double>()
         item.rolls.forEach { roll ->
             val def = index.modifier(roll.code) ?: return@forEach
-            val values = roll.values(def)
-            def.effects.forEachIndexed { i, effect -> effects.merge(effect.stat, values.getOrElse(i) { 0.0 }, Double::plus) }
+            def.bind(roll.values(def)).forEach { (effect, value) -> effects.merge(effect.stat, value, Double::plus) }
         }
         return effects
     }
@@ -316,10 +315,10 @@ fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
 /** What a state is called; a flag the dictionary has no name for yet reads as its own word, capitalised. */
 fun stateTitle(state: String, lang: Lang = uiLanguage): String = uiOr(lang, "state.$state", displayName(state, lang).replaceFirstChar { it.uppercase() })
 
-/** The tier's ranges as text: "70–79" per effect, a point as its number, effects split by " / ". */
+/** The tier's ranges as text: "70–79" per value, a point as its number, values split by " / ". */
 fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNotNull { index, range ->
     val (low, high) = range.takeIf { it.size == 2 } ?: return@mapIndexedNotNull null
-    val stat = def.effects.getOrNull(index)?.stat.orEmpty()
+    val stat = def.effectOf(index)?.stat.orEmpty()
     val from = modNumber(stat, low)
     val to = modNumber(stat, high)
     if (from == to) from else "$from–$to"
@@ -332,7 +331,7 @@ fun recipeText(index: ContentIndex, recipe: BenchRecipe): String = rangedLine(in
 fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>): String {
     val def = index.modifier(modifier)
     val ranges = values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
-        val stat = def?.effects?.getOrNull(i)?.stat.orEmpty()
+        val stat = def?.effectOf(i)?.stat.orEmpty()
         val low = modNumber(stat, min)
         val high = modNumber(stat, max)
         if (low == high) low else "($low–$high)"
@@ -341,15 +340,16 @@ fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>)
     return fillTemplate(template, ranges)
 }
 
-/** A monster's or a map's summed effect as a short line: «+40% life», by operation. */
+/** A monster's or a map's summed effect as a short line: «Здоровье: +40%», by operation; знак - из числа (3.89.1), «−51%», не «+-51%». */
 fun effectText(stat: String, op: Op, value: Double, index: ContentIndex? = null): String {
     val title = statTitle(stat)
-    val size = modNumber(stat, value)
+    val size = signedNumber(value) { modNumber(stat, it) }
     return when (op) {
         Op.ADD -> ui("fight.line_add", size + effectUnit(stat, op, index), title)
         Op.INCREASED -> ui("fight.line_increased", size, title)
         Op.MORE -> ui("fight.line_more", size, title)
-        Op.SET -> ui("fight.line_set", size, title)
+        // SET заменяет значение, а не прибавляет: знака у него нет.
+        Op.SET -> ui("fight.line_set", modNumber(stat, value), title)
     }
 }
 

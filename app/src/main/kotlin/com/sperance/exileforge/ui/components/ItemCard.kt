@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,12 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -156,20 +150,8 @@ fun ItemCard(
     val rolled = item.lines
     val shown = if (detailed) rolled else rolled.take(3)
     var opened by remember { mutableStateOf<ItemLine?>(null) }
-    val frame = Brush.verticalGradient(
-        if (selected) {
-            listOf(GoldBright, GoldBright)
-        } else {
-            listOf(look.gold.copy(alpha = .6f), look.gold.copy(alpha = .1f), look.gold.copy(alpha = .3f))
-        },
-    )
     Column(
-        Modifier.fillMaxWidth().clip(shape)
-            .background(Brush.verticalGradient(listOf(look.top, look.bottom)))
-            .drawBehind { drawRect(Brush.radialGradient(listOf(look.glow.copy(alpha = .16f), Color.Transparent), Offset(size.width / 2, 0f), size.width * .8f)) }
-            .relicSky(look)
-            .then(if (legend) Modifier.drawBehind { relicCorners(look.gold) } else Modifier)
-            .border(if (selected) 2.dp else 1.dp, frame, shape)
+        Modifier.fillMaxWidth().relicGround(look, shape, selected)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(start = 18.dp, end = 18.dp, top = if (legend) 6.dp else 18.dp, bottom = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -189,18 +171,12 @@ fun ItemCard(
                 ItemIcon(item, look.rarity, Modifier.size(if (detailed) 66.dp else 46.dp))
             }
         } else {
-            val socket = RoundedCornerShape(26.dp)
-            Box(
-                Modifier.size(88.dp).glow(look.glow.copy(alpha = .25f), radius = 8.dp, shape = socket)
-                    .background(Brush.radialGradient(listOf(Color(0xFF232C2A), Color(0xFF0B1013))), socket)
-                    .border(1.dp, look.rarity.copy(alpha = .45f), socket),
-                contentAlignment = Alignment.Center,
-            ) { ItemIcon(item, look.rarity, Modifier.size(58.dp)) }
+            RelicSocket(item, look, 88.dp)
         }
         Text(
             item.title,
             color = look.name,
-            style = relicName(if (legend) 23 else 22).copy(shadow = if (legend) Shadow(look.glow.copy(alpha = .6f), blurRadius = 18f) else null),
+            style = look.nameStyle(if (legend) 23 else 22),
             textAlign = TextAlign.Center,
             maxLines = if (detailed) 4 else 2,
             overflow = TextOverflow.Ellipsis,

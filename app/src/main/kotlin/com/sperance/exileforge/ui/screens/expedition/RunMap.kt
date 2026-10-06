@@ -48,6 +48,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.run.FeatureKind
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -138,6 +139,9 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
     world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
     world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
     world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, PortalTint, dot * 1.2f) }
+    // Объекты карты (3.89.1): не исчерпанные и видимые; у комнаты - вход и рычаг
+    world.features.filter { !it.spent && it.shown(world) }.forEach { spot -> mark(spot.cell.x + .5, spot.cell.y + .5, featureTint(spot.kind)) }
+    world.features.filterIsInstance<RoomSpot>().mapNotNull { spot -> spot.lever?.takeIf { !spot.opened && world.explored(it.x, it.y) } }.forEach { mark(it.x + .5, it.y + .5, featureTint(FeatureKind.VAULT)) }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
     if (monsters) {
         world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
@@ -222,6 +226,8 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
     if (world.crystals.any { !it.freed && world.explored(it.cell.x, it.cell.y) }) add(CrystalViolet to ui("map.legend_crystal"))
     if (world.cracks.any { !it.opened && world.explored(it.cell.x, it.cell.y) }) add(AbyssGlow to ui("map.legend_abyss"))
     if (world.portal?.let { world.explored(it.x, it.y) } == true) add(PortalTint to ui("map.legend_portal"))
+    world.features.filter { !it.spent && it.shown(world) }.map { it.kind }.distinct().forEach { add(featureTint(it) to ui(featureLegend(it))) }
+    if (world.features.any { it is RoomSpot && it.lever?.let { lever -> world.explored(lever.x, lever.y) } == true && !it.opened }) add(featureTint(FeatureKind.VAULT) to ui("map.legend_lever"))
     val exit = world.map.exit
     if (world.explored(exit.x, exit.y)) add(if (world.sealed) LifeRed to ui("map.legend_sealed") else Vital to ui("map.legend_exit"))
     world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.map { it.monster.rarity }.distinct().sorted()
@@ -230,6 +236,24 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
 
 /** A map's summed line (3.81.0) in the server's own sentence for it, as an item's line reads: «Игрок получает на 20% больше физического урона». */
 internal fun effectText(stat: String, value: Double): String = SkillText.statLine(stat, Op.ADD, value)
+
+/** Цвет объекта карты на миникарте и в легенде (3.89.1). */
+internal fun featureTint(kind: FeatureKind): Color = when (kind) {
+    FeatureKind.ALTAR -> Color(0xFFD03040)
+    FeatureKind.MERCHANT -> Color(0xFFE8C060)
+    FeatureKind.TRAP -> Color(0xFFB9C2CF)
+    FeatureKind.SECRET, FeatureKind.VAULT -> Color(0xFFE8E0C8)
+    FeatureKind.NODE -> Color(0xFF4FA048)
+}
+
+/** Ключ легенды объекта карты (3.89.1). */
+internal fun featureLegend(kind: FeatureKind): String = when (kind) {
+    FeatureKind.ALTAR -> "map.legend_altar"
+    FeatureKind.MERCHANT -> "map.legend_merchant"
+    FeatureKind.TRAP -> "map.legend_trap"
+    FeatureKind.SECRET, FeatureKind.VAULT -> "map.legend_room"
+    FeatureKind.NODE -> "map.legend_node"
+}
 
 /** The Vaal portal's mark on the maps and in their legend. */
 internal val PortalTint = Color(0xFFFF8A78)

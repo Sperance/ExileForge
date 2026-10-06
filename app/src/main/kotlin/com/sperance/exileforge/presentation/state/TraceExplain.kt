@@ -70,7 +70,7 @@ class TraceExplainer(private val game: GameUi) {
                 MonsterShareKind.RARITY -> ui("trace.src.rarity", ui("trace.rarity.${share.ref}"))
 
                 MonsterShareKind.MODIFIER -> index.modifier(ModifierCode(share.ref))?.let { def ->
-                    monster.modifiers.firstOrNull { it.code.value == share.ref }?.let { mod -> modifierLine(index, def, mod.effects.map { it.value }) }
+                    monster.modifiers.firstOrNull { it.code.value == share.ref }?.let { mod -> modifierLine(index, def, def.lineValues(mod.effects.map { it.value })) }
                 } ?: share.ref
 
                 MonsterShareKind.MAP -> ui("stat.src.map")

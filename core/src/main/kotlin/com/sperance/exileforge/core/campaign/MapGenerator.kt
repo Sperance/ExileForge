@@ -30,6 +30,11 @@ class ExpeditionMap(
     fun walkable(x: Int, y: Int) = tile(x, y) == Tile.FLOOR
     fun decorAt(x: Int, y: Int): Int = if (x in 0 until width && y in 0 until height) decor[y * width + x] else 0
     val floor: Int get() = tiles.count { it == Tile.FLOOR }
+
+    /** Клетка становится [tile] (3.89.1): объекты карты вырезают комнату за стеной, а открытая стена или дверь - пол. */
+    internal fun carve(cell: Cell, tile: Tile) {
+        if (cell.x in 0 until width && cell.y in 0 until height) tiles[cell.y * width + cell.x] = tile
+    }
 }
 
 /**

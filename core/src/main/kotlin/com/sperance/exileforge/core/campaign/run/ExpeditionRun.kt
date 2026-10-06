@@ -53,6 +53,7 @@ import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.roll.VaalZone
+import com.sperance.exileforge.rules.run.FeatureUse
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
@@ -84,8 +85,8 @@ class ExpeditionRun(
     build: HeroBuild,
     val rules: CombatRules,
     internal val seed: Long,
-    /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. */
-    val mapEffects: Map<String, Double>,
+    /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. Без сделок алтаря (3.89.1): с ними встали стаи на входе. */
+    val baseEffects: Map<String, Double>,
     /** This run is the Vaal zone behind the portal. */
     val vaal: Boolean,
     startPools: HeroPools?,
@@ -106,6 +107,14 @@ class ExpeditionRun(
 ) {
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
+        internal set
+
+    /** Сделки алтарей захода (3.89.1, сервер 1.81.3), сложенные по характеристике: герой и бои несут их до конца карты. */
+    var pacts: Map<String, Double> = emptyMap()
+        internal set
+
+    /** The map's summed effects with the altars' bargains (3.89.1): the hero's sheet and the map's window read these. */
+    var mapEffects: Map<String, Double> = baseEffects
         internal set
     internal val spawns get() = Spawns(index, run)
     var build: HeroBuild = build
@@ -135,6 +144,22 @@ class ExpeditionRun(
 
     /** The fountain offered (3.70.0), until it is drunk or turned down. */
     internal var fountain: Fountain? = null
+
+    /** Объект карты, чей лист открыт (3.89.1): забег ждёт ответа игрока, как у фонтана. */
+    internal var offer: FeatureSpot? = null
+
+    /** Сбор узла ремесла (3.89.1): какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
+    internal var channel: Channel? = null
+
+    /** Горение и яд ловушек на герое (3.89.1): тикают на карте, могут убить. */
+    internal val burns = mutableListOf<Burn>()
+
+    /** Последний удар ловушки на экране (3.89.1) и сколько секунд он ещё висит. */
+    internal var hazard: HazardView? = null
+    internal var hazardLeft = 0.0
+
+    /** Выборы объектов карты по номеру события (3.89.1): отклонённый сервером объект становится прежним. */
+    internal val featureEvents = HashMap<Int, Pair<FeatureSpot, Int>>()
     internal var crystalOutcome: String? = null
     internal var rift: AbyssSpot? = null
     internal var descent: Descent? = null
@@ -304,10 +329,15 @@ class ExpeditionRun(
     fun update(dt: Double) {
         while (true) handle(commands.poll() ?: break)
         if (phase != RunPhase.DEAD && phase != RunPhase.CLEARED && phase != RunPhase.LEFT) seconds += dt
+        hazardLeft = (hazardLeft - dt).coerceAtLeast(0.0)
+        if (hazardLeft <= 0) hazard = null
         if (holds == 0) {
             when (phase) {
-                // A fountain offered holds the walk until the player answers.
-                RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run { if (fountain == null) walk(dt) }
+                // A fountain offered holds the walk until the player answers; так же лист объекта карты и сбор узла (3.89.1).
+                RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run {
+                    channel?.let { gather(it, dt) }
+                    if (fountain == null && offer == null && channel == null) walk(dt)
+                }
 
                 RunPhase.FIGHT -> play(dt)
 
@@ -380,6 +410,10 @@ class ExpeditionRun(
             killed: Collection<Int> = emptyList(),
             /** Chests of the run the server already counts as opened (3.89.0): a run entered again shows them open in their places. */
             opened: Collection<Int> = emptyList(),
+            /** Журнал объектов карты (3.89.1): вернувшийся герой видит их использованными, сделки алтарей действуют. */
+            features: Collection<FeatureUse> = emptyList(),
+            /** Сделки алтарей карты, из которой вошли в Ваал-зону (3.89.1): действуют до конца карты и там. */
+            inherited: Map<String, Double> = emptyMap(),
             /** An autorun instead of the stick (3.2.0). */
             auto: AutoPlan? = null,
             /** The combat pet at work (3.5.0): it fights every fight at the hero's side, read again as each begins (3.70.0). */
@@ -404,7 +438,6 @@ class ExpeditionRun(
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)
             val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
-            world.restore(killed, Run.PACK_SLOTS)
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
             val extraFountains = MapEffects.fountains(effects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } } + extraFountains, fountains.heal)
@@ -413,12 +446,21 @@ class ExpeditionRun(
                 world.placeChests((campaign.chests[location.code.value]?.left ?: 0) + opened.size, opened)
                 world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
+                // Объекты карты (3.89.1) - после прочих: их места не сдвигают ни сундуков, ни кристаллов
+                world.placeFeatures(run.features.all, features, index.campaign.features?.traps?.reach ?: 0.0)
             }
             val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet,
-            ).also { it.atlas = context.atlas.filterValues { value -> value != 0.0 } }
+            ).also {
+                it.atlas = context.atlas.filterValues { value -> value != 0.0 }
+                // Сделки алтарей - до павших: стаи подкрепления встают, и уже убитые из них остаются лежать
+                it.bargain(if (vaal) inherited else run.features.bonuses(features))
+                // Стражи сокровищ (3.89.1, строка карты) - у комнат и узлов, тоже до павших
+                if (!vaal) it.guard()
+                world.restore(killed, Run.PACK_SLOTS)
+            }
         }
 
         internal const val VAAL_SALT = 0x5661616C5A6F6E65L

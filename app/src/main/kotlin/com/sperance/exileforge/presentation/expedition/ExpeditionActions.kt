@@ -246,7 +246,7 @@ class ExpeditionActions(
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, auto = autoPlan,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features, auto = autoPlan,
             pet = ::combatPet,
         ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         vaalKilled = started.vaalKilled
@@ -469,7 +469,7 @@ class ExpeditionActions(
         val inner = ExpeditionRun.start(
             i, outer.run.zone, outer.run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, auto = autoPlan.takeIf { outer.hud.value.auto != null },
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts, auto = autoPlan.takeIf { outer.hud.value.auto != null },
             pet = ::combatPet,
         ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         parent = outer
@@ -563,6 +563,8 @@ class ExpeditionActions(
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE,
             // Начало боя (3.88.0): его добыча нужна до первого убийства.
             RunEventKind.ENGAGE,
+            // Объект карты (3.89.1): золото торговца, сделка алтаря и добыча комнаты - ответ нужен сразу.
+            RunEventKind.FEATURE,
         )
         const val BATCH = 6
         const val FLUSH_EVERY = 20_000L

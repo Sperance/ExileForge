@@ -70,13 +70,20 @@ import kotlinx.serialization.Serializable
     val cycleMillis: Long = 0,
     val nextAt: Long = 0,
     val additives: List<String> = emptyList(),
-    val seed: Long = 0,
-    val cycle: Long = 0,
     val startedAt: Long = 0,
     val totals: WorkTally = WorkTally(),
     /** The variant chosen (3.45.0), blank for a work without a choice. */
     val choice: String = "",
-)
+) {
+    /**
+     * Сколько прошло текущего цикла на часах сервера [now] (3.89.1): по кругу от [settledAt], так что полоса идёт
+     * дальше, даже пока сервер не пересчитал работу, а не стоит на 100%. До [settledAt] - ноль.
+     */
+    fun phase(now: Long): Long = if (cycleMillis > 0) (now - settledAt).coerceAtLeast(0L) % cycleMillis else 0L
+
+    /** Ближайшая граница цикла позже [now] на часах сервера (3.89.1): на ней работа пересчитывается с сервера. */
+    fun nextBoundary(now: Long): Long = maxOf(now, settledAt) - phase(now) + cycleMillis
+}
 
 /** The work [code] as the hero runs it: the chosen variant of a choosing work, else the work itself. */
 fun ProfessionView.job(code: String, choice: String = ""): JobView? = jobs.firstOrNull { it.code == code }?.let { job -> job.options.firstOrNull { it.choice == choice } ?: job.takeIf { choice.isEmpty() } }

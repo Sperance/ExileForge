@@ -91,14 +91,28 @@ fun statValue(stat: String, value: Double, index: ContentIndex? = null): String 
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
-fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effects.getOrNull(i), v) }) }
-    ?: values.mapIndexed { i, v -> def.effects.getOrNull(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code.value) }
+fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effectOf(i), v) }) }
+    ?: values.mapIndexed { i, v -> def.effectOf(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code.value) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code.value)
 
-/** A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. */
-fun fillTemplate(template: String, values: List<String>): String = values.foldIndexed(template) { index, text, value -> text.replace("{|$index|}", value.removePrefix("-").removePrefix("−")).replace("{$index}", value) }
+/**
+ * A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. Плюс шаблона перед
+ * плейсхолдером (`+{0}`) - лишь место знака (3.89.1): знак даёт само число, отрицательное печатается «−51», а не «+-51».
+ */
+fun fillTemplate(template: String, values: List<String>): String = values.foldIndexed(template) { index, text, value ->
+    val size = value.removePrefix("-").removePrefix(ModifierText.MINUS)
+    val negative = size.length < value.length
+    val shown = if (negative) ModifierText.MINUS + size else value
+    text.replace("{|$index|}", size).replace("+{$index}", if (negative) shown else "+$value").replace("{$index}", shown)
+}
+
+/**
+ * Число со знаком (3.89.1) - единственный путь знака в строки эффектов, монстров, карт и атласа: «+12», «−51» (типографский
+ * минус). Знак берётся из числа, шаблоны словаря его не пишут; [format] печатает модуль. Ноль - с плюсом.
+ */
+fun signedNumber(value: Double, format: (Double) -> String = ::number): String = (if (value < 0) ModifierText.MINUS else "+") + format(kotlin.math.abs(value))
 
 /** Characteristics whose meaning lives in the fraction: rounding them destroys them. */
 val preciseStats = setOf(
@@ -113,6 +127,9 @@ val preciseStats = setOf(
 fun statNumber(stat: String, value: Double): String = if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else fineNumber(value)
 
 fun number(value: Double): String = statNumber("", value)
+
+/** Целое с разрядами через неразрывный пробел (3.89.1): «1 240», «2 950» - крупные счётчики вроде опыта. */
+fun groupedNumber(value: Long): String = String.format(java.util.Locale.ROOT, "%,d", value).replace(',', '\u00A0')
 
 /** Число строки модификатора: увеличение - доля без хвостовых нулей, прочее - как бросок. */
 private fun effectNumber(effect: Effect?, value: Double): String = if (effect?.op == Op.INCREASED) shareNumber(effect.stat, value) else modNumber(effect?.stat.orEmpty(), value)

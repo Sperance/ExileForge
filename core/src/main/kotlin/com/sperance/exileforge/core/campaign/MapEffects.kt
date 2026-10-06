@@ -173,6 +173,8 @@ object MapEffects {
         effects[BrewStat.RESIST]?.let { add(CoreStat.RESIST_ALL.code, it) }
         effects[BrewStat.DAMAGE]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }
         effects[BrewStat.LIFE]?.let { scale(CoreStat.HEALTH.code, it) }
+        // Дар алтаря сделки (3.89.1, сервер 1.81.3): «больше» урона героя до конца карты.
+        effects[MapStat.HERO_DAMAGE.code]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }
         return sheet
     }
 

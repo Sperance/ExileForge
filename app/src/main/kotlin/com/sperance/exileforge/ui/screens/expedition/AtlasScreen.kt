@@ -82,6 +82,11 @@ internal fun AtlasBranch.hue(): Color = when (this) {
     AtlasBranch.CRAFT -> Color(0xFFE8A05A)
     AtlasBranch.POWER -> Color(0xFFD24A43)
     AtlasBranch.INFLUENCE -> Color(0xFF9FD2F0)
+    AtlasBranch.ALTAR -> Color(0xFFD03040)
+    AtlasBranch.MERCHANT -> Color(0xFFE8C060)
+    AtlasBranch.TRAPS -> Color(0xFFB9C2CF)
+    AtlasBranch.SECRETS -> Color(0xFFE8E0C8)
+    AtlasBranch.GATHER -> Color(0xFF4FA048)
     AtlasBranch.ROOT -> Color.White
 }
 

@@ -104,6 +104,9 @@ sealed interface WorldEvent {
     /** The hero stepped up to a crack of the Abyss (2.82.0). */
     data class Abyss(val spot: AbyssSpot) : WorldEvent
 
+    /** Шаг героя сделал что-то с объектом карты (3.89.1): лист к выбору или сработавший объект. */
+    data class Feature(val action: FeatureAction) : WorldEvent
+
     /** The hero reached the Vaal portal (since 2.65.0). */
     data object Portal : WorldEvent
     data object Exit : WorldEvent

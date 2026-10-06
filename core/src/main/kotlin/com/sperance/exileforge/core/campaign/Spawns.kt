@@ -29,6 +29,15 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         return List(if (vaal) run.vaalCount else run.count) { i -> run.spawn(i, vaal).pack.map { skilled(buffed(it, buffs), casting) } }
     }
 
+    /**
+     * Стая, что встаёт посреди захода (3.89.1, сервер 1.81.3): подкрепление алтаря (`Run.REINFORCEMENT + k`) или страж сокровищ
+     * (`Run.GUARD + номер объекта`) - жетон [token], вожак редкий; [buffs] карты на каждом, навыки - на своём потоке.
+     */
+    fun summoned(token: Int, buffs: List<MonsterEffect>): List<RolledMonster> {
+        val casting = run.streams.of("summonedCasting", token)
+        return run.spawn(token).pack.map { skilled(buffed(it, buffs), casting) }
+    }
+
     /** The zone's boss at this encounter: its signature lines and a few of its table, [extra] what the map does to it alone. */
     fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? = guardian(zone.boss, zone.level, buffs, extra, run.streams.of("bossRoll"))
 

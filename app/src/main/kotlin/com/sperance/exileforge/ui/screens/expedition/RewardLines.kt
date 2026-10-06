@@ -16,6 +16,8 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.LootPresence
+import com.sperance.exileforge.presentation.state.presentLoot
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
@@ -28,9 +30,11 @@ import com.sperance.exileforge.ui.theme.*
  * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0).
  * [awaiting]: some of it is still on its way, and the sheet says so instead of «nothing else».
  * With [onItem] a card opens its comparison with what is worn (3.24.0). Каждая надеваемая вещь несёт стрелки урона и
- * защиты (3.89.0), а с [wear] - и «Надеть» прямо в строке, не открывая карточки.
+ * защиты (3.89.0), а с [wear] - и «Надеть» прямо в строке, не открывая карточки. Вещь показывается по её положению у
+ * героя (3.89.1, [presentLoot]): проданной нет, надетая - с меткой «Надето» и без действий; окно при этом не закрывается.
  */
 @Composable internal fun RewardLines(game: GameUi, reward: Reward, onItem: ((ItemView) -> Unit)? = null, awaiting: Boolean = false, wear: LootWear? = null) {
+    val gear = game.presentLoot(reward.equipment, arriving = awaiting || wear?.arriving == true)
     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
@@ -42,26 +46,29 @@ import com.sperance.exileforge.ui.theme.*
                 Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment)
             }
         }
-        reward.equipment.forEach { instance ->
+        gear.forEach { (instance, presence) ->
             key(instance.id) {
+                val piece = game.view(instance) ?: return@key
+                if (presence.worn) {
+                    WornLootRow(piece)
+                    return@key
+                }
                 // Две линии «Поля боя» (3.88.6): карточку открывает нажатие. Сравнение - с копией героя, когда она уже у него.
                 val verdict = rememberGearVerdict(game, game.hero?.item(instance.id) ?: instance)
                 val action = wear?.takeIf { verdict != null }
-                game.view(instance)?.let { piece ->
-                    ItemRow(
-                        piece,
-                        compact = true,
-                        enabled = onItem != null,
-                        price = game.sellPrice(instance),
-                        verdict = verdict,
-                        footer = if (action != null) ({ LootWearButton(action, piece) }) else null,
-                    ) { onItem?.invoke(piece) }
-                }
+                ItemRow(
+                    piece,
+                    compact = true,
+                    enabled = onItem != null,
+                    price = game.sellPrice(instance),
+                    verdict = verdict,
+                    footer = if (action != null) ({ LootWearButton(action, piece) }) else null,
+                ) { onItem?.invoke(piece) }
             }
         }
         if (awaiting) {
             Receiving()
-        } else if (reward.items.isEmpty() && reward.equipment.isEmpty()) {
+        } else if (reward.items.isEmpty() && gear.isEmpty()) {
             Text(ui("expedition.loot_nothing"), color = Muted)
         }
     }
@@ -75,10 +82,13 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
+/** Надетая вещь лута (3.89.1): строка с меткой «Надето», без цены и действий - во всех списках лута одна. */
+@Composable internal fun WornLootRow(piece: ItemView) = ItemRow(piece, compact = true, enabled = false, worn = true, onClick = {})
+
 /** «Надеть» в строке лута (3.89.0): та же команда, что в карточке; надетая или пропавшая вещь кнопки не несёт. */
 @Composable private fun LootWearButton(wear: LootWear, piece: ItemView) {
     val stand = wear.stand(piece)
-    if (stand == LootStand.WORN || stand == LootStand.GONE) return
-    LaunchedEffect(piece.id, stand) { if (stand == LootStand.ARRIVING) wear.hurry() }
+    if (!stand.actionable) return
+    LaunchedEffect(piece.id, stand) { if (stand == LootPresence.ARRIVING) wear.hurry() }
     ForgeButton(enabled = wear.ready(piece), onClick = { wear.wear(piece) }, modifier = Modifier.fillMaxWidth()) { Text(wear.label(piece)) }
 }

@@ -87,7 +87,6 @@ import kotlin.math.roundToInt
     val hud by run.hud.collectAsState()
     // The first run explains the fight before the first pack is met (3.14.0).
     var gear by remember { mutableStateOf(false) }
-    var wardrobe by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(false) }
     // Leaving a map gives up what is left on it, so it is asked first (2.48.0); the fight has its own retreat.
     var leaving by remember { mutableStateOf(false) }
@@ -109,7 +108,7 @@ import kotlin.math.roundToInt
 
             hud.phase == RunPhase.GATE -> model.runCommand(RunCommand.StepBack)
 
-            hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && hud.fountain != null -> model.runCommand(RunCommand.StepOff)
+            hud.phase == RunPhase.CRYSTAL || hud.phase == RunPhase.ABYSS || hud.phase == RunPhase.MAP && (hud.fountain != null || hud.feature != null) -> model.runCommand(RunCommand.StepOff)
 
             // С карты вне боя уходят всегда (3.88.9); зона Ваал держит до конца.
             hud.phase == RunPhase.MAP -> if (!zone) leaving = true
@@ -130,7 +129,6 @@ import kotlin.math.roundToInt
                     hud,
                     onLeave = if (zone) null else ({ leaving = true }),
                     onGear = { gear = true },
-                    onWardrobe = { wardrobe = true },
                     onStats = { sheet = true },
                     onDrink = { model.runCommand(RunCommand.Drink(it)) },
                     onRetry = model::flushRun,
@@ -139,16 +137,14 @@ import kotlin.math.roundToInt
                     HoldsRun(run)
                     GearSheet(game, model) { gear = false }
                 }
-                if (wardrobe) {
-                    HoldsRun(run)
-                    WardrobeSheet(game, model) { wardrobe = false }
-                }
                 if (sheet) {
                     HoldsRun(run)
                     StatsSheet(game, run.mapEffects) { sheet = false }
                 }
                 hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
                 hud.chest?.let { ChestLoot(game, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
+                // Лист объекта карты (3.89.1): алтарь, торговец, узел ремесла
+                hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
                 if (leaving) {
                     ConfirmSheet(
                         title = ui("expedition.leave_q"),
@@ -203,7 +199,6 @@ import kotlin.math.roundToInt
     hud: RunHud,
     onLeave: (() -> Unit)?,
     onGear: () -> Unit,
-    onWardrobe: () -> Unit,
     onStats: () -> Unit,
     onDrink: (Int) -> Unit,
     onRetry: () -> Unit,
@@ -216,8 +211,6 @@ import kotlin.math.roundToInt
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
                 RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
-                // Смена снаряжения из тайника (3.89.0): улучшения первыми, «Надеть» одним нажатием.
-                RoundButton(ForgeGlyphs.Stash, ui("expedition.wardrobe"), onClick = onWardrobe)
                 RoundButton(ForgeGlyphs.Scroll, ui("expedition.stats_hero"), onClick = onStats)
                 BugAction()
             }
@@ -244,6 +237,8 @@ import kotlin.math.roundToInt
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
+                // Удар ловушки и простой у трещины (3.89.1)
+                HazardLine(hud.hazard, hud.opening)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
             }
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1,

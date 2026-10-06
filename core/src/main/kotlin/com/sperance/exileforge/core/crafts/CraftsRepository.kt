@@ -8,18 +8,23 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Ремёсла, как сервер ответил последним, и часы устройства в тот миг ([readAt]); [totals] - итог сеанса,
- * [last] - последний цикл, [pending] - циклы, брошенные здесь раньше, чем их сосчитал сервер.
+ * [last] - что принёс последний пересчёт с циклами (3.89.1: его показывает всплывашка у полосы цикла).
  */
 data class Crafts(
     val state: CraftsState? = null,
     val readAt: Long = 0,
     val totals: WorkGains = WorkGains(),
-    val last: WorkGains? = null,
-    val pending: WorkGains = WorkGains(),
+    val last: Harvest? = null,
 ) {
     /** Сдвиг часов сервера против устройства на миг ответа. */
     val offset: Long get() = state?.let { it.now - readAt } ?: 0L
 }
+
+/**
+ * Сбор одного пересчёта (3.89.1): сумма циклов между двумя ответами сервера; [seq] растёт с каждым новым сбором,
+ * чтобы экран показал всплывашку один раз на сбор, даже если два подряд принесли одно и то же.
+ */
+data class Harvest(val gains: WorkGains, val seq: Long)
 
 /** Единственный источник правды о ремёслах (3.80.14). */
 class CraftsRepository {

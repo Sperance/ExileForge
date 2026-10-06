@@ -1,13 +1,11 @@
 package com.sperance.exileforge.presentation.crafts
 
-import com.sperance.exileforge.core.crafts.CraftCycle
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.CraftsRepository
-import com.sperance.exileforge.core.crafts.minus
+import com.sperance.exileforge.core.crafts.Harvest
 import com.sperance.exileforge.core.crafts.plus
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.model.crafts.CraftsState
-import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.core.session.Buzzes
@@ -23,9 +21,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Ремёсла. Работа идёт на сервере по времени. Закончившийся цикл бросается здесь из семени и номера работы, его
- * стопки сразу ложатся в сумку, а сервер спрашивается в фоне: его ответ считает те же циклы, и что он сосчитал
- * иначе - или сверх, пока приложения не было, - правится тогда. Действия общие для экрана, прогрева и возврата.
+ * Ремёсла. Работа идёт на сервере по времени, кости цикла - у него (сервер 1.53.0): полоса цикла идёт здесь по кругу,
+ * а на каждой границе цикла сервер тихо спрашивается заново (3.89.1), и его сбор ложится в сумку. Действия общие для
+ * экрана, прогрева и возврата.
  */
 class CraftsActions(
     private val repository: CraftsRepository,
@@ -51,48 +49,33 @@ class CraftsActions(
 
     private var cycle: Job? = null
 
-    /** Будильник следующего цикла живёт здесь: цикл кончается на любой вкладке и во время похода. */
-    private fun armCycle() {
-        cycle?.cancel()
-        val held = crafts
-        val work = held.state?.work ?: return
-        val due = work.nextAt - held.offset - System.currentTimeMillis()
-        cycle = scope.launch {
-            delay(due.coerceAtLeast(0))
-            cycleDue()
-        }
-    }
+    /** Граница цикла на часах сервера, под которую уже стоит пересчёт (3.89.1): один запрос на границу. */
+    private var armedAt = 0L
 
-    /** Текущий цикл кончился: бросить его здесь, уплатить в сумку и спросить сервер следом. */
-    fun cycleDue() {
+    /**
+     * Будильник границы цикла живёт здесь: цикл кончается на любой вкладке и во время похода. На каждой границе (3.89.1) -
+     * один тихий пересчёт с сервера, без спиннера; граница считается по кругу от `settledAt` работы, так что ответ,
+     * ещё не сдвинувший работу, ставит будильник на следующую границу, а не повторяет запрос.
+     */
+    private fun armCycle() {
         val held = crafts
-        val work = held.state?.work
-        val profession = held.state?.professions?.firstOrNull { it.code == work?.profession }
-        val job = work?.let { profession?.job(it.job, it.choice) }
-        val bag = heroes.state.value.hero?.bag
-        var thrown = false
-        if (work != null && profession != null && job != null && bag != null) {
-            val spent = CraftCycle.spent(job, work.additives)
-            // Цикл, который сумка не оплатит, остановит сервер: здесь он не бросается. Без семени (сервер 1.53.0 держит
-            // кости у себя) тоже: цикл - ответ сервера.
-            if (work.seed != 0L && spent.all { (code, amount) -> (bag[code] ?: 0L) >= amount }) {
-                val gains = CraftCycle.roll(work.seed, work.cycle, job, profession.bonus, work.additives)
-                heroes.patch { it.copy(bag = patched(it.bag, gains)) }
-                crafts { c ->
-                    c.copy(
-                        state = c.state?.copy(work = work.copy(settledAt = work.settledAt + work.cycleMillis, nextAt = work.nextAt + work.cycleMillis, cycle = work.cycle + 1)),
-                        totals = c.totals + gains,
-                        last = gains,
-                        pending = c.pending + gains,
-                    )
-                }
-                thrown = true
-            }
+        val work = held.state?.work?.takeIf { it.cycleMillis > 0 }
+        if (work == null) {
+            cycle?.cancel()
+            cycle = null
+            armedAt = 0L
+            return
         }
-        if (thrown) armCycle() else cycle = null
-        scope.launch {
-            delay(SETTLE_GRACE)
+        val boundary = work.nextBoundary(System.currentTimeMillis() + held.offset)
+        if (boundary == armedAt && cycle?.isActive == true) return
+        cycle?.cancel()
+        armedAt = boundary
+        cycle = scope.launch {
+            // Сервер считает цикл по своим часам: пересчёт - чуть позже границы, чтобы он её уже прошёл.
+            delay((boundary - held.offset - System.currentTimeMillis()).coerceAtLeast(0L) + SETTLE_GRACE)
+            cycle = null
             load(silent = true)
+            armCycle()
         }
     }
 
@@ -100,6 +83,7 @@ class CraftsActions(
     fun drop() {
         cycle?.cancel()
         cycle = null
+        armedAt = 0L
         repository.clear()
     }
 
@@ -129,46 +113,24 @@ class CraftsActions(
     }
 
     /**
-     * Ответ сервера против циклов, брошенных здесь: когда он сосчитал каждый, сосчитанное сверх ложится в сумку
-     * и в итог; когда он отстаёт от устройства, остаток остаётся предсказанным.
+     * Ответ сервера: работа как он её пересчитал, его сбор с прошлого ответа - в сумку (если сумку не прислал сам сервер)
+     * и в итог сеанса; сбор с циклами - [Crafts.last] для всплывашки у полосы цикла (3.89.1).
      */
     private fun land(id: String, answer: CraftsState, bagFromServer: Boolean = false) {
         if (!heroes.onScreen(id)) return
-        val now = System.currentTimeMillis()
-        var reread = false
+        val gains = answer.gains
+        val stacks = gains.items.isNotEmpty() || gains.spent.isNotEmpty()
+        if (!bagFromServer) heroes.patch { it.copy(bag = patched(it.bag, gains)) }
         crafts { c ->
-            val pending = c.pending
-            val local = c.state?.work
-            val remote = answer.work
-            val behind = local != null && remote != null && remote.job == local.job && remote.choice == local.choice && remote.cycle < local.cycle
-            when {
-                bagFromServer -> c.copy(
-                    state = answer,
-                    readAt = now,
-                    pending = WorkGains(),
-                    last = if (answer.gains.cycles > 0) answer.gains else c.last,
-                    totals = if (behind) c.totals else c.totals + (answer.gains - pending).copy(equipment = answer.gains.equipment),
-                )
-
-                behind -> c.copy(state = answer.copy(work = local), readAt = now, pending = pending - answer.gains)
-
-                else -> {
-                    val beyond = answer.gains - pending
-                    val changed = beyond.cycles != 0 || beyond.items.isNotEmpty() || beyond.spent.isNotEmpty() || answer.gains.equipment.isNotEmpty()
-                    heroes.patch { it.copy(bag = patched(it.bag, beyond)) }
-                    // Снаряжение или стопки сверх предсказанного: герой перечитывается, сумка и сундук берутся с сервера.
-                    reread = answer.gains.equipment.isNotEmpty() || beyond.items.isNotEmpty() || beyond.spent.isNotEmpty()
-                    c.copy(
-                        state = answer,
-                        readAt = now,
-                        pending = WorkGains(),
-                        totals = if (changed) c.totals + beyond.copy(equipment = answer.gains.equipment) else c.totals,
-                        last = if (answer.gains.cycles > pending.cycles) answer.gains else c.last,
-                    )
-                }
-            }
+            c.copy(
+                state = answer,
+                readAt = System.currentTimeMillis(),
+                totals = c.totals + gains,
+                last = if (gains.cycles > 0) Harvest(gains, (c.last?.seq ?: 0L) + 1) else c.last,
+            )
         }
-        if (reread) events.heroChanged()
+        // Снаряжение или стопки: герой перечитывается, сумка и сундук берутся с сервера.
+        if (!bagFromServer && (gains.equipment.isNotEmpty() || stacks)) events.heroChanged()
         armCycle()
     }
 

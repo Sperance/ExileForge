@@ -50,6 +50,9 @@ import kotlin.random.Random
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
     wound(dt)
+    // Горение и яд ловушек (3.89.1) - на дороге, и они убивают
+    burn(dt)
+    if (phase != RunPhase.MAP) return
     val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
     when (val event = world.step(dt, x, y)) {
         is WorldEvent.Encounter -> engage(event.agent)
@@ -61,6 +64,8 @@ internal fun ExpeditionRun.walk(dt: Double) {
         is WorldEvent.AtFountain -> fountain = event.fountain
 
         WorldEvent.Portal -> openGate()
+
+        is WorldEvent.Feature -> feature(event.action)
 
         is WorldEvent.Crystal -> {
             phase = RunPhase.CRYSTAL

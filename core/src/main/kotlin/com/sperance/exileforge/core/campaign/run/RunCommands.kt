@@ -51,6 +51,8 @@ import kotlin.random.Random
 internal fun ExpeditionRun.settle(answer: RunCommand.Settled) {
     answered = maxOf(answered, answer.applied)
     refused += answer.rejected
+    // Отклонённый выбор объекта карты (3.89.1) - объект снова прежний: золото не списано, сделки нет
+    answer.rejected.forEach(::refuseFeature)
     // Добыча начатых боёв (3.88.0) - раньше наград: убийства, что уже случились, показывают её сразу.
     answer.pending.forEach { (n, loot) ->
         val key = engaged[n] ?: return@forEach
@@ -233,11 +235,18 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         RunCommand.StepOff -> when {
             fountain != null -> fountain = null
 
+            // Лист объекта карты (3.89.1): алтарь без сделки не отпускает
+            leaveOffer() -> Unit
+
             phase == RunPhase.CRYSTAL -> closeCrystal()
 
             // A crack is left unopened, or once its hoard is in — never mid-descent with the hoard at stake.
             phase == RunPhase.ABYSS && (descent == null || descent?.claim != null) -> closeRift()
         }
+
+        is RunCommand.Choose -> choose(command.choice)
+
+        RunCommand.Gather -> startGather()
 
         RunCommand.Descend -> if (phase == RunPhase.ABYSS) descend()
 

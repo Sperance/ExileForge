@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdict.Shift
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.gearVerdict
@@ -27,7 +28,6 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Vital
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
@@ -62,7 +62,7 @@ private fun Shift.tint(): Color = when (this) {
 /** «+12%» / «−4%»: доля изменения целыми процентами со знаком. */
 private fun percent(change: Double): String {
     val value = (change * 100).roundToInt()
-    return if (value < 0) "−${abs(value)}%" else "+$value%"
+    return signedNumber(value.toDouble()) { "${it.toInt()}" } + "%"
 }
 
 /** «Урон ▲ +12% · Защита ▼ −4%» (3.89.0): итог вердикта над «Если надеть» в карточке вещи. */

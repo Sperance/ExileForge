@@ -82,12 +82,12 @@ val Reading = FontFamily(
     Font(R.font.onest_semibold, FontWeight.Bold),
 )
 
-/** Item frames follow Path of Exile rarity colours; unknown values stay bone white. */
+/** Цвета редкостей «Реликвария» (3.89.0): мягче цветов Path of Exile на басальте; неизвестная редкость - кость. */
 fun rarityColor(value: String) = when (value) {
-    "MAGIC" -> Color(0xFF8888FF)
-    "RARE" -> Color(0xFFFFFF77)
-    "UNIQUE" -> Color(0xFFAF6025)
-    "MYTHICAL" -> Color(0xFFE05A4E)
+    "MAGIC" -> Color(0xFF8E8EFF)
+    "RARE" -> Color(0xFFF2E46B)
+    "UNIQUE" -> Color(0xFFD9853B)
+    "MYTHICAL" -> Color(0xFFFFD99A)
     else -> Color(0xFFC8C8C8)
 }
 

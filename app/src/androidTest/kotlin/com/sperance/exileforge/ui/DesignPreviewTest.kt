@@ -2,6 +2,8 @@ package com.sperance.exileforge.ui
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.ui.Modifier
@@ -38,19 +40,23 @@ class DesignPreviewTest {
         val index = TestWorld.index
         val ring = checkNotNull(ItemView.of(TestWorld.roll("ring", Slot.RING, Rarity.RARE), index))
         val boots = checkNotNull(ItemView.of(TestWorld.roll("boots", Slot.BOOTS, Rarity.RARE, seed = 2L), index))
+        // «Астролябия» (3.89.0): уникальная и мифическая карточки - первыми, на снимке арсенала.
+        val unique = checkNotNull(ItemView.of(TestWorld.legend("unique", Rarity.UNIQUE, 41), index))
+        val mythic = checkNotNull(ItemView.of(TestWorld.legend("mythic", Rarity.MYTHICAL, 3), index))
         compose.setContent {
             ForgeTheme {
-                Column(Modifier.fillMaxSize().background(Ink).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("EXILE FORGE", color = Gold, style = MaterialTheme.typography.labelLarge)
-                    Text("Арсенал героя", style = MaterialTheme.typography.headlineLarge)
-                    Text("Снаряжение, которое меняет игру", color = Muted)
+                Column(Modifier.fillMaxSize().background(Ink).verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    ItemCard(unique, detailed = true)
+                    ItemCard(mythic, detailed = true)
                     ItemCard(ring, selected = true, detailed = true, actionLabel = "Свойства")
                     ItemCard(boots, actionLabel = "Свойства")
                 }
             }
         }
-        compose.onNodeWithText(ring.title).assertIsDisplayed()
-        compose.onNodeWithText(boots.title).assertIsDisplayed()
+        compose.onNodeWithText(unique.title).assertIsDisplayed()
+        compose.onNodeWithText(mythic.title).assertExists()
+        compose.onNodeWithText(ring.title).assertExists()
+        compose.onNodeWithText(boots.title).assertExists()
         // The label is drawn in capitals, and only on the short card: a full one is a page, not a way in
         compose.onAllNodesWithText("СВОЙСТВА").assertCountEquals(1)
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()

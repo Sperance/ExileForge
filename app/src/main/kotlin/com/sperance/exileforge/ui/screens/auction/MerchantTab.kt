@@ -44,7 +44,7 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
-import com.sperance.exileforge.ui.screens.hero.WearPreview
+import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -225,8 +225,7 @@ private fun OfferSheet(game: GameUi, offer: MerchantOffer, money: Long?, onDismi
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true) }
-                item { WearPreview(game, offer.item) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, offer.item), requirementsMet = game.unmetFor(offer.item.template).isEmpty()) }
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -40,35 +40,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The trade table (2.60.0): an item's lines as rows of a ledger — the badge and the sentence in its
- * kind's colour. One row per line and nothing between them but a hairline, so seven affixes read as one block.
- * Since 3.0.0 the lines come ready from the item's view. An [interactive] line opens [ModifierInfoSheet] on a
- * tap: the tier, its range and where the roll landed live there, not on the row.
- */
-@Composable fun TradeTable(lines: List<ItemLine>, interactive: Boolean = true) {
-    var opened by remember { mutableStateOf<ItemLine?>(null) }
-    Column(Modifier.fillMaxWidth()) {
-        lines.forEachIndexed { index, line ->
-            if (index > 0) HorizontalDivider(thickness = .5.dp, color = PanelRaised)
-            TradeLine(line, if (interactive) ({ opened = line }) else null)
-        }
-    }
-    opened?.let { ModifierInfoSheet(it) { opened = null } }
-}
-
-@Composable private fun TradeLine(line: ItemLine, onClick: (() -> Unit)?) {
-    val tap = if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = line.text, onClick = onClick)
-    Row(
-        Modifier.fillMaxWidth().then(tap).padding(vertical = 3.dp),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        AffixBadge(line.marks)
-        Text(line.text, color = ModBlue, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-    }
-}
-
-/**
  * The roll quality in steps of twenty (3.2.0): each step louder than the one below — from a quiet grey
  * with no frame to a gold that glows — and a perfect hundred shimmers through every colour.
  */
@@ -131,20 +102,6 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
             Text("$quality", color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
         }
     }
-}
-
-/**
- * A list line's rolls (2.72.0): how well it rolled, then every line it carries as a sentence — no
- * tier letters and no bars, the card behind the tap has those. No rarity since 2.73.0: the frame says it.
- */
-@Composable fun RollTops(summary: RollSummary, lines: List<ItemLine> = emptyList()) {
-    summary.quality?.let { RollPill(it) }
-    ItemLines(lines)
-}
-
-/** Every line an item carries, a sentence each in the modifiers' blue: a list line's rolls, read down without opening the card. */
-@Composable fun ItemLines(lines: List<ItemLine>) {
-    lines.forEach { line -> Text(line.text, color = ModBlue, style = MaterialTheme.typography.labelSmall) }
 }
 
 /** «роллы 87%» as a pill in its step's dress (2.73.0, steps since 3.2.0): the one figure a list line is judged by. */

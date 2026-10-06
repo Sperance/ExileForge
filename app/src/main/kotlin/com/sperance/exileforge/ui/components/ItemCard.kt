@@ -4,29 +4,44 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.lineText
+import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.stateTitle
@@ -34,7 +49,6 @@ import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
-import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.*
@@ -107,54 +121,15 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 }
 
 /**
- * The number an item *is*, set large, with the characteristic under it.
- *
- * The base of an item is the one thing a player weighs it by, so it is read as a figure rather
- * than as a sentence: 120 and "броня", not "+120 к броне". What the base was before the item's own
- * modifiers raised it follows quietly, because a raised number without its origin is a claim.
- *
- * A property the dictionary cannot name a characteristic for falls back to the sentence — a line
- * that reads oddly is better than a number with nothing beside it.
+ * Предмет как страница «Реликвария» (3.89.0, выбор владельца): рамка в свете редкости, иконка в гнезде, имя серифами,
+ * под ним что это и плашки уровня, качества и цены; база - крупными числами в три колонки; строки - со значком тира и вилкой
+ * справа, нажатие открывает тир и место ролла. Уникальная и мифическая вещь лежат в «Астролябии»: кольца вокруг гнезда, искры
+ * или звёзды, завитки по углам и номер экземпляра печатью. [totals] - итог героя «сейчас → станет» под строками,
+ * [requirementsMet] красит строку требований. Всё напечатанное - вид [item] (3.0.0): копия поверх шаблона и контента.
  */
-@Composable private fun BannerStat(property: BaseProperty, big: Boolean) {
-    val stat = property.values.firstOrNull()?.stat.orEmpty()
-    if (stat.isBlank()) {
-        BasePropertyLine(property)
-        return
-    }
-    Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            property.values.joinToString(" · ") { it.text },
-            color = if (property.augmented) Rune else Parchment,
-            style = if (big) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            statTitle(stat).uppercase(),
-            color = Muted,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp),
-        )
-        property.values.firstOrNull()?.takeIf { it.augmented }?.let {
-            Text(
-                ui("card.was", it.baseText),
-                color = Muted,
-                style = MaterialTheme.typography.labelSmall,
-                modifier = Modifier.padding(bottom = if (big) 4.dp else 1.dp),
-            )
-        }
-    }
-}
-
-/**
- * An item as a banner: a band of its rarity down the edge, and the rest read top to bottom.
- *
- * There is no frame — rarity is the spine, which leaves the name in the colour of every other name
- * and the card quiet enough to read. Above the name are the states it is in, drawn rather than
- * spelled out because they are glanced at, and what it is; below it the base as figures, and the
- * rolls as a trade table (2.60.0): the score of the roll over a row per line. The icon sits beside the name: it is how the item is
- * recognised before any of it is read. Everything printed is the [item]'s view (3.0.0): the copy over its template and the content.
- */
-@Composable fun ItemCard(
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ItemCard(
     item: ItemView,
     enabled: Boolean = true,
     selected: Boolean = false,
@@ -168,109 +143,203 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
     locked: Boolean = item.item.locked,
     /** A command about this copy waits for the network (3.30.0). */
     waiting: Boolean = false,
+    /** Итог героя «если надеть» (3.89.0) - таблица под строками; null - без неё. */
+    totals: (@Composable (RelicLook) -> Unit)? = null,
+    /** Выполнены ли требования (3.89.0): зелёная галка, красный крест или нейтрально, когда героя не с чем сравнить. */
+    requirementsMet: Boolean? = null,
     onClick: () -> Unit = {},
 ) {
-    val color = rarityColor(item.rarity.name)
-    val base = item.base
-    val states = item.states
-    val rolled = item.lines
-    val kind = slotTitle(item.slot)
-    // 3.81.0: a mythical lies under its own night sky; a unique's copy wears its number.
-    val mythic = item.rarity == Rarity.MYTHICAL
+    val look = relicLook(item.rarity)
+    val legend = look.legend != null
     val serial = item.item.serial
-
-    Box(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clipToBounds()) {
-        Row(
-            Modifier.fillMaxWidth().height(IntrinsicSize.Min).then(if (mythic) Modifier.celestial() else Modifier.background(Panel))
-                .border(if (selected) 2.dp else 1.dp, if (selected) GoldBright else Bronze.copy(alpha = .40f))
-                .clickable(enabled = enabled, onClick = onClick),
-        ) {
-            RaritySpine(color, 6.dp)
-            Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // The ribbon: what it is, and what state it is in. Both are glanced at, never read.
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    states.forEach {
-                        Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp))
-                    }
-                    if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
-                    if (waiting) PendingMark()
-                    Spacer(Modifier.weight(1f))
-                    MutedText(kind, style = MaterialTheme.typography.labelSmall)
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    ItemIcon(item, color, if (mythic) Modifier.size(56.dp).sigil() else Modifier.size(56.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                        Text(
-                            item.title,
-                            color = if (mythic) MythicName else Parchment,
-                            style = if (mythic) mythicTitle else MaterialTheme.typography.titleLarge,
-                            maxLines = if (detailed) 5 else 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        // The English trade name, on a full card only (2.51.0): what it is searched by.
-                        if (detailed) item.trade?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = FontStyle.Italic) }
-                        cardFacts(item, withPrice = price == null).forEach {
-                            MutedText(it, style = MaterialTheme.typography.labelSmall)
-                        }
-                    }
-                    QualityBadge(item)
-                    // How well it rolled, as a ring beside the name (a full card only): a tap says what the figure means.
-                    if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
-                    if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
-                }
-
-                // The base first, as figures: the biggest is what the item is bought for.
-                base.forEachIndexed { index, property -> BannerStat(property, big = index == 0) }
-                // Then what this copy rolled, as a trade table (2.60.0): the figures a trader weighs it by,
-                // then a row per line; a tap on one (detailed card) opens its tier, range and where it landed.
-                if (rolled.isNotEmpty()) TradeTable(rolled.take(if (detailed) rolled.size else 3), interactive = detailed)
-                if (!detailed && rolled.size > 3) MutedText(ui("card.more_properties", rolled.size - 3), style = MaterialTheme.typography.labelMedium)
-                if (detailed) {
-                    item.description.takeIf { it.isNotBlank() }?.let {
-                        Text(it, color = Muted, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Start)
-                    }
-                    if (serial > 0) SerialStamp(serial)
-                    // The game's words its lines use (3.81.0), each with its rule on a tap.
-                    TermsBlock(remember(item) { Term.ofStats(item.lines.flatMap { line -> line.definition?.effects.orEmpty().map { it.stat } }) })
-                }
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    price?.let {
-                        MutedText(ui("price.sell"), style = MaterialTheme.typography.labelSmall)
-                        Spacer(Modifier.width(6.dp))
-                        GoldPrice(it)
-                        Spacer(Modifier.weight(1f))
-                    }
-                    // A full card is a page, not a way in (2.51.0) — unless it is asked to lead on (3.2.0).
-                    if (action) {
-                        Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
-                        Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
+    val shape = RoundedCornerShape(22.dp)
+    val rolled = item.lines
+    val shown = if (detailed) rolled else rolled.take(3)
+    var opened by remember { mutableStateOf<ItemLine?>(null) }
+    val frame = Brush.verticalGradient(
+        if (selected) {
+            listOf(GoldBright, GoldBright)
+        } else {
+            listOf(look.gold.copy(alpha = .6f), look.gold.copy(alpha = .1f), look.gold.copy(alpha = .3f))
+        },
+    )
+    Column(
+        Modifier.fillMaxWidth().clip(shape)
+            .background(Brush.verticalGradient(listOf(look.top, look.bottom)))
+            .drawBehind { drawRect(Brush.radialGradient(listOf(look.glow.copy(alpha = .16f), Color.Transparent), Offset(size.width / 2, 0f), size.width * .8f)) }
+            .relicSky(look)
+            .then(if (legend) Modifier.drawBehind { relicCorners(look.gold) } else Modifier)
+            .border(if (selected) 2.dp else 1.dp, frame, shape)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(start = 18.dp, end = 18.dp, top = if (legend) 6.dp else 18.dp, bottom = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        // Плашки состояний и замок - в углу, их видят, а не читают.
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            item.states.forEach { Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp)) }
+            if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
+            if (waiting) PendingMark()
+            Spacer(Modifier.weight(1f))
+            if (detailed && rolled.isNotEmpty() && !legend) item.summary.quality?.let { RollRing(it) }
+            if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
+        }
+        if (legend) {
+            Astrolabe(look, size = if (detailed) 200.dp else 140.dp, socket = if (detailed) 108.dp else 76.dp) {
+                ItemIcon(item, look.rarity, Modifier.size(if (detailed) 66.dp else 46.dp))
+            }
+        } else {
+            val socket = RoundedCornerShape(26.dp)
+            Box(
+                Modifier.size(88.dp).glow(look.glow.copy(alpha = .25f), radius = 8.dp, shape = socket)
+                    .background(Brush.radialGradient(listOf(Color(0xFF232C2A), Color(0xFF0B1013))), socket)
+                    .border(1.dp, look.rarity.copy(alpha = .45f), socket),
+                contentAlignment = Alignment.Center,
+            ) { ItemIcon(item, look.rarity, Modifier.size(58.dp)) }
+        }
+        Text(
+            item.title,
+            color = look.name,
+            style = relicName(if (legend) 23 else 22).copy(shadow = if (legend) Shadow(look.glow.copy(alpha = .6f), blurRadius = 18f) else null),
+            textAlign = TextAlign.Center,
+            maxLines = if (detailed) 4 else 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val kind = listOfNotNull(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot), rarityTitle(item.rarity)).joinToString(" · ")
+        Text(
+            if (legend) kind.uppercase() else kind,
+            color = look.muted,
+            style = MaterialTheme.typography.labelMedium,
+            letterSpacing = if (legend) 2.4.sp else .4.sp,
+            textAlign = TextAlign.Center,
+        )
+        // Английское торговое имя (2.51.0): по нему ищут на аукционе.
+        if (detailed) item.trade?.let { Text(it, color = look.faint, style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic) }
+        if (serial > 0) SerialSeal(serial, look)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            RelicChip { Text(ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
+            QualityBadge(item)
+            item.baseQuality?.let { RelicChip { Text(ui("card.base_quality", it), color = Parchment, style = MaterialTheme.typography.labelMedium) } }
+            (price ?: item.template.price?.toLong())?.let { RelicChip { GoldPrice(it) } }
+        }
+        RelicDivider(look, Modifier.padding(horizontal = 4.dp))
+        BaseFigures(item, look)
+        if (shown.isNotEmpty()) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                shown.forEachIndexed { i, line ->
+                    RelicModLine(line, if (detailed) ({ opened = line }) else null)
+                    // Врождённые строки - над чертой: они от основы, а не от ролла.
+                    val next = shown.getOrNull(i + 1)
+                    if (line.marks.kind == AffixKind.IMPLICIT && next != null && next.marks.kind != AffixKind.IMPLICIT) {
+                        HorizontalDivider(thickness = .5.dp, color = Color.White.copy(alpha = .08f))
                     }
                 }
             }
         }
-        if (serial > 0) SerialRibbon(serial)
+        if (!detailed && rolled.size > shown.size) MutedText(ui("card.more_properties", rolled.size - shown.size), style = MaterialTheme.typography.labelMedium)
+        if (detailed) {
+            item.description.takeIf { it.isNotBlank() }?.let {
+                Text(
+                    "«$it»",
+                    color = look.muted,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontFamily = FontFamily.Serif,
+                    fontStyle = FontStyle.Italic,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
+            }
+            totals?.let {
+                HorizontalDivider(thickness = 1.dp, color = look.gold.copy(alpha = .2f))
+                it(look)
+            }
+            RelicFolds(item, look, requirementsMet)
+        }
+        if (action) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Text(actionLabel.uppercase(), color = Gold, style = MaterialTheme.typography.labelLarge)
+                Icon(Icons.Outlined.ChevronRight, null, tint = Gold)
+            }
+        }
     }
+    opened?.let { ModifierInfoSheet(it) { opened = null } }
+}
+
+/** Плашка шапки карточки: тихий фон-пилюля под уровнем, качеством и ценой. */
+@Composable private fun RelicChip(content: @Composable RowScope.() -> Unit) {
+    Row(
+        Modifier.height(24.dp).background(Color.White.copy(alpha = .05f), RoundedCornerShape(12.dp)).padding(horizontal = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        content = content,
+    )
 }
 
 /**
- * The short facts under a name: everything that is a field of the template rather than a modifier.
- *
- * Two lines at most — what the item is worth knowing about before its properties, then the odds
- * and ends a particular kind of item carries. A fact the template does not have is left out
- * rather than printed as nothing.
+ * База вещи крупными числами (3.89.0): по три в ряд, под числом - что оно считает; число, сдвинутое строками копии, -
+ * голубое. Свойство без характеристики остаётся фразой.
  */
-private fun cardFacts(item: ItemView, withPrice: Boolean = true): List<String> = listOfNotNull(
-    listOfNotNull(
-        ui("row.level", item.level),
-        item.baseQuality?.let { ui("card.base_quality", it) },
-        item.requirements.takeIf { it.isNotEmpty() }?.let { ui("auction.needs", it.joinToString(", ")) },
-    ).joinToString(" · ").takeIf { it.isNotBlank() },
-    listOfNotNull(
-        item.weaponType?.let { weaponTitle(it) },
-        item.template.price?.takeIf { withPrice }?.let { "${ui("card.price")} $it" },
-    ).joinToString(" · ").takeIf { it.isNotBlank() },
-)
+@Composable private fun BaseFigures(item: ItemView, look: RelicLook) {
+    val figures = item.base.flatMap { property -> property.values.filter { it.stat.isNotBlank() } }
+    val sentences = item.base.filter { property -> property.values.all { it.stat.isBlank() } }
+    figures.chunked(3).forEach { row ->
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            row.forEachIndexed { i, value ->
+                if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(look.gold.copy(alpha = .16f)))
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(value.text, color = if (value.augmented) Rune else Color(0xFFFFF6E6), fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.titleMedium, maxLines = 1)
+                    Text(statTitle(value.stat), color = look.muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
+                }
+            }
+        }
+    }
+    sentences.forEach { BasePropertyLine(it) }
+}
+
+/**
+ * Свёрнутые строки внизу карточки (3.89.0): требования одной строкой с отметкой, выполнены ли они, и термины строк -
+ * раскрываются нажатием.
+ */
+@Composable private fun RelicFolds(item: ItemView, look: RelicLook, met: Boolean?) {
+    val terms = remember(item) { Term.ofStats(item.lines.flatMap { line -> line.definition?.effects.orEmpty().map { it.stat } }) }
+    var termsOpen by remember(item) { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth()) {
+        item.requirements.takeIf { it.isNotEmpty() }?.let { needs ->
+            FoldRow(
+                ui("relic.requirements"),
+                needs.joinToString(" · ") + when (met) {
+                    true -> " ✓"
+                    false -> " ✕"
+                    null -> ""
+                },
+                when (met) {
+                    true -> Vital
+                    false -> LifeRed
+                    null -> look.muted
+                },
+                open = null,
+            )
+        }
+        if (terms.isNotEmpty()) {
+            FoldRow(ui("term.title"), terms.size.toString(), look.muted, open = termsOpen) { termsOpen = !termsOpen }
+            if (termsOpen) TermsBlock(terms, Modifier.padding(bottom = 6.dp))
+        }
+    }
+}
+
+/** Строка свёртки: название слева, сводка справа и шеврон, когда раскрывается. */
+@Composable private fun FoldRow(title: String, value: String, tint: Color, open: Boolean?, onClick: () -> Unit = {}) {
+    HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = .06f))
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(enabled = open != null, role = Role.Button, onClick = onClick).padding(horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(title, color = Parchment, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+        Text(value, color = tint, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, maxLines = 2)
+        if (open != null) Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
+    }
+}
 
 /** «Ждёт отправки» (3.30.0): a command about this thing waits for the network; its result comes with the server's answer. */
 @Composable fun PendingMark(modifier: Modifier = Modifier) {

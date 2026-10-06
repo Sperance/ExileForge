@@ -25,4 +25,10 @@ object TestWorld {
             .minWith(compareBy({ it.demanding }, { it.requiredLevel }, { it.code }))
         return ItemFactory(index).create(id, template, rarity, Dice(seed))
     }
+
+    /** Копия первой по коду вещи редкости [rarity] - уникальной или мифической - с номером экземпляра [serial]. */
+    fun legend(id: String, rarity: Rarity, serial: Long): ItemInstance {
+        val template = index.templates.values.filter { it.rarity == rarity }.minBy { it.code }
+        return ItemFactory(index).create(id, template, rarity, Dice(1L)).apply { this.serial = serial }
+    }
 }

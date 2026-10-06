@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -12,6 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -43,31 +47,25 @@ import com.sperance.exileforge.ui.theme.*
     val price = rules.price(hero.info.stashSlots)
     val label = ui("stash.places", held, capacity)
     var buying by remember { mutableStateOf(false) }
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            Modifier.weight(1f).semantics(mergeDescendants = true) { contentDescription = label },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Box(Modifier.weight(1f).height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp))) {
-                Box(
-                    Modifier.fillMaxWidth(if (capacity > 0) (held.toFloat() / capacity).coerceIn(0f, 1f) else 1f).fillMaxHeight()
-                        .background(tint, RoundedCornerShape(2.dp)),
-                )
-            }
-            Text(
-                ui("stash.places_chip", held, capacity),
-                color = if (full) tint else GoldBright,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-                softWrap = false,
-            )
-        }
+    // Пилюля «24/60 +» (3.89.0): места тайника и следующая пачка за золото.
+    Row(
+        modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF121A21)),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            ui("stash.places_chip", held, capacity),
+            color = if (full) tint else GoldBright,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelMedium,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.semantics { contentDescription = label }.padding(horizontal = 10.dp),
+        )
         if (price > 0) {
-            IconButton(onClick = { buying = true }, modifier = Modifier.size(28.dp)) {
-                Icon(Icons.Outlined.Add, ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)), tint = tint, modifier = Modifier.size(18.dp))
-            }
+            Box(
+                Modifier.size(32.dp).background(tint).clickable(role = Role.Button, onClickLabel = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity))) { buying = true },
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Outlined.Add, null, tint = Ink, modifier = Modifier.size(18.dp)) }
         }
     }
     if (buying) {

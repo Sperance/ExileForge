@@ -92,7 +92,6 @@ fun HeroScreen() {
     // «Hide equipped» (3.69.0) is the gear shelf's: a tool shelf shows everything it holds.
     val hideWorn = game.stashHideWorn && !tools
     val visible = remember(shelf, filter, game.stashSort, hideWorn, hero?.level, hero?.stats, game.world) { game.stashShelf(shelf, filter, hideWorn) }
-    val tweaks = stashTweaks(filter, game.stashSort, showsWorn = !game.stashHideWorn && !tools)
     // Each part is handed its own cut (3.66.0): a changed purse redraws the header, not the ledger or the stash.
     val header = rememberHeroHeader(game)
     val equipment = rememberEquipment(game)
@@ -133,40 +132,28 @@ fun HeroScreen() {
 
                     HeroSection.STASH -> {
                         if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(game, model) }
-                        // Two rows since 3.69.0: the count beside the switch squeezed the filter glyph off its shape.
-                        // The switch takes what is left after the glyph, never the other way round.
+                        // «Быстрые фильтры» (3.89.0): полка, места, редкости, группы и порядок - на виду над списком.
                         item(key = "shelf") {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    FilterChip(
-                                        selected = !tools,
-                                        onClick = {
-                                            tools = false
-                                            filter = filter.copy(groups = emptySet())
-                                        },
-                                        label = { Text(ui("hero.stash_gear"), maxLines = 1) },
-                                        leadingIcon = { Icon(ForgeGlyphs.Helm, null, modifier = Modifier.size(16.dp)) },
-                                    )
-                                    FilterChip(
-                                        selected = tools,
-                                        onClick = {
-                                            tools = true
-                                            filter = filter.copy(groups = emptySet())
-                                        },
-                                        label = { Text(ui("hero.stash_tools"), maxLines = 1) },
-                                        leadingIcon = { Icon(ForgeGlyphs.Anvil, null, modifier = Modifier.size(16.dp)) },
-                                    )
-                                }
-                                // Search, order and filters live behind one glyph since 3.67.0: the shelf keeps the screen.
-                                StashFilterButton(tweaks) { filtering = true }
-                            }
-                        }
-                        // The places held of how many across the whole width, and a «+» for the next pack.
-                        item(key = "fill") {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                StashFill(game, model, Modifier.weight(1f))
-                                if (!tools) HideWornChip(game.stashHideWorn, shell::stashHideWorn)
-                            }
+                            StashBar(
+                                tools = tools,
+                                onTools = {
+                                    tools = it
+                                    filter = filter.copy(groups = emptySet())
+                                },
+                                fill = { StashFill(game, model) },
+                                tweaks = if (filter.query.isNotBlank()) 1 else 0,
+                                onSearch = { filtering = true },
+                                filter = filter,
+                                onFilter = { filter = it },
+                                rarities = rarities,
+                                groupCounts = groupCounts,
+                                shelfSize = shelf.size,
+                                lang = game.lang,
+                                sort = game.stashSort,
+                                onSort = shell::stashSort,
+                                hideWorn = game.stashHideWorn.takeUnless { tools },
+                                onHideWorn = shell::stashHideWorn,
+                            )
                         }
                         if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
                         // A line, not a card: a stash is read down, and the card is one tap behind each line.

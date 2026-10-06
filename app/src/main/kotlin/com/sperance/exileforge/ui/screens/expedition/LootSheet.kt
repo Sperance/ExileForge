@@ -23,7 +23,7 @@ import com.sperance.exileforge.ui.components.HoldButton
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.hero.WearPreview
+import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Panel
@@ -62,8 +62,7 @@ internal fun LootSheet(
     LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item))
-            WearPreview(game, item.item)
+            ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item), requirementsMet = game.unmetFor(item.code).isEmpty())
             when {
                 stand == LootStand.WORN -> MutedText(ui("expedition.loot_worn"))
 
@@ -102,16 +101,5 @@ internal fun LootSheet(
             }
             extra()
         }
-    }
-}
-
-/** A dropped piece, whole: only what goes on the body offers the comparison with what is worn — a map or a jewel has nothing to compare with. */
-@Composable
-internal fun LootCard(game: GameUi, item: ItemView, onCompare: ((ItemView) -> Unit)?) {
-    val price = game.sellPrice(item.item)
-    if (onCompare == null || !wearable(game, item.item)) {
-        ItemCard(item, enabled = false, detailed = true, price = price)
-    } else {
-        ItemCard(item, detailed = true, actionLabel = ui("expedition.loot_compare"), action = true, price = price) { onCompare(item) }
     }
 }

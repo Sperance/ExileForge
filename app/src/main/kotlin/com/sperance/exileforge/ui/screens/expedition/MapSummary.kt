@@ -39,6 +39,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -187,23 +188,8 @@ private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onSt
     }
 }
 
-/** A piece in one line: its icon in its rarity's frame and its name in that colour; the whole card is one tap behind it. */
-@Composable internal fun PieceLine(item: ItemView, onClick: () -> Unit) {
-    val color = rarityColor(item.rarity.name)
-    val frame = RoundedCornerShape(5.dp)
-    Row(
-        Modifier.fillMaxWidth().clip(frame).background(Panel, frame).border(1.dp, Bronze.copy(alpha = .5f), frame)
-            .clickable(role = Role.Button, onClick = onClick).padding(6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Box(Modifier.size(32.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
-            ItemIcon(item, color, Modifier.size(22.dp))
-        }
-        Text(item.title, color = color, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        MutedText(ui("row.level", item.level), style = MaterialTheme.typography.labelSmall)
-    }
-}
+/** Добытая вещь «Полем боя» (3.89.0): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию. */
+@Composable internal fun PieceLine(item: ItemView, onClick: () -> Unit) = ItemRow(item, compact = true, onClick = onClick)
 
 /** A stack of the bag as a chip: its icon, its name and how many. */
 @Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {

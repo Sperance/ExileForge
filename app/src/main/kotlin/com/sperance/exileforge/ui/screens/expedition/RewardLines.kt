@@ -16,12 +16,12 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
-import com.sperance.exileforge.ui.screens.expedition.LootCard
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -42,8 +42,8 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         reward.equipment.forEach { instance ->
-            // The whole card, not a line (3.2.0): what dropped is read where it dropped
-            game.view(instance)?.let { LootCard(game, it, onItem) }
+            // Две линии «Поля боя» (3.89.0): карточку открывает нажатие.
+            game.view(instance)?.let { piece -> ItemRow(piece, compact = true, enabled = onItem != null, price = game.sellPrice(instance)) { onItem?.invoke(piece) } }
         }
         if (awaiting) {
             Receiving()

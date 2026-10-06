@@ -1,19 +1,24 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.LockOpen
+import androidx.compose.material.icons.outlined.MoreHoriz
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -84,10 +89,20 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     var replacing by remember(itemId) { mutableStateOf<BodyPlace?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
+            val look = relicLook(view.rarity)
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { ItemCard(view, enabled = false, detailed = true, price = price, waiting = waiting) }
+                item {
+                    ItemCard(
+                        view,
+                        enabled = false,
+                        detailed = true,
+                        price = price,
+                        waiting = waiting,
+                        totals = wearTotals(game, instance),
+                        requirementsMet = reachable,
+                    )
+                }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
-                item { WearPreview(game, instance) }
                 temperOffer(game, instance)?.let { (ore, need) ->
                     item {
                         // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
@@ -118,49 +133,70 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     }
                 }
             }
-            OrnateDivider()
-            Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp)) {
+            // Кнопки «Реликвария» (3.89.0): главное действие, кузня и «ещё» с заменой, замком, аукционом и продажей.
+            var more by remember(itemId) { mutableStateOf(false) }
+            Row(
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 when {
-                    instance.socketed -> Action(ForgeGlyphs.Gem, ui("hero.unequip"), can) {
+                    instance.socketed -> PrimaryPill(ui("hero.unequip"), can, look) {
                         onDismiss()
                         model.unsocketJewel(instance.id)
                     }
 
-                    instance.equipped -> {
-                        Action(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
-                            onDismiss()
-                            model.unequip(instance.id)
-                        }
-                        game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }?.let { place ->
-                            Action(Icons.Outlined.SwapHoriz, ui("hero.replace"), can, GoldBright) { replacing = place }
-                        }
+                    instance.equipped -> PrimaryPill(ui("hero.unequip"), can, look) {
+                        onDismiss()
+                        model.unequip(instance.id)
                     }
 
                     // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
-                    view.slot == Slot.MAP -> Action(ForgeGlyphs.Portal, ui("hero.action_map"), can, GoldBright) {
+                    view.slot == Slot.MAP -> PrimaryPill(ui("hero.action_map"), can, look) {
                         onDismiss()
                         shell.tab(TAB_EXPEDITION)
                         expedition.selectZone(instance.mapZone.value)
                         expedition.pickMap(instance.id)
                     }
 
-                    else -> Action(ForgeGlyphs.Helm, ui("hero.equip"), can && reachable, GoldBright) {
+                    else -> PrimaryPill(ui("hero.equip"), can && reachable, look) {
                         onDismiss()
                         model.equip(instance.id, null)
                     }
                 }
                 // One way into the forge (2.51.0): its orbs and bench are its own tabs.
-                Action(ForgeGlyphs.Anvil, ui("nav.forge"), can) {
+                QuietPill(can, onClick = {
                     onDismiss()
                     smithy.open(instance.id, ForgeSection.ORBS)
                     shell.tab(TAB_CRAFT)
+                }) { Text(ui("nav.forge"), color = if (can) GoldBright else Muted, style = MaterialTheme.typography.labelLarge, maxLines = 1) }
+                Box {
+                    QuietPill(true, square = true, onClick = { more = true }) {
+                        Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = GoldBright)
+                    }
+                    DropdownMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
+                        val worn = game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
+                        if (instance.equipped && worn != null) {
+                            MenuLine(Icons.Outlined.SwapHoriz, ui("hero.replace"), can) {
+                                more = false
+                                replacing = worn
+                            }
+                        }
+                        MenuLine(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
+                            more = false
+                            model.lockItem(instance.id, !locked)
+                        }
+                        // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
+                        MenuLine(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked) {
+                            more = false
+                            open = if (loose) ItemAction.AUCTION else ItemAction.WORN
+                        }
+                        MenuLine(ForgeGlyphs.Coins, ui("hero.action_sell"), can && !locked, LifeRed) {
+                            more = false
+                            open = if (loose) ItemAction.SELL else ItemAction.WORN
+                        }
+                    }
                 }
-                // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
-                Action(if (locked) Icons.Outlined.Lock else Icons.Outlined.LockOpen, ui(if (locked) "item.unlock" else "item.lock"), can) {
-                    model.lockItem(instance.id, !locked)
-                }
-                Action(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked) { open = if (loose) ItemAction.AUCTION else ItemAction.WORN }
-                Action(ForgeGlyphs.Coins, ui("hero.action_sell"), can && !locked, LifeRed) { open = if (loose) ItemAction.SELL else ItemAction.WORN }
             }
         }
     }
@@ -218,24 +254,39 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     }
 }
 
-/** One action of the row: a drawing over a word, the whole of it the tap target. */
-@Composable private fun RowScope.Action(icon: ImageVector, label: String, enabled: Boolean, accent: Color = Gold, onClick: () -> Unit) {
-    Column(
-        Modifier.weight(1f).clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick)
-            .padding(vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+/** Главная кнопка листа: пилюля во всю ширину, у легенды - золотая. */
+@Composable private fun RowScope.PrimaryPill(label: String, enabled: Boolean, look: RelicLook, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Box(
+        Modifier.weight(1f).height(48.dp).clip(shape)
+            .then(if (enabled) Modifier.background(look.primary, shape) else Modifier.background(PanelRaised, shape))
+            .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = if (enabled) accent else Muted.copy(alpha = .45f), modifier = Modifier.size(22.dp))
-        Text(
-            label,
-            color = if (enabled) Parchment else Muted.copy(alpha = .6f),
-            style = MaterialTheme.typography.labelSmall,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Text(label, color = if (enabled) look.onPrimary else Muted, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     }
+}
+
+/** Тихая кнопка рядом с главной: «Кузня» и «ещё». */
+@Composable private fun QuietPill(enabled: Boolean, square: Boolean = false, onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
+    val shape = RoundedCornerShape(24.dp)
+    Row(
+        Modifier.height(48.dp).then(if (square) Modifier.width(48.dp) else Modifier).clip(shape).background(Color.White.copy(alpha = .07f), shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = if (square) 0.dp else 18.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+/** Строка меню «ещё»: рисунок и слово. */
+@Composable private fun MenuLine(icon: ImageVector, label: String, enabled: Boolean, accent: Color = Gold, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(label, color = if (enabled) Parchment else Muted.copy(alpha = .6f)) },
+        leadingIcon = { Icon(icon, null, tint = if (enabled) accent else Muted.copy(alpha = .45f), modifier = Modifier.size(20.dp)) },
+        enabled = enabled,
+        onClick = onClick,
+    )
 }
 
 /** The ore and its amount the smith asks to temper [item] (3.79.0), or null when it cannot be: not gear, tempered, corrupted. */

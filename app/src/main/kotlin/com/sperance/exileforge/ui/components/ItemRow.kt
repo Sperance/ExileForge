@@ -14,6 +14,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
@@ -25,25 +27,18 @@ import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.stateTitle
+import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * One item of a stash, as a line rather than a card.
- *
- * A card is a page about one item; a line is a stash you can read down. Everything that decides
- * whether to stop and open it rides here — what it is, where it goes, what it rolled — and the
- * card behind the tap keeps the rest.
- *
- * Since 2.21.0 the icon leads, in a square framed in the rarity colour with the item level and the
- * item's states under it, and the name takes that colour too: the frame is enough to find a unique
- * in a list without a band down every line. The base is read as figures — a chip per number, the
- * number set bold — and since 2.60.0 the rolls are summed up in one line: the rarity, how well they
- * landed inside their tiers and how many affix places are open. The card behind the tap lists them. [trailing] sits opposite
- * the name — a lot's price — or else [price], what the merchant pays, and [footer] under everything, for what a list adds about the item.
- * The line reads the [item]'s view (3.0.0): the copy over its template and the content.
+ * Вещь в списке - «Плита» (3.89.0, выбор владельца): гнездо с иконкой в цвете редкости, имя серифами, под ним номер
+ * экземпляра уникальной или мифической, строка «что это · уровень · база», а ниже - каждая строка вещи со значком тира:
+ * модификаторы видны всегда, не открывая карточку. Мифическая плита лежит под звёздами, уникальная - в тёплом угле.
+ * [trailing] - напротив имени (цена лота), иначе [price] - что платит торговец; [footer] - под всем, что добавляет список.
+ * [compact] - две линии (лут после боя): имя целиком, под ним значки тиров и отметки, без текстов строк.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -69,107 +64,160 @@ fun ItemRow(
     locked: Boolean = item.item.locked,
     /** A command about this copy waits for the network (3.30.0). */
     waiting: Boolean = false,
+    /** Две линии вместо плиты (3.89.0): лут после боя, где строки читают уже в карточке. */
+    compact: Boolean = false,
+    /** «Ценник» (3.89.0): цена лота или полки торговца ярлыком, свисающим с верхнего края плиты. */
+    tag: (@Composable RowScope.() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
-    val color = rarityColor(item.rarity.name)
-    // The base carries the number this copy really has — its own local modifiers are already in
-    // it. The base the item started from stays on the card: a line has no room for a sum and its
-    // history both.
-    val base = item.base.flatMap { it.values }
-    val rolled = item.lines
-    val states = item.states
-    val slot = slotTitle(item.slot)
-    val frame = RoundedCornerShape(6.dp)
-    val card = RoundedCornerShape(10.dp)
-    Row(
-        Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card)
-            .background(if (worn) Gold.copy(alpha = .08f).compositeOver(Panel) else Panel, card)
-            .border(
-                1.dp,
-                if (selected) {
-                    Gold
-                } else if (worn) {
-                    Gold.copy(alpha = .5f)
-                } else {
-                    Bronze
-                },
-                card,
-            )
-            .clickable(enabled = enabled, onClick = onClick).padding(10.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            // The marker rides on the icon rather than in the text: the icon is where the eye starts.
-            Box(Modifier.size(54.dp).background(color.copy(alpha = .08f), frame).border(1.dp, color, frame), contentAlignment = Alignment.Center) {
-                ItemIcon(item, color, Modifier.size(34.dp))
-                // The mark alone on a row (2.74.0): what is missing is the card's to say, or the mark's own tip.
-                if (unwearable.isNotEmpty()) {
-                    Tipped(
-                        { Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },
-                        Modifier.align(Alignment.TopStart).padding(2.dp),
-                    ) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
-                }
-                if (locked) {
-                    Icon(
-                        Icons.Outlined.Lock,
-                        ui("item.locked"),
-                        tint = GoldBright,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(2.dp).size(13.dp),
+    val look = relicLook(item.rarity)
+    val legend = look.legend
+    val card = RoundedCornerShape(16.dp)
+    val base = item.base.flatMap { it.values }.filter { it.stat.isNotBlank() }
+    val sub = (
+        listOf(item.weaponType?.let { weaponTitle(it) } ?: slotTitle(item.slot), ui("row.level", item.level)) + facts +
+            base.take(2).map { "${statTitle(it.stat).lowercase()} ${it.text}" }
+        ).joinToString(" · ")
+    Box(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card).clip(card)
+                .background(
+                    when {
+                        legend != null -> Brush.verticalGradient(listOf(look.top, look.bottom))
+                        worn -> Brush.verticalGradient(listOf(Gold.copy(alpha = .10f).compositeOver(RowTop), Gold.copy(alpha = .06f).compositeOver(Panel)))
+                        else -> Brush.verticalGradient(listOf(RowTop, Panel))
+                    },
+                )
+                .relicSky(look)
+                .border(
+                    1.dp,
+                    when {
+                        selected -> Gold
+                        worn -> Gold.copy(alpha = .5f)
+                        legend != null -> look.gold.copy(alpha = .55f)
+                        else -> look.rarity.copy(alpha = .2f)
+                    },
+                    card,
+                )
+                .clickable(enabled = enabled, onClick = onClick).padding(start = 12.dp, end = 12.dp, top = if (tag != null) 16.dp else 10.dp, bottom = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                RowSocket(item, look, worn, locked, unwearable)
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(
+                        item.title,
+                        color = look.name,
+                        style = relicName(15),
+                        maxLines = if (compact) 3 else 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                    if (item.item.serial > 0) SerialLine(item.item.serial, look)
+                    if (!compact) Text(sub, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
-                if (worn) {
-                    Icon(
-                        Icons.Outlined.CheckCircle,
-                        ui("row.worn"),
-                        tint = Ink,
-                        modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(15.dp),
-                    )
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
+                    trailing?.invoke() ?: price?.let { GoldPrice(it) }
+                    if (!compact) item.summary.quality?.let { RollPill(it) }
                 }
             }
-            MutedText(ui("row.level", item.level), style = MaterialTheme.typography.labelSmall)
-            QualityBadge(item, compact = true)
-            // States as symbols, three to a row under the icon: words about corruption and sockets
-            // would push the properties off the line.
-            states.chunked(3).forEach { three ->
-                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    three.forEach { state ->
-                        Tipped({ Tip(stateTitle(state), tint = stateColor(state)) }) { Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(13.dp)) }
+            if (compact) {
+                // Вторая линия лута: значки тиров всех строк, качество, состояния и замок - важное одним взглядом.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+                    item.lines.forEach { TierHex(it.marks, 16.dp) }
+                    if (item.lines.isNotEmpty()) Spacer(Modifier.width(6.dp))
+                    QualityBadge(item, compact = true)
+                    item.summary.quality?.let { RollPill(it) }
+                    RowStates(item)
+                }
+            } else {
+                if (item.states.isNotEmpty() || waiting) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        QualityBadge(item, compact = true)
+                        RowStates(item)
+                        if (waiting) PendingMark()
+                    }
+                } else {
+                    QualityBadge(item, compact = true)
+                }
+                if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
+                if (item.lines.isNotEmpty()) {
+                    // Каждая строка вещи (2.72.0, со значком тира с 3.89.0): тайник читают сверху вниз, не открывая карточек.
+                    Column(Modifier.padding(start = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        item.lines.forEach { RelicModLine(it, null, big = false) }
                     }
                 }
             }
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    item.title,
-                    color = color,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
-                trailing?.invoke() ?: price?.let { GoldPrice(it) }
-            }
-            (listOf(slot) + facts).let {
-                Text(
-                    it.joinToString(" · "),
-                    color = Muted,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (base.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    base.forEach { value -> BaseChip(value) }
-                }
-            }
-            if (waiting) PendingMark()
-            // Every line it rolled, as sentences (2.72.0): a stash is read down without opening each card.
-            RollTops(item.summary, rolled)
             footer?.invoke(this)
         }
+        tag?.let { PriceTag(Modifier.align(Alignment.TopEnd).padding(end = 12.dp), it) }
+    }
+}
+
+/** Ярлык цены «Ценника»: свисает с верхнего края плиты, скруглён снизу, в тонкой золотой нити. */
+@Composable private fun PriceTag(modifier: Modifier, content: @Composable RowScope.() -> Unit) {
+    val shape = RoundedCornerShape(bottomStart = 10.dp, bottomEnd = 10.dp)
+    Row(
+        modifier.height(26.dp).background(Color(0xFF1A242C), shape).border(1.dp, Color(0x40E2C15A), shape).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+        content = content,
+    )
+}
+
+/** Верх плиты: чуть светлее басальта, к низу - панель. */
+private val RowTop = Color(0xFF121A20)
+
+/** Гнездо плиты: иконка в цвете редкости, у мифической - круглое; поверх - замок, запрет и отметка надетого. */
+@Composable private fun RowSocket(item: ItemView, look: RelicLook, worn: Boolean, locked: Boolean, unwearable: List<String>) {
+    val shape = if (look.legend == RelicLook.Legend.STARS) CircleShape else RoundedCornerShape(12.dp)
+    Box(
+        Modifier.size(44.dp).then(if (look.legend != null) Modifier.glow(look.glow.copy(alpha = .4f), radius = 7.dp, shape = shape) else Modifier)
+            .background(Brush.radialGradient(listOf(Color(0xFF222B30), Color(0xFF0B1013))), shape)
+            .border(1.dp, look.rarity.copy(alpha = .55f), shape),
+        contentAlignment = Alignment.Center,
+    ) {
+        ItemIcon(item, look.rarity, Modifier.size(28.dp))
+        // The mark alone on a row (2.74.0): what is missing is the card's to say, or the mark's own tip.
+        if (unwearable.isNotEmpty()) {
+            Tipped(
+                { Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },
+                Modifier.align(Alignment.TopStart).offset((-4).dp, (-4).dp),
+            ) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.background(Ink, CircleShape).size(14.dp)) }
+        }
+        if (locked) {
+            Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.align(Alignment.TopEnd).offset(4.dp, (-4).dp).background(Ink, CircleShape).padding(1.dp).size(12.dp))
+        }
+        if (worn) {
+            Icon(
+                Icons.Outlined.CheckCircle,
+                ui("row.worn"),
+                tint = Ink,
+                modifier = Modifier.align(Alignment.BottomEnd).offset(4.dp, 4.dp).background(Gold, CircleShape).padding(1.dp).size(14.dp),
+            )
+        }
+    }
+}
+
+/** «◆ № 41 ◆ ──»: номер экземпляра под именем в плите. */
+@Composable private fun SerialLine(serial: Long, look: RelicLook) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            "◆ № $serial ◆",
+            color = UniqueGoldInk,
+            style = MaterialTheme.typography.labelSmall.copy(fontFamily = RelicSerif, fontWeight = FontWeight.Bold),
+        )
+        Box(Modifier.width(28.dp).height(1.dp).background(look.gold.copy(alpha = .3f)))
+    }
+}
+
+/** Золото номера экземпляра. */
+private val UniqueGoldInk = Color(0xFFF0C76A)
+
+/** Состояния вещи значками с подсказкой: порча, отражение, влияние, ремесло. */
+@Composable private fun RowStates(item: ItemView) {
+    item.states.forEach { state ->
+        Tipped({ Tip(stateTitle(state), tint = stateColor(state)) }) { Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(13.dp)) }
     }
 }
 

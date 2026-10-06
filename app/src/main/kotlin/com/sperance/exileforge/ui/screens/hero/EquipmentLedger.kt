@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
@@ -13,9 +14,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
@@ -25,6 +30,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -43,91 +49,105 @@ import com.sperance.exileforge.ui.theme.*
     rememberEquipment(game)?.let { EquipmentLedger(it, onPlace) }
 }
 
-/** The ledger over its own cut of the state (3.66.0): the purse moving does not redraw what is worn. */
+/**
+ * Снаряжение «Группами» (3.89.0, выбор владельца): места тела под заголовками - оружие, броня, украшения, прочее, фляги - и в
+ * каждой группе по две карточки в ряд: место, имя, номер экземпляра и все строки вещи со значком тира. Пустое место говорит,
+ * сколько подходящего лежит в тайнике. Своя нарезка состояния (3.66.0): движение кошелька не перерисовывает надетое.
+ */
 @Composable fun EquipmentLedger(equipment: EquipmentState, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
-    Column(Modifier.fillMaxWidth()) {
-        equipment.places.forEach { line ->
-            PlaceLine(line, equipment.lang, equipment.signedIn) { onPlace(line.place, line.wornId) }
-            HorizontalDivider(color = PanelRaised)
+    val byCode = equipment.places.associateBy { it.place.code }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        GEAR_GROUPS.forEach { (key, codes) ->
+            val lines = codes.mapNotNull { byCode[it] }
+            if (lines.isEmpty()) return@forEach
+            Row(Modifier.padding(top = 8.dp, bottom = 2.dp, start = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(ui("gear.group.$key"), color = Color(0xFFB4C2CB), style = relicName(13).copy(letterSpacing = .8.sp))
+                Box(Modifier.weight(1f).height(1.dp).background(Color.White.copy(alpha = .07f)))
+            }
+            lines.chunked(2).forEach { pair ->
+                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    pair.forEach { line ->
+                        PlaceCard(line, equipment.lang, equipment.signedIn, Modifier.weight(1f).fillMaxHeight()) { onPlace(line.place, line.wornId) }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
     }
 }
 
+/** Группы мест по порядку тела: ключ заголовка и коды мест. */
+private val GEAR_GROUPS: List<Pair<String, List<String>>> = listOf(
+    "weapons" to listOf(BodyPlace.MAIN_HAND, BodyPlace.OFF_HAND),
+    "armour" to listOf(Slot.HELMET, Slot.BODY, Slot.GLOVES, Slot.BOOTS).map { it.name },
+    "jewellery" to listOf(Slot.AMULET, Slot.RING, Slot.RING_2, Slot.BELT).map { it.name },
+    "other" to listOf(Slot.WINGS, Slot.COLLAR).map { it.name },
+    "flasks" to Slot.FLASKS.map { it.name },
+)
+
 /**
- * One place, «Гроссбух» (2.50.0, the owner's pick of five mockups): a worn item is its icon in a
- * rarity frame, the name and the place on one line, the base as chips and every roll under a rhombus
- * with its tier — the stash's own row, tighter. An empty place is one thin line with what the stash
- * holds for it.
- *
- * An item whose requirements stopped being met keeps its place and stops counting; the line says
- * so in red with the rules' first reason.
+ * Одно место карточкой (3.89.0): гнездо с иконкой, место мелкими буквами, имя серифами в цвете редкости и строки вещи со
+ * значком тира, каждая в одну линию. Вещь, что перестала действовать, несёт красный знак с причиной в подсказке;
+ * пустое место - пунктир и что о нём сказать.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun PlaceLine(line: PlaceState, lang: Lang, signedIn: Boolean, onClick: () -> Unit) {
+private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val place = line.place
     val worn = line.worn
-    val reasons = line.reasons
     val title = slotTitle(place.code, lang)
-    val click = Modifier.fillMaxWidth().clickable(enabled = signedIn, role = Role.Button, onClickLabel = title, onClick = onClick)
-    if (worn == null) {
-        Row(click.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val frame = RoundedCornerShape(4.dp)
-            Box(Modifier.size(22.dp).border(1.dp, PanelRaised, frame), contentAlignment = Alignment.Center) {
-                SlotIcon(place.fits.first(), PanelRaised, Modifier.size(14.dp), tint = Muted.copy(alpha = .5f))
-            }
-            Text(title, color = Gold, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = Modifier.width(96.dp))
-            Text(
-                ui(if (line.blocked) "hero.off_hand_taken" else "hero.empty_slot"),
-                color = Muted,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f),
-            )
-            if (line.spare > 0) {
-                Text(
-                    ui("hero.place_spare", line.spare),
-                    color = GoldBright,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 6.dp, vertical = 2.dp),
-                )
-            }
-        }
-        return
+    val shape = RoundedCornerShape(16.dp)
+    val look = worn?.let { relicLook(it.rarity) }
+    val ground = when {
+        look == null -> Modifier.border(1.dp, Color(0xFF26323B), shape)
+        look.legend != null -> Modifier.background(Brush.verticalGradient(listOf(look.top, look.bottom)), shape).relicSky(look).border(1.dp, look.gold.copy(alpha = .55f), shape)
+        else -> Modifier.background(Brush.verticalGradient(listOf(Color(0xFF121A20), Panel)), shape).border(1.dp, look.rarity.copy(alpha = .2f), shape)
     }
-    val color = rarityColor(worn.rarity.name)
-    val frame = RoundedCornerShape(5.dp)
-    val base = worn.base.flatMap { it.values }
-    val rolled = worn.lines
-    Row(click.padding(vertical = 7.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(Modifier.size(38.dp).background(color.copy(alpha = .08f), frame).border(1.5.dp, color, frame), contentAlignment = Alignment.Center) {
-            ItemIcon(worn, color, Modifier.size(26.dp))
+    Column(
+        modifier.clip(shape).then(ground).clickable(enabled = signedIn, role = Role.Button, onClickLabel = title, onClick = onClick).padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val socket = if (look?.legend == RelicLook.Legend.STARS) CircleShape else RoundedCornerShape(10.dp)
+            Box(
+                Modifier.size(34.dp).background(Brush.radialGradient(listOf(Color(0xFF222B30), Color(0xFF0B1013))), socket)
+                    .border(1.dp, (look?.rarity ?: Color(0xFF3A4852)).copy(alpha = .55f), socket),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (worn != null) {
+                    ItemIcon(worn, look!!.rarity, Modifier.size(20.dp))
+                } else {
+                    SlotIcon(place.fits.first(), PanelRaised, Modifier.size(16.dp), tint = Muted.copy(alpha = .5f))
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(title.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    // An idle piece is a mark on the line (2.74.0); why is in its card, or behind the mark.
+                    line.reasons?.let { reasons ->
+                        Tipped({
+                            Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, lang) }, LifeRed)
+                        }) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(12.dp)) }
+                    }
+                }
+                if (worn != null) {
+                    Text(worn.title, color = look!!.name, style = relicName(12), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (worn.item.serial > 0) Text("◆ № ${worn.item.serial} ◆", color = Color(0xFFF0C76A), style = relicName(9))
+                } else {
+                    Text(ui(if (line.blocked) "hero.off_hand_taken" else "hero.empty_slot"), color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 2)
+                }
+            }
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    worn.title,
-                    color = color,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-                // An idle piece is a mark on the line (2.74.0); why is in its card, or behind the mark.
-                if (reasons != null) {
-                    Tipped({
-                        Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, lang) }, LifeRed)
-                    }) { Icon(Icons.Outlined.Block, ui("hero.inactive"), tint = LifeRed, modifier = Modifier.size(14.dp)) }
-                }
-                Text(title, color = Gold, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-            }
-            if (base.isNotEmpty()) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    base.forEach { BaseChip(it) }
+        if (worn != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                worn.lines.forEach { mod ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        TierHex(mod.marks, 12.dp)
+                        Text(mod.text, color = modColor(mod.marks), fontSize = 10.5.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
-            if (rolled.isNotEmpty()) TradeTable(rolled)
+        } else if (line.spare > 0) {
+            Text(ui("hero.place_spare", line.spare), color = GoldBright, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

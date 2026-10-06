@@ -18,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -66,7 +67,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable internal fun LotRow(game: GameUi, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
     var orbInfo by remember { mutableStateOf(false) }
     if (orbInfo) StackInfoSheet(game, lot.priceOrb) { orbInfo = false }
-    val price: @Composable ColumnScope.() -> Unit = { LotPrice(lot) { orbInfo = true } }
+    val price: @Composable RowScope.() -> Unit = { LotPrice(lot) { orbInfo = true } }
     val seller = listOfNotNull(sellerName(lot).takeIf { withSeller })
     val view = lot.equipment?.let { game.view(it) }
     // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet says why instead of its facts.
@@ -74,26 +75,31 @@ import com.sperance.exileforge.ui.theme.*
         ItemTradeRow(view, enabled = !game.busy, unmet = lotUnmet(game, lot), extra = seller, mark = mark, onClick = onClick, price = price)
     } else {
         TradeRow(
-            lot.title, lotColor(lot), stackFacts(game, lot) + seller, emptyList(), enabled = !game.busy, mark = mark, onClick = onClick,
-            icon = { LotIcon(game, lot, Modifier.size(28.dp)) }, price = price,
+            lot.title,
+            lotColor(lot),
+            stackFacts(game, lot) + seller,
+            enabled = !game.busy,
+            mark = mark,
+            onClick = onClick,
+            icon = { LotIcon(game, lot, Modifier.size(28.dp)) },
+            price = price,
         )
     }
 }
 
 /**
- * The price opposite the name: the count and the orb in its own glass (2.69.0) — the plain glyph for one the client has no art
- * for — and the orb's name under them, since the glasses of the lesser orbs look alike; a tap on a known orb's glass opens it.
+ * Цена лота в ярлыке «Ценника» (3.89.0): сфера в своём стекле (2.69.0) - простой знак, если рисунка нет, - число и имя сферы,
+ * ведь стёкла младших сфер похожи; нажатие на известную сферу открывает её.
  */
-@Composable internal fun LotPrice(lot: AuctionLot, onOrb: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(lot.price.toString(), color = Vital, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
-        Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.clickable(onClickLabel = orbTitle(lot), onClick = onOrb).padding(2.dp).size(16.dp)) }
-            ?: Icon(ForgeGlyphs.Orb, orbTitle(lot), tint = Gold, modifier = Modifier.size(15.dp))
-    }
+@Composable internal fun RowScope.LotPrice(lot: AuctionLot, onOrb: () -> Unit) {
+    Orb.of(lot.priceOrb)?.let { OrbGlyph(it, Modifier.clickable(onClickLabel = orbTitle(lot), onClick = onOrb).size(15.dp)) }
+        ?: Icon(ForgeGlyphs.Orb, orbTitle(lot), tint = Gold, modifier = Modifier.size(14.dp))
+    Text(lot.price.toString(), color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     Text(
         orbTitle(lot),
-        color = Muted,
+        color = Color(0xFF8FA0AB),
         style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = Modifier.widthIn(max = 96.dp),

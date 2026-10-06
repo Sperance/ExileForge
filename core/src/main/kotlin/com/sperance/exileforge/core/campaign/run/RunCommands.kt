@@ -159,17 +159,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
             else -> Unit
         }
 
-        // In the pause between stages the stage has not begun: the kit changes now, and its battle is drawn again.
-        is RunCommand.Regear -> if (phase == RunPhase.FIGHT && interlude != null && !started) {
-            pendingGear = null
-            regear(command.gear)
-            fight = battle()
-        } else if (phase == RunPhase.FIGHT) {
-            pendingGear = command
-        } else {
-            regear(command.gear)
-        }
-
         RunCommand.DismissChest -> chestEvent = null
 
         RunCommand.LevelSeen -> levelShown = levelNow()

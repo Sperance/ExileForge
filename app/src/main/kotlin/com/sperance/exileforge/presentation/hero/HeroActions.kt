@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.Buzz
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.NoticeKind
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
@@ -33,7 +32,6 @@ class HeroActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val events: GameEvents,
     private val buzzes: Buzzes,
 ) {
     private val api: GameApi get() = connection.api
@@ -176,7 +174,7 @@ class HeroActions(
     /** Продажа торговцу: цену ставит и платит сервер; карточка показала ту же сумму заранее. */
     fun sellForGold(itemId: String) = heroCommand { id -> notices.toast(ui("toast.sold", api.hero.sell(id, itemId).gold)) }
 
-    /** Одна команда героя: владелец или админ; ответ без снимка перечитывается; поход берёт новое снаряжение, когда герой нарисован. */
+    /** Одна команда героя: владелец или админ; ответ без снимка перечитывается и рисуется. */
     private fun heroCommand(block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.HERO)) {
         val id = heroes.heroId
         check(id.isNotBlank()) { ui("auction.choose_character") }
@@ -184,9 +182,7 @@ class HeroActions(
         check(session.isAdmin || (session.signedIn && session.profile?.id == heroes.state.value.owner)) { ui("hero.owner_only") }
         block(id)
         if (heroes.state.value.readAt == 0L) sync.readHero()
-        // Снимок рисуется вне главного потока: поход берёт новое снаряжение, когда герой, из которого оно читается, уже новый.
         sync.drawn()
-        events.regear()
     }
 
     /** Команда кузницы: прежняя фраза уходит, как только начинается другая; каждое касание кузницы вибрирует (3.77.0). */

@@ -96,7 +96,7 @@ class TrialArena(
     private val allies = PetAllies(index, rules)
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
-    private var gear = gear
+    private val gear = gear
     private var build = HeroBuild(gear, atlas, rules)
     private val hero: Combatant get() = build.body
     private val kit: Loadout get() = gear.kit
@@ -196,11 +196,6 @@ class TrialArena(
 
             // Walking away is only between two fights: the trial ends there, what it brought kept.
             RunCommand.Leave -> if (phase == TrialPhase.FIGHT && !started) finish(fallen = false)
-
-            is RunCommand.Regear -> if (!started) {
-                gear = command.gear
-                rebuild()
-            }
 
             else -> Unit
         }

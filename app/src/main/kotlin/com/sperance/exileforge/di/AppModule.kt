@@ -118,7 +118,7 @@ val appModule = module {
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
     single { ExpeditionRepository() }
-    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }

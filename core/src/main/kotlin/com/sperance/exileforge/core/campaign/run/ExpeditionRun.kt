@@ -289,7 +289,6 @@ class ExpeditionRun(
     internal val stats = RunStats()
     internal var recap: List<DeathHit> = emptyList()
     internal var fightAgent: MonsterAgent? = null
-    internal var pendingGear: RunCommand.Regear? = null
     internal val waves get() = AbyssWaves(index, run)
     internal val abyssRule get() = index.campaign.abyss
 

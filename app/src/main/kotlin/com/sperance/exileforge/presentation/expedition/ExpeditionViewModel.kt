@@ -14,7 +14,6 @@ import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.MapCode
-import com.sperance.exileforge.rules.content.Slot
 import kotlinx.coroutines.flow.StateFlow
 
 /** Экраны похода (3.80.21): карта мира, карточка зоны, бег похода, испытания и атлас - над общими действиями. */
@@ -61,7 +60,5 @@ class ExpeditionViewModel(
     fun abandonTrial() = trial.abandon()
     fun trialCommand(command: RunCommand) = trial.send(command)
     fun closeTrial() = trial.close()
-    fun equip(itemId: String, slot: Slot? = null) = hero.equip(itemId, slot)
-    fun unequip(itemId: String) = hero.unequip(itemId)
     fun sellForGold(itemId: String) = hero.sellForGold(itemId)
 }

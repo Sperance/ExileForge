@@ -24,7 +24,6 @@ import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
@@ -78,7 +77,6 @@ class ExpeditionActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val events: GameEvents,
     private val quests: QuestActions,
     private val prefs: PreferencesRepository,
     private val store: ServerStore,
@@ -125,7 +123,6 @@ class ExpeditionActions(
                 if (runJournal?.pending?.isNotEmpty() == true) flushes.trySend(Unit)
             }
         }
-        scope.launch { events.regear.collect { regear() } }
         // Новое чтение героя: поход читает сумку через состояние и берёт кампанию - зону Ваал или кристалл, что сервер решил.
         scope.launch { heroes.state.map { it.hero }.distinctUntilChanged { a, b -> a === b }.filterNotNull().collect { heroChanged(it) } }
     }
@@ -501,12 +498,6 @@ class ExpeditionActions(
     private fun atlasCommand(call: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.HERO)) {
         call(heroes.heroId)
         if (heroes.state.value.readAt == 0L) heroSync.readHero()
-    }
-
-    /** Герой перечитан после смены снаряжения: идущий поход берёт новый лист между боями. */
-    private fun regear() {
-        val gear = gear() ?: return
-        runs().forEach { it.send(RunCommand.Regear(gear)) }
     }
 
     /** Новое чтение героя: походу - кампания, зона Ваал или кристалл, что сервер решил. */

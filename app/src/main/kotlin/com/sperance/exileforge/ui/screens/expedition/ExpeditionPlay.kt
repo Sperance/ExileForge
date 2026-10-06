@@ -135,7 +135,7 @@ import kotlin.math.roundToInt
                 )
                 if (gear) {
                     HoldsRun(run)
-                    GearSheet(game, model) { gear = false }
+                    GearSheet(game) { gear = false }
                 }
                 if (sheet) {
                     HoldsRun(run)
@@ -321,16 +321,16 @@ internal const val PENDING_GRACE = 10_000L
 /**
  * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the server's roll,
  * shown as its answer arrives (server 1.30.0), and a button that puts it away. A piece opens its
- * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open. Строка вещи несёт
- * стрелки урона и защиты и «Надеть» сама (3.89.0).
+ * comparison with what is worn (3.24.0); the map holds still while it is open. Строка вещи несёт стрелки урона и
+ * защиты (3.89.0); надеть её можно только в убежище.
  */
 @Composable internal fun ChestLoot(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
-    val expedition: ExpeditionViewModel = koinViewModel()
+    val expedition by vm.state.collectAsStateWithLifecycle()
     var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            RewardLines(game, reward, { looked = it }, awaiting, rememberLootWear(game, vm))
+            RewardLines(game, reward, { looked = it }, awaiting, arriving = expedition.pending > 0)
             // Куда ушла добыча (3.88.8): вещи и стопки сундука уже лежат у героя, подбирать нечего.
             if (!awaiting && (reward.equipment.isNotEmpty() || reward.items.isNotEmpty())) {
                 Text(ui("expedition.chest_stored"), color = Vital, style = MaterialTheme.typography.bodySmall)

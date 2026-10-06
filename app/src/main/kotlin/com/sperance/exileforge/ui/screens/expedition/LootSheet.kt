@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -19,52 +18,22 @@ import com.sperance.exileforge.presentation.state.LootPresence
 import com.sperance.exileforge.presentation.state.lootPresence
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.HoldButton
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.wearTotals
-import com.sperance.exileforge.ui.screens.hero.wearable
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Panel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * «Надеть» над выпавшей вещью (3.89.0): одно действие для карточки лута и строки сундука - где вещь стоит, можно ли
- * надеть её сейчас и само надевание. Вещь из ролла попадает в тайник с ответом журнала, до того кнопка ждёт.
- * Положение вещи с 3.90.0 - общее правило списков лута [lootPresence].
- */
-internal class LootWear(private val game: GameUi, private val vm: ExpeditionViewModel, private val pending: Int) {
-    /** Журнал ещё несёт ответы: вещи, которой нет у героя, ждут. */
-    val arriving: Boolean get() = pending > 0
-
-    fun stand(item: ItemView): LootPresence = game.lootPresence(item.id, arriving)
-
-    /** Вещь в тайнике, команда не ждёт сети, требования выполнены. */
-    fun ready(item: ItemView): Boolean = stand(item) == LootPresence.HELD && !game.busy && game.unmetFor(item.code).isEmpty()
-
-    /** Подпись кнопки: «Надеть» или «в пути», пока сервер не принял вещь. */
-    fun label(item: ItemView): String = ui(if (stand(item) == LootPresence.ARRIVING) "expedition.loot_arriving" else "hero.equip")
-
-    fun wear(item: ItemView) = vm.equip(item.id)
-
-    /** Отправить журнал сейчас: вещь в пути станет вещью тайника быстрее. */
-    fun hurry() = vm.flushRun()
-}
-
-@Composable internal fun rememberLootWear(game: GameUi, vm: ExpeditionViewModel): LootWear {
-    val expedition by vm.state.collectAsStateWithLifecycle()
-    return LootWear(game, vm, expedition.pending)
-}
-
-/**
- * A piece the run dropped, opened where it dropped (3.24.0) — a chest's lid, a fight's spoils, the gear
- * sheet's loot: its card, what wearing it would change against what is worn, and «Надеть» right there.
- * The drop is the server's roll and reaches the stash with the journal's answer, so opening the sheet sends the
- * journal at once, and the button waits until the server holds the piece; one sold for want of room says so.
- * [extra] is what the caller adds under the button.
+ * A piece the run dropped, opened where it dropped (3.24.0) — a chest's lid, a fight's spoils, the run's reports:
+ * its card and what wearing it would change against what is worn. Снаряжение в заходе не меняется: надеть вещь можно
+ * только в убежище, здесь её можно лишь продать. The drop is the server's roll and reaches the stash with the journal's
+ * answer, so opening the sheet sends the journal at once; one sold for want of room says so.
+ * [extra] is what the caller adds under the card.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,30 +44,17 @@ internal fun LootSheet(
     onDismiss: () -> Unit,
     extra: @Composable ColumnScope.() -> Unit = {},
 ) {
-    val wear = rememberLootWear(game, vm)
-    val stand = wear.stand(item)
-    LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) wear.hurry() }
+    val expedition by vm.state.collectAsStateWithLifecycle()
+    val stand = game.lootPresence(item.id, arriving = expedition.pending > 0)
+    LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item), requirementsMet = game.unmetFor(item.code).isEmpty())
-            when {
-                stand == LootPresence.WORN -> MutedText(ui("expedition.loot_worn"))
-
-                stand == LootPresence.GONE -> MutedText(ui("expedition.loot_gone"))
-
-                // A map or a jewel is not worn (3.73.0): no «Надеть» under it.
-                item.slot.isJewelLike -> Unit
-
-                else -> ForgeButton(
-                    enabled = wear.ready(item),
-                    onClick = {
-                        onDismiss()
-                        wear.wear(item)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(wear.label(item))
-                }
+            when (stand) {
+                LootPresence.WORN -> MutedText(ui("expedition.loot_worn"))
+                LootPresence.GONE -> MutedText(ui("expedition.loot_gone"))
+                LootPresence.ARRIVING -> MutedText(ui("expedition.loot_arriving"))
+                LootPresence.HELD -> Unit
             }
             // Sold to the merchant right here (3.81.0), wherever the piece is opened on a run: a gilt ribbon with the coin and
             // the price in a chip, held as before. A locked piece (3.30.0) is not sold: the ribbon stays, dimmed, with the reason.

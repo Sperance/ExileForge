@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
-import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.ZoneShare
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
@@ -74,8 +73,6 @@ sealed interface RunCommand {
     /** Back from the Vaal zone with [life] left, and the mana and flasks it left. */
     data class Returned(val life: Double, val pools: HeroPools? = null, val zone: ZoneShare? = null) : RunCommand
 
-    /** The gear changed on the map: it lands between fights, and life keeps its share. */
-    data class Regear(val gear: HeroGear) : RunCommand
     data class Cast(val slot: Int) : RunCommand
     data class Drink(val slot: Int) : RunCommand
 

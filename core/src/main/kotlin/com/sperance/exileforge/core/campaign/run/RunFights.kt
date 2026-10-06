@@ -230,8 +230,6 @@ internal fun ExpeditionRun.play(dt: Double) {
         stageHits = pack
         stageTime = duration
         stageCarry = battle.carry()
-        pendingGear?.let { regear(it.gear) }
-        pendingGear = null
         begin(stage + 1)
         return
     }
@@ -280,8 +278,6 @@ internal fun ExpeditionRun.play(dt: Double) {
     }
     endFight()
     abyssFight = false
-    if (phase != RunPhase.DEAD) pendingGear?.let { regear(it.gear) }
-    pendingGear = null
     // The Abyss chains its fights (3.32.0): the next wave, or the next depth once the player descends, is the next stage.
     if (outcome == Outcome.WIN && down != null) {
         down.carry = battle.carry()

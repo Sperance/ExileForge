@@ -124,7 +124,7 @@ fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
 /** A folded part of the menagerie: one row with its title and a chevron; a tap opens what is under it. */
 @Composable private fun Fold(title: String, open: Boolean, onToggle: () -> Unit, content: @Composable () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    Column(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, Bronze.copy(alpha = .35f), shape)) {
+    Column(Modifier.fillMaxWidth().depthPanel(shape)) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onToggle).padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(title, color = Gold, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
             Text(if (open) "▾" else "▸", color = Gold)
@@ -174,7 +174,7 @@ private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onT
     val shape = RoundedCornerShape(8.dp)
     val tint = rarityColor(pet.rarity.name)
     Column(
-        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, if (open) GoldBright else tint.copy(alpha = .45f), shape)
+        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, if (open) GoldBright else tint.copy(alpha = .45f), shape)
             .clickable(onClick = onToggle).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {

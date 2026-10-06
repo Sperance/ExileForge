@@ -40,7 +40,7 @@ class DesignPreviewTest {
         val index = TestWorld.index
         val ring = checkNotNull(ItemView.of(TestWorld.roll("ring", Slot.RING, Rarity.RARE), index))
         val boots = checkNotNull(ItemView.of(TestWorld.roll("boots", Slot.BOOTS, Rarity.RARE, seed = 2L), index))
-        // «Астролябия» (3.89.0): уникальная и мифическая карточки - первыми, на снимке арсенала.
+        // «Астролябия» (3.88.6): уникальная и мифическая карточки - первыми, на снимке арсенала.
         val unique = checkNotNull(ItemView.of(TestWorld.legend("unique", Rarity.UNIQUE, 41), index))
         val mythic = checkNotNull(ItemView.of(TestWorld.legend("mythic", Rarity.MYTHICAL, 3), index))
         compose.setContent {

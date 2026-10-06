@@ -98,78 +98,84 @@ fun HeroScreen() {
     val lines = rememberStashLines(game, visible)
     val selected = game.holding.selectedEquipment
     PullToRefreshBox(isRefreshing = game.refreshing(Reads.HERO), onRefresh = model::load, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                // Who the character is heads every section; until the hero arrives the tab says what it is.
-                if (header != null) {
-                    HeroHeader(header)
-                } else {
-                    ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
+        Column(Modifier.fillMaxSize()) {
+            // Шапка над списком (3.88.7): герой и фильтры тайника уходят при прокрутке вниз, вкладки разделов прилипают.
+            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CollapsibleHeader {
+                    // Who the character is heads every section; until the hero arrives the tab says what it is.
+                    if (header != null) {
+                        HeroHeader(header)
+                    } else {
+                        ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
+                    }
+                }
+                SectionBar(section) { section = it }
+                if (section == HeroSection.STASH && hero != null) {
+                    CollapsibleHeader {
+                        StashBar(
+                            tools = tools,
+                            onTools = {
+                                tools = it
+                                filter = filter.copy(groups = emptySet())
+                            },
+                            fill = { StashFill(game, model) },
+                            tweaks = if (filter.query.isNotBlank()) 1 else 0,
+                            onSearch = { filtering = true },
+                            filter = filter,
+                            onFilter = { filter = it },
+                            rarities = rarities,
+                            groupCounts = groupCounts,
+                            shelfSize = shelf.size,
+                            lang = game.lang,
+                            sort = game.stashSort,
+                            onSort = shell::stashSort,
+                            hideWorn = game.stashHideWorn.takeUnless { tools },
+                            onHideWorn = shell::stashHideWorn,
+                        )
+                    }
                 }
             }
-            item { SectionBar(section) { section = it } }
-            if (hero == null) {
-                item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }
-            } else {
-                when (section) {
-                    HeroSection.CHARACTER -> {
-                        item { HeroSummary(game) }
-                    }
-
-                    HeroSection.EQUIPMENT -> {
-                        item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
-                    }
-
-                    HeroSection.BAG -> {
-                        val sections = bagSections(game)
-                        if (sections.isEmpty()) {
-                            item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
-                        } // A table since 2.75.0: icon and count per cell, everything else behind the tap.
-                        else {
-                            item(key = "bag") { BagGrid(game, sections) { stackCode = it } }
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (hero == null) {
+                    item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }
+                } else {
+                    when (section) {
+                        HeroSection.CHARACTER -> {
+                            item { HeroSummary(game) }
                         }
-                    }
 
-                    HeroSection.STASH -> {
-                        if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(game, model) }
-                        // «Быстрые фильтры» (3.89.0): полка, места, редкости, группы и порядок - на виду над списком.
-                        item(key = "shelf") {
-                            StashBar(
-                                tools = tools,
-                                onTools = {
-                                    tools = it
-                                    filter = filter.copy(groups = emptySet())
-                                },
-                                fill = { StashFill(game, model) },
-                                tweaks = if (filter.query.isNotBlank()) 1 else 0,
-                                onSearch = { filtering = true },
-                                filter = filter,
-                                onFilter = { filter = it },
-                                rarities = rarities,
-                                groupCounts = groupCounts,
-                                shelfSize = shelf.size,
-                                lang = game.lang,
-                                sort = game.stashSort,
-                                onSort = shell::stashSort,
-                                hideWorn = game.stashHideWorn.takeUnless { tools },
-                                onHideWorn = shell::stashHideWorn,
-                            )
+                        HeroSection.EQUIPMENT -> {
+                            item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
                         }
-                        if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
-                        // A line, not a card: a stash is read down, and the card is one tap behind each line.
-                        items(lines, key = { it.piece.id }) { line ->
-                            val piece = line.piece
-                            // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
-                            ItemRow(
-                                piece,
-                                selected = piece.id == selected,
-                                worn = line.worn,
-                                unwearable = line.unwearable,
-                                price = line.price,
-                                waiting = line.waiting,
-                            ) {
-                                detailId = piece.id
-                                model.selectEquipment(piece.id)
+
+                        HeroSection.BAG -> {
+                            val sections = bagSections(game)
+                            if (sections.isEmpty()) {
+                                item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
+                            } // A table since 2.75.0: icon and count per cell, everything else behind the tap.
+                            else {
+                                item(key = "bag") { BagGrid(game, sections) { stackCode = it } }
+                            }
+                        }
+
+                        HeroSection.STASH -> {
+                            if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(game, model) }
+                            if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
+                            // A line, not a card: a stash is read down, and the card is one tap behind each line.
+                            items(lines, key = { it.piece.id }) { line ->
+                                val piece = line.piece
+                                // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
+                                ItemRow(
+                                    piece,
+                                    selected = piece.id == selected,
+                                    worn = line.worn,
+                                    unwearable = line.unwearable,
+                                    price = line.price,
+                                    waiting = line.waiting,
+                                ) {
+                                    detailId = piece.id
+                                    model.selectEquipment(piece.id)
+                                }
                             }
                         }
                     }

@@ -24,10 +24,9 @@ import com.sperance.exileforge.ui.theme.*
  * (гильдия, роль, опасность) лишь чуть окрашивает фон; у обычной панели, с акцентом по умолчанию, фон чистый.
  */
 @Composable fun ForgePanel(modifier: Modifier = Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(18.dp)
-    val fill = if (accent == Gold) PanelRaised else accent.copy(alpha = .06f).compositeOver(PanelRaised)
+    // «Глубина» (3.88.7): градиент со светом по кромке и тенью; свой акцент лишь окрашивает верх.
     Column(
-        modifier.fillMaxWidth().background(fill, shape).padding(16.dp),
+        modifier.fillMaxWidth().depthPanel(RoundedCornerShape(18.dp), accent.takeIf { it != Gold }).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
         content = content,
     )
@@ -100,12 +99,12 @@ import com.sperance.exileforge.ui.theme.*
     Text(text.uppercase(), color = accent.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall, modifier = modifier)
 }
 
-/** The dark ground of every screen, with a faint ether glow from the upper corner. */
+/** Тёмная земля каждого экрана; сверху - изумрудный свет «Глубины» (3.88.7), к низу - тень. */
 fun Modifier.voidBackdrop(): Modifier = this.background(voidBrush()).drawBehind {
     drawCircle(
-        Brush.radialGradient(listOf(Gold.copy(alpha = .06f), Color.Transparent), center = Offset(size.width * .15f, 0f), radius = size.width * .9f),
-        radius = size.width * .9f,
-        center = Offset(size.width * .15f, 0f),
+        Brush.radialGradient(listOf(Gold.copy(alpha = .16f), Color.Transparent), center = Offset(size.width * .5f, 0f), radius = size.width * .95f),
+        radius = size.width * .95f,
+        center = Offset(size.width * .5f, 0f),
     )
     drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .45f)), startY = size.height * .55f, endY = size.height))
 }

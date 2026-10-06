@@ -61,7 +61,7 @@ private const val ONE_ROW = 6
     glyph: @Composable (String) -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
-    Column(Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, PanelRaised, shape).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().depthPanel(shape).padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(title, color = accent, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
             if (codes.isNotEmpty()) Text(codes.size.toString(), color = Muted, style = MaterialTheme.typography.labelSmall)

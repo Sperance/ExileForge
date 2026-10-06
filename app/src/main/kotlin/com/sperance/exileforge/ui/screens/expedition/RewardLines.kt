@@ -42,7 +42,7 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         reward.equipment.forEach { instance ->
-            // Две линии «Поля боя» (3.89.0): карточку открывает нажатие.
+            // Две линии «Поля боя» (3.88.6): карточку открывает нажатие.
             game.view(instance)?.let { piece -> ItemRow(piece, compact = true, enabled = onItem != null, price = game.sellPrice(instance)) { onItem?.invoke(piece) } }
         }
         if (awaiting) {

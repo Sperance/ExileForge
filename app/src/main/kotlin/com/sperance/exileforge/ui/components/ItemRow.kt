@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
@@ -34,7 +35,7 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Вещь в списке - «Плита» (3.89.0, выбор владельца): гнездо с иконкой в цвете редкости, имя серифами, под ним номер
+ * Вещь в списке - «Плита» (3.88.6, выбор владельца): гнездо с иконкой в цвете редкости, имя серифами, под ним номер
  * экземпляра уникальной или мифической, строка «что это · уровень · база», а ниже - каждая строка вещи со значком тира:
  * модификаторы видны всегда, не открывая карточку. Мифическая плита лежит под звёздами, уникальная - в тёплом угле.
  * [trailing] - напротив имени (цена лота), иначе [price] - что платит торговец; [footer] - под всем, что добавляет список.
@@ -64,9 +65,9 @@ fun ItemRow(
     locked: Boolean = item.item.locked,
     /** A command about this copy waits for the network (3.30.0). */
     waiting: Boolean = false,
-    /** Две линии вместо плиты (3.89.0): лут после боя, где строки читают уже в карточке. */
+    /** Две линии вместо плиты (3.88.6): лут после боя, где строки читают уже в карточке. */
     compact: Boolean = false,
-    /** «Ценник» (3.89.0): цена лота или полки торговца ярлыком, свисающим с верхнего края плиты. */
+    /** «Ценник» (3.88.6): цена лота или полки торговца ярлыком, свисающим с верхнего края плиты. */
     tag: (@Composable RowScope.() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
@@ -80,12 +81,12 @@ fun ItemRow(
         ).joinToString(" · ")
     Box(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card).clip(card)
+            Modifier.fillMaxWidth().glow(Gold, on = selected, radius = 10.dp, shape = card).shadow(8.dp, card, clip = false).clip(card)
                 .background(
                     when {
                         legend != null -> Brush.verticalGradient(listOf(look.top, look.bottom))
-                        worn -> Brush.verticalGradient(listOf(Gold.copy(alpha = .10f).compositeOver(RowTop), Gold.copy(alpha = .06f).compositeOver(Panel)))
-                        else -> Brush.verticalGradient(listOf(RowTop, Panel))
+                        worn -> Brush.verticalGradient(listOf(Gold.copy(alpha = .10f).compositeOver(DepthTop), Gold.copy(alpha = .06f).compositeOver(DepthBottom)))
+                        else -> Brush.verticalGradient(listOf(DepthTop, DepthBottom))
                     },
                 )
                 .relicSky(look)
@@ -142,7 +143,7 @@ fun ItemRow(
                 }
                 if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
                 if (item.lines.isNotEmpty()) {
-                    // Каждая строка вещи (2.72.0, со значком тира с 3.89.0): тайник читают сверху вниз, не открывая карточек.
+                    // Каждая строка вещи (2.72.0, со значком тира с 3.88.6): тайник читают сверху вниз, не открывая карточек.
                     Column(Modifier.padding(start = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                         item.lines.forEach { RelicModLine(it, null, big = false) }
                     }
@@ -164,9 +165,6 @@ fun ItemRow(
         content = content,
     )
 }
-
-/** Верх плиты: чуть светлее басальта, к низу - панель. */
-private val RowTop = Color(0xFF121A20)
 
 /** Гнездо плиты: иконка в цвете редкости, у мифической - круглое; поверх - замок, запрет и отметка надетого. */
 @Composable private fun RowSocket(item: ItemView, look: RelicLook, worn: Boolean, locked: Boolean, unwearable: List<String>) {

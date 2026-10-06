@@ -875,7 +875,6 @@
   "grant.title": "Выдача предметов · {0}",
   "grant.xp_note": "Уровень и очки дерева пересчитает сервер по своей таблице.",
   "hero.action_auction": "На аукцион",
-  "hero.action_map": "К локации",
   "hero.action_sell": "Продать",
   "hero.bag_admin_only": "Изменение сумки доступно администратору",
   "hero.bag_empty": "Сумка пуста",
@@ -3834,5 +3833,14 @@
   "gear.group.armour": "Броня",
   "gear.group.jewellery": "Украшения",
   "gear.group.other": "Прочее",
-  "gear.group.flasks": "Фляги"
+  "gear.group.flasks": "Фляги",
+  "feedback.asana_failed": "Asana не ответила ({0}) — задача не создана или не закрыта",
+  "feedback.asana_retry": "Повторить в Asana",
+  "moderation.new_tester": "Новый тестировщик",
+  "moderation.tester_login": "Логин",
+  "moderation.tester_password": "Пароль",
+  "moderation.tester_create": "Создать аккаунт",
+  "moderation.tester_once": "Пароль показан один раз — скопируйте его сейчас",
+  "moderation.role_title": "Роль аккаунта",
+  "moderation.role_set": "Роль изменена: {0}"
 }

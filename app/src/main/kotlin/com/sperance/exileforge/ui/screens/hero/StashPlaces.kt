@@ -14,6 +14,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -47,9 +48,9 @@ import com.sperance.exileforge.ui.theme.*
     val price = rules.price(hero.info.stashSlots)
     val label = ui("stash.places", held, capacity)
     var buying by remember { mutableStateOf(false) }
-    // Пилюля «24/60 +» (3.89.0): места тайника и следующая пачка за золото.
+    // Пилюля «24/60 +» (3.88.6): места тайника и следующая пачка за золото.
     Row(
-        modifier.height(32.dp).clip(RoundedCornerShape(16.dp)).background(Color(0xFF121A21)),
+        modifier.height(32.dp).depthRaised(RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -63,7 +64,7 @@ import com.sperance.exileforge.ui.theme.*
         )
         if (price > 0) {
             Box(
-                Modifier.size(32.dp).background(tint).clickable(role = Role.Button, onClickLabel = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity))) { buying = true },
+                Modifier.size(32.dp).background(if (full) Brush.verticalGradient(listOf(tint, tint)) else PrimaryBrush).clickable(role = Role.Button, onClickLabel = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity))) { buying = true },
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Outlined.Add, null, tint = Ink, modifier = Modifier.size(18.dp)) }
         }

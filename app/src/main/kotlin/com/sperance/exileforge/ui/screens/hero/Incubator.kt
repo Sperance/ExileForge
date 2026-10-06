@@ -118,7 +118,7 @@ private fun EmptySlot(game: GameUi, eggs: List<String>, enabled: Boolean, onLay:
             eggs.forEach { egg ->
                 val shape = RoundedCornerShape(6.dp)
                 Row(
-                    Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, Bronze, shape).clickable { onPick(egg) }.padding(8.dp),
+                    Modifier.fillMaxWidth().depthPanel(shape).clickable { onPick(egg) }.padding(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {

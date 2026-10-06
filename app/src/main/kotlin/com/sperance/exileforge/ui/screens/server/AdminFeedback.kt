@@ -56,7 +56,9 @@ import org.koin.compose.viewmodel.koinViewModel
     var chosen by remember(report.id, report.status) { mutableStateOf(report.status) }
     ForgePanel(Modifier.clickable { open = !open }) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(entry.login ?: ui("feedback.anonymous"), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text(entry.login ?: ui("feedback.anonymous"), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            RoleMark(entry.role, 14.dp)
+            Spacer(Modifier.weight(1f))
             StatusBadge(report.status)
         }
         Text(report.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = if (open) Int.MAX_VALUE else 3)
@@ -93,10 +95,18 @@ import org.koin.compose.viewmodel.koinViewModel
                 onClick = { vm.setReportStatus(report.id, chosen, reason) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(ui("feedback.save_status")) }
-            // Asana (3.75.0): the picked report becomes a task there; once exported, the link to it instead.
-            if (report.asanaUrl.isBlank()) {
+            // Asana (3.75.0; сама с «В работе» с 3.88.7): отказ Asana - красной строкой с повтором, выгруженный - ссылкой.
+            if (report.asanaError.isNotBlank()) {
+                Text(ui("feedback.asana_failed", report.asanaError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("feedback.to_asana"))
+                    Text(ui("feedback.asana_retry"))
+                }
+            }
+            if (report.asanaUrl.isBlank()) {
+                if (report.asanaError.isBlank()) {
+                    ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
+                        Text(ui("feedback.to_asana"))
+                    }
                 }
             } else {
                 val uri = LocalUriHandler.current

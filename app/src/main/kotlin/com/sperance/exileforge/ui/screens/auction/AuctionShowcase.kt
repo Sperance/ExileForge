@@ -80,8 +80,9 @@ import com.sperance.exileforge.ui.theme.*
 ) {
     var openLot by remember { mutableStateOf<String?>(null) }
     var confirmBuy by remember { mutableStateOf<String?>(null) }
+    // Поиск и фильтры над списком (3.88.7): уходят при прокрутке вниз, возвращаются при прокрутке вверх.
+    Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { header() } }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        item { header() }
         if (market.showcase.items.isEmpty()) {
             item {
                 InfoCard(

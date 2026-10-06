@@ -12,6 +12,7 @@ import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
@@ -41,7 +42,7 @@ private fun label(content: @Composable RowScope.() -> Unit): @Composable RowScop
     ProvideTextStyle(MaterialTheme.typography.labelLarge) { content() }
 }
 
-/** Путь вперёд: зелёная заливка. */
+/** Путь вперёд: градиентная пилюля «Глубины» с зелёным ореолом (3.88.7). */
 @Composable fun ForgeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -51,16 +52,16 @@ private fun label(content: @Composable RowScope.() -> Unit): @Composable RowScop
     content: @Composable RowScope.() -> Unit,
 ) = Button(
     onClick,
-    modifier.forgeHeight(),
+    modifier.forgeHeight().depthPrimary(ButtonShape, enabled && colors == null),
     enabled,
     ButtonShape,
-    colors ?: ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Ink, disabledContainerColor = Panel, disabledContentColor = Muted),
+    colors ?: ButtonDefaults.buttonColors(containerColor = Color.Transparent, contentColor = Ink, disabledContainerColor = Panel, disabledContentColor = Muted),
     ButtonDefaults.buttonElevation(0.dp, 0.dp, 0.dp, 0.dp, 0.dp),
     contentPadding = contentPadding,
     content = label(content),
 )
 
-/** Второй выбор: слова на полупрозрачном зелёном, без рамки. */
+/** Второй выбор: приподнятое стекло «Глубины» (3.88.7) со светлыми словами. */
 @Composable fun ForgeOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -70,12 +71,12 @@ private fun label(content: @Composable RowScope.() -> Unit): @Composable RowScop
     content: @Composable RowScope.() -> Unit,
 ) = OutlinedButton(
     onClick,
-    modifier.forgeHeight(),
+    modifier.forgeHeight().then(if (enabled && colors == null) Modifier.depthRaised(ButtonShape) else Modifier),
     enabled,
     ButtonShape,
     colors ?: ButtonDefaults.outlinedButtonColors(
-        containerColor = Gold.copy(alpha = .12f),
-        contentColor = Gold,
+        containerColor = Color.Transparent,
+        contentColor = GoldBright,
         disabledContainerColor = Panel,
         disabledContentColor = Muted,
     ),

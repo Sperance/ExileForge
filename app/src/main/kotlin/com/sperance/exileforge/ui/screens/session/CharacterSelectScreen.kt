@@ -154,7 +154,11 @@ import org.koin.compose.viewmodel.koinViewModel
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ClassPortrait(heroClass, game.world.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f)) {
-                Text(character.name, color = if (sanction != null) LifeRed else GoldBright, style = MaterialTheme.typography.titleMedium)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(character.name, color = if (sanction != null) LifeRed else GoldBright, style = MaterialTheme.typography.titleMedium)
+                    // Роль аккаунта (3.88.7): значок у администратора, модератора и тестировщика.
+                    RoleMark(accountRole(game.session.profile?.role))
+                }
                 PropertyRow(ui("common.class"), heroClass?.let(::classTitle) ?: ui("chars.unknown"), Glyph.CHARACTER)
                 PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
             }

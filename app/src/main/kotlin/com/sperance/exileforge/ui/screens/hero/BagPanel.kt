@@ -111,7 +111,7 @@ private val GAP = 6.dp
     val shape = RoundedCornerShape(6.dp)
     val title = itemTitle(stack.code)
     Box(
-        modifier.aspectRatio(1f).background(Panel, shape).border(1.dp, PanelRaised, shape)
+        modifier.aspectRatio(1f).depthPanel(shape)
             .clickable(role = Role.Button, onClickLabel = title, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

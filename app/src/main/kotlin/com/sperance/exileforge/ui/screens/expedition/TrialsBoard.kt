@@ -136,7 +136,7 @@ private const val KEYS_PER_ROW = 4
 @Composable private fun Plate(accent: Color, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(
-        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, accent.copy(alpha = .45f), shape).padding(12.dp),
+        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, accent.copy(alpha = .45f), shape).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
         content = content,
     )

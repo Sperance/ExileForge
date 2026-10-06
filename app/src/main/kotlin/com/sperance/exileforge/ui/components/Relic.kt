@@ -57,7 +57,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /*
- * «Реликварий» (3.89.0, выбор владельца): подробная карточка предмета, её строки модификаторов со значком тира, итог героя
+ * «Реликварий» (3.88.6, выбор владельца): подробная карточка предмета, её строки модификаторов со значком тира, итог героя
  * «сейчас → станет» и «Астролябия» уникальных и мифических вещей - кольца, искры и звёзды вокруг предмета.
  */
 
@@ -91,7 +91,7 @@ data class RelicLook(
     /** Рисунок «Астролябии»: искры уникальной вещи или звёзды мифической. */
     enum class Legend { EMBER, STARS }
 
-    val primary: Brush get() = if (legend != null) Brush.verticalGradient(listOf(gold.lighten(), gold.darken())) else Brush.verticalGradient(listOf(Gold, Gold))
+    val primary: Brush get() = if (legend != null) Brush.verticalGradient(listOf(gold.lighten(), gold.darken())) else PrimaryBrush
     val onPrimary: Color get() = if (legend != null) Color(0xFF2A1802) else Color(0xFF04210F)
 }
 
@@ -112,7 +112,7 @@ fun relicLook(rarity: Rarity): RelicLook {
             Color(0xFF9C8FB5), Color(0xFF6A5E80), Color(0xFF8EC5FF), RelicLook.Legend.STARS,
         )
 
-        else -> RelicLook(color, color, Color(0xFF151C1A), Color(0xFF0E1418), color, color, Color(0xFF8FA0AB), Color(0xFF56636D), Rune, null)
+        else -> RelicLook(color, color, DepthTop, DepthBottom, color, color, Color(0xFF8FA0AB), Color(0xFF56636D), Rune, null)
     }
 }
 
@@ -174,7 +174,7 @@ private fun DrawScope.hexPath(): Path {
 }
 
 /**
- * Значок строки (3.89.0): шестигранник в цвете тира с его номером, ✦ у уникальной строки, молот у ремесла, пустой контур у врождённой.
+ * Значок строки (3.88.6): шестигранник в цвете тира с его номером, ✦ у уникальной строки, молот у ремесла, пустой контур у врождённой.
  * Долгое нажатие называет вид строки.
  */
 @Composable fun TierHex(marks: AffixMarks, size: Dp = 20.dp) {
@@ -216,8 +216,8 @@ private fun DrawScope.hexPath(): Path {
 }
 
 /**
- * Строка модификатора в карточке: значок тира, текст в цвете вида и справа - вилка тира или «ремесло».
- * Нажатие на [interactive] строку открывает её тир, вилку и место ролла.
+ * Строка модификатора в карточке: значок тира, текст в цвете вида и справа «ремесло» у строки верстака. Вилку тира
+ * карточка не печатает (3.88.7): тир, вилку и место ролла открывает нажатие на строку.
  */
 @Composable fun RelicModLine(line: ItemLine, onClick: (() -> Unit)?, big: Boolean = true) {
     val tap = if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = line.text, onClick = onClick)
@@ -233,12 +233,7 @@ private fun DrawScope.hexPath(): Path {
             style = if (big) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.labelMedium,
             modifier = Modifier.weight(1f),
         )
-        val side = when {
-            line.marks.kind == AffixKind.CRAFTED -> ui("relic.crafted")
-            line.marks.kind == AffixKind.UNIQUE || line.fixed -> null
-            else -> line.range
-        }
-        if (big && side != null) Text(side, color = Color(0xFF56636D), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        if (big && line.marks.kind == AffixKind.CRAFTED) Text(ui("relic.crafted"), color = Color(0xFF56636D), style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
 }
 
@@ -281,7 +276,7 @@ private fun starPath(r: Float, c: Offset): Path = Path().apply {
 }
 
 /**
- * «ИТОГ ГЕРОЯ» (3.89.0): что станет с листом героя, если надеть вещь, - таблица «сейчас → станет», рост зелёным, потеря красным.
+ * «ИТОГ ГЕРОЯ» (3.88.6): что станет с листом героя, если надеть вещь, - таблица «сейчас → станет», рост зелёным, потеря красным.
  */
 @Composable fun HeroTotals(delta: List<StatDelta>, look: RelicLook, modifier: Modifier = Modifier) {
     val label = MaterialTheme.typography.labelSmall
@@ -378,7 +373,7 @@ fun DrawScope.relicCorners(gold: Color) {
 }
 
 /**
- * «Астролябия» (3.89.0): вокруг вещи - кольцо с делениями, медленно идущее по кругу, встречная пунктирная орбита со
+ * «Астролябия» (3.88.6): вокруг вещи - кольцо с делениями, медленно идущее по кругу, встречная пунктирная орбита со
  * спутниками и дышащее свечение; в центре - круглое гнездо с иконкой. Размер блока [size].
  */
 @Composable fun Astrolabe(look: RelicLook, size: Dp = 200.dp, socket: Dp = 108.dp, content: @Composable BoxScope.() -> Unit) {

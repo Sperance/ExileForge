@@ -82,7 +82,7 @@ val Reading = FontFamily(
     Font(R.font.onest_semibold, FontWeight.Bold),
 )
 
-/** Цвета редкостей «Реликвария» (3.89.0): мягче цветов Path of Exile на басальте; неизвестная редкость - кость. */
+/** Цвета редкостей «Реликвария» (3.88.6): мягче цветов Path of Exile на басальте; неизвестная редкость - кость. */
 fun rarityColor(value: String) = when (value) {
     "MAGIC" -> Color(0xFF8E8EFF)
     "RARE" -> Color(0xFFF2E46B)

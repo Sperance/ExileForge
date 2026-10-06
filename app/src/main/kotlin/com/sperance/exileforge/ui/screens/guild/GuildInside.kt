@@ -127,7 +127,7 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
 @Composable private fun SectionTile(tab: GuildTab, figure: String?, badge: Int, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Box(
-        modifier.clip(shape).background(Panel, shape).border(1.dp, PanelRaised, shape).clickable(role = Role.Button, onClick = onClick)
+        modifier.clip(shape).depthPanel(shape).clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 4.dp, vertical = 10.dp),
     ) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {

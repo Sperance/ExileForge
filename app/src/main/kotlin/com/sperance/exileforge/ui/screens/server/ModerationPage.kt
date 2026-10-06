@@ -10,6 +10,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Smartphone
@@ -19,6 +20,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -40,6 +43,7 @@ import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
+import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.presentation.admin.ModerationTab
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
@@ -61,16 +65,31 @@ import org.koin.compose.viewmodel.koinViewModel
         DossierView(account, vm, state.dossier)
         return
     }
-    OutlinedTextField(
-        state.query,
-        vm::search,
-        placeholder = { Text(ui("moderation.search")) },
-        leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
-        singleLine = true,
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-        keyboardActions = KeyboardActions(onSearch = { vm.load(0) }),
-        modifier = Modifier.fillMaxWidth(),
-    )
+    var creating by remember { mutableStateOf(false) }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            state.query,
+            vm::search,
+            placeholder = { Text(ui("moderation.search")) },
+            leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { vm.load(0) }),
+            modifier = Modifier.weight(1f),
+        )
+        // «+» администратора (3.88.7): новый аккаунт тестировщика.
+        if (account.isAdmin) {
+            ForgeButton(onClick = { creating = true }, enabled = !account.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
+                Icon(Icons.Outlined.PersonAdd, ui("moderation.new_tester"), modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+    if (creating || state.createdTester != null) {
+        TesterSheet(account, state.createdTester, onCreate = vm::createTester) {
+            creating = false
+            vm.forgetTester()
+        }
+    }
     PillTabs(
         ModerationTab.entries.map { ui("moderation.tab.${it.name}") },
         state.tab.ordinal,
@@ -112,7 +131,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val banned = row.sanction?.takeIf { it.active }
     val shape = RoundedCornerShape(16.dp)
     Row(
-        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, if (banned != null) LifeRed.copy(alpha = .45f) else Bronze, shape)
+        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, if (banned != null) LifeRed.copy(alpha = .45f) else Bronze, shape)
             .clickable(enabled = !account.busy, onClick = onOpen).padding(12.dp)
             .alpha(if (row.protected) .6f else 1f),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -123,7 +142,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(row.heroName, color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                RolePill(row.role)
+                RoleMark(row.role)
             }
             MutedText(listOf(classTitle(row.heroClass), ui("pets.level", row.level), row.login).filter { it.isNotBlank() }.joinToString(" · "))
             banned?.let { Text(sanctionLine(it), color = LifeRed, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
@@ -137,7 +156,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val sanction = row.sanction ?: return
     val shape = RoundedCornerShape(16.dp)
     Row(
-        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, Bronze, shape).padding(12.dp),
+        Modifier.fillMaxWidth().depthPanel(shape).padding(12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -189,8 +208,20 @@ import org.koin.compose.viewmodel.koinViewModel
             Text(focus, color = GoldBright, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MutedText(dossier.account.login)
-                RolePill(dossier.account.role)
+                RoleMark(dossier.account.role, 18.dp)
                 hero?.let { MutedText("${classTitle(it.heroClass)} ${it.level}") }
+            }
+        }
+    }
+    // Роль аккаунта (3.88.7): администратор меняет её здесь; администратора не меняет никто.
+    if (account.isAdmin && dossier.account.role != AccountRole.ADMIN) {
+        Section(ui("moderation.role_title")) {
+            Chips {
+                ASSIGNABLE.forEach { role ->
+                    Chip(ui("moderation.role.${role.name}"), dossier.account.role == role) {
+                        if (!account.busy && dossier.account.role != role) vm.setRole(dossier.account.userId, role)
+                    }
+                }
             }
         }
     }
@@ -401,7 +432,7 @@ import org.koin.compose.viewmodel.koinViewModel
 // ==================== Мелочи ====================
 
 @Composable private fun StatTile(label: String, value: String, modifier: Modifier, flagged: Boolean = false) {
-    Column(modifier.background(Panel, RoundedCornerShape(12.dp)).border(1.dp, Bronze, RoundedCornerShape(12.dp)).padding(8.dp)) {
+    Column(modifier.depthPanel(RoundedCornerShape(12.dp)).padding(8.dp)) {
         Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
         Text(value, color = if (flagged) Ember else GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
@@ -502,3 +533,42 @@ private const val HARDWARE = 6
 
 /** Журнал отдаёт страницу без счёта: полная страница - возможно, есть следующая. */
 private const val PAGE_GUESS = 30
+
+/** Роли, что администратор выдаёт в досье. */
+private val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.TESTER, AccountRole.MODERATOR)
+
+/**
+ * Новый тестировщик (3.88.7): логин - и сервер создаёт аккаунт с паролем, который показывается один раз, с кнопками
+ * скопировать логин и пароль.
+ */
+@Composable private fun TesterSheet(account: AccountUi, created: TesterAccount?, onCreate: (String) -> Unit, onDismiss: () -> Unit) {
+    var login by remember { mutableStateOf("") }
+    val clipboard = LocalClipboardManager.current
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(ui("moderation.new_tester"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+            if (created == null) {
+                OutlinedTextField(
+                    login,
+                    { login = it.filterNot(Char::isWhitespace).take(account.inputs.login) },
+                    label = { Text(ui("moderation.tester_login")) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                ForgeButton(onClick = { onCreate(login) }, enabled = !account.busy && login.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(ui("moderation.tester_create")) }
+            } else {
+                MutedText(ui("moderation.tester_once"))
+                listOf(ui("moderation.tester_login") to created.login, ui("moderation.tester_password") to created.password.orEmpty()).forEach { (label, value) ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Column(Modifier.weight(1f)) {
+                            Label(label)
+                            Text(value, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        }
+                        ForgeOutlinedButton(onClick = { clipboard.setText(AnnotatedString(value)) }) { Text(ui("tester.copy")) }
+                    }
+                }
+                ForgeButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("tester.ok")) }
+            }
+        }
+    }
+}

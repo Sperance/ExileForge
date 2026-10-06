@@ -75,7 +75,7 @@ private fun LazyListScope.goals(me: String, vm: QuestViewModel, busy: Boolean, t
     val color = rarityColor(goal.rarity.name)
     val shape = RoundedCornerShape(8.dp)
     val done = view.progress >= goal.target
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(shape).background(Panel, shape)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(shape).depthPanel(shape)) {
         RaritySpine(if (view.claimed) Muted else color)
         Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

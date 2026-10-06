@@ -112,8 +112,9 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     val petMode = smithy.petMode && hero?.pets?.pets?.isNotEmpty() == true
     Column(Modifier.fillMaxSize()) {
+        // Шапка над прокруткой (3.88.7): уходит при прокрутке вниз и возвращается вверх.
+        Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil) } }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil)
             if (hero == null || index == null) {
                 InfoCard(ui("tree.no_hero"), ui("craft.hero_first"))
                 return@Column

@@ -83,7 +83,7 @@ internal fun RewardChips(reward: QuestReward) {
 @Composable internal fun QuestRow(quest: Quest, actions: @Composable RowScope.() -> Unit = {}) {
     val color = rarityColor(quest.rarity.name)
     val shape = RoundedCornerShape(8.dp)
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(shape).background(Panel, shape)) {
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(shape).depthPanel(shape)) {
         RaritySpine(if (quest.claimed) Muted else color)
         Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {

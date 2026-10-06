@@ -158,7 +158,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
 @Composable private fun MerchantStrip(money: Long?, refreshAt: Long?, filter: AutoSell?, onFilter: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Row(
-        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, PanelRaised, shape).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+        Modifier.fillMaxWidth().depthPanel(shape).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

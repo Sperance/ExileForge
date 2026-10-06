@@ -875,7 +875,6 @@
   "grant.title": "Granting items · {0}",
   "grant.xp_note": "The server re-reads the level and the tree points from its own table.",
   "hero.action_auction": "Auction",
-  "hero.action_map": "To the location",
   "hero.action_sell": "Sell",
   "hero.bag_admin_only": "Changing the bag is available to administrators",
   "hero.bag_empty": "The bag is empty",
@@ -3834,5 +3833,14 @@
   "gear.group.armour": "Armour",
   "gear.group.jewellery": "Jewellery",
   "gear.group.other": "Other",
-  "gear.group.flasks": "Flasks"
+  "gear.group.flasks": "Flasks",
+  "feedback.asana_failed": "Asana did not respond ({0}) — the task was not created or closed",
+  "feedback.asana_retry": "Retry in Asana",
+  "moderation.new_tester": "New tester",
+  "moderation.tester_login": "Login",
+  "moderation.tester_password": "Password",
+  "moderation.tester_create": "Create account",
+  "moderation.tester_once": "The password is shown once — copy it now",
+  "moderation.role_title": "Account role",
+  "moderation.role_set": "Role changed: {0}"
 }

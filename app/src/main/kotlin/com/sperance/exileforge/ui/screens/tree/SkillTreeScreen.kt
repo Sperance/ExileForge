@@ -230,7 +230,7 @@ fun SkillTreePanel(
             val shape = RoundedCornerShape(12.dp)
             Column(
                 Modifier.align(Alignment.BottomCenter).padding(8.dp).fillMaxWidth().heightIn(max = 380.dp)
-                    .background(Panel, shape).border(1.dp, Bronze, shape).verticalScroll(rememberScrollState()).padding(12.dp),
+                    .depthPanel(shape).verticalScroll(rememberScrollState()).padding(12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 NodeDetails(

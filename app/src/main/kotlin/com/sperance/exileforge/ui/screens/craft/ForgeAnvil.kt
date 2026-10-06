@@ -43,7 +43,7 @@ internal class Socket(val label: String, val accent: Color, val glyph: (@Composa
 @Composable internal fun TargetRail(game: GameUi, recent: List<ItemView>, current: String?, onShelf: (TargetFilter) -> Unit, onPick: (String) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(
-        Modifier.width(52.dp).background(Panel, shape).border(1.dp, PanelRaised, shape).padding(vertical = 6.dp),
+        Modifier.width(52.dp).depthPanel(shape).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {

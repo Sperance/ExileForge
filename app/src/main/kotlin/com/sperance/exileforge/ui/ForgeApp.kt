@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,6 +30,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
@@ -58,7 +60,10 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.BugSheet
+import com.sperance.exileforge.ui.components.CollapsibleHeader
+import com.sperance.exileforge.ui.components.HeaderCollapse
 import com.sperance.exileforge.ui.components.LocalBugReport
+import com.sperance.exileforge.ui.components.LocalHeaderCollapse
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.LocalSettings
@@ -95,6 +100,7 @@ import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
 import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.ui.theme.depthPanel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
@@ -274,15 +280,19 @@ import org.koin.compose.viewmodel.koinViewModel
         screens(Modifier.fillMaxSize())
         return
     }
+    // Сворачиваемые шапки (3.88.7): одно состояние на открытую вкладку, любой список внутри сворачивает их прокруткой вниз.
+    val collapse = remember(route.tab) { HeaderCollapse() }
     Scaffold(containerColor = Ink, bottomBar = { GameBar(game, route) }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
-            Column(Modifier.fillMaxSize().voidBackdrop()) {
+            Column(Modifier.fillMaxSize().voidBackdrop().nestedScroll(collapse.connection)) {
                 // The craft under way is read with the game, so the banner's plaque knows it from the start.
                 LaunchedEffect(game.heroId) { if (game.heroId.isNotBlank()) craftsModel.load(silent = true) }
-                ForgeBanner(game, route, onBug)
+                CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
+                    CollapsibleHeader(compact = { CompactBanner(game) }) { ForgeBanner(game, route, onBug) }
+                }
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 HeroTab.of(route.tab)?.let { HeroTabStrip(it, locked = { tab -> !game.unlocked(Feature.ofTab(tab)) }, onSelect = shell::tab) }
-                screens(Modifier.weight(1f).fillMaxWidth())
+                CompositionLocalProvider(LocalHeaderCollapse provides collapse) { screens(Modifier.weight(1f).fillMaxWidth()) }
             }
             // The toasts float over the screen, under the banner (2.80.0).
             ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
@@ -293,10 +303,13 @@ import org.koin.compose.viewmodel.koinViewModel
 /** The bottom bar: five destinations are the game; an administrator gets exactly one more. A tab tapped again walks back to its root. */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
+    // Парящая капсула «Глубины» (3.88.7): панель со светом по кромке и тенью, отступом от краёв и жестов системы.
+    val capsule = RoundedCornerShape(24.dp)
     NavigationBar(
-        containerColor = Abyss,
+        containerColor = Color.Transparent,
         tonalElevation = 0.dp,
-        modifier = Modifier.drawBehind { drawLine(Brush.horizontalGradient(listOf(Color.Transparent, Gold.copy(alpha = .4f), Color.Transparent)), Offset(0f, 0f), Offset(size.width, 0f), 1f) },
+        windowInsets = WindowInsets(0),
+        modifier = Modifier.navigationBarsPadding().padding(start = 10.dp, end = 10.dp, bottom = 8.dp).depthPanel(capsule, elevation = 16.dp).clip(capsule).height(68.dp),
     ) {
         // Five destinations are the game; an administrator gets exactly one more, and
         // the promo codes live behind it as a button.
@@ -350,9 +363,9 @@ import org.koin.compose.viewmodel.koinViewModel
                 },
                 label = { Text(label, fontSize = 10.sp) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = GoldBright,
-                    selectedTextColor = Gold,
-                    indicatorColor = Gold.copy(alpha = .16f),
+                    selectedIconColor = Ink,
+                    selectedTextColor = GoldBright,
+                    indicatorColor = Gold,
                     unselectedIconColor = Muted,
                     unselectedTextColor = Muted,
                 ),

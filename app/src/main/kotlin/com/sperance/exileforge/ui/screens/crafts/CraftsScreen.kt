@@ -103,27 +103,29 @@ fun CraftsScreen() {
         return
     }
     PullToRefreshBox(isRefreshing = activity.busy || Reads.CRAFTS in activity.loading, onRefresh = vm::load, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) }
-            if (crafts == null) {
-                item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
-                return@LazyColumn
-            }
-            item { WorkPlaque(game, vm, held, offset) }
-            // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).
-            val (crafting, gathering) = crafts.professions.partition { it.crafting }
-            listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.forEachIndexed { index, (title, group) ->
-                if (index > 0) item { FlowMark() }
-                item { SectionRule(ui(title)) }
-                items(group.chunked(TILES)) { row ->
-                    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
-                        repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) } }
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (crafts == null) {
+                    item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
+                    return@LazyColumn
+                }
+                item { WorkPlaque(game, vm, held, offset) }
+                // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).
+                val (crafting, gathering) = crafts.professions.partition { it.crafting }
+                listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.forEachIndexed { index, (title, group) ->
+                    if (index > 0) item { FlowMark() }
+                    item { SectionRule(ui(title)) }
+                    items(group.chunked(TILES)) { row ->
+                        Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
+                            repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
+                        }
                     }
                 }
+                // The rules travel with the answer; an answer without them says nothing about the offline cap.
+                crafts.rules?.let { rules -> item { MutedText(ui("crafts.note", number(rules.offlineHours))) } }
             }
-            // The rules travel with the answer; an answer without them says nothing about the offline cap.
-            crafts.rules?.let { rules -> item { MutedText(ui("crafts.note", number(rules.offlineHours))) } }
         }
     }
 }

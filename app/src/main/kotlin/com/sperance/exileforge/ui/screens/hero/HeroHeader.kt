@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.RoleMark
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
@@ -41,7 +42,10 @@ import com.sperance.exileforge.ui.theme.*
             // The class's portrait as the map's token (since 2.31.0).
             ClassPortrait(hero.heroClass, hero.portraits, Modifier.size(64.dp), round = true)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(hero.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(hero.name, style = MaterialTheme.typography.headlineSmall, color = GoldBright, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    RoleMark(hero.role, 18.dp)
+                }
                 // The class is the base every percentage is counted from; the server owns it.
                 Text(
                     ui("hero.class_level", hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"), hero.level),

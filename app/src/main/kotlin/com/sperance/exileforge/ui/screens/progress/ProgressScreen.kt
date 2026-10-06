@@ -184,7 +184,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     val locked = tile.lockedUntil
     val hot = tile.badge > 0 && locked == null
     Box(
-        modifier.heightIn(min = 150.dp).alpha(if (locked != null) LOCKED_TILE_ALPHA else 1f).clip(shape).background(Panel, shape)
+        modifier.heightIn(min = 150.dp).alpha(if (locked != null) LOCKED_TILE_ALPHA else 1f).clip(shape).depthPanel(shape)
             .border(1.dp, if (hot) tile.accent.copy(alpha = .55f) else PanelRaised, shape)
             .clickable(role = Role.Button, onClick = tile.onOpen).padding(12.dp),
     ) {

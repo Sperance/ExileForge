@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.admin
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.ModerationEntryView
@@ -11,6 +12,7 @@ import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionView
+import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
@@ -36,6 +38,8 @@ data class ModerationState(
     val journalPage: Int = 0,
     val dossier: Dossier? = null,
     val dossierKey: Pair<String, String>? = null,
+    /** Только что созданный тестировщик (3.88.7): логин и пароль показываются один раз. */
+    val createdTester: TesterAccount? = null,
 )
 
 /**
@@ -102,6 +106,31 @@ class ModerationViewModel(
     fun lift(sanction: SanctionView) = act {
         api.lift(sanction.id).also { notices.toast(ui(if (it.kind == SanctionKind.DELETION) "moderation.restored" else "moderation.unbanned", it.label)) }
     }
+
+    /** Новая роль аккаунта [userId] (3.88.7): администратор выдаёт игрока, тестировщика или модератора. */
+    fun setRole(userId: String, role: AccountRole) {
+        val started = commands.task(writing = true) {
+            staff()
+            api.setRole(userId, role)
+            notices.toast(ui("moderation.role_set", ui("moderation.role.${role.name}")))
+            if (mutable.value.dossierKey != null) reloadDossier()
+            load()
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
+
+    /** Новый аккаунт тестировщика с логином [login] (3.88.7): пароль сервер придумывает сам и отдаёт один раз. */
+    fun createTester(login: String) {
+        val started = commands.task(writing = true) {
+            staff()
+            val account = connection.api.admin.createTester(login.trim())
+            mutable.update { it.copy(createdTester = account) }
+            load()
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
+
+    fun forgetTester() = mutable.update { it.copy(createdTester = null) }
 
     fun delete(request: DeletionRequest) = act { api.delete(request).also { notices.toast(ui("moderation.deleted", it.label)) } }
 

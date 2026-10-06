@@ -38,7 +38,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * «Быстрые фильтры» тайника (3.89.0, выбор владельца): над списком - переключатель снаряжения и инструментов, места тайника
+ * «Быстрые фильтры» тайника (3.88.6, выбор владельца): над списком - переключатель снаряжения и инструментов, места тайника
  * с «+», кнопка поиска; ниже ряд редкостей и ряд групп мест со счётом, затем порядок и «без надетого». Всё, что раньше жило
  * в листе фильтров, - на виду; лист остаётся для поиска.
  */
@@ -62,7 +62,7 @@ internal fun StashBar(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.background(Color(0xFF0E151A), RoundedCornerShape(16.dp)).padding(3.dp)) {
+            Row(Modifier.depthInset(RoundedCornerShape(16.dp)).padding(3.dp)) {
                 ShelfSwitch(ForgeGlyphs.Helm, ui("hero.stash_gear"), !tools) { onTools(false) }
                 ShelfSwitch(ForgeGlyphs.Anvil, ui("hero.stash_tools"), tools) { onTools(true) }
             }
@@ -120,8 +120,8 @@ internal fun StashBar(
     val ground = when {
         pill && on -> Modifier.background(tint.copy(alpha = .9f), shape)
         pill -> Modifier.border(1.dp, tint.copy(alpha = .4f), shape)
-        on -> Modifier.background(Color(0xFF1A242C), shape)
-        else -> Modifier.background(Color(0xFF0E151A), shape)
+        on -> Modifier.depthRaised(shape)
+        else -> Modifier.depthInset(shape)
     }
     Box(
         Modifier.height(30.dp).clip(shape).then(ground).selectable(on, role = Role.Checkbox, onClick = onClick).padding(horizontal = 12.dp),
@@ -146,7 +146,7 @@ internal fun StashBar(
 @Composable private fun ShelfSwitch(icon: ImageVector, label: String, on: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(13.dp)
     Box(
-        Modifier.size(width = 38.dp, height = 30.dp).clip(shape).then(if (on) Modifier.background(Color(0xFF1A242C), shape) else Modifier)
+        Modifier.size(width = 38.dp, height = 30.dp).then(if (on) Modifier.depthRaised(shape) else Modifier).clip(shape)
             .selectable(on, role = Role.Tab, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { Icon(icon, label, tint = if (on) GoldBright else Muted, modifier = Modifier.size(17.dp)) }

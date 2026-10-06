@@ -12,6 +12,7 @@ import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ClassesFile
+import com.sperance.exileforge.ui.components.accountRole
 
 /*
  * The Hero tab's parts, each cut from the state on its own (3.66.0). The screen as a whole is handed the state whenever
@@ -31,6 +32,8 @@ import com.sperance.exileforge.rules.content.ClassesFile
     val tree: TreePoints?,
     /** The experience table the bar is scaled by; null until the content is read. */
     val classes: ClassesFile?,
+    /** Роль аккаунта (3.88.7): значок рядом с именем, у игрока - нет. */
+    val role: com.sperance.exileforge.core.network.AccountRole? = null,
 )
 
 /** The tree's points the header's chip says: free of all. */
@@ -59,9 +62,10 @@ import com.sperance.exileforge.rules.content.ClassesFile
     val hero = game.hero ?: return null
     val index = game.index
     val tree = remember(index, hero.level, hero.tree) { game.treeState?.let { TreePoints(it.available, it.total) } }
-    return remember(hero.info, game.world.portraits, tree, index) {
+    val role = game.session.profile?.role
+    return remember(hero.info, game.world.portraits, tree, index, role) {
         val info = hero.info
-        HeroHeaderState(info.name, info.heroClass, info.level, info.experience, info.money, game.world.portraits, tree, index?.classes)
+        HeroHeaderState(info.name, info.heroClass, info.level, info.experience, info.money, game.world.portraits, tree, index?.classes, accountRole(role))
     }
 }
 

@@ -21,7 +21,7 @@ import com.sperance.exileforge.ui.theme.*
 fun wearable(game: GameUi, item: ItemInstance): Boolean = game.index?.template(item.template)?.slot?.let { !it.isJewelLike && !it.isTool } == true
 
 /**
- * «Если надеть» (2.46.0) в итоге героя карточки (3.89.0): что станет с листом с этой вещью, сложенное здесь формулой правил, -
+ * «Если надеть» (2.46.0) в итоге героя карточки (3.88.6): что станет с листом с этой вещью, сложенное здесь формулой правил, -
  * строка на каждую сдвинутую характеристику. Недоступная вещь говорит вместо этого красным, чего ей не хватает.
  */
 @Composable private fun WearTotals(game: GameUi, item: ItemInstance, look: RelicLook) {

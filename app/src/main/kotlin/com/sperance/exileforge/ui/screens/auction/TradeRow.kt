@@ -32,7 +32,7 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Товар «Ценником» (3.89.0, выбор владельца): плита стопки сумки - иконка, имя, факты и ярлык цены сверху; [mark] руническим
+ * Товар «Ценником» (3.88.6, выбор владельца): плита стопки сумки - иконка, имя, факты и ярлык цены сверху; [mark] руническим
  * синим после фактов: «ваш лот», сколько ему стоять.
  */
 @Composable internal fun TradeRow(
@@ -49,7 +49,7 @@ import com.sperance.exileforge.ui.theme.*
     val frame = RoundedCornerShape(12.dp)
     Box(Modifier.fillMaxWidth()) {
         Row(
-            Modifier.fillMaxWidth().clip(card).background(Brush.verticalGradient(listOf(Color(0xFF121A20), Panel))).border(1.dp, color.copy(alpha = .2f), card)
+            Modifier.fillMaxWidth().depthPanel(card, elevation = 8.dp).clip(card).border(1.dp, color.copy(alpha = .2f), card)
                 .clickable(enabled = enabled, onClick = onClick).padding(start = 12.dp, end = 12.dp, top = 16.dp, bottom = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically,

@@ -296,7 +296,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
     val books = bookCount(game, skill.code)
     val shape = RoundedCornerShape(8.dp)
     Row(
-        Modifier.fillMaxWidth().clip(shape).background(Panel, shape).border(1.dp, if (slot != null) Gold.copy(alpha = .6f) else PanelRaised, shape)
+        Modifier.fillMaxWidth().clip(shape).depthPanel(shape).border(1.dp, if (slot != null) Gold.copy(alpha = .6f) else PanelRaised, shape)
             .clickable(onClick = onOpen).padding(10.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,

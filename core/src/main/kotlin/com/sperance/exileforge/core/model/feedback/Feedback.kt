@@ -64,9 +64,12 @@ import kotlinx.serialization.Serializable
     val createdAt: String = "",
     /** The task in Asana once the administrator exported it (3.75.0, server 1.70.0); blank before. */
     val asanaUrl: String = "",
+    /** Код последнего отказа Asana (3.88.7, сервер 1.80.9): выгрузка или закрытие не удались; пусто - всё ушло. */
+    val asanaError: String = "",
 )
 
-@Serializable data class AdminReport(val report: FullReport, val login: String? = null)
+/** Отчёт для администратора: с логином и ролью автора (3.88.7). */
+@Serializable data class AdminReport(val report: FullReport, val login: String? = null, val role: com.sperance.exileforge.core.network.AccountRole? = null)
 
 /** A letter's thing to take (3.73.0): a template and its rarity, rolled at the hero's level when taken. */
 @Serializable data class MailEquipment(val template: String, val rarity: Rarity? = null)

@@ -28,13 +28,11 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
-import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
@@ -66,7 +64,6 @@ private enum class ItemAction { AUCTION, SELL, WORN }
 @Composable
 fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
-    val expedition: ExpeditionViewModel = koinViewModel()
     val smithy = koinViewModel<SmithyViewModel>()
     val instance = game.hero?.item(itemId)
     val view = instance?.let { game.view(it) }
@@ -133,7 +130,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     }
                 }
             }
-            // Кнопки «Реликвария» (3.89.0): главное действие, кузня и «ещё» с заменой, замком, аукционом и продажей.
+            // Кнопки «Реликвария» (3.88.6): главное действие, кузня и «ещё» с заменой, замком, аукционом и продажей.
             var more by remember(itemId) { mutableStateOf(false) }
             Row(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp),
@@ -151,21 +148,16 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         model.unequip(instance.id)
                     }
 
-                    // A map is not worn (2.37.0): it goes into its zone's launch window, picked.
-                    view.slot == Slot.MAP -> PrimaryPill(ui("hero.action_map"), can, look) {
-                        onDismiss()
-                        shell.tab(TAB_EXPEDITION)
-                        expedition.selectZone(instance.mapZone.value)
-                        expedition.pickMap(instance.id)
-                    }
+                    // Карта не надевается и в зону из карточки не ведёт (3.88.7): её выбирают в окне запуска зоны.
+                    view.slot == Slot.MAP -> Unit
 
                     else -> PrimaryPill(ui("hero.equip"), can && reachable, look) {
                         onDismiss()
                         model.equip(instance.id, null)
                     }
                 }
-                // One way into the forge (2.51.0): its orbs and bench are its own tabs.
-                QuietPill(can, onClick = {
+                // One way into the forge (2.51.0): its orbs and bench are its own tabs; у карты кузница - главная кнопка.
+                QuietPill(can, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, onClick = {
                     onDismiss()
                     smithy.open(instance.id, ForgeSection.ORBS)
                     shell.tab(TAB_CRAFT)
@@ -258,7 +250,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
 @Composable private fun RowScope.PrimaryPill(label: String, enabled: Boolean, look: RelicLook, onClick: () -> Unit) {
     val shape = RoundedCornerShape(24.dp)
     Box(
-        Modifier.weight(1f).height(48.dp).clip(shape)
+        Modifier.weight(1f).height(48.dp).then(if (enabled) Modifier.glow(look.glow, radius = 10.dp, shape = shape) else Modifier).clip(shape)
             .then(if (enabled) Modifier.background(look.primary, shape) else Modifier.background(PanelRaised, shape))
             .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -268,10 +260,10 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
 }
 
 /** Тихая кнопка рядом с главной: «Кузня» и «ещё». */
-@Composable private fun QuietPill(enabled: Boolean, square: Boolean = false, onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
+@Composable private fun QuietPill(enabled: Boolean, square: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
     val shape = RoundedCornerShape(24.dp)
     Row(
-        Modifier.height(48.dp).then(if (square) Modifier.width(48.dp) else Modifier).clip(shape).background(Color.White.copy(alpha = .07f), shape)
+        modifier.height(48.dp).then(if (square) Modifier.width(48.dp) else Modifier).depthRaised(shape).clip(shape)
             .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = if (square) 0.dp else 18.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,

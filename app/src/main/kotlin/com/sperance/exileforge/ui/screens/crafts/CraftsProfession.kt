@@ -79,7 +79,7 @@ import kotlin.math.ceil
     val shape = RoundedCornerShape(4.dp)
     val toolless = profession.equipped == null
     Column(
-        modifier.background(Panel, shape).border(if (working) 2.dp else 1.dp, if (working) GoldBright else PanelRaised, shape)
+        modifier.depthPanel(shape).border(if (working) 2.dp else 1.dp, if (working) GoldBright else PanelRaised, shape)
             .clickable(role = Role.Button, onClick = onClick).padding(horizontal = 6.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

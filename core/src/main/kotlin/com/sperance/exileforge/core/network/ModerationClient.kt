@@ -19,6 +19,9 @@ private const val NOTICE = "api/v1/notice"
 /** Роли аккаунта, как их называет сервер. */
 @Serializable enum class AccountRole { USER, MODERATOR, ADMIN, TESTER }
 
+/** Новая роль аккаунта [user]: игрок, тестировщик или модератор (3.88.7). */
+@Serializable data class RoleRequest(val user: String, val role: AccountRole)
+
 /**
  * Санкция, как её показывают игроку и модератору: [until] - конец бана или очистки корзины (null - бессрочно), [liftedAt] -
  * снята досрочно, [purgedAt] - удалённое стёрто, [appealed] - апелляция уже подана.
@@ -152,6 +155,9 @@ class ModerationClient internal constructor(private val http: Transport) {
 
     /** Снимает бан или восстанавливает удалённое. */
     suspend fun lift(sanctionId: String): SanctionView = http.post("$MODERATION/lift", mapOf("id" to sanctionId))
+
+    /** Новая роль аккаунта (3.88.7, сервер 1.80.9): только администратор, ответ - роль, что теперь у аккаунта. */
+    suspend fun setRole(userId: String, role: AccountRole): AccountRole = http.post("$MODERATION/role", body = WireJson.encodeToJsonElement(RoleRequest(userId, role)))
 
     suspend fun delete(request: DeletionRequest): SanctionView = http.post("$MODERATION/delete", body = WireJson.encodeToJsonElement(request))
 

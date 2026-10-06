@@ -50,7 +50,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Снаряжение «Группами» (3.89.0, выбор владельца): места тела под заголовками - оружие, броня, украшения, прочее, фляги - и в
+ * Снаряжение «Группами» (3.88.6, выбор владельца): места тела под заголовками - оружие, броня, украшения, прочее, фляги - и в
  * каждой группе по две карточки в ряд: место, имя, номер экземпляра и все строки вещи со значком тира. Пустое место говорит,
  * сколько подходящего лежит в тайнике. Своя нарезка состояния (3.66.0): движение кошелька не перерисовывает надетое.
  */
@@ -86,7 +86,7 @@ private val GEAR_GROUPS: List<Pair<String, List<String>>> = listOf(
 )
 
 /**
- * Одно место карточкой (3.89.0): гнездо с иконкой, место мелкими буквами, имя серифами в цвете редкости и строки вещи со
+ * Одно место карточкой (3.88.6): гнездо с иконкой, место мелкими буквами, имя серифами в цвете редкости и строки вещи со
  * значком тира, каждая в одну линию. Вещь, что перестала действовать, несёт красный знак с причиной в подсказке;
  * пустое место - пунктир и что о нём сказать.
  */
@@ -100,7 +100,7 @@ private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier:
     val ground = when {
         look == null -> Modifier.border(1.dp, Color(0xFF26323B), shape)
         look.legend != null -> Modifier.background(Brush.verticalGradient(listOf(look.top, look.bottom)), shape).relicSky(look).border(1.dp, look.gold.copy(alpha = .55f), shape)
-        else -> Modifier.background(Brush.verticalGradient(listOf(Color(0xFF121A20), Panel)), shape).border(1.dp, look.rarity.copy(alpha = .2f), shape)
+        else -> Modifier.depthPanel(shape, elevation = 6.dp).border(1.dp, look.rarity.copy(alpha = .2f), shape)
     }
     Column(
         modifier.clip(shape).then(ground).clickable(enabled = signedIn, role = Role.Button, onClickLabel = title, onClick = onClick).padding(horizontal = 10.dp, vertical = 9.dp),

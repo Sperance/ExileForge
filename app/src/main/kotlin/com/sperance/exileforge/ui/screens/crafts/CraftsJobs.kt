@@ -85,7 +85,7 @@ import kotlin.math.ceil
 @Composable internal fun JobRow(game: GameUi, profession: ProfessionView, job: JobView, locked: Boolean, current: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(6.dp)
     Column(
-        Modifier.fillMaxWidth().alpha(if (locked) .5f else 1f).background(Panel, shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
+        Modifier.fillMaxWidth().alpha(if (locked) .5f else 1f).depthPanel(shape).border(if (current) 2.dp else 1.dp, if (current) GoldBright else PanelRaised, shape)
             .clickable(role = Role.Button, onClick = onClick).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {

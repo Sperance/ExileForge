@@ -32,8 +32,9 @@ import com.sperance.exileforge.ui.theme.*
     trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val pill = RoundedCornerShape(50)
+    // «Глубина» (3.88.7): дорожка вдавлена, открытая вкладка приподнята стеклом; отдельные таблетки - стекло, открытая - зелёная.
     val track = if (segmented) {
-        Modifier.background(TabTrack, pill).padding(4.dp)
+        Modifier.depthInset(pill).padding(4.dp)
     } else {
         Modifier
     }
@@ -42,19 +43,26 @@ import com.sperance.exileforge.ui.theme.*
             labels.forEachIndexed { index, label ->
                 val on = index == selected
                 val fill = when {
-                    on -> PanelRaised
-                    segmented -> Color.Transparent
-                    else -> TabTrack
+                    on && segmented -> Modifier.depthRaised(pill)
+                    on -> Modifier.depthPrimary(pill)
+                    segmented -> Modifier
+                    else -> Modifier.depthRaised(pill, elevation = 2.dp)
                 }
                 Text(
                     label,
-                    color = if (on) GoldBright else Muted,
+                    color = if (on && !segmented) {
+                        Ink
+                    } else if (on) {
+                        GoldBright
+                    } else {
+                        Muted
+                    },
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
-                    modifier = (if (segmented) Modifier.weight(1f) else Modifier).clip(pill).background(fill, pill)
+                    modifier = (if (segmented) Modifier.weight(1f) else Modifier).then(fill).clip(pill)
                         .selectable(selected = on, enabled = enabled, role = Role.Tab) { if (!on) onSelect(index) }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 )
@@ -64,6 +72,3 @@ import com.sperance.exileforge.ui.theme.*
         trailing()
     }
 }
-
-/** Фон дорожки и невыбранных таблеток: темнее панели, чтобы открытая вкладка поднималась над ним. */
-private val TabTrack = Color(0xFF0D1419)

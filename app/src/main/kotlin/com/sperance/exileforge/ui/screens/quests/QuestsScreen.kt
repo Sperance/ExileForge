@@ -47,7 +47,7 @@ fun QuestsScreen() {
     val busy = activity.busy
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-            ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll)
+            CollapsibleHeader { ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll) }
         }
         TabRow(selectedTabIndex = current.ordinal, containerColor = Abyss) {
             QuestTab.entries.forEach { tab ->

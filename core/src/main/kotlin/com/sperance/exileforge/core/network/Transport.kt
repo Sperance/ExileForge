@@ -159,6 +159,8 @@ class Transport(
         val heroOf = query["heroId"]?.takeIf { method == "POST" && authenticated }
         val parts = heroOf?.let(heroParts)
         val request = Request.Builder().url(url).header("Accept", "application/json")
+            // Язык игрока (3.88.7, сервер 1.80.9): по нему сервер пишет текст отказа, которого нет в словаре клиента.
+            .header("Accept-Language", com.sperance.exileforge.core.i18n.uiLanguage.code)
             .apply { credential?.let { header("Authorization", "Bearer $it") } }
             .apply { parts?.let { header(HeroParts.HEADER, it) } }
             .apply { key?.let { header(IDEMPOTENCY_HEADER, it) } }

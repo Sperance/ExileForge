@@ -165,7 +165,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
 /** Rows under a small caption, in one rounded panel, hairlines between them. */
 @Composable internal fun RowGroup(title: String, rows: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(Panel, shape).border(1.dp, PanelRaised, shape)) {
+    Column(Modifier.fillMaxWidth().clip(shape).depthPanel(shape)) {
         Engraved(title, Muted, Modifier.padding(start = 12.dp, top = 9.dp, bottom = 2.dp))
         rows()
     }

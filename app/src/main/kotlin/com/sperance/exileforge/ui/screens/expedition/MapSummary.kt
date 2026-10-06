@@ -188,7 +188,7 @@ private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onSt
     }
 }
 
-/** Добытая вещь «Полем боя» (3.89.0): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию. */
+/** Добытая вещь «Полем боя» (3.88.6): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию. */
 @Composable internal fun PieceLine(item: ItemView, onClick: () -> Unit) = ItemRow(item, compact = true, onClick = onClick)
 
 /** A stack of the bag as a chip: its icon, its name and how many. */

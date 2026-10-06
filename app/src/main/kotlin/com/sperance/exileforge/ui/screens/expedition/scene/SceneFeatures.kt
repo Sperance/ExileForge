@@ -18,9 +18,13 @@ import kotlin.math.sin
  */
 internal fun ScenePainter.featureParts(spot: FeatureSpot, glow: (Int, Int) -> Float, explored: (Int, Int) -> Boolean): List<Pair<Double, () -> Unit>> = when (spot) {
     is AltarSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawAltar(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+
     is MerchantSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawMerchant(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+
     is NodeSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawNode(spot.cell.x + .5, spot.cell.y + .5, spot.node.profession, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+
     is TrapSpot -> listOf(depth(spot.cell.x, spot.cell.y) - .4 to { drawTrap(spot.cell.x + .5, spot.cell.y + .5, spot.trap.element, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+
     is RoomSpot -> buildList {
         val (ex, ey) = spot.entrance
         if (!spot.opened) add(depth(ex, ey) + .1 to { drawEntrance(ex + .5, ey + .5, spot.kind == FeatureKind.VAULT, spot.progress.toFloat(), glow(ex, ey)) })

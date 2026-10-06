@@ -38,5 +38,4 @@ fun GameUi.lootPresence(id: String, arriving: Boolean = false): LootPresence {
 }
 
 /** Вещи снимка награды [equipment] с их положением у героя, без пропавших, в порядке снимка. */
-fun GameUi.presentLoot(equipment: List<ItemInstance>, arriving: Boolean = false): List<Pair<ItemInstance, LootPresence>> =
-    equipment.map { it to lootPresence(it.id, arriving) }.filter { (_, presence) -> presence.shown }
+fun GameUi.presentLoot(equipment: List<ItemInstance>, arriving: Boolean = false): List<Pair<ItemInstance, LootPresence>> = equipment.map { it to lootPresence(it.id, arriving) }.filter { (_, presence) -> presence.shown }

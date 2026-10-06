@@ -346,8 +346,11 @@ fun effectText(stat: String, op: Op, value: Double, index: ContentIndex? = null)
     val size = signedNumber(value) { modNumber(stat, it) }
     return when (op) {
         Op.ADD -> ui("fight.line_add", size + effectUnit(stat, op, index), title)
+
         Op.INCREASED -> ui("fight.line_increased", size, title)
+
         Op.MORE -> ui("fight.line_more", size, title)
+
         // SET заменяет значение, а не прибавляет: знака у него нет.
         Op.SET -> ui("fight.line_set", modNumber(stat, value), title)
     }

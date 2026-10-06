@@ -190,4 +190,3 @@ internal fun ExpeditionRun.fallOnMap() {
     }
     onFallen()
 }
-

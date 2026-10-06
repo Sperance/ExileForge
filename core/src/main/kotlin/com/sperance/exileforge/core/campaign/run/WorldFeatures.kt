@@ -195,12 +195,16 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
     features.forEach { feature ->
         val spot = when (feature) {
             is MapFeature.Trap -> claim(anywhere, TRAP_SPACING)?.let { TrapSpot(feature, it, trapReach) }
+
             is MapFeature.Room -> RoomCarver.carve(map, reach.keys, feature.room.size, placing)?.let { (entrance, chest) ->
                 val lever = if (feature.kind == FeatureKind.VAULT) claim(roomy, rules.chestSpacing) ?: return@let null else null
                 RoomSpot(feature, entrance, chest, lever, feature.seconds)
             }
+
             is MapFeature.Altar -> claim(roomy, rules.chestSpacing)?.let { AltarSpot(feature, it) }
+
             is MapFeature.Merchant -> claim(roomy, rules.chestSpacing)?.let { MerchantSpot(feature, it) }
+
             is MapFeature.Node -> claim(roomy, rules.chestSpacing)?.let { NodeSpot(feature, it) }
         } ?: return@forEach
         log.filter { it.id == feature.id }.forEach { spot.take(it.choice) }

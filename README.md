@@ -1,5 +1,7 @@
 # ExileForge 1.11.0
 
+[![Android checks](https://github.com/Sperance/ExileForge/actions/workflows/android.yml/badge.svg)](https://github.com/Sperance/ExileForge/actions/workflows/android.yml)
+
 Android Compose client for **ktor-bestgame 0.13.0**, API revision 4.
 Server: `master`, commit `5d4015ad138088142902d822a8d67580424be404`.
 Client development branch: `master`.

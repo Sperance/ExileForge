@@ -88,15 +88,20 @@ import com.sperance.exileforge.ui.theme.*
             merchant.offers.forEachIndexed { i, offer ->
                 val item = game.view(offer.item) ?: return@forEachIndexed
                 val sold = i in bought
-                ItemRow(item, enabled = !sold, footer = {
-                    if (sold) {
-                        Text(ui("feature.merchant.sold"), color = Vital, style = MaterialTheme.typography.labelMedium)
-                    } else {
-                        ForgeButton(enabled = money >= offer.price, onClick = { onCommand(RunCommand.Choose(i)) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(ui("feature.merchant.buy", number(offer.price.toDouble())))
+                ItemRow(
+                    item,
+                    enabled = !sold,
+                    footer = {
+                        if (sold) {
+                            Text(ui("feature.merchant.sold"), color = Vital, style = MaterialTheme.typography.labelMedium)
+                        } else {
+                            ForgeButton(enabled = money >= offer.price, onClick = { onCommand(RunCommand.Choose(i)) }, modifier = Modifier.fillMaxWidth()) {
+                                Text(ui("feature.merchant.buy", number(offer.price.toDouble())))
+                            }
                         }
-                    }
-                })
+                    },
+                    onClick = {},
+                )
             }
             ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.leave")) }
         }

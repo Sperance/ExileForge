@@ -21,7 +21,6 @@ import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
@@ -53,7 +52,7 @@ internal fun ShareKind.color(): Color = when (this) {
 }
 
 /**
- * A figure's own window (3.11.0): what the stat is, then what it is made of — a bar of each kind's share,
+ * A figure's own window (3.11.0): its total, then what it is made of — a bar of each kind's share,
  * a card per kind with every source by name, the formula, and for a stat others take from, what it
  * gives them now. A linked stat opens in the same window; the chip on top goes back.
  *
@@ -71,7 +70,6 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
     val view = remember(current, explainer, shifts, game.lang, game.hero?.skills) {
         StatExplainer(game).explain(explainer.explain(current).shifted(shifts[current].orEmpty()), explainer.grants(current), explainer::holders, game.passiveShares(current))
     }
-    val power = game.index?.stats?.get(current)?.group == com.sperance.exileforge.rules.content.StatGroup.POWER
     val accent = StatGroup.of(current).accent()
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -87,7 +85,6 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
             item { Header(current, view, accent, game) }
             game.index?.campaign?.combat?.let { StatLimits.of(current, game.hero?.stats.orEmpty(), it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
             if (current == MANA_STAT) game.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
-            statDescription(current, game.lang, power).takeIf { it.isNotBlank() }?.let { text -> item { Description(text, accent) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
             if (view.cards.isEmpty()) item { Text(ui("stat.empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
@@ -149,14 +146,6 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
         Text(ui("stat.reserve.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         SourceLine(ShareRow(ui("stat.reserve.held", number(reserve.percent)), "−" + value(reserve.held))) {}
         SourceLine(ShareRow(ui("stat.reserve.free"), value(reserve.free))) {}
-    }
-}
-
-@Composable private fun Description(text: String, accent: Color) {
-    val shape = RoundedCornerShape(10.dp)
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(shape).background(PanelRaised)) {
-        Box(Modifier.width(3.dp).fillMaxHeight().background(accent))
-        Text(text, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(10.dp))
     }
 }
 

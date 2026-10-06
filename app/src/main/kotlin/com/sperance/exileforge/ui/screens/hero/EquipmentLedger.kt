@@ -177,6 +177,7 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
                     enabled = !game.busy && (game.ownsCharacter || game.isAdmin) && unmet.isEmpty(),
                     unwearable = unmet,
                     price = game.sellPrice(piece.item),
+                    verdict = rememberGearVerdict(game, piece.item),
                 ) {
                     onDismiss()
                     onEquip(piece.id)

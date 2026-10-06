@@ -61,6 +61,7 @@ data class ApiCapabilities(val routes: Set<String>) {
             "GET" to "/api/v1/hero/crafts", "POST" to "/api/v1/hero/crafts/start",
             "GET" to "/api/v1/hero/merchant", "POST" to "/api/v1/hero/merchant/buy", "POST" to "/api/v1/hero/merchant/buyOrb",
             "GET" to "/api/v1/hero/campaign/progress", "POST" to "/api/v1/hero/campaign/start", "POST" to "/api/v1/hero/campaign/events",
+            "POST" to "/api/v1/hero/campaign/abandon",
             "POST" to "/api/v1/hero/trials/rush", "POST" to "/api/v1/hero/trials/tower", "POST" to "/api/v1/hero/trials/key", "GET" to "/api/v1/hero/stats", "POST" to "/api/v1/hero/trials/events",
             "GET" to "/api/v1/auctionlot/search", "POST" to "/api/v1/auctionlot/sell/equipment", "POST" to "/api/v1/auctionlot/buy",
             "GET" to "/api/v1/guild/mine", "GET" to "/api/v1/guild/search", "POST" to "/api/v1/guild/create", "POST" to "/api/v1/guild/join",

@@ -85,6 +85,7 @@ import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
 import com.sperance.exileforge.ui.screens.expedition.TrialScreen
+import com.sperance.exileforge.ui.screens.expedition.UnfinishedRunHost
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.hero.HeroTab
@@ -228,6 +229,8 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     // «Пока вас не было» (3.69.0): the crafts catch-up of an absence, once, over whatever the game shows after the warm-up.
     if (route.phase == AppPhase.GAME && warmup?.finished != false) CraftsAwayHost()
+    // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
+    if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }
 
 /**

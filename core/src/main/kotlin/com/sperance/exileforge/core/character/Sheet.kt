@@ -109,7 +109,42 @@ object Sheets {
         before: Map<String, Double>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
     ): List<StatDelta> {
-        val template = index.template(item.template) ?: return emptyList()
+        val next = worn(index, item, level, heroClass, tree, items, pets) ?: return emptyList()
+        // The counts of what is worn (empty slots, uniques…) are the powers' reading of the sheet, not a figure to compare.
+        return (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
+            .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
+            .filter { abs(it.change) >= 0.05 }
+    }
+
+    /**
+     * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на то же место, что выберет «Надеть».
+     * Null, когда шаблона вещи нет в контенте.
+     */
+    fun verdict(
+        index: ContentIndex,
+        item: ItemInstance,
+        level: Int,
+        heroClass: String,
+        tree: List<TakenNode>,
+        items: List<ItemInstance>,
+        before: Map<String, Double>,
+        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
+    ): GearVerdict? = worn(index, item, level, heroClass, tree, items, pets)?.let { GearVerdict.of(index, level, before, it) }
+
+    /**
+     * The whole sheet with [item] put on as the server would place it — a ring on a free one of two, a two-handed weapon
+     * freeing both hands, a bow pairing with a quiver; null when the content does not know the item.
+     */
+    private fun worn(
+        index: ContentIndex,
+        item: ItemInstance,
+        level: Int,
+        heroClass: String,
+        tree: List<TakenNode>,
+        items: List<ItemInstance>,
+        pets: List<com.sperance.exileforge.rules.content.Pet>,
+    ): Map<String, Double>? {
+        val template = index.template(item.template) ?: return null
         val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
         val target = EquipSlots.target(template.slot, null, worn.mapNotNull { it.slot })
         val wornWeapon = worn.firstOrNull { it.slot == Slot.WEAPON_1H }?.let { index.template(it.template)?.weaponType }
@@ -122,10 +157,6 @@ object Sheets {
                 else -> it
             }
         }
-        val next = calculate(index, level, heroClass, tree, after, pets).stats
-        // The counts of what is worn (empty slots, uniques…) are the powers' reading of the sheet, not a figure to compare.
-        return (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
-            .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
-            .filter { abs(it.change) >= 0.05 }
+        return calculate(index, level, heroClass, tree, after, pets).stats
     }
 }

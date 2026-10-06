@@ -23,6 +23,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildFaction
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
+import com.sperance.exileforge.rules.text.NameCharset
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -64,10 +65,10 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
             Engraved(ui("guild.found_title"))
             OutlinedTextField(
                 name,
-                { name = it.take(rules.nameLength.last) },
+                { name = NameCharset.filter(it).take(rules.nameLength.last) },
                 label = { Text(ui("guild.name")) },
                 singleLine = true,
-                supportingText = { Text("${name.trim().length}/${rules.nameLength.last}") },
+                supportingText = { Text(ui("common.name_charset") + " · ${name.trim().length}/${rules.nameLength.last}") },
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(

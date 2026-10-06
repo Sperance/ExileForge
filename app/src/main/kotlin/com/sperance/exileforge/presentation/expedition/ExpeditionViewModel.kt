@@ -43,6 +43,8 @@ class ExpeditionViewModel(
     fun toggleScarab(code: String, add: Boolean) = expedition.toggleScarab(code, add)
     fun startRun(mapCode: String) = expedition.start(MapCode(mapCode))
     fun startAutoRun(mapCode: String, plan: AutoPlan) = expedition.start(MapCode(mapCode), plan)
+    fun continueUnfinished() = expedition.continueUnfinished()
+    fun abandonUnfinished() = expedition.abandonUnfinished()
     fun runCommand(command: RunCommand) = expedition.send(command)
     fun flushRun() = expedition.flushRun()
     fun enterVaal() = expedition.enterVaal()

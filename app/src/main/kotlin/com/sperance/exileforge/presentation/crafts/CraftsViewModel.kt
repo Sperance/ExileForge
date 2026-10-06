@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.SmithChoice
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -48,5 +49,13 @@ class CraftsViewModel(
     fun markCraftsAwaySeen(heroId: String, until: Long) {
         val server = sessions.state.value.server
         viewModelScope.launch { store.saveCraftsAwaySeen(server, heroId, until) }
+    }
+
+    /** Последний запущенный выбор кузнеца героя на этом устройстве (3.89.0): лист открывается в его режиме. */
+    suspend fun smithChoice(heroId: String): SmithChoice? = SmithChoice.of(store.smithChoice(sessions.state.value.server, heroId).orEmpty())
+
+    fun rememberSmithChoice(heroId: String, choice: SmithChoice) {
+        val server = sessions.state.value.server
+        viewModelScope.launch { store.saveSmithChoice(server, heroId, choice.name) }
     }
 }

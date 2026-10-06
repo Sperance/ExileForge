@@ -95,20 +95,14 @@ import org.koin.compose.viewmodel.koinViewModel
                 onClick = { vm.setReportStatus(report.id, chosen, reason) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(ui("feedback.save_status")) }
-            // Asana (3.75.0; сама с «В работе» с 3.88.7): отказ Asana - красной строкой с повтором, выгруженный - ссылкой.
+            // Asana (3.75.0; сама с «В работе» с 3.88.7, без ручной кнопки с 3.89.0): отказ Asana - красной строкой с повтором, выгруженный - ссылкой.
             if (report.asanaError.isNotBlank()) {
                 Text(ui("feedback.asana_failed", report.asanaError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("feedback.asana_retry"))
                 }
             }
-            if (report.asanaUrl.isBlank()) {
-                if (report.asanaError.isBlank()) {
-                    ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Text(ui("feedback.to_asana"))
-                    }
-                }
-            } else {
+            if (report.asanaUrl.isNotBlank()) {
                 val uri = LocalUriHandler.current
                 ForgeTextButton(enabled = report.asanaUrl.startsWith("http"), onClick = { uri.openUri(report.asanaUrl) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("feedback.in_asana"))

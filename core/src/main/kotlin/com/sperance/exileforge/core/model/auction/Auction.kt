@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -53,6 +54,9 @@ import kotlinx.serialization.Serializable
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
     val deal: AuctionLot get() = if (sold != null && equipment == null) copy(goods = LotGoods.Equipment(sold)) else this
+
+    /** Цена покупки (3.89.0): сферы цены и сбор золотом. */
+    val cost: Cost get() = Cost.item(priceOrb, price) + Cost.gold(fee)
 
     /** The copy on offer, or null for a stack. */
     val equipment: ItemInstance? get() = (goods as? LotGoods.Equipment)?.item

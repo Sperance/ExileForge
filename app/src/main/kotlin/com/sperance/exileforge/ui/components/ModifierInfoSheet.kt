@@ -15,7 +15,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.displayName
-import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.*
@@ -23,8 +22,8 @@ import kotlin.math.roundToInt
 
 /**
  * What a modifier line is, behind a tap on it: its name and sentence, where it sits (prefix, suffix,
- * implicit…), its tier out of how many, the tier's range and where the roll landed inside it, and
- * what each characteristic it moves does. The range lives here, not on the line.
+ * implicit…), its tier out of how many, the tier's range and where the roll landed inside it.
+ * The range lives here, not on the line.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,13 +54,6 @@ fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
                     } else {
                         Position((share * 100).roundToInt().coerceIn(0, 100))
                     }
-                }
-            }
-            line.stats.forEach { stat ->
-                val about = statDescription(stat)
-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    Text(statTitle(stat), color = Parchment, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-                    MutedText(about.ifBlank { ui("modinfo.no_description") })
                 }
             }
         }

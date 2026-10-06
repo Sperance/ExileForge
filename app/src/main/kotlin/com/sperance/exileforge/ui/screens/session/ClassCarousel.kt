@@ -28,7 +28,6 @@ import com.sperance.exileforge.core.display.ClassGuide
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
-import com.sperance.exileforge.core.display.nodeDescription
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
@@ -38,6 +37,7 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.ForgePanel
+import com.sperance.exileforge.ui.components.ModifierLine
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.SkillGlyph
 import com.sperance.exileforge.ui.theme.*
@@ -168,7 +168,7 @@ import kotlin.math.abs
         guide.keystones.forEach { node ->
             Column(Modifier.border(1.dp, accent.copy(alpha = .4f), RoundedCornerShape(6.dp)).padding(8.dp).fillMaxWidth()) {
                 Text(nodeTitle(node.code), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                nodeDescription(node.code).takeIf { it.isNotBlank() }?.let { Text(it, color = Muted, style = MaterialTheme.typography.bodySmall) }
+                node.lines.forEach { line -> ModifierLine(index, line) }
             }
         }
     }

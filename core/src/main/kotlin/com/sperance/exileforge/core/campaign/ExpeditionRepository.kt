@@ -15,6 +15,9 @@ data class LootEntry(val item: ItemInstance, val at: Long)
 /** Окно атласа: узел под курсором; окно закрыто, пока состояния нет. */
 data class AtlasWindow(val selected: String = "")
 
+/** Заход, открытый на сервере без похода на экране (3.89.0): приложение закрылось посреди него - его предлагают продолжить или покинуть. */
+data class UnfinishedRun(val runId: String, val zone: MapCode)
+
 /**
  * Поход на экране (3.80.20): карточка зоны перед входом, добыча похода для листа снаряжения, окно атласа и счётчики
  * журнала - события, которых сервер ещё не взял, и отвергнутые, для значка.
@@ -25,6 +28,7 @@ data class Expedition(
     val atlas: AtlasWindow? = null,
     val pending: Int = 0,
     val rejected: Int = 0,
+    val unfinished: UnfinishedRun? = null,
 )
 
 /** Единственный источник правды о походе на экране (3.80.20); сам бег похода - у `ExpeditionActions`. */

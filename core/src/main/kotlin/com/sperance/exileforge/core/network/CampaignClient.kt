@@ -39,6 +39,12 @@ class CampaignClient internal constructor(private val http: Transport) {
     }
 
     /**
+     * Abandons the open run [runId] (3.89.0, server 1.81.0): it is closed as a leave is, the loot it gave stays. Safe to repeat — a run
+     * already closed or replaced is left alone.
+     */
+    suspend fun abandon(heroId: String, runId: String): CampaignProgress = http.post("$CAMPAIGN/abandon", heroQuery(heroId, "runId" to runId))
+
+    /**
      * A batch of the journal of run [runId], in order; safe to repeat — numbers already applied are skipped, and a batch
      * of another run is refused (CP_026, server 1.68.0). The answer carries every event's reward (server 1.30.0), so a
      * batch whose answer was lost is sent again with the same [key]: the server repeats its stored report. Null - the

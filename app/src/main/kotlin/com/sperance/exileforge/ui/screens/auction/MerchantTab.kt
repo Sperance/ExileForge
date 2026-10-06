@@ -26,7 +26,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.model.trade.MerchantOrb
 import com.sperance.exileforge.core.session.Reads
@@ -125,11 +127,13 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
                     ForgePanel {
                         orbs.forEach { orb ->
                             val price = orb.price
+                            val short = game.shortfall(Cost.gold(price))?.text()
                             OrbRow(
                                 orb,
                                 price,
                                 have = game.bagAmount(orb.code),
-                                enabled = !busy && !orb.soldOut && (money == null || money >= price),
+                                short = short.takeUnless { orb.soldOut },
+                                enabled = !busy && !orb.soldOut && short == null,
                                 onInfo = { info = orb.code },
                             ) { market.buyOrb(orb.code) }
                         }
@@ -199,7 +203,7 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
 }
 
 /** One orb on the shelf: its glass and name (a tap on them opens the orb), how many the bag holds, and the button with the next price. */
-@Composable private fun OrbRow(orb: MerchantOrb, price: Long, have: Long?, enabled: Boolean, onInfo: () -> Unit, onBuy: () -> Unit) {
+@Composable private fun OrbRow(orb: MerchantOrb, price: Long, have: Long?, short: String?, enabled: Boolean, onInfo: () -> Unit, onBuy: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(
             Modifier.weight(1f).clickable(onClickLabel = itemTitle(orb.code), onClick = onInfo),
@@ -212,6 +216,8 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
                 have?.let { MutedText(ui("merchant.orb_have", it)) }
                 // The window's stock (3.24.0): how many more the shelf holds, in ember once it holds none.
                 orb.left?.let { Text(ui("merchant.orb_left", it), color = if (it > 0) Muted else Ember, style = MaterialTheme.typography.labelSmall) }
+                // Нехватка золота (3.89.0) - той же строкой, что на аукционе и в ремёслах.
+                short?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.labelSmall) }
             }
         }
         ForgeOutlinedButton(enabled = enabled, onClick = onBuy) { GoldPrice(price) }
@@ -236,12 +242,13 @@ private fun OfferSheet(game: GameUi, offer: MerchantOffer, money: Long?, onDismi
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
                 val price = offer.price
-                if (money != null && money < price) Text(ui("merchant.short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                val short = game.shortfall(Cost.gold(price))?.text()
+                short?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 HoldButton(
                     ui("merchant.buy_for", number(price.toDouble())),
                     Gold,
                     Modifier.fillMaxWidth(),
-                    enabled = !game.busy && (money == null || money >= price),
+                    enabled = !game.busy && short == null,
                     onHeld = onBuy,
                 )
             }

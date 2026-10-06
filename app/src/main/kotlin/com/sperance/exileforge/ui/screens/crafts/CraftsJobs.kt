@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
+import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
@@ -151,20 +152,30 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     var additives by remember(work.code) { mutableStateOf(emptyList<String>()) }
     // A choosing work (3.45.0) is started as one of its variants: the sheet shows the one picked.
     val choices = choices(game, profession, work)
-    var picked by remember(work.code) { mutableStateOf(choices.firstOrNull()?.choice.orEmpty()) }
+    // Кузнец (3.89.0) открывается в режиме, последний раз запущенном этим героем на устройстве; ничего не было - «Случайно».
+    val smith = work.kind == JobKind.EQUIPMENT
+    var picked by remember(work.code) { mutableStateOf(if (smith) SmithChoice.RANDOM.name else choices.firstOrNull()?.choice.orEmpty()) }
+    LaunchedEffect(work.code, game.heroId) { if (smith) vm.smithChoice(game.heroId)?.let { picked = it.name } }
     val job = work.options.firstOrNull { it.choice == picked } ?: work
     // The smith's random piece (3.81.0, server 1.76.0) takes no additives: its lines roll two tiers lower instead.
     val random = job.choice == SmithChoice.RANDOM.name
+    val chosenAdditives = if (random) emptyList() else additives
+    val short = game.shortfall(job.cycleCost(chosenAdditives))?.text()
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(jobTitle(job.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             Text(professionTitle(profession.code), color = Rune, style = MaterialTheme.typography.labelMedium)
             if (work.options.isNotEmpty()) {
                 Engraved(ui("crafts.choose"))
-                if (choices.isEmpty()) MutedText(ui("crafts.no_choice"))
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    choices.forEach { option ->
-                        FilterChip(selected = option.choice == picked, onClick = { picked = option.choice }, label = { Text(choiceTitle(option.choice)) })
+                if (choices.isEmpty()) {
+                    MutedText(ui("crafts.no_choice"))
+                } else if (smith) {
+                    SmithPicker(SmithChoice.of(picked) ?: SmithChoice.RANDOM) { picked = it.name }
+                } else {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        choices.forEach { option ->
+                            FilterChip(selected = option.choice == picked, onClick = { picked = option.choice }, label = { Text(choiceTitle(option.choice)) })
+                        }
                     }
                 }
             }
@@ -209,12 +220,13 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                     vm.stop()
                 }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
 
-                // A cycle the bag cannot feed is not started (2.46.0): the chips above say what is short.
-                job.inputs.any { bagCount(game, it.item) < it.amount } -> Text(ui("crafts.short_inputs"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+                // Цикл, который сумке не прокормить, не запускается (2.46.0); с 3.89.0 строка называет, чего и сколько не хватает.
+                short != null -> Text(short, color = LifeRed, style = MaterialTheme.typography.bodyMedium)
 
                 else -> ForgeButton(enabled = !game.busy, onClick = {
                     onDismiss()
-                    vm.start(job.code, job.choice, if (random) emptyList() else additives)
+                    if (smith) SmithChoice.of(job.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
+                    vm.start(job.code, job.choice, chosenAdditives)
                 }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
             if (profession.equipped == null && job.level <= profession.level) Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)

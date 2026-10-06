@@ -99,13 +99,14 @@ fun voidBrush() = Brush.verticalGradient(listOf(Color(0xFF0E151A), Ink, Abyss))
  * Light around what is alive (2.80.0): a coloured halo around the shape, nothing drawn when [on] is false.
  * Рисуется сам, а не тенью: цветная тень `shadow` ниже Android 9 и у части прошивок выходит чёрной. Ореол - [GLOW_LAYERS]
  * полупрозрачных копий формы, каждая шире прежней до [radius]: наложение даёт мягкий спад цвета к краю на любом API.
- * Рисуется за содержимым и без обрезки - за границы элемента, как прежняя тень.
+ * Рисуется за содержимым и без обрезки - за границы элемента, как прежняя тень. С 3.89.0 едва заметен: [radius] -
+ * относительная сила, вживую ореол выходит за форму лишь на долю [GLOW_REACH] от неё (10.dp - около 3.dp).
  */
 fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, shape: Shape = RoundedCornerShape(8.dp)): Modifier = if (!on || radius <= 0.dp) {
     this
 } else {
     drawWithCache {
-        val spread = radius.toPx()
+        val spread = radius.toPx() * GLOW_REACH
         val layer = color.copy(alpha = color.alpha * GLOW_ALPHA)
         val halo = (1..GLOW_LAYERS).map { step ->
             val grow = spread * step / GLOW_LAYERS
@@ -118,8 +119,11 @@ fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, s
 /** Слоёв в ореоле [glow]: больше - мягче спад, дороже рисунок. */
 private const val GLOW_LAYERS = 8
 
-/** Непрозрачность одного слоя ореола от цвета: у края формы набирается около половины цвета. */
-private const val GLOW_ALPHA = .09f
+/** Непрозрачность одного слоя ореола от цвета (3.89.0: втрое слабее прежних .09): у края формы - едва заметный отсвет. */
+private const val GLOW_ALPHA = .027f
+
+/** Доля [radius], на которую ореол [glow] выходит за форму (3.89.0): один множитель гасит свечение всех мест разом. */
+private const val GLOW_REACH = .3f
 
 @Composable fun ForgeTheme(content: @Composable () -> Unit) {
     fun text(family: FontFamily, size: Float, weight: FontWeight = FontWeight.Normal, tracking: Float = 0f, line: Float = size * 1.35f) = TextStyle(fontFamily = family, fontSize = size.sp, fontWeight = weight, letterSpacing = tracking.sp, lineHeight = line.sp)

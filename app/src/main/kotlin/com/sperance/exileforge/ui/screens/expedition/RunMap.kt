@@ -44,7 +44,6 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modNumber
-import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -196,7 +195,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
                 Engraved(ui("map.modifiers"))
                 // Read as an item's modifiers read, a sentence under its glyph, only without a tier: the lines are the map's and the atlas's summed.
                 run.mapEffects.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), statDescription(stat), ModBlue) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
+                    Tipped({ Tip(statTitle(stat), tint = ModBlue) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
                 }
             } else {
                 MutedText(ui("map.no_modifiers"))
@@ -205,7 +204,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
             if (run.atlas.isNotEmpty()) {
                 Engraved(ui("map.atlas"))
                 run.atlas.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), statDescription(stat), Rune) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
+                    Tipped({ Tip(statTitle(stat), tint = Rune) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
                 }
             }
         }

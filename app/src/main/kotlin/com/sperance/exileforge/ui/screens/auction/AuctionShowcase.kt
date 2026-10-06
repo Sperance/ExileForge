@@ -33,6 +33,7 @@ import com.sperance.exileforge.core.display.itemVisualKind
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
@@ -107,7 +108,7 @@ import com.sperance.exileforge.ui.theme.*
     market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
         // Нехватку видно сразу (3.88.9): «Купить» гаснет, а под ней - чего не хватает.
         val own = lot.belongsTo(game.heroId)
-        val short = shortfall(game, lot)
+        val short = game.shortfall(lot.cost)?.text()
         LotSheet(
             game,
             lot,
@@ -128,9 +129,8 @@ import com.sperance.exileforge.ui.theme.*
         // What the bag keeps after paying: shown when the bag is known and can pay; when it cannot,
         // the sheet says so and the purchase is not sent (2.46.0).
         val have = game.bagAmount(lot.priceOrb)
-        val money = game.hero?.money
         val fee = lot.fee
-        val poor = money != null && money < fee
+        val short = game.shortfall(lot.cost)?.text()
         ConfirmSheet(
             title = ui("auction.buy_q"),
             subtitle = lot.title,
@@ -143,24 +143,17 @@ import com.sperance.exileforge.ui.theme.*
                 LedgerLine(ui("auction.seller"), sellerName(lot)),
             ),
             warning = listOfNotNull(
-                have?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
-                ui("auction.fee_short", fee).takeIf { poor },
+                short,
                 blocked.takeIf { it.isNotEmpty() }?.let {
                     ui("auction.unwearable", it.joinToString(", ") { r -> requirementReason(r, game.lang) })
                 },
             ).joinToString("\n").ifBlank { null },
-            blocked = (have != null && have < lot.price) || poor,
+            blocked = short != null,
             confirm = ui("auction.buy_do"),
             onDismiss = { confirmBuy = null },
         ) { onBuy(lot.id) }
     }
 }
-
-/** Чего не хватает на лот: сфер в сумке и золота на сбор; null - хватает или сумка ещё не прочитана. */
-private fun shortfall(game: GameUi, lot: AuctionLot): String? = listOfNotNull(
-    game.bagAmount(lot.priceOrb)?.takeIf { it < lot.price }?.let { ui("confirm.short", it) },
-    game.hero?.money?.takeIf { it < lot.fee }?.let { ui("auction.fee_short", lot.fee) },
-).joinToString("\n").ifBlank { null }
 
 /**
  * The showcase's head: the name to search for, the button to every other filter, and the filters

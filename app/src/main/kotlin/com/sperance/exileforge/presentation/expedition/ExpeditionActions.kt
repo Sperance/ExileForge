@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.campaign.LootEntry
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.StageCarry
+import com.sperance.exileforge.core.campaign.UnfinishedRun
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
@@ -166,12 +167,43 @@ class ExpeditionActions(
      * «В путь»: зона входится на сервере - с выбранной картой, потраченной там, или без неё, - и семя с замороженным
      * контекстом приходят с героем; поход строится здесь и идёт.
      */
-    fun start(mapCode: MapCode, auto: AutoPlan? = null) {
+    fun start(mapCode: MapCode, auto: AutoPlan? = null) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, auto)
+
+    /**
+     * «Продолжить» незаконченный заход (3.89.0): вход в ту же зону без карты - сервер отдаёт тот же заход, его павших и открытые
+     * сундуки; герой у входа, туман заново.
+     */
+    fun continueUnfinished() {
+        val offer = repository.state.value.unfinished ?: return
+        if (commands.state.value.busy) return
+        expedition { it.copy(unfinished = null) }
+        enter(offer.zone, launch = null, auto = null)
+    }
+
+    /**
+     * «Покинуть» незаконченный заход (3.89.0): журнал, что ещё не дошёл, отправляется - его добыча героя, - и заход закрывается
+     * на сервере, как выходом.
+     */
+    fun abandonUnfinished() {
+        val offer = repository.state.value.unfinished ?: return
+        expedition { it.copy(unfinished = null) }
+        commands.task(writing = true, touches = setOf(Reads.HERO)) {
+            val id = heroes.heroId
+            runJournal?.takeIf { it.runId == offer.runId }?.let { j ->
+                flush()
+                if (runJournal === j) runJournal = null
+                store.clearJournal(id)
+            }
+            api.campaign.abandon(id, offer.runId)
+            if (heroes.state.value.readAt == 0L) heroSync.readHero()
+        }
+    }
+
+    private fun enter(mapCode: MapCode, launch: MapLaunch?, auto: AutoPlan?) {
         if (mutableRun.value != null || commands.state.value.busy) return
         val i = index ?: return
         val progress = progress()
         if (i.zone(mapCode) == null || progress?.unlocked?.contains(mapCode) != true) return
-        val launch = repository.state.value.launch?.takeIf { it.mapCode == mapCode }
         val picked = launch?.picked
         // Автопоход (3.2.0) тратит карту зоны, чей страж уже пал однажды.
         if (auto != null && (picked == null || progress.cleared.contains(mapCode) != true)) return
@@ -210,11 +242,11 @@ class ExpeditionActions(
         val run = Run(i, zone, started.seed, started.context)
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, carry = carry).also { runJournal = it }
         journal.onCarry = ::persist
-        expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0) }
+        expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null) }
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, auto = autoPlan,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, auto = autoPlan,
             pet = ::combatPet,
         ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         vaalKilled = started.vaalKilled
@@ -383,7 +415,11 @@ class ExpeditionActions(
      * начатый с тех пор или никакой значит, что сервер его закрыл, и журнал отбрасывается.
      */
     suspend fun resume(id: String) {
-        val kept = store.journal(id)?.let(RunJournal::decode) ?: return
+        store.journal(id)?.let(RunJournal::decode)?.let { kept -> resumeJournal(id, kept) }
+        offerUnfinished(id)
+    }
+
+    private suspend fun resumeJournal(id: String, kept: RunJournal) {
         val open = hero?.takeIf { it.id == id }?.campaign?.run
         // Учтённый журнал с переносом этапа остаётся: поход, в который вошли снова, его подхватит.
         if (open?.id != kept.runId || kept.settled && kept.carry == null) {
@@ -394,6 +430,16 @@ class ExpeditionActions(
         kept.onCarry = ::persist
         expedition { it.copy(pending = kept.pending.size, rejected = kept.rejected.size) }
         flush()
+    }
+
+    /**
+     * Заход, открытый на сервере, когда похода на экране нет (3.89.0): приложение закрылось или упало посреди него. Сервер держит
+     * его час с последнего запроса - простоявший он уже закрыл, - игроку предлагается продолжить или покинуть.
+     */
+    private fun offerUnfinished(id: String) {
+        val open = hero?.takeIf { it.id == id }?.campaign?.run ?: return
+        if (mutableRun.value != null) return
+        expedition { it.copy(unfinished = UnfinishedRun(open.id, MapCode(open.zone))) }
     }
 
     private fun stance(): HeroStance = hero?.let { HeroStance.of(it.heroClass) } ?: HeroStance()

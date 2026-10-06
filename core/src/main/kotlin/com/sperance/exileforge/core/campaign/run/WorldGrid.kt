@@ -5,9 +5,11 @@ import com.sperance.exileforge.rules.content.BehaviourRule
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
+import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
+import kotlin.math.sign
 import kotlin.random.Random
 
 // ==================== The grid ====================
@@ -69,16 +71,64 @@ internal fun ExpeditionWorld.distances(from: Cell, limit: Int): Map<Cell, Int> {
     return seen
 }
 
-/** Whether a straight line from one point to another crosses no rock. */
+/**
+ * Whether a straight line from one point to another crosses no rock (3.89.0): an exact walk over every cell
+ * the line enters (Amanatides–Woo), not samples along it - a sample could step over the tip of a rock corner.
+ * The cells of both ends are not checked: a rock face is seen, what is behind it is not.
+ * A line squeezing through the corner between two rocks touching by corners is blocked; past a single rock corner it goes on.
+ */
 fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boolean {
-    val distance = hypot(bx - ax, by - ay)
-    val steps = ceil(distance / ExpeditionWorld.SIGHT_STEP).toInt()
-    for (i in 1 until steps) {
-        val t = i.toDouble() / steps
-        if (!map.walkable(floor(ax + (bx - ax) * t).toInt(), floor(ay + (by - ay) * t).toInt())) return false
+    val x = GridAxis(ax, bx)
+    val y = GridAxis(ay, by)
+    var remaining = x.cells + y.cells
+    while (remaining > 0) {
+        val gap = x.next - y.next
+        when {
+            abs(gap) < CORNER -> {
+                if (!map.walkable(x.cell + x.step, y.cell) && !map.walkable(x.cell, y.cell + y.step)) return false
+                x.advance()
+                y.advance()
+                remaining -= 2
+            }
+            gap < 0 -> {
+                x.advance()
+                remaining--
+            }
+            else -> {
+                y.advance()
+                remaining--
+            }
+        }
+        if (remaining > 0 && !map.walkable(x.cell, y.cell)) return false
     }
     return true
 }
+
+/**
+ * One axis of the walk in [sight]: the cell the line is in, which way it goes, how many cell borders it has
+ * left to cross, and at which share of the line it crosses the next one.
+ */
+private class GridAxis(from: Double, to: Double) {
+    var cell = floor(from).toInt()
+        private set
+    val step = sign(to - from).toInt()
+    val cells = abs(floor(to).toInt() - cell)
+    private val span = if (step == 0) Double.POSITIVE_INFINITY else 1.0 / abs(to - from)
+    var next = when {
+        step > 0 -> (cell + 1 - from) * span
+        step < 0 -> (from - cell) * span
+        else -> Double.POSITIVE_INFINITY
+    }
+        private set
+
+    fun advance() {
+        cell += step
+        next += span
+    }
+}
+
+/** Shares of a line closer than this cross both borders at once: the line goes through a corner. */
+private const val CORNER = 1e-9
 
 /** What the hero sees from the cell they stand in, worked out again only when they leave it. */
 internal fun ExpeditionWorld.light() {
@@ -91,12 +141,8 @@ internal fun ExpeditionWorld.light() {
         for (x in here.x - reach..here.x + reach) {
             if (x !in 0 until map.width || y !in 0 until map.height) continue
             if (hypot(x - here.x.toDouble(), y - here.y.toDouble()) > lightRadius) continue
-            // A rock face is seen when the line reaches it; what is behind it is not.
-            val cx = x + 0.5
-            val cy = y + 0.5
-            val toward = hypot(cx - heroX, cy - heroY).coerceAtLeast(1e-6)
-            val near = (toward - 0.75).coerceAtLeast(0.0) / toward
-            if (!sight(heroX, heroY, heroX + (cx - heroX) * near, heroY + (cy - heroY) * near)) continue
+            // A rock face is seen when the line reaches it; what is behind it is not - [sight] skips the target's own cell.
+            if (!sight(heroX, heroY, x + 0.5, y + 0.5)) continue
             lit[y * map.width + x] = true
             explored[y * map.width + x] = true
         }

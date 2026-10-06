@@ -102,7 +102,7 @@ import com.sperance.exileforge.ui.theme.*
         MutedText(ui("stash.overflow_hint"))
         hero.overflow.forEach { item ->
             game.view(item)?.let { piece ->
-                ItemRow(piece, price = game.sellPrice(item), footer = {
+                ItemRow(piece, price = game.sellPrice(item), verdict = rememberGearVerdict(game, item), footer = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ForgeTextButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !game.busy) { Text(ui("stash.claim")) }
                         // A locked piece (3.30.0) waits in the overflow: it is never sold, by hand or by the server.

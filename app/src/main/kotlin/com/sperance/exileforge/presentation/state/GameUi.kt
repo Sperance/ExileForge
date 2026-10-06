@@ -13,6 +13,8 @@ import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.core.model.trade.Shortfall
 import com.sperance.exileforge.core.model.tree.TreeState
 import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.LinkRepository
@@ -81,6 +83,9 @@ data class GameUi(
 
     /** How many of one stacking item the hero holds, or null while the hero has not been read. */
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
+
+    /** Чего герою не хватает на [cost] (3.89.0); null, пока герой не прочитан. */
+    fun shortfall(cost: Cost): Shortfall? = hero?.let { h -> cost.shortfall({ h.bag[it] ?: 0L }, h.money) }
     val orbs: List<Item> get() = HeroLens.orbs(index)
     val currencies: List<Item> get() = HeroLens.currencies(index)
     val bench: List<BenchRecipe> get() = HeroLens.bench(index, hero)

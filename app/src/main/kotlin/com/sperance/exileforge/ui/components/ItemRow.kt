@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.requirementReason
@@ -69,6 +70,8 @@ fun ItemRow(
     compact: Boolean = false,
     /** «Ценник» (3.88.6): цена лота или полки торговца ярлыком, свисающим с верхнего края плиты. */
     tag: (@Composable RowScope.() -> Unit)? = null,
+    /** «Лучше или хуже» (3.89.0): стрелки урона и защиты героя, если надеть; только вещи тайника и лута, что герой может надеть. */
+    verdict: GearVerdict? = null,
     onClick: () -> Unit,
 ) {
     val look = relicLook(item.rarity)
@@ -119,6 +122,7 @@ fun ItemRow(
                 Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     note?.let { Text(it, color = noteColor, style = MaterialTheme.typography.labelSmall) }
                     trailing?.invoke() ?: price?.let { GoldPrice(it) }
+                    verdict?.let { GearVerdictBadge(it) }
                     if (!compact) item.summary.quality?.let { RollPill(it) }
                 }
             }

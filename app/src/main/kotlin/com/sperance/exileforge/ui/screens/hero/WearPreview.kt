@@ -13,8 +13,10 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.wearDelta
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.ui.components.GearVerdictSummary
 import com.sperance.exileforge.ui.components.HeroTotals
 import com.sperance.exileforge.ui.components.RelicLook
+import com.sperance.exileforge.ui.components.rememberGearVerdict
 import com.sperance.exileforge.ui.theme.*
 
 /** Whether an item goes on the body at all: a map, a tool and a jewel are placed elsewhere. */
@@ -22,13 +24,18 @@ fun wearable(game: GameUi, item: ItemInstance): Boolean = game.index?.template(i
 
 /**
  * «Если надеть» (2.46.0) в итоге героя карточки (3.88.6): что станет с листом с этой вещью, сложенное здесь формулой правил, -
- * строка на каждую сдвинутую характеристику. Недоступная вещь говорит вместо этого красным, чего ей не хватает.
+ * строка на каждую сдвинутую характеристику, над ними - урон и защита двумя числами (3.89.0). Недоступная вещь говорит вместо этого красным, чего ей не хватает.
  */
 @Composable private fun WearTotals(game: GameUi, item: ItemInstance, look: RelicLook) {
     val unmet = game.unmetFor(item.template)
     val delta = remember(item, game.hero, game.index) { game.wearDelta(item) }
+    val verdict = rememberGearVerdict(game, item)
     if (unmet.isEmpty()) {
-        HeroTotals(delta, look)
+        // Итог в двух числах (3.89.0) над построчным «Если надеть».
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            verdict?.let { GearVerdictSummary(it) }
+            HeroTotals(delta, look)
+        }
         return
     }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {

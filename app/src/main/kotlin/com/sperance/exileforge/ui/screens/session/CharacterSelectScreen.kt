@@ -24,6 +24,7 @@ import com.sperance.exileforge.presentation.session.CharactersViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.text.NameCharset
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -209,10 +210,10 @@ import org.koin.compose.viewmodel.koinViewModel
         ForgePanel {
             OutlinedTextField(
                 name,
-                { name = it.take(game.inputs.heroName) },
+                { name = NameCharset.filter(it).take(game.inputs.heroName) },
                 enabled = !game.busy,
                 label = { Text(ui("common.name")) },
-                supportingText = { Text(ui("chars.name_unique") + " · ${name.length}/${game.inputs.heroName}") },
+                supportingText = { Text(ui("chars.name_unique") + " · ${name.length}/${game.inputs.heroName}\n" + ui("common.name_charset")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )

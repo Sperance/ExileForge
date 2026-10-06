@@ -46,7 +46,6 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modNumber
-import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -88,6 +87,7 @@ import kotlin.math.roundToInt
     val hud by run.hud.collectAsState()
     // The first run explains the fight before the first pack is met (3.14.0).
     var gear by remember { mutableStateOf(false) }
+    var wardrobe by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(false) }
     // Leaving a map gives up what is left on it, so it is asked first (2.48.0); the fight has its own retreat.
     var leaving by remember { mutableStateOf(false) }
@@ -130,6 +130,7 @@ import kotlin.math.roundToInt
                     hud,
                     onLeave = if (zone) null else ({ leaving = true }),
                     onGear = { gear = true },
+                    onWardrobe = { wardrobe = true },
                     onStats = { sheet = true },
                     onDrink = { model.runCommand(RunCommand.Drink(it)) },
                     onRetry = model::flushRun,
@@ -137,6 +138,10 @@ import kotlin.math.roundToInt
                 if (gear) {
                     HoldsRun(run)
                     GearSheet(game, model) { gear = false }
+                }
+                if (wardrobe) {
+                    HoldsRun(run)
+                    WardrobeSheet(game, model) { wardrobe = false }
                 }
                 if (sheet) {
                     HoldsRun(run)
@@ -198,6 +203,7 @@ import kotlin.math.roundToInt
     hud: RunHud,
     onLeave: (() -> Unit)?,
     onGear: () -> Unit,
+    onWardrobe: () -> Unit,
     onStats: () -> Unit,
     onDrink: (Int) -> Unit,
     onRetry: () -> Unit,
@@ -210,6 +216,8 @@ import kotlin.math.roundToInt
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
                 RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
+                // Смена снаряжения из тайника (3.89.0): улучшения первыми, «Надеть» одним нажатием.
+                RoundButton(ForgeGlyphs.Stash, ui("expedition.wardrobe"), onClick = onWardrobe)
                 RoundButton(ForgeGlyphs.Scroll, ui("expedition.stats_hero"), onClick = onStats)
                 BugAction()
             }
@@ -318,7 +326,8 @@ internal const val PENDING_GRACE = 10_000L
 /**
  * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the server's roll,
  * shown as its answer arrives (server 1.30.0), and a button that puts it away. A piece opens its
- * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open.
+ * comparison with what is worn and can be worn at once (3.24.0); the map holds still while it is open. Строка вещи несёт
+ * стрелки урона и защиты и «Надеть» сама (3.89.0).
  */
 @Composable internal fun ChestLoot(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
     val expedition: ExpeditionViewModel = koinViewModel()
@@ -326,7 +335,7 @@ internal const val PENDING_GRACE = 10_000L
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            RewardLines(game, reward, { looked = it }, awaiting)
+            RewardLines(game, reward, { looked = it }, awaiting, rememberLootWear(game, vm))
             // Куда ушла добыча (3.88.8): вещи и стопки сундука уже лежат у героя, подбирать нечего.
             if (!awaiting && (reward.equipment.isNotEmpty() || reward.items.isNotEmpty())) {
                 Text(ui("expedition.chest_stored"), color = Vital, style = MaterialTheme.typography.bodySmall)

@@ -30,15 +30,37 @@ import com.sperance.exileforge.ui.theme.Panel
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Where a dropped piece stands for «Надеть»: the server holds it loose, wears it already, has it on the way, or never got it. */
-private enum class LootStand { LOOSE, WORN, ARRIVING, GONE }
+internal enum class LootStand { LOOSE, WORN, ARRIVING, GONE }
 
-private fun lootStand(game: GameUi, item: ItemView, pending: Int): LootStand {
-    val held = game.hero?.item(item.id)
-    return when {
-        held == null -> if (pending > 0) LootStand.ARRIVING else LootStand.GONE
-        held.equipped || held.socketed -> LootStand.WORN
-        else -> LootStand.LOOSE
+/**
+ * «Надеть» над выпавшей вещью (3.89.0): одно действие для карточки лута и строки сундука - где вещь стоит, можно ли
+ * надеть её сейчас и само надевание. Вещь из ролла попадает в тайник с ответом журнала, до того кнопка ждёт.
+ */
+internal class LootWear(private val game: GameUi, private val vm: ExpeditionViewModel, private val pending: Int) {
+    fun stand(item: ItemView): LootStand {
+        val held = game.hero?.item(item.id)
+        return when {
+            held == null -> if (pending > 0) LootStand.ARRIVING else LootStand.GONE
+            held.equipped || held.socketed -> LootStand.WORN
+            else -> LootStand.LOOSE
+        }
     }
+
+    /** Вещь в тайнике, команда не ждёт сети, требования выполнены. */
+    fun ready(item: ItemView): Boolean = stand(item) == LootStand.LOOSE && !game.busy && game.unmetFor(item.code).isEmpty()
+
+    /** Подпись кнопки: «Надеть» или «в пути», пока сервер не принял вещь. */
+    fun label(item: ItemView): String = ui(if (stand(item) == LootStand.ARRIVING) "expedition.loot_arriving" else "hero.equip")
+
+    fun wear(item: ItemView) = vm.equip(item.id)
+
+    /** Отправить журнал сейчас: вещь в пути станет вещью тайника быстрее. */
+    fun hurry() = vm.flushRun()
+}
+
+@Composable internal fun rememberLootWear(game: GameUi, vm: ExpeditionViewModel): LootWear {
+    val expedition by vm.state.collectAsStateWithLifecycle()
+    return LootWear(game, vm, expedition.pending)
 }
 
 /**
@@ -57,9 +79,9 @@ internal fun LootSheet(
     onDismiss: () -> Unit,
     extra: @Composable ColumnScope.() -> Unit = {},
 ) {
-    val expedition by vm.state.collectAsStateWithLifecycle()
-    val stand = lootStand(game, item, expedition.pending)
-    LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) vm.flushRun() }
+    val wear = rememberLootWear(game, vm)
+    val stand = wear.stand(item)
+    LaunchedEffect(item.id, stand) { if (stand == LootStand.ARRIVING) wear.hurry() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item), requirementsMet = game.unmetFor(item.code).isEmpty())
@@ -72,14 +94,14 @@ internal fun LootSheet(
                 item.slot.isJewelLike -> Unit
 
                 else -> ForgeButton(
-                    enabled = stand == LootStand.LOOSE && !game.busy && game.unmetFor(item.code).isEmpty(),
+                    enabled = wear.ready(item),
                     onClick = {
                         onDismiss()
-                        vm.equip(item.id)
+                        wear.wear(item)
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(ui(if (stand == LootStand.ARRIVING) "expedition.loot_arriving" else "hero.equip"))
+                    Text(wear.label(item))
                 }
             }
             // Sold to the merchant right here (3.81.0), wherever the piece is opened on a run: a gilt ribbon with the coin and

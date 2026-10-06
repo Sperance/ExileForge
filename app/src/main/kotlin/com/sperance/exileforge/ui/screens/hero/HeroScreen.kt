@@ -172,6 +172,7 @@ fun HeroScreen() {
                                     unwearable = line.unwearable,
                                     price = line.price,
                                     waiting = line.waiting,
+                                    verdict = rememberGearVerdict(game, piece.item),
                                 ) {
                                     detailId = piece.id
                                     model.selectEquipment(piece.id)

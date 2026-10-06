@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.crafts
 
+import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobExtra
@@ -9,6 +10,7 @@ import com.sperance.exileforge.rules.roll.ActiveWork
 import com.sperance.exileforge.rules.roll.CraftsAway
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.ProfessionProgress
+import com.sperance.exileforge.rules.roll.Work
 import com.sperance.exileforge.rules.roll.WorkBonus
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
@@ -43,6 +45,9 @@ import kotlinx.serialization.Serializable
     val experience: Double get() = job.experience
     val inputs: List<JobInput> get() = job.inputs
     val additives: Boolean get() = job.additives
+
+    /** Расход цикла с добавками [chosen] (3.89.0) - тот же, что проверяет сервер при запуске. */
+    fun cycleCost(chosen: List<String> = emptyList()): Cost = Cost(Work.perCycle(job, chosen))
 }
 
 /** A profession of the hero: its level and experience, the tool in its slot, its bonus and works. */

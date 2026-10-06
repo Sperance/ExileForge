@@ -155,9 +155,10 @@ class ExpeditionWorld(
     /**
      * Puts [count] chests on the map, once: far from the start, off the exit and the monsters'
      * places, a few steps apart, nooks first — a chest is found by walking, not by standing still.
-     * Where they stand is the seed's; how many, the server's.
+     * Where they stand is the seed's; how many, the server's. [opened] (3.89.0) are those a run entered again already opened:
+     * they stand where they stood, open, so the closed ones keep their places too.
      */
-    fun placeChests(count: Int) {
+    fun placeChests(count: Int, opened: Collection<Int> = emptyList()) {
         if (count <= 0 || chests.isNotEmpty()) return
         val placing = Random(seed * 7919 + 17)
         val taken = map.spawns.toSet() + map.exit + map.start + fountains.map { it.cell }
@@ -168,6 +169,7 @@ class ExpeditionWorld(
             if (chests.size >= count) break
             if (chests.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.chestSpacing }) chests += Chest(chests.size, cell)
         }
+        chests.forEach { it.opened = it.id in opened }
     }
 
     /**
@@ -302,7 +304,6 @@ class ExpeditionWorld(
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
         internal const val MIN_WALK = 0.8
         internal const val REPATH = 0.4
-        internal const val SIGHT_STEP = 0.25
         internal val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, 1 to -1, -1 to 1, -1 to -1)
 
         /**

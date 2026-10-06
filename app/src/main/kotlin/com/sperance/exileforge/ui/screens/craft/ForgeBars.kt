@@ -20,8 +20,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
+import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
@@ -53,7 +55,7 @@ import org.koin.compose.viewmodel.koinViewModel
             Text(ui("forge.pick_essence"), color = Muted)
             return@ForgeBar
         }
-        BarTitle(ForgeGlyphs.Shard, Elder, itemTitle(code), stock(owned, 1))
+        BarTitle(ForgeGlyphs.Shard, Elder, itemTitle(code), stock(code, owned, 1))
         HoldButton(ui("confirm.hold", ui("forge.apply_essence")), Elder, enabled = enabled && !instance.corrupted, rearm = true) {
             onApply(instance.id, code)
         }
@@ -84,7 +86,7 @@ import org.koin.compose.viewmodel.koinViewModel
             ForgeGlyphs.Orb,
             Gold,
             itemTitle(orb.code.value) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
-            if (waiting) ui("forge.needs_omen") to true else stock(owned, 1),
+            if (waiting) ui("forge.needs_omen") to true else stock(code, owned, 1),
             orb = Orb.of(orb.code.value),
         )
         HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted && !waiting, rearm = true) {
@@ -102,13 +104,13 @@ import org.koin.compose.viewmodel.koinViewModel
             chosen == UNCRAFT -> {
                 val scouring = index.rules.bench.uncraftOrb
                 val owned = game.bagAmount(scouring.name) ?: 0L
-                BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(owned, 1))
+                BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(scouring.name, owned, 1))
                 HoldButton(ui("confirm.hold", ui("forge.remove_bench")), Crafted, enabled = enabled && owned >= 1, rearm = true) { vm.uncraft(instance.id) }
             }
 
             recipe != null -> {
                 val owned = game.bagAmount(recipe.orb.name) ?: 0L
-                BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(index, recipe), stock(owned, recipe.amount))
+                BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(index, recipe), stock(recipe.orb.name, owned, recipe.amount))
                 HoldButton(ui("confirm.hold", ui("forge.apply_bench")), Crafted, enabled = enabled && owned >= recipe.amount, rearm = true) { vm.craft(instance.id, recipe.code) }
             }
 
@@ -120,8 +122,10 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * What the bag keeps after one use. It is printed only when the bag can pay; when it cannot, the
  * bar says so in red and the button stays off (2.46.0).
+ * Нехватка с 3.89.0 - общей строкой «Не хватает: …».
  */
-internal fun stock(have: Long, need: Long): Pair<String, Boolean> = if (have >= need) ui("forge.orb_left", have, have - need) to false else ui("forge.short", have) to true
+internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> =
+    Cost.item(code, need).shortfall({ have }, 0).text()?.let { it to true } ?: (ui("forge.orb_left", have, have - need) to false)
 
 @Composable internal fun ForgeBar(content: @Composable ColumnScope.() -> Unit) {
     HorizontalDivider(color = Bronze)

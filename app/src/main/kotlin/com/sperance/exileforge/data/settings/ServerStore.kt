@@ -197,6 +197,13 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     }
     private fun awayKey(server: String, heroId: String) = stringPreferencesKey("crafts_away:$server|$heroId")
 
+    /** Последний запущенный выбор кузнеца героя на сервере (3.89.0): лист кузнеца открывается в его режиме. */
+    suspend fun smithChoice(server: String, heroId: String): String? = context.settings.data.first()[smithKey(server, heroId)]
+    suspend fun saveSmithChoice(server: String, heroId: String, choice: String) {
+        context.settings.edit { it[smithKey(server, heroId)] = choice }
+    }
+    private fun smithKey(server: String, heroId: String) = stringPreferencesKey("smith_choice:$server|$heroId")
+
     /**
      * The world of other rules forgotten (3.81.2): when the rules' version moves, the session, the heroes' copies, the waiting
      * commands, the runs' journals and the content kept for the old one are dropped once, so a launch never opens on a world
@@ -328,8 +335,8 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         /** The kept folders of a world: heroes' copies, waiting commands, runs' journals, content and its manifest. */
         val WORLD_DIRS = listOf("heroes", "commands", "journal", "content", "manifest")
 
-        /** The kept keys of a world: sessions, last heroes, the crafts' absences and the content's fingerprints. */
-        val WORLD_KEYS = listOf("token:", "last_hero:", "crafts_away:", "content:", "manifest:")
+        /** The kept keys of a world: sessions, last heroes, the crafts' absences, the smith's choices and the content's fingerprints. */
+        val WORLD_KEYS = listOf("token:", "last_hero:", "crafts_away:", "smith_choice:", "content:", "manifest:")
 
         const val PORTRAITS_HASH = "set"
     }

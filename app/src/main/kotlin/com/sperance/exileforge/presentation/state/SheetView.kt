@@ -2,6 +2,8 @@ package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.character.GearVerdict
+import com.sperance.exileforge.core.character.GearVerdicts
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.display.ItemView
@@ -32,6 +34,15 @@ internal object HeroLens {
         hero ?: return emptyList()
         return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active)
     }
+
+    /** Память вердиктов (3.89.0): одна на приложение, сбрасывается сама с новым героем или контентом. */
+    private val verdicts = GearVerdicts()
+
+    /** Урон и защита героя, если надеть [item] (3.89.0); null - вещь не надевается, надета или не по требованиям. */
+    fun verdict(index: ContentIndex?, hero: HeroView?, item: ItemInstance): GearVerdict? = verdicts.of(index, hero, item)
+
+    /** Вещи тайника, что герой может надеть, улучшения первыми (3.89.0). */
+    fun upgrades(index: ContentIndex?, hero: HeroView?): List<Pair<ItemInstance, GearVerdict>> = verdicts.upgrades(index, hero)
 
     /** The requirements the template [code] misses against the sheet, in the rules' words; empty means it can be worn. */
     fun unmet(index: ContentIndex?, hero: HeroView?, code: String): List<String> {
@@ -104,6 +115,8 @@ internal object HeroLens {
 fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, hero, item)
 fun GameUi.wearDelta(item: ItemInstance): List<StatDelta> = HeroLens.wearDelta(index, hero, item)
+fun GameUi.gearVerdict(item: ItemInstance): GearVerdict? = HeroLens.verdict(index, hero, item)
+fun GameUi.upgrades(): List<Pair<ItemInstance, GearVerdict>> = HeroLens.upgrades(index, hero)
 fun GameUi.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)
 fun GameUi.manaReserve(): ManaReserve? = HeroLens.manaReserve(index, hero)
 fun GameUi.passiveShares(stat: String): PassiveShares = HeroLens.passiveShares(index, hero, stat)

@@ -378,6 +378,8 @@ class ExpeditionRun(
             onFallen: () -> Unit = {},
             /** Tokens `i*[Run.PACK_SLOTS]+m` the server already counts as killed: a run entered again keeps its dead dead. */
             killed: Collection<Int> = emptyList(),
+            /** Chests of the run the server already counts as opened (3.89.0): a run entered again shows them open in their places. */
+            opened: Collection<Int> = emptyList(),
             /** An autorun instead of the stick (3.2.0). */
             auto: AutoPlan? = null,
             /** The combat pet at work (3.5.0): it fights every fight at the hero's side, read again as each begins (3.70.0). */
@@ -407,7 +409,8 @@ class ExpeditionRun(
             val extraFountains = MapEffects.fountains(effects)
             world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } } + extraFountains, fountains.heal)
             if (!vaal) {
-                world.placeChests(campaign.chests[location.code.value]?.left ?: 0)
+                // Открытые сундуки (3.89.0) стоят на своих местах: всего их столько, сколько осталось, и открытые
+                world.placeChests((campaign.chests[location.code.value]?.left ?: 0) + opened.size, opened)
                 world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
             }

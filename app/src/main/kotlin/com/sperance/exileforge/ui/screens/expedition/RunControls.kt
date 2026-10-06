@@ -43,7 +43,6 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modNumber
-import com.sperance.exileforge.core.display.statDescription
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui

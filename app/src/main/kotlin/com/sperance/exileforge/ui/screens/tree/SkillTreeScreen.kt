@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.nodeDescription
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.display.requirementReason

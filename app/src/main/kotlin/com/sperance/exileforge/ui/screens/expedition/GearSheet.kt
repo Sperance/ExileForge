@@ -71,7 +71,7 @@ fun GearSheet(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
                     item { Engraved(ui("expedition.loot_tab")) }
                     if (loot.isEmpty()) item { MutedText(ui("expedition.loot_empty")) }
                     items(loot, key = { it.id }) { item ->
-                        ItemRow(item, enabled = !game.busy, unwearable = game.unmetFor(item.code), price = game.sellPrice(item.item)) { looked = item.id }
+                        ItemRow(item, enabled = !game.busy, unwearable = game.unmetFor(item.code), price = game.sellPrice(item.item), verdict = rememberGearVerdict(game, item.item)) { looked = item.id }
                     }
                 }
             }

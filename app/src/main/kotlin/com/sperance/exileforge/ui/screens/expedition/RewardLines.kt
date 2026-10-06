@@ -85,4 +85,3 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Надетая вещь лута (3.90.0): строка с меткой «Надето», без цены и действий - во всех списках лута одна. */
 @Composable internal fun WornLootRow(piece: ItemView) = ItemRow(piece, compact = true, enabled = false, worn = true, onClick = {})
-

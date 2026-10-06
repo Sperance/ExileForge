@@ -47,23 +47,28 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         gear.forEach { (instance, presence) ->
+            // Без нелокальных return из составных лямбд (3.90.0): D8 не переводит их в dex.
             key(instance.id) {
-                val piece = game.view(instance) ?: return@key
-                if (presence.worn) {
-                    WornLootRow(piece)
-                    return@key
+                val piece = game.view(instance)
+                when {
+                    piece == null -> Unit
+
+                    presence.worn -> WornLootRow(piece)
+
+                    else -> {
+                        // Две линии «Поля боя» (3.88.6): карточку открывает нажатие. Сравнение - с копией героя, когда она уже у него.
+                        val verdict = rememberGearVerdict(game, game.hero?.item(instance.id) ?: instance)
+                        val action = wear?.takeIf { verdict != null }
+                        ItemRow(
+                            piece,
+                            compact = true,
+                            enabled = onItem != null,
+                            price = game.sellPrice(instance),
+                            verdict = verdict,
+                            footer = if (action != null) ({ LootWearButton(action, piece) }) else null,
+                        ) { onItem?.invoke(piece) }
+                    }
                 }
-                // Две линии «Поля боя» (3.88.6): карточку открывает нажатие. Сравнение - с копией героя, когда она уже у него.
-                val verdict = rememberGearVerdict(game, game.hero?.item(instance.id) ?: instance)
-                val action = wear?.takeIf { verdict != null }
-                ItemRow(
-                    piece,
-                    compact = true,
-                    enabled = onItem != null,
-                    price = game.sellPrice(instance),
-                    verdict = verdict,
-                    footer = if (action != null) ({ LootWearButton(action, piece) }) else null,
-                ) { onItem?.invoke(piece) }
             }
         }
         if (awaiting) {

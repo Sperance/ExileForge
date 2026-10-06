@@ -91,9 +91,9 @@ fun GearSheet(game: GameUi, vm: ExpeditionViewModel, onDismiss: () -> Unit) {
                         items(loot, key = { it.first.id }) { (item, presence) ->
                             if (presence.worn) {
                                 WornLootRow(item)
-                                return@items
+                            } else {
+                                ItemRow(item, enabled = !game.busy, unwearable = game.unmetFor(item.code), price = game.sellPrice(item.item), verdict = rememberGearVerdict(game, item.item)) { looked = item.id }
                             }
-                            ItemRow(item, enabled = !game.busy, unwearable = game.unmetFor(item.code), price = game.sellPrice(item.item), verdict = rememberGearVerdict(game, item.item)) { looked = item.id }
                         }
                     }
                 }

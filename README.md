@@ -1,5 +1,8 @@
 # ExileForge
 
+[![Android checks](https://github.com/Sperance/ExileForge/actions/workflows/android.yml/badge.svg)](https://github.com/Sperance/ExileForge/actions/workflows/android.yml)
+[![Deploy server](https://github.com/Sperance/ktor-bestgame/actions/workflows/deploy.yml/badge.svg)](https://github.com/Sperance/ktor-bestgame/actions/workflows/deploy.yml)
+
 Android-клиент (Kotlin, Jetpack Compose) ARPG в духе Path of Exile для сервера **ktor-bestgame**. Сервер закреплён
 сабмодулем `backend/`; правила игры (`backend/rules`) - общий код клиента и сервера: роллы, лист героя, текст модификаторов, забеги.
 

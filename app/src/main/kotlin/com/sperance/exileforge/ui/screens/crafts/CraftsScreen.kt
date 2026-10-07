@@ -96,15 +96,16 @@ import kotlin.math.ceil
 @Composable
 fun CraftsScreen() {
     val game by koinViewModel<CraftsViewModel>().game.collectAsStateWithLifecycle()
-    val heroModel: HeroViewModel = koinViewModel()
     val vm = koinViewModel<CraftsViewModel>()
     val held by vm.crafts.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val openCode by vm.profession.collectAsStateWithLifecycle()
-    // A screen already holding the crafts asks again in silence: the cycle's alarm is the actions' (2.56.1).
-    LaunchedEffect(game.heroId, game.sessionEpoch) {
-        heroModel.ensure()
-        vm.load(silent = held.state != null)
+    // A screen already holding the crafts asks again in silence; герой приходит в том же ответе (3.94.1), а будильник цикла
+    // стоит, пока экран открыт.
+    LaunchedEffect(game.heroId, game.sessionEpoch) { vm.load(silent = held.state != null) }
+    DisposableEffect(Unit) {
+        vm.watch(true)
+        onDispose { vm.watch(false) }
     }
     val crafts = held.state
     val offset = held.offset

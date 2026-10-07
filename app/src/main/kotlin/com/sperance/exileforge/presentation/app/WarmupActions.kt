@@ -76,7 +76,6 @@ class WarmupActions(
                     step(id, WarmStep.WORLD) {
                         quests.load()
                         crafts.load(silent = true)
-                        market.loadMerchant()
                     }
                 }
                 mutable.update { w -> w?.takeIf { it.heroId == id }?.copy(finished = true) ?: w }

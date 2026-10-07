@@ -48,7 +48,7 @@ import org.koin.compose.viewmodel.koinViewModel
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         if (game.heroId.isNotBlank()) {
             heroModel.ensure()
-            vm.load()
+            vm.open()
         }
     }
     val mine = guilds.mine

@@ -138,7 +138,7 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
          */
         private val ROLLED = listOf(
             "api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/choose", "api/v1/hero/craft",
-            "api/v1/hero/pets/hatch", "api/v1/hero/pets/incubate", "api/v1/hero/pets/collect", "api/v1/hero/pets/orb", "api/v1/hero/pets/choose", "api/v1/hero/crafts/start",
+            "api/v1/hero/pets/incubate", "api/v1/hero/pets/collect", "api/v1/hero/pets/orb", "api/v1/hero/pets/choose", "api/v1/hero/crafts/start",
             "api/v1/hero/chest/open",
         )
 

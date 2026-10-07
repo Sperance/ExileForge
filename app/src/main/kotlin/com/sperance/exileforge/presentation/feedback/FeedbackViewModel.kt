@@ -28,7 +28,6 @@ class FeedbackViewModel(
     private val commands: CommandRunner,
     private val sessions: SessionRepository,
     private val notices: Notices,
-    private val events: GameEvents,
 ) : ViewModel() {
     val feedback: StateFlow<Feedback> = repository.state
     val activity = commands.state
@@ -72,45 +71,44 @@ class FeedbackViewModel(
         notices.toast(done)
     }
 
-    /** Ящик, тихо: конверт в шапке считает непрочитанное. */
+    /** Ящик, тихо - при открытии почты; счёт конверта в шапке едет в снимке героя (3.94.1). */
     fun loadMail() {
         if (!sessions.state.value.signedIn) return
         commands.read(Reads.MAIL, silent = true) {
             val mail = api.mail.inbox()
-            feedback { it.copy(mail = mail) }
+            feedback { it.withMail(mail) }
         }
     }
 
     fun readMail(id: String) = commands.read(Reads.MAIL) {
         val letter = api.mail.read(id)
-        feedback { f -> f.copy(mail = f.mail.map { if (it.id == id) letter else it }) }
+        feedback { f -> f.withMail(f.mail.map { if (it.id == id) letter else it }) }
     }
 
-    /** Вложение уходит герою в игре [heroId], и герой перечитывается с ним. */
+    /** Вложение уходит герою в игре [heroId]; герой приходит снимком в том же ответе (3.94.1). */
     fun claimMail(id: String, heroId: String) = commands.task(writing = true, touches = setOf(Reads.HERO)) {
         check(heroId.isNotBlank()) { ui("auction.choose_character") }
         val letter = api.mail.claim(id, heroId)
-        feedback { f -> f.copy(mail = f.mail.map { if (it.id == id) letter else it }) }
-        events.heroChanged()
+        feedback { f -> f.withMail(f.mail.map { if (it.id == id) letter else it }) }
         notices.toast(ui("mail.claimed"))
     }
 
     /** «Прочитать все» (3.94.0). */
     fun readAllMail() = commands.task(writing = true) {
         api.mail.readAll()
-        feedback { f -> f.copy(mail = f.mail.map { it.copy(read = true) }) }
+        feedback { f -> f.withMail(f.mail.map { it.copy(read = true) }) }
     }
 
     /** «Удалить прочитанные» (3.94.0): письма с незабранным вложением остаются. */
     fun deleteReadMail() = commands.task(writing = true) {
         val gone = api.mail.deleteRead()
-        feedback { f -> f.copy(mail = f.mail.filterNot { it.read && !it.claimable }) }
+        feedback { f -> f.withMail(f.mail.filterNot { it.read && !it.claimable }) }
         notices.toast(ui("mail.deleted_n", gone))
     }
 
     fun deleteMail(id: String) = commands.task(writing = true) {
         api.mail.delete(id)
-        feedback { f -> f.copy(mail = f.mail.filterNot { it.id == id }) }
+        feedback { f -> f.withMail(f.mail.filterNot { it.id == id }) }
     }
 
     fun sendMail(request: MailRequest) = commands.task(writing = true) {

@@ -159,11 +159,10 @@ class WorldLoader(
         val cached = store.portraits(server)
         applyPortraits(cached)
         val manifest = api.manifest().portraits
-        val fresh = coroutineScope {
-            manifest.portraits.mapValues { (key, hash) ->
-                cached[key]?.takeIf { it.first == hash }?.let { CompletableDeferred(it) } ?: async { hash to api.files.portraitDocument(key) }
-            }.mapValues { (_, file) -> file.await() }
-        }
+        // Хоть один портрет разошёлся - весь набор одним документом (3.94.1, прежде запрос на каждый файл)
+        if (manifest.portraits.all { (key, hash) -> cached[key]?.first == hash } && cached.keys == manifest.portraits.keys) return
+        val bundle = api.files.portraits()
+        val fresh = manifest.portraits.mapNotNull { (key, hash) -> bundle[key]?.let { key to (hash to it) } }.toMap()
         if (fresh == cached) return
         store.savePortraits(server, fresh)
         applyPortraits(fresh)

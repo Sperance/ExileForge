@@ -27,7 +27,6 @@ data class BossRecords(val records: Map<String, BossRecord> = emptyMap())
  * run by; the run's journal is played back by the server, each number once, and its answer is the truth.
  */
 class CampaignClient internal constructor(private val http: Transport) {
-    suspend fun progress(heroId: String): CampaignProgress = http.get("$CAMPAIGN/progress", heroQuery(heroId))
 
     /** Боссы игрового сервера героя (3.92.0, сервер 1.81.12): сколько героев с каждым дрались и сколько победили. */
     suspend fun bosses(heroId: String): BossRecords = http.get("$CAMPAIGN/bosses", heroQuery(heroId))

@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.app
 import com.sperance.exileforge.core.i18n.Phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.HeroRoster
 import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
@@ -39,9 +40,10 @@ class CharacterActions(
     suspend fun readCharacters(autoEnter: Boolean = false) {
         run {
             val owner = sessions.state.value.profile?.id.orEmpty()
-            val characters = if (owner.isBlank()) emptyList() else api.hero.heroesOf(owner)
-            // Санкции героев (3.88.5): без них карточки не скажут, кто под баном или в корзине; не прочитались - список без них
-            val sanctions = if (owner.isBlank()) emptyMap() else runCatching { api.hero.sanctionsOf(owner) }.getOrDefault(emptyMap())
+            // Герои вместе с санкциями (3.94.1): карточки сразу знают, кто под баном или в корзине
+            val roster = if (owner.isBlank()) HeroRoster() else api.hero.rosterOf(owner)
+            val characters = roster.heroes
+            val sanctions = roster.sanctions
             sessions.update { it.copy(characters = characters, charactersRead = true, sanctions = sanctions) }
             if (autoEnter) characters.singleOrNull()?.takeIf { it.id !in sanctions }?.let { only -> entered(only.id) }
         }

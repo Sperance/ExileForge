@@ -36,7 +36,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val boards by vm.quests.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val busy = activity.busy
-    LaunchedEffect(game.heroId, guild.id) { vm.loadGuild() }
+    LaunchedEffect(game.heroId, guild.id) { vm.openGuild() }
     val quests = boards.guild
     val names = guild.members.associate { it.heroId to it.name }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

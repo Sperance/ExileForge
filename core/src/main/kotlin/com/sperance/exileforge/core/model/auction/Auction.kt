@@ -180,5 +180,11 @@ fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enu
     val full: Boolean get() = used >= limit
 }
 
+/**
+ * Свой аукцион героя (3.94.1, сервер 1.81.15): [lots] - его лоты, [slots] - места, [history] - сделки; [lot] - лот только что
+ * прошедшей команды (выставлен, снят, продлён).
+ */
+@Serializable data class AuctionMine(val lots: List<AuctionLot> = emptyList(), val slots: AuctionSlots = AuctionSlots(), val history: List<AuctionLot> = emptyList(), val lot: AuctionLot? = null)
+
 /** The price hint (3.79.0, server 1.74.0): the median [price] a piece in [priceOrb] over [sales] recent deals of the like. */
 @kotlinx.serialization.Serializable data class PriceHint(val priceOrb: String = "", val price: Long = 0, val sales: Int = 0)

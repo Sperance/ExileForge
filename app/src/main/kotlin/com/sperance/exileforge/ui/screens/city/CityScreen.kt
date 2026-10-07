@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.guild.Guilds
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
+import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.guild.GuildViewModel
@@ -88,16 +89,17 @@ import org.koin.compose.viewmodel.koinViewModel
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         if (game.heroId.isNotBlank()) {
             heroModel.ensure()
-            market.loadMyLots(glance = true)
-            guild.load()
-            quests.load()
+            // Срок свежести (3.94.1): площадь, открытая снова за полминуты, сервер не спрашивает
+            market.glanceLots()
+            guild.open()
+            quests.open()
         }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep)
         BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(board), game.lockOf(Building.QUESTS), accent = Vital) { shell.building(Building.QUESTS) }
-        BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(trade), game.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
+        BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(game.hero?.merchant), game.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
         BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(trade), game.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }
         BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(guilds), game.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
         BuildingCard(ui("history.title"), ForgeGlyphs.Tome, ui("city.history_idle"), game.lockOf(Building.HISTORY), accent = Parchment) { shell.building(Building.HISTORY) }
@@ -113,7 +115,7 @@ private fun questNews(quests: Quests): String {
     return if (ready > 0) ui("city.quests_ready", ready) else ui("city.quests_active", quests.count { !it.claimed })
 }
 
-private fun merchantNews(market: Market): String = market.merchant?.takeIf { it.refreshAt > 0 }?.let { ui("merchant.renews", untilText(it.refreshAt)) } ?: ui("city.merchant_idle")
+private fun merchantNews(merchant: MerchantStock?): String = merchant?.takeIf { it.refreshAt > 0 }?.let { ui("merchant.renews", untilText(it.refreshAt)) } ?: ui("city.merchant_idle")
 
 private fun auctionNews(market: Market): String = market.locked
     ?: market.slots?.let { ui("city.auction_lots", market.myLots.count { lot -> lot.onSale }, it.limit) }

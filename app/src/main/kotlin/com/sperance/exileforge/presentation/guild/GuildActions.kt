@@ -17,6 +17,7 @@ import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.GuildMode
 import kotlinx.coroutines.CancellationException
@@ -32,7 +33,6 @@ class GuildActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val events: GameEvents,
     private val content: ContentLoader,
 ) {
     private val api: GameApi get() = connection.api
@@ -49,8 +49,8 @@ class GuildActions(
         search(0)
     }
 
-    /** Гильдия героя; контент прежде - числа экрана берутся из `guilds.json`. */
-    fun load() = commands.read(Reads.GUILD) {
+    /** Гильдия героя; контент прежде - числа экрана берутся из `guilds.json`. [fresh] (3.94.1) - экран открылся. */
+    fun load(fresh: Boolean = false) = commands.read(Reads.GUILD, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
         content.ensure()
         val mine = api.guild.mine(id)
@@ -100,7 +100,6 @@ class GuildActions(
     private fun stashCommand(done: String, block: suspend (String) -> GuildStashView) = command(done) { id ->
         val stash = block(id)
         guild { it.copy(stash = stash) }
-        refreshHero(id)
     }
 
     /** Золото или сфера в казну: ответ несёт гильдию, строку героя и остаток золота, так что перечитывается один герой. */
@@ -111,7 +110,6 @@ class GuildActions(
         guild { it.copy(mine = it.mine?.copy(guild = given.guild, me = given.me)) }
         heroes.money(given.money)
         notices.toast(ui("guild.toast.contributed"))
-        refreshHero(id)
     }
 
     /** Журнал с новейшей страницы или следующая за показанными; пустая страница - конец. */
@@ -128,12 +126,11 @@ class GuildActions(
 
     /**
      * Команда, что вводит героя в гильдию или выводит из неё - или отвечает на приглашение - и отвечает всей [GuildMine].
-     * Герой перечитывается после: золото едет на снимке, 304 - когда его принесла команда.
+     * Герой едет снимком в том же ответе (3.94.1): перечитывать нечего.
      */
     private fun moving(done: String, block: suspend (String) -> GuildMine) = command(done) { id ->
         val mine = block(id)
         guild { it.copy(mine = mine, tab = if (mine.guild == null) null else it.tab) }
-        refreshHero(id)
     }
 
     /** Команда внутри гильдии, отвеченная гильдией, как она теперь стоит. */
@@ -147,20 +144,5 @@ class GuildActions(
         val id = hero()
         block(id)
         notices.toast(done)
-    }
-
-    /** Чтения после команды, которую сервер уже совершил: их ошибка - не ошибка команды. */
-    private suspend fun after(block: suspend () -> Unit) {
-        try {
-            block()
-        } catch (e: CancellationException) {
-            throw e
-        } catch (_: Exception) {
-            commands.refuse(phrase("guild.done_refresh"))
-        }
-    }
-
-    private fun refreshHero(heroId: String) {
-        if (heroes.onScreen(heroId)) events.heroChanged()
     }
 }

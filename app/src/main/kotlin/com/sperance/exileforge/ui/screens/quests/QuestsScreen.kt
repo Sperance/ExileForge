@@ -42,7 +42,7 @@ fun QuestsScreen() {
     val quests by vm.quests.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val current by vm.tab.collectAsStateWithLifecycle()
-    LaunchedEffect(game.heroId, game.sessionEpoch) { if (game.heroId.isNotBlank()) vm.load() }
+    LaunchedEffect(game.heroId, game.sessionEpoch) { if (game.heroId.isNotBlank()) vm.open() }
     val board = quests.board
     val busy = activity.busy
     Column(Modifier.fillMaxSize()) {

@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.QuestClaimed
@@ -32,7 +33,6 @@ class QuestActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val events: GameEvents,
     private val content: ContentLoader,
     private val scope: CoroutineScope,
 ) {
@@ -40,24 +40,25 @@ class QuestActions(
 
     private fun quests(transform: (Quests) -> Quests) = repository.update(transform)
 
-    fun load() = commands.read(Reads.QUESTS) {
+    /** Доска героя; [fresh] (3.94.1) - экран открылся: ответ моложе полуминуты не перечитывается. */
+    fun load(fresh: Boolean = false) = commands.read(Reads.QUESTS, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
         content.ensure()
         val board = api.quests.board(id)
         if (heroes.onScreen(id)) quests { it.copy(board = board) }
     }
 
-    fun loadGuild() = commands.read(Reads.GUILD_QUESTS) {
+    fun loadGuild(fresh: Boolean = false) = commands.read(Reads.GUILD_QUESTS, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
         val guild = api.quests.guild(id)
         if (heroes.onScreen(id)) quests { it.copy(guild = guild) }
     }
 
-    fun claim(questId: String) = board(ui("quest.toast.claimed"), rewarded = true) { api.quests.claim(it, questId) }
+    fun claim(questId: String) = board(ui("quest.toast.claimed")) { api.quests.claim(it, questId) }
     fun take(offerId: String) = board(ui("quest.toast.taken")) { api.quests.take(it, offerId) }
     fun abandon(questId: String) = board(ui("quest.toast.abandoned")) { api.quests.abandon(it, questId) }
 
-    fun claimGuild(questId: String? = null, goal: String? = null) = command(ui("quest.toast.claimed"), rewarded = true) { id ->
+    fun claimGuild(questId: String? = null, goal: String? = null) = command(ui("quest.toast.claimed")) { id ->
         val guild = api.quests.claimGuild(id, questId, goal)
         if (heroes.onScreen(id)) quests { it.copy(guild = guild) }
         heroes.money(guild.money)
@@ -101,18 +102,16 @@ class QuestActions(
 
     private fun hero(): String = heroes.heroId.also { check(it.isNotBlank()) { ui("auction.choose_character") } }
 
-    private fun board(done: String, rewarded: Boolean = false, block: suspend (String) -> QuestBoard) = command(done, rewarded) { id ->
+    private fun board(done: String, block: suspend (String) -> QuestBoard) = command(done) { id ->
         val board = block(id)
         if (heroes.onScreen(id)) quests { it.copy(board = board) }
         heroes.money(board.money)
     }
 
-    /** Одна команда квестов: по одной за раз и без повторов; награждённая просит перечитать героя. */
-    private fun command(done: String, rewarded: Boolean = false, block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.QUESTS, Reads.GUILD_QUESTS, Reads.HERO)) {
-        val id = hero()
-        block(id)
+    /** Одна команда квестов: по одной за раз и без повторов; награда приходит снимком героя в том же ответе (3.94.1). */
+    private fun command(done: String, block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.QUESTS, Reads.GUILD_QUESTS, Reads.HERO)) {
+        block(hero())
         notices.toast(done)
-        if (rewarded && heroes.onScreen(id)) events.heroChanged()
     }
 
     /** Что сдано, одной строкой: первые заголовки, сколько ещё, и награды суммой. */

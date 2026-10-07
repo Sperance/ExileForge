@@ -23,7 +23,7 @@ class HeroViewModel(
     private val hero: HeroActions,
     private val sync: HeroSync,
     private val market: MarketActions,
-    private val connection: ServerConnection,
+    private val reads: HeroReads,
     heroes: HeroRepository,
     commands: CommandRunner,
     slice: GameSlice,
@@ -58,8 +58,8 @@ class HeroViewModel(
     fun temper(itemId: String) = hero.temper(itemId)
     fun unsocketJewel(itemId: String) = hero.unsocketJewel(itemId)
 
-    /** Статистика героя (3.51.0), читается при открытии хроники; null - чтение не удалось. */
-    suspend fun heroStats(heroId: String): Map<String, Long>? = runCatching { connection.api.hero.stats(heroId).values }.getOrNull()
+    /** Статистика героя (3.51.0), свежая полминуты (3.94.1); null - чтение не удалось. */
+    suspend fun heroStats(heroId: String): Map<String, Long>? = reads.stats(heroId)
 
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? = market.priceHint(itemCode, rarity, itemLevel)
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = market.sellEquipment(itemId, priceOrb, price)

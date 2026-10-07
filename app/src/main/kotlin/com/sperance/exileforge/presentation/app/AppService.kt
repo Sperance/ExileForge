@@ -54,6 +54,6 @@ abstract class AppService(
     protected fun onScreen(id: String): Boolean = heroes.onScreen(id)
 
     protected fun task(writing: Boolean = false, touches: Set<String> = emptySet(), block: suspend () -> Unit) = commands.task(writing, touches, block)
-    protected fun read(key: String, restart: Boolean = false, silent: Boolean = false, block: suspend () -> Unit) = commands.read(key, restart, silent, block)
+    protected fun read(key: String, restart: Boolean = false, silent: Boolean = false, block: suspend () -> Unit) = commands.read(key, restart, silent, block = block)
     protected fun cancelReads() = commands.cancelReads()
 }

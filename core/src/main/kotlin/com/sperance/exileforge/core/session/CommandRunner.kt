@@ -76,6 +76,13 @@ fun interface StallSink {
  * Сторож раннера: старт, задача и видимое чтение держат полосу не дольше [limitMs]. Дольше - работа отменяется, её
  * занятость снимается, игроку - «Сервер долго отвечает», разработчику - [Stall] с журналом [CommandRunner.describe].
  */
+
+/** Сколько ответ чтения считается свежим для экрана, открытого снова (3.94.1). */
+const val READ_FRESH_MS = 30_000L
+
+/** Срок свежести чтения: [fresh] - экран открылся и примет недавний ответ, иначе - читать сейчас. */
+fun freshness(fresh: Boolean): Long = if (fresh) READ_FRESH_MS else 0L
+
 class CommandRunner(
     private val scope: CoroutineScope,
     private val connection: ConnectionEvents,
@@ -88,6 +95,11 @@ class CommandRunner(
     private var running: Job? = null
     private var touching: Set<String> = emptySet()
     private val quiet = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+
+    /** Последнее удачное чтение ключа (3.94.1): чей ответ ([Read.tag], обычно герой) и когда - для срока свежести. */
+    private val done = java.util.concurrent.ConcurrentHashMap<String, Read>()
+
+    private data class Read(val tag: String, val at: Long)
 
     /** Откуда пришли идущие задача и чтения (3.84.2): журнал запуска показывает, кто держит `busy` или `loading`. */
     @Volatile private var taskOrigin: String? = null
@@ -107,7 +119,10 @@ class CommandRunner(
             System.err.println("CommandRunner: task refused (${describeHeld()}) from:\n${origin()}")
             return false
         }
-        touches.forEach { reads.remove(it)?.cancel() }
+        touches.forEach {
+            reads.remove(it)?.cancel()
+            done.remove(it)
+        }
         touching = touches
         mutable.update { it.copy(busy = true, loading = reads.keys.toSet(), message = null, error = false, failure = null) }
         taskOrigin = origin()
@@ -136,8 +151,15 @@ class CommandRunner(
         mutable.update { it.copy(busy = false) }
     }
 
-    fun read(key: String, restart: Boolean = false, silent: Boolean = false, block: suspend () -> Unit) {
+    /**
+     * Чтение под ключом [key]: одно за раз. С [tag] (3.94.1; обычно id героя) удачное чтение запоминается, и вызов с
+     * [maxAgeMs] пропускается, пока прошлый ответ для того же [tag] моложе - экран, открытый снова, не спрашивает сервер.
+     * Команда, что трогает ключ, срок сбрасывает.
+     */
+    fun read(key: String, restart: Boolean = false, silent: Boolean = false, tag: String? = null, maxAgeMs: Long = 0, block: suspend () -> Unit) {
         if (key in touching) return
+        val now = System.currentTimeMillis()
+        if (!restart && tag != null && maxAgeMs > 0 && done[key]?.let { it.tag == tag && now - it.at < maxAgeMs } == true) return
         if (restart) reads.remove(key)?.cancel()
         if (reads[key]?.isActive == true) return
         if (silent) quiet += key else quiet -= key
@@ -145,6 +167,7 @@ class CommandRunner(
         val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
                 block()
+                tag?.let { done[key] = Read(it, System.currentTimeMillis()) }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

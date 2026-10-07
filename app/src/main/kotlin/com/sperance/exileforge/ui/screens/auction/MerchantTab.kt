@@ -62,14 +62,11 @@ import org.koin.compose.viewmodel.koinViewModel
     val heroModel: HeroViewModel = koinViewModel()
     val market = koinViewModel<MarketViewModel>()
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // The shelf rides on the hero's snapshot; entering reads it afresh all the same.
+        // Полка едет в снимке героя (3.94.1): вход лишь освежает героя, если он остыл.
         LaunchedEffect(game.heroId, game.sessionEpoch) {
-            if (game.heroId.isNotBlank()) {
-                heroModel.ensure()
-                market.loadMerchant()
-            }
+            if (game.heroId.isNotBlank()) heroModel.ensure()
         }
-        MerchantTab(game, market)
+        MerchantTab(game, market, heroModel)
     }
 }
 
@@ -80,8 +77,7 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
-    val shelf by market.market.collectAsStateWithLifecycle()
+private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroModel: HeroViewModel) {
     val activity by market.activity.collectAsStateWithLifecycle()
     val busy = activity.busy
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
@@ -89,7 +85,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
     var orbsShelf by rememberSaveable { mutableStateOf(false) }
     // The orb a tap on its glass or name opened: what it is for, before it is bought.
     var info by remember { mutableStateOf<String?>(null) }
-    val stock = shelf.merchant
+    val stock = game.hero?.merchant
     val money = game.hero?.money
     // A copy whose template the content does not hold cannot be drawn, and is not offered.
     val offers = remember(stock?.offers, game.index, game.world) { stock?.offers.orEmpty().mapNotNull { offer -> game.view(offer.item)?.let { offer to it } } }
@@ -113,7 +109,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
             segmented = true,
         )
     }
-    PullToRefreshBox(isRefreshing = Reads.MERCHANT in activity.loading, onRefresh = market::loadMerchant, modifier = Modifier.weight(1f)) {
+    PullToRefreshBox(isRefreshing = Reads.HERO in activity.loading, onRefresh = heroModel::load, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 10.dp)) {
             if (orbsShelf && orbs.isNotEmpty()) {
                 item {

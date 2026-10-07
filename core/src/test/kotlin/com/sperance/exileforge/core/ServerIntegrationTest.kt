@@ -51,7 +51,7 @@ class ServerIntegrationTest {
         assertEquals(manifest.content.hash, index.hash, "the chunks do not make the manifest's content")
         assertEquals(TestContent.index.hash, index.hash, "the served content is not the pinned submodule's")
 
-        val locales = api.files.localeManifest()
+        val locales = manifest.locale
         assertTrue(locales.languages.map { it.code }.containsAll(listOf("ru", "en")), "languages: ${locales.languages}")
         serverLocale = api.files.localeBundle(assertNotNull(locales.language("ru")))
         assertTrue(serverLocale.contains("system.success"))
@@ -91,8 +91,8 @@ class ServerIntegrationTest {
             assertTrue(api.hero.sell(heroId, api.hero.unequip(heroId, rare.id).id).gold > 0)
 
             // The run: a seed from the server, the same zone here, the journal paid on replay — every reward rolled by the server alone.
-            val progress = api.campaign.progress(heroId)
-            val zoneCode = progress.unlocked.first()
+            // Открытые зоны клиент считает сам по правилам (3.94.1): у нового героя пройденных нет.
+            val zoneCode = index.world.unlocked(emptyList()).first()
             val start = api.campaign.start(heroId, zoneCode)
             assertEquals(start.id, api.campaign.start(heroId, zoneCode).id, "entering the zone again did not go on with its run")
             val run = Run(index, index.zone(zoneCode)!!, start.seed, start.context)
@@ -112,10 +112,10 @@ class ServerIntegrationTest {
             // hold chaos orbs too, so the count is compared with itself before the lot, not with a fixed figure.
             suspend fun chaos() = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).bag[Orb.CHAOS_ORB.name] ?: 0L
             val held = chaos()
-            val lot = api.auction.sellItem(heroId, Orb.CHAOS_ORB.name, 1, Orb.CHAOS_ORB.name, 1)
+            val lot = assertNotNull(api.auction.sellItem(heroId, Orb.CHAOS_ORB.name, 1, Orb.CHAOS_ORB.name, 1).lot)
             assertEquals(LotStatus.ACTIVE, lot.status)
             assertTrue(api.auction.search(heroId, AuctionFilter(), listOf("")).items.any { it.id == lot.id })
-            assertEquals(LotStatus.CANCELLED, api.auction.cancel(heroId, lot.id).status)
+            assertEquals(LotStatus.CANCELLED, api.auction.cancel(heroId, lot.id).lot?.status)
             assertEquals(held, chaos())
 
             // A code is a treasure once.

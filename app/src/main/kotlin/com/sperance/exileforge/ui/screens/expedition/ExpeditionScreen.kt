@@ -50,10 +50,7 @@ private const val CARD_TOP = .48f
     val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<ExpeditionViewModel>()
     val expedition by vm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(game.heroId, game.sessionEpoch) {
-        vm.ensureHero()
-        vm.loadCampaign()
-    }
+    LaunchedEffect(game.heroId, game.sessionEpoch) { vm.loadCampaign() }
     val index = game.index
     val progress = game.progress
     if (index == null || progress == null) {

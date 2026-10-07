@@ -34,7 +34,6 @@ object Reads {
     const val CONTENT = "content"
     const val REDEMPTIONS = "redemptions"
     const val HEALTH = "health"
-    const val MERCHANT = "merchant"
     const val CRAFTS = "crafts"
     const val GUILD = "guild"
     const val GUILD_SEARCH = "guild_search"

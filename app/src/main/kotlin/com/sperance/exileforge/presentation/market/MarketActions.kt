@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.model.auction.AuctionFilter
+import com.sperance.exileforge.core.model.auction.AuctionMine
 import com.sperance.exileforge.core.model.auction.AuctionPage
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.network.ApiFailure
@@ -17,14 +18,15 @@ import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.coroutines.CancellationException
 
 /**
- * Аукцион игроков и лавка торговца. Все правила у сервера; клиент называет лот и печатает отказ. Сделка просит
- * перечитать героя - один запрос о том, что сдвинулось, - и списки, которых коснулась. Действия общие для экранов
- * Города и для продажи из сундука героя (3.80.11).
+ * Аукцион игроков и лавка торговца. Все правила у сервера; клиент называет лот и печатает отказ. С 3.94.1 сделка - один
+ * запрос: ответ несёт снимок героя, а команды над своими лотами - ещё и свой аукцион. Полка торговца едет в снимке героя.
+ * Действия общие для экранов Города и для продажи из сундука героя (3.80.11).
  */
 class MarketActions(
     private val repository: MarketRepository,
@@ -32,8 +34,6 @@ class MarketActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
-    private val events: GameEvents,
-    private val content: ContentLoader,
 ) {
     private val api: GameApi get() = connection.api
     private val market: Market get() = repository.state.value
@@ -69,139 +69,91 @@ class MarketActions(
     private fun showcaseFilter(): AuctionFilter = market.filter.copy(excludeSellerId = if (market.showOwnLots) "" else heroes.heroId, lang = uiLanguage.code)
 
     /** [glance] - площадь Города (3.22.0): без полосы, а герой ниже уровня аукциона узнаёт это с карточки, не отказом. */
-    fun loadMyLots(glance: Boolean = false) = trade(key = Reads.LOTS, glance = glance) {
-        val id = heroes.heroId
-        val lots = api.auction.myLots(id)
-        val slots = api.auction.slots(id)
-        val history = if (glance) market.history else api.auction.history(id)
-        market { it.copy(myLots = lots, slots = slots, history = history) }
+    fun loadMyLots(glance: Boolean = false, fresh: Boolean = false) = trade(key = Reads.LOTS, glance = glance, maxAgeMs = freshness(fresh)) {
+        val mine = api.auction.mine(heroes.heroId)
+        market { it.copy(myLots = mine.lots, slots = mine.slots, history = mine.history) }
     }
 
-    /** Полка торговца: приходит со снимком героя, а при входе в лавку читается заново. */
-    fun loadMerchant() = trade(key = Reads.MERCHANT) {
-        content.ensure()
-        val stock = api.merchant.stock(heroes.heroId)
-        market { it.copy(merchant = stock) }
-    }
-
-    /** Два списка аукциона; торговец - своё здание с 3.22.0 и читает полку сам. */
-    fun loadAuction() {
+    /** Два списка аукциона; торговец - своё здание с 3.22.0, его полка едет в снимке героя (3.94.1). */
+    fun loadAuction(fresh: Boolean = false) {
         loadShowcase()
-        loadMyLots()
+        loadMyLots(fresh = fresh)
     }
 
     fun buyOffer(offerId: String) = trade(writing = true) {
-        val id = heroes.heroId
-        val purchase = api.merchant.buy(id, offerId)
-        market { it.copy(merchant = it.merchant?.let { stock -> stock.copy(offers = stock.offers.filter { offer -> offer.id != offerId }) }) }
-        bought(id, purchase.money)
+        api.merchant.buy(heroes.heroId, offerId)
     }
 
     fun buyOrb(code: String) = trade(writing = true) {
-        val id = heroes.heroId
-        val purchase = api.merchant.buyOrb(id, code)
-        market {
-            it.copy(
-                merchant = it.merchant?.let { stock ->
-                    stock.copy(orbs = stock.orbs.map { orb -> if (orb.code == code) orb.copy(price = purchase.next, bought = orb.bought + 1, left = orb.left?.let { n -> (n - 1).coerceAtLeast(0) }) else orb })
-                },
-            )
-        }
-        bought(id, purchase.money)
+        api.merchant.buyOrb(heroes.heroId, code)
     }
 
     fun buy(lotId: String) = trade(writing = true) {
-        val id = heroes.heroId
-        val lot = api.auction.buy(id, lotId)
+        val lot = api.auction.buy(heroes.heroId, lotId)
         notices.toast(ui("toast.bought", lot.title))
         // Купленный лот уходит с витрины; страницы, добавленные под ним «Показать ещё», остаются.
         market { it.copy(showcase = it.showcase.without(lotId)) }
-        refreshHero(id)
     }
 
     /** Выставляет копию за цену в сферах - [priceOrb] код предмета-валюты. */
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = trade(writing = true) {
-        val id = heroes.heroId
-        notices.toast(ui("toast.listed", api.auction.sellEquipment(id, itemId, priceOrb, price).title))
-        listed(id)
+        listed(api.auction.sellEquipment(heroes.heroId, itemId, priceOrb, price))
     }
 
     /** Выставляет стопку из сумки по коду. */
     fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = trade(writing = true) {
-        val id = heroes.heroId
-        notices.toast(ui("toast.listed", api.auction.sellItem(id, code, amount, priceOrb, price).title))
-        listed(id)
+        listed(api.auction.sellItem(heroes.heroId, code, amount, priceOrb, price))
     }
 
     /** Выставляет питомца (3.91.0). */
     fun sellPet(petId: String, priceOrb: String, price: Long) = trade(writing = true) {
-        val id = heroes.heroId
-        notices.toast(ui("toast.listed", api.auction.sellPet(id, petId, priceOrb, price).title))
-        listed(id)
+        listed(api.auction.sellPet(heroes.heroId, petId, priceOrb, price))
     }
 
     /** Ещё неделя своему лоту в его последний день (3.79.0). */
     fun extend(lotId: String) = trade(writing = true) {
-        val id = heroes.heroId
-        notices.toast(ui("toast.extended", api.auction.extend(id, lotId).title))
-        afterTrade {
-            val lots = api.auction.myLots(id)
-            market { it.copy(myLots = lots) }
-        }
+        mine(api.auction.extend(heroes.heroId, lotId), "toast.extended")
     }
 
-    /** Подсказка цены тому, что герой выставляет (3.79.0): читается тихо, ошибка - просто нет подсказки. */
-    suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? = try {
-        api.auction.priceHint(heroes.heroId, itemCode, rarity, itemLevel)
-    } catch (e: CancellationException) {
-        throw e
-    } catch (_: Exception) {
-        null
-    }
-
-    fun cancel(lotId: String) = trade(writing = true) {
-        val id = heroes.heroId
-        notices.toast(ui("toast.withdrawn", api.auction.cancel(id, lotId).title))
-        afterTrade {
-            refreshHero(id)
-            val lots = api.auction.myLots(id)
-            val slots = api.auction.slots(id)
-            market { it.copy(myLots = lots, slots = slots) }
-        }
-    }
-
-    private suspend fun listed(heroId: String) = afterTrade {
-        refreshHero(heroId)
-        val lots = api.auction.myLots(heroId)
-        val slots = api.auction.slots(heroId)
-        market { it.copy(myLots = lots, slots = slots, tab = 1) }
-    }
-
-    /** Чтения после сделки, которую сервер уже совершил: их ошибка - не ошибка сделки. */
-    private suspend fun afterTrade(block: suspend () -> Unit) {
-        try {
-            block()
+    /** Подсказка цены тому, что герой выставляет (3.79.0): читается тихо, ошибка - просто нет подсказки; одна на вещь за сеанс (3.94.1). */
+    suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? {
+        val key = "$itemCode/${rarity?.name}/$itemLevel"
+        hints[key]?.let { return it.value }
+        return try {
+            api.auction.priceHint(heroes.heroId, itemCode, rarity, itemLevel).also { hints[key] = Hint(it) }
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {
-            commands.refuse(phrase("auction.done_refresh"))
+            null
         }
     }
 
-    private fun bought(heroId: String, money: Long) {
-        heroes.money(money)
-        refreshHero(heroId)
+    /** Подсказки цен сеанса: сделки копятся медленно, а лист выставления открывают часто. */
+    private val hints = java.util.concurrent.ConcurrentHashMap<String, Hint>()
+
+    private class Hint(val value: PriceHint?)
+
+    fun cancel(lotId: String) = trade(writing = true) {
+        mine(api.auction.cancel(heroes.heroId, lotId), "toast.withdrawn")
     }
 
-    private fun refreshHero(heroId: String) {
-        if (heroes.onScreen(heroId)) events.heroChanged()
+    /** Выставлено (3.94.1): ответ уже несёт свой аукцион и героя - перечитывать нечего; экран - на свои лоты. */
+    private fun listed(answer: AuctionMine) {
+        mine(answer, "toast.listed")
+        market { it.copy(tab = 1) }
     }
 
-    private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, glance: Boolean = false, block: suspend () -> Unit) {
+    /** Свой аукцион из ответа команды и тост о её лоте. */
+    private fun mine(answer: AuctionMine, toast: String) {
+        answer.lot?.let { notices.toast(ui(toast, it.title)) }
+        market { it.copy(myLots = answer.lots, slots = answer.slots, history = answer.history) }
+    }
+
+    private fun trade(writing: Boolean = false, restart: Boolean = false, key: String = Reads.AUCTION, glance: Boolean = false, maxAgeMs: Long = 0, block: suspend () -> Unit) {
         if (writing) {
-            commands.task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO, Reads.MERCHANT)) { gated(block) }
+            commands.task(writing = true, touches = setOf(Reads.AUCTION, Reads.LOTS, Reads.HERO)) { gated(block) }
         } else {
-            commands.read(key, restart, silent = glance) { gated(block, glance) }
+            commands.read(key, restart, silent = glance, tag = heroes.heroId, maxAgeMs = maxAgeMs) { gated(block, glance) }
         }
     }
 

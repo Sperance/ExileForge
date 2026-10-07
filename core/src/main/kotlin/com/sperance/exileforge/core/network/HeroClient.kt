@@ -34,11 +34,14 @@ private const val HERO = "api/v1/hero"
  * names the hero and the thing; every rule is the server's, and a refusal comes back as it was said.
  */
 class HeroClient internal constructor(private val http: Transport) {
-    /** The hero in one read: only the parts whose fingerprints [parts] does not hold, or `null` on a 304. */
-    suspend fun view(heroId: String, parts: HeroParts): HeroSnapshot? {
+    /**
+     * The hero in one read: only the parts whose fingerprints [parts] does not hold, or `null` on a 304. В ETag и счёт
+     * непрочитанной почты [unread] (3.94.1, сервер 1.81.15): новое письмо не прячется за 304.
+     */
+    suspend fun view(heroId: String, parts: HeroParts, unread: Int = 0): HeroSnapshot? {
         val headers = buildMap {
             put(HeroParts.HEADER, parts.header())
-            if (parts.complete && parts.version.isNotBlank()) put("If-None-Match", "\"${parts.version}\"")
+            if (parts.complete && parts.version.isNotBlank()) put("If-None-Match", "\"${parts.version}.$unread\"")
         }
         val answer = http.request("GET", "$HERO/view", heroQuery(heroId), authenticated = true, headers = headers)
         return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)
@@ -50,16 +53,10 @@ class HeroClient internal constructor(private val http: Transport) {
     /** The unique templates the hero has found (server 1.81.7), each with its first find and count. */
     suspend fun uniques(heroId: String): com.sperance.exileforge.core.model.hero.UniquesView = http.get("$HERO/uniques", heroQuery(heroId))
 
-    /** The heroes one account owns — what the hero menu offers. */
-    suspend fun heroesOf(userId: String): List<HeroSummary> {
+    /** Герои аккаунта и их действующие санкции одним запросом (3.94.1, server 1.81.15) - что предлагает меню героев. */
+    suspend fun rosterOf(userId: String): HeroRoster {
         requireId(userId)
-        return http.request("GET", "$HERO/byUser", mapOf("userId" to userId), authenticated = true).jsonArray.map { WireJson.decodeFromJsonElement(it) }
-    }
-
-    /** Действующие санкции героев аккаунта (3.88.5, server 1.80.8): бан или удаление по id героя. */
-    suspend fun sanctionsOf(userId: String): Map<String, SanctionView> {
-        requireId(userId)
-        return http.get("$HERO/sanctions", mapOf("userId" to userId))
+        return http.get("$HERO/byUser", mapOf("userId" to userId))
     }
 
     suspend fun create(userId: String, name: String, description: String, heroClass: String): HeroSummary {
@@ -218,7 +215,6 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     /** The bench lines the hero has found on maps; the rest stay hidden. */
-    suspend fun bench(heroId: String): List<BenchRecipe> = http.get("$HERO/bench", heroQuery(heroId))
 
     suspend fun craft(heroId: String, itemId: String, recipe: String): CurrencyApplyResponse {
         requireItemId(itemId)
@@ -259,3 +255,7 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/$operation", heroQuery(heroId, "itemId" to itemId))
     }
 }
+
+/** Герои аккаунта (3.94.1, server 1.81.15) и санкции по id героя: бан или удаление. */
+@kotlinx.serialization.Serializable
+data class HeroRoster(val heroes: List<HeroSummary> = emptyList(), val sanctions: Map<String, SanctionView> = emptyMap())

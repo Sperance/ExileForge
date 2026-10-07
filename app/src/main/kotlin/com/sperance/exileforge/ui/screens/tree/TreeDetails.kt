@@ -56,6 +56,7 @@ import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
+import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
@@ -189,8 +190,11 @@ import kotlin.math.sin
     TermsBlock(terms)
 
     if (allocated) {
-        // A refund is held for a second (3.81.0): a tap on the wrong node no longer costs the point.
-        HoldButton(ui("tree.refund"), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && node.type != SkillNodeType.START, rearm = true, millis = REFUND_HOLD_MS) { onRefund(node.code) }
+        // A refund is held for a second (3.81.0): a tap on the wrong node no longer costs the point. Узел, без которого ветка
+        // оторвётся, правила не отдадут (3.94.1): кнопка гаснет, причина - под ней, запрос не уходит.
+        val refusal = remember(node.code, taken) { ruleRefusal { TreeAllocation.requireRefundable(index.tree, node, taken) } }
+        HoldButton(ui("tree.refund"), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && refusal == null, rearm = true, millis = REFUND_HOLD_MS) { onRefund(node.code) }
+        if (refusal != null && node.type != SkillNodeType.START) Text(refusal, color = LifeRed, style = MaterialTheme.typography.bodySmall)
         // The branch (3.54.0, server 1.52.0): this node and everything that would hang loose without it, an Orb of Regret each.
         val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
         if (branch.size > 1) {

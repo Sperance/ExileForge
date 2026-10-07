@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.i18n
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.rules.RuleViolation
 import com.sperance.exileforge.rules.text.LocaleKey
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonPrimitive
@@ -105,6 +106,17 @@ fun locError(code: String?, message: String, args: List<String> = emptyList()): 
     // a sentence is worse than the server's own. This is now rare: since 0.17.0 the envelope
     // carries what it interpolated.
     return if (HOLE.containsMatchIn(text)) message else text
+}
+
+/**
+ * Правило, спрошенное до команды (3.94.1): [check] из общих правил бросает [RuleViolation] - его отказ словами игрока, как
+ * сказал бы сервер (ключи словаря в аргументах раскрыты); null - правило пропускает. Кнопка гаснет, причина - рядом.
+ */
+fun ruleRefusal(check: () -> Unit): String? = try {
+    check()
+    null
+} catch (refused: RuleViolation) {
+    locError(refused.code, refused.message.orEmpty(), refused.args.map { if (serverLocale.contains(it)) serverLocale[it] else it })
 }
 
 /** A placeholder the arguments left unfilled: `{0}`, `{1}`... */

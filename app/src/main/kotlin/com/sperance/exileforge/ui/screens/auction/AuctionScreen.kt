@@ -41,7 +41,7 @@ fun AuctionScreen() {
         LaunchedEffect(game.heroId, game.sessionEpoch) {
             if (game.heroId.isNotBlank()) {
                 heroModel.ensure()
-                model.loadAuction()
+                model.openAuction()
             }
         }
         market.locked?.let { locked ->

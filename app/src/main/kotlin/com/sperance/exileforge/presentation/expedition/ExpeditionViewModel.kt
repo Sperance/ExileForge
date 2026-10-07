@@ -21,7 +21,6 @@ class ExpeditionViewModel(
     private val expedition: ExpeditionActions,
     private val trial: TrialActions,
     private val hero: HeroActions,
-    private val sync: HeroSync,
     repository: ExpeditionRepository,
     commands: CommandRunner,
     slice: GameSlice,
@@ -39,7 +38,6 @@ class ExpeditionViewModel(
     /** Босс на сервере героя (3.92.0): сколько героев с ним дрались и сколько победили. */
     suspend fun bossRecord(code: String) = expedition.bossRecord(code)
 
-    fun ensureHero() = sync.ensure()
     fun loadCampaign() = expedition.loadCampaign()
     fun selectZone(mapCode: String) = expedition.selectZone(mapCode)
     fun closeZone() = expedition.closeZone()

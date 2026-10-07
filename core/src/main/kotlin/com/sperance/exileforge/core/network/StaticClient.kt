@@ -1,6 +1,5 @@
 package com.sperance.exileforge.core.network
 
-import com.sperance.exileforge.core.display.PortraitKey
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.LocaleLanguage
 import com.sperance.exileforge.core.i18n.LocaleManifest
@@ -12,13 +11,6 @@ import com.sperance.exileforge.core.model.sync.StaticManifest
  * content chunks. Plain JSON outside the API envelope, readable without an account.
  */
 class StaticClient internal constructor(private val http: Transport) {
-    suspend fun manifest(): StaticManifest = http.fetch("static/index.json")
-
-    /** The manifest as it was served: kept on the device, it lets a start without the network read what it knew. */
-    suspend fun manifestText(): String = http.fetchText("static/index.json")
-
-    suspend fun localeManifest(): LocaleManifest = http.fetch("locale/index.json")
-
     /** One language's dictionary, tagged with the fingerprint the manifest gave it. */
     suspend fun localeBundle(language: LocaleLanguage): LocaleBundle = LocaleBundle.parse(language.code, language.hash, localeDocument(language.code))
 
@@ -33,10 +25,8 @@ class StaticClient internal constructor(private val http: Transport) {
         return http.fetchText("icons/$file", validate = false)
     }
 
-    suspend fun portraitDocument(key: String): String {
-        require('.' in key) { ui("api.no_portrait") }
-        return http.fetchText(PortraitKey.path(key), json = false)
-    }
+    /** Все портреты сервера одним документом (3.94.1, сервер 1.81.15): ключ - SVG. */
+    suspend fun portraits(): Map<String, String> = http.fetch("portraits/all.json")
 
     /** One chunk of the world's content (`content/<file>`), as served: parsed by the rules and stored verbatim under its fingerprint. */
     suspend fun contentChunk(file: String): String {

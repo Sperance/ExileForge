@@ -60,16 +60,9 @@ class AppStartup(
         trial.start()
         buzzer.allowed = { kind -> prefs.settings.value.let { if (kind == Buzz.DANGER) it.buzzDanger else it.buzzButtons } }
         content.delegate = { fresh -> loader.ensureContent(fresh) }
-        // Герой изменился на сервере по чужой команде: перечитывается тихо, отказ остаётся команде, что его просила.
-        scope.launch {
-            events.heroChanged.collect {
-                try {
-                    heroSync.readHero()
-                } catch (e: kotlinx.coroutines.CancellationException) {
-                    throw e
-                } catch (_: Exception) { }
-            }
-        }
+        // Герой изменился на сервере: перечитывается тихо и одним ключом с прочими чтениями - и лишь если ответ команды не
+        // принёс снимка (3.94.1); отказ остаётся команде, что его просила.
+        scope.launch { events.heroChanged.collect { heroSync.refreshIfStale() } }
         scope.launch {
             try {
                 languages.set(Lang.byCode(store.language.first()) ?: deviceLanguage())

@@ -21,9 +21,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Ремёсла. Работа идёт на сервере по времени, кости цикла - у него (сервер 1.53.0): полоса цикла идёт здесь по кругу,
- * а на каждой границе цикла сервер тихо спрашивается заново (3.90.0), и его сбор ложится в сумку. Действия общие для
- * экрана, прогрева и возврата.
+ * Ремёсла. Работа идёт на сервере по времени, кости цикла - у него (сервер 1.53.0): полоса цикла идёт здесь по кругу. С
+ * 3.94.1 сбор ленивый: сервер досчитывает циклы при любом чтении героя, а на границе цикла спрашивается лишь при открытом
+ * экране ремёсел - один запрос, сбор сразу со снимком героя. Действия общие для экрана, прогрева и возврата.
  */
 class CraftsActions(
     private val repository: CraftsRepository,
@@ -49,17 +49,26 @@ class CraftsActions(
 
     private var cycle: Job? = null
 
+    /** Экран ремёсел открыт: только тогда будильник границы цикла стоит (3.94.1). */
+    private var watching = false
+
+    /** Экран ремёсел открылся [on] или закрылся: будильник ставится или снимается. */
+    fun watch(on: Boolean) {
+        watching = on
+        armCycle()
+    }
+
     /** Граница цикла на часах сервера, под которую уже стоит пересчёт (3.90.0): один запрос на границу. */
     private var armedAt = 0L
 
     /**
-     * Будильник границы цикла живёт здесь: цикл кончается на любой вкладке и во время похода. На каждой границе (3.90.0) -
-     * один тихий пересчёт с сервера, без спиннера; граница считается по кругу от `settledAt` работы, так что ответ,
-     * ещё не сдвинувший работу, ставит будильник на следующую границу, а не повторяет запрос.
+     * Будильник границы цикла - только при открытом экране ремёсел (3.94.1): вне его сбор приходит с любым чтением героя.
+     * На каждой границе (3.90.0) - один тихий пересчёт с сервера, без спиннера; граница считается по кругу от `settledAt`
+     * работы, так что ответ, ещё не сдвинувший работу, ставит будильник на следующую границу, а не повторяет запрос.
      */
     private fun armCycle() {
         val held = crafts
-        val work = held.state?.work?.takeIf { it.cycleMillis > 0 }
+        val work = held.state?.work?.takeIf { it.cycleMillis > 0 && watching }
         if (work == null) {
             cycle?.cancel()
             cycle = null
@@ -94,15 +103,13 @@ class CraftsActions(
         if (running == null || running.job != job || running.choice != choice) crafts { it.copy(totals = WorkGains()) }
         commands.task(writing = true, touches = setOf(Reads.CRAFTS)) {
             val id = heroes.heroId
-            val before = heroes.version
-            land(id, api.crafts.start(id, job, choice, additives), heroes.version != before)
+            land(id, api.crafts.start(id, job, choice, additives))
         }
     }
 
     fun stop() = commands.task(writing = true, touches = setOf(Reads.CRAFTS)) {
         val id = heroes.heroId
-        val before = heroes.version
-        land(id, api.crafts.stop(id), heroes.version != before)
+        land(id, api.crafts.stop(id))
     }
 
     /** Инструмент в слот профессии: экипировка сервером, и ремёсла прочитаны заново ради новых чисел. */
@@ -113,14 +120,13 @@ class CraftsActions(
     }
 
     /**
-     * Ответ сервера: работа как он её пересчитал, его сбор с прошлого ответа - в сумку (если сумку не прислал сам сервер)
-     * и в итог сеанса; сбор с циклами - [Crafts.last] для всплывашки у полосы цикла (3.90.0).
+     * Ответ сервера: работа как он её пересчитал, его сбор с прошлого ответа - в итог сеанса; сбор с циклами - [Crafts.last] для
+     * всплывашки у полосы цикла (3.90.0). Сумка приходит снимком героя в том же ответе (3.94.1); не пришёл - герой
+     * перечитывается.
      */
-    private fun land(id: String, answer: CraftsState, bagFromServer: Boolean = false) {
+    private fun land(id: String, answer: CraftsState) {
         if (!heroes.onScreen(id)) return
         val gains = answer.gains
-        val stacks = gains.items.isNotEmpty() || gains.spent.isNotEmpty()
-        if (!bagFromServer) heroes.patch { it.copy(bag = patched(it.bag, gains)) }
         crafts { c ->
             c.copy(
                 state = answer,
@@ -129,18 +135,8 @@ class CraftsActions(
                 last = if (gains.cycles > 0) Harvest(gains, (c.last?.seq ?: 0L) + 1) else c.last,
             )
         }
-        // Снаряжение или стопки: герой перечитывается, сумка и сундук берутся с сервера.
-        if (!bagFromServer && (gains.equipment.isNotEmpty() || stacks)) events.heroChanged()
+        events.heroChanged()
         armCycle()
-    }
-
-    /** Сумка с уплаченными стопками итога и вычтенной тратой, по кодам. */
-    private fun patched(bag: Map<String, Long>, gains: WorkGains): Map<String, Long> {
-        if (gains.items.isEmpty() && gains.spent.isEmpty()) return bag
-        val have = bag.toMutableMap()
-        gains.items.forEach { (code, amount) -> have.merge(code, amount, Long::plus) }
-        gains.spent.forEach { (code, amount) -> have.merge(code, -amount, Long::plus) }
-        return have.filterValues { it > 0 }
     }
 
     private companion object {

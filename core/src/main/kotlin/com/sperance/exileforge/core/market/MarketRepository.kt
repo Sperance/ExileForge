@@ -21,7 +21,6 @@ data class Market(
     val history: List<AuctionLot> = emptyList(),
     /** Почему аукцион закрыт для героя, словами сервера; null - открыт. */
     val locked: String? = null,
-    val merchant: MerchantStock? = null,
     val slots: AuctionSlots? = null,
 ) {
     /** Свои лоты, что ещё продаются. */

@@ -27,6 +27,10 @@ import okhttp3.OkHttpClient
 /** "No account for this device yet" — the server's way of saying "register it". */
 private const val REVISION_RETRIES = 2
 private const val REVISION_RETRY_DELAY_MS = 1_500L
+
+/** Сколько ответ манифеста общий для всех, кто его спрашивает (3.94.1): волна старта - один запрос. */
+private const val SHARED_MS = 10_000L
+private const val MANIFEST = "static/index.json"
 private const val DEVICE_UNKNOWN = "US_015"
 
 /** Ответ лимита запросов (3.94.0). */
@@ -227,6 +231,25 @@ class GameApi(
     private val manifestLock = Mutex()
     private var manifest: StaticManifest? = null
 
+    /** Последний ответ сервера на манифест (3.94.1): текст, его ETag и когда спрошен - один запрос на волну старта. */
+    private var served: Served? = null
+
+    private class Served(val text: String, val etag: String?, val at: Long) {
+        val manifest: StaticManifest by lazy { WireJson.decodeFromString(StaticManifest.serializer(), text) }
+    }
+
+    /**
+     * Манифест с сервера (3.94.1): спрошенный не раньше [maxAgeMs] назад отдаётся из памяти - старт, вход и проверка
+     * связи берут один ответ; иначе запрос с `If-None-Match`, и на 304 тело не качается.
+     */
+    private suspend fun ask(maxAgeMs: Long = SHARED_MS): Served {
+        val now = System.currentTimeMillis()
+        served?.takeIf { now - it.at <= maxAgeMs }?.let { return it }
+        val known = served
+        val answer = http.fetchTagged(MANIFEST, known?.etag)
+        return (if (answer.status == 304 && known != null) Served(known.text, known.etag, now) else Served(answer.body, answer.etag, now)).also { served = it }
+    }
+
     /** Where the last manifest this server served is kept on the device (3.1.0); none keeps nothing. */
     var manifestCache: ManifestCache? = null
 
@@ -237,7 +260,7 @@ class GameApi(
      */
     suspend fun manifest(fresh: Boolean = false): StaticManifest = manifestLock.withLock {
         manifest?.takeIf { !fresh } ?: try {
-            files.manifestText().also { manifestCache?.write(it) }.let { WireJson.decodeFromString(StaticManifest.serializer(), it) }
+            ask().also { manifestCache?.write(it.text) }.manifest
         } catch (e: CancellationException) {
             throw e
         } catch (e: ApiFailure) {
@@ -252,14 +275,14 @@ class GameApi(
      * revision may be a deploy midway, so it is asked [REVISION_RETRIES] more times before the client refuses it.
      */
     suspend fun workbench(): StaticManifest {
-        repeat(REVISION_RETRIES) {
-            served().takeIf { it.matchesClient }?.let {
+        repeat(REVISION_RETRIES) { attempt ->
+            served(if (attempt == 0) SHARED_MS else 0L).takeIf { it.matchesClient }?.let {
                 it.requireWorkbench()
                 return it
             }
             delay(REVISION_RETRY_DELAY_MS)
         }
-        return served().also {
+        return served(0L).also {
             if (it.revision > API_REVISION || it.rules > RULES_VERSION) onNewerServer()
             it.requireWorkbench()
         }
@@ -285,21 +308,22 @@ class GameApi(
             http.onHeroBlocked = value
         }
 
-    /** `static/index.json` as served right now (3.74.0): never the kept copy, and kept nowhere — what the update check compares against. */
-    suspend fun liveManifest(): StaticManifest = WireJson.decodeFromString(StaticManifest.serializer(), files.manifestText())
+    /**
+     * `static/index.json` as served right now (3.74.0): never the device's copy - what the update check compares against. С 3.94.1
+     * ответ последних секунд общий, а без перемен сервер отвечает 304.
+     */
+    suspend fun liveManifest(): StaticManifest = manifestLock.withLock { ask().manifest }
 
     /** The manifest as served now; kept, on the device and in memory, only when it is this client's revision — a deploy midway is not. */
-    private suspend fun served(): StaticManifest = manifestLock.withLock {
-        val text = files.manifestText()
-        WireJson.decodeFromString(StaticManifest.serializer(), text).also {
+    private suspend fun served(maxAgeMs: Long): StaticManifest = manifestLock.withLock {
+        val answer = ask(maxAgeMs)
+        answer.manifest.also {
             if (it.matchesClient) {
-                manifestCache?.write(text)
+                manifestCache?.write(answer.text)
                 manifest = it
             }
         }
     }
-
-    suspend fun capabilities(): ApiCapabilities = manifest().capabilities
 
     /** The commands waiting for this server (3.30.0); none until the app gives them a place on the device. */
     val commands: CommandQueue? get() = http.queue
@@ -359,4 +383,7 @@ class GameApi(
         http.onHero = apply
     }
     suspend fun health(): JsonElement = http.request("GET", "system/health")
+
+    /** Когда сервер последний раз ответил на запрос API (3.94.1). */
+    val answeredAt: Long get() = http.answeredAt
 }

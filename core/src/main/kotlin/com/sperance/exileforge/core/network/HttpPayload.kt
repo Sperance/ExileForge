@@ -7,8 +7,11 @@ import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-/** [replayed]: the server answered a repeated `Idempotency-Key` with its stored answer (server 1.28.0). */
-internal data class HttpPayload(val status: Int, val body: String, val replayed: Boolean = false)
+/**
+ * [replayed]: the server answered a repeated `Idempotency-Key` with its stored answer (server 1.28.0); [etag] - отпечаток
+ * ответа для `If-None-Match` (3.94.1).
+ */
+internal data class HttpPayload(val status: Int, val body: String, val replayed: Boolean = false, val etag: String? = null)
 
 /** Consume and close the body on OkHttp's worker, keeping cancellation wired through the full read. */
 internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCoroutine { continuation ->
@@ -24,7 +27,7 @@ internal suspend fun Call.awaitPayload(): HttpPayload = suspendCancellableCorout
                     val limit = 2L * 1024 * 1024
                     source.request(limit + 1)
                     if (source.buffer.size > limit) throw ApiFailure(it.code, null, ui("api.too_large"))
-                    HttpPayload(it.code, source.readUtf8(), it.header(REPLAY_HEADER) == "true")
+                    HttpPayload(it.code, source.readUtf8(), it.header(REPLAY_HEADER) == "true", it.header("ETag"))
                 }
                 if (!continuation.isCancelled) continuation.resume(payload)
             } catch (e: Exception) {

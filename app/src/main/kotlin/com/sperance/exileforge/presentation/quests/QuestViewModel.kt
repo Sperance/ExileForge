@@ -32,6 +32,10 @@ class QuestViewModel(
 
     fun load() = actions.load()
     fun loadGuild() = actions.loadGuild()
+
+    /** Экран открылся (3.94.1): ответ моложе полуминуты не перечитывается. */
+    fun open() = actions.load(fresh = true)
+    fun openGuild() = actions.loadGuild(fresh = true)
     fun claim(questId: String) = actions.claim(questId)
     fun take(offerId: String) = actions.take(offerId)
     fun abandon(questId: String) = actions.abandon(questId)

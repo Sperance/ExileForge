@@ -157,9 +157,6 @@ object PortraitKey {
     fun characterClass(code: String) = "$CLASS.$code"
     fun form(form: String) = "$FORM.$form"
     fun monster(code: String) = "$MONSTER.$code"
-
-    /** Where the file is served: `portraits/class/WITCH.svg`. */
-    fun path(key: String) = "portraits/${key.substringBefore('.')}/${key.substringAfter('.')}.svg"
 }
 
 /** The portraits this server drew, by key. */

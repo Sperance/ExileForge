@@ -2,6 +2,7 @@ package com.sperance.exileforge.presentation.hero
 
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
@@ -41,6 +42,7 @@ class HeroSync(
     private val content: ContentLoader,
     private val notices: Notices,
     private val store: ServerStore,
+    private val feedback: FeedbackRepository,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -76,6 +78,12 @@ class HeroSync(
 
     fun load() = commands.read(Reads.HERO) { readHero() }
 
+    /** Герой, если ответ команды не принёс снимка (3.94.1): тихое чтение под общим ключом, без повтора. */
+    fun refreshIfStale() {
+        if (heroes.heroId.isBlank() || heroes.state.value.readAt != 0L) return
+        commands.read(Reads.HERO, silent = true) { readHero() }
+    }
+
     /** Герой, если то, что на экране, остыло: один запрос, обычно 304. */
     fun ensure() {
         if (heroes.heroId.isBlank()) return
@@ -89,16 +97,18 @@ class HeroSync(
         check(id.isNotBlank()) { ui("auction.choose_character") }
         content.ensure()
         val held = parts?.takeIf { it.heroId == id } ?: HeroParts(id)
-        val snapshot = api.hero.view(id, held)
+        val snapshot = api.hero.view(id, held, feedback.state.value.unread)
         when {
             snapshot != null -> apply(id, snapshot)
-            heroes.state.value.hero == null -> apply(id, HeroSnapshot(held.version))
+            heroes.state.value.hero == null -> apply(id, HeroSnapshot(held.version, unread = feedback.state.value.unread))
             else -> heroes.seen(System.currentTimeMillis())
         }
     }
 
     /** Сливает снимок с частями и рисует героя из них; лист складывают правила здесь. */
     private fun apply(heroId: String, snapshot: HeroSnapshot, keep: Boolean = true) {
+        // Счёт почты едет в снимке (3.94.1): конверт в шапке без опроса ящика; копия с устройства его не несёт.
+        if (keep) feedback.update { it.copy(unread = snapshot.unread) }
         val earnedBefore = parts?.takeIf { it.heroId == heroId && it.complete }?.hero?.earned
         val merged = (parts?.takeIf { it.heroId == heroId } ?: HeroParts(heroId)).merge(snapshot, fresh = keep)
         if (!merged.complete) {

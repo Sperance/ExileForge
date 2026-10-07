@@ -50,6 +50,10 @@ class Transport(
     private val base = normalizeServer(server).toHttpUrlOrNull()!!
     internal var token: String? = null
 
+    /** Когда сервер последний раз ответил по существу (3.94.1): свежий ответ заменяет проверку связи. */
+    @Volatile var answeredAt: Long = 0L
+        private set
+
     /** The fingerprints of the hero parts held for a hero, or `null` for one nobody is looking at: a command on it asks for its snapshot. */
     internal var heroParts: (String) -> String? = { null }
 
@@ -81,7 +85,15 @@ class Transport(
      * The same file as text, so a document can be stored verbatim and parsed again offline. [json] = false
      * is for a portrait's SVG; [validate] = false skips the syntax check for a document its caller parses whole anyway.
      */
-    internal suspend fun fetchText(path: String, json: Boolean = true, authenticated: Boolean = false, validate: Boolean = json): String {
+    internal suspend fun fetchText(path: String, json: Boolean = true, authenticated: Boolean = false, validate: Boolean = json): String = fetchPayload(path, json, authenticated, validate).body
+
+    /**
+     * Файл с отпечатком (3.94.1): [etag] уходит в `If-None-Match`, на 304 ответ - с пустым телом и тем же статусом; отпечаток
+     * нового тела - в [HttpPayload.etag].
+     */
+    internal suspend fun fetchTagged(path: String, etag: String?): HttpPayload = fetchPayload(path, etag = etag)
+
+    private suspend fun fetchPayload(path: String, json: Boolean = true, authenticated: Boolean = false, validate: Boolean = json, etag: String? = null): HttpPayload {
         val url = base.newBuilder().addPathSegments(path).build()
         val credential = token.takeIf { authenticated }
         if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
@@ -92,9 +104,14 @@ class Transport(
         try {
             val payload = client.newCall(
                 Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml")
-                    .apply { credential?.let { header("Authorization", "Bearer $it") } }.get().build(),
+                    .apply { credential?.let { header("Authorization", "Bearer $it") } }
+                    .apply { etag?.let { header("If-None-Match", it) } }.get().build(),
             ).awaitPayload()
             status = payload.status
+            if (status == 304 && etag != null) {
+                success = true
+                return payload
+            }
             responseText = payload.body.take(2_000)
             if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
             if (validate) {
@@ -107,7 +124,7 @@ class Transport(
                 }
             }
             success = true
-            return payload.body
+            return payload
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -138,6 +155,7 @@ class Transport(
         bearer: String? = null,
         headers: Map<String, String> = emptyMap(),
         replay: QueuedCommand? = null,
+        withHero: Boolean = false,
     ): JsonElement {
         val credential = bearer ?: token.takeIf { authenticated }
         if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
@@ -155,8 +173,9 @@ class Transport(
         // Several commands are POSTs carrying their arguments in the query string; OkHttp still demands a body for those methods.
         val payload = body?.toString()?.toRequestBody(JsonMedia)
             ?: if (method in setOf("POST", "PUT", "PATCH")) "".toRequestBody(JsonMedia) else null
-        // Every command on a hero the client shows asks for the hero back: the header names what it already holds.
-        val heroOf = query["heroId"]?.takeIf { method == "POST" && authenticated }
+        // Every command on a hero the client shows asks for the hero back: the header names what it already holds. Чтение
+        // просит снимок, когда сервер досчитывает героя на нём [withHero] (3.94.1: сбор ремёсел).
+        val heroOf = query["heroId"]?.takeIf { (method == "POST" || withHero) && authenticated }
         val parts = heroOf?.let(heroParts)
         val request = Request.Builder().url(url).header("Accept", "application/json")
             // Язык игрока (3.88.7, сервер 1.80.9): по нему сервер пишет текст отказа, которого нет в словаре клиента.
@@ -178,6 +197,7 @@ class Transport(
             }
             if (status == 304) {
                 success = true
+                answeredAt = System.currentTimeMillis()
                 return JsonNull
             }
             val raw = answer.body
@@ -213,6 +233,7 @@ class Transport(
                 throw failure
             }
             success = true
+            answeredAt = System.currentTimeMillis()
             // The command has landed: a snapshot that cannot be read only means the hero is read again — and so
             // does a replayed answer, whose snapshot is the hero as the first run left them.
             if (heroOf != null && parts != null) {

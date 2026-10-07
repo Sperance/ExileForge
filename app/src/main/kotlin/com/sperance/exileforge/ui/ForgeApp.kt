@@ -218,14 +218,6 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     if (suggestionsOpen) SuggestionsSheet { suggestionsOpen = false }
     if (mailOpen) MailSheet(game) { mailOpen = false }
-    // The inbox (3.73.0) is asked at sign-in and every few minutes after, quietly: the envelope counts the unread.
-    val mailbox = koinViewModel<FeedbackViewModel>()
-    LaunchedEffect(game.session.signedIn, game.sessionEpoch) {
-        while (game.session.signedIn) {
-            mailbox.loadMail()
-            kotlinx.coroutines.delay(MAIL_POLL_MS)
-        }
-    }
     // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
     if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }
@@ -373,6 +365,3 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
-
-/** How often the inbox is asked again while signed in (3.73.0). */
-internal const val MAIL_POLL_MS = 5 * 60_000L

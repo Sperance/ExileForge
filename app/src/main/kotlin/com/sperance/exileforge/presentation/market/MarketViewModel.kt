@@ -28,8 +28,11 @@ class MarketViewModel(
     fun loadShowcase() = actions.loadShowcase()
     fun moreShowcase() = actions.moreShowcase()
     fun loadMyLots(glance: Boolean = false) = actions.loadMyLots(glance)
-    fun loadMerchant() = actions.loadMerchant()
     fun loadAuction() = actions.loadAuction()
+
+    /** Экран открылся (3.94.1): свои лоты моложе полуминуты не перечитываются; [glance] - карточка Города. */
+    fun openAuction() = actions.loadAuction(fresh = true)
+    fun glanceLots() = actions.loadMyLots(glance = true, fresh = true)
     fun buyOffer(offerId: String) = actions.buyOffer(offerId)
     fun buyOrb(code: String) = actions.buyOrb(code)
     fun buy(lotId: String) = actions.buy(lotId)

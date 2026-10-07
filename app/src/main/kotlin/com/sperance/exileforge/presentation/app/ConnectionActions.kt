@@ -148,7 +148,8 @@ class ConnectionActions(
      * server is there; null then, else what stood in the way (a proxy's 502 is the server restarting, not an answer).
      */
     private suspend fun probe(): Throwable? = try {
-        api.health()
+        // Сервер только что ответил настоящим запросом (3.94.1): проверять связь ещё раз незачем.
+        if (links.state.value.offline || System.currentTimeMillis() - api.answeredAt > ANSWER_FRESH_MS) api.health()
         null
     } catch (e: CancellationException) {
         throw e
@@ -174,10 +175,9 @@ class ConnectionActions(
 
                         TAB_CITY -> when (now.building) {
                             Building.QUESTS -> quests.load()
-                            Building.MERCHANT -> market.loadMerchant()
                             Building.AUCTION -> market.loadAuction()
                             Building.GUILD -> guild.load()
-                            Building.HISTORY, null -> Unit
+                            Building.MERCHANT, Building.HISTORY, null -> Unit
                         }
                     }
                 }
@@ -194,5 +194,8 @@ class ConnectionActions(
     private companion object {
         /** The pauses between probes, in seconds; the last one repeats. */
         val BACKOFF_S = longArrayOf(2, 4, 8, 16, 30)
+
+        /** Ответ сервера моложе этого заменяет проверку связи (3.94.1). */
+        const val ANSWER_FRESH_MS = 10_000L
     }
 }

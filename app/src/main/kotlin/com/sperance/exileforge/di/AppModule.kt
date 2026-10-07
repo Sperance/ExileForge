@@ -53,6 +53,7 @@ import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.guild.GuildActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.hero.HeroActions
+import com.sperance.exileforge.presentation.hero.HeroReads
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.history.HistoryViewModel
@@ -116,8 +117,9 @@ val appModule = module {
     singleOf(::MarketActions)
     single { GuildRepository() }
     singleOf(::GuildActions)
+    singleOf(::HeroReads)
     single { Buzzes() }
-    single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
     single { ExpeditionRepository() }
     single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
@@ -133,7 +135,7 @@ val appModule = module {
     single { AdminRepository() }
     single { AppModes() }
     single { GameSlice(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
-    single { QuestActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { QuestActions(get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)
     // Сервисы приложения (3.80.44, вместо `ForgeRuntime`): сессия, связь, герои аккаунта, прогрев, коды наград и запуск.

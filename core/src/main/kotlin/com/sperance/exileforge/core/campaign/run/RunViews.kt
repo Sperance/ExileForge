@@ -181,7 +181,13 @@ data class FightHud(
 }
 
 /** One member of a pack fought and its own log. */
-data class PackHit(val monster: RolledMonster, val events: List<CombatEvent>, val duration: Double)
+data class PackHit(
+    val monster: RolledMonster,
+    val events: List<CombatEvent>,
+    val duration: Double,
+    /** Когда начался его этап боя (3.91.1), секунд от начала всего боя: время событий этапа считается с нуля. */
+    val start: Double = 0.0,
+)
 
 /** A fight that is over, as the screen after it reads it. */
 data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pack: List<PackHit>, val duration: Double) {

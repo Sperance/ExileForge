@@ -245,16 +245,20 @@ private const val CONTINUE_AFTER_MS = 15_000L
     Text(ui("app.version", BuildConfig.VERSION_NAME), modifier = modifier, color = Muted.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall)
 }
 
-/** The account's version row and «Проверить обновления» (3.72.0). */
+/** Версия в аккаунте (3.72.0): без проверки вручную (3.91.1) - она идёт сама; «Обновить» - только когда есть новая. */
 @Composable fun UpdateCard() {
     val updates = LocalUpdates.current ?: return
     val s by updates.state.collectAsStateWithLifecycle()
-    InfoCard(
-        ui("update.card_title"),
-        ui("update.version", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) +
-            if (s.upToDate) "\n" + ui("update.up_to_date") else s.failure?.let { "\n$it" }.orEmpty(),
-    )
-    ForgeOutlinedButton(enabled = !s.checking, onClick = updates::checkNow, modifier = Modifier.fillMaxWidth()) {
-        Text(ui(if (s.checking) "update.checking" else "update.check"))
+    InfoCard(ui("update.card_title"), ui("update.version", BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) + updateNote(s)?.let { "\n$it" }.orEmpty())
+    if (s.update != null) {
+        ForgeOutlinedButton(enabled = !s.installing, onClick = updates::install, modifier = Modifier.fillMaxWidth()) { Text(ui("update.install")) }
     }
+}
+
+/** Что сказать о версии (3.91.1): есть новая, идёт проверка, отказ проверки или «последняя». */
+fun updateNote(s: UpdateState): String? = when {
+    s.update != null -> ui("update.found", s.update.info.versionName)
+    s.checking -> ui("update.checking")
+    s.failure != null -> s.failure
+    else -> ui("update.up_to_date")
 }

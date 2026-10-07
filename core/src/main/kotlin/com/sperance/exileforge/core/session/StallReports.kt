@@ -43,6 +43,8 @@ class StallReports(
         text = "runner stall: ${stall.key}",
         screen = SCREEN,
         context = mapOf("key" to stall.key),
+        // Стек зависания (3.91.1) - служебной частью: её видит только задача Asana.
+        service = stall.details,
     )
 
     private companion object {

@@ -222,7 +222,7 @@ internal fun ExpeditionRun.play(dt: Double) {
     flaskLeft = out.flaskLeft
     rates = out.rates
     rebody()
-    val pack = stageHits + members.mapIndexed { index, member -> PackHit(member.monster, battle.events.filter { it.foe == index }, battle.duration) }
+    val pack = stageHits + members.mapIndexed { index, member -> PackHit(member.monster, battle.events.filter { it.foe == index }, battle.duration, stageTime) }
     val duration = stageTime + battle.duration
     // A stage won with packs still waiting: the next one stands up, and the report waits for the last.
     if (outcome == Outcome.WIN && stage < fightStages.size) {

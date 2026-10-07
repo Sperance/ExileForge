@@ -62,7 +62,7 @@ internal fun LootSheet(
 
                 LootPresence.ARRIVING -> MutedText(ui("expedition.loot_arriving"))
 
-                // В заходе торговцу не продают (3.90.4, сервер - `CH_038`): вещь помечают к продаже (3.91.0) - в итогах карты
+                // В заходе торговцу не продают (3.90.4; проверяет только клиент, 3.91.1): вещь помечают к продаже (3.91.0) - в итогах карты
                 // она уже отмечена. В самих итогах ([markable] = false) отмечают их же выбором.
                 LootPresence.HELD -> if (markable) {
                     val marked = item.id in expedition.saleMarks

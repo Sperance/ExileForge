@@ -293,7 +293,7 @@ class TrialArena(
         val outcome = fight.outcome ?: return
         if (fight.time < fight.duration + index.campaign.expedition.aftermath) return
         pools = fight.pools()
-        val pack = stageHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration) }
+        val pack = stageHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration, stageTime) }
         stageHits = pack
         stageTime += fight.duration
         if (outcome != Outcome.WIN) {

@@ -41,14 +41,16 @@ import kotlin.math.roundToInt
 @Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier, onOpen: ((CombatEvent) -> Unit)? = null) {
     val shifts = remember(events) { lifeShifts(events.asReversed()).asReversed() }
     LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        itemsIndexed(events) { i, event -> EventRow(event, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
+        itemsIndexed(events) { i, event -> EventRow(event, event.time, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
     }
 }
 
 /** A row of a pack's log: a caption naming one of the pack, or one of its lines under that name. */
 private sealed interface PackRow {
     data class Head(val text: String) : PackRow
-    data class Line(val event: CombatEvent, val name: String, val shift: LifeShift?) : PackRow
+
+    /** [at] (3.91.1) - секунда боя целиком: этап начинается с [PackHit.start], а время его событий - с нуля. */
+    data class Line(val event: CombatEvent, val name: String, val shift: LifeShift?, val at: Double = event.time) : PackRow
 }
 
 /** Здоровье цели строки до удара и после (3.88.8), как его показывает экран боя. */
@@ -104,9 +106,14 @@ private const val HERO_KEY = -1
                     hit.events.forEachIndexed { i, event -> if (LogKind.of(event) in shown) add(PackRow.Line(event, names[index], shifts[i])) }
                 }
             } else {
-                val timeline = pack.flatMapIndexed { index, hit -> hit.events.map { it to names[index] } }.sortedBy { it.first.time }
-                val shifts = lifeShifts(timeline.map { it.first })
-                timeline.forEachIndexed { i, (event, name) -> if (LogKind.of(event) in shown) add(PackRow.Line(event, name, shifts[i])) }
+                // Этапы боя (3.91.1) - подряд, со сквозным временем: внутри этапа удары стаи по порядку, между ними - подпись.
+                val stages = pack.withIndex().groupBy { it.value.start }.entries.sortedBy { it.key }
+                stages.forEachIndexed { stage, (start, hits) ->
+                    if (stages.size > 1) add(PackRow.Head(ui("expedition.log_stage", stage + 1, hits.joinToString { names[it.index] })))
+                    val timeline = hits.flatMap { (index, hit) -> hit.events.map { it to names[index] } }.sortedBy { it.first.time }
+                    val shifts = lifeShifts(timeline.map { it.first })
+                    timeline.forEachIndexed { i, (event, name) -> if (LogKind.of(event) in shown) add(PackRow.Line(event, name, shifts[i], start + event.time)) }
+                }
             }
         }
     }
@@ -126,18 +133,18 @@ private const val HERO_KEY = -1
         items(rows) { row ->
             when (row) {
                 is PackRow.Head -> Caption(row.text)
-                is PackRow.Line -> EventRow(row.event, row.name, row.shift, onOpen?.let { open -> { event: CombatEvent -> open(event, row.name) } })
+                is PackRow.Line -> EventRow(row.event, row.at, row.name, row.shift, onOpen?.let { open -> { event: CombatEvent -> open(event, row.name) } })
             }
         }
     }
 }
 
-@Composable private fun EventRow(event: CombatEvent, monster: String, shift: LifeShift?, onOpen: ((CombatEvent) -> Unit)? = null) {
+@Composable private fun EventRow(event: CombatEvent, at: Double, monster: String, shift: LifeShift?, onOpen: ((CombatEvent) -> Unit)? = null) {
     // A line with a trace opens its card (3.37.0); an older one without stays a line.
     val tap = if (onOpen != null && event.trace != null) Modifier.clickable { onOpen(event) } else Modifier
     Row(tap.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
-            ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", event.time)),
+            ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", at)),
             color = Muted,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.width(40.dp),

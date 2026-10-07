@@ -72,7 +72,14 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
             text = ui("stall.title") + " ${head.getOrNull(1).orEmpty()} ms",
             screen = SCREEN,
             context = mapOf("version" to head.getOrNull(0).orEmpty(), "stalledMs" to head.getOrNull(1).orEmpty(), "at" to head.getOrNull(2).orEmpty()),
+            // Стек и шаги запуска (3.91.1) - служебной частью: её видит только задача Asana.
+            service = text.substringAfter("\n---\n", ""),
         )
+    }
+
+    /** Последнее записанное зависание (3.91.1) - стек и шаги запуска - для служебной части отчёта; пусто - не было. */
+    suspend fun lastStall(): String = withContext(Dispatchers.IO) {
+        runCatching { (file.takeIf { it.isFile } ?: last.takeIf { it.isFile })?.readText()?.substringAfter("\n---\n", "") }.getOrNull().orEmpty()
     }
 
     suspend fun sent() = withContext(Dispatchers.IO) {

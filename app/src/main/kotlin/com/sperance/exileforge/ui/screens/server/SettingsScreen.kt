@@ -178,18 +178,16 @@ private enum class SettingsPage(val title: String) {
     }
 }
 
-/** The version, the answer of the last check asked for by hand, and «Проверить». */
+/** Версия сборки (3.91.1): проверка идёт сама после загрузки и возврата в игру; «Обновить» - только когда есть новая. */
 @Composable private fun UpdateRow() {
     val updates = LocalUpdates.current ?: return
     val state by updates.state.collectAsStateWithLifecycle()
-    val note = when {
-        state.checking -> ui("update.checking")
-        state.upToDate -> ui("update.up_to_date")
-        else -> state.failure
-    }
-    SettingRow(Icons.Outlined.SystemUpdate, ui("settings.updates"), listOfNotNull(ui("app.version", BuildConfig.VERSION_NAME), note).joinToString(" · ")) {
-        ForgeOutlinedButton(enabled = !state.checking, onClick = updates::checkNow, contentPadding = PaddingValues(horizontal = 10.dp)) {
-            Text(ui("settings.check"), style = MaterialTheme.typography.labelMedium)
+    val found = state.update
+    SettingRow(Icons.Outlined.SystemUpdate, ui("settings.updates"), listOfNotNull(ui("app.version", BuildConfig.VERSION_NAME), updateNote(state)).joinToString(" · ")) {
+        if (found != null) {
+            ForgeOutlinedButton(enabled = !state.installing, onClick = updates::install, contentPadding = PaddingValues(horizontal = 10.dp)) {
+                Text(ui("update.install"), style = MaterialTheme.typography.labelMedium)
+            }
         }
     }
 }

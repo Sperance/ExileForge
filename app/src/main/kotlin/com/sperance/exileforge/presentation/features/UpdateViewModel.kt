@@ -48,8 +48,6 @@ data class UpdateState(
     val installing: Boolean = false,
     val needsPermission: Boolean = false,
     val error: String? = null,
-    /** The answer of a check asked for by hand: this build is the latest. */
-    val upToDate: Boolean = false,
     val askSources: Boolean = false,
 ) {
     /** The build the game must take before anything else: every update found is one. */
@@ -135,11 +133,6 @@ class UpdateViewModel(
 
     private fun ask(request: Request) = pending.update { maxOf(it ?: request, request) }
 
-    /** «Проверить обновления»: asked by hand, the answer is said either way. */
-    fun checkNow() {
-        viewModelScope.launch { check(manual = true) }
-    }
-
     /**
      * Игрок вернулся в игру (3.90.3): сверка ресурсов и проверка сборки - каждый раз, без порога; во время похода или
      * испытания - по их концу. До конца холодного старта возвращение ничего не добавляет: его проверка и так впереди.
@@ -169,8 +162,8 @@ class UpdateViewModel(
     }
 
     /** One check; whether GitHub answered. */
-    private suspend fun check(manual: Boolean = false): Boolean = checks.withLock {
-        mutable.update { it.copy(checking = true, upToDate = false) }
+    private suspend fun check(): Boolean = checks.withLock {
+        mutable.update { it.copy(checking = true) }
         try {
             val wire: Wire? = reach.state.value.wire
             val found = trace.step(StartStage.VERSION, "start.step.latest") { updates.check(BuildConfig.VERSION_CODE, wire) }
@@ -181,7 +174,6 @@ class UpdateViewModel(
                     checking = false,
                     failure = null,
                     update = next,
-                    upToDate = manual && found == null,
                 )
             }
             true

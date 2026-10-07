@@ -19,6 +19,7 @@ import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.ConnectionActions
 import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.SessionActions
+import com.sperance.exileforge.presentation.app.StallWatchdog
 import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.presentation.app.WarmupActions
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
@@ -59,6 +60,7 @@ class ShellViewModel(
     private val warming: WarmupActions,
     private val expedition: ExpeditionActions,
     trial: TrialActions,
+    private val watchdog: StallWatchdog,
     /** Связь с сервером на старте (3.86.0): окно запуска уходит по её ответу. */
     val reach: ServerReach,
 ) : ViewModel() {
@@ -84,7 +86,10 @@ class ShellViewModel(
 
     /** Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. */
     fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = commands.task {
-        connection.api.reportBug(report)
+        // Служебная часть (3.91.1): запросы, ошибки и последнее зависание - уходит только в задачу Asana.
+        val stall = watchdog.lastStall()
+        val service = journal.service() + if (stall.isBlank()) "" else "--- stall\n$stall"
+        connection.api.reportBug(if (report.service.isBlank()) report.copy(service = service) else report)
         onSent()
         notices.toast(ui("bug.sent"))
     }

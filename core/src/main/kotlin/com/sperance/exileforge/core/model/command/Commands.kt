@@ -89,6 +89,8 @@ data class ApiCapabilities(val routes: Set<String>) {
     val heroId: String? = null,
     val device: String = "",
     val clientVersion: String = "",
+    /** Служебный журнал (3.91.1, server 1.81.11): запросы, ошибки и зависания; сервер отдаёт его только вложением в Asana. */
+    val service: String = "",
 )
 
 /**

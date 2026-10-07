@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +25,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -32,8 +34,13 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
@@ -43,6 +50,7 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modNumber
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -65,8 +73,8 @@ import kotlin.math.roundToInt
 
 /** Управление походом (3.80.24): полосы жизни и маны, стик движения. */
 /**
- * A life bar with the shield laid over it, and the figure in words; the mana under it since 2.78.0,
- * its [reserved] part past [maxMana] a hatched tail.
+ * Литые полосы (3.95.0, макет A): объёмная полоса жизни с числами внутри, щит - светящаяся кромка по её верху со своим числом,
+ * мана - тонкая полоса под ней с числами внутри; удержанная аурами часть ([reserved] сверх [maxMana]) - штриховкой.
  */
 @Composable internal fun Vitals(
     life: Int,
@@ -78,31 +86,67 @@ import kotlin.math.roundToInt
     maxMana: Int = 0,
     reserved: Int = 0,
 ) {
-    val shape = RoundedCornerShape(3.dp)
+    val shape = RoundedCornerShape(5.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Box(Modifier.fillMaxWidth().height(12.dp).background(Color(0xCC0A0D12), shape).border(1.dp, LifeRed.copy(alpha = .8f), shape)) {
-            Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(LifeRed, LifeRed.copy(alpha = .55f))), shape))
-            if (maxShield > 0) Box(Modifier.fillMaxWidth((shield / maxShield.toFloat()).coerceIn(0f, 1f)).height(4.dp).align(Alignment.TopStart).background(ShieldCyan.copy(alpha = .85f)))
+    val shieldShare by animateFloatAsState(if (maxShield > 0) shield / maxShield.toFloat() else 0f, label = "shield")
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Box(Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).border(1.dp, LifeRim, shape)) {
+            Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.verticalGradient(listOf(LifeTop, LifeRed, LifeDeep))))
+            // Блик литой полосы: верхние две пятых чуть светлее
+            Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight(.4f).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent))))
+            if (maxShield > 0) {
+                Box(
+                    Modifier.fillMaxWidth(shieldShare.coerceIn(0f, 1f)).height(5.dp).align(Alignment.TopStart)
+                        .background(Brush.horizontalGradient(listOf(ShieldBright, ShieldCyan))),
+                )
+            }
+            VitalsFigure(
+                buildAnnotatedString {
+                    append(ui("expedition.vitals_figure", number(life.toDouble()), number(maxLife.toDouble())))
+                    if (maxShield > 0) withStyle(SpanStyle(color = ShieldBright, fontWeight = FontWeight.SemiBold)) { append("  ◈ " + number(shield.toDouble())) }
+                },
+                11.sp,
+            )
         }
         // A pool the auras hold whole is still drawn: a full hatched bar.
         val pooled = maxMana + reserved.coerceAtLeast(0) > 0
         if (pooled) {
             Box(
-                Modifier.fillMaxWidth().height(6.dp).clip(shape).background(Color(0xCC0A0D12), shape)
-                    .reservedTail(reservedShare(maxMana, reserved), ManaBlue).border(1.dp, ManaBlue.copy(alpha = .8f), shape),
+                Modifier.fillMaxWidth().height(11.dp).clip(shape).background(VitalsWell, shape)
+                    .reservedTail(reservedShare(maxMana, reserved), ManaBlue).border(1.dp, ManaRim, shape),
             ) {
-                Box(Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, shape))
+                Box(
+                    Modifier.fillMaxWidth((mana / (maxMana + reserved.coerceAtLeast(0)).toFloat()).coerceIn(0f, 1f)).fillMaxHeight()
+                        .background(Brush.verticalGradient(listOf(ManaTop, ManaDeep))),
+                )
+                VitalsFigure(AnnotatedString(ui("expedition.vitals_figure", number(mana.toDouble()), number(maxMana.toDouble()))), 9.sp)
             }
         }
-        Text(
-            (if (maxShield > 0) ui("expedition.vitals_shield", life, maxLife, shield) else ui("expedition.vitals", life, maxLife)) +
-                (if (pooled) " · " + ui("expedition.vitals_mana", mana, maxMana) else ""),
-            color = Parchment,
-            style = MaterialTheme.typography.labelSmall,
-        )
     }
 }
+
+/** Числа поверх литой полосы: по центру, с тенью - читаются и на пустой, и на полной. */
+@Composable private fun BoxScope.VitalsFigure(text: AnnotatedString, size: TextUnit) {
+    Text(
+        text,
+        color = Color.White,
+        fontSize = size,
+        fontWeight = FontWeight.Bold,
+        letterSpacing = .4.sp,
+        style = MaterialTheme.typography.labelSmall.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f)),
+        modifier = Modifier.align(Alignment.Center),
+        maxLines = 1,
+    )
+}
+
+private val VitalsWell = Color(0xCC0A0D12)
+private val LifeRim = Color(0xFF3A1A18)
+private val LifeTop = Color(0xFFE8645C)
+private val LifeDeep = Color(0xFF7C2420)
+private val ShieldBright = Color(0xFF8FE4EF)
+private val ManaRim = Color(0xFF1A2C44)
+private val ManaTop = Color(0xFF9CCFFF)
+private val ManaDeep = Color(0xFF3F86D6)
 
 /**
  * The stick: wherever the thumb lands in the lower part of the screen, dragging from there walks.

@@ -77,7 +77,16 @@ internal fun ExpeditionWorld.distances(from: Cell, limit: Int): Map<Cell, Int> {
  * The cells of both ends are not checked: a rock face is seen, what is behind it is not.
  * A line squeezing through the corner between two rocks touching by corners is blocked; past a single rock corner it goes on.
  */
-fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boolean {
+fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boolean = line(ax, ay, bx, by) { cx, cy -> map.clear(cx, cy) }
+
+/**
+ * Прямая проходима ногами (3.95.0): та же проверка клеток, что у [sight], но пропасть и вода её рвут - монстр, видящий
+ * героя через яму, идёт в обход, а не скользит по её краю.
+ */
+fun ExpeditionWorld.passable(ax: Double, ay: Double, bx: Double, by: Double): Boolean = line(ax, ay, bx, by) { cx, cy -> map.walkable(cx, cy) }
+
+/** Обход клеток прямой (Amanatides–Woo): [open] - пропускает ли клетка; на углу двух закрытых клеток прямая рвётся. */
+private inline fun line(ax: Double, ay: Double, bx: Double, by: Double, open: (Int, Int) -> Boolean): Boolean {
     val x = GridAxis(ax, bx)
     val y = GridAxis(ay, by)
     var remaining = x.cells + y.cells
@@ -85,7 +94,7 @@ fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boole
         val gap = x.next - y.next
         when {
             abs(gap) < CORNER -> {
-                if (!map.clear(x.cell + x.step, y.cell) && !map.clear(x.cell, y.cell + y.step)) return false
+                if (!open(x.cell + x.step, y.cell) && !open(x.cell, y.cell + y.step)) return false
                 x.advance()
                 y.advance()
                 remaining -= 2
@@ -101,7 +110,7 @@ fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boole
                 remaining--
             }
         }
-        if (remaining > 0 && !map.clear(x.cell, y.cell)) return false
+        if (remaining > 0 && !open(x.cell, y.cell)) return false
     }
     return true
 }

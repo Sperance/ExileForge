@@ -41,6 +41,24 @@ internal fun Battle.enrage(foe: Fighter) = traits(foe, TraitAct.ENRAGE).forEach 
     note(foe, NoteKind.TRAIT, trait.code)
 }
 
+/**
+ * Ярость стража (3.95.0, сервер 1.82.0): в бою со стражем каждые `combat.bossEnrage.every` секунд урон всех врагов боя -
+ * стража, свиты, позже вставших - больше ещё на `damage` процентов; ступени складываются. Без бросков: бой остаётся тем же
+ * на тех же костях.
+ */
+internal fun Battle.rage() {
+    if (guardian == null) return
+    val stacks = rules.bossEnrage.stacks(time)
+    if (stacks <= enrage) return
+    enrage = stacks
+    val lines = listOf(StatLine(CoreStat.DAMAGE.code, Op.MORE, rules.bossEnrage.damage * stacks))
+    foeFighters.filter { it.alive }.forEach { buff(it, RAGE, lines, FOREVER) }
+    note(foeFighters[guardian!!], NoteKind.RAGE, stacks.toString())
+}
+
+/** Источник баффа ярости стража: один на врага, каждая ступень заменяет прежнюю. */
+private const val RAGE = "GUARDIAN_RAGE"
+
 /** What a fallen foe's traits do as it falls: a burst at the hero, a rallying of the pack, a mending of it. */
 internal fun Battle.lastWords(fallen: Fighter) {
     if (outcome != null) return

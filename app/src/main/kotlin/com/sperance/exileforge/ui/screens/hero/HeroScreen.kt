@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.HeroPage
 import com.sperance.exileforge.presentation.state.StashFilter
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
+import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
@@ -59,6 +61,14 @@ fun HeroScreen() {
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
     LaunchedEffect(heroId, game.sessionEpoch) { model.ensure() }
+    val list = rememberLazyListState()
+    // Вкладка нажата снова (3.95.0): карточки закрыты, герой - на первой странице и наверху
+    OnReselect(TAB_HERO) {
+        detailId = null
+        stackCode = null
+        model.page(HeroPage.CHARACTER)
+        list.animateScrollToItem(0)
+    }
     val hero = game.hero
     PullToRefreshBox(isRefreshing = game.refreshing(Reads.HERO), onRefresh = model::load, modifier = Modifier.fillMaxSize()) {
         when {
@@ -66,7 +76,7 @@ fun HeroScreen() {
 
             page == HeroPage.STASH -> StashPane(game, model, shell, stashFilter, onFilter = { stashFilter = it }, onOpen = { id -> detailId = id })
 
-            else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            else -> LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (page) {
                     HeroPage.WORN -> {
                         item { rememberEquipment(game)?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }

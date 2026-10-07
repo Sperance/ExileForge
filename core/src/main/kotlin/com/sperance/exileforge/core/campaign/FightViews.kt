@@ -142,7 +142,7 @@ internal fun Battle.hud(
 
 /** Босс боя (3.92.0): первый враг редкости босса или с фазами - его пороги и умение на подходе. */
 private fun Battle.bossHud(): BossHud? {
-    val i = foes.indices.firstOrNull { foes[it].phases.isNotEmpty() || foes[it].totems.isNotEmpty() || foes[it].rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE } ?: return null
+    val i = guardian ?: return null
     val foe = foes[i]
     val fighter = foeFighters[i]
     val cast = (foe.skills + learned[i].orEmpty()).mapNotNull { skill ->
@@ -156,7 +156,8 @@ private fun Battle.bossHud(): BossHud? {
             is SlotHolder.Totem -> holder.totem.let { t -> SlotView.Totem(t.serial, t.totem.totem.code, t.totem.totem.kind, (t.until - time).coerceAtLeast(0.0), t.until - t.raised, t.totem.totem.element) }
         }
     }
-    return BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots)
+    val rage = rules.bossEnrage
+    return BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, rage.damage * enrage, (rage.every - time % rage.every).coerceAtLeast(0.0))
 }
 
 /**

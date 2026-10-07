@@ -40,6 +40,7 @@ internal fun Battle.step(dt: Double) {
     }
     expire()
     if (finished()) return
+    rage()
     powers.tick()
     if (finished()) return
     val hero = heroFighter
@@ -400,6 +401,15 @@ private fun Battle.finished(): Boolean {
         else -> return false
     }
     return true
+}
+
+/**
+ * Герой сдаётся (3.95.0): бой кончается поражением, как гибель, - с её ценой в заходе. Выход из боя, что сам не кончается.
+ */
+fun Battle.surrender() {
+    if (outcome != null) return
+    heroFighter.life = 0.0
+    end(Outcome.LOSS)
 }
 
 private fun Battle.end(how: Outcome) {

@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.pools
+import com.sperance.exileforge.core.campaign.combat.surrender
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FightHud
@@ -188,6 +189,11 @@ class TrialArena(
             }
 
             RunCommand.Pause -> if (fight != null && started && fight.outcome == null) paused = !paused
+
+            RunCommand.Surrender -> if (fight != null && fight.outcome == null) {
+                fight.surrender()
+                paused = false
+            }
 
             is RunCommand.Focus -> fight?.focus(command.index)
 

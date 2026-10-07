@@ -134,6 +134,9 @@ data class BossHud(
     val cast: CastView?,
     /** Слоты вокруг босса (3.93.0): по порядку, null - пустой; первая половина слева, вторая справа. */
     val slots: List<SlotView?> = emptyList(),
+    /** Ярость (3.95.0): на сколько процентов больше урон врагов боя сейчас и через сколько секунд следующая ступень. */
+    val rage: Double = 0.0,
+    val rageIn: Double = 0.0,
 )
 
 /** Кто в слоте вокруг босса (3.93.0): приспешник свиты или тотем. */
@@ -301,6 +304,8 @@ data class RunHud(
     val auto: AutoHud? = null,
     val autoReward: Reward? = null,
     val autoAwaiting: Int = 0,
+    /** Счёт боевых заданий за этот заход (3.95.0): счётчик летописи - сколько прибавит. */
+    val questTally: Map<String, Long> = emptyMap(),
     /** Events of the journal the server has not taken yet, the number of the oldest of them, and the ones it refused. */
     val pending: Int = 0,
     val applied: Int = 0,

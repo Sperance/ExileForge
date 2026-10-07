@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -67,6 +68,7 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.TAB_CRAFTS
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
@@ -109,6 +111,12 @@ fun CraftsScreen() {
     }
     val crafts = held.state
     val offset = held.offset
+    val list = rememberLazyListState()
+    // Вкладка нажата снова (3.95.0): окно профессии закрывается, плитки - наверх
+    OnReselect(TAB_CRAFTS) {
+        vm.openProfession("")
+        list.animateScrollToItem(0)
+    }
     val open = crafts?.professions?.firstOrNull { it.code == openCode }
     if (open != null) {
         ProfessionWindow(game, vm, held, open, offset)
@@ -117,7 +125,7 @@ fun CraftsScreen() {
     PullToRefreshBox(isRefreshing = activity.busy || Reads.CRAFTS in activity.loading, onRefresh = vm::load, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) { CraftsGlossaryButton(crafts?.rules) } } }
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (crafts == null) {
                     item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
                     return@LazyColumn

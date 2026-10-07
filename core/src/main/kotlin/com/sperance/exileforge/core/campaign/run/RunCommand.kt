@@ -62,6 +62,9 @@ sealed interface RunCommand {
     data object ToBoss : RunCommand
     data object Pause : RunCommand
 
+    /** «Сдаться» с паузы боя (3.95.0): поражение, как гибель. */
+    data object Surrender : RunCommand
+
     /** A window over the map stops the world while it is open: `true` takes a hold, `false` gives one back. */
     data class Hold(val on: Boolean) : RunCommand
     data class Focus(val index: Int) : RunCommand

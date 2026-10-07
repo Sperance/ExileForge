@@ -98,11 +98,17 @@ class ShellViewModel(
     /** Срез «игра» для экранов этой модели (3.80.33). */
     val game: StateFlow<GameUi> = slice.ui
 
+    /** Повторное нажатие на открытую вкладку (3.95.0): её экран закрывает вложенное и прокручивается наверх. */
+    private val reselects = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val reselected: kotlinx.coroutines.flow.SharedFlow<Int> = reselects
+
     /** Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого. */
     fun tab(tab: Int) {
         if (!adminTools() && tab in ADMIN_TABS) return
         commands.dismissMessage()
+        val again = navigator.current.value.tab == tab
         navigator.tab(Route.ofTab(tab))
+        if (again) reselects.tryEmit(tab)
     }
 
     /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */

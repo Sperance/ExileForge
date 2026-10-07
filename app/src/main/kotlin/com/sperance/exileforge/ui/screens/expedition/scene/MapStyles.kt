@@ -4,6 +4,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import com.sperance.exileforge.core.campaign.ExpeditionMap
+import com.sperance.exileforge.core.campaign.Liquid
+import com.sperance.exileforge.core.campaign.Tile
 import kotlin.math.max
 import kotlin.math.sin
 
@@ -36,6 +39,26 @@ internal abstract class MapStyle {
         pen.diamond(cx, cy - u * .06f, u * .78f, u * .36f)
         pen.color = tone(palette.accent, .35f * light, alpha = .35f + .1f * sin(time * 2f + spot.x + spot.y))
         pen.diamond(cx, cy - u * .1f, u * .3f, u * .12f)
+    }
+
+    /**
+     * Вода (3.95.0): берег цвета пола, гладь цвета воды биома и блики, бегущие по течению; у лавы и тьмы - своё свечение. Края,
+     * где вода сходится с сушей, светлее: река читается полосой, а не пятнами клеток.
+     */
+    open fun water(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float, liquid: Liquid, map: ExpeditionMap): Unit = with(frame) {
+        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val look = LiquidLook.of(liquid)
+        pen.color = tone(palette.floor, .75f * light)
+        pen.diamond(cx, cy, u, u / 2)
+        val shore = listOf(spot.x + 1 to spot.y, spot.x - 1 to spot.y, spot.x to spot.y + 1, spot.x to spot.y - 1).count { (nx, ny) -> map.tile(nx, ny) != Tile.WATER }
+        pen.color = tone(look.deep, light)
+        pen.diamond(cx, cy - u * .04f, u * .92f, u * .44f)
+        pen.color = tone(look.surface, light, alpha = .55f + .08f * shore)
+        pen.diamond(cx, cy - u * .02f, u * .7f, u * .3f)
+        // Блик течения: по диагонали клетки, со сдвигом по времени и месту - соседние клетки текут одной волной
+        val wave = ((time * look.flow + (spot.x + spot.y) * .37f) % 1f)
+        pen.color = tone(look.glint, light, alpha = look.glintAlpha * sin(wave * Math.PI.toFloat()))
+        pen.diamond(cx - u * .5f + u * wave, cy - u * .03f, u * .18f, u * .05f)
     }
 
     /** Drawn over the finished map, in screen space: drips, fog, embers, fireflies. */
@@ -123,3 +146,22 @@ internal object MapStyles {
         else -> wet
     }
 }
+
+/** Цвета воды биома (3.95.0): глубина, гладь, блик и как быстро бежит течение. */
+internal class LiquidLook(val deep: Color, val surface: Color, val glint: Color, val glintAlpha: Float, val flow: Float) {
+    companion object {
+        private val looks = mapOf(
+            Liquid.WATER to LiquidLook(Color(0xFF0B2A3C), Color(0xFF2F6F8F), Color(0xFFBFEAFF), .7f, .35f),
+            Liquid.SWAMP to LiquidLook(Color(0xFF1A2414), Color(0xFF3F5A2A), Color(0xFFC8E8A0), .45f, .12f),
+            Liquid.LAVA to LiquidLook(Color(0xFF4A1206), Color(0xFFD9541C), Color(0xFFFFD27A), .9f, .2f),
+            Liquid.ICE to LiquidLook(Color(0xFF2A4A60), Color(0xFF9CC8E0), Color(0xFFFFFFFF), .6f, .05f),
+            Liquid.TAR to LiquidLook(Color(0xFF14110A), Color(0xFF3A3220), Color(0xFFB0A060), .35f, .08f),
+            Liquid.VOID to LiquidLook(Color(0xFF0A0614), Color(0xFF2A1848), Color(0xFFC88AF0), .6f, .15f),
+        )
+
+        fun of(liquid: Liquid): LiquidLook = looks.getValue(liquid)
+    }
+}
+
+/** Цвет воды на миникарте (3.95.0). */
+internal fun liquidTint(liquid: Liquid): Color = LiquidLook.of(liquid).surface

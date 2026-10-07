@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.CampaignFile
 import com.sperance.exileforge.rules.content.WorldGraph
@@ -51,6 +52,8 @@ private const val CARD_TOP = .48f
     val vm = koinViewModel<ExpeditionViewModel>()
     val expedition by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) { vm.loadCampaign() }
+    // Вкладка нажата снова (3.95.0): лист зоны закрывается, видна карта мира
+    OnReselect(TAB_EXPEDITION) { vm.closeZone() }
     val index = game.index
     val progress = game.progress
     if (index == null || progress == null) {

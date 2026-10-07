@@ -259,6 +259,7 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.PHASE -> ui("expedition.log_note_phase", monster, phaseTitle(note.ref), note.value.roundToInt())
         NoteKind.TOTEM -> ui("expedition.log_note_totem", monster, com.sperance.exileforge.core.display.totemTitle(note.ref))
         NoteKind.TOTEM_FALL -> ui("expedition.log_note_totem_fall", com.sperance.exileforge.core.display.totemTitle(note.ref))
+        NoteKind.RAGE -> ui("expedition.log_note_rage", monster, note.ref)
         NoteKind.RECOVER_FLASK -> ui("expedition.log_note_recover_flask", equipmentTitle(note.ref), note.value.roundToInt())
         NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())

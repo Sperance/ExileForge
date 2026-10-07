@@ -76,7 +76,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         crystalsLeft = world.standingCrystals.size,
         abyss = abyssView(), cracksLeft = world.standingCracks.size,
         bossDown = bossDown,
-        auto = autopilot?.let { AutoHud(it.wave, it.waves, it.chests) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits),
+        auto = autopilot?.let { AutoHud(it.wave, it.waves, it.chests) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits), questTally = questTally.toMap(),
         pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
         summary = figures, recap = recap,
         tally = MapTally(end, seconds, kills, bosses, deaths, granted, figures, awaiting),

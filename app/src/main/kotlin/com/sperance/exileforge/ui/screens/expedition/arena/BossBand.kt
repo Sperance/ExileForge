@@ -69,6 +69,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -176,6 +177,15 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                 )
             }
             Spacer(Modifier.weight(1f))
+            // Ярость (3.95.0): сколько уже прибавил урон и когда следующая ступень; без неё - когда первая
+            if (foe.alive) {
+                Text(
+                    if (boss.rage > 0) ui("boss.rage", number(boss.rage), ceil(boss.rageIn).toInt()) else ui("boss.rage_in", ceil(boss.rageIn).toInt()),
+                    color = if (boss.rage > 0) Ember else Muted,
+                    fontSize = 9.sp,
+                    modifier = Modifier.padding(end = 8.dp),
+                )
+            }
             if (boss.marks.isNotEmpty()) {
                 Text(
                     ui("boss.phase_number", roman(phaseNumber(boss))),

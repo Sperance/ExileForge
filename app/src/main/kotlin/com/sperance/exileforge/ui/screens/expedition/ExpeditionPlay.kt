@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -51,6 +52,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.run.Reward
@@ -118,10 +120,14 @@ import kotlin.math.roundToInt
         }
     }
 
+    // Задания захода (3.95.0): доска героя и счёт этого захода
+    val quests by koinViewModel<QuestViewModel>().quests.collectAsStateWithLifecycle()
+    var questsOpen by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         // Автопроход - лента боёв (3.94.0): карты на экране нет, между боями - только счёт пути.
         val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
         if (ribbon == null) ExpeditionScene(run, game.heroClass?.code, Modifier.fillMaxSize())
+        RunQuestWatch(quests, hud.questTally, shell::announce)
         if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazard)
         when (hud.phase) {
             RunPhase.MAP -> if (ribbon != null) {
@@ -138,7 +144,12 @@ import kotlin.math.roundToInt
                     onStats = { sheet = true },
                     onDrink = { model.runCommand(RunCommand.Drink(it)) },
                     onRetry = model::flushRun,
+                    onQuests = { questsOpen = true },
                 )
+                if (questsOpen) {
+                    HoldsRun(run)
+                    RunQuestsSheet(quests, hud.questTally) { questsOpen = false }
+                }
                 if (gear) {
                     HoldsRun(run)
                     GearSheet(game) { gear = false }
@@ -214,6 +225,7 @@ import kotlin.math.roundToInt
     onStats: () -> Unit,
     onDrink: (Int) -> Unit,
     onRetry: () -> Unit,
+    onQuests: () -> Unit,
 ) {
     val expedition: ExpeditionViewModel = koinViewModel()
     Column(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -224,6 +236,8 @@ import kotlin.math.roundToInt
                 onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
                 RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
                 RoundButton(ForgeGlyphs.Scroll, ui("expedition.stats_hero"), onClick = onStats)
+                // Задания по ходу захода (3.95.0)
+                RoundButton(Icons.Outlined.Flag, ui("run.quests"), onClick = onQuests)
                 BugAction()
             }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {

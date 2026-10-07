@@ -18,7 +18,7 @@ import kotlin.math.ceil
 
 /**
  * Under the hero: before «В бой» the call to fight and the way back; once it runs, pause and go on,
- * the speed, and the retreat. Under an autorun (3.77.0) its wave reads above the row and its stop joins it, so
+ * the speed and, on the pause (3.95.0), «Сдаться». Under an autorun (3.77.0) its wave reads above the row and its stop joins it, so
  * nothing floats over the speed.
  */
 @Composable internal fun Controls(fight: FightHud, auto: AutoHud?, onCommand: (RunCommand) -> Unit) {
@@ -65,6 +65,25 @@ import kotlin.math.ceil
         if (auto != null) {
             ForgeOutlinedButton(onClick = { onCommand(RunCommand.StopAuto) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
                 Text(ui("auto.stop"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+    // «Сдаться» (3.95.0): только на паузе, с подтверждением - бой, что сам не кончается, иначе не покинуть
+    if (fight.paused && live) {
+        var asking by remember { mutableStateOf(false) }
+        ForgeTextButton(onClick = { asking = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(ui("fight.surrender"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+        }
+        if (asking) {
+            ConfirmSheet(
+                title = ui("fight.surrender_q"),
+                confirm = ui("fight.surrender"),
+                danger = true,
+                note = ui("fight.surrender_note"),
+                onDismiss = { asking = false },
+            ) {
+                asking = false
+                onCommand(RunCommand.Surrender)
             }
         }
     }

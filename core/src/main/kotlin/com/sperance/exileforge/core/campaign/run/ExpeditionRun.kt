@@ -206,6 +206,12 @@ class ExpeditionRun(
     /** The last level the level-up screen told of (3.81.0); the hero's level at the run's start until then. */
     internal var levelShown: Int = heroLevel
 
+    /**
+     * Счёт боевых заданий по ходу захода (3.95.0): что записанные события прибавят счётчикам летописи, когда сервер их примет, -
+     * для листа «Задания» на карте. Сам заход уже сосчитан входом.
+     */
+    internal val questTally = hashMapOf(com.sperance.exileforge.rules.content.Counter.RUNS to 1L)
+
     /** What an autorun has gathered, fight by fight: its report at the end. */
     internal val autoEvents = HashSet<Int>()
     internal var autoReward: Reward? = null
@@ -350,7 +356,29 @@ class ExpeditionRun(
     }
 
     /** One event of the journal, and the listener told. */
-    internal fun record(event: (n: Int) -> RunEvent): RunEvent? = journal.record(event)?.also(onRecorded)
+    internal fun record(event: (n: Int) -> RunEvent): RunEvent? = journal.record(event)?.also(onRecorded)?.also(::counted)
+
+    private fun counted(event: RunEvent) {
+        fun add(counter: String) = questTally.merge(counter, 1L, Long::plus)
+        when (event) {
+            is RunEvent.Kill -> {
+                add(com.sperance.exileforge.rules.content.Counter.KILLS)
+                when (run.spawn(event.i, event.vaal).pack.getOrNull(event.m)?.rarity) {
+                    com.sperance.exileforge.rules.content.MonsterRarity.MAGIC -> add(com.sperance.exileforge.rules.content.Counter.KILLS_MAGIC)
+                    com.sperance.exileforge.rules.content.MonsterRarity.RARE -> add(com.sperance.exileforge.rules.content.Counter.KILLS_RARE)
+                    else -> Unit
+                }
+            }
+
+            is RunEvent.Chest -> add(com.sperance.exileforge.rules.content.Counter.CHESTS)
+
+            is RunEvent.Boss -> add(com.sperance.exileforge.rules.content.Counter.BOSSES)
+
+            is RunEvent.Crystal -> add(com.sperance.exileforge.rules.content.Counter.CRYSTALS)
+
+            else -> Unit
+        }
+    }
 
     /** A rewarding event recorded: what it brings comes with the server's answer, into the run's count, the autorun's and, [fought], the fight's report. */
     internal fun rewarding(event: RunEvent?, fought: Boolean = false): RunEvent? = event?.also {

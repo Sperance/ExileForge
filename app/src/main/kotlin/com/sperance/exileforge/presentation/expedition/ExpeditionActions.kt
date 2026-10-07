@@ -230,7 +230,7 @@ class ExpeditionActions(
                 runJournal = null
             }
             val started = try {
-                api.campaign.start(id, mapCode, picked, launch?.potion, launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty())
+                api.campaign.start(id, mapCode, picked, launch?.potion, launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty(), auto = auto != null)
             } catch (e: ApiFailure) {
                 // Новое семя не раньше, чем велят правила, чем бы ни кончился прошлый поход (сервер 1.30.0): ожидание, не ошибка.
                 if (e.code != SEED_TOO_SOON) throw e
@@ -544,17 +544,18 @@ class ExpeditionActions(
         parent = null
         mutableRun.value = null
         heroes.stale()
-        if (then == null) {
-            flushes.trySend(Unit)
-            heroSync.ensure()
-            return
-        }
+        // Конец захода закрывает его на сервере всегда (3.95.0): выход порталом прежде оставлял его открытым на час, и та
+        // же карта с её бонусами проходилась снова через «Продолжить»
         val runId = runJournal?.runId ?: hero?.campaign?.run?.id
-        commands.task(writing = true, touches = setOf(Reads.HERO)) {
+        val closing = commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroes.heroId
             runId?.let { finish(id, it) }
-            then(id)
+            then?.invoke(id)
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
+        }
+        if (!closing) {
+            flushes.trySend(Unit)
+            heroSync.ensure()
         }
     }
 

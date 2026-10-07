@@ -54,7 +54,7 @@ private fun essenceShare(index: ContentIndex, essence: Essence): Double {
 }
 
 /** Where a stack comes from, by kind; the order is the order a card lists them in. */
-enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAAL, EGGS, TRIALS, KEY, ABYSS, RUSH, MERCHANT, FIND }
+enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAAL, EGGS, TRIALS, KEY, ABYSS, RUSH, MERCHANT, SALE, FIND }
 
 /**
  * One way to come by a stack: its [kind], the zone [levels] it is found in, the best [chance] in percent where the
@@ -79,6 +79,7 @@ fun ItemSource.title(): String = when (kind) {
     SourceKind.FIND -> ui("source.FIND", professionTitle(ref), jobTitle(detail))
     SourceKind.EGGS -> ui("source.EGGS", ref.split(',').joinToString(", ") { ui("expedition.biome.$it") })
     SourceKind.KEY -> ui("source.KEY", level, itemTitle(ref))
+    SourceKind.SALE -> ui("source.SALE", ref.split(',').joinToString(", ") { ui("stash.rarity_many.$it").lowercase() }, level)
     else -> levels?.let { ui("source.$kind", if (it.first == it.last) "${it.first}" else "${it.first}–${it.last}") } ?: ui("source.$kind")
 }
 
@@ -129,6 +130,10 @@ private class SourceIndex(private val index: ContentIndex) {
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
         index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
         index.rules.merchant.orbs.codes.forEach { add(it, ItemSource(SourceKind.MERCHANT)) }
+        // Осколки (3.95.0): продажа вещей этих редкостей торговцу, столько-то за вещь
+        index.rules.sell.shards.entries.groupBy { it.value.shard }.forEach { (shard, grants) ->
+            add(shard, ItemSource(SourceKind.SALE, ref = grants.joinToString(",") { it.key.name }, level = grants.first().value.amount.toInt()))
+        }
         return found.mapValues { (_, sources) -> merge(sources) }
     }
 

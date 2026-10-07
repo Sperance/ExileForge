@@ -431,6 +431,14 @@ class Battle(
     /** Foes whose rage has been lit, and by which trait: it lights once and holds to the end of the fight. */
     internal val enraged = mutableSetOf<Pair<Int, String>>()
 
+    /** Ступень ярости стража (3.95.0): сколько раз по `combat.bossEnrage.every` секунд уже прошло. */
+    internal var enrage = 0
+
+    /** Страж боя (3.92.0): первый враг редкости босса, с фазами или тотемами; null - бой без стража. */
+    internal val guardian: Int? by lazy {
+        foes.indices.firstOrNull { foes[it].phases.isNotEmpty() || foes[it].totems.isNotEmpty() || foes[it].rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE }
+    }
+
     /** When each fallen foe of the field was first seen down (3.73.0): its place waits [CombatRules.reinforceDelay] from then. */
     internal val downSince = mutableMapOf<Int, Double>()
 

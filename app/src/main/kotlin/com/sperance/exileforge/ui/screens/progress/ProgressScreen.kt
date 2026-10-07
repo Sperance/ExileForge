@@ -193,7 +193,10 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
             ) { shell.tab(TAB_SKILLS) },
         )
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val scroll = rememberScrollState()
+    // Вкладка нажата снова (3.95.0): развитие - наверх
+    OnReselect(TAB_PROGRESS) { scroll.animateScrollTo(0) }
+    Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader(ui("progress.title"), ui("progress.subtitle"), ForgeGlyphs.Sigil)
         tiles.chunked(2).forEach { pair ->
             Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

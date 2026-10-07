@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
+import com.sperance.exileforge.core.campaign.combat.surrender
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.model.campaign.CampaignState
@@ -144,6 +145,11 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         RunCommand.ToBoss -> if (phase == RunPhase.MAP && autopilot == null) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { challenge(it) }
 
         RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
+
+        RunCommand.Surrender -> fight?.takeIf { it.outcome == null }?.let {
+            it.surrender()
+            paused = false
+        }
 
         is RunCommand.Focus -> fight?.focus(command.index)
 

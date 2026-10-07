@@ -126,6 +126,9 @@ enum class NoteKind {
     TOTEM,
     TOTEM_FALL,
 
+    /** Ярость стража (3.95.0): ref - ступень. */
+    RAGE,
+
     /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar, regeneration a second. */
     RECOVER_FLASK,
     RECOVER_RECOUP,

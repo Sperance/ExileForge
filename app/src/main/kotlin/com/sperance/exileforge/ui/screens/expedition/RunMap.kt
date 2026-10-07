@@ -57,6 +57,7 @@ import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
+import com.sperance.exileforge.ui.screens.expedition.scene.liquidTint
 import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
@@ -132,6 +133,7 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
             val ground = when (map.tile(x, y)) {
                 Tile.FLOOR -> Parchment.copy(alpha = if (world.lit(x, y)) .55f else .3f)
                 Tile.CHASM -> ChasmTint
+                Tile.WATER -> map.liquid?.let(::liquidTint) ?: ChasmTint
                 Tile.WALL -> Color(0xFF2A2B33)
             }
             drawRect(ground, Offset(origin.x + x * cell, origin.y + y * cell), square)

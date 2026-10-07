@@ -37,6 +37,7 @@ import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.TAB_CITY
 import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.*
@@ -95,7 +96,10 @@ import org.koin.compose.viewmodel.koinViewModel
             quests.open()
         }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    val scroll = rememberScrollState()
+    // Вкладка нажата снова на площади (3.95.0): наверх; из здания навигатор и так вернул на площадь
+    OnReselect(TAB_CITY) { scroll.animateScrollTo(0) }
+    Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep)
         BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(board), game.lockOf(Building.QUESTS), accent = Vital) { shell.building(Building.QUESTS) }

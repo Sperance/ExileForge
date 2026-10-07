@@ -33,9 +33,10 @@ class CampaignClient internal constructor(private val http: Transport) {
 
     /**
      * Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. A [potion]
-     * goes into the run and [scarabs] with the map (server 1.74.0), both spent there.
+     * goes into the run and [scarabs] with the map (server 1.74.0), both spent there. [auto] (3.95.0, server 1.82.0) - автопробег:
+     * карт он не роняет.
      */
-    suspend fun start(heroId: String, mapCode: MapCode, itemId: String? = null, potion: String? = null, scarabs: List<String> = emptyList()): RunStart {
+    suspend fun start(heroId: String, mapCode: MapCode, itemId: String? = null, potion: String? = null, scarabs: List<String> = emptyList(), auto: Boolean = false): RunStart {
         itemId?.let(::requireItemId)
         return http.post(
             "$CAMPAIGN/start",
@@ -45,6 +46,7 @@ class CampaignClient internal constructor(private val http: Transport) {
                 "itemId" to itemId,
                 "potion" to potion,
                 "scarabs" to scarabs.joinToString(",").ifEmpty { null },
+                "auto" to "true".takeIf { auto },
             ),
         )
     }

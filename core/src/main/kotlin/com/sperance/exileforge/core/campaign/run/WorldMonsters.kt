@@ -72,12 +72,13 @@ internal fun ExpeditionWorld.roam(agent: MonsterAgent, rule: BehaviourRule, dt: 
 }
 
 /**
- * Heads for ([tx], [ty]): straight when nothing is in the way, along a path round the rock
- * otherwise. False once it has arrived or has no way there.
+ * Heads for ([tx], [ty]): straight when nothing is in the way, along a path round the rock, the chasm and the
+ * water otherwise. False once it has arrived or has no way there.
  */
 internal fun ExpeditionWorld.go(agent: MonsterAgent, tx: Double, ty: Double, speed: Double, dt: Double): Boolean {
     if (hypot(tx - agent.x, ty - agent.y) < 0.1) return false
-    if (sight(agent.x, agent.y, tx, ty)) {
+    // Напрямую - лишь когда дорога проходима ногами (3.95.0): через яму виден, но не пройти
+    if (passable(agent.x, agent.y, tx, ty)) {
         agent.targetX = tx
         agent.targetY = ty
         // A corner can still catch a body wider than the line: then the path takes over.

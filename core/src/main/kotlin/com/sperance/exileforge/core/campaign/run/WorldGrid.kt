@@ -72,7 +72,7 @@ internal fun ExpeditionWorld.distances(from: Cell, limit: Int): Map<Cell, Int> {
 }
 
 /**
- * Whether a straight line from one point to another crosses no rock (3.89.0): an exact walk over every cell
+ * Whether a straight line from one point to another crosses no rock (3.89.0; chasms are seen across, 3.91.0): an exact walk over every cell
  * the line enters (Amanatides–Woo), not samples along it - a sample could step over the tip of a rock corner.
  * The cells of both ends are not checked: a rock face is seen, what is behind it is not.
  * A line squeezing through the corner between two rocks touching by corners is blocked; past a single rock corner it goes on.
@@ -85,7 +85,7 @@ fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boole
         val gap = x.next - y.next
         when {
             abs(gap) < CORNER -> {
-                if (!map.walkable(x.cell + x.step, y.cell) && !map.walkable(x.cell, y.cell + y.step)) return false
+                if (!map.clear(x.cell + x.step, y.cell) && !map.clear(x.cell, y.cell + y.step)) return false
                 x.advance()
                 y.advance()
                 remaining -= 2
@@ -101,7 +101,7 @@ fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boole
                 remaining--
             }
         }
-        if (remaining > 0 && !map.walkable(x.cell, y.cell)) return false
+        if (remaining > 0 && !map.clear(x.cell, y.cell)) return false
     }
     return true
 }

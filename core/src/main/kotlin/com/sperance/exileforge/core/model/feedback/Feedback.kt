@@ -54,7 +54,6 @@ import kotlinx.serialization.Serializable
     val text: String,
     val screen: String = "",
     val context: Map<String, String> = emptyMap(),
-    val requests: List<String> = emptyList(),
     val userId: String? = null,
     val status: ReportStatus = ReportStatus.NEW,
     val kind: FeedbackKind = FeedbackKind.BUG,
@@ -81,8 +80,10 @@ import kotlinx.serialization.Serializable
     val equipment: List<MailEquipment> = emptyList(),
     /** Items as they are (server 1.74.0): an expired lot's goods come back by mail with their rolls. */
     val instances: List<com.sperance.exileforge.rules.roll.ItemInstance> = emptyList(),
+    /** Питомцы как есть (3.91.0, сервер 1.81.10): питомец истёкшего лота; забрать - только в зверинец с местом. */
+    val pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
 ) {
-    val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty() && instances.isEmpty()
+    val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty() && instances.isEmpty() && pets.isEmpty()
 }
 
 @Serializable enum class MailKind { SYSTEM, ADMIN }

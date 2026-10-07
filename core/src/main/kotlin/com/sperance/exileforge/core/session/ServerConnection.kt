@@ -24,6 +24,7 @@ object Reads {
     const val FEEDBACK = "feedback"
     const val MODERATION = "moderation"
     const val DOSSIER = "dossier"
+    const val SERVERS = "servers"
     const val NOTICE = "notice"
     const val MAIL = "mail"
     const val HERO = "hero"

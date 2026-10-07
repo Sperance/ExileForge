@@ -43,14 +43,6 @@ class CraftsViewModel(
     fun stop() = actions.stop()
     fun equipTool(itemId: String) = actions.equipTool(itemId)
 
-    /** «Пока вас не было» (3.69.0): последний показанный итог героя, и отметка показанного. */
-    suspend fun craftsAwaySeen(heroId: String): Long = store.craftsAwaySeen(sessions.state.value.server, heroId)
-
-    fun markCraftsAwaySeen(heroId: String, until: Long) {
-        val server = sessions.state.value.server
-        viewModelScope.launch { store.saveCraftsAwaySeen(server, heroId, until) }
-    }
-
     /** Последний запущенный выбор кузнеца героя на этом устройстве (3.89.0): лист открывается в его режиме. */
     suspend fun smithChoice(heroId: String): SmithChoice? = SmithChoice.of(store.smithChoice(sessions.state.value.server, heroId).orEmpty())
 

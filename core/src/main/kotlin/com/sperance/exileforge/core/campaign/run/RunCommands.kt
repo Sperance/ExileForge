@@ -154,7 +154,10 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
                 if (vaal && bossDown) exit()
             }
 
-            RunPhase.DEAD, RunPhase.CLEARED -> phase = RunPhase.LEFT
+            RunPhase.DEAD, RunPhase.CLEARED -> {
+                report = null
+                phase = RunPhase.LEFT
+            }
 
             else -> Unit
         }

@@ -43,14 +43,10 @@ class StallReports(
         text = "runner stall: ${stall.key}",
         screen = SCREEN,
         context = mapOf("key" to stall.key),
-        // Сервер берёт до 20 строк по 400 знаков.
-        requests = stall.details.chunked(ENTRY).take(ENTRIES),
     )
 
     private companion object {
         const val SCREEN = "runner_stall"
         const val PERIOD_MS = 10 * 60 * 1000L
-        const val ENTRY = 400
-        const val ENTRIES = 20
     }
 }

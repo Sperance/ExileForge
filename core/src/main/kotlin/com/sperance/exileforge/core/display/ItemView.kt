@@ -323,7 +323,7 @@ fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
         Slot.WINGS -> ItemVisualKind.WINGS
         Slot.JEWEL -> ItemVisualKind.GEM
         Slot.MAP -> ItemVisualKind.MAP
-        Slot.FLASK, Slot.FLASK_2, Slot.FLASK_3 -> ItemVisualKind.SCROLL
+        Slot.FLASK, Slot.FLASK_2 -> ItemVisualKind.SCROLL
         else -> ItemVisualKind.ITEM
     }
 }

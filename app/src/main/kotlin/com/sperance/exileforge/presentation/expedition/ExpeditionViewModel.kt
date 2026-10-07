@@ -46,6 +46,7 @@ class ExpeditionViewModel(
     fun abandonUnfinished() = expedition.abandonUnfinished()
     fun runCommand(command: RunCommand) = expedition.send(command)
     fun flushRun() = expedition.flushRun()
+    fun toggleSaleMark(itemId: String) = expedition.toggleSaleMark(itemId)
     fun enterVaal() = expedition.enterVaal()
     fun closeRun() = expedition.close()
 

@@ -47,7 +47,7 @@ class HeroViewModel(
     fun petOrb(petId: String, orb: String, omen: String? = null) = hero.petOrb(petId, orb, omen)
     fun choosePetLine(petId: String, choice: Int) = hero.choosePetLine(petId, choice)
     fun activatePet(petId: String) = hero.activatePet(petId)
-    fun releasePet(petId: String) = hero.releasePet(petId)
+    fun sellPet(petId: String) = hero.sellPet(petId)
     fun breedPets(first: String, second: String) = hero.breedPets(first, second)
     fun learnSkill(code: String) = hero.learnSkill(code)
     fun openChest(code: String) = hero.openChest(code)
@@ -64,6 +64,7 @@ class HeroViewModel(
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? = market.priceHint(itemCode, rarity, itemLevel)
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = market.sellEquipment(itemId, priceOrb, price)
     fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = market.sellItem(code, amount, priceOrb, price)
+    fun sellPetLot(petId: String, priceOrb: String, price: Long) = market.sellPet(petId, priceOrb, price)
 
     /** Выдачи администратора и тестера (3.80.30) и код награды, как их просят страницы настроек. */
     fun grant(template: String, rarity: Rarity? = null) = hero.grant(template, rarity)

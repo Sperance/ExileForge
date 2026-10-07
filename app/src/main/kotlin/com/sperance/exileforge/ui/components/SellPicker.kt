@@ -6,9 +6,9 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -64,11 +64,11 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 }
 
 /**
- * Выбор над [lots]: отмеченное живёт, пока жив вызывающий экран, и переживает смену лотов. Ничего не отмечено заранее.
- * [shown] - id на экране, по которым работают наборы; null - все лоты.
+ * Выбор над [lots]: отмеченное живёт, пока жив вызывающий экран, и переживает смену лотов. Заранее отмечено [initial]
+ * (3.91.0: помеченное к продаже посреди захода). [shown] - id на экране, по которым работают наборы; null - все лоты.
  */
-@Composable fun rememberSellPick(lots: List<SellLot>, shown: Set<String>? = null): SellPick {
-    val state = remember { mutableStateOf(SellSelection()) }
+@Composable fun rememberSellPick(lots: List<SellLot>, shown: Set<String>? = null, initial: Set<String> = emptySet()): SellPick {
+    val state = remember { mutableStateOf(SellSelection(initial)) }
     return remember(lots, shown) { SellPick(lots, shown?.let { ids -> lots.filter { it.id in ids } } ?: lots, state) }
 }
 
@@ -100,21 +100,24 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
     ) { Text(label, color = ink, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1) }
 }
 
-/** Отметка строки: у вещи, что пачкой не продаётся (уникальная, запертая, надетая), - погашена. */
-@Composable fun SellMark(pick: SellPick, id: String) {
-    Checkbox(
-        checked = pick.chosen(id),
-        onCheckedChange = { pick.toggle(id) },
-        enabled = pick.sellable(id),
-        colors = CheckboxDefaults.colors(checkedColor = Vital, uncheckedColor = Muted, checkmarkColor = Ink, disabledUncheckedColor = Muted.copy(alpha = .25f)),
-    )
+/**
+ * Строка списка в режиме выбора (3.91.0): без галочки сбоку - [content] (сама вещь) рисует отмеченную в золотой рамке, монета
+ * в углу говорит, что она продастся; ширина строки не меняется. [content] получает, отмечена ли вещь, и переключатель.
+ */
+@Composable fun SellLine(pick: SellPick, id: String, content: @Composable (chosen: Boolean, onToggle: () -> Unit) -> Unit) {
+    SaleMarked(pick.chosen(id)) { content(pick.chosen(id)) { pick.toggle(id) } }
 }
 
-/** Строка списка в режиме выбора: отметка слева, [content] - сама вещь; нажатие на вещь отмечает её. */
-@Composable fun SellLine(pick: SellPick, id: String, content: @Composable (onToggle: () -> Unit) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        SellMark(pick, id)
-        Box(Modifier.weight(1f)) { content { pick.toggle(id) } }
+/** Вещь [content] с монетой «продастся» в правом верхнем углу, когда она отмечена [marked] (3.91.0). */
+@Composable fun SaleMarked(marked: Boolean, content: @Composable () -> Unit) {
+    Box {
+        content()
+        if (marked) {
+            Box(
+                Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-4).dp).size(22.dp).background(Gold, CircleShape).border(1.dp, Ink.copy(alpha = .6f), CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { Icon(ForgeGlyphs.Coins, ui("sell.marked"), tint = Ink, modifier = Modifier.size(13.dp)) }
+        }
     }
 }
 

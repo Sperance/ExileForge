@@ -79,6 +79,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -164,7 +165,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
         levelLine(crafts, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
         // The server's tally: the rules' own sum.
-        WorkTotals(work.startedAt, work.totals, offset)
+        WorkTotals(game, work.startedAt, work.totals, offset)
         crafts.last?.let { Text(gainsLine(it.gains), color = Parchment, style = MaterialTheme.typography.bodySmall) }
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
@@ -173,11 +174,11 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
 /**
  * What the work has come to since it started, framed inside its plaque: four figures in a row —
  * the time it runs (ticking by the server's clock), cycles, experience, pieces made — and under
- * them a chip per stack, gathered in green and spent in red.
+ * them a line per stack (3.91.0, as a map's loot): its icon and name, gathered in green and spent in red; a tap opens its card.
  */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
-internal fun WorkTotals(startedAt: Long, totals: WorkTally, offset: Long) {
+internal fun WorkTotals(game: GameUi, startedAt: Long, totals: WorkTally, offset: Long) {
+    var opened by remember { mutableStateOf<String?>(null) }
     val shape = RoundedCornerShape(4.dp)
     Column(
         Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, Bronze.copy(alpha = .6f), shape).padding(10.dp),
@@ -201,12 +202,13 @@ internal fun WorkTotals(startedAt: Long, totals: WorkTally, offset: Long) {
         if (totals.items.isEmpty() && totals.spent.isEmpty()) {
             MutedText(ui("crafts.totals_empty"), style = MaterialTheme.typography.labelSmall)
         } else {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(itemTitle(code), "+$amount", Vital) }
-                totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(itemTitle(code), "−$amount", LifeRed) }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackLine(game, code, "+$amount", Vital) { opened = code } }
+                totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackLine(game, code, "−$amount", LifeRed) { opened = code } }
             }
         }
     }
+    opened?.let { code -> StackInfoSheet(game, code) { opened = null } }
 }
 
 @Composable internal fun TotalFigure(title: String, figure: String, modifier: Modifier) {

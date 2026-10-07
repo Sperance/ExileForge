@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.hero
 
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -13,7 +14,10 @@ import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,13 +42,17 @@ internal fun stashTweaks(filter: StashFilter, showsWorn: Boolean = false): Int =
     FilterChip(selected = on, onClick = { onToggle(!on) }, label = { Text(ui("stash.hide_worn"), maxLines = 1) })
 }
 
-/** The stash's one filter glyph: lit and badged with the count of what narrows the shelf; its size is required, so no row squeezes it. */
+/**
+ * The stash's one filter glyph (3.91.0: a small circle, not a full touch button): lit and badged with the count of what narrows the
+ * shelf; its size is required, so no row squeezes it.
+ */
 @Composable internal fun StashFilterButton(tweaks: Int, onClick: () -> Unit) {
     val tint = if (tweaks > 0) GoldBright else Muted
     BadgedBox(badge = { if (tweaks > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(tweaks.toString(), fontSize = 9.sp, maxLines = 1) } }) {
-        IconButton(onClick = onClick, modifier = Modifier.requiredSize(36.dp).border(1.dp, tint.copy(alpha = .6f), CircleShape)) {
-            Icon(Icons.Outlined.FilterList, ui("stash.filters"), tint = tint, modifier = Modifier.size(18.dp))
-        }
+        Box(
+            Modifier.requiredSize(30.dp).clip(CircleShape).border(1.dp, tint.copy(alpha = .6f), CircleShape).clickable(role = Role.Button, onClickLabel = ui("stash.filters"), onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Outlined.FilterList, ui("stash.filters"), tint = tint, modifier = Modifier.size(16.dp)) }
     }
 }
 

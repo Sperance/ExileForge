@@ -233,13 +233,13 @@ private object RoomCarver {
     /** Вход и клетка сундука; null - места нет нигде. */
     fun carve(map: ExpeditionMap, reachable: Set<Cell>, size: Int, random: Random): Pair<Cell, Cell>? {
         val doors = reachable.flatMap { floor -> SIDES.map { side -> floor to side } }
-            .filter { (floor, side) -> !map.walkable(floor.x + side.first, floor.y + side.second) }
+            .filter { (floor, side) -> map.tile(floor.x + side.first, floor.y + side.second) == Tile.WALL }
             .shuffled(random)
         for ((floor, side) in doors) {
             val entrance = Cell(floor.x + side.first, floor.y + side.second)
             val room = rect(entrance, side, size, 1..size, 0)
             val margin = rect(entrance, side, size, 0..size + 1, 1)
-            if (margin.any { it.x !in 1 until map.width - 1 || it.y !in 1 until map.height - 1 || map.walkable(it.x, it.y) }) continue
+            if (margin.any { it.x !in 1 until map.width - 1 || it.y !in 1 until map.height - 1 || map.tile(it.x, it.y) != Tile.WALL }) continue
             room.forEach { map.carve(it, Tile.FLOOR) }
             return entrance to rect(entrance, side, 1, (size + 1) / 2..(size + 1) / 2, 0).single()
         }

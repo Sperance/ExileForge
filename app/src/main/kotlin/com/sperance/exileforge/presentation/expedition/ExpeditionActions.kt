@@ -234,7 +234,7 @@ class ExpeditionActions(
         val run = Run(i, zone, started.seed, started.context)
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, carry = carry).also { runJournal = it }
         journal.onCarry = ::persist
-        expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null) }
+        expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = emptySet()) }
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
@@ -395,6 +395,9 @@ class ExpeditionActions(
         // Поход считается целиком (3.24.0): всё, что он закончил, сдаётся разом.
         quests.claimAll(j.heroId)
     }
+
+    /** Пометка вещи добычи к продаже посреди захода (3.91.0): в итогах карты помеченное уже отмечено; повтор снимает. */
+    fun toggleSaleMark(itemId: String) = expedition { it.copy(saleMarks = if (itemId in it.saleMarks) it.saleMarks - itemId else it.saleMarks + itemId) }
 
     /** Отправить журнал сейчас: приложение уходит в фон или поход окончен. */
     fun flushRun() {

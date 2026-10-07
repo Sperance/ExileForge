@@ -78,12 +78,11 @@ data class ApiCapabilities(val routes: Set<String>) {
     }
 }
 
-/** A bug report (server 1.46.0): the words of the player, where they were, and the tail of the request journal. */
+/** A bug report (server 1.46.0): the words of the player and where they were; no request journal (3.91.0) - nobody reads it. */
 @Serializable data class BugReportRequest(
     val text: String,
     val screen: String,
     val context: Map<String, String>,
-    val requests: List<String>,
     /** A bug or a player's suggestion (3.73.0, server 1.69.0). */
     val kind: FeedbackKind = FeedbackKind.BUG,
     /** Герой отправителя, отпечаток устройства и версия клиента (3.88.0, server 1.80.0): ставит [ClientIdentity]. */

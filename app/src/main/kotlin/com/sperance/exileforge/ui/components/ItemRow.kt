@@ -1,8 +1,9 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -42,7 +43,7 @@ import com.sperance.exileforge.ui.theme.*
  * [trailing] - напротив имени (цена лота), иначе [price] - что платит торговец; [footer] - под всем, что добавляет список.
  * [compact] - две линии (лут после боя): имя целиком, под ним значки тиров и отметки, без текстов строк.
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 fun ItemRow(
     item: ItemView,
@@ -72,6 +73,8 @@ fun ItemRow(
     tag: (@Composable RowScope.() -> Unit)? = null,
     /** «Лучше или хуже» (3.89.0): стрелки урона и защиты героя, если надеть; только вещи тайника и лута, что герой может надеть. */
     verdict: GearVerdict? = null,
+    /** Удержание строки (3.91.0): пометка к продаже в заходе или карточка там, где нажатие отмечает. */
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     val look = relicLook(item.rarity)
@@ -103,7 +106,7 @@ fun ItemRow(
                     },
                     card,
                 )
-                .clickable(enabled = enabled, onClick = onClick).padding(start = 12.dp, end = 12.dp, top = if (tag != null) 16.dp else 10.dp, bottom = 10.dp),
+                .combinedClickable(enabled = enabled, onLongClick = onLongClick, onClick = onClick).padding(start = 12.dp, end = 12.dp, top = if (tag != null) 16.dp else 10.dp, bottom = 10.dp),
             verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 7.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

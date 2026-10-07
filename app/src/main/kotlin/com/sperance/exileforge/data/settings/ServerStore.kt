@@ -190,13 +190,6 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     suspend fun heroCopy(server: String, heroId: String): String? = withContext(Dispatchers.IO) { serverFile("heroes", "$server|$heroId").takeIf { it.isFile }?.readText() }
     suspend fun saveHeroCopy(server: String, heroId: String, text: String) = withContext(Dispatchers.IO) { replace(serverFile("heroes", "$server|$heroId"), text) }
 
-    /** The `until` of the last «Пока вас не было» shown for a hero on a server (3.69.0): each catch-up is shown once. */
-    suspend fun craftsAwaySeen(server: String, heroId: String): Long = context.settings.data.first()[awayKey(server, heroId)]?.toLongOrNull() ?: 0L
-    suspend fun saveCraftsAwaySeen(server: String, heroId: String, until: Long) {
-        context.settings.edit { it[awayKey(server, heroId)] = until.toString() }
-    }
-    private fun awayKey(server: String, heroId: String) = stringPreferencesKey("crafts_away:$server|$heroId")
-
     /** Последний запущенный выбор кузнеца героя на сервере (3.89.0): лист кузнеца открывается в его режиме. */
     suspend fun smithChoice(server: String, heroId: String): String? = context.settings.data.first()[smithKey(server, heroId)]
     suspend fun saveSmithChoice(server: String, heroId: String, choice: String) {
@@ -205,9 +198,11 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     private fun smithKey(server: String, heroId: String) = stringPreferencesKey("smith_choice:$server|$heroId")
 
     /**
-     * The world of other rules forgotten (3.81.2): when the rules' version moves, the session, the heroes' copies, the waiting
-     * commands, the runs' journals and the content kept for the old one are dropped once, so a launch never opens on a world
-     * the server no longer has. The language, the settings, the dictionary, the art and the device's own account stay.
+     * The world of other rules forgotten (3.81.2): when the rules' version moves, the heroes' copies, the waiting commands, the
+     * runs' journals and the content kept for the old one are dropped once, so a launch never opens on a world the server no
+     * longer has. The session and the last hero stay (3.91.0): an update must not sign the player out - a token the server no
+     * longer takes is dropped by its 401, a stale hero by the fast start's revision check. The language, the settings, the
+     * dictionary, the art and the device's own account stay too.
      * Whether anything was dropped.
      */
     suspend fun forgetWorldUnless(rules: Int): Boolean {
@@ -335,8 +330,8 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         /** The kept folders of a world: heroes' copies, waiting commands, runs' journals, content and its manifest. */
         val WORLD_DIRS = listOf("heroes", "commands", "journal", "content", "manifest")
 
-        /** The kept keys of a world: sessions, last heroes, the crafts' absences, the smith's choices and the content's fingerprints. */
-        val WORLD_KEYS = listOf("token:", "last_hero:", "crafts_away:", "smith_choice:", "content:", "manifest:")
+        /** The kept keys of a world: the smith's choices and the content's fingerprints. */
+        val WORLD_KEYS = listOf("smith_choice:", "content:", "manifest:")
 
         const val PORTRAITS_HASH = "set"
     }

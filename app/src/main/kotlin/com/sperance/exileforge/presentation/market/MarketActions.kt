@@ -133,6 +133,13 @@ class MarketActions(
         listed(id)
     }
 
+    /** Выставляет питомца (3.91.0). */
+    fun sellPet(petId: String, priceOrb: String, price: Long) = trade(writing = true) {
+        val id = heroes.heroId
+        notices.toast(ui("toast.listed", api.auction.sellPet(id, petId, priceOrb, price).title))
+        listed(id)
+    }
+
     /** Ещё неделя своему лоту в его последний день (3.79.0). */
     fun extend(lotId: String) = trade(writing = true) {
         val id = heroes.heroId

@@ -3,13 +3,19 @@ package com.sperance.exileforge.core.campaign
 import kotlin.math.abs
 import kotlin.random.Random
 
-/** A cell on the grid: rock, or ground a hero can stand on. */
-enum class Tile { WALL, FLOOR }
+/**
+ * A cell on the grid: rock, ground a hero can stand on, or a chasm (3.91.0) - a pit, a crack or a sinkhole the hero sees across
+ * but never steps into.
+ */
+enum class Tile { WALL, FLOOR, CHASM }
 
 data class Cell(val x: Int, val y: Int)
 
 /** How the ground is carved: open caverns, or rooms joined by corridors. */
 enum class MapStyle { CAVERN, HALLS }
+
+/** How a biome's chasms look (3.91.0): round pits and sinkholes, or long narrow cracks. */
+enum class ChasmShape { PIT, CRACK }
 
 /**
  * A generated map: the grid, where the hero starts, where the exit is and where monsters stand.
@@ -28,6 +34,9 @@ class ExpeditionMap(
 ) {
     fun tile(x: Int, y: Int): Tile = if (x in 0 until width && y in 0 until height) tiles[y * width + x] else Tile.WALL
     fun walkable(x: Int, y: Int) = tile(x, y) == Tile.FLOOR
+
+    /** Whether sight passes over the cell (3.91.0): ground and chasms do, rock does not. */
+    fun clear(x: Int, y: Int) = tile(x, y) != Tile.WALL
     fun decorAt(x: Int, y: Int): Int = if (x in 0 until width && y in 0 until height) decor[y * width + x] else 0
     val floor: Int get() = tiles.count { it == Tile.FLOOR }
 
@@ -43,13 +52,19 @@ class ExpeditionMap(
  * The biome decides the carving — a crypt, a temple, ruins, mines and a citadel are halls joined by
  * corridors, everything else a cavern dug by wandering walkers — and the map is then trimmed to
  * the one region the start can reach, so an exit or a monster is never sealed in rock. The exit is
- * the farthest reachable cell from the start; monsters stand away from both.
+ * the farthest reachable cell from the start; monsters stand away from both. Chasms (3.91.0) are cut last, away from the start,
+ * the exit and the monsters, and only where every piece of ground stays reachable.
  */
 object MapGenerator {
 
     private val halls = setOf("RUINS", "CRYPT", "MINES", "TEMPLE", "CITADEL", VaalZones.BIOME)
 
     fun styleOf(biome: String): MapStyle = if (biome in halls) MapStyle.HALLS else MapStyle.CAVERN
+
+    /** Biomes whose ground splits into cracks; the rest sink into pits. */
+    private val cracked = setOf("CAVE", "MINES", "CANYON", "VOLCANO", "ASH", "STORMPEAK", "SKYREACH", "GLASSWASTE", "FROST", "CITADEL", "RUINS", "CRYPT", "TEMPLE", "GODHALL", "ASTRAL", "OBLIVION")
+
+    fun chasmOf(biome: String): ChasmShape = if (biome in cracked) ChasmShape.CRACK else ChasmShape.PIT
 
     fun generate(seed: Long, biome: String, monsters: Int, size: Int = 48): ExpeditionMap {
         val random = Random(seed)
@@ -89,8 +104,64 @@ object MapGenerator {
                 0
             }
         }
+        chasms(grid, size, random, chasmOf(biome), keep = setOf(start, exit) + spawns)
         return ExpeditionMap(size, size, grid, decor, start, exit, spawns)
     }
+
+    /**
+     * Chasms (3.91.0): shapes of the biome are tried until about [CHASM_SHARE] of the ground is gone. A shape is cut only on
+     * open ground two steps or more from [keep] and only if every remaining piece of ground is still reachable from the
+     * first kept cell, so a map never splits; a shape that would split it is put back.
+     */
+    private fun chasms(grid: Array<Tile>, size: Int, random: Random, shape: ChasmShape, keep: Set<Cell>) {
+        val target = (grid.count { it == Tile.FLOOR } * CHASM_SHARE).toInt()
+        val from = keep.first()
+        var cut = 0
+        repeat(CHASM_TRIES) {
+            if (cut >= target) return
+            val seed = Cell(random.nextInt(2, size - 2), random.nextInt(2, size - 2))
+            val cells = when (shape) {
+                ChasmShape.PIT -> pit(seed, random.nextInt(2, 7), random)
+                ChasmShape.CRACK -> crack(seed, random.nextInt(4, 10), random)
+            }.filter { it.x in 1 until size - 1 && it.y in 1 until size - 1 && grid[it.y * size + it.x] == Tile.FLOOR }
+            if (cells.isEmpty() || cells.any { cell -> keep.any { abs(it.x - cell.x) + abs(it.y - cell.y) < 2 } }) return@repeat
+            cells.forEach { grid[it.y * size + it.x] = Tile.CHASM }
+            val reach = distances(grid, size, from)
+            if (grid.indices.any { grid[it] == Tile.FLOOR && reach[it] < 0 }) {
+                cells.forEach { grid[it.y * size + it.x] = Tile.FLOOR }
+            } else {
+                cut += cells.size
+            }
+        }
+    }
+
+    /** A pit: [count] cells grown from [seed] to its neighbours. */
+    private fun pit(seed: Cell, count: Int, random: Random): List<Cell> {
+        val cells = linkedSetOf(seed)
+        while (cells.size < count) {
+            val (x, y) = cells.elementAt(random.nextInt(cells.size))
+            cells += listOf(Cell(x + 1, y), Cell(x - 1, y), Cell(x, y + 1), Cell(x, y - 1))[random.nextInt(4)]
+        }
+        return cells.toList()
+    }
+
+    /** A crack: a line of [length] cells from [seed], keeping its course and swerving now and then. */
+    private fun crack(seed: Cell, length: Int, random: Random): List<Cell> {
+        val horizontal = random.nextBoolean()
+        var x = seed.x
+        var y = seed.y
+        return List(length) {
+            Cell(x, y).also {
+                if (horizontal) x++ else y++
+                if (random.nextDouble() < CRACK_SWERVE) if (horizontal) y += if (random.nextBoolean()) 1 else -1 else x += if (random.nextBoolean()) 1 else -1
+            }
+        }
+    }
+
+    /** The share of the ground chasms take, how many shapes are tried for it, and how often a crack swerves. */
+    private const val CHASM_SHARE = 0.04
+    private const val CHASM_TRIES = 60
+    private const val CRACK_SWERVE = 0.3
 
     /** Walkers dig from the middle until about two fifths of the map is open, then the edges are smoothed. */
     private fun cavern(grid: Array<Tile>, size: Int, random: Random) {

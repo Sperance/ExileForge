@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
@@ -224,6 +225,10 @@ fun ItemCard(
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
+            }
+            // Мастер (3.91.0, сервер 1.82.0): кто и когда изготовил снаряжение ремеслом.
+            item.item.maker?.let { maker ->
+                Text(ui("card.maker", maker.hero, stampText(maker.at)), color = look.muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
             }
             totals?.let {
                 HorizontalDivider(thickness = 1.dp, color = look.gold.copy(alpha = .2f))

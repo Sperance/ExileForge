@@ -7,7 +7,6 @@ import com.sperance.exileforge.rules.content.JobExtra
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.roll.ActiveWork
-import com.sperance.exileforge.rules.roll.CraftsAway
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.ProfessionProgress
 import com.sperance.exileforge.rules.roll.Work
@@ -20,7 +19,7 @@ import kotlinx.serialization.Serializable
  * The crafts part of the hero snapshot: each profession's progress, the work under way and the last catch-up of an
  * absence of five minutes or more (3.69.0, server 1.66.0), shown once as «Пока вас не было».
  */
-@Serializable data class WorkState(val professions: Map<String, ProfessionProgress> = emptyMap(), val work: ActiveWork? = null, val away: CraftsAway? = null)
+@Serializable data class WorkState(val professions: Map<String, ProfessionProgress> = emptyMap(), val work: ActiveWork? = null)
 
 /** One work of a profession as the hero has it now: the rules' seconds, and the cycle and the «nothing» chance their gear makes of it. */
 @Serializable data class JobView(
@@ -98,8 +97,6 @@ fun ProfessionView.job(code: String, choice: String = ""): JobView? = jobs.first
     /** Which additive guarantees which handcrafted line, and how many a smelt takes. */
     val additives: Map<String, String> = emptyMap(),
     val maxAdditives: Int = 0,
-    /** The last catch-up of an absence (3.69.0), the same as the snapshot's [WorkState.away]. */
-    val away: CraftsAway? = null,
 )
 
 /** The work under way, as its profession lists it: the chosen variant when it has one. */

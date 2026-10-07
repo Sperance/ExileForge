@@ -19,11 +19,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.IncubatorSlot
 import com.sperance.exileforge.core.model.hero.IncubatorState
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeDialog
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
@@ -33,8 +35,8 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 
 /**
- * The incubator (server 1.67.0): an egg from the bag is laid into an open place, ripens by the server's clock — its rarity and
- * level settled the moment it was laid — and is taken out as a pet. Open places come from the hero's sheet; the ones a collar
+ * The incubator (server 1.67.0): an egg from the bag is laid into an open place, ripens by the server's clock — its level
+ * settled the moment it was laid, its rarity the egg's own (3.91.0, server 1.81.10) — and is taken out as a pet. Open places come from the hero's sheet; the ones a collar
  * could still open are drawn locked up to the ceiling.
  */
 @Composable internal fun IncubatorPanel(game: GameUi, vm: HeroViewModel, titled: Boolean = true) {
@@ -42,7 +44,9 @@ import kotlinx.coroutines.delay
     val index = game.index ?: return
     val pets = hero.pets
     val incubator = pets.incubator
-    val eggs = index.pets.eggs.values.distinct().filter { hero.count(it) > 0 }
+    // Редкие яйца первыми (3.91.0): редкость у яйца своя, её видно в выборе.
+    val menagerie = remember(index) { Menagerie(index) }
+    val eggs = index.pets.eggs.values.flatMap { it.values }.filter { hero.count(it) > 0 }.sortedByDescending { menagerie.egg(it)?.rarity?.ordinal ?: 0 }
     val now = rememberServerNow(incubator)
     val full = pets.pets.size >= pets.cap
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -123,9 +127,10 @@ private fun EmptySlot(game: GameUi, eggs: List<String>, enabled: Boolean, onLay:
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     StackIcon(game, egg, 36)
+                    val rarity = game.index?.let { Menagerie(it).egg(egg)?.rarity }
                     Column(Modifier.weight(1f)) {
-                        Text(itemTitle(egg), color = Parchment, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        MutedText(ui("incubator.egg_count", hero.count(egg)), style = MaterialTheme.typography.labelSmall)
+                        Text(itemTitle(egg), color = rarity?.let { rarityColor(it.name) } ?: Parchment, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        MutedText(listOfNotNull(rarity?.let(::rarityTitle), ui("incubator.egg_count", hero.count(egg))).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }

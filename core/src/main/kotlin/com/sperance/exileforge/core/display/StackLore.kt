@@ -7,7 +7,9 @@ import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobRecipes
 import com.sperance.exileforge.rules.content.MonsterCode
+import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.TrialRules
+import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.table.Ref
 import com.sperance.exileforge.rules.table.TableKind
 import java.util.WeakHashMap
@@ -164,11 +166,13 @@ private class SourceIndex(private val index: ContentIndex) {
         }
     }
 
-    /** A biome's egg falls from its rare monsters and bosses. */
+    /** A biome's egg falls from its rare monsters and bosses: magic, or rare with the rules' share (server 1.82.0). */
     private fun eggs() {
         val pets = index.pets
-        pets.eggs.entries.groupBy({ it.value }, { it.key }).forEach { (egg, biomes) ->
-            add(egg, ItemSource(SourceKind.EGGS, chance = maxOf(pets.eggChance.rare, pets.eggChance.boss) * 100, ref = biomes.joinToString(",")))
+        val drop = maxOf(pets.eggChance.rare, pets.eggChance.boss) * 100
+        val rare = Menagerie(index).rareEggChance(0.0)
+        pets.eggs.forEach { (biome, codes) ->
+            codes.forEach { (rarity, egg) -> add(egg, ItemSource(SourceKind.EGGS, chance = drop * if (rarity == Rarity.RARE) rare else 1 - rare, ref = biome)) }
         }
     }
 

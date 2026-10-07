@@ -67,16 +67,11 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
     /** Отчёт о прошлом зависании, ещё не отправленный; null - его нет. */
     suspend fun pending(): BugReportRequest? = withContext(Dispatchers.IO) {
         val text = file.takeIf { it.isFile }?.readText() ?: return@withContext null
-        val parts = text.split("\n---\n")
-        val head = parts.getOrNull(0).orEmpty().lines()
-        val stack = parts.getOrNull(1).orEmpty().lines()
-        val journal = parts.getOrNull(2).orEmpty().lines()
+        val head = text.substringBefore("\n---\n").lines()
         BugReportRequest(
             text = ui("stall.title") + " ${head.getOrNull(1).orEmpty()} ms",
             screen = SCREEN,
             context = mapOf("version" to head.getOrNull(0).orEmpty(), "stalledMs" to head.getOrNull(1).orEmpty(), "at" to head.getOrNull(2).orEmpty()),
-            // Сервер берёт до 20 строк по 400 знаков: стек - сверху, журнал запуска - хвостом.
-            requests = pack(stack, STACK_ENTRIES) + pack(journal.takeLast(JOURNAL_LINES), JOURNAL_ENTRIES),
         )
     }
 
@@ -120,22 +115,6 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         thread.state == Thread.State.WAITING || thread.state == Thread.State.TIMED_WAITING ||
         frames.first().methodName == "nativePollOnce"
 
-    private fun pack(lines: List<String>, entries: Int): List<String> {
-        val out = mutableListOf<String>()
-        val current = StringBuilder()
-        for (line in lines) {
-            if (current.isNotEmpty() && current.length + line.length + 1 > ENTRY) {
-                out += current.toString()
-                current.clear()
-                if (out.size == entries) return out
-            }
-            if (current.isNotEmpty()) current.append('\n')
-            current.append(line.take(ENTRY))
-        }
-        if (current.isNotEmpty() && out.size < entries) out += current.toString()
-        return out
-    }
-
     private companion object {
         const val FILE = "stall.txt"
         const val LAST_FILE = "stall-last.txt"
@@ -144,9 +123,5 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         const val STALL_MS = 5_000L
         const val TICK_MS = 1_000L
         const val PAUSE_MS = 3 * TICK_MS
-        const val ENTRY = 400
-        const val STACK_ENTRIES = 12
-        const val JOURNAL_ENTRIES = 8
-        const val JOURNAL_LINES = 60
     }
 }

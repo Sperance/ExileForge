@@ -132,12 +132,12 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     }
                 }
             }
-            // Кнопки «Реликвария» (3.88.6): главное действие, кузня и «ещё» с заменой, замком, аукционом и продажей.
+            // Кнопки «Реликвария» (3.88.6; 3.91.0 - одна низкая строка): главное действие, кузня и «ещё» с заменой, замком, аукционом и продажей.
             var more by remember(itemId) { mutableStateOf(false) }
             // Место, где надета вещь (3.88.8): «Заменить» открывает его на всё, что туда идёт.
             val wornPlace = game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
             Row(
-                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 10.dp),
+                Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -170,7 +170,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                 }) { Text(ui("nav.forge"), color = if (can) GoldBright else Muted, style = MaterialTheme.typography.labelLarge, maxLines = 1) }
                 Box {
                     QuietPill(true, square = true, onClick = { more = true }) {
-                        Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = GoldBright)
+                        Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = GoldBright, modifier = Modifier.size(18.dp))
                     }
                     DropdownMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
                         // «Снять» надетую вещь (3.88.8) - в меню: главная кнопка у неё «Заменить».
@@ -255,23 +255,23 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
 
 /** Главная кнопка листа: пилюля во всю ширину, у легенды - золотая. */
 @Composable private fun RowScope.PrimaryPill(label: String, enabled: Boolean, look: RelicLook, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(PillHeight / 2)
     Box(
-        Modifier.weight(1f).height(48.dp).then(if (enabled) Modifier.glow(look.glow, radius = 10.dp, shape = shape) else Modifier).clip(shape)
+        Modifier.weight(1f).height(PillHeight).then(if (enabled) Modifier.glow(look.glow, radius = 10.dp, shape = shape) else Modifier).clip(shape)
             .then(if (enabled) Modifier.background(look.primary, shape) else Modifier.background(PanelRaised, shape))
             .clickable(enabled = enabled, role = Role.Button, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = if (enabled) look.onPrimary else Muted, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.ExtraBold, maxLines = 1)
+        Text(label, color = if (enabled) look.onPrimary else Muted, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.ExtraBold, maxLines = 1)
     }
 }
 
 /** Тихая кнопка рядом с главной: «Кузня» и «ещё». */
 @Composable private fun QuietPill(enabled: Boolean, square: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit, content: @Composable RowScope.() -> Unit) {
-    val shape = RoundedCornerShape(24.dp)
+    val shape = RoundedCornerShape(PillHeight / 2)
     Row(
-        modifier.height(48.dp).then(if (square) Modifier.width(48.dp) else Modifier).depthRaised(shape).clip(shape)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = if (square) 0.dp else 18.dp),
+        modifier.height(PillHeight).then(if (square) Modifier.width(PillHeight) else Modifier).depthRaised(shape).clip(shape)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = if (square) 0.dp else 14.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
         content = content,
@@ -302,3 +302,6 @@ private fun temperOffer(game: GameUi, item: com.sperance.exileforge.rules.roll.I
 
 /** The profession whose level tempering asks. */
 private const val SMITHING = "SMITHING"
+
+/** Высота кнопок карточки (3.91.0): одна низкая строка вместо крупных плит. */
+private val PillHeight = 36.dp

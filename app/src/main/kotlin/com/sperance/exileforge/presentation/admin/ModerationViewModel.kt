@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
+import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationPage
 import com.sperance.exileforge.core.network.ModerationSegment
@@ -40,6 +41,8 @@ data class ModerationState(
     val dossierKey: Pair<String, String>? = null,
     /** Только что созданный тестировщик (3.88.7): логин и пароль показываются один раз. */
     val createdTester: TesterAccount? = null,
+    /** Игровые серверы (3.91.0): администратор переносит между ними героя из досье. */
+    val servers: List<GameServer> = emptyList(),
 )
 
 /**
@@ -129,6 +132,38 @@ class ModerationViewModel(
         }
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }
+
+    /** Список серверов (3.91.0) - только администратору: перенос и новый сервер - его команды. */
+    fun loadServers() = commands.read(Reads.SERVERS) {
+        if (!sessions.state.value.isAdmin) return@read
+        val servers = connection.api.admin.servers()
+        mutable.update { it.copy(servers = servers) }
+    }
+
+    /** Новый игровой сервер (3.91.0). */
+    fun createServer(code: String, name: String) {
+        val started = commands.task(writing = true) {
+            staff()
+            val server = connection.api.admin.createServer(code, name)
+            notices.toast(ui("admin.server_created", server.name))
+            mutable.update { it.copy(servers = it.servers + server) }
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
+
+    /** Переносит героя [heroId] на сервер [server] (3.91.0); тост называет, вышел ли он из гильдии и сколько лотов вернулось. */
+    fun moveHero(heroId: String, server: String) {
+        val started = commands.task(writing = true) {
+            staff()
+            val move = connection.api.admin.moveHero(heroId, server)
+            notices.toast(ui("admin.hero_moved", move.name, serverName(move.server), move.lotsReturned) + if (move.leftGuild) " " + ui("admin.left_guild") else "")
+            reloadDossier()
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
+
+    /** Название сервера по коду; неизвестный - самим кодом. */
+    fun serverName(code: String): String = mutable.value.servers.firstOrNull { it.code == code }?.name?.ifBlank { null } ?: code
 
     fun forgetTester() = mutable.update { it.copy(createdTester = null) }
 

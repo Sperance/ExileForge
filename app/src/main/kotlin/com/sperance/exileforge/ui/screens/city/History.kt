@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.display.UniquePool
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.UniqueFind
 import com.sperance.exileforge.presentation.history.HistoryViewModel
@@ -36,9 +37,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 
 /** «История» (3.90.2): здание Города со списком разделов прошлого героя; пока раздел один - найденные уникалки. */
 @Composable internal fun HistoryScreen() {
@@ -205,8 +203,3 @@ private sealed interface AlbumPick {
         if (!SpriteIcon(equipmentIcon(template.code), tint, Modifier.size(32.dp), halo = false)) Icon(ForgeGlyphs.Gem, null, tint = tint, modifier = Modifier.size(24.dp))
     }
 }
-
-/** Миг находки в поясе устройства: «07.10.2026 21:40». */
-private fun stampText(at: Long): String = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(STAMP)
-
-private val STAMP = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")

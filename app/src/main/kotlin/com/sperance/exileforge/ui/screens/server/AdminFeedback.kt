@@ -74,10 +74,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 Engraved(ui("bug.context"))
                 report.context.forEach { (key, value) -> MutedText("$key: $value", style = MaterialTheme.typography.labelSmall) }
             }
-            if (report.requests.isNotEmpty()) {
-                Engraved(ui("feedback.journal"))
-                report.requests.forEach { MutedText(it, style = MaterialTheme.typography.labelSmall) }
-            }
             Engraved(ui("feedback.set_status"))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ReportStatus.entries.forEach { st -> FilterChip(selected = chosen == st, onClick = { chosen = st }, label = { Text(statusTitle(st)) }) }

@@ -161,6 +161,7 @@ fun attachmentLines(mail: Mail): List<String> = buildList {
     mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount") }
     mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}")) }
     mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "")) }
+    mail.attachment.pets.forEach { add(locOr("pet.${it.species}", it.species) + " · " + ui("enum.rarity.${it.rarity.name}")) }
 }
 
 /**

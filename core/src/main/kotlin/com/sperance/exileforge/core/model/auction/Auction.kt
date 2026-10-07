@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -61,6 +62,9 @@ import kotlinx.serialization.Serializable
     /** The copy on offer, or null for a stack. */
     val equipment: ItemInstance? get() = (goods as? LotGoods.Equipment)?.item
 
+    /** The pet on offer (3.91.0, server 1.81.0), or null for another kind. */
+    val pet: Pet? get() = (goods as? LotGoods.Beast)?.pet
+
     /** How many units go for the one price: one for an item. */
     val amount: Long get() = goods?.amount ?: 1
     val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
@@ -74,7 +78,11 @@ import kotlinx.serialization.Serializable
 
     /** An equipment lot names a template, a stack lot names an item of the bag. */
     val title: String get() = equipment?.mapZone?.takeIf { it.isNotEmpty() }?.let(::mapItemTitle)
-        ?: locOr(if (kind == LotKind.EQUIPMENT) LocaleKey.equipmentName(itemCode) else LocaleKey.itemName(itemCode), itemCode)
+        ?: when (kind) {
+            LotKind.EQUIPMENT -> locOr(LocaleKey.equipmentName(itemCode), itemCode)
+            LotKind.PET -> locOr("pet.$itemCode", itemCode)
+            LotKind.ITEM -> locOr(LocaleKey.itemName(itemCode), itemCode)
+        }
 }
 
 /** The showcase filter, as `GET /api/v1/auctionlot/search` reads it from the query string. A blank field means "do not filter by it". */

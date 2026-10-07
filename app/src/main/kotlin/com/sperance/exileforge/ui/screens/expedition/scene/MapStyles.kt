@@ -24,6 +24,20 @@ internal abstract class MapStyle {
     abstract fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float)
     abstract fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float)
 
+    /**
+     * A chasm (3.91.0): the ground's rim around a sunken dark, the biome's accent glimmering at the bottom - a pit, a crack, a
+     * sinkhole, the same hole in every biome's colours. Seen across, never walked.
+     */
+    open fun chasm(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
+        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        pen.color = tone(palette.floor, .8f * light)
+        pen.diamond(cx, cy, u, u / 2)
+        pen.color = tone(palette.void, .9f)
+        pen.diamond(cx, cy - u * .06f, u * .78f, u * .36f)
+        pen.color = tone(palette.accent, .35f * light, alpha = .35f + .1f * sin(time * 2f + spot.x + spot.y))
+        pen.diamond(cx, cy - u * .1f, u * .3f, u * .12f)
+    }
+
     /** Drawn over the finished map, in screen space: drips, fog, embers, fireflies. */
     open fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {}
 

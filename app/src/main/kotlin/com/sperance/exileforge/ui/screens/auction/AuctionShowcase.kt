@@ -238,7 +238,7 @@ internal fun chipLabel(game: GameUi, field: FilterField, value: String): String 
 }
 
 /** The slots a template may have: the second ring and the belt's other flasks are places of the worn, never of a lot. */
-internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 && it != Slot.FLASK_2 && it != Slot.FLASK_3 }
+internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 && it != Slot.FLASK_2 }
 
 /**
  * Every filter the server understands, on a draft: nothing reaches the showcase until «Показать»,

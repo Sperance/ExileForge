@@ -111,7 +111,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         val incubator = pets?.incubator
         val ready = incubator?.ready ?: 0
         val incubating = incubator?.incubating ?: 0
-        val eggs = if (hero != null && index != null && incubator?.free != null) index.pets.eggs.values.toSet().sumOf { hero.count(it) } else 0L
+        val eggs = if (hero != null && index != null && incubator?.free != null) index.pets.eggs.values.flatMap { it.values }.toSet().sumOf { hero.count(it) } else 0L
         val atlas = game.atlasState
         val rules = index?.campaign?.trials
         val keys = hero?.count(TrialRules.KEY) ?: 0L

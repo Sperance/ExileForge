@@ -28,6 +28,7 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.equipmentIcon
+import com.sperance.exileforge.core.display.icon
 import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.itemVisualKind
@@ -46,6 +47,7 @@ import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.trade.LotKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -54,6 +56,7 @@ import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.icons.orbArt
+import com.sperance.exileforge.ui.screens.hero.PetCard
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
@@ -123,13 +126,26 @@ internal const val MINUTES_A_DAY = 1_440L
  * copy by its template, a stack by the item of the bag it is a stack of.
  */
 @Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, modifier: Modifier) {
-    val sprite = if (lot.kind == LotKind.EQUIPMENT) equipmentIcon(lot.itemCode) else itemIcon(lot.itemCode)
+    val sprite = when (lot.kind) {
+        LotKind.EQUIPMENT -> equipmentIcon(lot.itemCode)
+
+        LotKind.ITEM -> itemIcon(lot.itemCode)
+
+        // Питомец (3.91.0): свой портрет у гибрида, иначе яйцо его биома в его редкости.
+        LotKind.PET -> icon("pet.${lot.itemCode}") ?: lotEgg(game, lot)?.let(::itemIcon)
+    }
     if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(lotVisualKind(game, lot), lotColor(lot), modifier)
 }
 
 internal fun lotVisualKind(game: GameUi, lot: AuctionLot): ItemVisualKind = when (lot.kind) {
     LotKind.EQUIPMENT -> game.index?.template(lot.itemCode)?.let(::itemVisualKind) ?: ItemVisualKind.ITEM
     LotKind.ITEM -> game.index?.item(ItemCode(lot.itemCode))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
+    LotKind.PET -> lotEgg(game, lot)?.let { game.index?.item(ItemCode(it)) }?.let(::bagVisualKind) ?: ItemVisualKind.ITEM
+}
+
+/** Код яйца, из которого вылупляется питомец лота (3.91.0): биом вида и редкость питомца. */
+private fun lotEgg(game: GameUi, lot: AuctionLot): String? = game.index?.pets?.let { pets ->
+    pets.species.firstOrNull { it.code == lot.itemCode }?.let { pets.eggs[it.biome]?.get(lot.rarity ?: Rarity.MAGIC) }
 }
 
 /** The rarity's colour for a copy; a stack has none and keeps bone white. */
@@ -169,10 +185,16 @@ internal fun LotSheet(
                     ItemCard(view, enabled = false, detailed = true, actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}")
                 }
             }
+            lot.pet?.let { pet ->
+                val index = game.index ?: return@let
+                val menagerie = Menagerie(index)
+                val kind = menagerie.species(pet.species) ?: return@let
+                item { PetCard(game, index, menagerie, kind, pet, active = false) }
+            }
             item {
                 ForgePanel {
                     Engraved(ui("auction.lot"))
-                    if (view == null) Text(lot.title, color = Gold, style = MaterialTheme.typography.titleMedium)
+                    if (view == null && lot.pet == null) Text(lot.title, color = Gold, style = MaterialTheme.typography.titleMedium)
                     if (lot.kind == LotKind.ITEM) PropertyRow(ui("auction.amount"), lot.amount.toString(), Glyph.ITEM)
                     // The price is always counted in orbs; the content gives the orb its name.
                     PropertyRow(ui("card.price"), orbPrice(lot), Glyph.CURRENCY)

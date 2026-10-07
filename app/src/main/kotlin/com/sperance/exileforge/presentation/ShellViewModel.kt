@@ -19,7 +19,6 @@ import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.ConnectionActions
 import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.SessionActions
-import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.presentation.app.WarmupActions
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
@@ -60,7 +59,6 @@ class ShellViewModel(
     private val warming: WarmupActions,
     private val expedition: ExpeditionActions,
     trial: TrialActions,
-    private val trace: StartupTrace,
     /** Связь с сервером на старте (3.86.0): окно запуска уходит по её ответу. */
     val reach: ServerReach,
 ) : ViewModel() {
@@ -86,8 +84,7 @@ class ShellViewModel(
 
     /** Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. */
     fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = commands.task {
-        // Шаги запуска (3.82.0) - в отчёт: где и сколько стоял старт.
-        connection.api.reportBug(report.copy(requests = report.requests + trace.journal().lines().takeLast(STARTUP_LINES).chunked(STARTUP_CHUNK).map { it.joinToString("\n") }))
+        connection.api.reportBug(report)
         onSent()
         notices.toast(ui("bug.sent"))
     }
@@ -156,10 +153,4 @@ class ShellViewModel(
 
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer: Flow<Unit> get() = session.newerServer
-
-    private companion object {
-        /** Последние шаги запуска в баг-репорте и сколько строк в одной записи (сервер берёт записи до 400 знаков). */
-        const val STARTUP_LINES = 40
-        const val STARTUP_CHUNK = 5
-    }
 }

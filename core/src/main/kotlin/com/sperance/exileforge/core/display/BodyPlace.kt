@@ -6,7 +6,7 @@ import com.sperance.exileforge.rules.content.Slot
  * One line of the equipment ledger: a place on the body and the template slots that fill it. The hands are
  * two places rather than four slots — a one- or two-handed weapon in the main hand, a shield or a quiver in
  * the other. The rings and the flasks are places filled from one template slot: [place] is the worn slot the
- * server is asked to put the item in (`RING_2`, `FLASK_3`), null where the template's own slot decides.
+ * server is asked to put the item in (`RING_2`, `FLASK_2`), null where the template's own slot decides.
  */
 data class BodyPlace(val code: String, val fits: List<Slot>, val place: Slot? = null) {
     /** What is worn here, out of the hero's items keyed by the slot they are worn in. */

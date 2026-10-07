@@ -48,7 +48,6 @@ import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.nav.Navigator
@@ -73,7 +72,6 @@ import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
 import com.sperance.exileforge.ui.screens.city.CityScreen
-import com.sperance.exileforge.ui.screens.crafts.CraftsAwayHost
 import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
@@ -110,8 +108,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * 2.3.0: it is not something a player has, and the banner is the one thing on screen every player
  * sees on every tab. The language runes went the same way in 2.4.0, to the Account tab and to the
  * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
- * Since 2.48.0 the hero's class is gone from it, a short plaque of the craft under way opens the
- * crafts, and the account sits in its corner — it left the bottom bar. Since 3.75.0 the inbox, the beetle and the
+ * Since 2.48.0 the hero's class is gone from it and the account sits in its corner — it left the bottom bar; the plaque
+ * of the craft under way is gone too (3.91.0). Since 3.75.0 the inbox, the beetle and the
  * account share one «⋮»: with every badge up the name of the game no longer fit.
  */
 @Composable internal fun ForgeBanner(game: GameUi, route: Route, onBug: () -> Unit) {
@@ -123,7 +121,6 @@ import org.koin.compose.viewmodel.koinViewModel
     if (hero != null) {
         HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
             GoldPrice(hero.money)
-            WorkBadge { shell.tab(TAB_CRAFTS) }
             LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
             BannerMenu(feedback.unread, settingsOpen = false, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
         }
@@ -155,7 +152,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        WorkBadge { shell.tab(TAB_CRAFTS) }
         LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
         BannerMenu(feedback.unread, settingsOpen = route.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
     }
@@ -240,27 +236,5 @@ import org.koin.compose.viewmodel.koinViewModel
                 }) { Text(ui("link.retry_now"), color = GoldBright) }
             }
         }
-    }
-}
-
-/** The craft under way, very short: its name and the cycle filling, every frame. Nothing when the hero works at nothing. */
-@Composable internal fun WorkBadge(onClick: () -> Unit) {
-    val held by koinViewModel<CraftsViewModel>().crafts.collectAsStateWithLifecycle()
-    val crafts = held.state ?: return
-    val work = crafts.work ?: return
-    val offset = crafts.now - held.readAt
-    val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
-    Column(Modifier.widthIn(max = 120.dp).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 2.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            Icon(ForgeGlyphs.Anvil, null, tint = Gold, modifier = Modifier.size(12.dp))
-            Text(workTitle(work.job, work.choice), color = Parchment, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        LinearProgressIndicator(
-            // По кругу, как полоса вкладки ремёсел (3.90.0): не стоит на 100%, пока сервер не пересчитал работу.
-            progress = { if (work.cycleMillis > 0) work.phase(now + offset).toFloat() / work.cycleMillis else 0f },
-            modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 1.dp),
-            color = Gold,
-            trackColor = PanelRaised,
-        )
     }
 }

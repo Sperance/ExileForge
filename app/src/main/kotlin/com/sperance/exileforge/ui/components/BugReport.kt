@@ -116,7 +116,7 @@ fun BugSheet(
                 enabled = text.isNotBlank() && !game.busy && (kind == FeedbackKind.BUG || game.session.signedIn),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    onSend(BugReportRequest(text.trim().take(limit), screen, emptyMap(), emptyList(), kind))
+                    onSend(BugReportRequest(text.trim().take(limit), screen, emptyMap(), kind))
                     onDismiss()
                 },
             ) { Text(ui("bug.send")) }

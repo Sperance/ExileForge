@@ -88,6 +88,8 @@ private const val NOTICE = "api/v1/notice"
     val levelsPerHour: Double? = null,
     val guild: String? = null,
     val deleted: Boolean = false,
+    /** Игровой сервер героя (3.91.0, сервер 1.81.10) - код. */
+    val server: String = "MAIN",
 )
 
 @Serializable data class DossierEconomy(val gearValue: Long = 0, val uniques: Int = 0, val mythics: Int = 0, val tradesPerDay: Int = 0)

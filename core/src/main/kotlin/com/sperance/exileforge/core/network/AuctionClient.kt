@@ -41,6 +41,12 @@ class AuctionClient internal constructor(private val http: Transport) {
         return sell("item", heroId, priceOrb, price, mapOf("code" to code, "amount" to amount.toString()))
     }
 
+    /** Выставляет питомца (сервер 1.81.0): он уходит из зверинца в лот; работающего сервер не примет. */
+    suspend fun sellPet(heroId: String, petId: String, priceOrb: String, price: Long): AuctionLot {
+        requireItemId(petId)
+        return sell("pet", heroId, priceOrb, price, mapOf("petId" to petId))
+    }
+
     private suspend fun sell(what: String, heroId: String, priceOrb: String, price: Long, extra: Map<String, String>): AuctionLot {
         require(priceOrb.isNotBlank()) { ui("api.choose_orb") }
         require(price > 0) { ui("api.price_positive") }

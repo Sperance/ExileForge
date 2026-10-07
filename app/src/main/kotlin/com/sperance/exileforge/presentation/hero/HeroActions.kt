@@ -66,7 +66,7 @@ class HeroActions(
     fun petOrb(petId: String, orb: String, omen: String? = null) = heroCommand { id -> api.hero.petOrb(id, petId, orb, omen) }
     fun choosePetLine(petId: String, choice: Int) = heroCommand { id -> api.hero.choosePetLine(id, petId, choice) }
     fun activatePet(petId: String) = heroCommand { id -> api.hero.activatePet(id, petId) }
-    fun releasePet(petId: String) = heroCommand { id -> api.hero.releasePet(id, petId) }
+    fun sellPet(petId: String) = heroCommand { id -> api.hero.sellPet(id, petId) }
 
     /** Разведение (3.79.0): рождённое названо - гибрид по виду, иначе яйцо, ушедшее в сумку. */
     fun breedPets(first: String, second: String) = heroCommand { id ->

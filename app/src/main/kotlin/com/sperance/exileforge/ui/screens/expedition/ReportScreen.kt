@@ -22,6 +22,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.Outcome
@@ -110,7 +111,8 @@ import java.util.Locale
             modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment),
         ) {
-            Text(ui(if (won) "expedition.continue" else "expedition.back_to_camp"), style = MaterialTheme.typography.titleMedium)
+            // Гибель ведёт к итогам карты (3.91.0), а не в лагерь: «Вернуться» там же, где эта кнопка, - подпись их различает.
+            Text(ui(if (won) "expedition.continue" else "expedition.to_summary"), style = MaterialTheme.typography.titleMedium)
         }
     }
     // A line of the log opened (3.37.0): its card over the report.
@@ -192,8 +194,15 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     val gear = game.presentLoot(reward.equipment, arriving = hud.rewardAwaiting > 0).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
-        // A line a piece, as the map's summary has it: the whole card is one tap behind each.
-        gear.forEach { (piece, presence) -> PieceLine(piece, presence) { onItem(piece) } }
+        // A line a piece, as the map's summary has it: the whole card is one tap behind each. Удержание (3.91.0) помечает вещь
+        // к продаже: в итогах карты она уже отмечена.
+        val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
+        gear.forEach { (piece, presence) ->
+            val marked = piece.id in marks
+            SaleMarked(marked) {
+                PieceLine(piece, presence, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable }) { onItem(piece) }
+            }
+        }
     }
     if (reward.items.isNotEmpty()) {
         Caption(ui("expedition.report_orbs"))

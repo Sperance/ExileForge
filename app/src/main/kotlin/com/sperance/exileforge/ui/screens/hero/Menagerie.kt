@@ -33,6 +33,7 @@ import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -43,7 +44,7 @@ fun petName(species: String): String = locOr("pet.$species", species)
 @Composable fun PetIcon(game: GameUi, species: String, size: Int) {
     // A hybrid (3.79.0) has a portrait of its own, not its biome's egg.
     if (SpriteIcon(com.sperance.exileforge.core.display.icon("pet.$species"), Gold, Modifier.size(size.dp), halo = false)) return
-    val egg = game.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome] } }
+    val egg = game.index?.pets?.let { pets -> pets.species.firstOrNull { it.code == species }?.let { pets.eggs[it.biome]?.get(Rarity.MAGIC) } }
     if (egg != null) {
         StackIcon(game, egg, size)
     } else {
@@ -217,7 +218,8 @@ private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onT
     val active = hero.pets.isActive(pet.id)
     val smithy = koinViewModel<SmithyViewModel>()
     val shell = koinViewModel<ShellViewModel>()
-    var releasing by remember(pet.id) { mutableStateOf(false) }
+    var selling by remember(pet.id) { mutableStateOf(false) }
+    var listing by remember(pet.id) { mutableStateOf(false) }
     var hiring by remember(pet.id) { mutableStateOf(false) }
     // A helper does not fight (3.70.0): the hiring dialog repeats its lines before it goes to work.
     val helps = if (kind.kind == PetKind.HELPER) menagerie.lines(pet).joinToString(", ") { lineText(index, it) }.ifBlank { "—" } else null
@@ -231,7 +233,11 @@ private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onT
                     smithy.openPet(pet.id)
                     shell.tab(TAB_CRAFT)
                 }) { Text(ui("pets.to_forge")) }
-                ForgeTextButton(onClick = { releasing = true }, enabled = !game.busy) { Text(ui("pets.release"), color = LifeRed) }
+                // Работающего питомца не продать (CH_039): сначала отдых.
+                if (!active) {
+                    ForgeOutlinedButton(onClick = { listing = true }, enabled = !game.busy) { Text(ui("hero.action_auction")) }
+                    ForgeTextButton(onClick = { selling = true }, enabled = !game.busy) { Text(ui("pets.sell"), color = LifeRed) }
+                }
             }
         }
     }
@@ -247,17 +253,23 @@ private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onT
             vm.activatePet(pet.id)
         }
     }
-    if (releasing) {
+    if (selling) {
         ConfirmSheet(
-            title = ui("pets.release_q"),
-            confirm = ui("pets.release"),
+            title = ui("pets.sell_q"),
+            confirm = ui("pets.sell"),
             danger = true,
             subtitle = petName(pet.species),
-            ledger = listOf(LedgerLine(ui("pets.release_gold"), number(index.rules.pets.releasePrice(pet).toDouble()), Tone.GAIN)),
-            onDismiss = { releasing = false },
+            ledger = listOf(LedgerLine(ui("pets.sell_gold"), number(index.rules.pets.releasePrice(pet).toDouble()), Tone.GAIN)),
+            onDismiss = { selling = false },
         ) {
-            releasing = false
-            vm.releasePet(pet.id)
+            selling = false
+            vm.sellPet(pet.id)
+        }
+    }
+    if (listing) {
+        ListingSheet(game, petName(pet.species), onDismiss = { listing = false }) { orb, price, _ ->
+            listing = false
+            vm.sellPetLot(pet.id, orb, price)
         }
     }
 }

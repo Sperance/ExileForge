@@ -36,6 +36,7 @@ import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.DeviceView
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.DossierHero
+import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.SanctionCategory
@@ -225,6 +226,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
     }
+    if (account.isAdmin && hero != null) ServerSection(account, vm, hero)
     dossier.sanctions.firstOrNull { it.active }?.let { active ->
         Text(
             sanctionLine(active),
@@ -310,6 +312,77 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
+
+/**
+ * Сервер героя (3.91.0): администратор видит, где он, и переносит на другой - с подтверждением, ведь перенос уводит из гильдии
+ * и снимает лоты; «+» заводит новый сервер.
+ */
+@Composable private fun ServerSection(account: AccountUi, vm: ModerationViewModel, hero: DossierHero) {
+    val state by vm.state.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { vm.loadServers() }
+    var moving by remember(hero.heroId) { mutableStateOf<GameServer?>(null) }
+    var founding by remember { mutableStateOf(false) }
+    Section(ui("admin.server_title")) {
+        Chips {
+            val known = state.servers.ifEmpty { listOf(GameServer(hero.server, hero.server)) }
+            known.forEach { server ->
+                Chip(server.name.ifBlank { server.code }, server.code == hero.server) {
+                    if (!account.busy && server.code != hero.server) moving = server
+                }
+            }
+            Chip("+", false) { if (!account.busy) founding = true }
+        }
+    }
+    moving?.let { target ->
+        ConfirmSheet(
+            title = ui("admin.move_q", hero.name),
+            confirm = ui("admin.move"),
+            danger = true,
+            subtitle = "${vm.serverName(hero.server)} → ${target.name.ifBlank { target.code }}",
+            note = ui("admin.move_note"),
+            onDismiss = { moving = null },
+        ) {
+            moving = null
+            vm.moveHero(hero.heroId, target.code)
+        }
+    }
+    if (founding) {
+        ServerSheet(account, onDismiss = { founding = false }) { code, name ->
+            founding = false
+            vm.createServer(code, name)
+        }
+    }
+}
+
+@Composable private fun ServerSheet(account: AccountUi, onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
+    var code by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(ui("admin.server_new"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+            OutlinedTextField(
+                code,
+                { value -> code = value.filter { it.isLetterOrDigit() || it == '_' }.uppercase().take(SERVER_CODE) },
+                label = { Text(ui("admin.server_code")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            OutlinedTextField(
+                name,
+                { name = it.take(SERVER_NAME) },
+                label = { Text(ui("admin.server_name")) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            ForgeButton(onClick = { onCreate(code, name) }, enabled = !account.busy && code.isNotBlank() && name.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
+                Text(ui("admin.server_create"))
+            }
+        }
+    }
+}
+
+private const val SERVER_CODE = 16
+private const val SERVER_NAME = 32
 
 @Composable private fun OtherHero(hero: DossierHero, onOpen: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {

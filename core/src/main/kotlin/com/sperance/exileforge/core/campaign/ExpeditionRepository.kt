@@ -20,7 +20,8 @@ data class UnfinishedRun(val runId: String, val zone: MapCode)
 
 /**
  * Поход на экране (3.80.20): карточка зоны перед входом, добыча похода для листа снаряжения, окно атласа и счётчики
- * журнала - события, которых сервер ещё не взял, и отвергнутые, для значка.
+ * журнала - события, которых сервер ещё не взял, и отвергнутые, для значка. [saleMarks] (3.91.0) - id вещей добычи, помеченных
+ * к продаже посреди захода: в итогах карты они уже отмечены.
  */
 data class Expedition(
     val launch: MapLaunch? = null,
@@ -29,6 +30,7 @@ data class Expedition(
     val pending: Int = 0,
     val rejected: Int = 0,
     val unfinished: UnfinishedRun? = null,
+    val saleMarks: Set<String> = emptySet(),
 )
 
 /** Единственный источник правды о походе на экране (3.80.20); сам бег похода - у `ExpeditionActions`. */

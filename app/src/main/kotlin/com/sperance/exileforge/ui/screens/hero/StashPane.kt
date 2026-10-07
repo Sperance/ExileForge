@@ -121,7 +121,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
                 items(lines, key = { it.piece.id }) { line ->
                     val verdict = rememberGearVerdict(game, line.piece.item)
                     if (selling) {
-                        SellLine(pick, line.piece.id) { toggle -> StashTile(line, verdict, selected = pick.chosen(line.piece.id), onClick = toggle) }
+                        SellLine(pick, line.piece.id) { chosen, toggle -> StashTile(line, verdict, selected = chosen, onClick = toggle) }
                     } else {
                         StashTile(line, verdict, selected = line.piece.id == selected, onHold = { hold(line.piece.id) }) {
                             onOpen(line.piece.id)

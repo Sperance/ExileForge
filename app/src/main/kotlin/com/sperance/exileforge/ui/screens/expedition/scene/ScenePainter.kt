@@ -94,6 +94,8 @@ internal class ScenePainter {
         scope.translate(width / 2 - cameraX, height * .55f + cameraY) {
             // The ground first, all of it: nothing stands below the floor.
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) style.floor(frame, spot(map, x, y), palette, glow(x, y))
+            // Chasms (3.91.0) sink into the ground: drawn with it, under everything that stands.
+            for (y in ys) for (x in xs) if (map.tile(x, y) == Tile.CHASM && visible(x, y)) style.chasm(frame, spot(map, x, y), palette, glow(x, y))
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) decor(map, x, y, palette, biome, glow(x, y))
             if (world.explored(map.exit.x, map.exit.y)) portal(map.exit.x + .5, map.exit.y + .5, world.sealed)
             world.portal?.takeIf { world.explored(it.x, it.y) }?.let { vaalPortal(it.x + .5, it.y + .5, glow(it.x, it.y)) }

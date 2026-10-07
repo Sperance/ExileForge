@@ -55,6 +55,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.delay
 
 /**
  * How a map's summary opens: its title and line, the colour and glyph of the ending, and the button that closes it.
@@ -92,17 +93,24 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     var looked by remember { mutableStateOf<ItemView?>(null) }
     var stack by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(tally.receiving) { if (tally.receiving) vm.flushRun() }
-    // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; ничего не отмечено заранее. Продаётся
-    // «Продать и вернуться» (3.90.4) - уже после захода.
+    // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; заранее отмечено помеченное к продаже в заходе
+    // (3.91.0). Продаётся «Продать и вернуться» (3.90.4) - уже после захода.
     val hero = game.hero
     val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index) {
         val ids = tally.loot.equipment.mapTo(HashSet()) { it.id }
         game.sellLots(hero?.items.orEmpty().filter { it.id in ids }.mapNotNull { game.view(it) })
     }
-    val pick = rememberSellPick(lots)
+    val marks = vm.state.collectAsStateWithLifecycle().value.saleMarks
+    val pick = rememberSellPick(lots, initial = marks)
     // Из выигранной зоны Ваал возвращаются на карту - заход идёт, и продажи нет: в заходе не продают (3.90.4).
     val run by vm.run.collectAsStateWithLifecycle()
     val selling = lots.isNotEmpty() && run?.vaal != true
+    // Кнопки итогов оживают не сразу (3.91.0): нажатие, пришедшее в кнопку отчёта боя на том же месте, не закрывает заход.
+    var armed by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(ARM_DELAY)
+        armed = true
+    }
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -120,16 +128,17 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
             RunFigures(tally.figures)
         }
-        if (selling) SellDock(pick, enabled = !game.busy, verb = "sell.do_n_return", onSell = onDone)
+        if (selling) SellDock(pick, enabled = armed && !game.busy, verb = "sell.do_n_return", onSell = onDone)
         ForgeButton(
             onClick = { onDone(emptyList()) },
+            enabled = armed,
             modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = head.accent, contentColor = if (head.accent == LifeRed) Parchment else Ink),
         ) {
             Text(head.done, style = MaterialTheme.typography.titleMedium)
         }
     }
-    looked?.let { item -> LootSheet(game, vm, item, onDismiss = { looked = null }) }
+    looked?.let { item -> LootSheet(game, vm, item, onDismiss = { looked = null }, markable = false) }
     stack?.let { code -> StackInfoSheet(game, code) { stack = null } }
 }
 
@@ -198,10 +207,18 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, onItem: (ItemVi
         val text = game.index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code)
         Text(ui("summary.recipe", text), color = Rune, style = MaterialTheme.typography.bodySmall)
     }
-    pick?.let { SellPresetRow(it) }
+    pick?.let {
+        SellPresetRow(it)
+        MutedText(ui("sell.summary_hint"), style = MaterialTheme.typography.bodySmall)
+    }
     game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) ->
         game.view(instance)?.let { piece ->
-            if (pick != null && presence.actionable) SellLine(pick, piece.id) { PieceLine(piece, presence) { onItem(piece) } } else PieceLine(piece, presence) { onItem(piece) }
+            // В выборе (3.91.0) нажатие отмечает вещь, удержание открывает её карточку.
+            if (pick != null && presence.actionable) {
+                SellLine(pick, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, onClick = toggle) }
+            } else {
+                PieceLine(piece, presence) { onItem(piece) }
+            }
         }
     }
     if (loot.items.isNotEmpty()) {
@@ -222,7 +239,7 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, onItem: (ItemVi
  * Добытая вещь «Полем боя» (3.88.6): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
  * Надетая (3.90.0, [presence]) - строкой с меткой «Надето», без действий.
  */
-@Composable internal fun PieceLine(item: ItemView, presence: LootPresence, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, onClick = onClick)
+@Composable internal fun PieceLine(item: ItemView, presence: LootPresence, selected: Boolean = false, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, selected = selected, onLongClick = onLongClick, onClick = onClick)
 
 /** A stack of the bag as a chip: its icon, its name and how many. */
 @Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {
@@ -238,3 +255,6 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, onItem: (ItemVi
         Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment, style = MaterialTheme.typography.labelMedium)
     }
 }
+
+/** Сколько итоги карты глухи к нажатиям после появления, мс. */
+private const val ARM_DELAY = 600L

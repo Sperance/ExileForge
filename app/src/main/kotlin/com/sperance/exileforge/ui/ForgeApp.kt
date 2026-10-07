@@ -49,7 +49,6 @@ import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.app.StallWatchdog
-import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
@@ -80,7 +79,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
 import com.sperance.exileforge.ui.screens.city.CityScreen
 import com.sperance.exileforge.ui.screens.city.UniquesScreen
-import com.sperance.exileforge.ui.screens.crafts.CraftsAwayHost
 import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
@@ -225,8 +223,6 @@ import org.koin.compose.viewmodel.koinViewModel
             kotlinx.coroutines.delay(MAIL_POLL_MS)
         }
     }
-    // «Пока вас не было» (3.69.0): the crafts catch-up of an absence, once, over whatever the game shows after the warm-up.
-    if (route.phase == AppPhase.GAME && warmup?.finished != false) CraftsAwayHost()
     // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
     if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }
@@ -238,7 +234,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable internal fun Shell(game: GameUi, logs: List<RequestLog>, route: Route, navigator: Navigator, onBug: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val heroModel: HeroViewModel = koinViewModel()
-    val craftsModel: CraftsViewModel = koinViewModel()
     val screens: @Composable (Modifier) -> Unit = { modifier ->
         NavDisplay(
             backStack = navigator.stack,
@@ -288,8 +283,6 @@ import org.koin.compose.viewmodel.koinViewModel
     Scaffold(containerColor = Ink, bottomBar = { GameBar(game, route) }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Column(Modifier.fillMaxSize().voidBackdrop().nestedScroll(collapse.connection)) {
-                // The craft under way is read with the game, so the banner's plaque knows it from the start.
-                LaunchedEffect(game.heroId) { if (game.heroId.isNotBlank()) craftsModel.load(silent = true) }
                 // Шапка игры с меню не сворачивается (3.88.8): сворачиваются только шапки экранов.
                 ForgeBanner(game, route, onBug)
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)

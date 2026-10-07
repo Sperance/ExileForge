@@ -149,6 +149,9 @@ class HeroActions(
     fun resetTree() = heroCommand { id -> api.tree.reset(id) }
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = heroCommand { id -> api.hero.autoSell(id, rarity, groups) }
 
+    /** Правило автопродажи «всё, что герой не может носить» (3.90.3). */
+    fun autoSellUnwearable(on: Boolean) = heroCommand { id -> api.hero.autoSellUnwearable(id, on) }
+
     /** Админу: опыт герою, уровень решает сервер. */
     fun addExperience(amount: Double) = heroCommand { id ->
         check(sessions.state.value.isAdmin) { ui("hero.xp_admin_only") }
@@ -172,6 +175,12 @@ class HeroActions(
 
     /** Продажа торговцу: цену ставит и платит сервер; карточка показала ту же сумму заранее. */
     fun sellForGold(itemId: String) = heroCommand { id -> notices.toast(ui("toast.sold", api.hero.sell(id, itemId).gold)) }
+
+    /** Продажа пачкой (3.90.3): выбор тайника, «по правилам» и окно конца захода; сколько и за сколько - тостом. */
+    fun sellMany(itemIds: Collection<String>) = heroCommand { id ->
+        val sold = api.hero.sellMany(id, itemIds.toList())
+        notices.toast(ui("toast.sold_many", sold.itemIds.size, sold.gold))
+    }
 
     /** Одна команда героя: владелец или админ; ответ без снимка перечитывается и рисуется. */
     private fun heroCommand(block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.HERO)) {

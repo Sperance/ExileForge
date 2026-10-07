@@ -32,7 +32,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.WarmupScreen
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
-import com.sperance.exileforge.ui.screens.hero.HeroHeader
+import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.HeroSummary
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
@@ -73,7 +73,7 @@ class NarrowScreenTest {
         compose.setContent {
             ForgeTheme {
                 Column(Modifier.width(320.dp).background(Ink).verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    HeroHeader(state)
+                    HeroLine(state)
                     HeroSummary(state)
                     EquipmentLedger(state) { _, _ -> }
                     ItemCard(boots, detailed = true, actionLabel = "Свойства")

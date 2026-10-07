@@ -98,6 +98,7 @@ object Sheets {
     /**
      * What wearing [item] would change, by the rules' own placement: a ring takes a free one of two, a
      * two-handed weapon frees both hands, a bow pairs with a quiver. Only the characteristics that move are returned.
+     * [place] (3.90.3) - место из нескольких (второе кольцо, третья фляга), куда вещь надевают; null - решают правила.
      */
     fun wearing(
         index: ContentIndex,
@@ -108,8 +109,9 @@ object Sheets {
         items: List<ItemInstance>,
         before: Map<String, Double>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
+        place: Slot? = null,
     ): List<StatDelta> {
-        val next = worn(index, item, level, heroClass, tree, items, pets) ?: return emptyList()
+        val next = worn(index, item, level, heroClass, tree, items, pets, place) ?: return emptyList()
         // The counts of what is worn (empty slots, uniques…) are the powers' reading of the sheet, not a figure to compare.
         return (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
             .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
@@ -117,8 +119,8 @@ object Sheets {
     }
 
     /**
-     * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на то же место, что выберет «Надеть».
-     * Null, когда шаблона вещи нет в контенте.
+     * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на место [place] (3.90.3) или, без него,
+     * на то, что выберут правила. Null, когда шаблона вещи нет в контенте.
      */
     fun verdict(
         index: ContentIndex,
@@ -129,11 +131,12 @@ object Sheets {
         items: List<ItemInstance>,
         before: Map<String, Double>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
-    ): GearVerdict? = worn(index, item, level, heroClass, tree, items, pets)?.let { GearVerdict.of(index, level, before, it) }
+        place: Slot? = null,
+    ): GearVerdict? = worn(index, item, level, heroClass, tree, items, pets, place)?.let { GearVerdict.of(index, level, before, it) }
 
     /**
-     * The whole sheet with [item] put on as the server would place it — a ring on a free one of two, a two-handed weapon
-     * freeing both hands, a bow pairing with a quiver; null when the content does not know the item.
+     * The whole sheet with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),
+     * a two-handed weapon freeing both hands, a bow pairing with a quiver; null when the content does not know the item.
      */
     private fun worn(
         index: ContentIndex,
@@ -143,10 +146,11 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         pets: List<com.sperance.exileforge.rules.content.Pet>,
+        place: Slot?,
     ): Map<String, Double>? {
         val template = index.template(item.template) ?: return null
         val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
-        val target = EquipSlots.target(template.slot, null, worn.mapNotNull { it.slot })
+        val target = EquipSlots.target(template.slot, place, worn.mapNotNull { it.slot })
         val wornWeapon = worn.firstOrNull { it.slot == Slot.WEAPON_1H }?.let { index.template(it.template)?.weaponType }
         val freed = EquipSlots.displaced(template.slot, template.weaponType, wornWeapon) + target
         // An item not yet the hero's — a merchant's offer, a lot — is weighed as if it were in the stash.

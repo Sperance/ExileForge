@@ -114,7 +114,7 @@ fun CraftsScreen() {
     }
     PullToRefreshBox(isRefreshing = activity.busy || Reads.CRAFTS in activity.loading, onRefresh = vm::load, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) } }
+            Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) { CraftsGlossaryButton(crafts?.rules) } } }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (crafts == null) {
                     item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }

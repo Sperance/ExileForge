@@ -177,7 +177,8 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
                     enabled = !game.busy && (game.ownsCharacter || game.isAdmin) && unmet.isEmpty(),
                     unwearable = unmet,
                     price = game.sellPrice(piece.item),
-                    verdict = rememberGearVerdict(game, piece.item),
+                    // Вердикт на это самое место (3.90.3): кольцо во вторую руку меряется со вторым кольцом.
+                    verdict = rememberGearVerdict(game, piece.item, place.place),
                 ) {
                     onDismiss()
                     onEquip(piece.id)

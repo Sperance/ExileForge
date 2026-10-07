@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -29,12 +30,21 @@ import com.sperance.exileforge.ui.theme.Parchment
  * Плитка вещи (3.90.0) - сжатая карточка «Реликвария» в том же облике редкости ([relicGround], [RelicSocket], [RelicLook.nameStyle]):
  * гнездо и имя в шапке, под ним «что это · редкость», база одной строкой, затем каждая строка вещи мелким шрифтом в цвете её вида -
  * без значков и тиров. [footer] - что добавляет список под строками (вердикт, «Надеть»).
+ * Строка тайника (3.90.3): [trailing] - напротив имени (цена, вердикт, отметки), [selected] - золотая рамка, [onClick] - вся плитка.
  */
 @Composable
-fun ItemTile(item: ItemView, modifier: Modifier = Modifier, footer: @Composable ColumnScope.() -> Unit = {}) {
+fun ItemTile(
+    item: ItemView,
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    trailing: (@Composable ColumnScope.() -> Unit)? = null,
+    footer: @Composable ColumnScope.() -> Unit = {},
+) {
     val look = relicLook(item.rarity)
     Column(
-        modifier.fillMaxWidth().relicGround(look, RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp),
+        modifier.fillMaxWidth().relicGround(look, RoundedCornerShape(16.dp), selected).then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -49,6 +59,7 @@ fun ItemTile(item: ItemView, modifier: Modifier = Modifier, footer: @Composable 
                     maxLines = 1,
                 )
             }
+            trailing?.let { Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp), content = it) }
         }
         if (item.base.isNotEmpty()) {
             Text(

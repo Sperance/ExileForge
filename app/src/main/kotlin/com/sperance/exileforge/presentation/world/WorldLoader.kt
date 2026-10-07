@@ -32,6 +32,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withContext
@@ -50,7 +53,7 @@ class WorldLoader(
     private val languages: LanguageRepository,
     private val scope: CoroutineScope,
     private val trace: StartupTrace,
-) {
+) : GameResources {
     private val api: GameApi get() = connection.api
     private var localeJob: Job? = null
     private var iconJob: Job? = null
@@ -126,6 +129,16 @@ class WorldLoader(
             launch { quietly { loadIcons() } }
             launch { quietly { loadPortraits() } }
         }
+    }
+
+    override val ready: Flow<Boolean> = world.state.map { it.content != null && it.localeStrings > 0 && it.iconKeys > 0 }.distinctUntilChanged()
+
+    /** Контент, словарь и иконки сверяются с манифестом бок о бок (3.90.3); шаги видны в журнале запуска своих пунктов. */
+    override suspend fun recheck() = coroutineScope {
+        launch { quietly { ensureContent(fresh = true) } }
+        launch { quietly { loadLocale(languages.lang.value) } }
+        launch { quietly { loadIcons() } }
+        Unit
     }
 
     private suspend fun quietly(block: suspend () -> Unit) {

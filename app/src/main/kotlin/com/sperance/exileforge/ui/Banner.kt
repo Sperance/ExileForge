@@ -80,8 +80,6 @@ import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
 import com.sperance.exileforge.ui.screens.expedition.TrialScreen
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
-import com.sperance.exileforge.ui.screens.hero.HeroTab
-import com.sperance.exileforge.ui.screens.hero.HeroTabStrip
 import com.sperance.exileforge.ui.screens.progress.ProgressPlace
 import com.sperance.exileforge.ui.screens.progress.ProgressPlaceScreen
 import com.sperance.exileforge.ui.screens.progress.ProgressScreen

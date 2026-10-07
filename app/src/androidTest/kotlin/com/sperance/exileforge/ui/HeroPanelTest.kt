@@ -27,7 +27,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
-import com.sperance.exileforge.ui.screens.hero.HeroHeader
+import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.HeroSummary
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
@@ -73,7 +73,7 @@ class HeroPanelTest {
                         world = World(content = index, contentHash = index.hash),
                         holding = HeroHolding(heroId = "hero", hero = hero, owner = "owner"),
                     )
-                    HeroHeader(state)
+                    HeroLine(state)
                     HeroSummary(state)
                     EquipmentLedger(state) { place, itemId -> picked = place.code to itemId }
                 }

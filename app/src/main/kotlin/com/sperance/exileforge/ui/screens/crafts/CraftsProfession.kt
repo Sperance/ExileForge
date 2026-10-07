@@ -143,6 +143,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { vm.openProfession("") }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold) }
                 Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
+                CraftsGlossaryButton(crafts.state?.rules)
                 ToolButton(game, profession) { toolOpen = true }
             }
         }

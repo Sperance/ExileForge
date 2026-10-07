@@ -35,19 +35,27 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.LootPresence
 import com.sperance.exileforge.presentation.state.presentLoot
+import com.sperance.exileforge.presentation.state.sellLots
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.SellDock
+import com.sperance.exileforge.ui.components.SellLine
+import com.sperance.exileforge.ui.components.SellPick
+import com.sperance.exileforge.ui.components.SellPresetRow
+import com.sperance.exileforge.ui.components.rememberSellPick
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * How a map's summary opens: its title and line, the colour and glyph of the ending, and the button that closes it.
@@ -78,12 +86,21 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * and every stack and piece the server granted for it, compact, each with its icon. The loot is the server's roll:
  * while some of it is on its way the screen says so, asks for it at once and fills in as the answers arrive.
  * A piece opens its comparison with what is worn, a stack its description.
+ * С 3.90.3 добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N · +◎» над возвратом в лагерь.
  */
 @Composable internal fun MapSummary(game: GameUi, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: () -> Unit) {
     val tally = hud.tally
     var looked by remember { mutableStateOf<ItemView?>(null) }
     var stack by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(tally.receiving) { if (tally.receiving) vm.flushRun() }
+    // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; ничего не отмечено заранее.
+    val heroModel = koinViewModel<HeroViewModel>()
+    val hero = game.hero
+    val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index) {
+        val ids = tally.loot.equipment.mapTo(HashSet()) { it.id }
+        game.sellLots(hero?.items.orEmpty().filter { it.id in ids }.mapNotNull { game.view(it) })
+    }
+    val pick = rememberSellPick(lots)
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -97,10 +114,11 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                     Text(ui("expedition.fall_lost", number(it)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Loot(game, tally, onItem = { looked = it }, onStack = { stack = it })
+            Loot(game, tally, pick.takeIf { lots.isNotEmpty() }, onItem = { looked = it }, onStack = { stack = it })
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
             RunFigures(tally.figures)
         }
+        if (lots.isNotEmpty()) SellDock(pick, enabled = !game.busy) { heroModel.sellMany(it) }
         ForgeButton(
             onClick = onDone,
             modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -165,17 +183,25 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     }
 }
 
-/** Everything the server granted for the map: the recipe, the pieces a line each, the stacks as chips; on its way, or its absence said. */
+/**
+ * Everything the server granted for the map: the recipe, the pieces a line each, the stacks as chips; on its way, or its absence said.
+ * С выбором продажи [pick] (3.90.3) над вещами - быстрые наборы, у каждой лежащей в тайнике - отметка.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Loot(game: GameUi, tally: MapTally, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
+private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
     val loot = tally.loot
     Caption(ui("summary.loot"))
     loot.recipe?.let { code ->
         val text = game.index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code)
         Text(ui("summary.recipe", text), color = Rune, style = MaterialTheme.typography.bodySmall)
     }
-    game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) -> game.view(instance)?.let { PieceLine(it, presence) { onItem(it) } } }
+    pick?.let { SellPresetRow(it) }
+    game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) ->
+        game.view(instance)?.let { piece ->
+            if (pick != null && presence.actionable) SellLine(pick, piece.id) { PieceLine(piece, presence) { onItem(piece) } } else PieceLine(piece, presence) { onItem(piece) }
+        }
+    }
     if (loot.items.isNotEmpty()) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             loot.items.entries.sortedByDescending { it.value }.forEach { (code, amount) ->

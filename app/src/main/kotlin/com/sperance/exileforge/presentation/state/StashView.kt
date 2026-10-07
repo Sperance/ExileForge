@@ -18,6 +18,11 @@ import com.sperance.exileforge.rules.content.Slot
         else -> Slot.entries.firstOrNull { it.tag == tag }?.let { slotTitle(it, lang) } ?: tag
     }
 
+    /** Место группы, чей значок она носит в рейке тайника (3.90.3): первое место с её тегом. */
+    val slot: Slot get() = Slot.entries.first { it.tag == tag }
+
+    val isTool: Boolean get() = tag == TOOL
+
     companion object {
         const val WEAPON = "weapon"
         const val RING = "ring"
@@ -30,25 +35,24 @@ import com.sperance.exileforge.rules.content.Slot
 /**
  * The stash's filters (3.30.0): slot groups, rarities, «can wear» and a text query. Empty sets let everything
  * through; they are the screen's own and reset when it is left — only the [StashSort] and «hide equipped» are kept on the device.
+ * С 3.90.3 группа - одна, пункт рейки тайника ([group], null - всё); инструменты - тоже пункт рейки.
  */
 data class StashFilter(
-    val groups: Set<SlotGroup> = emptySet(),
+    val group: SlotGroup? = null,
     val rarities: Set<Rarity> = emptySet(),
     val wearable: Boolean = false,
     val query: String = "",
 ) {
-    val active: Boolean get() = groups.isNotEmpty() || rarities.isNotEmpty() || wearable || query.isNotBlank()
+    /** Сужен ли список листом фильтров; рейка видна сама и в счёт не идёт. */
+    val active: Boolean get() = rarities.isNotEmpty() || wearable || query.isNotBlank()
 
     /** Whether [piece] passes; [unmet] names the requirements the hero misses for a template. */
-    fun admits(piece: ItemView, unmet: (String) -> List<String>): Boolean = (groups.isEmpty() || SlotGroup.of(piece.slot) in groups) &&
+    fun admits(piece: ItemView, unmet: (String) -> List<String>): Boolean = (group == null || SlotGroup.of(piece.slot) == group) &&
         (rarities.isEmpty() || piece.rarity in rarities) &&
         (!wearable || unmet(piece.code).isEmpty()) &&
         ItemSearch.matches(piece, query)
 
-    fun toggle(group: SlotGroup) = copy(groups = groups.toggled(group))
-    fun toggle(rarity: Rarity) = copy(rarities = rarities.toggled(rarity))
-
-    private fun <T> Set<T>.toggled(value: T): Set<T> = if (value in this) this - value else this + value
+    fun toggle(rarity: Rarity) = copy(rarities = if (rarity in rarities) rarities - rarity else rarities + rarity)
 }
 
 /**
@@ -74,3 +78,12 @@ fun GameUi.stashShelf(pieces: List<ItemView>, filter: StashFilter, hideWorn: Boo
 
 /** Whether the hero wears this copy, on the body or in a socket. */
 val ItemView.isWorn: Boolean get() = equipped || socketed
+
+/**
+ * Пункты рейки тайника (3.90.3): группы мест в порядке мест тела, инструменты - в конце, со счётом вещей [pieces];
+ * группа без вещей пункта не получает.
+ */
+fun railGroups(pieces: List<ItemView>): List<Pair<SlotGroup, Int>> {
+    val counts = pieces.groupingBy { SlotGroup.of(it.slot) }.eachCount()
+    return Slot.entries.map(SlotGroup::of).distinct().sortedBy { it.isTool }.mapNotNull { group -> counts[group]?.let { group to it } }
+}

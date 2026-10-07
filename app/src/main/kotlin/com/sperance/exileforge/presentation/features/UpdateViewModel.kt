@@ -2,7 +2,6 @@ package com.sperance.exileforge.presentation.features
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
@@ -12,21 +11,27 @@ import com.sperance.exileforge.core.update.Wire
 import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.StartStage
 import com.sperance.exileforge.presentation.app.StartupTrace
+import com.sperance.exileforge.presentation.world.GameResources
 import com.sperance.exileforge.update.InstallResult
 import com.sperance.exileforge.update.UpdateInstaller
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.getAndUpdate
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import java.io.File
 
@@ -54,13 +59,19 @@ data class UpdateState(
 /**
  * Updates from GitHub Releases (3.86.0): at start, when the server answers (its wire decides whether a build is required),
  * by hand and every hour. A failed check is quietly tried again a minute later and never holds the start.
+ *
+ * С 3.90.3 сами проверки идут одной очередью ([pending]): на холодном старте - только когда ресурсы игры ([resources])
+ * дочитаны, а не бок о бок с ними; по каждому возвращению в игру - сперва сверка ресурсов, затем проверка, без
+ * поминутного порога; во время похода или испытания ([playing]) - ни одной, отложенная проверка идёт по их концу.
  */
 class UpdateViewModel(
     app: Application,
     private val reach: ServerReach,
-    newerServer: kotlinx.coroutines.flow.Flow<Unit> = kotlinx.coroutines.flow.emptyFlow(),
+    newerServer: Flow<Unit> = emptyFlow(),
     http: OkHttpClient,
     private val trace: StartupTrace,
+    private val resources: GameResources,
+    private val playing: Flow<Boolean>,
 ) : AndroidViewModel(app) {
     private val updates = Updates(client = http)
 
@@ -70,19 +81,23 @@ class UpdateViewModel(
     private val checks = Mutex()
     private var download: Job? = null
 
-    @Volatile private var lastCheck = 0L
+    /** Отложенная проверка: null - не нужна; первая - холодного старта. Две просьбы сливаются в более полную. */
+    private val pending = MutableStateFlow<Request?>(Request.CHECK)
+
+    /** Холодный старт позади: возвращения в игру с этих пор сверяют ресурсы. */
+    @Volatile private var warm = false
+    private var periodic: Job? = null
 
     // Установщик ушёл в системное окно: ответ его ждётся, пока игрок не вернулся в игру без него.
     private var installerReturn: Job? = null
 
     init {
         if (BuildConfig.UPDATES) {
-            viewModelScope.launch {
-                while (true) delay(if (check()) Updates.PERIOD_MS else RETRY_MS)
-            }
+            viewModelScope.launch { serve() }
             // The server answered: its wire may make a build required, so the check runs again with it.
-            viewModelScope.launch { reach.state.map { it.wire }.filterNotNull().distinctUntilChanged().collect { check() } }
-            // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour.
+            viewModelScope.launch { reach.state.map { it.wire }.filterNotNull().distinctUntilChanged().collect { ask(Request.CHECK) } }
+            // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour -
+            // мимо очереди: без новой сборки игра дальше входа не пойдёт, и ресурсов ей ждать незачем.
             viewModelScope.launch { newerServer.collect { check() } }
         }
         recheckSources()
@@ -97,15 +112,40 @@ class UpdateViewModel(
         }
     }
 
+    /**
+     * Очередь проверок: первая ждёт ресурсов старта (не дольше [RESOURCES_WAIT_MS] - без связи они могут и не прийти), каждая -
+     * конца похода и испытания; после каждой следующая плановая встаёт через час, после отказа GitHub - через минуту.
+     */
+    private suspend fun serve() {
+        trace.step(StartStage.VERSION, "start.step.wait_resources") { withTimeoutOrNull(RESOURCES_WAIT_MS) { resources.ready.first { it } } }
+        while (true) {
+            pending.filterNotNull().first()
+            playing.first { !it }
+            val request = pending.getAndUpdate { null } ?: continue
+            if (request == Request.RECHECK) resources.recheck()
+            val answered = check()
+            warm = true
+            periodic?.cancel()
+            periodic = viewModelScope.launch {
+                delay(if (answered) Updates.PERIOD_MS else RETRY_MS)
+                ask(Request.CHECK)
+            }
+        }
+    }
+
+    private fun ask(request: Request) = pending.update { maxOf(it ?: request, request) }
+
     /** «Проверить обновления»: asked by hand, the answer is said either way. */
     fun checkNow() {
         viewModelScope.launch { check(manual = true) }
     }
 
-    /** The player came back to the app: the build is asked again, at most once a minute. The caller does not ask during a run. */
+    /**
+     * Игрок вернулся в игру (3.90.3): сверка ресурсов и проверка сборки - каждый раз, без порога; во время похода или
+     * испытания - по их концу. До конца холодного старта возвращение ничего не добавляет: его проверка и так впереди.
+     */
     fun resumed() {
-        if (!BuildConfig.UPDATES || System.currentTimeMillis() - lastCheck < RESUME_GAP_MS) return
-        viewModelScope.launch { check() }
+        if (BuildConfig.UPDATES && warm) ask(Request.RECHECK)
     }
 
     /**
@@ -130,7 +170,6 @@ class UpdateViewModel(
 
     /** One check; whether GitHub answered. */
     private suspend fun check(manual: Boolean = false): Boolean = checks.withLock {
-        lastCheck = System.currentTimeMillis()
         mutable.update { it.copy(checking = true, upToDate = false) }
         try {
             val wire: Wire? = reach.state.value.wire
@@ -184,14 +223,17 @@ class UpdateViewModel(
     /** The permission screen was left: the player tries again. */
     fun permissionAsked() = mutable.update { it.copy(needsPermission = false) }
 
+    /** Отложенная проверка (3.90.3): просто проверка или, по возвращении в игру, сперва сверка ресурсов; вторая полнее. */
+    private enum class Request { CHECK, RECHECK }
+
     private companion object {
         const val DIR = "updates"
 
         /** A failed check is tried again this soon, unseen. */
         const val RETRY_MS = 60_000L
 
-        /** Coming back to the app asks again no sooner than this after the last check. */
-        const val RESUME_GAP_MS = 60_000L
+        /** Дольше этого первая проверка не ждёт ресурсов старта: без связи они не придут, а сборку искать надо. */
+        const val RESOURCES_WAIT_MS = 30_000L
 
         /** Back in the game while installing: the installer's answer is waited for this long before the retry is offered. */
         const val INSTALLER_GRACE_MS = 3_000L

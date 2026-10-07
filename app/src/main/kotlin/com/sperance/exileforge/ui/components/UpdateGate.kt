@@ -61,9 +61,8 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     val s by updates.state.collectAsState()
     val reach = window.reach
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    // Back in the app (3.76.0): the build is asked again, unless a run is under way.
-    val idle by rememberUpdatedState(!busy)
-    LifecycleEventEffect(Lifecycle.Event.ON_START) { if (idle) updates.resumed() }
+    // Back in the app (3.76.0): the build is asked again; с 3.90.3 поход и испытание откладывает сама модель - до их конца.
+    LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.resumed() }
     // Back from the settings or the system installer: the permission is asked again, a closed installer stops waiting.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updates.foreground() }
     // The window is the start's, once: a server lost later in the game is the banner's.

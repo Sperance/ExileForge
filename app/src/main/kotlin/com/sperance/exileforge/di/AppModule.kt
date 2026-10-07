@@ -74,6 +74,7 @@ import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.combine
 import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
@@ -164,5 +165,9 @@ val appModule = module {
     viewModel { SettingsViewModel(get()) }
     viewModelOf(::ServerViewModel)
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
-    viewModel { params -> UpdateViewModel(androidApplication(), get(), params.get(0), get(), get()) }
+    // 3.90.3: и ресурсы игры, которых ждёт первая проверка, и поход с испытанием, во время которых проверок нет.
+    viewModel { params ->
+        val playing = combine(get<ExpeditionActions>().run, get<TrialActions>().arena) { run, arena -> run != null || arena != null }
+        UpdateViewModel(androidApplication(), get(), params.get(0), get(), get(), get<WorldLoader>(), playing)
+    }
 }

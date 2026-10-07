@@ -53,6 +53,9 @@ import kotlinx.serialization.Serializable
 /** What a merchant paid for an item: the copy is gone by the time this arrives. */
 @Serializable data class SellOutcome(val itemId: String = "", val code: String = "", val gold: Long = 0, val money: Long = 0)
 
+/** Продажа пачкой (3.90.3, сервер 1.81.8): проданные id, золото за них и золото героя после. */
+@Serializable data class SellBatch(val itemIds: List<String> = emptyList(), val gold: Long = 0, val money: Long = 0)
+
 /**
  * What an orb, an essence or the bench answered: the copy as it now stands, the one a Mirror made, and
  * the key of a sentence with its arguments — themselves locale keys, so the client says it in its language.

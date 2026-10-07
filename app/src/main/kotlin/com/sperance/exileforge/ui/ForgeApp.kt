@@ -88,9 +88,8 @@ import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
 import com.sperance.exileforge.ui.screens.expedition.TrialScreen
 import com.sperance.exileforge.ui.screens.expedition.UnfinishedRunHost
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
+import com.sperance.exileforge.ui.screens.hero.HeroChrome
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
-import com.sperance.exileforge.ui.screens.hero.HeroTab
-import com.sperance.exileforge.ui.screens.hero.HeroTabStrip
 import com.sperance.exileforge.ui.screens.progress.ProgressPlace
 import com.sperance.exileforge.ui.screens.progress.ProgressPlaceScreen
 import com.sperance.exileforge.ui.screens.progress.ProgressScreen
@@ -296,8 +295,11 @@ import org.koin.compose.viewmodel.koinViewModel
                 // Шапка игры с меню не сворачивается (3.88.8): сворачиваются только шапки экранов.
                 ForgeBanner(game, route, onBug)
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
-                HeroTab.of(route.tab)?.let { HeroTabStrip(it, locked = { tab -> !game.unlocked(Feature.ofTab(tab)) }, onSelect = shell::tab) }
-                CompositionLocalProvider(LocalHeaderCollapse provides collapse) { screens(Modifier.weight(1f).fillMaxWidth()) }
+                CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
+                    // Строка героя и полоса его разделов (3.90.3) - над персонажем, тайником, деревом и гримуаром разом.
+                    HeroChrome(game, route.tab, shell::tab)
+                    screens(Modifier.weight(1f).fillMaxWidth())
+                }
             }
             // The toasts float over the screen, under the banner (2.80.0).
             ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
@@ -343,7 +345,7 @@ import org.koin.compose.viewmodel.koinViewModel
             // open, its tab reads as the one chosen. The City's tab tapped again from inside a building (3.22.0) walks back out
             // to the square, as «Развитие» tapped again from a tile's screen walks back to its hub.
             NavigationBarItem(
-                selected = route.tab == index || (index == TAB_HERO && HeroTab.of(route.tab) != null) ||
+                selected = route.tab == index || (index == TAB_HERO && HeroPage.entries.any { it.tab == route.tab }) ||
                     (index == TAB_PROGRESS && ProgressPlace.of(route.tab) != null),
                 onClick = { shell.tab(index) },
                 icon = {

@@ -20,20 +20,18 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.SlotGroup
 import com.sperance.exileforge.presentation.state.StashFilter
-import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * How many of the shelf's settings differ from its default: each filter chip, the query, the worn gear shown ([showsWorn]:
- * hidden is the default since 3.77.0) and an order other than the newest first.
+ * Сколько настроек листа фильтров отличается от обычных (3.90.3): каждая редкость, «могу надеть», поиск и показанное надетое
+ * ([showsWorn]: скрытое - обычное с 3.77.0). Группа - рейка, порядок - строка управления: их видно и без счёта.
  */
-internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolean = false): Int = filter.groups.size + filter.rarities.size + (if (filter.wearable) 1 else 0) + (if (filter.query.isNotBlank()) 1 else 0) +
-    (if (showsWorn) 1 else 0) + (if (sort != StashSort.NEWEST) 1 else 0)
+internal fun stashTweaks(filter: StashFilter, showsWorn: Boolean = false): Int = filter.rarities.size + (if (filter.wearable) 1 else 0) + (if (filter.query.isNotBlank()) 1 else 0) +
+    (if (showsWorn) 1 else 0)
 
 /** «Hide equipped» (3.69.0): the gear shelf without what the hero wears or has socketed; the same chip sits in the sheet. */
 @Composable internal fun HideWornChip(on: Boolean, onToggle: (Boolean) -> Unit) {
@@ -51,20 +49,16 @@ internal fun stashTweaks(filter: StashFilter, sort: StashSort, showsWorn: Boolea
 }
 
 /**
- * What narrows the shelf, in one sheet: the search, the order, the groups, «can wear», «hide equipped» and the rarities, and a
- * reset of them all. [hideWorn] is null on a shelf it does not apply to (the tools), and its chip is not drawn there.
+ * Что сужает список, одним листом (3.90.3): поиск, «могу надеть», «скрыть надетое» и редкости, и сброс их всех. Группа -
+ * рейка, порядок - строка управления. [hideWorn] - null там, где правило не действует (инструменты), и его фишки нет.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 internal fun StashFilterSheet(
     filter: StashFilter,
-    sort: StashSort,
     lang: Lang,
-    shelfSize: Int,
-    groupCounts: Map<SlotGroup, Int>,
     rarities: List<Rarity>,
     onFilter: (StashFilter) -> Unit,
-    onSort: (StashSort) -> Unit,
     hideWorn: Boolean?,
     onHideWorn: (Boolean) -> Unit,
     onDismiss: () -> Unit,
@@ -82,48 +76,28 @@ internal fun StashFilterSheet(
                 singleLine = true, keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { onDismiss() }),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Engraved(ui("stash.sort"))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StashSort.entries.forEach { entry ->
-                    FilterChip(selected = entry == sort, onClick = { onSort(entry) }, label = { Text(ui("stash.sort.${entry.name.lowercase()}")) })
-                }
-            }
-            Engraved(ui("stash.filter_groups"))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = filter.groups.isEmpty(),
-                    onClick = { onFilter(filter.copy(groups = emptySet())) },
-                    label = { Text(ui("hero.slot_count", ui("common.all"), shelfSize)) },
-                )
-                groupCounts.forEach { (group, count) ->
-                    FilterChip(
-                        selected = group in filter.groups,
-                        onClick = { onFilter(filter.toggle(group)) },
-                        label = { Text(ui("hero.slot_count", group.title(lang), count)) },
-                    )
-                }
-            }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(selected = filter.wearable, onClick = { onFilter(filter.copy(wearable = !filter.wearable)) }, label = { Text(ui("stash.can_wear")) })
                 hideWorn?.let { HideWornChip(it, onHideWorn) }
             }
-            Engraved(ui("stash.filter_rarity"))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                rarities.forEach { rarity ->
-                    FilterChip(
-                        selected = rarity in filter.rarities,
-                        onClick = { onFilter(filter.toggle(rarity)) },
-                        label = { Text(rarityTitle(rarity, lang), color = rarityColor(rarity.name)) },
-                    )
+            if (rarities.isNotEmpty()) {
+                Engraved(ui("stash.filter_rarity"))
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    rarities.forEach { rarity ->
+                        FilterChip(
+                            selected = rarity in filter.rarities,
+                            onClick = { onFilter(filter.toggle(rarity)) },
+                            label = { Text(rarityTitle(rarity, lang), color = rarityColor(rarity.name)) },
+                        )
+                    }
                 }
             }
             ForgeOutlinedButton(
                 onClick = {
-                    onFilter(StashFilter())
-                    onSort(StashSort.NEWEST)
+                    onFilter(StashFilter(group = filter.group))
                     if (hideWorn == false) onHideWorn(true)
                 },
-                enabled = stashTweaks(filter, sort, showsWorn = hideWorn == false) > 0,
+                enabled = stashTweaks(filter, showsWorn = hideWorn == false) > 0,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(ui("stash.reset")) }
         }

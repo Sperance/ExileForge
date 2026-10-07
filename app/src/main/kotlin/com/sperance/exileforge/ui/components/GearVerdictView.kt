@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.gearVerdict
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.LifeRed
@@ -32,11 +33,12 @@ import kotlin.math.roundToInt
 
 /**
  * Вердикт вещи для героя (3.89.0), сложенный вне главного потока и запомненный на вещь и лист героя: строки длинного
- * списка не держат прокрутку. Null - пока считается или когда вещь не надеть.
+ * списка не держат прокрутку. Null - пока считается или когда вещь не надеть. [place] (3.90.3) - место пары, на которое
+ * вещь мерится; без него - лучшее.
  */
-@Composable fun rememberGearVerdict(game: GameUi, item: ItemInstance): GearVerdict? {
-    val verdict by produceState<GearVerdict?>(null, item, game.hero, game.index) {
-        value = withContext(Dispatchers.Default) { game.gearVerdict(item) }
+@Composable fun rememberGearVerdict(game: GameUi, item: ItemInstance, place: Slot? = null): GearVerdict? {
+    val verdict by produceState<GearVerdict?>(null, item, game.hero, game.index, place) {
+        value = withContext(Dispatchers.Default) { game.gearVerdict(item, place) }
     }
     return verdict
 }

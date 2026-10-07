@@ -84,6 +84,8 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
     // «Заменить» (3.81.0): the place this copy is worn in, opened on what could go there instead.
     var replacing by remember(itemId) { mutableStateOf<BodyPlace?>(null) }
+    // Место пары для «Если надеть» и «Надеть» (3.90.3): с каким из колец сравнивать и куда надевать.
+    val wear = rememberWearChoice(game, instance)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             val look = relicLook(view.rarity)
@@ -95,7 +97,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         detailed = true,
                         price = price,
                         waiting = waiting,
-                        totals = wearTotals(game, instance),
+                        totals = wearTotals(game, instance, wear),
                         requirementsMet = reachable,
                     )
                 }
@@ -157,7 +159,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
 
                     else -> PrimaryPill(ui("hero.equip"), can && reachable, look) {
                         onDismiss()
-                        model.equip(instance.id, null)
+                        model.equip(instance.id, wear.target)
                     }
                 }
                 // One way into the forge (2.51.0): its orbs and bench are its own tabs; у карты кузница - главная кнопка.

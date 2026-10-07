@@ -1,16 +1,11 @@
 package com.sperance.exileforge.ui.screens.auction
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
@@ -37,17 +32,16 @@ import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
-import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.content.Rarity
-import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
+import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -82,16 +76,15 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * «Шапка и вкладки» (variant A): the gold, the time to the next shelf and the loot filter in one strip; the notes behind
  * the header's (i); the wares and the orbs as two halves of one switch, so the first item is in sight at once.
+ * С 3.90.3 под шапкой только кошелёк: время до нового товара - первой строкой списка, фильтр добычи - автопродажа тайника.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
-    val heroModel: HeroViewModel = koinViewModel()
     val shelf by market.market.collectAsStateWithLifecycle()
     val activity by market.activity.collectAsStateWithLifecycle()
     val busy = activity.busy
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
-    var filtering by remember { mutableStateOf(false) }
     var notes by remember { mutableStateOf(false) }
     var orbsShelf by rememberSaveable { mutableStateOf(false) }
     // The orb a tap on its glass or name opened: what it is for, before it is bought.
@@ -109,7 +102,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
                 Text(ui("merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                 IconButton(onClick = { notes = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Info, ui("merchant.notes"), tint = Muted) }
             }
-            MerchantStrip(money, stock?.refreshAt?.takeIf { it > 0 }, game.hero?.info?.autoSell) { filtering = true }
+            money?.let { MerchantPurse(it) }
         }
     }
     if (orbs.isNotEmpty()) {
@@ -140,6 +133,8 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
                     }
                 }
             } else {
+                // Таймер обновления (3.90.3) - шапка списка товаров: тикает и уходит с прокруткой.
+                stock?.refreshAt?.takeIf { it > 0 }?.let { at -> item(key = "renews") { RenewalRow(at) } }
                 if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
                 items(offers, key = { it.first.id }) { (offer, view) ->
                     ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { GoldPrice(offer.price) }
@@ -155,38 +150,36 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel) {
             market.buyOffer(offer.id)
         }
     }
-    // Read from the snapshot on every pass, so a chip turns as soon as the server has the new filter.
-    if (filtering) {
-        game.hero?.info?.autoSell?.let { filter ->
-            AutoSellSheet(filter, enabled = !game.busy, onChange = heroModel::autoSell, onDismiss = { filtering = false })
-        }
+}
+
+/** Кошелёк под шапкой (3.90.3): таймер товара ушёл шапкой списка, фильтр добычи - автопродажей тайника. */
+@Composable private fun MerchantPurse(money: Long) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(Modifier.fillMaxWidth().depthPanel(shape).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        GoldPrice(money)
     }
 }
 
-/** The strip under the header: the purse, when the shelf renews, and the loot filter's door with the number of marks on. */
-@Composable private fun MerchantStrip(money: Long?, refreshAt: Long?, filter: AutoSell?, onFilter: () -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
-    Row(
-        Modifier.fillMaxWidth().depthPanel(shape).padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        money?.let { GoldPrice(it) }
-        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            refreshAt?.let {
-                Icon(Icons.Outlined.Schedule, null, tint = Muted, modifier = Modifier.size(14.dp))
-                Text(
-                    ui("merchant.renews", untilText(it)),
-                    color = Muted,
-                    style = MaterialTheme.typography.labelMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
+/** «Новый товар через 2:14:03» (3.90.3): первая строка списка товаров, тикает раз в секунду по часам устройства. */
+@Composable private fun RenewalRow(at: Long) {
+    val now by produceState(System.currentTimeMillis(), at) {
+        while (true) {
+            value = System.currentTimeMillis()
+            delay(1_000)
         }
-        filter?.let { AutoSellButton(it, onFilter) }
+    }
+    Row(
+        Modifier.fillMaxWidth().depthInset(RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(Icons.Outlined.Schedule, null, tint = Muted, modifier = Modifier.size(14.dp))
+        Text(ui("merchant.renews", countdown(((at - now) / 1_000).coerceAtLeast(0))), color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/** Секунды как `h:mm:ss`. */
+private fun countdown(seconds: Long): String = "%d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60)
 
 /** The merchant's two notes — how the shelf renews and is priced, how the orbs grow dearer — behind the header's (i). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -236,7 +229,7 @@ private fun OfferSheet(game: GameUi, offer: MerchantOffer, money: Long?, onDismi
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, offer.item), requirementsMet = game.unmetFor(offer.item.template).isEmpty()) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, offer.item, rememberWearChoice(game, offer.item)), requirementsMet = game.unmetFor(offer.item.template).isEmpty()) }
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -260,45 +253,4 @@ private fun OfferSheet(game: GameUi, offer: MerchantOffer, money: Long?, onDismi
 internal fun untilText(at: Long): String {
     val minutes = ((at - System.currentTimeMillis()) / 60_000).coerceAtLeast(0)
     return ui("merchant.time", minutes / 60, minutes % 60)
-}
-
-/** The loot filter's door in the strip: its glyph with how many marks are on; the marks themselves wait in [AutoSellSheet]. */
-@Composable private fun AutoSellButton(filter: AutoSell, onClick: () -> Unit) {
-    val marks = filter.sell.values.sumOf { it.size }
-    BadgedBox(badge = { if (marks > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(marks.toString()) } }) {
-        IconButton(onClick = onClick) { Icon(Icons.Outlined.FilterList, ui("merchant.autosell"), tint = Gold) }
-    }
-}
-
-/**
- * The loot filter (3.47.0, server 1.45.0): a row per rarity, a chip per slot group — what is on, the merchant takes from a
- * run's loot before it reaches the stash. A unique, an influenced, corrupted, fractured or locked piece never goes.
- * A sheet behind the header's button, so the shelf is not pushed down by it.
- */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
-@Composable
-private fun AutoSellSheet(filter: AutoSell, enabled: Boolean, onChange: (Rarity, Set<SlotGroup>) -> Unit, onDismiss: () -> Unit) {
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Engraved(ui("merchant.autosell"))
-            MutedText(ui("merchant.autosell_note"))
-            AutoSell.SELLABLE.forEach { rarity ->
-                val on = filter.sell[rarity].orEmpty()
-                Text(ui("enum.rarity.${rarity.name}"), color = rarityColor(rarity.name), style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SlotGroup.entries.forEach { group ->
-                        FilterChip(
-                            selected = group in on,
-                            enabled = enabled,
-                            onClick = { onChange(rarity, if (group in on) on - group else on + group) },
-                            label = { Text(ui("merchant.group.${group.name}")) },
-                        )
-                    }
-                }
-            }
-        }
-    }
 }

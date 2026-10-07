@@ -5,7 +5,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.itemDescription
@@ -16,6 +15,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
@@ -26,16 +26,17 @@ import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.OrbGlyph
-import com.sperance.exileforge.ui.screens.hero.PetIcon
-import com.sperance.exileforge.ui.screens.hero.PetLines
+import com.sperance.exileforge.ui.screens.hero.PetCard
 import com.sperance.exileforge.ui.screens.hero.petName
-import com.sperance.exileforge.ui.screens.hero.petSubtitle
 import com.sperance.exileforge.ui.theme.*
 
 /**
  * The forge over a pet (3.81.0): the orbs that change a pet are spent here and only here. The crafting orbs of items
  * (server 1.65.0) are tried over the pet by the rules, as over an item, an omen laid on the next one — the Omen of Choice,
  * of Corruption — is picked above them, and the pets' own growth orb follows; the Omen of Choice's lines wait for the pick here.
+ *
+ * С 3.90.3 питомец выбирается не списком, а карточкой ([PetCard], та же, что под снаряжением героя): все питомцы со всеми
+ * строками, выбранный подсвечен, а варианты знамения выбора и сферы лежат прямо под ним.
  */
 @Composable internal fun PetForge(game: GameUi, smithy: Smithy, vm: SmithyViewModel) {
     val hero = game.hero ?: return
@@ -45,36 +46,31 @@ import com.sperance.exileforge.ui.theme.*
         InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
         return
     }
-    val pet = pets.firstOrNull { it.id == smithy.pet } ?: pets.first()
+    val chosen = pets.firstOrNull { it.id == smithy.pet } ?: pets.first()
     val menagerie = remember(index) { Menagerie(index) }
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
-    Spinner(
-        ui("forge.pet_pick"),
-        pet.id,
-        pets.associate { it.id to "${petName(it.species)} · ${ui("pets.level", it.level)}" },
-        !game.busy,
-        onChange = vm::selectPet,
-    )
-    ForgePanel {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PetIcon(game, pet.species, 40)
-            Column(Modifier.weight(1f)) {
-                Text(petName(pet.species), color = rarityColor(pet.rarity.name), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                menagerie.species(pet.species)?.let { MutedText(petSubtitle(it, pet)) }
-            }
-            Text(ui("pets.level", pet.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
-        }
-        PetLines(index, menagerie, pet)
-    }
-    if (pet.offer.isNotEmpty()) {
-        ChoiceFrame("forge.choice_title", "forge.choice_hint") {
-            pet.offer.forEachIndexed { i, option ->
-                val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code.value)
-                ChoiceRow(text, "T${option.tier}") { if (enabled) vm.choosePetLine(pet.id, i) }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        pets.forEach { pet ->
+            val kind = menagerie.species(pet.species) ?: return@forEach
+            val selected = pet.id == chosen.id
+            PetCard(game, index, menagerie, kind, pet, hero.pets.isActive(pet.id), selected = selected, onClick = { if (!game.busy && !selected) vm.selectPet(pet.id) })
+            if (selected) {
+                PetChoices(index, menagerie, pet, enabled, vm)
+                PetOrbs(game, pet, enabled, vm)
             }
         }
     }
-    PetOrbs(game, pet, enabled, vm)
+}
+
+/** Варианты строки знамения выбора, что ждут решения игрока; нажатие ставит выбранную строку. */
+@Composable private fun PetChoices(index: ContentIndex, menagerie: Menagerie, pet: Pet, enabled: Boolean, vm: SmithyViewModel) {
+    if (pet.offer.isEmpty()) return
+    ChoiceFrame("forge.choice_title", "forge.choice_hint") {
+        pet.offer.forEachIndexed { i, option ->
+            val text = menagerie.lines(pet.copy(lines = listOf(option), offer = emptyList())).firstOrNull()?.let { lineText(index, it) } ?: displayName(option.code.value)
+            ChoiceRow(text, "T${option.tier}") { if (enabled) vm.choosePetLine(pet.id, i) }
+        }
+    }
 }
 
 /** The orbs at hand that go on this pet, each with what it does; one tap spends one on it. */

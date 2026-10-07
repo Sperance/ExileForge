@@ -23,6 +23,7 @@ import com.sperance.exileforge.ui.components.HoldButton
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Panel
@@ -49,7 +50,7 @@ internal fun LootSheet(
     LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item), requirementsMet = game.unmetFor(item.code).isEmpty())
+            ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item, rememberWearChoice(game, item.item)), requirementsMet = game.unmetFor(item.code).isEmpty())
             when (stand) {
                 LootPresence.WORN -> MutedText(ui("expedition.loot_worn"))
                 LootPresence.GONE -> MutedText(ui("expedition.loot_gone"))

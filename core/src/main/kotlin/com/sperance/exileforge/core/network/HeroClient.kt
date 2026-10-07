@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.model.command.CreateHeroCommand
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.PetState
+import com.sperance.exileforge.core.model.hero.SellBatch
 import com.sperance.exileforge.core.model.hero.SellOutcome
 import com.sperance.exileforge.core.model.hero.StashState
 import com.sperance.exileforge.core.model.sync.HeroParts
@@ -22,6 +23,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
@@ -120,6 +122,16 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     /**
+     * Продажа пачкой (3.90.3, сервер 1.81.8): вещи тайника телом запроса. Сервер отказывает всей пачке, если хоть одна
+     * надета, заперта или не уходит пачкой.
+     */
+    suspend fun sellMany(heroId: String, itemIds: List<String>): SellBatch {
+        require(itemIds.isNotEmpty()) { ui("api.choose_item") }
+        itemIds.forEach(::requireItemId)
+        return http.post("$HERO/sell/batch", heroQuery(heroId), body = WireJson.encodeToJsonElement(itemIds))
+    }
+
+    /**
      * Locks or unlocks one item, in the stash or worn (server 1.28.0): a locked item is never sold, listed or
      * auto-sold from the overflow; orbs and the bench still work on it.
      */
@@ -130,6 +142,9 @@ class HeroClient internal constructor(private val http: Transport) {
 
     /** One row of the loot filter (server 1.45.0): the slot groups of [rarity] the merchant takes at once; none clears it. */
     suspend fun autoSell(heroId: String, rarity: Rarity, groups: Set<SlotGroup>): AutoSell = http.post("$HERO/autosell", heroQuery(heroId, "rarity" to rarity.name, "groups" to groups.joinToString(",") { it.name }))
+
+    /** Правило фильтра добычи «всё, что герой не может носить» (3.90.3, сервер 1.81.8). */
+    suspend fun autoSellUnwearable(heroId: String, on: Boolean): AutoSell = http.post("$HERO/autosell/unwearable", heroQuery(heroId, "on" to on.toString()))
 
     /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))

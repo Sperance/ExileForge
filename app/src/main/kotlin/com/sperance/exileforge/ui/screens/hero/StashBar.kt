@@ -1,19 +1,24 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AutoMode
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,148 +29,63 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.SlotGroup
-import com.sperance.exileforge.presentation.state.StashFilter
 import com.sperance.exileforge.presentation.state.StashSort
-import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.ui.components.Tip
+import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.icons.SlotIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * «Быстрые фильтры» тайника (3.88.6, выбор владельца): над списком - переключатель снаряжения и инструментов во всю ширину
- * (3.90.2, макет Б1); ниже ряд редкостей с местами тайника и «+» и кнопкой поиска, ряд групп мест со счётом, затем порядок
- * и «без надетого». Всё, что раньше жило в листе фильтров, - на виду; лист остаётся для поиска.
+ * Строка управления тайника (3.90.3, макет «Тайник» В): места «31/200 +» с докупкой ([fill]), порядок списком, дверь
+ * автопродажи с числом включённых правил, «Продать» - режим выбора, и фильтры листом. Редкости, группы и порядок больше
+ * не лежат рядами над списком: группа - рейка слева, остальное - лист фильтров.
  */
 @Composable
-internal fun StashBar(
-    tools: Boolean,
-    onTools: (Boolean) -> Unit,
+internal fun StashTopBar(
     fill: @Composable () -> Unit,
-    tweaks: Int,
-    onSearch: () -> Unit,
-    filter: StashFilter,
-    onFilter: (StashFilter) -> Unit,
-    rarities: List<Rarity>,
-    groupCounts: Map<SlotGroup, Int>,
-    shelfSize: Int,
-    lang: Lang,
     sort: StashSort,
     onSort: (StashSort) -> Unit,
-    hideWorn: Boolean?,
-    onHideWorn: (Boolean) -> Unit,
+    autoSellMarks: Int,
+    onAutoSell: () -> Unit,
+    canSell: Boolean,
+    onSell: () -> Unit,
+    tweaks: Int,
+    onFilters: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth().depthInset(RoundedCornerShape(14.dp)).padding(3.dp)) {
-            ShelfSwitch(ForgeGlyphs.Helm, ui("hero.stash_gear"), !tools, Modifier.weight(1f)) { onTools(false) }
-            ShelfSwitch(ForgeGlyphs.Anvil, ui("hero.stash_tools"), tools, Modifier.weight(1f)) { onTools(true) }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChipLine(Modifier.weight(1f)) {
-                QuickChip(ui("common.all"), filter.rarities.isEmpty(), Parchment, pill = true) { onFilter(filter.copy(rarities = emptySet())) }
-                rarities.forEach { rarity ->
-                    QuickChip(ui("stash.rarity_many.${rarity.name}"), rarity in filter.rarities, rarityColor(rarity.name), pill = true) { onFilter(filter.toggle(rarity)) }
-                }
-            }
-            fill()
-            StashFilterButton(tweaks, onSearch)
-        }
-        if (groupCounts.size > 1) {
-            ChipLine {
-                QuickChip(ui("hero.slot_count", ui("stash.all_things"), shelfSize), filter.groups.isEmpty(), GoldBright) { onFilter(filter.copy(groups = emptySet())) }
-                groupCounts.forEach { (group, count) ->
-                    QuickChip(ui("hero.slot_count", group.title(lang), count), group in filter.groups, GoldBright) { onFilter(filter.toggle(group)) }
-                }
-            }
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            SortPicker(sort, onSort)
-            Spacer(Modifier.weight(1f))
-            hideWorn?.let { on ->
-                Row(
-                    Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.Switch) { onHideWorn(!on) }.padding(horizontal = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Switch(
-                        checked = on,
-                        onCheckedChange = null,
-                        modifier = Modifier.height(20.dp),
-                        colors = SwitchDefaults.colors(checkedTrackColor = Gold, checkedThumbColor = Ink, uncheckedTrackColor = PanelRaised, uncheckedBorderColor = Bronze),
-                    )
-                    Text(ui("stash.no_worn"), color = Muted, style = MaterialTheme.typography.labelMedium)
-                }
-            }
-        }
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        fill()
+        SortPicker(sort, onSort, Modifier.weight(1f))
+        AutoSellDoor(autoSellMarks, onAutoSell)
+        SellDoor(canSell, onSell)
+        StashFilterButton(tweaks, onFilters)
     }
 }
 
-/** Ряд фишек, что уходит вбок прокруткой, а не переносится. */
-@Composable private fun ChipLine(modifier: Modifier = Modifier.fillMaxWidth(), content: @Composable RowScope.() -> Unit) {
-    Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), content = content)
-}
-
-/**
- * Фишка быстрого фильтра: [pill] - редкость, контур в её цвете и светлая заливка у выбранной; иначе - группа мест, тихий
- * прямоугольник, выбранный светлее.
- */
-@Composable private fun QuickChip(label: String, on: Boolean, tint: Color, pill: Boolean = false, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(if (pill) 15.dp else 10.dp)
-    val ground = when {
-        pill && on -> Modifier.background(tint.copy(alpha = .9f), shape)
-        pill -> Modifier.border(1.dp, tint.copy(alpha = .4f), shape)
-        on -> Modifier.depthRaised(shape)
-        else -> Modifier.depthInset(shape)
-    }
-    Box(
-        Modifier.height(30.dp).clip(shape).then(ground).selectable(on, role = Role.Checkbox, onClick = onClick).padding(horizontal = 12.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            label,
-            color = when {
-                pill && on -> Abyss
-                pill -> tint
-                on -> GoldBright
-                else -> Color(0xFF8FA0AB)
-            },
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = if (pill && on) FontWeight.ExtraBold else FontWeight.Bold,
-            maxLines = 1,
-        )
-    }
-}
-
-/** Половинка переключателя полок (3.90.2): значок и подпись, выбранная - приподнята на светлой подложке. */
-@Composable private fun ShelfSwitch(icon: ImageVector, label: String, on: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(11.dp)
-    val tint = if (on) GoldBright else Muted
-    Row(
-        modifier.height(34.dp).then(if (on) Modifier.depthRaised(shape) else Modifier).clip(shape).selectable(on, role = Role.Tab, onClick = onClick),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
-    ) {
-        Icon(icon, null, tint = if (on) Gold else Muted, modifier = Modifier.size(16.dp))
-        Text(label, color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
-    }
-}
-
-/** «Сортировка: по цене ▾»: нажатие раскрывает порядки. */
-@Composable private fun SortPicker(sort: StashSort, onSort: (StashSort) -> Unit) {
+/** «Новые ▾»: порядок тайника коротким словом, нажатие раскрывает все порядки. */
+@Composable private fun SortPicker(sort: StashSort, onSort: (StashSort) -> Unit, modifier: Modifier) {
     var open by remember { mutableStateOf(false) }
-    Box {
-        Row(
-            Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.DropdownList) { open = true }.padding(horizontal = 4.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(ui("stash.sort") + ":", color = Color(0xFF8FA0AB), style = MaterialTheme.typography.labelMedium)
-            Text(ui("stash.sort.${sort.name.lowercase()}").lowercase() + " ▾", color = GoldBright, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-        }
+    Box(modifier) {
+        Text(
+            ui("stash.sort_short.${sort.name.lowercase()}") + " ▾",
+            color = GoldBright,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.DropdownList, onClickLabel = ui("stash.sort")) { open = true }
+                .padding(horizontal = 6.dp, vertical = 8.dp),
+        )
         DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             StashSort.entries.forEach { entry ->
                 DropdownMenuItem(
@@ -177,5 +97,74 @@ internal fun StashBar(
                 )
             }
         }
+    }
+}
+
+/** Дверь в правила автопродажи: значок и число включённых отметок. */
+@Composable private fun AutoSellDoor(marks: Int, onClick: () -> Unit) {
+    BadgedBox(badge = { if (marks > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(marks.toString(), fontSize = 9.sp, maxLines = 1) } }) {
+        IconButton(onClick = onClick, modifier = Modifier.requiredSize(36.dp).border(1.dp, Gold.copy(alpha = .6f), CircleShape)) {
+            Icon(Icons.Outlined.AutoMode, ui("autosell.title"), tint = Gold, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+/** «Продать»: монета и слово, вход в режим выбора; без продаваемого пачкой - погашена. */
+@Composable private fun SellDoor(enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(18.dp)
+    val tint = if (enabled) GoldBright else Muted
+    Row(
+        Modifier.height(36.dp).clip(shape).border(1.dp, tint.copy(alpha = .6f), shape).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(ForgeGlyphs.Coins, null, tint = tint, modifier = Modifier.size(14.dp))
+        Text(ui("hero.sell_do"), color = tint, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
+/**
+ * Рейка тайника (3.90.3, макет В): узкий столбец значков мест - те же, что у надетого, - со счётом вещей; первым «всё»,
+ * инструменты - пунктом в конце. Выбранный приподнят и в золоте; долгое нажатие называет пункт подсказкой.
+ */
+@Composable
+internal fun StashRail(groups: List<Pair<SlotGroup, Int>>, total: Int, selected: SlotGroup?, lang: Lang, onSelect: (SlotGroup?) -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier.width(56.dp).verticalScroll(rememberScrollState()).padding(vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        RailEntry(ui("stash.all_things"), total, selected == null, { onSelect(null) }) { tint -> Icon(ForgeGlyphs.Stash, null, tint = tint, modifier = Modifier.size(22.dp)) }
+        groups.forEach { (group, count) ->
+            RailEntry(group.title(lang), count, group == selected, { onSelect(group) }) { tint ->
+                if (group.isTool) Icon(ForgeGlyphs.Anvil, null, tint = tint, modifier = Modifier.size(22.dp)) else SlotIcon(group.slot, tint, Modifier.size(22.dp), tint = tint)
+            }
+        }
+    }
+}
+
+/** Пункт рейки: значок в ячейке и счёт в углу; подпись - только подсказкой по долгому нажатию и для чтения с экрана. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun RailEntry(label: String, count: Int, on: Boolean, onClick: () -> Unit, icon: @Composable (Color) -> Unit) {
+    var tip by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        Modifier.size(48.dp).then(if (on) Modifier.depthRaised(shape) else Modifier.depthInset(shape)).clip(shape)
+            .semantics { contentDescription = ui("hero.slot_count", label, count) }
+            .combinedClickable(role = Role.Tab, onLongClick = { tip = true }, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        icon(if (on) Gold else Muted)
+        Text(
+            count.toString(),
+            color = if (on) GoldBright else Muted,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 4.dp),
+        )
+        if (on) Box(Modifier.align(Alignment.CenterStart).width(2.dp).height(24.dp).background(Gold, RoundedCornerShape(1.dp)))
+        if (tip) TipCallout(Tip(label)) { tip = false }
     }
 }

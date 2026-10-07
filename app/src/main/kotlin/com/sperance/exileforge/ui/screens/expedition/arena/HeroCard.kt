@@ -161,7 +161,6 @@ import kotlin.math.sin
                     ),
                 )
             }
-            if (pet.quality > 0) Text(ui("pets.quality", pet.quality), color = GoldBright, style = MaterialTheme.typography.labelSmall)
             if (pet.corrupted) Text(ui("pets.corrupted"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
             PetLines(index, menagerie, pet)
         }

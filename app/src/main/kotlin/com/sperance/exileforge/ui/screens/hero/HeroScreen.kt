@@ -1,20 +1,12 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.BodyPlace
@@ -25,25 +17,13 @@ import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.SlotGroup
+import com.sperance.exileforge.presentation.state.HeroPage
 import com.sperance.exileforge.presentation.state.StashFilter
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
-import com.sperance.exileforge.presentation.state.stashShelf
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
-import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
-
-/** The Hero tab's sections, in the order a player reaches for them; the menagerie (3.5.0) moved to «Развитие». */
-private enum class HeroSection(val title: String, val icon: ImageVector) {
-    CHARACTER("hero.section_character", ForgeGlyphs.Exile),
-    EQUIPMENT("hero.section_equipment", ForgeGlyphs.Helm),
-    STASH("hero.section_stash", ForgeGlyphs.Stash),
-    BAG("hero.section_bag", ForgeGlyphs.Orb),
-}
 
 /**
  * The hero: who they are, what they wear, and what they own.
@@ -56,6 +36,9 @@ private enum class HeroSection(val title: String, val icon: ImageVector) {
  * Since 2.22.0 the stash holds only what lies loose — what is worn or socketed is the Equipment
  * section's — and the bag is a section of its own, a list rather than a strip of chips. Since 3.0.0
  * every copy is read through its view over the content on the device, and the bag is keyed by item code.
+ *
+ * С 3.90.3 строка героя и полоса разделов - в оболочке ([HeroChrome]), раздел - [HeroPage] модели героя; тайник - рейка
+ * мест слева и список справа (макет «Тайник» В), с режимом продажи и автопродажей (макет «Продажа» А и В).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -64,133 +47,43 @@ fun HeroScreen() {
     val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<HeroViewModel>()
     val smithy = koinViewModel<SmithyViewModel>()
+    val page by model.page.collectAsStateWithLifecycle()
     val heroId = game.heroId
-    var section by rememberSaveable(heroId) { mutableStateOf(HeroSection.CHARACTER) }
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }
     var pickPlace by remember(heroId) { mutableStateOf<BodyPlace?>(null) }
-    // The filters (3.30.0) are the screen's own and go with it; the order is kept on the device.
-    var filter by remember(heroId) { mutableStateOf(StashFilter()) }
-    var filtering by remember { mutableStateOf(false) }
     var stackCode by remember(heroId) { mutableStateOf<String?>(null) }
     var listStack by remember(heroId) { mutableStateOf<String?>(null) }
-    // The stash is two shelves since 2.56.1: gear, and the professions' tools apart from it.
-    var tools by rememberSaveable(heroId) { mutableStateOf(false) }
+    // The filters (3.30.0) are the screen's own and go with it: a page switched away and back keeps the rail's choice.
+    var stashFilter by remember(heroId) { mutableStateOf(StashFilter()) }
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
     LaunchedEffect(heroId, game.sessionEpoch) { model.ensure() }
     val hero = game.hero
-    // The stash holds everything (2.51.0): what is worn or socketed too, with a gold frame and a badge.
-    // A copy whose template the content does not hold is left out rather than drawn blank.
-    // Remembered (3.55.0): a thousand views, the filter and the sort by price were rebuilt on every tick of the state.
-    // Keyed by the copies rather than the hero (3.66.0): a view rebuilt for a changed purse would redraw every line.
-    val stash = remember(hero?.items, game.index, game.world) { hero?.items.orEmpty().mapNotNull { game.view(it) } }
-    // How many items each slot group holds (2.47.0, grouped since 3.30.0): a chip says it, and a group with none has no chip.
-    val shelf = remember(stash, tools) { stash.filter { it.slot.isTool == tools } }
-    val groupCounts = remember(shelf) { shelf.groupingBy { SlotGroup.of(it.slot) }.eachCount() }
-    val rarities = remember(shelf) { shelf.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
-    // The shelf reads the sheet (what can be worn, what the merchant pays), not the rest of the hero.
-    // «Hide equipped» (3.69.0) is the gear shelf's: a tool shelf shows everything it holds.
-    val hideWorn = game.stashHideWorn && !tools
-    val visible = remember(shelf, filter, game.stashSort, hideWorn, hero?.level, hero?.stats, game.world) { game.stashShelf(shelf, filter, hideWorn) }
-    // Each part is handed its own cut (3.66.0): a changed purse redraws the header, not the ledger or the stash.
-    val header = rememberHeroHeader(game)
-    val equipment = rememberEquipment(game)
-    val lines = rememberStashLines(game, visible)
-    val selected = game.holding.selectedEquipment
     PullToRefreshBox(isRefreshing = game.refreshing(Reads.HERO), onRefresh = model::load, modifier = Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            // Шапка над списком (3.88.7): герой уходит при прокрутке вниз, вкладки разделов прилипают.
-            Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CollapsibleHeader {
-                    // Who the character is heads every section; until the hero arrives the tab says what it is.
-                    if (header != null) {
-                        HeroHeader(header)
-                    } else {
-                        ScreenHeader(ui("hero.title"), ui("hero.inventory_count", stash.size), ForgeGlyphs.Stash)
+        when {
+            hero == null -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) { item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) } }
+
+            page == HeroPage.STASH -> StashPane(game, model, shell, stashFilter, onFilter = { stashFilter = it }, onOpen = { id -> detailId = id })
+
+            else -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                when (page) {
+                    HeroPage.WORN -> {
+                        item { rememberEquipment(game)?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
+                        item { PetSlots(game, model::activatePet) }
                     }
-                }
-                SectionBar(section) { section = it }
-                // Фильтры тайника прилипают вместе с вкладками разделов (3.90.2): уходит при прокрутке только герой.
-                if (section == HeroSection.STASH && hero != null) {
-                    StashBar(
-                        tools = tools,
-                        onTools = {
-                            tools = it
-                            filter = filter.copy(groups = emptySet())
-                        },
-                        fill = { StashFill(game, model) },
-                        tweaks = if (filter.query.isNotBlank()) 1 else 0,
-                        onSearch = { filtering = true },
-                        filter = filter,
-                        onFilter = { filter = it },
-                        rarities = rarities,
-                        groupCounts = groupCounts,
-                        shelfSize = shelf.size,
-                        lang = game.lang,
-                        sort = game.stashSort,
-                        onSort = shell::stashSort,
-                        hideWorn = game.stashHideWorn.takeUnless { tools },
-                        onHideWorn = shell::stashHideWorn,
-                    )
-                }
-            }
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (hero == null) {
-                    item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) }
-                } else {
-                    when (section) {
-                        HeroSection.CHARACTER -> {
-                            item { HeroSummary(game) }
-                        }
 
-                        HeroSection.EQUIPMENT -> {
-                            item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
-                            item { PetSlots(game, model::activatePet) }
-                        }
-
-                        HeroSection.BAG -> {
-                            val sections = bagSections(game)
-                            if (sections.isEmpty()) {
-                                item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) }
-                            } // A table since 2.75.0: icon and count per cell, everything else behind the tap.
-                            else {
-                                item(key = "bag") { BagGrid(game, sections) { stackCode = it } }
-                            }
-                        }
-
-                        HeroSection.STASH -> {
-                            if (hero.overflow.isNotEmpty()) item(key = "overflow") { StashOverflow(game, model) }
-                            if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
-                            // A line, not a card: a stash is read down, and the card is one tap behind each line.
-                            items(lines, key = { it.piece.id }) { line ->
-                                val piece = line.piece
-                                // No rarity in words, a map's included (2.73.0): the row's frame already wears it.
-                                ItemRow(
-                                    piece,
-                                    selected = piece.id == selected,
-                                    worn = line.worn,
-                                    unwearable = line.unwearable,
-                                    price = line.price,
-                                    waiting = line.waiting,
-                                    verdict = rememberGearVerdict(game, piece.item),
-                                ) {
-                                    detailId = piece.id
-                                    model.selectEquipment(piece.id)
-                                }
-                            }
-                        }
+                    HeroPage.BAG -> {
+                        val sections = bagSections(game)
+                        // A table since 2.75.0: icon and count per cell, everything else behind the tap.
+                        if (sections.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) } else item(key = "bag") { BagGrid(game, sections) { stackCode = it } }
                     }
+
+                    else -> item { HeroSummary(game) }
                 }
             }
         }
     }
     detailId?.let { id -> ItemSheet(game, model, id) { detailId = null } }
-    if (filtering) {
-        StashFilterSheet(
-            filter, game.stashSort, game.lang, shelf.size, groupCounts, rarities, onFilter = { filter = it },
-            onSort = shell::stashSort, hideWorn = game.stashHideWorn.takeUnless { tools }, onHideWorn = shell::stashHideWorn, onDismiss = { filtering = false },
-        )
-    }
     // The sheet is about a stack the bag still holds: listed or read away, it closes with it.
     stackCode?.let { code ->
         hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
@@ -236,36 +129,4 @@ fun HeroScreen() {
     }
     // The place goes with the pick: a ring chosen for the second line lands in the second ring, a flask in its own bay.
     pickPlace?.let { place -> SlotPicker(game, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> model.equip(itemId, place.place) }) }
-}
-
-/**
- * The four sections as glyphs over short labels.
- *
- * Four words side by side do not fit a phone's width in both languages, and a row that scrolls
- * hides the section a player is looking for; a drawing over a small label fits and is found first.
- */
-@Composable private fun SectionBar(selected: HeroSection, onSelect: (HeroSection) -> Unit) {
-    Column {
-        Row(Modifier.fillMaxWidth().background(Abyss)) {
-            HeroSection.entries.forEach { entry ->
-                val on = entry == selected
-                Column(
-                    Modifier.weight(1f).selectable(selected = on, role = Role.Tab, onClick = { onSelect(entry) }).padding(top = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Icon(entry.icon, null, tint = if (on) Gold else Muted, modifier = Modifier.size(20.dp))
-                    Text(
-                        ui(entry.title),
-                        color = if (on) GoldBright else Muted,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                        softWrap = false,
-                    )
-                    Box(Modifier.fillMaxWidth().height(2.dp).background(if (on) Gold else Color.Transparent))
-                }
-            }
-        }
-        HorizontalDivider(color = PanelRaised)
-    }
 }

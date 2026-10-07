@@ -195,7 +195,6 @@ internal fun PetCard(
             ui("pets.hybrid").takeIf { kind.element2 != null }?.let { it to GoldBright },
             ui("pets.tired").takeIf { pet.tiredUntil > System.currentTimeMillis() }?.let { it to Muted },
             ui("pets.corrupted").takeIf { pet.corrupted }?.let { it to LifeRed },
-            ui("pets.quality", pet.quality).takeIf { pet.quality > 0 }?.let { it to GoldBright },
             ui("pets.offer_waiting").takeIf { pet.offer.isNotEmpty() }?.let { it to Rune },
         )
         marks.forEach { (text, color) -> Text(text, color = color, style = MaterialTheme.typography.labelSmall) }

@@ -4,6 +4,8 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.EquipSlots
+import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.CombatProfile
 import kotlin.math.abs
@@ -81,40 +83,59 @@ internal object Toughness {
 }
 
 /**
- * Вердикты вещей одного героя (3.89.0): лист с вещью складывается один раз на вещь, пока герой и контент те же, -
+ * Место, куда можно надеть вещь (3.90.3): [slot] - место на теле (у колец и фляг их несколько), [replaced] - что там
+ * надето сейчас, [verdict] - урон и защита, если надеть вещь именно сюда (null - не по требованиям).
+ */
+data class WearPlace(val slot: Slot, val replaced: ItemInstance?, val verdict: GearVerdict?) {
+    companion object {
+        /** Место по умолчанию: первое пустое, а когда пустых нет - то, где замена даёт больший прирост. */
+        fun best(places: List<WearPlace>): WearPlace? = places.firstOrNull { it.replaced == null } ?: places.maxByOrNull { it.verdict?.score ?: Double.NEGATIVE_INFINITY }
+    }
+}
+
+/**
+ * Вердикты вещей одного героя (3.89.0): лист с вещью складывается один раз на вещь и место, пока герой и контент те же, -
  * длинный тайник и лут не пересчитывают его при каждой прокрутке. Новый герой (новый лист) или контент сбрасывают память.
- * Потокобезопасна: считают её вне главного потока.
+ * Потокобезопасна: считают её вне главного потока. С 3.90.3 вещь слота с несколькими местами (кольцо, фляга) меряется
+ * на каждом, и её вердикт - вердикт лучшего места ([WearPlace.best]).
  */
 class GearVerdicts {
     private var index: ContentIndex? = null
     private var hero: HeroView? = null
-    private val known = HashMap<ItemInstance, GearVerdict?>()
+    private val known = HashMap<ItemInstance, List<WearPlace>>()
 
     /**
-     * Вердикт [item] для [hero], или null: вещь не надевается (карта, самоцвет, инструмент), уже надета или вставлена,
-     * требования не выполнены, контента или героя ещё нет.
+     * Вердикт [item] для [hero] на лучшем месте, или null: вещь не надевается (карта, самоцвет, инструмент), уже надета или
+     * вставлена, требования не выполнены, контента или героя ещё нет.
      */
-    fun of(index: ContentIndex?, hero: HeroView?, item: ItemInstance): GearVerdict? {
-        index ?: return null
-        hero ?: return null
+    fun of(index: ContentIndex?, hero: HeroView?, item: ItemInstance): GearVerdict? = WearPlace.best(places(index, hero, item))?.verdict
+
+    /** Места [item] у [hero], каждое с тем, что там надето, и вердиктом; пусто - вещь не надеть или ещё нечего мерить. */
+    fun places(index: ContentIndex?, hero: HeroView?, item: ItemInstance): List<WearPlace> {
+        index ?: return emptyList()
+        hero ?: return emptyList()
         synchronized(this) {
             if (this.index !== index || this.hero !== hero) {
                 this.index = index
                 this.hero = hero
                 known.clear()
             }
-            if (known.containsKey(item)) return known[item]
+            known[item]?.let { return it }
         }
-        val verdict = weigh(index, hero, item)
-        synchronized(this) { if (this.hero === hero && this.index === index) known[item] = verdict }
-        return verdict
+        val places = weigh(index, hero, item)
+        synchronized(this) { if (this.hero === hero && this.index === index) known[item] = places }
+        return places
     }
 
-    private fun weigh(index: ContentIndex, hero: HeroView, item: ItemInstance): GearVerdict? {
-        if (item.equipped || item.socketed) return null
-        val slot = index.template(item.template)?.slot ?: return null
-        if (slot.isJewelLike || slot.isTool) return null
-        if (Sheets.unmet(index, item.template, hero.level, hero.stats).isNotEmpty()) return null
-        return Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active)
+    private fun weigh(index: ContentIndex, hero: HeroView, item: ItemInstance): List<WearPlace> {
+        if (item.equipped || item.socketed) return emptyList()
+        val slot = index.template(item.template)?.slot ?: return emptyList()
+        if (slot.isJewelLike || slot.isTool) return emptyList()
+        val wearable = Sheets.unmet(index, item.template, hero.level, hero.stats).isEmpty()
+        val worn = hero.equipped
+        return EquipSlots.places(slot).map { place ->
+            val verdict = if (wearable) Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place) else null
+            WearPlace(place, worn[place], verdict)
+        }
     }
 }

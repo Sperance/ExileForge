@@ -41,7 +41,7 @@ private val GLOSSARY: List<GlossaryEntry> = listOf(
     GlossaryEntry("tool"),
     GlossaryEntry("bonuses") { listOf(number(it.luckCap)) },
     GlossaryEntry("level") { listOf(it.maxLevel, number(it.levelSpeed), number(it.levelFind)) },
-    GlossaryEntry("away") { listOf(number(it.offlineHours), it.awayMinMinutes) },
+    GlossaryEntry("away") { listOf(number(it.offlineHours)) },
 )
 
 /** Кнопка ⓘ шапки ремёсел: открывает справку по показателям работ; пока правила не пришли, её нет. */

@@ -1732,7 +1732,6 @@
   "skills.type.AURA": "Аура",
   "skills.type.BONUS": "Дар",
   "skills.type.TRIGGER": "Отклик",
-  "fight.skills": "Умения: {0}",
   "enum.stat.ATLAS_CRYSTAL_CHANCE": "Атлас: шанс кристаллов",
   "enum.stat.ATLAS_CRYSTAL_ESSENCES": "Атлас: лишняя эссенция",
   "enum.stat.ATLAS_CRYSTAL_TIER": "Атлас: эссенции выше",

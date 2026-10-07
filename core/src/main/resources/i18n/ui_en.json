@@ -1732,7 +1732,6 @@
   "skills.type.AURA": "Aura",
   "skills.type.BONUS": "Gift",
   "skills.type.TRIGGER": "Response",
-  "fight.skills": "Skills: {0}",
   "enum.stat.ATLAS_CRYSTAL_CHANCE": "Atlas: Crystal Chance",
   "enum.stat.ATLAS_CRYSTAL_ESSENCES": "Atlas: Extra Essence",
   "enum.stat.ATLAS_CRYSTAL_TIER": "Atlas: Higher Essences",

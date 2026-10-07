@@ -11,7 +11,10 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.PriceHint
+import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.level
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
@@ -82,9 +85,15 @@ fun ListingSheet(
                 }
             }
             MutedText(ui("sell.note"))
-            ForgeButton(enabled = !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
+            // Аукцион ещё закрыт (3.94.0): кнопка неактивна, и рядом сказано, когда он откроется
+            val closed = auctionClosed(game)
+            ForgeButton(enabled = closed == null && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("sell.list"))
             }
+            closed?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
         }
     }
 }
+
+/** Почему выставить лот нельзя (3.94.0): аукцион откроется с уровня из правил; null - можно. */
+fun auctionClosed(game: GameUi): String? = Feature.AUCTION.takeUnless { game.unlocked(it) }?.let { ui("auction.closed_until", it.level(game.index?.rules), game.heroLevel) }

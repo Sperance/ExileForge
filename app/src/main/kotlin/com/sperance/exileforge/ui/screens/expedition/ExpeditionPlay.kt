@@ -119,9 +119,13 @@ import kotlin.math.roundToInt
     }
 
     Box(Modifier.fillMaxSize().background(Ink)) {
-        ExpeditionScene(run, game.heroClass?.code, Modifier.fillMaxSize())
+        // Автопроход - лента боёв (3.94.0): карты на экране нет, между боями - только счёт пути.
+        val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
+        if (ribbon == null) ExpeditionScene(run, game.heroClass?.code, Modifier.fillMaxSize())
         when (hud.phase) {
-            RunPhase.MAP -> {
+            RunPhase.MAP -> if (ribbon != null) {
+                AutoRibbon(hud, ribbon) { model.runCommand(RunCommand.StopAuto) }
+            } else {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
                 if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
                 MapBar(
@@ -187,10 +191,6 @@ import kotlin.math.roundToInt
 
             // Экран-вызов перед стражем (3.92.0)
             RunPhase.CHALLENGE -> hud.challenge?.let { BossChallenge(game, model, run, it, model::runCommand) }
-        }
-        // In a fight the arena's own row carries the autorun (3.77.0); the plate floats only over the map.
-        hud.auto?.takeIf { hud.phase == RunPhase.MAP }?.let { auto ->
-            AutoBar(auto, Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 8.dp)) { model.runCommand(RunCommand.StopAuto) }
         }
         // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
         ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
@@ -380,16 +380,26 @@ internal const val FOUNTAIN_TAP = .9
 
 // ==================== After ====================
 
-/** The autorun's plate (3.2.0): the wave under way of how many, and a stop that hands the run back to the stick. */
-@Composable internal fun AutoBar(auto: AutoHud, modifier: Modifier, onStop: () -> Unit) {
-    val shape = RoundedCornerShape(50)
-    Row(
-        modifier.background(Panel.copy(alpha = .92f), shape).border(1.dp, Gold.copy(alpha = .5f), shape).padding(start = 14.dp, end = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Text(ui("auto.wave", auto.wave, auto.waves), color = GoldBright, style = MaterialTheme.typography.labelLarge)
-        ForgeTextButton(onClick = onStop) { Text(ui("auto.stop"), color = LifeRed) }
+/**
+ * Лента боёв автопрохода (3.94.0) - между боями вместо карты: зона, волна из скольких полосой, открытые сундуки и павшие,
+ * жизнь героя (между боями она не восполняется) и «Остановить», что возвращает заход на карту в руки игрока.
+ */
+@Composable internal fun AutoRibbon(hud: RunHud, auto: AutoHud, onStop: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Panel, Ink))).systemBarsPadding().padding(24.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(ui("auto.title"), color = Muted, style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp)
+            Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(ui("auto.wave_short", auto.wave, auto.waves), color = Parchment, style = MaterialTheme.typography.titleMedium)
+            LinearProgressIndicator(
+                progress = { if (auto.waves > 0) auto.wave.toFloat() / auto.waves else 0f },
+                modifier = Modifier.fillMaxWidth(.8f).height(6.dp).clip(RoundedCornerShape(50)),
+                color = Gold,
+                trackColor = Bronze.copy(alpha = .3f),
+            )
+            Text(ui("auto.tally", auto.chests, hud.kills), color = Muted, style = MaterialTheme.typography.bodyMedium)
+            Text(ui("auto.life", hud.heroLife, hud.heroMaxLife), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+            ForgeTextButton(onClick = onStop) { Text(ui("auto.stop"), color = LifeRed) }
+        }
     }
 }
 

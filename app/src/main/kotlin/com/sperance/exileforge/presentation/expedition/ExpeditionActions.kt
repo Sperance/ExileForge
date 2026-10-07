@@ -108,6 +108,9 @@ class ExpeditionActions(
     /** Поход по карте, из которого вошли в зону Ваал: стоит, пока зона играется. */
     private var parent: ExpeditionRun? = null
 
+    /** Добыча основной карты под открытой зоной Ваал (3.94.0): павший в зоне заканчивает весь заход и продаёт и её. */
+    fun outerLoot(): List<String> = parent?.hud?.value?.tally?.loot?.equipment?.map { it.id }.orEmpty()
+
     /** Журнал похода, что идёт. */
     private var runJournal: RunJournal? = null
     private val flushes = Channel<Unit>(Channel.CONFLATED)

@@ -11,7 +11,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,43 +36,43 @@ import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
-/** How many items the forge remembers as worked on lately. */
-internal const val RECENT_TARGETS = 6
-
 /** A shelf of the forge's item picker (the owner's mockup B): what the item is, or how it stands to the player. */
 internal enum class TargetFilter(val title: String, val glyph: ImageVector) {
     ALL("forge.filter_all", Icons.Outlined.Search),
-    RECENT("forge.filter_recent", Icons.Outlined.History),
     GEAR("forge.filter_gear", ForgeGlyphs.Swords),
     MAPS("forge.filter_maps", ForgeGlyphs.Atlas),
     TOOLS("forge.filter_tools", Icons.Outlined.Build),
     WORN("forge.filter_worn", Icons.Outlined.CheckCircle),
     ;
 
-    fun admits(piece: ItemView, recent: List<String>): Boolean = when (this) {
+    fun admits(piece: ItemView): Boolean = when (this) {
         ALL -> true
-        RECENT -> piece.id in recent
         GEAR -> piece.slot != Slot.MAP && !piece.slot.isTool
         MAPS -> piece.slot == Slot.MAP
         TOOLS -> piece.slot.isTool
         WORN -> piece.isWorn
     }
+
+    companion object {
+        /** Разделы на полке у наковальни. */
+        val RAIL = listOf(ALL, GEAR, MAPS, TOOLS)
+    }
 }
 
 /**
  * The stash to pick what the forge works on (worn items included, since an orb does not care): a search over names and lines,
- * the shelves that hold anything, and the list — the items worked on lately first, then the rarest and highest.
+ * the shelves that hold anything, and the list — the rarest and highest first.
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-internal fun TargetPicker(game: GameUi, recent: List<String>, initial: TargetFilter, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+internal fun TargetPicker(game: GameUi, initial: TargetFilter, onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val stash = remember(game.hero?.items, game.index) { game.hero?.items.orEmpty().mapNotNull { game.view(it) } }
-    val shelves = remember(stash, recent) { TargetFilter.entries.filter { filter -> filter == TargetFilter.ALL || stash.any { filter.admits(it, recent) } } }
+    val shelves = remember(stash) { TargetFilter.entries.filter { filter -> filter == TargetFilter.ALL || stash.any { filter.admits(it) } } }
     var filter by remember { mutableStateOf(initial.takeIf { it in shelves } ?: TargetFilter.ALL) }
     var query by remember { mutableStateOf("") }
-    val shown = remember(stash, recent, filter, query) {
-        stash.filter { filter.admits(it, recent) && ItemSearch.matches(it, query) }
-            .sortedWith(compareBy<ItemView>({ recent.indexOf(it.id).let { at -> if (at < 0) Int.MAX_VALUE else at } }, { -it.rarity.ordinal }, { -it.level }))
+    val shown = remember(stash, filter, query) {
+        stash.filter { filter.admits(it) && ItemSearch.matches(it, query) }
+            .sortedWith(compareBy<ItemView>({ -it.rarity.ordinal }, { -it.level }))
     }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

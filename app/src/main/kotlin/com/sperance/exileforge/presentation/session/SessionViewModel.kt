@@ -47,14 +47,10 @@ class SessionViewModel(
     fun mode(mode: AppMode) = sessionActions.mode(mode)
 
     /** Тестовые учётки администратора (3.80.30), как их просят страницы настроек. */
-    fun loadTesters() = sessionActions.loadTesters()
-    fun resetTester(id: String) = sessionActions.resetTester(id)
-    fun setTesterActive(id: String, active: Boolean) = sessionActions.setTesterActive(id, active)
     fun refreshLocale() = loader.refreshLocale()
     fun refreshIcons() = loader.refreshIcons()
 
     fun connect(draft: String) = sessionActions.connect(draft)
     fun health() = sessionActions.health()
     fun leaveGame() = characters.leaveGame()
-    fun closeShownTester() = sessionActions.closeShownTester()
 }

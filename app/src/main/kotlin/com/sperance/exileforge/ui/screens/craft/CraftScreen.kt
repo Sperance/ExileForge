@@ -9,7 +9,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -77,12 +76,6 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     var picking by remember { mutableStateOf<TargetFilter?>(null) }
     var benchLine by remember(instance?.id) { mutableStateOf("") }
-    // The items worked on lately, newest first: kept while the hero is, so the rail and the picker's «Недавние» lead with them.
-    var recentIds by rememberSaveable(game.heroId) { mutableStateOf("") }
-    LaunchedEffect(instance?.id) {
-        instance?.id?.let { id -> recentIds = (listOf(id) + recentIds.split(',')).filter { it.isNotBlank() }.distinct().take(RECENT_TARGETS).joinToString(",") }
-    }
-    val recent = recentIds.split(',').filter { it.isNotBlank() && hero?.item(it) != null }
     // A map takes no bench line (2.47.0): its forge is the orbs alone, with no tabs to choose between.
     val slot = view?.slot
     val isMap = slot == Slot.MAP
@@ -129,7 +122,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
             }
             if (sections.size > 1) PillTabs(sections.map { ui(it.title) }, sections.indexOf(section), { vm.section(sections[it]) }, segmented = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TargetRail(game, recent.mapNotNull { id -> hero.item(id)?.let { game.view(it) } }, instance?.id, { picking = it }, vm::selectEquipment)
+                TargetRail { picking = it }
                 Anvil(
                     game,
                     view,
@@ -163,7 +156,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
         }
     }
     picking?.let { shelf ->
-        TargetPicker(game, recent, shelf, onDismiss = { picking = null }) {
+        TargetPicker(game, shelf, onDismiss = { picking = null }) {
             vm.selectEquipment(it)
             picking = null
         }

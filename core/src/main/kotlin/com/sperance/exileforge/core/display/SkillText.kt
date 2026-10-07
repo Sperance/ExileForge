@@ -124,18 +124,28 @@ object SkillText {
 
     private fun barrier(barrier: SkillBarrier, level: Int) = ui("skill.line.barrier", number(barrier.life.at(level)), fineNumber(barrier.duration))
 
-    private fun trigger(trigger: SkillTrigger, level: Int): List<String> = buildList {
-        val chance = trigger.chance?.let { ui("skill.line.chance", number(it.at(level))) }.orEmpty()
-        add(ui("skill.on.${trigger.on.name}") + chance + ":")
-        trigger.heal?.let { addAll(heal(it, level)) }
-        trigger.shield?.let { add(ui("skill.line.shield", number(it.at(level)))) }
-        trigger.barrier?.let { add(barrier(it, level)) }
-        trigger.buff?.let { addAll(buff(it, level)) }
-        trigger.hit?.let { addAll(hit(it, level)) }
-        if (trigger.flaskCharges > 0) add(ui("skill.line.flask_charges", trigger.flaskCharges))
-        trigger.ailment?.let { add(ui(if (trigger.twice) "skill.line.inflict_twice" else "skill.line.inflict", ailment(it))) }
-        if (trigger.refund) add(ui("skill.line.refund"))
-        if (trigger.cooldown > 0) add(ui("skill.line.trigger_cooldown", fineNumber(trigger.cooldown)))
+    /**
+     * Срабатывание (3.94.0): условие и шанс одной фразой, и первое следствие в той же строке - «С шансом 20%, убив врага: +1 заряд
+     * всем флягам»; прочие следствия и перезарядка - строками ниже. Строка без следствия больше не висит на двоеточии.
+     */
+    private fun trigger(trigger: SkillTrigger, level: Int): List<String> {
+        val effects = buildList {
+            trigger.heal?.let { addAll(heal(it, level)) }
+            trigger.shield?.let { add(ui("skill.line.shield", number(it.at(level)))) }
+            trigger.barrier?.let { add(barrier(it, level)) }
+            trigger.buff?.let { addAll(buff(it, level)) }
+            trigger.hit?.let { addAll(hit(it, level)) }
+            if (trigger.flaskCharges > 0) add(ui("skill.line.flask_charges", trigger.flaskCharges))
+            trigger.ailment?.let { add(ui(if (trigger.twice) "skill.line.inflict_twice" else "skill.line.inflict", ailment(it))) }
+            if (trigger.refund) add(ui("skill.line.refund"))
+        }
+        val event = ui("skill.on.${trigger.on.name}")
+        val head = trigger.chance?.let { ui("skill.line.chance_on", number(it.at(level)), event.replaceFirstChar { c -> c.lowercase() }) } ?: event
+        return buildList {
+            add(listOfNotNull(head, effects.firstOrNull()).joinToString(": "))
+            addAll(effects.drop(1))
+            if (trigger.cooldown > 0) add(ui("skill.line.trigger_cooldown", fineNumber(trigger.cooldown)))
+        }
     }
 
     private fun targets(count: Int) = if (count <= 0) ui("skill.line.all_foes") else ui("skill.line.foes", count)

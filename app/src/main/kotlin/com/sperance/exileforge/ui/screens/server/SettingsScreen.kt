@@ -56,13 +56,12 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /** The pages behind the settings' rows: the language and the developers' tools, each with «back» to the list. */
-private enum class SettingsPage(val title: String) {
+internal enum class SettingsPage(val title: String) {
     LANGUAGE("account.language"),
     SERVER("account.server"),
     CLIENT("account.client"),
     JOURNAL("account.journal"),
     TESTING("tester.window"),
-    TESTERS("tester.accounts"),
     FEEDBACK("feedback.admin"),
     MODERATION("moderation.title"),
     MAIL("mail.compose"),
@@ -78,17 +77,19 @@ private enum class SettingsPage(val title: String) {
     val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
-    var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
+    // Страница, открытая прямо с экрана «Аккаунт» (3.94.0): «Назад» с неё закрывает настройки целиком
+    val direct by rememberSaveable { mutableStateOf(shell.takeSettingsPage()?.takeIf { name -> SettingsPage.entries.any { it.name == name } }) }
+    var page by rememberSaveable { mutableStateOf<SettingsPage?>(direct?.let { SettingsPage.valueOf(it) }) }
     val open = page
     Column(Modifier.fillMaxSize()) {
-        BackRow(ui(if (open == null) "common.back" else "settings.title")) { if (open == null) shell.closeSettings() else page = null }
+        BackRow(ui(if (open == null || direct != null) "common.back" else "settings.title")) { if (open == null || direct != null) shell.closeSettings() else page = null }
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             when (open) {
-                null -> SettingsList(account, logs) { page = it }
+                null -> SettingsList(account) { page = it }
 
                 SettingsPage.LANGUAGE -> ForgePanel {
                     LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
@@ -103,8 +104,6 @@ private enum class SettingsPage(val title: String) {
 
                 SettingsPage.TESTING -> TestingPage(account)
 
-                SettingsPage.TESTERS -> TestersPage(account)
-
                 SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
 
                 SettingsPage.MODERATION -> ModerationPage(account)
@@ -117,7 +116,7 @@ private enum class SettingsPage(val title: String) {
     }
 }
 
-@Composable private fun SettingsList(account: AccountUi, logs: List<RequestLog>, onPage: (SettingsPage) -> Unit) {
+@Composable private fun SettingsList(account: AccountUi, onPage: (SettingsPage) -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val sessionModel: SessionViewModel = koinViewModel()
     val settingsModel = koinViewModel<SettingsViewModel>()
@@ -156,6 +155,14 @@ private enum class SettingsPage(val title: String) {
         SwitchRow(Icons.Outlined.Vibration, ui("settings.buzz_danger"), ui("settings.buzz_danger_note"), set.buzzDanger) { change { copy(buzzDanger = it) } }
         SwitchRow(Icons.Outlined.TouchApp, ui("settings.buzz_buttons"), ui("settings.buzz_buttons_note"), set.buzzButtons) { change { copy(buzzButtons = it) } }
     }
+}
+
+/**
+ * Разделы персонала (3.94.0): модерация модератору и администратору, инструменты разработчика тестировщику и администратору.
+ * Живут на экране «Аккаунт», а не в настройках; каждая строка открывает свою страницу настроек напрямую.
+ */
+@Composable internal fun StaffGroups(account: AccountUi, onPage: (SettingsPage) -> Unit) {
+    val sessionModel: SessionViewModel = koinViewModel()
     // Модерация (3.88.5): модератору и администратору - баны, корзина, журнал и отчёты игроков.
     if (account.isModerator) {
         RowGroup(ui("moderation.group")) {
@@ -173,9 +180,8 @@ private enum class SettingsPage(val title: String) {
                 dot = if (account.link.offline) LifeRed else Vital,
             ) { onPage(SettingsPage.SERVER) }
             AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(SettingsPage.CLIENT) }
-            AccountRow(Icons.AutoMirrored.Outlined.ReceiptLong, ui("account.journal"), value = logs.size.toString()) { onPage(SettingsPage.JOURNAL) }
+            AccountRow(Icons.AutoMirrored.Outlined.ReceiptLong, ui("account.journal")) { onPage(SettingsPage.JOURNAL) }
             if (account.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
-            if (account.isAdmin) AccountRow(Icons.Outlined.Group, ui("tester.accounts"), enabled = !account.busy) { onPage(SettingsPage.TESTERS) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
             // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.
             if (BuildConfig.DEBUG && account.isAdmin && !account.adminTools) {

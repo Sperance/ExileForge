@@ -59,7 +59,12 @@ private const val NOTICE = "api/v1/notice"
     val role: AccountRole = AccountRole.USER,
     val sanction: SanctionView? = null,
     val protected: Boolean = false,
+    /** Последняя команда героя (3.94.0, server 1.81.14), мс эпохи; 0 - неизвестно. */
+    val lastSeenAt: Long = 0,
 )
+
+/** Порядок списка модерации (3.94.0): последняя активность, уровень, дата создания, имя. */
+@Serializable enum class ModerationSort { ACTIVITY, LEVEL, CREATED, NAME }
 
 @Serializable data class ModerationPage(val total: Long = 0, val page: Int = 0, val size: Int = 0, val rows: List<ModerationRow> = emptyList())
 
@@ -148,7 +153,7 @@ private const val NOTICE = "api/v1/notice"
  * и администратору. Экран санкции и апелляция ([notice], [appeal]) - без входа: забаненный уже без сессии.
  */
 class ModerationClient internal constructor(private val http: Transport) {
-    suspend fun rows(query: String, segment: ModerationSegment, page: Int): ModerationPage = http.get("$MODERATION/rows", mapOf("q" to query.trim(), "segment" to segment.name, "page" to page.toString()))
+    suspend fun rows(query: String, segment: ModerationSegment, page: Int, sort: ModerationSort = ModerationSort.ACTIVITY): ModerationPage = http.get("$MODERATION/rows", mapOf("q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name))
 
     /** Досье героя [heroId] или, без героя, аккаунта [userId]. */
     suspend fun dossier(heroId: String, userId: String): Dossier = http.get("$MODERATION/dossier", mapOf("hero" to heroId, "user" to userId))

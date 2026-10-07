@@ -75,7 +75,7 @@ class ExpeditionGoldenTest {
         val run = Run(index, zone, case.seed, RunContext(heroClass.code, case.level))
         val journal = RunJournal("run-${case.seed}", "hero", zone.code.value)
         val campaign = CampaignState(chests = mapOf(zone.code.value to ChestWindow(Long.MAX_VALUE, 2)))
-        val expedition = ExpeditionRun.start(index, zone, run, journal, gear, campaign, 0L, 0.0, case.level, { 0L }, auto = AutoPlan(abyss = false))
+        val expedition = ExpeditionRun.start(index, zone, run, journal, gear, campaign, 0L, 0.0, case.level, { 0L }, auto = AutoPlan)
         var guard = 0
         while (guard++ < 200_000) {
             expedition.update(STEP)

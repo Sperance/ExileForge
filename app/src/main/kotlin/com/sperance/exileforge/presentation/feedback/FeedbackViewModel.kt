@@ -95,6 +95,19 @@ class FeedbackViewModel(
         notices.toast(ui("mail.claimed"))
     }
 
+    /** «Прочитать все» (3.94.0). */
+    fun readAllMail() = commands.task(writing = true) {
+        api.mail.readAll()
+        feedback { f -> f.copy(mail = f.mail.map { it.copy(read = true) }) }
+    }
+
+    /** «Удалить прочитанные» (3.94.0): письма с незабранным вложением остаются. */
+    fun deleteReadMail() = commands.task(writing = true) {
+        val gone = api.mail.deleteRead()
+        feedback { f -> f.copy(mail = f.mail.filterNot { it.read && !it.claimable }) }
+        notices.toast(ui("mail.deleted_n", gone))
+    }
+
     fun deleteMail(id: String) = commands.task(writing = true) {
         api.mail.delete(id)
         feedback { f -> f.copy(mail = f.mail.filterNot { it.id == id }) }

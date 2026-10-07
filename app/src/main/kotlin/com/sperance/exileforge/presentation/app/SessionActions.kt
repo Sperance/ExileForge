@@ -72,34 +72,6 @@ class SessionActions(
         }
     }
 
-    // ---- the administrator's testers (3.73.0) ----
-
-    fun loadTesters() {
-        run {
-            task {
-                check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
-                val testers = api.admin.testers()
-                admins.update { it.copy(testers = testers) }
-            }
-        }
-    }
-
-    /** A new tester: the server picks the password and says it once, so the window keeps it on screen to be copied. */
-    fun resetTester(id: String) = testerCommand { api.admin.resetTester(id) }
-    fun setTesterActive(id: String, active: Boolean) = testerCommand { api.admin.setTesterActive(id, active) }
-    fun closeShownTester() = admins.update { it.copy(shownTester = null) }
-
-    private fun testerCommand(block: suspend () -> com.sperance.exileforge.core.network.TesterAccount) {
-        run {
-            task(writing = true) {
-                check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
-                val account = block()
-                val testers = api.admin.testers()
-                admins.update { it.copy(testers = testers, shownTester = account.takeIf { a -> a.password != null }) }
-            }
-        }
-    }
-
     /** Подключение к адресу [draft] из поля экрана (3.80.32: черновик живёт на экране). */
     fun connect(draft: String) = connectTo(normalizeServer(draft))
 

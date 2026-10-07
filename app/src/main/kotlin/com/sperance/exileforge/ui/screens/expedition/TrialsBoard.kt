@@ -77,14 +77,23 @@ import com.sperance.exileforge.ui.theme.*
         Plate(GoldBright) {
             Text(ui("trials.rush_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("trials.rush_hint", rules.rush.key, rules.rush.life.toInt(), rules.rush.seconds.toInt()))
-            ForgeOutlinedButton(onClick = vm::forgeRushKey, enabled = idle && crests >= rules.rush.key, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("trials.key_forge", rules.rush.key))
+            val cleared = hero.campaign.cleared
+            val unlocked = index.campaign.regions.filter { RushPlan.open(it, cleared) }
+            // Ковка (3.94.0): пока ни один раш не открыт, ключ ковать незачем - вместо кнопки ближайший регион и сколько зон осталось
+            if (unlocked.isEmpty()) {
+                index.campaign.regions.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
+                    Text(ui("trials.rush_locked", regionTitle(near.code), near.zones.count { it.code !in cleared }), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                }
+            } else {
+                ForgeOutlinedButton(onClick = vm::forgeRushKey, enabled = idle && crests >= rules.rush.key, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("trials.key_forge_count", minOf(crests, rules.rush.key.toLong()), rules.rush.key))
+                }
+                if (crests < rules.rush.key) MutedText(ui("trials.key_short", rules.rush.key - crests), style = MaterialTheme.typography.labelSmall)
             }
         }
         val cleared = hero.campaign.cleared
         // A rush still locked is not shown (3.67.0): the board lists only what can be run, or says when one opens.
         val unlocked = index.campaign.regions.filter { RushPlan.open(it, cleared) }
-        if (unlocked.isEmpty()) MutedText(ui("trials.rush_none"))
         unlocked.forEach { region ->
             val best = trials.rushBest[region.code]
             Plate(Gold) {
@@ -99,8 +108,15 @@ import com.sperance.exileforge.ui.theme.*
                             ).joinToString(" · "),
                         )
                     }
-                    ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && keys >= 1 && trials.run == null) {
-                        Text(ui("trials.rush_enter"))
+                    Column(horizontalAlignment = Alignment.End) {
+                        ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && keys >= 1 && trials.run == null) {
+                            Text(ui("trials.rush_enter"))
+                        }
+                        // Причина у неактивной кнопки (3.94.0)
+                        when {
+                            trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)
+                            keys < 1 -> MutedText(ui("trials.rush_no_key"), style = MaterialTheme.typography.labelSmall)
+                        }
                     }
                 }
             }

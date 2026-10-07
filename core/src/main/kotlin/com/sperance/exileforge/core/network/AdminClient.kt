@@ -17,15 +17,12 @@ private const val SERVERS = "api/v1/gameserver"
 
 /** The administrator's accounts window (3.73.0, server 1.69.0): the testers, a new one, a new password, switching one off. */
 class AdminClient internal constructor(private val http: Transport) {
-    suspend fun testers(): List<TesterAccount> = http.get(TESTERS)
 
     /** Новый аккаунт [login] с ролью [role] - тестировщик или модератор (3.88.8, сервер 1.80.11); пароль - в ответе один раз. */
     suspend fun createTester(login: String, role: AccountRole = AccountRole.TESTER): TesterAccount {
         require(login.isNotBlank()) { com.sperance.exileforge.core.i18n.ui("api.credentials") }
         return http.post(TESTERS, mapOf("login" to login.trim(), "role" to role.name))
     }
-
-    suspend fun resetTester(id: String): TesterAccount = http.post("$TESTERS/reset", mapOf("userId" to id))
 
     /** Все игровые серверы (3.91.0): основной есть всегда. */
     suspend fun servers(): List<GameServer> = http.get(SERVERS)
@@ -38,6 +35,4 @@ class AdminClient internal constructor(private val http: Transport) {
 
     /** Переносит героя [heroId] на сервер [server] (3.91.0): он выходит из гильдии, его лоты возвращаются письмами. */
     suspend fun moveHero(heroId: String, server: String): HeroMove = http.post("$ADMIN/hero/server", mapOf("heroId" to heroId, "server" to server))
-
-    suspend fun setTesterActive(id: String, active: Boolean): TesterAccount = http.post("$TESTERS/active", mapOf("userId" to id, "active" to active.toString()))
 }

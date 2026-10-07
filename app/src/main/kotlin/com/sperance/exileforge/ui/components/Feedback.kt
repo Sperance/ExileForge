@@ -184,6 +184,30 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
             if (letter != null) {
                 LetterView(game, model, activity.busy, letter) { open = null }
             } else {
+                // Разом (3.94.0): прочитать все и удалить прочитанные - с вопросом, сколько уйдёт; с вложением не удаляется
+                var purging by remember { mutableStateOf(false) }
+                val unread = feedback.mail.count { !it.read }
+                val removable = feedback.mail.count { it.read && !it.claimable }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ForgeOutlinedButton(onClick = model::readAllMail, enabled = !activity.busy && unread > 0, modifier = Modifier.weight(1f)) {
+                        Text(ui("mail.read_all", unread), style = MaterialTheme.typography.labelMedium)
+                    }
+                    ForgeOutlinedButton(onClick = { purging = true }, enabled = !activity.busy && removable > 0, modifier = Modifier.weight(1f)) {
+                        Text(ui("mail.delete_read", removable), style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                if (purging) {
+                    ConfirmSheet(
+                        ui("mail.delete_read_title", removable),
+                        ui("mail.delete_read_confirm"),
+                        onDismiss = { purging = false },
+                        note = ui("mail.delete_read_note"),
+                        danger = true,
+                    ) {
+                        purging = false
+                        model.deleteReadMail()
+                    }
+                }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                     if (feedback.mail.isEmpty()) item { MutedText(ui("mail.empty")) }
                     items(feedback.mail, key = { it.id }) { mail ->

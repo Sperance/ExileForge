@@ -7,11 +7,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-/** Инструменты администратора: коды наград, тестовые учётки и та, чей пароль только что показан - один раз, чтобы скопировать. */
+/** Инструменты администратора: коды наград. Тестовые учётки - в окне модерации (3.94.0). */
 data class Admin(
     val redemptions: List<RedemptionCode> = emptyList(),
-    val testers: List<TesterAccount> = emptyList(),
-    val shownTester: TesterAccount? = null,
 )
 
 /** Единственный источник данных администратора (3.80.32); выход из аккаунта их забывает. */

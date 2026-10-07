@@ -39,6 +39,12 @@ class FeedbackClient internal constructor(private val http: Transport) {
 class MailClient internal constructor(private val http: Transport) {
     suspend fun inbox(): List<Mail> = http.get("$MAIL/inbox")
     suspend fun read(id: String): Mail = http.post("$MAIL/read", mapOf("id" to id))
+
+    /** Все письма прочитаны (3.94.0, server 1.81.14); сколько стало прочитанными. */
+    suspend fun readAll(): Long = http.post("$MAIL/read/all", emptyMap())
+
+    /** Прочитанные удалены, кроме писем с незабранным вложением (3.94.0); сколько удалено. */
+    suspend fun deleteRead(): Long = http.post("$MAIL/delete/read", emptyMap())
     suspend fun claim(id: String, heroId: String): Mail = http.post("$MAIL/claim", heroQuery(heroId, "id" to id))
     suspend fun delete(id: String) {
         http.request("POST", "$MAIL/delete", mapOf("id" to id), authenticated = true)

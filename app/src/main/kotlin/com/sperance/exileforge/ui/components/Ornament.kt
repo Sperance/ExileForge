@@ -65,6 +65,14 @@ import com.sperance.exileforge.ui.theme.*
     )
 }
 
+/**
+ * Полоса редкости фоном (3.94.0): то же, что [RaritySpine], но рисуется за содержимым и не требует `IntrinsicSize.Min` у
+ * строки - кнопки внутри меряются как есть и не сжимаются. Содержимому нужен левый отступ не меньше [width].
+ */
+fun Modifier.raritySpine(accent: Color, width: Dp = 4.dp): Modifier = drawBehind {
+    drawRect(Brush.verticalGradient(listOf(accent, accent.copy(alpha = .12f))), size = androidx.compose.ui.geometry.Size(width.toPx(), size.height))
+}
+
 /** A small rotated square, the marker a rolled modifier is listed under. */
 @Composable fun Rhombus(accent: Color = Rune, side: Dp = 5.dp) {
     Canvas(Modifier.size(side)) {

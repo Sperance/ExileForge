@@ -454,7 +454,7 @@ class ExpeditionRun(
                 // Объекты карты (3.90.0) - после прочих: их места не сдвигают ни сундуков, ни кристаллов
                 world.placeFeatures(run.features.all, features, index.campaign.features?.traps?.reach ?: 0.0)
             }
-            val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, it, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
+            val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet,

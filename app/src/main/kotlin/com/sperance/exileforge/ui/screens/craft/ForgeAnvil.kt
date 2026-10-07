@@ -36,33 +36,17 @@ import com.sperance.exileforge.ui.theme.*
 /** What lies in one round socket of the anvil: its drawing (null - the socket is empty), its name and its colour. */
 internal class Socket(val label: String, val accent: Color, val glyph: (@Composable () -> Unit)?, val onClick: (() -> Unit)? = null)
 
-/**
- * The rail beside the anvil (mockup B): the picker's shelves as drawings — each opens the stash on that shelf — and under a rule
- * the items worked on lately, a tap laying one on the anvil.
- */
-@Composable internal fun TargetRail(game: GameUi, recent: List<ItemView>, current: String?, onShelf: (TargetFilter) -> Unit, onPick: (String) -> Unit) {
+/** Полка у наковальни (макет B): разделы выбора предмета рисунками; тап открывает тайник на этом разделе. История недавних убрана (3.94.0). */
+@Composable internal fun TargetRail(onShelf: (TargetFilter) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(
         Modifier.width(52.dp).depthPanel(shape).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        listOf(TargetFilter.ALL, TargetFilter.RECENT, TargetFilter.GEAR, TargetFilter.MAPS, TargetFilter.TOOLS).forEach { shelf ->
+        TargetFilter.RAIL.forEach { shelf ->
             Box(Modifier.size(40.dp, 28.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { onShelf(shelf) }, contentAlignment = Alignment.Center) {
                 Icon(shelf.glyph, ui(shelf.title), tint = Muted, modifier = Modifier.size(16.dp))
-            }
-        }
-        if (recent.isNotEmpty()) HorizontalDivider(Modifier.width(32.dp), color = Bronze)
-        recent.forEach { piece ->
-            val color = rarityColor(piece.rarity.name)
-            val on = piece.id == current
-            val frame = RoundedCornerShape(9.dp)
-            Box(
-                Modifier.size(40.dp).clip(frame).background(PanelRaised, frame).border(if (on) 2.dp else 1.dp, if (on) Gold else Bronze, frame)
-                    .clickable(role = Role.Button) { onPick(piece.id) },
-                contentAlignment = Alignment.Center,
-            ) {
-                ItemIcon(piece, color, Modifier.size(24.dp))
             }
         }
     }

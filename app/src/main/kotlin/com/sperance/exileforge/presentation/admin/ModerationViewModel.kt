@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationPage
 import com.sperance.exileforge.core.network.ModerationSegment
+import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionView
@@ -34,6 +35,8 @@ enum class ModerationTab { ALL, BANNED, TRASH, JOURNAL }
 data class ModerationState(
     val tab: ModerationTab = ModerationTab.ALL,
     val query: String = "",
+    /** Порядок списка (3.94.0). */
+    val sort: ModerationSort = ModerationSort.ACTIVITY,
     val page: ModerationPage = ModerationPage(),
     val journal: List<ModerationEntryView> = emptyList(),
     val journalPage: Int = 0,
@@ -64,6 +67,12 @@ class ModerationViewModel(
 
     fun search(query: String) = mutable.update { it.copy(query = query) }
 
+    /** Новый порядок списка (3.94.0): с первой страницы. */
+    fun sort(sort: ModerationSort) {
+        mutable.update { it.copy(sort = sort) }
+        load(0)
+    }
+
     fun tab(tab: ModerationTab) {
         mutable.update { it.copy(tab = tab) }
         if (tab == ModerationTab.JOURNAL) journal(0) else load(0)
@@ -78,7 +87,7 @@ class ModerationViewModel(
             ModerationTab.TRASH -> ModerationSegment.TRASH
             else -> ModerationSegment.ALL
         }
-        val answer = api.rows(state.query, segment, page.coerceAtLeast(0))
+        val answer = api.rows(state.query, segment, page.coerceAtLeast(0), state.sort)
         mutable.update { it.copy(page = answer) }
     }
 

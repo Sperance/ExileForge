@@ -130,6 +130,8 @@ import com.sperance.exileforge.ui.theme.*
         // the sheet says so and the purchase is not sent (2.46.0).
         val have = game.bagAmount(lot.priceOrb)
         val fee = lot.fee
+        // Сбор золотом (3.94.0): подпись называет и долю цены лота, чтобы было видно, откуда сумма.
+        val feeRate = game.index?.rules?.auction?.buyerFee?.let { r -> if (r % 1.0 == 0.0) r.toLong().toString() else r.toString() }
         val short = game.shortfall(lot.cost)?.text()
         ConfirmSheet(
             title = ui("auction.buy_q"),
@@ -137,7 +139,7 @@ import com.sperance.exileforge.ui.theme.*
             icon = { LotIcon(game, lot, Modifier.size(44.dp)) },
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
-                fee.takeIf { it > 0 }?.let { LedgerLine(ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
+                fee.takeIf { it > 0 }?.let { LedgerLine(feeRate?.let { r -> ui("auction.fee_rate", r) } ?: ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
                 have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
                 LedgerLine(ui("auction.seller"), sellerName(lot)),

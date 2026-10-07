@@ -113,11 +113,17 @@ class ShellViewModel(
         navigator.tab(Route.ofBuilding(building))
     }
 
-    /** «Настройки» (3.77.0) поверх открытой вкладки; закрытие возвращает на неё. */
-    fun openSettings() {
+    /** Страница настроек, которую открыть сразу (3.94.0): её забирает экран настроек один раз. */
+    private var settingsPage: String? = null
+
+    /** «Настройки» (3.77.0) поверх открытой вкладки; закрытие возвращает на неё. [page] (3.94.0) - сразу на свою страницу. */
+    fun openSettings(page: String? = null) {
         commands.dismissMessage()
+        settingsPage = page
         navigator.open(Route.Settings)
     }
+
+    fun takeSettingsPage(): String? = settingsPage.also { settingsPage = null }
 
     fun closeSettings() = navigator.back()
 

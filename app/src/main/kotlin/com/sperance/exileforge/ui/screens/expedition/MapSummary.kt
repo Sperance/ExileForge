@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.run.RunHud
+import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
@@ -96,15 +97,18 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; заранее отмечено помеченное к продаже в заходе
     // (3.91.0). Продаётся «Продать и вернуться» (3.90.4) - уже после захода.
     val hero = game.hero
-    val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index) {
+    val run by vm.run.collectAsStateWithLifecycle()
+    // Из выигранной зоны Ваал возвращаются на карту - заход идёт, и продажи нет (3.90.4); павший в зоне (3.94.0) заканчивает
+    // весь заход - он продаёт и добычу зоны, и добычу основной карты под ней.
+    val back = run?.vaal == true && hud.phase != RunPhase.DEAD
+    val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index, back) {
         val ids = tally.loot.equipment.mapTo(HashSet()) { it.id }
+        if (run?.vaal == true && !back) ids += vm.outerLoot()
         game.sellLots(hero?.items.orEmpty().filter { it.id in ids }.mapNotNull { game.view(it) })
     }
     val marks = vm.state.collectAsStateWithLifecycle().value.saleMarks
     val pick = rememberSellPick(lots, initial = marks)
-    // Из выигранной зоны Ваал возвращаются на карту - заход идёт, и продажи нет: в заходе не продают (3.90.4).
-    val run by vm.run.collectAsStateWithLifecycle()
-    val selling = lots.isNotEmpty() && run?.vaal != true
+    val selling = lots.isNotEmpty() && !back
     // Кнопки итогов оживают не сразу (3.91.0): нажатие, пришедшее в кнопку отчёта боя на том же месте, не закрывает заход.
     var armed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {

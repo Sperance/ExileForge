@@ -37,7 +37,6 @@ import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
-import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
@@ -163,32 +162,18 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
 }
 
 /**
- * The autorun (3.2.0): once the zone's guardian has fallen, a map of it can be run by itself — its packs as
- * waves on the arena, the guardian last. What else it takes on is chosen here; a crack of the Abyss and the
- * Vaal portal still stop it for the player's word.
+ * Автопроход (3.2.0, лента боёв с 3.94.0): когда страж зоны пал, её карту можно пройти самой - стаи волнами, сундуки между
+ * ними, страж последним. Алтари, Бездна, Ваал и торговец пропускаются; лечения между боями нет.
  */
 @Composable internal fun AutoLaunch(game: GameUi, vm: ExpeditionViewModel, zone: String, launch: MapLaunch, guarded: (() -> Unit) -> Unit) {
     if (game.progress?.cleared?.contains(MapCode(zone)) != true) return
-    var chests by rememberSaveable { mutableStateOf(true) }
-    var crystals by rememberSaveable { mutableStateOf(true) }
-    var abyss by rememberSaveable { mutableStateOf(true) }
     ForgePanel {
         Engraved(ui("auto.title"))
         MutedText(ui("auto.hint"))
-        listOf(
-            Triple("auto.chests", chests) { v: Boolean -> chests = v },
-            Triple("auto.crystals", crystals) { v: Boolean -> crystals = v },
-            Triple("auto.abyss", abyss) { v: Boolean -> abyss = v },
-        ).forEach { (key, on, set) ->
-            Row(Modifier.fillMaxWidth().clickable { set(!on) }, verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = on, onCheckedChange = set)
-                Text(ui(key), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-            }
-        }
         ForgeOutlinedButton(
             enabled = game.hero != null && !game.busy && launch.picked != null,
             modifier = Modifier.fillMaxWidth(),
-            onClick = { guarded { vm.startAutoRun(zone, AutoPlan(chests, crystals, abyss)) } },
+            onClick = { guarded { vm.startAutoRun(zone) } },
         ) {
             Text(ui(if (launch.picked == null) "auto.needs_map" else "auto.go"))
         }

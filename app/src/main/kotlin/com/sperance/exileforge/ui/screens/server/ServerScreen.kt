@@ -119,6 +119,8 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             ) { onPage(AccountPage.SIGN_IN) }
             AccountRow(ForgeGlyphs.Sigil, ui("settings.title")) { shell.openSettings() }
         }
+        // Модерация и инструменты разработчика (3.94.0) - здесь, а не в настройках
+        StaffGroups(account) { shell.openSettings(it.name) }
     }
 }
 

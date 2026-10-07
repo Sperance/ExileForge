@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.network.DossierHero
 import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationRow
+import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.SanctionCategory
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionRequest
@@ -105,6 +106,12 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     val page = state.page
+    // Порядок (3.94.0): корзина идёт по номеру удаления, у неё сортировки нет
+    if (state.tab != ModerationTab.TRASH) {
+        Chips {
+            ModerationSort.entries.forEach { sort -> Chip(ui("moderation.sort.${sort.name}"), state.sort == sort) { if (!account.busy) vm.sort(sort) } }
+        }
+    }
     MutedText(ui("moderation.total", page.total))
     if (page.rows.isEmpty()) MutedText(ui("moderation.none"))
     page.rows.forEach { row ->
@@ -146,6 +153,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 RoleMark(row.role)
             }
             MutedText(listOf(classTitle(row.heroClass), ui("pets.level", row.level), row.login).filter { it.isNotBlank() }.joinToString(" · "))
+            MutedText(seenText(row.lastSeenAt), style = MaterialTheme.typography.labelSmall)
             banned?.let { Text(sanctionLine(it), color = LifeRed, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
         if (row.protected) Icon(Icons.Outlined.Lock, ui("moderation.protected"), tint = Muted, modifier = Modifier.size(18.dp))
@@ -566,6 +574,18 @@ internal fun sanctionLine(sanction: SanctionView): String = listOfNotNull(
     sanction.byLogin,
     "#${sanction.number}",
 ).joinToString(" · ")
+
+/** Последняя активность героя (3.94.0): «был 5 мин назад», «был 07.10 18:24», «нет данных». */
+internal fun seenText(at: Long, now: Long = System.currentTimeMillis()): String {
+    if (at <= 0) return ui("moderation.seen_unknown")
+    val minutes = (now - at) / 60_000
+    return when {
+        minutes < 1 -> ui("moderation.seen_now")
+        minutes < 60 -> ui("moderation.seen_minutes", minutes)
+        minutes < 24 * 60 -> ui("moderation.seen_hours", minutes / 60)
+        else -> ui("moderation.seen_at", java.text.SimpleDateFormat("dd.MM HH:mm", java.util.Locale.ROOT).format(java.util.Date(at)))
+    }
+}
 
 internal fun categoryTitle(category: SanctionCategory): String = ui("moderation.category.${category.name}")
 

@@ -29,6 +29,12 @@ private const val REVISION_RETRIES = 2
 private const val REVISION_RETRY_DELAY_MS = 1_500L
 private const val DEVICE_UNKNOWN = "US_015"
 
+/** Ответ лимита запросов (3.94.0). */
+private const val TOO_MANY = 429
+
+/** Паузы перед повтором входа, упёршегося в лимит, мс (3.94.0). */
+private val RATE_WAITS = listOf(2_000L, 5_000L, 12_000L)
+
 /**
  * The client of one ktor-bestgame server: the session here, every other route in a feature client.
  *
@@ -95,7 +101,25 @@ class GameApi(
      * knows it (`US_015`): the server issues a fresh secret, and [deviceSecret] holds it until the caller keeps it.
      * The [fingerprint] lets the server hand back the account this device already has after its data was wiped.
      */
-    suspend fun loginByDevice(secret: String?, fingerprint: String = ""): UserProfile {
+    suspend fun loginByDevice(secret: String?, fingerprint: String = ""): UserProfile = patiently { deviceSignIn(secret, fingerprint) }
+
+    /**
+     * Вход, переживший лимит (3.94.0): сервер ответил 429 - ждём и пробуем снова, всё дольше, не больше [RATE_WAITS] раз;
+     * игрок не видит «слишком много запросов» от того, что за одним адресом вошли сразу несколько устройств.
+     */
+    private suspend fun <T> patiently(block: suspend () -> T): T {
+        RATE_WAITS.forEach { wait ->
+            try {
+                return block()
+            } catch (e: ApiFailure) {
+                if (e.status != TOO_MANY) throw e
+                kotlinx.coroutines.delay(wait)
+            }
+        }
+        return block()
+    }
+
+    private suspend fun deviceSignIn(secret: String?, fingerprint: String): UserProfile {
         logout()
         fun credentials(deviceId: String) = DeviceCredentials(deviceId, fingerprint, identity?.model.orEmpty(), identity?.version.orEmpty())
         val answer = secret?.let {

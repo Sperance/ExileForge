@@ -30,6 +30,9 @@ class ExpeditionViewModel(
     val game: StateFlow<GameUi> = slice.ui
     val state: StateFlow<Expedition> = repository.state
     val run: StateFlow<ExpeditionRun?> = expedition.run
+
+    /** Добыча основной карты под зоной Ваал (3.94.0). */
+    fun outerLoot(): List<String> = expedition.outerLoot()
     val arena: StateFlow<TrialArena?> = trial.arena
     val activity: StateFlow<Activity> = commands.state
 
@@ -46,7 +49,7 @@ class ExpeditionViewModel(
 
     /** Заход в зону; [toBoss] (3.92.0, тестировщик и выше) - сразу бой со стражем. */
     fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.start(MapCode(mapCode), toBoss = toBoss && game.value.isTester)
-    fun startAutoRun(mapCode: String, plan: AutoPlan) = expedition.start(MapCode(mapCode), plan)
+    fun startAutoRun(mapCode: String) = expedition.start(MapCode(mapCode), AutoPlan)
     fun continueUnfinished() = expedition.continueUnfinished()
     fun abandonUnfinished() = expedition.abandonUnfinished()
     fun runCommand(command: RunCommand) = expedition.send(command)

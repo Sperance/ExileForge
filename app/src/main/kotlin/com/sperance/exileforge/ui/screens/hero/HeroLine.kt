@@ -13,12 +13,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.groupedNumber
 import com.sperance.exileforge.core.display.number
@@ -37,8 +38,7 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Герой одной строкой (3.90.3, макет «Тайник» В): портрет, «имя · ур.», класс мелко, [trailing] справа (по умолчанию -
- * золото) и тонкая полоса опыта под ними. Нажатие раскрывает подпись опыта «1 240 / 2 950 · 42%»; та же подпись - описание
- * полосы для чтения с экрана. С 3.90.5 это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
+ * золото) и под ними полоса опыта с подписью «42% · 1 240 / 2 950» в той же строке (3.94.0), без нажатия. С 3.90.5 это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
  * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - золото, ремесло, связь и меню.
  */
 @Composable fun HeroLine(
@@ -47,11 +47,10 @@ import com.sperance.exileforge.ui.theme.*
     onPortrait: (() -> Unit)? = null,
     trailing: @Composable RowScope.() -> Unit = { GoldPrice(hero.money) },
 ) {
-    var xpOpen by rememberSaveable { mutableStateOf(false) }
     val xp = experienceOf(hero.classes, hero.level, hero.experience)
     Column(
-        modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = ui("hero.xp_short")) { xpOpen = !xpOpen }.padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+        modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             ClassPortrait(hero.heroClass, hero.portraits, Modifier.size(38.dp).then(onPortrait?.let { Modifier.clickable(onClickLabel = ui("nav.account"), onClick = it) } ?: Modifier), round = true)
@@ -72,16 +71,14 @@ import com.sperance.exileforge.ui.theme.*
             }
             trailing()
         }
-        if (hero.classes != null) {
-            Box(Modifier.fillMaxWidth().height(3.dp).background(PanelRaised, RoundedCornerShape(2.dp)).semantics { contentDescription = xp.label }) {
-                Box(Modifier.fillMaxWidth(xp.fraction).fillMaxHeight().background(Gold, RoundedCornerShape(2.dp)))
+        // Опыт (3.94.0): полоса и подпись одной строкой, всегда на виду - шапка игры не сворачивается
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (hero.classes != null) {
+                Box(Modifier.weight(1f).height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp)).semantics { contentDescription = xp.label }) {
+                    Box(Modifier.fillMaxWidth(xp.fraction).fillMaxHeight().background(Brush.horizontalGradient(listOf(Gold, GoldBright)), RoundedCornerShape(2.dp)))
+                }
             }
-        }
-        if (xpOpen || hero.classes == null) {
-            Row {
-                Text(ui("hero.xp_short"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
-                Text(xp.label, color = Muted, style = MaterialTheme.typography.labelSmall)
-            }
+            Text(xp.label, color = Muted, fontSize = 10.sp, maxLines = 1, softWrap = false)
         }
     }
 }
@@ -103,7 +100,7 @@ private fun experienceOf(classes: ClassesFile?, level: Int, experience: Double):
     val label = when {
         classes == null -> ui("hero.xp_total", number(experience))
         next == null -> ui("hero.xp_last")
-        else -> ui("hero.xp_progress", groupedNumber(inLevel.toLong()), groupedNumber(span.toLong()), Math.round(fraction * 100))
+        else -> ui("hero.xp_compact", Math.round(fraction * 100), groupedNumber(inLevel.toLong()), groupedNumber(span.toLong()))
     }
     return Experience(fraction, label)
 }

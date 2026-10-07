@@ -107,9 +107,8 @@ internal fun ExpeditionRun.exit() {
 }
 
 /**
- * The autorun's beat (3.2.0): mana and draughts run as on the road, and after a short rest the next step
- * is taken — a fight begins at once, a chest opens, a guardian stands up; a crack or the portal stops the
- * run for the player's word, and the way out ends it.
+ * Шаг автопрохода (3.2.0): мана и флаконы идут как в пути, и после короткой паузы берётся следующий шаг - бой начинается сразу,
+ * сундук открывается, выход заканчивает заход.
  */
 internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
     recover(dt)
@@ -133,24 +132,10 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 
             is AutoStep.OpenChest -> if (!step.chest.opened) {
                 step.chest.opened = true
+                pilot.chests++
                 rewarding(record { RunEvent.Chest(it, step.chest.id) })
                 return
             }
-
-            is AutoStep.Guardian -> if (!step.spot.freed) {
-                crystal = step.spot
-                release()
-                started = true
-                return
-            }
-
-            is AutoStep.Rift -> if (!step.spot.opened) {
-                phase = RunPhase.ABYSS
-                rift = step.spot
-                descent = null
-            }
-
-            AutoStep.Portal -> if (world.portal != null) openGate()
 
             AutoStep.Boss -> world.boss?.takeIf { it.alive && !sealed }?.let {
                 engage(it)

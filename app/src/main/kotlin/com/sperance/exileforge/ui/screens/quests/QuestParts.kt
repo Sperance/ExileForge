@@ -21,7 +21,7 @@ import com.sperance.exileforge.rules.content.QuestReward
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.MutedText
-import com.sperance.exileforge.ui.components.RaritySpine
+import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.theme.*
 
@@ -83,8 +83,8 @@ internal fun RewardChips(reward: QuestReward) {
 @Composable internal fun QuestRow(quest: Quest, actions: @Composable RowScope.() -> Unit = {}) {
     val color = rarityColor(quest.rarity.name)
     val shape = RoundedCornerShape(8.dp)
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(shape).depthPanel(shape)) {
-        RaritySpine(if (quest.claimed) Muted else color)
+    Row(Modifier.fillMaxWidth().clip(shape).depthPanel(shape).raritySpine(if (quest.claimed) Muted else color)) {
+        Spacer(Modifier.width(4.dp))
         Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(questTitle(quest), color = if (quest.claimed) Muted else GoldBright, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))

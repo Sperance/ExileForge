@@ -101,7 +101,6 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
                     alpha = t.coerceIn(0f, 1f)
                 },
             )
-            Text(ui("levelup.was", rise.from), color = Muted, style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(22.dp))
             Column(Modifier.widthIn(max = 320.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 gains.stats.forEachIndexed { i, (stat, value) ->

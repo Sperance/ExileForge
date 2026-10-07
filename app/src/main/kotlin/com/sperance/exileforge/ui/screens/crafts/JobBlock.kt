@@ -30,6 +30,11 @@ internal sealed interface JobBlock {
         override val text: String get() = ui("crafts.no_variant")
     }
 
+    /** Варианты у работы есть, но ни один не выбран (3.90.2). */
+    data object PickVariant : JobBlock {
+        override val text: String get() = ui("crafts.pick_variant")
+    }
+
     /** Карта региона, чья локация ещё не открыта в кампании. */
     data object LockedMap : JobBlock {
         override val text: String get() = ui("crafts.locked_map")
@@ -49,11 +54,13 @@ internal sealed interface JobBlock {
         /**
          * Первая причина по порядку проверки сервера: уровень, вариант, регион, инструмент, расход цикла [job] с добавками
          * [additives]; null - работу можно начать. [work] - сама работа, [choices] - её варианты, что лист предлагает.
+         * Вариант выбирающей работы того же вида, что она сама (кузнец - EQUIPMENT, 3.90.2): не выбран лишь тот, у кого нет
+         * [JobView.choice].
          */
         fun of(game: GameUi, profession: ProfessionView, work: JobView, choices: List<JobView>, job: JobView, additives: List<String>): JobBlock? = when {
             job.level > profession.level -> Level(job.level, profession.code)
             work.options.isNotEmpty() && choices.isEmpty() && work.kind == JobKind.CONDENSE -> NothingToCondense
-            job.kind.chosen -> NoVariant
+            job.kind.chosen && job.choice.isEmpty() -> if (work.options.isEmpty()) NoVariant else PickVariant
             !job.open -> LockedMap
             profession.equipped == null -> NoTool
             else -> game.shortfall(job.cycleCost(additives))?.text()?.let(::Short)

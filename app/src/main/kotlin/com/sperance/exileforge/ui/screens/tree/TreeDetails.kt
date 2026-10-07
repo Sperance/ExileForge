@@ -100,11 +100,9 @@ import kotlin.math.sin
     taken: Set<String>,
     reachable: Set<String>,
     enabled: Boolean,
-    path: List<String>?,
     available: Int,
     onClose: () -> Unit,
     onAllocate: (String, Int?) -> Unit,
-    onPath: (String, Int?) -> Unit,
     onRefund: (String) -> Unit,
     onRefundBranch: (String) -> Unit,
     onSocket: (String, String) -> Unit,
@@ -162,7 +160,7 @@ import kotlin.math.sin
                 allocated -> at == chosen
                 else -> false
             }
-            OptionCard(on, enabled = (!allocated && (node.code in reachable || path != null)) || (rechoosable && enabled), onClick = { picked = at }) {
+            OptionCard(on, enabled = (!allocated && node.code in reachable) || (rechoosable && enabled), onClick = { picked = at }) {
                 option.forEach { line -> ModifierLine(index, line) }
             }
         }
@@ -202,18 +200,6 @@ import kotlin.math.sin
             }
             MutedText(ui("tree.refund_branch_note", branch.size, owned))
         }
-    } else if (path != null) {
-        // A far node (3.39.0): the whole way at once, for the sum of its steps; short of points, the button says so.
-        val cost = path.sumOf { index.tree.node(it)?.cost ?: 0 }
-        MutedText("${ui("tree.path")}: ${ui("tree.path_value", path.size, cost)}")
-        NodeActions {
-            ForgeButton(
-                enabled = enabled && cost <= available && (!choosing || picked != null),
-                onClick = { onPath(node.code, picked) },
-                modifier = Modifier.weight(1f),
-            ) { Text(if (cost > available) ui("tree.not_enough_points") else ui("tree.path_take", cost)) }
-        }
-        if (cost > available) MutedText(ui("tree.path_short", cost, available))
     } else if (node.code in reachable || taken.isEmpty()) {
         // Short of points the button says so and stays grey: the server would only refuse (ST_008).
         val short = node.cost > available

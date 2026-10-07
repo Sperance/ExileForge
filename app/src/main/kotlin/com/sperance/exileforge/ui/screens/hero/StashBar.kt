@@ -38,9 +38,9 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * «Быстрые фильтры» тайника (3.88.6, выбор владельца): над списком - переключатель снаряжения и инструментов, места тайника
- * с «+», кнопка поиска; ниже ряд редкостей и ряд групп мест со счётом, затем порядок и «без надетого». Всё, что раньше жило
- * в листе фильтров, - на виду; лист остаётся для поиска.
+ * «Быстрые фильтры» тайника (3.88.6, выбор владельца): над списком - переключатель снаряжения и инструментов во всю ширину
+ * (3.90.2, макет Б1); ниже ряд редкостей с местами тайника и «+» и кнопкой поиска, ряд групп мест со счётом, затем порядок
+ * и «без надетого». Всё, что раньше жило в листе фильтров, - на виду; лист остаётся для поиска.
  */
 @Composable
 internal fun StashBar(
@@ -61,20 +61,19 @@ internal fun StashBar(
     onHideWorn: (Boolean) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(Modifier.fillMaxWidth().depthInset(RoundedCornerShape(14.dp)).padding(3.dp)) {
+            ShelfSwitch(ForgeGlyphs.Helm, ui("hero.stash_gear"), !tools, Modifier.weight(1f)) { onTools(false) }
+            ShelfSwitch(ForgeGlyphs.Anvil, ui("hero.stash_tools"), tools, Modifier.weight(1f)) { onTools(true) }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.depthInset(RoundedCornerShape(16.dp)).padding(3.dp)) {
-                ShelfSwitch(ForgeGlyphs.Helm, ui("hero.stash_gear"), !tools) { onTools(false) }
-                ShelfSwitch(ForgeGlyphs.Anvil, ui("hero.stash_tools"), tools) { onTools(true) }
+            ChipLine(Modifier.weight(1f)) {
+                QuickChip(ui("common.all"), filter.rarities.isEmpty(), Parchment, pill = true) { onFilter(filter.copy(rarities = emptySet())) }
+                rarities.forEach { rarity ->
+                    QuickChip(ui("stash.rarity_many.${rarity.name}"), rarity in filter.rarities, rarityColor(rarity.name), pill = true) { onFilter(filter.toggle(rarity)) }
+                }
             }
-            Spacer(Modifier.weight(1f))
             fill()
             StashFilterButton(tweaks, onSearch)
-        }
-        ChipLine {
-            QuickChip(ui("common.all"), filter.rarities.isEmpty(), Parchment, pill = true) { onFilter(filter.copy(rarities = emptySet())) }
-            rarities.forEach { rarity ->
-                QuickChip(ui("stash.rarity_many.${rarity.name}"), rarity in filter.rarities, rarityColor(rarity.name), pill = true) { onFilter(filter.toggle(rarity)) }
-            }
         }
         if (groupCounts.size > 1) {
             ChipLine {
@@ -107,8 +106,8 @@ internal fun StashBar(
 }
 
 /** Ряд фишек, что уходит вбок прокруткой, а не переносится. */
-@Composable private fun ChipLine(content: @Composable RowScope.() -> Unit) {
-    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), content = content)
+@Composable private fun ChipLine(modifier: Modifier = Modifier.fillMaxWidth(), content: @Composable RowScope.() -> Unit) {
+    Row(modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), content = content)
 }
 
 /**
@@ -142,14 +141,18 @@ internal fun StashBar(
     }
 }
 
-/** Половинка переключателя полок: значок, выбранная - на светлой подложке. */
-@Composable private fun ShelfSwitch(icon: ImageVector, label: String, on: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(13.dp)
-    Box(
-        Modifier.size(width = 38.dp, height = 30.dp).then(if (on) Modifier.depthRaised(shape) else Modifier).clip(shape)
-            .selectable(on, role = Role.Tab, onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Icon(icon, label, tint = if (on) GoldBright else Muted, modifier = Modifier.size(17.dp)) }
+/** Половинка переключателя полок (3.90.2): значок и подпись, выбранная - приподнята на светлой подложке. */
+@Composable private fun ShelfSwitch(icon: ImageVector, label: String, on: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(11.dp)
+    val tint = if (on) GoldBright else Muted
+    Row(
+        modifier.height(34.dp).then(if (on) Modifier.depthRaised(shape) else Modifier).clip(shape).selectable(on, role = Role.Tab, onClick = onClick),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+    ) {
+        Icon(icon, null, tint = if (on) Gold else Muted, modifier = Modifier.size(16.dp))
+        Text(label, color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = if (on) FontWeight.Bold else FontWeight.Medium, maxLines = 1)
+    }
 }
 
 /** «Сортировка: по цене ▾»: нажатие раскрывает порядки. */

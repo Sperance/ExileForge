@@ -122,6 +122,19 @@ sealed interface Route : NavKey {
         override val building get() = Building.GUILD
     }
 
+    @Serializable data object History : Route {
+        override val root: Route get() = City
+        override val tab get() = TAB_CITY
+        override val building get() = Building.HISTORY
+    }
+
+    /** Найденные уникалки (3.90.2): экран над «Историей», «назад» ведёт в неё. */
+    @Serializable data object Uniques : Route {
+        override val root: Route get() = City
+        override val tab get() = TAB_CITY
+        override val building get() = Building.HISTORY
+    }
+
     /** Аккаунт и настройки ложатся поверх открытой вкладки: «назад» возвращает на неё. */
     @Serializable data object Account : Route {
         override val root: Route? get() = null
@@ -154,6 +167,7 @@ sealed interface Route : NavKey {
             Building.MERCHANT -> Merchant
             Building.AUCTION -> Auction
             Building.GUILD -> Guild
+            Building.HISTORY -> History
             null -> City
         }
     }

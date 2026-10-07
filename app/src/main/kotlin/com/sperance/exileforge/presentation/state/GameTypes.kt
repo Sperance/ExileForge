@@ -35,8 +35,8 @@ typealias LootEntry = com.sperance.exileforge.core.campaign.LootEntry
 /** The forge's sections: orbs, the bench and the essences work on one item. */
 enum class ForgeSection { ORBS, BENCH, ESSENCES }
 
-/** The City's buildings (3.22.0): each one a screen of its own behind the square. */
-enum class Building { QUESTS, MERCHANT, AUCTION, GUILD }
+/** The City's buildings (3.22.0): each one a screen of its own behind the square; «История» (3.90.2) - прошлое героя. */
+enum class Building { QUESTS, MERCHANT, AUCTION, GUILD, HISTORY }
 
 /** How many heroes one account may hold when the rules have not been read yet. */
 const val MAX_CHARACTERS = 3

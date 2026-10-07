@@ -216,6 +216,12 @@ object ServerClock {
 /** The hero's statistics (server 1.49.0): key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
 @kotlinx.serialization.Serializable data class HeroStatsView(val values: Map<String, Long> = emptyMap())
 
+/** A unique template's find (3.90.2, server 1.81.7): the first one, in epoch milliseconds, and how many copies came in all. */
+@kotlinx.serialization.Serializable data class UniqueFind(val at: Long, val count: Long)
+
+/** The hero's unique finds as `GET hero/uniques` answers them (server 1.81.7): template code — its find. */
+@kotlinx.serialization.Serializable data class UniquesView(val finds: Map<String, UniqueFind> = emptyMap())
+
 /** A loot chest opened (3.76.0, server 1.71.0): what it gave — gold, stacks, things (already in the stash or its overflow). */
 @kotlinx.serialization.Serializable
 data class ChestOpening(

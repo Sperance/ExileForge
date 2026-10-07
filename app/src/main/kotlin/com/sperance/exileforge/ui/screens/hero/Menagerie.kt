@@ -157,25 +157,27 @@ fun petSubtitle(kind: PetSpecies, pet: Pet): String {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Карточка питомца в стиле Зверинца: значок, имя в цвете редкости, кто он, уровень и «В деле», метки, все строки и у бойца
+ * здоровье с уроном; [extra] - что лежит под ней (действия Зверинца). Её же рисует снаряжение героя ([PetSlots], 3.90.2).
+ */
 @Composable
-private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onToggle: () -> Unit) {
-    val hero = game.hero ?: return
-    val index = game.index ?: return
-    val menagerie = remember(index) { Menagerie(index) }
-    val kind = menagerie.species(pet.species) ?: return
-    val active = hero.pets.isActive(pet.id)
-    val smithy = koinViewModel<SmithyViewModel>()
-    val shell = koinViewModel<ShellViewModel>()
-    var releasing by remember(pet.id) { mutableStateOf(false) }
-    var hiring by remember(pet.id) { mutableStateOf(false) }
-    // A helper does not fight (3.70.0): the hiring dialog repeats its lines before it goes to work.
-    val helps = if (kind.kind == PetKind.HELPER) menagerie.lines(pet).joinToString(", ") { lineText(index, it) }.ifBlank { "—" } else null
+internal fun PetCard(
+    game: GameUi,
+    index: ContentIndex,
+    menagerie: Menagerie,
+    kind: PetSpecies,
+    pet: Pet,
+    active: Boolean,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
+    extra: @Composable ColumnScope.() -> Unit = {},
+) {
     val shape = RoundedCornerShape(8.dp)
     val tint = rarityColor(pet.rarity.name)
     Column(
-        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, if (open) GoldBright else tint.copy(alpha = .45f), shape)
-            .clickable(onClick = onToggle).padding(10.dp),
+        Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, if (selected) GoldBright else tint.copy(alpha = .45f), shape)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -202,6 +204,25 @@ private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onT
             val sheet = menagerie.sheet(pet)
             MutedText(ui("pets.sheet", number(sheet[CoreStat.HEALTH.code] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })), style = MaterialTheme.typography.labelSmall)
         }
+        extra()
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onToggle: () -> Unit) {
+    val hero = game.hero ?: return
+    val index = game.index ?: return
+    val menagerie = remember(index) { Menagerie(index) }
+    val kind = menagerie.species(pet.species) ?: return
+    val active = hero.pets.isActive(pet.id)
+    val smithy = koinViewModel<SmithyViewModel>()
+    val shell = koinViewModel<ShellViewModel>()
+    var releasing by remember(pet.id) { mutableStateOf(false) }
+    var hiring by remember(pet.id) { mutableStateOf(false) }
+    // A helper does not fight (3.70.0): the hiring dialog repeats its lines before it goes to work.
+    val helps = if (kind.kind == PetKind.HELPER) menagerie.lines(pet).joinToString(", ") { lineText(index, it) }.ifBlank { "—" } else null
+    PetCard(game, index, menagerie, kind, pet, active, selected = open, onClick = onToggle) {
         if (open) {
             FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 ForgeButton(onClick = { if (helps != null && !active) hiring = true else vm.activatePet(pet.id) }, enabled = !game.busy) {

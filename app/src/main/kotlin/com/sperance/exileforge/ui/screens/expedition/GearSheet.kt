@@ -13,11 +13,13 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
+import com.sperance.exileforge.ui.screens.hero.PetSlots
 
 /**
  * The gear on the map (since 2.40.0): the body's ledger as the Equipment section draws it, over the walking map.
  * Только просмотр: в заходе снаряжение не меняется - ни снять, ни заменить, ни надеть из тайника или лута; надетая
- * вещь открывает свою карточку, пустое место - ничего. Сменить снаряжение можно только в убежище.
+ * вещь открывает свою карточку, пустое место - ничего. Сменить снаряжение можно только в убежище. Под ним - питомцы в деле
+ * (3.90.2), тоже только посмотреть.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,6 +30,7 @@ fun GearSheet(game: GameUi, onDismiss: () -> Unit) {
             item { Engraved(ui("expedition.gear")) }
             item { MutedText(ui("expedition.gear_hint")) }
             item { EquipmentLedger(game) { _, id -> worn = id } }
+            item { PetSlots(game, onActivate = null) }
         }
     }
     val instance = worn?.let { id -> game.hero?.item(id) } ?: return

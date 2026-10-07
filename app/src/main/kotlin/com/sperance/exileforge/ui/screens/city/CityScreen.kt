@@ -49,7 +49,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The City (3.22.0): where the auction's tab was, a square of buildings — the quest board (3.23.0), the merchant, the auction and the guild.
+ * The City (3.22.0): where the auction's tab was, a square of buildings — the quest board (3.23.0), the merchant, the auction, the guild
+ * and «История» (3.90.2).
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
  * The buildings are the screens they always were, each explaining itself on its first visit.
  */
@@ -67,6 +68,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 Building.MERCHANT -> MerchantScreen()
                 Building.AUCTION -> AuctionScreen()
                 Building.GUILD -> GuildScreen()
+                Building.HISTORY -> HistoryScreen()
             }
         }
     }
@@ -98,6 +100,7 @@ import org.koin.compose.viewmodel.koinViewModel
         BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(trade), game.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
         BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(trade), game.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }
         BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(guilds), game.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
+        BuildingCard(ui("history.title"), ForgeGlyphs.Tome, ui("city.history_idle"), game.lockOf(Building.HISTORY), accent = Parchment) { shell.building(Building.HISTORY) }
         Spacer(Modifier.height(12.dp))
     }
 }

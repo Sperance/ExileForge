@@ -97,7 +97,6 @@ import kotlin.math.sin
     selected: String,
     taken: Set<String>,
     reachable: Set<String>,
-    path: List<String>,
     highlight: Set<String>,
     view: TreeView,
     modifier: Modifier = Modifier,
@@ -196,21 +195,13 @@ import kotlin.math.sin
                     )
                 }
             }
-            if (path.isNotEmpty()) {
-                // The dashed way to the chosen node: from the taken node it leaves, through every step it would take.
-                val anchor = byCode[path.first()]?.connections.orEmpty().plus(nodes.filter { path.first() in it.connections }.map { it.code })
-                    .firstOrNull { it in taken && byCode[it]?.type != SkillNodeType.MASTERY }
-                val points = (listOfNotNull(anchor) + path).mapNotNull { byCode[it] }.map { place(it, bounds, width, height, view.scale, view.pan) }
-                val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 7f).map { it * view.scale.coerceIn(.6f, 1.6f) }.toFloatArray())
-                points.zipWithNext { a, b -> drawLine(GoldBright, a, b, 3f * view.scale.coerceIn(.6f, 1.6f), pathEffect = dash) }
-            }
             nodes.forEach { node ->
                 medallion(
                     node,
                     place(node, bounds, width, height, view.scale, view.pan),
                     view.scale,
                     node.code in taken,
-                    node.code in reachable || node.code in path,
+                    node.code in reachable,
                     node.code == selected,
                     pulse,
                 )

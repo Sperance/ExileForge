@@ -79,6 +79,7 @@ import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
 import com.sperance.exileforge.ui.screens.city.CityScreen
+import com.sperance.exileforge.ui.screens.city.UniquesScreen
 import com.sperance.exileforge.ui.screens.crafts.CraftsAwayHost
 import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
 import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
@@ -274,6 +275,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Merchant> { CityScreen(Building.MERCHANT) }
                 entry<Route.Auction> { CityScreen(Building.AUCTION) }
                 entry<Route.Guild> { CityScreen(Building.GUILD) }
+                entry<Route.History> { CityScreen(Building.HISTORY) }
+                entry<Route.Uniques> { UniquesScreen() }
                 entry<Route.Admin> { AdminScreen() }
                 entry<Route.Redemption> { RedemptionScreen() }
             },

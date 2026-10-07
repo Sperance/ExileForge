@@ -240,7 +240,8 @@ import org.koin.compose.viewmodel.koinViewModel
             add(ui("moderation.level_rate") to (it.levelsPerHour?.let { rate -> "%.2f".format(rate) } ?: "—"))
         }
         add(ui("moderation.registered") to (listedAt(dossier.account.registeredAt)?.take(DATE) ?: "—"))
-        add(ui("moderation.last_login") to (dossier.account.lastLoginAt?.let(::listedAt) ?: "—"))
+        // Дата и время входа - двумя строками: одной в треть ширины время не влезало (3.90.2)
+        add(ui("moderation.last_login") to (dossier.account.lastLoginAt?.let(::listedAt)?.replaceFirst(' ', '\n') ?: "—"))
         add(ui("moderation.client") to dossier.account.clientVersion.ifBlank { "—" })
     }
     tiles.chunked(TILES).forEach { line ->
@@ -434,7 +435,8 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable private fun StatTile(label: String, value: String, modifier: Modifier, flagged: Boolean = false) {
     Column(modifier.depthPanel(RoundedCornerShape(12.dp)).padding(8.dp)) {
         Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-        Text(value, color = if (flagged) Ember else GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // Перенос строки - только явный (вход: дата и время), длинное значение по-прежнему обрывается многоточием
+        Text(value, color = if (flagged) Ember else GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = false, overflow = TextOverflow.Ellipsis)
     }
 }
 

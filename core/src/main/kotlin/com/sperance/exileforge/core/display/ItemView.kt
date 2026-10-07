@@ -18,6 +18,8 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Source
 import com.sperance.exileforge.rules.content.Tier
 import com.sperance.exileforge.rules.content.WeaponType
+import com.sperance.exileforge.rules.roll.Dice
+import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.rules.sheet.SellPrice
@@ -147,8 +149,9 @@ data class BaseProperty(val code: String, val template: String, val values: List
 /**
  * An item as the screen reads it: the copy, its template and the index that explains both. Everything a
  * card, a row or a tooltip prints is derived here once, so no screen reads a roll on its own.
+ * [ranged] (3.90.2) - витрина шаблона ([showcase]): строка печатает вилку своего тира, а не выпавшее число.
  */
-class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: ContentIndex) {
+class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: ContentIndex, private val ranged: Boolean = false) {
     val id: String get() = item.id
     val code: String get() = template.code
     val rarity: Rarity get() = item.rarity
@@ -185,7 +188,8 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         item.rolls.map { roll ->
             val def = index.modifier(roll.code)
             val values = def?.let(roll::values).orEmpty()
-            val words = def?.let { modifierLine(index, it, values) } ?: displayName(roll.code.value)
+            val tier = def?.tier(roll.tier)?.takeIf { ranged }
+            val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values) } ?: modifierLine(index, it, values) } ?: displayName(roll.code.value)
             ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level)
         }
     }
@@ -265,6 +269,18 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
         /** The view of [item], or null for a copy whose template the content does not hold. */
         fun of(item: ItemInstance, index: ContentIndex): ItemView? = index.template(item.template)?.let { ItemView(item, it, index) }
+
+        private const val SHOWCASE = "showcase"
+        private const val SHOWCASE_SEED = 1L
+
+        /**
+         * Шаблон как витрина (3.90.2, «История»): копия правил с закреплёнными строками шаблона на нейтральной базе, каждая
+         * строка - вилкой тира. Своего ролла, номера и владельца у неё нет; кости с постоянным семенем - вид не мигает.
+         */
+        fun showcase(template: ItemTemplate, index: ContentIndex): ItemView {
+            val copy = ItemFactory(index).create(SHOWCASE, template, template.rarity, Dice(SHOWCASE_SEED)).copy(baseQuality = BaseVariance.NEUTRAL)
+            return ItemView(copy, template, index, ranged = true)
+        }
     }
 }
 

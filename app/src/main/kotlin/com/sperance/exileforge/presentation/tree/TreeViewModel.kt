@@ -38,7 +38,6 @@ class TreeViewModel(
     }
 
     fun allocate(code: String, choice: Int? = null) = hero.allocateNode(code, choice)
-    fun allocatePath(code: String, choice: Int? = null) = hero.allocatePath(code, choice)
     fun refund(code: String) = hero.refundNode(code)
     fun refundBranch(code: String) = hero.refundBranch(code)
     fun rechoose(code: String, choice: Int) = hero.rechooseNode(code, choice)

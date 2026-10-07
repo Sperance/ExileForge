@@ -99,7 +99,7 @@ fun HeroScreen() {
     val selected = game.holding.selectedEquipment
     PullToRefreshBox(isRefreshing = game.refreshing(Reads.HERO), onRefresh = model::load, modifier = Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            // Шапка над списком (3.88.7): герой и фильтры тайника уходят при прокрутке вниз, вкладки разделов прилипают.
+            // Шапка над списком (3.88.7): герой уходит при прокрутке вниз, вкладки разделов прилипают.
             Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 CollapsibleHeader {
                     // Who the character is heads every section; until the hero arrives the tab says what it is.
@@ -110,29 +110,28 @@ fun HeroScreen() {
                     }
                 }
                 SectionBar(section) { section = it }
+                // Фильтры тайника прилипают вместе с вкладками разделов (3.90.2): уходит при прокрутке только герой.
                 if (section == HeroSection.STASH && hero != null) {
-                    CollapsibleHeader {
-                        StashBar(
-                            tools = tools,
-                            onTools = {
-                                tools = it
-                                filter = filter.copy(groups = emptySet())
-                            },
-                            fill = { StashFill(game, model) },
-                            tweaks = if (filter.query.isNotBlank()) 1 else 0,
-                            onSearch = { filtering = true },
-                            filter = filter,
-                            onFilter = { filter = it },
-                            rarities = rarities,
-                            groupCounts = groupCounts,
-                            shelfSize = shelf.size,
-                            lang = game.lang,
-                            sort = game.stashSort,
-                            onSort = shell::stashSort,
-                            hideWorn = game.stashHideWorn.takeUnless { tools },
-                            onHideWorn = shell::stashHideWorn,
-                        )
-                    }
+                    StashBar(
+                        tools = tools,
+                        onTools = {
+                            tools = it
+                            filter = filter.copy(groups = emptySet())
+                        },
+                        fill = { StashFill(game, model) },
+                        tweaks = if (filter.query.isNotBlank()) 1 else 0,
+                        onSearch = { filtering = true },
+                        filter = filter,
+                        onFilter = { filter = it },
+                        rarities = rarities,
+                        groupCounts = groupCounts,
+                        shelfSize = shelf.size,
+                        lang = game.lang,
+                        sort = game.stashSort,
+                        onSort = shell::stashSort,
+                        hideWorn = game.stashHideWorn.takeUnless { tools },
+                        onHideWorn = shell::stashHideWorn,
+                    )
                 }
             }
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -146,6 +145,7 @@ fun HeroScreen() {
 
                         HeroSection.EQUIPMENT -> {
                             item { equipment?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
+                            item { PetSlots(game, model::activatePet) }
                         }
 
                         HeroSection.BAG -> {

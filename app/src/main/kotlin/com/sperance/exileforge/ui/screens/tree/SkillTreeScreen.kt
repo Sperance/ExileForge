@@ -91,7 +91,7 @@ import kotlin.math.sin
     // «Карта на весь экран» (variant A): no header and no scrolling column — the map owns everything between the Hero
     // strip and the bar, and the rest floats over it. A pannable canvas inside a scroll fights the scroll for every drag.
     SkillTreePanel(
-        game, selected, query, vm::select, vm::allocate, vm::refund, vm::reset, vm::query, onPath = vm::allocatePath,
+        game, selected, query, vm::select, vm::allocate, vm::refund, vm::reset, vm::query,
         onSocket = vm::socket, onUnsocket = vm::unsocket, onRechoose = vm::rechoose, onRefundBranch = vm::refundBranch,
         modifier = Modifier.fillMaxSize(),
     )
@@ -122,7 +122,6 @@ fun SkillTreePanel(
     onSocket: (String, String) -> Unit = { _, _ -> },
     onUnsocket: (String) -> Unit = {},
     onRechoose: (String, Int) -> Unit = { _, _ -> },
-    onPath: (String, Int?) -> Unit = { _, _ -> },
     onRefundBranch: (String) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -153,10 +152,6 @@ fun SkillTreePanel(
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
     val heroClass = game.heroClass
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
-    // The way to a far node (3.39.0): the rules' shortest path from what is taken, drawn dashed and taken at once.
-    val path = remember(index, heroClass, taken, selected) {
-        heroClass?.startNode?.takeIf { taken.isNotEmpty() && selected !in reachable }?.let { TreeAllocation.path(index.tree, taken, it, selected) }
-    }
     // The tag filter (3.47.0): every node whose lines carry the tag lights up.
     var tag by remember { mutableStateOf<String?>(null) }
     // The search (3.54.0): by a node's name or the stats it gives; every match lights up with the tag's.
@@ -169,7 +164,7 @@ fun SkillTreePanel(
     val filtering = tag != null || query.length >= 2
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
-        TreeCanvas(nodes, selected, taken, reachable, path.orEmpty(), highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
+        TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
             onSelect(code)
             nodeOpen = true
         }
@@ -222,15 +217,11 @@ fun SkillTreePanel(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 NodeDetails(
-                    game, index, heroClass, index.tree.node(selected), taken, reachable, enabled, path, tree.available,
+                    game, index, heroClass, index.tree.node(selected), taken, reachable, enabled, tree.available,
                     onClose = { nodeOpen = false },
                     onAllocate = { code, choice ->
                         nodeOpen = false
                         onAllocate(code, choice)
-                    },
-                    onPath = { code, choice ->
-                        nodeOpen = false
-                        onPath(code, choice)
                     },
                     onRefund = {
                         nodeOpen = false

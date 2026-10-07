@@ -13,8 +13,6 @@ class TreeClient internal constructor(private val http: Transport) {
     /** [choice] is the picked option of a MASTERY or ATTRIBUTE node; every other node takes none. */
     suspend fun allocate(heroId: String, nodeCode: String, choice: Int? = null): TreeState = node("allocate", heroId, nodeCode, choice)
 
-    /** The shortest path to [nodeCode] at once (server 1.37.0): the rules' path, its summed cost; [choice] is the target's own option. */
-    suspend fun path(heroId: String, nodeCode: String, choice: Int? = null): TreeState = node("path", heroId, nodeCode, choice)
     suspend fun refund(heroId: String, nodeCode: String): TreeState = node("refund", heroId, nodeCode)
 
     /** The node and everything that hangs on it (server 1.52.0), an Orb of Regret each. */

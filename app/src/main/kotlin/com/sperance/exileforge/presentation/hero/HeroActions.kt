@@ -143,7 +143,6 @@ class HeroActions(
 
     /** Древо навыков: взять узел, вернуть его или сбросить всё древо. Каждое правило - серверное. */
     fun allocateNode(code: String, choice: Int? = null) = heroCommand { id -> api.tree.allocate(id, code, choice) }
-    fun allocatePath(code: String, choice: Int? = null) = heroCommand { id -> api.tree.path(id, code, choice) }
     fun refundNode(code: String) = heroCommand { id -> api.tree.refund(id, code) }
     fun refundBranch(code: String) = heroCommand { id -> api.tree.refundBranch(id, code) }
     fun rechooseNode(code: String, choice: Int) = heroCommand { id -> api.tree.rechoose(id, code, choice) }

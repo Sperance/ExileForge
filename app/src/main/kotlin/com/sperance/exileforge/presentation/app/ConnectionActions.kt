@@ -177,7 +177,7 @@ class ConnectionActions(
                             Building.MERCHANT -> market.loadMerchant()
                             Building.AUCTION -> market.loadAuction()
                             Building.GUILD -> guild.load()
-                            null -> Unit
+                            Building.HISTORY, null -> Unit
                         }
                     }
                 }

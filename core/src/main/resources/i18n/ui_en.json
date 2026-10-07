@@ -889,7 +889,6 @@
   "feature.node.gathering": "Gathering…",
   "feature.leave": "Step away",
   "feature.secret.opening": "The crack gives way…",
-  "trap.hit": "{0}: −{1} life",
   "trap.SPIKES": "Spikes",
   "trap.FIRE": "Fire trap",
   "trap.POISON": "Poison trap",
@@ -3729,5 +3728,12 @@
   "auction.fee_rate": "Fee: {0}% of the lot price",
   "auto.wave_short": "Wave {0} of {1}",
   "auto.tally": "Chests: {0} · Slain: {1}",
-  "auto.life": "Life {0} / {1}"
+  "auto.life": "Life {0} / {1}",
+  "use.WORK": "{0}: «{1}» (lvl {2}) — {3} each",
+  "bag.uses": "Used in",
+  "bag.uses_more": "…and {0} more",
+  "hero.to_tree": "To the tree",
+  "hero.to_tree_none": "A jewel goes into a socket of the passive tree. Take a socket node in the tree — or free a filled one.",
+  "forge.essence_refused": "This essence does not go on the chosen item",
+  "trap.float": "−{0}"
 }

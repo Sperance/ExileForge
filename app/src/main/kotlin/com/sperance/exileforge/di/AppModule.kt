@@ -170,6 +170,6 @@ val appModule = module {
     // 3.90.3: и ресурсы игры, которых ждёт первая проверка, и поход с испытанием, во время которых проверок нет.
     viewModel { params ->
         val playing = combine(get<ExpeditionActions>().run, get<TrialActions>().arena) { run, arena -> run != null || arena != null }
-        UpdateViewModel(androidApplication(), get(), params.get(0), get(), get(), get<WorldLoader>(), playing)
+        UpdateViewModel(androidApplication(), get(), params.get(0), get(), get(), get<WorldLoader>(), playing, params.get(1))
     }
 }

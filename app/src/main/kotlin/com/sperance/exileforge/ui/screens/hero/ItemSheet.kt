@@ -122,6 +122,10 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         }
                     }
                 }
+                // Самоцвет без свободного взятого гнезда (3.94.1): почему «В дерево» погасла.
+                if (view.slot == Slot.JEWEL && !instance.socketed && game.index?.let { game.hero?.freeSocket(it) } == null) {
+                    item { Text(ui("hero.to_tree_none"), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
+                }
                 // Worn but not counting: the rules' reasons, as the slot cell prints them.
                 game.hero?.inactive?.get(instance.id)?.let { reasons ->
                     item {
@@ -156,6 +160,16 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
 
                     // Карта не надевается и в зону из карточки не ведёт (3.88.7): её выбирают в окне запуска зоны.
                     view.slot == Slot.MAP -> Unit
+
+                    // Самоцвет не надевается, а встаёт в гнездо дерева (3.94.1): кнопка ведёт к первому свободному взятому
+                    // гнезду; нет такого - гаснет, причина под карточкой.
+                    view.slot == Slot.JEWEL -> {
+                        val socket = remember(game.hero, game.index) { game.index?.let { game.hero?.freeSocket(it) } }
+                        PrimaryPill(ui("hero.to_tree"), can && socket != null, look) {
+                            onDismiss()
+                            socket?.let(shell::openTree)
+                        }
+                    }
 
                     else -> PrimaryPill(ui("hero.equip"), can && reachable, look) {
                         onDismiss()

@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
+import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.forge.Smithy
@@ -33,6 +34,7 @@ import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
@@ -101,6 +103,17 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
         }
     }
     val accepted: (String) -> Boolean = { it !in refused }
+    // Эссенции сумки, что на эту вещь не лягут (3.94.1): лоток показывает их серыми, с отказом правил словами игрока.
+    val essenceRefusals = remember(gear, index, hero?.bag) {
+        if (index == null || gear == null || hero == null) {
+            emptyMap()
+        } else {
+            val applier = OrbApplier(index)
+            index.essences.essences.values.filter { hero.count(it.code) > 0 && it.code in refused }.associate { essence ->
+                essence.code to (ruleRefusal { applier.applyEssence(essence, gear.item.copy(), gear.template, Dice(0)) } ?: ui("forge.essence_refused"))
+            }
+        }
+    }
     val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     val petMode = smithy.petMode && hero?.pets?.pets?.isNotEmpty() == true
@@ -144,7 +157,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
 
                 ForgeSection.BENCH -> view?.let { BenchLedger(game, index, hero, it, benchLine) { line -> benchLine = line } }
 
-                ForgeSection.ESSENCES -> EssenceTray(game, smithy.essence, accepted, vm::selectEssence)
+                ForgeSection.ESSENCES -> EssenceTray(game, smithy.essence, essenceRefusals, vm::selectEssence)
             }
         }
         if (hero != null && instance != null && !petMode) {

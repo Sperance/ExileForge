@@ -301,6 +301,13 @@ class GameApi(
             http.onSanctioned = value
         }
 
+    /** Сервер и клиент друг друга не поняли (3.94.1): приложение проверяет обновление. */
+    var onConfused: () -> Unit
+        get() = http.onConfused
+        set(value) {
+            http.onConfused = value
+        }
+
     /** Герой запроса под санкцией (`CH_034`, 3.88.0; id санкции - 3.88.5): приложение уводит к выбору героя. */
     var onHeroBlocked: (heroId: String, failure: ApiFailure) -> Unit
         get() = http.onHeroBlocked

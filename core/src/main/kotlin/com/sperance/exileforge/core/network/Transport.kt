@@ -72,6 +72,12 @@ class Transport(
     /** Сервер отказал герою запроса как заблокированному (`CH_034`, 3.88.0): id героя из запроса и сам отказ. */
     internal var onHeroBlocked: (String, ApiFailure) -> Unit = { _, _ -> }
 
+    /**
+     * Клиент и сервер друг друга не поняли (3.94.1): маршрута нет (404), ответ битый, код отказа незнаком словарю или сервер
+     * упал (500/501). Похоже на разные версии - приложение проверяет обновление. Обычные отказы правил и обрывы сети - нет.
+     */
+    internal var onConfused: () -> Unit = {}
+
     /** Whose session is signed in, so a kept command is never replayed for another account. */
     internal var account: () -> String? = { null }
 
@@ -207,6 +213,7 @@ class Transport(
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
+                if (status != 401 && status != 403) runCatching { onConfused() }
                 throw ApiFailure(
                     status,
                     null,
@@ -228,6 +235,7 @@ class Transport(
                     error?.text("message")?.takeIf { it.isNotBlank() } ?: ui("api.rejected", status),
                     (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull },
                 )
+                if (confusing(failure)) runCatching { onConfused() }
                 if (failure.code == HERO_BLOCKED) (query["heroId"] ?: query["id"])?.let { hero -> runCatching { onHeroBlocked(hero, failure) } }
                 if (failure.code == SANCTIONED) runCatching { onSanctioned(failure.args.firstOrNull().orEmpty()) }
                 throw failure
@@ -298,3 +306,7 @@ const val HERO_BLOCKED = "CH_034"
 
 /** Доступ закрыт санкцией модерации (3.88.5, server 1.80.8): первый аргумент - id санкции. */
 const val SANCTIONED = "AUTH_006"
+
+/** Отказ, в котором клиент не узнаёт сервер (3.94.1): нет маршрута, падение сервера или код, которого нет в словаре. */
+private fun confusing(failure: ApiFailure): Boolean = failure.status == 404 || failure.status == 500 || failure.status == 501 ||
+    failure.code?.let { !com.sperance.exileforge.core.i18n.serverLocale.contains(com.sperance.exileforge.rules.text.LocaleKey.error(it)) } == true

@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.RuleViolation
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.content.TreeAllocation
@@ -122,6 +123,9 @@ data class HeroView(
         }
     }
     fun count(code: String): Long = bag[code] ?: 0L
+
+    /** Первое взятое гнездо самоцвета дерева, где ничего не стоит (3.94.1); null - такого нет. */
+    fun freeSocket(index: ContentIndex): String? = tree.map { it.code }.firstOrNull { code -> index.tree.node(code)?.type == SkillNodeType.JEWEL_SOCKET && code !in jewels }
 
     /** The chronicle whole: the kept counters, and the level, zones, atlas and tree nodes at their record. */
     val chronicle: Map<String, Long> get() = Counter.values(info.counters, Counter.derived(level, campaign.cleared.size, info.atlas.size, tree.size))

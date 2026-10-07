@@ -403,6 +403,9 @@ class SessionActions(
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
+    /** Ответ сервера, которого клиент не понял (3.94.1): проверка обновлений в очередь. */
+    val confused = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without being
      * asked. The sign-in waits for the command that met the 401 to finish, because [task] refuses to nest.
@@ -427,6 +430,7 @@ class SessionActions(
         })
         created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
+        created.onConfused = { confused.tryEmit(Unit) }
         // Отчёты подписаны устройством, версией и активным героем (3.88.0); заблокированный герой уводит к выбору (3.88.0).
         created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint, { heroes.heroId }, android.os.Build.MODEL.orEmpty())
         created.onHeroBlocked = { heroId, failure -> if (api === created) characterActions.blocked(heroId, failure) }

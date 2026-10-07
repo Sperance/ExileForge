@@ -34,6 +34,7 @@ import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StashSort
+import com.sperance.exileforge.presentation.state.TAB_TREE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -125,6 +126,17 @@ class ShellViewModel(
 
     fun takeSettingsPage(): String? = settingsPage.also { settingsPage = null }
 
+    /** Узел дерева, на котором оно откроется (3.94.1): гнездо для самоцвета из карточки. */
+    private var treeNode: String? = null
+
+    /** Пассивное дерево с выбранным узлом [node]. */
+    fun openTree(node: String) {
+        treeNode = node
+        tab(TAB_TREE)
+    }
+
+    fun takeTreeNode(): String? = treeNode.also { treeNode = null }
+
     fun closeSettings() = navigator.back()
 
     /** Проба связи сразу (3.30.0): нажата иконка «не в сети». */
@@ -164,4 +176,5 @@ class ShellViewModel(
 
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer: Flow<Unit> get() = session.newerServer
+    val confused: Flow<Unit> get() = session.confused
 }

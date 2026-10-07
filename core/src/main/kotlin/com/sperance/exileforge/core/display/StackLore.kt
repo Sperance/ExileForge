@@ -84,6 +84,34 @@ fun ItemSource.title(): String = when (kind) {
 
 fun ItemSource.chanceText(): String? = chance?.takeIf { it > 0 }?.let { ui("source.chance", number(it)) }
 
+/** Куда идёт стопка (3.94.1): работа [job] профессии [profession] с её уровня [level] берёт [amount] за цикл. */
+data class ItemUse(val profession: String, val job: String, val level: Int, val amount: Long)
+
+/** Строка «Идёт в»: профессия, работа и уровень, как у источника-работы. */
+fun ItemUse.title(): String = ui("use.WORK", professionTitle(profession), jobTitle(job), level, amount)
+
+/**
+ * Где тратится каждая стопка (3.94.1): входы всех работ профессий, у перегонки - каждой её пары; по уровню работы. Как и
+ * [itemSourceIndex], считается раз на контент и вне главного потока.
+ */
+fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized(useCache) {
+    useCache.getOrPut(index) {
+        val recipes = JobRecipes(index)
+        val uses = HashMap<String, MutableList<ItemUse>>()
+        index.professions.professions.forEach { profession ->
+            profession.jobs.forEach { job ->
+                val variants = if (job is Job.Refine) recipes.options(job, heroClass = "").map { it.job } else listOf(job)
+                variants.forEach { variant ->
+                    variant.inputs.forEach { input -> uses.getOrPut(input.item) { ArrayList() } += ItemUse(profession.code, variant.code, variant.level, input.amount) }
+                }
+            }
+        }
+        uses.mapValues { (_, list) -> list.distinctBy { it.profession to it.job }.sortedWith(compareBy({ it.level }, { it.profession })) }
+    }
+}
+
+private val useCache = WeakHashMap<ContentIndex, Map<String, List<ItemUse>>>()
+
 /** The reverse of the content: every table, monster, zone, work, egg and shelf, read once into stack → sources. */
 private class SourceIndex(private val index: ContentIndex) {
     private val found = HashMap<String, MutableList<ItemSource>>()

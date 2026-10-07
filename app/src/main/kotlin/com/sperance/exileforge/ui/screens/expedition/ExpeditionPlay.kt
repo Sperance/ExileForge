@@ -122,6 +122,7 @@ import kotlin.math.roundToInt
         // Автопроход - лента боёв (3.94.0): карты на экране нет, между боями - только счёт пути.
         val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
         if (ribbon == null) ExpeditionScene(run, game.heroClass?.code, Modifier.fillMaxSize())
+        if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazard)
         when (hud.phase) {
             RunPhase.MAP -> if (ribbon != null) {
                 AutoRibbon(hud, ribbon) { model.runCommand(RunCommand.StopAuto) }
@@ -252,8 +253,8 @@ import kotlin.math.roundToInt
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
-                // Удар ловушки и простой у трещины (3.90.0)
-                HazardLine(hud.hazard, hud.opening)
+                // Простой у трещины (3.90.0); удар ловушки - над героем
+                OpeningLine(hud.opening)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
             }
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1,

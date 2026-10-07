@@ -14,6 +14,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
@@ -58,6 +59,7 @@ private const val ONE_ROW = 6
     accent: Color,
     onSelect: (String) -> Unit,
     note: String? = null,
+    refusal: (String) -> String? = { null },
     glyph: @Composable (String) -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
@@ -78,10 +80,15 @@ private const val ONE_ROW = 6
             verticalArrangement = Arrangement.spacedBy(GAP),
         ) {
             items(codes, key = { it }) { code ->
-                TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, accent, { onSelect(code) }) { glyph(code) }
+                Box(Modifier.alpha(if (refusal(code) == null) 1f else .4f)) {
+                    TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, accent, { onSelect(code) }) { glyph(code) }
+                }
             }
         }
-        if (chosen in codes) TrayTip(itemTitle(chosen), itemDescription(chosen), note)
+        if (chosen in codes) {
+            val refused = refusal(chosen)
+            if (refused != null) Text(refused, color = LifeRed, style = MaterialTheme.typography.bodySmall) else TrayTip(itemTitle(chosen), itemDescription(chosen), note)
+        }
     }
 }
 
@@ -138,13 +145,16 @@ private const val ONE_ROW = 6
     }
 }
 
-/** The essences of the tray (2.78.0): the bag's that the item takes, the special ones last and the higher tiers first. */
-@Composable internal fun EssenceTray(game: GameUi, chosen: String, accepted: (String) -> Boolean, onSelect: (String) -> Unit) {
+/**
+ * The essences of the tray (2.78.0): the bag's, the special ones last and the higher tiers first. С 3.94.1 и те, что вещь не
+ * примет ([refusals] - отказ правил по коду): серыми в конце, выбранная говорит почему.
+ */
+@Composable internal fun EssenceTray(game: GameUi, chosen: String, refusals: Map<String, String>, onSelect: (String) -> Unit) {
     val hero = game.hero ?: return
     val index = game.index ?: return
     val essences = index.itemsByCategory[com.sperance.exileforge.rules.content.Item.ESSENCE].orEmpty()
-        .filter { hero.count(it.code.value) > 0 && accepted(it.code.value) }
-        .sortedWith(compareBy({ index.essence(it.code.value)?.special == true }, { -(index.essence(it.code.value)?.tier ?: 0) })).map { it.code.value }
+        .filter { hero.count(it.code.value) > 0 }
+        .sortedWith(compareBy({ it.code.value in refusals }, { index.essence(it.code.value)?.special == true }, { -(index.essence(it.code.value)?.tier ?: 0) })).map { it.code.value }
     ForgeTray(
         game,
         ui("forge.tray_essences"),
@@ -154,6 +164,7 @@ private const val ONE_ROW = 6
         Elder,
         onSelect,
         note = ui("essence.note"),
+        refusal = refusals::get,
     ) { code ->
         BagIcon(code, Modifier.fillMaxSize(), tint = if (index.essence(code)?.special == true) GoldBright else Elder)
     }

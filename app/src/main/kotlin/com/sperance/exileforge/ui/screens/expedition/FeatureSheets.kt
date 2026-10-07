@@ -1,5 +1,8 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,10 +12,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.run.FeatureView
@@ -32,8 +39,10 @@ import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LocalLore
+import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -141,11 +150,34 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Удар ловушки на полосе карты, пока он висит, и простой у трещины тайной комнаты. */
-@Composable internal fun HazardLine(hazard: HazardView?, opening: Float?) {
-    hazard?.let { Text(ui("trap.hit", ui("trap.${it.trap}"), it.damage), color = LifeRed, style = MaterialTheme.typography.labelMedium) }
+/** Простой у трещины тайной комнаты на полосе карты; удар ловушки с 3.94.1 всплывает над героем ([HazardFloat]). */
+@Composable internal fun OpeningLine(opening: Float?) {
     opening?.let {
         Text(ui("feature.secret.opening"), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Start)
         LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Rune)
     }
 }
+
+/**
+ * Удар ловушки над героем (3.94.1): красное «−N» встаёт над жетоном героя - камера держит его по центру чуть ниже середины -
+ * и за полторы секунды уплывает вверх и гаснет; без анимаций просто висит, пока виден удар.
+ */
+@Composable internal fun HazardFloat(hazard: HazardView?) {
+    val shown = hazard ?: return
+    val motion = LocalSettings.current.animations
+    val rise = remember(shown) { Animatable(0f) }
+    LaunchedEffect(shown) { if (motion) rise.animateTo(1f, tween(HAZARD_FLOAT_MS, easing = LinearOutSlowInEasing)) }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // Ноги героя - на 55% высоты и полтайла ниже; жетон над ними - около двух полутайлов.
+        val top = maxHeight * .55f + SCENE_UNIT - SCENE_UNIT * 2.6f - SCENE_UNIT * rise.value
+        Text(
+            ui("trap.float", shown.damage),
+            color = LifeRed,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.align(Alignment.TopCenter).offset(y = top).alpha(1f - rise.value * .8f),
+        )
+    }
+}
+
+private const val HAZARD_FLOAT_MS = 1500

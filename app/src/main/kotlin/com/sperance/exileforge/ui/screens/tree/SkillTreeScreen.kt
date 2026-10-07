@@ -56,6 +56,7 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
@@ -88,6 +89,9 @@ import kotlin.math.sin
     val vm = koinViewModel<TreeViewModel>()
     val selected by vm.selected.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
+    val shell: ShellViewModel = koinViewModel()
+    // Открыто из карточки самоцвета (3.94.1): сразу на свободном гнезде.
+    LaunchedEffect(Unit) { shell.takeTreeNode()?.let(vm::select) }
     // «Карта на весь экран» (variant A): no header and no scrolling column — the map owns everything between the Hero
     // strip and the bar, and the rest floats over it. A pannable canvas inside a scroll fights the scroll for every drag.
     SkillTreePanel(

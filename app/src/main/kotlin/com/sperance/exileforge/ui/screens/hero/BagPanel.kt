@@ -16,6 +16,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemSource
+import com.sperance.exileforge.core.display.ItemUse
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.chanceText
@@ -23,6 +24,7 @@ import com.sperance.exileforge.core.display.essenceGuarantees
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemSourceIndex
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.itemUseIndex
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
@@ -240,17 +242,24 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
         }
     }
     itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
-    game.index?.let { StackLore(it, code) }
+    game.index?.let { StackLore(it, code, game.hero?.crafts?.professions.orEmpty().mapValues { (_, p) -> p.level }) }
 }
 
-/** What the content says of a stack under its description: an essence's guaranteed line by kind of item, then where it is found. */
-@Composable private fun StackLore(index: ContentIndex, code: String) {
+/**
+ * What the content says of a stack under its description: an essence's guaranteed line by kind of item, where it is found and
+ * (3.94.1) where it goes - работы профессий; закрытые по уровню героя [levels] - серым с нужным уровнем.
+ */
+@Composable private fun StackLore(index: ContentIndex, code: String, levels: Map<String, Int>) {
     val guarantees = remember(index, code) { essenceGuarantees(index, code) }
     // The reverse of the whole content, built once per content off the main thread; the card shows none until it is.
     val sourceIndex by produceState<Map<String, List<ItemSource>>>(emptyMap(), index) {
         value = withContext(Dispatchers.Default) { itemSourceIndex(index) }
     }
     val sources = sourceIndex[code].orEmpty().take(MAX_SOURCES)
+    val useIndex by produceState<Map<String, List<ItemUse>>>(emptyMap(), index) {
+        value = withContext(Dispatchers.Default) { itemUseIndex(index) }
+    }
+    val uses = useIndex[code].orEmpty()
     if (guarantees.isNotEmpty()) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Engraved(ui("bag.essence_guarantee"))
@@ -273,7 +282,20 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
             }
         }
     }
+    if (uses.isNotEmpty()) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Engraved(ui("bag.uses"))
+            uses.take(MAX_USES).forEach { use ->
+                val open = (levels[use.profession] ?: 1) >= use.level
+                Text(use.title(), color = if (open) Parchment else Muted, style = MaterialTheme.typography.bodySmall)
+            }
+            if (uses.size > MAX_USES) MutedText(ui("bag.uses_more", uses.size - MAX_USES), style = MaterialTheme.typography.labelSmall)
+        }
+    }
 }
+
+/** «Идёт в» показывает столько работ, остальные - числом. */
+private const val MAX_USES = 6
 
 /** A card lists this many sources at most: the first by kind — works, monsters, bosses, chests — say enough. */
 private const val MAX_SOURCES = 5

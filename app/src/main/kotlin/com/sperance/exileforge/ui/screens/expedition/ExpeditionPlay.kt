@@ -96,15 +96,16 @@ import kotlin.math.roundToInt
     // and closing it closes the run, once.
     val summary = hud.phase == RunPhase.LEFT || hud.phase == RunPhase.CLEARED || hud.phase == RunPhase.DEAD && hud.report == null
     var closed by remember(run) { mutableStateOf(false) }
-    val close: () -> Unit = {
+    // «Продать и вернуться» (3.90.4): [sell] - отмеченная в итогах добыча, проданная уже после захода.
+    val close: (sell: List<String>) -> Unit = { sell ->
         if (!closed) {
             closed = true
-            model.closeRun()
+            if (sell.isEmpty()) model.closeRun() else model.closeRunSelling(sell)
         }
     }
     BackHandler {
         when {
-            summary -> close()
+            summary -> close(emptyList())
 
             hud.phase == RunPhase.GATE -> model.runCommand(RunCommand.StepBack)
 

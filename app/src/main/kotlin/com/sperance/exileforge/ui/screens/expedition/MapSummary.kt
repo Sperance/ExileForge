@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.run.RunHud
@@ -35,7 +36,6 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.LootPresence
 import com.sperance.exileforge.presentation.state.presentLoot
@@ -55,7 +55,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
-import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * How a map's summary opens: its title and line, the colour and glyph of the ending, and the button that closes it.
@@ -88,19 +87,22 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * A piece opens its comparison with what is worn, a stack its description.
  * С 3.90.3 добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N · +◎» над возвратом в лагерь.
  */
-@Composable internal fun MapSummary(game: GameUi, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: () -> Unit) {
+@Composable internal fun MapSummary(game: GameUi, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: (sell: List<String>) -> Unit) {
     val tally = hud.tally
     var looked by remember { mutableStateOf<ItemView?>(null) }
     var stack by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(tally.receiving) { if (tally.receiving) vm.flushRun() }
-    // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; ничего не отмечено заранее.
-    val heroModel = koinViewModel<HeroViewModel>()
+    // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; ничего не отмечено заранее. Продаётся
+    // «Продать и вернуться» (3.90.4) - уже после захода.
     val hero = game.hero
     val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index) {
         val ids = tally.loot.equipment.mapTo(HashSet()) { it.id }
         game.sellLots(hero?.items.orEmpty().filter { it.id in ids }.mapNotNull { game.view(it) })
     }
     val pick = rememberSellPick(lots)
+    // Из выигранной зоны Ваал возвращаются на карту - заход идёт, и продажи нет: в заходе не продают (3.90.4).
+    val run by vm.run.collectAsStateWithLifecycle()
+    val selling = lots.isNotEmpty() && run?.vaal != true
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -114,13 +116,13 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                     Text(ui("expedition.fall_lost", number(it)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Loot(game, tally, pick.takeIf { lots.isNotEmpty() }, onItem = { looked = it }, onStack = { stack = it })
+            Loot(game, tally, pick.takeIf { selling }, onItem = { looked = it }, onStack = { stack = it })
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
             RunFigures(tally.figures)
         }
-        if (lots.isNotEmpty()) SellDock(pick, enabled = !game.busy) { heroModel.sellMany(it) }
+        if (selling) SellDock(pick, enabled = !game.busy, verb = "sell.do_n_return", onSell = onDone)
         ForgeButton(
-            onClick = onDone,
+            onClick = { onDone(emptyList()) },
             modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = head.accent, contentColor = if (head.accent == LifeRed) Parchment else Ink),
         ) {

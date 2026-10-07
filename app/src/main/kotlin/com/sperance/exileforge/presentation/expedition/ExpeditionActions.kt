@@ -186,12 +186,7 @@ class ExpeditionActions(
         expedition { it.copy(unfinished = null) }
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroes.heroId
-            runJournal?.takeIf { it.runId == offer.runId }?.let { j ->
-                flush()
-                if (runJournal === j) runJournal = null
-                store.clearJournal(id)
-            }
-            api.campaign.abandon(id, offer.runId)
+            finish(id, offer.runId)
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
         }
     }
@@ -508,9 +503,10 @@ class ExpeditionActions(
     /**
      * Поход окончен или брошен: журнал уходит, герой перечитывается, если ответы оставили его холодным. Выигранная
      * зона Ваал - не конец: герой снова на карте у портала с жизнью, что оставила зона. Павший в ней (3.71.0)
-     * гибнет, как везде: весь поход окончен.
+     * гибнет, как везде: весь поход окончен. С [then] (3.90.4) заход ещё и закрывается на сервере - журнал сдаётся, заход
+     * брошен, как выходом, - и уже вне захода выполняется [then]: продажа добычи, которой в заходе нет (сервер - `CH_038`).
      */
-    fun close() {
+    fun close(then: (suspend (heroId: String) -> Unit)? = null) {
         val outer = parent
         val zone = mutableRun.value
         if (outer != null && zone != null && zone.heroLife > 0) {
@@ -522,9 +518,29 @@ class ExpeditionActions(
         }
         parent = null
         mutableRun.value = null
-        flushes.trySend(Unit)
         heroes.stale()
-        heroSync.ensure()
+        if (then == null) {
+            flushes.trySend(Unit)
+            heroSync.ensure()
+            return
+        }
+        val runId = runJournal?.runId ?: hero?.campaign?.run?.id
+        commands.task(writing = true, touches = setOf(Reads.HERO)) {
+            val id = heroes.heroId
+            runId?.let { finish(id, it) }
+            then(id)
+            if (heroes.state.value.readAt == 0L) heroSync.readHero()
+        }
+    }
+
+    /** Закрывает заход [runId] на сервере: недошедший журнал отправляется (его добыча - героя), затем заход брошен, как выходом. */
+    private suspend fun finish(heroId: String, runId: String) {
+        runJournal?.takeIf { it.runId == runId }?.let { j ->
+            flush()
+            if (runJournal === j) runJournal = null
+            store.clearJournal(heroId)
+        }
+        api.campaign.abandon(heroId, runId)
     }
 
     private fun loot(heroId: String, equipment: List<ItemInstance>) {

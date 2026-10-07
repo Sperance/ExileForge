@@ -33,10 +33,11 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Выбор продажи (3.90.3) - одна абстракция на режим продажи тайника и окно конца захода: текущие [lots] и отмеченное поверх
- * них. Отметить можно только лот - то, что уходит пачкой; проданное выпадает из выбора само, с новыми лотами.
+ * них. Отметить можно только лот - то, что уходит пачкой; проданное выпадает из выбора само, с новыми лотами. Быстрые наборы
+ * (3.90.4) берут только [shown] - лоты открытого пункта рейки и фильтров; отмеченное в других пунктах остаётся.
  */
 @Stable
-class SellPick internal constructor(val lots: List<SellLot>, private val state: MutableState<SellSelection>) {
+class SellPick internal constructor(val lots: List<SellLot>, private val shown: List<SellLot>, private val state: MutableState<SellSelection>) {
     private val byId = lots.associateBy { it.id }
 
     /** Отмеченные живые лоты, их число и сумма. */
@@ -50,11 +51,11 @@ class SellPick internal constructor(val lots: List<SellLot>, private val state: 
         if (sellable(id)) state.value = state.value.toggle(id)
     }
 
-    fun covers(preset: SellPreset): Boolean = state.value.covers(lots, preset)
-    fun offers(preset: SellPreset): Boolean = lots.any(preset::takes)
+    fun covers(preset: SellPreset): Boolean = state.value.covers(shown, preset)
+    fun offers(preset: SellPreset): Boolean = shown.any(preset::takes)
 
     fun flip(preset: SellPreset) {
-        state.value = state.value.flip(lots, preset)
+        state.value = state.value.flip(shown, preset)
     }
 
     fun clear() {
@@ -62,10 +63,13 @@ class SellPick internal constructor(val lots: List<SellLot>, private val state: 
     }
 }
 
-/** Выбор над [lots]: отмеченное живёт, пока жив вызывающий экран, и переживает смену лотов. Ничего не отмечено заранее. */
-@Composable fun rememberSellPick(lots: List<SellLot>): SellPick {
+/**
+ * Выбор над [lots]: отмеченное живёт, пока жив вызывающий экран, и переживает смену лотов. Ничего не отмечено заранее.
+ * [shown] - id на экране, по которым работают наборы; null - все лоты.
+ */
+@Composable fun rememberSellPick(lots: List<SellLot>, shown: Set<String>? = null): SellPick {
     val state = remember { mutableStateOf(SellSelection()) }
-    return remember(lots) { SellPick(lots, state) }
+    return remember(lots, shown) { SellPick(lots, shown?.let { ids -> lots.filter { it.id in ids } } ?: lots, state) }
 }
 
 /** Быстрые наборы над списком: «по правилам автопродажи» и по редкости; включённый снимается тем же нажатием. */
@@ -116,14 +120,14 @@ class SellPick internal constructor(val lots: List<SellLot>, private val state: 
 
 /**
  * Кнопка снизу «Продать N · +◎ сумма», удерживаемая: продажа не отменяется. [onCancel] - «Отмена» рядом (режим тайника);
- * без отмеченного - подсказка вместо суммы, кнопка погашена.
+ * без отмеченного - подсказка вместо суммы, кнопка погашена. [verb] - ключ подписи с числом: в итогах захода - «Продать N и вернуться».
  */
-@Composable fun SellDock(pick: SellPick, enabled: Boolean, modifier: Modifier = Modifier, onCancel: (() -> Unit)? = null, onSell: (List<String>) -> Unit) {
+@Composable fun SellDock(pick: SellPick, enabled: Boolean, modifier: Modifier = Modifier, verb: String = "sell.do_n", onCancel: (() -> Unit)? = null, onSell: (List<String>) -> Unit) {
     val picked = pick.picked
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         onCancel?.let { ForgeOutlinedButton(onClick = it) { Text(ui("common.cancel")) } }
         HoldButton(
-            if (picked.isEmpty()) ui("sell.pick_hint") else ui("sell.do_n", picked.size),
+            if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size),
             Gold,
             Modifier.weight(1f),
             enabled = enabled && picked.isNotEmpty(),

@@ -56,9 +56,10 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
     val rarities = remember(stash) { stash.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
     val visible = remember(stash, filter, game.stashSort, hideWorn, hero.level, hero.stats, game.world) { game.stashShelf(stash, filter, hideWorn) }
     val lines = rememberStashLines(game, visible)
-    // Лоты - весь тайник: набор «Обычные» берёт все обычные, а не только видимые в пункте рейки.
+    // Лоты - весь тайник, наборы - только видимое в открытом пункте рейки (3.90.4): отмеченное в других пунктах остаётся.
     val lots = remember(stash, hero.info.autoSell, hero.stats, hero.info.heroClass, game.index) { game.sellLots(stash) }
-    val pick = rememberSellPick(lots)
+    val shown = remember(visible) { visible.mapTo(HashSet()) { it.id } }
+    val pick = rememberSellPick(lots, shown)
     val selected = game.holding.selectedEquipment
     val leave = {
         selling = false

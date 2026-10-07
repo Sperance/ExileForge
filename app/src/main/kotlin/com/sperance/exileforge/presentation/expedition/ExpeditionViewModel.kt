@@ -48,6 +48,9 @@ class ExpeditionViewModel(
     fun flushRun() = expedition.flushRun()
     fun enterVaal() = expedition.enterVaal()
     fun closeRun() = expedition.close()
+
+    /** «Продать и вернуться» (3.90.4): заход закрывается и на сервере, затем отмеченная добыча продаётся пачкой. */
+    fun closeRunSelling(itemIds: Collection<String>) = expedition.close { id -> hero.sellBatch(id, itemIds) }
     fun openAtlas() = expedition.openAtlas()
     fun closeAtlas() = expedition.closeAtlas()
     fun selectAtlasNode(code: String) = expedition.selectAtlasNode(code)
@@ -60,5 +63,4 @@ class ExpeditionViewModel(
     fun abandonTrial() = trial.abandon()
     fun trialCommand(command: RunCommand) = trial.send(command)
     fun closeTrial() = trial.close()
-    fun sellForGold(itemId: String) = hero.sellForGold(itemId)
 }

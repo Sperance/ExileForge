@@ -176,9 +176,12 @@ class HeroActions(
     /** Продажа торговцу: цену ставит и платит сервер; карточка показала ту же сумму заранее. */
     fun sellForGold(itemId: String) = heroCommand { id -> notices.toast(ui("toast.sold", api.hero.sell(id, itemId).gold)) }
 
-    /** Продажа пачкой (3.90.3): выбор тайника, «по правилам» и окно конца захода; сколько и за сколько - тостом. */
-    fun sellMany(itemIds: Collection<String>) = heroCommand { id ->
-        val sold = api.hero.sellMany(id, itemIds.toList())
+    /** Продажа пачкой (3.90.3): выбор тайника и «по правилам»; сколько и за сколько - тостом. */
+    fun sellMany(itemIds: Collection<String>) = heroCommand { id -> sellBatch(id, itemIds) }
+
+    /** Та же продажа пачкой внутри идущей команды - «Продать и вернуться» конца захода (3.90.4), уже вне захода. */
+    suspend fun sellBatch(heroId: String, itemIds: Collection<String>) {
+        val sold = api.hero.sellMany(heroId, itemIds.toList())
         notices.toast(ui("toast.sold_many", sold.itemIds.size, sold.gold))
     }
 

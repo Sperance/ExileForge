@@ -59,6 +59,31 @@ import org.koin.compose.viewmodel.koinViewModel
         } else {
             TrialEnding(game, model, hud)
         }
+        // Досье босса (3.92.0) перед его этапом, как у стража карты: «В бой» начинает этап
+        val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
+        val boss = fight?.boss
+        val stage = hud.step to fight?.stage
+        var seen by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
+        if (fight != null && boss != null && seen != stage) {
+            fight.foes.firstOrNull { it.index == boss.index }?.let { foe ->
+                BossDossier(
+                    game,
+                    foe.monster,
+                    hud.level,
+                    foe.maxLife.toDouble(),
+                    boss.phase,
+                    boss.marks,
+                    ui(if (hud.kind == TrialKind.RUSH) "trials.boss_of" else "trials.floor", hud.step, hud.steps),
+                    fight.heroBody,
+                    arena.rules,
+                    odds = { arena.bossOdds() },
+                    record = { model.bossRecord(foe.monster.code.value) },
+                ) {
+                    seen = stage
+                    model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Begin)
+                }
+            }
+        }
     }
 }
 

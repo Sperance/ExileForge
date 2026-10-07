@@ -177,6 +177,9 @@ import kotlin.math.roundToInt
             RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(game, hud, it, onCommand = model::runCommand) }
 
             RunPhase.LEFT -> MapSummary(game, model, hud, onDone = close)
+
+            // Экран-вызов перед стражем (3.92.0)
+            RunPhase.CHALLENGE -> hud.challenge?.let { BossChallenge(game, model, run, it, model::runCommand) }
         }
         // In a fight the arena's own row carries the autorun (3.77.0); the plate floats only over the map.
         hud.auto?.takeIf { hud.phase == RunPhase.MAP }?.let { auto ->

@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.screens.expedition.arena
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -68,9 +69,15 @@ import com.sperance.exileforge.ui.theme.*
     // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill.
     val buff = view.buff
     val title = buff?.let { ui("fight.buff.${it.name}") } ?: SkillText.title(view.source)
+    // Проклятие (3.92.0) открывает лист: что меняет, сколько ещё, чем снять; бафф - прежнюю подсказку
+    val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
     Tipped(
-        { Tip(title, ui(if (view.kind == EffectKind.CURSE) "fight.effect_curse" else "fight.effect_buff", fineNumber(view.seconds))) },
-        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
+        if (lore != null) {
+            null
+        } else {
+            { Tip(title, ui(if (view.kind == EffectKind.CURSE) "fight.effect_curse" else "fight.effect_buff", fineNumber(view.seconds))) }
+        },
+        Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Curse(view.source, null, view.seconds)) } else Modifier).size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
             .semantics { contentDescription = title },
     ) {
         if (buff != null) {

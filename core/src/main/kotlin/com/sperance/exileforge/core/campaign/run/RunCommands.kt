@@ -138,6 +138,10 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
             interlude = null
         }
 
+        RunCommand.Accept -> accept()
+
+        RunCommand.ToBoss -> if (phase == RunPhase.MAP && autopilot == null) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { engage(it) }
+
         RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
 
         is RunCommand.Focus -> fight?.focus(command.index)

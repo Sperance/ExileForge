@@ -80,7 +80,7 @@ internal fun Battle.lastWords(fallen: Fighter) {
 
 /** A monster's skills, the first ready one it has the mana for and a reason to use: a heal when hurt, a buff or a curse not already on. */
 internal fun Battle.monsterCast(me: Fighter) {
-    val skills = foes[me.index].skills
+    val skills = foes[me.index].skills + learned[me.index].orEmpty()
     if (skills.isEmpty() || !heroFighter.alive) return
     for (skill in skills) {
         val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown / 2 }

@@ -13,12 +13,24 @@ import java.util.UUID
 
 private const val CAMPAIGN = "api/v1/hero/campaign"
 
+/** Босс на сервере (3.92.0): сколько героев с ним дралось и сколько победили; [share] - доля победивших. */
+@kotlinx.serialization.Serializable
+data class BossRecord(val fought: Int = 0, val won: Int = 0) {
+    val share: Double? get() = if (fought > 0) won.toDouble() / fought else null
+}
+
+@kotlinx.serialization.Serializable
+data class BossRecords(val records: Map<String, BossRecord> = emptyMap())
+
 /**
  * The campaign by seed: entering a zone answers the seed and the frozen context the client rolls the
  * run by; the run's journal is played back by the server, each number once, and its answer is the truth.
  */
 class CampaignClient internal constructor(private val http: Transport) {
     suspend fun progress(heroId: String): CampaignProgress = http.get("$CAMPAIGN/progress", heroQuery(heroId))
+
+    /** Боссы игрового сервера героя (3.92.0, сервер 1.81.12): сколько героев с каждым дрались и сколько победили. */
+    suspend fun bosses(heroId: String): BossRecords = http.get("$CAMPAIGN/bosses", heroQuery(heroId))
 
     /**
      * Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. A [potion]

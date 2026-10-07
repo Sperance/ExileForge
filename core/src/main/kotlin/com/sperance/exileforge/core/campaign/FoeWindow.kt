@@ -28,6 +28,24 @@ class FoeWindow(order: List<Int>, val size: Int = SIZE) {
 
     fun waits(index: Int): Boolean = index in line
 
+    /**
+     * Зов посреди боя (3.92.0): свободное место - у стаи меньше поля они есть - берёт [index] сразу (`true`), иначе он ждёт
+     * первым в очереди.
+     */
+    fun call(index: Int): Boolean {
+        if (places.size < size) {
+            places += index
+            return true
+        }
+        line.addFirst(index)
+        return false
+    }
+
+    /** Ждущий [index] уходит из очереди (3.92.0): свита пала вместе с боссом и уже не встанет. */
+    fun dismiss(index: Int) {
+        line.remove(index)
+    }
+
     /** Every place whose foe is [down] takes the next in line; the ones that stepped in, in the order they did. */
     fun refill(down: (Int) -> Boolean): List<Int> {
         if (line.isEmpty()) return emptyList()

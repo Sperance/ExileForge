@@ -50,7 +50,14 @@ data class Foe(
     /** Its traits (3.73.0) and their strength for its rarity: their lines are on [body] already, their answers the fight plays. */
     val traits: List<MonsterTrait> = emptyList(),
     val traitPower: Double = 1.0,
-)
+    /** Фазы босса (3.92.0): шаблон [phase] и его шаги по убыванию порога; пусто - фаз нет. */
+    val phase: String? = null,
+    val phases: List<FoePhase> = emptyList(),
+    /** Свита (3.92.0): номер босса, чья фаза её зовёт; в бой она встаёт только по зову, добычи не даёт и падает с ним. */
+    val summonOf: Int? = null,
+) {
+    val summoned: Boolean get() = summonOf != null
+}
 
 /** What lies on a fighter for a while (2.78.0). */
 enum class EffectKind { BUFF, CURSE, FLASK }

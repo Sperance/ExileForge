@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.FightFigures
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
+import com.sperance.exileforge.core.campaign.PhaseFoes
 import com.sperance.exileforge.core.campaign.RunStats
 import com.sperance.exileforge.core.campaign.StageCarry
 import com.sperance.exileforge.core.campaign.combat.Action
@@ -35,6 +36,7 @@ import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
+import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
@@ -123,26 +125,22 @@ internal fun ExpeditionRun.begin(number: Int) {
 }
 
 /** The stage's battle on the hero's pools now, at the fight's level, on its own dice. */
-internal fun ExpeditionRun.battle(): Battle = Battle(
-    hero,
-    members.map { member ->
+internal fun ExpeditionRun.battle(): Battle {
+    val phases = PhaseFoes(this.index, rules)
+    val foes = members.map { member ->
         // Сделки алтаря (3.90.0) ложатся на каждый бой: строки карты, сила босса, лишние строки монстров
         val monster = pactFoe(member)
         // Its own level on a map (3.73.0), the fight's otherwise.
-        val level = monster.level.takeIf { it > 0 } ?: fightLevel
-        Foe(
-            Combatant(monster.stats, level, rules),
-            monster.rarity,
-            monster.skills.mapNotNull(this.index.skills.monsterByCode::get),
-            monster,
-            level,
-            monster.traitsIn(this.index),
-            this.index.campaign.traits.power(monster.rarity),
-        )
-    },
-    rules, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
-    percent = build.gear.percent, ally = ally(), stage = stageCarry,
-)
+        phases.foe(monster, monster.level.takeIf { it > 0 } ?: fightLevel)
+    }
+    return Battle(
+        hero,
+        // Свита фаз босса (3.92.0) - в конце стаи, на своём потоке: бой без фаз катится как прежде
+        phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
+        rules, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
+        percent = build.gear.percent, ally = ally(), stage = stageCarry,
+    )
+}
 
 /** The fight is over, whichever way: nothing of it is held any longer. */
 internal fun ExpeditionRun.endFight() {
@@ -222,7 +220,9 @@ internal fun ExpeditionRun.play(dt: Double) {
     flaskLeft = out.flaskLeft
     rates = out.rates
     rebody()
-    val pack = stageHits + members.mapIndexed { index, member -> PackHit(member.monster, battle.events.filter { it.foe == index }, battle.duration, stageTime) }
+    // Свита фаз (3.92.0) - в журнале боя вслед за стаей
+    val retinue = battle.foes.withIndex().drop(members.size).mapNotNull { (index, foe) -> foe.origin?.let { PackHit(it, battle.events.filter { e -> e.foe == index }, battle.duration, stageTime) } }
+    val pack = stageHits + members.mapIndexed { index, member -> PackHit(member.monster, battle.events.filter { it.foe == index }, battle.duration, stageTime) } + retinue
     val duration = stageTime + battle.duration
     // A stage won with packs still waiting: the next one stands up, and the report waits for the last.
     if (outcome == Outcome.WIN && stage < fightStages.size) {

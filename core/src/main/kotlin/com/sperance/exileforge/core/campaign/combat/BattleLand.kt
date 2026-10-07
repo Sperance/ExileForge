@@ -277,11 +277,13 @@ internal fun Battle.place(target: Fighter, fresh: ActiveAilment, stacks: Boolean
 
 /** A foe down: a kill to report, life and mana on kill and the flasks' charges for the hero (2.78.0), its aura lifted, and a focus on it let go. */
 internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fighter? = null) {
-    if (fighter.side != Side.MONSTER || fighter.index in fallenOrder) return
+    if (fighter.side != Side.MONSTER || fighter.index in fallenOrder || fighter.index in retinueDown) return
     val ailing = fighter.ailments.toList()
     fighter.ailments.clear()
     fighter.effects.clear()
-    fallenOrder += fighter.index
+    // Свита (3.92.0) - не убийство: о ней не сообщают; босс уводит свою за собой
+    if (foes[fighter.index].summoned) retinueDown += fighter.index else fallenOrder += fighter.index
+    if (foes[fighter.index].phases.isNotEmpty()) dismissRetinue(fighter)
     if (focus == fighter.index) focus = null
     if (lastStriker == fighter.index) lastStriker = null
     val stepped = stepIn()

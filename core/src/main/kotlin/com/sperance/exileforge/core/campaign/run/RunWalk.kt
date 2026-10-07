@@ -55,7 +55,8 @@ internal fun ExpeditionRun.walk(dt: Double) {
     if (phase != RunPhase.MAP) return
     val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
     when (val event = world.step(dt, x, y)) {
-        is WorldEvent.Encounter -> engage(event.agent)
+        // Страж вручную (3.92.0) - сперва экран-вызов
+        is WorldEvent.Encounter -> if (event.agent === world.boss) challenge(event.agent) else engage(event.agent)
 
         WorldEvent.Exit -> exit()
 

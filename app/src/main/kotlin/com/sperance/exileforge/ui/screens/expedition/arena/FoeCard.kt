@@ -153,7 +153,15 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                 // Its traits (3.73.0) as seals; a tap on the card opens what they do.
                 if (traits.isNotEmpty() && foe.alive) {
                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        traits.forEach { trait -> SkillGlyph(trait.icon, Modifier.size(14.dp), Color(0xFFE8B06A)) }
+                        // Печать свойства (3.92.0) открывает его лист
+                        val lore = LocalLore.current
+                        traits.forEach { trait ->
+                            SkillGlyph(
+                                trait.icon,
+                                Modifier.size(14.dp).then(if (lore != null) Modifier.clickable { lore(Lore.Trait(trait, monsterTitle(foe.monster.code))) } else Modifier),
+                                Color(0xFFE8B06A),
+                            )
+                        }
                     }
                 }
             }

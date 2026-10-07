@@ -170,7 +170,7 @@ class Battle(
     }
 
     /** Who of the pack is on the field: at most [FoeWindow.SIZE] at once, the strongest first, the rest stepping in as they fall. */
-    val window = FoeWindow(FoeWindow.order(foes.map { it.rarity }))
+    val window = FoeWindow(FoeWindow.order(foes.map { it.rarity }).filterNot { foes[it].summoned })
     val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i) }
         .also { all -> window.field.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
@@ -310,7 +310,7 @@ class Battle(
 
     /** The drawings of every skill in this fight, by code: the hero's and the foes'. */
     internal val icons: Map<String, String> = (kit.actives.filterNotNull() + kit.passives + kit.curses).associate { it.skill.code to it.skill.icon } +
-        foes.flatMap { it.skills }.associate { it.code to it.icon }
+        foes.flatMap { it.skills + it.phases.mapNotNull(FoePhase::skill) }.associate { it.code to it.icon }
 
     internal fun draughtOf(slot: Int): TimedEffect? = heroFighter.effects.firstOrNull { it.kind == EffectKind.FLASK && it.slot == slot && it.until > time }
     internal fun skillsFree(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.skillsFree == true && draughtOf(i) != null }
@@ -403,6 +403,16 @@ class Battle(
 
     /** The foes that have swung once already: an ambusher's first blow is the heavier one. */
     internal val swung = mutableSetOf<Int>()
+
+    /** Сработавшие шаги фаз (3.92.0): номер врага и шага - каждый срабатывает раз за бой. */
+    internal val phased = mutableSetOf<Pair<Int, Int>>()
+
+    /** Умения, что фазы дали врагам (3.92.0), по номеру врага: он применяет их вслед за своими. */
+    internal val learned = mutableMapOf<Int, MutableList<com.sperance.exileforge.rules.content.MonsterSkill>>()
+
+    /** Свита, что уже звана (3.92.0), и павшая: её смерть не убийство, о ней не сообщают. */
+    internal val called = mutableSetOf<Int>()
+    internal val retinueDown = mutableSetOf<Int>()
 
     /** Foes whose rage has been lit, and by which trait: it lights once and holds to the end of the fight. */
     internal val enraged = mutableSetOf<Pair<Int, String>>()

@@ -29,6 +29,7 @@ import com.sperance.exileforge.rules.content.TrialEvent
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.rules.content.TrialRun
+import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
@@ -240,22 +241,43 @@ class TrialArena(
         interlude = BREAK
     }
 
-    private fun battle(foes: List<RolledMonster>): Battle = Battle(
-        hero,
-        foes.map { monster ->
-            Foe(
-                Combatant(monster.stats, level, rules),
-                monster.rarity,
-                monster.skills.mapNotNull(index.skills.monsterByCode::get),
-                monster,
-                level,
-                monster.traitsIn(index),
-                index.campaign.traits.power(monster.rarity),
+    private fun battle(foes: List<RolledMonster>): Battle {
+        val phases = PhaseFoes(index, rules)
+        val stream = fought++
+        return Battle(
+            hero,
+            // Фазы и свита боссов (3.92.0): свита - на своём потоке
+            phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
+            rules, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
+            percent = gear.percent, ally = allies.of(hero.stats, pet), stage = carry,
+        )
+    }
+
+    /**
+     * Прогон боя с боссом этажа (3.92.0): [fights] боёв героем, каков он сейчас, против стаи этапа, каждый на своих костях, не
+     * дольше [cap] секунд; null - босса в стае нет. Тяжёлый: звать вне главного потока.
+     */
+    fun bossOdds(fights: Int = 40, cap: Double = 180.0): com.sperance.exileforge.core.campaign.run.BossOdds? {
+        val pack = monsters
+        if (pack.none { it.rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE }) return null
+        val phases = PhaseFoes(index, rules)
+        val foes = pack.map { phases.foe(it, level) }
+        val ally = allies.of(hero.stats, pet)
+        val life = pools.life
+        val start = pools
+        var wins = 0
+        var seconds = 0.0
+        repeat(fights) { i ->
+            val battle = Battle(
+                hero, phases.withRetinue(foes, Dice(ODDS_SEED + i)), rules, life, Random(ODDS_SEED + i), gear.stance,
+                kit = kit, model = build, pools = start, percent = gear.percent, ally = ally,
             )
-        },
-        rules, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, fought++)), gear.stance, kit = kit, model = build, pools = pools,
-        percent = gear.percent, ally = allies.of(hero.stats, pet), stage = carry,
-    )
+            while (battle.outcome == null && battle.time < cap) battle.advance(1.0)
+            if (battle.outcome == Outcome.WIN) wins++
+            seconds += battle.time
+        }
+        return com.sperance.exileforge.core.campaign.run.BossOdds(wins, fights, seconds / fights)
+    }
 
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */
     private fun effects(): Map<String, Double> = MapEffects.sum(atlas, floor?.mods.orEmpty().groupBy { it.stat }.mapValues { (_, lines) -> lines.sumOf { it.value } })
@@ -293,7 +315,8 @@ class TrialArena(
         val outcome = fight.outcome ?: return
         if (fight.time < fight.duration + index.campaign.expedition.aftermath) return
         pools = fight.pools()
-        val pack = stageHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration, stageTime) }
+        val retinue = fight.foes.withIndex().drop(monsters.size).mapNotNull { (i, foe) -> foe.origin?.let { PackHit(it, fight.events.filter { e -> e.foe == i }, fight.duration, stageTime) } }
+        val pack = stageHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration, stageTime) } + retinue
         stageHits = pack
         stageTime += fight.duration
         if (outcome != Outcome.WIN) {
@@ -375,5 +398,9 @@ class TrialArena(
         /** Seconds the next fight stands laid open before it begins by itself. */
         const val BREAK = 3.0
         private val FIGHT_STREAM = "trial".hashCode().toLong()
+
+        /** Поток свиты фаз боссов (3.92.0). */
+        private val RETINUE_STREAM = "trialRetinue".hashCode().toLong()
+        private const val ODDS_SEED = 9_173L
     }
 }

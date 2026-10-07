@@ -33,6 +33,9 @@ class ExpeditionViewModel(
     val arena: StateFlow<TrialArena?> = trial.arena
     val activity: StateFlow<Activity> = commands.state
 
+    /** Босс на сервере героя (3.92.0): сколько героев с ним дрались и сколько победили. */
+    suspend fun bossRecord(code: String) = expedition.bossRecord(code)
+
     fun ensureHero() = sync.ensure()
     fun loadCampaign() = expedition.loadCampaign()
     fun selectZone(mapCode: String) = expedition.selectZone(mapCode)
@@ -40,7 +43,9 @@ class ExpeditionViewModel(
     fun pickMap(itemId: String?) = expedition.pickMap(itemId)
     fun pickPotion(code: String?) = expedition.pickPotion(code)
     fun toggleScarab(code: String, add: Boolean) = expedition.toggleScarab(code, add)
-    fun startRun(mapCode: String) = expedition.start(MapCode(mapCode))
+
+    /** Заход в зону; [toBoss] (3.92.0, тестировщик и выше) - сразу бой со стражем. */
+    fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.start(MapCode(mapCode), toBoss = toBoss && game.value.isTester)
     fun startAutoRun(mapCode: String, plan: AutoPlan) = expedition.start(MapCode(mapCode), plan)
     fun continueUnfinished() = expedition.continueUnfinished()
     fun abandonUnfinished() = expedition.abandonUnfinished()

@@ -181,23 +181,26 @@ import org.koin.compose.viewmodel.koinViewModel
     // so a switch whose dictionary landed after the first redraw left the server's names in the old language.
     key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
         CompositionLocalProvider(LocalBugReport provides { bugOpen = true }, LocalMailOpen provides { mailOpen = true }) {
-            Box(Modifier.fillMaxSize()) {
-                // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
-                val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
-                val run = expedition
-                val arena = trial
-                val notice = game.session.notice
-                when {
-                    // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
-                    notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
+            // Листы-справки (3.92.0): умение монстра, проклятие, свойство, фаза - откуда бы их ни открыли
+            com.sperance.exileforge.ui.components.LoreHost(game) {
+                Box(Modifier.fillMaxSize()) {
+                    // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
+                    val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
+                    val run = expedition
+                    val arena = trial
+                    val notice = game.session.notice
+                    when {
+                        // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
+                        notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
 
-                    warming != null -> WarmupScreen(warming)
+                        warming != null -> WarmupScreen(warming)
 
-                    run != null -> ExpeditionPlay(run)
+                        run != null -> ExpeditionPlay(run)
 
-                    arena != null -> TrialScreen(arena)
+                        arena != null -> TrialScreen(arena)
 
-                    else -> Shell(game, logs, route, navigator) { bugOpen = true }
+                        else -> Shell(game, logs, route, navigator) { bugOpen = true }
+                    }
                 }
             }
         }

@@ -128,6 +128,9 @@ class ExpeditionRun(
     @Volatile var stickY = 0.0
     internal val commands = ConcurrentLinkedQueue<RunCommand>()
     internal var phase = RunPhase.MAP
+
+    /** Страж на экране-вызове (3.92.0): мир ждёт «В бой»; null - вызова нет. */
+    internal var challenge: MonsterAgent? = null
     internal var life = startPools?.life?.coerceIn(0.0, hero.maxLife) ?: hero.maxLife
     val heroLife: Double get() = life
     internal val kit: Loadout get() = build.gear.kit
@@ -382,6 +385,9 @@ class ExpeditionRun(
         /** The agents of the Abyss's waves are numbered down from here, out of the way of the map's and the crystals'. */
         internal const val ABYSS_AGENT = -10_000
         internal val FIGHT_STREAM = "fight".hashCode().toLong()
+
+        /** Поток свиты фаз боссов (3.92.0): свой, чтобы бой без фаз катился на прежних костях. */
+        internal val RETINUE_STREAM = "retinue".hashCode().toLong()
 
         /**
          * A run of [location] as the seed rolls it — or, [vaal], of the Vaal zone behind its portal, entered with

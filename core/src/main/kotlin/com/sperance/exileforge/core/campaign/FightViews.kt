@@ -11,7 +11,9 @@ import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.run.AilmentView
 import com.sperance.exileforge.core.campaign.run.AllyView
+import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.BuildupView
+import com.sperance.exileforge.core.campaign.run.CastView
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FloatingHit
@@ -107,7 +109,7 @@ internal fun Battle.hud(
     }
     val foes = foeFighters.map { f ->
         FoeView(
-            f.index, monsters[f.index], shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
+            f.index, monsters.getOrNull(f.index) ?: checkNotNull(foes[f.index].origin), shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index),
             reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay, buildup = buildup(f),
@@ -130,7 +132,21 @@ internal fun Battle.hud(
         heroBarrier = h.barrier.roundToInt(),
         level = level,
         stage = stage, stages = stages, interlude = interlude,
+        heroBody = h.body,
+        boss = bossHud(),
     )
+}
+
+/** Босс боя (3.92.0): первый враг редкости босса или с фазами - его пороги и умение на подходе. */
+private fun Battle.bossHud(): BossHud? {
+    val i = foes.indices.firstOrNull { foes[it].phases.isNotEmpty() || foes[it].rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE } ?: return null
+    val foe = foes[i]
+    val fighter = foeFighters[i]
+    val cast = (foe.skills + learned[i].orEmpty()).mapNotNull { skill ->
+        val ready = fighter.readyAt[skill.code] ?: return@mapNotNull null
+        CastView(skill.code, (ready - time).coerceAtLeast(0.0), skill.cooldown / fighter.body.recovery(skill.spell))
+    }.minByOrNull { it.left }?.takeIf { fighter.alive }
+    return BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast)
 }
 
 /**

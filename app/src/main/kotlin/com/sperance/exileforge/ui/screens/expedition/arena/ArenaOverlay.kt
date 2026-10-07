@@ -80,23 +80,29 @@ private const val HERO_CARD = -1
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            PackHeader(fight, level)
-            if (fight.field.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                    // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
-                    fight.field.forEach { foe ->
-                        key(foe.index) {
-                            FoeCard(
-                                foe,
-                                fight,
-                                time,
-                                chosen == foe.index && fight.scouting,
-                                track(foe.index).weight(1f).widthIn(max = 180.dp),
-                                large,
-                                traits[foe.index].orEmpty(),
-                                narrow = fight.field.size >= 3,
-                            ) {
-                                onCommand(RunCommand.Focus(foe.index))
+            // Бой с боссом (3.92.0, макет B): своя раскладка - полоса с фазами, каст, крупный портрет, свита по бокам
+            val boss = fight.boss
+            if (boss != null) {
+                BossBand(fight, boss, time, chosen, large, traits, ::track) { onCommand(RunCommand.Focus(it)) }
+            } else {
+                PackHeader(fight, level)
+                if (fight.field.isNotEmpty()) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                        // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
+                        fight.field.forEach { foe ->
+                            key(foe.index) {
+                                FoeCard(
+                                    foe,
+                                    fight,
+                                    time,
+                                    chosen == foe.index && fight.scouting,
+                                    track(foe.index).weight(1f).widthIn(max = 180.dp),
+                                    large,
+                                    traits[foe.index].orEmpty(),
+                                    narrow = fight.field.size >= 3,
+                                ) {
+                                    onCommand(RunCommand.Focus(foe.index))
+                                }
                             }
                         }
                     }

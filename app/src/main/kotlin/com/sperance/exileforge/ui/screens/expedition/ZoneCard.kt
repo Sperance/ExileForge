@@ -149,6 +149,14 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 Spacer(Modifier.width(10.dp))
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
+            // Тестировщик и выше (3.92.0): заход начинается сразу боем со стражем
+            if (game.isTester) {
+                ForgeOutlinedButton(
+                    enabled = game.hero != null && !game.busy,
+                    onClick = { launchGuarded { vm.startRun(zone.code.value, toBoss = true) } },
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(ui("expedition.launch_boss")) }
+            }
             AutoLaunch(game, vm, zone.code.value, launch, launchGuarded)
         }
     }
@@ -226,8 +234,11 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
     val campaign = game.hero?.campaign
     val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code.value)
     val shape = RoundedCornerShape(12.dp)
+    // Страж открывает свой лист (3.92.0): умения и фазы, каждое - своей справкой
+    var open by remember { mutableStateOf(false) }
+    if (open) GuardianSheet(game, zone, boss) { open = false }
     Row(
-        Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, PanelRaised, shape).padding(horizontal = 10.dp, vertical = 7.dp),
+        Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, PanelRaised, shape).clip(shape).clickable { open = true }.padding(horizontal = 10.dp, vertical = 7.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -239,6 +250,35 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 color = if (back != null) Muted else Color(0xFFE0907F),
                 style = MaterialTheme.typography.labelMedium,
             )
+        }
+    }
+}
+
+/** Лист стража зоны (3.92.0): уровень и здоровье, умения и фазы чипами - каждый открывает свою справку. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: () -> Unit) {
+    val index = game.index ?: return
+    val rules = index.campaign.combat
+    val body = remember(boss, zone) { com.sperance.exileforge.core.campaign.combat.Combatant(com.sperance.exileforge.rules.roll.MonsterRoller(index).stats(boss, zone.level), zone.level, rules) }
+    val name = monsterTitle(boss.code)
+    val lore = LocalLore.current
+    val steps = remember(boss) { index.campaign.phasesOf(boss) }
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(name, color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            MutedText(ui("challenge.subtitle", zone.level, com.sperance.exileforge.core.display.number(body.maxLife)))
+            if (boss.skills.isNotEmpty()) {
+                Text(ui("challenge.skills").uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    boss.skills.forEach { code -> LoreChip(com.sperance.exileforge.core.display.SkillText.title(code), Rune) { lore?.invoke(Lore.Skill(code, name, body)) } }
+                }
+            }
+            boss.phases?.takeIf { steps.isNotEmpty() }?.let { code ->
+                Text(ui("challenge.traits").uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
+                val marks = steps.map { it.at }.distinct().joinToString("/") { "${it.toInt()}" }
+                LoreChip(ui("challenge.phase", com.sperance.exileforge.core.display.phaseTitle(code), marks), Elder) { lore?.invoke(Lore.Phase(code, name)) }
+            }
         }
     }
 }

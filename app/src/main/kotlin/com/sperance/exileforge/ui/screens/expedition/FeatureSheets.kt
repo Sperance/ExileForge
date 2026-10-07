@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.expedition
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +31,8 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ItemRow
+import com.sperance.exileforge.ui.components.LocalLore
+import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.theme.*
 
@@ -69,8 +72,16 @@ import com.sperance.exileforge.ui.theme.*
                 ) {
                     Text(ui("feature.altar.boon"), color = Vital, style = MaterialTheme.typography.labelMedium)
                     Text(text(pact.boon), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-                    Text(ui("feature.altar.curse"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
-                    Text(text(pact.curse), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                    // Проклятие сделки (3.92.0) открывает свой лист: что меняет и что действует до конца карты
+                    val lore = LocalLore.current
+                    Column(
+                        Modifier.fillMaxWidth().then(
+                            if (lore != null) Modifier.clickable { lore(Lore.CurseText(ui("feature.altar.curse"), listOf(text(pact.curse)), ui("lore.altar_note"))) } else Modifier,
+                        ),
+                    ) {
+                        Text(ui("feature.altar.curse") + " ›", color = LifeRed, style = MaterialTheme.typography.labelMedium)
+                        Text(text(pact.curse), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                    }
                     ForgeButton(onClick = { onPick(i) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.altar.pick")) }
                 }
             }

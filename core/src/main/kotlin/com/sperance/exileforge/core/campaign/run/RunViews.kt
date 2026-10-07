@@ -55,7 +55,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /** Where a run stands: walking, fighting, at a kill's loot, at a Vaal portal's gate, at a crystal, at a crack of the Abyss, or over one way or another. */
-enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, ABYSS, DEAD, CLEARED, LEFT }
+enum class RunPhase { MAP, FIGHT, LOOT, GATE, CRYSTAL, ABYSS, DEAD, CLEARED, LEFT, CHALLENGE }
 
 /** A number floating off a fighter, [age] seconds after the blow that made it; [foe] is the foe of the pack it was about. */
 data class FloatingHit(
@@ -120,6 +120,17 @@ data class FoeView(
     val onField: Boolean get() = place >= 0
 }
 
+/**
+ * Босс в бою (3.92.0): [index] - его место в стае, [phase] - шаблон фаз, [marks] - пороги шагов в процентах здоровья и
+ * [passed] - какие уже сработали, [cast] - умение, что он готовит, и через сколько секунд из скольких.
+ */
+data class BossHud(val index: Int, val phase: String?, val marks: List<Double>, val passed: List<Boolean>, val cast: CastView?)
+
+/** Умение врага на подходе (3.92.0): [left] секунд до готовности из [total]. */
+data class CastView(val code: String, val left: Double, val total: Double) {
+    val progress: Float get() = if (total <= 0) 1f else (1 - left / total).toFloat().coerceIn(0f, 1f)
+}
+
 /** The fight as the overlay prints it: the pack as cards, the hero's pools and states, what just landed, and the blows so far, newest first. */
 
 /**
@@ -170,6 +181,10 @@ data class FightHud(
     val stages: Int = 1,
     /** Seconds left of the pause before this stage begins by itself; null when there is none. */
     val interlude: Double? = null,
+    /** Лист героя сейчас (3.92.0): по нему лист умения врага считает, сколько оно снимет. */
+    val heroBody: com.sperance.exileforge.core.campaign.combat.Combatant? = null,
+    /** Босс боя (3.92.0): его фазы и что он готовит; null - босса нет. */
+    val boss: BossHud? = null,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
 
@@ -277,6 +292,18 @@ data class RunHud(
     val hazard: HazardView? = null,
     /** Доля простоя у трещины тайной комнаты (3.90.0); null - герой не стоит у неё. */
     val opening: Float? = null,
+    /** Экран-вызов перед стражем (3.92.0); null - его нет. */
+    val challenge: ChallengeView? = null,
+)
+
+/** Страж на экране-вызове (3.92.0): его ролл, уровень, полное здоровье, шаблон фаз с порогами; [vaal] - страж Ваал-зоны. */
+data class ChallengeView(
+    val boss: RolledMonster,
+    val level: Int,
+    val maxLife: Double,
+    val phase: String?,
+    val marks: List<Double>,
+    val vaal: Boolean,
 )
 
 /** The Abyss as its sheet shows it: how many depths the crack leads down, how many are cleared, every depth's wave and hoard, and the share a fall keeps. */

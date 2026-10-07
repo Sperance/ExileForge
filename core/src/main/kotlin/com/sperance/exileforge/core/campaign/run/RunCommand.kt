@@ -54,6 +54,12 @@ sealed interface RunCommand {
 
     /** The fight begins: until then the pack is laid open to be studied. Mid-fight it ends a [Pause]. */
     data object Begin : RunCommand
+
+    /** «В бой» с экрана-вызова стража (3.92.0). */
+    data object Accept : RunCommand
+
+    /** Тестировщик (3.92.0): заход начинается сразу боем со стражем, без пути к нему. */
+    data object ToBoss : RunCommand
     data object Pause : RunCommand
 
     /** A window over the map stops the world while it is open: `true` takes a hold, `false` gives one back. */

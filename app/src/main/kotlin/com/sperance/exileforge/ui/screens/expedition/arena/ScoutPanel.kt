@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.expedition.arena
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -84,18 +85,26 @@ internal fun ScoutPanel(
             }
         }
         // What it casts for its mana (2.78.0): a boss's own skills, a caster's spell, a borrowed one.
+        // Каждое умение (3.92.0) - чип: его лист говорит суть, урон по герою, перезарядку и ману
         if (foe.monster.skills.isNotEmpty()) {
-            Text(
-                ui("fight.skills", foe.monster.skills.joinToString(", ") { SkillText.title(it) }),
-                color = Rune,
-                style = MaterialTheme.typography.labelSmall,
-            )
+            val lore = LocalLore.current
+            Caption(ui("fight.skills_title"))
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                foe.monster.skills.forEach { code ->
+                    LoreChip(SkillText.title(code), Rune) { lore?.invoke(Lore.Skill(code, monsterTitle(foe.monster.code), body, fight.heroBody)) }
+                }
+            }
         }
         // Its traits (3.73.0): what its kind and its form do, at its rarity's strength.
         if (traits.isNotEmpty()) {
             Caption(ui("fight.traits", traits.size))
             traits.forEach { trait ->
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+                val lore = LocalLore.current
+                Row(
+                    Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Trait(trait, monsterTitle(foe.monster.code))) } else Modifier),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.Top,
+                ) {
                     SkillGlyph(trait.icon, Modifier.size(18.dp), Color(0xFFE8B06A))
                     Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(trait.title, color = Color(0xFFE8B06A), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)

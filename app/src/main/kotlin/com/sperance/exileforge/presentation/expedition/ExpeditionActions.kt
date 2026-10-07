@@ -84,6 +84,21 @@ class ExpeditionActions(
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
+
+    /** Боссы сервера героя (3.92.0): спрошены раз за запуск, следующий вызов берёт их отсюда. */
+    private var bossRecords: com.sperance.exileforge.core.network.BossRecords? = null
+
+    /** Сколько героев сервера дрались с боссом [code] и сколько победили; null - сервер не ответил. */
+    suspend fun bossRecord(code: String): com.sperance.exileforge.core.network.BossRecord? {
+        val known = bossRecords ?: try {
+            api.campaign.bosses(heroes.heroId).also { bossRecords = it }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        return known?.records?.get(code) ?: known?.let { com.sperance.exileforge.core.network.BossRecord() }
+    }
     private val index: ContentIndex? get() = world.state.value.content
     private val hero: HeroView? get() = heroes.state.value.hero
 
@@ -164,7 +179,7 @@ class ExpeditionActions(
      * «В путь»: зона входится на сервере - с выбранной картой, потраченной там, или без неё, - и семя с замороженным
      * контекстом приходят с героем; поход строится здесь и идёт.
      */
-    fun start(mapCode: MapCode, auto: AutoPlan? = null) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, auto)
+    fun start(mapCode: MapCode, auto: AutoPlan? = null, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, auto, toBoss)
 
     /**
      * «Продолжить» незаконченный заход (3.89.0): вход в ту же зону без карты - сервер отдаёт тот же заход, его павших и открытые
@@ -191,7 +206,7 @@ class ExpeditionActions(
         }
     }
 
-    private fun enter(mapCode: MapCode, launch: MapLaunch?, auto: AutoPlan?) {
+    private fun enter(mapCode: MapCode, launch: MapLaunch?, auto: AutoPlan?, toBoss: Boolean = false) {
         if (mutableRun.value != null || commands.state.value.busy) return
         val i = index ?: return
         val progress = progress()
@@ -221,11 +236,11 @@ class ExpeditionActions(
             }
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
             heroSync.drawn()
-            begin(id, started, kept?.takeIf { it.first == started.id }?.second)
+            begin(id, started, kept?.takeIf { it.first == started.id }?.second, toBoss)
         }
     }
 
-    private fun begin(id: String, started: RunStart, carry: StageCarry? = null) {
+    private fun begin(id: String, started: RunStart, carry: StageCarry? = null, toBoss: Boolean = false) {
         val i = index ?: return
         val h = hero?.takeIf { it.id == id } ?: return
         val zone = i.zone(started.zone) ?: return
@@ -240,7 +255,11 @@ class ExpeditionActions(
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features, auto = autoPlan,
             pet = ::combatPet,
-        ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
+        ).also { r ->
+            repeat(speedSteps) { r.send(RunCommand.Speed) }
+            // Тестировщик (3.92.0): сразу бой со стражем
+            if (toBoss) r.send(RunCommand.ToBoss)
+        }
         vaalKilled = started.vaalKilled
         persist()
     }

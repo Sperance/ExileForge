@@ -50,6 +50,11 @@ fun monsterTitle(code: MonsterCode): String = monsterTitle(code.value)
 /** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds. */
 fun traitTitle(code: String): String = locOr(LocaleKey.traitName(code), displayName(code))
 fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds)))
+
+/** Фаза босса (3.92.0): название шаблона и что он делает. */
+fun phaseTitle(code: String): String = locOr("phase.$code.name", displayName(code))
+fun phaseText(code: String): String = locOr("phase.$code.description", "")
+
 fun mapTitle(code: String): String = locOr(LocaleKey.mapName(code), displayName(code))
 fun mapTitle(code: MapCode): String = mapTitle(code.value)
 

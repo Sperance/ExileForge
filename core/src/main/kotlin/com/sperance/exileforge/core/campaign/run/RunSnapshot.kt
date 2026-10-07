@@ -83,6 +83,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         feature = offer?.let { spot -> FeatureView(spot.feature, spot.taken.toList(), channel?.let { (it.elapsed / it.spot.node.seconds).toFloat().coerceIn(0f, 1f) }) },
         hazard = hazard,
         opening = world.features.maxOfOrNull { it.progress }?.takeIf { it > 0 }?.toFloat(),
+        challenge = challengeView(),
     )
 }
 

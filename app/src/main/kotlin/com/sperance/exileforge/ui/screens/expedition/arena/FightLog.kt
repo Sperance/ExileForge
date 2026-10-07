@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.monsterTitle
+import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.traitTitle
 import com.sperance.exileforge.core.i18n.locOr
@@ -140,8 +141,15 @@ private const val HERO_KEY = -1
 }
 
 @Composable private fun EventRow(event: CombatEvent, at: Double, monster: String, shift: LifeShift?, onOpen: ((CombatEvent) -> Unit)? = null) {
-    // A line with a trace opens its card (3.37.0); an older one without stays a line.
-    val tap = if (onOpen != null && event.trace != null) Modifier.clickable { onOpen(event) } else Modifier
+    // Умение врага и удар фазы (3.92.0) открывают свой лист; иная строка с разбором - его карточку (3.37.0)
+    val lore = LocalLore.current
+    val skill = event.skill?.takeIf { event.actor == Side.MONSTER && event.action != Action.NOTE }
+    val tap = when {
+        lore != null && skill != null && '#' in skill -> Modifier.clickable { lore(Lore.Phase(skill.substringBefore('#'), monster)) }
+        lore != null && skill != null -> Modifier.clickable { lore(Lore.Skill(skill, monster, null)) }
+        onOpen != null && event.trace != null -> Modifier.clickable { onOpen(event) }
+        else -> Modifier
+    }
     Row(tap.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", at)),
@@ -248,6 +256,7 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.CONDITION_OFF -> ui("expedition.log_note_condition_off", locOr("condition.${note.ref}", note.ref))
         NoteKind.KILL -> ui("expedition.log_note_kill", monster) + (if (note.value >= 1) " · +${note.value.roundToInt()}" else "")
         NoteKind.TRAIT -> ui("expedition.log_note_trait", monster, traitTitle(note.ref))
+        NoteKind.PHASE -> ui("expedition.log_note_phase", monster, phaseTitle(note.ref), note.value.roundToInt())
         NoteKind.RECOVER_FLASK -> ui("expedition.log_note_recover_flask", equipmentTitle(note.ref), note.value.roundToInt())
         NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())

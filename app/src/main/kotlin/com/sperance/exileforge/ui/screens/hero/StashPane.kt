@@ -2,15 +2,19 @@ package com.sperance.exileforge.ui.screens.hero
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -18,9 +22,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
@@ -32,11 +38,15 @@ import com.sperance.exileforge.presentation.state.stashShelf
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.launch
+import org.koin.compose.koinInject
 
 /**
- * Тайник (3.90.3, макет «Тайник» В): сверху строка управления, слева рейка мест со счётом, справа список под названием
- * выбранного пункта. «Продать» включает режим выбора (макет «Продажа» А): у строк отметки, сверху быстрые наборы, снизу
- * удерживаемая кнопка с суммой; «Отмена» и системный «назад» выходят из него. Автопродажа - лист правил с «продать сейчас».
+ * Тайник (3.90.3, макет «Тайник» В; 3.90.5 - макет «Герой» A): сверху только порядок и фильтры, слева рейка мест со счётом,
+ * справа список под названием выбранного пункта с фишкой мест и автопродажи - она открывает лист тайника ([StashSheet]).
+ * Удержание плитки включает режим выбора (макет «Продажа» А): у строк отметки, сверху быстрые наборы, снизу удерживаемая
+ * кнопка с суммой; «Отмена» и системный «назад» выходят из него. Как продавать, говорит разовая плашка над списком
+ * ([SELL_HINT], до закрытия или первого удержания на этом устройстве) и лист тайника.
  *
  * Фильтры ([filter]) - экрана героя и уходят с ним; порядок и «скрыть надетое» хранятся на устройстве. Список, лоты и счёт рейки
  * запоминаются по копиям, а не по герою: изменившийся кошелёк не перестраивает тысячу строк.
@@ -45,7 +55,7 @@ import com.sperance.exileforge.ui.theme.*
 internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel, filter: StashFilter, onFilter: (StashFilter) -> Unit, onOpen: (String) -> Unit) {
     val hero = game.hero ?: return
     var filtering by remember { mutableStateOf(false) }
-    var autoSelling by remember { mutableStateOf(false) }
+    var sheet by remember { mutableStateOf(false) }
     var selling by remember(game.heroId) { mutableStateOf(false) }
     // A copy whose template the content does not hold is left out rather than drawn blank.
     val stash = remember(hero.items, game.index, game.world) { hero.items.mapNotNull { game.view(it) } }
@@ -61,6 +71,18 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
     val shown = remember(visible) { visible.mapTo(HashSet()) { it.id } }
     val pick = rememberSellPick(lots, shown)
     val selected = game.holding.selectedEquipment
+    val guides = koinInject<GuideStore>()
+    val read by guides.read.collectAsStateWithLifecycle(initialValue = null)
+    val scope = rememberCoroutineScope()
+    val hintRead = { scope.launch { guides.markRead(SELL_HINT) } }
+    // Удержание плитки - вход в выбор с ней отмеченной; вне продаваемого пачкой тайника выбора нет.
+    val hold = { id: String ->
+        if (lots.isNotEmpty()) {
+            selling = true
+            pick.toggle(id)
+            hintRead()
+        }
+    }
     val leave = {
         selling = false
         pick.clear()
@@ -73,13 +95,8 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
                 SellPresetRow(pick)
             } else {
                 StashTopBar(
-                    fill = { StashFill(game, model) },
                     sort = game.stashSort,
                     onSort = shell::stashSort,
-                    autoSellMarks = hero.info.autoSell.marks,
-                    onAutoSell = { autoSelling = true },
-                    canSell = lots.isNotEmpty(),
-                    onSell = { selling = true },
                     tweaks = stashTweaks(filter, showsWorn = filter.group?.isTool != true && !game.stashHideWorn),
                     onFilters = { filtering = true },
                 )
@@ -92,7 +109,13 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
                 contentPadding = PaddingValues(start = 8.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                item(key = "shelf") { ShelfTitle(filter.group?.title(game.lang) ?: ui("stash.all_things"), visible.size) }
+                item(key = "shelf") {
+                    ShelfTitle(filter.group?.title(game.lang) ?: ui("stash.all_things"), visible.size) {
+                        val capacity = game.index?.rules?.stash?.capacity(hero.info.stashSlots)
+                        if (!selling && capacity != null) StashChip(hero.items.size, capacity, hero.info.autoSell.marks) { sheet = true }
+                    }
+                }
+                if (!selling && lots.isNotEmpty() && read?.contains(SELL_HINT) == false) item(key = "hint") { SellHint(onDismiss = { hintRead() }) }
                 if (hero.overflow.isNotEmpty() && !selling) item(key = "overflow") { StashOverflow(game, model) }
                 if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
                 items(lines, key = { it.piece.id }) { line ->
@@ -100,7 +123,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
                     if (selling) {
                         SellLine(pick, line.piece.id) { toggle -> StashTile(line, verdict, selected = pick.chosen(line.piece.id), onClick = toggle) }
                     } else {
-                        StashTile(line, verdict, selected = line.piece.id == selected) {
+                        StashTile(line, verdict, selected = line.piece.id == selected, onHold = { hold(line.piece.id) }) {
                             onOpen(line.piece.id)
                             model.selectEquipment(line.piece.id)
                         }
@@ -121,14 +144,30 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
             onDismiss = { filtering = false },
         )
     }
-    if (autoSelling) AutoSellSheet(hero.info.autoSell, lots, busy = game.busy, model) { autoSelling = false }
+    if (sheet) StashSheet(hero.info.autoSell, lots, busy = game.busy, model, places = { StashFill(game, model) }) { sheet = false }
 }
 
 /** Название пункта рейки над списком и сколько в нём видно. */
-@Composable private fun ShelfTitle(title: String, count: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+@Composable private fun ShelfTitle(title: String, count: Int, trailing: @Composable () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(title, color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-        Text(count.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
+        Text(count.toString(), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        trailing()
+    }
+}
+
+/** Ключ разовой плашки «удерживайте, чтобы продать» в [GuideStore]: раз на устройство. */
+private const val SELL_HINT = "stash.hold_to_sell"
+
+/** Разовая плашка над списком (3.90.5): как начать продажу пачкой; крестик закрывает её навсегда. */
+@Composable private fun SellHint(onDismiss: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier.fillMaxWidth().background(Vital.copy(alpha = .08f), shape).border(1.dp, Vital.copy(alpha = .35f), shape).padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(ui("stash.hold_hint"), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        IconButton(onClick = onDismiss) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Muted, modifier = Modifier.size(18.dp)) }
     }
 }
 
@@ -136,11 +175,12 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
  * Строка тайника (3.90.3) - плитка вещи [ItemTile] в облике её редкости: все строки мелко, напротив имени цена торговца,
  * стрелки урона и защиты и отметки - надето, заперто, не надеть, ждёт сети; под строками - чего не хватает, чтобы надеть.
  */
-@Composable internal fun StashTile(line: StashLine, verdict: GearVerdict?, selected: Boolean, onClick: () -> Unit) {
+@Composable internal fun StashTile(line: StashLine, verdict: GearVerdict?, selected: Boolean, onHold: (() -> Unit)? = null, onClick: () -> Unit) {
     ItemTile(
         line.piece,
         selected = selected,
         onClick = onClick,
+        onLongClick = onHold,
         trailing = {
             line.price?.let { GoldPrice(it) }
             verdict?.let { GearVerdictBadge(it) }

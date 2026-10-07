@@ -36,11 +36,17 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Герой одной строкой над разделами (3.90.3, макет «Тайник» В): портрет, «имя · ур.», класс мелко, золото справа и тонкая
- * полоса опыта под ними. Нажатие раскрывает подпись опыта «1 240 / 2 950 · 42%»; та же подпись - описание полосы для
- * чтения с экрана. Свободные очки дерева перешли значком на раздел «Дерево» ([HeroPageStrip]).
+ * Герой одной строкой (3.90.3, макет «Тайник» В): портрет, «имя · ур.», класс мелко, [trailing] справа (по умолчанию -
+ * золото) и тонкая полоса опыта под ними. Нажатие раскрывает подпись опыта «1 240 / 2 950 · 42%»; та же подпись - описание
+ * полосы для чтения с экрана. С 3.90.5 это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
+ * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - золото, ремесло, связь и меню.
  */
-@Composable fun HeroLine(hero: HeroHeaderState, modifier: Modifier = Modifier) {
+@Composable fun HeroLine(
+    hero: HeroHeaderState,
+    modifier: Modifier = Modifier,
+    onPortrait: (() -> Unit)? = null,
+    trailing: @Composable RowScope.() -> Unit = { GoldPrice(hero.money) },
+) {
     var xpOpen by rememberSaveable { mutableStateOf(false) }
     val xp = experienceOf(hero.classes, hero.level, hero.experience)
     Column(
@@ -48,7 +54,7 @@ import com.sperance.exileforge.ui.theme.*
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            ClassPortrait(hero.heroClass, hero.portraits, Modifier.size(38.dp), round = true)
+            ClassPortrait(hero.heroClass, hero.portraits, Modifier.size(38.dp).then(onPortrait?.let { Modifier.clickable(onClickLabel = ui("nav.account"), onClick = it) } ?: Modifier), round = true)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     Text(hero.name, color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
@@ -64,7 +70,7 @@ import com.sperance.exileforge.ui.theme.*
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            GoldPrice(hero.money)
+            trailing()
         }
         if (hero.classes != null) {
             Box(Modifier.fillMaxWidth().height(3.dp).background(PanelRaised, RoundedCornerShape(2.dp)).semantics { contentDescription = xp.label }) {

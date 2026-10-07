@@ -30,7 +30,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Автопродажа (3.47.0, сервер 1.45.0; в тайнике с 3.90.3, макет «Продажа» В): по редкости - «всё» переключателем и фишки
+ * Лист тайника (3.90.5, из фишки мест в заголовке списка): сверху места и их докупка ([places]) и как продать пачкой -
+ * удержанием плитки, ниже автопродажа (3.47.0, сервер 1.45.0; макет «Продажа» В): по редкости - «всё» переключателем и фишки
  * групп мест, затем «всё, что герой не может носить». Отмеченное торговец забирает из добычи захода сразу; уникальная, с
  * влиянием, осквернённая, расколотая и запертая вещь не уходит никогда. Внизу - «продать сейчас по правилам» то, что уже
  * лежит в тайнике ([lots] с отметкой правил), одним удержанием. Читается из снимка на каждом проходе: переключатель
@@ -38,13 +39,17 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-internal fun AutoSellSheet(rules: AutoSell, lots: List<SellLot>, busy: Boolean, model: HeroViewModel, onDismiss: () -> Unit) {
+internal fun StashSheet(rules: AutoSell, lots: List<SellLot>, busy: Boolean, model: HeroViewModel, places: @Composable () -> Unit, onDismiss: () -> Unit) {
     val matching = lots.filter { it.byRules }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            Engraved(ui("stash.sheet_title"))
+            places()
+            MutedText(ui("stash.hold_hint"))
+            HorizontalDivider(color = PanelRaised)
             Engraved(ui("autosell.title"))
             MutedText(ui("autosell.note"))
             AutoSell.SELLABLE.sortedBy { it.ordinal }.forEach { rarity -> RarityRule(rarity, rules.sell[rarity].orEmpty(), enabled = !busy, model) }

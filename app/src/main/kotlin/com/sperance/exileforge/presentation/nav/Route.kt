@@ -46,12 +46,12 @@ sealed interface Route : NavKey {
     @Serializable data object Hero : Route
 
     @Serializable data object Tree : Route {
-        override val root: Route get() = Hero
+        override val root: Route get() = Progress
         override val tab get() = TAB_TREE
     }
 
     @Serializable data object Grimoire : Route {
-        override val root: Route get() = Hero
+        override val root: Route get() = Progress
         override val tab get() = TAB_SKILLS
     }
 

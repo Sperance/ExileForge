@@ -7,17 +7,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AutoMode
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -47,28 +43,34 @@ import com.sperance.exileforge.ui.icons.SlotIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Строка управления тайника (3.90.3, макет «Тайник» В): места «31/200 +» с докупкой ([fill]), порядок списком, дверь
- * автопродажи с числом включённых правил, «Продать» - режим выбора, и фильтры листом. Редкости, группы и порядок больше
- * не лежат рядами над списком: группа - рейка слева, остальное - лист фильтров.
+ * Строка управления тайника (3.90.5): только порядок и фильтры листом. Места и автопродажа - фишкой в заголовке списка
+ * ([StashChip]), продажа пачкой - удержанием плитки; группа - рейка слева.
  */
 @Composable
-internal fun StashTopBar(
-    fill: @Composable () -> Unit,
-    sort: StashSort,
-    onSort: (StashSort) -> Unit,
-    autoSellMarks: Int,
-    onAutoSell: () -> Unit,
-    canSell: Boolean,
-    onSell: () -> Unit,
-    tweaks: Int,
-    onFilters: () -> Unit,
-) {
+internal fun StashTopBar(sort: StashSort, onSort: (StashSort) -> Unit, tweaks: Int, onFilters: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        fill()
         SortPicker(sort, onSort, Modifier.weight(1f))
-        AutoSellDoor(autoSellMarks, onAutoSell)
-        SellDoor(canSell, onSell)
         StashFilterButton(tweaks, onFilters)
+    }
+}
+
+/**
+ * Фишка тайника в заголовке списка (3.90.5): «44/200» - места, значок автопродажи с числом включённых правил; нажатие
+ * открывает лист тайника ([StashSheet]) - докупка мест и правила. Полный тайник - в красном.
+ */
+@Composable
+internal fun StashChip(held: Int, capacity: Int, autoSellMarks: Int, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(14.dp)
+    val full = held >= capacity
+    Row(
+        Modifier.height(28.dp).clip(shape).border(1.dp, (if (full) LifeRed else Gold).copy(alpha = .5f), shape)
+            .clickable(role = Role.Button, onClickLabel = ui("stash.sheet_title"), onClick = onClick).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(ui("stash.places_chip", held, capacity), color = if (full) LifeRed else GoldBright, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+        Icon(Icons.Outlined.AutoMode, ui("autosell.title"), tint = if (autoSellMarks > 0) Vital else Muted, modifier = Modifier.size(14.dp))
+        if (autoSellMarks > 0) Text(autoSellMarks.toString(), color = Vital, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -97,29 +99,6 @@ internal fun StashTopBar(
                 )
             }
         }
-    }
-}
-
-/** Дверь в правила автопродажи: значок и число включённых отметок. */
-@Composable private fun AutoSellDoor(marks: Int, onClick: () -> Unit) {
-    BadgedBox(badge = { if (marks > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(marks.toString(), fontSize = 9.sp, maxLines = 1) } }) {
-        IconButton(onClick = onClick, modifier = Modifier.requiredSize(36.dp).border(1.dp, Gold.copy(alpha = .6f), CircleShape)) {
-            Icon(Icons.Outlined.AutoMode, ui("autosell.title"), tint = Gold, modifier = Modifier.size(18.dp))
-        }
-    }
-}
-
-/** «Продать»: монета и слово, вход в режим выбора; без продаваемого пачкой - погашена. */
-@Composable private fun SellDoor(enabled: Boolean, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(18.dp)
-    val tint = if (enabled) GoldBright else Muted
-    Row(
-        Modifier.height(36.dp).clip(shape).border(1.dp, tint.copy(alpha = .6f), shape).clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Icon(ForgeGlyphs.Coins, null, tint = tint, modifier = Modifier.size(14.dp))
-        Text(ui("hero.sell_do"), color = tint, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 

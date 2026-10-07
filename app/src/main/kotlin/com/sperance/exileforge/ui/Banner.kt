@@ -57,6 +57,7 @@ import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.BugSheet
+import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.LocalMotion
@@ -79,7 +80,9 @@ import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
 import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
 import com.sperance.exileforge.ui.screens.expedition.TrialScreen
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
+import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
+import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
 import com.sperance.exileforge.ui.screens.progress.ProgressPlace
 import com.sperance.exileforge.ui.screens.progress.ProgressPlaceScreen
 import com.sperance.exileforge.ui.screens.progress.ProgressScreen
@@ -114,9 +117,20 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable internal fun ForgeBanner(game: GameUi, route: Route, onBug: () -> Unit) {
     val feedback by koinViewModel<FeedbackViewModel>().feedback.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
+    val glow = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
+    // Вкладка «Герой» (3.90.5): шапка игры и строка героя - одна строка, имя и уровень не повторяются дважды.
+    val hero = rememberHeroHeader(game)?.takeIf { route.tab == TAB_HERO }
+    if (hero != null) {
+        HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
+            GoldPrice(hero.money)
+            WorkBadge { shell.tab(TAB_CRAFTS) }
+            LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
+            BannerMenu(feedback.unread, settingsOpen = false, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
+        }
+        return
+    }
     Row(
-        Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
-            .padding(horizontal = 18.dp, vertical = 10.dp),
+        glow.padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // The game's sigil opens the account (3.77.0), where the menu's row was.

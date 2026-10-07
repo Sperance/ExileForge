@@ -37,8 +37,9 @@ import org.koin.compose.viewmodel.koinViewModel
  * section's — and the bag is a section of its own, a list rather than a strip of chips. Since 3.0.0
  * every copy is read through its view over the content on the device, and the bag is keyed by item code.
  *
- * С 3.90.3 строка героя и полоса разделов - в оболочке ([HeroChrome]), раздел - [HeroPage] модели героя; тайник - рейка
- * мест слева и список справа (макет «Тайник» В), с режимом продажи и автопродажей (макет «Продажа» А и В).
+ * С 3.90.3 полоса разделов - в оболочке ([HeroChrome]), раздел - [HeroPage] модели героя; тайник - рейка мест слева и список
+ * справа (макет «Тайник» В), с режимом продажи и автопродажей (макет «Продажа» А и В). С 3.90.5 (макет «Герой» A) герой - в шапке
+ * игры, разделов четыре, дерево и гримуар - в «Развитии», продажа - удержанием плитки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -98,8 +98,6 @@ import com.sperance.exileforge.ui.screens.server.ServerScreen
 import com.sperance.exileforge.ui.screens.server.SettingsScreen
 import com.sperance.exileforge.ui.screens.session.AuthScreen
 import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
-import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
-import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.ui.theme.depthPanel
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -256,8 +254,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Account> { ServerScreen() }
                 entry<Route.Settings> { SettingsScreen(logs) }
                 entry<Route.Hero> { HeroScreen() }
-                entry<Route.Tree> { SkillTreeScreen() }
-                entry<Route.Grimoire> { GrimoireScreen() }
+                entry<Route.Tree> { ProgressPlaceScreen(ProgressPlace.TREE) }
+                entry<Route.Grimoire> { ProgressPlaceScreen(ProgressPlace.GRIMOIRE) }
                 entry<Route.Expedition> { ExpeditionScreen() }
                 entry<Route.Crafts> { CraftsScreen() }
                 entry<Route.Progress> { ProgressScreen() }
@@ -296,8 +294,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 ForgeBanner(game, route, onBug)
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
-                    // Строка героя и полоса его разделов (3.90.3) - над персонажем, тайником, деревом и гримуаром разом.
-                    HeroChrome(game, route.tab, shell::tab)
+                    // Полоса разделов героя (3.90.5) - над персонажем, надетым, тайником и сумкой; сам герой - в шапке игры.
+                    HeroChrome(route.tab)
                     screens(Modifier.weight(1f).fillMaxWidth())
                 }
             }
@@ -341,16 +339,15 @@ import org.koin.compose.viewmodel.koinViewModel
         )
         destinations.forEach { index ->
             val label = labels.getValue(index)
-            // The tree and the grimoire are the hero's (3.24.0), the forge, the menagerie and the trials the hub's: while one is
-            // open, its tab reads as the one chosen. The City's tab tapped again from inside a building (3.22.0) walks back out
+            // The forge, the menagerie, the trials, the tree and the grimoire (3.90.5) are the hub's: while one is open, its tab
+            // reads as the one chosen. The City's tab tapped again from inside a building (3.22.0) walks back out
             // to the square, as «Развитие» tapped again from a tile's screen walks back to its hub.
             NavigationBarItem(
-                selected = route.tab == index || (index == TAB_HERO && HeroPage.entries.any { it.tab == route.tab }) ||
-                    (index == TAB_PROGRESS && ProgressPlace.of(route.tab) != null),
+                selected = route.tab == index || (index == TAB_PROGRESS && ProgressPlace.of(route.tab) != null),
                 onClick = { shell.tab(index) },
                 icon = {
-                    // Free atlas points (3.47.0) mark the tab the atlas opens from: «Развитие».
-                    val free = if (index == TAB_PROGRESS) game.atlasState?.available ?: 0 else 0
+                    // Free atlas points (3.47.0) and tree points (3.90.5) mark the tab both open from: «Развитие».
+                    val free = if (index == TAB_PROGRESS) (game.atlasState?.available ?: 0) + (game.treeState?.available ?: 0) else 0
                     // A tab the hero's level has not opened wears a lock (3.76.0).
                     val locked = !game.unlocked(Feature.ofTab(index))
                     BadgedBox(badge = {

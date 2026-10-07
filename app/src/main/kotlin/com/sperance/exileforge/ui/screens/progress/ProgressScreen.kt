@@ -36,6 +36,8 @@ import com.sperance.exileforge.presentation.state.TAB_CHRONICLE
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_PETS
 import com.sperance.exileforge.presentation.state.TAB_PROGRESS
+import com.sperance.exileforge.presentation.state.TAB_SKILLS
+import com.sperance.exileforge.presentation.state.TAB_TREE
 import com.sperance.exileforge.presentation.state.TAB_TRIALS
 import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
@@ -48,6 +50,8 @@ import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
 import com.sperance.exileforge.ui.screens.hero.MenagerieSection
 import com.sperance.exileforge.ui.screens.hero.chronicleDone
 import com.sperance.exileforge.ui.screens.hero.titleName
+import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
+import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -55,14 +59,16 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val PETS_AT_WORK = 2
 
 /**
- * The screens the «Развитие» tab holds: the forge, the menagerie, the trials and the chronicle (3.69.0) open over the
- * hub with a way back to it; the atlas is a sky of its own and covers the whole screen, as it always did.
+ * The screens the «Развитие» tab holds: the forge, the menagerie, the trials, the chronicle (3.69.0), the tree and the
+ * grimoire (3.90.5) open over the hub with a way back to it; the atlas is a sky of its own and covers the whole screen, as it always did.
  */
 enum class ProgressPlace(val tab: Int, private val title: String, val icon: ImageVector) {
     FORGE(TAB_CRAFT, "nav.forge", ForgeGlyphs.Anvil),
     PETS(TAB_PETS, "progress.pets", ForgeGlyphs.Exile),
     TRIALS(TAB_TRIALS, "trials.title", ForgeGlyphs.Skull),
     CHRONICLE(TAB_CHRONICLE, "chronicle.title", ForgeGlyphs.Scroll),
+    TREE(TAB_TREE, "nav.tree", ForgeGlyphs.Constellation),
+    GRIMOIRE(TAB_SKILLS, "nav.skills", ForgeGlyphs.Grimoire),
     ;
 
     val label: String get() = ui(title)
@@ -111,6 +117,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         val keys = hero?.count(TrialRules.KEY) ?: 0L
         val chronicle = game.chronicleDone()
         val title = hero?.info?.title?.takeIf { it.isNotBlank() }
+        val tree = game.treeState
         listOf(
             ProgressTile(
                 ui("nav.forge"),
@@ -166,6 +173,24 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 0,
                 game.lockOf(Feature.CHRONICLE),
             ) { shell.tab(TAB_CHRONICLE) },
+            // Дерево и гримуар (3.90.5) - из полосы «Героя»: там остались только вещи.
+            ProgressTile(
+                ui("nav.tree"),
+                ForgeGlyphs.Constellation,
+                Gold,
+                ui("progress.tree_note"),
+                tree?.let { ui("tree.points", it.available, it.total) },
+                tree?.available ?: 0,
+            ) { shell.tab(TAB_TREE) },
+            ProgressTile(
+                ui("nav.skills"),
+                ForgeGlyphs.Grimoire,
+                ManaBlue,
+                ui("progress.grimoire_note"),
+                null,
+                0,
+                game.lockOf(Feature.GRIMOIRE),
+            ) { shell.tab(TAB_SKILLS) },
         )
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -232,6 +257,8 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 ProgressPlace.PETS -> PetsPlace(game)
                 ProgressPlace.TRIALS -> TrialsBoard(game, koinViewModel(), Modifier.fillMaxSize())
                 ProgressPlace.CHRONICLE -> ChronicleScreen(game, koinViewModel())
+                ProgressPlace.TREE -> SkillTreeScreen()
+                ProgressPlace.GRIMOIRE -> GrimoireScreen()
             }
         }
     }

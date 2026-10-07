@@ -52,6 +52,10 @@ private const val HERO_CARD = -1
     onCommand: (RunCommand) -> Unit,
     onLogFilter: (Set<LogKind>) -> Unit = {},
     onBuzz: (Buzz) -> Unit = {},
+    /** Биом зоны (3.93.0): небо и погода боя с боссом. */
+    biome: String = "",
+    /** Источники строк карты на монстрах (3.93.0): лист врага раскладывает по ним его модификаторы. */
+    shares: (Boolean) -> List<BuffShare> = { emptyList() },
 ) {
     val time by rememberClock()
     // The settings' pause and buzz (3.77.0): each once as the hero's life falls through its line, the buzz again at a fall.
@@ -74,8 +78,11 @@ private const val HERO_CARD = -1
     val large = fight.scouting
     // The skill whose page is open over the fight (3.24.0); the fight holds still while it is read.
     var info by remember { mutableStateOf<SkillView?>(null) }
+    // Лист врага (3.93.0): открывается касанием на паузе и до боя
+    var inspect by remember { mutableStateOf<Int?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
     Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
+        fight.boss?.let { BossBackdrop(biome, it, time) }
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -83,7 +90,7 @@ private const val HERO_CARD = -1
             // Бой с боссом (3.92.0, макет B): своя раскладка - полоса с фазами, каст, крупный портрет, свита по бокам
             val boss = fight.boss
             if (boss != null) {
-                BossBand(fight, boss, time, chosen, large, traits, ::track) { onCommand(RunCommand.Focus(it)) }
+                BossBand(fight, boss, time, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
             } else {
                 PackHeader(fight, level)
                 if (fight.field.isNotEmpty()) {
@@ -130,6 +137,19 @@ private const val HERO_CARD = -1
             Controls(fight, hud.auto, onCommand)
         }
         StrikeLine(fight.lunge, bounds, origin)
+        fight.boss?.let { BossCinema(fight, it) }
+        inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
+            FoeSheet(
+                foe,
+                fight,
+                foe.monster.level.takeIf { it > 0 } ?: level,
+                rules,
+                game.index,
+                traits[foe.index].orEmpty(),
+                fight.boss,
+                remember(foe.index, fight.boss?.index) { shares(fight.boss?.index == foe.index) },
+            ) { inspect = null }
+        }
         info?.let { view -> FightSkillSheet(game, view, onCommand) { info = null } }
         // A win says so in the rewards window itself (2.73.0); only a loss or a retreat is announced here.
         fight.outcome?.takeIf { it != Outcome.WIN }?.let {

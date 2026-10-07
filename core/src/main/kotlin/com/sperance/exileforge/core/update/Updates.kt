@@ -8,6 +8,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -37,6 +38,15 @@ data class Wire(val api: Int, val rules: Int) {
     val notes: String = "",
 ) {
     val wire: Wire get() = Wire(apiRevision, rules)
+}
+
+/** Заметки релиза (3.93.0): версия, дата публикации (ISO) и текст `RELEASE_NOTES.md` той версии. */
+@Serializable data class ReleaseNotes(
+    @kotlinx.serialization.SerialName("tag_name") val tag: String,
+    @kotlinx.serialization.SerialName("published_at") val published: String? = null,
+    val body: String = "",
+) {
+    val version: String get() = tag.removePrefix("v")
 }
 
 /** Найденная сборка: что это, откуда качать APK и страница релиза для браузера. Любая найденная обязательна. */
@@ -72,6 +82,15 @@ class Updates(client: OkHttpClient = ForgeHttp.client) {
         }
         val info = WireJson.decodeFromString(AppBuild.serializer(), text)
         info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server) }?.available()
+    }
+
+    /** Заметки [count] последних релизов (3.93.0), новые первыми; GitHub не ответил - ошибка. */
+    suspend fun recent(count: Int = RECENT): List<ReleaseNotes> = withContext(Dispatchers.IO) {
+        val text = small.newCall(Request.Builder().url("$API_RELEASES?per_page=$count").header("Accept", "application/vnd.github+json").build()).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
+            response.body.string()
+        }
+        NOTES_JSON.decodeFromString(ListSerializer(ReleaseNotes.serializer()), text).take(count)
     }
 
     private fun AppBuild.available() = AvailableUpdate(this, "$RELEASES/download/v$versionName/$apk", "$RELEASES/tag/v$versionName")
@@ -128,6 +147,14 @@ class Updates(client: OkHttpClient = ForgeHttp.client) {
     companion object {
         /** Релизы приложения. */
         const val RELEASES = "https://github.com/Sperance/ExileForge/releases"
+
+        /** Релизы через API GitHub (3.93.0): заметки последних версий. */
+        const val API_RELEASES = "https://api.github.com/repos/Sperance/ExileForge/releases"
+
+        /** Сколько последних версий показывает «Что нового». */
+        const val RECENT = 3
+
+        private val NOTES_JSON = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
         /** Описание последнего релиза. */
         const val LATEST = "$RELEASES/latest/download/update.json"

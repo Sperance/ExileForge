@@ -170,7 +170,21 @@ class Battle(
     }
 
     /** Who of the pack is on the field: at most [FoeWindow.SIZE] at once, the strongest first, the rest stepping in as they fall. */
-    val window = FoeWindow(FoeWindow.order(foes.map { it.rarity }).filterNot { foes[it].summoned })
+    val window = FoeWindow(FoeWindow.order(foes.map { it.rarity }).filterNot { foes[it].summoned }, (foes.maxOfOrNull { it.slots } ?: 0).let { if (it > 0) maxOf(FoeWindow.SIZE, 1 + it) else FoeWindow.SIZE })
+
+    /**
+     * Слоты вокруг босса (3.93.0): их делят свита и тотемы; пустые - null. Свита при полных слотах не встаёт, тотем вытесняет
+     * самый старый тотем. У боя без босса с фазами или тотемами слотов нет.
+     */
+    val slotHolders: Array<SlotHolder?> = arrayOfNulls(foes.maxOfOrNull { it.slots } ?: 0)
+
+    /** Тотемы, что стоят сейчас (3.93.0), по порядку, в котором встали. */
+    val totems: List<StandingTotem> get() = standingTotems
+    internal val standingTotems = mutableListOf<StandingTotem>()
+    internal var totemSerial = 0
+
+    /** Когда босс со своими тотемами ставит следующий (3.93.0), по номеру врага. */
+    internal val totemAt = mutableMapOf<Int, Double>()
     val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i) }
         .also { all -> window.field.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)

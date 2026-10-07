@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.campaign.combat.afflict
 import com.sperance.exileforge.core.campaign.combat.afflictSelf
 import com.sperance.exileforge.core.campaign.combat.chargeFlasks
 import com.sperance.exileforge.core.campaign.combat.consumeCharges
+import com.sperance.exileforge.core.campaign.combat.enemies
 import com.sperance.exileforge.core.campaign.combat.flaskCharges
 import com.sperance.exileforge.core.campaign.combat.gainCharges
 import com.sperance.exileforge.core.campaign.combat.healPet
@@ -235,7 +236,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
     /** A count of the fight a line grows with. */
     private fun count(scale: PowerScale): Double = when (scale) {
-        PowerScale.FOES -> battle.foeFighters.count { it.alive }.toDouble()
+        PowerScale.FOES -> battle.enemies().toDouble()
         PowerScale.MISSING_LIFE -> floor((1 - hero.life / hero.body.maxLife) * 10)
         PowerScale.SECONDS -> floor(battle.time)
         PowerScale.KILLS -> kills.toDouble()
@@ -248,6 +249,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         PowerScale.FRENZY_CHARGES -> battle.heroCharges.count(ChargeKind.FRENZY).toDouble()
         PowerScale.POWER_CHARGES -> battle.heroCharges.count(ChargeKind.POWER).toDouble()
         PowerScale.ENDURANCE_CHARGES -> battle.heroCharges.count(ChargeKind.ENDURANCE).toDouble()
+        PowerScale.TOTEMS -> battle.totems.size.toDouble()
     }
 
     /** What an effect's number is multiplied by (server 1.32.0): its scale's count at this moment, under its cap; one without a scale. */
@@ -264,8 +266,8 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerCheckKind.SHIELD_EMPTY -> hero.shield <= 0.5
             PowerCheckKind.MANA_BELOW -> hero.mana < battle.manaCap() * share
             PowerCheckKind.MANA_ABOVE -> hero.mana > battle.manaCap() * share
-            PowerCheckKind.FOES_AT_LEAST -> battle.foeFighters.count { it.alive } >= check.value
-            PowerCheckKind.FOES_AT_MOST -> battle.foeFighters.count { it.alive } <= check.value
+            PowerCheckKind.FOES_AT_LEAST -> battle.enemies() >= check.value
+            PowerCheckKind.FOES_AT_MOST -> battle.enemies() <= check.value
             PowerCheckKind.TARGET_RARE -> target != null && battle.foes[target.index].rarity >= MonsterRarity.RARE
             PowerCheckKind.TARGET_AILED -> target != null && (target.ailments.isNotEmpty() || moment.ailments.isNotEmpty())
             PowerCheckKind.TARGET_AILMENT -> target != null && (target.ailments + moment.ailments).any { it.ailment.word == check.word }

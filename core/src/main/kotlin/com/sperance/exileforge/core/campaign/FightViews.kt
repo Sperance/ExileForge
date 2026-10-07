@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.HitKind
+import com.sperance.exileforge.core.campaign.combat.SlotHolder
 import com.sperance.exileforge.core.campaign.combat.chargeViews
 import com.sperance.exileforge.core.campaign.combat.effects
 import com.sperance.exileforge.core.campaign.combat.flaskViews
@@ -19,6 +20,7 @@ import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FloatingHit
 import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.LungeView
+import com.sperance.exileforge.core.campaign.run.SlotView
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Pet
@@ -113,6 +115,7 @@ internal fun Battle.hud(
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index),
             reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay, buildup = buildup(f),
+            barrier = f.barrier.takeIf { f.barrierUntil > time }?.roundToInt() ?: 0,
         )
     }
     return FightHud(
@@ -139,14 +142,21 @@ internal fun Battle.hud(
 
 /** Босс боя (3.92.0): первый враг редкости босса или с фазами - его пороги и умение на подходе. */
 private fun Battle.bossHud(): BossHud? {
-    val i = foes.indices.firstOrNull { foes[it].phases.isNotEmpty() || foes[it].rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE } ?: return null
+    val i = foes.indices.firstOrNull { foes[it].phases.isNotEmpty() || foes[it].totems.isNotEmpty() || foes[it].rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE } ?: return null
     val foe = foes[i]
     val fighter = foeFighters[i]
     val cast = (foe.skills + learned[i].orEmpty()).mapNotNull { skill ->
         val ready = fighter.readyAt[skill.code] ?: return@mapNotNull null
         CastView(skill.code, (ready - time).coerceAtLeast(0.0), skill.cooldown / fighter.body.recovery(skill.spell))
     }.minByOrNull { it.left }?.takeIf { fighter.alive }
-    return BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast)
+    val slots = slotHolders.map { holder ->
+        when (holder) {
+            null -> null
+            is SlotHolder.Minion -> SlotView.Minion(holder.index)
+            is SlotHolder.Totem -> holder.totem.let { t -> SlotView.Totem(t.serial, t.totem.totem.code, t.totem.totem.kind, (t.until - time).coerceAtLeast(0.0), t.until - t.raised, t.totem.totem.element) }
+        }
+    }
+    return BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots)
 }
 
 /**

@@ -18,6 +18,8 @@ data class GameSettings(
     val textSize: TextSize = TextSize.M,
     /** Pulses, glows and marching roads; off for a weak phone or a low battery. */
     val animations: Boolean = true,
+    /** Упрощённые эффекты боя (3.93.0): без тряски и вспышек - для чувствительных глаз и слабого телефона. */
+    val simpleEffects: Boolean = false,
     val buzzDanger: Boolean = true,
     val buzzButtons: Boolean = false,
 ) {

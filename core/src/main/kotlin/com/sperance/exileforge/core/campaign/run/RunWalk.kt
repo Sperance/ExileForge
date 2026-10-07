@@ -56,7 +56,12 @@ internal fun ExpeditionRun.walk(dt: Double) {
     val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
     when (val event = world.step(dt, x, y)) {
         // Страж вручную (3.92.0) - сперва экран-вызов
-        is WorldEvent.Encounter -> if (event.agent === world.boss) challenge(event.agent) else engage(event.agent)
+        // Печать стража (3.93.0): запечатанный босс не встаёт
+        is WorldEvent.Encounter -> if (event.agent !== world.boss) {
+            engage(event.agent)
+        } else if (!sealed) {
+            challenge(event.agent)
+        }
 
         WorldEvent.Exit -> exit()
 
@@ -147,7 +152,7 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 
             AutoStep.Portal -> if (world.portal != null) openGate()
 
-            AutoStep.Boss -> world.boss?.takeIf { it.alive }?.let {
+            AutoStep.Boss -> world.boss?.takeIf { it.alive && !sealed }?.let {
                 engage(it)
                 started = true
                 return

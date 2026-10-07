@@ -55,6 +55,14 @@ data class Foe(
     val phases: List<FoePhase> = emptyList(),
     /** Свита (3.92.0): номер босса, чья фаза её зовёт; в бой она встаёт только по зову, добычи не даёт и падает с ним. */
     val summonOf: Int? = null,
+    /**
+     * Тотемы (3.93.0): свои тотемы босса [totems] - ставит случайный раз в [totemEvery] секунд, первый через [totemFirst];
+     * [slots] - слоты вокруг него для свиты и тотемов, 0 - у врага их нет.
+     */
+    val totems: List<FoeTotem> = emptyList(),
+    val totemEvery: Double = 0.0,
+    val totemFirst: Double = 0.0,
+    val slots: Int = 0,
 ) {
     val summoned: Boolean get() = summonOf != null
 }

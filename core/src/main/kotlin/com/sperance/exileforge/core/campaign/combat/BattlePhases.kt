@@ -10,7 +10,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /** Шаг фазы босса в бою (3.92.0): шаг правил и умение, которое он даёт, уже найденное среди умений монстров. */
-data class FoePhase(val step: PhaseStep, val skill: MonsterSkill? = null)
+data class FoePhase(val step: PhaseStep, val skill: MonsterSkill? = null, val totems: List<FoeTotem> = emptyList())
 
 /** Источник строк шага [step] фазы [code] на боссе: у каждого шага свой, так что два шага одного порога не заменяют друг друга. */
 internal fun phaseSource(code: String, step: Int) = "$code#$step"
@@ -38,6 +38,7 @@ internal fun Battle.phase(foe: Fighter) {
         }
         if (step.invulnerable > 0) foe.invulnerableUntil = max(foe.invulnerableUntil, time + step.invulnerable)
         if (step.summon > 0) summon(foe, step.summon)
+        if (phase.totems.isNotEmpty()) raiseTotem(foe, phase.totems)
         note(foe, NoteKind.PHASE, code, step.at)
         if (step.burst > 0 && heroFighter.alive) {
             val element = DamageType.element(step.element)
@@ -48,19 +49,25 @@ internal fun Battle.phase(foe: Fighter) {
     }
 }
 
-/** Свита [count] босса [boss] встаёт: свободное место берёт сразу, иначе ждёт первой в очереди. */
+/** Свита [count] босса [boss] встаёт: свободное место берёт сразу, иначе ждёт первой в очереди; без свободного слота - не встаёт. */
 private fun Battle.summon(boss: Fighter, count: Int) {
     foes.indices.filter { foes[it].summonOf == boss.index && it !in called }.take(count).forEach { index ->
+        // Слоты вокруг босса (3.93.0): все заняты - приспешник не встаёт
+        val slot = freeSlot() ?: return@forEach
+        slotHolders[slot] = SlotHolder.Minion(index)
         called += index
         if (window.call(index)) foeFighters[index].enter(window.place(index), time)
+        bannerFor(foeFighters[index])
     }
     if (foes.indices.any { it in called && foeFighters[it].body.auras.isNotEmpty() }) remake(heroFighter)
 }
 
 /** Босс пал (3.92.0): его свита падает с ним - и стоящая, и ждущая; добычи она не даёт и убийством не считается. */
 internal fun Battle.dismissRetinue(boss: Fighter) {
+    fellTotems(boss)
     foes.indices.filter { foes[it].summonOf == boss.index }.forEach { index ->
         window.dismiss(index)
+        freeMinionSlot(index)
         val fighter = foeFighters[index]
         if (fighter.life > 0) {
             fighter.life = 0.0
@@ -70,4 +77,9 @@ internal fun Battle.dismissRetinue(boss: Fighter) {
         }
         retinueDown += index
     }
+}
+
+/** Приспешник пал (3.93.0): его слот свободен для новой свиты или тотема. */
+internal fun Battle.freeMinionSlot(index: Int) {
+    slotHolders.indices.firstOrNull { (slotHolders[it] as? SlotHolder.Minion)?.index == index }?.let { slotHolders[it] = null }
 }

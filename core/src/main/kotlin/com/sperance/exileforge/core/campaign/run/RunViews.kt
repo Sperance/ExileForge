@@ -115,6 +115,8 @@ data class FoeView(
     val reinforceDelay: Double = 0.0,
     /** Its buildups (3.78.0), null while the rules have none. */
     val buildup: BuildupView? = null,
+    /** Барьер (3.93.0): что ещё поглотит барьер фазы босса. */
+    val barrier: Int = 0,
 ) {
     /** Its card is on the field: it fights there, or fell there and nobody stepped in yet. */
     val onField: Boolean get() = place >= 0
@@ -124,7 +126,26 @@ data class FoeView(
  * Босс в бою (3.92.0): [index] - его место в стае, [phase] - шаблон фаз, [marks] - пороги шагов в процентах здоровья и
  * [passed] - какие уже сработали, [cast] - умение, что он готовит, и через сколько секунд из скольких.
  */
-data class BossHud(val index: Int, val phase: String?, val marks: List<Double>, val passed: List<Boolean>, val cast: CastView?)
+data class BossHud(
+    val index: Int,
+    val phase: String?,
+    val marks: List<Double>,
+    val passed: List<Boolean>,
+    val cast: CastView?,
+    /** Слоты вокруг босса (3.93.0): по порядку, null - пустой; первая половина слева, вторая справа. */
+    val slots: List<SlotView?> = emptyList(),
+)
+
+/** Кто в слоте вокруг босса (3.93.0): приспешник свиты или тотем. */
+sealed interface SlotView {
+    /** Приспешник: [index] - его место в стае. */
+    data class Minion(val index: Int) : SlotView
+
+    /** Тотем [code] рода [kind]: [serial] - его номер в бою, [left] секунд из [total]; [element] - стихия удара. */
+    data class Totem(val serial: Int, val code: String, val kind: com.sperance.exileforge.rules.content.TotemKind, val left: Double, val total: Double, val element: String?) : SlotView {
+        val share: Float get() = if (total <= 0) 0f else (left / total).toFloat().coerceIn(0f, 1f)
+    }
+}
 
 /** Умение врага на подходе (3.92.0): [left] секунд до готовности из [total]. */
 data class CastView(val code: String, val left: Double, val total: Double) {

@@ -257,6 +257,8 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.KILL -> ui("expedition.log_note_kill", monster) + (if (note.value >= 1) " · +${note.value.roundToInt()}" else "")
         NoteKind.TRAIT -> ui("expedition.log_note_trait", monster, traitTitle(note.ref))
         NoteKind.PHASE -> ui("expedition.log_note_phase", monster, phaseTitle(note.ref), note.value.roundToInt())
+        NoteKind.TOTEM -> ui("expedition.log_note_totem", monster, com.sperance.exileforge.core.display.totemTitle(note.ref))
+        NoteKind.TOTEM_FALL -> ui("expedition.log_note_totem_fall", com.sperance.exileforge.core.display.totemTitle(note.ref))
         NoteKind.RECOVER_FLASK -> ui("expedition.log_note_recover_flask", equipmentTitle(note.ref), note.value.roundToInt())
         NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())

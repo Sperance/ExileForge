@@ -27,6 +27,8 @@ import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseText
 import com.sperance.exileforge.core.display.phaseTitle
+import com.sperance.exileforge.core.display.totemText
+import com.sperance.exileforge.core.display.totemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.ui.theme.*
@@ -139,6 +141,12 @@ import com.sperance.exileforge.ui.theme.*
     LoreSheet(phaseTitle(code), owner?.let { ui("lore.phase_of", it) }, Elder, listOf(ui("lore.essence") to listOf(phaseText(code))), note = ui("lore.phase_note"), onDismiss = onDismiss)
 }
 
+/** Тотем босса (3.93.0): что делает, сколько ещё стоит; бить его нельзя - он рассыпается сам или со смертью босса. */
+@Composable fun TotemSheet(code: String, owner: String?, left: Double?, onDismiss: () -> Unit) {
+    val facts = listOfNotNull(left?.let { ui("lore.totem_left") to ui("lore.seconds", fineNumber(it)) })
+    LoreSheet(totemTitle(code), owner?.let { ui("lore.totem_of", it) }, Elder, listOf(ui("lore.essence") to listOf(totemText(code))), facts, ui("lore.totem_note"), onDismiss)
+}
+
 /** Что открыть в листе-справке (3.92.0): кто бы ни коснулся - плитка, печать, чип, строка журнала. */
 sealed interface Lore {
     /** Умение монстра [code] врага [owner]; [foe] - его лист, [hero] - лист героя (null - по герою из игры). */
@@ -151,6 +159,9 @@ sealed interface Lore {
     data class CurseText(val title: String, val lines: List<String>, val note: String?) : Lore
     data class Trait(val view: TraitView, val owner: String?) : Lore
     data class Phase(val code: String, val owner: String?) : Lore
+
+    /** Тотем [code] босса [owner], ещё [left] секунд (3.93.0). */
+    data class Totem(val code: String, val owner: String?, val left: Double?) : Lore
 }
 
 /** Как открыть лист-справку отсюда; null - некому показать, плитка остаётся подсказкой. */
@@ -177,6 +188,8 @@ val LocalLore = androidx.compose.runtime.staticCompositionLocalOf<((Lore) -> Uni
         is Lore.Trait -> TraitSheet(lore.view, lore.owner, close)
 
         is Lore.Phase -> PhaseSheet(lore.code, lore.owner, close)
+
+        is Lore.Totem -> TotemSheet(lore.code, lore.owner, lore.left, close)
     }
 }
 

@@ -140,7 +140,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.Accept -> accept()
 
-        RunCommand.ToBoss -> if (phase == RunPhase.MAP && autopilot == null) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { engage(it) }
+        // Тестировщик сразу к стражу (3.93.0) - тоже через экран-вызов; печать его не держит, сервер ему доверяет
+        RunCommand.ToBoss -> if (phase == RunPhase.MAP && autopilot == null) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { challenge(it) }
 
         RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
 

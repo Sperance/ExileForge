@@ -159,7 +159,14 @@ import kotlin.math.roundToInt
                 }
             }
 
-            RunPhase.FIGHT -> hud.fight?.let { ArenaOverlay(game, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance, onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz) }
+            RunPhase.FIGHT -> hud.fight?.let {
+                ArenaOverlay(
+                    game, hud, it, it.level.takeIf { level -> level > 0 } ?: run.zone.level, run.rules, run.stance,
+                    onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
+                    biome = run.zone.biome,
+                    shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
+                )
+            }
 
             // The fight is over: its report — the log, what it came to, and the loot of a victory.
             RunPhase.LOOT -> hud.report?.let { ReportScreen(game, model, hud, it) { model.runCommand(RunCommand.Continue) } }
@@ -238,6 +245,10 @@ import kotlin.math.roundToInt
                     color = if (hud.sealed) LifeRed else Vital,
                     style = MaterialTheme.typography.labelMedium,
                 )
+                // Печать стража (3.93.0): сколько редких пало из нужных
+                run.seal?.takeIf { !it.open }?.let { seal ->
+                    Text(ui("expedition.seal_progress", seal.killed, seal.need), color = Color(0xFFC9A0FF), style = MaterialTheme.typography.labelSmall)
+                }
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)

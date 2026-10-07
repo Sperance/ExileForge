@@ -49,7 +49,7 @@ private fun Battle.holds(condition: SlotCondition, opened: Boolean): Boolean {
         SlotCondition.LIFE_20 -> hero.life < hero.body.maxLife * 0.2
         SlotCondition.MANA_30 -> hero.mana < manaCap() * 0.3
         SlotCondition.SHIELD_BROKEN -> hero.body.maxShield > 0 && hero.shield <= 0.5
-        SlotCondition.ENEMIES_3 -> foeFighters.count { it.alive } >= 3
+        SlotCondition.ENEMIES_3 -> enemies() >= 3
         SlotCondition.AILING -> hero.ailments.isNotEmpty()
         SlotCondition.MANUAL -> false
     }

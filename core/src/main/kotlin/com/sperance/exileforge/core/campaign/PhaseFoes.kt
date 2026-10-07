@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.FoePhase
+import com.sperance.exileforge.core.campaign.combat.FoeTotem
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -17,7 +18,7 @@ import com.sperance.exileforge.rules.roll.RolledMonster
  * своего шаблона с найденными умениями; к стае добавляется его свита - столько обычных монстров его зоны, сколько зовут
  * все шаги, - она ждёт зова вне поля и добычи не даёт.
  */
-class PhaseFoes(private val index: ContentIndex, private val rules: CombatRules) {
+class PhaseFoes(private val index: ContentIndex, private val combat: CombatRules) {
     private val roller by lazy { MonsterRoller(index) }
 
     /** Враг [monster] на [level]: его лист, умения, свойства и - у босса - фазы. */
@@ -26,7 +27,7 @@ class PhaseFoes(private val index: ContentIndex, private val rules: CombatRules)
         val template = index.monster(monster.code)
         val steps = template?.let(index.campaign::phasesOf).orEmpty()
         return Foe(
-            Combatant(monster.stats, level, rules),
+            Combatant(monster.stats, level, combat),
             monster.rarity,
             own,
             monster,
@@ -36,10 +37,19 @@ class PhaseFoes(private val index: ContentIndex, private val rules: CombatRules)
             phase = template?.phases?.takeIf { steps.isNotEmpty() },
             phases = steps.map { step ->
                 val code = step.skill ?: step.skills.firstOrNull { it !in monster.skills }
-                FoePhase(step, code?.let(index.skills.monsterByCode::get))
+                FoePhase(step, code?.let(index.skills.monsterByCode::get), totems(step.totems))
             },
+            totems = totems(template?.totems.orEmpty()),
+            totemEvery = rules.every,
+            totemFirst = rules.first,
+            slots = if (steps.isNotEmpty() || template?.totems.orEmpty().isNotEmpty()) rules.slots else 0,
         )
     }
+
+    private val rules get() = index.campaign.totems
+
+    /** Тотемы правил по кодам [codes] (3.93.0), с проклятием-умением монстров. */
+    private fun totems(codes: List<String>): List<FoeTotem> = codes.mapNotNull(rules.byCode::get).map { totem -> FoeTotem(totem, totem.curse?.let(index.skills.monsterByCode::get)) }
 
     /** Стая [foes] со свитой каждого босса с фазами в конце - на костях [dice], чтобы бой без фаз не менял своих. */
     fun withRetinue(foes: List<Foe>, dice: Dice): List<Foe> {

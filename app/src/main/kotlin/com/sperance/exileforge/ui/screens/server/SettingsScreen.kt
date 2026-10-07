@@ -10,12 +10,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Animation
+import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FastForward
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Gavel
 import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
@@ -64,6 +66,7 @@ private enum class SettingsPage(val title: String) {
     FEEDBACK("feedback.admin"),
     MODERATION("moderation.title"),
     MAIL("mail.compose"),
+    WHATS_NEW("settings.whats_new"),
 }
 
 /**
@@ -107,6 +110,8 @@ private enum class SettingsPage(val title: String) {
                 SettingsPage.MODERATION -> ModerationPage(account)
 
                 SettingsPage.MAIL -> MailComposePage(account)
+
+                SettingsPage.WHATS_NEW -> WhatsNewPage()
             }
         }
     }
@@ -126,6 +131,7 @@ private enum class SettingsPage(val title: String) {
             change { copy(keepScreen = it) }
         }
         UpdateRow()
+        AccountRow(Icons.Outlined.History, ui("settings.whats_new")) { onPage(SettingsPage.WHATS_NEW) }
     }
     RowGroup(ui("settings.fight")) {
         ChoiceRow(Icons.Outlined.FastForward, ui("settings.speed"), GameSettings.SPEEDS, set.fightSpeed, { "×$it" }) { change { copy(fightSpeed = it) } }
@@ -144,6 +150,7 @@ private enum class SettingsPage(val title: String) {
     RowGroup(ui("settings.interface")) {
         ChoiceRow(Icons.Outlined.FormatSize, ui("settings.text"), TextSize.entries, set.textSize, { it.name }) { change { copy(textSize = it) } }
         SwitchRow(Icons.Outlined.Animation, ui("settings.animations"), ui("settings.animations_note"), set.animations) { change { copy(animations = it) } }
+        SwitchRow(Icons.Outlined.AutoAwesome, ui("settings.simple_effects"), ui("settings.simple_effects_note"), set.simpleEffects) { change { copy(simpleEffects = it) } }
     }
     RowGroup(ui("settings.vibration")) {
         SwitchRow(Icons.Outlined.Vibration, ui("settings.buzz_danger"), ui("settings.buzz_danger_note"), set.buzzDanger) { change { copy(buzzDanger = it) } }
@@ -173,6 +180,37 @@ private enum class SettingsPage(val title: String) {
             // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.
             if (BuildConfig.DEBUG && account.isAdmin && !account.adminTools) {
                 AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !account.busy, chevron = false) { sessionModel.mode(AppMode.ADMIN) }
+            }
+        }
+    }
+}
+
+/**
+ * «Что нового» (3.93.0): заметки трёх последних версий с GitHub - карточки с номером и датой, свежая раскрыта, прочие
+ * раскрываются касанием.
+ */
+@Composable private fun WhatsNewPage() {
+    val updates = LocalUpdates.current ?: return
+    val notes by updates.notes.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { updates.loadNotes() }
+    val list = notes
+    when {
+        list == null -> MutedText(ui("settings.whats_new_loading"))
+
+        list.isEmpty() -> MutedText(ui("settings.whats_new_failed"))
+
+        else -> list.forEachIndexed { i, release ->
+            var open by rememberSaveable(release.tag) { mutableStateOf(i == 0) }
+            ForgePanel(Modifier.fillMaxWidth().clickable { open = !open }) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(ui("app.version", release.version), color = GoldBright, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    release.published?.take(10)?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+                }
+                if (open) {
+                    release.body.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("## ") }.forEach { line ->
+                        Text(line.removePrefix("- ").removePrefix("* ").let { "• $it" }, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
             }
         }
     }

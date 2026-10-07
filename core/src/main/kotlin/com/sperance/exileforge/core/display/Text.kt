@@ -55,6 +55,10 @@ fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, second
 fun phaseTitle(code: String): String = locOr("phase.$code.name", displayName(code))
 fun phaseText(code: String): String = locOr("phase.$code.description", "")
 
+/** Тотем босса (3.93.0): название и что делает, пока стоит. */
+fun totemTitle(code: String): String = locOr("totem.$code.name", displayName(code))
+fun totemText(code: String): String = locOr("totem.$code.description", "")
+
 fun mapTitle(code: String): String = locOr(LocaleKey.mapName(code), displayName(code))
 fun mapTitle(code: MapCode): String = mapTitle(code.value)
 

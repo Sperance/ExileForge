@@ -283,7 +283,8 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     fighter.effects.clear()
     // Свита (3.92.0) - не убийство: о ней не сообщают; босс уводит свою за собой
     if (foes[fighter.index].summoned) retinueDown += fighter.index else fallenOrder += fighter.index
-    if (foes[fighter.index].phases.isNotEmpty()) dismissRetinue(fighter)
+    if (foes[fighter.index].summoned) freeMinionSlot(fighter.index)
+    if (foes[fighter.index].phases.isNotEmpty() || foes[fighter.index].totems.isNotEmpty()) dismissRetinue(fighter)
     if (focus == fighter.index) focus = null
     if (lastStriker == fighter.index) lastStriker = null
     val stepped = stepIn()

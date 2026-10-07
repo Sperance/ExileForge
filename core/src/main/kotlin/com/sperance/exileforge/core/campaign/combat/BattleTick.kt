@@ -167,6 +167,7 @@ internal fun Battle.watch() {
     petWatch()
     foeFighters.forEach { foe -> if (foe.alive) enrage(foe) }
     foeFighters.forEach { foe -> if (foe.alive) phase(foe) }
+    if (slotHolders.isNotEmpty()) totemTick()
     foeFighters.forEach { foe ->
         val low = foe.alive && foe.life < foe.body.maxLife / 2
         if (low != foe.low && foe.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code] > 0) {

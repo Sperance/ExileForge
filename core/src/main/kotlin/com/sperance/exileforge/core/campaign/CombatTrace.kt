@@ -122,6 +122,10 @@ enum class NoteKind {
     /** Шаг фазы босса (3.92.0): ref - шаблон, value - порог здоровья в процентах. */
     PHASE,
 
+    /** Тотем босса (3.93.0): ref - код тотема; встал и рассыпался. */
+    TOTEM,
+    TOTEM_FALL,
+
     /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar, regeneration a second. */
     RECOVER_FLASK,
     RECOVER_RECOUP,

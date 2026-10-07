@@ -77,6 +77,17 @@ class UpdateViewModel(
     private val mutable = MutableStateFlow(UpdateState(checking = BuildConfig.UPDATES))
     val state: StateFlow<UpdateState> = mutable.asStateFlow()
     private val checks = Mutex()
+
+    /** «Что нового» (3.93.0): заметки последних релизов; null - ещё не загружены, пусто - GitHub не ответил. */
+    private val notesFlow = MutableStateFlow<List<com.sperance.exileforge.core.update.ReleaseNotes>?>(null)
+    val notes: StateFlow<List<com.sperance.exileforge.core.update.ReleaseNotes>?> = notesFlow.asStateFlow()
+
+    /** Загружает заметки последних релизов, если их ещё нет или прошлый раз не вышло. */
+    fun loadNotes() {
+        if (!notesFlow.value.isNullOrEmpty()) return
+        notesFlow.value = null
+        viewModelScope.launch { notesFlow.value = runCatching { updates.recent() }.getOrDefault(emptyList()) }
+    }
     private var download: Job? = null
 
     /** Отложенная проверка: null - не нужна; первая - холодного старта. Две просьбы сливаются в более полную. */

@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.sealed
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.icons.drawToken
 import kotlin.math.abs
@@ -45,8 +46,12 @@ internal class ScenePainter {
     /** The hero's class, whose portrait is the hero's token. */
     internal var classCode: String? = null
 
+    /** Босс этого захода запечатан (3.93.0). */
+    private var sealed = false
+
     fun draw(scope: DrawScope, run: ExpeditionRun, time: Float, classCode: String?) {
         this.time = time
+        sealed = run.sealed
         this.classCode = classCode
         pen.scope = scope
         unit = with(scope) { SCENE_UNIT.toPx() }
@@ -174,6 +179,11 @@ internal class ScenePainter {
                     token(isoX(agent.x, agent.y), isoY(agent.x, agent.y), size, ring, bob) {
                         Portraits.monster(this, monster.code.value, monster.form, ring, time)
                         if (agent.mode == AgentMode.ASLEEP) drawRect(Color.Black.copy(alpha = .35f))
+                        // Печать стража (3.93.0): запечатанный босс - под фиолетовой пеленой с бегущим кругом
+                        if (sealed && agent === world.boss) {
+                            drawRect(Color(0xFF2A1040).copy(alpha = .55f + .1f * sin(time * 2f)))
+                            drawArc(Color(0xFFB07CFF), time * 90f, 270f, false, style = androidx.compose.ui.graphics.drawscope.Stroke(drawContext.size.minDimension * .06f))
+                        }
                     }
                 }
             }

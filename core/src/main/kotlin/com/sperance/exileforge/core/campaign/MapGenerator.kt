@@ -105,7 +105,11 @@ object MapGenerator {
         // The exit stands in the open (3.79.0): off the walls, where the perspective of the scene does not hide it.
         fun roomy(i: Int) = grid[i] == Tile.FLOOR && i % size in 1 until size - 1 && i / size in 1 until size - 1 &&
             grid[i - 1] == Tile.FLOOR && grid[i + 1] == Tile.FLOOR && grid[i - size] == Tile.FLOOR && grid[i + size] == Tile.FLOOR
-        val exitIndex = (grid.indices.filter(::roomy).ifEmpty { grid.indices.filter { grid[it] == Tile.FLOOR } }).maxBy { fromStart[it] }
+        fun rock(x: Int, y: Int) = x !in 0 until size || y !in 0 until size || grid[y * size + x] == Tile.WALL
+        // ...и так, чтобы скала перед ним по ходу камеры не закрыла его овал (3.95.3)
+        val roomyCells = grid.indices.filter(::roomy)
+        val exitIndex = roomyCells.filter { SceneSight.inView(it % size, it / size, ::rock) }.ifEmpty { roomyCells }.ifEmpty { grid.indices.filter { grid[it] == Tile.FLOOR } }
+            .maxBy { fromStart[it] }
         val exit = Cell(exitIndex % size, exitIndex / size)
         val fromExit = distances(grid, size, exit)
 

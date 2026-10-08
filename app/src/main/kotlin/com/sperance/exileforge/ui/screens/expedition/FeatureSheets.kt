@@ -19,9 +19,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.run.AfflictionView
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
@@ -42,8 +45,12 @@ import com.sperance.exileforge.ui.components.LocalLore
 import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
+import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
+import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.theme.*
+import kotlin.math.ceil
 
 /**
  * Лист объекта карты (3.90.0, сервер 1.81.3), по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
@@ -159,25 +166,60 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Удар ловушки над героем (3.94.1): красное «−N» встаёт над жетоном героя - камера держит его по центру чуть ниже середины -
- * и за полторы секунды уплывает вверх и гаснет; без анимаций просто висит, пока виден удар.
+ * Урон карты над героем (3.94.1; с 3.95.3 - каждое число своё): удар ловушки - «−42 огонь» цветом стихии, принятое щитом -
+ * голубым рядом, наложенный эффект - строкой ниже («+ Горение 4 с»); тики эффекта - мелким курсивом, как в бою. Число встаёт
+ * над жетоном героя - камера держит его чуть ниже середины - и уплывает вверх, гаснет; без анимаций висит, пока видно.
  */
-@Composable internal fun HazardFloat(hazard: HazardView?) {
-    val shown = hazard ?: return
-    val motion = LocalSettings.current.animations
-    val rise = remember(shown) { Animatable(0f) }
-    LaunchedEffect(shown) { if (motion) rise.animateTo(1f, tween(HAZARD_FLOAT_MS, easing = LinearOutSlowInEasing)) }
+@Composable internal fun HazardFloat(hazards: List<HazardView>) {
+    if (hazards.isEmpty()) return
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Ноги героя - на 55% высоты и полтайла ниже; жетон над ними - около двух полутайлов.
-        val top = maxHeight * .55f + SCENE_UNIT - SCENE_UNIT * 2.6f - SCENE_UNIT * rise.value
-        Text(
-            ui("trap.float", shown.damage),
-            color = LifeRed,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.align(Alignment.TopCenter).offset(y = top).alpha(1f - rise.value * .8f),
-        )
+        val feet = maxHeight * .55f + SCENE_UNIT - SCENE_UNIT * 2.6f
+        hazards.forEach { hazard -> androidx.compose.runtime.key(hazard.id) { HazardNumber(hazard, feet) } }
     }
 }
 
+@Composable private fun BoxWithConstraintsScope.HazardNumber(hazard: HazardView, feet: Dp) {
+    val motion = LocalSettings.current.animations
+    val rise = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { if (motion) rise.animateTo(1f, tween(if (hazard.tick) HAZARD_TICK_MS else HAZARD_FLOAT_MS, easing = LinearOutSlowInEasing)) }
+    // Тик чуть в стороне от удара: оба читаются, когда эффект тикает, пока удар ещё висит
+    val side = if (hazard.tick) SCENE_UNIT * .9f else 0.dp
+    Column(
+        Modifier.align(Alignment.TopCenter).offset(x = side, y = feet - SCENE_UNIT * rise.value).alpha(1f - rise.value * .8f),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            val size = if (hazard.tick) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleMedium
+            val style = if (hazard.tick) FontStyle.Italic else FontStyle.Normal
+            if (hazard.life > 0 || hazard.shield == 0) {
+                Text(ui("trap.float", hazard.life), color = damageTint(hazard.type, onHero = true), fontWeight = FontWeight.Bold, fontStyle = style, style = size)
+            }
+            if (hazard.shield > 0) Text(ui("trap.float", hazard.shield), color = ShieldCyan, fontWeight = FontWeight.Bold, fontStyle = style, style = size)
+            if (!hazard.tick) Text(ui(hazard.type.key()), color = damageTint(hazard.type, onHero = true), style = MaterialTheme.typography.labelSmall)
+        }
+        hazard.ailment?.let { ailment ->
+            Text(ui("trap.ailment", ui(ailment.key()), ceil(hazard.seconds).toInt()), color = ailmentTint(ailment), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+/** Эффекты ловушек на герое (3.95.3) под полосой жизни: «Горение −32/с · 3 с». */
+@Composable internal fun AfflictionChips(afflictions: List<AfflictionView>, modifier: Modifier = Modifier) {
+    if (afflictions.isEmpty()) return
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        afflictions.forEach { affliction ->
+            val tint = ailmentTint(affliction.ailment)
+            Text(
+                ui("trap.affliction", ui(affliction.ailment.key()), affliction.perSecond, ceil(affliction.left).toInt()),
+                color = tint,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.background(Ink.copy(alpha = .8f), RoundedCornerShape(8.dp)).border(1.dp, tint.copy(alpha = .5f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
+    }
+}
+
+private const val HAZARD_TICK_MS = 1100
 private const val HAZARD_FLOAT_MS = 1500

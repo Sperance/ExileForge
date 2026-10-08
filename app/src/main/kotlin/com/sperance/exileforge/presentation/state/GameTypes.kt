@@ -66,7 +66,8 @@ const val TAB_CHRONICLE = 16
 /** «Настройки» (3.77.0): from the banner's menu, «back» leading to the tab it was opened over. */
 const val TAB_SETTINGS = 17
 
-val PLAYER_TABS = listOf(TAB_HERO, TAB_EXPEDITION, TAB_CRAFTS, TAB_PROGRESS, TAB_CITY)
+// Порядок нижних кнопок (3.95.3): Герой, Развитие, Поход, Город, Ремёсла
+val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CITY, TAB_CRAFTS)
 
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_ADMIN, TAB_REDEMPTION)

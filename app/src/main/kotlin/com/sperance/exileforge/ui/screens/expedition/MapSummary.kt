@@ -131,7 +131,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
             RunFigures(tally.figures)
         }
-        if (selling) SellDock(pick, enabled = armed && !game.busy, verb = "sell.do_n_return", onSell = onDone)
+        if (selling) SellDock(pick, enabled = armed && !game.busy, verb = "sell.do_n_return", shards = { lots -> game.shardsFor(lots.map { it.piece.rarity }) }, onSell = onDone)
         ForgeButton(
             onClick = { onDone(emptyList()) },
             enabled = armed,

@@ -115,7 +115,7 @@ import kotlinx.serialization.Serializable
 )
 
 /** Where items that came to the hero went: into the stash, into its overflow, or to the merchant for [gold]. */
-@Serializable data class Received(val stashed: Int = 0, val overflowed: Int = 0, val sold: Int = 0, val gold: Long = 0)
+@Serializable data class Received(val stashed: Int = 0, val overflowed: Int = 0, val sold: Int = 0, val gold: Long = 0, val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList())
 
 /** A trial entered (server 1.47.0): the trial itself and the hero's context frozen on entry, the monsters stood up by it. */
 @Serializable data class TrialStart(val run: TrialRun, val context: RunContext)

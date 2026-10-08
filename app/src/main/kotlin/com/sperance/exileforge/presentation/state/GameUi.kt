@@ -81,6 +81,12 @@ data class GameUi(
     val characterSlotsLeft: Int get() = ((index?.rules?.maxCharacters ?: MAX_CHARACTERS) - session.characters.size).coerceAtLeast(0)
     val ownsCharacter: Boolean get() = session.signedIn && session.profile?.id == holding.owner
 
+    /** Что продажа вещей редкостей [rarities] даст осколками сейчас (3.95.3), словами: правило сервера над сумкой героя; null - ничего. */
+    fun shardsFor(rarities: Collection<com.sperance.exileforge.rules.content.Rarity>): String? {
+        val rules = index?.rules?.sell ?: return null
+        return com.sperance.exileforge.core.display.shardsText(rules.yields(rarities, hero?.bag.orEmpty()), rules.shardsPerOrb)
+    }
+
     /** How many of one stacking item the hero holds, or null while the hero has not been read. */
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
 

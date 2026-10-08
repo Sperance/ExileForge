@@ -1,5 +1,8 @@
 package com.sperance.exileforge.presentation.hero
 
+import com.sperance.exileforge.core.display.shardsPerOrb
+import com.sperance.exileforge.core.display.shardsText
+import com.sperance.exileforge.core.display.withShards
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
@@ -56,7 +59,7 @@ class HeroActions(
 
     /** Из переполнения в сундук: [itemId], или сколько влезет. */
     fun claimOverflow(itemId: String? = null) = heroCommand { id -> api.hero.claimOverflow(id, itemId) }
-    fun sellOverflow(itemId: String) = heroCommand { id -> api.hero.sellOverflow(id, itemId) }
+    fun sellOverflow(itemId: String) = heroCommand { id -> shardsText(api.hero.sellOverflow(id, itemId).shards, perOrb)?.let(notices::toast) }
 
     // Зверинец (3.5.0): снимок с каждым ответом несёт питомцев и сумку.
     fun incubatePet(egg: String, slot: Int? = null) = heroCommand { id -> api.hero.incubatePet(id, egg, slot) }
@@ -174,7 +177,10 @@ class HeroActions(
     fun unsocketJewel(itemId: String) = heroCommand { id -> api.hero.unsocket(id, itemId) }
 
     /** Продажа торговцу: цену ставит и платит сервер; карточка показала ту же сумму заранее. */
-    fun sellForGold(itemId: String) = heroCommand { id -> notices.toast(ui("toast.sold", api.hero.sell(id, itemId).gold)) }
+    fun sellForGold(itemId: String) = heroCommand { id ->
+        val sold = api.hero.sell(id, itemId)
+        notices.toast(withShards(ui("toast.sold", sold.gold), sold.shards, perOrb))
+    }
 
     /** Продажа пачкой (3.90.3): выбор тайника и «по правилам»; сколько и за сколько - тостом. */
     fun sellMany(itemIds: Collection<String>) = heroCommand { id -> sellBatch(id, itemIds) }
@@ -182,8 +188,11 @@ class HeroActions(
     /** Та же продажа пачкой внутри идущей команды - «Продать и вернуться» конца захода (3.90.4), уже вне захода. */
     suspend fun sellBatch(heroId: String, itemIds: Collection<String>) {
         val sold = api.hero.sellMany(heroId, itemIds.toList())
-        notices.toast(ui("toast.sold_many", sold.itemIds.size, sold.gold))
+        notices.toast(withShards(ui("toast.sold_many", sold.itemIds.size, sold.gold), sold.shards, perOrb))
     }
+
+    /** Сколько осколков склеиваются в сферу - для строки осколков в тосте (3.95.3). */
+    private val perOrb: Int get() = world.state.value.content.shardsPerOrb
 
     /** Одна команда героя: владелец или админ; ответ без снимка перечитывается и рисуется. */
     private fun heroCommand(block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.HERO)) {

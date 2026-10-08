@@ -229,9 +229,11 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             subtitle = name,
             danger = true,
             icon = { ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(44.dp)) },
-            ledger = listOf(
+            ledger = listOfNotNull(
                 LedgerLine(ui("confirm.give"), name, Tone.SPEND),
                 LedgerLine(ui("confirm.gain"), price?.let { ui("merchant.gold_amount", it) } ?: ui("confirm.gold_by_server"), Tone.GAIN),
+                // Осколки сфер за неё (3.95.3): что продажа даст кроме золота
+                game.shardsFor(listOf(view.rarity))?.let { LedgerLine(ui("confirm.gain"), it, Tone.GAIN) },
             ),
             note = ui("hero.sell_confirm"),
             confirm = ui("hero.sell_do"),

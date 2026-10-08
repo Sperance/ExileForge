@@ -131,7 +131,15 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
                 }
             }
         }
-        if (selling) SellDock(pick, enabled = !game.busy, Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp), onCancel = leave) { model.sellMany(it) }
+        if (selling) {
+            SellDock(
+                pick,
+                enabled = !game.busy,
+                Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
+                shards = { lots -> game.shardsFor(lots.map { it.piece.rarity }) },
+                onCancel = leave,
+            ) { model.sellMany(it) }
+        }
     }
     if (filtering) {
         StashFilterSheet(

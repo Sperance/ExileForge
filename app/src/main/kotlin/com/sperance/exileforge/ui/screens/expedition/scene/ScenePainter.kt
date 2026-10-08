@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
@@ -104,8 +105,6 @@ internal class ScenePainter {
             // Вода (3.95.0): реки и озёра биома - вровень с полом, с бликами течения
             map.liquid?.let { liquid -> for (y in ys) for (x in xs) if (map.tile(x, y) == Tile.WATER && visible(x, y)) style.water(frame, spot(map, x, y), palette, glow(x, y), liquid, map) }
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) decor(map, x, y, palette, biome, glow(x, y))
-            if (world.explored(map.exit.x, map.exit.y)) portal(map.exit.x + .5, map.exit.y + .5, world.sealed)
-            world.portal?.takeIf { world.explored(it.x, it.y) }?.let { vaalPortal(it.x + .5, it.y + .5, glow(it.x, it.y)) }
             // The torch's warmth on the ground, an ellipse because the ground is seen at a slant.
             val hxs = isoX(world.heroX, world.heroY)
             val hys = -isoY(world.heroX, world.heroY)
@@ -125,16 +124,27 @@ internal class ScenePainter {
             // Then everything that stands, back to front: rock, monsters and the hero by x + y.
             val heroDepth = world.heroX + world.heroY
             val standing = mutableListOf<Pair<Double, () -> Unit>>()
+            // Скала перед объектом карты (3.95.3) - полупрозрачная, как перед героем: сундук за краем комнаты виден
+            val screens = world.screens()
             for (y in ys) {
                 for (x in xs) {
                     if (map.tile(x, y) == Tile.WALL && visible(x, y) && touchesFloor(map, x, y)) {
                         val depth = x + y + 1.0
                         // Rock between the hero and the player is see-through, or a corridor would hide them.
                         val near = depth > heroDepth && depth - heroDepth < 4 && abs((x - y) - (world.heroX - world.heroY)) < 3
-                        standing += depth to { style.wall(frame, spot(map, x, y), palette, if (near) .4f else 1f, glow(x, y)) }
+                        val alpha = when {
+                            near -> .4f
+                            Cell(x, y) in screens -> SCREEN_ALPHA
+                            else -> 1f
+                        }
+                        standing += depth to { style.wall(frame, spot(map, x, y), palette, alpha, glow(x, y)) }
                     }
                 }
             }
+            // Выход и портал Ваал стоят по глубине, как всё стоящее (3.95.3): прежде их рисовала земля, и любая скала за ними
+            // ложилась поверх овала
+            if (world.explored(map.exit.x, map.exit.y)) standing += (map.exit.x + map.exit.y + 1.0) to { portal(map.exit.x + .5, map.exit.y + .5, world.sealed) }
+            world.portal?.takeIf { world.explored(it.x, it.y) }?.let { at -> standing += (at.x + at.y + 1.0) to { vaalPortal(at.x + .5, at.y + .5, glow(at.x, at.y)) } }
             // A chest stands once the hero has seen its place (2.33.0); an opened one stays, open.
             // A fountain stands once seen (2.48.0): brimming until drunk, dry after.
             world.fountains.filter { world.explored(it.cell.x, it.cell.y) }.forEach { fountain ->
@@ -232,3 +242,6 @@ internal class ScenePainter {
 
     internal fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
 }
+
+/** Прозрачность скалы, что закрывает объект карты от камеры (3.95.3). */
+private const val SCREEN_ALPHA = .45f

@@ -39,6 +39,9 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     val taken = mutableListOf<Int>()
     val spent: Boolean get() = feature.spent(taken)
 
+    /** Клетки, где объект стоит и должен быть виден (3.95.3): ловушка лежит вровень с полом, её скала не закрывает. */
+    open val landmarks: List<Cell> get() = listOf(cell)
+
     /** Доля простоя, что открывает объект (трещина тайной комнаты), 0..1; у прочих - ноль. */
     open val progress: Double get() = 0.0
 
@@ -116,6 +119,8 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
     var seen = false
         private set
 
+    override val landmarks: List<Cell> get() = emptyList()
+
     /** Секунды до нового взвода; ноль - ловушка взведена. */
     var rearming = 0.0
         private set
@@ -148,6 +153,9 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
  * открывает рычаг [lever] в другом конце карты. Открытая - сундук сокровищницы [chest] внутри.
  */
 class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, val lever: Cell?, private val seconds: Double) : FeatureSpot(feature, entrance) {
+    /** Сундук открытой комнаты - за её каменным краем: край над ним рисуется полупрозрачным (3.95.3). */
+    override val landmarks: List<Cell> get() = if (opened) listOf(chest) else emptyList()
+
     val opened: Boolean get() = MapFeature.OPEN in taken
     val looted: Boolean get() = MapFeature.LOOT in taken
 

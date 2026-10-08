@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign.run
 import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.MapGenerator
+import com.sperance.exileforge.core.campaign.SceneSight
 import com.sperance.exileforge.rules.content.BehaviourRule
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ExpeditionRules
@@ -123,8 +124,28 @@ class ExpeditionWorld(
      * The cells of these with floor on all four sides (3.79.0): a fountain, a chest, a crystal or a portal set against a wall
      * hid behind it in the scene's perspective. Should none be roomy, all of them.
      */
-    internal fun Set<Cell>.roomy(): Set<Cell> = filter { (x, y) -> map.walkable(x - 1, y) && map.walkable(x + 1, y) && map.walkable(x, y - 1) && map.walkable(x, y + 1) }
-        .toSet().ifEmpty { this }
+    internal fun Set<Cell>.roomy(): Set<Cell> {
+        val open = filter { (x, y) -> map.walkable(x - 1, y) && map.walkable(x + 1, y) && map.walkable(x, y - 1) && map.walkable(x, y + 1) }.toSet().ifEmpty { this }
+        // Скала перед местом по ходу камеры закрыла бы объект (3.95.3): такие места - только когда других нет
+        return open.filter { (x, y) -> SceneSight.inView(x, y) { cx, cy -> !map.clear(cx, cy) } }.toSet().ifEmpty { open }
+    }
+
+    /**
+     * Скала, что закрывает объект карты от камеры (3.95.3): выход, портал Ваал, сундуки, фонтаны, кристаллы, трещины и объекты
+     * карты. Сцена рисует её полупрозрачной - так виден и сундук комнаты, что стоит за её каменным краем.
+     */
+    fun screens(): Set<Cell> {
+        val landmarks = buildList {
+            add(map.exit)
+            portal?.let(::add)
+            chests.mapTo(this) { it.cell }
+            fountains.mapTo(this) { it.cell }
+            crystals.mapTo(this) { it.cell }
+            cracks.mapTo(this) { it.cell }
+            features.forEach { spot -> addAll(spot.landmarks) }
+        }
+        return landmarks.filter { explored(it.x, it.y) }.flatMapTo(HashSet()) { SceneSight.screening(it) }.filterTo(HashSet()) { !map.clear(it.x, it.y) }
+    }
 
     /** Where the guardian stands: the floor nearest the exit, a step or two from it. */
     internal fun guardPost(): Cell? {

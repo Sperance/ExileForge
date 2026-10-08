@@ -176,9 +176,9 @@ class ExpeditionRun(
     /** Горение и яд ловушек на герое (3.90.0): тикают на карте, могут убить. */
     internal val burns = mutableListOf<Burn>()
 
-    /** Последний удар ловушки на экране (3.90.0) и сколько секунд он ещё висит. */
-    internal var hazard: HazardView? = null
-    internal var hazardLeft = 0.0
+    /** Числа урона карты на экране (3.90.0; с 3.95.3 - удары и тики эффектов, каждое своё) и номер следующего. */
+    internal val hazards = mutableListOf<ShownHazard>()
+    internal var nextHazard = 0
 
     /** Выборы объектов карты по номеру события (3.90.0): отклонённый сервером объект становится прежним. */
     internal val featureEvents = HashMap<Int, Pair<FeatureSpot, Int>>()
@@ -358,8 +358,8 @@ class ExpeditionRun(
         while (true) handle(commands.poll() ?: break)
         if (phase == RunPhase.MAP) guardianBack?.takeIf { clock() >= it + GUARDIAN_GRACE_MS }?.let { guardianReturns() }
         if (phase != RunPhase.DEAD && phase != RunPhase.CLEARED && phase != RunPhase.LEFT) seconds += dt
-        hazardLeft = (hazardLeft - dt).coerceAtLeast(0.0)
-        if (hazardLeft <= 0) hazard = null
+        hazards.forEach { it.left -= dt }
+        hazards.removeAll { it.left <= 0 }
         if (holds == 0) {
             when (phase) {
                 // A fountain offered holds the walk until the player answers; так же лист объекта карты и сбор узла (3.90.0).

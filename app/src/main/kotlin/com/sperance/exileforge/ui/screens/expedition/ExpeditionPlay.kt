@@ -15,7 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
@@ -131,7 +130,7 @@ import kotlin.math.roundToInt
         val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
         if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
         RunQuestWatch(quests, hud.questTally, shell::announce)
-        if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazard)
+        if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazards)
         when (hud.phase) {
             RunPhase.MAP -> if (ribbon != null) {
                 AutoRibbon(run, hud, ribbon) { model.runCommand(RunCommand.FinishAuto) }
@@ -238,9 +237,9 @@ import kotlin.math.roundToInt
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
                 RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
-                RoundButton(ForgeGlyphs.Scroll, ui("expedition.stats_hero"), onClick = onStats)
-                // Задания по ходу захода (3.95.0)
-                RoundButton(Icons.Outlined.Flag, ui("run.quests"), onClick = onQuests)
+                RoundButton(ForgeGlyphs.Tome, ui("expedition.stats_hero"), onClick = onStats)
+                // Задания по ходу захода (3.95.0) - свитком, как доска заданий в городе (3.95.3): флаг читался как «сдаться»
+                RoundButton(ForgeGlyphs.Scroll, ui("run.quests"), onClick = onQuests)
                 BugAction()
             }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -260,6 +259,7 @@ import kotlin.math.roundToInt
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
+                AfflictionChips(hud.afflictions)
                 // Простой у трещины (3.90.0); удар ловушки - над героем
                 OpeningLine(hud.opening)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)

@@ -15,6 +15,8 @@ import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.display.receivedText
+import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
@@ -353,7 +355,7 @@ class ExpeditionActions(
             // Отклонённое начало боя (бой, который сервер не начал) - не потеря игрока: о нём не говорят.
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
-            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
+            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
             if (!report.open && j.settled) done(j) else store.saveJournal(j.heroId, j.encode())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             // Журнал длиннее одной пачки идёт дальше сразу, часть за частью.

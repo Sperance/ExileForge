@@ -125,9 +125,25 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
  * Кнопка снизу «Продать N · +◎ сумма», удерживаемая: продажа не отменяется. [onCancel] - «Отмена» рядом (режим тайника);
  * без отмеченного - подсказка вместо суммы, кнопка погашена. [verb] - ключ подписи с числом: в итогах захода - «Продать N и вернуться».
  */
-@Composable fun SellDock(pick: SellPick, enabled: Boolean, modifier: Modifier = Modifier, verb: String = "sell.do_n", onCancel: (() -> Unit)? = null, onSell: (List<String>) -> Unit) {
+@Composable fun SellDock(
+    pick: SellPick,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    verb: String = "sell.do_n",
+    shards: (List<SellLot>) -> String? = { null },
+    onCancel: (() -> Unit)? = null,
+    onSell: (List<String>) -> Unit,
+) {
     val picked = pick.picked
-    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        // Что продажа даст осколками (3.95.3) - над кнопкой, до продажи
+        shards(picked)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally)) }
+        SellRow(pick, picked, enabled, verb, onCancel, onSell)
+    }
+}
+
+@Composable private fun SellRow(pick: SellPick, picked: List<SellLot>, enabled: Boolean, verb: String, onCancel: (() -> Unit)?, onSell: (List<String>) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         onCancel?.let { ForgeOutlinedButton(onClick = it) { Text(ui("common.cancel")) } }
         HoldButton(
             if (picked.isEmpty()) ui("sell.pick_hint") else ui(verb, picked.size),

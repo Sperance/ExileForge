@@ -49,13 +49,22 @@ import kotlinx.serialization.Serializable
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
-@Serializable data class StashState(val used: Int = 0, val capacity: Int = 0, val max: Int = 0, val price: Long = 0, val overflow: Int = 0, val overflowMax: Int = 0, val money: Long = 0)
+@Serializable data class StashState(
+    val used: Int = 0,
+    val capacity: Int = 0,
+    val max: Int = 0,
+    val price: Long = 0,
+    val overflow: Int = 0,
+    val overflowMax: Int = 0,
+    val money: Long = 0,
+    val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList(),
+)
 
 /** What a merchant paid for an item: the copy is gone by the time this arrives. */
-@Serializable data class SellOutcome(val itemId: String = "", val code: String = "", val gold: Long = 0, val money: Long = 0)
+@Serializable data class SellOutcome(val itemId: String = "", val code: String = "", val gold: Long = 0, val money: Long = 0, val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList())
 
 /** Продажа пачкой (3.90.3, сервер 1.81.8): проданные id, золото за них и золото героя после. */
-@Serializable data class SellBatch(val itemIds: List<String> = emptyList(), val gold: Long = 0, val money: Long = 0)
+@Serializable data class SellBatch(val itemIds: List<String> = emptyList(), val gold: Long = 0, val money: Long = 0, val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList())
 
 /**
  * What an orb, an essence or the bench answered: the copy as it now stands, the one a Mirror made, and

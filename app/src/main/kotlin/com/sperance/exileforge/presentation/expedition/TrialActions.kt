@@ -4,6 +4,8 @@ import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.display.receivedText
+import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.TrialStart
@@ -115,7 +117,7 @@ class TrialActions(
         if (mutableArena.value != null) return
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val report = api.trials.events(heroes.heroId, open.id, listOf(TrialEvent.End(open.applied)))
-            report?.received?.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
+            report?.received?.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
             notices.toast(ui("trials.abandoned"))
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
         }
@@ -154,7 +156,7 @@ class TrialActions(
             }
             mutableArena.value?.settle(report.applied, report.rewards.associate { it.n to it.reward.toReward() })
             if (report.rejected.isNotEmpty()) notices.toast(ui("expedition.rejected", report.rejected.size))
-            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(ui("stash.received", it.overflowed, it.sold, it.gold)) }
+            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
             if (heroes.state.value.readAt == 0L && heroes.onScreen(owner)) heroSync.readHero()
             if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
         } catch (e: CancellationException) {

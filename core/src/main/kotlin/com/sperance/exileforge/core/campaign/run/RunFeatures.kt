@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
+import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.rules.content.CoreStat
@@ -15,17 +16,52 @@ import com.sperance.exileforge.rules.run.FeatureUse
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
+import kotlin.math.roundToInt
 
 // ==================== Объекты карты (3.90.0, сервер 1.81.3) ====================
 
 /** Сбор узла [spot]: прошло [elapsed] секунд из его [MapFeature.Node.seconds]. */
 internal class Channel(val spot: NodeSpot, var elapsed: Double = 0.0)
 
-/** Горение или яд ловушки на герое: [perSecond] урона в секунду ещё [left] секунд; [chaos] (3.95.2) - мимо энергощита. */
-internal class Burn(val perSecond: Double, var left: Double, val chaos: Boolean = false)
+/**
+ * Эффект ловушки на герое: [ailment] её стихии [type], [perSecond] урона в секунду ещё [left] секунд; хаос (3.95.2) - мимо
+ * энергощита. Урон идёт каждый кадр, а на экран - тиками по [TICK_SECONDS] (3.95.3): сколько набралось со щита и здоровья.
+ */
+internal class Burn(val trap: String, val type: DamageType, val ailment: Ailment, val perSecond: Double, var left: Double) {
+    val chaos: Boolean get() = type == DamageType.CHAOS
+    var wound = Wound()
+    var clock = 0.0
+}
 
-/** Удар ловушки, как его пишет полоса карты: вид ловушки и сколько здоровья он снял. */
-data class HazardView(val trap: String, val damage: Int)
+/** Сколько урона карты принял щит и сколько - здоровье. */
+internal data class Wound(val shield: Double = 0.0, val life: Double = 0.0) {
+    operator fun plus(other: Wound) = Wound(shield + other.shield, life + other.life)
+    val total: Double get() = shield + life
+}
+
+/**
+ * Урон карты над героем (3.95.3): удар ловушки или тик её эффекта - стихией [type], [shield] со щита и [life] со здоровья. Удар
+ * ещё и называет эффект [ailment] на [seconds] секунд. [id] свой у каждого: два одинаковых подряд - два числа, а не одно.
+ */
+data class HazardView(
+    val id: Int,
+    val trap: String,
+    val type: DamageType,
+    val life: Int,
+    val shield: Int,
+    val ailment: Ailment? = null,
+    val seconds: Double = 0.0,
+    val tick: Boolean = false,
+)
+
+/** Эффект ловушки на герое (3.95.3) для чипа под полосой жизни: что это, сколько отнимает в секунду, сколько ещё длится. */
+data class AfflictionView(val ailment: Ailment, val type: DamageType, val perSecond: Int, val left: Double)
+
+/** Число урона карты на экране и сколько секунд ему ещё висеть. */
+internal class ShownHazard(val view: HazardView, var left: Double)
+
+/** Как часто тик эффекта ловушки встаёт числом над героем, секунд. */
+internal const val TICK_SECONDS = 1.0
 
 /** Правила ловушек контента. */
 private val ExpeditionRun.traps get() = index.campaign.features?.traps
@@ -155,32 +191,50 @@ internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
     val share = feature.power * (1 - ward / 100).coerceAtLeast(0.0)
     val raw = hero.maxLife * trap.hit / 100 * share
     val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
-    val chaos = type == DamageType.CHAOS
-    if (trap.dot > 0 && share > 0) burns += Burn(hero.maxLife * trap.dot / 100 * share * (1 - hero.resist(type)) * hero.damageTaken(type), trap.seconds, chaos)
-    hazard = HazardView(trap.code, (dealt * hero.damageTaken(type)).toInt())
-    hazardLeft = traps?.shown ?: 0.0
-    hurt(dealt * hero.damageTaken(type), chaos)
+    // Эффект ловушки (3.95.3 - назван и виден): горение у огня, яд у хаоса
+    val ailment = if (trap.dot > 0 && share > 0) Ailment.of(type) else null
+    ailment?.let { burns += Burn(trap.code, type, it, hero.maxLife * trap.dot / 100 * share * (1 - hero.resist(type)) * hero.damageTaken(type), trap.seconds) }
+    val wound = hurt(dealt * hero.damageTaken(type), type == DamageType.CHAOS)
+    showHazard(HazardView(nextHazard++, trap.code, type, wound.life.roundToInt(), wound.shield.roundToInt(), ailment, if (ailment != null) trap.seconds else 0.0))
 }
 
-/** Горение и яд ловушек на [dt] секунд дороги. */
+/** Горение и яд ловушек на [dt] секунд дороги: урон каждый кадр, на экран - тиком раз в [TICK_SECONDS]. */
 internal fun ExpeditionRun.burn(dt: Double) {
     if (burns.isEmpty()) return
-    burns.partition { it.chaos }.let { (chaos, plain) ->
-        hurt(plain.sumOf { it.perSecond * minOf(dt, it.left) }, chaos = false)
-        hurt(chaos.sumOf { it.perSecond * minOf(dt, it.left) }, chaos = true)
+    // Копия: гибель от тика очищает эффекты посреди обхода
+    burns.toList().forEach { burn ->
+        burn.wound += hurt(burn.perSecond * minOf(dt, burn.left), burn.chaos)
+        burn.clock += dt
+        burn.left -= dt
+        if (burn.clock >= TICK_SECONDS || burn.left <= 0) {
+            if (burn.wound.total >= .5) showHazard(HazardView(nextHazard++, burn.trap, burn.type, burn.wound.life.roundToInt(), burn.wound.shield.roundToInt(), tick = true))
+            burn.wound = Wound()
+            burn.clock = 0.0
+        }
     }
-    burns.forEach { it.left -= dt }
     burns.removeAll { it.left <= 0 }
 }
 
-/** Урон вне боя (3.95.2 - через щит, как в бою; [chaos] мимо него): ноль здоровья - гибель на карте. */
-private fun ExpeditionRun.hurt(damage: Double, chaos: Boolean) {
-    if (damage <= 0 || phase != RunPhase.MAP) return
+/** Число урона карты над героем на [TrapRules.shown] секунд. */
+private fun ExpeditionRun.showHazard(view: HazardView) {
+    hazards += ShownHazard(view, if (view.tick) TICK_SECONDS * 1.5 else traps?.shown ?: 0.0)
+}
+
+/** Эффекты ловушек на герое для чипа: по виду - сколько в секунду и сколько ещё. */
+internal fun ExpeditionRun.afflictions(): List<AfflictionView> = burns.groupBy { it.ailment to it.type }.map { (key, same) ->
+    AfflictionView(key.first, key.second, same.sumOf { it.perSecond }.roundToInt(), same.maxOf { it.left })
+}
+
+/** Урон вне боя (3.95.2 - через щит, как в бою; [chaos] мимо него): ноль здоровья - гибель на карте. Сколько принял щит и здоровье. */
+private fun ExpeditionRun.hurt(damage: Double, chaos: Boolean): Wound {
+    if (damage <= 0 || phase != RunPhase.MAP) return Wound()
     val absorbed = EnergyShield.absorbed(shield, damage, chaos = if (chaos) damage else 0.0)
     shield -= absorbed
     hitAt = seconds
-    life = (life - (damage - absorbed)).coerceAtLeast(0.0)
+    val taken = minOf(life, damage - absorbed)
+    life -= taken
     if (life <= 0) fallOnMap()
+    return Wound(absorbed, taken)
 }
 
 /** Гибель на карте вне боя (ловушкой): та же смерть, что в бою, - цена, событие гибели и итог карты. */

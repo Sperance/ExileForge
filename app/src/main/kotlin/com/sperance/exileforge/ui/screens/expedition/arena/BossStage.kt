@@ -17,8 +17,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.NoteKind
@@ -139,9 +138,10 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
                 val bar = maxHeight * .16f * c
                 Box(Modifier.fillMaxWidth().height(bar).align(Alignment.TopCenter).background(Color.Black))
                 Box(Modifier.fillMaxWidth().height(bar).align(Alignment.BottomCenter).background(Color.Black), contentAlignment = Alignment.Center) {
-                    Column(Modifier.alpha(c), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.alpha(c).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(ui("boss.intro"), color = Color(0xFF9A8B7A), fontSize = 10.sp, letterSpacing = 3.sp)
-                        Text(monsterTitle(foe.monster.code), color = FrameGold, fontFamily = FontFamily.Serif, fontWeight = FontWeight.SemiBold, fontSize = 22.sp)
+                        // Имя - авторазмером (4.2.0): длинное сжимается, а не рвётся
+                        FittedName(monsterTitle(foe.monster.code), FrameGold, 22.sp, 13.sp, Modifier.fillMaxWidth(), TextAlign.Center)
                     }
                 }
             }

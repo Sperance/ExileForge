@@ -19,6 +19,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.GenericShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicText
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -41,10 +43,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.NoteKind
@@ -169,8 +173,9 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
             .drawBehind { cornerFlourish(FrameGold) }.padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
+        // Строка 1 (4.2.0): имя на всю ширину - шрифт сжимается до минимума, дальше многоточие - и уровень
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(name, color = FrameGold, fontFamily = FontFamily.Serif, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+            FittedName(name, FrameGold, 15.sp, 10.sp, Modifier.weight(1f))
             foe.monster.level.takeIf { it > 0 }?.let { level ->
                 Text(
                     level.toString(),
@@ -179,27 +184,32 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                     modifier = Modifier.padding(start = 6.dp).border(1.dp, Color(0xFF5A4632), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
                 )
             }
-            Spacer(Modifier.weight(1f))
-            // Ярость (3.95.0): сколько уже прибавил урон и когда следующая ступень; без неё - когда первая
-            if (foe.alive) {
-                Text(
-                    if (boss.rage > 0) ui("boss.rage", number(boss.rage), ceil(boss.rageIn).toInt()) else ui("boss.rage_in", ceil(boss.rageIn).toInt()),
-                    color = if (boss.rage > 0) Ember else Muted,
-                    fontSize = 9.sp,
-                    modifier = Modifier.padding(end = 8.dp),
-                )
-            }
-            if (boss.marks.isNotEmpty()) {
-                Text(
-                    ui("boss.phase_number", roman(phaseNumber(boss))),
-                    color = FrameGoldBright,
-                    fontSize = 9.sp,
-                    letterSpacing = 2.5.sp,
-                    modifier = if (lore != null && boss.phase != null) Modifier.clickable { lore(Lore.Phase(boss.phase!!, name)) } else Modifier,
-                )
-            }
         }
         LifeBar(foe, boss, time)
+        // Строка 2 под полосой: фаза и ярость табулярными цифрами - ширина не прыгает, пока тикают секунды
+        if (boss.marks.isNotEmpty() || foe.alive) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (boss.marks.isNotEmpty()) {
+                    Text(
+                        ui("boss.phase_number", roman(phaseNumber(boss))),
+                        color = FrameGoldBright,
+                        fontSize = 9.sp,
+                        letterSpacing = 2.5.sp,
+                        modifier = if (lore != null && boss.phase != null) Modifier.clickable { lore(Lore.Phase(boss.phase!!, name)) } else Modifier,
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                // Ярость (3.95.0): сколько уже прибавил урон и когда следующая ступень; без неё - когда первая
+                if (foe.alive) {
+                    Text(
+                        if (boss.rage > 0) ui("boss.rage", number(boss.rage), ceil(boss.rageIn).toInt()) else ui("boss.rage_in", ceil(boss.rageIn).toInt()),
+                        color = if (boss.rage > 0) Ember else Muted,
+                        fontSize = 9.sp,
+                        style = TabularDigits,
+                    )
+                }
+            }
+        }
         if (boss.rift != null && foe.alive) RiftStrip(boss, time)
         // Сердце Скверны (4.0.0): пуповины Матери гаснут по фазам
         if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, time)
@@ -229,6 +239,26 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
         }
     }
 }
+
+/** Табулярные цифры: каждая цифра одной ширины, счётчик не дёргает строку. */
+private val TabularDigits = TextStyle(fontFeatureSettings = "tnum")
+
+/**
+ * Имя босса в одну строку (4.2.0): серифы цвета [color] от [max] вниз до [min] - сколько влезет, дальше многоточие. Общее для
+ * рамки боя и заставки.
+ */
+@Composable internal fun FittedName(name: String, color: Color, max: TextUnit, min: TextUnit, modifier: Modifier = Modifier, align: TextAlign = TextAlign.Start) {
+    BasicText(
+        name,
+        modifier,
+        style = TextStyle(color = color, fontFamily = FontFamily.Serif, fontWeight = FontWeight.SemiBold, fontSize = max, textAlign = align),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        autoSize = TextAutoSize.StepBased(minFontSize = min, maxFontSize = max, stepSize = NAME_STEP),
+    )
+}
+
+private val NAME_STEP = 0.5.sp
 
 /** Кованые уголки рамки: золотая скоба в каждом углу. */
 private fun DrawScope.cornerFlourish(tint: Color) {

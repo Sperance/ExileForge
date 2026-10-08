@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.rules.content.MonsterRarity
+import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.icons.drawToken
 import kotlin.math.abs
 import kotlin.math.ceil
@@ -43,6 +44,7 @@ import kotlin.math.sin
  */
 @Composable fun ExpeditionScene(run: ExpeditionRun, clock: FloatState, classCode: String?, modifier: Modifier = Modifier) {
     val painter = remember { ScenePainter() }
+    painter.motion = LocalMotion.current
     Canvas(modifier) { painter.draw(this, run, clock.floatValue, classCode) }
 }
 

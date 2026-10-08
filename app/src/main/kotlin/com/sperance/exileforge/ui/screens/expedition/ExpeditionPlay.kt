@@ -131,6 +131,7 @@ import kotlin.math.roundToInt
         val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
         if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
         RunQuestWatch(quests, hud.questTally, shell::announce)
+        BlightWatch(hud.blight, shell::announce)
         if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazards)
         when (hud.phase) {
             RunPhase.MAP -> if (ribbon != null) {
@@ -263,6 +264,8 @@ import kotlin.math.roundToInt
                 AfflictionChips(hud.afflictions)
                 // Простой у трещины (3.90.0); удар ловушки - над героем
                 OpeningLine(hud.opening)
+                // Очаг Скверны (4.0.0): точка, монстры вокруг неё, сундук
+                BlightLine(hud.blight)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
             }
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1,

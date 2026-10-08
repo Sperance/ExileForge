@@ -201,6 +201,8 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
         }
         LifeBar(foe, boss, time)
         if (boss.rift != null && foe.alive) RiftStrip(boss, time)
+        // Сердце Скверны (4.0.0): пуповины Матери гаснут по фазам
+        if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, time)
         if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
         foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
         if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(foe.ailments, foe.held, foe.effects)
@@ -626,7 +628,8 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
                 .clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
         ) {
             Canvas(Modifier.fillMaxSize()) {
-                Portraits.monster(this, foe.monster.code.value, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index))
+                // Матерь Скверны рвёт пуповины по фазам - портрет показывает порванные
+                Portraits.monster(this, foe.monster.code.value, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
             }
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }

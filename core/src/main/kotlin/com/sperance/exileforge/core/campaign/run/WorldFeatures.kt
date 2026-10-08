@@ -6,8 +6,10 @@ import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.rules.content.TrapKind
 import com.sperance.exileforge.rules.content.TrapRules
 import com.sperance.exileforge.rules.run.FeatureKind
+import com.sperance.exileforge.rules.run.FeatureState
 import com.sperance.exileforge.rules.run.FeatureUse
 import com.sperance.exileforge.rules.run.MapFeature
+import com.sperance.exileforge.rules.run.Run
 import kotlin.math.hypot
 import kotlin.random.Random
 
@@ -23,6 +25,9 @@ sealed interface FeatureAction {
 
     /** Взведённая снова ловушка ударила (3.95.2): только урон - журнал её не пишет, награда была за первый раз. */
     data class Spring(override val spot: TrapSpot) : FeatureAction
+
+    /** Объект поднял своих монстров - группу [group] (4.0.0, точка очага Скверны): журнал молчит, жетоны встают на карте. */
+    data class Rouse(override val spot: FeatureSpot, val group: Int) : FeatureAction
 }
 
 /**
@@ -41,6 +46,9 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
 
     /** Клетки, где объект стоит и должен быть виден (3.95.3): ловушка лежит вровень с полом, её скала не закрывает. */
     open val landmarks: List<Cell> get() = listOf(cell)
+
+    /** Клетка, где объект ждёт героя сейчас (4.0.0): её отмечает миникарта; у очага Скверны - активная точка. */
+    open val focus: Cell get() = cell
 
     /** Доля простоя, что открывает объект (трещина тайной комнаты), 0..1; у прочих - ноль. */
     open val progress: Double get() = 0.0
@@ -69,6 +77,18 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     internal open fun refused(run: ExpeditionRun, choice: Int) {
         undo(choice)
     }
+
+    /** Объект поднимает своих монстров группы [group] (4.0.0); у объектов без монстров - ничего. */
+    internal open fun rouse(run: ExpeditionRun, group: Int) = Unit
+
+    /**
+     * Вход в заход снова (4.0.0): объект поднимает монстров, что уже стояли, по своему журналу и павшим жетонам [killed] - до
+     * того, как мир уложит павших.
+     */
+    internal open fun resume(run: ExpeditionRun, killed: Collection<Int>) = Unit
+
+    /** Что объект видит, решая о выборе (4.0.0): свои выборы и павшие жетоны карты [world]. */
+    fun state(world: ExpeditionWorld): FeatureState = FeatureState(taken.toList(), world.killed(Run.PACK_SLOTS))
 
     internal fun near(world: ExpeditionWorld, at: Cell, reach: Double) = hypot(at.x + 0.5 - world.heroX, at.y + 0.5 - world.heroY) < reach
 }
@@ -200,7 +220,7 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
 }
 
 /**
- * Ставит объекты карты, один раз (3.90.0): где - по семени, вдали от входа, выхода, монстров и прочих объектов; комнаты
+ * Ставит объекты карты, один раз (3.90.0): где - по семени (точки очага Скверны - цепью, 4.0.0), вдали от входа, выхода, монстров и прочих объектов; комнаты
  * вырезаются в скале за стеной, касаясь пола только входом, так что карта остаётся связной, а комната закрыта до открытия.
  * [log] - журнал объектов, с которым герой вернулся в заход: использованное стоит использованным, открытые комнаты открыты.
  */
@@ -228,6 +248,8 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
             is MapFeature.Merchant -> claim(roomy, rules.chestSpacing)?.let { MerchantSpot(feature, it) }
 
             is MapFeature.Node -> claim(roomy, rules.chestSpacing)?.let { NodeSpot(feature, it) }
+
+            is MapFeature.Blight -> claim(roomy, rules.chestSpacing)?.let { first -> BlightSpot(feature, blightCells(feature.points, first, roomy, taken, placing)) }
         } ?: return@forEach
         log.filter { it.id == feature.id }.forEach { spot.take(it.choice) }
         this.features += spot

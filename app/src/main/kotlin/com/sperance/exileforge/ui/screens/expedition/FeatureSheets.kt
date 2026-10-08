@@ -54,14 +54,14 @@ import kotlin.math.ceil
 
 /**
  * Лист объекта карты (3.90.0, сервер 1.81.3), по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
- * открывают - они срабатывают сами.
+ * открывают - они срабатывают сами (очаг Скверны - касанием точки и сундука).
  */
 @Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, onCommand: (RunCommand) -> Unit) {
     when (val feature = view.feature) {
         is MapFeature.Altar -> AltarSheet(game, feature) { onCommand(RunCommand.Choose(it)) }
         is MapFeature.Merchant -> MerchantSheet(game, feature, view.taken, onCommand)
         is MapFeature.Node -> NodeSheet(game, feature, view.gathering, onCommand)
-        is MapFeature.Trap, is MapFeature.Room -> Unit
+        is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
     }
 }
 

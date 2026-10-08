@@ -72,6 +72,7 @@ internal fun ExpeditionRun.feature(action: FeatureAction) {
         is FeatureAction.Offer -> offer = action.spot
         is FeatureAction.Trigger -> action.spot.resolve(this, action.choice)
         is FeatureAction.Spring -> spring(action.spot.feature as MapFeature.Trap)
+        is FeatureAction.Rouse -> action.spot.rouse(this, action.group)
     }
 }
 
@@ -90,7 +91,7 @@ internal fun ExpeditionRun.showLoot(event: RunEvent?) {
 
 /** Игрок выбрал на листе объекта [choice]: пару алтаря или вещь торговца. Исчерпанный объект закрывает лист. */
 internal fun ExpeditionRun.choose(choice: Int) {
-    val spot = offer?.takeIf { phase == RunPhase.MAP && it.feature.accepts(choice, it.taken) } ?: return
+    val spot = offer?.takeIf { phase == RunPhase.MAP && it.feature.accepts(choice, it.state(world)) } ?: return
     spot.resolve(this, choice)
     if (spot.spent || spot is AltarSpot) offer = null
 }

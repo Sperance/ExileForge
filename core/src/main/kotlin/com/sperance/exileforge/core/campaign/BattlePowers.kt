@@ -269,6 +269,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerCheckKind.FOES_AT_LEAST -> battle.enemies() >= check.value
             PowerCheckKind.FOES_AT_MOST -> battle.enemies() <= check.value
             PowerCheckKind.TARGET_RARE -> target != null && battle.foes[target.index].rarity >= MonsterRarity.RARE
+            PowerCheckKind.TARGET_BLIGHTED -> target != null && battle.foes[target.index].tainted
             PowerCheckKind.TARGET_AILED -> target != null && (target.ailments.isNotEmpty() || moment.ailments.isNotEmpty())
             PowerCheckKind.TARGET_AILMENT -> target != null && (target.ailments + moment.ailments).any { it.ailment.word == check.word }
             PowerCheckKind.TARGET_CURSED -> target?.cursed == true

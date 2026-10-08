@@ -1,5 +1,5 @@
 hero=WITCH zone=C1_BRINE_CAVES level=30 seed=2024 skill=FIREBALL
-phase=DEAD life=0.0000 seconds=78.2000 kills=15 bosses=0 deaths=1 events=39
+phase=DEAD life=0.0000 seconds=80.0000 kills=15 bosses=0 deaths=1 events=39
 0 ENGAGE 0 0 0 0 false false
 1 KILL 0 0 0 0 false false
 2 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=404 dealt={FIRE=404, PHYSICAL=3}
@@ -20,22 +20,22 @@ phase=DEAD life=0.0000 seconds=78.2000 kills=15 bosses=0 deaths=1 events=39
 17 KILL 5 1 0 0 false false
 18 KILL 5 0 0 0 false false
 19 FIGHT 0 0 0 0 false false fight=8/1/0/0/0/0 taken=28 healed=0 max=556 dealt={FIRE=556, PHYSICAL=28}
-20 ENGAGE 6 0 0 0 false false
-21 KILL 6 0 0 0 false false
-22 KILL 6 1 0 0 false false
-23 FIGHT 0 0 0 0 false false fight=9/0/0/0/0/0 taken=47 healed=0 max=383 dealt={FIRE=383, PHYSICAL=28}
-24 ENGAGE 7 0 0 0 false false
-25 KILL 7 0 0 0 false false
-26 FIGHT 0 0 0 0 false false fight=5/1/0/0/0/0 taken=17 healed=0 max=402 dealt={FIRE=402, PHYSICAL=9}
-27 CHEST 0 0 0 0 false false
+20 CHEST 0 0 0 0 false false
+21 ENGAGE 6 0 0 0 false false
+22 KILL 6 0 0 0 false false
+23 KILL 6 1 0 0 false false
+24 FIGHT 0 0 0 0 false false fight=8/0/0/0/0/0 taken=28 healed=0 max=326 dealt={FIRE=326, PHYSICAL=28}
+25 ENGAGE 7 0 0 0 false false
+26 KILL 7 0 0 0 false false
+27 FIGHT 0 0 0 0 false false fight=5/1/0/0/0/0 taken=17 healed=0 max=402 dealt={FIRE=402, PHYSICAL=9}
 28 ENGAGE 8 0 0 0 false false
 29 KILL 8 0 0 0 false false
-30 FIGHT 0 0 0 0 false false fight=9/0/0/0/0/0 taken=45 healed=0 max=363 dealt={FIRE=363, PHYSICAL=14}
+30 FIGHT 0 0 0 0 false false fight=10/0/0/0/0/0 taken=45 healed=0 max=408 dealt={FIRE=408, PHYSICAL=16}
 31 ENGAGE 9 0 0 0 false false
 32 KILL 9 0 0 0 false false
 33 FIGHT 0 0 0 0 false false fight=10/0/0/0/0/0 taken=61 healed=0 max=417 dealt={FIRE=417, PHYSICAL=13}
 34 ENGAGE 10 0 0 0 false false
 35 KILL 10 0 0 0 false false
 36 KILL 10 1 0 0 false false
-37 FIGHT 0 0 0 0 false false fight=20/2/0/0/0/0 taken=369 healed=0 max=339 dealt={FIRE=643, PHYSICAL=54}
+37 FIGHT 0 0 0 0 false false fight=22/2/0/0/0/0 taken=393 healed=0 max=339 dealt={FIRE=643, PHYSICAL=62}
 38 FALL 0 0 0 0 false false

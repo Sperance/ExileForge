@@ -158,7 +158,8 @@ private fun Battle.bossHud(): BossHud? {
         }
     }
     val rage = rules.bossEnrage
-    return riftHud(BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, rage.damage * enrage, (rage.every - time % rage.every).coerceAtLeast(0.0)))
+    val hud = BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, rage.damage * enrage, (rage.every - time % rage.every).coerceAtLeast(0.0), tainted = foe.tainted)
+    return riftHud(hud)
 }
 
 /** Полоса стража Разлома (3.96.0): печати, Законы, украденное - поверх полосы босса. */

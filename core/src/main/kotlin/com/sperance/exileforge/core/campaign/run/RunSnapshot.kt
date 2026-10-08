@@ -84,6 +84,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         hazards = hazards.map { it.view }, afflictions = afflictions(),
         opening = world.features.maxOfOrNull { it.progress }?.takeIf { it > 0 }?.toFloat(),
         challenge = challengeView(),
+        blight = world.features.firstNotNullOfOrNull { it as? BlightSpot }?.view(world),
     )
 }
 

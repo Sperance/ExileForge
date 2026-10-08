@@ -87,9 +87,20 @@ class ExpeditionWorld(
      */
     fun summon(token: Int, pack: List<RolledMonster>, near: Cell) {
         if (pack.isEmpty() || roster.any { it.id == token }) return
-        val cell = distances(near, SUMMON_STEPS).entries.filter { it.value >= 2 }.maxByOrNull { it.value }?.key ?: near
+        summonAt(token, pack, distances(near, SUMMON_STEPS).entries.filter { it.value >= 2 }.maxByOrNull { it.value }?.key ?: near)
+    }
+
+    /** Пак жетона [token] встаёт ровно на клетке [cell] (4.0.0, кольцо очага Скверны). Один жетон встаёт один раз. */
+    fun summonAt(token: Int, pack: List<RolledMonster>, cell: Cell) {
+        if (pack.isEmpty() || roster.any { it.id == token }) return
         roster += MonsterAgent(token, pack, cell.x + 0.5, cell.y + 0.5)
     }
+
+    /** Жетон [token] стоит на карте и пал - весь его пак (4.0.0). */
+    fun fell(token: Int): Boolean = roster.firstOrNull { it.id == token }?.let { it.standing.isEmpty() } == true
+
+    /** Павшие члены паков карты ключами `жетон × [slots] + член` (4.0.0): что объект видит, решая о выборе. */
+    fun killed(slots: Int): Set<Int> = roster.flatMapTo(HashSet()) { agent -> agent.fallen.map { agent.id * slots + it } }
 
     /** The exit does not open while its guardian lives. */
     val sealed: Boolean get() = boss?.alive == true

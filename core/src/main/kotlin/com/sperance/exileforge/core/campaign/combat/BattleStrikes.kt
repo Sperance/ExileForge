@@ -17,6 +17,9 @@ import kotlin.math.min
 
 // ==================== The strike (2.78.0) ====================
 
+/** Доля удара [attacker] по [target], что проходит (4.0.0): осквернённый монстр бьёт героя слабее на его снижение от Скверны. */
+internal fun Battle.blightTaken(attacker: Fighter, target: Fighter): Double = if (target === heroFighter && attacker.side == Side.MONSTER && foes[attacker.index].tainted) 1 - target.body.blightReduction else 1.0
+
 /**
  * One blow of [me] at [target] — a weapon's swing, a skill's hit, a spell: evaded unless a spell,
  * blocked, or landed and maybe critical; then armour, resistance and shock.
@@ -65,7 +68,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
     val facing = if (me === heroFighter) max(0.0, model.against(states(target))) else 0.0
     val versus = versus(blow, facing)
-    val eased = eased(target, blow) * target.body.hitTaken
+    val eased = eased(target, blow) * target.body.hitTaken * blightTaken(me, target)
     // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
     // "damage taken" of the target scales what got through; server 0.69.0: so does a curse on it.
     val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body[CoreStat.DAMAGE_VS_CURSED.code]) / 100 else 1.0)
@@ -147,7 +150,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         }
         if (target.weakness() != 1.0) add(FactorTrace(FactorKey.SHOCK, target.weakness(), listOf(CoreStat.SHOCK_EFFECT.code), listOf(CoreStat.SHOCK_TAKEN.code)))
         if (defended > 0 && takenSum != defended) add(FactorTrace(FactorKey.TAKEN, takenSum / defended, target = listOf(CoreStat.DAMAGE_TAKEN.code, CoreStat.PHYSICAL_TAKEN.code, CoreStat.ELEMENTAL_TAKEN.code, CoreStat.CHAOS_TAKEN.code)))
-        if (eased != 1.0) add(FactorTrace(FactorKey.EASED, eased, target = listOf(CoreStat.SPELL_SUPPRESSION.code, CoreStat.DEFLECTION.code, CoreStat.HIT_TAKEN.code)))
+        if (eased != 1.0) add(FactorTrace(FactorKey.EASED, eased, target = listOf(CoreStat.SPELL_SUPPRESSION.code, CoreStat.DEFLECTION.code, CoreStat.HIT_TAKEN.code, CoreStat.BLIGHT_REDUCTION.code)))
         if (seals != 1.0) add(FactorTrace(FactorKey.SEALS, seals))
         val law = heavy * if (unruled > 0) taken.values.sum() / unruled else 1.0
         if (law != 1.0) add(FactorTrace(FactorKey.LAW, law))

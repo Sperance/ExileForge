@@ -63,6 +63,8 @@ data class Foe(
     val totemEvery: Double = 0.0,
     val totemFirst: Double = 0.0,
     val slots: Int = 0,
+    /** Осквернён (4.0.0): несёт печать Скверны - цель условия `VS_BLIGHTED`, а герой со снижением от Скверны получает от него меньше. */
+    val tainted: Boolean = false,
 ) {
     val summoned: Boolean get() = summonOf != null
 }

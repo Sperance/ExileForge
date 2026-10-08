@@ -250,6 +250,7 @@ internal fun Battle.states(target: Fighter): Set<Condition> {
     return buildSet {
         if (rarity >= MonsterRarity.RARE) add(Condition.VS_RARE)
         if (rarity == MonsterRarity.UNIQUE) add(Condition.VS_UNIQUE)
+        if (foes[target.index].tainted) add(Condition.VS_BLIGHTED)
         if (target.life >= target.body.maxLife - 0.5) add(Condition.VS_FULL_LIFE)
     }
 }

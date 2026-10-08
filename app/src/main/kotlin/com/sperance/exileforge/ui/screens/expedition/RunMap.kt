@@ -55,6 +55,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
+import com.sperance.exileforge.ui.screens.expedition.scene.BlightTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.screens.expedition.scene.liquidTint
@@ -147,7 +148,7 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
     world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
     world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, PortalTint, dot * 1.2f) }
     // Объекты карты (3.90.0): не исчерпанные и видимые; у комнаты - вход и рычаг
-    world.features.filter { !it.spent && it.shown(world) }.forEach { spot -> featureMark(spot.kind)?.let { mark(spot.cell.x + .5, spot.cell.y + .5, it.tint) } }
+    world.features.filter { !it.spent && it.shown(world) }.forEach { spot -> featureMark(spot.kind)?.let { mark(spot.focus.x + .5, spot.focus.y + .5, it.tint) } }
     world.features.filterIsInstance<RoomSpot>().mapNotNull { spot -> spot.lever?.takeIf { !spot.opened && world.explored(it.x, it.y) } }.forEach { mark(it.x + .5, it.y + .5, RoomMark.tint) }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
     if (monsters) {
@@ -235,6 +236,12 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
     if (world.portal?.let { world.explored(it.x, it.y) } == true) add(PortalTint to ui("map.legend_portal"))
     world.features.filter { !it.spent && it.shown(world) }.mapNotNull { featureMark(it.kind) }.distinct().forEach { add(it.tint to ui(it.legend)) }
     if (world.features.any { it is RoomSpot && it.lever?.let { lever -> world.explored(lever.x, lever.y) } == true && !it.opened }) add(RoomMark.tint to ui("map.legend_lever"))
+    // Скверна (4.0.0): сундук зачищенной точки и проснувшаяся Матерь
+    world.features.filterIsInstance<BlightSpot>().filter { it.shown(world) }.forEach { spot ->
+        val point = spot.active ?: return@forEach
+        if (spot.cleared(world, point)) add(BlightTint.bile to ui("map.legend_blight_chest"))
+        if (point == spot.blight.motherChoice && !spot.cleared(world, point)) add(BlightTint.hot to ui("map.legend_mother"))
+    }
     val exit = world.map.exit
     if (world.explored(exit.x, exit.y)) add(if (world.sealed) LifeRed to ui("map.legend_sealed") else Vital to ui("map.legend_exit"))
     world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.map { it.monster.rarity }.distinct().sorted()
@@ -256,6 +263,7 @@ internal fun featureMark(kind: FeatureKind): FeatureMark? = when (kind) {
     FeatureKind.TRAP -> null
     FeatureKind.SECRET, FeatureKind.VAULT -> RoomMark
     FeatureKind.NODE -> FeatureMark(Color(0xFF4FA048), "map.legend_node")
+    FeatureKind.BLIGHT -> FeatureMark(BlightTint.vein, "map.legend_blight")
 }
 
 /** Пропасть на миникарте (3.91.0): темнее пола, но не скала - сквозь неё видно. */

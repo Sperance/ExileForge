@@ -2,6 +2,8 @@ package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.graphics.Color
 import com.sperance.exileforge.core.campaign.run.AltarSpot
+import com.sperance.exileforge.core.campaign.run.BlightSpot
+import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import com.sperance.exileforge.core.campaign.run.FeatureSpot
 import com.sperance.exileforge.core.campaign.run.MerchantSpot
 import com.sperance.exileforge.core.campaign.run.NodeSpot
@@ -17,7 +19,7 @@ import kotlin.math.sin
  * Объект карты в стиле сцены: каждый вид - свой знак. Глубина сортировки - его клетка; комната рисует трещину или дверь на
  * стене, рычаг и сундук внутри - каждый своей клеткой ([featureParts]).
  */
-internal fun ScenePainter.featureParts(spot: FeatureSpot, glow: (Int, Int) -> Float, explored: (Int, Int) -> Boolean): List<Pair<Double, () -> Unit>> = when (spot) {
+internal fun ScenePainter.featureParts(spot: FeatureSpot, world: ExpeditionWorld, glow: (Int, Int) -> Float, explored: (Int, Int) -> Boolean): List<Pair<Double, () -> Unit>> = when (spot) {
     is AltarSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawAltar(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y)) })
 
     is MerchantSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawMerchant(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y)) })
@@ -32,6 +34,8 @@ internal fun ScenePainter.featureParts(spot: FeatureSpot, glow: (Int, Int) -> Fl
         spot.lever?.takeIf { explored(it.x, it.y) }?.let { lever -> add(depth(lever.x, lever.y) to { drawLever(lever.x + .5, lever.y + .5, spot.opened, glow(lever.x, lever.y)) }) }
         spot.chest.takeIf { spot.opened && explored(it.x, it.y) }?.let { chest -> add(depth(chest.x, chest.y) to { drawChest(chest.x + .5, chest.y + .5, spot.looted, glow(chest.x, chest.y)) }) }
     }
+
+    is BlightSpot -> blightParts(spot, world, glow)
 }
 
 private fun depth(x: Int, y: Int) = x + y + 1.0

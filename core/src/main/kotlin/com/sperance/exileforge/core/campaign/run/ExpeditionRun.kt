@@ -526,6 +526,8 @@ class ExpeditionRun(
                 it.bargain(if (vaal) inherited else run.features.bonuses(features))
                 // Стражи сокровищ (3.90.0, строка карты) - у комнат и узлов, тоже до павших
                 if (!vaal) it.guard()
+                // Монстры объектов, что уже стояли (4.0.0, кольцо очага Скверны, Матерь), - тоже до павших
+                if (!vaal) world.features.forEach { spot -> spot.resume(it, killed) }
                 world.restore(killed, Run.PACK_SLOTS)
                 if (bossDown) it.guardianBack = campaign.bosses[location.code.value]
             }

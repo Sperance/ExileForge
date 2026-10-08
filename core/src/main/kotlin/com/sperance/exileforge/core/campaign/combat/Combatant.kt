@@ -331,6 +331,9 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** Damage taken from hits, not over time: Fortify's work. */
     val hitTaken = max(0.1, 1 + stat(CoreStat.HIT_TAKEN.code) / 100)
+
+    /** Доля удара осквернённого монстра, что снимает Скверна (4.0.0): «% меньше урона от монстров Скверны», не больше 100%. */
+    val blightReduction = percent(CoreStat.BLIGHT_REDUCTION.code)
     val suppression = percent(CoreStat.SPELL_SUPPRESSION.code, rules.defence.suppressionCap)
     val deflection = percent(CoreStat.DEFLECTION.code, rules.defence.deflectionCap)
 

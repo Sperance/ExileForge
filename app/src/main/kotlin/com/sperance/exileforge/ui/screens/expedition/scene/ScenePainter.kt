@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
+import com.sperance.exileforge.core.campaign.run.BlightSpot
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.sealed
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -49,6 +50,12 @@ internal class ScenePainter {
 
     /** Босс этого захода запечатан (3.93.0). */
     private var sealed = false
+
+    /** Анимации-декор включены (`LocalMotion`): без них декор стоит в покое ([decor]). */
+    internal var motion = true
+
+    /** Часы декора: при выключенных анимациях стоят на нуле. */
+    internal val decor: Float get() = if (motion) time else 0f
 
     fun draw(scope: DrawScope, run: ExpeditionRun, time: Float, classCode: String?) {
         this.time = time
@@ -162,15 +169,19 @@ internal class ScenePainter {
                 standing += (spot.cell.x + spot.cell.y + .5) to { drawCrack(spot.cell.x + .5, spot.cell.y + .5, spot.opened, spot.id, glow(spot.cell.x, spot.cell.y)) }
             }
             // Объекты карты (3.90.0): каждый своим знаком, когда виден; ловушка - только замеченная светом.
-            world.features.filter { it.shown(world) }.forEach { spot -> standing += featureParts(spot, { x, y -> glow(x, y) }, { x, y -> world.explored(x, y) }) }
+            world.features.filter { it.shown(world) }.forEach { spot -> standing += featureParts(spot, world, { x, y -> glow(x, y) }, { x, y -> world.explored(x, y) }) }
+            val blight = world.features.firstNotNullOfOrNull { it as? BlightSpot }
             // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
             // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
             // Since 2.32.0 a monster is drawn only where the hero's light reaches.
             world.agents.filter { it.alive && world.lit(floor(it.x).toInt(), floor(it.y).toInt()) }.forEach { agent ->
+                // Жетон кольца очага Скверны «выпрыгивает» по очереди (4.0.0); ещё не вставший не виден
+                val pop = blight?.age(agent.id)?.let { (age, n) -> blightPop(age, n) } ?: 1f
+                if (pop <= 0f) return@forEach
                 standing += (agent.x + agent.y) to {
                     val monster = agent.monster
                     // A rarer monster is a bigger one: the tier is read before the ring is noticed.
-                    val size = unit * when (monster.rarity) {
+                    val size = pop * unit * when (monster.rarity) {
                         MonsterRarity.NORMAL -> .7f
                         MonsterRarity.MAGIC -> .8f
                         MonsterRarity.RARE -> .92f

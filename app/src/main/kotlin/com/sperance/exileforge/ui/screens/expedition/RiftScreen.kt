@@ -639,7 +639,7 @@ private const val SPARKS = 14
             fight.foes.firstOrNull { it.index == boss.index }?.let { foe ->
                 BossDossier(
                     game, foe.monster, hud.level, foe.maxLife.toDouble(), boss.phase, boss.marks, loc("rift.node.${hud.kind.name}.name"),
-                    fight.heroBody, arena.combat, odds = { null }, record = { model.bossRecord(foe.monster.code.value) },
+                    fight.heroBody, arena.combat, plan = null, record = { model.bossRecord(foe.monster.code.value) },
                 ) {
                     seen = true
                     model.riftCommand(RunCommand.Begin)

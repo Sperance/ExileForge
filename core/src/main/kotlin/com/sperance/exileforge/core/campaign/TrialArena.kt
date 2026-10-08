@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.campaign.combat.surrender
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FightHud
+import com.sperance.exileforge.core.campaign.run.OddsPlan
 import com.sperance.exileforge.core.campaign.run.PackHit
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
@@ -21,6 +22,7 @@ import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapCode
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RushPlan
@@ -49,7 +51,7 @@ enum class TrialPhase { FIGHT, DEAD, DONE }
 
 /**
  * The trial as its screen prints it: the fight for the arena's cards, which boss of how many or which floor, the level
- * the foes stand at, the seconds since the entry and the rush's limit for its bonus, the floor's lines, and what the
+ * the foes stand at, the seconds since the first fight began (4.2.0) and the rush's limit for its bonus, the floor's lines, and what the
  * server's answers brought — the tower's hoards as they come, the rush's chest at the end.
  */
 data class TrialHud(
@@ -119,6 +121,12 @@ class TrialArena(
 
     /** When the trial ended, by [clock]: the clock stops there, and the ending prints a time that no longer runs. */
     private var endedAt: Long? = null
+
+    /**
+     * Когда начался первый бой (4.2.0), по [clock]: часы испытания и лимит раша идут с него, а не с входа. Вход в начатое
+     * испытание - с уже павшими боссами или пройденными этажами - считает с входа на сервере.
+     */
+    private var begunAt: Long? = trial.startedAt.takeIf { trial.applied > 0 }
 
     /** The rush's boss under way (from 0), or the tower's floor. */
     private var step = if (trial.kind == TrialKind.RUSH) trial.killed else trial.floor
@@ -193,6 +201,7 @@ class TrialArena(
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
 
             RunCommand.Begin -> if (fight != null && phase == TrialPhase.FIGHT) {
+                if (begunAt == null) begunAt = clock()
                 started = true
                 paused = false
             }
@@ -283,29 +292,13 @@ class TrialArena(
     }
 
     /**
-     * Прогон боя с боссом этажа (3.92.0): [fights] боёв героем, каков он сейчас, против стаи этапа, каждый на своих костях, не
-     * дольше [cap] секунд; null - босса в стае нет. Тяжёлый: звать вне главного потока.
+     * Снимок боя с боссом шага для прогона (3.92.0; 4.2.0 - снимок): герой, каков он сейчас, против стаи боя; null - босса в стае
+     * нет. Снимать в потоке арены; прогон [OddsPlan.run] - вне главного потока.
      */
-    fun bossOdds(fights: Int = 40, cap: Double = 180.0): com.sperance.exileforge.core.campaign.run.BossOdds? {
-        val pack = monsters
-        if (pack.none { it.rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE }) return null
+    fun oddsPlan(): OddsPlan? {
+        if (monsters.none { it.rarity == MonsterRarity.UNIQUE }) return null
         val phases = PhaseFoes(index, rules)
-        val foes = pack.map { phases.foe(it, level) }
-        val ally = allies.of(hero.stats, pet)
-        val life = pools.life
-        val start = pools
-        var wins = 0
-        var seconds = 0.0
-        repeat(fights) { i ->
-            val battle = Battle(
-                hero, phases.withRetinue(foes, Dice(ODDS_SEED + i)), rules, index.rules.fight, life, Random(ODDS_SEED + i), gear.stance,
-                kit = kit, model = build, pools = start, percent = gear.percent, ally = ally,
-            )
-            while (battle.outcome == null && battle.time < cap) battle.advance(1.0)
-            if (battle.outcome == Outcome.WIN) wins++
-            seconds += battle.time
-        }
-        return com.sperance.exileforge.core.campaign.run.BossOdds(wins, fights, seconds / fights)
+        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero.stats, pet), phases)
     }
 
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */
@@ -411,7 +404,7 @@ class TrialArena(
         return TrialHud(
             kind = trial.kind, phase = phase, run = runHud, fight = fightHud,
             step = if (trial.kind == TrialKind.RUSH) (step + 1).coerceAtMost(plan?.size ?: 0) else step, steps = plan?.size ?: 0,
-            level = level, elapsed = ((endedAt ?: clock()) - trial.startedAt) / 1000.0, limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
+            level = level, elapsed = begunAt?.let { ((endedAt ?: clock()) - it) / 1000.0 } ?: 0.0, limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
             mods = floor?.mods.orEmpty(), cleared = cleared, gained = gained, awaiting = (next - answered).coerceAtLeast(0), lastHoard = lastHoard,
             summary = stats.summary(kills),
             choice = choice,
@@ -424,6 +417,5 @@ class TrialArena(
 
         /** Поток свиты фаз боссов (3.92.0). */
         private val RETINUE_STREAM = "trialRetinue".hashCode().toLong()
-        private const val ODDS_SEED = 9_173L
     }
 }

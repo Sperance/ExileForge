@@ -476,6 +476,9 @@ class Battle(
     /** Ступень ярости стража (3.95.0): сколько раз по `combat.bossEnrage.every` секунд уже прошло. */
     internal var enrage = 0
 
+    /** Страж уже в ярости (4.2.0): хоть одна ступень `combat.bossEnrage` прошла. */
+    val furious: Boolean get() = enrage > 0
+
     /** Страж боя (3.92.0): первый враг редкости босса, с фазами или тотемами; null - бой без стража. */
     internal val guardian: Int? by lazy {
         foes.indices.firstOrNull { foes[it].guards }

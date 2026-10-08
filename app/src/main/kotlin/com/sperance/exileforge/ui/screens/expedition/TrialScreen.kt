@@ -62,7 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         // Строка угрозы десятка башни (3.96.0): выбор до первого боя десятка
         hud.choice?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { options -> TowerChoice(hud.step, options) { model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.PickLine(it)) } }
-        // Досье босса (3.92.0) перед его этапом, как у стража карты: «В бой» начинает этап
+        // Досье босса (3.92.0) перед его боем, как у стража карты: «В бой» начинает бой; без босса - кнопка «В бой» под героем
         val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
         val boss = fight?.boss
         val stage = hud.step to fight?.round
@@ -79,7 +79,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     ui(if (hud.kind == TrialKind.RUSH) "trials.boss_of" else "trials.floor", hud.step, hud.steps),
                     fight.heroBody,
                     arena.rules,
-                    odds = { arena.bossOdds() },
+                    plan = remember(stage) { arena.oddsPlan() },
                     record = { model.bossRecord(foe.monster.code.value) },
                 ) {
                     seen = stage

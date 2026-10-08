@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 class ExpeditionViewModel(
     private val expedition: ExpeditionActions,
     private val trial: TrialActions,
+    private val rift: RiftActions,
     private val hero: HeroActions,
     repository: ExpeditionRepository,
     commands: CommandRunner,
@@ -64,10 +65,23 @@ class ExpeditionViewModel(
     fun allocateAtlas(code: String) = expedition.allocateAtlas(code)
     fun refundAtlas(code: String, regret: Boolean = false) = expedition.refundAtlas(code, regret)
     fun resetAtlas(regret: Boolean = false) = expedition.resetAtlas(regret)
-    fun enterRush(region: String) = trial.rush(region)
+    fun enterRush(region: String, tier: Int = 0) = trial.rush(region, tier)
     fun enterTower() = trial.tower()
     fun forgeRushKey() = trial.forgeKey()
     fun abandonTrial() = trial.abandon()
     fun trialCommand(command: RunCommand) = trial.send(command)
     fun closeTrial() = trial.close()
+
+    /** Разлом недели (3.96.0). */
+    val riftState: StateFlow<RiftState> = rift.state
+    fun openRift() = rift.open()
+    fun closeRift() = rift.close()
+    fun refreshRift() = rift.refresh()
+    fun startRift() = rift.start()
+    fun riftAct(act: com.sperance.exileforge.rules.rift.RiftAct) = rift.act(act)
+    fun riftCommand(command: RunCommand) = rift.send(command)
+    fun dismissRiftResult() = rift.dismissResult()
+
+    /** Таблица испытаний (3.96.0); null - закрыть. */
+    fun trialTable(board: com.sperance.exileforge.rules.content.TrialBoard?, scope: String = "", league: Int? = null) = rift.table(board, scope, league)
 }

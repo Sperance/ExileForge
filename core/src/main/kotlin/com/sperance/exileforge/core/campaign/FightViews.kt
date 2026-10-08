@@ -25,6 +25,7 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PetRole
+import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.roundToInt
@@ -157,7 +158,26 @@ private fun Battle.bossHud(): BossHud? {
         }
     }
     val rage = rules.bossEnrage
-    return BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, rage.damage * enrage, (rage.every - time % rage.every).coerceAtLeast(0.0))
+    return riftHud(BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, rage.damage * enrage, (rage.every - time % rage.every).coerceAtLeast(0.0)))
+}
+
+/** Полоса стража Разлома (3.96.0): печати, Законы, украденное - поверх полосы босса. */
+private fun Battle.riftHud(hud: BossHud): BossHud {
+    val fight = riftFight ?: return hud
+    return hud.copy(
+        rift = fight.guard,
+        seals = fight.seals,
+        sealsMax = fight.sealsMax,
+        sealHits = fight.sealHits,
+        sealEvery = fight.rules.warden?.hits ?: 0,
+        law = fight.laws,
+        lawNext = fight.next,
+        lawIn = if (fight.rules.lord != null) (fight.lawAt - time).coerceAtLeast(0.0) else 0.0,
+        lawElement = fight.element?.takeIf { RiftLaw.ONE_ELEMENT in fight.laws }?.name,
+        lawNextElement = fight.nextElement?.name,
+        stolen = fight.stolen.toList(),
+        devoured = fight.devoured,
+    )
 }
 
 /**

@@ -49,17 +49,23 @@ internal fun Battle.phase(foe: Fighter) {
     }
 }
 
-/** Свита [count] босса [boss] встаёт: свободное место берёт сразу, иначе ждёт первой в очереди; без свободного слота - не встаёт. */
-private fun Battle.summon(boss: Fighter, count: Int) {
+/**
+ * Свита [count] босса [boss] встаёт: свободное место берёт сразу, иначе ждёт первой в очереди; без свободного слота - не встаёт.
+ * Кто встал - номера в стае (3.96.0: тень Поглотителя получает украденный дар).
+ */
+internal fun Battle.summon(boss: Fighter, count: Int): List<Int> {
+    val risen = mutableListOf<Int>()
     foes.indices.filter { foes[it].summonOf == boss.index && it !in called }.take(count).forEach { index ->
         // Слоты вокруг босса (3.93.0): все заняты - приспешник не встаёт
         val slot = freeSlot() ?: return@forEach
         slotHolders[slot] = SlotHolder.Minion(index)
         called += index
+        risen += index
         if (window.call(index)) foeFighters[index].enter(window.place(index), time)
         bannerFor(foeFighters[index])
     }
     if (foes.indices.any { it in called && foeFighters[it].body.auras.isNotEmpty() }) remake(heroFighter)
+    return risen
 }
 
 /** Босс пал (3.92.0): его свита падает с ним - и стоящая, и ждущая; добычи она не даёт и убийством не считается. */

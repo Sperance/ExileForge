@@ -68,6 +68,10 @@ data class TrialHud(
     val awaiting: Int = 0,
     val lastHoard: Reward? = null,
     val summary: RunSummary = RunSummary(),
+    /** Варианты строки десятка башни, пока герой выбирает (3.96.0); null - выбора нет. */
+    val choice: List<TowerMod>? = null,
+    /** Ступень раша (3.96.0), с 0. */
+    val tier: Int = 0,
 )
 
 /**
@@ -85,6 +89,8 @@ class TrialArena(
     context: RunContext,
     gear: HeroGear,
     private val pet: Pet?,
+    /** Строки башни, выбранные героем по десяткам (3.96.0). */
+    picks: List<Int>,
     private val onEvent: (TrialEvent) -> Unit,
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
@@ -94,7 +100,11 @@ class TrialArena(
     private val spawns = Spawns(index, run)
     private val waves = AbyssWaves(index, run)
     private val atlas = AtlasEffects.map(emptyMap(), context.atlas)
-    private val plan = trial.region.takeIf { trial.kind == TrialKind.RUSH }?.let { code -> index.campaign.regions.firstOrNull { it.code == code } }?.let(::RushPlan)
+    private val plan = trial.region.takeIf { trial.kind == TrialKind.RUSH }?.let { code -> index.campaign.regions.firstOrNull { it.code == code } }
+        ?.let { RushPlan(it, trial.seed, trials.rush.bosses) }
+    private val tier = trials.rush.tier(trial.tier)
+    private val picks = picks.toMutableList()
+    private var choice: List<TowerMod>? = null
     private val allies = PetAllies(index, rules)
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
@@ -201,6 +211,14 @@ class TrialArena(
 
             is RunCommand.Drink -> if (started) fight?.useFlask(command.slot)
 
+            is RunCommand.PickLine -> choice?.takeIf { command.option in it.indices }?.let {
+                val decade = picks.size + 1
+                record { n -> TrialEvent.Pick(n, decade, command.option) }
+                picks += command.option
+                choice = null
+                stand()
+            }
+
             // Walking away is only between two fights: the trial ends there, what it brought kept.
             RunCommand.Leave -> if (phase == TrialPhase.FIGHT && !started) finish(fallen = false)
 
@@ -215,13 +233,20 @@ class TrialArena(
                 TrialKind.RUSH -> {
                     val zone = plan?.zones?.getOrNull(step) ?: return finish(fallen = false)
                     level = trial.heroLevel
-                    fights = listOfNotNull(spawns.boss(zone.copy(level = level), emptyList(), emptyList())?.let(::listOf))
+                    // Ступень раша (3.96.0): боссы сильнее и с лишними строками
+                    fights = listOfNotNull(spawns.boss(zone.copy(level = level), growth(tier.power), emptyList(), tier.mods)?.let(::listOf))
                     if (fights.isEmpty()) return finish(fallen = false)
                 }
 
                 TrialKind.TOWER -> {
                     val abyss = index.campaign.abyss ?: return finish(fallen = false)
-                    val next = trials.tower.floor(abyss, trial.heroLevel, step)
+                    // Новый десяток (3.96.0): сначала герой выбирает его строку угрозы
+                    if (!trials.tower.ready(step, picks)) {
+                        choice = trials.tower.options(picks.size + 1)
+                        battle = null
+                        return
+                    }
+                    val next = trials.tower.floor(abyss, trial.heroLevel, step, picks)
                     if (next.mods != floor?.mods) {
                         floor = next
                         rebuild()
@@ -397,6 +422,8 @@ class TrialArena(
             level = level, elapsed = ((endedAt ?: clock()) - trial.startedAt) / 1000.0, limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
             mods = floor?.mods.orEmpty(), cleared = cleared, gained = gained, awaiting = (next - answered).coerceAtLeast(0), lastHoard = lastHoard,
             summary = stats.summary(kills),
+            choice = choice,
+            tier = trial.tier,
         )
     }
 

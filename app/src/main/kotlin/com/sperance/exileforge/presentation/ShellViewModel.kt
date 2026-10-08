@@ -61,6 +61,7 @@ class ShellViewModel(
     private val warming: WarmupActions,
     private val expedition: ExpeditionActions,
     trial: TrialActions,
+    rift: com.sperance.exileforge.presentation.expedition.RiftActions,
     private val watchdog: StallWatchdog,
     /** Связь с сервером на старте (3.86.0): окно запуска уходит по её ответу. */
     val reach: ServerReach,
@@ -78,6 +79,9 @@ class ShellViewModel(
     val warmup: StateFlow<Warmup?> = warming.state
     val run: StateFlow<ExpeditionRun?> = expedition.run
     val arena: StateFlow<TrialArena?> = trial.arena
+
+    /** Разлом недели (3.96.0): открыт - экран Разлома поверх стека. */
+    val rift: StateFlow<com.sperance.exileforge.presentation.expedition.RiftState> = rift.state
     val logs = journal.entries
 
     /** Что телефон отзывает вибрацией (3.77.0), уже по настройкам. */

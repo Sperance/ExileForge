@@ -30,7 +30,7 @@ fun Battle.skillViews(): List<SkillView?> = kit.actives.mapIndexed { slot, kitSk
         val left = ((heroFighter.readyAt[slotKey(slot)] ?: 0.0) - time).coerceAtLeast(0.0)
         SkillView(
             slot, it.skill.code, it.skill.icon, level, cost.roundToInt(), if (cooldown > 0) (1 - left / cooldown).toFloat().coerceIn(0f, 1f) else 1f,
-            skillsFree() || heroFighter.mana + 1e-9 >= cost, it.condition, left,
+            skillsFree() || heroFighter.mana + 1e-9 >= cost, it.condition, left, skillLock(slot),
         )
     }
 }
@@ -48,12 +48,13 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
             ceil(it.perUse(heroFighter.body) - 1e-9).toInt(),
             running?.let { d -> ((d.until - time) / d.duration).toFloat().coerceIn(0f, 1f) } ?: 0f,
             it.condition,
+            flaskLock(i),
         )
     }
 }
 
 /** What lies on [fighter], for its tiles. */
-fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { it.kind != EffectKind.FLASK }.map {
+fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { it.kind != EffectKind.FLASK && !riftSourced(it.source) }.map {
     EffectView(
         it.source,
         it.kind,

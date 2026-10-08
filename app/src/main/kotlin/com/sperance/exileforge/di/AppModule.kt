@@ -46,6 +46,7 @@ import com.sperance.exileforge.presentation.crafts.CraftsActions
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionActions
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.presentation.expedition.RiftActions
 import com.sperance.exileforge.presentation.expedition.TrialActions
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
@@ -124,6 +125,7 @@ val appModule = module {
     single { ExpeditionRepository() }
     single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { RiftActions(get(), get(), get(), get(), get(), get(), get(), get()) }
     single { CraftsRepository() }
     single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { ContentLoader() }
@@ -169,7 +171,7 @@ val appModule = module {
     // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
     // 3.90.3: и ресурсы игры, которых ждёт первая проверка, и поход с испытанием, во время которых проверок нет.
     viewModel { params ->
-        val playing = combine(get<ExpeditionActions>().run, get<TrialActions>().arena) { run, arena -> run != null || arena != null }
+        val playing = combine(get<ExpeditionActions>().run, get<TrialActions>().arena, get<RiftActions>().state) { run, arena, rift -> run != null || arena != null || rift.arena != null }
         UpdateViewModel(androidApplication(), get(), params.get(0), get(), get(), get<WorldLoader>(), playing, params.get(1))
     }
 }

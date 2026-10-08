@@ -82,6 +82,9 @@ sealed interface RunCommand {
     /** Back from the Vaal zone with [life] left, and the mana and flasks it left. */
     data class Returned(val life: Double, val pools: HeroPools? = null, val zone: ZoneShare? = null) : RunCommand
 
+    /** Строка угрозы десятка башни выбрана (3.96.0): вариант [option]. */
+    data class PickLine(val option: Int) : RunCommand
+
     data class Cast(val slot: Int) : RunCommand
     data class Drink(val slot: Int) : RunCommand
 

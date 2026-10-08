@@ -24,6 +24,7 @@ import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Outcome
+import com.sperance.exileforge.core.campaign.combat.RiftGuard
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.combat.flaskViews
@@ -36,6 +37,7 @@ import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.Pet
+import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -138,6 +140,25 @@ data class BossHud(
     /** Ярость (3.95.0): на сколько процентов больше урон врагов боя сейчас и через сколько секунд следующая ступень. */
     val rage: Double = 0.0,
     val rageIn: Double = 0.0,
+    /** Страж Разлома (3.96.0): кто он; null - обычный босс, поля ниже пусты. */
+    val rift: RiftGuard? = null,
+    /** Печати брони Стража Врат: стоят [seals] из [sealsMax], к следующей снятой - [sealHits] попаданий из [sealEvery]. */
+    val seals: Int = 0,
+    val sealsMax: Int = 0,
+    val sealHits: Int = 0,
+    val sealEvery: Int = 0,
+    /**
+     * Законы Владыки: [law] - в силе, [lawNext] - объявленные (только в знамение перед сменой), [lawIn] - секунд до смены;
+     * [lawElement] - стихия «Одной стихии» в силе, [lawNextElement] - объявленной.
+     */
+    val law: List<RiftLaw> = emptyList(),
+    val lawNext: List<RiftLaw> = emptyList(),
+    val lawIn: Double = 0.0,
+    val lawElement: String? = null,
+    val lawNextElement: String? = null,
+    /** Поглотитель эха: коды украденных даров по порядку и его сила от Эха, «больше» в процентах. */
+    val stolen: List<String> = emptyList(),
+    val devoured: Double = 0.0,
 )
 
 /** Кто в слоте вокруг босса (3.93.0): приспешник свиты или тотем. */

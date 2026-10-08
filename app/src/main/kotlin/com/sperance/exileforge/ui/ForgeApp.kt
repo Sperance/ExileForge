@@ -108,6 +108,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val context = LocalContext.current
     val expedition by shell.run.collectAsStateWithLifecycle()
     val trial by shell.arena.collectAsStateWithLifecycle()
+    val rift by shell.rift.collectAsStateWithLifecycle()
     // The settings (3.77.0) that reach every screen: the text's size, the motion, the lit screen and the phone's buzz.
     val settings by remember(shell) { shell.game.map { it.settings }.distinctUntilChanged() }.collectAsStateWithLifecycle(GameSettings())
     val base = LocalDensity.current
@@ -115,7 +116,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val lit = when (settings.keepScreen) {
         KeepScreen.ALWAYS -> true
         KeepScreen.NEVER -> false
-        KeepScreen.EXPEDITION -> expedition != null || trial != null
+        KeepScreen.EXPEDITION -> expedition != null || trial != null || rift.arena != null
     }
     DisposableEffect(view, lit) {
         view.keepScreenOn = lit
@@ -151,6 +152,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val logs by shell.logs.collectAsStateWithLifecycle()
     val expedition by shell.run.collectAsStateWithLifecycle()
     val trial by shell.arena.collectAsStateWithLifecycle()
+    val rift by shell.rift.collectAsStateWithLifecycle()
     val warming by shell.warmup.collectAsStateWithLifecycle()
     val navigator = koinInject<Navigator>()
     val route by navigator.current.collectAsStateWithLifecycle()
@@ -198,6 +200,8 @@ import org.koin.compose.viewmodel.koinViewModel
                         run != null -> ExpeditionPlay(run)
 
                         arena != null -> TrialScreen(arena)
+
+                        rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
 
                         else -> Shell(game, logs, route, navigator) { bugOpen = true }
                     }

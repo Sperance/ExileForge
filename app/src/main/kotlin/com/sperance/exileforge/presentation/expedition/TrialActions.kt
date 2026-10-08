@@ -70,8 +70,8 @@ class TrialActions(
 
     private val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(prefs.settings.value.fightSpeed).coerceAtLeast(0)
 
-    /** «Раш»: ключ раша тратится на раш [region]. */
-    fun rush(region: String) = enter { api.trials.rush(it, region) }
+    /** «Раш»: ключ раша тратится на раш [region] ступени [tier] (3.96.0, с 0). */
+    fun rush(region: String, tier: Int = 0) = enter { api.trials.rush(it, region, tier) }
 
     /** «Собрать ключ» (3.50.0): пять обломков герба становятся ключом раша. */
     fun forgeKey() {
@@ -107,7 +107,7 @@ class TrialActions(
             pending.clear()
             batch = null
         }
-        mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.pets.pet(hero.pets.combat), onEvent = ::recorded)
+        mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.pets.pet(hero.pets.combat), hero.campaign.trials.towerPicks, onEvent = ::recorded)
             .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     }
 

@@ -116,6 +116,8 @@ data class SkillView(
     val affordable: Boolean,
     val condition: SlotCondition,
     val seconds: Double = 0.0,
+    /** Сколько ещё секунд слот заперт «Запечатыванием» Стража Врат (3.96.0); 0 - свободен. */
+    val locked: Double = 0.0,
 )
 
 /** A flask of the belt as its button draws it (2.78.0): charges, the price of a draught, and how much of one is left (0 none). */
@@ -128,8 +130,10 @@ data class FlaskView(
     val perUse: Int,
     val active: Float,
     val condition: SlotCondition,
+    /** Сколько ещё секунд флакон заперт «Запечатыванием» Стража Врат (3.96.0); 0 - свободен. */
+    val locked: Double = 0.0,
 ) {
-    val usable: Boolean get() = charges >= perUse && active <= 0f
+    val usable: Boolean get() = charges >= perUse && active <= 0f && locked <= 0.0
 }
 
 /** A buff or a curse on a fighter as its tile shows it (2.78.0): what, of which kind, and how much of it is left. */

@@ -263,8 +263,14 @@ data class HeroGear(
  * How the hero's body is made in a run (2.78.0): the sheet with the passives and the lines of the
  * moment laid among its operations, then the map's and the atlas's share over it.
  */
-class HeroBuild(val gear: HeroGear, private val mapEffects: Map<String, Double>, private val rules: CombatRules) : HeroModel {
-    private fun sheet(lines: List<StatLine>): Map<String, Double> = gear.model?.with(lines) ?: StatLines.fold(gear.stats, lines, gear.percent)
+class HeroBuild(
+    val gear: HeroGear,
+    private val mapEffects: Map<String, Double>,
+    private val rules: CombatRules,
+    /** Строки поверх листа на весь заход (3.96.0): дары и проклятия Разлома. */
+    private val extra: List<StatLine> = emptyList(),
+) : HeroModel {
+    private fun sheet(lines: List<StatLine>): Map<String, Double> = (extra + lines).let { all -> gear.model?.with(all) ?: StatLines.fold(gear.stats, all, gear.percent) }
 
     /** The body without passives: what the passives' levels and the auras' effect are read off. */
     val bare: Combatant by lazy { Combatant(MapEffects.hero(sheet(emptyList()), mapEffects), gear.level, rules) }

@@ -33,7 +33,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
     }
     val chaos = if (dealt > 0) (taken[DamageType.CHAOS] ?: 0.0) * rest / dealt else 0.0
     val shielded = rest - chaos
-    val absorbed = EnergyShield.absorbed(target.shield, rest, chaos)
+    val absorbed = if (shieldless(target)) 0.0 else EnergyShield.absorbed(target.shield, rest, chaos)
     target.shield -= absorbed
     val manaBefore = target.mana
     val bound = shielded - absorbed + chaos
@@ -58,7 +58,8 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
     // Life leech into the shield (server 1.32.0): what it restores is not life.
     if (body.leechToShield) me.shield = min(me.body.maxShield, me.shield + leech)
     val healed = if (body.leechToShield) onHit else leech + onHit
-    me.life = min(me.body.maxLife, me.life + healed)
+    lifeBack(me, healed)
+    bloodPrice(me)
     // Mana (server 0.69.0): leeched and gained on hit; a burning blow takes the struck one's.
     if (me.body.maxMana > 0) me.mana = min(manaCap(me), me.mana + dealt * body.leechMana + if (blow.weapon) body.manaOnHit else 0.0)
     if (body.manaBurn > 0) target.mana = max(0.0, target.mana - target.body.maxMana * body.manaBurn)
@@ -89,6 +90,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
         me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill, trace = trace,
         pet = isPet(me) || isPet(target),
     )
+    if (me.side == Side.HERO) sealStruck(target, kind == HitKind.CRIT)
     if (me === heroFighter) {
         if (target.alive && hexing()) hex(target)
         if (blow.weapon) chanceBuff(BuffKind.FORTIFY)
@@ -284,16 +286,14 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     // Свита (3.92.0) - не убийство: о ней не сообщают; босс уводит свою за собой
     if (foes[fighter.index].summoned) retinueDown += fighter.index else fallenOrder += fighter.index
     if (foes[fighter.index].summoned) freeMinionSlot(fighter.index)
-    if (foes[fighter.index].phases.isNotEmpty() || foes[fighter.index].totems.isNotEmpty()) dismissRetinue(fighter)
+    if (foes[fighter.index].phases.isNotEmpty() || foes[fighter.index].totems.isNotEmpty() || riftFight != null && fighter.index == guardian) dismissRetinue(fighter)
     if (focus == fighter.index) focus = null
     if (lastStriker == fighter.index) lastStriker = null
     val stepped = stepIn()
     if (fighter.body.auras.isNotEmpty() || stepped) remake(heroFighter)
     val hero = heroFighter
     if (!hero.alive) return
-    val lifeBefore = hero.life
-    hero.life = min(hero.body.maxLife, hero.life + (hero.body.lifeOnKill + hero.body.maxLife * hero.body.lifeOnKillShare) * hero.body.recoveryRate)
-    note(fighter, NoteKind.KILL, "", hero.life - lifeBefore)
+    note(fighter, NoteKind.KILL, "", lifeBack(hero, (hero.body.lifeOnKill + hero.body.maxLife * hero.body.lifeOnKillShare) * hero.body.recoveryRate))
     hero.mana = min(manaCap(), hero.mana + hero.body.manaOnKill)
     hero.shield = min(hero.body.maxShield, hero.shield + hero.body.shieldOnKill)
     killedAt = time

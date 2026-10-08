@@ -27,25 +27,25 @@ import kotlin.math.min
 
 internal fun Battle.step(dt: Double) {
     time += dt
+    lookLife()
     (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach {
         regenerate(it, dt)
         degenerate(it, dt)
         burn(it, dt)
     }
     // A support pet mends the hero while it stands (3.5.0).
-    allyFighter?.takeIf { it.alive && heroFighter.alive && ally!!.heal > 0 }?.let {
-        val before = heroFighter.life
-        heroFighter.life = min(heroFighter.body.maxLife, heroFighter.life + heroFighter.body.maxLife * ally!!.heal / 100 * dt)
-        mended(heroFighter.life - before)
+    allyFighter?.takeIf { it.alive && heroFighter.alive && ally!!.heal > 0 && joined() }?.let {
+        mended(lifeBack(heroFighter, heroFighter.body.maxLife * ally!!.heal / 100 * dt))
     }
     expire()
     if (finished()) return
     rage()
+    riftTick()
     powers.tick()
     if (finished()) return
     val hero = heroFighter
-    // A draught goes down even stunned; a skill waits until the hero can move again.
-    if (hero.alive) {
+    // A draught goes down even stunned; a skill waits until the hero can move again. Засада Разлома (3.96.0) - и то и другое позже.
+    if (hero.alive && joined()) {
         if (!autoDrunk) {
             autoDrunk = true
             if (hero.body.flasksAuto) {
@@ -69,7 +69,7 @@ internal fun Battle.step(dt: Double) {
         if (!me.alive || me.held || me.nextAttack > time) return@forEach
         val target = if (me.side == Side.HERO) target() else foeTarget()
         if (target != null) strike(me, target, Blow(firstStrike(me)))
-        me.nextAttack = time + me.attackInterval * me.slow()
+        me.nextAttack = time + me.attackInterval * me.slow() * cadence(me)
         if (finished()) return
     }
     watch()
@@ -80,19 +80,17 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     if (!me.alive) return
     // The bars melt once no blow has filled them for the rule's delay (3.78.0).
     rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
-    val regenerated = min(me.body.maxLife, me.life + (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
-    if (me === heroFighter) regenLogged += regenerated - me.life
-    me.life = regenerated
-    me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
-    me.mana = min(manaCap(me), me.mana + me.body.manaRegen(rules.mana) * dt)
+    val regenerated = lifeBack(me, (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
+    if (me === heroFighter) regenLogged += regenerated
+    if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
+    if (!manaless(me)) me.mana = min(manaCap(me), me.mana + me.body.manaRegen(rules.mana) * dt)
     if (me === heroFighter) {
         recoveries.forEach { draught ->
             val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)
             val gain = draught.life * slice
-            val life = min(me.body.maxLife, me.life + gain)
-            draught.restored += life - me.life
-            draught.wasted += gain - (life - me.life)
-            me.life = life
+            val restored = lifeBack(me, gain)
+            draught.restored += restored
+            draught.wasted += gain - restored
             me.mana = min(manaCap(), me.mana + draught.mana * slice)
             if (draught.stopsAtFull && me.life >= me.body.maxLife) stopDraught(draught)
         }
@@ -307,7 +305,10 @@ private fun Battle.burn(me: Fighter, dt: Double) {
         val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
         val rate = active.magnitude * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(active.ailment)
         // Whatever deals damage at all deals at least [CombatRules.minDot] a tick, however it is taken.
-        val slice = (if (active.magnitude > 0) max(rate, rules.minDot / TICK) else rate) * span
+        val dealt = (if (active.magnitude > 0) max(rate, rules.minDot / TICK) else rate) * span
+        // Разлом (3.96.0): печати Стража и «Одна стихия» Владыки
+        val rift = sealed(me) * lawTaken(me, if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.second)
+        val slice = if (rift == 1.0) dealt else dealt * rift
         if (slice <= 0 || !me.alive || me.invulnerable) return@forEach
         val chaos = active.ailment == Ailment.POISONED || active.chaos
         if (chaos && me.body.chaosImmune) return@forEach
@@ -339,10 +340,14 @@ private fun Battle.burn(me: Fighter, dt: Double) {
                 // 3.37.0: the tick names its ailment and carries how strong it runs and what grows it.
                 val own = (me.ailments + expired).filter { it.ailment == ailment }
                 val base = own.filter { it.until > time - TICK }.sumOf { it.magnitude }
-                val factors = listOf(
+                val seals = sealed(me)
+                val law = lawTaken(me, type)
+                val factors = listOfNotNull(
                     FactorTrace(FactorKey.BASE, base, listOfNotNull(ailment.damage, CoreStat.FASTER_AILMENTS.code, CoreStat.AILMENT_DURATION.code, "STOCK_${ailment.word}_DURATION")),
                     FactorTrace(FactorKey.SHOCK, me.weakness(), target = listOf(CoreStat.SHOCK_TAKEN.code)),
                     FactorTrace(FactorKey.TAKEN, me.body.dotTaken * me.body.ailmentTaken(ailment), target = listOf(CoreStat.DOT_TAKEN.code, CoreStat.BLEED_TAKEN.code)),
+                    FactorTrace(FactorKey.SEALS, seals).takeIf { seals != 1.0 },
+                    FactorTrace(FactorKey.LAW, law).takeIf { law != 1.0 },
                     FactorTrace(FactorKey.TOTAL, amount),
                 )
                 record(
@@ -355,6 +360,7 @@ private fun Battle.burn(me: Fighter, dt: Double) {
                     ),
                     pet = isPet(me),
                 )
+                if (source == Side.HERO) sealStruck(me, crit = false)
             }
         }
     }
@@ -369,7 +375,7 @@ private fun Battle.wound(me: Fighter, amount: Double, chaos: Boolean) {
         me.barrier -= soaked
         rest -= soaked
     }
-    val absorbed = EnergyShield.absorbed(me.shield, rest, chaos = if (chaos) rest else 0.0)
+    val absorbed = if (shieldless(me)) 0.0 else EnergyShield.absorbed(me.shield, rest, chaos = if (chaos) rest else 0.0)
     me.shield -= absorbed
     me.life = max(0.0, me.life - (rest - absorbed))
 }
@@ -412,6 +418,13 @@ fun Battle.surrender() {
 }
 
 private fun Battle.end(how: Outcome) {
+    lookLife()
     outcome = how
     duration = time
+}
+
+/** Низшая доля здоровья героя за бой (3.96.0) - для Испытания чемпиона. */
+private fun Battle.lookLife() {
+    val max = heroFighter.body.maxLife
+    if (max > 0) trial.lowestLife = min(trial.lowestLife, (heroFighter.life / max).coerceIn(0.0, 1.0))
 }

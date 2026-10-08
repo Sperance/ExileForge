@@ -127,6 +127,9 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.FinishAuto -> autopilot?.finish()
 
+        // Строка башни (3.96.0) - команда арены испытания, у похода её нет
+        is RunCommand.PickLine -> Unit
+
         RunCommand.Leave -> leave()
 
         RunCommand.Begin -> if (fight != null) {

@@ -65,6 +65,7 @@ internal fun Battle.useSkills() {
         kitSkill ?: continue
         val tapped = slot in taps
         if (time < hero.readyAt.getOrPut(slotKey(slot)) { openingReady(kitSkill) }) continue
+        if (skillLock(slot) > 0) continue
         if (!tapped && !holds(kitSkill.condition, opened[slot])) continue
         if (foeFighters.none { it.alive }) return
         val level = kitSkill.level(hero.body)
@@ -294,9 +295,7 @@ private fun Battle.heal(heal: SkillHeal, level: Int, scale: Double = 1.0): Doubl
 /** Life given back to the hero; the passives waiting for a heal hear of it. */
 internal fun Battle.restore(amount: Double): Double {
     val hero = heroFighter
-    val before = hero.life
-    hero.life = min(hero.body.maxLife, hero.life + amount)
-    val healed = hero.life - before
+    val healed = lifeBack(hero, amount)
     if (healed > 0) trigger(SkillEvent.HEALED)
     return healed
 }
@@ -369,7 +368,7 @@ internal fun Battle.useFlasks() {
     val hero = heroFighter
     kit.flasks.forEachIndexed { i, flask ->
         flask ?: return@forEachIndexed
-        if (draughtOf(i) != null) return@forEachIndexed
+        if (draughtOf(i) != null || flaskLock(i) > 0) return@forEachIndexed
         val auto = flask.own("FLASK_AUTO_LOW_LIFE").let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
         if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
         if (charges[i] + 1e-9 < flask.perUse(hero.body)) return@forEachIndexed
@@ -397,12 +396,12 @@ internal fun Battle.drink(slot: Int, flask: Flask, free: Boolean = false) {
     hero.shield = min(hero.body.maxShield, hero.shield + draught.shield)
     if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration, slot, draught.lifeOnly)
     if (draught.invulnerable > 0) hero.invulnerableUntil = time + draught.invulnerable
-    val before = hero.life
-    hero.life = min(hero.body.maxLife, hero.life + draught.life)
+    if (!free) trial.flasks++
+    val healed = lifeBack(hero, draught.life)
     record(
-        Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, hero.life - before, false, emptyList(), null, target()?.index ?: 0, flask.code, onSelf = true,
-        trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, hero.life - before, flask.effect(hero.body), shot(hero), origin),
+        Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, healed, false, emptyList(), null, target()?.index ?: 0, flask.code, onSelf = true,
+        trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, healed, flask.effect(hero.body), shot(hero), origin),
     )
-    if (hero.life > before || draught.lifeRate > 0) trigger(SkillEvent.HEALED)
+    if (healed > 0 || draught.lifeRate > 0) trigger(SkillEvent.HEALED)
     powers.fire(PowerEvent.FLASK)
 }

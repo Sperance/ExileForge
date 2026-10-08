@@ -35,7 +35,8 @@ enum class RollKey { EVADE, BLOCK, CRIT, CRIT_LUCKY, SUPPRESS, DEFLECT, DOUBLE, 
  */
 data class FactorTrace(val key: FactorKey, val value: Double, val attacker: List<String> = emptyList(), val target: List<String> = emptyList())
 
-enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, AGAINST, DOUBLE, VERSUS, DEFENCE, SHOCK, TAKEN, EASED, TOTAL }
+/** Множители удара по порядку; [SEALS] - печати Стража Врат, [LAW] - Закон Владыки Разлома (3.96.0). */
+enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, AGAINST, DOUBLE, VERSUS, DEFENCE, SHOCK, TAKEN, EASED, SEALS, LAW, TOTAL }
 
 /** One damage type of a hit: its [base], [raw] after the striker's multipliers, the [armour] and [resist] shares it lost, and what landed. */
 data class TypeTrace(val type: DamageType, val base: Double, val raw: Double, val armour: Double, val resist: Double, val penetration: Double, val dealt: Double)
@@ -128,6 +129,21 @@ enum class NoteKind {
 
     /** Ярость стража (3.95.0): ref - ступень. */
     RAGE,
+
+    /** Страж Врат (3.96.0): печать снята и печати вернулись - value - сколько стоит теперь. */
+    SEAL_BROKEN,
+    SEALS_RETURNED,
+
+    /** «Запечатывание» Стража Врат (3.96.0): ref - код умения или флакона, value - на сколько секунд заперт. */
+    SEAL_LOCK_SKILL,
+    SEAL_LOCK_FLASK,
+
+    /** Поглотитель эха украл дар (3.96.0): ref - код дара. */
+    BOON_STOLEN,
+
+    /** Закон Владыки Разлома вступил (3.96.0): ref - Закон. «Время вспять» вернуло урон: value - сколько здоровья. */
+    LAW,
+    LAW_REWOUND,
 
     /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar, regeneration a second. */
     RECOVER_FLASK,

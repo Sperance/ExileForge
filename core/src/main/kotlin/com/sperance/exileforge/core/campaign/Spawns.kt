@@ -39,14 +39,16 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     }
 
     /** The zone's boss at this encounter: its signature lines and a few of its table, [extra] what the map does to it alone. */
-    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? = guardian(zone.boss, zone.level, buffs, extra, run.streams.of("bossRoll"))
+    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, moreRolls: Int = 0): RolledMonster? = guardian(zone.boss, zone.level, buffs, extra, run.streams.of("bossRoll"), moreRolls)
 
     /** The guardian of the Vaal zone behind the portal, sealing its exit. */
     fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = guardian(zone.corrupted, zone.level, buffs, emptyList(), run.streams.of("corruptRoll"))
 
-    private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice): RolledMonster? {
+    /** Страж [code]; [moreRolls] - сверх его строк (ступень раша, 3.96.0). */
+    private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice, moreRolls: Int = 0): RolledMonster? {
         if (code.value.isBlank() || index.monster(code) == null) return null
-        return skilled(buffed(monsters.boss(monsters.guardian(code, level), dice, extra), buffs), dice)
+        val view = monsters.guardian(code, level).let { if (moreRolls > 0) it.copy(rolls = it.rolls.map { n -> n + moreRolls }) else it }
+        return skilled(buffed(monsters.boss(view, dice, extra), buffs), dice)
     }
 
     /**

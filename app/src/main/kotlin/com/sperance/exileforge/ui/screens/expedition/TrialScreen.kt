@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.screens.expedition
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -59,6 +60,8 @@ import org.koin.compose.viewmodel.koinViewModel
         } else {
             TrialEnding(game, model, hud)
         }
+        // Строка угрозы десятка башни (3.96.0): выбор до первого боя десятка
+        hud.choice?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { options -> TowerChoice(hud.step, options) { model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.PickLine(it)) } }
         // Досье босса (3.92.0) перед его этапом, как у стража карты: «В бой» начинает этап
         val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
         val boss = fight?.boss
@@ -87,6 +90,27 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
+/** Выбор строки угрозы десятка башни (3.96.0): варианты по силе, у каждого - прибавка к кладу. */
+@Composable private fun TowerChoice(floor: Int, options: List<com.sperance.exileforge.rules.content.TowerMod>, onPick: (Int) -> Unit) {
+    Column(
+        Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
+    ) {
+        Text(ui("trials.tower_choice_title", floor), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+        MutedText(ui("trials.tower_choice_hint"))
+        options.forEachIndexed { i, mod ->
+            val shape = RoundedCornerShape(12.dp)
+            Column(
+                Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, LifeRed.copy(alpha = .3f + .2f * i), shape).clickable { onPick(i) }.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(SkillText.statLine(mod.stat, mod.op, mod.value), color = LifeRed, style = MaterialTheme.typography.titleSmall)
+                Text(ui("trials.tower_choice_hoard", mod.hoard.toInt()), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
 /** The trial's plate over the arena: which boss of how many or which floor, the clock against the rush's limit, the floor's lines. */
 @Composable private fun TrialPlate(hud: TrialHud, modifier: Modifier) {
     val shape = RoundedCornerShape(10.dp)
@@ -99,6 +123,7 @@ import org.koin.compose.viewmodel.koinViewModel
             color = GoldBright,
             style = MaterialTheme.typography.labelLarge,
         )
+        if (hud.kind == TrialKind.RUSH && hud.tier > 0) Text(ui("trials.rush_tier", roman(hud.tier + 1)), color = Rune, style = MaterialTheme.typography.labelSmall)
         val time = clock(hud.elapsed)
         Text(
             if (hud.limit > 0) ui("trials.clock_limit", time, clock(hud.limit)) else time,

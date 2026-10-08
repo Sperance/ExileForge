@@ -47,8 +47,20 @@ import com.sperance.exileforge.ui.theme.*
     val keys = hero.bag[TrialRules.KEY] ?: 0L
     val seals = hero.bag[TrialRules.SEAL] ?: 0L
     val idle = !game.busy
+    val rift by vm.riftState.collectAsState()
+    rift.table?.takeIf { !rift.open }?.let { TrialTableSheet(it) { vm.trialTable(null) } }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        KeyGrid(game, listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals))
+        KeyGrid(game, listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals, com.sperance.exileforge.rules.content.RiftRules.KEY to (hero.bag[com.sperance.exileforge.rules.content.RiftRules.KEY] ?: 0L)))
+        // Разлом недели (3.96.0): своя доска на весь экран
+        rules.rift?.let { riftRules ->
+            RiftPlate(RiftColors.Rift) {
+                Text(ui("rift.title"), color = RiftColors.Rift, style = MaterialTheme.typography.titleMedium)
+                MutedText(ui("rift.hint", riftRules.acts, riftRules.layout.rows, riftRules.free))
+                val league = riftRules.league(hero.level)
+                ForgeButton(onClick = vm::openRift, enabled = idle && league != null, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.open")) }
+                if (league == null) Text(ui("rift.league_none", riftRules.leagues.first()), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+            }
+        }
         trials.run?.let { open ->
             Plate(LifeRed) {
                 Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
@@ -66,13 +78,15 @@ import com.sperance.exileforge.ui.theme.*
                 Text(ui("trials.tower_conquered", tower.maxFloor), color = GoldBright, style = MaterialTheme.typography.bodyMedium)
             } else {
                 Text(ui("trials.tower_record", trials.towerBest, tower.start(trials.towerBest)), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-                tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1).takeIf { it.isNotEmpty() }?.let { mods ->
+                // Строки десятков (3.96.0): выбранные героем, по ним идёт вход
+                tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).takeIf { it.isNotEmpty() }?.let { mods ->
                     mods.forEach { Text(SkillText.statLine(it.stat, it.op, it.value), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
                 }
             }
             ForgeButton(onClick = vm::enterTower, enabled = idle && seals >= 1 && trials.run == null && !conquered, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("trials.tower_enter", itemTitle(TrialRules.SEAL)))
             }
+            ForgeOutlinedButton(onClick = { vm.trialTable(com.sperance.exileforge.rules.content.TrialBoard.TOWER) }, enabled = idle, modifier = Modifier.fillMaxWidth()) { Text(ui("trials.table")) }
         }
         Plate(GoldBright) {
             Text(ui("trials.rush_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
@@ -96,22 +110,49 @@ import com.sperance.exileforge.ui.theme.*
         val unlocked = index.campaign.regions.filter { RushPlan.open(it, cleared) }
         unlocked.forEach { region ->
             val best = trials.rushBest[region.code]
+            // Ступени (3.96.0): открыта следующая за зачищенными; выбранная - по умолчанию высшая открытая
+            val open = (trials.rushTiers[region.code] ?: 0).coerceAtMost(rules.rush.tierCount - 1)
+            var tier by remember(region.code, open) { mutableStateOf(open) }
             Plate(Gold) {
+                if (rules.rush.tierCount > 1) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        (0 until rules.rush.tierCount).forEach { t ->
+                            val unlockedTier = t <= open
+                            val shape = RoundedCornerShape(8.dp)
+                            Box(
+                                Modifier.border(
+                                    1.dp,
+                                    if (t == tier) {
+                                        GoldBright
+                                    } else if (unlockedTier) {
+                                        Gold.copy(alpha = .5f)
+                                    } else {
+                                        Muted.copy(alpha = .3f)
+                                    },
+                                    shape,
+                                )
+                                    .clickable(enabled = unlockedTier) { tier = t }.padding(horizontal = 10.dp, vertical = 4.dp),
+                            ) { Text(roman(t + 1), color = if (unlockedTier) Parchment else Muted, style = MaterialTheme.typography.labelLarge) }
+                        }
+                    }
+                    if (open < rules.rush.tierCount - 1) MutedText(ui("trials.rush_tier_next", roman(open + 2), roman(open + 1)), style = MaterialTheme.typography.labelSmall)
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(regionTitle(region.code), color = Parchment, style = MaterialTheme.typography.titleSmall)
                         MutedText(
                             listOfNotNull(
-                                ui("trials.rush_bosses", region.zones.size),
+                                ui("trials.rush_bosses", minOf(region.zones.size, rules.rush.bosses)),
                                 best?.let { ui("trials.rush_best", clock(it.toDouble())) },
                                 ui("trials.rush_cleared").takeIf { region.code in trials.rushCleared },
                             ).joinToString(" · "),
                         )
                     }
                     Column(horizontalAlignment = Alignment.End) {
-                        ForgeOutlinedButton(onClick = { vm.enterRush(region.code) }, enabled = idle && keys >= 1 && trials.run == null) {
+                        ForgeOutlinedButton(onClick = { vm.enterRush(region.code, tier) }, enabled = idle && keys >= 1 && trials.run == null) {
                             Text(ui("trials.rush_enter"))
                         }
+                        ForgeTextButton(onClick = { vm.trialTable(com.sperance.exileforge.rules.content.TrialBoard.RUSH, "${region.code}:$tier") }, enabled = idle) { Text(ui("trials.table")) }
                         // Причина у неактивной кнопки (3.94.0)
                         when {
                             trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)
@@ -148,6 +189,11 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 private const val KEYS_PER_ROW = 4
+
+/** Номер ступени раша римскими цифрами (3.96.0). */
+internal fun roman(n: Int): String = listOf(10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I").fold(n to "") { (left, out), (value, sign) ->
+    (left % value) to (out + sign.repeat(left / value))
+}.second
 
 @Composable private fun Plate(accent: Color, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(12.dp)

@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.semantics.contentDescription
@@ -75,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable
 private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onInfo: () -> Unit, onTap: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
-    val ready = view.ready >= 1f
+    val ready = view.ready >= 1f && view.locked <= 0.0
     // Готовое умение (3.88.3): зелёная рамка, без свечения.
     Box(
         modifier.height(52.dp).clip(shape).background(PanelRaised, shape)
@@ -86,7 +87,8 @@ private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onIn
         SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), if (view.affordable) GoldBright else Muted)
         // What is left to recover darkens the button from the top, as a flask's charge fills it from the bottom.
         if (!ready) Box(Modifier.fillMaxWidth().fillMaxHeight(1 - view.ready).background(Color.Black.copy(alpha = .6f)))
-        if (!ready) Text(fineNumber(view.seconds), color = Parchment, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+        if (!ready && view.locked <= 0.0) Text(fineNumber(view.seconds), color = Parchment, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+        if (view.locked > 0.0) SealedSlot(view.locked, shape)
         Text(
             "${view.cost}",
             color = if (view.affordable) Rune else LifeRed,
@@ -161,5 +163,13 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
         }
         FlaskBottle(view.kind, 0f, true, Modifier.size(14.dp, 22.dp))
         Text("${view.charges}", color = GoldBright, fontSize = 8.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp))
+        if (view.locked > 0.0) SealedSlot(view.locked, CircleShape)
+    }
+}
+
+/** Слот, запертый «Запечатыванием» Стража Врат (3.96.0): тёмная печать Разлома и сколько ещё секунд. */
+@Composable private fun BoxScope.SealedSlot(seconds: Double, shape: Shape) {
+    Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = .65f), shape).border(1.5.dp, RiftSeal, shape), contentAlignment = Alignment.Center) {
+        Text("◈ ${fineNumber(seconds)}", color = RiftSeal, fontSize = 10.sp, fontWeight = FontWeight.Bold)
     }
 }

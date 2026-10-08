@@ -42,7 +42,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         draw(RollKey.BLOCK, blockChance) < blockChance -> HitKind.BLOCKED
         sure || crit(body, blow.spell) -> HitKind.CRIT
         else -> HitKind.HIT
-    }
+    }.let { if (it == HitKind.CRIT && critBanned(me)) HitKind.HIT else it }
     if (sure && kind == HitKind.CRIT) nextCrit = false
     if (me.side == Side.MONSTER) lastStriker = me.index
     if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
@@ -72,13 +72,18 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Server 1.32.0: the element the target resists least is pierced deeper, the one it resists most may hurt it less.
     val weakest = if (body.lowestResistPenetrate > 0) DamageType.ELEMENTS.minBy { target.body.resistTo(it) } else null
     val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
+    // Разлом (3.96.0): «Тяжкие удары» героя, печати Стража, «Одна стихия» Владыки
+    val heavy = heavy(me, blow)
+    val seals = sealed(target)
+    var unruled = 0.0
     val types = mutableListOf<TypeTrace>()
     var spreadSum = 0.0
     var takenSum = 0.0
     var defended = 0.0
     val taken = converted(body, target.body, blow.damage.filterValues { it > 0 }).mapValues { (type, base) ->
         val spread = if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0
-        val raw = base * spread * multiplier * against * body.damageMore * doubled * versus
+        val grown = base * spread * multiplier * against * body.damageMore * doubled * versus
+        val raw = if (heavy == 1.0) grown else grown * heavy
         val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
         val armour = when (type) {
             DamageType.PHYSICAL -> target.body.physicalMitigation(raw, rules.armour.factor)
@@ -90,7 +95,11 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
             else -> raw * (1 - armour) * (1 - resist)
         }.coerceAtLeast(0.0)
         val typeTaken = target.body.damageTaken(type) * (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0)
-        val dealt = defence * target.weakness() * typeTaken * eased * exposure(target, type)
+        val landed = defence * target.weakness() * typeTaken * eased * exposure(target, type)
+        val sealedOff = if (seals == 1.0) landed else landed * seals
+        unruled += sealedOff
+        val ruled = lawTaken(target, type)
+        val dealt = if (ruled == 1.0) sealedOff else sealedOff * ruled
         spreadSum += base * spread
         takenSum += defence * typeTaken
         defended += defence
@@ -139,6 +148,9 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         if (target.weakness() != 1.0) add(FactorTrace(FactorKey.SHOCK, target.weakness(), listOf(CoreStat.SHOCK_EFFECT.code), listOf(CoreStat.SHOCK_TAKEN.code)))
         if (defended > 0 && takenSum != defended) add(FactorTrace(FactorKey.TAKEN, takenSum / defended, target = listOf(CoreStat.DAMAGE_TAKEN.code, CoreStat.PHYSICAL_TAKEN.code, CoreStat.ELEMENTAL_TAKEN.code, CoreStat.CHAOS_TAKEN.code)))
         if (eased != 1.0) add(FactorTrace(FactorKey.EASED, eased, target = listOf(CoreStat.SPELL_SUPPRESSION.code, CoreStat.DEFLECTION.code, CoreStat.HIT_TAKEN.code)))
+        if (seals != 1.0) add(FactorTrace(FactorKey.SEALS, seals))
+        val law = heavy * if (unruled > 0) taken.values.sum() / unruled else 1.0
+        if (law != 1.0) add(FactorTrace(FactorKey.LAW, law))
         add(FactorTrace(FactorKey.TOTAL, taken.values.sum()))
     }
     pendingHit = HitTrace(striker, struck, emptyList(), factors, types, null, origin)
@@ -162,7 +174,7 @@ private fun Battle.elementalArmour(target: Combatant, type: DamageType, raw: Dou
 /** A block by [target] (3.35.0): life, mana and shield on block, and the hero's «blocked recently». */
 private fun Battle.blocked(target: Fighter) {
     val body = target.body
-    target.life = min(body.maxLife, target.life + body.lifeOnBlock * body.recoveryRate)
+    lifeBack(target, body.lifeOnBlock * body.recoveryRate)
     target.mana = min(manaCap(target), target.mana + body.manaOnBlock)
     target.shield = min(body.maxShield, target.shield + body.shieldOnBlock)
     if (target === heroFighter) blockedAt = time
@@ -215,7 +227,9 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
             DamageType.PHYSICAL -> raw * (1 - attacker.body.physicalMitigation(raw, rules.armour.factor))
             else -> raw * (1 - attacker.body.resist(type))
         }.coerceAtLeast(0.0)
-        TypeTrace(type, raw, raw, armour, resist, 0.0, defended * attacker.body.damageTaken(type)) to defended
+        val hurt = defended * attacker.body.damageTaken(type)
+        val rift = sealed(attacker) * lawTaken(attacker, type)
+        TypeTrace(type, raw, raw, armour, resist, 0.0, if (rift == 1.0) hurt else hurt * rift) to defended
     }
     val mitigated = types.associate { (trace, _) -> trace.type to trace.dealt }.filterValues { it > 0 }
     if (mitigated.isEmpty()) return
@@ -223,7 +237,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
     val struck = shot(attacker)
     val chaos = mitigated[DamageType.CHAOS] ?: 0.0
     val shielded = mitigated.values.sum() - chaos
-    val absorbed = min(attacker.shield, shielded)
+    val absorbed = if (shieldless(attacker)) 0.0 else min(attacker.shield, shielded)
     attacker.shield -= absorbed
     attacker.life = max(0.0, attacker.life - (shielded - absorbed) - chaos)
     attacker.lastHit = time

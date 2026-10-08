@@ -68,6 +68,8 @@ class Battle(
     val ally: Ally? = null,
     /** A later stage of a staged fight (3.32.0): what the stage won before it hands on; null for a fight of its own or a first stage. */
     val stage: StageCarry? = null,
+    /** Бой Разлома недели (3.96.0): механики стража и правила забега; null - обычный бой, ни одного лишнего броска. */
+    val rift: RiftCombat? = null,
 ) {
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
@@ -176,7 +178,7 @@ class Battle(
      * Слоты вокруг босса (3.93.0): их делят свита и тотемы; пустые - null. Свита при полных слотах не встаёт, тотем вытесняет
      * самый старый тотем. У боя без босса с фазами или тотемами слотов нет.
      */
-    val slotHolders: Array<SlotHolder?> = arrayOfNulls(foes.maxOfOrNull { it.slots } ?: 0)
+    val slotHolders: Array<SlotHolder?> = arrayOfNulls(max(foes.maxOfOrNull { it.slots } ?: 0, rift?.slots ?: 0))
 
     /** Тотемы, что стоят сейчас (3.93.0), по порядку, в котором встали. */
     val totems: List<StandingTotem> get() = standingTotems
@@ -347,7 +349,9 @@ class Battle(
 
     /** Singles out foe [index]; the same foe again, or a fallen one, gives the choice back to the class. */
     fun focus(index: Int?) {
+        val was = focus
         focus = index?.takeIf { it != focus && foeFighters.getOrNull(it)?.alive == true }
+        if (was != null && focus != null && foeFighters[was].alive) trial.focusChanges++
     }
 
     /** Foes taunting right now: while any stands, only they can be struck. */
@@ -436,7 +440,7 @@ class Battle(
 
     /** Страж боя (3.92.0): первый враг редкости босса, с фазами или тотемами; null - бой без стража. */
     internal val guardian: Int? by lazy {
-        foes.indices.firstOrNull { foes[it].phases.isNotEmpty() || foes[it].totems.isNotEmpty() || foes[it].rarity == com.sperance.exileforge.rules.content.MonsterRarity.UNIQUE }
+        foes.indices.firstOrNull { foes[it].guards }
     }
 
     /** When each fallen foe of the field was first seen down (3.73.0): its place waits [CombatRules.reinforceDelay] from then. */
@@ -455,6 +459,16 @@ class Battle(
         if (window.waiting == 0 || outcome != null) return null
         val foe = window.field.getOrNull(place)?.takeIf { !foeFighters[it].alive } ?: return null
         return (rules.reinforceDelay - (time - (downSince[foe] ?: time))).coerceAtLeast(0.0)
+    }
+
+    /** След боя для Испытания чемпиона (3.96.0): флаконы, низшая доля здоровья, смены цели. */
+    val trial = RiftTrace()
+
+    /** Механики Разлома (3.96.0); null вне Разлома. */
+    internal val riftFight: RiftFight? = rift?.let { RiftFight(it, kit.actives.size, kit.flasks.size) }
+
+    init {
+        riftFight?.let { riftOpen(it) }
     }
 
     companion object {

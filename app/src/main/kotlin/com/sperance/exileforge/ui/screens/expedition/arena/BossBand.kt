@@ -52,6 +52,7 @@ import com.sperance.exileforge.core.campaign.NoteTrace
 import com.sperance.exileforge.core.campaign.TraitView
 import com.sperance.exileforge.core.campaign.combat.Buildup
 import com.sperance.exileforge.core.campaign.combat.HitKind
+import com.sperance.exileforge.core.campaign.combat.RiftGuard
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.FightHud
@@ -63,7 +64,9 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.display.totemTitle
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.TotemKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
@@ -197,6 +200,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
             }
         }
         LifeBar(foe, boss, time)
+        if (boss.rift != null && foe.alive) RiftStrip(boss, time)
         if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
         foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
         if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(foe.ailments, foe.held, foe.effects)
@@ -708,4 +712,174 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
             }
         }
     }
+}
+
+// ============================================================ Стражи Разлома (3.96.0)
+
+/** Палитра Разлома (RULES.md, «Стражи Разлома»): панель, черта, ядовитая зелень, текст, тревога. */
+private val RiftPanel = Color(0xFF0E1812)
+private val RiftPanelDeep = Color(0xFF0A120D)
+private val RiftLine = Color(0xFF1F3427)
+private val RiftLineBright = Color(0xFF2F5A3F)
+private val RiftGreen = Color(0xFF39FF88)
+
+/** Печать Разлома на запертом слоте героя - та же ядовитая зелень. */
+internal val RiftSeal = RiftGreen
+private val RiftSoft = Color(0xFF9DFFB8)
+private val RiftHot = Color(0xFFD4FF6A)
+private val RiftDeep = Color(0xFF0B3A21)
+private val RiftText = Color(0xFFDBE8DC)
+private val RiftMuted = Color(0xFF7F9686)
+private val RiftDim = Color(0xFF4B5E51)
+private val RiftAlarm = Color(0xFFFF6B4A)
+
+/** Сколько длится разгорание печати и её раскол, мс. */
+private const val SEAL_GROW_MS = 2400
+private const val SEAL_BREAK_MS = 700
+
+/** Пульс печатей и мигание тревоги знамения, секунды периода. */
+private const val SEAL_PULSE_SECONDS = 2.4f
+private const val ALARM_SECONDS = .5f
+
+/** Сколько въезжает новая плашка украденного дара, мс. */
+private const val CHIP_MS = 500
+
+/** Полоса механики стража Разлома под здоровьем: печати Стража, Законы Владыки или украденное Поглотителем. */
+@Composable private fun RiftStrip(boss: BossHud, time: Float) {
+    val shape = RoundedCornerShape(6.dp)
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(RiftPanel, RiftPanelDeep))).border(1.dp, RiftLine, shape)
+            .padding(horizontal = 8.dp, vertical = 5.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        when (boss.rift) {
+            RiftGuard.WARDEN -> Seals(boss, time)
+            RiftGuard.DEVOURER -> Stolen(boss)
+            RiftGuard.LORD -> Laws(boss, time)
+            null -> Unit
+        }
+    }
+}
+
+/** Подпись полосы Разлома: заглавные серифы, мягкая зелень. */
+@Composable private fun RiftCaption(text: String, modifier: Modifier = Modifier, tint: Color = RiftSoft) {
+    Text(text, color = tint, fontFamily = FontFamily.Serif, fontSize = 10.sp, letterSpacing = 1.2.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = modifier)
+}
+
+/** Печати брони: ромб на печать - горит, пока стоит, гаснет с расколом и разгорается вновь; ниже - попадания до следующей. */
+@Composable private fun Seals(boss: BossHud, time: Float) {
+    val motion = LocalMotion.current
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RiftCaption(ui("boss.rift_seals", boss.seals, boss.sealsMax).uppercase(), Modifier.weight(1f, fill = false))
+        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            repeat(boss.sealsMax) { i -> SealPip(i < boss.seals, if (motion) .75f + .25f * sin(time * 2 * PI.toFloat() / SEAL_PULSE_SECONDS + i) else 1f) }
+        }
+    }
+    if (boss.sealEvery > 0 && boss.seals > 0) {
+        Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(RiftDeep)) {
+            Box(Modifier.fillMaxWidth((boss.sealHits / boss.sealEvery.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(Brush.horizontalGradient(listOf(RiftGreen.copy(alpha = .6f), RiftHot))))
+        }
+    }
+}
+
+/** Ромб печати: [lit] - стоит; [pulse] - дыхание свечения. Раскол - быстрая вспышка, возврат - медленное разгорание. */
+@Composable private fun SealPip(lit: Boolean, pulse: Float) {
+    val glow by animateFloatAsState(if (lit) 1f else 0f, tween(if (lit) SEAL_GROW_MS else SEAL_BREAK_MS, easing = FastOutSlowInEasing), label = "seal")
+    Canvas(Modifier.size(12.dp)) {
+        val c = center
+        val r = size.minDimension / 2
+        val gem = Path().apply {
+            moveTo(c.x, c.y - r)
+            lineTo(c.x + r * .72f, c.y)
+            lineTo(c.x, c.y + r)
+            lineTo(c.x - r * .72f, c.y)
+            close()
+        }
+        if (glow > 0f) drawCircle(RiftGreen.copy(alpha = .45f * glow * pulse), r * 1.1f, c)
+        drawPath(gem, Brush.linearGradient(listOf(RiftHot.copy(alpha = glow), RiftGreen.copy(alpha = .25f + .75f * glow), RiftDeep), Offset(c.x - r, c.y - r), Offset(c.x + r, c.y + r)))
+        drawPath(gem, if (glow > .5f) RiftSoft else RiftLineBright, style = Stroke(1.dp.toPx()))
+        // Снятая печать - трещина поперёк ромба
+        if (glow < 1f) drawLine(RiftDim.copy(alpha = 1 - glow), Offset(c.x - r * .4f, c.y - r * .3f), Offset(c.x + r * .35f, c.y + r * .4f), 1.dp.toPx())
+    }
+}
+
+/** Название Закона по словарю сервера; «Одна стихия» - с её стихией. */
+private fun lawName(law: RiftLaw, element: String?): String {
+    val name = locOr("rift.law.${law.name}.name", law.name)
+    return if (law == RiftLaw.ONE_ELEMENT && element != null) ui("boss.rift_law_element", name, ui("enum.damage.$element")) else name
+}
+
+/** Законы Владыки: скрижаль с Законами в силе; в знамение - тревога, отсчёт и имя следующего. */
+@Composable private fun Laws(boss: BossHud, time: Float) {
+    val motion = LocalMotion.current
+    val omen = boss.lawNext.isNotEmpty()
+    val flash = when {
+        !omen -> 0f
+        motion -> if ((time / ALARM_SECONDS).toInt() % 2 == 0) 1f else .35f
+        else -> 1f
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RiftCaption(ui("boss.rift_law").uppercase(), tint = RiftMuted)
+        val now = boss.law.joinToString(" · ") { lawName(it, boss.lawElement) }.ifEmpty { ui("boss.rift_law_none") }
+        Text(
+            now.uppercase(),
+            color = if (boss.law.isEmpty()) RiftDim else RiftGreen,
+            fontFamily = FontFamily.Serif,
+            fontWeight = FontWeight.Bold,
+            fontSize = 12.sp,
+            letterSpacing = 1.5.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    val seconds = ceil(boss.lawIn).toInt()
+    if (omen) {
+        val shape = RoundedCornerShape(4.dp)
+        Text(
+            ui("boss.rift_law_omen", seconds, boss.lawNext.joinToString(" · ") { lawName(it, boss.lawNextElement) }),
+            color = RiftAlarm.copy(alpha = .55f + .45f * flash),
+            fontFamily = FontFamily.Serif,
+            fontSize = 10.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth().clip(shape).background(RiftAlarm.copy(alpha = .12f * flash)).border(1.dp, RiftAlarm.copy(alpha = .7f * flash), shape)
+                .padding(horizontal = 6.dp, vertical = 1.dp),
+        )
+    } else {
+        RiftCaption(ui("boss.rift_law_in", seconds), tint = RiftMuted)
+    }
+}
+
+/** Поглотитель: его сила от Эха, счёт украденных даров и их плашки - новая въезжает слева. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Stolen(boss: BossHud) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RiftCaption(ui("boss.rift_stolen", boss.stolen.size).uppercase(), Modifier.weight(1f, fill = false))
+        Spacer(Modifier.weight(1f))
+        if (boss.devoured > 0) RiftCaption(ui("boss.rift_devoured", number(boss.devoured)), tint = RiftHot)
+    }
+    if (boss.stolen.isNotEmpty()) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            boss.stolen.forEach { code -> key(code) { StolenChip(code) } }
+        }
+    }
+}
+
+@Composable private fun StolenChip(code: String) {
+    val arrive = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { arrive.animateTo(1f, tween(CHIP_MS, easing = FastOutSlowInEasing)) }
+    val shape = RoundedCornerShape(4.dp)
+    Text(
+        locOr("rift.boon.$code.name", code),
+        color = RiftText,
+        fontFamily = FontFamily.Serif,
+        fontSize = 9.sp,
+        maxLines = 1,
+        modifier = Modifier.graphicsLayer {
+            translationX = (1 - arrive.value) * -16.dp.toPx()
+            alpha = arrive.value
+        }.clip(shape).background(RiftDeep).border(1.dp, RiftLineBright, shape).padding(horizontal = 5.dp, vertical = 1.dp),
+    )
 }

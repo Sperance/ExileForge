@@ -235,6 +235,7 @@ class Battle(
     }
     internal val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType>> = rules.ailments
         .mapNotNull { rule -> Ailment.of(rule.ailment)?.let { a -> DamageType.of(rule.type)?.let { t -> rule to (a to t) } } }.toMap()
+
     /** Недуги, что подавляют восстановление цели (4.2.0): поджог, яд, кровотечение по правилу. */
     private val suppressing: Set<Ailment> = fight.suppression.ailments.mapNotNull { code: String -> Ailment.of(code) }.toSet()
 

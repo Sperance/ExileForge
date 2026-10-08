@@ -31,6 +31,7 @@ import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.ItemFilter
 import com.sperance.exileforge.presentation.state.ItemShelf
+import com.sperance.exileforge.presentation.state.ItemType
 import com.sperance.exileforge.presentation.state.isWorn
 import com.sperance.exileforge.presentation.state.itemShelf
 import com.sperance.exileforge.presentation.state.railGroups
@@ -102,14 +103,14 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
             }
         }
         Row(Modifier.weight(1f).fillMaxWidth()) {
-            StashRail(rail, counted.size, filter.group, game.lang, onSelect = { filterState.update(filter.copy(group = it)) }, Modifier.fillMaxHeight().padding(start = 8.dp))
+            StashRail(rail, counted.size, (filter.type as? ItemType.Group)?.group, game.lang, onSelect = { filterState.update(filter.copy(type = it?.let(ItemType::Group))) }, Modifier.fillMaxHeight().padding(start = 8.dp))
             LazyColumn(
                 Modifier.weight(1f).fillMaxHeight(),
                 contentPadding = PaddingValues(start = 8.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 item(key = "shelf") {
-                    ShelfTitle(filter.group?.title(game.lang) ?: ui("stash.all_things"), visible.size) {
+                    ShelfTitle(filter.type?.let { typeTitle(it, game.lang) } ?: ui("stash.all_things"), visible.size) {
                         val capacity = game.index?.rules?.stash?.capacity(hero.info.stashSlots)
                         if (!selling && capacity != null) StashChip(hero.items.size, capacity, hero.info.autoSell.marks) { sheet = true }
                     }

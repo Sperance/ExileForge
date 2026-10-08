@@ -24,6 +24,7 @@ import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.state.FilterFacet
 import com.sperance.exileforge.presentation.state.ItemFilter
 import com.sperance.exileforge.presentation.state.ItemShelf
+import com.sperance.exileforge.presentation.state.ItemType
 import com.sperance.exileforge.presentation.state.QualityFilter
 import com.sperance.exileforge.presentation.state.SlotGroup
 import com.sperance.exileforge.rules.content.Rarity
@@ -104,9 +105,10 @@ fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: L
     val any = ui("filter.any")
     fun has(facet: FilterFacet) = facet in shelf.facets
     val accordion = listOfNotNull(
-        AccordionGroup("type", ui("filter.type"), draft.group?.title(lang) ?: any) {
-            ChoiceChips(listOf<SlotGroup?>(null) + groups, { it == draft.group }, { it?.title(lang) ?: any }) { draft = draft.copy(group = it) }
-        }.takeIf { has(FilterFacet.TYPE) && groups.isNotEmpty() },
+        AccordionGroup("type", ui("filter.type"), draft.type?.let { typeTitle(it, lang) } ?: any) {
+            val types = listOf<ItemType?>(null) + shelf.sections.map(ItemType::Section) + groups.map(ItemType::Group)
+            ChoiceChips(types, { it == draft.type }, { it?.let { t -> typeTitle(t, lang) } ?: any }) { draft = draft.copy(type = it) }
+        }.takeIf { has(FilterFacet.TYPE) && (groups.isNotEmpty() || shelf.sections.isNotEmpty()) },
         AccordionGroup("rarity", ui("filter.rarity"), draft.rarities.takeIf { it.isNotEmpty() }?.sortedByDescending { it.ordinal }?.joinToString(", ") { rarityTitle(it, lang) } ?: any) {
             RarityTiles(rarities, { it in draft.rarities }) { draft = draft.toggle(it) }
         }.takeIf { has(FilterFacet.RARITY) && rarities.isNotEmpty() },
@@ -138,4 +140,10 @@ fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: L
         },
         onDismiss = onDismiss,
     )
+}
+
+/** Имя варианта «Типа»: раздел - своим словом, группа мест - как в рейке. */
+fun typeTitle(type: ItemType, lang: Lang): String = when (type) {
+    is ItemType.Group -> type.group.title(lang)
+    is ItemType.Section -> ui("filter.section.${type.section.name}")
 }

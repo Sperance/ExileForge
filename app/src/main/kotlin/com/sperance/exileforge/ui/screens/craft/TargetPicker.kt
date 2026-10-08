@@ -20,18 +20,17 @@ import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ItemFilterBar
 import com.sperance.exileforge.ui.components.ItemFilterSheet
+import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.ItemRow
-import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.theme.*
 
 /**
  * The stash to pick what the forge works on (worn items included, since an orb does not care). С 4.2.0 - общий фильтр предметов
- * ([ItemShelf.FORGE]): строка над списком и шторка «Аккордеон», выбор запоминается; полки у наковальни ушли в его «Тип».
+ * ([ItemShelf.FORGE], [filterState] - общий с полкой у наковальни): строка над списком и шторка «Аккордеон», выбор запоминается.
  */
 @Composable
-internal fun TargetPicker(game: GameUi, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+internal fun TargetPicker(game: GameUi, filterState: ItemFilterState, onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val stash = remember(game.hero?.items, game.index) { game.hero?.items.orEmpty().mapNotNull { game.view(it) } }
-    val filterState = rememberItemFilter(ItemShelf.FORGE)
     var filtering by remember { mutableStateOf(false) }
     val shelf = { draft: ItemFilter -> game.itemShelf(stash, ItemShelf.FORGE, draft) { game.sellPrice(it.item) } }
     val shown = remember(stash, filterState.filter, game.hero) { shelf(filterState.filter) }

@@ -12,7 +12,7 @@ import kotlinx.serialization.Transient
 
 /**
  * A shelf of the stash's slot chips (3.30.0): the slots the rules tag alike are one — both weapons, both rings,
- * the three flask bays — and every other slot is its own. С 4.2.0 - пункт «Тип» фильтра предметов ([ItemFilter.group]).
+ * the three flask bays — and every other slot is its own. С 4.2.0 - вариант «Типа» фильтра предметов ([ItemType.Group]).
  */
 @Serializable
 @JvmInline
@@ -33,6 +33,42 @@ value class SlotGroup(val tag: String) {
         const val FLASK = "flask"
         const val TOOL = "tool"
         fun of(slot: Slot) = SlotGroup(slot.tag)
+    }
+}
+
+/**
+ * Раздел списка шире места (4.2.0): вся экипировка, карты, инструменты, надетое - быстрые варианты «Типа» на полке у наковальни.
+ * Новый раздел - запись здесь и в [ItemShelf.sections].
+ */
+@Serializable
+enum class ItemSection {
+    GEAR,
+    MAPS,
+    TOOLS,
+    WORN,
+    ;
+
+    fun admits(piece: ItemView): Boolean = when (this) {
+        GEAR -> piece.slot != Slot.MAP && !piece.slot.isTool
+        MAPS -> piece.slot == Slot.MAP
+        TOOLS -> piece.slot.isTool
+        WORN -> piece.isWorn
+    }
+}
+
+/** «Тип» фильтра предметов (4.2.0): место (группа мест рейки) или раздел шире места - одно состояние для рейки, полки и шторки. */
+@Serializable
+sealed interface ItemType {
+    fun admits(piece: ItemView): Boolean
+
+    @Serializable
+    data class Group(val group: SlotGroup) : ItemType {
+        override fun admits(piece: ItemView): Boolean = SlotGroup.of(piece.slot) == group
+    }
+
+    @Serializable
+    data class Section(val section: ItemSection) : ItemType {
+        override fun admits(piece: ItemView): Boolean = section.admits(piece)
     }
 }
 
@@ -90,25 +126,25 @@ enum class FilterFacet { TYPE, RARITY, QUALITY, MINE, WEARABLE, HIDE_WORN, SORT 
  * Список предметов приложения с фильтром (4.2.0): какие грани фильтра в нём есть ([facets]), какие порядки ([sorts]) и с чего он
  * начинается ([defaults]). Выбор фильтра запоминается на список, на устройстве ([ItemFilters]). Новый список - запись здесь.
  */
-enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, val defaults: ItemFilter) {
+enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, val defaults: ItemFilter, val sections: List<ItemSection> = emptyList()) {
     /** Тайник героя: тип - и рейка, цена - торговца за копию; надетое скрыто, пока игрок его не покажет. */
     STASH(FilterFacet.entries.toSet(), ItemSort.entries, ItemFilter(hideWorn = true)),
 
     /** Выбор вещи в кузнице: сферам всё равно, надета ли вещь, поэтому надетое видно. */
-    FORGE(FilterFacet.entries.toSet() - FilterFacet.WEARABLE, ItemSort.entries, ItemFilter(sort = ItemSort.RARITY)),
+    FORGE(FilterFacet.entries.toSet() - FilterFacet.WEARABLE, ItemSort.entries, ItemFilter(sort = ItemSort.RARITY), ItemSection.entries),
 
     /** Товар торговца: его вещи не сделаны героем и не надеты; цена - торговца. */
     MERCHANT(setOf(FilterFacet.TYPE, FilterFacet.RARITY, FilterFacet.QUALITY, FilterFacet.WEARABLE, FilterFacet.SORT), ItemSort.entries, ItemFilter()),
 }
 
 /**
- * Единый фильтр предметов (4.2.0, обобщение фильтра тайника 3.30.0): тип ([group], null - всё), редкости (пусто - все), качество,
+ * Единый фильтр предметов (4.2.0, обобщение фильтра тайника 3.30.0): тип ([type], null - всё), редкости (пусто - все), качество,
  * «сделано мной» (поле `maker` копии - имя героя), «могу надеть», «скрыть надетое», порядок и поиск. Поиск - только экрана и не
  * запоминается; прочее хранится на устройстве для своего списка ([ItemShelf]).
  */
 @Serializable
 data class ItemFilter(
-    val group: SlotGroup? = null,
+    val type: ItemType? = null,
     val rarities: Set<Rarity> = emptySet(),
     val quality: QualityFilter = QualityFilter.ANY,
     val mine: Boolean = false,
@@ -122,7 +158,7 @@ data class ItemFilter(
     /** Сколько настроек отличается от обычных списка [shelf]: число на значке фильтра. */
     fun tweaks(shelf: ItemShelf): Int {
         val base = shelf.defaults
-        return listOf(group != base.group, rarities != base.rarities, quality != base.quality, mine != base.mine, wearable != base.wearable, hideWorn != base.hideWorn, query.isNotBlank())
+        return listOf(type != base.type, rarities != base.rarities, quality != base.quality, mine != base.mine, wearable != base.wearable, hideWorn != base.hideWorn, query.isNotBlank())
             .count { it }
     }
 
@@ -132,7 +168,7 @@ data class ItemFilter(
      */
     fun admits(piece: ItemView, shelf: ItemShelf, heroName: String, unmet: (String) -> List<String>): Boolean {
         fun on(facet: FilterFacet) = facet in shelf.facets
-        return (!on(FilterFacet.TYPE) || group == null || SlotGroup.of(piece.slot) == group) &&
+        return (!on(FilterFacet.TYPE) || type?.admits(piece) != false) &&
             (!on(FilterFacet.RARITY) || rarities.isEmpty() || piece.rarity in rarities) &&
             (!on(FilterFacet.QUALITY) || quality.admits(piece)) &&
             (!on(FilterFacet.MINE) || !mine || piece.item.maker?.hero == heroName) &&

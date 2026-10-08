@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -16,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -26,16 +29,59 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.ItemSection
+import com.sperance.exileforge.presentation.state.ItemType
 import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
+import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.typeTitle
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** What lies in one round socket of the anvil: its drawing (null - the socket is empty), its name and its colour. */
 internal class Socket(val label: String, val accent: Color, val glyph: (@Composable () -> Unit)?, val onClick: (() -> Unit)? = null)
+
+/** Значок раздела на полке у наковальни. */
+private val ItemSection.glyph: ImageVector get() = when (this) {
+    ItemSection.GEAR -> ForgeGlyphs.Swords
+    ItemSection.MAPS -> ForgeGlyphs.Atlas
+    ItemSection.TOOLS -> Icons.Outlined.Build
+    ItemSection.WORN -> Icons.Outlined.CheckCircle
+}
+
+/**
+ * Полка у наковальни (макет B; с 4.2.0 - быстрый переключатель «Типа» общего фильтра [ItemShelf.FORGE], как рейка тайника):
+ * «Все» и разделы списка рисунками; выбранный - в золоте. Нажатие ставит тип фильтра и открывает выбор вещи - выбор на полке и
+ * «Тип» в шторке одно и то же состояние.
+ */
+@Composable internal fun TargetRail(state: ItemFilterState, onOpen: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    val entries = listOf<ItemType?>(null) + state.shelf.sections.map(ItemType::Section)
+    Column(
+        Modifier.width(52.dp).depthPanel(shape).padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        entries.forEach { type ->
+            val on = type == state.filter.type
+            val title = type?.let { typeTitle(it, uiLanguage) } ?: ui("common.all")
+            Box(
+                Modifier.size(40.dp, 28.dp).clip(RoundedCornerShape(8.dp)).background(if (on) Gold.copy(alpha = .16f) else Color.Transparent)
+                    .clickable(role = Role.Tab, onClickLabel = title) {
+                        state.update(state.filter.copy(type = type))
+                        onOpen()
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon((type as? ItemType.Section)?.section?.glyph ?: Icons.Outlined.Search, title, tint = if (on) GoldBright else Muted, modifier = Modifier.size(16.dp))
+            }
+        }
+    }
+}
 
 /**
  * The anvil (mockup B): the item's socket, then the [tool] laid on it and, for an orb, its [omen] — then the item itself as it

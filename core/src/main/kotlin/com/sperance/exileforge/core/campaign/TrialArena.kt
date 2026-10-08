@@ -76,7 +76,7 @@ data class TrialHud(
 
 /**
  * One trial (3.49.0, server 1.47.0) — an arena with no map: the boss rush of a cleared region, its bosses one after
- * another at the hero's level, or the endless tower, a wave of the Abyss a floor, stronger each floor. The screen calls
+ * another at the hero's level, or the endless tower, its floor a wave of its own cut into fights, a level higher each floor. The screen calls
  * [update] once a frame and sends [RunCommand]s, the arena's own; nothing here talks to the server: a boss down, a floor
  * cleared and the end are events for [onEvent], and the server's answers come back as [settle].
  *
@@ -358,11 +358,7 @@ class TrialArena(
             TrialKind.RUSH -> {
                 record { TrialEvent.Boss(it, step) }
                 step++
-                val rush = trials.rush
-                pools = pools.copy(
-                    life = (pools.life + hero.maxLife * rush.life / 100).coerceAtMost(hero.maxLife),
-                    charges = pools.charges.mapIndexed { i, held -> kit.flasks.getOrNull(i)?.let { (held + rush.flaskCharges).coerceAtMost(it.sheet.maxCharges) } ?: held },
-                )
+                breathe(trials.rush.life, trials.rush.flaskCharges)
                 if (step >= (plan?.size ?: 0)) finish(fallen = false)
             }
 
@@ -370,10 +366,20 @@ class TrialArena(
                 val n = record { TrialEvent.Floor(it, step) }
                 if (floor?.hoard == true) hoards += n
                 step++
+                // Передышка между этажами (4.2.0), как между боссами раша
+                breathe(trials.tower.life, trials.tower.flaskCharges)
                 // The tower's last floor won (3.71.0): the server closes the trial with it, so no end is sent after it
                 if (step > trials.tower.maxFloor) finish(fallen = false, ended = true)
             }
         }
+    }
+
+    /** Передышка после босса раша или этажа башни: [life]% максимума здоровья (не выше него) и [charges] зарядов каждой фляге. */
+    private fun breathe(life: Double, charges: Double) {
+        pools = pools.copy(
+            life = (pools.life + hero.maxLife * life / 100).coerceAtMost(hero.maxLife),
+            charges = pools.charges.mapIndexed { i, held -> kit.flasks.getOrNull(i)?.let { (held + charges).coerceAtMost(it.sheet.maxCharges) } ?: held },
+        )
     }
 
     /** The trial over; [ended] - the server closed it already, and no end of it is recorded. */

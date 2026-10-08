@@ -3211,7 +3211,7 @@
   "trials.abandon": "End",
   "trials.abandoned": "The trial is over",
   "trials.tower_title": "Endless Tower",
-  "trials.tower_hint": "A floor is a wave of the Abyss: monsters {0}% stronger each floor, a hoard and a leader every {1} floors, a new floor line every {2}, a checkpoint every {3}",
+  "trials.tower_hint": "Floor 1 stands {0} levels below the hero, +1 level every {1} floors; a floor's foes come in fights of {2}. Between floors +{3}% life and +{4} flask charge. A hoard and a leader every {5} floors, a new threat line every {6}, a checkpoint every {7}",
   "trials.tower_record": "Record: floor {0} · entry at floor {1}",
   "trials.tower_conquered": "The tower is conquered: all {0} floors are behind you",
   "trials.tower_enter": "Enter — {0}",

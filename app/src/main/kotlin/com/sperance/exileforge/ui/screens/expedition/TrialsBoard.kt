@@ -92,7 +92,12 @@ import org.koin.compose.viewmodel.koinViewModel
         val conquered = tower.start(trials.towerBest) > tower.maxFloor
         val towerNote = if (conquered) ui("trials.tower_conquered", tower.maxFloor) else ui("trials.tower_record", trials.towerBest, tower.start(trials.towerBest))
         TrialModeCard(TrialMode.TOWER, towerNote, ui("trials.chip_seals", seals), opened == TrialMode.TOWER, 1f / 3, { toggle(TrialMode.TOWER) }) {
-            MutedText(ui("trials.tower_hint", tower.growth.toInt(), tower.hoardEvery, tower.modEvery, tower.checkpoint))
+            MutedText(
+                ui(
+                    "trials.tower_hint", tower.levelOffset, tower.levelStep, index.rules.fight.maxFoes, tower.life.toInt(), number(tower.flaskCharges),
+                    tower.hoardEvery, tower.modEvery, tower.checkpoint,
+                ),
+            )
             if (!conquered) {
                 // Строки десятков (3.96.0): выбранные героем, по ним идёт вход
                 tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).forEach {

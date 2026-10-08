@@ -13,11 +13,9 @@ import androidx.test.core.app.ActivityScenario
 import com.sperance.exileforge.MainActivity
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.model.hero.HeroInfo
-import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -56,21 +54,23 @@ class ReleaseSmokeTest {
         val hero = WireJson.decodeFromString(HeroInfo.serializer(), """{"id":"hero","name":"Изгнанник","level":7,"money":120}""")
         assertEquals(7, hero.level)
         val view = checkNotNull(ItemView.of(item, index))
-        // A rare copy always carries a modifier: its line is the one drawn on its own under the card
-        val line = view.lines.first().let { Line(it.code, it.values) }
+        // A rare copy always carries a modifier: its line is the one drawn on its own under the card. Its text is the one
+        // the item's view already holds (4.0.0): the shrunk app and the test APK each read the dictionary through their own
+        // path, and a line re-worded on the test side may not be the line the app drew.
+        val line = view.lines.first().text
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
             scenario.onActivity {
                 it.setContent {
                     ForgeTheme {
                         Column {
                             ItemCard(view, detailed = true)
-                            ModifierLine(index, line)
+                            ModifierLine(line)
                         }
                     }
                 }
             }
             compose.onNodeWithText(view.title).assertIsDisplayed()
-            compose.onAllNodesWithText(lineText(index, line)).onFirst().assertExists()
+            compose.onAllNodesWithText(line).onFirst().assertExists()
         }
     }
 }

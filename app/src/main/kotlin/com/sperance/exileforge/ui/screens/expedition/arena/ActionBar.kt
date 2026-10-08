@@ -51,8 +51,6 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable internal fun ActionBar(fight: FightHud, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
     val live = fight.started && fight.outcome == null
-    // Between stages the belt is open (3.28.0): a draught then is drunk as on the road.
-    val drinkable = live || (!fight.started && fight.interlude != null)
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
         fight.skills.forEach { view ->
             if (view == null) {
@@ -66,7 +64,7 @@ import com.sperance.exileforge.ui.theme.*
             if (view == null) {
                 Box(Modifier.size(44.dp).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
             } else {
-                FlaskButton(view, drinkable) { onCommand(RunCommand.Drink(view.slot)) }
+                FlaskButton(view, live) { onCommand(RunCommand.Drink(view.slot)) }
             }
         }
     }

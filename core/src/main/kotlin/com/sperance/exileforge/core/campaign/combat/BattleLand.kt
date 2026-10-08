@@ -289,8 +289,7 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     if (foes[fighter.index].phases.isNotEmpty() || foes[fighter.index].totems.isNotEmpty() || riftFight != null && fighter.index == guardian) dismissRetinue(fighter)
     if (focus == fighter.index) focus = null
     if (lastStriker == fighter.index) lastStriker = null
-    val stepped = stepIn()
-    if (fighter.body.auras.isNotEmpty() || stepped) remake(heroFighter)
+    if (fighter.body.auras.isNotEmpty()) remake(heroFighter)
     val hero = heroFighter
     if (!hero.alive) return
     note(fighter, NoteKind.KILL, "", lifeBack(hero, (hero.body.lifeOnKill + hero.body.maxLife * hero.body.lifeOnKillShare) * hero.body.recoveryRate))

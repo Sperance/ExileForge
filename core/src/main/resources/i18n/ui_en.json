@@ -982,8 +982,6 @@
   "fight.focus_on": "Your target — tap again to let the class choose",
   "fight.focus_off": "Auto target: {0}. Tap a foe to pick it",
   "fight.stage": "Stage {0}/{1}",
-  "fight.stage_countdown": "The next pack joins the fight in {0} s. There is time for a flask.",
-  "fight.stage_next": "Next",
   "fight.pause": "Pause",
   "fight.resume": "Resume",
   "fight.line_add": "{1}: {0}",

@@ -169,26 +169,3 @@ internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double,
 
 internal fun ExpeditionWorld.free(x: Double, y: Double, radius: Double): Boolean = listOf(-radius to -radius, radius to -radius, -radius to radius, radius to radius)
     .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
-
-/**
- * The packs a fight with [agent] draws in (3.26.0): it and every ordinary pack still standing within
- * [rules.gatherRadius] of it — since 3.28.0 in the order they are fought, [agent] first, then the rest nearest first.
- * The boss, a crystal's guardian and anything not of the map fight alone.
- */
-fun ExpeditionWorld.gathered(agent: MonsterAgent): List<MonsterAgent> {
-    if (agent === boss || agent.crystal != null || agents.none { it === agent }) return listOf(agent)
-    fun distance(other: MonsterAgent) = hypot(other.x - agent.x, other.y - agent.y)
-    return listOf(agent) + agents.filter {
-        it !== agent && it !== boss && it.alive && it.crystal == null && it.standing.isNotEmpty() && distance(it) <= rules.gatherRadius
-    }.sortedBy(::distance)
-}
-
-/**
- * The gathered packs as the stages they are fought in (3.70.0): packs in a row share a stage while the stage holds
- * no more than [rules.stageMonsters] monsters — 1+1 and 1+2 fight together, 2+2 stay two stages; a pack too big stands alone.
- */
-fun ExpeditionWorld.stages(packs: List<MonsterAgent>): List<List<MonsterAgent>> = packs.fold(mutableListOf<MutableList<MonsterAgent>>()) { stages, pack ->
-    val last = stages.lastOrNull()
-    if (last != null && last.sumOf { it.standing.size } + pack.standing.size <= rules.stageMonsters) last += pack else stages += mutableListOf(pack)
-    stages
-}

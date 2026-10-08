@@ -61,7 +61,7 @@ internal class PetAllies(private val index: ContentIndex, private val rules: Com
 }
 
 /**
- * The fight as the overlay prints it: the [monsters] of the stage as cards in the battle's order, the hero's pools and states,
+ * The fight as the overlay prints it: the [monsters] of the fight as cards in the battle's order, the hero's pools and states,
  * what just landed, and the blows so far, newest first. Shared by the map's runs and the trials (3.49.0).
  */
 internal fun Battle.hud(
@@ -72,9 +72,8 @@ internal fun Battle.hud(
     paused: Boolean,
     heroTaunt: Boolean,
     level: Int,
-    stage: Int,
-    stages: Int,
-    interlude: Double?,
+    round: Int = 1,
+    rounds: Int = 1,
 ): FightHud {
     val battle = this
     val h = heroFighter
@@ -114,8 +113,7 @@ internal fun Battle.hud(
         FoeView(
             f.index, monsters.getOrNull(f.index) ?: checkNotNull(foes[f.index].origin), shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
-            f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = window.place(f.index), waiting = window.waits(f.index),
-            reinforce = window.place(f.index).takeIf { it >= 0 }?.let(::reinforceIn), reinforceDelay = rules.reinforceDelay, buildup = buildup(f),
+            f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = place(f.index), buildup = buildup(f),
             barrier = f.barrier.takeIf { f.barrierUntil > time }?.roundToInt() ?: 0,
         )
     }
@@ -135,7 +133,7 @@ internal fun Battle.hud(
         skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(),
         heroBarrier = h.barrier.roundToInt(),
         level = level,
-        stage = stage, stages = stages, interlude = interlude,
+        round = round, rounds = rounds,
         heroBody = h.body,
         boss = bossHud(),
     )

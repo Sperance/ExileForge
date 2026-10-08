@@ -15,7 +15,6 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.AutoFinish
 import com.sperance.exileforge.ui.theme.*
-import kotlin.math.ceil
 
 /**
  * Under the hero: before «В бой» the call to fight and the way back; once it runs, pause and go on,
@@ -25,10 +24,6 @@ import kotlin.math.ceil
 @Composable internal fun Controls(fight: FightHud, hud: RunHud, onCommand: (RunCommand) -> Unit) {
     val auto = hud.auto
     val live = fight.outcome == null
-    fight.interlude?.takeIf { !fight.started }?.let {
-        StageBreak(fight, it, onCommand)
-        return
-    }
     if (!fight.started) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ForgeButton(
@@ -88,28 +83,6 @@ import kotlin.math.ceil
             ) {
                 asking = false
                 onCommand(RunCommand.Surrender)
-            }
-        }
-    }
-}
-
-/**
- * The pause between the stages of a gathered fight (3.28.0): which stage stands up next, the seconds before it does
- * by itself and «Дальше» to begin at once; the belt above stays open for a draught. Отступления нет (3.88.8).
- */
-@Composable private fun StageBreak(fight: FightHud, left: Double, onCommand: (RunCommand) -> Unit) {
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(ui("fight.stage", fight.stage, fight.stages), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(ui("fight.stage_countdown", ceil(left).toInt()), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeButton(
-                onClick = { onCommand(RunCommand.Begin) },
-                modifier = Modifier.weight(1f).height(52.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
-            ) {
-                Icon(ForgeGlyphs.Swords, null, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(ui("fight.stage_next"), style = MaterialTheme.typography.titleMedium)
             }
         }
     }

@@ -384,26 +384,13 @@ private fun Battle.wound(me: Fighter, amount: Double, chaos: Boolean) {
 /** Accuracy against evasion (3.35.0, server 1.34.0), as in PoE, under the target's ceiling. */
 internal fun Battle.evasion(me: Fighter, target: Fighter): Double = rules.accuracy.evaded(me.body.accuracy(rules.accuracy), target.body.evasion).coerceAtMost(target.body.evasionCap)
 
-/**
- * The next in line take the places of the fallen once each place has stood empty for the rule's delay (3.73.0); whether
- * one brought an aura the hero now stands under.
- */
-internal fun Battle.stepIn(): Boolean {
-    if (window.waiting == 0) return false
-    window.field.forEach { if (!foeFighters[it].alive) downSince.getOrPut(it) { time } }
-    return window.refill { !foeFighters[it].alive && time - (downSince[it] ?: time) >= rules.reinforceDelay - 1e-9 }
-        .onEach { foeFighters[it].enter(window.place(it), time) }
-        .any { foeFighters[it].body.auras.isNotEmpty() }
-}
-
 private fun Battle.finished(): Boolean {
     if (outcome != null) return true
-    if (stepIn()) remake(heroFighter)
     // A power may answer the hero's fall (2.79.0) and stand them back up.
     if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
     when {
         !heroFighter.alive -> end(Outcome.LOSS)
-        foeFighters.none { it.alive } && window.waiting == 0 -> end(Outcome.WIN)
+        foeFighters.none { it.alive } -> end(Outcome.WIN)
         else -> return false
     }
     return true

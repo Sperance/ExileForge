@@ -80,8 +80,8 @@ data class TrialHud(
  * [update] once a frame and sends [RunCommand]s, the arena's own; nothing here talks to the server: a boss down, a floor
  * cleared and the end are events for [onEvent], and the server's answers come back as [settle].
  *
- * Between two fights the next one stands laid open for [BREAK] seconds, or the player's word: a rush gives back a share
- * of life and a flask charge each; walking away there ends the trial. Mid-fight there is no way out.
+ * Between two fights the next one stands laid open until the player's «В бой»: a rush gives back a share of life and a flask
+ * charge each; walking away there ends the trial. Mid-fight there is no way out.
  */
 class TrialArena(
     val index: ContentIndex,
@@ -126,21 +126,21 @@ class TrialArena(
 
     /** The fights of the floor still to come, the one under way first; a rush's boss is a fight of one. */
     private var fights: List<List<RolledMonster>> = emptyList()
-    private var stage = 0
-    private var stages = 0
+    private var round = 0
+    private var rounds = 0
     private var level = trial.heroLevel
     private var battle: Battle? = null
     private var monsters: List<RolledMonster> = emptyList()
-    private var carry: StageCarry? = null
     private var started = false
     private var paused = false
-    private var interlude: Double? = null
     private var speed = 1
     private var reported = 0
     private var fought = 0L
     private var cleared = 0
-    private var stageHits: List<PackHit> = emptyList()
-    private var stageTime = 0.0
+
+    /** Бои шага (босса раша или этажа башни) до сих пор: шаг - одно событие боя с общим журналом и временем. */
+    private var stepHits: List<PackHit> = emptyList()
+    private var stepTime = 0.0
     private val stats = RunStats()
     private var kills = 0
 
@@ -195,7 +195,6 @@ class TrialArena(
             RunCommand.Begin -> if (fight != null && phase == TrialPhase.FIGHT) {
                 started = true
                 paused = false
-                interlude = null
             }
 
             RunCommand.Pause -> if (fight != null && started && fight.outcome == null) paused = !paused
@@ -257,19 +256,18 @@ class TrialArena(
                     if (fights.isEmpty()) return finish(fallen = false)
                 }
             }
-            stages = fights.size
-            stage = 0
-            stageHits = emptyList()
-            stageTime = 0.0
+            rounds = fights.size
+            round = 0
+            stepHits = emptyList()
+            stepTime = 0.0
         }
         monsters = fights.first()
         fights = fights.drop(1)
-        stage++
+        round++
         reported = 0
         battle = battle(monsters)
         started = false
         paused = false
-        interlude = BREAK
     }
 
     private fun battle(foes: List<RolledMonster>): Battle {
@@ -280,7 +278,7 @@ class TrialArena(
             // Фазы и свита боссов (3.92.0): свита - на своём потоке
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
-            percent = gear.percent, ally = allies.of(hero.stats, pet), stage = carry,
+            percent = gear.percent, ally = allies.of(hero.stats, pet),
         )
     }
 
@@ -327,16 +325,6 @@ class TrialArena(
 
     private fun play(dt: Double) {
         val fight = battle ?: return
-        if (!started) {
-            interlude?.let { left ->
-                if (left > dt) {
-                    interlude = left - dt
-                } else {
-                    interlude = null
-                    started = true
-                }
-            }
-        }
         if (!started || paused) return
         fight.advance(dt * speed)
         while (reported < fight.fallen.size) {
@@ -346,26 +334,25 @@ class TrialArena(
         val outcome = fight.outcome ?: return
         if (fight.time < fight.duration + index.campaign.expedition.aftermath) return
         pools = fight.pools()
-        val retinue = fight.foes.withIndex().drop(monsters.size).mapNotNull { (i, foe) -> foe.origin?.let { PackHit(it, fight.events.filter { e -> e.foe == i }, fight.duration, stageTime) } }
-        val pack = stageHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration, stageTime) } + retinue
-        stageHits = pack
-        stageTime += fight.duration
+        val retinue = fight.foes.withIndex().drop(monsters.size).mapNotNull { (i, foe) -> foe.origin?.let { PackHit(it, fight.events.filter { e -> e.foe == i }, fight.duration, stepTime) } }
+        val pack = stepHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration, stepTime) } + retinue
+        stepHits = pack
+        stepTime += fight.duration
         if (outcome != Outcome.WIN) {
-            stats.add(pack, stageTime)
-            record { TrialEvent.Fight(it, FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = false)) }
+            stats.add(pack, stepTime)
+            record { TrialEvent.Fight(it, FightFigures.of(pack, stepTime, trial.kind == TrialKind.RUSH, won = false)) }
             battle = null
             finish(fallen = true)
             return
         }
-        carry = fight.carry()
         if (fights.isEmpty()) won(pack)
         if (phase == TrialPhase.FIGHT) stand()
     }
 
     /** A boss or a whole floor won: its event, the rush's breath between bosses, and the next one — or the end of the rush. */
     private fun won(pack: List<PackHit>) {
-        stats.add(pack, stageTime)
-        record { TrialEvent.Fight(it, FightFigures.of(pack, stageTime, trial.kind == TrialKind.RUSH, won = true)) }
+        stats.add(pack, stepTime)
+        record { TrialEvent.Fight(it, FightFigures.of(pack, stepTime, trial.kind == TrialKind.RUSH, won = true)) }
         cleared++
         when (trial.kind) {
             TrialKind.RUSH -> {
@@ -410,8 +397,7 @@ class TrialArena(
         val fightHud = if (fight != null && leader != null) {
             fight.hud(
                 monsters, leader, speed, started, paused, hero.taunt, level,
-                stage = if (trial.kind == TrialKind.RUSH) step + 1 else stage, stages = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else stages,
-                interlude = interlude,
+                round = if (trial.kind == TrialKind.RUSH) step + 1 else round, rounds = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else rounds,
             )
         } else {
             null
@@ -428,8 +414,6 @@ class TrialArena(
     }
 
     companion object {
-        /** Seconds the next fight stands laid open before it begins by itself. */
-        const val BREAK = 3.0
         private val FIGHT_STREAM = "trial".hashCode().toLong()
 
         /** Поток свиты фаз боссов (3.92.0). */

@@ -13,7 +13,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -32,10 +31,9 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
-import kotlin.math.ceil
 import kotlin.math.sin
 
-/** The pack's leader by name and what the pack is: its rarity, the map's level, the stage of a gathered fight, how many are left standing. */
+/** The pack's leader by name and what the pack is: its rarity, the map's level, the fight of a chain, how many are left standing. */
 @Composable internal fun PackHeader(fight: FightHud, level: Int) {
     val leader = fight.leader
     Box(Modifier.fillMaxWidth()) {
@@ -50,7 +48,7 @@ import kotlin.math.sin
             )
             val line = listOfNotNull(
                 ui("expedition.monster_line", ui(leader.rarity.key()), level),
-                ui("fight.stage", fight.stage, fight.stages).takeIf { fight.stages > 1 },
+                ui("fight.stage", fight.round, fight.rounds).takeIf { fight.rounds > 1 },
                 ui("expedition.pack_left", fight.standing, fight.foes.size).takeIf { fight.foes.size > 1 },
             ).joinToString(" · ")
             Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
@@ -221,8 +219,7 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
         }
         if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
         if (!foe.alive) {
-            foe.reinforce?.let { left -> ReinforceRing(left, foe.reinforceDelay, Modifier.align(Alignment.Center).size(40.dp)) }
-                ?: Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
+            Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
         } // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
         else if (focused && !foe.reachable) {
             Text(
@@ -259,18 +256,6 @@ private val FOE_AVATAR_NARROW = 46.dp
         textAlign = TextAlign.Center,
         onTextLayout = { if (it.hasVisualOverflow && size > 8.5f) size -= .5f },
     )
-}
-
-/** The place of a fallen foe while the next of the line closes in (3.73.0): a ring running down and the seconds left. */
-@Composable private fun ReinforceRing(left: Double, delay: Double, modifier: Modifier) {
-    val share = if (delay > 0) (left / delay).toFloat().coerceIn(0f, 1f) else 0f
-    Box(modifier, contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            drawCircle(Muted.copy(alpha = .25f), style = Stroke(3.dp.toPx()))
-            drawArc(GoldBright, -90f, 360f * share, useCenter = false, style = Stroke(3.dp.toPx()))
-        }
-        Text(ceil(left).toInt().toString(), color = GoldBright, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-    }
 }
 
 /** The numbers rising off a card: the blows that reached it in the last second. */

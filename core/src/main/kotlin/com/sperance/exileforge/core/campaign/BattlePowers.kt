@@ -59,13 +59,6 @@ internal class PowerMoment(
     val damage: Double get() = taken.values.sum()
 }
 
-/**
- * What a won stage of a staged fight hands the next one (3.32.0, server 1.31.0): the stage was cleared — the next
- * battle answers [PowerEvent.STAGE_CLEAR] before its [PowerEvent.FIGHT_START] — the [momentum] the hero built and, since 3.33.0
- * (server 1.32.0), the hero's [charges] by kind, their lives starting afresh.
- */
-@kotlinx.serialization.Serializable data class StageCarry(val momentum: Int = 0, val charges: Map<ChargeKind, Int> = emptyMap())
-
 /** A hit to strike again (3.32.0): its foe, the damage, at [at]; dropped if the foe or the fight is gone by then. */
 private class Echo(val at: Double, val foe: Battle.Fighter, val damage: Map<DamageType, Double>, val spell: Boolean, val skill: String)
 
@@ -82,7 +75,7 @@ private fun Power.amount(own: Double?, value: Double): Double = own ?: if (roll 
 private fun Power.duration(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.DURATION) value else 0.0
 private fun Power.chance(value: Double): Double = chance ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.CHANCE) value else 100.0
 
-internal class PowerRunner(private val battle: Battle, book: PowerBook, private val stage: StageCarry? = null) {
+internal class PowerRunner(private val battle: Battle, book: PowerBook) {
     private val byEvent: Map<PowerEvent, List<Power>> = book.powers.filter { it.on != null }.groupBy { it.on!! }
     private val standingPowers = byEvent[PowerEvent.STANDING].orEmpty()
     private val readyAt = mutableMapOf<String, Double>()
@@ -96,8 +89,8 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
     /** Whether a standing line grows with [momentum]: only then does a hit make the hero's body again. */
     private val momentous = standingPowers.any { power -> power.effects.any { effect -> effect.lines.any { it.scale == PowerScale.MOMENTUM } } }
 
-    /** The hero's hits in a row on one foe (3.32.0): another foe starts it over, a new stage keeps it. */
-    var momentum = stage?.momentum ?: 0
+    /** The hero's hits in a row on one foe (3.32.0): another foe starts it over. */
+    var momentum = 0
         private set
     private var momentumOn: Battle.Fighter? = null
 
@@ -117,7 +110,6 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
     fun tick() {
         if (!started) {
             started = true
-            if (stage != null) fire(PowerEvent.STAGE_CLEAR)
             fire(PowerEvent.FIGHT_START)
         }
         echo()

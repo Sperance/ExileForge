@@ -19,31 +19,13 @@ data class ChargeView(val kind: ChargeKind, val count: Int, val max: Int, val se
 /**
  * The hero's frenzy, power and endurance charges in one fight (3.33.0, server 1.32.0) under the rules' [rules]: at most
  * [ChargeRules.max] of a kind, all of a kind living as long as the last one gained — a gain refreshes every charge of it —
- * each laying its kind's lines on the hero. A fight starts with none unless the stage before hands its own on.
+ * each laying its kind's lines on the hero. A fight starts with none.
  */
-internal class HeroCharges(private val rules: ChargeRules, carried: Map<ChargeKind, Int> = emptyMap()) {
+internal class HeroCharges(private val rules: ChargeRules) {
     private val counts = EnumMap<ChargeKind, Int>(ChargeKind::class.java)
     private val until = EnumMap<ChargeKind, Double>(ChargeKind::class.java)
 
-    init {
-        carried.forEach { (kind, count) -> if (kind.real && count > 0) counts[kind] = count }
-    }
-
-    val any: Boolean get() = counts.values.any { it > 0 }
-
     fun count(kind: ChargeKind): Int = if (kind == ChargeKind.ALL) ChargeKind.REAL.sumOf { count(it) } else counts[kind] ?: 0
-
-    /** The charges handed on to the next stage of a staged fight. */
-    fun snapshot(): Map<ChargeKind, Int> = counts.filterValues { it > 0 }
-
-    /** The carried charges start their lives now, capped by [sheet]'s maximum. */
-    fun start(now: Double, sheet: Map<String, Double>) {
-        val life = rules.lifetime(sheet)
-        counts.keys.toList().forEach { kind ->
-            counts[kind] = min(counts.getValue(kind), rules.max(kind, sheet))
-            until[kind] = now + life
-        }
-    }
 
     /** [amount] charges of [kind] — each of `RANDOM` drawn from [random] — up to the maximum; whether any count changed. */
     fun gain(kind: ChargeKind, amount: Int, now: Double, sheet: Map<String, Double>, random: Random): Boolean {

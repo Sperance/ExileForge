@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.LootEntry
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.RunJournal
-import com.sperance.exileforge.core.campaign.StageCarry
 import com.sperance.exileforge.core.campaign.UnfinishedRun
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.AutoPlan
@@ -230,8 +229,6 @@ class ExpeditionActions(
         autoPlan = auto
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroes.heroId
-            // Перенос этапа боя, прерванного перезапуском, продолжается в том же походе, куда вошли снова.
-            val kept = runJournal?.let { it.runId to it.carry }
             // Журнал, которого сервер ещё не взял, не бросается ради нового похода: его убийства - героя.
             runJournal?.let { j ->
                 flush()
@@ -257,11 +254,11 @@ class ExpeditionActions(
             }
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
             heroSync.drawn()
-            begin(id, started, kept?.takeIf { it.first == started.id }?.second, toBoss)
+            begin(id, started, toBoss)
         }
     }
 
-    private fun begin(id: String, started: RunStart, carry: StageCarry? = null, toBoss: Boolean = false) {
+    private fun begin(id: String, started: RunStart, toBoss: Boolean = false) {
         val i = index ?: return
         val h = hero?.takeIf { it.id == id } ?: return
         val zone = i.zone(started.zone) ?: return
@@ -270,8 +267,7 @@ class ExpeditionActions(
         val run = Run(i, zone, started.seed, started.context)
         // Заход, начатый автопробегом, и продолжается им (3.95.1): признак едет в его контексте с сервера.
         if (started.context.auto) autoPlan = AutoPlan
-        val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, carry = carry).also { runJournal = it }
-        journal.onCarry = ::persist
+        val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied).also { runJournal = it }
         expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = emptySet()) }
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
@@ -474,13 +470,11 @@ class ExpeditionActions(
 
     private suspend fun resumeJournal(id: String, kept: RunJournal) {
         val open = hero?.takeIf { it.id == id }?.campaign?.run
-        // Учтённый журнал с переносом этапа остаётся: поход, в который вошли снова, его подхватит.
-        if (open?.id != kept.runId || kept.settled && kept.carry == null) {
+        if (open?.id != kept.runId || kept.settled) {
             store.clearJournal(id)
             return
         }
         runJournal = kept
-        kept.onCarry = ::persist
         expedition { it.copy(pending = kept.pending.size, rejected = kept.rejected.size) }
         flush()
     }

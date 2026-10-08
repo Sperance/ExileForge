@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.campaign.BodyModel
-import com.sperance.exileforge.core.campaign.FoeWindow
 import com.sperance.exileforge.core.campaign.HeroCharges
 import com.sperance.exileforge.core.campaign.HeroModel
 import com.sperance.exileforge.core.campaign.HitTrace
@@ -9,7 +8,6 @@ import com.sperance.exileforge.core.campaign.KitSkill
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.PowerRunner
 import com.sperance.exileforge.core.campaign.RollTrace
-import com.sperance.exileforge.core.campaign.StageCarry
 import com.sperance.exileforge.core.campaign.TraceOrigin
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.skillsFree
@@ -27,8 +25,7 @@ import kotlin.random.Random
  * Since 2.70.0 it is the hero against the whole pack at once: every foe swings at the hero at its own
  * speed from the first second, and the hero at any one foe on screen, whatever the weapon. Whom is the
  * player's [focus] when given, the class's [TargetRule] otherwise, chosen afresh at every swing; a taunter
- * comes first. Only [FoeWindow.SIZE] of the pack fight at once: the rest wait in
- * line and step in, each into the place of one that fell ([window]); a foe waiting is not [Fighter.alive].
+ * comes first. Вся стая на поле сразу (4.2.0): бой не больше `fight.maxFoes` врагов, свита босса встаёт по зову фаз ([field]).
  *
  * Each swing can be evaded (evasion against the attacker's level), blocked, or land; a landing hit
  * rolls the rule's variance per damage type, may be a critical strike, and is reduced by armour
@@ -67,8 +64,6 @@ class Battle(
     private val percent: Set<String> = emptySet(),
     /** The combat pet at the hero's side (3.5.0); it stands up whole after the fight. */
     val ally: Ally? = null,
-    /** A later stage of a staged fight (3.32.0): what the stage won before it hands on; null for a fight of its own or a first stage. */
-    val stage: StageCarry? = null,
     /** Бой Разлома недели (3.96.0): механики стража и правила забега; null - обычный бой, ни одного лишнего броска. */
     val rift: RiftCombat? = null,
 ) {
@@ -149,7 +144,7 @@ class Battle(
         /** The fullest bar, for the card: which and how full. */
         fun leading(): Pair<Buildup, Double>? = Buildup.entries.map { it to buildup[it.ordinal] }.filter { it.second > 0.005 }.maxByOrNull { it.second }
 
-        /** On the field: the hero's side always, a foe once the [window] lets it in — one waiting its turn is not in the fight yet. */
+        /** On the field: the hero's side always, a foe from the start or, свита босса, once its phase calls it ([field]). */
         var engaged: Boolean = side == Side.HERO
             private set
 
@@ -172,8 +167,21 @@ class Battle(
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
     }
 
-    /** Who of the pack is on the field: at most [FoeWindow.SIZE] at once, the strongest first, the rest stepping in as they fall. */
-    val window = FoeWindow(FoeWindow.order(foes.map { it.rarity }).filterNot { foes[it].summoned }, (foes.maxOfOrNull { it.slots } ?: 0).let { if (it > 0) maxOf(FoeWindow.SIZE, 1 + it) else FoeWindow.SIZE })
+    /**
+     * Кто на поле, по местам (4.2.0): вся стая сразу, сильнейший первым; свита босса встаёт по зову фаз на следующее место
+     * ([enterField]). Павший держит своё место до конца боя.
+     */
+    private val places: MutableList<Int> = foes.indices.filterNot { foes[it].summoned }.sortedByDescending { foes[it].rarity }.toMutableList()
+
+    /** Место врага [index] на поле; -1 - свита, что ещё не звана. */
+    fun place(index: Int): Int = places.indexOf(index)
+
+    /** Званая свита [index] встаёт на следующее место и подходит к герою. */
+    internal fun enterField(index: Int) {
+        if (index in places) return
+        places += index
+        foeFighters[index].enter(places.lastIndex, time)
+    }
 
     /**
      * Слоты вокруг босса (3.93.0): их делят свита и тотемы; пустые - null. Свита при полных слотах не встаёт, тотем вытесняет
@@ -189,7 +197,7 @@ class Battle(
     /** Когда босс со своими тотемами ставит следующий (3.93.0), по номеру врага. */
     internal val totemAt = mutableMapOf<Int, Double>()
     val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i) }
-        .also { all -> window.field.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
+        .also { all -> places.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
 
     /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
@@ -258,10 +266,10 @@ class Battle(
     internal var shieldUp = true
 
     /** The hero's powers (2.79.0): the unique items' answers to what happens here. */
-    internal val powers = PowerRunner(this, kit.powers, stage)
+    internal val powers = PowerRunner(this, kit.powers)
 
-    /** The hero's frenzy, power and endurance charges (3.33.0, server 1.32.0): none as a fight opens, a stage's from the one before. */
-    internal val heroCharges = HeroCharges(kit.charges, stage?.charges.orEmpty())
+    /** The hero's frenzy, power and endurance charges (3.33.0, server 1.32.0): none as a fight opens. */
+    internal val heroCharges = HeroCharges(kit.charges)
 
     /** The delayed life damage still to come (3.33.0). */
     internal val delayed = mutableListOf<Delayed>()
@@ -281,9 +289,6 @@ class Battle(
     internal val conditioned = model.conditional(Condition.entries.toSet()).isNotEmpty()
     internal var conditions: Set<Condition> = emptySet()
 
-    /** What this fight, won, hands the next stage of a staged fight (3.32.0): the momentum and, since 3.33.0, the charges. */
-    fun carry(): StageCarry = StageCarry(powers.momentum, heroCharges.snapshot())
-
     init {
         // A draught still running from the map comes into the fight, and the belt's opening ones count as drunk.
         pools?.flaskLeft?.forEachIndexed { i, left ->
@@ -295,11 +300,10 @@ class Battle(
             pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly) }
             flaskOpened[i] = true
         }
-        if (heroCharges.any) heroCharges.start(time, heroFighter.body.stats)
         // Buffs worn from the start (3.35.0): a monster's modifier or the map's.
         (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach(::wear)
         if (conditioned) conditions = heroConditions()
-        if (heroFighter.effects.isNotEmpty() || heroCharges.any || conditions.isNotEmpty()) remake(heroFighter)
+        if (heroFighter.effects.isNotEmpty() || conditions.isNotEmpty()) remake(heroFighter)
         heroFighter.mana = (pools?.mana ?: Double.MAX_VALUE).coerceIn(0.0, manaCap())
         shieldUp = heroFighter.shield > 0
     }
@@ -444,9 +448,6 @@ class Battle(
         foes.indices.firstOrNull { foes[it].guards }
     }
 
-    /** When each fallen foe of the field was first seen down (3.73.0): its place waits [CombatRules.reinforceDelay] from then. */
-    internal val downSince = mutableMapOf<Int, Double>()
-
     /**
      * What a support pet mended since its last line (3.70.0): its healing runs every slice, so the log gathers it into a
      * line a [CombatRules.petMendEvery]. The line is the hero's own, on themselves — the figures leave it out, as they always did.
@@ -454,13 +455,6 @@ class Battle(
     internal var petMend = 0.0
 
     internal var petMendFrom = 0.0
-
-    /** Seconds until a foe steps into [place], or null when nobody waits for it or its foe still stands (3.73.0). */
-    fun reinforceIn(place: Int): Double? {
-        if (window.waiting == 0 || outcome != null) return null
-        val foe = window.field.getOrNull(place)?.takeIf { !foeFighters[it].alive } ?: return null
-        return (rules.reinforceDelay - (time - (downSince[foe] ?: time))).coerceAtLeast(0.0)
-    }
 
     /** След боя для Испытания чемпиона (3.96.0): флаконы, низшая доля здоровья, смены цели. */
     val trial = RiftTrace()

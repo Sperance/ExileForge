@@ -25,7 +25,7 @@ data class AbyssDepth(val level: Int, val count: List<Int>, val magic: Double, v
 /**
  * The waves of the Abyss: the dice of a depth are the client's, as every fight's. A wave is the rule's own
  * monsters, as many as its count and the map's swarm say, magic and rare by the depth's shares, with the map's
- * and the Abyss's buffs on them, and the depth's leader last. A wave larger than [FIGHT] is fought in turns.
+ * and the Abyss's buffs on them, and the depth's leader last. Волна режется на бои по `fight.maxFoes` врагов (4.2.0).
  */
 class AbyssWaves(private val index: ContentIndex, private val run: Run) {
     private val monsters = MonsterRoller(index)
@@ -78,7 +78,7 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
         val leader = floor.leader?.takeIf { index.monster(it) != null }?.let { code ->
             spawns.skilled(spawns.buffed(monsters.boss(monsters.guardian(code, level, rule.modifiers, rule.rolls, rule.tierReach), dice, leaderBuffs(effects)), buffs), dice)
         }
-        return (foes + listOfNotNull(leader)).chunked(FIGHT)
+        return index.rules.fight.fights(foes + listOfNotNull(leader))
     }
 
     /** What the map's lines and the atlas do to every monster of the Abyss: more life, more damage, both. */
@@ -90,9 +90,4 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
 
     /** What the map's «stronger leaders» does to a leader alone. */
     fun leaderBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStats.ABYSS_LEADER]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + DamageType.entries.map { it.attack }).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
-
-    companion object {
-        /** The most foes one fight of a wave holds. */
-        const val FIGHT = 4
-    }
 }

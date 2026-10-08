@@ -114,10 +114,8 @@ class RiftArena(
     private var wave = 0
     private var battle: Battle? = null
     private var monsters: List<RolledMonster> = emptyList()
-    private var carry: StageCarry? = null
     private var started = false
     private var paused = false
-    private var interlude: Double? = TrialArena.BREAK
     private var speed = 1
     private var elapsed = 0.0
     private var hurt = false
@@ -150,7 +148,6 @@ class RiftArena(
             RunCommand.Begin -> if (fight != null && phase == TrialPhase.FIGHT) {
                 started = true
                 paused = false
-                interlude = null
             }
 
             RunCommand.Pause -> if (fight != null && started && fight.outcome == null) paused = !paused
@@ -233,7 +230,7 @@ class RiftArena(
         )
     }
 
-    /** Следующая волна встаёт; первая - после передышки, следующие - сразу. */
+    /** Следующая волна встаёт; первая ждёт «В бой», следующие - сразу. */
     private fun stand() {
         monsters = waves.getOrNull(wave) ?: return
         val phases = PhaseFoes(index, combat)
@@ -249,26 +246,15 @@ class RiftArena(
         }
         battle = Battle(
             hero, foes, combat, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, stream)), gear.stance,
-            kit = kit, model = build, pools = pools, percent = gear.percent, ally = allies.of(hero.stats, pet), stage = carry,
+            kit = kit, model = build, pools = pools, percent = gear.percent, ally = allies.of(hero.stats, pet),
             rift = riftCombat().takeIf { fight.guardian != null || it.ambush > 0 },
         )
         started = wave > 0
         paused = false
-        interlude = if (wave == 0) TrialArena.BREAK else null
     }
 
     private fun play(dt: Double) {
         val fight = battle ?: return
-        if (!started) {
-            interlude?.let { left ->
-                if (left > dt) {
-                    interlude = left - dt
-                } else {
-                    interlude = null
-                    started = true
-                }
-            }
-        }
         if (!started || paused) return
         val before = fight.time
         fight.advance(dt * speed)
@@ -282,7 +268,6 @@ class RiftArena(
         lowest = minOf(lowest, fight.trial.lowestLife)
         pools = fight.pools()
         if (outcome != Outcome.WIN) return end(won = false)
-        carry = fight.carry()
         wave++
         if (wave >= waves.size) end(won = true) else stand()
     }
@@ -316,7 +301,7 @@ class RiftArena(
         )
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
         val fightHud = if (fight != null && leader != null) {
-            fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, stage = wave + 1, stages = waves.size, interlude = interlude)
+            fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, round = wave + 1, rounds = waves.size)
         } else {
             null
         }

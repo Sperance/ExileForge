@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.MapStats
-import com.sperance.exileforge.core.campaign.StageCarry
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.Ally
@@ -58,9 +57,6 @@ internal class Descent(val spot: AbyssSpot, val depth: Int) {
     /** The claim of the hoard, by its event: what it holds is the server's answer. */
     var claim: Int? = null
     var fallen = false
-
-    /** The last fight of the descent won (3.32.0): the next wave or depth is its next stage. */
-    var carry: StageCarry? = null
 }
 
 /** «Спуститься»: the crack is opened — its event recorded — and the first wave rises; between depths, the next. */
@@ -92,7 +88,7 @@ internal fun ExpeditionRun.wave(current: Descent, depth: Int) {
 internal fun ExpeditionRun.nextFight(current: Descent) {
     val group = current.fights.firstOrNull() ?: return
     current.fights = current.fights.drop(1)
-    engage(MonsterAgent(ExpeditionRun.ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5), current.level, abyssal = true, carry = current.carry)
+    engage(MonsterAgent(ExpeditionRun.ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5), current.level, abyssal = true)
 }
 
 /** The descent is over: the hoard of the depths cleared — whole, or what a fall leaves of it. */

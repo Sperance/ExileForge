@@ -50,7 +50,7 @@ internal fun Battle.phase(foe: Fighter) {
 }
 
 /**
- * Свита [count] босса [boss] встаёт: свободное место берёт сразу, иначе ждёт первой в очереди; без свободного слота - не встаёт.
+ * Свита [count] босса [boss] встаёт на поле сразу; без свободного слота - не встаёт.
  * Кто встал - номера в стае (3.96.0: тень Поглотителя получает украденный дар).
  */
 internal fun Battle.summon(boss: Fighter, count: Int): List<Int> {
@@ -61,18 +61,17 @@ internal fun Battle.summon(boss: Fighter, count: Int): List<Int> {
         slotHolders[slot] = SlotHolder.Minion(index)
         called += index
         risen += index
-        if (window.call(index)) foeFighters[index].enter(window.place(index), time)
+        enterField(index)
         bannerFor(foeFighters[index])
     }
     if (foes.indices.any { it in called && foeFighters[it].body.auras.isNotEmpty() }) remake(heroFighter)
     return risen
 }
 
-/** Босс пал (3.92.0): его свита падает с ним - и стоящая, и ждущая; добычи она не даёт и убийством не считается. */
+/** Босс пал (3.92.0): его свита падает с ним; добычи она не даёт и убийством не считается. */
 internal fun Battle.dismissRetinue(boss: Fighter) {
     fellTotems(boss)
     foes.indices.filter { foes[it].summonOf == boss.index }.forEach { index ->
-        window.dismiss(index)
         freeMinionSlot(index)
         val fighter = foeFighters[index]
         if (fighter.life > 0) {

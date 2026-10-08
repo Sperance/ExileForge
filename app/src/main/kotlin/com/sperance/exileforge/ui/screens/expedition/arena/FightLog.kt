@@ -50,7 +50,7 @@ import kotlin.math.roundToInt
 private sealed interface PackRow {
     data class Head(val text: String) : PackRow
 
-    /** [at] (3.91.1) - секунда боя целиком: этап начинается с [PackHit.start], а время его событий - с нуля. */
+    /** [at] (3.91.1) - секунда шага целиком: бой начинается с [PackHit.start], а время его событий - с нуля. */
     data class Line(val event: CombatEvent, val name: String, val shift: LifeShift?, val at: Double = event.time) : PackRow
 }
 
@@ -107,7 +107,7 @@ private const val HERO_KEY = -1
                     hit.events.forEachIndexed { i, event -> if (LogKind.of(event) in shown) add(PackRow.Line(event, names[index], shifts[i])) }
                 }
             } else {
-                // Этапы боя (3.91.1) - подряд, со сквозным временем: внутри этапа удары стаи по порядку, между ними - подпись.
+                // Бои шага испытания (3.91.1) - подряд, со сквозным временем: внутри боя удары стаи по порядку, между ними - подпись.
                 val stages = pack.withIndex().groupBy { it.value.start }.entries.sortedBy { it.key }
                 stages.forEachIndexed { stage, (start, hits) ->
                     if (stages.size > 1) add(PackRow.Head(ui("expedition.log_stage", stage + 1, hits.joinToString { names[it.index] })))

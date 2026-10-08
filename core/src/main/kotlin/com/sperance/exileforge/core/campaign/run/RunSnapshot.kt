@@ -142,10 +142,10 @@ internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed
     }
 }
 
-/** The strongest of the stage: its portrait and its name head the pack fought now. */
+/** The strongest of the fight: its portrait and its name head the pack fought now. */
 internal fun ExpeditionRun.fightLeader(): RolledMonster = members.maxBy { it.monster.rarity.ordinal }.monster
 
 internal fun ExpeditionRun.fightHud(battle: Battle): FightHud = battle.hud(
     members.map { it.monster }, fightLeader(), speed, started, paused, hero.taunt,
-    level = fightLevel, stage = stage, stages = fightStages.size, interlude = interlude,
+    level = fightLevel,
 )

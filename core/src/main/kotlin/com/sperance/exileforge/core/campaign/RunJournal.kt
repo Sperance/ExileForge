@@ -13,7 +13,6 @@ import kotlinx.serialization.Serializable
     val applied: Int = 0,
     val base: Int = 0,
     val batch: JournalBatch? = null,
-    val carry: StageCarry? = null,
 )
 
 /**
@@ -40,21 +39,9 @@ class RunJournal(
     applied: Int = 0,
     val base: Int = 0,
     batch: JournalBatch? = null,
-    carry: StageCarry? = null,
 ) {
     private val events = events.toMutableList()
 
-    /** What the staged fight under way carries to its next stage (3.32.1): kept on disk, so a restart mid-fight goes on with it. */
-    var carry: StageCarry? = carry
-        set(value) {
-            if (field != value) {
-                field = value
-                onCarry()
-            }
-        }
-
-    /** Told when [carry] changes: whoever keeps the journal on disk writes it again. */
-    var onCarry: () -> Unit = {}
     private val end: Int get() = base + events.size
     var applied: Int = applied.coerceIn(base, base + events.size)
         private set
@@ -104,14 +91,14 @@ class RunJournal(
         batch = null
     }
 
-    fun snapshot(): JournalState = JournalState(runId, heroId, zone, events.toList(), applied, base, batch, carry)
+    fun snapshot(): JournalState = JournalState(runId, heroId, zone, events.toList(), applied, base, batch)
     fun encode(): String = WireJson.encodeToString(JournalState.serializer(), snapshot())
 
     companion object {
         /** The most events one batch carries: the server refuses a longer journal whole (CP_022, server 1.53.0). */
         const val MAX_BATCH = 64
 
-        fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch, state.carry)
+        fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch)
         fun decode(text: String): RunJournal? = runCatching { of(WireJson.decodeFromString(JournalState.serializer(), text)) }.getOrNull()
     }
 }

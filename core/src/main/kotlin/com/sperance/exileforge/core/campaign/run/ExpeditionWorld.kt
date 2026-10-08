@@ -357,10 +357,6 @@ class ExpeditionWorld(
 
     companion object {
 
-        /** How close, in tiles, a pack must stand to the one engaged to join its fight. */
-
-        /** The most monsters gathered packs put in one stage of a fight when they merge (3.70.0). */
-
         /** A chest stands at least this many steps from the start and this far from another chest. */
 
         /** A fountain stands at least this many steps from the start and this far from another one. */

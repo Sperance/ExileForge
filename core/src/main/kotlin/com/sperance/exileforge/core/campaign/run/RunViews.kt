@@ -4,7 +4,6 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssDepth
 import com.sperance.exileforge.core.campaign.ChargeView
 import com.sperance.exileforge.core.campaign.DeathHit
-import com.sperance.exileforge.core.campaign.FoeWindow
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunSummary
@@ -109,19 +108,14 @@ data class FoeView(
     val effects: List<EffectView> = emptyList(),
     val mana: Int = 0,
     val maxMana: Int = 0,
-    /** Its place on the field, of [FoeWindow.SIZE]; -1 while it waits its turn or once the next took its place. */
+    /** Its place on the field; -1 - свита босса, что ещё не звана. */
     val place: Int = index,
-    /** Still in line: not in the fight yet, but still to be beaten. */
-    val waiting: Boolean = false,
-    /** Fallen with the next still in line (3.73.0): seconds until that one steps into its place, of [reinforceDelay]. */
-    val reinforce: Double? = null,
-    val reinforceDelay: Double = 0.0,
     /** Its buildups (3.78.0), null while the rules have none. */
     val buildup: BuildupView? = null,
     /** Барьер (3.93.0): что ещё поглотит барьер фазы босса. */
     val barrier: Int = 0,
 ) {
-    /** Its card is on the field: it fights there, or fell there and nobody stepped in yet. */
+    /** Its card is on the field: it fights there, or fell there. */
     val onField: Boolean get() = place >= 0
 }
 
@@ -230,11 +224,9 @@ data class FightHud(
     val heroBarrier: Int = 0,
     /** The level the foes stand at: a depth of the Abyss stands deeper than its zone. */
     val level: Int = 0,
-    /** The stage of a gathered fight (3.28.0), from 1, of [stages]: small packs in a row share one (3.70.0). */
-    val stage: Int = 1,
-    val stages: Int = 1,
-    /** Seconds left of the pause before this stage begins by itself; null when there is none. */
-    val interlude: Double? = null,
+    /** Бой цепочки (4.2.0), с 1, из [rounds]: босс раша, бой этажа Башни, волна Разлома; у одиночного боя - 1 из 1. */
+    val round: Int = 1,
+    val rounds: Int = 1,
     /** Лист героя сейчас (3.92.0): по нему лист умения врага считает, сколько оно снимет. */
     val heroBody: com.sperance.exileforge.core.campaign.combat.Combatant? = null,
     /** Босс боя (3.92.0): его фазы и что он готовит; null - босса нет. */
@@ -242,11 +234,11 @@ data class FightHud(
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
 
-    /** The foes on the field, by their places: at most [FoeWindow.SIZE] cards whatever the pack. */
+    /** The foes on the field, by their places. */
     val field: List<FoeView> get() = foes.filter { it.onField }.sortedBy { it.place }
 
-    /** How many of the whole pack are still to be beaten: those standing and those waiting their turn. */
-    val standing: Int get() = foes.count { it.alive || it.waiting }
+    /** How many of the whole pack are still to be beaten. */
+    val standing: Int get() = foes.count { it.alive }
 }
 
 /** One member of a pack fought and its own log. */
@@ -254,7 +246,7 @@ data class PackHit(
     val monster: RolledMonster,
     val events: List<CombatEvent>,
     val duration: Double,
-    /** Когда начался его этап боя (3.91.1), секунд от начала всего боя: время событий этапа считается с нуля. */
+    /** Когда начался его бой (3.91.1), секунд от начала шага испытания (этажа башни): время событий боя считается с нуля. */
     val start: Double = 0.0,
 )
 

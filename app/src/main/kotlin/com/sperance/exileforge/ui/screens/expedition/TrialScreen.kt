@@ -65,7 +65,7 @@ import org.koin.compose.viewmodel.koinViewModel
         // Досье босса (3.92.0) перед его этапом, как у стража карты: «В бой» начинает этап
         val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
         val boss = fight?.boss
-        val stage = hud.step to fight?.stage
+        val stage = hud.step to fight?.round
         var seen by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
         if (fight != null && boss != null && seen != stage) {
             fight.foes.firstOrNull { it.index == boss.index }?.let { foe ->

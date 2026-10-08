@@ -68,9 +68,9 @@ private const val HERO_CARD = -1
     LaunchedEffect(fight.outcome) { if (fight.outcome == Outcome.LOSS) onBuzz(Buzz.DANGER) }
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
-    val names = remember(fight.foes.size, fight.leader, fight.stage) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
+    val names = remember(fight.foes.size, fight.leader, fight.round) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
     // Each foe's traits (3.73.0): seals on its card, their whole text in its window.
-    val traits = remember(fight.foes.size, fight.leader, fight.stage, game.index) {
+    val traits = remember(fight.foes.size, fight.leader, fight.round, game.index) {
         fight.foes.associate { foe -> foe.index to (game.index?.let { traitViews(foe.monster, it) } ?: emptyList()) }
     }
     val chosen = fight.focus ?: fight.target ?: fight.field.firstOrNull { it.alive }?.index

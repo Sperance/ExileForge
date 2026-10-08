@@ -14,7 +14,6 @@ import com.sperance.exileforge.core.campaign.PetAllies
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.RunStats
 import com.sperance.exileforge.core.campaign.Spawns
-import com.sperance.exileforge.core.campaign.StageCarry
 import com.sperance.exileforge.core.campaign.VaalZones
 import com.sperance.exileforge.core.campaign.ZoneShare
 import com.sperance.exileforge.core.campaign.combat.Action
@@ -275,39 +274,10 @@ class ExpeditionRun(
     internal var slain: RolledMonster? = null
     internal var report: FightReport? = null
 
-    /** The foes of the stage in the battle's order, each with the pack it walked with. */
+    /** The foes of the fight in the battle's order, each with the pack it walked with. */
     internal var members: List<FightMember> = emptyList()
 
-    /** Every pack the fight drew in: the engaged one first, then the rest by their distance to it. */
-    internal var fightAgents: List<MonsterAgent> = emptyList()
-
-    /** [fightAgents] as the stages they are fought in: small packs in a row merge into one (3.70.0). */
-    internal var fightStages: List<List<MonsterAgent>> = emptyList()
-
-    /** The stage under way, from 1 (3.28.0): the packs of [fightStages] it fights. */
-    internal var stage = 0
-
-    /** Seconds of the pause before a later stage begins on its own; null outside that pause. */
-    internal var interlude: Double? = null
-
-    /** What the stages already won leave to the one report: every foe's log, and the seconds they took. */
-    internal var stageHits: List<PackHit> = emptyList()
-    internal var stageTime = 0.0
-
-    /**
-     * What the stage won last hands the one under way (3.32.0): its STAGE_CLEAR powers and the momentum; null for a first stage.
-     * Held by the journal (3.32.1), so a run entered again after a restart mid-fight hands it to its next fight.
-     */
-    internal var stageCarry: StageCarry?
-        get() = journal.carry
-        set(value) {
-            journal.carry = value
-        }
-
-    /** The strongest of every stage: it stands for the whole fight in the report. */
-    internal var fightStrongest: RolledMonster? = null
-
-    /** The dice stream of the stage's battle: a draught in the pause builds the battle again on the same dice. */
+    /** The dice stream of the fight's battle. */
     internal var fightStream = 0L
     internal var reported = 0
     internal var fall: Double? = null
@@ -441,8 +411,6 @@ class ExpeditionRun(
     companion object {
         /** How long the fight's last blow hangs before the scene moves on. */
         const val HIT_LIFETIME = 1.0
-
-        /** Seconds between the stages of a fight before the next begins on its own. */
 
         /** The agents of the Abyss's waves are numbered down from here, out of the way of the map's and the crystals'. */
         internal const val ABYSS_AGENT = -10_000

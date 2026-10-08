@@ -136,7 +136,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         RunCommand.Begin -> if (fight != null) {
             started = true
             paused = false
-            interlude = null
         }
 
         RunCommand.Accept -> accept()
@@ -212,11 +211,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         is RunCommand.Cast -> fight?.useSkill(command.slot)
 
-        // In the pause between stages a draught is drunk as on the road, and the stage's battle takes the pools it leaves.
-        is RunCommand.Drink -> if (phase == RunPhase.FIGHT && interlude != null && !started) {
-            drinkOnMap(command.slot)
-            fight = battle()
-        } else if (phase == RunPhase.FIGHT) {
+        is RunCommand.Drink -> if (phase == RunPhase.FIGHT) {
             fight?.useFlask(command.slot)
         } else if (phase == RunPhase.MAP || phase == RunPhase.CRYSTAL || phase == RunPhase.ABYSS) {
             drinkOnMap(command.slot)

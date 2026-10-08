@@ -105,13 +105,18 @@ object Portraits {
         finish(scope, wash, washAmount, flash)
     }
 
-    /** A monster's bust: its own portrait, then its form's, then the client's own drawing of the form. */
-    fun monster(scope: DrawScope, code: String, form: String, accent: Color, time: Float, wash: Color? = null, washAmount: Float = 0f, flash: Float = 0f) = with(scope) {
+    /**
+     * A monster's bust: its own portrait, then its form's, then the client's own drawing of the form.
+     * [phase] - стадия боя для живого портрета (у Матери Скверны - порванные пуповины, см. [BlightPortraits.mother]).
+     */
+    fun monster(scope: DrawScope, code: String, form: String, accent: Color, time: Float, wash: Color? = null, washAmount: Float = 0f, flash: Float = 0f, phase: Int = 0) = with(scope) {
         monsterPortrait(code, form)?.let {
             val lift = sin(time * 1.2f + 1f) * size.height * .006f
-            drawPortrait(it, lift)
-            // Стражи Разлома (3.96.1) - живые: слои анимации поверх портрета
-            RiftPortraits.draw(scope, code, time, lift)
+            // живые портреты (Разлом, Скверна): дыхание фигуры и слои анимации поверх портрета
+            LivingPortraits.breathing(scope, code, time) {
+                drawPortrait(it, lift)
+                LivingPortraits.draw(this, code, time, lift, phase)
+            }
             return@with finish(scope, wash, washAmount, flash)
         }
         val w = size.width

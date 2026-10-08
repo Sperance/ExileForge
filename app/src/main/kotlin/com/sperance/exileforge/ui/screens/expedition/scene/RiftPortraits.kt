@@ -2,11 +2,9 @@ package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.withTransform
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.floor
@@ -18,54 +16,27 @@ import kotlin.math.sin
  * моргают, нимбы Владыки вращаются и скрижаль сбоит перед Законом, тень мерцает. Слои рисуются в поле портрета 300 на 400;
  * [time] - секунды; при выключенных анимациях вызывающий держит его неподвижным, и портрет стоит в покое.
  */
-internal object RiftPortraits {
+internal object RiftPortraits : FieldPortraitMotion() {
     private val rift = Color(0xFF39FF88)
     private val soft = Color(0xFF9DFFB8)
     private val hot = Color(0xFFD4FF6A)
     private val deep = Color(0xFF0B3A21)
-    private const val FIELD_W = 300f
-    private const val FIELD_H = 400f
 
-    private val motions: Map<String, DrawScope.(Float) -> Unit> = mapOf(
-        "RIFT_GATE_WARDEN" to { t -> warden(t) },
-        "RIFT_ECHO_DEVOURER" to { t -> devourer(t) },
-        "RIFT_LORD" to { t -> lord(t) },
-        "RIFT_SHADE" to { t -> shade(t) },
+    override val layers: Map<String, DrawScope.(Float, Int) -> Unit> = mapOf(
+        "RIFT_GATE_WARDEN" to { t, _ -> warden(t) },
+        "RIFT_ECHO_DEVOURER" to { t, _ -> devourer(t) },
+        "RIFT_LORD" to { t, _ -> lord(t) },
+        "RIFT_SHADE" to { t, _ -> shade(t) },
     )
-
-    fun animated(code: String): Boolean = code in motions
-
-    /** Слои анимации стража [code] над его портретом, в том же поле и с тем же сдвигом [lift], что у портрета. */
-    fun draw(scope: DrawScope, code: String, time: Float, lift: Float) = with(scope) {
-        val motion = motions[code] ?: return@with
-        val scale = maxOf(size.width / FIELD_W, size.height / FIELD_H)
-        val dx = (size.width - FIELD_W * scale) / 2
-        val dy = (size.height - FIELD_H * scale) / 2 + lift
-        withTransform({
-            translate(dx, dy)
-            scale(scale, scale, Offset.Zero)
-        }) { motion(time) }
-    }
 
     /** Точка макета (поле 400 в ширину) в поле портрета: так её перенёс генератор портретов сервера. */
     private fun mock(x: Float, y: Float, dy: Float) = Offset(.8f * (x - 200) + 150, .8f * y + dy)
 
-    private fun wave(t: Float, period: Float, phase: Float = 0f) = .5f + .5f * sin((t / period + phase) * 2 * PI.toFloat())
+    private fun wave(t: Float, period: Float, phase: Float = 0f) = portraitWave(t, period, phase)
 
-    private fun DrawScope.glow(center: Offset, radius: Float, color: Color, alpha: Float) = drawCircle(Brush.radialGradient(listOf(color.copy(alpha = alpha), Color.Transparent), center, radius), radius, center)
+    private fun DrawScope.glow(center: Offset, radius: Float, color: Color, alpha: Float) = portraitGlow(center, radius, color, alpha)
 
-    /** Искры, что всплывают снизу вверх и гаснут. */
-    private fun DrawScope.sparks(t: Float, count: Int, color: Color) {
-        repeat(count) { i ->
-            val seed = i * 37.17f
-            val u = ((t * (.08f + (i % 5) * .015f) + seed % 1f) % 1f)
-            val x = (seed * 7.3f) % FIELD_W + sin(t * .9f + i) * 6f
-            val y = FIELD_H + 10 - u * (FIELD_H + 30)
-            val a = (sin(u * PI.toFloat())) * .8f
-            glow(Offset(x, y), 5f, color, a * .5f)
-            drawCircle(color.copy(alpha = a), 1.1f, Offset(x, y))
-        }
-    }
+    private fun DrawScope.sparks(t: Float, count: Int, color: Color) = portraitSparks(t, count, color)
 
     // ---------------------------------------------------------------------------------- Страж Врат
 
@@ -218,17 +189,4 @@ internal object RiftPortraits {
         }
         sparks(t, 8, rift)
     }
-}
-
-/** Часы живого портрета (3.96.1): секунды для [RiftPortraits] у стража Разлома при включённых анимациях, иначе - покой. */
-@androidx.compose.runtime.Composable
-internal fun portraitClock(code: String): Float {
-    val moving = com.sperance.exileforge.ui.components.LocalMotion.current && RiftPortraits.animated(code)
-    val time = androidx.compose.runtime.remember(code) { androidx.compose.runtime.mutableFloatStateOf(0f) }
-    androidx.compose.runtime.LaunchedEffect(code, moving) {
-        if (!moving) return@LaunchedEffect
-        val start = androidx.compose.runtime.withFrameNanos { it }
-        while (true) androidx.compose.runtime.withFrameNanos { now -> time.floatValue = (now - start) / 1e9f }
-    }
-    return time.floatValue
 }

@@ -42,8 +42,12 @@ import org.koin.compose.viewmodel.koinViewModel
 val LocalMailOpen = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 /** A report's status by name, in the server's words (3.73.0). */
-fun statusTitle(status: ReportStatus): String = locOr("enum.BugStatus.${status.name}", status.name)
-fun kindTitle(kind: FeedbackKind): String = locOr("enum.FeedbackKind.${kind.name}", kind.name)
+fun statusTitle(status: ReportStatus): String = statusTitle(status.name)
+fun kindTitle(kind: FeedbackKind): String = kindTitle(kind.name)
+
+/** Статус и вид по имени из письма: незнакомое клиенту имя показывается словарём сервера или самим именем, не пустотой. */
+fun statusTitle(name: String): String = locOr("enum.BugStatus.$name", name)
+fun kindTitle(name: String): String = locOr("enum.FeedbackKind.$name", name)
 
 /** Цвет статуса: созданный - пергамент, отправленный - зелёный. */
 fun statusTint(status: ReportStatus): Color = when (status) {
@@ -145,8 +149,8 @@ fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
  */
 private fun systemLine(mail: Mail, part: String): String {
     if (mail.key in AUCTION_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let(::lotItemTitle).orEmpty(), mail.args.getOrNull(1).orEmpty()))
-    val kind = mail.args.getOrNull(0)?.let { name -> FeedbackKind.entries.firstOrNull { it.name == name } }?.let(::kindTitle).orEmpty()
-    val status = mail.args.getOrNull(1)?.let { name -> ReportStatus.entries.firstOrNull { it.name == name } }?.let(::statusTitle).orEmpty()
+    val kind = mail.args.getOrNull(0)?.takeIf { it.isNotBlank() }?.let(::kindTitle).orEmpty()
+    val status = mail.args.getOrNull(1)?.takeIf { it.isNotBlank() }?.let(::statusTitle).orEmpty()
     return when (part) {
         "subject" -> loc("${mail.key}.subject", listOf(kind))
         else -> loc("${mail.key}.body", listOf(status, mail.args.getOrNull(2).orEmpty()))

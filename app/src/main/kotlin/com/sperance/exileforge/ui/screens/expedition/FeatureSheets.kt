@@ -181,9 +181,9 @@ import kotlin.math.ceil
 }
 
 /**
- * Урон карты над героем (3.94.1; с 3.95.3 - каждое число своё): удар ловушки - «−42 огонь» цветом стихии, принятое щитом -
- * голубым рядом, наложенный эффект - строкой ниже («+ Горение 4 с»); тики эффекта - мелким курсивом, как в бою. Число встаёт
- * над жетоном героя - камера держит его чуть ниже середины - и уплывает вверх, гаснет; без анимаций висит, пока видно.
+ * Урон карты над героем (3.94.1; 4.2.0 - одной строкой): удар ловушки - «−12 Хаос · Яд: 3% здоровья/с, 6 с» цветом её урона,
+ * щит и здоровье вместе; тики состояния - мелким курсивом, как в бою. Число встаёт над жетоном героя - камера держит его чуть
+ * ниже середины - и уплывает вверх, гаснет; без анимаций висит, пока видно.
  */
 @Composable internal fun HazardFloat(hazards: List<HazardView>) {
     if (hazards.isEmpty()) return
@@ -204,19 +204,20 @@ import kotlin.math.ceil
         Modifier.align(Alignment.TopCenter).offset(x = side, y = feet - SCENE_UNIT * rise.value).alpha(1f - rise.value * .8f),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            val size = if (hazard.tick) MaterialTheme.typography.labelMedium else MaterialTheme.typography.titleMedium
-            val style = if (hazard.tick) FontStyle.Italic else FontStyle.Normal
-            if (hazard.life > 0 || hazard.shield == 0) {
-                Text(ui("trap.float", hazard.life), color = damageTint(hazard.type, onHero = true), fontWeight = FontWeight.Bold, fontStyle = style, style = size)
-            }
-            if (hazard.shield > 0) Text(ui("trap.float", hazard.shield), color = ShieldCyan, fontWeight = FontWeight.Bold, fontStyle = style, style = size)
-            if (!hazard.tick) Text(ui(hazard.type.key()), color = damageTint(hazard.type, onHero = true), style = MaterialTheme.typography.labelSmall)
-        }
-        hazard.ailment?.let { ailment ->
-            Text(ui("trap.ailment", ui(ailment.key()), ceil(hazard.seconds).toInt()), color = ailmentTint(ailment), style = MaterialTheme.typography.labelSmall)
+        val tint = damageTint(hazard.type, onHero = true)
+        if (hazard.tick) {
+            Text(ui("trap.float", hazard.total), color = tint, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, style = MaterialTheme.typography.labelMedium)
+        } else {
+            Text(hazardLine(hazard), color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
         }
     }
+}
+
+/** Удар ловушки одной строкой (4.2.0): сколько снял и чем, затем её состояние - сколько здоровья в секунду и сколько секунд. */
+private fun hazardLine(hazard: HazardView): String {
+    val type = ui(hazard.type.key())
+    val ailment = hazard.ailment ?: return ui("trap.hit", hazard.total, type)
+    return ui("trap.hit_ailment", hazard.total, type, ui(ailment.ailment.key()), number(ailment.lifeShare), number(ailment.seconds))
 }
 
 /** Эффекты ловушек на герое (3.95.3) под полосой жизни: «Горение −32/с · 3 с». */

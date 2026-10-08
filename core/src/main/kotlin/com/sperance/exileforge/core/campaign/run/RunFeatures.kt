@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FeatureStat
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.TrapKind
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -41,7 +42,7 @@ internal data class Wound(val shield: Double = 0.0, val life: Double = 0.0) {
 
 /**
  * Урон карты над героем (3.95.3): удар ловушки или тик её эффекта - стихией [type], [shield] со щита и [life] со здоровья. Удар
- * ещё и называет эффект [ailment] на [seconds] секунд. [id] свой у каждого: два одинаковых подряд - два числа, а не одно.
+ * ещё и называет своё состояние [ailment]. [id] свой у каждого: два одинаковых подряд - два числа, а не одно.
  */
 data class HazardView(
     val id: Int,
@@ -49,10 +50,24 @@ data class HazardView(
     val type: DamageType,
     val life: Int,
     val shield: Int,
-    val ailment: Ailment? = null,
-    val seconds: Double = 0.0,
+    val ailment: HazardAilment? = null,
     val tick: Boolean = false,
-)
+) {
+    /** Всё, что снял удар: щит и здоровье вместе. */
+    val total: Int get() = life + shield
+}
+
+/**
+ * Состояние, что ловушка оставляет на герое (4.2.0): выводится из типа её урона ([Ailment.of]: огонь - горение, хаос - яд,
+ * физический - кровотечение), если оно тикает уроном; [lifeShare] - процент максимума здоровья героя в секунду до сопротивления,
+ * [seconds] - сколько длится.
+ */
+data class HazardAilment(val ailment: Ailment, val type: DamageType, val lifeShare: Double, val seconds: Double) {
+    companion object {
+        /** Состояние ловушки [trap] урона [type] силой [share]; null - ловушка без тика или вовсе не ранит. */
+        fun of(trap: TrapKind, type: DamageType, share: Double): HazardAilment? = Ailment.of(type).takeIf { it.hurts && trap.dot > 0 && share > 0 }?.let { HazardAilment(it, type, trap.dot * share, trap.seconds) }
+    }
+}
 
 /** Эффект ловушки на герое (3.95.3) для чипа под полосой жизни: что это, сколько отнимает в секунду, сколько ещё длится. */
 data class AfflictionView(val ailment: Ailment, val type: DamageType, val perSecond: Int, val left: Double)
@@ -192,11 +207,11 @@ internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
     val share = feature.power * (1 - ward / 100).coerceAtLeast(0.0)
     val raw = hero.maxLife * trap.hit / 100 * share
     val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
-    // Эффект ловушки (3.95.3 - назван и виден): горение у огня, яд у хаоса
-    val ailment = if (trap.dot > 0 && share > 0) Ailment.of(type) else null
-    ailment?.let { burns += Burn(trap.code, type, it, hero.maxLife * trap.dot / 100 * share * (1 - hero.resist(type)) * hero.damageTaken(type), trap.seconds) }
+    // Состояние ловушки (4.2.0) - из типа её урона, для всех ловушек
+    val ailment = HazardAilment.of(trap, type, share)
+    ailment?.let { burns += Burn(trap.code, type, it.ailment, hero.maxLife * it.lifeShare / 100 * (1 - hero.resist(type)) * hero.damageTaken(type), it.seconds) }
     val wound = hurt(dealt * hero.damageTaken(type), type == DamageType.CHAOS)
-    showHazard(HazardView(nextHazard++, trap.code, type, wound.life.roundToInt(), wound.shield.roundToInt(), ailment, if (ailment != null) trap.seconds else 0.0))
+    showHazard(HazardView(nextHazard++, trap.code, type, wound.life.roundToInt(), wound.shield.roundToInt(), ailment))
 }
 
 /** Горение и яд ловушек на [dt] секунд дороги: урон каждый кадр, на экран - тиком раз в [TICK_SECONDS]. */

@@ -47,30 +47,6 @@ data class Wire(val api: Int, val rules: Int) {
     val body: String = "",
 ) {
     val version: String get() = tag.removePrefix("v")
-
-    /** Вес релиза по семверу (4.0.0): «Что нового» выделяет крупные и патчи. */
-    val kind: ReleaseKind get() = ReleaseKind.of(version)
-}
-
-/** Вес релиза: [MAJOR] - `X.0.0`, [MINOR] - `X.Y.0`, [PATCH] - прочие; нечитаемый номер - патч. */
-enum class ReleaseKind {
-    MAJOR,
-    MINOR,
-    PATCH,
-    ;
-
-    companion object {
-        fun of(version: String): ReleaseKind {
-            val parts = version.substringBefore('-').split('.').map { it.toIntOrNull() }
-            val minor = parts.getOrNull(1) ?: return PATCH
-            val patch = parts.getOrNull(2) ?: 0
-            return when {
-                patch != 0 -> PATCH
-                minor == 0 -> MAJOR
-                else -> MINOR
-            }
-        }
-    }
 }
 
 /** Найденная сборка: что это, откуда качать APK и страница релиза для браузера. Любая найденная обязательна. */

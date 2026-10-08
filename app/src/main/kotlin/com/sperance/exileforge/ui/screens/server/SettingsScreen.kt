@@ -192,7 +192,7 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
- * «Что нового» (3.93.0): заметки пяти последних версий с GitHub (4.0.0) - карточки [ReleaseCard] по весу релиза,
+ * «Что нового» (3.93.0): заметки пяти последних версий с GitHub (4.0.0) - одинаковые карточки [ReleaseCard] (4.2.0),
  * свежая раскрыта, прочие раскрываются касанием.
  */
 @Composable private fun WhatsNewPage() {

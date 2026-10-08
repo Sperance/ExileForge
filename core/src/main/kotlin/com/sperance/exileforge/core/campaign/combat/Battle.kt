@@ -69,6 +69,8 @@ class Battle(
     val ally: Ally? = null,
     /** Бой Разлома недели (3.96.0): механики стража и правила забега; null - обычный бой, ни одного лишнего броска. */
     val rift: RiftCombat? = null,
+    /** Прошлый бой героя выигран (4.2.0): силы [com.sperance.exileforge.rules.content.PowerEvent.FIGHT_CLEAR] ложатся в начале этого. */
+    val cleared: Boolean = false,
 ) {
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
@@ -299,7 +301,7 @@ class Battle(
     internal var shieldUp = true
 
     /** The hero's powers (2.79.0): the unique items' answers to what happens here. */
-    internal val powers = PowerRunner(this, kit.powers)
+    internal val powers = PowerRunner(this, kit.powers, cleared)
 
     /** The hero's frenzy, power and endurance charges (3.33.0, server 1.32.0): none as a fight opens. */
     internal val heroCharges = HeroCharges(kit.charges)

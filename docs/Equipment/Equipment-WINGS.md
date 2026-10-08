@@ -578,7 +578,7 @@
 - +30–40% к сопротивлению огню · [Сопротивление огню](../reference/Stats/Stats-HERO.md#stock_resist_fire)
 - 80–110% увеличение брони · [Броня](../reference/Stats/Stats-HERO.md#stock_armor)
 - Каждые 5 с наносит всем врагам 4–6% максимума здоровья огнём · [Жерловый порыв](../reference/Stats/Stats-POWER.md#power_vent_gust)
-- Пройденный этап восстанавливает 10–15% максимума здоровья в начале следующего · [Восходящий жар](../reference/Stats/Stats-POWER.md#power_rising_heat)
+- За каждый выигранный бой восстанавливаете 5–7.5% максимума здоровья в начале следующего · [Восходящий жар](../reference/Stats/Stats-POWER.md#power_rising_heat)
 
 
 | Параметр | Значение |
@@ -857,7 +857,7 @@
 - +10–15% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all)
 - 15–25% увеличение длительности баффов · [Длительность баффов](../reference/Stats/Stats-HERO.md#stock_buff_duration)
 - Карт находится на 20–30% больше · [Везение землемера](../reference/Stats/Stats-POWER.md#power_cartographers_luck)
-- Каждый пройденный этап даёт 6–10% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
+- За каждый выигранный бой 3–5% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
 - -20–-10% увеличение шанса критического удара · [Шанс критического удара](../reference/Stats/Stats-HERO.md#stock_critical_chance)
 
 

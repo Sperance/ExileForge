@@ -1613,7 +1613,7 @@
 - 72–99% увеличение энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
 - +30–40 к интеллекту · [Интеллект](../reference/Stats/Stats-HERO.md#stock_intellect)
 - +25–35% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
-- Пройденный этап сокращает перезарядку ваших умений на 2–4 с · [Вечерня](../reference/Stats/Stats-POWER.md#power_vespers)
+- За каждый выигранный бой перезарядка ваших умений короче на 1–2 с в начале следующего · [Вечерня](../reference/Stats/Stats-POWER.md#power_vespers)
 - Заклинание с шансом 20–30% проклинает цель · [Метка еретика](../reference/Stats/Stats-POWER.md#power_heretics_mark)
 
 

@@ -75,7 +75,7 @@ private fun Power.amount(own: Double?, value: Double): Double = own ?: if (roll 
 private fun Power.duration(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.DURATION) value else 0.0
 private fun Power.chance(value: Double): Double = chance ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.CHANCE) value else 100.0
 
-internal class PowerRunner(private val battle: Battle, book: PowerBook) {
+internal class PowerRunner(private val battle: Battle, book: PowerBook, private val cleared: Boolean = false) {
     private val byEvent: Map<PowerEvent, List<Power>> = book.powers.filter { it.on != null }.groupBy { it.on!! }
     private val standingPowers = byEvent[PowerEvent.STANDING].orEmpty()
     private val readyAt = mutableMapOf<String, Double>()
@@ -110,6 +110,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook) {
     fun tick() {
         if (!started) {
             started = true
+            if (cleared) fire(PowerEvent.FIGHT_CLEAR)
             fire(PowerEvent.FIGHT_START)
         }
         echo()

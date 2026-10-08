@@ -67,6 +67,8 @@ class OddsPlan internal constructor(
     private val percent: Set<String>,
     private val ally: Ally?,
     private val phases: PhaseFoes,
+    /** Прошлый бой выигран: силы `FIGHT_CLEAR` открывают и бои прогона. */
+    private val cleared: Boolean,
 ) {
     /** [fights] боёв, каждый на своих костях, не дольше [cap] секунд (недоигранный - не победа). */
     fun run(fights: Int = FIGHTS, cap: Double = CAP): BossOdds {
@@ -77,7 +79,7 @@ class OddsPlan internal constructor(
         repeat(fights) { i ->
             val battle = Battle(
                 hero, phases.withRetinue(foes, Dice(SEED + i)), rules, fight, pools.life, Random(SEED + i), stance,
-                kit = kit, model = model, pools = pools, percent = percent, ally = ally,
+                kit = kit, model = model, pools = pools, percent = percent, ally = ally, cleared = cleared,
             )
             while (battle.outcome == null && battle.time < cap) battle.advance(1.0)
             seconds += battle.time

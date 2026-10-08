@@ -1540,7 +1540,7 @@
 - 20–25% увеличение скорости передвижения · [Скорость передвижения](../reference/Stats/Stats-HERO.md#stock_movement_speed)
 - 50–70% увеличение брони · [Броня](../reference/Stats/Stats-HERO.md#stock_armor)
 - +20–30% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
-- Пройденный этап даёт 15–25% увеличения скорости атаки на первые 6 с следующего · [Шаг нисхождения](../reference/Stats/Stats-POWER.md#power_descent_stride)
+- За каждый выигранный бой 7.5–12.5% увеличения скорости атаки на первые 6 с следующего · [Шаг нисхождения](../reference/Stats/Stats-POWER.md#power_descent_stride)
 - 30–50% увеличения уклонения, пока против вас не меньше 4 врагов · [Удержанный рубеж](../reference/Stats/Stats-POWER.md#power_held_ground)
 
 
@@ -2064,7 +2064,7 @@
 - 5–8% увеличение получаемого опыта · [Опыт](../reference/Stats/Stats-HERO.md#stock_experience)
 - +60–90 к уклонению · [Уклонение](../reference/Stats/Stats-HERO.md#stock_evasion)
 - 15–25% больше опыта за редких врагов · [Чтец следов](../reference/Stats/Stats-POWER.md#power_trailfinder)
-- Каждый пройденный этап даёт 5–8% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
+- За каждый выигранный бой 2.5–4% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
 
 
 | Параметр | Значение |
@@ -2315,7 +2315,7 @@
 - 30–35% увеличение скорости передвижения · [Скорость передвижения](../reference/Stats/Stats-HERO.md#stock_movement_speed)
 - +200–260 к броне · [Броня](../reference/Stats/Stats-HERO.md#stock_armor)
 - +80–110 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
-- Каждый пройденный этап даёт 6.9–11.5% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
+- За каждый выигранный бой 3.5–5.8% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
 - Падение здоровья до низкого даёт барьер в 17.2–28.7% максимума здоровья на 4 с, не чаще раза в 15 с · [Последний рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
 
 

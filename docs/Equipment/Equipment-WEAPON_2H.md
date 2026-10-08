@@ -2060,7 +2060,7 @@
 - 25–30% шанс получить Укрепление при ударе · [Укрепление при ударе](../reference/Stats/Stats-HERO.md#stock_fortify_on_hit)
 - 10–14% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
 - Блок даёт 34.5–57.5% увеличения брони на 4 с · [Закалённая душа](../reference/Stats/Stats-POWER.md#power_tempered_soul)
-- Пройденный этап поднимает заслон в 17.2–23% максимума здоровья на первые 5 с следующего · [Сомкнуть строй](../reference/Stats/Stats-POWER.md#power_rally_the_line)
+- За каждый выигранный бой заслон в 8.6–11.5% максимума здоровья на первые 5 с следующего · [Сомкнуть строй](../reference/Stats/Stats-POWER.md#power_rally_the_line)
 
 
 | Параметр | Значение |

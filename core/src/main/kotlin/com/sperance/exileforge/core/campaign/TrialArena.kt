@@ -51,7 +51,7 @@ enum class TrialPhase { FIGHT, DEAD, DONE }
 
 /**
  * The trial as its screen prints it: the fight for the arena's cards, which boss of how many or which floor, the level
- * the foes stand at, the seconds since the first fight began (4.2.0) and the rush's limit for its bonus, the floor's lines, and what the
+ * the foes stand at, the seconds of fighting so far (4.2.0) and the rush's limit for its bonus, the floor's lines, and what the
  * server's answers brought — the tower's hoards as they come, the rush's chest at the end.
  */
 data class TrialHud(
@@ -94,7 +94,6 @@ class TrialArena(
     /** Строки башни, выбранные героем по десяткам (3.96.0). */
     picks: List<Int>,
     private val onEvent: (TrialEvent) -> Unit,
-    private val clock: () -> Long = System::currentTimeMillis,
 ) {
     val rules = index.campaign.combat
     private val trials: TrialRules = index.campaign.trials ?: TrialRules()
@@ -119,14 +118,14 @@ class TrialArena(
 
     private var phase = TrialPhase.FIGHT
 
-    /** When the trial ended, by [clock]: the clock stops there, and the ending prints a time that no longer runs. */
-    private var endedAt: Long? = null
-
     /**
-     * Когда начался первый бой (4.2.0), по [clock]: часы испытания и лимит раша идут с него, а не с входа. Вход в начатое
-     * испытание - с уже павшими боссами или пройденными этажами - считает с входа на сервере.
+     * Время боёв испытания (4.2.0), секунд: часы испытания и лимит раша идут только в боях, как их считает сервер
+     * ([TrialRun.fought]); вход в начатое испытание продолжает с его счёта.
      */
-    private var begunAt: Long? = trial.startedAt.takeIf { trial.applied > 0 }
+    private var fightSeconds = trial.fought / 1000.0
+
+    /** Прошлый бой испытания выигран (4.2.0): следующий открывается силами `FIGHT_CLEAR`. */
+    private var wonLast = false
 
     /** The rush's boss under way (from 0), or the tower's floor. */
     private var step = if (trial.kind == TrialKind.RUSH) trial.killed else trial.floor
@@ -201,7 +200,6 @@ class TrialArena(
             RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
 
             RunCommand.Begin -> if (fight != null && phase == TrialPhase.FIGHT) {
-                if (begunAt == null) begunAt = clock()
                 started = true
                 paused = false
             }
@@ -287,7 +285,7 @@ class TrialArena(
             // Фазы и свита боссов (3.92.0): свита - на своём потоке
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
-            percent = gear.percent, ally = allies.of(hero.stats, pet),
+            percent = gear.percent, ally = allies.of(hero.stats, pet), cleared = wonLast,
         )
     }
 
@@ -298,7 +296,7 @@ class TrialArena(
     fun oddsPlan(): OddsPlan? {
         if (monsters.none { it.rarity == MonsterRarity.UNIQUE }) return null
         val phases = PhaseFoes(index, rules)
-        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero.stats, pet), phases)
+        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero.stats, pet), phases, wonLast)
     }
 
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */
@@ -331,6 +329,8 @@ class TrialArena(
         val pack = stepHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration, stepTime) } + retinue
         stepHits = pack
         stepTime += fight.duration
+        fightSeconds += fight.duration
+        wonLast = outcome == Outcome.WIN
         if (outcome != Outcome.WIN) {
             stats.add(pack, stepTime)
             record { TrialEvent.Fight(it, FightFigures.of(pack, stepTime, trial.kind == TrialKind.RUSH, won = false)) }
@@ -379,7 +379,6 @@ class TrialArena(
     private fun finish(fallen: Boolean, ended: Boolean = false) {
         if (phase != TrialPhase.FIGHT) return
         if (!ended) record { TrialEvent.End(it, fallen) }
-        endedAt = clock()
         battle = null
         phase = if (fallen) TrialPhase.DEAD else TrialPhase.DONE
     }
@@ -404,7 +403,7 @@ class TrialArena(
         return TrialHud(
             kind = trial.kind, phase = phase, run = runHud, fight = fightHud,
             step = if (trial.kind == TrialKind.RUSH) (step + 1).coerceAtMost(plan?.size ?: 0) else step, steps = plan?.size ?: 0,
-            level = level, elapsed = begunAt?.let { ((endedAt ?: clock()) - it) / 1000.0 } ?: 0.0, limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
+            level = level, elapsed = fightSeconds + (fight?.takeIf { started }?.let { it.outcome?.let { _ -> it.duration } ?: it.time } ?: 0.0), limit = plan?.let { trials.rush.seconds * it.size } ?: 0.0,
             mods = floor?.mods.orEmpty(), cleared = cleared, gained = gained, awaiting = (next - answered).coerceAtLeast(0), lastHoard = lastHoard,
             summary = stats.summary(kills),
             choice = choice,

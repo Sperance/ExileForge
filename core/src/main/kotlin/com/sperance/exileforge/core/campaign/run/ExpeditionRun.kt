@@ -274,6 +274,9 @@ class ExpeditionRun(
     internal var slain: RolledMonster? = null
     internal var report: FightReport? = null
 
+    /** Прошлый бой захода выигран (4.2.0): следующий бой открывается силами `FIGHT_CLEAR`. */
+    internal var wonLast = false
+
     /** The foes of the fight in the battle's order, each with the pack it walked with. */
     internal var members: List<FightMember> = emptyList()
 

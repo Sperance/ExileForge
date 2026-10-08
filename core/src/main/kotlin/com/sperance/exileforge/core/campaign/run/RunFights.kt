@@ -117,7 +117,7 @@ internal fun ExpeditionRun.battle(): Battle {
         // Свита фаз босса (3.92.0) - в конце стаи, на своём потоке: бой без фаз катится как прежде
         phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
         rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
-        percent = build.gear.percent, ally = ally(),
+        percent = build.gear.percent, ally = ally(), cleared = wonLast,
     )
 }
 
@@ -187,6 +187,7 @@ internal fun ExpeditionRun.play(dt: Double) {
     // The fight's figures (3.51.0): only the hero's statistics, before a fall closes the journal.
     record { n -> RunEvent.Fight(n, FightFigures.of(pack, duration, boss = agent === world.boss, won = outcome == Outcome.WIN)) }
     val leader = fightLeader()
+    wonLast = outcome == Outcome.WIN
     val down = descent?.takeIf { abyssFight }
     when (outcome) {
         Outcome.WIN -> {

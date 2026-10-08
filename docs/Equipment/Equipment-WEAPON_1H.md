@@ -3678,7 +3678,7 @@
 - 40–55% увеличение шанса критического удара · [Шанс критического удара](../reference/Stats/Stats-HERO.md#stock_critical_chance)
 - 8–12% шанс нанести двойной урон · [Шанс двойного урона](../reference/Stats/Stats-HERO.md#stock_double_damage)
 - Удары с шансом 17.2–28.7% повторяются через 0,3 с за половину урона · [Двойные клыки](../reference/Stats/Stats-POWER.md#power_twin_fangs)
-- Каждый пройденный этап даёт 6.9–11.5% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
+- За каждый выигранный бой 3.5–5.8% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
 
 
 | Параметр | Значение |

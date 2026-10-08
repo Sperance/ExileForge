@@ -540,7 +540,7 @@
 
 - +30–45 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - +10–15 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
-- Пройденный этап даёт 3–5 зарядов каждой фляге · [Пересменка](../reference/Stats/Stats-POWER.md#power_shift_change)
+- За каждый выигранный бой 2–3 зарядов каждой фляге в начале следующего · [Пересменка](../reference/Stats/Stats-POWER.md#power_shift_change)
 - Каждый 4-й удар с шансом 30–50% оглушает врага на 0,8 с · [Кайло и тачка](../reference/Stats/Stats-POWER.md#power_pick_and_haul)
 
 

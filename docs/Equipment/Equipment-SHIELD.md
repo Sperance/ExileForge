@@ -1652,7 +1652,7 @@
 - 100–140% увеличение брони · [Броня](../reference/Stats/Stats-HERO.md#stock_armor)
 - +5–7% к шансу блока · [Шанс блока](../reference/Stats/Stats-HERO.md#stock_block_chance)
 - +70–90 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
-- Пройденный этап поднимает заслон в 15–20% максимума здоровья на первые 5 с следующего · [Сомкнуть строй](../reference/Stats/Stats-POWER.md#power_rally_the_line)
+- За каждый выигранный бой заслон в 7.5–10% максимума здоровья на первые 5 с следующего · [Сомкнуть строй](../reference/Stats/Stats-POWER.md#power_rally_the_line)
 - В начале боя все враги 5 с получают на 10–15% больше урона · [Сменённая сторона](../reference/Stats/Stats-POWER.md#power_switched_sides)
 
 

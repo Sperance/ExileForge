@@ -634,8 +634,8 @@
 
 - +30–45 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - +15–20% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
-- Пройденный этап даёт +10–15% урона на первые 8 с следующего · [Всё глубже](../reference/Stats/Stats-POWER.md#power_deeper_still)
-- Пройденный этап восстанавливает 8–12% максимума здоровья в начале следующего · [Вдох на ступени](../reference/Stats/Stats-POWER.md#power_stair_breath)
+- За каждый выигранный бой +5–7.5% урона на первые 8 с следующего · [Всё глубже](../reference/Stats/Stats-POWER.md#power_deeper_still)
+- За каждый выигранный бой восстанавливаете 4–6% максимума здоровья в начале следующего · [Вдох на ступени](../reference/Stats/Stats-POWER.md#power_stair_breath)
 
 
 | Параметр | Значение |
@@ -695,7 +695,7 @@
 - +25–35% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
 - +25–35 к интеллекту · [Интеллект](../reference/Stats/Stats-HERO.md#stock_intellect)
 - Против 3 и более врагов удары отзываются через 1 с на 25–35% урона хаосом · [Отвечающая тьма](../reference/Stats/Stats-POWER.md#power_answering_dark)
-- Пройденный этап восстанавливает 20–30% максимума энергетического щита в начале следующего · [Глубинное наполнение](../reference/Stats/Stats-POWER.md#power_deep_refill)
+- За каждый выигранный бой восстанавливаете 10–15% максимума энергетического щита в начале следующего · [Глубинное наполнение](../reference/Stats/Stats-POWER.md#power_deep_refill)
 
 
 | Параметр | Значение |

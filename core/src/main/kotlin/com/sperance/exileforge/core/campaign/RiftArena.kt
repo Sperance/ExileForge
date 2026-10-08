@@ -248,6 +248,8 @@ class RiftArena(
             hero, foes, combat, index.rules.fight, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, stream)), gear.stance,
             kit = kit, model = build, pools = pools, percent = gear.percent, ally = allies.of(hero.stats, pet),
             rift = riftCombat().takeIf { fight.guardian != null || it.ambush > 0 },
+            // Волна после выигранной (4.2.0): силы FIGHT_CLEAR
+            cleared = wave > 0,
         )
         started = wave > 0
         paused = false

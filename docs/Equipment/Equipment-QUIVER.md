@@ -512,7 +512,7 @@
 - +20–30% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
 - +25–35 к ловкости · [Ловкость](../reference/Stats/Stats-HERO.md#stock_agility)
 - +1.5–2.5% урона за каждый удар подряд по одному врагу, до 12 раз · [Неразорванная нить](../reference/Stats/Stats-POWER.md#power_unbroken_line)
-- Пройденный этап с шансом 50–100% делает первый удар следующего критическим · [Глубинное зрение](../reference/Stats/Stats-POWER.md#power_depth_sight)
+- За каждый выигранный бой с шансом 25–50% первый удар следующего - критический · [Глубинное зрение](../reference/Stats/Stats-POWER.md#power_depth_sight)
 
 
 | Параметр | Значение |

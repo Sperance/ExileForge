@@ -1212,6 +1212,7 @@
   "tree.reset_q": "Reset the tree?",
   "tree.reset_view": "Reset the view",
   "tree.socket_first": "Take the socket first.",
+  "tree.socket_hint": "The socket itself grants nothing - the jewel inside does. Its name only hints at which jewel fits here.",
   "tree.socket_locked": "Socket not taken",
   "tree.socket_working": "Working",
   "tree.start_note": "The start node comes with the class and only a full reset gives it back.",

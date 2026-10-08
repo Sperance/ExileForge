@@ -250,6 +250,8 @@ class ExpeditionActions(
         val gear = gear() ?: return
         // Войдя снова, поход продолжается (сервер 1.1.0): его числа и его павшие до сих пор.
         val run = Run(i, zone, started.seed, started.context)
+        // Заход, начатый автопробегом, и продолжается им (3.95.1): признак едет в его контексте с сервера.
+        if (started.context.auto) autoPlan = AutoPlan
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied, carry = carry).also { runJournal = it }
         journal.onCarry = ::persist
         expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = emptySet()) }

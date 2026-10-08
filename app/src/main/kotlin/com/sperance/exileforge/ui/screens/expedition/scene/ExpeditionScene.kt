@@ -2,11 +2,10 @@ package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -38,14 +37,21 @@ import kotlin.math.sin
  * the cave of the owner's mockup VI behind the fight's cards (2.57.0, [fightBackdrop]). Everything is a shape — rule 17, no picture is ever loaded
  * — and nothing here is text: names, bars and numbers are the overlay's, in the app's dictionary.
  *
- * The scene is also the run's clock: every frame [ExpeditionRun.update] is called once from the
- * frame loop and the canvas is drawn again, so the world is stepped and drawn by the same hand and
- * never seen half-moved. Reading [clock] in the draw block is what redraws it: only the drawing is
- * repeated each frame, never the composition.
+ * The run's clock is [rememberRunClock]: the scene only reads it, so the world is stepped once a frame and drawn by the
+ * same frame, never seen half-moved. Reading [clock] in the draw block is what redraws it: only the drawing is repeated
+ * each frame, never the composition.
  */
-@Composable fun ExpeditionScene(run: ExpeditionRun, classCode: String?, modifier: Modifier = Modifier) {
-    var clock by remember(run) { mutableFloatStateOf(0f) }
+@Composable fun ExpeditionScene(run: ExpeditionRun, clock: FloatState, classCode: String?, modifier: Modifier = Modifier) {
     val painter = remember { ScenePainter() }
+    Canvas(modifier) { painter.draw(this, run, clock.floatValue, classCode) }
+}
+
+/**
+ * Часы захода: каждый кадр [ExpeditionRun.update] один раз; значение - секунды на экране. Живут отдельно от сцены (3.95.1):
+ * в ленте автопробега сцены нет, и заход, которого никто не шагал, стоял на «Волна 0» без отклика на «Стоп».
+ */
+@Composable fun rememberRunClock(run: ExpeditionRun): FloatState {
+    val clock = remember(run) { mutableFloatStateOf(0f) }
     LaunchedEffect(run) {
         var last = 0L
         while (true) {
@@ -53,13 +59,13 @@ import kotlin.math.sin
                 if (last != 0L) {
                     val dt = ((now - last) / 1e9).coerceAtMost(.05)
                     run.update(dt)
-                    clock += dt.toFloat()
+                    clock.floatValue += dt.toFloat()
                 }
                 last = now
             }
         }
     }
-    Canvas(modifier) { painter.draw(this, run, clock, classCode) }
+    return clock
 }
 
 /** Half a tile's width on screen; the tile is twice as wide as it is tall. */

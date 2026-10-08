@@ -63,6 +63,7 @@ import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
+import com.sperance.exileforge.ui.screens.expedition.scene.rememberRunClock
 import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
@@ -123,10 +124,12 @@ import kotlin.math.roundToInt
     // Задания захода (3.95.0): доска героя и счёт этого захода
     val quests by koinViewModel<QuestViewModel>().quests.collectAsStateWithLifecycle()
     var questsOpen by remember { mutableStateOf(false) }
+    // Часы захода идут и без сцены (3.95.1): лента автопробега карты не рисует
+    val clock = rememberRunClock(run)
     Box(Modifier.fillMaxSize().background(Ink)) {
         // Автопроход - лента боёв (3.94.0): карты на экране нет, между боями - только счёт пути.
         val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
-        if (ribbon == null) ExpeditionScene(run, game.heroClass?.code, Modifier.fillMaxSize())
+        if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
         RunQuestWatch(quests, hud.questTally, shell::announce)
         if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazard)
         when (hud.phase) {

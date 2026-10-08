@@ -252,6 +252,8 @@ import kotlin.math.sin
 ) {
     val hero = game.hero ?: return
     val inside = hero.jewels[node.code]
+    // Имя гнезда - тема, а не бонус (3.95.1): «Гнездо: точность» само ничего не даёт, игрок ждал от него баффа.
+    MutedText(ui("tree.socket_hint"))
 
     if (inside != null) {
         // A taken socket may still hold a jewel that does nothing - a second copy of a unique one (1.31.0): the sheet's reason.

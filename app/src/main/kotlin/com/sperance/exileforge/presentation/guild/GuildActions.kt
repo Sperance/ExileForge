@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildStashView
 import com.sperance.exileforge.core.model.guild.GuildView
+import com.sperance.exileforge.core.network.GUILD_LOG_PAGE_SIZE
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.core.session.CommandRunner
@@ -112,12 +113,12 @@ class GuildActions(
         notices.toast(ui("guild.toast.contributed"))
     }
 
-    /** Журнал с новейшей страницы или следующая за показанными; пустая страница - конец. */
+    /** Журнал с новейшей страницы или следующая за показанными; неполная страница - конец, «Ещё» больше не показывается. */
     fun loadLog(more: Boolean = false) = commands.read(Reads.GUILD_LOG, restart = !more) {
         val id = hero()
         val page = if (more) guilds.logPage + 1 else 0
         val entries = api.guild.log(id, page)
-        if (heroes.onScreen(id)) guild { it.copy(log = if (more) it.log + entries else entries, logPage = page, logEnd = entries.isEmpty()) }
+        if (heroes.onScreen(id)) guild { it.copy(log = if (more) it.log + entries else entries, logPage = page, logEnd = entries.size < GUILD_LOG_PAGE_SIZE) }
     }
 
     private fun inviteName(guildId: String): String = guilds.mine?.invites?.firstOrNull { it.guild.id == guildId }?.guild?.name.orEmpty()

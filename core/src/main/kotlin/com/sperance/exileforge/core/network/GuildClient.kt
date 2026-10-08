@@ -11,6 +11,9 @@ import com.sperance.exileforge.rules.content.GuildMode
 
 private const val GUILD = "api/v1/guild"
 
+/** Страница журнала гильдии, что клиент просит у сервера; страница короче - конец журнала. */
+const val GUILD_LOG_PAGE_SIZE = 20
+
 /** The member commands, each about one other hero of the guild by `memberId`. */
 enum class MemberCommand(val path: String) { KICK("kick"), PROMOTE("promote"), DEMOTE("demote"), TRANSFER("transfer") }
 
@@ -109,7 +112,7 @@ class GuildClient internal constructor(private val http: Transport) {
 
     suspend fun log(heroId: String, page: Int): List<GuildLogEntry> {
         requirePage(page)
-        return http.get("$GUILD/log", heroQuery(heroId, "page" to page.toString()))
+        return http.get("$GUILD/log", heroQuery(heroId, "page" to page.toString(), "size" to GUILD_LOG_PAGE_SIZE.toString()))
     }
 
     private suspend fun onGuild(operation: String, heroId: String, guildId: String): GuildMine {

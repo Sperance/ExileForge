@@ -113,7 +113,7 @@ class TrialArena(
     private val hero: Combatant get() = build.body
     private val kit: Loadout get() = gear.kit
     val stance: HeroStance get() = gear.stance
-    private var pools = HeroPools(hero.maxLife, manaCap(), kit.flasks.map { it?.maxCharges ?: 0.0 }, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
+    private var pools = HeroPools(hero.maxLife, manaCap(), kit.flasks.map { it?.sheet?.maxCharges ?: 0.0 }, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
 
     private var phase = TrialPhase.FIGHT
 
@@ -374,7 +374,7 @@ class TrialArena(
                 val rush = trials.rush
                 pools = pools.copy(
                     life = (pools.life + hero.maxLife * rush.life / 100).coerceAtMost(hero.maxLife),
-                    charges = pools.charges.mapIndexed { i, held -> kit.flasks.getOrNull(i)?.let { (held + rush.flaskCharges).coerceAtMost(it.maxCharges) } ?: held },
+                    charges = pools.charges.mapIndexed { i, held -> kit.flasks.getOrNull(i)?.let { (held + rush.flaskCharges).coerceAtMost(it.sheet.maxCharges) } ?: held },
                 )
                 if (step >= (plan?.size ?: 0)) finish(fallen = false)
             }

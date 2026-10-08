@@ -16,7 +16,7 @@ internal fun Battle.powerShown(code: String, healed: Double) = self(code, healed
 internal fun Battle.flaskCharges(): Double = charges.sum()
 
 /** [amount] charges to every flask of the belt, up to each one's maximum. */
-internal fun Battle.chargeFlasks(amount: Double) = kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.maxCharges, charges[i] + amount) } }
+internal fun Battle.chargeFlasks(amount: Double) = kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.sheet.maxCharges, charges[i] + amount) } }
 
 /** [amount] charges of [kind] for the hero (3.33.0): the body is made again with them. */
 internal fun Battle.gainCharges(kind: ChargeKind, amount: Int) {

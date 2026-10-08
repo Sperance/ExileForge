@@ -41,11 +41,11 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
         val running = draughtOf(i)
         FlaskView(
             i,
-            it.code,
-            it.kind,
+            it.sheet.code,
+            it.sheet.kind,
             charges[i].toInt(),
-            it.maxCharges.toInt(),
-            ceil(it.perUse(heroFighter.body) - 1e-9).toInt(),
+            it.sheet.maxCharges.toInt(),
+            ceil(it.sheet.perUse(heroFighter.body::get) - 1e-9).toInt(),
             running?.let { d -> ((d.until - time) / d.duration).toFloat().coerceIn(0f, 1f) } ?: 0f,
             it.condition,
             flaskLock(i),

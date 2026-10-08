@@ -1,12 +1,14 @@
 package com.sperance.exileforge.core.campaign.combat
 
+import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.EffectTrace
-import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.KitSkill
 import com.sperance.exileforge.core.campaign.PowerMoment
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.draught
+import com.sperance.exileforge.core.campaign.hexes
 import com.sperance.exileforge.core.campaign.lines
+import com.sperance.exileforge.core.campaign.usesAll
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -267,7 +269,7 @@ internal fun Battle.curse(kitSkill: KitSkill, targets: List<Fighter>, level: Int
 internal fun Battle.curseOf(): KitSkill? = kit.actives.firstOrNull { it?.skill?.curse != null } ?: kit.curses.firstOrNull()
 
 /** A hexing draught runs (a unique flask): every blow that lands lays a random curse of the class. */
-internal fun Battle.hexing(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.hexes == true && draughtOf(i) != null }
+internal fun Battle.hexing(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.sheet?.hexes == true && draughtOf(i) != null }
 
 internal fun Battle.hex(target: Fighter) {
     if (target.cursed || kit.curses.isEmpty()) return
@@ -311,8 +313,8 @@ internal fun Battle.self(code: String, healed: Double = 0.0) = record(Side.HERO,
 
 /** A chance per flask of the belt to gain a charge, by a line of its own ([stat], in percent). */
 internal fun Battle.flaskCharge(stat: String) = kit.flasks.forEachIndexed { i, flask ->
-    val chance = flask?.own(stat) ?: return@forEachIndexed
-    if (chance > 0 && random.nextDouble() * 100 < chance) charges[i] = min(flask.maxCharges, charges[i] + 1)
+    val chance = flask?.sheet?.own(stat) ?: return@forEachIndexed
+    if (chance > 0 && random.nextDouble() * 100 < chance) charges[i] = min(flask.sheet.maxCharges, charges[i] + 1)
 }
 
 /**
@@ -344,7 +346,7 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     answer.shield?.let { hero.shield = min(hero.body.maxShield, hero.shield + hero.body.maxShield * it.at(level) / 100) }
     answer.barrier?.let { ward(it, level) }
     answer.buff?.let { buff(hero, code, it.stats.lines(level), it.duration, it.counter?.at(level) ?: 0.0) }
-    if (answer.flaskCharges > 0) kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.maxCharges, charges[i] + answer.flaskCharges) } }
+    if (answer.flaskCharges > 0) kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.sheet.maxCharges, charges[i] + answer.flaskCharges) } }
     if (answer.refund && refund > 0) hero.mana = min(manaCap(), hero.mana + refund)
     val hit = answer.hit
     if (hit != null) {
@@ -369,17 +371,18 @@ internal fun Battle.useFlasks() {
     kit.flasks.forEachIndexed { i, flask ->
         flask ?: return@forEachIndexed
         if (draughtOf(i) != null || flaskLock(i) > 0) return@forEachIndexed
-        val auto = flask.own("FLASK_AUTO_LOW_LIFE").let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
+        val auto = flask.sheet.own("FLASK_AUTO_LOW_LIFE").let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
         if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
-        if (charges[i] + 1e-9 < flask.perUse(hero.body)) return@forEachIndexed
+        if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) return@forEachIndexed
         // As in PoE (3.79.0): a draught that only gives life back is not wasted on a full bar.
-        if (hero.life >= hero.body.maxLife && flask.draught(hero.body, hero.life, manaCap()).lifeOnly) return@forEachIndexed
+        if (hero.life >= hero.body.maxLife && flask.sheet.draught(hero.body, hero.life, manaCap()).lifeOnly) return@forEachIndexed
         flaskOpened[i] = true
         drink(i, flask)
     }
 }
 
-internal fun Battle.drink(slot: Int, flask: Flask, free: Boolean = false) {
+internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
+    val flask = belt.sheet
     val hero = heroFighter
     val keep = !free && flask.own("FLASK_NO_CHARGE_CHANCE").let { it > 0 && random.nextDouble() * 100 < it }
     val draught = flask.draught(hero.body, hero.life, manaCap())
@@ -387,7 +390,7 @@ internal fun Battle.drink(slot: Int, flask: Flask, free: Boolean = false) {
         free -> charges[slot]
         flask.usesAll -> 0.0
         keep -> charges[slot]
-        else -> (charges[slot] - flask.perUse(hero.body)).coerceAtLeast(0.0)
+        else -> (charges[slot] - flask.perUse(hero.body::get)).coerceAtLeast(0.0)
     }
     lay(hero, TimedEffect(EffectKind.FLASK, flask.code, draught.lines, time + draught.duration, draught.duration, slot = slot))
     // An immunity drunk lifts what it guards against at once.
@@ -400,7 +403,7 @@ internal fun Battle.drink(slot: Int, flask: Flask, free: Boolean = false) {
     val healed = lifeBack(hero, draught.life)
     record(
         Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, healed, false, emptyList(), null, target()?.index ?: 0, flask.code, onSelf = true,
-        trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, healed, flask.effect(hero.body), shot(hero), origin),
+        trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, healed, flask.effect(hero.body::get), shot(hero), origin),
     )
     if (healed > 0 || draught.lifeRate > 0) trigger(SkillEvent.HEALED)
     powers.fire(PowerEvent.FLASK)

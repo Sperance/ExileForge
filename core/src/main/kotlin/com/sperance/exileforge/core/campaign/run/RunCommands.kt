@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.surrender
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.draught
+import com.sperance.exileforge.core.campaign.usesAll
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -287,10 +288,10 @@ internal fun ExpeditionRun.closeCrystal() {
 
 /** A draught on the map: what it gives back comes at once, and what it lays on runs as the hero walks. */
 internal fun ExpeditionRun.drinkOnMap(slot: Int) {
-    val flask = kit.flasks.getOrNull(slot) ?: return
-    if ((flaskLeft.getOrNull(slot) ?: 0.0) > 0 || (charges.getOrNull(slot) ?: 0.0) + 1e-9 < flask.perUse(hero)) return
+    val flask = kit.flasks.getOrNull(slot)?.sheet ?: return
+    if ((flaskLeft.getOrNull(slot) ?: 0.0) > 0 || (charges.getOrNull(slot) ?: 0.0) + 1e-9 < flask.perUse(hero::get)) return
     val draught = flask.draught(hero, life, manaCap())
-    charges = charges.toMutableList().also { it[slot] = if (flask.usesAll) 0.0 else (it[slot] - flask.perUse(hero)).coerceAtLeast(0.0) }
+    charges = charges.toMutableList().also { it[slot] = if (flask.usesAll) 0.0 else (it[slot] - flask.perUse(hero::get)).coerceAtLeast(0.0) }
     flaskLeft = flaskLeft.toMutableList().also { it[slot] = draught.duration }
     rates = rates.toMutableList().also { it[slot] = DraughtRate(draught.lifeRate, draught.manaRate) }
     rebody()

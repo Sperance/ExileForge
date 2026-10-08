@@ -131,12 +131,12 @@ internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed
         val left = flaskLeft.getOrNull(i) ?: 0.0
         FlaskView(
             i,
-            it.code,
-            it.kind,
+            it.sheet.code,
+            it.sheet.kind,
             (charges.getOrNull(i) ?: 0.0).toInt(),
-            it.maxCharges.toInt(),
-            kotlin.math.ceil(it.perUse(hero) - 1e-9).toInt(),
-            if (left > 0) (left / it.duration(hero)).toFloat().coerceIn(0f, 1f) else 0f,
+            it.sheet.maxCharges.toInt(),
+            kotlin.math.ceil(it.sheet.perUse(hero::get) - 1e-9).toInt(),
+            if (left > 0) (left / it.sheet.duration(hero::get)).toFloat().coerceIn(0f, 1f) else 0f,
             it.condition,
         )
     }

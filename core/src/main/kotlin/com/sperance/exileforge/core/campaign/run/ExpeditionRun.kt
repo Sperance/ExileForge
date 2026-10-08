@@ -157,7 +157,7 @@ class ExpeditionRun(
     /** Темп похода из контента (3.80.31): паузы боя, шаг автозабега. */
     internal val pace: ExpeditionRules get() = index.campaign.expedition
     internal var mana = startPools?.mana?.coerceIn(0.0, manaCap()) ?: manaCap()
-    internal var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
+    internal var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.sheet?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
     internal var flaskLeft: List<Double> = kit.flasks.indices.map { startPools?.flaskLeft?.getOrNull(it) ?: 0.0 }
     internal var rates: List<DraughtRate> = kit.flasks.indices.map { startPools?.rates?.getOrNull(it) ?: DraughtRate() }
     val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft, rates)
@@ -334,7 +334,7 @@ class ExpeditionRun(
         build = next
         rebody()
         life = if (before.maxLife > 0) life / before.maxLife * hero.maxLife else hero.maxLife
-        charges = next.gear.kit.flasks.mapIndexed { i, flask -> flask?.let { (charges.getOrNull(i) ?: 0.0).coerceIn(0.0, it.maxCharges) } ?: 0.0 }
+        charges = next.gear.kit.flasks.mapIndexed { i, flask -> flask?.sheet?.let { (charges.getOrNull(i) ?: 0.0).coerceIn(0.0, it.maxCharges) } ?: 0.0 }
         flaskLeft = next.gear.kit.flasks.indices.map { i -> if (next.gear.kit.flasks[i] != null) flaskLeft.getOrNull(i) ?: 0.0 else 0.0 }
         rates = next.gear.kit.flasks.indices.map { i -> if (next.gear.kit.flasks[i] != null) rates.getOrNull(i) ?: DraughtRate() else DraughtRate() }
         rebody()
@@ -343,7 +343,7 @@ class ExpeditionRun(
     /** The hero between fights made again: the sheet with the draughts still running, and the pace and sight they give. */
     internal fun rebody() {
         val lines = kit.flasks.withIndex().filter { (i, flask) -> flask != null && (flaskLeft.getOrNull(i) ?: 0.0) > 0 }
-            .flatMap { (_, flask) -> flask!!.draught(build.body, life, 0.0).lines }
+            .flatMap { (_, flask) -> flask!!.sheet.draught(build.body, life, 0.0).lines }
         hero = if (lines.isEmpty()) build.body else build.body(lines)
         mana = mana.coerceIn(0.0, manaCap())
         shield = shield.coerceIn(0.0, hero.maxShield)

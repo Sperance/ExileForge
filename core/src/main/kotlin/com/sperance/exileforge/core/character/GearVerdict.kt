@@ -11,12 +11,12 @@ import com.sperance.exileforge.rules.sheet.CombatProfile
 import kotlin.math.abs
 
 /**
- * Лучше или хуже (3.89.0): что смена вещи даст герою двумя числами - [offence] и [defence], доли изменения урона в
- * секунду и эффективного запаса здоровья (0.12 - на 12% больше). Считается правилами: лист с вещью против листа без неё.
+ * Лучше или хуже (3.89.0): что смена вещи даст герою. С 4.2.0 - два вида: [SheetVerdict] (урон и защита листа) для
+ * снаряжения и [FlaskVerdict] (строки листа фляги) для фляг, что лист героя не меняют.
  */
-data class GearVerdict(val offence: Double, val defence: Double) {
-    /** Оба изменения вместе: по нему улучшения идут первыми. */
-    val score: Double get() = offence + defence
+sealed interface GearVerdict {
+    /** Насколько смена лучше в целом: по нему улучшения идут первыми. */
+    val score: Double
 
     /** Куда сдвинулась величина, когда сдвиг достаточно велик, чтобы о нём говорить. */
     enum class Shift {
@@ -36,14 +36,22 @@ data class GearVerdict(val offence: Double, val defence: Double) {
             }
         }
     }
+}
+
+/**
+ * Вердикт снаряжения (3.89.0): [offence] и [defence] - доли изменения урона в секунду и эффективного запаса здоровья
+ * (0.12 - на 12% больше). Считается правилами: лист с вещью против листа без неё.
+ */
+data class SheetVerdict(val offence: Double, val defence: Double) : GearVerdict {
+    override val score: Double get() = offence + defence
 
     companion object {
         /** Вердикт листа [after] против [before] героя уровня [level]: оба листа меряются одним и тем же ударом. */
-        fun of(index: ContentIndex, level: Int, before: Map<String, Double>, after: Map<String, Double>): GearVerdict {
+        fun of(index: ContentIndex, level: Int, before: Map<String, Double>, after: Map<String, Double>): SheetVerdict {
             val rules = index.campaign.combat
             val was = Combatant(before, level, rules)
             val hit = Toughness.referenceHit(was)
-            return GearVerdict(
+            return SheetVerdict(
                 change(CombatProfile.of(index, before).best, CombatProfile.of(index, after).best),
                 change(Toughness.of(was, hit), Toughness.of(Combatant(after, level, rules), hit)),
             )
@@ -134,7 +142,14 @@ class GearVerdicts {
         val wearable = Sheets.unmet(index, item.template, hero.level, hero.stats).isEmpty()
         val worn = hero.equipped
         return EquipSlots.places(slot).map { place ->
-            val verdict = if (wearable) Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place) else null
+            val verdict = when {
+                !wearable -> null
+
+                // Фляга листа героя не меняет (4.2.0): её меряют строками листа фляги против надетой в этом гнезде.
+                slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])
+
+                else -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place)
+            }
             WearPlace(place, worn[place], verdict)
         }
     }

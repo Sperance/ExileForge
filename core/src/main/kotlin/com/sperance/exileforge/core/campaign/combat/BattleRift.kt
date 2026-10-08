@@ -136,7 +136,7 @@ private fun Battle.lock(fight: RiftFight, rule: WardenRule, boss: Fighter) {
     } else {
         val slot = flasks[pick - skills.size]
         fight.flaskLocks[slot] = until
-        note(boss, NoteKind.SEAL_LOCK_FLASK, kit.flasks[slot]!!.code, rule.lock)
+        note(boss, NoteKind.SEAL_LOCK_FLASK, kit.flasks[slot]!!.sheet.code, rule.lock)
     }
 }
 

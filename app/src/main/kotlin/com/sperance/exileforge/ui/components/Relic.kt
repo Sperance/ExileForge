@@ -39,11 +39,15 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.R
+import com.sperance.exileforge.core.character.FlaskVerdict
+import com.sperance.exileforge.core.character.GearVerdict.Shift
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.AffixMarks
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.flaskRowTitle
+import com.sperance.exileforge.core.display.flaskRowValue
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.ui
@@ -314,24 +318,50 @@ private fun starPath(r: Float, c: Offset): Path = Path().apply {
 /**
  * «ИТОГ ГЕРОЯ» (3.88.6): что станет с листом героя, если надеть вещь, - таблица «сейчас → станет», рост зелёным, потеря красным.
  */
-@Composable fun HeroTotals(delta: List<StatDelta>, look: RelicLook, modifier: Modifier = Modifier) {
+@Composable fun HeroTotals(delta: List<StatDelta>, look: RelicLook, modifier: Modifier = Modifier) = TotalsTable(
+    ui("relic.totals"),
+    delta.map { TotalsLine(statTitle(it.stat), statValue(it.stat, it.before), statValue(it.stat, it.after), it.change > 0) },
+    look,
+    modifier,
+)
+
+/**
+ * «ИТОГ ФЛЯГИ» (4.2.0): строки листа фляги против фляги в выбранном гнезде - лечение, длительность, заряды, эффект и что она
+ * кладёт на героя; лучше - зелёным, хуже - красным (меньший расход заряда - лучше).
+ */
+@Composable fun FlaskTotals(verdict: FlaskVerdict, look: RelicLook, modifier: Modifier = Modifier) = TotalsTable(
+    ui("relic.flask_totals"),
+    verdict.rows.map { TotalsLine(flaskRowTitle(it), flaskRowValue(it, it.before), flaskRowValue(it, it.after), it.shift.takeIf { s -> s != Shift.EVEN }?.let { s -> s == Shift.UP }) },
+    look,
+    modifier,
+)
+
+/** Строка итога: имя, «сейчас», «станет» и сдвиг - к лучшему, к худшему или без цвета (null). */
+private class TotalsLine(val title: String, val before: String, val after: String, val better: Boolean?)
+
+/** Таблица «сейчас → станет» итога карточки под заголовком [title]; пустая говорит, что ничего не изменится. */
+@Composable private fun TotalsTable(title: String, lines: List<TotalsLine>, look: RelicLook, modifier: Modifier) {
     val label = MaterialTheme.typography.labelSmall
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(ui("relic.totals"), color = look.muted, style = label, letterSpacing = 1.8.sp, modifier = Modifier.weight(1f))
+            Text(title, color = look.muted, style = label, letterSpacing = 1.8.sp, modifier = Modifier.weight(1f))
             Text(ui("relic.now"), color = look.faint, style = label, textAlign = TextAlign.End, modifier = Modifier.width(64.dp))
             Spacer(Modifier.width(22.dp))
             Text(ui("relic.after"), color = look.faint, style = label, modifier = Modifier.width(64.dp))
         }
-        if (delta.isEmpty()) Text(ui("wear.nothing"), color = look.muted, style = MaterialTheme.typography.bodySmall)
-        delta.forEach { line ->
+        if (lines.isEmpty()) Text(ui("wear.nothing"), color = look.muted, style = MaterialTheme.typography.bodySmall)
+        lines.forEach { line ->
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(statTitle(line.stat), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
-                Text(statValue(line.stat, line.before), color = look.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.width(64.dp), maxLines = 1)
+                Text(line.title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f), maxLines = 1)
+                Text(line.before, color = look.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End, modifier = Modifier.width(64.dp), maxLines = 1)
                 Text("→", color = look.faint, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.width(22.dp))
                 Text(
-                    statValue(line.stat, line.after),
-                    color = if (line.change > 0) Vital else Color(0xFFFF8F88),
+                    line.after,
+                    color = when (line.better) {
+                        true -> Vital
+                        false -> Color(0xFFFF8F88)
+                        null -> Parchment
+                    },
                     fontWeight = FontWeight.ExtraBold,
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.width(64.dp),

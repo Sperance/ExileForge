@@ -12,6 +12,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.character.FlaskVerdict
 import com.sperance.exileforge.core.character.WearPlace
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.requirementReason
@@ -25,6 +26,7 @@ import com.sperance.exileforge.presentation.state.wearDelta
 import com.sperance.exileforge.presentation.state.wearPlaces
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.ui.components.FlaskTotals
 import com.sperance.exileforge.ui.components.GearVerdictSummary
 import com.sperance.exileforge.ui.components.HeroTotals
 import com.sperance.exileforge.ui.components.MutedText
@@ -67,13 +69,15 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
 /**
  * «Если надеть» (2.46.0) в итоге героя карточки (3.88.6): что станет с листом с этой вещью, сложенное здесь формулой правил, -
  * строка на каждую сдвинутую характеристику, над ними - урон и защита двумя числами (3.89.0). Недоступная вещь говорит вместо этого красным, чего ей не хватает.
- * С 3.90.3 над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать.
+ * С 3.90.3 над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги (4.2.0) итог - «ИТОГ ФЛЯГИ» ([FlaskTotals]).
  */
 @Composable private fun WearTotals(game: GameUi, item: ItemInstance, choice: WearChoice, look: RelicLook) {
     val unmet = game.unmetFor(item.template)
     val selected = choice.selected
     val place = choice.target
-    val delta = remember(item, game.hero, game.index, place) { game.wearDelta(item, place) }
+    // Фляга листа героя не меняет (4.2.0): вместо пустого итога героя - строки её листа против фляги в выбранном гнезде.
+    val flask = game.index?.template(item.template)?.slot?.isFlask == true
+    val delta = remember(item, game.hero, game.index, place) { if (flask) emptyList() else game.wearDelta(item, place) }
     if (unmet.isEmpty()) {
         // Итог в двух числах (3.89.0) над построчным «Если надеть».
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -81,8 +85,13 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
                 PillTabs(choice.places.map { placeTitle(it.slot) }, choice.places.indexOf(selected), { choice.pick(choice.places[it].slot) }, segmented = true)
                 MutedText(selected.replaced?.let { ui("wear.instead", equipmentTitle(it.template)) } ?: ui("wear.place_free"), style = MaterialTheme.typography.labelSmall)
             }
-            selected?.verdict?.let { GearVerdictSummary(it) }
-            HeroTotals(delta, look)
+            val verdict = selected?.verdict
+            verdict?.let { GearVerdictSummary(it) }
+            if (!flask) {
+                HeroTotals(delta, look)
+            } else if (verdict is FlaskVerdict) {
+                FlaskTotals(verdict, look)
+            }
         }
         return
     }

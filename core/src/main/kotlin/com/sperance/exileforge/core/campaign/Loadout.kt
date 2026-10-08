@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.FlaskStat
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierCode
@@ -20,83 +21,22 @@ import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.FlaskKind
+import com.sperance.exileforge.rules.sheet.FlaskSheet
 import com.sperance.exileforge.rules.sheet.SheetExplainer
 import com.sperance.exileforge.rules.sheet.Shift
 import kotlin.math.max
 
-/** What a flask does when drunk (2.78.0), by its base: brings life back, brings mana back, or only lays its lines for a while. */
-enum class FlaskKind { LIFE, MANA, UTILITY }
-
 /**
- * A flask on the belt as a fight takes it (2.78.0): its base and its own affixes summed by stat, as the
- * server rolled them. What the hero's sheet adds — more charges, a longer or stronger draught — is the
- * fight's to lay on, with the sheet of the moment: see the functions taking `hero`.
+ * Фляга на поясе (4.2.0): её лист из правил ([FlaskSheet] - ёмкость, расход, длительность, лечение, эффект с качеством, аффиксами
+ * и бонусами героя) и когда её пьют сами - условие пояса, а без него - вида фляги. Бой и карточка читают одно и то же правило.
  */
-data class Flask(
-    /** The template's code: the name and the icon. */
-    val code: String,
-    val kind: FlaskKind,
-    val condition: SlotCondition,
-    val quality: Int = 0,
-    private val added: Map<String, Double> = emptyMap(),
-    private val increased: Map<String, Double> = emptyMap(),
-    /** What it lays on the hero while its effect lasts, before its effect's increase. */
-    val lines: List<StatLine> = emptyList(),
-) {
-    fun own(stat: String): Double = added[stat] ?: 0.0
-    private fun inc(stat: String): Double = increased[stat] ?: 0.0
-
-    val maxCharges: Double get() = max(1.0, own("FLASK_CHARGES"))
-    fun perUse(hero: Combatant): Double = own("FLASK_CHARGES_PER_USE") * max(0.0, 1 - (own(CoreStat.FLASK_CHARGES_USED.code) + hero[CoreStat.FLASK_CHARGES_USED.code]) / 100)
-    fun duration(hero: Combatant): Double = max(0.5, own("FLASK_DURATION") * (1 + (inc(CoreStat.FLASK_DURATION.code) + hero[CoreStat.FLASK_DURATION.code]) / 100))
-
-    /** How much stronger its lines are: its own and the hero's increase, and a utility flask's quality. */
-    fun effect(hero: Combatant): Double = max(0.0, 1 + (inc(CoreStat.FLASK_EFFECT.code) + hero[CoreStat.FLASK_EFFECT.code] + if (kind == FlaskKind.UTILITY) quality.toDouble() else 0.0) / 100)
-
-    /** How much more it brings back: its own and the hero's increase, life flasks' own, and a recovery flask's quality. */
-    fun recovery(hero: Combatant): Double = max(
-        0.0,
-        1 + (
-            inc(CoreStat.FLASK_RECOVERY.code) + hero[CoreStat.FLASK_RECOVERY.code] +
-                (if (kind == FlaskKind.LIFE) hero[CoreStat.FLASK_LIFE_RECOVERY.code] else 0.0) + (if (kind != FlaskKind.UTILITY) quality.toDouble() else 0.0)
-            ) / 100,
-    )
-
-    /** The charges a kill of [base] brings: the rule's, more by its own and the hero's increase, plus both flat additions. */
-    fun gained(base: Double, hero: Combatant): Double = max(0.0, base * (1 + (inc(CoreStat.FLASK_CHARGES_GAINED.code) + hero[CoreStat.FLASK_CHARGES_GAINED.code]) / 100) + own(CoreStat.FLASK_CHARGES_PER_KILL.code) + hero[CoreStat.FLASK_CHARGES_PER_KILL.code])
-
-    /** The share of its recovery that comes at once; the rest runs over its duration. */
-    val instant: Double get() = (own("FLASK_INSTANT") / 100).coerceIn(0.0, 1.0)
-    val usesAll: Boolean get() = own("FLASK_USES_ALL") > 0
-    val skillsFree: Boolean get() = own("FLASK_SKILLS_FREE") > 0
-    val hexes: Boolean get() = own("FLASK_HITS_CURSE") > 0
-
+data class BeltFlask(val sheet: FlaskSheet, val condition: SlotCondition) {
     companion object {
-        /** Stats that are the flask's own working rather than what it lays on the hero. */
-        private fun mechanic(stat: String) = stat.startsWith("FLASK_") || stat.startsWith("STOCK_FLASK_")
-
-        /** The flask [item] of [template] as the fight takes it; [condition] is the belt's, or the kind's own when null. */
-        fun of(item: ItemInstance, template: ItemTemplate, index: ContentIndex, condition: SlotCondition?): Flask {
-            val added = mutableMapOf<String, Double>()
-            val increased = mutableMapOf<String, Double>()
-            val lines = mutableListOf<StatLine>()
-            fun take(code: ModifierCode, values: List<Double>) {
-                index.modifier(code)?.bind(values)?.forEach { (effect, value) ->
-                    when {
-                        !mechanic(effect.stat) -> lines += StatLine(effect.stat, effect.op, value)
-                        effect.op == Op.INCREASED -> increased.merge(effect.stat, value, Double::plus)
-                        else -> added.merge(effect.stat, value, Double::plus)
-                    }
-                }
-            }
-            template.base.forEach { take(it.code, it.values) }
-            item.rolls.forEach { take(it.code, it.values(index)) }
-            val kind = when {
-                (added["FLASK_LIFE"] ?: 0.0) > 0 -> FlaskKind.LIFE
-                (added["FLASK_MANA"] ?: 0.0) > 0 -> FlaskKind.MANA
-                else -> FlaskKind.UTILITY
-            }
-            return Flask(template.code, kind, condition ?: defaultCondition(kind), item.quality, added, increased, lines)
+        /** Фляга [item] шаблона [template] на поясе; [condition] - пояса, null - своё условие вида. */
+        fun of(item: ItemInstance, template: ItemTemplate, index: ContentIndex, condition: SlotCondition?): BeltFlask {
+            val sheet = FlaskSheet.of(item, template, index)
+            return BeltFlask(sheet, condition ?: defaultCondition(sheet.kind))
         }
 
         /** When a flask is drunk by itself unless the belt says otherwise: a life flask at half life, a mana flask low on mana, the rest at the start. */
@@ -107,6 +47,15 @@ data class Flask(
         }
     }
 }
+
+/** Глоток тратит все заряды (уникальная фляга). */
+val FlaskSheet.usesAll: Boolean get() = own("FLASK_USES_ALL") > 0
+
+/** Пока действует, навыки ничего не стоят. */
+val FlaskSheet.skillsFree: Boolean get() = own("FLASK_SKILLS_FREE") > 0
+
+/** Пока действует, удары накладывают проклятия класса. */
+val FlaskSheet.hexes: Boolean get() = own("FLASK_HITS_CURSE") > 0
 
 /** A skill as the fight uses it: what it is, the level it was learned to and when its slot fires. */
 data class KitSkill(
@@ -146,7 +95,7 @@ fun List<SkillStat>.lines(level: Int, scale: Double = 1.0): List<StatLine> = map
 data class Loadout(
     val actives: List<KitSkill?> = emptyList(),
     val passives: List<KitSkill> = emptyList(),
-    val flasks: List<Flask?> = emptyList(),
+    val flasks: List<BeltFlask?> = emptyList(),
     val curses: List<KitSkill> = emptyList(),
     /** The book of the unique items' powers (2.79.0): which of them the hero has, their sheet says. */
     val powers: PowerBook = PowerBook(),
@@ -186,7 +135,7 @@ data class Loadout(
             skills: HeroSkills,
             book: SkillBook,
             heroClass: String,
-            flasks: List<Flask?>,
+            flasks: List<BeltFlask?>,
             powers: PowerBook = PowerBook(),
             charges: ChargeRules = ChargeRules(),
         ): Loadout {
@@ -354,19 +303,19 @@ data class Draught(
  * its own line, the instant share comes now and the rest runs over the duration; a life flask may also
  * give mana or shield back, and any flask a sip of either.
  */
-fun Flask.draught(hero: Combatant, life: Double, manaCap: Double): Draught {
-    val duration = duration(hero)
+fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught {
+    val duration = duration(hero::get)
     val low = life < hero.maxLife * LOW_LIFE
-    val recover = recovery(hero) * if (low) 1 + own("FLASK_LOW_LIFE_RECOVERY") / 100 else 1.0
-    val lifeAmount = own("FLASK_LIFE") * recover
-    val manaAmount = own("FLASK_MANA") * recover
+    val recover = recovery(hero::get) * if (low) 1 + own("FLASK_LOW_LIFE_RECOVERY") / 100 else 1.0
+    val lifeAmount = own(FlaskStat.LIFE.code) * recover
+    val manaAmount = own(FlaskStat.MANA.code) * recover
     return Draught(
         life = lifeAmount * instant,
         mana = manaAmount * instant + lifeAmount * own("FLASK_LIFE_TO_MANA") / 100 + manaCap * own("FLASK_SIP_MANA") / 100,
         shield = lifeAmount * own("FLASK_LIFE_TO_SHIELD") / 100 + hero.maxShield * own("FLASK_SIP_SHIELD") / 100,
         lifeRate = lifeAmount * (1 - instant) / duration,
         manaRate = manaAmount * (1 - instant) / duration,
-        lines = effect(hero).let { scale -> lines.map { it.copy(value = it.value * scale) } },
+        lines = effect(hero::get).let { scale -> lines.map { StatLine(it.stat, it.op, it.value * scale) } },
         duration = duration,
         invulnerable = own("FLASK_INVULNERABLE"),
     )

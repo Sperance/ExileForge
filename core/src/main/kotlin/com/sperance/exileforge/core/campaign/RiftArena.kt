@@ -195,7 +195,7 @@ class RiftArena(
     private fun startPools(): HeroPools {
         val dry = touch.rules[RiftRule.FLASK_CHARGES] ?: 0.0
         val charges = kit.flasks.mapIndexed { i, flask ->
-            val max = flask?.maxCharges ?: 0.0
+            val max = flask?.sheet?.maxCharges ?: 0.0
             (run.flasks.getOrNull(i) ?: max).coerceAtMost(max - dry).coerceIn(0.0, max)
         }
         val mana = hero.maxMana * (1 - kit.reserved(hero) / 100)

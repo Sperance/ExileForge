@@ -132,7 +132,7 @@ object Sheets {
         before: Map<String, Double>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         place: Slot? = null,
-    ): GearVerdict? = worn(index, item, level, heroClass, tree, items, pets, place)?.let { GearVerdict.of(index, level, before, it) }
+    ): SheetVerdict? = worn(index, item, level, heroClass, tree, items, pets, place)?.let { SheetVerdict.of(index, level, before, it) }
 
     /**
      * The whole sheet with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),

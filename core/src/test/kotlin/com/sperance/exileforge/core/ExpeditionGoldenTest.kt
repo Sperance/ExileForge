@@ -1,6 +1,6 @@
 package com.sperance.exileforge.core
 
-import com.sperance.exileforge.core.campaign.Flask
+import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
@@ -69,7 +69,7 @@ class ExpeditionGoldenTest {
         // Two plain life flasks on the belt: a naked hero would fall before the boss.
         val flasks = List(2) { n ->
             val template = index.template(FLASK) ?: return@List null
-            Flask.of(ItemFactory(index).create("flask-$n", template, Rarity.COMMON, Dice(case.seed + n)), template, index, SlotCondition.READY)
+            BeltFlask.of(ItemFactory(index).create("flask-$n", template, Rarity.COMMON, Dice(case.seed + n)), template, index, SlotCondition.READY)
         }
         val gear = HeroGear(sheet.stats, case.level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(skills, index.skills, heroClass.code, flasks, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, case.seed, RunContext(heroClass.code, case.level))

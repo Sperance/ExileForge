@@ -96,7 +96,7 @@ internal fun ExpeditionRun.drink(spring: Fountain) {
     fountain = null
     life = (life + hero.maxLife * spring.heal / 100).coerceAtMost(hero.maxLife)
     mana = (mana + manaCap() * spring.heal / 100).coerceAtMost(manaCap())
-    charges = kit.flasks.map { it?.maxCharges ?: 0.0 }
+    charges = kit.flasks.map { it?.sheet?.maxCharges ?: 0.0 }
 }
 
 /** The way out: the Vaal zone's exit leads back to the map; the zone's own records the leaving, the boss passed. */

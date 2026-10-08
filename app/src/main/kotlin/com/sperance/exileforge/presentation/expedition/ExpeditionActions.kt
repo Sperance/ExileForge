@@ -1,9 +1,9 @@
 package com.sperance.exileforge.presentation.expedition
 
 import com.sperance.exileforge.core.campaign.AtlasWindow
+import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.Expedition
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
-import com.sperance.exileforge.core.campaign.Flask
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.LootEntry
@@ -502,7 +502,7 @@ class ExpeditionActions(
         val i = index ?: return null
         val h = hero ?: return null
         val conditions = h.skills.flasks
-        val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { Flask.of(item, it, i, conditions.getOrNull(n)) } } }
+        val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
         return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i.skills, h.heroClass, flasks, i.powers, i.rules.charges), i.stats.percent)
     }
 

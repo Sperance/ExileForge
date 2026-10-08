@@ -1,12 +1,12 @@
 package com.sperance.exileforge.core.campaign.combat
 
-import com.sperance.exileforge.core.campaign.FlaskKind
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.MonsterTrait
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.sheet.FlaskKind
 
 /**
  * An ailment on a fighter: what, until when, how hard, and who put it there — the side and, for a

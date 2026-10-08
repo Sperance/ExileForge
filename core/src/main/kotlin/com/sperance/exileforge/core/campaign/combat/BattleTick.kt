@@ -110,7 +110,7 @@ private fun Battle.stopDraught(draught: Recovery) {
 
 /** The recovery shelf's line for a draught or a recoup that ran out: what it gave back, and what spilled over a full bar. */
 private fun Battle.logRecovery(recovery: Recovery) {
-    val code = kit.flasks.getOrNull(recovery.slot)?.code
+    val code = kit.flasks.getOrNull(recovery.slot)?.sheet?.code
     if (recovery.restored >= 1) note(heroFighter, if (code != null) NoteKind.RECOVER_FLASK else NoteKind.RECOVER_RECOUP, code.orEmpty(), recovery.restored)
     if (recovery.wasted >= 1) note(heroFighter, NoteKind.RECOVER_WASTE, code.orEmpty(), recovery.wasted)
 }

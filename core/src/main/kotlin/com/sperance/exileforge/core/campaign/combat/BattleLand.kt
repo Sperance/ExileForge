@@ -302,9 +302,9 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     val base = (rules.flasks.perKill[rarity] ?: 1.0) + if (rarity >= MonsterRarity.RARE) hero.body[AtlasStat.FLASK_RARE.code] else 0.0
     kit.flasks.forEachIndexed { i, flask ->
         flask ?: return@forEachIndexed
-        charges[i] = min(flask.maxCharges, charges[i] + flask.gained(base, hero.body))
+        charges[i] = min(flask.sheet.maxCharges, charges[i] + flask.sheet.gained(base, hero.body::get))
         // A lingering draught runs on for every kill made while it runs.
-        val longer = flask.own("FLASK_DURATION_PER_KILL")
+        val longer = flask.sheet.own("FLASK_DURATION_PER_KILL")
         if (longer > 0) draughtOf(i)?.let { running -> hero.effects[hero.effects.indexOf(running)] = running.copy(until = running.until + longer) }
     }
     trigger(SkillEvent.KILL)

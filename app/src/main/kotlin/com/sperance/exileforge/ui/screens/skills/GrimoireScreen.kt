@@ -34,8 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.campaign.Flask
-import com.sperance.exileforge.core.campaign.FlaskKind
+import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
@@ -57,6 +56,7 @@ import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillRules
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

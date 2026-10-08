@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.StageCarry
 import com.sperance.exileforge.core.campaign.TraceOrigin
 import com.sperance.exileforge.core.campaign.draught
+import com.sperance.exileforge.core.campaign.skillsFree
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
@@ -238,7 +239,7 @@ class Battle(
     /** A slot whose opening condition has fired this fight, and the slots tapped since the last slice. */
     internal val opened = BooleanArray(kit.actives.size)
     internal val taps = mutableSetOf<Int>()
-    internal val charges = DoubleArray(kit.flasks.size) { i -> kit.flasks[i]?.let { pools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
+    internal val charges = DoubleArray(kit.flasks.size) { i -> kit.flasks[i]?.sheet?.let { pools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
     internal val flaskOpened = BooleanArray(kit.flasks.size)
     internal val drinks = mutableSetOf<Int>()
     internal val triggerReady = mutableMapOf<String, Double>()
@@ -288,8 +289,8 @@ class Battle(
         pools?.flaskLeft?.forEachIndexed { i, left ->
             val flask = kit.flasks.getOrNull(i) ?: return@forEachIndexed
             if (left <= 0) return@forEachIndexed
-            val draught = flask.draught(heroFighter.body, heroFighter.life, 0.0)
-            heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.code, draught.lines, left, draught.duration, slot = i)
+            val draught = flask.sheet.draught(heroFighter.body, heroFighter.life, 0.0)
+            heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.sheet.code, draught.lines, left, draught.duration, slot = i)
             // Its recovery comes along with it (2.81.0): before, the draught's buff ran on but its healing stopped.
             pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly) }
             flaskOpened[i] = true
@@ -329,7 +330,7 @@ class Battle(
         foes.flatMap { it.skills + it.phases.mapNotNull(FoePhase::skill) }.associate { it.code to it.icon }
 
     internal fun draughtOf(slot: Int): TimedEffect? = heroFighter.effects.firstOrNull { it.kind == EffectKind.FLASK && it.slot == slot && it.until > time }
-    internal fun skillsFree(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.skillsFree == true && draughtOf(i) != null }
+    internal fun skillsFree(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.sheet?.skillsFree == true && draughtOf(i) != null }
     internal fun slotKey(slot: Int) = "#$slot"
     internal fun cost(kitSkill: KitSkill, level: Int): Double = (kitSkill.skill.mana?.at(level) ?: 0.0) * heroFighter.body.skillCost
 

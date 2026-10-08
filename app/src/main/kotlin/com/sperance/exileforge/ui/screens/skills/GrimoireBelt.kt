@@ -32,8 +32,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.core.campaign.Flask
-import com.sperance.exileforge.core.campaign.FlaskKind
+import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
@@ -57,6 +56,7 @@ import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillRules
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -82,9 +82,9 @@ import org.koin.compose.viewmodel.koinViewModel
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                FlaskBottle(flask?.kind, 1f, flask != null, Modifier.size(34.dp, 56.dp))
+                FlaskBottle(flask?.sheet?.kind, 1f, flask != null, Modifier.size(34.dp, 56.dp))
                 Text(
-                    if (flask != null) "${flask.maxCharges.toInt()} · ${flask.perUse(body).toInt()}" else ui("skills.belt_empty"),
+                    if (flask != null) "${flask.sheet.maxCharges.toInt()} · ${flask.sheet.perUse(body::get).toInt()}" else ui("skills.belt_empty"),
                     color = if (flask != null) GoldBright else Muted,
                     style = MaterialTheme.typography.labelSmall,
                 )
@@ -95,12 +95,12 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** A flask worn on the belt: the copy over the content on screen, and the fight's reading of it. */
-internal data class WornFlask(val view: ItemView, val flask: Flask)
+internal data class WornFlask(val view: ItemView, val flask: BeltFlask)
 
 /** The belt's three places: each worn flask with the fight's reading of it; null where a place is empty or its template is unknown. */
 internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List<WornFlask?> = Slot.FLASKS.mapIndexed { i, slot ->
     hero.equipped[slot]?.let { item ->
-        index.template(item.template)?.let { WornFlask(ItemView(item, it, index), Flask.of(item, it, index, skills.flasks.getOrNull(i))) }
+        index.template(item.template)?.let { WornFlask(ItemView(item, it, index), BeltFlask.of(item, it, index, skills.flasks.getOrNull(i))) }
     }
 }
 
@@ -145,17 +145,18 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
         InfoCard(ui("skills.belt_place", at + 1), ui("skills.belt_empty_hint"))
         return
     }
-    val draught = flask.draught(body, body.maxLife, body.maxMana)
-    ForgePanel(accent = flaskTint(flask.kind)) {
+    val sheet = flask.sheet
+    val draught = sheet.draught(body, body.maxLife, body.maxMana)
+    ForgePanel(accent = flaskTint(sheet.kind)) {
         Text(view.title, color = rarityColor(view.rarity.name), style = MaterialTheme.typography.titleMedium)
-        val gives = when (flask.kind) {
+        val gives = when (sheet.kind) {
             FlaskKind.LIFE -> ui("skills.flask_life", number(draught.life + draught.lifeRate * draught.duration), fineNumber(draught.duration))
             FlaskKind.MANA -> ui("skills.flask_mana", number(draught.mana + draught.manaRate * draught.duration), fineNumber(draught.duration))
             FlaskKind.UTILITY -> ui("skills.flask_utility", fineNumber(draught.duration))
         }
         Text(gives, color = Parchment, style = MaterialTheme.typography.bodyMedium)
         Text(
-            ui("skills.flask_charges", number(flask.perUse(body)), number(flask.maxCharges)) +
+            ui("skills.flask_charges", number(sheet.perUse(body::get)), number(sheet.maxCharges)) +
                 (if (view.quality > 0) " · " + ui("skills.flask_quality", view.quality) else ""),
             color = Muted,
             style = MaterialTheme.typography.labelMedium,

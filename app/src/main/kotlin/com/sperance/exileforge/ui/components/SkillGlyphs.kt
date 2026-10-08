@@ -4,12 +4,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import com.sperance.exileforge.core.campaign.FlaskKind
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.skillIcon
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.Gold

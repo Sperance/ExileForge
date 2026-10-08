@@ -17,6 +17,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -29,6 +30,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -37,19 +39,26 @@ import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.state.Feature
+import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** What a rise brings: the class's growth for every level, the skill slots and the tree's points that open on the way. */
-internal data class LevelGains(val stats: List<Pair<String, Double>>, val active: Int, val passive: Int, val points: Int)
+/**
+ * What a rise brings: the class's growth for every level, the skill slots and the tree's points that open on the way;
+ * разделы, открытые по таблице `unlocks` ([opened], 4.2.0), и ближайший следующий ([next]). Тестировщику открыто всё -
+ * ни тех, ни другого.
+ */
+internal data class LevelGains(val stats: List<Pair<String, Double>>, val active: Int, val passive: Int, val points: Int, val opened: List<Feature>, val next: Feature?)
 
-internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?): LevelGains {
+internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean): LevelGains {
     val stats = heroClass?.perLevel.orEmpty().filterValues { it != 0.0 }.map { (stat, value) -> stat to value * rise.levels }
     val within = { levels: List<Int> -> levels.count { it in (rise.from + 1)..rise.to } }
     val rules = index?.skills?.rules
@@ -58,6 +67,8 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
         active = rules?.let { within(it.activeSlots) } ?: 0,
         passive = rules?.let { within(it.passiveSlots) } ?: 0,
         points = index?.classes?.let { it.pointsTotal(rise.to) - it.pointsTotal(rise.from) } ?: 0,
+        opened = if (tester) emptyList() else Feature.gained(rise.from, rise.to, index?.rules),
+        next = if (tester) null else Feature.next(rise.to, index?.rules),
     )
 }
 
@@ -65,9 +76,10 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
  * «Вознесение» (3.81.0, mockup A): a won fight that raised the hero's level stops on a screen of its own before the report —
  * rays behind, the new level falling into place over the old, then what it brought one line after another: the class's growth
  * (with the attributes every level adds), the skill slots and the tree's points it opened. Several levels at once are one screen.
+ * Ниже (4.2.0) - «Открыто»: каждый раздел, что открыл уровень, значком и строкой о нём, и «Следующее» - ближайший раздел.
  */
-@Composable internal fun LevelUpScreen(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, onDone: () -> Unit) {
-    val gains = remember(rise, heroClass, index) { levelGains(rise, heroClass, index) }
+@Composable internal fun LevelUpScreen(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean, onDone: () -> Unit) {
+    val gains = remember(rise, heroClass, index, tester) { levelGains(rise, heroClass, index, tester) }
     val motion = LocalMotion.current
     val drop = remember { Animatable(if (motion) 0f else 1f) }
     var shown by remember { mutableIntStateOf(if (motion) 0 else Int.MAX_VALUE) }
@@ -120,6 +132,15 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
                         unlocks.forEach { Text("✦ $it", color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
                     }
                 }
+                if (gains.opened.isNotEmpty() && shown > gains.stats.size) Opened(gains.opened)
+                gains.next?.takeIf { shown > gains.stats.size }?.let { next ->
+                    Text(
+                        ui("levelup.next", ui(next.title), next.level(index?.rules)),
+                        color = Muted,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                    )
+                }
             }
             Spacer(Modifier.weight(1f))
             ForgeButton(
@@ -143,6 +164,40 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
         Text(title, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         Text(figure, color = Vital, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     }
+}
+
+/** «Открыто» (4.2.0): каждый открытый раздел - значок, название и одна строка о том, что там. */
+@Composable private fun Opened(features: List<Feature>) {
+    Column(
+        Modifier.fillMaxWidth().padding(top = 8.dp).background(Vital.copy(alpha = .08f), RoundedCornerShape(8.dp))
+            .border(1.dp, Vital.copy(alpha = .45f), RoundedCornerShape(8.dp)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(ui("levelup.opened").uppercase(), color = Vital, style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp)
+        features.forEach { feature ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(feature.glyph, null, tint = GoldBright, modifier = Modifier.size(22.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(ui(feature.title), color = Parchment, style = MaterialTheme.typography.titleSmall)
+                    Text(ui("unlock.about.${feature.name}"), color = Muted, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
+
+/** Значок раздела на экране повышения: тот же, каким раздел встречает героя в городе и на полосах. */
+private val Feature.glyph: ImageVector get() = when (this) {
+    Feature.GRIMOIRE -> ForgeGlyphs.Grimoire
+    Feature.CRAFTS -> ForgeGlyphs.Anvil
+    Feature.CHRONICLE -> ForgeGlyphs.Tome
+    Feature.MERCHANT -> ForgeGlyphs.Coins
+    Feature.FORGE -> ForgeGlyphs.Orb
+    Feature.QUESTS -> ForgeGlyphs.Scroll
+    Feature.AUCTION -> ForgeGlyphs.Scales
+    Feature.TRIALS -> ForgeGlyphs.Skull
+    Feature.PETS -> ForgeGlyphs.Exile
+    Feature.GUILD -> ForgeGlyphs.Banner
 }
 
 /** The rays behind the number: a slow golden wheel, still when the animations are off. */

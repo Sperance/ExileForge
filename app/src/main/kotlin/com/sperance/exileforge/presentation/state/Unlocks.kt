@@ -26,11 +26,14 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
 
         /** The features a hero gains between [from] and [to], both levels inclusive of [to] only. */
         fun gained(from: Int, to: Int, rules: EngineRules?): List<Feature> = entries.filter { it.level(rules) in (from + 1)..to }
+
+        /** Ближайший раздел, что откроется после уровня [level] (4.2.0); всё открыто - ничего. */
+        fun next(level: Int, rules: EngineRules?): Feature? = entries.filter { it.level(rules) > level }.minByOrNull { it.level(rules) }
     }
 }
 
 /** Whether the hero being played has [feature] open. */
 fun GameUi.unlocked(feature: Feature?): Boolean = feature == null || isTester || heroLevel >= feature.level(index?.rules)
 
-/** Уровень, с которого раздел открыт, по правилам `unlocks`; без правил или без строки раздела - первый. */
-fun Feature.level(rules: EngineRules?): Int = rules?.unlocks?.get(name) ?: 1
+/** Уровень, с которого раздел открыт, по таблице `unlocks` ([EngineRules.unlockLevel]); без правил - первый. */
+fun Feature.level(rules: EngineRules?): Int = rules?.unlockLevel(name) ?: 1

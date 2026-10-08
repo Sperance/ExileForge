@@ -168,14 +168,6 @@ import org.koin.compose.viewmodel.koinViewModel
     var suggestionsOpen by remember { mutableStateOf(false) }
     var mailOpen by remember { mutableStateOf(false) }
     LaunchedEffect(route.phase, game.heroId) { if (route.phase == AppPhase.GAME && game.heroId.isNotBlank()) shell.warmUp() }
-    // A level that opens a place says so once (3.76.0): the level is remembered per hero, the first reading only sets it.
-    val level = game.heroInfo?.level
-    var seen by remember(game.heroId) { mutableStateOf<Int?>(null) }
-    LaunchedEffect(game.heroId, level) {
-        if (level == null) return@LaunchedEffect
-        seen?.let { before -> if (!game.isTester) Feature.gained(before, level, game.index?.rules).forEach { shell.announce(ui("unlock.opened", ui(it.title))) } }
-        seen = level
-    }
     // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
     val campaign = game.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }

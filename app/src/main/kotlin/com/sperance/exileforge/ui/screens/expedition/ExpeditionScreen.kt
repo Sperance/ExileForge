@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.CampaignFile
@@ -29,6 +30,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCamera
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCanvas
+import com.sperance.exileforge.ui.screens.quests.StoryCard
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -51,7 +53,13 @@ private const val CARD_TOP = .48f
     val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<ExpeditionViewModel>()
     val expedition by vm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(game.heroId, game.sessionEpoch) { vm.loadCampaign() }
+    val questModel = koinViewModel<QuestViewModel>()
+    val quests by questModel.quests.collectAsStateWithLifecycle()
+    LaunchedEffect(game.heroId, game.sessionEpoch) {
+        vm.loadCampaign()
+        // Сюжет (4.2.0) - над картой с первого уровня: доска заданий читается и без раздела «Задания»
+        if (game.heroId.isNotBlank()) questModel.open()
+    }
     // Вкладка нажата снова (3.95.0): лист зоны закрывается, видна карта мира
     OnReselect(TAB_EXPEDITION) { vm.closeZone() }
     val index = game.index
@@ -90,12 +98,16 @@ private const val CARD_TOP = .48f
         } else {
             WorldCanvas(world, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
-        WorldBar(
-            world,
-            Modifier.align(Alignment.TopCenter),
-            onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
-        )
-        ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
+        // Голова карты (4.2.0): шапка, под ней - карточка текущей главы сюжета, ниже - масштаб
+        Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
+            WorldBar(
+                world,
+                Modifier,
+                onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
+            )
+            StoryCard(game, quests.board, Modifier.padding(horizontal = 12.dp), onOpen = questModel::openStory)
+            ZoomButtons(camera, Modifier.align(Alignment.End).padding(top = 8.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
+        }
         launch?.let { ZoneCard(game, vm, world, it, expedition.forced, Modifier.align(Alignment.BottomCenter)) }
     }
 }

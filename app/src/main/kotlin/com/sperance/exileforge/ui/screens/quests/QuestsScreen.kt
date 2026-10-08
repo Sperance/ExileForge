@@ -20,7 +20,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.quests.QuestViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.ui.components.*
@@ -30,8 +29,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The quest board of the City (3.23.0): four sections — dailies, weeklies, the contract board and the story — each a
- * ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
+ * The quest board of the City (3.23.0): three sections — dailies, weeklies and the contract board (the story is the
+ * expedition's own screen since 4.2.0) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
  * the board or given up. Pulling down reads the board again.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,7 +74,6 @@ fun QuestsScreen() {
                     QuestTab.DAILY -> daily(vm, busy, board)
                     QuestTab.WEEKLY -> weekly(vm, busy, board)
                     QuestTab.CONTRACTS -> contracts(vm, busy, board)
-                    QuestTab.STORY -> story(game, vm, busy, board)
                 }
             }
         }
@@ -87,14 +85,12 @@ private fun readyCount(tab: QuestTab, board: QuestBoard?): Int = when (tab) {
     QuestTab.DAILY -> board?.daily
     QuestTab.WEEKLY -> board?.weekly
     QuestTab.CONTRACTS -> board?.contracts
-    QuestTab.STORY -> listOfNotNull(board?.story)
 }.orEmpty().count { it.done && !it.claimed }
 
 private val QuestTab.glyph: ImageVector get() = when (this) {
     QuestTab.DAILY -> ForgeGlyphs.Target
     QuestTab.WEEKLY -> ForgeGlyphs.Banner
     QuestTab.CONTRACTS -> ForgeGlyphs.Scroll
-    QuestTab.STORY -> ForgeGlyphs.Tome
 }
 
 private fun LazyListScope.daily(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
@@ -134,40 +130,7 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
     }
 }
 
-/** The story: the chapter's name, its steps behind and ahead, and the step at hand as a quest. */
-private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
-    val chapters = game.index?.quests?.story.orEmpty()
-    val chapter = chapters.getOrNull(board.chapter)
-    if (chapter == null) {
-        item {
-            ForgePanel {
-                Engraved(ui("quest.story_done"))
-                MutedText(ui("quest.story_done_text"))
-            }
-        }
-        return
-    }
-    item {
-        ForgePanel {
-            Engraved(loc("quest.chapter.${chapter.region}"))
-            MutedText(ui("quest.chapter_line", loc("region.${chapter.region}.name"), board.step + 1, chapter.steps.size))
-        }
-    }
-    items(chapter.steps.withIndex().toList(), key = { it.value.code }) { (index, step) ->
-        val current = board.story?.takeIf { index == board.step && it.goal == step.code }
-        when {
-            current != null -> QuestRow(current) { ClaimButton(vm, busy, current) }
-            index < board.step -> StepLine("✓ " + loc("quest.story.${step.code}.name"), Vital)
-            else -> StepLine("· " + loc("quest.story.${step.code}.name"), Muted)
-        }
-    }
-}
-
-@Composable private fun StepLine(text: String, color: androidx.compose.ui.graphics.Color) {
-    Text(text, color = color, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 4.dp))
-}
-
-@Composable private fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
+@Composable internal fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
     if (quest.done && !quest.claimed) ForgeButton({ vm.claim(quest.id) }, enabled = !busy) { Text(ui("quest.claim")) }
 }
 

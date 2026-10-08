@@ -135,10 +135,10 @@ private fun chronicleNews(game: GameUi): String {
     ChronicleScreen(game, heroModel)
 }
 
-/** How many quests wait for their reward, or how many are under way. */
+/** How many quests wait for their reward, or how many are under way; сюжет (4.2.0) - в «Походе», не здесь. */
 private fun questNews(quests: Quests): String {
     val board = quests.board ?: return ui("city.quests_idle")
-    val quests = board.daily + board.weekly + board.contracts + listOfNotNull(board.story)
+    val quests = board.daily + board.weekly + board.contracts
     val ready = quests.count { it.done && !it.claimed }
     return if (ready > 0) ui("city.quests_ready", ready) else ui("city.quests_active", quests.count { !it.claimed })
 }

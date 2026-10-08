@@ -88,6 +88,12 @@ sealed interface Route : NavKey {
         override val tab get() = TAB_EXPEDITION
     }
 
+    /** Сюжет (4.2.0): все главы и шаг под рукой, экран над картой «Похода»; открыт с первого уровня. */
+    @Serializable data object Story : Route {
+        override val root: Route get() = Expedition
+        override val tab get() = TAB_EXPEDITION
+    }
+
     @Serializable data object City : Route {
         override val tab get() = TAB_CITY
     }

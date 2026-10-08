@@ -6,8 +6,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-/** Разделы доски квестов Города. */
-enum class QuestTab { DAILY, WEEKLY, CONTRACTS, STORY }
+/** Разделы доски квестов Города; сюжет (4.2.0) - не раздел доски, а свой экран «Похода», открытый с первого уровня. */
+enum class QuestTab { DAILY, WEEKLY, CONTRACTS }
 
 /**
  * Квесты героя, как сервер ответил последним (3.23.0): [board] - ежедневные, недельные, контракты и шаг истории

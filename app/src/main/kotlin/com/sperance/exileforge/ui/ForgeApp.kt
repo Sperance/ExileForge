@@ -251,6 +251,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Trials> { com.sperance.exileforge.ui.screens.expedition.TrialsPage() }
                 // The atlas (2.68.0) is a sky of its own, above the tabs.
                 entry<Route.Atlas> { AtlasScreen() }
+                entry<Route.Story> { com.sperance.exileforge.ui.screens.quests.StoryScreen() }
                 // The City's square and its buildings are one screen that reads which building is open.
                 entry<Route.City> { CityScreen(null) }
                 entry<Route.Quests> { CityScreen(Building.QUESTS) }

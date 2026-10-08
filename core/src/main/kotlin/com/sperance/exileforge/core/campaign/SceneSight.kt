@@ -11,7 +11,4 @@ object SceneSight {
 
     /** Ничто перед клеткой [x], [y] её не закрывает: в клетках [FRONT] нет скалы ([rock]). */
     fun inView(x: Int, y: Int, rock: (x: Int, y: Int) -> Boolean): Boolean = FRONT.none { (dx, dy) -> rock(x + dx, y + dy) }
-
-    /** Клетки, скала в которых закрыла бы [cell]. */
-    fun screening(cell: Cell): List<Cell> = FRONT.map { (dx, dy) -> Cell(cell.x + dx, cell.y + dy) }
 }

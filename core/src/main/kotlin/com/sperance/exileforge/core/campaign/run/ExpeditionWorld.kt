@@ -142,10 +142,11 @@ class ExpeditionWorld(
     }
 
     /**
-     * Скала, что закрывает объект карты от камеры (3.95.3): выход, портал Ваал, сундуки, фонтаны, кристаллы, трещины и объекты
-     * карты. Сцена рисует её полупрозрачной - так виден и сундук комнаты, что стоит за её каменным краем.
+     * Ориентиры, что скала закрывает от камеры (3.95.3, 4.2.0): выход, портал Ваал, сундуки, фонтаны, кристаллы, трещины и
+     * объекты карты, уже увиденные, со скалой перед ними. Сцена открывает вокруг каждого «окно» в скале - так виден и сундук
+     * комнаты, что стоит за её каменным краем.
      */
-    fun screens(): Set<Cell> {
+    fun screened(): List<Cell> {
         val landmarks = buildList {
             add(map.exit)
             portal?.let(::add)
@@ -155,7 +156,7 @@ class ExpeditionWorld(
             cracks.mapTo(this) { it.cell }
             features.forEach { spot -> addAll(spot.landmarks) }
         }
-        return landmarks.filter { explored(it.x, it.y) }.flatMapTo(HashSet()) { SceneSight.screening(it) }.filterTo(HashSet()) { !map.clear(it.x, it.y) }
+        return landmarks.filter { explored(it.x, it.y) && !SceneSight.inView(it.x, it.y) { x, y -> !map.clear(x, y) } }
     }
 
     /** Where the guardian stands: the floor nearest the exit, a step or two from it. */

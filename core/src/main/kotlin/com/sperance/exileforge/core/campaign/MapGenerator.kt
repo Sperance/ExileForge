@@ -45,9 +45,16 @@ class ExpeditionMap(
     fun decorAt(x: Int, y: Int): Int = if (x in 0 until width && y in 0 until height) decor[y * width + x] else 0
     val floor: Int get() = tiles.count { it == Tile.FLOOR }
 
+    /** Правка карты (4.2.0): растёт с каждой вырезанной клеткой - по ней сцена пересчитывает то, что держит на карту. */
+    var revision: Int = 0
+        private set
+
     /** Клетка становится [tile] (3.90.0): объекты карты вырезают комнату за стеной, а открытая стена или дверь - пол. */
     internal fun carve(cell: Cell, tile: Tile) {
-        if (cell.x in 0 until width && cell.y in 0 until height) tiles[cell.y * width + cell.x] = tile
+        if (cell.x in 0 until width && cell.y in 0 until height && tiles[cell.y * width + cell.x] != tile) {
+            tiles[cell.y * width + cell.x] = tile
+            revision++
+        }
     }
 }
 

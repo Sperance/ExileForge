@@ -18,7 +18,6 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
@@ -57,6 +56,9 @@ internal class ScenePainter {
     /** Часы декора: при выключенных анимациях стоят на нуле. */
     internal val decor: Float get() = if (motion) time else 0f
 
+    /** Массивы скалы и контуры вод карты (4.2.0): считаются раз на карту и её правку. */
+    private var relief: MapRelief? = null
+
     fun draw(scope: DrawScope, run: ExpeditionRun, time: Float, classCode: String?) {
         this.time = time
         sealed = run.sealed
@@ -78,7 +80,9 @@ internal class ScenePainter {
         val map = world.map
         val biome = run.zone.biome
         val style = MapStyles.of(biome)
-        val frame = SceneFrame(pen, unit, time)
+        val shape = MapRelief.of(map, relief).also { relief = it }
+        // Узор земли, скалы и воды - декор (4.2.0): без `LocalMotion` стоит
+        val frame = SceneFrame(pen, unit, decor)
         val width = scope.size.width
         val height = scope.size.height
         // The hero stands a little below the middle: more of the map lies ahead of a player than behind.
@@ -90,7 +94,7 @@ internal class ScenePainter {
         val xs = (hx - reach).coerceAtLeast(0)..(hx + reach).coerceAtMost(map.width - 1)
         val ys = (hy - reach).coerceAtLeast(0)..(hy + reach).coerceAtMost(map.height - 1)
         // The torch breathes a little: the edge of the light is never a printed circle.
-        val radius = (world.lightRadius * (1 + .03 * sin(time * 7f) + .02 * sin(time * 13f + 1f))).toFloat()
+        val radius = (world.lightRadius * (1 + .03 * sin(decor * 7f) + .02 * sin(decor * 13f + 1f))).toFloat()
 
         // How lit a cell is (since 2.32.0): full near the hero, fading to the edge of the light, and
         // what was only remembered stays dim. What was never seen is not drawn at all.
@@ -107,10 +111,31 @@ internal class ScenePainter {
         scope.translate(width / 2 - cameraX, height * .55f + cameraY) {
             // The ground first, all of it: nothing stands below the floor.
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) style.floor(frame, spot(map, x, y), palette, glow(x, y))
-            // Chasms (3.91.0) sink into the ground: drawn with it, under everything that stands.
-            for (y in ys) for (x in xs) if (map.tile(x, y) == Tile.CHASM && visible(x, y)) style.chasm(frame, spot(map, x, y), palette, glow(x, y))
-            // Вода (3.95.0): реки и озёра биома - вровень с полом, с бликами течения
-            map.liquid?.let { liquid -> for (y in ys) for (x in xs) if (map.tile(x, y) == Tile.WATER && visible(x, y)) style.water(frame, spot(map, x, y), palette, glow(x, y), liquid, map) }
+            // Chasms (3.91.0) sink into the ground: drawn with it, under everything that stands. Вода (3.95.0): реки и озёра биома -
+            // вровень с полом. С 4.2.0 и то и другое - одна гладь по контуру карты, неувиденное под ней закрыто тьмой
+            fun cells(tile: Tile, near: Boolean) = buildList {
+                for (y in ys) {
+                    for (x in xs) {
+                        if (!visible(x, y)) continue
+                        val hit = map.tile(x, y) == tile || near && (-1..1).any { dy -> (-1..1).any { dx -> map.tile(x + dx, y + dy) == tile } }
+                        if (hit) add(PoolCell(spot(map, x, y), glow(x, y)))
+                    }
+                }
+            }
+            fun hide(tile: Tile) {
+                pen.color = palette.void
+                for (y in ys) for (x in xs) if (!world.explored(x, y) && (-1..1).any { dy -> (-1..1).any { dx -> map.tile(x + dx, y + dy) == tile } }) diamond(isoX(x + .5, y + .5), isoY(x + .5, y + .5), unit, unit / 2)
+            }
+            listOfNotNull(Tile.CHASM, Tile.WATER.takeIf { map.liquid != null }).forEach { tile ->
+                val pool = cells(tile, near = false)
+                if (pool.isEmpty()) return@forEach
+                val outline = shape.outline(tile, unit)
+                when (tile) {
+                    Tile.WATER -> style.water(frame, pool, cells(tile, near = true), outline, palette, checkNotNull(map.liquid))
+                    else -> style.chasm(frame, pool, cells(tile, near = true), outline, palette)
+                }
+                hide(tile)
+            }
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) decor(map, x, y, palette, biome, glow(x, y))
             // The torch's warmth on the ground, an ellipse because the ground is seen at a slant.
             val hxs = isoX(world.heroX, world.heroY)
@@ -131,20 +156,21 @@ internal class ScenePainter {
             // Then everything that stands, back to front: rock, monsters and the hero by x + y.
             val heroDepth = world.heroX + world.heroY
             val standing = mutableListOf<Pair<Double, () -> Unit>>()
-            // Скала перед объектом карты (3.95.3) - полупрозрачная, как перед героем: сундук за краем комнаты виден
-            val screens = world.screens()
+            // Rock between the hero and the player is see-through, or a corridor would hide them. С 4.2.0 - круглое «окно» вокруг
+            // героя, монстров, что гонятся за ним, и закрытых скалой ориентиров (3.95.3): скала перед ними прозрачна к центру
+            val windows = buildList {
+                add(Window(world.heroX, world.heroY))
+                world.agents.filter { it.alive && it.mode in ENGAGED && world.lit(floor(it.x).toInt(), floor(it.y).toInt()) }.forEach { add(Window(it.x, it.y)) }
+                world.screened().forEach { add(Window(it.x + .5, it.y + .5)) }
+            }
+            fun drawn(x: Int, y: Int) = map.tile(x, y) == Tile.WALL && visible(x, y) && touchesFloor(map, x, y)
             for (y in ys) {
                 for (x in xs) {
-                    if (map.tile(x, y) == Tile.WALL && visible(x, y) && touchesFloor(map, x, y)) {
+                    if (drawn(x, y)) {
                         val depth = x + y + 1.0
-                        // Rock between the hero and the player is see-through, or a corridor would hide them.
-                        val near = depth > heroDepth && depth - heroDepth < 4 && abs((x - y) - (world.heroX - world.heroY)) < 3
-                        val alpha = when {
-                            near -> .4f
-                            Cell(x, y) in screens -> SCREEN_ALPHA
-                            else -> 1f
-                        }
-                        standing += depth to { style.wall(frame, spot(map, x, y), palette, alpha, glow(x, y)) }
+                        val alpha = windows.minOf { it.alpha(x, y) }
+                        val faces = Face.entries.filterNot { drawn(x + it.dx, y + it.dy) }.sumOf { it.bit }
+                        standing += depth to { style.wall(frame, spot(map, x, y, faces, shape.rise(x, y)), palette, alpha, glow(x, y)) }
                     }
                 }
             }
@@ -218,18 +244,36 @@ internal class ScenePainter {
             }
             standing.sortedBy { it.first }.forEach { it.second() }
         }
-        // The air over everything (2.64.0): drips, fog, sparks or fireflies, by the biome's style.
-        style.atmosphere(scope, palette, time)
+        // The air over everything (2.64.0): fog, sparks or fireflies, by the biome's style - на часах декора (4.2.0).
+        style.atmosphere(scope, palette, decor)
     }
 
-    /** A cell as the style reads it: where its centre falls and how much rock borders it. */
-    internal fun spot(map: ExpeditionMap, x: Int, y: Int) = TileSpot(
+    /** A cell as the style reads it: where its centre falls and how much rock borders it; у скалы - видимые грани и высота массива. */
+    internal fun spot(map: ExpeditionMap, x: Int, y: Int, faces: Int = Face.ALL, rise: Float = 0f) = TileSpot(
         x,
         y,
         isoX(x + .5, y + .5),
         isoY(x + .5, y + .5),
         listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1).count { (nx, ny) -> !map.walkable(nx, ny) },
+        faces,
+        rise,
     )
+
+    /**
+     * «Окно» в скале вокруг точки карты ([x], [y]) (4.2.0): скала перед ней по ходу камеры прозрачна до [WINDOW_ALPHA] в центре
+     * и плавно плотнеет к краю круга в [WINDOW_CELLS] клеток на экране; скала за точкой не трогается.
+     */
+    private inner class Window(val x: Double, val y: Double) {
+        fun alpha(cx: Int, cy: Int): Float {
+            if (cx + cy + 1.0 <= x + y) return 1f
+            // Расстояние на экране: середина скалы по высоте против середины жетона
+            val dx = isoX(cx + .5, cy + .5) - isoX(x, y)
+            val dy = isoY(cx + .5, cy + .5) + unit * WALL_MID - (isoY(x, y) + unit * TOKEN_MID)
+            val d = (hypot(dx, dy) / (unit * WINDOW_CELLS * CELL_STEP)).coerceIn(0f, 1f)
+            val eased = d * d * (3f - 2f * d)
+            return WINDOW_ALPHA + (1f - WINDOW_ALPHA) * eased
+        }
+    }
 
     /**
      * A token standing on its feet at ([x], [y]) in the pen's upward measure: a shadow on the floor
@@ -254,5 +298,18 @@ internal class ScenePainter {
     internal fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
 }
 
-/** Прозрачность скалы, что закрывает объект карты от камеры (3.95.3). */
-private const val SCREEN_ALPHA = .45f
+/** Прозрачность скалы в центре «окна» (4.2.0). */
+private const val WINDOW_ALPHA = .2f
+
+/** Радиус «окна» в клетках (4.2.0). */
+private const val WINDOW_CELLS = 3f
+
+/** Шаг клетки на экране в полуширинах клетки: сдвиг на клетку по x - полуширина вбок и четверть ширины вниз. */
+private const val CELL_STEP = 1.118f
+
+/** Середина скалы и жетона над землёй, в полуширинах клетки. */
+private const val WALL_MID = .75f
+private const val TOKEN_MID = 1.1f
+
+/** Монстры, что гонятся за героем: вокруг них в скале тоже «окно» (4.2.0). */
+private val ENGAGED = setOf(AgentMode.CHASING, AgentMode.HUNTING)

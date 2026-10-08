@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import kotlin.math.max
 import kotlin.math.sin
 
-/** VI · Sky glass (3.43.0): ground fused to glass with the sky in it, pillars of crystal, light falling like rain. */
+/** VI · Sky glass (3.43.0): ground fused to glass with the sky in it, pillars of crystal, a pale glow of sky overhead (без дождя с 4.2.0). */
 internal class SkyGlass : MapStyle() {
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
         val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
@@ -27,7 +27,7 @@ internal class SkyGlass : MapStyle() {
     }
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.6f + noise(spot.x, spot.y, 51) * 1.1f)
+        val h = unit * (1.6f + spot.rise * 1.1f)
         block(
             spot,
             h,
@@ -37,7 +37,7 @@ internal class SkyGlass : MapStyle() {
         )
         // A facet: a bright diagonal down the left face, as on cut crystal.
         pen.color = tone(palette.accent, light, alpha = .3f * alpha)
-        seam({ t, lift -> left(spot, t, lift) }, unit * .05f, .15f, h * .9f, .85f, h * .2f)
+        seam(spot, Face.LEFT, unit * .05f, .15f, h * .9f, .85f, h * .2f)
         when (variant(spot)) {
             // A shard growing from the cap.
             0 -> {
@@ -48,7 +48,7 @@ internal class SkyGlass : MapStyle() {
             // Lightning sleeping in the rock.
             1 -> if (noise(spot.x, spot.y, 52) < .4f) {
                 pen.color = palette.accent.copy(alpha = (.3f + .4f * sin(time * 7f + spot.y)).coerceAtLeast(0f) * alpha)
-                seam({ t, lift -> right(spot, t, lift) }, unit * .03f, .3f, h * .85f, .55f, h * .6f, .4f, h * .45f, .65f, h * .15f)
+                seam(spot, Face.RIGHT, unit * .03f, .3f, h * .85f, .55f, h * .6f, .4f, h * .45f, .65f, h * .15f)
             }
 
             else -> frontEdges(spot, h, tone(palette.accent, light, alpha = .45f * alpha), unit * .04f)
@@ -58,12 +58,6 @@ internal class SkyGlass : MapStyle() {
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height
         scope.drawRect(Brush.verticalGradient(listOf(palette.accent.copy(alpha = .08f), Color.Transparent), startY = 0f, endY = h * .5f))
-        repeat(24) { i ->
-            val x = spread(i, 60) * w
-            val fall = h * (.04f + spread(i, 61) * .05f)
-            val y = (time * h * (.25f + spread(i, 62) * .2f) + spread(i, 63) * h * 2) % (h * 1.2f)
-            scope.drawLine(palette.accent.copy(alpha = .18f + .18f * spread(i, 64)), Offset(x, y), Offset(x - fall * .3f, y + fall), strokeWidth = 1.2f)
-        }
     }
 }
 
@@ -85,7 +79,7 @@ internal class Drowned : MapStyle() {
     }
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.4f + noise(spot.x, spot.y, 53) * .9f)
+        val h = unit * (1.4f + spot.rise * .9f)
         block(
             spot,
             h,
@@ -105,13 +99,12 @@ internal class Drowned : MapStyle() {
             // Kelp hanging down the right face.
             1 -> {
                 pen.color = tone(Color(0xFF3A7A4A), light, alpha = .8f * alpha)
-                val right = { t: Float, z: Float -> right(spot, t, z) }
-                seam(right, unit * .05f, .3f, h * .95f, .35f, h * .6f, .28f, h * .3f)
-                seam(right, unit * .05f, .7f, h * .95f, .64f, h * .55f, .72f, h * .2f)
+                seam(spot, Face.RIGHT, unit * .05f, .3f, h * .95f, .35f, h * .6f, .28f, h * .3f)
+                seam(spot, Face.RIGHT, unit * .05f, .7f, h * .95f, .64f, h * .55f, .72f, h * .2f)
             }
 
             // Barnacles along the left face.
-            else -> {
+            else -> if (spot.shows(Face.LEFT)) {
                 pen.color = tone(palette.wallTop, 1.3f * light, alpha = .7f * alpha)
                 listOf(.2f to .3f, .45f to .55f, .7f to .25f, .35f to .8f).forEach { (t, z) ->
                     val p = left(spot, t, h * z)
@@ -158,7 +151,7 @@ internal class Divine : MapStyle() {
     }
 
     override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.9f + noise(spot.x, spot.y, 57) * .8f)
+        val h = unit * (1.9f + spot.rise * .8f)
         block(
             spot,
             h,
@@ -168,16 +161,12 @@ internal class Divine : MapStyle() {
         )
         // Fluting: the vertical grooves of a column.
         pen.color = Color.Black.copy(alpha = .2f * alpha)
-        listOf(.25f, .5f, .75f).forEach { t ->
-            seam({ tt, lift -> left(spot, tt, lift) }, unit * .03f, t, h * .1f, t, h * .9f)
-            seam({ tt, lift -> right(spot, tt, lift) }, unit * .03f, t, h * .1f, t, h * .9f)
-        }
+        listOf(.25f, .5f, .75f).forEach { t -> Face.entries.forEach { face -> seam(spot, face, unit * .03f, t, h * .1f, t, h * .9f) } }
         // A gold cap on every column, and a gold band on some.
         frontEdges(spot, h, gold.copy(alpha = .7f * alpha * max(.4f, light)), unit * .06f)
         if (variant(spot) == 1) {
             pen.color = gold.copy(alpha = .5f * alpha)
-            seam({ t, lift -> left(spot, t, lift) }, unit * .05f, 0f, h * .55f, 1f, h * .55f)
-            seam({ t, lift -> right(spot, t, lift) }, unit * .05f, 0f, h * .55f, 1f, h * .55f)
+            Face.entries.forEach { face -> seam(spot, face, unit * .05f, 0f, h * .55f, 1f, h * .55f) }
         }
     }
 

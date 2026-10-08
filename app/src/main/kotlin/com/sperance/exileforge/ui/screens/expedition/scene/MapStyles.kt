@@ -1,20 +1,42 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import com.sperance.exileforge.core.campaign.ExpeditionMap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.lerp
 import com.sperance.exileforge.core.campaign.Liquid
-import com.sperance.exileforge.core.campaign.Tile
-import kotlin.math.max
 import kotlin.math.sin
 
-/** One tile as a style sees it: its cell, its centre in the pen's upward measure, and how many of its four sides are rock. */
-internal class TileSpot(val x: Int, val y: Int, val cx: Float, val cy: Float, val walls: Int)
+/**
+ * One tile as a style sees it: its cell, its centre in the pen's upward measure, and how many of its four sides are rock. У скалы
+ * (4.2.0) ещё [faces] - какие грани видны камере (сосед там не скала) - и [rise], высота её массива в `[0, 1)`, одна на массив.
+ */
+internal class TileSpot(val x: Int, val y: Int, val cx: Float, val cy: Float, val walls: Int, val faces: Int = Face.ALL, val rise: Float = 0f) {
+    fun shows(face: Face) = faces and face.bit != 0
+}
 
-/** What every stroke of a frame shares: the pen, half a tile's width, and the scene's clock. */
+/**
+ * Грань блока скалы, обращённая к камере (4.2.0): левая смотрит на клетку `y + 1`, правая - на `x + 1`. Грань рисуется, только
+ * где сосед не скала - внутри массива граней и швов нет.
+ */
+internal enum class Face(val bit: Int, val dx: Int, val dy: Int) {
+    LEFT(1, 0, 1),
+    RIGHT(2, 1, 0),
+    ;
+
+    companion object {
+        const val ALL = 3
+    }
+}
+
+/** What every stroke of a frame shares: the pen, half a tile's width, and the scene's clock (декора: стоит без `LocalMotion`). */
 internal class SceneFrame(val pen: Pen, val unit: Float, val time: Float)
+
+/** Клетка воды или пропасти, как её видит слой глади (4.2.0): место и свет. */
+internal class PoolCell(val spot: TileSpot, val light: Float)
 
 /**
  * How a biome's ground and rock are drawn (2.64.0, the owner's map mockups I, II, III and V).
@@ -29,66 +51,89 @@ internal abstract class MapStyle {
 
     /**
      * A chasm (3.91.0): the ground's rim around a sunken dark, the biome's accent glimmering at the bottom - a pit, a crack, a
-     * sinkhole, the same hole in every biome's colours. Seen across, never walked.
+     * sinkhole, the same hole in every biome's colours. Seen across, never walked. С 4.2.0 соседние клетки - одна пропасть по
+     * контуру [outline]; край - только снаружи.
      */
-    open fun chasm(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
-        pen.color = tone(palette.floor, .8f * light)
-        pen.diamond(cx, cy, u, u / 2)
-        pen.color = tone(palette.void, .9f)
-        pen.diamond(cx, cy - u * .06f, u * .78f, u * .36f)
-        pen.color = tone(palette.accent, .35f * light, alpha = .35f + .1f * sin(time * 2f + spot.x + spot.y))
-        pen.diamond(cx, cy - u * .1f, u * .3f, u * .12f)
+    open fun chasm(frame: SceneFrame, cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, palette: Palette): Unit = with(frame) {
+        pool(cells, shade, outline, { tone(palette.floor, .8f * it) }, tone(palette.void, .9f), Color.Black.copy(alpha = .5f)) { cell ->
+            val (cx, cy, u) = Triple(cell.spot.cx, cell.spot.cy, unit)
+            pen.color = tone(palette.accent, .35f * cell.light, alpha = .35f + .1f * sin(time * 2f + cell.spot.x + cell.spot.y))
+            pen.diamond(cx, cy - u * .1f, u * .3f, u * .12f)
+        }
     }
 
     /**
-     * Вода (3.95.0): берег цвета пола, гладь цвета воды биома и блики, бегущие по течению; у лавы и тьмы - своё свечение. Края,
-     * где вода сходится с сушей, светлее: река читается полосой, а не пятнами клеток.
+     * Вода (3.95.0): берег цвета пола, гладь цвета воды биома и блики, бегущие по течению; у лавы и тьмы - своё свечение. С 4.2.0
+     * соседние клетки - одна гладь по контуру [outline] со скруглёнными углами: берег только по внешнему краю, блики по всей
+     * площади, светлая кромка у берега.
      */
-    open fun water(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float, liquid: Liquid, map: ExpeditionMap): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+    open fun water(frame: SceneFrame, cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, palette: Palette, liquid: Liquid): Unit = with(frame) {
         val look = LiquidLook.of(liquid)
-        pen.color = tone(palette.floor, .75f * light)
-        pen.diamond(cx, cy, u, u / 2)
-        val shore = listOf(spot.x + 1 to spot.y, spot.x - 1 to spot.y, spot.x to spot.y + 1, spot.x to spot.y - 1).count { (nx, ny) -> map.tile(nx, ny) != Tile.WATER }
-        pen.color = tone(look.deep, light)
-        pen.diamond(cx, cy - u * .04f, u * .92f, u * .44f)
-        pen.color = tone(look.surface, light, alpha = .55f + .08f * shore)
-        pen.diamond(cx, cy - u * .02f, u * .7f, u * .3f)
-        // Блик течения: по диагонали клетки, со сдвигом по времени и месту - соседние клетки текут одной волной
-        val wave = ((time * look.flow + (spot.x + spot.y) * .37f) % 1f)
-        pen.color = tone(look.glint, light, alpha = look.glintAlpha * sin(wave * Math.PI.toFloat()))
-        pen.diamond(cx - u * .5f + u * wave, cy - u * .03f, u * .18f, u * .05f)
+        // Гладь светлее у берега: кромка по всему контуру изнутри
+        pool(cells, shade, outline, { tone(palette.floor, .75f * it) }, lerp(look.deep, look.surface, .45f), look.surface.copy(alpha = .5f)) { cell ->
+            // Блик течения: по диагонали клетки, со сдвигом по времени и месту - соседние клетки текут одной волной
+            val (cx, cy, u) = Triple(cell.spot.cx, cell.spot.cy, unit)
+            val wave = ((time * look.flow + (cell.spot.x + cell.spot.y) * .37f) % 1f)
+            pen.color = look.glint.copy(alpha = look.glintAlpha * sin(wave * Math.PI.toFloat()))
+            pen.diamond(cx - u * .5f + u * wave, cy - u * .03f, u * .18f, u * .05f)
+        }
     }
 
-    /** Drawn over the finished map, in screen space: drips, fog, embers, fireflies. */
+    /**
+     * Слой глади (4.2.0): край [rim] по клеткам [cells] - он остаётся виден лишь снаружи контура, - заливка [fill] по контуру, затем
+     * внутри контура - кромка [edge] вдоль берега, [inside] каждой клетки и тень света клеток [shade] (клетки глади и суши рядом,
+     * куда заходит скруглённый угол).
+     */
+    protected fun SceneFrame.pool(cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, rim: (Float) -> Color, fill: Color, edge: Color, inside: (PoolCell) -> Unit) {
+        cells.forEach { cell ->
+            pen.color = rim(cell.light)
+            pen.diamond(cell.spot.cx, cell.spot.cy, unit, unit / 2)
+        }
+        pen.scope.drawPath(outline, fill)
+        pen.scope.clipPath(outline) {
+            drawPath(outline, edge, style = Stroke(unit * .16f, join = StrokeJoin.Round))
+            cells.forEach(inside)
+            shade.forEach { cell ->
+                pen.color = Color.Black.copy(alpha = (1f - cell.light).coerceIn(0f, 1f))
+                pen.diamond(cell.spot.cx, cell.spot.cy, unit, unit / 2)
+            }
+        }
+    }
+
+    /** Drawn over the finished map, in screen space: fog, embers, fireflies; [time] - часы декора, без `LocalMotion` стоят. */
     open fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {}
 
     /** A stable value in `[0, 1)` per cell and [salt]: the same tile always gets the same crack. */
-    protected fun noise(x: Int, y: Int, salt: Int = 0): Float {
-        var h = x * 374761393 + y * 668265263 + salt * 1442695041
-        h = (h xor (h ushr 13)) * 1274126177
-        return ((h xor (h ushr 16)) ushr 8) / 16777216f
-    }
+    protected fun noise(x: Int, y: Int, salt: Int = 0): Float = cellNoise(x, y, salt)
 
     protected fun Pen.diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = quad(cx - halfWidth, cy, cx, cy - halfHeight, cx + halfWidth, cy, cx, cy + halfHeight)
 
-    /** A block standing on the tile, [height] tall: the two faces the camera sees and the cap. */
+    /**
+     * A block standing on the tile, [height] tall: the faces the camera sees and the cap. Автотайлинг (4.2.0): грань - только
+     * где сосед не скала ([TileSpot.faces]), высота - одна на массив, так что крышки соседних блоков сходятся без швов. Крышка
+     * чуть шире клетки - сглаживание краёв не оставляет щелей между крышками.
+     */
     protected fun SceneFrame.block(spot: TileSpot, height: Float, left: Color, right: Color, cap: Color) {
         val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
         val bottom = cy - u / 2
-        pen.color = left
-        pen.quad(cx - u, cy, cx, bottom, cx, bottom + height, cx - u, cy + height)
-        pen.color = right
-        pen.quad(cx, bottom, cx + u, cy, cx + u, cy + height, cx, bottom + height)
+        if (spot.shows(Face.LEFT)) {
+            pen.color = left
+            pen.quad(cx - u, cy, cx, bottom, cx, bottom + height, cx - u, cy + height)
+        }
+        if (spot.shows(Face.RIGHT)) {
+            pen.color = right
+            pen.quad(cx, bottom, cx + u, cy, cx + u, cy + height, cx, bottom + height)
+        }
         pen.color = cap
-        pen.diamond(cx, cy + height, u, u / 2)
+        val seal = if (cap.alpha >= 1f) CAP_SEAL else 0f
+        pen.diamond(cx, cy + height, u + seal, u / 2 + seal / 2)
     }
 
-    /** The cap's two edges that face the camera, where light and glow gather. */
+    /** The cap's edges that face the camera, where light and glow gather - только над видимыми гранями (4.2.0). */
     protected fun SceneFrame.frontEdges(spot: TileSpot, height: Float, color: Color, width: Float) {
         pen.color = color
-        pen.polyline(spot.cx - unit, spot.cy + height, spot.cx, spot.cy - unit / 2 + height, spot.cx + unit, spot.cy + height, width = width)
+        if (spot.shows(Face.LEFT)) pen.line(spot.cx - unit, spot.cy + height, spot.cx, spot.cy - unit / 2 + height, width)
+        if (spot.shows(Face.RIGHT)) pen.line(spot.cx, spot.cy - unit / 2 + height, spot.cx + unit, spot.cy + height, width)
     }
 
     /**
@@ -103,8 +148,17 @@ internal abstract class MapStyle {
     /** A point on the block's right face: [t] across it from the front edge, [z] up from the ground. */
     protected fun SceneFrame.right(spot: TileSpot, t: Float, z: Float) = floatArrayOf(spot.cx + t * unit, spot.cy - unit / 2 + t * unit / 2 + z)
 
-    /** A stroke along a face through its points, each a `t` and `z` pair. */
-    protected fun SceneFrame.seam(face: (Float, Float) -> FloatArray, width: Float, vararg tz: Float) = pen.polyline(*tz.toList().chunked(2).flatMap { (t, z) -> face(t, z).toList() }.toFloatArray(), width = width)
+    /** Точка на грани [face] блока: [t] поперёк грани, [z] вверх от земли. */
+    protected fun SceneFrame.on(face: Face, spot: TileSpot, t: Float, z: Float) = if (face == Face.LEFT) left(spot, t, z) else right(spot, t, z)
+
+    /**
+     * A stroke along a face through its points, each a `t` and `z` pair. Скрытая грань (4.2.0) - внутри массива - не несёт ни
+     * швов, ни узора.
+     */
+    protected fun SceneFrame.seam(spot: TileSpot, face: Face, width: Float, vararg tz: Float) {
+        if (!spot.shows(face)) return
+        pen.polyline(*tz.toList().chunked(2).flatMap { (t, z) -> on(face, spot, t, z).toList() }.toFloatArray(), width = width)
+    }
 
     /** A value spread over the screen by [index] - particles that need no state of their own. */
     protected fun spread(index: Int, salt: Int) = noise(index, salt, 97)
@@ -112,6 +166,9 @@ internal abstract class MapStyle {
 
 /** How many kindred wall textures each style draws (2.73.0). */
 private const val WALL_VARIANTS = 3
+
+/** Запас крышки за край клетки в пикселях (4.2.0): соседние крышки перекрываются и не светят щелью сглаживания. */
+private const val CAP_SEAL = .6f
 
 /** Which style draws which biome: halls of stone, the dark of crypts, the burnt land, the living cave, the sands. */
 internal object MapStyles {

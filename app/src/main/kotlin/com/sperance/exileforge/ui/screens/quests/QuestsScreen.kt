@@ -1,9 +1,11 @@
 package com.sperance.exileforge.ui.screens.quests
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -121,12 +123,30 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
             if (board.nextOfferAt > 0) MutedText(ui("quest.next_offer", untilText(board.nextOfferAt)))
         }
     }
-    if (board.offers.isEmpty()) item { MutedText(ui("quest.board_empty")) }
+    if (board.offers.isEmpty() && board.refills.isEmpty()) item { MutedText(ui("quest.board_empty")) }
     val full = board.contracts.size >= board.activeLimit
+    // Невзятый листок не истекает (4.2.0): срок у него появится со взятия; ненужный сбрасывается, место заполнится само
     items(board.offers, key = { it.id }) { offer ->
         QuestRow(offer) {
+            ForgeTextButton({ vm.reset(offer.id) }, enabled = !busy) { Text(ui("quest.reset"), color = Muted) }
             ForgeButton({ vm.take(offer.id) }, enabled = !busy && !full) { Text(ui("quest.take")) }
         }
+    }
+    if (full && board.offers.isNotEmpty()) item { MutedText(ui("quest.take_full", board.activeLimit)) }
+    // Каждое пустое место - со своим таймером пополнения
+    items(board.refills.withIndex().toList(), key = { "refill-${it.index}" }) { (_, at) -> EmptySlot(at) }
+}
+
+/** Пустое место доски: когда сюда ляжет новый листок. */
+@Composable private fun EmptySlot(at: Long) {
+    val shape = RoundedCornerShape(8.dp)
+    Row(
+        Modifier.fillMaxWidth().border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(ForgeGlyphs.Scroll, null, tint = Muted, modifier = Modifier.size(16.dp))
+        MutedText(ui("quest.slot_refill", untilText(at)), Modifier.weight(1f))
     }
 }
 

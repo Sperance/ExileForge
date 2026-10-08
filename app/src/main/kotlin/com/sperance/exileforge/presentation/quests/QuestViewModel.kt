@@ -44,6 +44,7 @@ class QuestViewModel(
     fun openGuild() = actions.loadGuild(fresh = true)
     fun claim(questId: String) = actions.claim(questId)
     fun take(offerId: String) = actions.take(offerId)
+    fun reset(offerId: String) = actions.reset(offerId)
     fun abandon(questId: String) = actions.abandon(questId)
     fun claimGuild(questId: String? = null, goal: String? = null) = actions.claimGuild(questId, goal)
 

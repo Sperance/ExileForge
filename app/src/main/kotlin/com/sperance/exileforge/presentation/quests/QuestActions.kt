@@ -56,6 +56,9 @@ class QuestActions(
 
     fun claim(questId: String) = board(ui("quest.toast.claimed")) { api.quests.claim(it, questId) }
     fun take(offerId: String) = board(ui("quest.toast.taken")) { api.quests.take(it, offerId) }
+
+    /** Невзятый листок [offerId] снят с доски (4.2.0): место заполнится само по своему таймеру. */
+    fun reset(offerId: String) = board(ui("quest.toast.reset")) { api.quests.reset(it, offerId) }
     fun abandon(questId: String) = board(ui("quest.toast.abandoned")) { api.quests.abandon(it, questId) }
 
     fun claimGuild(questId: String? = null, goal: String? = null) = command(ui("quest.toast.claimed")) { id ->

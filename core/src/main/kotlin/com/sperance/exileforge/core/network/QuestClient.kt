@@ -24,6 +24,15 @@ class QuestClient internal constructor(private val http: Transport) {
         return http.post("$HERO_QUESTS/take", heroQuery(heroId, "offerId" to offerId))
     }
 
+    /**
+     * Сбросить невзятый контракт [offerId] (4.2.0, сервер 1.84.0): место на доске пустеет и само заполнится по своему
+     * таймеру `QuestBoard.refills`. Отказ `QU_007` - предложения нет или оно уже взято.
+     */
+    suspend fun reset(heroId: String, offerId: String): QuestBoard {
+        requireId(offerId)
+        return http.post("$HERO_QUESTS/reset", heroQuery(heroId, "offerId" to offerId))
+    }
+
     suspend fun guild(heroId: String): GuildQuests = http.get("$GUILD_QUESTS", heroQuery(heroId))
 
     /** The guild's reward: a personal quest by [questId], or a share of a common goal by its [goal] key. */

@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
+import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -114,6 +115,17 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
             }
         }
     }
+    // Сферы сумки, что не пойдут на вещь ни сами, ни со знамением (4.2.0): лоток показывает их серыми, с причиной правил.
+    val orbRefusals = remember(gear, index, hero?.bag, refused) {
+        if (index == null || gear == null || hero == null) {
+            emptyMap()
+        } else {
+            val applier = OrbApplier(index)
+            Orb.entries.filter { it.name in refused && hero.count(it.name) > 0 }.mapNotNull { orb ->
+                applier.refusal(orb, gear.item, gear.template)?.let { orb.name to refusalText(it) }
+            }.toMap()
+        }
+    }
     val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     val petMode = smithy.petMode && hero?.pets?.pets?.isNotEmpty() == true
@@ -152,7 +164,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                         LineChoice(game, it, it.offer, "forge.choice_title", "forge.choice_hint", enabled, vm::choose)
                     }
                     gear?.let { OmenLedger(game, smithy.orb, smithy.omen, it, omens, vm::selectOmen) }
-                    if (instance != null) OrbTray(game, smithy, accepted, { it in omenOnly }, vm::selectOrb)
+                    if (instance != null) OrbTray(game, smithy, accepted, orbRefusals, { it in omenOnly }, vm::selectOrb)
                 }
 
                 ForgeSection.BENCH -> view?.let { BenchLedger(game, index, hero, it, benchLine) { line -> benchLine = line } }
@@ -163,7 +175,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
         if (hero != null && instance != null && !petMode) {
             when (section) {
                 ForgeSection.ORBS -> OrbBar(game, smithy, instance, enabled, accepted, { it in omenOnly }, vm::applyOrb)
-                ForgeSection.BENCH -> BenchBar(game, vm, instance, benchLine, enabled)
+                ForgeSection.BENCH -> view?.let { BenchBar(game, vm, it, benchLine, enabled) }
                 ForgeSection.ESSENCES -> EssenceBar(game, smithy.essence, instance, enabled, accepted, vm::applyEssence)
             }
         }

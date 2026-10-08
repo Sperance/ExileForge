@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
@@ -78,7 +79,7 @@ internal class Socket(val label: String, val accent: Color, val glyph: (@Composa
                 MutedText(ui("forge.pick_item_hint"))
             }
         } else {
-            AnvilItem(game, item)
+            AnvilItem(item)
         }
         game.holding.forgeLine.takeIf { it.isNotBlank() }?.let {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -89,12 +90,10 @@ internal class Socket(val label: String, val accent: Color, val glyph: (@Composa
     }
 }
 
-/** The item as the anvil holds it: the name in its rarity's colour, what it is and how many affix places it fills, its base and its lines. */
+/** The item as the anvil holds it: the name in its rarity's colour, what it is and its affix sides (4.2.0), its base and its lines. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AnvilItem(game: GameUi, item: ItemView) {
-    val limits = game.index?.limits(item.rarity, item.slot)
-    val places = limits?.takeIf { it.ceiling > 0 }?.let { it.prefixes + it.suffixes }
+private fun AnvilItem(item: ItemView) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             item.title,
@@ -108,7 +107,7 @@ private fun AnvilItem(game: GameUi, item: ItemView) {
             listOfNotNull(
                 slotTitle(item.slot),
                 ui("row.level", item.level),
-                places?.let { "${item.affixes.size}/$it" },
+                item.sides?.let(::sidesText),
                 item.baseQuality?.let { ui("card.base_quality", it) },
             ).joinToString(" · "),
             style = MaterialTheme.typography.labelSmall,

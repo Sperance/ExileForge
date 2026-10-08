@@ -18,6 +18,8 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Source
 import com.sperance.exileforge.rules.content.Tier
 import com.sperance.exileforge.rules.content.WeaponType
+import com.sperance.exileforge.rules.roll.AffixRoller
+import com.sperance.exileforge.rules.roll.AffixSides
 import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -127,8 +129,8 @@ data class ItemLine(
     val stats: List<String> get() = definition?.effects?.map { it.stat }?.distinct().orEmpty()
 }
 
-/** What the head of a card reads before any line: how well the item rolled on average, how many affix places are still open, and its best tier. */
-data class RollSummary(val quality: Int?, val openSlots: Int?, val bestTier: Int?)
+/** What the head of a card reads before any line: how well the item rolled on average and its best tier. */
+data class RollSummary(val quality: Int?, val bestTier: Int?)
 
 /** One value inside a base line: what the base said, and what the item carries with its local lines folded in. */
 data class PropertyValue(val stat: String, val base: Double, val total: Double) {
@@ -227,13 +229,17 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
     val summary: RollSummary by lazy {
         val qualities = lines.mapNotNull { it.quality }
-        val limits = index.limits(rarity, slot)
         RollSummary(
             quality = qualities.takeIf { it.isNotEmpty() }?.let { Math.round(it.average() * 100).toInt() },
-            openSlots = if (limits.ceiling > 0) (limits.prefixes + limits.suffixes - affixes.size).coerceAtLeast(0) else null,
             bestTier = lines.filter { it.marks.kind in RANKED }.mapNotNull { it.roll.tier.takeIf { t -> t > 0 } }.minOrNull(),
         )
     }
+
+    /**
+     * Стороны аффиксов (4.2.0) по правилу [AffixRoller.sides] - то же, что держат сферы и верстак; null - у редкости в этом
+     * слоте мест нет (обычная, уникальная).
+     */
+    val sides: AffixSides? by lazy { AffixRoller(index).sides(item, template).takeIf { it.prefixLimit + it.suffixLimit > 0 } }
 
     /** The true/false states, in a fixed order: corrupted, mirrored, an influence, fractured, crafted, worn, socketed. */
     val states: List<String> by lazy {
@@ -341,6 +347,10 @@ fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNot
 }.joinToString(" / ").ifBlank { null }
 
 /** A bench line as the sentence it would add, with the tier's range where the roll will land: "+(70–79) to maximum Life". */
+
+/** Стороны аффиксов одной строкой (4.2.0): «Преф. 2/3 · Суф. 1/3». */
+fun sidesText(sides: AffixSides): String = ui("card.sides", sides.prefixes, sides.prefixLimit, sides.suffixes, sides.suffixLimit)
+
 fun recipeText(index: ContentIndex, recipe: BenchRecipe): String = rangedLine(index, recipe.modifier, recipe.values)
 
 /** A modifier's sentence with each value as its range: "+(70–79) to maximum Life" — a bench line, an essence's guarantee. */

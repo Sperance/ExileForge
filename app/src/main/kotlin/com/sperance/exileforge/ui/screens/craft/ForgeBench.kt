@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -20,6 +21,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
+import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.forge.Smithy
@@ -33,6 +35,7 @@ import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.Bench
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
@@ -48,9 +51,11 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * The bench lines for this item's slot, and the crafted modifier it already carries, if any.
  * Only the recipes the hero has found are offered (3.0.0); the rest of the bench stays hidden.
+ * С 4.2.0 рецепт подписан стороной (префикс, суффикс), а тот, что на вещь не встанет, погашен с причиной правил ([benchRefusals]).
  */
 @Composable internal fun BenchLedger(game: GameUi, index: ContentIndex, hero: HeroView, item: ItemView, chosen: String, onChoose: (String) -> Unit) {
     val recipes = game.bench.filter { it.fits(item.slot) }.sortedWith(compareBy({ it.source }, { it.modifier }, { -it.tier }))
+    val refusals = benchRefusals(index, hero, item)
     val crafted = item.lines.firstOrNull { it.marks.crafted }
     val scouring = index.rules.bench.uncraftOrb
     Column {
@@ -66,21 +71,36 @@ import org.koin.compose.viewmodel.koinViewModel
             ) { onChoose(UNCRAFT) }
         }
         recipes.forEach { recipe ->
+            val refusal = refusals[recipe.code]
             LedgerRow(
                 ForgeGlyphs.Anvil,
                 Crafted,
                 recipeText(index, recipe),
-                ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, hero.count(recipe.orb.name)),
+                ui("mod.kind.${recipe.source.name}") + " · " + ui("bench.cost_line", itemTitle(recipe.orb.name), recipe.amount, hero.count(recipe.orb.name)),
                 "T${recipe.tier}",
-                selected = chosen == recipe.code,
+                selected = chosen == recipe.code && refusal == null,
                 ink = ModBlue,
+                refusal = refusal,
             ) { onChoose(recipe.code) }
         }
     }
     if (recipes.isEmpty()) Text(ui("bench.none"), color = Muted)
 }
 
-/** One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. */
+/** Почему каждый найденный рецепт не встанет на [item] (4.2.0): отказ [Bench.blockedBy] словами игрока; рецепта, что встанет, нет в карте. */
+@Composable internal fun benchRefusals(index: ContentIndex, hero: HeroView, item: ItemView): Map<String, String> {
+    val bench = remember(index) { Bench(index) }
+    return remember(bench, item.item, hero.info.recipes) {
+        index.bench.filter { it.code in hero.info.recipes }.mapNotNull { recipe ->
+            bench.blockedBy(item.item, item.template, recipe, hero.info.recipes)?.let { recipe.code to refusalText(it) }
+        }.toMap()
+    }
+}
+
+/**
+ * One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. Описание раскрывается
+ * нажатием ([ExpandableText], 4.2.0); строка с [refusal] погашена, не выбирается и называет причину.
+ */
 @Composable internal fun LedgerRow(
     icon: ImageVector,
     accent: Color,
@@ -90,11 +110,13 @@ import org.koin.compose.viewmodel.koinViewModel
     selected: Boolean,
     orb: Orb? = null,
     ink: Color = Parchment,
+    refusal: String? = null,
     onClick: () -> Unit,
 ) {
+    val enabled = refusal == null
     Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(role = Role.Button, onClick = onClick)
-            .background(if (selected) Panel else Color.Transparent),
+        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .background(if (selected) Panel else Color.Transparent).alpha(if (enabled) 1f else .55f),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -107,7 +129,8 @@ import org.koin.compose.viewmodel.koinViewModel
         }
         Column(Modifier.weight(1f).padding(vertical = 9.dp)) {
             Text(title, color = if (selected) GoldBright else ink, style = MaterialTheme.typography.bodyLarge)
-            Text(subtitle, color = Muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            if (subtitle.isNotBlank()) ExpandableText(subtitle)
+            refusal?.let { ExpandableText(it, color = LifeRed) }
         }
         Text(figure, color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(end = 4.dp))
     }

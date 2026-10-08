@@ -282,7 +282,7 @@ fun ItemCard(
  * раскрываются нажатием.
  */
 @Composable private fun RelicFolds(item: ItemView, look: RelicLook, met: Boolean?) {
-    val terms = remember(item) { Term.ofStats(item.lines.flatMap { line -> line.definition?.effects.orEmpty().map { it.stat } }) }
+    val terms = remember(item) { Term.ofItem(item) }
     var termsOpen by remember(item) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
         item.requirements.takeIf { it.isNotEmpty() }?.let { needs ->

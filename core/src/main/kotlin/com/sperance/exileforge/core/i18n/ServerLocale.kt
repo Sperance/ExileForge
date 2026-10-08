@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.i18n
 
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.rules.Refusal
 import com.sperance.exileforge.rules.RuleViolation
 import com.sperance.exileforge.rules.text.LocaleKey
 import kotlinx.serialization.Serializable
@@ -116,8 +117,14 @@ fun ruleRefusal(check: () -> Unit): String? = try {
     check()
     null
 } catch (refused: RuleViolation) {
-    locError(refused.code, refused.message.orEmpty(), refused.args.map { if (serverLocale.contains(it)) serverLocale[it] else it })
+    refusalText(refused.refusal(), refused.message.orEmpty())
 }
+
+/**
+ * Отказ правил значением (4.2.0, [Refusal]) словами игрока: `error.<code>` с раскрытыми ключами в аргументах. Нет шаблона -
+ * [fallback], по умолчанию сам код.
+ */
+fun refusalText(refusal: Refusal, fallback: String = refusal.code): String = locError(refusal.code, fallback, refusal.args.map { if (serverLocale.contains(it)) serverLocale[it] else it })
 
 /** A placeholder the arguments left unfilled: `{0}`, `{1}`... */
 private val HOLE = Regex("""\{\d+\}""")

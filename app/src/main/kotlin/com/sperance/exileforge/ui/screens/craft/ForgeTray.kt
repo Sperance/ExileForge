@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -33,6 +34,8 @@ import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
+import com.sperance.exileforge.ui.components.ExpandableText
+import com.sperance.exileforge.ui.components.TermsBlock
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
@@ -126,10 +129,14 @@ private const val ONE_ROW = 6
     }
 }
 
-/** The orbs of the tray: the bag's, Regret left out (it is spent on the tree), each one the item takes by the rules. */
-@Composable internal fun OrbTray(game: GameUi, smithy: Smithy, accepted: (String) -> Boolean, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
+/**
+ * The orbs of the tray: the bag's, Regret left out (it is spent on the tree). Те, что вещь не примет ([refusals] - отказ правил
+ * [OrbApplier.refusal] по коду, 4.2.0: сфера удачи без уникалки того же вида и прочие), серыми в конце; выбранная говорит почему.
+ */
+@Composable internal fun OrbTray(game: GameUi, smithy: Smithy, accepted: (String) -> Boolean, refusals: Map<String, String>, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
     val hero = game.hero ?: return
-    val orbs = game.orbs.filter { hero.count(it.code.value) > 0 && it.code.value != Orb.ORB_OF_REGRET.name && accepted(it.code.value) }.map { it.code.value }
+    val orbs = game.orbs.map { it.code.value }.filter { hero.count(it) > 0 && it != Orb.ORB_OF_REGRET.name && (accepted(it) || it in refusals) }
+        .sortedBy { it in refusals }
     val chosen = smithy.orb
     ForgeTray(
         game,
@@ -140,6 +147,7 @@ private const val ONE_ROW = 6
         Gold,
         onSelect,
         note = ui("forge.needs_omen").takeIf { chosen in orbs && needsOmen(chosen) && smithy.omen.isBlank() },
+        refusal = refusals::get,
     ) { code ->
         OrbGlyph(Orb.of(code), Modifier.fillMaxSize())
     }
@@ -171,7 +179,7 @@ private const val ONE_ROW = 6
 }
 
 /**
- * The omens the bag holds for the chosen orb (3.36.0): one may be laid on the next use, the one that goes on the [target] -
+ * The omens the bag holds for the chosen orb (3.36.0). Описание знамени раскрывается нажатием ([ExpandableText], 4.2.0): one may be laid on the next use, the one that goes on the [target] -
  * an item or, since server 1.65.0, a pet. Chosen again, it is taken off. Each is the orb's pair on the anvil (mockup B).
  */
 @Composable fun OmenLedger(game: GameUi, orbCode: String, chosenOmen: String, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
@@ -201,10 +209,12 @@ private const val ONE_ROW = 6
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(itemDescription(omen.code), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    ExpandableText(itemDescription(omen.code), style = MaterialTheme.typography.labelSmall)
                 }
                 Text("×${hero.count(omen.code)}", color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }
         }
+        // Общее правило катализаторов (4.2.0) - термином, один раз: описание каждого называет лишь свой вид.
+        if (omens.any { it.catalyst != null }) TermsBlock(listOf(Term.CATALYST))
     }
 }

@@ -95,10 +95,13 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** The chosen bench line over the navigation, priced, with the same held button. */
-@Composable internal fun BenchBar(game: GameUi, vm: SmithyViewModel, instance: ItemInstance, chosen: String, enabled: Boolean) {
+/** The chosen bench line over the navigation, priced, with the same held button; рецепт, что не встанет (4.2.0), не предлагается. */
+@Composable internal fun BenchBar(game: GameUi, vm: SmithyViewModel, item: ItemView, chosen: String, enabled: Boolean) {
     val index = game.index ?: return
-    val recipe = game.bench.firstOrNull { it.code == chosen }
+    val hero = game.hero ?: return
+    val instance = item.item
+    val refusals = benchRefusals(index, hero, item)
+    val recipe = game.bench.firstOrNull { it.code == chosen && it.code !in refusals }
     ForgeBar {
         when {
             chosen == UNCRAFT -> {

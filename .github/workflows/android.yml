@@ -23,6 +23,9 @@ jobs:
           # The obsolete 'tools' package is gone from the SDK repository; sdkmanager fails on it.
           packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          # Рабочая ветка не default: без этого кэш Gradle только читается, и каждый прогон собирает с нуля
+          cache-read-only: false
       - run: chmod +x gradlew
       - run: ./gradlew :core:ktlintCheck :app:ktlintCheck :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
       # The release build is shrunk by R8, which removes what it cannot see being used; building it
@@ -87,6 +90,9 @@ jobs:
           distribution: temurin
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          # Рабочая ветка не default: без этого кэш Gradle только читается, и каждый прогон собирает с нуля
+          cache-read-only: false
       - run: bash gradlew installDist
         working-directory: backend
       - uses: actions/setup-java@v4
@@ -160,6 +166,9 @@ jobs:
           packages: 'platform-tools'
       - if: steps.version.outputs.exists == 'false'
         uses: gradle/actions/setup-gradle@v4
+        with:
+          # Рабочая ветка не default: без этого кэш Gradle только читается, и каждый прогон собирает с нуля
+          cache-read-only: false
       - if: steps.version.outputs.exists == 'false'
         name: Build signed release APK
         env:

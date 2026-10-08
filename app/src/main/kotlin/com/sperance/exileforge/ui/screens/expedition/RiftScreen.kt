@@ -110,7 +110,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             BackHandler { model.closeRift() }
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator(color = RiftColors.Rift) }
         } else {
-            val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan) }
+            val engine = remember(board.plan) { RiftEngine(rules, index.campaign, board.plan, index.rules.fight) }
             val run = board.progress.run
             if (run == null) RiftGate(game, model, rules, board, engine) else RiftRunView(model, rules, board, engine, run, idle = !game.busy)
         }

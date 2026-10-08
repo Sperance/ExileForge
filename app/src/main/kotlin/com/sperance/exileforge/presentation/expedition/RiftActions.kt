@@ -133,7 +133,7 @@ class RiftActions(
         val gear = expedition.gear() ?: return null
         val run = board.progress.run ?: return null
         val fight = board.fight ?: return null
-        val engine = RiftEngine(rules, index.campaign, board.plan)
+        val engine = RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
         return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, hero.pets.pet(hero.pets.combat)) { end -> act(end) }
             .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     }

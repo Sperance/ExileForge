@@ -35,13 +35,14 @@ import kotlinx.serialization.Serializable
     val choice: String = "",
     /** The variants of a choosing work — a condensed essence, a skill book of the hero's class — each a plain work of its own. */
     val options: List<JobView> = emptyList(),
+    /** Опыт профессии за цикл (4.2.0) - присылает сервер по кривой опыта ремесла. */
+    val experience: Double = 0.0,
 ) {
     val code: String get() = job.code
     val kind: JobKind get() = job.kind
     val level: Int get() = job.level
     val seconds: Double get() = job.seconds
     val output: String get() = job.output
-    val experience: Double get() = job.experience
     val inputs: List<JobInput> get() = job.inputs
     val additives: Boolean get() = job.additives
 

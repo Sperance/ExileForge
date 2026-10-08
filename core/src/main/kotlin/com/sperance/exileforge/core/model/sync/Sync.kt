@@ -33,7 +33,7 @@ import kotlinx.serialization.json.JsonElement
  * 60 - Скверна: объект карты `BLIGHT` (жетоны очага, сундук точки выбором `FEATURE`), `MapFeature.accepts` с убитыми, доля добычи автозабега `expedition.autoYield`.
  * 61 - статусы отчётов `CREATED`/`SENT`, обзор Разлома (правило `SIGHT`, правила у даров), `campaign/start?forced=` механики тестировщика.
  */
-const val API_REVISION = 61
+const val API_REVISION = 62
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

@@ -49,9 +49,10 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var mode by remember { mutableStateOf(GuildMode.OPEN) }
     var minLevel by remember { mutableStateOf("1") }
     val money = game.hero?.money
+    val price = rules.create.price.of(game.heroLevel)
     val refusal = when {
         game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
-        money != null && money < rules.create.gold -> ui("guild.found_gold", number(rules.create.gold.toDouble()))
+        money != null && money < price -> ui("guild.found_gold", number(price.toDouble()))
         name.trim().length !in rules.nameLength -> ui("guild.found_name", rules.nameLength.first, rules.nameLength.last)
         tag.length !in rules.tagLength -> ui("guild.found_tag", rules.tagLength.first, rules.tagLength.last)
         faction.isBlank() -> ui("guild.api.faction")
@@ -88,12 +89,12 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
             ModePicker(mode, enabled = true) { mode = it }
             MinLevelField(minLevel, enabled = true) { minLevel = it }
             OrnateDivider()
-            PropertyRow(ui("guild.found_price"), number(rules.create.gold.toDouble()), Glyph.CURRENCY)
+            PropertyRow(ui("guild.found_price"), number(price.toDouble()), Glyph.CURRENCY)
             PropertyRow(ui("guild.found_level_row"), rules.create.level.toString(), Glyph.LEVEL)
             money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
             refusal?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
             HoldButton(
-                ui("guild.found_for", number(rules.create.gold.toDouble())),
+                ui("guild.found_for", number(price.toDouble())),
                 Gold,
                 Modifier.fillMaxWidth(),
                 enabled = !game.busy && refusal == null,

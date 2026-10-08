@@ -7,15 +7,17 @@ import kotlinx.serialization.Serializable
 /** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion. */
 @Serializable enum class FeedbackKind { BUG, SUGGESTION, APPEAL }
 
-/** Where a report stands: new, in progress, implemented, closed — a closed suggestion leaves the public list. */
+/**
+ * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [SENT] - администратор отправил его в Asana. Отправленное
+ * предложение остаётся в общем списке, но голосовать за него больше нельзя.
+ */
 @Serializable enum class ReportStatus {
-    NEW,
-    IN_PROGRESS,
-    DONE,
-    WONTFIX,
+    CREATED,
+    SENT,
     ;
 
-    val open: Boolean get() = this == NEW || this == IN_PROGRESS
+    /** Отчёт ещё не отправлен: за такое предложение голосуют. */
+    val open: Boolean get() = this == CREATED
 }
 
 /** A player's vote on a suggestion: one per account, switched by tapping again. */
@@ -55,7 +57,7 @@ import kotlinx.serialization.Serializable
     val screen: String = "",
     val context: Map<String, String> = emptyMap(),
     val userId: String? = null,
-    val status: ReportStatus = ReportStatus.NEW,
+    val status: ReportStatus = ReportStatus.CREATED,
     val kind: FeedbackKind = FeedbackKind.BUG,
     val likes: List<String> = emptyList(),
     val dislikes: List<String> = emptyList(),
@@ -63,7 +65,7 @@ import kotlinx.serialization.Serializable
     val createdAt: String = "",
     /** The task in Asana once the administrator exported it (3.75.0, server 1.70.0); blank before. */
     val asanaUrl: String = "",
-    /** Код последнего отказа Asana (3.88.7, сервер 1.80.9): выгрузка или закрытие не удались; пусто - всё ушло. */
+    /** Код последнего отказа Asana (3.88.7, сервер 1.80.9): выгрузка не удалась; пусто - всё ушло. */
     val asanaError: String = "",
 )
 

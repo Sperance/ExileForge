@@ -62,11 +62,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     ;
 
     val label: String get() = ui(title)
-
-    companion object {
-        /** The «Развитие» tab's screen a tab index is, if it is one. */
-        fun of(tab: Int): ProgressPlace? = entries.firstOrNull { it.tab == tab }
-    }
 }
 
 /** What each tile of the hub says: one line of what it holds, one of what waits, and a count when something does. */

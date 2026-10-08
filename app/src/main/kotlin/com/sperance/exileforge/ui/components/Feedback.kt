@@ -45,12 +45,10 @@ val LocalMailOpen = staticCompositionLocalOf<(() -> Unit)?> { null }
 fun statusTitle(status: ReportStatus): String = locOr("enum.BugStatus.${status.name}", status.name)
 fun kindTitle(kind: FeedbackKind): String = locOr("enum.FeedbackKind.${kind.name}", kind.name)
 
-/** Each status its colour: new muted, in progress gold, implemented green, closed red. */
+/** Цвет статуса: созданный - пергамент, отправленный - зелёный. */
 fun statusTint(status: ReportStatus): Color = when (status) {
-    ReportStatus.NEW -> Parchment
-    ReportStatus.IN_PROGRESS -> GoldBright
-    ReportStatus.DONE -> Vital
-    ReportStatus.WONTFIX -> LifeRed
+    ReportStatus.CREATED -> Parchment
+    ReportStatus.SENT -> Vital
 }
 
 @Composable fun StatusBadge(status: ReportStatus) {

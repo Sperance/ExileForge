@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.campaign.RunReport
 import com.sperance.exileforge.rules.content.MapCode
+import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunStart
 import kotlinx.serialization.builtins.ListSerializer
@@ -34,9 +35,17 @@ class CampaignClient internal constructor(private val http: Transport) {
     /**
      * Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. A [potion]
      * goes into the run and [scarabs] with the map (server 1.74.0), both spent there. [auto] (3.95.0, server 1.82.0) - автопробег:
-     * карт он не роняет.
+     * карт он не роняет. [forced] (4.0.1, сервер `API_REVISION` 61) - механики, что тестировщик ставит на заход насильно.
      */
-    suspend fun start(heroId: String, mapCode: MapCode, itemId: String? = null, potion: String? = null, scarabs: List<String> = emptyList(), auto: Boolean = false): RunStart {
+    suspend fun start(
+        heroId: String,
+        mapCode: MapCode,
+        itemId: String? = null,
+        potion: String? = null,
+        scarabs: List<String> = emptyList(),
+        auto: Boolean = false,
+        forced: Set<MapMechanic> = emptySet(),
+    ): RunStart {
         itemId?.let(::requireItemId)
         return http.post(
             "$CAMPAIGN/start",
@@ -47,6 +56,7 @@ class CampaignClient internal constructor(private val http: Transport) {
                 "potion" to potion,
                 "scarabs" to scarabs.joinToString(",").ifEmpty { null },
                 "auto" to "true".takeIf { auto },
+                "forced" to forced.joinToString(",") { it.name }.ifEmpty { null },
             ),
         )
     }

@@ -43,6 +43,7 @@ import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import com.sperance.exileforge.rules.run.RunEventKind
@@ -136,11 +137,12 @@ class ExpeditionActions(
     /** Запуск после сборки графа: отправки журнала по часам и по сигналу, новое снаряжение и новый герой - походу. */
     fun start() {
         scope.launch { for (signal in flushes) flush() }
-        // Отправка по часам: что тихий отрезок карты оставил в ожидании, уходит само.
+        // Отправка по часам: что тихий отрезок карты оставил в ожидании, уходит само. Без связи (4.0.1) повторы ведёт пауза
+        // [retryLater] - часы её не обгоняют.
         scope.launch {
             while (true) {
                 delay(FLUSH_EVERY)
-                if (runJournal?.pending?.isNotEmpty() == true) flushes.trySend(Unit)
+                if (failures == 0 && runJournal?.pending?.isNotEmpty() == true) flushes.trySend(Unit)
             }
         }
         // Новое чтение героя: поход читает сумку через состояние и берёт кампанию - зону Ваал или кристалл, что сервер решил.
@@ -163,6 +165,12 @@ class ExpeditionActions(
 
     /** Карта из сундука, с которой войти, или null - войти без неё. */
     fun pickMap(itemId: String?) = expedition { e -> e.copy(launch = e.launch?.let { l -> l.copy(picked = itemId, scarabs = if (itemId == null) emptyList() else l.scarabs) }) }
+
+    /** Механика, что тестировщик ставит на заход насильно (4.0.1): переключить одну. */
+    fun toggleForced(mechanic: MapMechanic) = expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
+
+    /** Все механики разом - или ни одной. */
+    fun forceAll(on: Boolean) = expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
 
     /** Зелье на поход (3.79.0): одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
@@ -232,7 +240,15 @@ class ExpeditionActions(
                 runJournal = null
             }
             val started = try {
-                api.campaign.start(id, mapCode, picked, launch?.potion, launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty(), auto = auto != null)
+                api.campaign.start(
+                    id,
+                    mapCode,
+                    picked,
+                    launch?.potion,
+                    launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty(),
+                    auto = auto != null,
+                    forced = repository.state.value.forced,
+                )
             } catch (e: ApiFailure) {
                 // Новое семя не раньше, чем велят правила, чем бы ни кончился прошлый поход (сервер 1.30.0): ожидание, не ошибка.
                 if (e.code != SEED_TOO_SOON) throw e
@@ -313,7 +329,7 @@ class ExpeditionActions(
     }
 
     /**
-     * Отправка не дошла: следующая после удвоенной паузы, не дольше часовой. Первая неудача (4.0.0) ставит автопробег на
+     * Отправка не дошла: следующая после удвоенной паузы, не дольше [FLUSH_EVERY]. Первая неудача (4.0.0) ставит автопробег на
      * паузу ([RunCommand.Link]); ответ сервера снимает её ([linkBack]).
      */
     private fun retryLater() {
@@ -375,8 +391,9 @@ class ExpeditionActions(
         } catch (e: ApiFailure) {
             // CP_018: сервер не держит похода для героя - поход журнала окончен, последняя пачка уже учтена;
             // CP_020: мир сменился под походом, сервер закрыл его; CP_026: журнал старшего похода.
-            // Сервер недоступен за шлюзом (4.0.0): повтор с паузой и одно сообщение на всю пропажу связи, не на каждую попытку
-            val transient = CommandQueue.transient(e.status)
+            // Сервер недоступен за шлюзом (4.0.0) или упал сам (5xx, 4.0.1): повтор с паузой и одно сообщение на всю пропажу
+            // связи, не на каждую попытку. Журнал на диске - пачка дойдёт, когда сервер встанет.
+            val transient = CommandQueue.transient(e.status) || (e.status ?: 0) >= SERVER_ERROR
             when {
                 e.code in RUN_CLOSED -> done(j)
                 transient && failures > 0 -> Unit
@@ -624,6 +641,9 @@ class ExpeditionActions(
         )
         const val BATCH = 6
         const val FLUSH_EVERY = 20_000L
+
+        /** С этого кода ответ - сбой самого сервера, а не отказ правила. */
+        const val SERVER_ERROR = 500
 
         /** Пачка убийства уходит через столько после последнего события, если ничто не отправит её раньше. */
         const val QUIET_AFTER = 3_000L

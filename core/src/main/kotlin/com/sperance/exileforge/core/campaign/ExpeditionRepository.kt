@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.run.MapMechanic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -21,7 +22,8 @@ data class UnfinishedRun(val runId: String, val zone: MapCode)
 /**
  * Поход на экране (3.80.20): карточка зоны перед входом, добыча похода для листа снаряжения, окно атласа и счётчики
  * журнала - события, которых сервер ещё не взял, и отвергнутые, для значка. [saleMarks] (3.91.0) - id вещей добычи, помеченных
- * к продаже посреди захода: в итогах карты они уже отмечены.
+ * к продаже посреди захода: в итогах карты они уже отмечены. [forced] (4.0.1) - механики, что тестировщик ставит на новые заходы
+ * насильно: выбор держится между зонами.
  */
 data class Expedition(
     val launch: MapLaunch? = null,
@@ -31,6 +33,7 @@ data class Expedition(
     val rejected: Int = 0,
     val unfinished: UnfinishedRun? = null,
     val saleMarks: Set<String> = emptySet(),
+    val forced: Set<MapMechanic> = emptySet(),
 )
 
 /** Единственный источник правды о походе на экране (3.80.20); сам бег похода - у `ExpeditionActions`. */

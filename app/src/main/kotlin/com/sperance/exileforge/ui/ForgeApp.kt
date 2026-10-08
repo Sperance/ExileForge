@@ -333,15 +333,18 @@ import org.koin.compose.viewmodel.koinViewModel
         )
         destinations.forEach { index ->
             val label = labels.getValue(index)
-            // The forge, the menagerie, the trials, the tree and the grimoire (3.90.5) are the hub's: while one is open, its tab
-            // reads as the one chosen. The City's tab tapped again from inside a building (3.22.0) walks back out
-            // to the square, as «Развитие» tapped again from a tile's screen walks back to its hub.
+            // Выбрана вкладка корня экрана (4.0.1): кузня, зверинец, дерево и гримуар - «Развития», испытания и атлас - «Похода»,
+            // здания - Города. Вкладка, нажатая снова изнутри (3.22.0), возвращает к своему корню.
             NavigationBarItem(
-                selected = route.tab == index || (index == TAB_PROGRESS && ProgressPlace.of(route.tab) != null),
+                selected = route.root?.tab == index,
                 onClick = { shell.tab(index) },
                 icon = {
-                    // Free atlas points (3.47.0) and tree points (3.90.5) mark the tab both open from: «Развитие».
-                    val free = if (index == TAB_PROGRESS) (game.atlasState?.available ?: 0) + (game.treeState?.available ?: 0) else 0
+                    // Свободные очки отмечают вкладку, откуда их тратят: атлас (3.47.0) - «Поход», дерево (3.90.5) - «Развитие».
+                    val free = when (index) {
+                        TAB_EXPEDITION -> game.atlasState?.available ?: 0
+                        TAB_PROGRESS -> game.treeState?.available ?: 0
+                        else -> 0
+                    }
                     // A tab the hero's level has not opened wears a lock (3.76.0).
                     val locked = !game.unlocked(Feature.ofTab(index))
                     BadgedBox(badge = {

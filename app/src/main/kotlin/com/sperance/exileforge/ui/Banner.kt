@@ -81,8 +81,6 @@ import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
-import com.sperance.exileforge.ui.screens.progress.ProgressPlace
-import com.sperance.exileforge.ui.screens.progress.ProgressPlaceScreen
 import com.sperance.exileforge.ui.screens.progress.ProgressScreen
 import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
 import com.sperance.exileforge.ui.screens.server.ServerScreen

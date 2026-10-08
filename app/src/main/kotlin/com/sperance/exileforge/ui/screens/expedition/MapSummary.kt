@@ -110,9 +110,11 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     val marks = vm.state.collectAsStateWithLifecycle().value.saleMarks
     val pick = rememberSellPick(lots, initial = marks)
     val offered = lots.isNotEmpty() && !back
-    // Режим продажи (4.0.0): включает удержание вещи, как в тайнике; помеченное к продаже посреди захода включает его сразу
-    var selling by rememberSaveable { mutableStateOf(marks.any { mark -> lots.any { it.id == mark } }) }
+    // Режим продажи (4.0.0): включает удержание вещи, как в тайнике. Страница всегда открывается в обычном режиме (4.0.1):
+    // касание открывает карточку; помеченное посреди захода остаётся помеченным, и его продажа видна сразу
+    var selling by rememberSaveable { mutableStateOf(false) }
     val selecting = offered && selling
+    val docked = offered && (selling || pick.picked.isNotEmpty())
     BackHandler(enabled = selecting) {
         pick.clear()
         selling = false
@@ -151,7 +153,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
             RunFigures(tally.figures)
         }
-        if (selecting) {
+        if (docked) {
             SellDock(
                 pick,
                 enabled = armed && !game.busy,

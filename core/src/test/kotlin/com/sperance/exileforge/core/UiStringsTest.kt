@@ -168,7 +168,8 @@ class UiStringsTest {
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
             // Качество сундука Скверны (4.0.0): от обычного до редкого
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }
-            com.sperance.exileforge.core.update.ReleaseKind.entries.forEach { add("release.kind.${it.name.lowercase()}") }
+            // Насильные механики тестировщика (4.0.1)
+            com.sperance.exileforge.rules.run.MapMechanic.entries.forEach { add("tester.mechanic.${it.name}") }
             Slot.entries.forEach { add("enum.slot.${it.name}") }
             bodyPlaces.forEach { add("enum.slot.${it.code}") }
             WeaponType.entries.forEach { add("enum.weapon.${it.name}") }

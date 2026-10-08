@@ -58,7 +58,7 @@ const val TAB_EXPEDITION = 10
 const val TAB_CRAFTS = 11
 const val TAB_SKILLS = 12
 
-/** «Развитие»: the hub of the forge ([TAB_CRAFT]), the menagerie, the atlas, the trials and the chronicle. */
+/** «Развитие»: кузня ([TAB_CRAFT]), зверинец, дерево и гримуар; испытания и атлас - страницы «Похода» (4.0.0). */
 const val TAB_PROGRESS = 13
 const val TAB_PETS = 14
 const val TAB_TRIALS = 15

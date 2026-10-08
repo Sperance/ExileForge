@@ -96,7 +96,7 @@ private const val CARD_TOP = .48f
             onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
         )
         ZoomButtons(camera, Modifier.align(Alignment.TopEnd).padding(top = 72.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
-        launch?.let { ZoneCard(game, vm, world, it, Modifier.align(Alignment.BottomCenter)) }
+        launch?.let { ZoneCard(game, vm, world, it, expedition.forced, Modifier.align(Alignment.BottomCenter)) }
     }
 }
 

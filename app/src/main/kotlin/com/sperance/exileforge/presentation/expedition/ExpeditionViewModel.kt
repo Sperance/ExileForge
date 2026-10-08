@@ -14,6 +14,7 @@ import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.MapCode
+import com.sperance.exileforge.rules.run.MapMechanic
 import kotlinx.coroutines.flow.StateFlow
 
 /** Экраны похода (3.80.21): карта мира, карточка зоны, бег похода, испытания и атлас - над общими действиями. */
@@ -45,6 +46,15 @@ class ExpeditionViewModel(
     fun pickMap(itemId: String?) = expedition.pickMap(itemId)
     fun pickPotion(code: String?) = expedition.pickPotion(code)
     fun toggleScarab(code: String, add: Boolean) = expedition.toggleScarab(code, add)
+
+    /** Насильные механики захода (4.0.1) - только тестировщику и выше. */
+    fun toggleForced(mechanic: MapMechanic) {
+        if (game.value.isTester) expedition.toggleForced(mechanic)
+    }
+
+    fun forceAll(on: Boolean) {
+        if (game.value.isTester) expedition.forceAll(on)
+    }
 
     /** Заход в зону; [toBoss] (3.92.0, тестировщик и выше) - сразу бой со стражем. */
     fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.start(MapCode(mapCode), toBoss = toBoss && game.value.isTester)

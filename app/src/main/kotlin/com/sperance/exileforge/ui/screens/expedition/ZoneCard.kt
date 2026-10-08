@@ -60,6 +60,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.LootRoller
+import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -93,7 +94,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  * «Войти в портал». A «???» zone says only whose guardian opens it. The rules and the content are the
  * index's; the windows of the zone — its guardian's return — are the hero's own campaign.
  */
-@Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, modifier: Modifier = Modifier) {
+@Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, forced: Set<MapMechanic>, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
     val index = game.index ?: return
     val zone = token.zone
@@ -148,6 +149,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 Spacer(Modifier.width(10.dp))
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
+            if (game.isTester) TesterMechanics(vm, forced)
             // Тестировщик и выше (3.92.0): заход начинается сразу боем со стражем
             if (game.isTester) {
                 ForgeOutlinedButton(
@@ -157,6 +159,24 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 ) { Text(ui("expedition.launch_boss")) }
             }
             AutoLaunch(game, vm, zone.code.value, launch, launchGuarded)
+        }
+    }
+}
+
+/**
+ * Механики тестировщика (4.0.1): что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится
+ * между зонами; открытый заход с другим выбором начинается заново.
+ */
+@Composable private fun TesterMechanics(vm: ExpeditionViewModel, forced: Set<MapMechanic>) {
+    ForgePanel {
+        Engraved(ui("tester.mechanics"))
+        MutedText(ui("tester.mechanics_hint"), style = MaterialTheme.typography.bodySmall)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            val all = forced.size == MapMechanic.entries.size
+            FilterChip(selected = all, onClick = { vm.forceAll(!all) }, label = { Text(ui("tester.mechanics_all")) })
+            MapMechanic.entries.forEach { mechanic ->
+                FilterChip(selected = mechanic in forced, onClick = { vm.toggleForced(mechanic) }, label = { Text(ui("tester.mechanic.${mechanic.name}")) })
+            }
         }
     }
 }

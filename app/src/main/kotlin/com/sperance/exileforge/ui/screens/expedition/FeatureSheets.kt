@@ -13,7 +13,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -45,6 +48,7 @@ import com.sperance.exileforge.ui.components.LocalLore
 import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.screens.auction.OfferSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
@@ -105,9 +109,13 @@ import kotlin.math.ceil
     }
 }
 
-/** Странствующий торговец: вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка не нажимается. */
+/**
+ * Странствующий торговец: вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка не нажимается.
+ * Нажатие на товар открывает полную карточку со сравнением с надетым - ту же, что у лавки Города (4.2.0).
+ */
 @Composable private fun MerchantSheet(game: GameUi, merchant: MapFeature.Merchant, bought: List<Int>, onCommand: (RunCommand) -> Unit) {
     val money = game.hero?.money ?: 0L
+    var chosen by remember { mutableStateOf<Int?>(null) }
     ForgeSheet(onDismissRequest = { onCommand(RunCommand.StepOff) }) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feature.merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
@@ -127,10 +135,17 @@ import kotlin.math.ceil
                             }
                         }
                     },
-                    onClick = {},
+                    onClick = { chosen = i },
                 )
             }
             ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.leave")) }
+        }
+    }
+    chosen?.takeIf { it !in bought }?.let { i ->
+        val offer = merchant.offers.getOrNull(i) ?: return@let
+        OfferSheet(game, offer.item, offer.price, money, onDismiss = { chosen = null }) {
+            chosen = null
+            onCommand(RunCommand.Choose(i))
         }
     }
 }

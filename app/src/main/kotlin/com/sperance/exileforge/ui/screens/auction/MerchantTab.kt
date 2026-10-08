@@ -33,6 +33,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -141,7 +142,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     if (notes) MerchantNotes { notes = false }
     info?.let { code -> StackInfoSheet(game, code) { info = null } }
     chosen?.let { offer ->
-        OfferSheet(game, offer, money, onDismiss = { chosen = null }) {
+        OfferSheet(game, offer.item, offer.price, money, onDismiss = { chosen = null }) {
             chosen = null
             market.buyOffer(offer.id)
         }
@@ -217,20 +218,21 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
  * An offer's full card (since 2.40.0): the item as the stash would show it, scrolling, and under it
  * the one way to buy it — a button held for the price. Short of gold, it says so and the button
  * stays off (2.46.0); what wearing it would change is added up here, as on a stash card.
+ *
+ * Общая для любого товара за золото (4.2.0): лавка Города и странствующий торговец карты.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun OfferSheet(game: GameUi, offer: MerchantOffer, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
-    val view = game.view(offer.item)
+internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, money: Long?, onDismiss: () -> Unit, onBuy: () -> Unit) {
+    val view = game.view(item)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, offer.item, rememberWearChoice(game, offer.item)), requirementsMet = game.unmetFor(offer.item.template).isEmpty()) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, rememberWearChoice(game, item)), requirementsMet = game.unmetFor(item.template).isEmpty()) }
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
-                val price = offer.price
                 val short = game.shortfall(Cost.gold(price))?.text()
                 short?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 HoldButton(

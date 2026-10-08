@@ -411,7 +411,7 @@
   "crafts.help.level": "Profession level",
   "crafts.help.level_text": "Grows with the experience of cycles, each next level costs more; the cap is {0}. The level opens new works, cuts the cycle time (by up to −{1}% at the cap) and raises the find chance (by up to +{2}%), and for the smith also the unique chance and the crafted item's level.",
   "crafts.help.away": "Away",
-  "crafts.help.away_text": "The work runs on the server without you: when you come back, cycles since the last count are added, but for {0} h at most — time beyond that is lost, and the work goes on from your return.",
+  "crafts.help.away_text": "The work runs on the server without you: cycles are counted on your next visit, but for {0} h after the last count at most — time beyond that is lost. There is no separate report of your absence: what was made is already in the bag, and the work's total is under “Since the work started”.",
   "crafts.have": "{0} of {1}",
   "crafts.totals_title": "Since the work started",
   "crafts.totals_time": "Running",

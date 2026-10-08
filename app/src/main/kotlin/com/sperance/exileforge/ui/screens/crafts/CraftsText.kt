@@ -141,6 +141,7 @@ fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
 /**
  * How long the work still needs to lift its profession a level (3.2.0), counted here: the experience a
  * cycle brings past its «nothing» chance, the cycles that leaves, less what the running cycle has done.
+ * Опыт удачного цикла с 4.2.0 - [com.sperance.exileforge.core.model.crafts.JobView.experience] по кривой сервера, не поле работы.
  */
 @Composable internal fun levelLine(crafts: Crafts, work: WorkView, offset: Long): String? {
     val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession } ?: return null

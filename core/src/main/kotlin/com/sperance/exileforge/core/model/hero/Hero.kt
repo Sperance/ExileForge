@@ -227,7 +227,12 @@ object ServerClock {
     val title: String = "",
     /** Удалён модерацией в корзину (3.88.5, server 1.80.8): виден до очистки, играть им нельзя - санкция в [com.sperance.exileforge.core.session.Session.sanctions]. */
     val deleted: Boolean = false,
-)
+    /** Когда герой создан (4.2.0): время сервера в UTC, как документ его хранит; пусто - сервер не прислал. */
+    val createdAt: String = "",
+) {
+    /** [createdAt] в мс эпохи; null - не прочитать. */
+    val createdAtMs: Long? get() = runCatching { java.time.LocalDateTime.parse(createdAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull()
+}
 
 /** The hero's statistics (server 1.49.0): key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
 @kotlinx.serialization.Serializable data class HeroStatsView(val values: Map<String, Long> = emptyMap())

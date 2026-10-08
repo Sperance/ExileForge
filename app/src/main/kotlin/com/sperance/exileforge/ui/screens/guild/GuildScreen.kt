@@ -19,6 +19,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildInviteView
@@ -170,7 +171,10 @@ private fun joinBlock(game: GameUi, card: GuildCard, waiting: Boolean): String? 
     else -> null
 }
 
-/** One guild of the list: arms, name, faction and level, the roll and the way in; the button asks or joins by the guild's mode. */
+/**
+ * One guild of the list: arms, name, faction and level, the roll and the way in; the button asks or joins by the guild's mode.
+ * Заявка (4.2.0) называет цену вступления `application.price` от уровня героя: золото спишется, когда заявку примут.
+ */
 @Composable private fun GuildCardRow(game: GameUi, card: GuildCard, blocked: String?, onJoin: () -> Unit) {
     ForgePanel(accent = guildColor(card.color)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -184,9 +188,17 @@ private fun joinBlock(game: GameUi, card: GuildCard, waiting: Boolean): String? 
         if (blocked != null) {
             MutedText(blocked)
         } else {
+            val price = game.index?.guilds?.application?.price?.of(game.heroLevel) ?: 0L
             ForgeOutlinedButton(enabled = !game.busy, onClick = onJoin, modifier = Modifier.fillMaxWidth()) {
-                Text(if (card.mode == GuildMode.OPEN) ui("guild.join") else ui("guild.apply"))
+                Text(
+                    when {
+                        card.mode == GuildMode.OPEN -> ui("guild.join")
+                        price > 0 -> ui("guild.apply_for", number(price.toDouble()))
+                        else -> ui("guild.apply")
+                    },
+                )
             }
+            if (card.mode != GuildMode.OPEN && price > 0) MutedText(ui("guild.apply_note"))
         }
     }
 }

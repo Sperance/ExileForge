@@ -27,7 +27,9 @@ import com.sperance.exileforge.rules.text.NameCharset
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.quests.weekText
 import com.sperance.exileforge.ui.theme.*
+import java.util.concurrent.TimeUnit
 
 /** What the founding form hands over: name, tag, faction, emblem, colour, mode and the level to join. */
 internal typealias Founding = (String, String, String, String, String, GuildMode, Int) -> Unit
@@ -50,8 +52,11 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var minLevel by remember { mutableStateOf("1") }
     val money = game.hero?.money
     val price = rules.create.price.of(game.heroLevel)
+    // Возраст героя (4.2.0): с создания должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат
+    val readyAt = game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) }
     val refusal = when {
-        game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
+        !game.isTester && game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
+        !game.isTester && readyAt != null && readyAt > System.currentTimeMillis() -> ui("guild.found_age", rules.create.heroDays, weekText(readyAt))
         money != null && money < price -> ui("guild.found_gold", number(price.toDouble()))
         name.trim().length !in rules.nameLength -> ui("guild.found_name", rules.nameLength.first, rules.nameLength.last)
         tag.length !in rules.tagLength -> ui("guild.found_tag", rules.tagLength.first, rules.tagLength.last)

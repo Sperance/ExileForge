@@ -117,7 +117,12 @@ import com.sperance.exileforge.ui.theme.*
                 }
                 PropertyRow(ui("guild.stash_places"), "${shown.size} / ${stash.tabSize}", com.sperance.exileforge.core.display.Glyph.ITEM)
                 PropertyRow(ui("guild.stash_rank"), ranks.getOrNull(minRank)?.code?.let(GuildText::rank).orEmpty(), com.sperance.exileforge.core.display.Glyph.CHARACTER)
-                Text(if (stash.takesLeft < 0) ui("guild.stash_takes_free") else ui("guild.stash_takes", stash.takesLeft), color = Muted, style = MaterialTheme.typography.bodySmall)
+                // Точные цифры роли (4.2.0): участник и офицер - «N/M» на сегодня, глава - без ограничений
+                Text(
+                    if (stash.takesPerDay < 0) ui("guild.stash_takes_free") else ui("guild.stash_takes", stash.takesLeft.coerceAtLeast(0), stash.takesPerDay),
+                    color = Muted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 if (me?.role == GuildRole.LEADER && ranks.isNotEmpty()) {
                     Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !game.busy) {
                         vm.tabRank(tab, it.toInt())

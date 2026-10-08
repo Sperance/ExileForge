@@ -107,13 +107,17 @@ val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
 /** A stash tab: the rank (an index of the rules' ranks) a member needs to take from it. */
 @Serializable data class GuildStashTab(val minRank: Int = 0)
 
-/** The guild stash as a member sees it: its things, its tabs, places a tab and the takes left today (-1 — no count). */
+/**
+ * The guild stash as a member sees it: its things, its tabs, places a tab and the takes left today (-1 — no count);
+ * [takesPerDay] (4.2.0) - дневной лимит взятий роли героя (`guilds.json` → `stash.roles`), -1 - без лимита (глава).
+ */
 @Serializable data class GuildStashView(
     val entries: List<GuildStashEntry> = emptyList(),
     val tabs: List<GuildStashTab> = emptyList(),
     val tabSize: Int = 0,
     val takesLeft: Int = 0,
     val money: Long = 0,
+    val takesPerDay: Int = -1,
 )
 
 /** A contribution landed: the guild after it, the hero's row and the gold the hero has left. */

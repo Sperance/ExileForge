@@ -505,6 +505,21 @@ private const val ROW = 58
                 Text(ui(if (hud.met) "rift.champion_met" else "rift.champion_failed"), color = if (hud.met) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
             }
         }
+        // Досье стража перед боем, с живым портретом: «В бой» начинает бой
+        val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
+        val boss = fight?.boss
+        var seen by remember(arena) { mutableStateOf(false) }
+        if (fight != null && boss != null && !seen && hud.kind == RiftNodeKind.GUARDIAN) {
+            fight.foes.firstOrNull { it.index == boss.index }?.let { foe ->
+                BossDossier(
+                    game, foe.monster, hud.level, foe.maxLife.toDouble(), boss.phase, boss.marks, loc("rift.node.${hud.kind.name}.name"),
+                    fight.heroBody, arena.combat, odds = { null }, record = { model.bossRecord(foe.monster.code.value) },
+                ) {
+                    seen = true
+                    model.riftCommand(RunCommand.Begin)
+                }
+            }
+        }
         if (hud.phase != TrialPhase.FIGHT) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator(color = RiftColors.Rift) }
     }
 }

@@ -106,8 +106,9 @@ internal fun BossDossier(
     ) {
         Text(caption.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         val shape = RoundedCornerShape(14.dp)
+        val clock = com.sperance.exileforge.ui.screens.expedition.scene.portraitClock(boss.code.value)
         Canvas(Modifier.fillMaxWidth().height(170.dp).clip(shape).background(Color(0xFF1A0F0E)).border(1.dp, Color(0xFF4A2A24), shape)) {
-            Portraits.monster(this, boss.code.value, boss.form, rarityTint(boss.rarity), 0f)
+            Portraits.monster(this, boss.code.value, boss.form, rarityTint(boss.rarity), clock)
         }
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(name, color = rarityTint(boss.rarity), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)

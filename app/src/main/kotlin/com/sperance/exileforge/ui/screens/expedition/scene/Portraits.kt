@@ -108,7 +108,10 @@ object Portraits {
     /** A monster's bust: its own portrait, then its form's, then the client's own drawing of the form. */
     fun monster(scope: DrawScope, code: String, form: String, accent: Color, time: Float, wash: Color? = null, washAmount: Float = 0f, flash: Float = 0f) = with(scope) {
         monsterPortrait(code, form)?.let {
-            drawPortrait(it, sin(time * 1.2f + 1f) * size.height * .006f)
+            val lift = sin(time * 1.2f + 1f) * size.height * .006f
+            drawPortrait(it, lift)
+            // Стражи Разлома (3.96.1) - живые: слои анимации поверх портрета
+            RiftPortraits.draw(scope, code, time, lift)
             return@with finish(scope, wash, washAmount, flash)
         }
         val w = size.width

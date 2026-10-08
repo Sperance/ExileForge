@@ -112,8 +112,11 @@ sealed interface RunCommand {
     /** Takes the hoard of the depths cleared and leaves the Abyss. */
     data object TakeHoard : RunCommand
 
-    /** Stops the autorun: the run goes on by hand from where it stands. */
-    data object StopAuto : RunCommand
+    /**
+     * «Завершить» автопроход (3.95.2): идущий бой доигрывается, затем заход кончается, как уходом порталом, - с тем, что уже
+     * собрано. Ручной зачистки после автопрохода нет.
+     */
+    data object FinishAuto : RunCommand
 
     /**
      * The server answered the journal up to [applied] (server 1.30.0): what each accepted event brought, by its

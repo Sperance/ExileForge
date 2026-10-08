@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.EffectView
+import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.core.campaign.combat.FlaskView
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.HeroPools
@@ -144,6 +145,12 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
             }
 
             AutoStep.Exit -> exit()
+
+            AutoStep.Leave -> {
+                autopilot = null
+                leave()
+                return
+            }
         }
     }
 }
@@ -151,6 +158,7 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 /** Mana back on the road and the draughts still running, over [dt] seconds off the fight. */
 internal fun ExpeditionRun.recover(dt: Double) {
     mana = (mana + hero.manaRegen(rules.mana) * dt).coerceAtMost(manaCap())
+    shield = EnergyShield.recovered(hero, rules, shield, seconds - hitAt, dt)
     if (flaskLeft.any { it > 0 }) {
         val before = flaskLeft.map { it > 0 }
         flaskLeft.forEachIndexed { i, left ->

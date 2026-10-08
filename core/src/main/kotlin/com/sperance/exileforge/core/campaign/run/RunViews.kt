@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.campaign.AbyssDepth
 import com.sperance.exileforge.core.campaign.ChargeView
 import com.sperance.exileforge.core.campaign.DeathHit
 import com.sperance.exileforge.core.campaign.FoeWindow
+import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.combat.Action
@@ -300,6 +301,8 @@ data class RunHud(
     val cracksLeft: Int = 0,
     /** The guardian is slain and not yet back. */
     val bossDown: Boolean = false,
+    /** Секунды до возвращения отдыхающего стража (3.95.2); null - он не отдыхает: стоит или повержен в этом заходе. */
+    val guardianRest: Int? = null,
     /** The autorun under way, and what it has gathered (3.2.0). */
     val auto: AutoHud? = null,
     val autoReward: Reward? = null,
@@ -320,7 +323,13 @@ data class RunHud(
     val opening: Float? = null,
     /** Экран-вызов перед стражем (3.92.0); null - его нет. */
     val challenge: ChallengeView? = null,
-)
+) {
+    /**
+     * Итог ведёт обратно на карту под зоной (3.95.2): зона Ваал, из которой вышли живыми. Гибель в зоне заканчивает весь заход -
+     * по фазе этого не понять: отчёт о гибели уже закрыт («Дальше» переводит DEAD в LEFT), а конец захода остаётся `FELL`.
+     */
+    val returnsToMap: Boolean get() = vaal && tally.end != MapEnd.FELL
+}
 
 /** Страж на экране-вызове (3.92.0): его ролл, уровень, полное здоровье, шаблон фаз с порогами; [vaal] - страж Ваал-зоны. */
 data class ChallengeView(

@@ -83,8 +83,7 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     val regenerated = min(me.body.maxLife, me.life + (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt)
     if (me === heroFighter) regenLogged += regenerated - me.life
     me.life = regenerated
-    val recharge = if (time - me.lastHit >= rules.shield.rechargeDelay / me.body.rechargeStart) me.body.maxShield * rules.shield.rechargePerSecond / 100 * me.body.shieldRecharge else 0.0
-    me.shield = min(me.body.maxShield, me.shield + ((me.body.shieldRegen + me.body.maxShield * me.body.shieldRegenShare) * me.body.recoveryRate + recharge) * dt)
+    me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
     me.mana = min(manaCap(me), me.mana + me.body.manaRegen(rules.mana) * dt)
     if (me === heroFighter) {
         recoveries.forEach { draught ->
@@ -370,7 +369,7 @@ private fun Battle.wound(me: Fighter, amount: Double, chaos: Boolean) {
         me.barrier -= soaked
         rest -= soaked
     }
-    val absorbed = if (chaos) 0.0 else min(me.shield, rest)
+    val absorbed = EnergyShield.absorbed(me.shield, rest, chaos = if (chaos) rest else 0.0)
     me.shield -= absorbed
     me.life = max(0.0, me.life - (rest - absorbed))
 }

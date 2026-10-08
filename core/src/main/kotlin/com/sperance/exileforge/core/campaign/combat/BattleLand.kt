@@ -33,7 +33,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
     }
     val chaos = if (dealt > 0) (taken[DamageType.CHAOS] ?: 0.0) * rest / dealt else 0.0
     val shielded = rest - chaos
-    val absorbed = min(target.shield, shielded)
+    val absorbed = EnergyShield.absorbed(target.shield, rest, chaos)
     target.shield -= absorbed
     val manaBefore = target.mana
     val bound = shielded - absorbed + chaos

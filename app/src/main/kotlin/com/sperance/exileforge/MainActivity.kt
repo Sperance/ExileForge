@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.presentation.app.NetworkWatch
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.ForgeApp
 import com.sperance.exileforge.ui.theme.ForgeTheme
@@ -21,6 +22,9 @@ class MainActivity : ComponentActivity() {
     /** Updates from GitHub Releases (3.72.0): checked against the server the game model is connected to. */
     private val updates: UpdateViewModel by viewModel { parametersOf(shell.newerServer, shell.confused) }
 
+    /** Сеть устройства (3.95.2): вернувшаяся будит связь сразу. */
+    private val network by lazy { NetworkWatch(applicationContext, shell::networkBack) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -31,6 +35,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         shell.reconnect()
+        network.start()
     }
 
     /**
@@ -38,6 +43,7 @@ class MainActivity : ComponentActivity() {
      * The moment is noted, so a long absence refreshes the screen on return.
      */
     override fun onStop() {
+        network.stop()
         shell.away()
         shell.flushRun()
         super.onStop()

@@ -73,16 +73,16 @@ internal enum class SettingsPage(val title: String) {
  * ones, the fight, the interface, the vibration — with its switch in its row; the developers' tools at the foot for a
  * tester or an administrator only. «Back» returns to the tab the settings were opened over.
  */
-@Composable internal fun SettingsScreen(logs: List<RequestLog> = emptyList()) {
+@Composable internal fun SettingsScreen(direct: String? = null, logs: List<RequestLog> = emptyList()) {
     val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
-    // Страница, открытая прямо с экрана «Аккаунт» (3.94.0): «Назад» с неё закрывает настройки целиком
-    val direct by rememberSaveable { mutableStateOf(shell.takeSettingsPage()?.takeIf { name -> SettingsPage.entries.any { it.name == name } }) }
-    var page by rememberSaveable { mutableStateOf<SettingsPage?>(direct?.let { SettingsPage.valueOf(it) }) }
+    // Страница, открытая прямо с экрана «Аккаунт» (3.94.0), приходит маршрутом: «Назад» с неё закрывает настройки целиком
+    val opened = remember(direct) { SettingsPage.entries.firstOrNull { it.name == direct } }
+    var page by rememberSaveable(direct) { mutableStateOf(opened) }
     val open = page
     Column(Modifier.fillMaxSize()) {
-        BackRow(ui(if (open == null || direct != null) "common.back" else "settings.title")) { if (open == null || direct != null) shell.closeSettings() else page = null }
+        BackRow(ui(if (open == null || opened != null) "common.back" else "settings.title")) { if (open == null || opened != null) shell.closeSettings() else page = null }
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),

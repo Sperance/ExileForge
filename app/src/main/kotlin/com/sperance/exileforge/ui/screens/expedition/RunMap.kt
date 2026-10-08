@@ -195,7 +195,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
                 Counter(ui("map.fountains_left", hud.fountainsLeft), ShieldCyan)
                 if (hud.crystalsLeft > 0) Counter(ui("map.crystals_left", hud.crystalsLeft), CrystalViolet)
                 if (hud.cracksLeft > 0) Counter(ui("map.cracks_left", hud.cracksLeft), AbyssGlow)
-                Counter(ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), if (hud.sealed) LifeRed else Vital)
+                GuardianLine.of(hud).let { Counter(it.text, it.color) }
                 Counter(ui("map.explored", explored * 100 / floorCells), Parchment)
             }
             Engraved(ui("map.legend"))

@@ -141,7 +141,11 @@ sealed interface Route : NavKey {
         override val tab get() = TAB_ACCOUNT
     }
 
-    @Serializable data object Settings : Route {
+    /**
+     * Настройки; [page] (3.95.2) - страница, открытая сразу с экрана «Аккаунт». Страница - часть маршрута, а не разовое поле
+     * модели: у каждой свой ключ сохранённого состояния, и быстрый повторный вход не поднимает прежнюю страницу.
+     */
+    @Serializable data class Settings(val page: String? = null) : Route {
         override val root: Route? get() = null
         override val tab get() = TAB_SETTINGS
     }
@@ -156,7 +160,7 @@ sealed interface Route : NavKey {
     }
 
     companion object {
-        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Account, Settings, Admin, Redemption)
+        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Account, Settings(), Admin, Redemption)
 
         /** Экран по прежнему номеру вкладки; неизвестный номер - герой. */
         fun ofTab(tab: Int): Route = GAME.firstOrNull { it.tab == tab } ?: Hero

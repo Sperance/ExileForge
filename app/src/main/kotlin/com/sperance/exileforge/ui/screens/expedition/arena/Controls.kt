@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.expedition.AutoFinish
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.ceil
 
@@ -21,7 +22,8 @@ import kotlin.math.ceil
  * the speed and, on the pause (3.95.0), «Сдаться». Under an autorun (3.77.0) its wave reads above the row and its stop joins it, so
  * nothing floats over the speed.
  */
-@Composable internal fun Controls(fight: FightHud, auto: AutoHud?, onCommand: (RunCommand) -> Unit) {
+@Composable internal fun Controls(fight: FightHud, hud: RunHud, onCommand: (RunCommand) -> Unit) {
+    val auto = hud.auto
     val live = fight.outcome == null
     fight.interlude?.takeIf { !fight.started }?.let {
         StageBreak(fight, it, onCommand)
@@ -63,8 +65,10 @@ import kotlin.math.ceil
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
         }
         if (auto != null) {
-            ForgeOutlinedButton(onClick = { onCommand(RunCommand.StopAuto) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Text(ui("auto.stop"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+            AutoFinish(hud, auto, onFinish = { onCommand(RunCommand.FinishAuto) }) { enabled, label, onClick ->
+                ForgeOutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                    Text(label, color = LifeRed, style = MaterialTheme.typography.labelMedium)
+                }
             }
         }
     }

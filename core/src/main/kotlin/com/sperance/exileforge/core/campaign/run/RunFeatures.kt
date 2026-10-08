@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign.run
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.combat.DamageType
+import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FeatureStat
 import com.sperance.exileforge.rules.content.MapStat
@@ -20,8 +21,8 @@ import com.sperance.exileforge.rules.run.RunEvent
 /** Сбор узла [spot]: прошло [elapsed] секунд из его [MapFeature.Node.seconds]. */
 internal class Channel(val spot: NodeSpot, var elapsed: Double = 0.0)
 
-/** Горение или яд ловушки на герое: [perSecond] здоровья в секунду ещё [left] секунд. */
-internal class Burn(val perSecond: Double, var left: Double)
+/** Горение или яд ловушки на герое: [perSecond] урона в секунду ещё [left] секунд; [chaos] (3.95.2) - мимо энергощита. */
+internal class Burn(val perSecond: Double, var left: Double, val chaos: Boolean = false)
 
 /** Удар ловушки, как его пишет полоса карты: вид ловушки и сколько здоровья он снял. */
 data class HazardView(val trap: String, val damage: Int)
@@ -34,6 +35,7 @@ internal fun ExpeditionRun.feature(action: FeatureAction) {
     when (action) {
         is FeatureAction.Offer -> offer = action.spot
         is FeatureAction.Trigger -> action.spot.resolve(this, action.choice)
+        is FeatureAction.Spring -> spring(action.spot.feature as MapFeature.Trap)
     }
 }
 
@@ -153,25 +155,31 @@ internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
     val share = feature.power * (1 - ward / 100).coerceAtLeast(0.0)
     val raw = hero.maxLife * trap.hit / 100 * share
     val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
-    if (trap.dot > 0 && share > 0) burns += Burn(hero.maxLife * trap.dot / 100 * share * (1 - hero.resist(type)) * hero.damageTaken(type), trap.seconds)
+    val chaos = type == DamageType.CHAOS
+    if (trap.dot > 0 && share > 0) burns += Burn(hero.maxLife * trap.dot / 100 * share * (1 - hero.resist(type)) * hero.damageTaken(type), trap.seconds, chaos)
     hazard = HazardView(trap.code, (dealt * hero.damageTaken(type)).toInt())
     hazardLeft = traps?.shown ?: 0.0
-    hurt(dealt * hero.damageTaken(type))
+    hurt(dealt * hero.damageTaken(type), chaos)
 }
 
 /** Горение и яд ловушек на [dt] секунд дороги. */
 internal fun ExpeditionRun.burn(dt: Double) {
     if (burns.isEmpty()) return
-    val damage = burns.sumOf { it.perSecond * minOf(dt, it.left) }
+    burns.partition { it.chaos }.let { (chaos, plain) ->
+        hurt(plain.sumOf { it.perSecond * minOf(dt, it.left) }, chaos = false)
+        hurt(chaos.sumOf { it.perSecond * minOf(dt, it.left) }, chaos = true)
+    }
     burns.forEach { it.left -= dt }
     burns.removeAll { it.left <= 0 }
-    hurt(damage)
 }
 
-/** Урон вне боя: здоровье падает, ноль - гибель на карте. */
-private fun ExpeditionRun.hurt(damage: Double) {
+/** Урон вне боя (3.95.2 - через щит, как в бою; [chaos] мимо него): ноль здоровья - гибель на карте. */
+private fun ExpeditionRun.hurt(damage: Double, chaos: Boolean) {
     if (damage <= 0 || phase != RunPhase.MAP) return
-    life = (life - damage).coerceAtLeast(0.0)
+    val absorbed = EnergyShield.absorbed(shield, damage, chaos = if (chaos) damage else 0.0)
+    shield -= absorbed
+    hitAt = seconds
+    life = (life - (damage - absorbed)).coerceAtLeast(0.0)
     if (life <= 0) fallOnMap()
 }
 

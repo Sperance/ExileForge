@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.campaign.run.NodeSpot
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.rules.run.FeatureKind
+import kotlin.math.abs
 import kotlin.math.sin
 
 // ==================== Объекты карты (3.90.0, сервер 1.81.3) ====================
@@ -23,7 +24,7 @@ internal fun ScenePainter.featureParts(spot: FeatureSpot, glow: (Int, Int) -> Fl
 
     is NodeSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawNode(spot.cell.x + .5, spot.cell.y + .5, spot.node.profession, spot.spent, glow(spot.cell.x, spot.cell.y)) })
 
-    is TrapSpot -> listOf(depth(spot.cell.x, spot.cell.y) - .4 to { drawTrap(spot.cell.x + .5, spot.cell.y + .5, spot.trap.element, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+    is TrapSpot -> listOf(depth(spot.cell.x, spot.cell.y) - .4 to { drawTrap(spot, glow(spot.cell.x, spot.cell.y)) })
 
     is RoomSpot -> buildList {
         val (ex, ey) = spot.entrance
@@ -126,29 +127,59 @@ internal fun ScenePainter.drawNode(x: Double, y: Double, profession: String, spe
     }
 }
 
-/** Ловушка, замеченная светом: шипы стали, решётка огня или лужа яда; сработавшая - тусклая. */
-internal fun ScenePainter.drawTrap(x: Double, y: Double, element: String, spent: Boolean, light: Float) {
+/**
+ * Ловушка, замеченная светом (3.95.2 - крупнее и опаснее с виду): тёмная плита, знак стихии - шипы стали, решётка огня, лужа
+ * яда - и ореол угрозы, что дышит, пока она взведена. Сработавшая вспыхивает, затем тускнеет и разгорается к новому взводу.
+ */
+internal fun ScenePainter.drawTrap(spot: TrapSpot, light: Float) {
+    val x = spot.cell.x + .5
+    val y = spot.cell.y + .5
     val cx = isoX(x, y)
     val cy = isoY(x, y)
-    val hue = when (element) {
+    val hue = when (spot.trap.element) {
         "FIRE" -> Color(0xFFFF7A30)
         "CHAOS" -> Color(0xFF7CD050)
-        else -> Color(0xFFB9C2CF)
+        else -> Color(0xFFE0E6EE)
     }
-    val alpha = (if (spent) .35f else .9f) * light
-    pen.color = Color(0xFF15120F).copy(alpha = .6f * light)
-    diamond(cx, cy, unit * .4f, unit * .2f)
+    // Доля взвода: 1 - взведена, к нулю - только что сработала
+    val charge = when {
+        spot.rearm > 0 -> (1 - spot.rearming / spot.rearm).toFloat().coerceIn(0f, 1f)
+        spot.armed -> 1f
+        else -> 0f
+    }
+    val pulse = .5f + .5f * sin(time * 3f + x.toFloat())
+    if (spot.armed) {
+        pen.color = hue.copy(alpha = (.18f + .22f * pulse) * light)
+        diamond(cx, cy, unit * (.62f + .06f * pulse), unit * (.31f + .03f * pulse))
+    }
+    pen.color = Color(0xFF15120F).copy(alpha = .75f * light)
+    diamond(cx, cy, unit * .5f, unit * .25f)
+    pen.color = Color(0xFF6A2A20).copy(alpha = (.35f + .4f * charge) * light)
+    pen.ring(cx - unit * .5f, cy - unit * .25f, unit, unit * .5f, unit * .03f)
+    val alpha = (.3f + .65f * charge) * light
     pen.color = hue.copy(alpha = alpha)
-    if (element == "PHYSICAL") {
-        for (i in -1..1) pen.triangle(cx + i * unit * .16f - unit * .05f, cy, cx + i * unit * .16f + unit * .05f, cy, cx + i * unit * .16f, cy + unit * .22f)
-    } else {
-        pen.ring(cx - unit * .28f, cy - unit * .1f, unit * .56f, unit * .2f, unit * .04f)
-        if (!spent) {
-            pen.color = hue.copy(alpha = (.25f + .2f * sin(time * 4f + x.toFloat())) * light)
-            pen.circle(cx, cy + unit * .1f, unit * .25f)
+    if (spot.trap.element == "PHYSICAL") {
+        for (i in -2..2) {
+            val at = cx + i * unit * .14f
+            val tall = unit * (.3f - abs(i) * .04f) * (.4f + .6f * charge)
+            pen.triangle(at - unit * .055f, cy, at + unit * .055f, cy, at, cy + tall)
         }
+    } else {
+        pen.ring(cx - unit * .36f, cy - unit * .13f, unit * .72f, unit * .26f, unit * .05f)
+        pen.color = hue.copy(alpha = (.2f + .3f * pulse) * charge * light)
+        pen.circle(cx, cy + unit * .12f, unit * .3f)
+    }
+    // Вспышка удара: первые доли секунды после срабатывания
+    val since = if (spot.rearm > 0) spot.rearm - spot.rearming else Double.MAX_VALUE
+    if (since < FLASH_SECONDS) {
+        val fade = (1 - since / FLASH_SECONDS).toFloat()
+        pen.color = hue.copy(alpha = .55f * fade * light)
+        pen.circle(cx, cy + unit * .2f, unit * (.4f + .5f * (1 - fade)))
     }
 }
+
+/** Сколько секунд горит вспышка сработавшей ловушки. */
+private const val FLASH_SECONDS = .45
 
 /** Вход в комнату на стене: тайная - светлая трещина, что ярче, пока герой стоит рядом; запертая - окованная дверь. */
 internal fun ScenePainter.drawEntrance(x: Double, y: Double, door: Boolean, progress: Float, light: Float) {

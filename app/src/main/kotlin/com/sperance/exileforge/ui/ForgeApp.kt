@@ -242,7 +242,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Auth> { AuthScreen() }
                 entry<Route.Characters> { CharacterSelectScreen() }
                 entry<Route.Account> { ServerScreen() }
-                entry<Route.Settings> { SettingsScreen(logs) }
+                entry<Route.Settings> { key -> SettingsScreen(key.page, logs) }
                 entry<Route.Hero> { HeroScreen() }
                 entry<Route.Tree> { ProgressPlaceScreen(ProgressPlace.TREE) }
                 entry<Route.Grimoire> { ProgressPlaceScreen(ProgressPlace.GRIMOIRE) }

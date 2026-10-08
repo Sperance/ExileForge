@@ -134,7 +134,7 @@ import kotlin.math.roundToInt
         if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazard)
         when (hud.phase) {
             RunPhase.MAP -> if (ribbon != null) {
-                AutoRibbon(hud, ribbon) { model.runCommand(RunCommand.StopAuto) }
+                AutoRibbon(run, hud, ribbon) { model.runCommand(RunCommand.FinishAuto) }
             } else {
                 // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
                 if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
@@ -171,7 +171,7 @@ import kotlin.math.roundToInt
                         confirm = ui("expedition.leave"),
                         danger = true,
                         subtitle = mapTitle(hud.mapCode),
-                        ledger = listOf(LedgerLine(ui("expedition.leave_left"), ui(if (hud.sealed) "expedition.boss_alive" else "expedition.boss_slain"), Tone.SPEND)),
+                        ledger = listOf(LedgerLine(ui("expedition.leave_left"), GuardianLine.of(hud).text, Tone.SPEND)),
                         note = ui("expedition.leave_note"),
                         onDismiss = { leaving = false },
                     ) { model.runCommand(RunCommand.Leave) }
@@ -251,18 +251,8 @@ import kotlin.math.roundToInt
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 2,
                 )
-                Text(
-                    ui(
-                        when {
-                            zone && hud.sealed -> "vaal.guardian_alive"
-                            zone -> "vaal.guardian_slain"
-                            hud.sealed -> "expedition.boss_alive"
-                            else -> "expedition.boss_slain"
-                        },
-                    ),
-                    color = if (hud.sealed) LifeRed else Vital,
-                    style = MaterialTheme.typography.labelMedium,
-                )
+                val guardian = GuardianLine.of(hud, zone)
+                Text(guardian.text, color = guardian.color, style = MaterialTheme.typography.labelMedium)
                 // Печать стража (3.93.0): сколько редких пало из нужных
                 run.seal?.takeIf { !it.open }?.let { seal ->
                     Text(ui("expedition.seal_progress", seal.killed, seal.need), color = Color(0xFFC9A0FF), style = MaterialTheme.typography.labelSmall)
@@ -400,9 +390,9 @@ internal const val FOUNTAIN_TAP = .9
 
 /**
  * Лента боёв автопрохода (3.94.0) - между боями вместо карты: зона, волна из скольких полосой, открытые сундуки и павшие,
- * жизнь героя (между боями она не восполняется) и «Остановить», что возвращает заход на карту в руки игрока.
+ * жизнь героя (между боями она не восполняется) и «Завершить» (3.95.2) - уход с собранным, после вопроса.
  */
-@Composable internal fun AutoRibbon(hud: RunHud, auto: AutoHud, onStop: () -> Unit) {
+@Composable internal fun AutoRibbon(run: ExpeditionRun, hud: RunHud, auto: AutoHud, onFinish: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Panel, Ink))).systemBarsPadding().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(ui("auto.title"), color = Muted, style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp)
@@ -416,8 +406,41 @@ internal const val FOUNTAIN_TAP = .9
             )
             Text(ui("auto.tally", auto.chests, hud.kills), color = Muted, style = MaterialTheme.typography.bodyMedium)
             Text(ui("auto.life", hud.heroLife, hud.heroMaxLife), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-            ForgeTextButton(onClick = onStop) { Text(ui("auto.stop"), color = LifeRed) }
+            AutoFinish(hud, auto, hold = run, onFinish = onFinish) { enabled, label, onClick ->
+                ForgeTextButton(onClick = onClick, enabled = enabled) { Text(label, color = LifeRed) }
+            }
         }
+    }
+}
+
+/**
+ * «Завершить» автопробег (3.95.2) с вопросом: карта потрачена, и уход оставляет непройденные волны и стража - лист называет
+ * их. Завершённый доигрывает идущий бой, кнопка гаснет с причиной. [hold] - заход, что стоит, пока лист открыт.
+ */
+@Composable internal fun AutoFinish(
+    hud: RunHud,
+    auto: AutoHud,
+    hold: ExpeditionRun? = null,
+    onFinish: () -> Unit,
+    trigger: @Composable (enabled: Boolean, label: String, onClick: () -> Unit) -> Unit,
+) {
+    var asking by remember { mutableStateOf(false) }
+    trigger(!auto.finishing, ui(if (auto.finishing) "auto.finishing" else "auto.finish")) { asking = true }
+    if (!asking) return
+    hold?.let { HoldsRun(it) }
+    ConfirmSheet(
+        title = ui("auto.finish_q"),
+        confirm = ui("auto.finish"),
+        danger = true,
+        ledger = listOf(
+            LedgerLine(ui("auto.finish_waves"), ui("auto.wave_short", auto.wave, auto.waves)),
+            LedgerLine(ui("auto.finish_guardian"), GuardianLine.of(hud).text, if (hud.sealed) Tone.SPEND else Tone.PLAIN),
+        ),
+        note = ui("auto.finish_note"),
+        onDismiss = { asking = false },
+    ) {
+        asking = false
+        onFinish()
     }
 }
 

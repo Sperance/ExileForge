@@ -125,13 +125,9 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
     when (command) {
         RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
 
-        RunCommand.StopAuto -> autopilot = null
+        RunCommand.FinishAuto -> autopilot?.finish()
 
-        // Вне боя с карты можно уйти всегда (3.88.9): бой идёт до конца, а карта - нет.
-        RunCommand.Leave -> if (phase == RunPhase.MAP || phase == RunPhase.DEAD || phase == RunPhase.CLEARED) {
-            if (phase == RunPhase.MAP) end = MapEnd.LEFT
-            phase = RunPhase.LEFT
-        }
+        RunCommand.Leave -> leave()
 
         RunCommand.Begin -> if (fight != null) {
             started = true
@@ -295,4 +291,11 @@ internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     rebody()
     life = (life + draught.life).coerceAtMost(hero.maxLife)
     mana = (mana + draught.mana).coerceAtMost(manaCap())
+}
+
+/** Уход с карты (3.88.9): вне боя - всегда; бой идёт до конца, а карта - нет. С карты - концом `LEFT`, с итога - просто закрыть его. */
+internal fun ExpeditionRun.leave() {
+    if (phase != RunPhase.MAP && phase != RunPhase.DEAD && phase != RunPhase.CLEARED) return
+    if (phase == RunPhase.MAP) end = MapEnd.LEFT
+    phase = RunPhase.LEFT
 }

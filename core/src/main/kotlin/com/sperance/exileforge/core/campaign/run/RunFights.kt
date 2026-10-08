@@ -215,6 +215,7 @@ internal fun ExpeditionRun.play(dt: Double) {
     if (battle.time < battle.duration + pace.aftermath) return
     val out = battle.pools()
     life = out.life
+    shield = hero.maxShield
     mana = out.mana
     charges = out.charges
     flaskLeft = out.flaskLeft

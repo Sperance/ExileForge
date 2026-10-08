@@ -41,6 +41,7 @@ import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.hud
 import com.sperance.exileforge.core.model.campaign.CampaignState
+import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
@@ -109,6 +110,15 @@ class ExpeditionRun(
     var run: Run = run
         internal set
 
+    /**
+     * Когда отдыхающий страж вернётся на пост (3.95.2), мс часов сервера; null - он не отдыхает. Отдых, что кончился посреди
+     * захода, ставит стража на пост: выход снова запечатан, автопроход берёт его своим последним боем.
+     */
+    internal var guardianBack: Long? = null
+
+    /** Часы сервера (3.95.2): по ним отдых стража сверяется с тем, что примет сервер. */
+    internal var clock: () -> Long = { System.currentTimeMillis() + ServerClock.offset }
+
     /** Сделки алтарей захода (3.90.0, сервер 1.81.3), сложенные по характеристике: герой и бои несут их до конца карты. */
     var pacts: Map<String, Double> = emptyMap()
         internal set
@@ -133,6 +143,15 @@ class ExpeditionRun(
     internal var challenge: MonsterAgent? = null
     internal var life = startPools?.life?.coerceIn(0.0, hero.maxLife) ?: hero.maxLife
     val heroLife: Double get() = life
+
+    /**
+     * Энергощит на карте (3.95.2): ловушки и их горение бьют сначала в него, как удары в бою, - яд и хаос мимо; он
+     * перезаряжается по тем же правилам. Бой его не наследует: каждый начинается с полного щита - и полным его оставляет.
+     */
+    internal var shield = hero.maxShield
+
+    /** Секунда захода, когда карта ранила героя в последний раз: с неё отсчитывается задержка перезарядки щита. */
+    internal var hitAt = Double.NEGATIVE_INFINITY
     internal val kit: Loadout get() = build.gear.kit
 
     /** Темп похода из контента (3.80.31): паузы боя, шаг автозабега. */
@@ -321,6 +340,7 @@ class ExpeditionRun(
             .flatMap { (_, flask) -> flask!!.draught(build.body, life, 0.0).lines }
         hero = if (lines.isEmpty()) build.body else build.body(lines)
         mana = mana.coerceIn(0.0, manaCap())
+        shield = shield.coerceIn(0.0, hero.maxShield)
         world.regear(ExpeditionWorld.heroSpeed(pace, hero.stats), ExpeditionWorld.lightRadius(pace, hero.stats, zone.light))
     }
 
@@ -336,6 +356,7 @@ class ExpeditionRun(
 
     fun update(dt: Double) {
         while (true) handle(commands.poll() ?: break)
+        if (phase == RunPhase.MAP) guardianBack?.takeIf { clock() >= it + GUARDIAN_GRACE_MS }?.let { guardianReturns() }
         if (phase != RunPhase.DEAD && phase != RunPhase.CLEARED && phase != RunPhase.LEFT) seconds += dt
         hazardLeft = (hazardLeft - dt).coerceAtLeast(0.0)
         if (hazardLeft <= 0) hazard = null
@@ -353,6 +374,13 @@ class ExpeditionRun(
             }
         }
         state.value = snapshot()
+    }
+
+    /** Отдых стража кончился (3.95.2): он снова на посту. */
+    private fun guardianReturns() {
+        guardianBack = null
+        bossDown = false
+        world.bossReturns()
     }
 
     /** One event of the journal, and the listener told. */
@@ -480,9 +508,9 @@ class ExpeditionRun(
                 world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
                 // Объекты карты (3.90.0) - после прочих: их места не сдвигают ни сундуков, ни кристаллов
-                world.placeFeatures(run.features.all, features, index.campaign.features?.traps?.reach ?: 0.0)
+                world.placeFeatures(run.features.all, features, index.campaign.features?.traps)
             }
-            val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, if (vaal) run.seed xor VAAL_SALT else run.seed, bossStands = world.boss?.alive == true) }
+            val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, if (vaal) run.seed xor VAAL_SALT else run.seed) }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet,
@@ -493,10 +521,14 @@ class ExpeditionRun(
                 // Стражи сокровищ (3.90.0, строка карты) - у комнат и узлов, тоже до павших
                 if (!vaal) it.guard()
                 world.restore(killed, Run.PACK_SLOTS)
+                if (bossDown) it.guardianBack = campaign.bosses[location.code.value]
             }
         }
 
         internal const val VAAL_SALT = 0x5661616C5A6F6E65L
+
+        /** Запас к концу отдыха стража, мс: часы клиента и сервера сверены с точностью до задержки ответа. */
+        internal const val GUARDIAN_GRACE_MS = 2_000L
     }
 }
 

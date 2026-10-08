@@ -264,6 +264,9 @@ private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: ()
                 val marks = steps.map { it.at }.distinct().joinToString("/") { "${it.toInt()}" }
                 LoreChip(ui("challenge.phase", com.sperance.exileforge.core.display.phaseTitle(code), marks), Elder) { lore?.invoke(Lore.Phase(code, name)) }
             }
+            // Чем он бьёт и что это значит (3.95.2): хаос и яд идут мимо энергощита - лист говорит это до боя
+            val terms = remember(body) { com.sperance.exileforge.core.display.Term.ofStats(body.stats.filterValues { it != 0.0 }.keys) }
+            TermsBlock(terms)
         }
     }
 }

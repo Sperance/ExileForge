@@ -302,16 +302,18 @@ class SessionActions(
                 withContext(Dispatchers.IO) { http.connectionPool.evictAll() }
                 val session = sessions.state.value
                 val link = links.state.value
+                // Связь проверяется при каждом возврате (3.95.2), а не первым запросом экрана: живая по старой памяти, она
+                // могла умереть в фоне - проба коротка и не ждёт паузы повтора
+                if (session.signedIn) connectionActions.wake(now = true, verify = true)
                 when {
                     !session.signedIn -> if (session.resumable) retryResume()
 
                     commands.state.value.failure is FailureState.Offline || link.offline || stale -> {
                         commands.clearOffline()
-                        // The probe waits no longer: the link is asked again with the screen.
-                        if (link.offline || link.waiting.isNotEmpty()) connectionActions.wake(now = true)
+                        // Чтение, повисшее на сокете, умершем в фоне, заменяется новым (3.95.2): иначе новое ждало бы его таймаута
                         when (navigator.current.value.phase) {
-                            AppPhase.GAME -> read(Reads.HERO, silent = true) { heroSync.readHero() }
-                            AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterActions.readCharacters() }
+                            AppPhase.GAME -> read(Reads.HERO, restart = true, silent = true) { heroSync.readHero() }
+                            AppPhase.CHARACTERS -> read(Reads.CHARACTERS, restart = true, silent = true) { characterActions.readCharacters() }
                             AppPhase.AUTH -> Unit
                         }
                     }

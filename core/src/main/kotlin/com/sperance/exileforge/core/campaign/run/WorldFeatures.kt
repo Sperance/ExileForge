@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.rules.content.TrapKind
+import com.sperance.exileforge.rules.content.TrapRules
 import com.sperance.exileforge.rules.run.FeatureKind
 import com.sperance.exileforge.rules.run.FeatureUse
 import com.sperance.exileforge.rules.run.MapFeature
@@ -19,6 +20,9 @@ sealed interface FeatureAction {
 
     /** Объект сработал сам - ловушка, открытая стена, рычаг, сундук: выбор [choice] уходит в журнал сразу. */
     data class Trigger(override val spot: FeatureSpot, val choice: Int) : FeatureAction
+
+    /** Взведённая снова ловушка ударила (3.95.2): только урон - журнал её не пишет, награда была за первый раз. */
+    data class Spring(override val spot: TrapSpot) : FeatureAction
 }
 
 /**
@@ -104,19 +108,29 @@ class NodeSpot(feature: MapFeature.Node, cell: Cell) : OfferSpot(feature, cell) 
 
 /**
  * Ловушка (3.90.0): видна только в свете героя - больший радиус света замечает её раньше; однажды замеченная или сработавшая
- * остаётся на карте. Срабатывает раз, когда герой наступил ближе [reach] к центру клетки.
+ * остаётся на карте. Срабатывает, когда герой наступил ближе [reach] к центру клетки; первый раз - в журнал (награда за
+ * ловушку), затем (3.95.2) взводится снова через [rearm] секунд и бьёт опять - только уроном. [rearm] 0 - срабатывает раз.
  */
-class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double) : FeatureSpot(feature, cell) {
+class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, val rearm: Double = 0.0) : FeatureSpot(feature, cell) {
     val trap: TrapKind get() = (feature as MapFeature.Trap).trap
     var seen = false
         private set
+
+    /** Секунды до нового взвода; ноль - ловушка взведена. */
+    var rearming = 0.0
+        private set
+
+    /** Взведена ли: сработавшая без повторного взвода стоит разряженной до конца карты. */
+    val armed: Boolean get() = rearming <= 0 && (!spent || rearm > 0)
 
     override fun shown(world: ExpeditionWorld): Boolean = seen || spent
 
     override fun touch(world: ExpeditionWorld, dt: Double): FeatureAction? {
         if (!seen && world.lit(cell.x, cell.y)) seen = true
-        if (spent || !near(world, cell, reach)) return null
-        return FeatureAction.Trigger(this, MapFeature.TRIGGER)
+        if (rearming > 0) rearming = (rearming - dt).coerceAtLeast(0.0)
+        if (!armed || !near(world, cell, reach)) return null
+        rearming = rearm
+        return if (spent) FeatureAction.Spring(this) else FeatureAction.Trigger(this, MapFeature.TRIGGER)
     }
 
     override fun resolve(run: ExpeditionRun, choice: Int) {
@@ -182,7 +196,7 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
  * вырезаются в скале за стеной, касаясь пола только входом, так что карта остаётся связной, а комната закрыта до открытия.
  * [log] - журнал объектов, с которым герой вернулся в заход: использованное стоит использованным, открытые комнаты открыты.
  */
-fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<FeatureUse>, trapReach: Double) {
+fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<FeatureUse>, traps: TrapRules?) {
     if (features.isEmpty() || this.features.isNotEmpty()) return
     val placing = Random(seed * 2_750_159 + 71)
     val taken = (map.spawns + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + crystals.map { it.cell } + cracks.map { it.cell } + listOfNotNull(portal)).toMutableSet()
@@ -194,7 +208,7 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
     fun claim(pool: MutableList<Cell>, spacing: Double): Cell? = pool.firstOrNull { it !in taken && apart(it, spacing) }?.also { taken += it }
     features.forEach { feature ->
         val spot = when (feature) {
-            is MapFeature.Trap -> claim(anywhere, TRAP_SPACING)?.let { TrapSpot(feature, it, trapReach) }
+            is MapFeature.Trap -> claim(anywhere, TRAP_SPACING)?.let { TrapSpot(feature, it, traps?.reach ?: 0.0, traps?.rearm ?: 0.0) }
 
             is MapFeature.Room -> RoomCarver.carve(map, reach.keys, feature.room.size, placing)?.let { (entrance, chest) ->
                 val lever = if (feature.kind == FeatureKind.VAULT) claim(roomy, rules.chestSpacing) ?: return@let null else null

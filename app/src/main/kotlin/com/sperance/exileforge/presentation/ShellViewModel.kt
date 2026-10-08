@@ -120,17 +120,11 @@ class ShellViewModel(
         navigator.tab(Route.ofBuilding(building))
     }
 
-    /** Страница настроек, которую открыть сразу (3.94.0): её забирает экран настроек один раз. */
-    private var settingsPage: String? = null
-
     /** «Настройки» (3.77.0) поверх открытой вкладки; закрытие возвращает на неё. [page] (3.94.0) - сразу на свою страницу. */
     fun openSettings(page: String? = null) {
         commands.dismissMessage()
-        settingsPage = page
-        navigator.open(Route.Settings)
+        navigator.open(Route.Settings(page))
     }
-
-    fun takeSettingsPage(): String? = settingsPage.also { settingsPage = null }
 
     /** Узел дерева, на котором оно откроется (3.94.1): гнездо для самоцвета из карточки. */
     private var treeNode: String? = null
@@ -147,6 +141,9 @@ class ShellViewModel(
 
     /** Проба связи сразу (3.30.0): нажата иконка «не в сети». */
     fun retryLink() = link.wake(now = true)
+
+    /** Сеть устройства вернулась (3.95.2). */
+    fun networkBack() = link.networkBack()
 
     /** Строка в тосты с экранов (3.76.0: место, открытое уровнем). */
     fun announce(text: String) = notices.toast(text)

@@ -26,7 +26,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.run.RunHud
-import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
@@ -65,7 +64,7 @@ import kotlinx.coroutines.delay
 internal data class SummaryHead(val title: String, val hint: String, val accent: Color, val glyph: ImageVector, val done: String) {
     companion object {
         fun of(hud: RunHud): SummaryHead {
-            val back = ui(if (hud.vaal) "vaal.back" else "expedition.back_to_camp")
+            val back = ui(if (hud.returnsToMap) "vaal.back" else "expedition.back_to_camp")
             return when (hud.tally.end) {
                 MapEnd.FELL -> SummaryHead(ui("expedition.dead"), ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), LifeRed, ForgeGlyphs.Skull, back)
 
@@ -100,10 +99,10 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     val run by vm.run.collectAsStateWithLifecycle()
     // Из выигранной зоны Ваал возвращаются на карту - заход идёт, и продажи нет (3.90.4); павший в зоне (3.94.0) заканчивает
     // весь заход - он продаёт и добычу зоны, и добычу основной карты под ней.
-    val back = run?.vaal == true && hud.phase != RunPhase.DEAD
+    val back = hud.returnsToMap
     val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index, back) {
         val ids = tally.loot.equipment.mapTo(HashSet()) { it.id }
-        if (run?.vaal == true && !back) ids += vm.outerLoot()
+        if (hud.vaal && !back) ids += vm.outerLoot()
         game.sellLots(hero?.items.orEmpty().filter { it.id in ids }.mapNotNull { game.view(it) })
     }
     val marks = vm.state.collectAsStateWithLifecycle().value.saleMarks

@@ -93,9 +93,20 @@ class ExpeditionWorld(
     /** The exit does not open while its guardian lives. */
     val sealed: Boolean get() = boss?.alive == true
 
-    /** The boss was slain within its respawn: it is not on the map this run. */
+    /** The boss was slain within its respawn: it is not on the map this run - until its rest ends ([bossReturns]). */
     fun bossAbsent() {
         boss?.alive = false
+    }
+
+    /** Отдых стража кончился посреди захода (3.95.2): он встаёт на свой пост целым. */
+    fun bossReturns() {
+        val guardian = boss ?: return
+        guardian.fallen.clear()
+        guardian.x = guardian.homeX
+        guardian.y = guardian.homeY
+        guardian.targetX = guardian.homeX
+        guardian.targetY = guardian.homeY
+        guardian.alive = true
     }
 
     /** The members the server already counts as killed, by token `i*[slots]+m`: they stay down, and a pack with none standing is gone. */

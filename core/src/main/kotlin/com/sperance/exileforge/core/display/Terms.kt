@@ -26,6 +26,10 @@ enum class Term(vararg val marks: String) {
     STUN("STUN"),
     LOW_LIFE("LOW_LIFE"),
     CURSE("CURSE"),
+
+    // Защита и урон, что её обходит (3.95.2): щит принимает удары первым, хаос и яд идут мимо него
+    ENERGY_SHIELD("ENERGY_SHIELD", "SHIELD_RECHARGE", "ENERGY_REGEN", "SHIELD_OF_LIFE"),
+    CHAOS("CHAOS"),
     ;
 
     val title: String get() = ui("term.$name")

@@ -129,6 +129,13 @@ sealed interface Route : NavKey {
         override val building get() = Building.CHRONICLE
     }
 
+    /** Доска славы (4.2.0): здание Города, таблицы реестра `HallBoard`. */
+    @Serializable data object Hall : Route {
+        override val root: Route get() = City
+        override val tab get() = TAB_CITY
+        override val building get() = Building.HALL
+    }
+
     /** Найденные уникалки (3.90.2): экран над «Историей», «назад» ведёт в неё. */
     @Serializable data object Uniques : Route {
         override val root: Route get() = City
@@ -174,6 +181,7 @@ sealed interface Route : NavKey {
             Building.GUILD -> Guild
             Building.HISTORY -> History
             Building.CHRONICLE -> Chronicle
+            Building.HALL -> Hall
             null -> City
         }
     }

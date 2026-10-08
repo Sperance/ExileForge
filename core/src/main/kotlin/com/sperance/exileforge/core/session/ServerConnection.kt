@@ -40,6 +40,7 @@ object Reads {
     const val GUILD_LOG = "guild_log"
     const val QUESTS = "quests"
     const val GUILD_QUESTS = "guild_quests"
+    const val HALL = "hall"
 }
 
 /** Что сообщить сразу: вид выбирает цвет, [at] отличает два одинаковых текста. */

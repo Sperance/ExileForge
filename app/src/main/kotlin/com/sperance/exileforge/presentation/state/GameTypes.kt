@@ -37,9 +37,9 @@ enum class ForgeSection { ORBS, BENCH, ESSENCES }
 
 /**
  * The City's buildings (3.22.0): each one a screen of its own behind the square; «История» (3.90.2) - прошлое героя,
- * «Летопись» (4.0.0, прежде страница «Развития») - его деяния и титулы.
+ * «Летопись» (4.0.0, прежде страница «Развития») - его деяния и титулы, «Доска славы» (4.2.0) - таблицы сервера.
  */
-enum class Building { QUESTS, MERCHANT, AUCTION, GUILD, HISTORY, CHRONICLE }
+enum class Building { QUESTS, MERCHANT, AUCTION, GUILD, HISTORY, CHRONICLE, HALL }
 
 /** How many heroes one account may hold when the rules have not been read yet. */
 const val MAX_CHARACTERS = 3

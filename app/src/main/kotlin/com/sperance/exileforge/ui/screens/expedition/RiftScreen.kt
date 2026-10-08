@@ -41,7 +41,6 @@ import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.TraitLine
-import com.sperance.exileforge.rules.content.TrialBoard
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard
 import com.sperance.exileforge.rules.rift.RiftEngine
@@ -115,7 +114,6 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             if (run == null) RiftGate(game, model, rules, board, engine) else RiftRunView(model, rules, board, engine, run, idle = !game.busy)
         }
         state.result?.let { RiftResultSheet(game, model, it) }
-        state.table?.let { TrialTableSheet(it) { model.trialTable(null) } }
     }
 }
 
@@ -172,10 +170,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             Text((if (board.free > 0) ui("rift.start") else ui("rift.start_key", itemTitle(RiftRules.KEY))).uppercase(), style = relicName(15))
         }
         reason?.let { Text(it, color = RiftColors.Warn, style = MaterialTheme.typography.labelSmall) }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ForgeOutlinedButton(onClick = { model.trialTable(TrialBoard.RIFT, league = league) }, enabled = idle && league != null, modifier = Modifier.weight(1f)) { Text(ui("rift.table")) }
-            ForgeOutlinedButton(onClick = { preview = true }, modifier = Modifier.weight(1f)) { Text(ui("rift.preview")) }
-        }
+        ForgeOutlinedButton(onClick = { preview = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.preview")) }
     }
     if (preview) {
         var looking by remember { mutableStateOf<RiftNode?>(null) }
@@ -339,7 +334,7 @@ private enum class RunSheet { BOONS, CURSES, MENU }
     }
 }
 
-/** Меню забега: мутаторы недели, таблица лиги, выход из забега. */
+/** Меню забега: мутаторы недели, выход из забега. */
 @Composable private fun RunMenu(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, idle: Boolean, onDismiss: () -> Unit) {
     var ending by remember { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -354,9 +349,6 @@ private enum class RunSheet { BOONS, CURSES, MENU }
                     color = if (mutator.good) RiftColors.Soft else RiftColors.Warn,
                     style = MaterialTheme.typography.bodySmall,
                 )
-            }
-            ForgeOutlinedButton(onClick = { model.trialTable(TrialBoard.RIFT, league = board.league) }, enabled = idle && board.league != null, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("rift.table"))
             }
             ForgeOutlinedButton(onClick = { ending = true }, enabled = idle, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.end"), color = RiftColors.Warn) }
             ForgeTextButton(onClick = model::closeRift, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.close"), color = RiftColors.Muted) }
@@ -680,24 +672,6 @@ private const val SPARKS = 14
             if (result.place > 0) Text(ui("rift.result_place", result.place), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
             RewardLines(game, result.reward)
             ForgeButton(onClick = model::dismissRiftResult, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.back_board")) }
-        }
-    }
-}
-
-/** Таблица испытаний лиги: первые места и место героя. */
-@Composable internal fun TrialTableSheet(table: com.sperance.exileforge.rules.content.TrialTable, onDismiss: () -> Unit) {
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(ui("trials.table_title.${table.board.name}"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            if (table.place > 0) Text(ui("rift.table_you", table.place, table.size), color = Vital, style = MaterialTheme.typography.bodySmall)
-            if (table.top.isEmpty()) MutedText(ui("rift.table_empty"))
-            table.top.forEachIndexed { i, entry ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("${i + 1}.", color = Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(28.dp))
-                    Text("${entry.name} · ${entry.level}", color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                    Text(if (table.board == TrialBoard.RUSH) clock(entry.value.toDouble()) else entry.value.toString(), color = GoldBright, style = MaterialTheme.typography.bodySmall)
-                }
-            }
         }
     }
 }

@@ -53,6 +53,7 @@ import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.guild.GuildActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
+import com.sperance.exileforge.presentation.hall.HallViewModel
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroReads
 import com.sperance.exileforge.presentation.hero.HeroSync
@@ -159,6 +160,7 @@ val appModule = module {
     viewModelOf(::MarketViewModel)
     viewModelOf(::GuildViewModel)
     viewModelOf(::HistoryViewModel)
+    viewModelOf(::HallViewModel)
     viewModelOf(::CraftsViewModel)
     viewModelOf(::ProgressViewModel)
     viewModelOf(::TreeViewModel)

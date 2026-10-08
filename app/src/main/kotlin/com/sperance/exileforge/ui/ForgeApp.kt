@@ -259,6 +259,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Guild> { CityScreen(Building.GUILD) }
                 entry<Route.History> { CityScreen(Building.HISTORY) }
                 entry<Route.Chronicle> { CityScreen(Building.CHRONICLE) }
+                entry<Route.Hall> { CityScreen(Building.HALL) }
                 entry<Route.Uniques> { UniquesScreen() }
                 entry<Route.Admin> { AdminScreen() }
                 entry<Route.Redemption> { RedemptionScreen() }

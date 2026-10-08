@@ -93,5 +93,4 @@ class ExpeditionViewModel(
     fun dismissRiftResult() = rift.dismissResult()
 
     /** Таблица испытаний (3.96.0); null - закрыть. */
-    fun trialTable(board: com.sperance.exileforge.rules.content.TrialBoard?, scope: String = "", league: Int? = null) = rift.table(board, scope, league)
 }

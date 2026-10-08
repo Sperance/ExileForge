@@ -29,7 +29,6 @@ import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.RushPlan
 import com.sperance.exileforge.rules.content.RushTier
-import com.sperance.exileforge.rules.content.TrialBoard
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
@@ -68,7 +67,6 @@ import org.koin.compose.viewmodel.koinViewModel
     val free = game.isTester
     val rift by vm.riftState.collectAsState()
     var opened by rememberSaveable { mutableStateOf<TrialMode?>(null) }
-    rift.table?.takeIf { !rift.open }?.let { TrialTableSheet(it) { vm.trialTable(null) } }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         KeyGrid(game, listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals, RiftRules.KEY to (hero.bag[RiftRules.KEY] ?: 0L)))
         trials.run?.let { open ->
@@ -104,7 +102,6 @@ import org.koin.compose.viewmodel.koinViewModel
             ForgeButton(onClick = vm::enterTower, enabled = idle && seals >= 1 && trials.run == null && !conquered, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("trials.tower_enter", itemTitle(TrialRules.SEAL)))
             }
-            ForgeOutlinedButton(onClick = { vm.trialTable(TrialBoard.TOWER) }, enabled = idle, modifier = Modifier.fillMaxWidth()) { Text(ui("trials.table")) }
         }
         val cleared = hero.campaign.cleared
         // Раш, ещё закрытый, не показывается (3.67.0); тестировщику открыты все регионы
@@ -172,7 +169,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 ForgeOutlinedButton(onClick = { vm.enterRush(region.code, tier) }, enabled = idle && keys >= 1 && trials.run == null) {
                     Text(ui("trials.rush_enter"))
                 }
-                ForgeTextButton(onClick = { vm.trialTable(TrialBoard.RUSH, "${region.code}:$tier") }, enabled = idle) { Text(ui("trials.table")) }
                 // Причина у неактивной кнопки (3.94.0)
                 when {
                     trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)

@@ -40,12 +40,14 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CITY
 import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
+import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.AuctionScreen
 import com.sperance.exileforge.ui.screens.auction.MerchantScreen
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.guild.GuildScreen
+import com.sperance.exileforge.ui.screens.hall.HallScreen
 import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
 import com.sperance.exileforge.ui.screens.hero.chronicleDone
 import com.sperance.exileforge.ui.screens.hero.titleName
@@ -54,8 +56,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The City (3.22.0): where the auction's tab was, a square of buildings — the quest board (3.23.0), the merchant, the auction, the guild
- * and «История» (3.90.2).
+ * The City (3.22.0): where the auction's tab was, a square of buildings — the quest board (3.23.0), the merchant, the auction, the guild,
+ * «История» (3.90.2) and «Доска славы» (4.2.0).
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
  * The buildings are the screens they always were, each explaining itself on its first visit.
  */
@@ -75,6 +77,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 Building.GUILD -> GuildScreen()
                 Building.HISTORY -> HistoryScreen()
                 Building.CHRONICLE -> CityChronicle()
+                Building.HALL -> HallScreen()
             }
         }
     }
@@ -112,6 +115,7 @@ import org.koin.compose.viewmodel.koinViewModel
         BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(guilds), game.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
         BuildingCard(ui("history.title"), ForgeGlyphs.Tome, ui("city.history_idle"), game.lockOf(Building.HISTORY), accent = Parchment) { shell.building(Building.HISTORY) }
         BuildingCard(ui("chronicle.title"), ForgeGlyphs.Scroll, chronicleNews(game), game.lockOf(Building.CHRONICLE), accent = GoldBright) { shell.building(Building.CHRONICLE) }
+        BuildingCard(ui("hall.title"), ForgeGlyphs.Gem, ui("city.hall_idle"), game.lockOf(Building.HALL), accent = rarityColor(Rarity.MYTHICAL.name)) { shell.building(Building.HALL) }
         Spacer(Modifier.height(12.dp))
     }
 }

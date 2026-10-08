@@ -5,9 +5,7 @@ import com.sperance.exileforge.core.model.campaign.RiftReport
 import com.sperance.exileforge.core.model.campaign.TrialReport
 import com.sperance.exileforge.core.model.campaign.TrialStart
 import com.sperance.exileforge.rules.content.RiftStyle
-import com.sperance.exileforge.rules.content.TrialBoard
 import com.sperance.exileforge.rules.content.TrialEvent
-import com.sperance.exileforge.rules.content.TrialTable
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard
 import kotlinx.serialization.builtins.ListSerializer
@@ -24,9 +22,6 @@ private const val TRIALS = "api/v1/hero/trials"
 class TrialClient internal constructor(private val http: Transport) {
     /** Enters the rush of [region] at [tier] (server 1.83.0, from 0): a rush key is spent. Never retried: a repeat spends another key. */
     suspend fun rush(heroId: String, region: String, tier: Int = 0): TrialStart = http.post("$TRIALS/rush", heroQuery(heroId, "region" to region, "tier" to tier.toString()))
-
-    /** Таблица испытаний (сервер 1.83.0): [board] с разделом [scope] в лиге [league] (null - лига героя). */
-    suspend fun table(heroId: String, board: TrialBoard, scope: String = "", league: Int? = null): TrialTable = http.get("$TRIALS/table", heroQuery(heroId, "board" to board.name, "scope" to scope, *listOfNotNull(league?.let { "league" to it.toString() }).toTypedArray()))
 
     /** Доска Разлома недели (сервер 1.83.0). */
     suspend fun riftBoard(heroId: String): RiftBoard = http.get("$TRIALS/rift/board", heroQuery(heroId))

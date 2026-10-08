@@ -16,8 +16,6 @@ import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.rules.content.RiftRules
-import com.sperance.exileforge.rules.content.TrialBoard
-import com.sperance.exileforge.rules.content.TrialTable
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard
 import com.sperance.exileforge.rules.rift.RiftEngine
@@ -30,7 +28,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Разлом на экране (3.96.0): доска недели с забегом, бой текущего узла (арена), итог последнего забега и таблица лиги.
+ * Разлом на экране (3.96.0): доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
  * [open] - экран Разлома открыт.
  */
 data class RiftState(
@@ -38,7 +36,6 @@ data class RiftState(
     val board: RiftBoard? = null,
     val arena: RiftArena? = null,
     val result: RiftResult? = null,
-    val table: TrialTable? = null,
 )
 
 /**
@@ -102,12 +99,6 @@ class RiftActions(
 
     /** Итог прочитан. */
     fun dismissResult() = mutable.update { it.copy(result = null) }
-
-    /** Таблица испытаний [board] (Разлом, башня, раш) в разделе [scope]; null - закрыть. */
-    fun table(board: TrialBoard?, scope: String = "", league: Int? = null) {
-        if (board == null) return mutable.update { it.copy(table = null) }
-        commands.task { mutable.update { s -> s.copy(table = api.trials.table(heroes.heroId, board, scope, league)) } }
-    }
 
     fun send(command: RunCommand) {
         mutable.value.arena?.send(command)

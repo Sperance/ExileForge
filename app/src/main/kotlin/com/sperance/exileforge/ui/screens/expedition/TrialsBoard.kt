@@ -18,7 +18,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
@@ -26,6 +28,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.RushPlan
+import com.sperance.exileforge.rules.content.RushTier
 import com.sperance.exileforge.rules.content.TrialBoard
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
@@ -129,11 +132,14 @@ import org.koin.compose.viewmodel.koinViewModel
     val trials = game.hero?.campaign?.trials ?: return
     val idle = !game.busy
     val best = trials.rushBest[region.code]
-    // Ступени (3.96.0): открыта следующая за зачищенными; выбранная - по умолчанию высшая открытая
-    val open = if (free) rules.rush.tierCount - 1 else (trials.rushTiers[region.code] ?: 0).coerceAtMost(rules.rush.tierCount - 1)
-    var tier by remember(region.code, open) { mutableStateOf(open) }
+    // Ступени (3.96.0): открыта следующая за зачищенными. Выбранная по умолчанию (4.2.0) - низшая непройденная, и у
+    // тестировщика тоже: ему открыты все, но начинает он не с высшей
+    val lowest = (trials.rushTiers[region.code] ?: 0).coerceAtMost(rules.rush.tierCount - 1)
+    val open = if (free) rules.rush.tierCount - 1 else lowest
+    var tier by remember(region.code, lowest) { mutableStateOf(lowest) }
     Plate(Gold) {
         if (rules.rush.tierCount > 1) {
+            MutedText(ui("trials.rush_tier_title"), style = MaterialTheme.typography.labelMedium)
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 (0 until rules.rush.tierCount).forEach { t ->
                     val unlockedTier = t <= open
@@ -148,6 +154,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     }
                 }
             }
+            Text(rushTierText(rules.rush.tier(tier)), color = Parchment, style = MaterialTheme.typography.bodySmall)
             if (open < rules.rush.tierCount - 1) MutedText(ui("trials.rush_tier_next", roman(open + 2), roman(open + 1)), style = MaterialTheme.typography.labelSmall)
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -175,6 +182,12 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
+
+/** Чем ступень раша тяжелее и щедрее (4.2.0), из её записи в контенте: «Боссы +X% здоровья и урона · +N строк · Сферы ×R». */
+private fun rushTierText(tier: RushTier): String = listOfNotNull(
+    ui("trials.rush_tier_power", number(tier.power)).takeIf { tier.power > 0 },
+    ui("trials.rush_tier_mods", tier.mods, plural("trials.rush_tier_line", tier.mods)).takeIf { tier.mods > 0 },
+).ifEmpty { listOf(ui("trials.rush_tier_plain")) }.plus(ui("trials.rush_tier_reward", number(tier.reward))).joinToString(" · ")
 
 /** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */
 @Composable private fun KeyGrid(game: GameUi, stacks: List<Pair<String, Long>>) {

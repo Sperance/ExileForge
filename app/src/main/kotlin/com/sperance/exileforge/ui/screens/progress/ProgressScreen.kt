@@ -27,29 +27,21 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.progress.ProgressViewModel
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.TAB_CHRONICLE
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_PETS
 import com.sperance.exileforge.presentation.state.TAB_PROGRESS
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
 import com.sperance.exileforge.presentation.state.TAB_TREE
-import com.sperance.exileforge.presentation.state.TAB_TRIALS
 import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
-import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.craft.CraftScreen
-import com.sperance.exileforge.ui.screens.expedition.TrialsBoard
-import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
 import com.sperance.exileforge.ui.screens.hero.MenagerieSection
-import com.sperance.exileforge.ui.screens.hero.chronicleDone
-import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
@@ -59,14 +51,12 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val PETS_AT_WORK = 2
 
 /**
- * The screens the «Развитие» tab holds: the forge, the menagerie, the trials, the chronicle (3.69.0), the tree and the
- * grimoire (3.90.5) open over the hub with a way back to it; the atlas is a sky of its own and covers the whole screen, as it always did.
+ * The screens the «Развитие» tab holds: the forge, the menagerie, the tree and the grimoire (3.90.5) open over the hub with a
+ * way back to it. The trials and the atlas are pages of «Поход», the chronicle a building of the City (4.0.0).
  */
 enum class ProgressPlace(val tab: Int, private val title: String, val icon: ImageVector) {
     FORGE(TAB_CRAFT, "nav.forge", ForgeGlyphs.Anvil),
     PETS(TAB_PETS, "progress.pets", ForgeGlyphs.Exile),
-    TRIALS(TAB_TRIALS, "trials.title", ForgeGlyphs.Skull),
-    CHRONICLE(TAB_CHRONICLE, "chronicle.title", ForgeGlyphs.Scroll),
     TREE(TAB_TREE, "nav.tree", ForgeGlyphs.Constellation),
     GRIMOIRE(TAB_SKILLS, "nav.skills", ForgeGlyphs.Grimoire),
     ;
@@ -93,12 +83,11 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 
 /**
  * «Развитие» (variant A, «Плитки 2×2»): the hero's growth between runs gathered in one tab — the forge, the menagerie,
- * the atlas, the trials and the chronicle (3.69.0), which lay about the Hero tab and the world map before. Each tile says in a line what it
+ * the tree and the grimoire. Each tile says in a line what it
  * holds and, in its colour, what waits; a badge counts what asks to be done.
  */
 @Composable fun ProgressScreen() {
     val game by koinViewModel<ProgressViewModel>().game.collectAsStateWithLifecycle()
-    val expedition: ExpeditionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
     val progress: ProgressViewModel = koinViewModel()
     LaunchedEffect(game.heroId, game.sessionEpoch) { progress.ensure() }
@@ -112,11 +101,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         val ready = incubator?.ready ?: 0
         val incubating = incubator?.incubating ?: 0
         val eggs = if (hero != null && index != null && incubator?.free != null) index.pets.eggs.values.flatMap { it.values }.toSet().sumOf { hero.count(it) } else 0L
-        val atlas = game.atlasState
-        val rules = index?.campaign?.trials
-        val keys = hero?.count(TrialRules.KEY) ?: 0L
-        val chronicle = game.chronicleDone()
-        val title = hero?.info?.title?.takeIf { it.isNotBlank() }
         val tree = game.treeState
         listOf(
             ProgressTile(
@@ -142,37 +126,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 if (ready > 0) ready else eggs.toInt(),
                 game.lockOf(Feature.PETS),
             ) { shell.tab(TAB_PETS) },
-            ProgressTile(
-                ui("atlas.title"),
-                ForgeGlyphs.Atlas,
-                Rune,
-                ui("progress.atlas_note", ((atlas?.allocated?.size ?: 1) - 1).coerceAtLeast(0)),
-                atlas?.let { ui("atlas.points", it.available, it.points) },
-                atlas?.available ?: 0,
-                onOpen = expedition::openAtlas,
-            ),
-            ProgressTile(
-                ui("trials.title"),
-                ForgeGlyphs.Skull,
-                AbyssGlow,
-                ui("progress.trials_note", hero?.campaign?.trials?.towerBest ?: 0),
-                when {
-                    keys > 0 -> ui("progress.trials_keys", keys)
-                    rules != null -> ui("progress.trials_crests", hero?.count(TrialRules.CREST) ?: 0L, rules.rush.key)
-                    else -> null
-                },
-                keys.toInt(),
-                game.lockOf(Feature.TRIALS),
-            ) { shell.tab(TAB_TRIALS) },
-            ProgressTile(
-                ui("chronicle.title"),
-                ForgeGlyphs.Scroll,
-                GoldBright,
-                chronicle?.let { (done, all) -> ui("chronicle.done", done, all) } ?: ui("common.loading"),
-                title?.let(::titleName),
-                0,
-                game.lockOf(Feature.CHRONICLE),
-            ) { shell.tab(TAB_CHRONICLE) },
             // Дерево и гримуар (3.90.5) - из полосы «Героя»: там остались только вещи.
             ProgressTile(
                 ui("nav.tree"),
@@ -243,14 +196,14 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /**
- * A screen of the hub with its way back: the forge, the menagerie, the trials or the chronicle. The forge is reached from an item's
+ * A screen of the hub with its way back: the forge, the menagerie, the tree or the grimoire. The forge is reached from an item's
  * sheet as well, and «back» from it comes here too — the hub is where it lives now.
  */
 @Composable fun ProgressPlaceScreen(place: ProgressPlace) {
     val game by koinViewModel<ProgressViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val heroModel: HeroViewModel = koinViewModel()
-    // The forge reads the hero itself; the menagerie and the trials have only this.
+    // The forge reads the hero itself; the menagerie has only this.
     LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
     Column(Modifier.fillMaxSize()) {
         BackRow("${ui("nav.progress")} · ${place.label}") { shell.tab(TAB_PROGRESS) }
@@ -258,8 +211,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
             when (place) {
                 ProgressPlace.FORGE -> CraftScreen()
                 ProgressPlace.PETS -> PetsPlace(game)
-                ProgressPlace.TRIALS -> TrialsBoard(game, koinViewModel(), Modifier.fillMaxSize())
-                ProgressPlace.CHRONICLE -> ChronicleScreen(game, koinViewModel())
                 ProgressPlace.TREE -> SkillTreeScreen()
                 ProgressPlace.GRIMOIRE -> GrimoireScreen()
             }

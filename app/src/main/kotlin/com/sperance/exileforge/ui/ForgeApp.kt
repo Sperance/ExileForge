@@ -256,8 +256,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
                 entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE) }
                 entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS) }
-                entry<Route.Trials> { ProgressPlaceScreen(ProgressPlace.TRIALS) }
-                entry<Route.Chronicle> { ProgressPlaceScreen(ProgressPlace.CHRONICLE) }
+                entry<Route.Trials> { com.sperance.exileforge.ui.screens.expedition.TrialsPage() }
                 // The atlas (2.68.0) is a sky of its own, above the tabs.
                 entry<Route.Atlas> { AtlasScreen() }
                 // The City's square and its buildings are one screen that reads which building is open.
@@ -267,6 +266,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Auction> { CityScreen(Building.AUCTION) }
                 entry<Route.Guild> { CityScreen(Building.GUILD) }
                 entry<Route.History> { CityScreen(Building.HISTORY) }
+                entry<Route.Chronicle> { CityScreen(Building.CHRONICLE) }
                 entry<Route.Uniques> { UniquesScreen() }
                 entry<Route.Admin> { AdminScreen() }
                 entry<Route.Redemption> { RedemptionScreen() }
@@ -288,6 +288,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
                     // Полоса разделов героя (3.90.5) - над персонажем, надетым, тайником и сумкой; сам герой - в шапке игры.
                     HeroChrome(route.tab)
+                    // Полоса страниц «Похода» (4.0.0): карта, испытания и Атлас
+                    com.sperance.exileforge.ui.screens.expedition.ExpeditionChrome(route)
                     screens(Modifier.weight(1f).fillMaxWidth())
                 }
             }

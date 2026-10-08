@@ -9,8 +9,11 @@ import com.sperance.exileforge.rules.roll.Streams
  */
 data object AutoPlan
 
-/** Где автопроход, для ленты: волна из скольких, сколько сундуков открыто и завершается ли он после идущего боя (3.95.2). */
-data class AutoHud(val wave: Int, val waves: Int, val chests: Int = 0, val finishing: Boolean = false)
+/**
+ * Где автопроход, для ленты: волна из скольких, сколько сундуков открыто, завершается ли он после идущего боя (3.95.2)
+ * и стоит ли без связи с сервером [offline] (4.0.0).
+ */
+data class AutoHud(val wave: Int, val waves: Int, val chests: Int = 0, val finishing: Boolean = false, val offline: Boolean = false)
 
 /** Один шаг автопрохода, между боями. */
 sealed interface AutoStep {

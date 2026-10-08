@@ -189,6 +189,12 @@ class ExpeditionRun(
     internal var fightLevel = 0
     internal var started = false
     internal var paused = false
+
+    /** Связь с сервером пропала ([RunCommand.Link], 4.0.0): автопробег стоит. */
+    internal var linkDown = false
+
+    /** Автопробег ждёт связи. */
+    internal val waitingLink: Boolean get() = linkDown && autopilot != null
     internal var holds = 0
     internal var fights = 0
     internal var speed = 1

@@ -280,15 +280,15 @@ class ExpeditionActions(
     /**
      * Ещё одно событие: журнал записан, контрольная точка или полная пачка отправляют его. Убийство или сундук боя
      * вручную уходят сразу: добыча в пути, пока бой ещё идёт. Автопоход ждёт тихого отрезка. Сбоящая связь держит
-     * паузу повтора.
+     * паузу повтора (4.0.0: и для контрольных точек и полных пачек - без связи событие не шлёт запрос само).
      */
     private fun recorded(event: RunEvent) {
         val j = runJournal ?: return
         expedition { it.copy(pending = j.pending.size) }
         persist()
         when {
-            event.kind in CHECKPOINTS || j.pending.size >= BATCH -> flushes.trySend(Unit)
             failures > 0 -> Unit
+            event.kind in CHECKPOINTS || j.pending.size >= BATCH -> flushes.trySend(Unit)
             event.kind in LOOT && mutableRun.value?.hud?.value?.auto == null -> sendSoon()
             else -> sendIn(QUIET_AFTER)
         }
@@ -312,10 +312,20 @@ class ExpeditionActions(
         }
     }
 
-    /** Отправка не дошла: следующая после удвоенной паузы, не дольше часовой. */
+    /**
+     * Отправка не дошла: следующая после удвоенной паузы, не дольше часовой. Первая неудача (4.0.0) ставит автопробег на
+     * паузу ([RunCommand.Link]); ответ сервера снимает её ([linkBack]).
+     */
     private fun retryLater() {
-        failures++
+        if (failures++ == 0) runs().forEach { it.send(RunCommand.Link(up = false)) }
         sendIn((RETRY_FIRST shl (failures - 1).coerceAtMost(RETRY_DOUBLINGS)).coerceAtMost(FLUSH_EVERY))
+    }
+
+    /** Сервер снова ответил: счёт неудач сброшен, автопробег идёт дальше. */
+    private fun linkBack() {
+        if (failures == 0) return
+        failures = 0
+        runs().forEach { it.send(RunCommand.Link(up = true)) }
     }
 
     /** Журнал на диск через миг после последнего события: залп убийств - одна запись. */
@@ -344,7 +354,7 @@ class ExpeditionActions(
             // Ключ пачки на диске до её ухода: ответ, потерянный с процессом, спрашивается снова после него.
             store.saveJournal(j.heroId, j.encode())
             val report = api.campaign.events(j.heroId, j.runId, pending, batch.key)
-            failures = 0
+            linkBack()
             if (report == null) {
                 landed(j, batch.end)
                 return
@@ -365,9 +375,15 @@ class ExpeditionActions(
         } catch (e: ApiFailure) {
             // CP_018: сервер не держит похода для героя - поход журнала окончен, последняя пачка уже учтена;
             // CP_020: мир сменился под походом, сервер закрыл его; CP_026: журнал старшего похода.
-            if (e.code in RUN_CLOSED) done(j) else commands.report(e, writing = true)
+            // Сервер недоступен за шлюзом (4.0.0): повтор с паузой и одно сообщение на всю пропажу связи, не на каждую попытку
+            val transient = CommandQueue.transient(e.status)
+            when {
+                e.code in RUN_CLOSED -> done(j)
+                transient && failures > 0 -> Unit
+                else -> commands.report(e, writing = true)
+            }
             // Отказ - последнее слово сервера под ключом пачки: следующая отправка - новый запрос, не повтор.
-            if (!CommandQueue.transient(e.status)) j.release()
+            if (transient) retryLater() else j.release()
         } catch (_: Exception) {
             // Офлайн или таймаут: снова скоро, не на следующем круге часов.
             retryLater()
@@ -427,7 +443,6 @@ class ExpeditionActions(
 
     /** Отправить журнал сейчас: приложение уходит в фон или поход окончен. */
     fun flushRun() {
-        failures = 0
         flushes.trySend(Unit)
     }
 
@@ -499,17 +514,21 @@ class ExpeditionActions(
 
     // ==================== Атлас ====================
 
-    fun openAtlas() {
+    /** Страница «Похода» (4.0.0): карта, испытания или Атлас - экраном под вкладкой; Атлас прежде готовит своё окно. */
+    fun openPage(route: Route) {
+        if (route == Route.Atlas) prepareAtlas()
+        navigator.tab(route)
+    }
+
+    /** Атлас (4.0.0 - страница «Похода»): окно с последним взятым узлом. */
+    fun openAtlas() = openPage(Route.Atlas)
+
+    private fun prepareAtlas() {
         val last = index?.let { i -> hero?.let { h -> (listOf(i.atlasGraph.start) + h.info.atlas).lastOrNull() } }.orEmpty()
         expedition { it.copy(atlas = it.atlas ?: AtlasWindow(selected = last)) }
-        navigator.open(Route.Atlas)
         heroSync.ensure()
     }
 
-    fun closeAtlas() {
-        navigator.back()
-        expedition { it.copy(atlas = null) }
-    }
     fun selectAtlasNode(code: String) = expedition { it.copy(atlas = it.atlas?.copy(selected = code)) }
 
     /** Команда атласа: снимок героя с её ответом несёт новые узлы и очки. */

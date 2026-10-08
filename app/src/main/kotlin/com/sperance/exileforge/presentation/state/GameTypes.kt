@@ -35,8 +35,11 @@ typealias LootEntry = com.sperance.exileforge.core.campaign.LootEntry
 /** The forge's sections: orbs, the bench and the essences work on one item. */
 enum class ForgeSection { ORBS, BENCH, ESSENCES }
 
-/** The City's buildings (3.22.0): each one a screen of its own behind the square; «История» (3.90.2) - прошлое героя. */
-enum class Building { QUESTS, MERCHANT, AUCTION, GUILD, HISTORY }
+/**
+ * The City's buildings (3.22.0): each one a screen of its own behind the square; «История» (3.90.2) - прошлое героя,
+ * «Летопись» (4.0.0, прежде страница «Развития») - его деяния и титулы.
+ */
+enum class Building { QUESTS, MERCHANT, AUCTION, GUILD, HISTORY, CHRONICLE }
 
 /** How many heroes one account may hold when the rules have not been read yet. */
 const val MAX_CHARACTERS = 3
@@ -59,9 +62,6 @@ const val TAB_SKILLS = 12
 const val TAB_PROGRESS = 13
 const val TAB_PETS = 14
 const val TAB_TRIALS = 15
-
-/** The chronicle (3.69.0): a page of «Развитие», where the Hero tab's card was. */
-const val TAB_CHRONICLE = 16
 
 /** «Настройки» (3.77.0): from the banner's menu, «back» leading to the tab it was opened over. */
 const val TAB_SETTINGS = 17

@@ -10,7 +10,7 @@ import com.sperance.exileforge.rules.content.EngineRules
 enum class Feature(val title: String, val tab: Int? = null, val building: Building? = null) {
     GRIMOIRE("nav.skills", tab = TAB_SKILLS),
     CRAFTS("nav.crafts", tab = TAB_CRAFTS),
-    CHRONICLE("chronicle.title", tab = TAB_CHRONICLE),
+    CHRONICLE("chronicle.title", building = Building.CHRONICLE),
     MERCHANT("merchant.title", building = Building.MERCHANT),
     FORGE("nav.forge", tab = TAB_CRAFT),
     QUESTS("quest.title", building = Building.QUESTS),

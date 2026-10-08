@@ -11,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -122,7 +121,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             // The points float over the sky, stacked above the node's sheet so neither hides the other.
             Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                 val node = index.atlasGraph.node(atlas.selected)
-                PointsPill(state.available, state.points, if (node == null) Modifier.navigationBarsPadding().padding(bottom = 16.dp) else Modifier)
+                PointsPill(state.available, state.points, if (node == null) Modifier.padding(bottom = 16.dp) else Modifier)
                 node?.let {
                     NodeSheet(
                         index, it, taken, state.available, index.atlas.respec.price(game.heroLevel, 1), enabled = !game.busy,
@@ -133,9 +132,8 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         }
         // The start is nobody's to give back: what was spent is every taken node but it.
         val spent = (state?.allocated?.size ?: 1) - 1
-        Row(Modifier.fillMaxWidth().statusBarsPadding().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            IconButton(onClick = model::closeAtlas) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.close"), tint = Sky.text) }
-            Text(ui("atlas.title"), color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+        // Атлас - страница «Похода» (4.0.0): имя и возврат - в полосе страниц, над небом только меню
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
             AtlasMenu(summary = spent > 0, reset = spent > 0 && !game.busy, onSummary = { summary = true }, onReset = { resetting = true })
         }
         val money = game.hero?.money ?: 0L

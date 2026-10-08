@@ -152,6 +152,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         is RunCommand.Focus -> fight?.focus(command.index)
 
+        is RunCommand.Link -> linkDown = !command.up
+
         is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
 
         RunCommand.Continue -> when (phase) {

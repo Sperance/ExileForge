@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -13,6 +14,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -107,7 +109,14 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     }
     val marks = vm.state.collectAsStateWithLifecycle().value.saleMarks
     val pick = rememberSellPick(lots, initial = marks)
-    val selling = lots.isNotEmpty() && !back
+    val offered = lots.isNotEmpty() && !back
+    // Режим продажи (4.0.0): включает удержание вещи, как в тайнике; помеченное к продаже посреди захода включает его сразу
+    var selling by rememberSaveable { mutableStateOf(marks.any { mark -> lots.any { it.id == mark } }) }
+    val selecting = offered && selling
+    BackHandler(enabled = selecting) {
+        pick.clear()
+        selling = false
+    }
     // Кнопки итогов оживают не сразу (3.91.0): нажатие, пришедшее в кнопку отчёта боя на том же месте, не закрывает заход.
     var armed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -127,11 +136,34 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                     Text(ui("expedition.fall_lost", number(it)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Loot(game, tally, pick.takeIf { selling }, onItem = { looked = it }, onStack = { stack = it })
+            Loot(
+                game,
+                tally,
+                pick.takeIf { offered },
+                selecting,
+                onItem = { looked = it },
+                onStack = { stack = it },
+                onSelect = { id ->
+                    selling = true
+                    if (!pick.chosen(id)) pick.toggle(id)
+                },
+            )
             if (tally.end == MapEnd.FELL) DeathRecap(hud.recap)
             RunFigures(tally.figures)
         }
-        if (selling) SellDock(pick, enabled = armed && !game.busy, verb = "sell.do_n_return", shards = { lots -> game.shardsFor(lots.map { it.piece.rarity }) }, onSell = onDone)
+        if (selecting) {
+            SellDock(
+                pick,
+                enabled = armed && !game.busy,
+                verb = "sell.do_n_return",
+                shards = { lots -> game.shardsFor(lots.map { it.piece.rarity }) },
+                onCancel = {
+                    pick.clear()
+                    selling = false
+                },
+                onSell = onDone,
+            )
+        }
         ForgeButton(
             onClick = { onDone(emptyList()) },
             enabled = armed,
@@ -199,11 +231,12 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 
 /**
  * Everything the server granted for the map: the recipe, the pieces a line each, the stacks as chips; on its way, or its absence said.
- * С выбором продажи [pick] (3.90.3) над вещами - быстрые наборы, у каждой лежащей в тайнике - отметка.
+ * Продажа (4.0.0) - как в тайнике: нажатие открывает карточку вещи, удержание лота [pick] включает режим продажи [selecting]
+ * и отмечает её ([onSelect]); в режиме нажатие отмечает, над вещами - быстрые наборы.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
+private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Boolean, onItem: (ItemView) -> Unit, onStack: (String) -> Unit, onSelect: (String) -> Unit) {
     val loot = tally.loot
     Caption(ui("summary.loot"))
     loot.recipe?.let { code ->
@@ -211,16 +244,16 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, onItem: (ItemVi
         Text(ui("summary.recipe", text), color = Rune, style = MaterialTheme.typography.bodySmall)
     }
     pick?.let {
-        SellPresetRow(it)
-        MutedText(ui("sell.summary_hint"), style = MaterialTheme.typography.bodySmall)
+        if (selecting) SellPresetRow(it)
+        MutedText(ui(if (selecting) "sell.summary_hint" else "sell.summary_hold"), style = MaterialTheme.typography.bodySmall)
     }
     game.presentLoot(loot.equipment, arriving = tally.receiving).forEach { (instance, presence) ->
         game.view(instance)?.let { piece ->
-            // В выборе (3.91.0) нажатие отмечает вещь, удержание открывает её карточку.
-            if (pick != null && presence.actionable) {
-                SellLine(pick, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, onClick = toggle) }
-            } else {
-                PieceLine(piece, presence) { onItem(piece) }
+            val lot = pick?.takeIf { presence.actionable && it.sellable(piece.id) }
+            when {
+                lot != null && selecting -> SellLine(lot, piece.id) { chosen, toggle -> PieceLine(piece, presence, selected = chosen, onLongClick = { onItem(piece) }, onClick = toggle) }
+                lot != null -> PieceLine(piece, presence, onLongClick = { onSelect(piece.id) }) { onItem(piece) }
+                else -> PieceLine(piece, presence) { onItem(piece) }
             }
         }
     }

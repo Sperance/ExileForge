@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.serverLocale
@@ -152,7 +153,10 @@ fun modNumber(stat: String, value: Double): String = if (stat in preciseStats) s
 /** A small figure with its tenth: a bleed of 0.4 a second is «0.4», not «0»; from ten up the whole number stays. */
 fun fineNumber(value: Double): String = if (kotlin.math.abs(value) >= 10) Math.round(value).toString() else String.format(java.util.Locale.ROOT, "%.1f", value).removeSuffix(".0")
 
-/** Why an equipped item does not count, from the rules' own words — "strength: need 30, have 14". */
+/**
+ * Why an equipped item does not count, from the rules' own words — "strength: need 30, have 14" reads «Требуется 30 силы»:
+ * the hero's own figure is on the hero screen already (4.0.0), so only the need is told.
+ */
 fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
     // A second copy of a unique jewel (server 1.31.0): the sheet names the jewel by its code.
     UNIQUE_JEWEL.find(reason)?.let { return ui(lang, "req.unique_jewel", equipmentTitle(it.groupValues[1])) }
@@ -160,12 +164,10 @@ fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
     val rest = reason.substringAfter(':', "").trim()
     val title = uiOr(lang, "req.$name", displayName(name, lang))
     if (rest.isBlank()) return title
-    val need = NEED.find(rest)?.groupValues?.get(1)
-    val have = HAVE.find(rest)?.groupValues?.get(1)
-    return if (need == null || have == null) "$title: $rest" else "$title: " + ui(lang, "req.reason", need, have)
+    val need = NEED.find(rest)?.groupValues?.get(1) ?: return "$title: $rest"
+    return UiStrings.table(lang)["req.need.$name"]?.let { ui(lang, "req.need.$name", need) } ?: ui(lang, "req.need", title, need)
 }
 
 private val CAMEL_GAP = Regex("([a-z])([A-Z])")
 private val UNIQUE_JEWEL = Regex("^unique jewel: one (\\S+) per hero")
 private val NEED = Regex("need\\s+(-?\\d+)")
-private val HAVE = Regex("have\\s+(-?\\d+)")

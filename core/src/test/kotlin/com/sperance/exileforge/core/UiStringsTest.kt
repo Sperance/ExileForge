@@ -166,6 +166,7 @@ class UiStringsTest {
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
             MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
+            com.sperance.exileforge.core.update.ReleaseKind.entries.forEach { add("release.kind.${it.name.lowercase()}") }
             Slot.entries.forEach { add("enum.slot.${it.name}") }
             bodyPlaces.forEach { add("enum.slot.${it.code}") }
             WeaponType.entries.forEach { add("enum.weapon.${it.name}") }
@@ -189,6 +190,7 @@ class UiStringsTest {
             (Ailment.entries.map { it.word } + "ELEMENT").forEach { add("skill.ailment.$it") }
             listOf(EssenceBook.VAAL_UPGRADE, EssenceBook.VAAL_SPECIAL, EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
+            listOf("level", "strength", "dexterity", "intelligence").forEach { add("req.need.$it") }
             listOf("corrupted", "mirrored", "equipped", "socketed").forEach { add("state.$it") }
             // The chronicle (3.54.0): every counter and section, every statistic and group the server writes.
             com.sperance.exileforge.rules.content.Counter.SECTIONS.forEach { (section, counters) ->

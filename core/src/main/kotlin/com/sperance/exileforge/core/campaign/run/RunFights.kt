@@ -201,7 +201,7 @@ internal fun ExpeditionRun.play(dt: Double) {
             }
         }
     }
-    if (!started || paused) return
+    if (!started || paused || waitingLink) return
     battle.advance(dt * speed)
     // Every foe is a kill of its own, recorded the moment it falls, the fight still going.
     while (reported < battle.fallen.size) {

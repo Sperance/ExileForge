@@ -60,7 +60,7 @@ class ExpeditionViewModel(
     /** «Продать и вернуться» (3.90.4): заход закрывается и на сервере, затем отмеченная добыча продаётся пачкой. */
     fun closeRunSelling(itemIds: Collection<String>) = expedition.close { id -> hero.sellBatch(id, itemIds) }
     fun openAtlas() = expedition.openAtlas()
-    fun closeAtlas() = expedition.closeAtlas()
+    fun openPage(route: com.sperance.exileforge.presentation.nav.Route) = expedition.openPage(route)
     fun selectAtlasNode(code: String) = expedition.selectAtlasNode(code)
     fun allocateAtlas(code: String) = expedition.allocateAtlas(code)
     fun refundAtlas(code: String, regret: Boolean = false) = expedition.refundAtlas(code, regret)

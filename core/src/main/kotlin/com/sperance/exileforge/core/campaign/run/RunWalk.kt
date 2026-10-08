@@ -112,6 +112,8 @@ internal fun ExpeditionRun.exit() {
  * сундук открывается, выход заканчивает заход.
  */
 internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
+    // Нет связи (4.0.0): шаг не берётся, пока сервер не ответит - события не копятся без подтверждения
+    if (waitingLink) return
     recover(dt)
     pilot.rest -= dt * speed
     if (pilot.rest > 0) return

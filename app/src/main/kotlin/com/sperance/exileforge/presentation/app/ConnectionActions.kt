@@ -195,7 +195,7 @@ class ConnectionActions(
                             Building.QUESTS -> quests.load()
                             Building.AUCTION -> market.loadAuction()
                             Building.GUILD -> guild.load()
-                            Building.MERCHANT, Building.HISTORY, null -> Unit
+                            Building.MERCHANT, Building.HISTORY, Building.CHRONICLE, null -> Unit
                         }
                     }
                 }

@@ -46,6 +46,9 @@ import com.sperance.exileforge.ui.screens.auction.AuctionScreen
 import com.sperance.exileforge.ui.screens.auction.MerchantScreen
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.guild.GuildScreen
+import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
+import com.sperance.exileforge.ui.screens.hero.chronicleDone
+import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.screens.quests.QuestsScreen
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -71,6 +74,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 Building.AUCTION -> AuctionScreen()
                 Building.GUILD -> GuildScreen()
                 Building.HISTORY -> HistoryScreen()
+                Building.CHRONICLE -> CityChronicle()
             }
         }
     }
@@ -107,8 +111,24 @@ import org.koin.compose.viewmodel.koinViewModel
         BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(trade), game.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }
         BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(guilds), game.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
         BuildingCard(ui("history.title"), ForgeGlyphs.Tome, ui("city.history_idle"), game.lockOf(Building.HISTORY), accent = Parchment) { shell.building(Building.HISTORY) }
+        BuildingCard(ui("chronicle.title"), ForgeGlyphs.Scroll, chronicleNews(game), game.lockOf(Building.CHRONICLE), accent = GoldBright) { shell.building(Building.CHRONICLE) }
         Spacer(Modifier.height(12.dp))
     }
+}
+
+/** Летопись (4.0.0): сколько деяний свершено и носимый титул. */
+private fun chronicleNews(game: GameUi): String {
+    val done = game.chronicleDone()?.let { (done, all) -> ui("chronicle.done", done, all) } ?: return ui("common.loading")
+    val title = game.hero?.info?.title?.takeIf { it.isNotBlank() } ?: return done
+    return "$done · ${titleName(title)}"
+}
+
+/** Летопись в здании Города (4.0.0): её экран читает героя, как прежде на странице «Развития». */
+@Composable private fun CityChronicle() {
+    val game by koinViewModel<ShellViewModel>().game.collectAsStateWithLifecycle()
+    val heroModel: HeroViewModel = koinViewModel()
+    LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
+    ChronicleScreen(game, heroModel)
 }
 
 /** How many quests wait for their reward, or how many are under way. */

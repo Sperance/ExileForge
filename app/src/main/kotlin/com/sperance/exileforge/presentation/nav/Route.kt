@@ -5,7 +5,6 @@ import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.TAB_ACCOUNT
 import com.sperance.exileforge.presentation.state.TAB_ADMIN
-import com.sperance.exileforge.presentation.state.TAB_CHRONICLE
 import com.sperance.exileforge.presentation.state.TAB_CITY
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_CRAFTS
@@ -77,21 +76,16 @@ sealed interface Route : NavKey {
         override val tab get() = TAB_PETS
     }
 
+    /** Испытания (4.0.0): страница «Похода», прежде «Развития». */
     @Serializable data object Trials : Route {
-        override val root: Route get() = Progress
+        override val root: Route get() = Expedition
         override val tab get() = TAB_TRIALS
     }
 
-    @Serializable data object Chronicle : Route {
-        override val root: Route get() = Progress
-        override val tab get() = TAB_CHRONICLE
-    }
-
-    /** Атлас - небо над вкладками: без шапки и панели, системный «назад» возвращает на «Развитие». */
+    /** Атлас (4.0.0): страница «Похода» под полосой страниц, прежде небо над вкладками «Развития». */
     @Serializable data object Atlas : Route {
-        override val root: Route get() = Progress
-        override val tab get() = TAB_PROGRESS
-        override val bars get() = false
+        override val root: Route get() = Expedition
+        override val tab get() = TAB_EXPEDITION
     }
 
     @Serializable data object City : Route {
@@ -128,6 +122,13 @@ sealed interface Route : NavKey {
         override val building get() = Building.HISTORY
     }
 
+    /** Летопись (4.0.0): здание Города, прежде страница «Развития». */
+    @Serializable data object Chronicle : Route {
+        override val root: Route get() = City
+        override val tab get() = TAB_CITY
+        override val building get() = Building.CHRONICLE
+    }
+
     /** Найденные уникалки (3.90.2): экран над «Историей», «назад» ведёт в неё. */
     @Serializable data object Uniques : Route {
         override val root: Route get() = City
@@ -160,7 +161,7 @@ sealed interface Route : NavKey {
     }
 
     companion object {
-        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, Chronicle, City, Account, Settings(), Admin, Redemption)
+        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, City, Account, Settings(), Admin, Redemption)
 
         /** Экран по прежнему номеру вкладки; неизвестный номер - герой. */
         fun ofTab(tab: Int): Route = GAME.firstOrNull { it.tab == tab } ?: Hero
@@ -172,6 +173,7 @@ sealed interface Route : NavKey {
             Building.AUCTION -> Auction
             Building.GUILD -> Guild
             Building.HISTORY -> History
+            Building.CHRONICLE -> Chronicle
             null -> City
         }
     }

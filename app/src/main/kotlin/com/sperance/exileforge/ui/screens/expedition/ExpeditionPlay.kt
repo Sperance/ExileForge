@@ -35,6 +35,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -405,6 +406,8 @@ internal const val FOUNTAIN_TAP = .9
                 trackColor = Bronze.copy(alpha = .3f),
             )
             Text(ui("auto.tally", auto.chests, hud.kills), color = Muted, style = MaterialTheme.typography.bodyMedium)
+            // Нет связи (4.0.0): автопробег стоит и сам пойдёт дальше, когда сервер ответит
+            if (auto.offline) Text(ui("auto.offline"), color = LifeRed, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
             Text(ui("auto.life", hud.heroLife, hud.heroMaxLife), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
             AutoFinish(hud, auto, hold = run, onFinish = onFinish) { enabled, label, onClick ->
                 ForgeTextButton(onClick = onClick, enabled = enabled) { Text(label, color = LifeRed) }

@@ -62,6 +62,12 @@ sealed interface RunCommand {
     data object ToBoss : RunCommand
     data object Pause : RunCommand
 
+    /**
+     * Связь с сервером (4.0.0): `false` - журнал не уходит, автопробег встаёт на месте и ждёт, бой его тоже; `true` - идёт дальше.
+     * Ручной заход не стоит: его события копятся и уходят, когда связь вернётся.
+     */
+    data class Link(val up: Boolean) : RunCommand
+
     /** «Сдаться» с паузы боя (3.95.0): поражение, как гибель. */
     data object Surrender : RunCommand
 

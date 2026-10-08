@@ -192,8 +192,8 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
- * «Что нового» (3.93.0): заметки трёх последних версий с GitHub - карточки с номером и датой, свежая раскрыта, прочие
- * раскрываются касанием.
+ * «Что нового» (3.93.0): заметки пяти последних версий с GitHub (4.0.0) - карточки [ReleaseCard] по весу релиза,
+ * свежая раскрыта, прочие раскрываются касанием.
  */
 @Composable private fun WhatsNewPage() {
     val updates = LocalUpdates.current ?: return
@@ -207,17 +207,7 @@ internal enum class SettingsPage(val title: String) {
 
         else -> list.forEachIndexed { i, release ->
             var open by rememberSaveable(release.tag) { mutableStateOf(i == 0) }
-            ForgePanel(Modifier.fillMaxWidth().clickable { open = !open }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(ui("app.version", release.version), color = GoldBright, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                    release.published?.take(10)?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
-                }
-                if (open) {
-                    release.body.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("## ") }.forEach { line ->
-                        Text(line.removePrefix("- ").removePrefix("* ").let { "• $it" }, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
-            }
+            ReleaseCard(release, open) { open = !open }
         }
     }
 }

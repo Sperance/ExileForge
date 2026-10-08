@@ -1,11 +1,5 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,9 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -351,13 +342,6 @@ private fun starPath(r: Float, c: Offset): Path = Path().apply {
     }
 }
 
-/** Часы «Астролябии»: доля круга от 0 до 1 за [periodMs]; стоят на месте, когда анимации выключены в настройках. */
-@Composable private fun relicClock(periodMs: Int, label: String): Float {
-    if (!LocalMotion.current) return remember { mutableFloatStateOf(0f) }.floatValue
-    val time by rememberInfiniteTransition(label = label).animateFloat(0f, 1f, infiniteRepeatable(tween(periodMs, easing = LinearEasing), RepeatMode.Restart), label = label)
-    return time
-}
-
 /** Мерцание звёзд и подъём искр легендарной карточки: по одному числу на точку, без перестройки при каждом кадре. */
 private val SPARKS = List(26) { i ->
     val r = java.util.Random(7L + i * 31)
@@ -370,7 +354,7 @@ private val SPARKS = List(26) { i ->
  */
 @Composable fun Modifier.relicSky(look: RelicLook): Modifier {
     val legend = look.legend ?: return this
-    val time = relicClock(SKY_MS, "relic-sky")
+    val time = motionClock(SKY_MS, "relic-sky")
     return drawBehind {
         SPARKS.forEach { (x, y, r, phase) ->
             if (legend == RelicLook.Legend.STARS) {
@@ -422,8 +406,8 @@ fun DrawScope.relicCorners(gold: Color) {
  * спутниками и дышащее свечение; в центре - круглое гнездо с иконкой. Размер блока [size].
  */
 @Composable fun Astrolabe(look: RelicLook, size: Dp = 200.dp, socket: Dp = 108.dp, content: @Composable BoxScope.() -> Unit) {
-    val turn = relicClock(RING_MS, "relic-ring")
-    val breath = relicClock(BREATH_MS, "relic-breath")
+    val turn = motionClock(RING_MS, "relic-ring")
+    val breath = motionClock(BREATH_MS, "relic-breath")
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val c = center

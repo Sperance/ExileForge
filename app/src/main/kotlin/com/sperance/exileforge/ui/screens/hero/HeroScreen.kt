@@ -19,7 +19,6 @@ import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.HeroPage
-import com.sperance.exileforge.presentation.state.StashFilter
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
@@ -57,7 +56,6 @@ fun HeroScreen() {
     var stackCode by remember(heroId) { mutableStateOf<String?>(null) }
     var listStack by remember(heroId) { mutableStateOf<String?>(null) }
     // The filters (3.30.0) are the screen's own and go with it: a page switched away and back keeps the rail's choice.
-    var stashFilter by remember(heroId) { mutableStateOf(StashFilter()) }
     // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
     // Nothing here asks the player to press anything: the pull below is for when they disagree.
     LaunchedEffect(heroId, game.sessionEpoch) { model.ensure() }
@@ -74,7 +72,7 @@ fun HeroScreen() {
         when {
             hero == null -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) { item { InfoCard(ui("common.loading"), ui("hero.stash_empty_hint")) } }
 
-            page == HeroPage.STASH -> StashPane(game, model, shell, stashFilter, onFilter = { stashFilter = it }, onOpen = { id -> detailId = id })
+            page == HeroPage.STASH -> StashPane(game, model, onOpen = { id -> detailId = id })
 
             else -> LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 when (page) {

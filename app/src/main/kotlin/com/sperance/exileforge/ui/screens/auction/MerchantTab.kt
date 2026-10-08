@@ -30,6 +30,10 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.ItemFilter
+import com.sperance.exileforge.presentation.state.ItemShelf
+import com.sperance.exileforge.presentation.state.itemShelf
+import com.sperance.exileforge.presentation.state.railGroups
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -91,6 +95,14 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     // A copy whose template the content does not hold cannot be drawn, and is not offered.
     val offers = remember(stock?.offers, game.index, game.world) { stock?.offers.orEmpty().mapNotNull { offer -> game.view(offer.item)?.let { offer to it } } }
     val orbs = stock?.orbs.orEmpty()
+    // Товар - под общим фильтром предметов (4.2.0, [ItemShelf.MERCHANT]): цена - торговца, порядок «новые» - полки.
+    val filterState = rememberItemFilter(ItemShelf.MERCHANT)
+    var filtering by remember { mutableStateOf(false) }
+    val prices = remember(offers) { offers.associate { (offer, view) -> view.id to offer.price } }
+    val wares = remember(offers) { offers.map { it.second } }
+    val shelf = { draft: ItemFilter -> game.itemShelf(wares, ItemShelf.MERCHANT, draft) { prices[it.id] } }
+    val visible = remember(offers, filterState.filter, game.hero) { shelf(filterState.filter).map { it.id } }
+    val byId = remember(offers) { offers.associateBy { it.first.item.id } }
     // Шапка и полоса кошелька уходят при прокрутке вниз (3.88.9), вкладки остаются.
     CollapsibleHeader {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -133,13 +145,24 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
                 // Таймер обновления (3.90.3) - шапка списка товаров: тикает и уходит с прокруткой.
                 stock?.refreshAt?.takeIf { it > 0 }?.let { at -> item(key = "renews") { RenewalRow(at) } }
                 if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
-                items(offers, key = { it.first.id }) { (offer, view) ->
+                if (offers.isNotEmpty()) item(key = "filter") { ItemFilterBar(filterState, visible.size, onOpen = { filtering = true }) }
+                if (offers.isNotEmpty() && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }
+                items(visible.mapNotNull(byId::get), key = { it.first.id }) { (offer, view) ->
                     ItemTradeRow(view, enabled = !busy, unmet = game.unmetFor(offer.item.template), onClick = { chosen = offer }) { GoldPrice(offer.price) }
                 }
             }
         }
     }
     if (notes) MerchantNotes { notes = false }
+    if (filtering) {
+        ItemFilterSheet(
+            filterState,
+            railGroups(wares).map { it.first },
+            wares.map { it.rarity }.distinct().sortedByDescending { it.ordinal },
+            game.lang,
+            count = { shelf(it).size },
+        ) { filtering = false }
+    }
     info?.let { code -> StackInfoSheet(game, code) { info = null } }
     chosen?.let { offer ->
         OfferSheet(game, offer.item, offer.price, money, onDismiss = { chosen = null }) {

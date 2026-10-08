@@ -35,24 +35,11 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.SlotGroup
-import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SlotIcon
 import com.sperance.exileforge.ui.theme.*
-
-/**
- * Строка управления тайника (3.90.5): только порядок и фильтры листом. Места и автопродажа - фишкой в заголовке списка
- * ([StashChip]), продажа пачкой - удержанием плитки; группа - рейка слева.
- */
-@Composable
-internal fun StashTopBar(sort: StashSort, onSort: (StashSort) -> Unit, tweaks: Int, onFilters: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        SortPicker(sort, onSort, Modifier.weight(1f))
-        StashFilterButton(tweaks, onFilters)
-    }
-}
 
 /**
  * Фишка тайника в заголовке списка (3.90.5): «44/200» - места, значок автопродажи с числом включённых правил; нажатие
@@ -71,34 +58,6 @@ internal fun StashChip(held: Int, capacity: Int, autoSellMarks: Int, onClick: ()
         Text(ui("stash.places_chip", held, capacity), color = if (full) LifeRed else GoldBright, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
         Icon(Icons.Outlined.AutoMode, ui("autosell.title"), tint = if (autoSellMarks > 0) Vital else Muted, modifier = Modifier.size(14.dp))
         if (autoSellMarks > 0) Text(autoSellMarks.toString(), color = Vital, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-    }
-}
-
-/** «Новые ▾»: порядок тайника коротким словом, нажатие раскрывает все порядки. */
-@Composable private fun SortPicker(sort: StashSort, onSort: (StashSort) -> Unit, modifier: Modifier) {
-    var open by remember { mutableStateOf(false) }
-    Box(modifier) {
-        Text(
-            ui("stash.sort_short.${sort.name.lowercase()}") + " ▾",
-            color = GoldBright,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.clip(RoundedCornerShape(12.dp)).clickable(role = Role.DropdownList, onClickLabel = ui("stash.sort")) { open = true }
-                .padding(horizontal = 6.dp, vertical = 8.dp),
-        )
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
-            StashSort.entries.forEach { entry ->
-                DropdownMenuItem(
-                    text = { Text(ui("stash.sort.${entry.name.lowercase()}"), color = if (entry == sort) Gold else Parchment) },
-                    onClick = {
-                        open = false
-                        onSort(entry)
-                    },
-                )
-            }
-        }
     }
 }
 

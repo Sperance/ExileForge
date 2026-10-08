@@ -33,7 +33,6 @@ import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.StashSort
 import com.sperance.exileforge.presentation.state.TAB_TREE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
@@ -157,15 +156,7 @@ class ShellViewModel(
     fun buzz(kind: Buzz) = buzzer.buzz(kind)
     fun clearLogs() = journal.clear()
 
-    /** Настройки устройства, в хранилище устройства: порядок сундука и «скрыть надетое» (3.30.0, 3.69.0), фильтр журнала боя. */
-    fun stashSort(sort: StashSort) {
-        viewModelScope.launch { prefs.saveStashSort(sort) }
-    }
-
-    fun stashHideWorn(hide: Boolean) {
-        viewModelScope.launch { prefs.saveStashHideWorn(hide) }
-    }
-
+    /** Настройка устройства, в хранилище устройства: фильтр журнала боя. Фильтры списков предметов - у самих списков (4.2.0). */
     fun logFilter(kinds: Set<LogKind>) {
         viewModelScope.launch { prefs.saveLogFilter(kinds) }
     }

@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.presentation.state.GameSettings
+import com.sperance.exileforge.presentation.state.ItemFilters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -55,20 +56,13 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         context.settings.edit { it[languageKey] = value.code }
     }
 
-    /** How the stash is sorted (3.30.0), by the name of the order; nothing is the default, newest first. */
-    private val stashSortKey = stringPreferencesKey("stash_sort")
-    val stashSort = context.settings.data.map { it[stashSortKey] }
-    suspend fun saveStashSort(value: String) {
-        context.settings.edit { it[stashSortKey] = value }
+    /** Фильтры списков предметов (4.2.0) одним документом: выбор каждого списка; нечитаемый - обычные фильтры. */
+    private val itemFiltersKey = stringPreferencesKey("item_filters")
+    val itemFilters = context.settings.data.map { prefs ->
+        prefs[itemFiltersKey]?.let { runCatching { WireJson.decodeFromString(ItemFilters.serializer(), it) }.getOrNull() } ?: ItemFilters()
     }
-
-    /** Whether the gear shelf hides what the hero wears (3.69.0); nothing is the default, everything shown. */
-    private val hideWornKey = stringPreferencesKey("stash_worn_hidden")
-
-    // Hidden unless the player shows it (3.77.0): the key is now "stash_worn_hidden", so an older «shown» is not kept.
-    val stashHideWorn = context.settings.data.map { it[hideWornKey] != "false" }
-    suspend fun saveStashHideWorn(value: Boolean) {
-        context.settings.edit { it[hideWornKey] = value.toString() }
+    suspend fun saveItemFilters(value: ItemFilters) {
+        context.settings.edit { it[itemFiltersKey] = WireJson.encodeToString(ItemFilters.serializer(), value) }
     }
 
     /** The player's settings (3.77.0) as one document; an unreadable one falls back to the defaults. */

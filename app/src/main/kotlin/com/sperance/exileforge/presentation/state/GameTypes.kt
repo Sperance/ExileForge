@@ -16,19 +16,6 @@ typealias Notice = com.sperance.exileforge.core.session.Notice
 /** Which of the three screens the app is on, above the tabs: the tabs only make sense once there is an account and a hero. */
 enum class AppPhase { AUTH, CHARACTERS, GAME }
 
-/** The stash's orders (3.30.0): the newest first as the server keeps it, or by rarity, item level or the merchant's price. */
-enum class StashSort {
-    NEWEST,
-    RARITY,
-    LEVEL,
-    PRICE,
-    ;
-
-    companion object {
-        fun of(name: String?): StashSort = entries.firstOrNull { it.name == name } ?: NEWEST
-    }
-}
-
 /** Вещь, принесённая походом, - из :core (3.80.20). */
 typealias LootEntry = com.sperance.exileforge.core.campaign.LootEntry
 

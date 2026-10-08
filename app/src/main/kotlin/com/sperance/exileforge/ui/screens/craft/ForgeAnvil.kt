@@ -37,22 +37,6 @@ import com.sperance.exileforge.ui.theme.*
 /** What lies in one round socket of the anvil: its drawing (null - the socket is empty), its name and its colour. */
 internal class Socket(val label: String, val accent: Color, val glyph: (@Composable () -> Unit)?, val onClick: (() -> Unit)? = null)
 
-/** Полка у наковальни (макет B): разделы выбора предмета рисунками; тап открывает тайник на этом разделе. История недавних убрана (3.94.0). */
-@Composable internal fun TargetRail(onShelf: (TargetFilter) -> Unit) {
-    val shape = RoundedCornerShape(12.dp)
-    Column(
-        Modifier.width(52.dp).depthPanel(shape).padding(vertical = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
-        TargetFilter.RAIL.forEach { shelf ->
-            Box(Modifier.size(40.dp, 28.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { onShelf(shelf) }, contentAlignment = Alignment.Center) {
-                Icon(shelf.glyph, ui(shelf.title), tint = Muted, modifier = Modifier.size(16.dp))
-            }
-        }
-    }
-}
-
 /**
  * The anvil (mockup B): the item's socket, then the [tool] laid on it and, for an orb, its [omen] — then the item itself as it
  * stands, its base and every line with its badge, and the server's last word about it. A tap on the item opens the picker.

@@ -57,8 +57,8 @@ internal val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
 internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
 
 /**
- * The forge as an anvil (the owner's mockup B, 3.x): a rail of the stash's shelves and the items worked on lately beside the anvil,
- * which holds the item, the orb, essence or bench line laid on it and, for an orb, its omen — and shows the item as it stands.
+ * The forge as an anvil (the owner's mockup B, 3.x; полка разделов у наковальни ушла в общий фильтр выбора вещи, 4.2.0): the anvil
+ * holds the item, the orb, essence or bench line laid on it and, for an orb, its omen — and shows the item as it stands.
  * Under it the section's tray: a compact grid of only what the bag holds and the item takes, or the bench's lines. What is laid
  * sits in a bar over the navigation with a button that is held, because an orb is spent the moment it is used; the bar stays,
  * so the same orb can be spent again.
@@ -77,7 +77,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val instance = hero?.item(game.holding.selectedEquipment)
     val view = instance?.let { game.view(it) }
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
-    var picking by remember { mutableStateOf<TargetFilter?>(null) }
+    var picking by remember { mutableStateOf(false) }
     var benchLine by remember(instance?.id) { mutableStateOf("") }
     // A map takes no bench line (2.47.0): its forge is the orbs alone, with no tabs to choose between.
     val slot = view?.slot
@@ -146,17 +146,14 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                 return@Column
             }
             if (sections.size > 1) PillTabs(sections.map { ui(it.title) }, sections.indexOf(section), { vm.section(sections[it]) }, segmented = true)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TargetRail { picking = it }
-                Anvil(
-                    game,
-                    view,
-                    toolSocket(game, smithy, section, index, benchLine, accepted),
-                    omenSocket(game, smithy, section, vm::selectOmen),
-                    onPick = { picking = TargetFilter.ALL },
-                    modifier = Modifier.weight(1f),
-                )
-            }
+            Anvil(
+                game,
+                view,
+                toolSocket(game, smithy, section, index, benchLine, accepted),
+                omenSocket(game, smithy, section, vm::selectOmen),
+                onPick = { picking = true },
+                modifier = Modifier.fillMaxWidth(),
+            )
             when (section) {
                 ForgeSection.ORBS -> {
                     instance?.let {
@@ -180,10 +177,10 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
             }
         }
     }
-    picking?.let { shelf ->
-        TargetPicker(game, shelf, onDismiss = { picking = null }) {
+    if (picking) {
+        TargetPicker(game, onDismiss = { picking = false }) {
             vm.selectEquipment(it)
-            picking = null
+            picking = false
         }
     }
 }

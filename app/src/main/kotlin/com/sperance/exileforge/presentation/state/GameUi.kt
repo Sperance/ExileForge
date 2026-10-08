@@ -50,8 +50,6 @@ data class GameUi(
     val holding: HeroHolding = HeroHolding(),
     val link: Link = Link(),
     val mode: AppMode = AppMode.PLAYER,
-    val stashSort: StashSort = StashSort.NEWEST,
-    val stashHideWorn: Boolean = true,
     val settings: GameSettings = GameSettings(),
     val logFilter: Set<LogKind> = LogKind.DEFAULT,
     /** Тост успеха на экране (3.80.38); отказ - у [activity]. */
@@ -117,16 +115,16 @@ class GameSlice(
         combine(commands.state, languages.lang, worlds.state, sessions.state, heroes.state) { activity, lang, world, session, holding ->
             GameUi(activity, lang, world, session, holding)
         },
-        combine(links.state, modes.mode, prefs.stashSort, prefs.stashHideWorn, combine(prefs.settings, prefs.logFilter, notices.state, ::Triple)) { link, mode, sort, hideWorn, (settings, logFilter, notice) ->
-            GameUi(link = link, mode = mode, stashSort = sort, stashHideWorn = hideWorn, settings = settings, logFilter = logFilter, notice = notice)
+        combine(links.state, modes.mode, prefs.settings, prefs.logFilter, notices.state) { link, mode, settings, logFilter, notice ->
+            GameUi(link = link, mode = mode, settings = settings, logFilter = logFilter, notice = notice)
         },
-    ) { a, b -> a.copy(link = b.link, mode = b.mode, stashSort = b.stashSort, stashHideWorn = b.stashHideWorn, settings = b.settings, logFilter = b.logFilter, notice = b.notice) }
+    ) { a, b -> a.copy(link = b.link, mode = b.mode, settings = b.settings, logFilter = b.logFilter, notice = b.notice) }
         .stateIn(
             scope,
             SharingStarted.Eagerly,
             GameUi(
                 commands.state.value, languages.lang.value, worlds.state.value, sessions.state.value, heroes.state.value, links.state.value, modes.mode.value,
-                prefs.stashSort.value, prefs.stashHideWorn.value, prefs.settings.value, prefs.logFilter.value, notices.state.value,
+                prefs.settings.value, prefs.logFilter.value, notices.state.value,
             ),
         )
 }

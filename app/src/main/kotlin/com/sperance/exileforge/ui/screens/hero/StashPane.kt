@@ -27,14 +27,15 @@ import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.data.settings.GuideStore
-import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.StashFilter
+import com.sperance.exileforge.presentation.state.ItemFilter
+import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.presentation.state.isWorn
+import com.sperance.exileforge.presentation.state.itemShelf
 import com.sperance.exileforge.presentation.state.railGroups
 import com.sperance.exileforge.presentation.state.sellLots
-import com.sperance.exileforge.presentation.state.stashShelf
+import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
@@ -48,23 +49,26 @@ import org.koin.compose.koinInject
  * кнопка с суммой; «Отмена» и системный «назад» выходят из него. Как продавать, говорит разовая плашка над списком
  * ([SELL_HINT], до закрытия или первого удержания на этом устройстве) и лист тайника.
  *
- * Фильтры ([filter]) - экрана героя и уходят с ним; порядок и «скрыть надетое» хранятся на устройстве. Список, лоты и счёт рейки
- * запоминаются по копиям, а не по герою: изменившийся кошелёк не перестраивает тысячу строк.
+ * Фильтр - общий фильтр предметов (4.2.0, [ItemShelf.STASH]): строка над списком и шторка «Аккордеон», выбор запоминается на
+ * устройстве; рейка - его же «Тип». Список, лоты и счёт рейки запоминаются по копиям, а не по герою: изменившийся кошелёк не
+ * перестраивает тысячу строк.
  */
 @Composable
-internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel, filter: StashFilter, onFilter: (StashFilter) -> Unit, onOpen: (String) -> Unit) {
+internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> Unit) {
     val hero = game.hero ?: return
+    val filterState = rememberItemFilter(ItemShelf.STASH)
+    val filter = filterState.filter
     var filtering by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(false) }
     var selling by remember(game.heroId) { mutableStateOf(false) }
     // A copy whose template the content does not hold is left out rather than drawn blank.
     val stash = remember(hero.items, game.index, game.world) { hero.items.mapNotNull { game.view(it) } }
-    // «Скрыть надетое» (3.69.0) - правило снаряжения: пункт инструментов показывает всё, что держит.
-    val hideWorn = game.stashHideWorn && filter.group?.isTool != true
-    val counted = remember(stash, game.stashHideWorn) { stash.filterNot { game.stashHideWorn && it.isWorn && !it.slot.isTool } }
+    // «Скрыть надетое» (3.69.0) - правило снаряжения: инструменты видны всегда.
+    val counted = remember(stash, filter.hideWorn) { stash.filterNot { filter.hideWorn && it.isWorn && !it.slot.isTool } }
     val rail = remember(counted) { railGroups(counted) }
     val rarities = remember(stash) { stash.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
-    val visible = remember(stash, filter, game.stashSort, hideWorn, hero.level, hero.stats, game.world) { game.stashShelf(stash, filter, hideWorn) }
+    val shelf = { draft: ItemFilter -> game.itemShelf(stash, ItemShelf.STASH, draft) { game.sellPrice(it.item) } }
+    val visible = remember(stash, filter, hero.level, hero.stats, game.world) { shelf(filter) }
     val lines = rememberStashLines(game, visible)
     // Лоты - весь тайник, наборы - только видимое в открытом пункте рейки (3.90.4): отмеченное в других пунктах остаётся.
     val lots = remember(stash, hero.info.autoSell, hero.stats, hero.info.heroClass, game.index) { game.sellLots(stash) }
@@ -94,16 +98,11 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
                 Text(ui("sell.mode_title"), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                 SellPresetRow(pick)
             } else {
-                StashTopBar(
-                    sort = game.stashSort,
-                    onSort = shell::stashSort,
-                    tweaks = stashTweaks(filter, showsWorn = filter.group?.isTool != true && !game.stashHideWorn),
-                    onFilters = { filtering = true },
-                )
+                ItemFilterBar(filterState, visible.size, onOpen = { filtering = true })
             }
         }
         Row(Modifier.weight(1f).fillMaxWidth()) {
-            StashRail(rail, counted.size, filter.group, game.lang, onSelect = { onFilter(filter.copy(group = it)) }, Modifier.fillMaxHeight().padding(start = 8.dp))
+            StashRail(rail, counted.size, filter.group, game.lang, onSelect = { filterState.update(filter.copy(group = it)) }, Modifier.fillMaxHeight().padding(start = 8.dp))
             LazyColumn(
                 Modifier.weight(1f).fillMaxHeight(),
                 contentPadding = PaddingValues(start = 8.dp, end = 16.dp, top = 4.dp, bottom = 16.dp),
@@ -117,7 +116,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
                 }
                 if (!selling && lots.isNotEmpty() && read?.contains(SELL_HINT) == false) item(key = "hint") { SellHint(onDismiss = { hintRead() }) }
                 if (hero.overflow.isNotEmpty() && !selling) item(key = "overflow") { StashOverflow(game, model) }
-                if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.active || hideWorn) ui("stash.filter_empty") else ui("hero.stash_empty_hint")) }
+                if (visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), if (filter.tweaks(ItemShelf.STASH) > 0 || filter.hideWorn) ui("filter.empty") else ui("hero.stash_empty_hint")) }
                 items(lines, key = { it.piece.id }) { line ->
                     val verdict = rememberGearVerdict(game, line.piece.item)
                     if (selling) {
@@ -141,17 +140,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, shell: ShellViewModel
             ) { model.sellMany(it) }
         }
     }
-    if (filtering) {
-        StashFilterSheet(
-            filter,
-            game.lang,
-            rarities,
-            onFilter = onFilter,
-            hideWorn = game.stashHideWorn.takeUnless { filter.group?.isTool == true },
-            onHideWorn = shell::stashHideWorn,
-            onDismiss = { filtering = false },
-        )
-    }
+    if (filtering) ItemFilterSheet(filterState, rail.map { it.first }, rarities, game.lang, count = { shelf(it).size }) { filtering = false }
     if (sheet) StashSheet(hero.info.autoSell, lots, busy = game.busy, model, places = { StashFill(game, model) }) { sheet = false }
 }
 

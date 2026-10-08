@@ -208,7 +208,7 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     if (sheet) {
-        FilterSheet(game, market, onDismiss = { sheet = false }) { filter, mine ->
+        AuctionFilterSheet(game, market, onDismiss = { sheet = false }) { filter, mine ->
             sheet = false
             vm.filter(filter)
             vm.showOwnLots(mine)
@@ -243,31 +243,29 @@ internal fun chipLabel(game: GameUi, field: FilterField, value: String): String 
 internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 && it != Slot.FLASK_2 }
 
 /**
- * Every filter the server understands, on a draft: nothing reaches the showcase until «Показать»,
- * so trying a combination costs no request, and «Сбросить» clears all but the typed name.
+ * Every filter the server understands, on a draft, in the shared «Аккордеон» sheet (4.2.0): the name to search on top, each filter a
+ * row with its value that opens on a tap, own lots as a switch. Nothing reaches the showcase until «Показать», so trying a
+ * combination costs no request, and «Сбросить» clears all but the typed name.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun FilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
+internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
     var draft by remember { mutableStateOf(market.filter) }
     var mine by remember { mutableStateOf(market.showOwnLots) }
-    val any = ui("common.all")
+    val any = ui("filter.any")
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(
-            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp).navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Engraved(ui("auction.filters"))
-            Spinner(
-                ui("auction.what_sold"),
-                draft.kind,
-                mapOf("" to any) + LotKind.entries.associate { it.name to lotKindTitle(it, game.lang) },
-                true,
-                glyph = Glyph.ITEM,
-            ) { draft = draft.copy(kind = it) }
-            Spinner(ui("common.slot"), draft.slot, mapOf("" to any) + templateSlots.associate { it.name to slotTitle(it, game.lang) }, true, glyph = Glyph.ITEM) { draft = draft.copy(slot = it) }
-            Spinner(ui("common.rarity"), draft.rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, game.lang) }, true, glyph = Glyph.RARITY) { draft = draft.copy(rarity = it) }
+    val levels = listOfNotNull(draft.minItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_from", it) }, draft.maxItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_to", it) })
+    val groups = listOf(
+        AccordionGroup("kind", ui("auction.what_sold"), draft.kind.takeIf { it.isNotBlank() }?.let { chipLabel(game, FilterField.KIND, it) } ?: any) {
+            ChoiceChips(listOf("") + LotKind.entries.map { it.name }, { it == draft.kind }, { if (it.isBlank()) any else chipLabel(game, FilterField.KIND, it) }) { draft = draft.copy(kind = it) }
+        },
+        AccordionGroup("slot", ui("filter.type"), draft.slot.takeIf { it.isNotBlank() }?.let { slotTitle(it, game.lang) } ?: any) {
+            ChoiceChips(listOf("") + templateSlots.map { it.name }, { it == draft.slot }, { if (it.isBlank()) any else slotTitle(it, game.lang) }) { draft = draft.copy(slot = it) }
+        },
+        AccordionGroup("rarity", ui("filter.rarity"), draft.rarity.takeIf { it.isNotBlank() }?.let { rarityTitle(it, game.lang) } ?: any) {
+            // Сервер ищет по одной редкости: плитка выбирает её, повторное нажатие снимает.
+            RarityTiles(Rarity.entries, { it.name == draft.rarity }) { draft = draft.copy(rarity = if (draft.rarity == it.name) "" else it.name) }
+        },
+        AccordionGroup("level", ui("auction.item_level"), levels.joinToString(" · ").ifBlank { any }) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     draft.minItemLevel,
@@ -286,24 +284,30 @@ internal fun FilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, on
                     modifier = Modifier.weight(1f),
                 )
             }
-            // The price's orb is an item code (3.0.0): the auction's currencies, in the order of their price.
-            Spinner(
-                ui("auction.priced_in"),
-                draft.priceOrb,
-                mapOf("" to any) + orbOptions(game),
-                true,
-                glyph = Glyph.CURRENCY,
-                optionArt = orbArt(game.currencies),
-            ) { draft = draft.copy(priceOrb = it) }
-            OutlinedTextField(
-                draft.maxPrice,
-                { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(game.inputs.number)) },
-                label = { Text(ui("auction.price_max")) },
-                singleLine = true,
-                keyboardOptions = digits,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.
+        },
+        // The price's orb is an item code (3.0.0): the auction's currencies, in the order of their price.
+        AccordionGroup("price", ui("auction.price"), listOfNotNull(draft.priceOrb.takeIf { it.isNotBlank() }?.let(::itemTitle), draft.maxPrice.takeIf { it.isNotBlank() }?.let { ui("auction.chip_max_price", it) }).joinToString(" · ").ifBlank { any }) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spinner(
+                    ui("auction.priced_in"),
+                    draft.priceOrb,
+                    mapOf("" to any) + orbOptions(game),
+                    true,
+                    glyph = Glyph.CURRENCY,
+                    optionArt = orbArt(game.currencies),
+                ) { draft = draft.copy(priceOrb = it) }
+                OutlinedTextField(
+                    draft.maxPrice,
+                    { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(game.inputs.number)) },
+                    label = { Text(ui("auction.price_max")) },
+                    singleLine = true,
+                    keyboardOptions = digits,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.
+        AccordionGroup("seller", ui("auction.seller"), draft.sellerId.takeIf { it.isNotBlank() }?.let { chipLabel(game, FilterField.SELLER, it) } ?: any) {
             OutlinedTextField(
                 draft.sellerId,
                 { draft = draft.copy(sellerId = it.trim().take(game.inputs.code)) },
@@ -311,18 +315,22 @@ internal fun FilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, on
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(ui("auction.show_mine"), modifier = Modifier.weight(1f))
-                Switch(checked = mine, onCheckedChange = { mine = it })
-            }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(onClick = {
-                    draft = draft.cleared()
-                    mine = false
-                }, modifier = Modifier.weight(1f)) { Text(ui("auction.reset")) }
-                ForgeButton(enabled = !game.busy, onClick = { onApply(draft, mine) }, modifier = Modifier.weight(1f)) { Text(ui("auction.apply")) }
-            }
-        }
-    }
+        },
+    )
+    FilterAccordionSheet(
+        query = draft.title,
+        onQuery = { draft = draft.copy(title = it.take(game.inputs.search)) },
+        queryHint = ui("auction.name"),
+        groups = groups,
+        // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
+        switches = listOf(FilterSwitch(ui("auction.show_mine"), mine) { mine = it }),
+        show = ui("filter.show_all"),
+        resettable = draft != draft.cleared() || mine,
+        onReset = {
+            draft = draft.cleared()
+            mine = false
+        },
+        onShow = { if (!game.busy) onApply(draft, mine) },
+        onDismiss = onDismiss,
+    )
 }

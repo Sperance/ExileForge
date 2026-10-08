@@ -23,6 +23,9 @@ enum class Term(vararg val marks: String) {
     SHOCK("SHOCK"),
     POISON("POISON"),
     BLEED("BLEED"),
+
+    // Подавление восстановления (4.2.0): не путать с подавлением чар `STOCK_SPELL_SUPPRESSION`
+    RECOVERY_SUPPRESSION("RECOVERY_SUPPRESSION", "SUPPRESSION_AVOID"),
     STUN("STUN"),
     LOW_LIFE("LOW_LIFE"),
     CURSE("CURSE"),

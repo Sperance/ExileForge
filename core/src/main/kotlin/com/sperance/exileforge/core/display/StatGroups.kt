@@ -34,7 +34,7 @@ enum class StatGroup {
         )
         private val ailment = setOf(
             CoreStat.IGNITE_CHANCE.code, CoreStat.FREEZE_CHANCE.code, CoreStat.STUN_BUILDUP.code, CoreStat.ELECTROCUTE_BUILDUP.code, CoreStat.SHOCK_CHANCE.code, CoreStat.POISON_CHANCE.code, CoreStat.BLEED_CHANCE.code,
-            CoreStat.BURNING_DAMAGE.code, CoreStat.POISON_DAMAGE.code, CoreStat.BLEED_DAMAGE.code, CoreStat.AILMENT_DURATION.code,
+            CoreStat.BURNING_DAMAGE.code, CoreStat.POISON_DAMAGE.code, CoreStat.BLEED_DAMAGE.code, CoreStat.AILMENT_DURATION.code, CoreStat.RECOVERY_SUPPRESSION.code,
         )
         private val attribute = setOf(CoreStat.STRENGTH.code, CoreStat.AGILITY.code, CoreStat.INTELLECT.code, CoreStat.ALL_ATTRIBUTES.code)
         private val attack = setOf(CoreStat.ELEMENTAL_DAMAGE.code, CoreStat.CAST_SPEED.code, CoreStat.SPELL_CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_MULTIPLIER.code)

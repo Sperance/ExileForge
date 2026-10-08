@@ -1095,6 +1095,8 @@
   "term.POISON.text": "A chaos and physical ailment: it stacks and takes life every second, around energy shield.",
   "term.BLEED": "Bleeding",
   "term.BLEED.text": "A physical ailment: the target loses life every second.",
+  "term.RECOVERY_SUPPRESSION": "Recovery suppression",
+  "term.RECOVERY_SUPPRESSION.text": "The hero's ignite, poison and bleeding cut the foe's regeneration and vampirism.",
   "term.STUN": "Stun",
   "term.STUN.text": "Heavy hits build a stun; a full bar interrupts the target for a while.",
   "term.LOW_LIFE": "Low life",

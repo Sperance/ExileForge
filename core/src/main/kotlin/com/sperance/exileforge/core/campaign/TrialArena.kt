@@ -277,7 +277,7 @@ class TrialArena(
             hero,
             // Фазы и свита боссов (3.92.0): свита - на своём потоке
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
-            rules, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
+            rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
             percent = gear.percent, ally = allies.of(hero.stats, pet),
         )
     }
@@ -298,7 +298,7 @@ class TrialArena(
         var seconds = 0.0
         repeat(fights) { i ->
             val battle = Battle(
-                hero, phases.withRetinue(foes, Dice(ODDS_SEED + i)), rules, life, Random(ODDS_SEED + i), gear.stance,
+                hero, phases.withRetinue(foes, Dice(ODDS_SEED + i)), rules, index.rules.fight, life, Random(ODDS_SEED + i), gear.stance,
                 kit = kit, model = build, pools = start, percent = gear.percent, ally = ally,
             )
             while (battle.outcome == null && battle.time < cap) battle.advance(1.0)

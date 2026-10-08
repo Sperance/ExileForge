@@ -58,7 +58,7 @@ fun ExpeditionRun.bossOdds(fights: Int = ODDS_FIGHTS, cap: Double = ODDS_CAP): B
     var seconds = 0.0
     repeat(fights) { i ->
         val battle = Battle(
-            hero, phases.withRetinue(foes, Dice(ODDS_SEED + i)), rules, life, Random(ODDS_SEED + i), stance,
+            hero, phases.withRetinue(foes, Dice(ODDS_SEED + i)), rules, index.rules.fight, life, Random(ODDS_SEED + i), stance,
             kit = kit, model = build, pools = pools, percent = build.gear.percent, ally = ally,
         )
         while (battle.outcome == null && battle.time < cap) battle.advance(1.0)

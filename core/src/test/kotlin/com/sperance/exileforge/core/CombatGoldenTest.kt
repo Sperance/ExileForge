@@ -59,7 +59,7 @@ class CombatGoldenTest {
             val level = monster.level.takeIf { it > 0 } ?: zone.level
             Foe(Combatant(monster.stats, level, rules), monster.rarity, monster.skills.mapNotNull(index.skills.monsterByCode::get), monster, level, monster.traitsIn(index), index.campaign.traits.power(monster.rarity))
         }
-        val battle = Battle(hero, foes, rules, hero.maxLife, Random(case.seed))
+        val battle = Battle(hero, foes, rules, index.rules.fight, hero.maxLife, Random(case.seed))
         var guard = 0
         while (battle.outcome == null && guard++ < 100_000) battle.advance(0.1)
         val log = battle.log()

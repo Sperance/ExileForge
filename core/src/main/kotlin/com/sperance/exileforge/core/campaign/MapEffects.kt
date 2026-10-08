@@ -121,6 +121,8 @@ object MapEffects {
         effects[MapStat.MONSTER_ONSLAUGHT.code]?.takeIf { it > 0 }?.let { add(MonsterEffect(BuffKind.ONSLAUGHT.always, Op.ADD, 1.0)) }
         effects[MapStat.MONSTER_FORTIFY.code]?.takeIf { it > 0 }?.let { add(MonsterEffect(BuffKind.FORTIFY.always, Op.ADD, 1.0)) }
         effects[MapStat.MONSTER_EXTRA_ELEMENTAL.code]?.let { v -> DamageType.ELEMENTS.forEach { add(MonsterEffect("STOCK_PHYSICAL_AS_EXTRA_${it.name}", Op.ADD, v / DamageType.ELEMENTS.size)) } }
+        // Стойкость к подавлению восстановления (4.2.0)
+        effects[MapStat.MONSTER_UNSUPPRESSED.code]?.let { add(MonsterEffect(CoreStat.SUPPRESSION_AVOID.code, Op.ADD, it)) }
     }
 
     /** A crystal's guardian beyond its rarity: so many percent more life and damage when a Vaal orb made it [stronger], and by the atlas's power of guardians. */

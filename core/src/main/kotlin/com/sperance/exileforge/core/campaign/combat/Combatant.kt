@@ -185,6 +185,12 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill (server 0.66.0). */
     val recoveryRate = max(0.0, 1 + stat(CoreStat.RECOVERY_RATE.code) / 100)
 
+    /** Подавление восстановления (4.2.0): насколько недуги этого бойца сверх базы правила режут регенерацию и вампиризм цели, %. */
+    val recoverySuppression = stat(CoreStat.RECOVERY_SUPPRESSION.code)
+
+    /** Стойкость к подавлению восстановления (4.2.0), %: на столько слабее подавление на нём. */
+    val suppressionAvoid = stat(CoreStat.SUPPRESSION_AVOID.code)
+
     /** The pace of the shield's recharge after the rule's delay. */
     val shieldRecharge = max(0.0, 1 + stat(CoreStat.SHIELD_RECHARGE.code) / 100)
 

@@ -53,7 +53,8 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
     if (culled) target.life = 0.0
     val physical = taken[DamageType.PHYSICAL] ?: 0.0
     // Vampirism is capped per second (server 1.76.0): a share of the maximum life, whatever the blows.
-    val leech = me.leechRoom((physical * body.leechPhysical + dealt * body.leechAll + (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0)) * body.recoveryRate, time, rules.caps.leechPerSecond)
+    // Монстр (4.2.0): подавление героя и потолок восстановления, общий с регенерацией.
+    val leech = recovery(me, me.leechRoom((physical * body.leechPhysical + dealt * body.leechAll + (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0)) * body.recoveryRate, time, rules.caps.leechPerSecond))
     val onHit = (if (blow.weapon) body.lifeOnHit else 0.0) * body.recoveryRate
     // Life leech into the shield (server 1.32.0): what it restores is not life.
     if (body.leechToShield) me.shield = min(me.body.maxShield, me.shield + leech)

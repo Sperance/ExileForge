@@ -73,6 +73,7 @@ object AtlasEffects {
         AtlasStat.SKILL_LEVEL.code to CoreStat.SKILL_LEVEL.code,
         AtlasStat.FLASK_CHARGES.code to CoreStat.FLASK_CHARGES_GAINED.code,
         AtlasStat.FLASK_DURATION.code to CoreStat.FLASK_DURATION.code,
+        AtlasStat.SUPPRESSION.code to CoreStat.RECOVERY_SUPPRESSION.code,
         FLASK_RARE to FLASK_RARE,
     )
 

@@ -245,7 +245,7 @@ class RiftArena(
             }
         }
         battle = Battle(
-            hero, foes, combat, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, stream)), gear.stance,
+            hero, foes, combat, index.rules.fight, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, stream)), gear.stance,
             kit = kit, model = build, pools = pools, percent = gear.percent, ally = allies.of(hero.stats, pet),
             rift = riftCombat().takeIf { fight.guardian != null || it.ambush > 0 },
         )

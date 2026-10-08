@@ -73,7 +73,7 @@ class RiftCombatTest {
         val warden = guardians.warden
         val idol = FoeTotem(index.campaign.totems.byCode.getValue(warden.idols))
         // Засада на весь тест: печати снимает только сам тест
-        val quiet = Battle(hero(), listOf(boss()), rules, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, ambush = 1e6, idol = idol))
+        val quiet = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, ambush = 1e6, idol = idol))
         val boss = quiet.foe(0)
         assertEquals(1 + warden.taken / 100, quiet.sealed(boss), 1e-9)
         quiet.run(0.2)
@@ -91,7 +91,7 @@ class RiftCombatTest {
         assertTrue(quiet.notes(NoteKind.SEAL_BROKEN).size == 2 && quiet.notes(NoteKind.SEALS_RETURNED).size == 2)
 
         // В настоящем бою удар по Стражу несёт множитель печатей в своём следе
-        val fight = Battle(hero(), listOf(boss()), rules, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, idol = idol))
+        val fight = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, idol = idol))
         fight.run(10.0)
         val sealedHit = fight.events.firstNotNullOfOrNull { e ->
             (e.trace as? HitTrace)?.takeIf { e.actor == Side.HERO && e.action == Action.ATTACK }?.factors?.firstOrNull { it.key == FactorKey.SEALS }
@@ -109,8 +109,8 @@ class RiftCombatTest {
         val foes = PhaseFoes(index, rules).withShades(listOf(boss()), shade, devourer.shades)
         assertEquals(1 + devourer.shades, foes.size)
         val hero = hero()
-        val battle = Battle(hero, foes, rules, 1_000_000.0, Random(5L), rift = RiftCombat(devourer = devourer, echo = 30, boons = listOf(boon), ambush = 1e6))
-        val fed = Battle(hero, listOf(boss()), rules, 1_000_000.0, Random(5L))
+        val battle = Battle(hero, foes, rules, index.rules.fight, 1_000_000.0, Random(5L), rift = RiftCombat(devourer = devourer, echo = 30, boons = listOf(boon), ambush = 1e6))
+        val fed = Battle(hero, listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(5L))
         assertEquals(fed.foe(0).body.maxLife * (1 + minOf(30 * devourer.perEcho, devourer.maxPower) / 100), battle.foe(0).body.maxLife, 1.0)
         val before = battle.heroFighter.body.maxLife
         battle.run(devourer.stealEvery + 0.3)
@@ -125,10 +125,10 @@ class RiftCombatTest {
     fun no_crits_law_turns_crits_into_hits() {
         val lord = guardians.lord.copy(every = 3.0, warn = 1.0, laws = listOf(RiftLaw.NO_CRITS))
         val critical = hero(mapOf(CoreStat.CRITICAL_CHANCE.code to 70.0))
-        val free = Battle(critical, listOf(boss()), rules, 1_000_000.0, Random(9L))
+        val free = Battle(critical, listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(9L))
         free.run(20.0)
         assertTrue(free.events.any { it.actor == Side.HERO && it.kind == HitKind.CRIT }, "the hero crits without the law")
-        val ruled = Battle(critical, listOf(boss()), rules, 1_000_000.0, Random(9L), rift = RiftCombat(lord = lord))
+        val ruled = Battle(critical, listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(9L), rift = RiftCombat(lord = lord))
         ruled.run(20.0)
         val proclaimed = ruled.notes(NoteKind.LAW).first().time
         assertTrue(ruled.events.none { it.actor == Side.HERO && it.kind == HitKind.CRIT && it.time > proclaimed }, "no crit under the law")
@@ -136,8 +136,8 @@ class RiftCombatTest {
 
     @Test
     fun a_rift_without_mechanics_is_the_same_fight() {
-        val plain = Battle(hero(), listOf(boss()), rules, 1_000_000.0, Random(13L))
-        val empty = Battle(hero(), listOf(boss()), rules, 1_000_000.0, Random(13L), rift = RiftCombat())
+        val plain = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(13L))
+        val empty = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(13L), rift = RiftCombat())
         plain.run(30.0)
         empty.run(30.0)
         assertTrue(plain.events.size > 10, "the fight went on")

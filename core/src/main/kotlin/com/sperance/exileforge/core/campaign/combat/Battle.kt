@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.campaign.skillsFree
 import com.sperance.exileforge.rules.content.AilmentRule
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
+import com.sperance.exileforge.rules.content.FightRules
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
@@ -50,6 +51,8 @@ class Battle(
     val hero: Combatant,
     val foes: List<Foe>,
     val rules: CombatRules,
+    /** Правила боя движка (4.2.0, `rules.json` → `fight`): потолок восстановления монстра и подавление восстановления. */
+    val fight: FightRules,
     heroLife: Double,
     internal val random: Random,
     val stance: HeroStance = HeroStance(),
@@ -100,6 +103,21 @@ class Battle(
         /** Vampirism within the current second (server 1.76.0): [leechStart] opens it, [leeched] is what it has given back so far. */
         var leechStart = -1e9
         var leeched = 0.0
+
+        /** Восстановление монстра в текущей секунде (4.2.0): [recoveryStart] открывает её, [recovered] - сколько вернули реген и вампиризм. */
+        var recoveryStart = -1e9
+        var recovered = 0.0
+
+        /** Сколько из [amount] здоровья монстр ещё вернёт в секунду [time] под потолком [FightRules.recoveryRoom], учтя его. */
+        fun recoveryRoom(amount: Double, time: Double): Double {
+            if (time - recoveryStart >= 1.0) {
+                recoveryStart = time
+                recovered = 0.0
+            }
+            val allowed = min(amount, fight.recoveryRoom(body.maxLife, recovered))
+            recovered += allowed
+            return allowed
+        }
 
         /** How much of [leech] the per-second cap still lets through at [time], counting it in. */
         fun leechRoom(leech: Double, time: Double, cap: Double): Double {
@@ -217,6 +235,20 @@ class Battle(
     }
     internal val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType>> = rules.ailments
         .mapNotNull { rule -> Ailment.of(rule.ailment)?.let { a -> DamageType.of(rule.type)?.let { t -> rule to (a to t) } } }.toMap()
+    /** Недуги, что подавляют восстановление цели (4.2.0): поджог, яд, кровотечение по правилу. */
+    private val suppressing: Set<Ailment> = fight.suppression.ailments.mapNotNull { code: String -> Ailment.of(code) }.toSet()
+
+    /**
+     * Восстановление врага героя [amount] здоровья за этот миг (4.2.0): урезано подавлением, пока на нём недуг героя или питомца
+     * из [suppressing], затем - потолком в секунду. Герою и питомцу - как есть.
+     */
+    internal fun recovery(me: Fighter, amount: Double): Double {
+        if (me.side != Side.MONSTER || amount <= 0) return amount
+        val ailed = me.ailments.any { it.source == Side.HERO && it.ailment in suppressing }
+        val suppressed = amount * (1 - fight.suppression.share(heroFighter.body.recoverySuppression, me.body.suppressionAvoid, ailed))
+        return me.recoveryRoom(suppressed, time)
+    }
+
     internal val ruleOf: Map<Ailment, Pair<AilmentRule, DamageType>> = ailmentRules.entries.associate { (rule, what) -> what.first to (rule to what.second) }
 
     var time = 0.0

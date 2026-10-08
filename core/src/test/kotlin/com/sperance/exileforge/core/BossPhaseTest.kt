@@ -39,7 +39,7 @@ class BossPhaseTest {
         val foe = phases.foe(boss, zone.level).copy(phase = "SUMMON", phases = steps.map { FoePhase(it) }, slots = index.campaign.totems.slots)
         val foes = phases.withRetinue(listOf(foe), Dice(3L))
         assertEquals(1 + steps.sumOf { it.summon }, foes.size)
-        val battle = Battle(hero, foes, rules, hero.maxLife, Random(11L))
+        val battle = Battle(hero, foes, rules, index.rules.fight, hero.maxLife, Random(11L))
         var guard = 0
         while (battle.outcome == null && guard++ < 100_000) battle.advance(0.1)
         assertEquals(Outcome.WIN, battle.outcome)
@@ -62,7 +62,7 @@ class BossPhaseTest {
         val totems = index.campaign.totems
         val own = listOf("TOTEM_RAGE", "TOTEM_FLAME").map { FoeTotem(totems.byCode.getValue(it)) }
         val foe = PhaseFoes(index, rules).foe(boss, zone.level).copy(totems = own, totemEvery = 3.0, totemFirst = 1.0, slots = totems.slots)
-        val battle = Battle(hero, listOf(foe), rules, hero.maxLife, Random(5L))
+        val battle = Battle(hero, listOf(foe), rules, index.rules.fight, hero.maxLife, Random(5L))
         var most = 0
         var guard = 0
         while (battle.outcome == null && guard++ < 100_000) {

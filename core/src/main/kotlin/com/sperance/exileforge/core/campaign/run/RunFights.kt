@@ -53,16 +53,20 @@ import kotlin.random.Random
 
 // ==================== Fights ====================
 /**
- * A fight with [agent]'s pack still standing, all at once, at [level] — the zone's, or a depth's of the Abyss. Пачка карты
- * не больше `fight.maxFoes` (4.2.0): соседние стаи в бой не втягиваются, каждая - свой бой.
+ * A fight with [agent]'s pack still standing, at [level] — the zone's, or a depth's of the Abyss. На карте (4.4.1, решение
+ * владельца) бой собирает обычные стаи вокруг ([gathered]) и идёт раундами ([FightRounds]) не больше `fight.maxFoes` врагов:
+ * герой переходит из раунда в раунд как есть, гибель в любом - гибель в бою. Каждой стае - своё ENGAGE.
  */
 internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(zone), abyssal: Boolean = false) {
     fightPet = pet()
     fightAgent = agent
+    fightAgents = if (abyssal) listOf(agent) else world.gathered(agent)
     abyssFight = abyssal
     fightLevel = level
-    if (!abyssal) announce(agent)
-    members = agent.standing.map { FightMember(agent, it) }
+    if (!abyssal) fightAgents.forEach(::announce)
+    members = FightRounds.of(fightAgents, index.rules.fight.maxFoes) { it.standing.size }.flatMapIndexed { round, packs ->
+        packs.flatMap { pack -> pack.standing.map { FightMember(pack, it, round) } }
+    }
     reported = 0
     fightStream = (fights++).toLong()
     fight = battle()
@@ -110,7 +114,7 @@ internal fun ExpeditionRun.battle(): Battle {
         // Сделки алтаря (3.90.0) ложатся на каждый бой: строки карты, сила босса, лишние строки монстров
         val monster = pactFoe(member)
         // Its own level on a map (3.73.0), the fight's otherwise.
-        phases.foe(monster, monster.level.takeIf { it > 0 } ?: fightLevel)
+        phases.foe(monster, monster.level.takeIf { it > 0 } ?: fightLevel).copy(round = member.round)
     }
     return Battle(
         hero,
@@ -125,6 +129,7 @@ internal fun ExpeditionRun.battle(): Battle {
 internal fun ExpeditionRun.endFight() {
     fight = null
     fightAgent = null
+    fightAgents = emptyList()
     members = emptyList()
 }
 
@@ -167,6 +172,8 @@ internal fun ExpeditionRun.play(dt: Double) {
     while (reported < battle.fallen.size) {
         val member = members[battle.fallen[reported++]]
         member.agent.fallen += member.index
+        // Стая раунда, павшая целиком, уходит с карты сразу (4.4.1): гибель в следующем раунде её не поднимет
+        if (member.agent.standing.isEmpty()) member.agent.alive = false
         fell(member.agent, member.index)
     }
     val outcome = battle.outcome ?: return
@@ -191,7 +198,7 @@ internal fun ExpeditionRun.play(dt: Double) {
     val down = descent?.takeIf { abyssFight }
     when (outcome) {
         Outcome.WIN -> {
-            agent.alive = false
+            fightAgents.forEach { it.alive = false }
             if (down != null) {
                 report = null
                 phase = RunPhase.ABYSS

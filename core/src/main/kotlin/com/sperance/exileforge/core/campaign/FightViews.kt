@@ -117,7 +117,7 @@ internal fun Battle.hud(
             f.index, monsters.getOrNull(f.index) ?: checkNotNull(foes[f.index].origin), shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = place(f.index), buildup = buildup(f),
-            barrier = f.barrier.takeIf { f.barrierUntil > time }?.roundToInt() ?: 0,
+            barrier = f.barrier.takeIf { f.barrierUntil > time }?.roundToInt() ?: 0, waiting = waits(f.index),
         )
     }
     return FightHud(
@@ -139,7 +139,7 @@ internal fun Battle.hud(
         round = round, rounds = rounds,
         heroBody = h.body,
         boss = bossHud(),
-        rage = RageView(enrage, rageRule.damage * enrage, rageRule.next(time)).takeIf { outcome == null },
+        rage = RageView(enrage, rageRule.damage * enrage, rageRule.next(rageClock)).takeIf { outcome == null },
         heroCast = heroCast(),
     )
 }

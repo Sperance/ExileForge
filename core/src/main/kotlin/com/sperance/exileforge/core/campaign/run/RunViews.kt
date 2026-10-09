@@ -115,6 +115,8 @@ data class FoeView(
     val buildup: BuildupView? = null,
     /** Барьер (3.93.0): что ещё поглотит барьер фазы босса. */
     val barrier: Int = 0,
+    /** Ждёт своего раунда (4.4.1): ещё не на поле, но его ещё бить. */
+    val waiting: Boolean = false,
 ) {
     /** Its card is on the field: it fights there, or fell there. */
     val onField: Boolean get() = place >= 0
@@ -245,7 +247,7 @@ data class FightHud(
     val heroBarrier: Int = 0,
     /** The level the foes stand at: a depth of the Abyss stands deeper than its zone. */
     val level: Int = 0,
-    /** Бой цепочки (4.2.0), с 1, из [rounds]: босс раша, бой этажа Башни, волна Разлома; у одиночного боя - 1 из 1. */
+    /** Бой цепочки (4.2.0), с 1, из [rounds]: босс раша, бой этажа Башни, волна Разлома, раунд собранных стай (4.4.1); у одиночного боя - 1 из 1. */
     val round: Int = 1,
     val rounds: Int = 1,
     /** Лист героя сейчас (3.92.0): по нему лист умения врага считает, сколько оно снимет. */
@@ -262,8 +264,8 @@ data class FightHud(
     /** The foes on the field, by their places. */
     val field: List<FoeView> get() = foes.filter { it.onField }.sortedBy { it.place }
 
-    /** How many of the whole pack are still to be beaten. */
-    val standing: Int get() = foes.count { it.alive }
+    /** How many of the whole pack are still to be beaten: those on the field and (4.4.1) those waiting for their round. */
+    val standing: Int get() = foes.count { it.alive || it.waiting }
 }
 
 /** One member of a pack fought and its own log. */

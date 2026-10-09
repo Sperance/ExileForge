@@ -192,10 +192,49 @@ class Battle(
     }
 
     /**
-     * Кто на поле, по местам (4.2.0): вся стая сразу, сильнейший первым; свита босса встаёт по зову фаз на следующее место
-     * ([enterField]). Павший держит своё место до конца боя.
+     * Раунды боя (4.4.1): стаи, что бой собрал вокруг вступившей, выходят на поле по очереди ([Foe.round]) - следующий раунд
+     * встаёт, едва пал последний враг на поле ([nextRound]). [round] - идущий, с 0, из [rounds]; у боя одной стаи раунд один.
      */
-    private val places: MutableList<Int> = foes.indices.filterNot { foes[it].summoned }.sortedByDescending { foes[it].rarity }.toMutableList()
+    val rounds: Int = (foes.maxOfOrNull { it.round } ?: 0) + 1
+    var round = 0
+        private set
+
+    /** Когда начался идущий раунд: ярость каждого раунда считается от его начала. */
+    private var roundAt = 0.0
+
+    /** Секунды идущего раунда - часы ярости. */
+    internal val rageClock: Double get() = time - roundAt
+
+    /** Враги раунда [round], что встают на поле сами (не свита), сильнейший первым. */
+    private fun roundFoes(round: Int): List<Int> = foes.indices.filter { !foes[it].summoned && foes[it].round == round }.sortedByDescending { foes[it].rarity }
+
+    /**
+     * Кто на поле, по местам (4.2.0): весь раунд сразу, сильнейший первым; свита босса встаёт по зову фаз на следующее место
+     * ([enterField]). Павший держит своё место до конца раунда.
+     */
+    private val places: MutableList<Int> = roundFoes(0).toMutableList()
+
+    /** Враг [index] ещё ждёт своего раунда (4.4.1): не на поле, цел и не свита. */
+    fun waits(index: Int): Boolean = !foes[index].summoned && foes[index].round > round
+
+    /**
+     * Следующий раунд встаёт на поле (4.4.1): павшие уходят с него, новые подходят к герою, ярость начинается заново. Герой
+     * остаётся каким был - здоровье, мана, фляги, откаты, эффекты и заряды. False - раундов больше нет.
+     */
+    internal fun nextRound(): Boolean {
+        if (round + 1 >= rounds) return false
+        round++
+        roundAt = time
+        enrage = 0
+        places.clear()
+        roundFoes(round).forEach { index ->
+            places += index
+            foeFighters[index].enter(places.lastIndex, time)
+        }
+        // Ауры вставших ложатся на героя
+        remake(heroFighter)
+        return true
+    }
 
     /** Место врага [index] на поле; -1 - свита, что ещё не звана. */
     fun place(index: Int): Int = places.indexOf(index)

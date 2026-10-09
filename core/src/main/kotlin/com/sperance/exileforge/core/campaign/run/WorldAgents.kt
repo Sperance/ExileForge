@@ -27,6 +27,8 @@ class MonsterAgent(
     val homeY: Double,
     /** The guardian of a crystal of essences: which one of the map's, by its place; null for everyone else. */
     val crystal: Int? = null,
+    /** Обычная стая карты (4.4.1): её бой собирает соседние такие же; босс, стражи и стаи объектов карты бьются одни. */
+    val ordinary: Boolean = false,
 ) {
     val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
     val rule: BehaviourRule get() = monster.behaviour

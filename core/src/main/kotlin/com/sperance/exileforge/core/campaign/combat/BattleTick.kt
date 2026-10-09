@@ -394,7 +394,7 @@ private fun Battle.finished(): Boolean {
     if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
     when {
         !heroFighter.alive -> end(Outcome.LOSS)
-        foeFighters.none { it.alive } -> end(Outcome.WIN)
+        foeFighters.none { it.alive } && !nextRound() -> end(Outcome.WIN)
         else -> return false
     }
     return true

@@ -296,6 +296,9 @@ class ExpeditionRun(
     internal val stats = RunStats()
     internal var recap: List<DeathHit> = emptyList()
     internal var fightAgent: MonsterAgent? = null
+
+    /** Все стаи боя (4.4.1): вступившая первой, затем собранные ею по раундам. */
+    internal var fightAgents: List<MonsterAgent> = emptyList()
     internal val waves get() = AbyssWaves(index, run)
     internal val abyssRule get() = index.campaign.abyss
 
@@ -512,7 +515,9 @@ class ExpeditionRun(
 }
 
 /** One foe of a fight: the pack it walked with and its place there. */
-internal class FightMember(val agent: MonsterAgent, val index: Int) {
+
+/** Член [index] стаи [agent] в бою; [round] (4.4.1) - раунд, в котором он выходит на поле. */
+internal class FightMember(val agent: MonsterAgent, val index: Int, val round: Int = 0) {
     val monster: RolledMonster get() = agent.pack[index]
 }
 

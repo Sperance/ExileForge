@@ -74,7 +74,7 @@ class ExpeditionWorld(
     /** Монстры карты: жетоны, босс и стаи подкрепления алтаря (3.90.0), что встают посреди захода ([summon]). */
     private val roster: MutableList<MonsterAgent> = (
         packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
-            MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
+            MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5, ordinary = true).also { agent ->
                 if (agent.monster.behaviour.type == Behaviours.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
             }
         } + listOfNotNull(boss)

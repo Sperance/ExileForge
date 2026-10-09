@@ -53,8 +53,8 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Карточка текущей главы над картой мира: глава, цель шага, прогресс и награда; нажатие - весь сюжет. Сюжет пройден или
- * доска не прочитана - карточки нет.
+ * Карточка текущей главы над картой мира и сверху экрана «Задания» (4.3.0) - одна на оба места: глава, цель шага, прогресс и
+ * награда; нажатие - весь сюжет. Сюжет пройден или доска не прочитана - карточки нет.
  */
 @Composable fun StoryCard(game: GameUi, board: QuestBoard?, modifier: Modifier = Modifier, onOpen: () -> Unit) {
     val chapter = board?.let { game.index?.quests?.story?.getOrNull(it.chapter) } ?: return

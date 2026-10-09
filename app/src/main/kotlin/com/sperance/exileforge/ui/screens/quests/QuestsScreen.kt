@@ -32,7 +32,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The quest board of the City (3.23.0): three sections — dailies, weeklies and the contract board (the story is the
- * expedition's own screen since 4.2.0) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
+ * expedition's own screen since 4.2.0; its chapter card heads the board since 4.3.0) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
  * the board or given up. Pulling down reads the board again.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,6 +49,8 @@ fun QuestsScreen() {
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             CollapsibleHeader { ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll) }
+            // Текущая глава сюжета (4.3.0) - та же карточка, что над картой Похода, ведёт на экран Сюжета
+            StoryCard(game, board, Modifier.padding(bottom = 8.dp), onOpen = vm::openStory)
         }
         TabRow(selectedTabIndex = current.ordinal, containerColor = Abyss) {
             QuestTab.entries.forEach { tab ->

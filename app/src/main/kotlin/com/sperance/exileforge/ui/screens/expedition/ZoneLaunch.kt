@@ -95,7 +95,7 @@ import com.sperance.exileforge.ui.theme.*
         color = rarityColor(rarity.name),
         style = MaterialTheme.typography.labelMedium,
     )
-    // Тир карты поднимает уровень района (4.2.1): по нему монстры, добыча и мифические захода
+    // Тир карты поднимает уровень района (4.3.0): по нему монстры, добыча и мифические захода
     picked.view.areaLevel?.takeIf { picked.item.mapTier > 0 }?.let { area ->
         Text(ui("expedition.launch_area", picked.item.mapTier, area, zone.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
     }

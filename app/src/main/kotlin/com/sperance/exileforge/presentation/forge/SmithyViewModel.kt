@@ -30,7 +30,7 @@ data class Smithy(
     val pet: String = "",
     /** Кузница над питомцем, а не над предметом (3.81.0). */
     val petMode: Boolean = false,
-    /** Вещь, под которую выбрано знамение (4.2.1): катализатор подбирается к вещи, на другой его нет. */
+    /** Вещь, под которую выбрано знамение (4.3.0): катализатор подбирается к вещи, на другой его нет. */
     val omenItem: String = "",
 )
 
@@ -48,7 +48,7 @@ class SmithyViewModel(
 
     /**
      * Выбор как он есть; пока сфера не выбрана - самая дешёвая валюта контента, когда он прочитан. Знамение держится только над
-     * вещью, под которую его выбрали (4.2.1): сменилась вещь под кузницей - знамения нет.
+     * вещью, под которую его выбрали (4.3.0): сменилась вещь под кузницей - знамения нет.
      */
     val smithy: StateFlow<Smithy> = combine(mutable, world.state, game.map { it.holding.selectedEquipment }.distinctUntilChanged()) { chosen, w, item ->
         val omened = if (chosen.omenItem == item) chosen else chosen.copy(omen = "", omenItem = "")
@@ -58,7 +58,7 @@ class SmithyViewModel(
 
     fun ensure() = sync.ensure()
 
-    /** Другая вещь под кузницей - знамение, выбранное под прежнюю, снимается (4.2.1). */
+    /** Другая вещь под кузницей - знамение, выбранное под прежнюю, снимается (4.3.0). */
     fun selectEquipment(itemId: String) {
         hero.selectEquipment(itemId)
         mutable.update { if (it.omenItem == itemId) it else it.copy(omen = "", omenItem = "") }

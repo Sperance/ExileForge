@@ -52,7 +52,7 @@ import kotlin.math.sin
                 ui("expedition.pack_left", fight.standing, fight.foes.size).takeIf { fight.foes.size > 1 },
             ).joinToString(" · ")
             Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
-            // Ярость боя (4.2.1): ступень и отсчёт - и у стаи, не только у стража
+            // Ярость боя (4.3.0): ступень и отсчёт - и у стаи, не только у стража
             fight.rage?.let { RageMark(it) }
         }
         BugAction(Modifier.align(Alignment.TopEnd))

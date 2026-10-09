@@ -108,7 +108,7 @@ import kotlin.math.sin
     onSelect: (String) -> Unit,
 ) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
-    // Пометка прохода (4.2.1) под серым узлом чужой ветки - видна, когда карта приближена.
+    // Пометка прохода (4.3.0) под серым узлом чужой ветки - видна, когда карта приближена.
     val measurer = rememberTextMeasurer()
     val passageWord = ui("tree.passage")
     val passageLabel = remember(passageWord) { measurer.measure(passageWord, TextStyle(color = FAR_RIM, fontSize = 9.sp)) }
@@ -347,7 +347,7 @@ internal fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float
  * mockups) every node shines in its kind's colour so the tree reads at a glance: one out of reach is a dark stone with a
  * bright rim and a faint halo, one a step away is ringed thicker and breathes ([pulse]), a taken one is filled with its
  * colour under a light rim and a strong halo. Since 3.77.0 a node out of reach is grey and unlit: only what can be taken
- * and what is taken keep their colour. A [passage] through another class's branch (4.2.1) is grey whatever its state.
+ * and what is taken keep their colour. A [passage] through another class's branch (4.3.0) is grey whatever its state.
  */
 internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float, passage: Boolean = false) {
     val r = radius(node) * scale.coerceIn(.5f, 2.2f)

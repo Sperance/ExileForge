@@ -73,7 +73,7 @@ class Battle(
     val rift: RiftCombat? = null,
     /** Прошлый бой героя выигран (4.2.0): силы [com.sperance.exileforge.rules.content.PowerEvent.FIGHT_CLEAR] ложатся в начале этого. */
     val cleared: Boolean = false,
-    /** Вид боя (4.2.1): по нему правила ярости `combat.enrage`; без него - бой похода, со стражем или со стаей. */
+    /** Вид боя (4.3.0): по нему правила ярости `combat.enrage`; без него - бой похода, со стражем или со стаей. */
     val kind: FightKind = FightKinds.expedition(foes),
 ) {
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
@@ -479,13 +479,13 @@ class Battle(
     /** Foes whose rage has been lit, and by which trait: it lights once and holds to the end of the fight. */
     internal val enraged = mutableSetOf<Pair<Int, String>>()
 
-    /** Правило ярости этого боя (4.2.1): по его виду [kind]. */
+    /** Правило ярости этого боя (4.3.0): по его виду [kind]. */
     internal val rageRule: EnrageRule get() = rules.enrage(kind)
 
-    /** Ступень ярости (3.95.0; 4.2.1 - любого боя): сколько ступеней [rageRule] уже прошло. */
+    /** Ступень ярости (3.95.0; 4.3.0 - любого боя): сколько ступеней [rageRule] уже прошло. */
     internal var enrage = 0
 
-    /** Ступень ярости, что уже лежит на каждом враге (4.2.1): вставший позже догоняет её. */
+    /** Ступень ярости, что уже лежит на каждом враге (4.3.0): вставший позже догоняет её. */
     internal val raged = mutableMapOf<Int, Int>()
 
     /** Враги уже в ярости (4.2.0): хоть одна ступень прошла. */

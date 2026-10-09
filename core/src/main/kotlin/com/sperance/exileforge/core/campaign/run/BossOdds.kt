@@ -22,7 +22,7 @@ import kotlin.random.Random
  * Почему герой проиграл бой прогона (4.2.0). Расширяемо: новая причина - новая реализация и правило в [LossCauses].
  */
 sealed interface LossCause {
-    /** Враги боя разъярились ко времени гибели героя (4.2.1: ярость - в любом бою). */
+    /** Враги боя разъярились ко времени гибели героя (4.3.0: ярость - в любом бою). */
     data object Enrage : LossCause
 
     /** Бой не кончился за лимит прогона. */
@@ -46,7 +46,7 @@ object LossCauses {
 
 /**
  * Исход прогона боёв со стражем (3.92.0; 4.2.0 - «Весы»): побед из [fights], средняя длина боя в секундах, средний остаток
- * здоровья героя в победах (доля, null - побед нет) и поражения по причинам [causes] (4.2.1).
+ * здоровья героя в победах (доля, null - побед нет) и поражения по причинам [causes] (4.3.0).
  */
 data class BossOdds(val wins: Int, val fights: Int, val seconds: Double, val lifeLeft: Double?, val causes: Map<LossCause, Int> = emptyMap()) {
     val share: Double get() = if (fights > 0) wins.toDouble() / fights else 0.0
@@ -73,7 +73,7 @@ class OddsPlan internal constructor(
     private val phases: PhaseFoes,
     /** Прошлый бой выигран: силы `FIGHT_CLEAR` открывают и бои прогона. */
     private val cleared: Boolean,
-    /** Вид предсказанного боя (4.2.1): прогон катит его правила - своей ярости у «Весов» нет. */
+    /** Вид предсказанного боя (4.3.0): прогон катит его правила - своей ярости у «Весов» нет. */
     private val kind: FightKind,
 ) {
     /** [fights] боёв, каждый на своих костях, не дольше [cap] секунд (недоигранный - не победа). */

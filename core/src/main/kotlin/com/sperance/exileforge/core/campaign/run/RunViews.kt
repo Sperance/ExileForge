@@ -120,7 +120,7 @@ data class FoeView(
 }
 
 /**
- * Ярость боя (3.95.0 - в полосе стража; 4.2.1 - любого боя): [stage] ступеней уже прошло, урон врагов больше на [damage]
+ * Ярость боя (3.95.0 - в полосе стража; 4.3.0 - любого боя): [stage] ступеней уже прошло, урон врагов больше на [damage]
  * процентов, до следующей ступени [next] секунд; null - ступеней больше не будет.
  */
 data class RageView(val stage: Int, val damage: Double, val next: Double?)
@@ -234,7 +234,7 @@ data class FightHud(
     val heroBody: com.sperance.exileforge.core.campaign.combat.Combatant? = null,
     /** Босс боя (3.92.0): его фазы и что он готовит; null - босса нет. */
     val boss: BossHud? = null,
-    /** Ярость боя (4.2.1): ступень, прибавка урона врагов и отсчёт до следующей; null - бой кончен. */
+    /** Ярость боя (4.3.0): ступень, прибавка урона врагов и отсчёт до следующей; null - бой кончен. */
     val rage: RageView? = null,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)

@@ -8,7 +8,7 @@ import kotlinx.serialization.Serializable
 @Serializable enum class FeedbackKind { BUG, SUGGESTION, APPEAL }
 
 /**
- * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.2.1: первый
+ * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.3.0: первый
  * комментарий модерации к созданному), [SENT] - отправлен в Asana. Куда отчёт может перейти и можно ли голосовать,
  * решает машина состояний сервера: она приходит полями [AdminReport.moves] и [Suggestion.votable].
  */
@@ -27,7 +27,7 @@ import kotlinx.serialization.Serializable
     val vote: Vote,
     val mine: Boolean,
     val createdAt: String = "",
-    /** Можно ли зрителю голосовать (4.2.1): не своё и ещё не отправленное - решает сервер. */
+    /** Можно ли зрителю голосовать (4.3.0): не своё и ещё не отправленное - решает сервер. */
     val votable: Boolean = false,
 ) {
     val rating: Int get() = likes - dislikes
@@ -43,7 +43,7 @@ import kotlinx.serialization.Serializable
     val likes: Int = 0,
     val dislikes: Int = 0,
     val createdAt: String = "",
-    /** Автор может удалить его (4.2.1): ошибку и предложение - да, апелляцию - нет. */
+    /** Автор может удалить его (4.3.0): ошибку и предложение - да, апелляцию - нет. */
     val deletable: Boolean = false,
 )
 
@@ -68,7 +68,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Отчёт для модерации: с логином и ролью автора (3.88.7); [moves] - куда его можно перевести по машине состояний сервера,
- * [deletable] - может ли смотрящий его удалить (4.2.1).
+ * [deletable] - может ли смотрящий его удалить (4.3.0).
  */
 @Serializable data class AdminReport(
     val report: FullReport,

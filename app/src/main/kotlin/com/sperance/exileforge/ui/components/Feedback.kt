@@ -108,7 +108,7 @@ fun SuggestionsSheet(onDismiss: () -> Unit) {
     }
 }
 
-/** Удаление отчёта (4.2.1) - всегда с вопросом: оно жёсткое и не возвращается. */
+/** Удаление отчёта (4.3.0) - всегда с вопросом: оно жёсткое и не возвращается. */
 @Composable fun ReportDeleteButton(enabled: Boolean, onClick: () -> Unit) {
     ForgeTextButton(enabled = enabled, onClick = onClick) {
         Icon(Icons.Outlined.Delete, null, tint = LifeRed, modifier = Modifier.size(16.dp))

@@ -32,7 +32,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The administrator's reading of players' reports (3.73.0): bugs and suggestions apart, filtered by status, each with its
- * author and where it was written; a new status with a word for the author, who gets a letter about it. С 4.2.1 - только
+ * author and where it was written; a new status with a word for the author, who gets a letter about it. С 4.3.0 - только
  * допустимые переходы статуса и удаление ошибок и предложений.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
@@ -77,7 +77,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 report.context.forEach { (key, value) -> MutedText("$key: $value", style = MaterialTheme.typography.labelSmall) }
             }
             Engraved(ui("feedback.set_status"))
-            // Только допустимые переходы машины состояний сервера (4.2.1): нынешний статус и [AdminReport.moves]
+            // Только допустимые переходы машины состояний сервера (4.3.0): нынешний статус и [AdminReport.moves]
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 (listOf(report.status) + entry.moves).distinct().forEach { st -> FilterChip(selected = chosen == st, onClick = { chosen = st }, label = { Text(statusTitle(st)) }) }
             }
@@ -108,7 +108,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     Text(ui("feedback.in_asana"))
                 }
             }
-            // Удаление (4.2.1): ошибку и предложение - с вопросом; задача в Asana остаётся
+            // Удаление (4.3.0): ошибку и предложение - с вопросом; задача в Asana остаётся
             if (entry.deletable) ReportDeleteButton(!account.busy) { deleting = true }
         }
     }

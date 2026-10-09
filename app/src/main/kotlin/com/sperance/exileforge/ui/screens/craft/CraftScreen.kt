@@ -130,11 +130,11 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
             }.toMap()
         }
     }
-    // Сфера качества над вещью (4.2.1): что поднимет вид качества выбранного знамения и сколько качества другого вида сбросится.
+    // Сфера качества над вещью (4.3.0): что поднимет вид качества выбранного знамения и сколько качества другого вида сбросится.
     val quality = remember(gear, index, smithy.omen) {
         if (index == null || gear == null) null else QualityForecast.of(index, gear.item, gear.template, Omen.of(smithy.omen))
     }
-    // Что может выйти из сферы удачи (4.2.1): уникалки правил того же семейства и уровня вещи, тот же список, что тянет сервер.
+    // Что может выйти из сферы удачи (4.3.0): уникалки правил того же семейства и уровня вещи, тот же список, что тянет сервер.
     val chanceUniques = remember(gear, index) {
         if (index == null || gear == null) emptyList() else OrbApplier(index).chanceUniques(gear.item, gear.template).map { it.value.code }
     }

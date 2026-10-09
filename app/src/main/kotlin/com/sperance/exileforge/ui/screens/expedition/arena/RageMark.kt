@@ -15,7 +15,7 @@ import kotlin.math.ceil
 /** Цифры одной ширины: строка ярости не прыгает, пока тикают секунды. */
 internal val TabularDigits = TextStyle(fontFeatureSettings = "tnum")
 
-/** Ярость боя (4.2.1) одной строкой: до первой ступени - отсчёт до неё, потом - ступень, прибавка урона врагов и отсчёт до следующей. */
+/** Ярость боя (4.3.0) одной строкой: до первой ступени - отсчёт до неё, потом - ступень, прибавка урона врагов и отсчёт до следующей. */
 internal fun rageText(rage: RageView): String {
     val next = rage.next
     return when {
@@ -25,7 +25,7 @@ internal fun rageText(rage: RageView): String {
     }
 }
 
-/** Компактный знак ярости (4.2.1): в шапке стаи и в полосе стража; пока ступени нет - приглушённый. */
+/** Компактный знак ярости (4.3.0): в шапке стаи и в полосе стража; пока ступени нет - приглушённый. */
 @Composable internal fun RageMark(rage: RageView, modifier: Modifier = Modifier) {
     Text(rageText(rage), modifier, color = if (rage.stage > 0) Ember else Muted, fontSize = 9.sp, style = TabularDigits)
 }

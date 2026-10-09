@@ -126,7 +126,7 @@ import kotlin.math.sin
         return
     }
     val allocated = node.code in taken
-    // Режим узла для класса (4.2.1): чужая ветка - проход за одно очко, без бонусов и вариантов; цену и варианты дают правила.
+    // Режим узла для класса (4.3.0): чужая ветка - проход за одно очко, без бонусов и вариантов; цену и варианты дают правила.
     val start = heroClass?.startNode
     val passage = node.roleFor(start) == NodeRole.PASSAGE
     val cost = index.tree.cost(node, start)
@@ -224,7 +224,7 @@ import kotlin.math.sin
     } else if (start == null) {
         MutedText(ui("tree.path_none"))
     } else {
-        // Почему узел не взять - причина правил (4.2.1), та же, что вернул бы сервер: сначала место узла, затем очки.
+        // Почему узел не взять - причина правил (4.3.0), та же, что вернул бы сервер: сначала место узла, затем очки.
         val placement = remember(node.code, taken, start) { TreeAllocation.placement(index.tree, node, taken, start) }
         if (placement == null) {
             val short = remember(node.code, taken, start, available) { TreeAllocation.refusal(index.tree, node, taken, start, available) }

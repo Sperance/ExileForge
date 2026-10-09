@@ -157,7 +157,7 @@ fun SkillTreePanel(
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
     val heroClass = game.heroClass
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
-    // Чужие ветки (4.2.1) - проходы: серые на карте, за одно очко и без бонусов.
+    // Чужие ветки (4.3.0) - проходы: серые на карте, за одно очко и без бонусов.
     val passages = remember(index, heroClass) { nodes.filter { it.roleFor(heroClass?.startNode) == NodeRole.PASSAGE }.mapTo(HashSet()) { it.code } }
     // The tag filter (3.47.0): every node whose lines carry the tag lights up.
     var tag by remember { mutableStateOf<String?>(null) }
@@ -320,7 +320,7 @@ internal val PILL = RoundedCornerShape(16.dp)
 
 /**
  * Which nodes are one step away - those the rules place next to the taken ones ([TreeAllocation.placement]): the class's
- * own start while nothing is taken, otherwise every adjacent node, a passage through another class's branch (4.2.1) too.
+ * own start while nothing is taken, otherwise every adjacent node, a passage through another class's branch (4.3.0) too.
  */
 internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>): Set<String> {
     val start = heroClass?.startNode ?: return emptySet()

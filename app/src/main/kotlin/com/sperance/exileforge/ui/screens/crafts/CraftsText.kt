@@ -117,7 +117,7 @@ fun jobProduct(view: JobView): String = when (val job = view.job) {
 
     is Job.Jewel -> ui("crafts.kind_jewel", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
 
-    // Инструмент кузнеца (server 4.2.1): выбранный вариант - база инструмента, сама работа - полоса уровней.
+    // Инструмент кузнеца (server 4.3.0): выбранный вариант - база инструмента, сама работа - полоса уровней.
     is Job.Tool -> if (job.output.isNotEmpty()) equipmentTitle(job.output) else ui("crafts.kind_tool", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
 }
 

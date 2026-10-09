@@ -93,7 +93,7 @@ enum class QualityFilter {
     }
 }
 
-/** Потолок качества вещи - потолок её вида качества по правилам (4.2.1, [QualityKind]); вида нет - общий. */
+/** Потолок качества вещи - потолок её вида качества по правилам (4.3.0, [QualityKind]); вида нет - общий. */
 private val ItemView.qualityCap: Int get() = QualityKind.of(catalyst).gain(item, template, index)?.cap(index.rules) ?: index.rules.quality.max
 
 /** Порядки списка предметов (3.30.0, с 4.2.0 - общие для всех списков): новые первыми, по редкости, уровню предмета или цене списка. */

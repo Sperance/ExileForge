@@ -76,7 +76,7 @@ import org.koin.compose.viewmodel.koinViewModel
     onApply: (String, String) -> Unit,
 ) {
     val code = smithy.orb
-    // Качество другого вида (4.2.1): сфера качества сбросит его - сначала подтверждение с тем, сколько пропадёт.
+    // Качество другого вида (4.3.0): сфера качества сбросит его - сначала подтверждение с тем, сколько пропадёт.
     var confirming by remember(instance.id, code, smithy.omen) { mutableStateOf(false) }
     val owned = game.bagAmount(code) ?: 0L
     val orb = game.orbs.firstOrNull { it.code.value == code && owned > 0 && accepted(code) }
@@ -96,7 +96,7 @@ import org.koin.compose.viewmodel.koinViewModel
         )
         val resets = orb.code.value == Orb.QUALITY_ORB.name && lost > 0
         if (resets) Text(ui("forge.quality_reset", lost), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-        // Сфера удачи (4.2.1): какие уникалки может дать эта вещь - список правил ([OrbApplier.chanceUniques]).
+        // Сфера удачи (4.3.0): какие уникалки может дать эта вещь - список правил ([OrbApplier.chanceUniques]).
         if (orb.code.value == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
             Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
         }

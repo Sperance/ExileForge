@@ -21,7 +21,7 @@ class FeedbackClient internal constructor(private val http: Transport) {
     suspend fun mine(): List<OwnReport> = http.get("$REPORTS/mine")
     suspend fun vote(id: String, vote: Vote): Suggestion = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
 
-    /** Удаление отчёта (4.2.1, сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
+    /** Удаление отчёта (4.3.0, сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
     suspend fun delete(id: String) {
         http.request("POST", "$REPORTS/delete", mapOf("id" to id), authenticated = true)
     }

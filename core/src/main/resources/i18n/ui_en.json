@@ -2659,7 +2659,6 @@
   "pets.no_lines": "No modifiers",
   "pets.to_forge": "To the forge",
   "pets.offer_waiting": "A line waits to be chosen in the forge",
-  "forge.target_item": "Item",
   "forge.target_pet": "Pet",
   "pets.title": "Menagerie: {0}",
   "pets.hint": "Eggs drop from rare monsters and bosses; the species follows the egg's biome. One combat pet and one helper work at a time; those at work take half the hero's experience.",

@@ -149,17 +149,18 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                 InfoCard(ui("tree.no_hero"), ui("craft.hero_first"))
                 return@Column
             }
-            // The forge works a pet too (3.81.0): the pets' orbs are spent here alone.
-            if (hero.pets.pets.isNotEmpty()) {
-                PillTabs(listOf(ui("forge.target_item"), ui("forge.target_pet")), if (petMode) 1 else 0, { vm.petMode(it == 1) }, segmented = true)
-            }
+            // The forge works a pet too (3.81.0): the pets' orbs are spent here alone. С 4.3.0 питомцы - кнопкой полки у наковальни
+            val pets = PetRail(petMode, enter = { vm.petMode(true) }, leave = { vm.petMode(false) }).takeIf { hero.pets.pets.isNotEmpty() }
             if (petMode) {
-                PetForge(game, smithy, vm)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TargetRail(pickFilter, pets) { picking = true }
+                    Column(Modifier.weight(1f)) { PetForge(game, smithy, vm) }
+                }
                 return@Column
             }
             if (sections.size > 1) PillTabs(sections.map { ui(it.title) }, sections.indexOf(section), { vm.section(sections[it]) }, segmented = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TargetRail(pickFilter) { picking = true }
+                TargetRail(pickFilter, pets) { picking = true }
                 Anvil(
                     game,
                     view,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -56,30 +57,44 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
 /**
  * Полка у наковальни (макет B; с 4.2.0 - быстрый переключатель «Типа» общего фильтра [ItemShelf.FORGE], как рейка тайника):
  * «Все» и разделы списка рисунками; выбранный - в золоте. Нажатие ставит тип фильтра и открывает выбор вещи - выбор на полке и
- * «Тип» в шторке одно и то же состояние.
+ * «Тип» в шторке одно и то же состояние. Под разделами вещей (4.3.0) - отдельной кнопкой питомцы ([pets]; нет питомцев - нет
+ * кнопки): она включает кузню питомца, выбор раздела вещей - выключает.
  */
-@Composable internal fun TargetRail(state: ItemFilterState, onOpen: () -> Unit) {
+@Composable internal fun TargetRail(state: ItemFilterState, pets: PetRail?, onOpen: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     val entries = listOf<ItemType?>(null) + state.shelf.sections.map(ItemType::Section)
+    val petOn = pets?.on == true
     Column(
         Modifier.width(52.dp).depthPanel(shape).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         entries.forEach { type ->
-            val on = type == state.filter.type
             val title = type?.let { typeTitle(it, uiLanguage) } ?: ui("common.all")
-            Box(
-                Modifier.size(40.dp, 28.dp).clip(RoundedCornerShape(8.dp)).background(if (on) Gold.copy(alpha = .16f) else Color.Transparent)
-                    .clickable(role = Role.Tab, onClickLabel = title) {
-                        state.update(state.filter.copy(type = type))
-                        onOpen()
-                    },
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon((type as? ItemType.Section)?.section?.glyph ?: Icons.Outlined.Search, title, tint = if (on) GoldBright else Muted, modifier = Modifier.size(16.dp))
+            RailButton((type as? ItemType.Section)?.section?.glyph ?: Icons.Outlined.Search, title, on = !petOn && type == state.filter.type) {
+                pets?.leave?.invoke()
+                state.update(state.filter.copy(type = type))
+                onOpen()
             }
         }
+        pets?.let {
+            HorizontalDivider(Modifier.width(28.dp), color = Bronze.copy(alpha = .5f))
+            RailButton(Icons.Outlined.Pets, ui("forge.target_pet"), on = it.on, onClick = it.enter)
+        }
+    }
+}
+
+/** Кнопка питомцев на полке у наковальни: включена ли кузня питомца ([on]), как войти в неё и как выйти к вещам. */
+internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> Unit)
+
+/** Кнопка полки: рисунок [glyph] с подписью [title] для чтеца, выбранная - в золоте. */
+@Composable private fun RailButton(glyph: ImageVector, title: String, on: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier.size(40.dp, 28.dp).clip(RoundedCornerShape(8.dp)).background(if (on) Gold.copy(alpha = .16f) else Color.Transparent)
+            .clickable(role = Role.Tab, onClickLabel = title, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(glyph, title, tint = if (on) GoldBright else Muted, modifier = Modifier.size(16.dp))
     }
 }
 

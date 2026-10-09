@@ -192,7 +192,7 @@ import com.sperance.exileforge.ui.theme.*
         if (count > 0) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 f.active().forEach { field ->
-                    ActiveFilter(chipLabel(game, field, f.value(field))) {
+                    ActiveFilter(chipLabel(game, field, f.value(field), f.sellerName)) {
                         vm.filter(f.without(field))
                         vm.loadShowcase()
                     }
@@ -227,7 +227,7 @@ import com.sperance.exileforge.ui.theme.*
     )
 }
 
-internal fun chipLabel(game: GameUi, field: FilterField, value: String): String = when (field) {
+internal fun chipLabel(game: GameUi, field: FilterField, value: String, sellerName: String = ""): String = when (field) {
     FilterField.KIND -> LotKind.entries.firstOrNull { it.name == value }?.let { lotKindTitle(it, game.lang) } ?: value
     FilterField.SLOT -> slotTitle(value, game.lang)
     FilterField.RARITY -> rarityTitle(value, game.lang)
@@ -235,7 +235,7 @@ internal fun chipLabel(game: GameUi, field: FilterField, value: String): String 
     FilterField.MAX_LEVEL -> ui("auction.chip_ilvl_to", value)
     FilterField.ORB -> ui("auction.chip_orb", itemTitle(value))
     FilterField.MAX_PRICE -> ui("auction.chip_max_price", value)
-    FilterField.SELLER -> ui("auction.chip_seller", value.takeLast(6))
+    FilterField.SELLER -> sellerName.takeIf { it.isNotBlank() }?.let { ui("auction.chip_seller_name", it) } ?: ui("auction.chip_seller", value.takeLast(6))
 }
 
 /** The slots a template may have: the second ring and the belt's other flasks are places of the worn, never of a lot. */
@@ -306,10 +306,10 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
             }
         },
         // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.
-        AccordionGroup("seller", ui("auction.seller"), draft.sellerId.takeIf { it.isNotBlank() }?.let { chipLabel(game, FilterField.SELLER, it) } ?: any) {
+        AccordionGroup("seller", ui("auction.seller"), draft.sellerId.takeIf { it.isNotBlank() }?.let { chipLabel(game, FilterField.SELLER, it, draft.sellerName) } ?: any) {
             OutlinedTextField(
                 draft.sellerId,
-                { draft = draft.copy(sellerId = it.trim().take(game.inputs.code)) },
+                { draft = draft.copy(sellerId = it.trim().take(game.inputs.code), sellerName = "") },
                 label = { Text(ui("auction.seller")) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),

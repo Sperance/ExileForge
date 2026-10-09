@@ -173,7 +173,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(row.heroName.ifBlank { sanction.label }, color = Parchment, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
             MutedText(listOf(ui("moderation.target.${sanction.target.name}"), sanction.byLogin, categoryTitle(sanction.category)).joinToString(" · "))
-            val left = daysLeft(sanction)
+            val left = sanction.daysLeft()
             LinearProgressIndicator(progress = { trashShare(sanction) }, color = Muted, trackColor = PanelRaised, modifier = Modifier.fillMaxWidth().height(3.dp))
             Text(ui("moderation.purge_in", left ?: 0), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
@@ -472,7 +472,7 @@ private const val SERVER_NAME = 32
                 modifier = Modifier.fillMaxWidth(),
             )
             Label(ui("moderation.category"))
-            Chips { SanctionCategory.entries.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
+            Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
             OutlinedTextField(comment, { comment = it.take(limit) }, label = { Text(ui("moderation.comment")) }, minLines = 2, supportingText = { LengthCounter(comment, limit) }, modifier = Modifier.fillMaxWidth())
             val term = custom.toIntOrNull() ?: hours
             ForgeButton(
@@ -499,7 +499,7 @@ private const val SERVER_NAME = 32
                 Chip(ui("moderation.delete_account", dossier.account.login, dossier.account.heroes), target == SanctionTarget.ACCOUNT) { onTarget(SanctionTarget.ACCOUNT) }
             }
             MutedText(ui(if (target == SanctionTarget.HERO) "moderation.delete_hero_note" else "moderation.delete_account_note", days))
-            Chips { SanctionCategory.entries.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
+            Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
             OutlinedTextField(comment, { comment = it.take(limit) }, label = { Text(ui("moderation.delete_reason")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
             HoldButton(
                 ui("moderation.hold_delete"),
@@ -593,7 +593,7 @@ internal fun categoryTitle(category: SanctionCategory): String = ui("moderation.
 internal fun termText(sanction: SanctionView): String? {
     val until = sanction.until
     return when {
-        sanction.kind == SanctionKind.DELETION -> daysLeft(sanction)?.let { ui("moderation.purge_in", it) }
+        sanction.kind == SanctionKind.DELETION -> sanction.daysLeft()?.let { ui("moderation.purge_in", it) }
         until == null -> ui("moderation.forever")
         else -> listedAt(until)?.let { ui("moderation.until", it) }
     }
@@ -607,8 +607,6 @@ private fun hoursText(hours: Int): String = when {
 /** Мс эпохи по метке сервера (UTC); не читается - null. */
 internal fun epochOf(stamp: String?): Long? = stamp?.let { runCatching { java.time.LocalDateTime.parse(it).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull() }
 
-private fun daysLeft(sanction: SanctionView): Long? = epochOf(sanction.until)?.let { ((it - System.currentTimeMillis()).coerceAtLeast(0) + DAY_MS - 1) / DAY_MS }
-
 private fun trashShare(sanction: SanctionView): Float {
     val from = epochOf(sanction.at) ?: return 0f
     val to = epochOf(sanction.until) ?: return 0f
@@ -621,7 +619,6 @@ private const val TRASH_DAYS = 30
 private const val COMMENT = 300
 private const val DIGITS = 4
 private const val HOURS_IN_DAY = 24
-private const val DAY_MS = 86_400_000L
 private const val TILES = 3
 private const val DATE = 10
 private const val HARDWARE = 6

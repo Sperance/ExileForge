@@ -41,6 +41,12 @@ object Reads {
     const val QUESTS = "quests"
     const val GUILD_QUESTS = "guild_quests"
     const val HALL = "hall"
+
+    /** Карточка игрока (4.5.1). */
+    const val PLAYER_CARD = "player_card"
+
+    /** Последствия самоудаления героя (4.5.1). */
+    const val DELETION = "deletion"
 }
 
 /** Что сообщить сразу: вид выбирает цвет, [at] отличает два одинаковых текста. */

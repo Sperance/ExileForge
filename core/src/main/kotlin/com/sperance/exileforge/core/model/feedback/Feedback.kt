@@ -54,6 +54,9 @@ import kotlinx.serialization.Serializable
     val screen: String = "",
     val context: Map<String, String> = emptyMap(),
     val userId: String? = null,
+    /** Герой автора (сервер 1.80.0): свой герой его аккаунта и имя на момент отчёта; null - без героя. */
+    val heroId: String? = null,
+    val heroName: String = "",
     val status: ReportStatus = ReportStatus.CREATED,
     val kind: FeedbackKind = FeedbackKind.BUG,
     val likes: List<String> = emptyList(),

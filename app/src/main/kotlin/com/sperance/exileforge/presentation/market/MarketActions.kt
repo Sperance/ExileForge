@@ -44,6 +44,15 @@ class MarketActions(
     fun filter(filter: AuctionFilter) = market { it.copy(filter = filter) }
     fun showOwnLots(show: Boolean) = market { it.copy(showOwnLots = show) }
 
+    /**
+     * Лоты одного продавца [sellerId] по имени [name] (4.5.1, «Лоты игрока» карточки игрока): витрина, суженная до него, с первой
+     * страницы; свои лоты при этом не прячутся.
+     */
+    fun sellerLots(sellerId: String, name: String) {
+        market { it.copy(tab = SHOWCASE_TAB, filter = AuctionFilter(sellerId = sellerId, sellerName = name), showOwnLots = it.showOwnLots || sellerId == heroes.heroId) }
+        loadShowcase()
+    }
+
     /** Витрина с первой страницы под фильтром, как он стоит. */
     fun loadShowcase() = trade(restart = true) {
         val showcase = api.auction.search(heroes.heroId, showcaseFilter(), listOf(""))
@@ -176,3 +185,6 @@ class MarketActions(
         const val LEVEL_GATE = "AU_002"
     }
 }
+
+/** Вкладка витрины аукциона: первая из «витрина, свои лоты, история». */
+private const val SHOWCASE_TAB = 0

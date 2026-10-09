@@ -6,9 +6,12 @@ import com.sperance.exileforge.core.contract.requireItemId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.CreateHeroCommand
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
+import com.sperance.exileforge.core.model.hero.DeletionConfirm
+import com.sperance.exileforge.core.model.hero.DeletionPreview
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.PetOrbResponse
 import com.sperance.exileforge.core.model.hero.PetState
+import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.model.hero.SellBatch
 import com.sperance.exileforge.core.model.hero.SellOutcome
 import com.sperance.exileforge.core.model.hero.StashState
@@ -22,6 +25,7 @@ import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
@@ -29,6 +33,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 
 private const val HERO = "api/v1/hero"
+private const val DELETION = "$HERO/deletion"
 
 /**
  * One hero: what they are, what they carry and wear, and every command that changes that. Each command
@@ -68,9 +73,40 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.request("POST", HERO, body = body, authenticated = true).jsonArray.single().let { WireJson.decodeFromJsonElement(it) }
     }
 
+    /** Стирание героя администратором (общий `DELETE hero`, с сервера 4.5.1 - только ему); игрок удаляет своего через [markDeletion]. */
     suspend fun delete(heroId: String) {
         requireId(heroId)
         http.request("DELETE", HERO, mapOf("id" to heroId), authenticated = true)
+    }
+
+    // ---- самоудаление (сервер 4.5.1): корзина на `selfDeleteDays` дней; героя запрос называет `hero` ----
+
+    /** Что случится при удалении своего героя [heroId]: гильдия, лоты и срок, пока его можно вернуть. */
+    suspend fun deletionPreview(heroId: String): DeletionPreview = http.get("$DELETION/preview", deletionQuery(heroId))
+
+    /** Свой герой [heroId] - в корзину; [name] - его имя, введённое для подтверждения (`CH_040`). Ответ - герои аккаунта. */
+    suspend fun markDeletion(heroId: String, name: String): HeroRoster = http.post("$DELETION/mark", deletionQuery(heroId), confirm(name))
+
+    /** Вернуть своего героя [heroId] из самоудаления; места на аккаунте нет - `CH_005`. */
+    suspend fun restoreDeletion(heroId: String): HeroRoster = http.post("$DELETION/restore", deletionQuery(heroId))
+
+    /** Стереть своего героя [heroId] сразу и навсегда - живого или из самоудаления; [name] - его имя. */
+    suspend fun eraseDeletion(heroId: String, name: String): HeroRoster = http.post("$DELETION/erase", deletionQuery(heroId), confirm(name))
+
+    private fun deletionQuery(heroId: String): Map<String, String> {
+        requireId(heroId)
+        return mapOf("hero" to heroId)
+    }
+
+    private fun confirm(name: String): JsonElement {
+        require(name.isNotBlank()) { ui("contract.enter_name") }
+        return WireJson.encodeToJsonElement(DeletionConfirm.serializer(), DeletionConfirm(name.trim()))
+    }
+
+    /** Карточка игрока (сервер 4.5.1): герой [target] глазами своего героя [heroId], только на его игровом сервере. */
+    suspend fun card(heroId: String, target: String): PlayerCard {
+        requireId(target)
+        return http.get("$HERO/card", heroQuery(heroId, "target" to target))
     }
 
     // ---- an administrator grants out of nothing ----

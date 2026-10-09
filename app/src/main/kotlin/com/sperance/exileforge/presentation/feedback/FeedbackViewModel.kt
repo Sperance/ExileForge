@@ -36,6 +36,9 @@ class FeedbackViewModel(
 
     private fun feedback(transform: (Feedback) -> Feedback) = repository.update(transform)
 
+    /** Адресат из карточки игрока (4.5.1) для формы письма: отдаётся один раз и забывается. */
+    fun takeMailTo(): String = feedback.value.mailTo.also { if (it.isNotEmpty()) feedback { f -> f.copy(mailTo = "") } }
+
     fun loadSuggestions() = commands.read(Reads.FEEDBACK) {
         val suggestions = api.feedback.suggestions()
         val mine = api.feedback.mine()

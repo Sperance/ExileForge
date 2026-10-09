@@ -40,8 +40,10 @@ import kotlinx.serialization.json.JsonElement
  *      `PowerAct.RECAST`, поля умения `echo`/`cast`/`hit.chain`.
  * 65 - `hero/pets/orb` отвечает `PetOrbResponse` (строка итога и зверинец), `OrbApplier.refusal` цели-питомца, отклики свойств
  *      `HINDER`/`HEX`/`RIPOSTE`/`STACK`, недуг `BURST`, строки `FIRST_STRIKE`, `LootRoller.deathLoss(heroLevel, experience)`.
+ * 66 - самоудаление героя `hero/deletion/preview|mark|restore|erase` (`CH_040`, `CH_041`, причина санкции `SELF`, `MOD_010`),
+ *      общий `DELETE hero` - только администратору, карточка игрока `GET hero/card`, `GuildMember.online`.
  */
-const val API_REVISION = 65
+const val API_REVISION = 66
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

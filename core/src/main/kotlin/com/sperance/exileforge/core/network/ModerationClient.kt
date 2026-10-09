@@ -13,8 +13,30 @@ private const val NOTICE = "api/v1/notice"
 /** На что санкция: герой, аккаунт целиком или устройство. */
 @Serializable enum class SanctionTarget { HERO, ACCOUNT, DEVICE }
 
-/** Категория причины - её название из словаря на языке игрока. */
-@Serializable enum class SanctionCategory { BOT, CHEATS, EXPLOIT, ABUSE, MULTI, OTHER }
+/**
+ * Категория причины - её название из словаря на языке игрока.
+ *
+ * @property voluntary удаление по воле владельца (сервер 4.5.1, [SELF]): место аккаунта свободно сразу, вернуть героя может
+ * сам владелец; модерация такую причину не ставит
+ */
+@Serializable
+enum class SanctionCategory(val voluntary: Boolean = false) {
+    BOT,
+    CHEATS,
+    EXPLOIT,
+    ABUSE,
+    MULTI,
+    OTHER,
+
+    /** Самоудаление героя игроком: корзина на `moderation.selfDeleteDays` дней. */
+    SELF(voluntary = true),
+    ;
+
+    companion object {
+        /** Причины, что ставит модерация: без самоудаления. */
+        val imposed: List<SanctionCategory> get() = entries.filterNot { it.voluntary }
+    }
+}
 
 /** Роли аккаунта, как их называет сервер. */
 @Serializable enum class AccountRole { USER, MODERATOR, ADMIN, TESTER }
@@ -44,7 +66,17 @@ private const val NOTICE = "api/v1/notice"
     val appealed: Boolean = false,
 ) {
     val active: Boolean get() = liftedAt == null && purgedAt == null
+
+    /** Самоудаление (4.5.1): герой в корзине по воле владельца - он сам вернёт или сотрёт его. */
+    val voluntary: Boolean get() = kind == SanctionKind.DELETION && category.voluntary
+
+    /** Сколько полных или начатых дней до [until] (конец бана или очистка корзины); null - бессрочно или не прочитать. */
+    fun daysLeft(now: Long = System.currentTimeMillis()): Long? = until
+        ?.let { runCatching { java.time.LocalDateTime.parse(it).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull() }
+        ?.let { ((it - now).coerceAtLeast(0) + DAY_MS - 1) / DAY_MS }
 }
+
+private const val DAY_MS = 86_400_000L
 
 @Serializable enum class ModerationSegment { ALL, BANNED, TRASH }
 

@@ -134,7 +134,7 @@ class ServerIntegrationTest {
             try {
                 assertEquals(403, assertFailsWith<ApiFailure> { player.hero.grantItem(own.id, Orb.CHAOS_ORB.name, 1) }.status)
             } finally {
-                player.hero.delete(own.id)
+                player.hero.eraseDeletion(own.id, own.name)
             }
         } finally {
             api.hero.delete(heroId)

@@ -138,17 +138,5 @@ private fun modeHint(mode: GuildMode): String = when (mode) {
     modifier = Modifier.fillMaxWidth(),
 )
 
-/** When a member was last seen: «в игре», minutes, hours or days ago. */
-internal fun seenText(at: Long): String {
-    if (at <= 0) return ui("guild.seen_never")
-    val minutes = ((System.currentTimeMillis() - at) / 60_000).coerceAtLeast(0)
-    return when {
-        minutes < 5 -> ui("guild.seen_now")
-        minutes < 60 -> ui("guild.seen_minutes", minutes)
-        minutes < 24 * 60 -> ui("guild.seen_hours", minutes / 60)
-        else -> ui("guild.seen_days", minutes / (24 * 60))
-    }
-}
-
 /** An epoch-millisecond moment by the device's clock, «dd.MM HH:mm». */
 internal fun clockText(at: Long): String = if (at <= 0) "" else Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd.MM HH:mm"))

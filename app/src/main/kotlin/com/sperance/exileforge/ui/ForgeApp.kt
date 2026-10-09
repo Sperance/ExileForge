@@ -179,25 +179,28 @@ import org.koin.compose.viewmodel.koinViewModel
             com.sperance.exileforge.ui.components.LoreHost(game) {
                 // Карточка предмета (4.3.2): любое касание вещи или стопки открывает её здесь, поверх всего
                 com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
-                    Box(Modifier.fillMaxSize()) {
-                        // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
-                        val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
-                        val run = expedition
-                        val arena = trial
-                        val notice = game.session.notice
-                        when {
-                            // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
-                            notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
+                    // Карточка игрока (4.5.1): имя или строка игрока где угодно открывает её здесь, поверх всего
+                    com.sperance.exileforge.ui.components.PlayerCardHost(game) {
+                        Box(Modifier.fillMaxSize()) {
+                            // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
+                            val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
+                            val run = expedition
+                            val arena = trial
+                            val notice = game.session.notice
+                            when {
+                                // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
+                                notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
 
-                            warming != null -> WarmupScreen(warming)
+                                warming != null -> WarmupScreen(warming)
 
-                            run != null -> ExpeditionPlay(run)
+                                run != null -> ExpeditionPlay(run)
 
-                            arena != null -> TrialScreen(arena)
+                                arena != null -> TrialScreen(arena)
 
-                            rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
+                                rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
 
-                            else -> Shell(game, logs, route, navigator) { bugOpen = true }
+                                else -> Shell(game, logs, route, navigator) { bugOpen = true }
+                            }
                         }
                     }
                 }

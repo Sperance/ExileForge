@@ -71,6 +71,8 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/guild/transfer", "POST" to "/api/v1/guild/disband", "POST" to "/api/v1/guild/settings",
             "POST" to "/api/v1/guild/contribute", "GET" to "/api/v1/guild/log",
             "POST" to "/api/v1/redemptioncodes/redeem",
+            "GET" to "/api/v1/hero/card", "GET" to "/api/v1/hero/deletion/preview", "POST" to "/api/v1/hero/deletion/mark",
+            "POST" to "/api/v1/hero/deletion/restore", "POST" to "/api/v1/hero/deletion/erase",
             "GET" to "/content/{file}", "GET" to "/static/index.json",
         )
 

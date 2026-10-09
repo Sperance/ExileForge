@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.guild
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,7 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
@@ -38,19 +43,33 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     return MemberCommand.entries.filter { GuildPolicy.can(me.role, it.action, target.role) }
 }
 
-/** The roll: the leader first, then the officers, each group by contribution; an officer or the leader may invite by name. */
+/**
+ * Состав таблицей (4.5.1, утверждён макет «Таблица»): заголовки «Ур.», «Неделя», «Всего» сортируют по нажатию (повтор - обратный
+ * порядок), без выбора - глава, офицеры, участники, внутри по вкладу. Нажатие строки открывает карточку игрока; у кого есть
+ * права, тот находит в ней прежний лист званий. Офицер и глава зовут по имени.
+ */
 @Composable internal fun MembersTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var chosen by remember { mutableStateOf<GuildMember?>(null) }
     var pending by remember { mutableStateOf<Pair<GuildMember, MemberCommand>?>(null) }
+    var order by remember { mutableStateOf<RosterOrder?>(null) }
+    val openPlayer = rememberPlayerCard()
     // Места офицеров - из `guilds.json`; без прочитанного контента повышение не предлагается
     val officerSeat = game.index?.guilds?.officerSeat(guild.officers) == true
-    val roll = guild.members.sortedWith(compareBy<GuildMember> { it.role.ordinal }.thenByDescending { it.contribution })
-    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)) item { InviteField(game, vm) }
+    val roll = remember(guild.members, order) { order?.sort(guild.members) ?: RosterOrder.byRole(guild.members) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp)) {
+        if (me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)) {
+            item {
+                InviteField(game, vm)
+                Spacer(Modifier.height(8.dp))
+            }
+        }
+        item { RosterHeader(order) { column -> order = order.next(column) } }
         items(roll, key = { it.heroId }) { member ->
             val commands = commandsOn(me, member)
-            MemberRow(member, isMe = member.heroId == me?.heroId, onClick = if (commands.isEmpty()) null else ({ chosen = member }))
+            val manage = commands.takeIf { it.isNotEmpty() }?.let { PlayerAction(ui("guild.manage")) { chosen = member } }
+            MemberRow(member, isMe = member.heroId == me?.heroId) { openPlayer(member.heroId, manage) }
         }
+        item { RosterFooter(guild.members) }
     }
     chosen?.let { member ->
         MemberSheet(game, member, commandsOn(me, member), officerSeat, onDismiss = { chosen = null }) { command ->
@@ -71,6 +90,110 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     }
 }
 
+/** Столбец состава, по которому его можно упорядочить. */
+private enum class RosterColumn(val title: String, val value: (GuildMember) -> Long) {
+    LEVEL("guild.col_level", { it.level.toLong() }),
+    WEEK("guild.col_week", { it.weekContribution }),
+    TOTAL("guild.col_total", { it.contribution }),
+}
+
+/** Порядок состава: столбец и направление; равные - по имени. */
+private data class RosterOrder(val column: RosterColumn, val descending: Boolean = true) {
+    fun sort(members: List<GuildMember>): List<GuildMember> {
+        val by = compareBy<GuildMember> { column.value(it) }.let { if (descending) it.reversed() else it }
+        return members.sortedWith(by.thenBy { it.name.lowercase() })
+    }
+
+    companion object {
+        /** Без выбора: глава, офицеры, участники, внутри - по вкладу за всё время. */
+        fun byRole(members: List<GuildMember>): List<GuildMember> = members.sortedWith(compareBy<GuildMember> { it.role.ordinal }.thenByDescending { it.contribution })
+    }
+}
+
+/** Нажатие на заголовок [column]: новый столбец - по убыванию, тот же - обратный порядок. */
+private fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.column == column) copy(descending = !descending) else RosterOrder(column)
+
+@Composable private fun RosterHeader(order: RosterOrder?, onSort: (RosterColumn) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        HeaderCell(ui("guild.col_member"), Modifier.weight(1f), TextAlign.Start)
+        RosterColumn.entries.forEach { column ->
+            val mark = when {
+                order?.column != column -> ""
+                order.descending -> " ↓"
+                else -> " ↑"
+            }
+            HeaderCell(ui(column.title) + mark, Modifier.width(column.width).clickable { onSort(column) }, TextAlign.End, active = order?.column == column)
+        }
+    }
+    HorizontalDivider(color = Bronze, thickness = 1.dp)
+}
+
+@Composable private fun HeaderCell(text: String, modifier: Modifier, align: TextAlign, active: Boolean = false) {
+    Text(
+        text.uppercase(),
+        color = if (active) GoldBright else Muted,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+        textAlign = align,
+        maxLines = 1,
+        modifier = modifier.padding(vertical = 4.dp),
+    )
+}
+
+private val RosterColumn.width: Dp get() = if (this == RosterColumn.LEVEL) 36.dp else 64.dp
+
+/**
+ * Строка состава: точка присутствия, роль, имя, под ним «класс · ранг · был N назад» (у себя - суточный лимит вклада); справа
+ * уровень, вклад за неделю и за всё время. Своя строка подсвечена.
+ */
+@Composable private fun MemberRow(member: GuildMember, isMe: Boolean, onClick: () -> Unit) {
+    Column(Modifier.fillMaxWidth().background(if (isMe) Gold.copy(alpha = .06f) else Color.Transparent).clickable(onClick = onClick)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    PresenceDot(member.online, member.lastSeenAt, 7.dp)
+                    GuildRoleBadge(member.role)
+                    Text(
+                        if (isMe) ui("guild.me", member.name) else member.name,
+                        color = GoldBright,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                Text(memberLine(member, isMe), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            NumberCell(member.level.toString(), RosterColumn.LEVEL)
+            NumberCell(number(member.weekContribution.toDouble()), RosterColumn.WEEK)
+            NumberCell(number(member.contribution.toDouble()), RosterColumn.TOTAL)
+        }
+        HorizontalDivider(color = Bronze.copy(alpha = .5f), thickness = 1.dp)
+    }
+}
+
+@Composable private fun NumberCell(text: String, column: RosterColumn) {
+    Text(text, color = Parchment, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(column.width))
+}
+
+/** «класс · ранг · был N назад»; у себя вместо присутствия - сколько вклада внесено из суточного потолка. */
+private fun memberLine(member: GuildMember, isMe: Boolean): String {
+    val tail = if (isMe && member.dayLimit > 0) {
+        ui("guild.day_limit", number((member.dayLimit - member.dayLeft).coerceAtLeast(0).toDouble()), number(member.dayLimit.toDouble()))
+    } else {
+        seenAgoText(member.online, member.lastSeenAt)
+    }
+    return listOf(classTitle(member.heroClass), GuildText.rank(member.rank), tail).joinToString(" · ")
+}
+
+/** Итог состава: «В сети X из N · Неделя: Σ». */
+@Composable private fun RosterFooter(members: List<GuildMember>) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp)) {
+        MutedText(ui("guild.roster_online", members.count { it.online }, members.size), Modifier.weight(1f))
+        MutedText(ui("guild.roster_week", number(members.sumOf { it.weekContribution }.toDouble())))
+    }
+}
+
 @Composable private fun InviteField(game: GameUi, vm: GuildViewModel) {
     var name by remember { mutableStateOf("") }
     ForgePanel {
@@ -83,35 +206,6 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
             }) { Text(ui("guild.invite")) }
         }
     }
-}
-
-/** One member: name and role, rank, level and class, when last seen, and what they gave. */
-@Composable private fun MemberRow(member: GuildMember, isMe: Boolean, onClick: (() -> Unit)?) {
-    ForgePanel(Modifier.then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier), accent = roleColor(member.role)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(
-                    if (isMe) ui("guild.me", member.name) else member.name,
-                    color = if (isMe) GoldBright else Parchment,
-                    style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                MutedText(ui("guild.member_line", GuildText.role(member.role), GuildText.rank(member.rank), member.level, classTitle(member.heroClass)))
-                MutedText(seenText(member.lastSeenAt))
-            }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(number(member.contribution.toDouble()), color = GoldBright, style = MaterialTheme.typography.labelLarge)
-                MutedText(ui("guild.contribution_short"))
-            }
-        }
-    }
-}
-
-private fun roleColor(role: GuildRole) = when (role) {
-    GuildRole.LEADER -> Gold
-    GuildRole.OFFICER -> Rune
-    GuildRole.MEMBER -> Bronze
 }
 
 /** A member's card with the commands this hero may give about them; each one asks again before it goes. */
@@ -158,7 +252,7 @@ private fun confirmNote(command: MemberCommand): String? = when (command) {
         if (guild.applications.isEmpty()) item { InfoCard(ui("guild.no_applications"), ui("guild.no_applications_hint")) }
         items(guild.applications, key = { it.heroId }) { applicant ->
             ForgePanel {
-                Text(applicant.name, color = Parchment, style = MaterialTheme.typography.titleSmall)
+                Text(applicant.name, color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.opensPlayer(applicant.heroId))
                 MutedText(ui("guild.applicant_line", applicant.level, classTitle(applicant.heroClass), clockText(applicant.at)))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ForgeOutlinedButton(enabled = !game.busy, onClick = { vm.declineApplicant(applicant.heroId) }, modifier = Modifier.weight(1f)) { Text(ui("guild.decline")) }

@@ -44,6 +44,8 @@ import kotlinx.serialization.Serializable
     /** Суточный потолок вклада с бонусом древа и остаток на сегодня (4.3.0, сервер по `GuildRules.dailyLimit`). */
     val dayLimit: Long = 0,
     val dayLeft: Long = 0,
+    /** В сети ли герой (4.5.1, сервер по `rules.onlineMinutes`); [lastSeenAt] с 4.5.1 - позднее из захода в гильдию и последней команды. */
+    val online: Boolean = false,
 )
 
 /** A hero asking to join an APPLY guild; only the leader and the officers are shown them. */

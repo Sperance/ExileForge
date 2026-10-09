@@ -75,8 +75,11 @@ data class GameUi(
     val heroLevel: Int get() = heroInfo?.level ?: heroRow?.level ?: 1
     val heroClass: HeroClass? get() = index?.let { i -> hero?.let { i.heroClass(it.heroClass) } }
 
-    /** The rules refuse one hero more than they allow, so the button that would ask for one is not offered. */
-    val characterSlotsLeft: Int get() = ((index?.rules?.maxCharacters ?: MAX_CHARACTERS) - session.characters.size).coerceAtLeast(0)
+    /**
+     * The rules refuse one hero more than they allow, so the button that would ask for one is not offered. Герой, удалённый
+     * самим игроком (4.5.1), места не держит.
+     */
+    val characterSlotsLeft: Int get() = ((index?.rules?.maxCharacters ?: MAX_CHARACTERS) - session.slotHolders).coerceAtLeast(0)
     val ownsCharacter: Boolean get() = session.signedIn && session.profile?.id == holding.owner
 
     /** Что продажа вещей редкостей [rarities] даст осколками сейчас (3.95.3), словами: правило сервера над сумкой героя; null - ничего. */

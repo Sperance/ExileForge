@@ -11,6 +11,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -126,6 +127,9 @@ private fun HallBoard.measure(value: Long): String = when (this) {
     HallBoard.GUILD, HallBoard.PROFESSION -> ui("hall.value.experience", number(value.toDouble()))
 }
 
+/** Герой строки [entry] для карточки игрока (4.5.1); в таблице гильдий строки - гильдии, героя нет. */
+private fun HallTable.heroOf(entry: HallEntry): String? = entry.id.takeIf { board != HallBoard.GUILD }
+
 /** Кто стоит на месте: герой - класс и уровень, гильдия - знак и уровень. */
 private fun about(entry: HallEntry): String = listOfNotNull(
     entry.tag.takeIf { it.isNotBlank() }?.let { "[$it]" },
@@ -177,7 +181,7 @@ private fun about(entry: HallEntry): String = listOfNotNull(
     val look = relicLook(PODIUM[place])
     val shape = RoundedCornerShape(14.dp)
     Column(
-        modifier.relicGround(look, shape, selected = entry.id == table.own?.id).padding(horizontal = 14.dp, vertical = if (big) 18.dp else 12.dp),
+        modifier.relicGround(look, shape, selected = entry.id == table.own?.id).clip(shape).opensPlayer(table.heroOf(entry)).padding(horizontal = 14.dp, vertical = if (big) 18.dp else 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
@@ -194,7 +198,7 @@ private fun about(entry: HallEntry): String = listOfNotNull(
     val shape = RoundedCornerShape(8.dp)
     Row(
         Modifier.fillMaxWidth().depthPanel(shape).then(if (own) Modifier.border(1.dp, Vital.copy(alpha = .6f), shape) else Modifier)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .clip(shape).opensPlayer(table.heroOf(entry)).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {

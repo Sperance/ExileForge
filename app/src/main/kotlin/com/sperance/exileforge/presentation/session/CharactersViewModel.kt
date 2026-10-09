@@ -2,6 +2,7 @@ package com.sperance.exileforge.presentation.session
 
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.model.hero.DeletionPreview
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
@@ -34,7 +35,28 @@ class CharactersViewModel(
     fun enterCharacter(id: String) = characters.enter(id)
     fun refreshCharacters() = characters.refresh()
     fun createCharacter(name: String, heroClass: String) = characters.create(name, heroClass)
-    fun deleteCharacter(id: String) = characters.delete(id)
+    fun markDeletion(id: String, name: String) = characters.markDeletion(id, name)
+    fun restoreCharacter(id: String) = characters.restore(id)
+    fun eraseCharacter(id: String, name: String) = characters.erase(id, name)
+
+    private val mutablePreview = MutableStateFlow<DeletionPreview?>(null)
+
+    /** Последствия удаления героя, чей лист подтверждения открыт (4.5.1); null - читаются или лист закрыт. */
+    val deletionPreview: StateFlow<DeletionPreview?> = mutablePreview.asStateFlow()
+
+    /** Лист удаления героя [id] открылся: прежний ответ про другого героя не показывается. */
+    fun previewDeletion(id: String) {
+        previewing = id
+        mutablePreview.value = null
+        characters.deletionPreview(id) { preview -> if (previewing == id) mutablePreview.value = preview }
+    }
+
+    fun closeDeletion() {
+        previewing = null
+        mutablePreview.value = null
+    }
+
+    private var previewing: String? = null
     fun ensureClasses() = characters.ensureClasses()
 
     private val mutableDraft = MutableStateFlow("")

@@ -46,7 +46,8 @@ import org.koin.compose.viewmodel.koinViewModel
     val vm = koinViewModel<CharactersViewModel>()
     val empty = game.session.charactersRead && game.session.characters.isEmpty()
     var creating by rememberSaveable(empty) { mutableStateOf(empty) }
-    var pendingDelete by remember { mutableStateOf<HeroSummary?>(null) }
+    var pendingDelete by remember { mutableStateOf<Pair<HeroSummary, HeroDeletion>?>(null) }
+    val preview by vm.deletionPreview.collectAsStateWithLifecycle()
     LaunchedEffect(creating) { if (creating) vm.ensureClasses() }
     Scaffold(containerColor = Ink) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
@@ -58,7 +59,12 @@ import org.koin.compose.viewmodel.koinViewModel
                     CharacterMenu(
                         game,
                         onPlay = vm::enterCharacter,
-                        onDelete = { pendingDelete = it },
+                        onDelete = { hero ->
+                            pendingDelete = hero to HeroDeletion.MARK
+                            vm.previewDeletion(hero.id)
+                        },
+                        onRestore = { vm.restoreCharacter(it.id) },
+                        onErase = { pendingDelete = it to HeroDeletion.ERASE },
                         onCreate = { creating = true },
                         onRefresh = vm::refreshCharacters,
                         onLogout = vm::logout,
@@ -70,16 +76,17 @@ import org.koin.compose.viewmodel.koinViewModel
             ToastHost(game, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
     }
-    pendingDelete?.let { doomed ->
-        ConfirmSheet(
-            title = ui("chars.release_q"),
-            subtitle = doomed.name,
-            danger = true,
-            icon = { Icon(ForgeGlyphs.Exile, null, tint = LifeRed, modifier = Modifier.size(40.dp)) },
-            note = ui("chars.release_text"),
-            confirm = ui("chars.release_do"),
-            onDismiss = { pendingDelete = null },
-        ) { vm.deleteCharacter(doomed.id) }
+    pendingDelete?.let { (doomed, mode) ->
+        val close = {
+            pendingDelete = null
+            vm.closeDeletion()
+        }
+        HeroDeletionSheet(doomed, mode, preview, game.busy, onDismiss = close) { name ->
+            when (mode) {
+                HeroDeletion.MARK -> vm.markDeletion(doomed.id, name)
+                HeroDeletion.ERASE -> vm.eraseCharacter(doomed.id, name)
+            }
+        }
     }
 }
 
@@ -93,6 +100,8 @@ import org.koin.compose.viewmodel.koinViewModel
     game: GameUi,
     onPlay: (String) -> Unit,
     onDelete: (HeroSummary) -> Unit,
+    onRestore: (HeroSummary) -> Unit = {},
+    onErase: (HeroSummary) -> Unit = {},
     onCreate: () -> Unit = {},
     onRefresh: () -> Unit = {},
     onLogout: () -> Unit = {},
@@ -110,7 +119,14 @@ import org.koin.compose.viewmodel.koinViewModel
                 )
             }
             items(game.session.characters, key = { it.id }) { character ->
-                CharacterCard(game, character, onPlay = { onPlay(character.id) }, onDelete = { onDelete(character) })
+                CharacterCard(
+                    game,
+                    character,
+                    onPlay = { onPlay(character.id) },
+                    onDelete = { onDelete(character) },
+                    onRestore = { onRestore(character) },
+                    onErase = { onErase(character) },
+                )
             }
             item {
                 ForgeButton(enabled = !game.busy && game.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
@@ -144,19 +160,21 @@ import org.koin.compose.viewmodel.koinViewModel
  * The row carries the class as a code (3.0.0); the server's dictionary names it, and the portrait
  * is drawn by the code alone, so the menu reads before the content has.
  */
-@Composable private fun CharacterCard(game: GameUi, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit) {
+@Composable private fun CharacterCard(game: GameUi, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit, onRestore: () -> Unit, onErase: () -> Unit) {
     val heroClass = character.heroClass.takeIf { it.isNotBlank() }
     // Санкция героя (3.88.5): под баном и в корзине им не играют; карточка говорит, кто, за что и до когда, и даёт обжаловать
     val sanction = game.session.sanctions[character.id]
     val deleted = character.deleted || sanction?.kind == SanctionKind.DELETION
+    // Самоудаление (4.5.1): серая карточка с отсчётом; вернуть или стереть сразу - сам владелец, обжаловать нечего
+    val voluntary = sanction?.voluntary == true
     val playable = sanction == null && !deleted
     var appealing by remember(character.id) { mutableStateOf(false) }
     ForgePanel(modifier = Modifier.alpha(if (deleted) .6f else 1f).clickable(enabled = !game.busy && playable, onClick = onPlay)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            ClassPortrait(heroClass, game.world.portraits, Modifier.size(64.dp), round = true)
+            ClassPortrait(heroClass, game.world.portraits, Modifier.size(64.dp).then(if (voluntary) Modifier.grayscale() else Modifier), round = true)
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(character.name, color = if (sanction != null) LifeRed else GoldBright, style = MaterialTheme.typography.titleMedium)
+                    Text(character.name, color = nameColor(sanction != null, voluntary), style = MaterialTheme.typography.titleMedium)
                     // Роль аккаунта (3.88.7): значок у администратора, модератора и тестировщика.
                     RoleMark(accountRole(game.session.profile?.role))
                 }
@@ -164,14 +182,22 @@ import org.koin.compose.viewmodel.koinViewModel
                 PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
             }
         }
-        sanction?.let { Text(sanctionLine(it), color = if (deleted) Muted else LifeRed, style = MaterialTheme.typography.bodySmall) }
-        if (sanction?.comment?.isNotBlank() == true) MutedText("«${sanction.comment}»")
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (sanction != null) {
-                ForgeOutlinedButton(enabled = !game.busy && !sanction.appealed, onClick = { appealing = true }, modifier = Modifier.weight(1f)) {
-                    Text(ui(if (sanction.appealed) "notice.appealed_short" else "notice.appeal"))
-                }
-            } else {
+        when {
+            voluntary -> sanction?.daysLeft()?.let { Text(ui("chars.marked_in", it), color = Muted, style = MaterialTheme.typography.bodySmall) }
+
+            sanction != null -> {
+                Text(sanctionLine(sanction), color = if (deleted) Muted else LifeRed, style = MaterialTheme.typography.bodySmall)
+                if (sanction.comment.isNotBlank()) MutedText("«${sanction.comment}»")
+            }
+        }
+        when {
+            voluntary -> MarkedActions(game, onRestore, onErase)
+
+            sanction != null -> ForgeOutlinedButton(enabled = !game.busy && !sanction.appealed, onClick = { appealing = true }, modifier = Modifier.fillMaxWidth()) {
+                Text(ui(if (sanction.appealed) "notice.appealed_short" else "notice.appeal"))
+            }
+
+            else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ForgeButton(enabled = !game.busy, onClick = onPlay, modifier = Modifier.weight(1f)) { Text(ui("auth.play")) }
                 ForgeOutlinedButton(enabled = !game.busy, onClick = onDelete) { Text(ui("chars.release_do"), color = MaterialTheme.colorScheme.error) }
             }
@@ -183,6 +209,23 @@ import org.koin.compose.viewmodel.koinViewModel
             appealing = false
             notices.appeal(sanction.id, text)
         }
+    }
+}
+
+/** Имя героя: под санкцией модерации - красным, в своей корзине - приглушённым, иначе - золотом. */
+private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
+    voluntary -> Muted
+    sanctioned -> LifeRed
+    else -> GoldBright
+}
+
+/** Кнопки героя в своей корзине (4.5.1): вернуть - если есть свободное место, иначе погашено с причиной; стереть навсегда. */
+@Composable private fun MarkedActions(game: GameUi, onRestore: () -> Unit, onErase: () -> Unit) {
+    val slot = game.characterSlotsLeft > 0
+    ForgeButton(enabled = !game.busy && slot, onClick = onRestore, modifier = Modifier.fillMaxWidth()) { Text(ui("chars.restore")) }
+    if (!slot) Text(ui("chars.restore_no_slot"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+    ForgeOutlinedButton(enabled = !game.busy, onClick = onErase, modifier = Modifier.fillMaxWidth()) {
+        Text(ui("chars.erase_do"), color = MaterialTheme.colorScheme.error)
     }
 }
 

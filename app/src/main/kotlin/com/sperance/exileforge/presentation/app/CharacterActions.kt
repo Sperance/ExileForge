@@ -2,6 +2,7 @@ package com.sperance.exileforge.presentation.app
 
 import com.sperance.exileforge.core.i18n.Phrase
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.hero.DeletionPreview
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.HeroRoster
 import com.sperance.exileforge.core.network.refusalLine
@@ -113,7 +114,7 @@ class CharacterActions(
                 require(heroClass.isNotBlank()) { ui("character.choose_class") }
                 val owner = sessions.state.value.profile?.id.orEmpty()
                 check(owner.isNotBlank()) { ui("catalog.sign_in") }
-                check(characterSlotsLeft() > 0) { ui("character.limit", sessions.state.value.characters.size) }
+                check(characterSlotsLeft() > 0) { ui("character.limit", sessions.state.value.slotHolders) }
                 val created = api.hero.create(owner, name, "", heroClass)
                 readCharacters()
                 entered(created.id)
@@ -121,13 +122,28 @@ class CharacterActions(
         }
     }
 
-    fun delete(id: String) {
-        run {
-            task(writing = true, touches = setOf(Reads.CHARACTERS)) {
-                api.hero.delete(id)
-                val remaining = sessions.state.value.characters.filterNot { character -> character.id == id }
-                sessions.update { it.copy(characters = remaining) }
-            }
+    /**
+     * Последствия самоудаления героя [id] (4.5.1) - гильдия, лоты, срок корзины - для листа подтверждения; ответ отдаётся
+     * [onPreview], пока лист открыт.
+     */
+    fun deletionPreview(id: String, onPreview: (DeletionPreview) -> Unit) {
+        read(Reads.DELETION, restart = true) { onPreview(api.hero.deletionPreview(id)) }
+    }
+
+    /** Свой герой [id] - в корзину на `selfDeleteDays` дней (4.5.1); [name] - его имя, введённое для подтверждения. */
+    fun markDeletion(id: String, name: String) = rosterCommand { api.hero.markDeletion(id, name) }
+
+    /** Вернуть героя [id] из самоудаления (4.5.1): занимает место аккаунта снова. */
+    fun restore(id: String) = rosterCommand { api.hero.restoreDeletion(id) }
+
+    /** Стереть героя [id] сразу и навсегда (4.5.1); [name] - его имя, введённое ещё раз. */
+    fun erase(id: String, name: String) = rosterCommand { api.hero.eraseDeletion(id, name) }
+
+    /** Команда над героями аккаунта, что отвечает их списком с санкциями (4.5.1): меню берёт ответ как есть. */
+    private fun rosterCommand(call: suspend () -> HeroRoster) {
+        task(writing = true, touches = setOf(Reads.CHARACTERS)) {
+            val roster = call()
+            sessions.update { it.copy(characters = roster.heroes, charactersRead = true, sanctions = roster.sanctions) }
         }
     }
 
@@ -137,5 +153,5 @@ class CharacterActions(
     }
 
     /** Сколько героев ещё можно создать: по правилам контента, пока их не прочли - по умолчанию. */
-    private fun characterSlotsLeft(): Int = ((world.state.value.content?.rules?.maxCharacters ?: MAX_CHARACTERS) - sessions.state.value.characters.size).coerceAtLeast(0)
+    private fun characterSlotsLeft(): Int = ((world.state.value.content?.rules?.maxCharacters ?: MAX_CHARACTERS) - sessions.state.value.slotHolders).coerceAtLeast(0)
 }

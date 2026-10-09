@@ -18,6 +18,8 @@ data class Feedback(
     val reports: List<AdminReport> = emptyList(),
     val mail: List<Mail> = emptyList(),
     val unread: Int = 0,
+    /** Кому администратор пишет письмо (4.5.1): логин из карточки игрока, его берёт форма письма; пусто - не задан. */
+    val mailTo: String = "",
 ) {
     /** Ящик, каким его теперь знает клиент, и счёт непрочитанного по нему. */
     fun withMail(mail: List<Mail>): Feedback = copy(mail = mail, unread = mail.count { !it.read })

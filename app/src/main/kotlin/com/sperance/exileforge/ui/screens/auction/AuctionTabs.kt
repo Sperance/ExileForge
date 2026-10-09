@@ -196,7 +196,8 @@ internal fun LotSheet(
                     if (lot.kind == LotKind.ITEM) PropertyRow(ui("auction.amount"), lot.amount.toString(), Glyph.ITEM)
                     // The price is always counted in orbs; the content gives the orb its name.
                     PropertyRow(ui("card.price"), orbPrice(lot), Glyph.CURRENCY)
-                    PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER)
+                    // Продавец открывает карточку игрока (4.5.1)
+                    Box(Modifier.opensPlayer(lot.sellerId)) { PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER) }
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
                     note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
                     extra?.invoke()

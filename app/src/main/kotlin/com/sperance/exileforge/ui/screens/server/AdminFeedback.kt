@@ -63,6 +63,10 @@ import org.koin.compose.viewmodel.koinViewModel
             Spacer(Modifier.weight(1f))
             StatusBadge(report.status)
         }
+        // Герой автора открывает карточку игрока (4.5.1)
+        report.heroId?.takeIf { it.isNotBlank() }?.let { hero ->
+            Text(ui("feedback.hero", report.heroName.ifBlank { "…" + hero.takeLast(6) }), color = Gold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.opensPlayer(hero))
+        }
         Text(report.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = if (open) Int.MAX_VALUE else 3)
         MutedText(
             listOfNotNull(
@@ -130,7 +134,8 @@ private const val REASON = 400
 @Composable internal fun MailComposePage(account: AccountUi) {
     val index = account.index ?: return
     val vm = koinViewModel<FeedbackViewModel>()
-    var login by remember { mutableStateOf("") }
+    // Письмо из карточки игрока (4.5.1): адресат уже вписан
+    var login by remember { mutableStateOf(vm.takeMailTo()) }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     var gold by remember { mutableStateOf("") }

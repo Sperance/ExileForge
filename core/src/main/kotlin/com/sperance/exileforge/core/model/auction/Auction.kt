@@ -96,6 +96,8 @@ import kotlinx.serialization.Serializable
     val priceOrb: String = "",
     val maxPrice: String = "",
     val sellerId: String = "",
+    /** Имя продавца [sellerId] для плашки фильтра (4.5.1, «Лоты игрока» из карточки); серверу не уходит. */
+    val sellerName: String = "",
     /** Hide one hero's own lots; they cannot be bought anyway, so the showcase drops them. */
     val excludeSellerId: String = "",
     /** Which dictionary the server resolves [title] against: lots carry codes, so a search by text is a search by code. */
@@ -139,7 +141,7 @@ import kotlinx.serialization.Serializable
         FilterField.MAX_LEVEL -> copy(maxItemLevel = "")
         FilterField.ORB -> copy(priceOrb = "")
         FilterField.MAX_PRICE -> copy(maxPrice = "")
-        FilterField.SELLER -> copy(sellerId = "")
+        FilterField.SELLER -> copy(sellerId = "", sellerName = "")
     }
 
     /** Every filter off, the name kept. */

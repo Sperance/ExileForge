@@ -2950,6 +2950,7 @@
   "crafts.choose": "What to make",
   "crafts.kind_refine": "One tier up from the tier below: how much and how long follow their gathering times. A target opens once the tier below it can be gathered",
   "crafts.kind_jewel": "A jewel of levels {0}–{1} for the tree's sockets",
+  "crafts.kind_tool": "A profession tool of levels {0}–{1}: the tool you choose, rarity by the forge",
   "quest.toast.claimed_all": "Quests handed in: {0} — {1}",
   "quest.toast.more": "and {0} more",
   "quest.toast.gold": "+{0} gold",

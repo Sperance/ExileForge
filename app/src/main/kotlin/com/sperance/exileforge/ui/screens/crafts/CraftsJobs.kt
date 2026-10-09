@@ -137,7 +137,7 @@ import kotlin.math.ceil
 @Composable internal fun JobIcon(job: JobView, modifier: Modifier) {
     when (job.kind) {
         JobKind.ITEM, JobKind.CONDENSE, JobKind.REFINE -> if (job.output.isNotBlank()) BagIcon(job.output, modifier) else GlyphIcon(Glyph.CRAFT, Gold, modifier)
-        JobKind.FLASK, JobKind.EQUIPMENT, JobKind.JEWEL -> if (!SpriteIcon(equipmentIcon(job.output), Gold, modifier, halo = false)) GlyphIcon(Glyph.ITEM, Gold, modifier)
+        JobKind.FLASK, JobKind.EQUIPMENT, JobKind.JEWEL, JobKind.TOOL -> if (!SpriteIcon(equipmentIcon(job.output), Gold, modifier, halo = false)) GlyphIcon(Glyph.ITEM, Gold, modifier)
         JobKind.MAP -> GlyphIcon(Glyph.MAP, Gold, modifier)
         JobKind.BOOK -> GlyphIcon(Glyph.TEXT, Gold, modifier)
     }

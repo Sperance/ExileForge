@@ -33,7 +33,8 @@ import kotlinx.serialization.json.JsonElement
  * 60 - Скверна: объект карты `BLIGHT` (жетоны очага, сундук точки выбором `FEATURE`), `MapFeature.accepts` с убитыми, доля добычи автозабега `expedition.autoYield`.
  * 61 - статусы отчётов `CREATED`/`SENT`, обзор Разлома (правило `SIGHT`, правила у даров), `campaign/start?forced=` механики тестировщика.
  * 63 - статус отчёта `REVIEW` и переходы `AdminReport.moves`, удаление `bugreport/delete`, без служебного журнала в отчёте,
- *      суточный вклад `GuildMember.dayLimit`/`dayLeft`, права гильдии `GuildPolicy` (офицер повышает участника).
+ *      суточный вклад `GuildMember.dayLimit`/`dayLeft`, права гильдии `GuildPolicy` (офицер повышает участника), работа кузнеца
+ *      `JobKind.TOOL` (инструменты профессий).
  */
 const val API_REVISION = 63
 

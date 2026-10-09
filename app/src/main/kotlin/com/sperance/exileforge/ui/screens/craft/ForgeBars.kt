@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
@@ -25,6 +26,8 @@ import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.presentation.forge.ForgeTarget
+import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
@@ -63,48 +66,49 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. */
+/**
+ * The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. С 4.4.x - над любой целью
+ * кузницы ([ForgeTarget]): [chosen] - сфера лотка, что ляжет на цель; нет её - полоса просит выбрать.
+ */
 @Composable internal fun OrbBar(
     game: GameUi,
     smithy: Smithy,
-    instance: ItemInstance,
+    target: ForgeTarget,
+    chosen: OrbChoice?,
     enabled: Boolean,
-    accepted: (String) -> Boolean,
-    needsOmen: (String) -> Boolean,
     lost: Int,
     chanceUniques: List<String>,
-    onApply: (String, String) -> Unit,
+    onApply: (String) -> Unit,
 ) {
-    val code = smithy.orb
     // Качество другого вида (4.3.0): сфера качества сбросит его - сначала подтверждение с тем, сколько пропадёт.
-    var confirming by remember(instance.id, code, smithy.omen) { mutableStateOf(false) }
-    val owned = game.bagAmount(code) ?: 0L
-    val orb = game.orbs.firstOrNull { it.code.value == code && owned > 0 && accepted(code) }
+    var confirming by remember(target.id, chosen, smithy.omen) { mutableStateOf(false) }
     ForgeBar {
-        if (orb == null) {
+        if (chosen == null) {
             Text(ui("forge.pick_orb"), color = Muted)
             return@ForgeBar
         }
-        // An orb the item takes only under an omen (a catalyst's Orb of Quality) waits for one: alone the server would refuse it.
-        val waiting = needsOmen(orb.code.value) && smithy.omen.isBlank()
+        val code = chosen.code
+        val owned = game.bagAmount(code) ?: 0L
+        // An orb the target takes only under an omen (a catalyst's Orb of Quality) waits for one: alone the server would refuse it.
+        val waiting = chosen.needsOmen && smithy.omen.isBlank()
         BarTitle(
             ForgeGlyphs.Orb,
             Gold,
-            itemTitle(orb.code.value) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
+            itemTitle(code) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
             if (waiting) ui("forge.needs_omen") to true else stock(code, owned, 1),
-            orb = Orb.of(orb.code.value),
+            code = code,
         )
-        val resets = orb.code.value == Orb.QUALITY_ORB.name && lost > 0
+        val resets = code == Orb.QUALITY_ORB.name && lost > 0
         if (resets) Text(ui("forge.quality_reset", lost), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         // Сфера удачи (4.3.0): какие уникалки может дать эта вещь - список правил ([OrbApplier.chanceUniques]).
-        if (orb.code.value == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
+        if (code == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
             Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
         }
-        HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted && !waiting, rearm = true) {
-            if (resets) confirming = true else onApply(instance.id, orb.code.value)
+        HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !target.corrupted && !waiting, rearm = true) {
+            if (resets) confirming = true else onApply(code)
         }
     }
-    if (confirming && orb != null) {
+    if (confirming && chosen != null) {
         AlertDialog(
             onDismissRequest = { confirming = false },
             containerColor = PanelRaised,
@@ -115,7 +119,7 @@ import org.koin.compose.viewmodel.koinViewModel
             confirmButton = {
                 ForgeTextButton(enabled = enabled, onClick = {
                     confirming = false
-                    onApply(instance.id, orb.code.value)
+                    onApply(chosen.code)
                 }) { Text(ui("forge.quality_reset_do")) }
             },
             dismissButton = { ForgeTextButton(onClick = { confirming = false }) { Text(ui("common.cancel")) } },
@@ -166,10 +170,11 @@ internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> 
     )
 }
 
-@Composable internal fun BarTitle(icon: ImageVector, accent: Color, title: String, stock: Pair<String, Boolean>, orb: Orb? = null) {
+/** Заголовок полосы: рисунок стопки [code] (сфера - своим стеклом), иначе значок [icon]; имя и что останется в сумке. */
+@Composable internal fun BarTitle(icon: ImageVector, accent: Color, title: String, stock: Pair<String, Boolean>, code: String? = null) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (orb != null) {
-            OrbGlyph(orb, Modifier.size(34.dp))
+        if (code != null) {
+            BagIcon(code, Modifier.size(34.dp), kind = ItemVisualKind.CURRENCY)
         } else {
             Icon(icon, null, tint = accent, modifier = Modifier.size(30.dp))
         }

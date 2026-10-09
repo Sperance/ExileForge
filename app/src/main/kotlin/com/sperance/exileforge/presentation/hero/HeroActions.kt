@@ -42,6 +42,9 @@ class HeroActions(
     /** Предмет под кузницей: тот, на который укажет следующая сфера. */
     fun selectEquipment(itemId: String) = heroes.selectEquipment(itemId)
 
+    /** Фраза наковальни уходит вместе с целью, о которой она (4.4.x): выбран питомец или другая вещь. */
+    fun clearForgeLine() = heroes.forgeLine("")
+
     fun equip(itemId: String, slot: Slot? = null) {
         buzzes.buzz(Buzz.BUTTON)
         heroCommand { id -> api.hero.equip(id, itemId, slot) }
@@ -66,7 +69,10 @@ class HeroActions(
     fun collectPet(slot: Int) = heroCommand { id -> api.hero.collectPet(id, slot) }
 
     /** Сфера ремесла на питомце (сервер 1.65.0), с предзнаменованием, если оно положено; фраза итога (4.4.1) - строка кузницы, как у вещи. */
-    fun petOrb(petId: String, orb: String, omen: String? = null) = forgeCommand { id -> heroes.forgeLine(api.hero.petOrb(id, petId, orb, omen).message) }
+    fun petOrb(petId: String, orb: String, omen: String? = null, onApplied: () -> Unit = {}) = forgeCommand { id ->
+        heroes.forgeLine(api.hero.petOrb(id, petId, orb, omen).message)
+        onApplied()
+    }
     fun choosePetLine(petId: String, choice: Int) = heroCommand { id -> api.hero.choosePetLine(id, petId, choice) }
     fun activatePet(petId: String) = heroCommand { id -> api.hero.activatePet(id, petId) }
     fun sellPet(petId: String) = heroCommand { id -> api.hero.sellPet(id, petId) }

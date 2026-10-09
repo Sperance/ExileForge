@@ -4,13 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.rules.content.Item
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,19 +24,19 @@ data class Smithy(
     val essence: String = "",
     val omen: String = "",
     val section: ForgeSection = ForgeSection.ORBS,
-    /** Питомец под кузницей (3.81.0): сферы питомцев тратятся только здесь; пустая строка - кузница над предметом. */
+    /** Питомец под кузницей (3.81.0); пустая строка - кузница над предметом героя (`selectedEquipment`). */
     val pet: String = "",
-    /** Кузница над питомцем, а не над предметом (3.81.0). */
-    val petMode: Boolean = false,
-    /** Вещь, под которую выбрано знамение (4.3.0): катализатор подбирается к вещи, на другой его нет. */
-    val omenItem: String = "",
+    /** Цель, под которую выбрано знамение (4.3.0): знамение подбирается к вещи или питомцу, на другой цели его нет. */
+    val omenTarget: String = "",
 )
+
+/** Id цели кузницы: выбранный питомец, иначе вещь под кузницей [item]. */
+private fun Smithy.targetId(item: String): String = pet.ifBlank { item }
 
 /** Кузница (3.80.18): выбор инструмента - состояние экрана, команды - общие действия героя; предмет под кузницей - в репозитории героя. */
 class SmithyViewModel(
     private val hero: HeroActions,
     private val sync: HeroSync,
-    world: WorldRepository,
     commands: CommandRunner,
     slice: GameSlice,
 ) : ViewModel() {
@@ -46,46 +44,61 @@ class SmithyViewModel(
     val game: StateFlow<GameUi> = slice.ui
     private val mutable = MutableStateFlow(Smithy())
 
-    /**
-     * Выбор как он есть; пока сфера не выбрана - самая дешёвая валюта контента, когда он прочитан. Знамение держится только над
-     * вещью, под которую его выбрали (4.3.0): сменилась вещь под кузницей - знамения нет.
-     */
-    val smithy: StateFlow<Smithy> = combine(mutable, world.state, game.map { it.holding.selectedEquipment }.distinctUntilChanged()) { chosen, w, item ->
-        val omened = if (chosen.omenItem == item) chosen else chosen.copy(omen = "", omenItem = "")
-        if (omened.orb.isNotBlank()) omened else omened.copy(orb = w.content?.itemsByCategory?.get(Item.CURRENCY)?.minByOrNull { it.price }?.code?.value.orEmpty())
+    /** Выбор как он есть. Знамение держится только над целью, под которую его выбрали (4.3.0): сменилась цель - знамения нет. */
+    val smithy: StateFlow<Smithy> = combine(mutable, game.map { it.holding.selectedEquipment }.distinctUntilChanged()) { chosen, item ->
+        if (chosen.omenTarget == chosen.targetId(item)) chosen else chosen.copy(omen = "", omenTarget = "")
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Smithy())
     val activity: StateFlow<Activity> = commands.state
 
     fun ensure() = sync.ensure()
 
-    /** Другая вещь под кузницей - знамение, выбранное под прежнюю, снимается (4.3.0). */
+    /** Другая цель под кузницей (4.4.x): вещь или питомец; прежняя фраза наковальни уходит вместе с прежней целью. */
+    fun select(target: ForgeTarget) {
+        if (target.id == smithy.value.targetId(game.value.holding.selectedEquipment)) return
+        hero.clearForgeLine()
+        when (target) {
+            is ForgeTarget.Gear -> selectEquipment(target.id)
+            is ForgeTarget.Beast -> mutable.update { it.copy(pet = target.id) }
+        }
+    }
+
+    /** Вещь под кузницей - питомец уходит; знамение, выбранное под прежнюю цель, снимается (4.3.0). */
     fun selectEquipment(itemId: String) {
         hero.selectEquipment(itemId)
-        mutable.update { if (it.omenItem == itemId) it else it.copy(omen = "", omenItem = "") }
+        mutable.update { it.copy(pet = "") }
     }
 
     /** Кузница над одним предметом на разделе, за которым пришёл игрок; `null` оставляет её предмет. */
     fun open(itemId: String?, section: ForgeSection) {
         itemId?.let(::selectEquipment)
-        mutable.update { it.copy(section = section, petMode = false) }
+        mutable.update { it.copy(section = section, pet = "") }
     }
 
-    /** Кузница над питомцем (3.81.0): из Зверинца кнопкой «В кузницу». */
-    fun openPet(petId: String) = mutable.update { it.copy(pet = petId, petMode = true) }
-    fun petMode(on: Boolean) = mutable.update { it.copy(petMode = on) }
-    fun selectPet(petId: String) = mutable.update { it.copy(pet = petId) }
-    fun petOrb(petId: String, orb: String, omen: String? = null) = hero.petOrb(petId, orb, omen)
+    /** Кузница над питомцем (3.81.0): из Зверинца кнопкой «В кузницу» - питомец выбран, раздел сфер. */
+    fun openPet(petId: String) {
+        hero.clearForgeLine()
+        mutable.update { it.copy(pet = petId, section = ForgeSection.ORBS) }
+    }
+
     fun choosePetLine(petId: String, choice: Int) = hero.choosePetLine(petId, choice)
 
     fun section(section: ForgeSection) = mutable.update { it.copy(section = section) }
 
     /** Новая сфера - без предзнаменования: оно подбирается к сфере. */
-    fun selectOrb(code: String) = mutable.update { it.copy(orb = code, omen = "", omenItem = "") }
-    fun selectOmen(code: String) = mutable.update { it.copy(omen = code, omenItem = game.value.holding.selectedEquipment) }
+    fun selectOrb(code: String) = mutable.update { it.copy(orb = code, omen = "", omenTarget = "") }
+    fun selectOmen(code: String) = mutable.update { it.copy(omen = code, omenTarget = it.targetId(game.value.holding.selectedEquipment)) }
     fun selectEssence(code: String) = mutable.update { it.copy(essence = code) }
 
-    /** Сфера тратится вместе с предзнаменованием: следующее применение начинается без него. */
-    fun applyOrb(itemId: String, orb: String) = hero.applyOrb(itemId, orb, smithy.value.omen) { mutable.update { it.copy(omen = "", omenItem = "") } }
+    /** Сфера тратится вместе с предзнаменованием на любую цель: следующее применение начинается без него. */
+    fun applyOrb(target: ForgeTarget, orb: String) = when (target) {
+        is ForgeTarget.Gear -> applyOrb(target.id, orb)
+        is ForgeTarget.Beast -> hero.petOrb(target.id, orb, smithy.value.omen.ifBlank { null }, ::omenSpent)
+    }
+
+    /** Сфера на вещь [itemId] (и с панели администратора, где цель - любая вещь героя). */
+    fun applyOrb(itemId: String, orb: String) = hero.applyOrb(itemId, orb, smithy.value.omen, ::omenSpent)
+
+    private fun omenSpent() = mutable.update { it.copy(omen = "", omenTarget = "") }
     fun applyEssence(itemId: String, essence: String) = hero.applyEssence(itemId, essence)
     fun unveil(itemId: String, choice: Int) = hero.unveil(itemId, choice)
     fun choose(itemId: String, choice: Int) = hero.choose(itemId, choice)

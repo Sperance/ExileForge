@@ -2681,7 +2681,6 @@
   "pets.sell": "Sell to merchant",
   "pets.sell_q": "Sell the pet to the merchant?",
   "pets.sell_gold": "Gold",
-  "pets.orbs_of": "Crafting orbs: {0}",
   "stat.src.base": "{0} class, level {1}",
   "stat.src.class": "{0} class",
   "stat.src.map": "Map",
@@ -3046,7 +3045,6 @@
   "forge.socket_orb": "Orb",
   "forge.socket_essence": "Essence",
   "forge.omen": "Omen",
-  "forge.omen_none": "No omen",
   "forge.unveil_title": "Reveal the veiled modifier",
   "forge.unveil_hint": "Tap the modifier to keep; the others are lost.",
   "item.quality_badge": "✦ +{0}%",
@@ -4065,5 +4063,7 @@
   "skills.xp_cap": "Highest level: {0}",
   "skills.xp_cap_tier": "Tier cap: level {0}. Tier {1} leads to level {2}",
   "skills.xp_progress": "Experience {0} / {1} to level {2} · gathered in a slot from battle experience",
-  "skills.xp_waiting": "Experience full: level {0} waits for its requirements — {1}"
+  "skills.xp_waiting": "Experience full: level {0} waits for its requirements — {1}",
+  "forge.pick_pet": "Pick a pet",
+  "forge.change_pet": "Change pet"
 }

@@ -3,8 +3,11 @@ package com.sperance.exileforge.ui.screens.hero
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -172,13 +175,15 @@ internal fun PetCard(
     active: Boolean,
     selected: Boolean = false,
     onClick: (() -> Unit)? = null,
+    /** Долгое нажатие (4.4.x): в выборе цели кузницы оно открывает карточку, а нажатие выбирает. */
+    onLongClick: (() -> Unit)? = null,
     extra: @Composable ColumnScope.() -> Unit = {},
 ) {
     val shape = RoundedCornerShape(8.dp)
     val tint = rarityColor(pet.rarity.name)
     Column(
         Modifier.fillMaxWidth().depthPanel(shape).border(1.dp, if (selected) GoldBright else tint.copy(alpha = .45f), shape)
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier).padding(10.dp),
+            .then(if (onClick != null || onLongClick != null) Modifier.combinedClickable(onLongClick = onLongClick) { onClick?.invoke() } else Modifier).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -205,6 +210,28 @@ internal fun PetCard(
             MutedText(ui("pets.sheet", number(sheet[CoreStat.HEALTH.code] ?: 0.0), number(listOfNotNull(kind.element, kind.element2).sumOf { sheet["STOCK_ATTACK_$it"] ?: 0.0 })), style = MaterialTheme.typography.labelSmall)
         }
         extra()
+    }
+}
+
+/**
+ * Карточка питомца в шторке (4.4.x): кузница открывает её касанием питомца на наковальне и долгим нажатием в выборе цели;
+ * [action] - главная кнопка места (сменить питомца), как [InspectAction] в карточке предмета.
+ */
+@Composable
+fun PetCardSheet(game: GameUi, pet: Pet, action: InspectAction? = null, onDismiss: () -> Unit) {
+    val index = game.index ?: return
+    val menagerie = remember(index) { Menagerie(index) }
+    val kind = menagerie.species(pet.species) ?: return
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            PetCard(game, index, menagerie, kind, pet, game.hero?.pets?.isActive(pet.id) == true)
+            action?.let {
+                ForgeButton(onClick = {
+                    onDismiss()
+                    it.run()
+                }, modifier = Modifier.fillMaxWidth(), enabled = it.enabled) { Text(it.label) }
+            }
+        }
     }
 }
 

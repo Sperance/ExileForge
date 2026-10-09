@@ -24,11 +24,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.QualityForecast
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Omen
@@ -64,6 +66,7 @@ private const val ONE_ROW = 6
     onSelect: (String) -> Unit,
     note: String? = null,
     refusal: (String) -> String? = { null },
+    marked: (String) -> Boolean = { false },
     glyph: @Composable (String) -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
@@ -85,7 +88,7 @@ private const val ONE_ROW = 6
         ) {
             items(codes, key = { it }) { code ->
                 Box(Modifier.alpha(if (refusal(code) == null) 1f else .4f)) {
-                    TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, accent, { onSelect(code) }) { glyph(code) }
+                    TrayCell(itemTitle(code), game.bagAmount(code) ?: 0L, code == chosen, marked(code), accent, { onSelect(code) }) { glyph(code) }
                 }
             }
         }
@@ -96,8 +99,11 @@ private const val ONE_ROW = 6
     }
 }
 
-/** One stack of the tray: its drawing, the count in the corner, and a gold frame when it lies on the anvil. */
-@Composable private fun TrayCell(name: String, count: Long, selected: Boolean, accent: Color, onClick: () -> Unit, glyph: @Composable () -> Unit) {
+/**
+ * One stack of the tray: its drawing, the count in the corner, and a gold frame when it lies on the anvil. [marked] (4.4.x) -
+ * знак знамения в нижнем углу: стопка ляжет только с ним.
+ */
+@Composable private fun TrayCell(name: String, count: Long, selected: Boolean, marked: Boolean, accent: Color, onClick: () -> Unit, glyph: @Composable () -> Unit) {
     val shape = RoundedCornerShape(10.dp)
     Box(
         Modifier.size(CELL).clip(shape).background(if (selected) accent.copy(alpha = .14f) else PanelRaised, shape)
@@ -114,6 +120,7 @@ private const val ONE_ROW = 6
             maxLines = 1,
             modifier = Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 3.dp),
         )
+        if (marked) Icon(ForgeGlyphs.Sigil, null, tint = Rune, modifier = Modifier.align(Alignment.BottomStart).padding(start = 2.dp, bottom = 2.dp).size(11.dp))
     }
 }
 
@@ -131,34 +138,31 @@ private const val ONE_ROW = 6
 }
 
 /**
- * The orbs of the tray: the bag's, Regret left out (it is spent on the tree). Те, что вещь не примет ([refusals] - отказ правил
- * [OrbApplier.refusal] по коду, 4.2.0: сфера удачи без уникалки того же вида и прочие), серыми в конце; выбранная говорит почему.
+ * The orbs of the tray (4.4.x): только [choices] - сферы сумки, что лягут на цель (вещь или питомца) сами или со знамением сумки,
+ * в порядке полки; сферы, что не лягут, спрятаны. Сфера, что ждёт знамения, помечена знаком, а выбранная говорит, что его нужно.
  */
 @Composable internal fun OrbTray(
     game: GameUi,
     smithy: Smithy,
-    accepted: (String) -> Boolean,
-    refusals: Map<String, String>,
-    needsOmen: (String) -> Boolean,
+    choices: List<OrbChoice>,
+    empty: String,
     quality: QualityForecast?,
     onSelect: (String) -> Unit,
 ) {
-    val hero = game.hero ?: return
-    val orbs = game.orbs.map { it.code.value }.filter { hero.count(it) > 0 && it != Orb.ORB_OF_REGRET.name && (accepted(it) || it in refusals) }
-        .sortedBy { it in refusals }
+    val waiting = remember(choices) { choices.filter { it.needsOmen }.map { it.code }.toSet() }
     val chosen = smithy.orb
     ForgeTray(
         game,
         ui("forge.tray_orbs"),
-        orbs,
+        choices.map { it.code },
         chosen,
-        ui("forge.no_orbs_fit"),
+        empty,
         Gold,
         onSelect,
-        note = if (chosen in orbs && needsOmen(chosen) && smithy.omen.isBlank()) ui("forge.needs_omen") else qualityNote(chosen, quality),
-        refusal = refusals::get,
+        note = if (chosen in waiting && smithy.omen.isBlank()) ui("forge.needs_omen") else qualityNote(chosen, quality),
+        marked = { it in waiting },
     ) { code ->
-        OrbGlyph(Orb.of(code), Modifier.fillMaxSize())
+        BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
     }
 }
 

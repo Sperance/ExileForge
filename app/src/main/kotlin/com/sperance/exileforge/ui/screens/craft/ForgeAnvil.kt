@@ -12,7 +12,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,9 +31,12 @@ import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.ItemSection
 import com.sperance.exileforge.presentation.state.ItemType
+import com.sperance.exileforge.rules.content.Pet
+import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
 import com.sperance.exileforge.ui.components.Inspect
@@ -44,6 +47,11 @@ import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.typeTitle
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.ui.screens.hero.PetCardSheet
+import com.sperance.exileforge.ui.screens.hero.PetIcon
+import com.sperance.exileforge.ui.screens.hero.PetLines
+import com.sperance.exileforge.ui.screens.hero.petName
+import com.sperance.exileforge.ui.screens.hero.petSubtitle
 import com.sperance.exileforge.ui.theme.*
 
 /** What lies in one round socket of the anvil: its drawing (null - the socket is empty), its name and its colour. */
@@ -59,14 +67,13 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
 
 /**
  * Полка у наковальни (макет B; с 4.2.0 - быстрый переключатель «Типа» общего фильтра [ItemShelf.FORGE], как рейка тайника):
- * «Все» и разделы списка рисунками; выбранный - в золоте. Нажатие ставит тип фильтра и открывает выбор вещи - выбор на полке и
- * «Тип» в шторке одно и то же состояние. Под разделами вещей (4.3.0) - отдельной кнопкой питомцы ([pets]; нет питомцев - нет
- * кнопки): она включает кузню питомца, выбор раздела вещей - выключает.
+ * «Все» и разделы списка рисунками; выбранный - в золоте. Нажатие ставит тип фильтра и открывает выбор цели на вещах - выбор на
+ * полке и «Тип» в шторке одно и то же состояние. Под разделами вещей - питомцы ([pets]; нет питомцев - нет кнопки): тот же выбор
+ * цели на разделе питомцев (4.4.x); [petOn] - под кузницей питомец.
  */
-@Composable internal fun TargetRail(state: ItemFilterState, pets: PetRail?, onOpen: () -> Unit) {
+@Composable internal fun TargetRail(state: ItemFilterState, pets: Boolean, petOn: Boolean, onOpen: (PickerSection) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     val entries = listOf<ItemType?>(null) + state.shelf.sections.map(ItemType::Section)
-    val petOn = pets?.on == true
     Column(
         Modifier.width(52.dp).depthPanel(shape).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -75,20 +82,16 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
         entries.forEach { type ->
             val title = type?.let { typeTitle(it, uiLanguage) } ?: ui("common.all")
             RailButton((type as? ItemType.Section)?.section?.glyph ?: Icons.Outlined.Search, title, on = !petOn && type == state.filter.type) {
-                pets?.leave?.invoke()
                 state.update(state.filter.copy(type = type))
-                onOpen()
+                onOpen(PickerSection.ITEMS)
             }
         }
-        pets?.let {
+        if (pets) {
             HorizontalDivider(Modifier.width(28.dp), color = Bronze.copy(alpha = .5f))
-            RailButton(Icons.Outlined.Pets, ui("forge.target_pet"), on = it.on, onClick = it.enter)
+            RailButton(Icons.Outlined.Pets, ui("forge.target_pet"), on = petOn) { onOpen(PickerSection.PETS) }
         }
     }
 }
-
-/** Кнопка питомцев на полке у наковальни: включена ли кузня питомца ([on]), как войти в неё и как выйти к вещам. */
-internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> Unit)
 
 /** Кнопка полки: рисунок [glyph] с подписью [title] для чтеца, выбранная - в золоте. */
 @Composable private fun RailButton(glyph: ImageVector, title: String, on: Boolean, onClick: () -> Unit) {
@@ -102,21 +105,28 @@ internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> 
 }
 
 /**
- * The anvil (mockup B): the item's socket, then the [tool] laid on it and, for an orb, its [omen] — then the item itself as it
- * stands, its base and every line with its badge, and the server's last word about it. A tap on the item opens the picker.
- * С 4.3.2 касание лежащей вещи открывает её карточку, выбор другой - кнопкой карточки.
+ * The anvil (mockup B): the target's socket, then the [tool] laid on it and, for an orb, its [omen] — then the target itself as it
+ * stands and the server's last word about it. С 4.4.x цель - [ForgeTarget]: вещь (база и строки со значками) или питомец (вид,
+ * уровень и строки). Касание лежащей цели открывает её карточку, выбор другой - кнопкой карточки; пустая открывает выбор.
  */
-@Composable internal fun Anvil(game: GameUi, item: ItemView?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
+@Composable internal fun Anvil(game: GameUi, target: ForgeTarget?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
     val inspect = rememberInspect()
-    val open = { if (item == null) onPick() else inspect(Inspect.Copy(item.item, InspectAction(ui("forge.change_target"), run = onPick))) }
+    var petCard by remember { mutableStateOf<ForgeTarget.Beast?>(null) }
+    val open = {
+        when (target) {
+            null -> onPick()
+            is ForgeTarget.Gear -> inspect(Inspect.Copy(target.view.item, InspectAction(ui(target.changeKey), run = onPick)))
+            is ForgeTarget.Beast -> petCard = target
+        }
+    }
     Column(
         modifier.background(Brush.verticalGradient(listOf(Gold.copy(alpha = .14f).compositeOver(Panel), Panel)), shape)
             .border(1.dp, Bronze, shape).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.Top) {
-            ItemSocket(item, open)
+            TargetSocket(game, target, open)
             Plus()
             RoundSocket(tool)
             omen?.let {
@@ -124,13 +134,15 @@ internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> 
                 RoundSocket(it)
             }
         }
-        if (item == null) {
-            Column(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onPick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        when (target) {
+            null -> Column(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onPick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(ui("forge.pick_item"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
                 MutedText(ui("forge.pick_item_hint"))
             }
-        } else {
-            AnvilItem(item, open)
+
+            is ForgeTarget.Gear -> AnvilItem(target.view, open)
+
+            is ForgeTarget.Beast -> AnvilPet(game, target.pet, open)
         }
         game.holding.forgeLine.takeIf { it.isNotBlank() }?.let {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -138,6 +150,20 @@ internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> 
                 Text(it, color = Vital, style = MaterialTheme.typography.bodySmall)
             }
         }
+    }
+    petCard?.let { beast -> PetCardSheet(game, beast.pet, InspectAction(ui(beast.changeKey), run = onPick)) { petCard = null } }
+}
+
+/** Питомец, как его держит наковальня (4.4.x): вид в цвете редкости, кто он и уровень, его строки. */
+@Composable private fun AnvilPet(game: GameUi, pet: Pet, onClick: () -> Unit) {
+    val index = game.index ?: return
+    val menagerie = remember(index) { Menagerie(index) }
+    val kind = menagerie.species(pet.species) ?: return
+    Column(Modifier.clickable(role = Role.Button, onClick = onClick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(petName(pet.species), color = rarityColor(pet.rarity.name), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        MutedText(listOf(petSubtitle(kind, pet), ui("pets.level", pet.level)).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
+        PetLines(index, menagerie, pet)
+        if (pet.corrupted) Text(ui("pets.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -181,19 +207,23 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
 
 @Composable private fun Plus() = Text("+", color = Muted, fontSize = 16.sp, modifier = Modifier.padding(top = 18.dp))
 
-/** The item's square socket, framed in its rarity's colour. */
-@Composable private fun ItemSocket(item: ItemView?, onPick: () -> Unit) {
-    val color = item?.let { rarityColor(it.rarity.name) } ?: Bronze
+/** The target's square socket, framed in its rarity's colour: the item's icon or the pet's sprite. */
+@Composable private fun TargetSocket(game: GameUi, target: ForgeTarget?, onClick: () -> Unit) {
+    val color = when (target) {
+        null -> Bronze
+        is ForgeTarget.Gear -> rarityColor(target.view.rarity.name)
+        is ForgeTarget.Beast -> rarityColor(target.pet.rarity.name)
+    }
     val frame = RoundedCornerShape(14.dp)
-    SocketColumn(ui("forge.socket_item")) {
+    SocketColumn(ui(target?.socketKey ?: "forge.socket_item")) {
         Box(
-            Modifier.size(60.dp).clip(frame).background(PanelRaised, frame).border(2.dp, color, frame).clickable(role = Role.Button, onClick = onPick),
+            Modifier.size(60.dp).clip(frame).background(PanelRaised, frame).border(2.dp, color, frame).clickable(role = Role.Button, onClick = onClick),
             contentAlignment = Alignment.Center,
         ) {
-            if (item != null) {
-                ItemIcon(item, color, Modifier.size(34.dp))
-            } else {
-                Icon(ForgeGlyphs.Plus, null, tint = Muted, modifier = Modifier.size(22.dp))
+            when (target) {
+                null -> Icon(ForgeGlyphs.Plus, null, tint = Muted, modifier = Modifier.size(22.dp))
+                is ForgeTarget.Gear -> ItemIcon(target.view, color, Modifier.size(34.dp))
+                is ForgeTarget.Beast -> PetIcon(game, target.pet.species, 34)
             }
         }
     }

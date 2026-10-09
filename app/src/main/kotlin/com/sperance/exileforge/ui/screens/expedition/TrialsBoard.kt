@@ -33,7 +33,6 @@ import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.compactCount
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -68,7 +67,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val rift by vm.riftState.collectAsState()
     var opened by rememberSaveable { mutableStateOf<TrialMode?>(null) }
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        KeyGrid(game, listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals, RiftRules.KEY to (hero.bag[RiftRules.KEY] ?: 0L)))
+        KeyGrid(listOf(TrialRules.CREST to crests, TrialRules.KEY to keys, TrialRules.SEAL to seals, RiftRules.KEY to (hero.bag[RiftRules.KEY] ?: 0L)))
         trials.run?.let { open ->
             Plate(LifeRed) {
                 Text(ui("trials.open_title"), color = LifeRed, style = MaterialTheme.typography.titleSmall)
@@ -191,13 +190,12 @@ private fun rushTierText(tier: RushTier): String = listOfNotNull(
 ).ifEmpty { listOf(ui("trials.rush_tier_plain")) }.plus(ui("trials.rush_tier_reward", number(tier.reward))).joinToString(" · ")
 
 /** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */
-@Composable private fun KeyGrid(game: GameUi, stacks: List<Pair<String, Long>>) {
-    var info by remember { mutableStateOf<String?>(null) }
-    info?.let { code -> StackInfoSheet(game, code) { info = null } }
+@Composable private fun KeyGrid(stacks: List<Pair<String, Long>>) {
+    val inspect = rememberInspect()
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         stacks.chunked(KEYS_PER_ROW).forEach { row ->
             Row(Modifier.fillMaxWidth()) {
-                row.forEach { (code, count) -> Key(code, count, Modifier.weight(1f)) { info = code } }
+                row.forEach { (code, count) -> Key(code, count, Modifier.weight(1f)) { inspect(Inspect.Stack(code)) } }
                 repeat(KEYS_PER_ROW - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }

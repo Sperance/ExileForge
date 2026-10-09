@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.screens.quests
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -20,8 +21,10 @@ import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.content.QuestReward
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.GoldPrice
+import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.raritySpine
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.theme.*
 
@@ -55,20 +58,21 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
     )
 }
 
-/** The reward as chips: gold, experience, orbs, and for a guild's quest the guild's experience. */
+/** The reward as chips: gold, experience, orbs, and for a guild's quest the guild's experience; сфера открывает карточку (4.3.2). */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun RewardChips(reward: QuestReward) {
+    val inspect = rememberInspect()
     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Chip { GoldPrice(reward.gold) }
         if (reward.experience > 0) Chip { Text(ui("quest.reward_xp", number(reward.experience)), color = Vital, style = MaterialTheme.typography.labelMedium) }
-        reward.orbs.forEach { (code, amount) -> Chip { Text(ui("quest.reward_orb", itemTitle(code), amount), color = Parchment, style = MaterialTheme.typography.labelMedium) } }
+        reward.orbs.forEach { (code, amount) -> Chip({ inspect(Inspect.Stack(code)) }) { Text(ui("quest.reward_orb", itemTitle(code), amount), color = Parchment, style = MaterialTheme.typography.labelMedium) } }
         if (reward.guildExperience > 0) Chip { Text(ui("quest.reward_guild_xp", number(reward.guildExperience.toDouble())), color = Rune, style = MaterialTheme.typography.labelMedium) }
     }
 }
 
-@Composable private fun Chip(content: @Composable () -> Unit) {
-    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(PanelRaised).padding(horizontal = 6.dp, vertical = 2.dp)) { content() }
+@Composable private fun Chip(onClick: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    Box(Modifier.clip(RoundedCornerShape(6.dp)).background(PanelRaised).then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier).padding(horizontal = 6.dp, vertical = 2.dp)) { content() }
 }
 
 @Composable internal fun QuestBar(progress: Long, target: Long, color: Color) {

@@ -72,6 +72,7 @@ import com.sperance.exileforge.presentation.state.TAB_CRAFTS
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
@@ -81,7 +82,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -175,7 +175,11 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         levelLine(crafts, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
         // The server's tally: the rules' own sum.
         WorkTotals(game, work.startedAt, work.totals, offset)
-        crafts.last?.let { Text(gainsLine(it.gains), color = Parchment, style = MaterialTheme.typography.bodySmall) }
+        crafts.last?.let { last ->
+            // Сделанные вещи - чипами (4.3.2): касание открывает карточку
+            gainsLine(last.gains, made = false).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodySmall) }
+            MadeChips(last.gains.equipment)
+        }
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
@@ -187,7 +191,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
  */
 @Composable
 internal fun WorkTotals(game: GameUi, startedAt: Long, totals: WorkTally, offset: Long) {
-    var opened by remember { mutableStateOf<String?>(null) }
+    val inspect = rememberInspect()
     val shape = RoundedCornerShape(4.dp)
     Column(
         Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, Bronze.copy(alpha = .6f), shape).padding(10.dp),
@@ -212,12 +216,11 @@ internal fun WorkTotals(game: GameUi, startedAt: Long, totals: WorkTally, offset
             MutedText(ui("crafts.totals_empty"), style = MaterialTheme.typography.labelSmall)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackLine(game, code, "+$amount", Vital) { opened = code } }
-                totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackLine(game, code, "−$amount", LifeRed) { opened = code } }
+                totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackLine(game, code, "+$amount", Vital) { inspect(Inspect.Stack(code)) } }
+                totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> StackLine(game, code, "−$amount", LifeRed) { inspect(Inspect.Stack(code)) } }
             }
         }
     }
-    opened?.let { code -> StackInfoSheet(game, code) { opened = null } }
 }
 
 @Composable internal fun TotalFigure(title: String, figure: String, modifier: Modifier) {
@@ -229,11 +232,12 @@ internal fun WorkTotals(game: GameUi, startedAt: Long, totals: WorkTally, offset
 
 /**
  * What this session's crafting brought, summed (2.47.0): one line of cycles, the empty ones and the
- * experience, then a chip per stack — gathered in green, spent in red — and the pieces made.
+ * experience, then a chip per stack — gathered in green, spent in red — and the pieces made. Каждый чип открывает карточку (4.3.2).
  */
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun SessionTally(totals: WorkGains) {
+    val inspect = rememberInspect()
     if (totals.cycles == 0) {
         MutedText(ui("crafts.session_empty"), style = MaterialTheme.typography.labelMedium)
         return
@@ -248,28 +252,35 @@ internal fun SessionTally(totals: WorkGains) {
     )
     if (totals.items.isNotEmpty() || totals.spent.isNotEmpty()) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(itemTitle(code), "+$amount", Vital) }
-            totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(itemTitle(code), "−$amount", LifeRed) }
+            totals.items.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(itemTitle(code), "+$amount", Vital) { inspect(Inspect.Stack(code)) } }
+            totals.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) -> TallyChip(itemTitle(code), "−$amount", LifeRed) { inspect(Inspect.Stack(code)) } }
         }
     }
-    if (totals.equipment.isNotEmpty()) {
-        Text(
-            ui("crafts.made", totals.equipment.joinToString { equipmentTitle(it.template) }),
-            color = Parchment,
-            style = MaterialTheme.typography.bodySmall,
-        )
-    }
+    MadeChips(totals.equipment)
     if (totals.starved) Text(ui("crafts.starved"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
 }
 
-@Composable internal fun TallyChip(title: String, figure: String, tone: Color) {
+/** Сделанные ремеслом вещи (4.3.2): «Сделано» и чип на каждую в цвете её редкости; касание открывает карточку копии. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun MadeChips(made: List<ItemInstance>) {
+    if (made.isEmpty()) return
+    val inspect = rememberInspect()
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(ui("crafts.made_title"), color = Parchment, style = MaterialTheme.typography.bodySmall)
+        made.forEach { item -> TallyChip(equipmentTitle(item.template), null, rarityColor(item.rarity.name)) { inspect(Inspect.Copy(item)) } }
+    }
+}
+
+/** Чип стопки или вещи: [figure] в тоне [tone] (null - без числа) и название; касание - [onClick]. */
+@Composable internal fun TallyChip(title: String, figure: String?, tone: Color, onClick: () -> Unit) {
     val shape = RoundedCornerShape(2.dp)
     Row(
-        Modifier.background(Abyss, shape).border(1.dp, tone.copy(alpha = .5f), shape).padding(horizontal = 7.dp, vertical = 3.dp),
+        Modifier.background(Abyss, shape).border(1.dp, tone.copy(alpha = .5f), shape).clickable(onClick = onClick).padding(horizontal = 7.dp, vertical = 3.dp),
         horizontalArrangement = Arrangement.spacedBy(5.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(figure, color = tone, style = MaterialTheme.typography.labelMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        figure?.let { Text(it, color = tone, style = MaterialTheme.typography.labelMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
         Text(title, color = Parchment, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

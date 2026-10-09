@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.hero
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,8 +22,10 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemCard
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Parchment
 
@@ -41,8 +44,10 @@ import com.sperance.exileforge.ui.theme.Parchment
     }
 }
 
+/** Строка добычи сундука; у стопки касание открывает её карточку (4.3.2). */
 @Composable private fun Line(game: GameUi, code: String?, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    val inspect = rememberInspect()
+    Row(code?.let { Modifier.clickable { inspect(Inspect.Stack(it)) } } ?: Modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         code?.let { StackIcon(game, it, 28) }
         Text(text, color = Parchment, style = MaterialTheme.typography.bodyMedium)
     }

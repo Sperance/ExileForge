@@ -81,17 +81,18 @@ fun workTitle(work: WorkView): String = com.sperance.exileforge.core.display.wor
 
 /**
  * What an answer brought, as one line: «+2 Iron Ore, +1 Bark», the pieces a smith or a cartographer
- * made, that the bag ran dry, or that the cycles came up empty.
+ * made, that the bag ran dry, or that the cycles came up empty. [made] = false - сделанные вещи рисует вызывающий чипами (4.3.2),
+ * и строка пуста, если, кроме них, ничего нет.
  */
-fun gainsLine(gains: WorkGains): String = gainParts(gains).joinToString(" · ").ifBlank { ui("crafts.gain_nothing", gains.cycles) }
+fun gainsLine(gains: WorkGains, made: Boolean = true): String = gainParts(gains, made).joinToString(" · ").ifBlank { if (gains.equipment.isEmpty()) ui("crafts.gain_nothing", gains.cycles) else "" }
 
 /** Всплывашка сбора у полосы цикла (3.90.0): то же, что [gainsLine], с опытом - «+1 Медная руда · +2 опыта», а без добычи - «пусто». */
 fun harvestLine(gains: WorkGains): String = (gainParts(gains) + listOfNotNull(gains.experience.takeIf { it > 0 }?.let { ui("crafts.experience_gain", number(it)) }))
     .joinToString(" · ").ifBlank { ui("crafts.harvest_empty") }
 
-private fun gainParts(gains: WorkGains): List<String> = listOfNotNull(
+private fun gainParts(gains: WorkGains, made: Boolean = true): List<String> = listOfNotNull(
     gains.items.entries.joinToString { (code, amount) -> ui("crafts.gain", amount, itemTitle(code)) }.ifBlank { null },
-    gains.equipment.takeIf { it.isNotEmpty() }?.let { made -> ui("crafts.made", made.joinToString { equipmentTitle(it.template) }) },
+    gains.equipment.takeIf { made && it.isNotEmpty() }?.let { pieces -> ui("crafts.made", pieces.joinToString { equipmentTitle(it.template) }) },
     ui("crafts.starved").takeIf { gains.starved },
 )
 

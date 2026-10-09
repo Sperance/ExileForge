@@ -36,8 +36,11 @@ import com.sperance.exileforge.presentation.state.ItemSection
 import com.sperance.exileforge.presentation.state.ItemType
 import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
+import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.typeTitle
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -101,16 +104,19 @@ internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> 
 /**
  * The anvil (mockup B): the item's socket, then the [tool] laid on it and, for an orb, its [omen] — then the item itself as it
  * stands, its base and every line with its badge, and the server's last word about it. A tap on the item opens the picker.
+ * С 4.3.2 касание лежащей вещи открывает её карточку, выбор другой - кнопкой карточки.
  */
 @Composable internal fun Anvil(game: GameUi, item: ItemView?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
+    val inspect = rememberInspect()
+    val open = { if (item == null) onPick() else inspect(Inspect.Copy(item.item, InspectAction(ui("forge.change_target"), run = onPick))) }
     Column(
         modifier.background(Brush.verticalGradient(listOf(Gold.copy(alpha = .14f).compositeOver(Panel), Panel)), shape)
             .border(1.dp, Bronze, shape).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.Top) {
-            ItemSocket(item, onPick)
+            ItemSocket(item, open)
             Plus()
             RoundSocket(tool)
             omen?.let {
@@ -124,7 +130,7 @@ internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> 
                 MutedText(ui("forge.pick_item_hint"))
             }
         } else {
-            AnvilItem(item)
+            AnvilItem(item, open)
         }
         game.holding.forgeLine.takeIf { it.isNotBlank() }?.let {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -138,8 +144,8 @@ internal class PetRail(val on: Boolean, val enter: () -> Unit, val leave: () -> 
 /** The item as the anvil holds it: the name in its rarity's colour, what it is and its affix sides (4.2.0), its base and its lines. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun AnvilItem(item: ItemView) {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
+    Column(Modifier.clickable(role = Role.Button, onClick = onClick), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             item.title,
             color = rarityColor(item.rarity.name),

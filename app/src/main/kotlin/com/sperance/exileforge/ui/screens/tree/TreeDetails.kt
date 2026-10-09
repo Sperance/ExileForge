@@ -262,6 +262,7 @@ import kotlin.math.sin
 ) {
     val hero = game.hero ?: return
     val inside = hero.jewels[node.code]
+    val inspect = rememberInspect()
     // Имя гнезда - тема, а не бонус (3.95.1): «Гнездо: точность» само ничего не даёт, игрок ждал от него баффа.
     MutedText(ui("tree.socket_hint"))
 
@@ -271,14 +272,13 @@ import kotlin.math.sin
         game.view(inside)?.let { jewel ->
             ItemRow(
                 jewel,
-                enabled = false,
                 note = when {
                     !allocated -> ui("tree.socket_locked")
                     idle != null -> idle
                     else -> ui("tree.socket_working")
                 },
                 noteColor = if (allocated && idle == null) Gold else LifeRed,
-            ) { }
+            ) { inspect(Inspect.Copy(inside)) }
         }
         ForgeOutlinedButton(enabled = enabled, onClick = { onUnsocket(inside.id) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui("tree.jewel_out"))
@@ -304,11 +304,13 @@ import kotlin.math.sin
         game.view(instance)?.let { jewel ->
             ItemRow(
                 jewel,
-                enabled = enabled && single,
                 price = game.sellPrice(instance),
                 note = if (single) null else ui("tree.jewel_unique_taken"),
                 noteColor = LifeRed,
-            ) { onSocket(instance.id, node.code) }
+            ) {
+                // Касание - карточка самоцвета (4.3.2), в гнездо его ставит её кнопка
+                inspect(Inspect.Copy(instance, InspectAction(ui("tree.jewel_in"), enabled = enabled && single) { onSocket(instance.id, node.code) }))
+            }
         }
     }
 }

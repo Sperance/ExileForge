@@ -45,17 +45,18 @@ import com.sperance.exileforge.presentation.state.sellLots
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ForgeButton
+import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.SellDock
 import com.sperance.exileforge.ui.components.SellLine
 import com.sperance.exileforge.ui.components.SellPick
 import com.sperance.exileforge.ui.components.SellPresetRow
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.components.rememberSellPick
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 
@@ -93,7 +94,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 @Composable internal fun MapSummary(game: GameUi, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: (sell: List<String>) -> Unit) {
     val tally = hud.tally
     var looked by remember { mutableStateOf<ItemView?>(null) }
-    var stack by remember { mutableStateOf<String?>(null) }
+    val inspect = rememberInspect()
     LaunchedEffect(tally.receiving) { if (tally.receiving) vm.flushRun() }
     // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; заранее отмечено помеченное к продаже в заходе
     // (3.91.0). Продаётся «Продать и вернуться» (3.90.4) - уже после захода.
@@ -144,7 +145,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                 pick.takeIf { offered },
                 selecting,
                 onItem = { looked = it },
-                onStack = { stack = it },
+                onStack = { inspect(Inspect.Stack(it)) },
                 onSelect = { id ->
                     selling = true
                     if (!pick.chosen(id)) pick.toggle(id)
@@ -176,7 +177,6 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         }
     }
     looked?.let { item -> LootSheet(game, vm, item, onDismiss = { looked = null }, markable = false) }
-    stack?.let { code -> StackInfoSheet(game, code) { stack = null } }
 }
 
 /** The ending over the map's name: its glyph in a ring of its colour, on a glow of it. */

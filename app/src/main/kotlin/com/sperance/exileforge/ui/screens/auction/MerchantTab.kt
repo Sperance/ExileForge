@@ -42,7 +42,6 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.*
@@ -88,8 +87,8 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
     var notes by remember { mutableStateOf(false) }
     var orbsShelf by rememberSaveable { mutableStateOf(false) }
-    // The orb a tap on its glass or name opened: what it is for, before it is bought.
-    var info by remember { mutableStateOf<String?>(null) }
+    // The orb a tap on its glass or name opened: what it is for, before it is bought - общей карточкой (4.3.2).
+    val inspect = rememberInspect()
     val stock = game.hero?.merchant
     val money = game.hero?.money
     // A copy whose template the content does not hold cannot be drawn, and is not offered.
@@ -136,7 +135,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
                                 have = game.bagAmount(orb.code),
                                 short = short.takeUnless { orb.soldOut },
                                 enabled = !busy && !orb.soldOut && short == null,
-                                onInfo = { info = orb.code },
+                                onInfo = { inspect(Inspect.Stack(orb.code)) },
                             ) { market.buyOrb(orb.code) }
                         }
                     }
@@ -163,7 +162,6 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             count = { shelf(it).size },
         ) { filtering = false }
     }
-    info?.let { code -> StackInfoSheet(game, code) { info = null } }
     chosen?.let { offer ->
         OfferSheet(game, offer.item, offer.price, money, onDismiss = { chosen = null }) {
             chosen = null

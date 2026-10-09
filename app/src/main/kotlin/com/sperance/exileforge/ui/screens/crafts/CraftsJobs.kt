@@ -232,19 +232,22 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     }
 }
 
-/** The stash's tools of this profession — the copies whose template sits in the profession's tool slot; tapping one puts it in the slot. */
+/** The stash's tools of this profession — the copies whose template sits in the profession's tool slot; касание открывает карточку (4.3.2), её кнопка кладёт инструмент в слот. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ToolPicker(game: GameUi, profession: ProfessionView, onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val slot = Slot.of(profession.tool)
     val tools = game.hero?.stash.orEmpty().filter { !it.socketed }
         .mapNotNull { instance -> game.view(instance)?.takeIf { slot != null && it.slot == slot }?.let { instance to it } }
+    val inspect = rememberInspect()
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.7f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("crafts.pick_tool")) }
             if (tools.isEmpty()) item { InfoCard(ui("crafts.no_tools"), ui("crafts.no_tools_hint")) }
             items(tools, key = { it.first.id }) { (instance, view) ->
-                ItemRow(view, enabled = !game.busy, unwearable = game.unmetFor(instance.template), price = game.sellPrice(instance)) { onPick(instance.id) }
+                ItemRow(view, unwearable = game.unmetFor(instance.template), price = game.sellPrice(instance)) {
+                    inspect(Inspect.Copy(instance, InspectAction(ui("hero.equip"), enabled = !game.busy) { onPick(instance.id) }))
+                }
             }
         }
     }

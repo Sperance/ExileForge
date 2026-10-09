@@ -18,20 +18,25 @@ import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.ItemFilterBar
 import com.sperance.exileforge.ui.components.ItemFilterSheet
 import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.ItemRow
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.theme.*
 
 /**
  * The stash to pick what the forge works on (worn items included, since an orb does not care). С 4.2.0 - общий фильтр предметов
  * ([ItemShelf.FORGE], [filterState] - общий с полкой у наковальни): строка над списком и шторка «Аккордеон», выбор запоминается.
+ * Касание строки открывает карточку (4.3.2), в кузницу вещь кладёт её кнопка.
  */
 @Composable
 internal fun TargetPicker(game: GameUi, filterState: ItemFilterState, onDismiss: () -> Unit, onPick: (String) -> Unit) {
     val stash = remember(game.hero?.items, game.index) { game.hero?.items.orEmpty().mapNotNull { game.view(it) } }
     var filtering by remember { mutableStateOf(false) }
+    val inspect = rememberInspect()
     val shelf = { draft: ItemFilter -> game.itemShelf(stash, ItemShelf.FORGE, draft) { game.sellPrice(it.item) } }
     val shown = remember(stash, filterState.filter, game.hero) { shelf(filterState.filter) }
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -45,7 +50,7 @@ internal fun TargetPicker(game: GameUi, filterState: ItemFilterState, onDismiss:
                     selected = piece.id == game.holding.selectedEquipment,
                     facts = if (piece.isWorn) listOf(ui("hero.equipped")) else emptyList(),
                     price = game.sellPrice(piece.item),
-                ) { onPick(piece.id) }
+                ) { inspect(Inspect.Copy(piece.item, InspectAction(ui("bag.to_forge")) { onPick(piece.id) })) }
             }
         }
     }

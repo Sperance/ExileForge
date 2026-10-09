@@ -50,7 +50,6 @@ import com.sperance.exileforge.ui.screens.expedition.arena.outcomeColour
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.arena.rememberClock
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 import java.util.Locale
@@ -73,7 +72,7 @@ import java.util.Locale
     var logOpen by remember { mutableStateOf(!won) }
     var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
-    var stack by remember { mutableStateOf<String?>(null) }
+    val inspect = rememberInspect()
     var recipe by remember { mutableStateOf<String?>(null) }
     // The spoils still on the way — a victory's, or the Abyss hoard a fall there keeps; the answers are asked for at once,
     // and the back gesture is held while they are on the way.
@@ -91,7 +90,7 @@ import java.util.Locale
         // A first win over this guardian (3.81.0, server 1.76.0): the hero's place among everyone who has beaten it.
         if (won) hud.rank?.let { place -> FirstWin(place, monsterTitle(report.monster.code)) }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (won) Spoils(game, hud, onStack = { stack = it }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
+            if (won) Spoils(game, hud, onStack = { inspect(Inspect.Stack(it)) }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
             if (logOpen) {
                 Box(
                     Modifier.fillMaxWidth().height(if (won) 260.dp else 420.dp).background(Panel, RoundedCornerShape(8.dp))
@@ -119,8 +118,6 @@ import java.util.Locale
     line?.let { (event, name) -> CombatDetailSheet(game, event, name) { line = null } }
     // Compared and worn right here (3.24.0), as on the gear sheet.
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
-    // A stack of the spoils opened: what it is, what it is for, and how many the hero holds.
-    stack?.let { code -> StackInfoSheet(game, code) { stack = null } }
     // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
     recipe?.let { code -> RecipeSheet(game, code, inRun = true) { recipe = null } }
     // The fight raised the hero's level (3.81.0): its own screen over the report until it is read.

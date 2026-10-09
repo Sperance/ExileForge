@@ -175,13 +175,13 @@ private fun systemLine(mail: Mail, part: String): String {
     }
 }
 
-/** What a letter carries, a line each: gold, stacks, things. */
-fun attachmentLines(mail: Mail): List<String> = buildList {
-    if (mail.attachment.gold > 0) add(ui("mail.gold", mail.attachment.gold))
-    mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount") }
-    mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}")) }
-    mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "")) }
-    mail.attachment.pets.forEach { add(locOr("pet.${it.species}", it.species) + " · " + ui("enum.rarity.${it.rarity.name}")) }
+/** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает (4.3.2); у золота и питомца её нет. */
+fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
+    if (mail.attachment.gold > 0) add(ui("mail.gold", mail.attachment.gold) to null)
+    mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount" to Inspect.Stack(code)) }
+    mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}") to Inspect.Copy(it)) }
+    mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template)) }
+    mail.attachment.pets.forEach { add(locOr("pet.${it.species}", it.species) + " · " + ui("enum.rarity.${it.rarity.name}") to null) }
 }
 
 /**
@@ -265,7 +265,10 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
         val lines = attachmentLines(mail)
         if (lines.isNotEmpty()) {
             Engraved(ui("mail.attachment"))
-            lines.forEach { Text(it, color = Vital, style = MaterialTheme.typography.labelLarge) }
+            val inspect = rememberInspect()
+            lines.forEach { (line, card) ->
+                Text(line, color = Vital, style = MaterialTheme.typography.labelLarge, modifier = card?.let { Modifier.clickable { inspect(it) } } ?: Modifier)
+            }
             if (mail.claimable) {
                 ForgeButton(enabled = !busy && game.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("mail.claim", game.heroName))

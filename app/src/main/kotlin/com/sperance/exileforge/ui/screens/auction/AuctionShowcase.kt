@@ -53,7 +53,6 @@ import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.icons.orbArt
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
 /** Витрина аукциона (3.80.24): список лотов, строка поиска и фильтры. */

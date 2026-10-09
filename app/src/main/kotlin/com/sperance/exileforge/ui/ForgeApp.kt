@@ -177,25 +177,28 @@ import org.koin.compose.viewmodel.koinViewModel
         CompositionLocalProvider(LocalBugReport provides { bugOpen = true }, LocalMailOpen provides { mailOpen = true }) {
             // Листы-справки (3.92.0): умение монстра, проклятие, свойство, фаза - откуда бы их ни открыли
             com.sperance.exileforge.ui.components.LoreHost(game) {
-                Box(Modifier.fillMaxSize()) {
-                    // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
-                    val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
-                    val run = expedition
-                    val arena = trial
-                    val notice = game.session.notice
-                    when {
-                        // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
-                        notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
+                // Карточка предмета (4.3.2): любое касание вещи или стопки открывает её здесь, поверх всего
+                com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
+                    Box(Modifier.fillMaxSize()) {
+                        // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
+                        val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
+                        val run = expedition
+                        val arena = trial
+                        val notice = game.session.notice
+                        when {
+                            // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
+                            notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
 
-                        warming != null -> WarmupScreen(warming)
+                            warming != null -> WarmupScreen(warming)
 
-                        run != null -> ExpeditionPlay(run)
+                            run != null -> ExpeditionPlay(run)
 
-                        arena != null -> TrialScreen(arena)
+                            arena != null -> TrialScreen(arena)
 
-                        rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
+                            rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
 
-                        else -> Shell(game, logs, route, navigator) { bugOpen = true }
+                            else -> Shell(game, logs, route, navigator) { bugOpen = true }
+                        }
                     }
                 }
             }
@@ -213,7 +216,8 @@ import org.koin.compose.viewmodel.koinViewModel
         )
     }
     if (suggestionsOpen) SuggestionsSheet { suggestionsOpen = false }
-    if (mailOpen) MailSheet(game) { mailOpen = false }
+    // Вложения письма открывают карточку предмета (4.3.2): лист почты стоит вне хозяина игры - у него свой
+    if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
     // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
     if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }

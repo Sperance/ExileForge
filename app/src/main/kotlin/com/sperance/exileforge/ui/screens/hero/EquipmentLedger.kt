@@ -163,6 +163,7 @@ private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier:
 @Composable
 fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
     val hero = game.hero ?: return
+    val inspect = rememberInspect()
     // The dearest first by the merchant's price (3.81.0), what the hero cannot wear yet greyed at the foot.
     val fitting = hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
         .sortedWith(compareBy({ game.unmetFor(it.code).isNotEmpty() }, { -(game.sellPrice(it.item) ?: 0L) }))
@@ -174,14 +175,17 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
                 val unmet = game.unmetFor(piece.code)
                 ItemRow(
                     piece,
-                    enabled = !game.busy && (game.ownsCharacter || game.isAdmin) && unmet.isEmpty(),
                     unwearable = unmet,
                     price = game.sellPrice(piece.item),
                     // Вердикт на это самое место (3.90.3): кольцо во вторую руку меряется со вторым кольцом.
                     verdict = rememberGearVerdict(game, piece.item, place.place),
                 ) {
-                    onDismiss()
-                    onEquip(piece.id)
+                    // Касание открывает карточку (4.3.2), надевает её кнопка
+                    val equip = InspectAction(ui("hero.equip"), enabled = !game.busy && (game.ownsCharacter || game.isAdmin) && unmet.isEmpty()) {
+                        onDismiss()
+                        onEquip(piece.id)
+                    }
+                    inspect(Inspect.Copy(piece.item, equip))
                 }
             }
         }

@@ -160,19 +160,22 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
 /**
  * The crafts' gifts to the run (3.79.0): one potion of the bag drunk on entering, and with a map up to two scarabs
  * spent with it. A tap picks, a tap again puts back; what each does is the item's own line.
+ * С 4.3.2 касание открывает карточку стопки, взять или убрать - её кнопкой.
  */
 @Composable internal fun Brews(game: GameUi, vm: ExpeditionViewModel, launch: MapLaunch) {
     val brews = game.index?.rules?.brews ?: return
     val potions = brews.potions.keys.filter { (game.bagAmount(it) ?: 0L) > 0 }
     val scarabs = brews.scarabs.keys.filter { (game.bagAmount(it) ?: 0L) > 0 }
     if (potions.isEmpty() && scarabs.isEmpty()) return
+    val inspect = rememberInspect()
+    fun brew(code: String, taken: Boolean, run: () -> Unit) = inspect(Inspect.Stack(code, InspectAction(ui(if (taken) "brew.put_back" else "brew.take"), enabled = !game.busy, run = run)))
     ForgePanel {
         if (potions.isNotEmpty()) {
             Engraved(ui("brew.potion"))
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(potions, key = { it }) { code ->
                     val chosen = launch.potion == code
-                    Square(if (chosen) GoldBright else PanelRaised, chosen, !game.busy, itemTitle(code), { vm.pickPotion(code) }) {
+                    Square(if (chosen) GoldBright else PanelRaised, chosen, true, itemTitle(code), { brew(code, chosen) { vm.pickPotion(code) } }) {
                         BagIcon(code, Modifier.size(28.dp))
                     }
                 }
@@ -187,12 +190,13 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(scarabs, key = { it }) { code ->
                         val set = launch.scarabs.count { it == code }
+                        val add = set == 0 || (launch.scarabs.size < brews.scarabsPerMap && set < (game.bagAmount(code) ?: 0L))
                         Square(
                             if (set > 0) GoldBright else PanelRaised,
                             set > 0,
-                            !game.busy,
+                            true,
                             itemTitle(code),
-                            { vm.toggleScarab(code, add = set == 0 || (launch.scarabs.size < brews.scarabsPerMap && set < (game.bagAmount(code) ?: 0L))) },
+                            { brew(code, !add) { vm.toggleScarab(code, add = add) } },
                         ) {
                             BagIcon(code, Modifier.size(28.dp))
                             if (set > 1) Text("×$set", color = GoldBright, fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp))
@@ -205,8 +209,9 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
     }
 }
 
-/** The stash maps of this zone as squares framed in their rarity, the empty one first. */
+/** The stash maps of this zone as squares framed in their rarity, the empty one first; карта открывает карточку (4.3.2), выбирает её кнопка. */
 @Composable internal fun MapRibbon(maps: List<StashMap>, picked: StashMap?, enabled: Boolean, onPick: (String?) -> Unit) {
+    val inspect = rememberInspect()
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 2.dp), modifier = Modifier.fillMaxWidth()) {
         item(key = "none") {
             Square(if (picked == null) GoldBright else PanelRaised, picked == null, enabled, ui("expedition.launch_no_map"), { onPick(null) }) {
@@ -216,7 +221,7 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
         items(maps, key = { it.item.id }) { map ->
             val chosen = map.item.id == picked?.item?.id
             val color = rarityColor(map.view.rarity.name)
-            Square(if (chosen) GoldBright else color, chosen, enabled, map.view.title, { onPick(map.item.id) }) {
+            Square(if (chosen) GoldBright else color, chosen, true, map.view.title, { inspect(Inspect.Copy(map.item, InspectAction(ui("expedition.map_pick"), enabled = enabled && !chosen) { onPick(map.item.id) })) }) {
                 ItemIcon(map.view, color, Modifier.size(28.dp))
             }
         }

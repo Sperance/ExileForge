@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -31,16 +32,18 @@ import com.sperance.exileforge.ui.theme.*
  * With [onItem] a card opens its comparison with what is worn (3.24.0). Каждая надеваемая вещь несёт стрелки урона и
  * защиты (3.89.0). Вещь показывается по её положению у героя (3.90.0, [presentLoot]): проданной нет, надетая - с меткой
  * «Надето»; [arriving] - журнал ещё несёт ответы, и вещи, которой нет у героя, ждут, а не пропадают.
+ * Без [onItem] вещь и стопка открывают общую карточку предмета (4.3.2).
  */
 @Composable internal fun RewardLines(game: GameUi, reward: Reward, onItem: ((ItemView) -> Unit)? = null, awaiting: Boolean = false, arriving: Boolean = awaiting) {
     val gear = game.presentLoot(reward.equipment, arriving = awaiting || arriving)
+    val inspect = rememberInspect()
     Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
             if (reward.experience > 0) Text(ui("expedition.loot_experience", number(reward.experience)), color = Rune)
             if (reward.gold > 0) Text(ui("expedition.loot_gold", reward.gold), color = GoldBright)
         }
         reward.items.forEach { (code, amount) ->
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.clickable { inspect(Inspect.Stack(code)) }, horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 BagIcon(code, Modifier.size(20.dp), kind = game.index?.item(ItemCode(code))?.let(::bagVisualKind) ?: ItemVisualKind.ITEM)
                 Text(ui("expedition.loot_stack", itemTitle(code), amount), color = Parchment)
             }
@@ -59,10 +62,9 @@ import com.sperance.exileforge.ui.theme.*
                         ItemRow(
                             piece,
                             compact = true,
-                            enabled = onItem != null,
                             price = game.sellPrice(instance),
                             verdict = rememberGearVerdict(game, game.hero?.item(instance.id) ?: instance),
-                        ) { onItem?.invoke(piece) }
+                        ) { if (onItem != null) onItem(piece) else inspect(Inspect.Copy(instance)) }
                     }
                 }
             }
@@ -83,5 +85,8 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Надетая вещь лута (3.90.0): строка с меткой «Надето», без цены и действий - во всех списках лута одна. */
-@Composable internal fun WornLootRow(piece: ItemView) = ItemRow(piece, compact = true, enabled = false, worn = true, onClick = {})
+/** Надетая вещь лута (3.90.0): строка с меткой «Надето», без цены и действий - во всех списках лута одна; касание - карточка (4.3.2). */
+@Composable internal fun WornLootRow(piece: ItemView) {
+    val inspect = rememberInspect()
+    ItemRow(piece, compact = true, worn = true) { inspect(Inspect.Copy(piece.item)) }
+}

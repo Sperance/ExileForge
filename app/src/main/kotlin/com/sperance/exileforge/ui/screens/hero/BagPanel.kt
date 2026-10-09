@@ -212,10 +212,13 @@ internal fun compactCount(amount: Long): String = when {
 
 /**
  * A stack seen away from the bag — a fight's spoils: its face alone, with no way on, since the run is still underway.
- * [code] is the stack's item code; the count is what the hero holds now.
+ * [code] is the stack's item code; the count is what the hero holds now. [footer] - что место кладёт под лицо (действие инспектора).
  */
-@Composable fun StackInfoSheet(game: GameUi, code: String, onDismiss: () -> Unit) {
-    StackPanel(onDismiss) { StackFace(game, code, game.hero?.bag?.get(code) ?: 0L) }
+@Composable fun StackInfoSheet(game: GameUi, code: String, footer: @Composable ColumnScope.() -> Unit = {}, onDismiss: () -> Unit) {
+    StackPanel(onDismiss) {
+        StackFace(game, code, game.hero?.bag?.get(code) ?: 0L)
+        footer()
+    }
 }
 
 /** The sheet a stack opens in: the gold spine along its edge and [content] beside it. */

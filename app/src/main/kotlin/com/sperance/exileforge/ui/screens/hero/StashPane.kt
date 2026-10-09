@@ -76,6 +76,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
     val shown = remember(visible) { visible.mapTo(HashSet()) { it.id } }
     val pick = rememberSellPick(lots, shown)
     val selected = game.holding.selectedEquipment
+    val inspect = rememberInspect()
     val guides = koinInject<GuideStore>()
     val read by guides.read.collectAsStateWithLifecycle(initialValue = null)
     val scope = rememberCoroutineScope()
@@ -121,7 +122,8 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
                 items(lines, key = { it.piece.id }) { line ->
                     val verdict = rememberGearVerdict(game, line.piece.item)
                     if (selling) {
-                        SellLine(pick, line.piece.id) { chosen, toggle -> StashTile(line, verdict, selected = chosen, onClick = toggle) }
+                        // В выборе касание отмечает, удержание открывает карточку (4.3.2)
+                        SellLine(pick, line.piece.id) { chosen, toggle -> StashTile(line, verdict, selected = chosen, onHold = { inspect(Inspect.Copy(line.piece.item)) }, onClick = toggle) }
                     } else {
                         StashTile(line, verdict, selected = line.piece.id == selected, onHold = { hold(line.piece.id) }) {
                             onOpen(line.piece.id)

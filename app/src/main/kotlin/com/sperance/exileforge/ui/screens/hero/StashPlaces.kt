@@ -93,6 +93,7 @@ import com.sperance.exileforge.ui.theme.*
     val rules = game.index?.rules?.stash ?: return
     if (hero.overflow.isEmpty()) return
     val full = hero.items.size >= rules.capacity(hero.info.stashSlots)
+    val inspect = rememberInspect()
     ForgePanel(accent = Ember) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Engraved(ui("stash.overflow", hero.overflow.size, rules.overflowSlots), accent = Ember)
@@ -108,7 +109,7 @@ import com.sperance.exileforge.ui.theme.*
                         // A locked piece (3.30.0) waits in the overflow: it is never sold, by hand or by the server.
                         ForgeTextButton(onClick = { vm.sellOverflow(item.id) }, enabled = !game.busy && !item.locked) { Text(ui("hero.sell_do")) }
                     }
-                }) { }
+                }) { inspect(Inspect.Copy(item)) }
             }
         }
     }

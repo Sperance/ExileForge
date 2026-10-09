@@ -143,10 +143,12 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
+/** Строка хранилища гильдии: касание открывает карточку вещи или стопки (4.3.2), «Взять» - своей кнопкой. */
 @Composable private fun EntryRow(game: GameUi, entry: GuildStashEntry, enabled: Boolean, onTake: () -> Unit) {
     val view = entry.item?.let { game.view(it) }
+    val inspect = rememberInspect()
     ForgePanel {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.clickable { inspect(entry.item?.let { Inspect.Copy(it) } ?: Inspect.Stack(entry.code)) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             if (view != null) ItemIcon(view, rarityColor(view.rarity.name), Modifier.size(32.dp)) else BagIcon(entry.code, Modifier.size(32.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -170,6 +172,8 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
     val stacks = hero.bag.filterValues { it > 0 }.keys.sortedBy { itemTitle(it) }
     var stack by remember { mutableStateOf<String?>(null) }
     var amount by remember { mutableStateOf("1") }
+    val inspect = rememberInspect()
+    val put = ui("guild.stash_put")
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.85f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item { Engraved(ui("guild.stash_put")) }
@@ -195,7 +199,8 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
             items(loose, key = { it.id }) { item ->
                 val view = game.view(item) ?: return@items
                 Row(
-                    Modifier.fillMaxWidth().clickable(enabled = !game.busy) { onPut(item.id, null, 1) }.padding(vertical = 4.dp),
+                    // Касание - карточка (4.3.2), положить в хранилище - её кнопка
+                    Modifier.fillMaxWidth().clickable { inspect(Inspect.Copy(item, InspectAction(put, enabled = !game.busy) { onPut(item.id, null, 1) })) }.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
@@ -205,9 +210,16 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
             }
             items(stacks, key = { "bag:$it" }) { code ->
                 Row(
-                    Modifier.fillMaxWidth().clickable(enabled = !game.busy) {
-                        stack = code
-                        amount = "1"
+                    Modifier.fillMaxWidth().clickable {
+                        inspect(
+                            Inspect.Stack(
+                                code,
+                                InspectAction(put, enabled = !game.busy) {
+                                    stack = code
+                                    amount = "1"
+                                },
+                            ),
+                        )
                     }.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),

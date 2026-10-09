@@ -57,7 +57,6 @@ import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.screens.hero.PetCard
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -68,9 +67,8 @@ import com.sperance.exileforge.ui.theme.*
  * Rarity is not written anywhere: it is the frame of the icon and the colour of the name.
  */
 @Composable internal fun LotRow(game: GameUi, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
-    var orbInfo by remember { mutableStateOf(false) }
-    if (orbInfo) StackInfoSheet(game, lot.priceOrb) { orbInfo = false }
-    val price: @Composable RowScope.() -> Unit = { LotPrice(lot) { orbInfo = true } }
+    val inspect = rememberInspect()
+    val price: @Composable RowScope.() -> Unit = { LotPrice(lot) { inspect(Inspect.Stack(lot.priceOrb)) } }
     val seller = listOfNotNull(sellerName(lot).takeIf { withSeller })
     val view = lot.equipment?.let { game.view(it) }
     // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet says why instead of its facts.

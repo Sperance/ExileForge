@@ -58,7 +58,6 @@ import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.screens.hero.StackIcon
-import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
 /** Свои лоты и история сделок (3.80.24). */
@@ -130,6 +129,15 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
     val deals = market.history.map { it.deal }
     val ledger = remember(deals, heroId) { DealLedger.of(deals, heroId) }
     var opened by remember { mutableStateOf<DealEntry?>(null) }
+    // Стопку и сферу открывает общая карточка (4.3.2), товар - карточка лота
+    val inspect = rememberInspect()
+    val open = { entry: DealEntry ->
+        if (entry is DealEntry.Stack) {
+            inspect(Inspect.Stack(entry.code))
+        } else {
+            opened = entry
+        }
+    }
     val shown = deals.filter { deal ->
         when (filter) {
             DealFilter.ALL -> true
@@ -145,8 +153,8 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
                         FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(ui("auction.history_${f.name.lowercase()}")) })
                     }
                 }
-                DealTable(game, ui("auction.history_earned"), ledger.received) { entry -> opened = entry }
-                DealTable(game, ui("auction.history_spent"), ledger.spent) { entry -> opened = entry }
+                DealTable(game, ui("auction.history_earned"), ledger.received, open)
+                DealTable(game, ui("auction.history_spent"), ledger.spent, open)
                 MutedText(ui("auction.history_note"), style = MaterialTheme.typography.labelMedium)
             }
         }
@@ -161,8 +169,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
     // Строка табличек открывает своё (4.3.0): товар - карточку лота, стопку и сферу - их лист
     when (val entry = opened) {
         is DealEntry.Goods -> LotSheet(game, entry.lot, action = null, enabled = false, note = dealMark(entry.lot, heroId), onDismiss = { opened = null })
-        is DealEntry.Stack -> StackInfoSheet(game, entry.code) { opened = null }
-        is DealEntry.Gold, null -> Unit
+        is DealEntry.Stack, is DealEntry.Gold, null -> Unit
     }
 }
 

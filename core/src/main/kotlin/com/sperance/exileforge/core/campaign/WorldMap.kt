@@ -55,9 +55,6 @@ class WorldMap(val campaign: CampaignFile, private val world: WorldGraph, progre
         }
     }
 
-    val passedCount: Int = campaign.zones.count { it.code in passed }
-    val total: Int = campaign.zones.size
-
     /** The regions the hero has seen a token of; the rest are fog, name and all. */
     val knownRegions: List<Region> = campaign.regions.filter { region -> region.zones.any { it.code in byCode } }
 

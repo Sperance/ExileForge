@@ -765,7 +765,6 @@
   "expedition.stunned": "Stunned",
   "expedition.summary": "Slain: {0} · gold: {1} · experience: {2}",
   "expedition.title": "Expedition",
-  "expedition.passed": "Passed {0} of {1}",
   "expedition.frontier": "To the frontier",
   "expedition.unsent": "The last run's journal is not sent yet: check the connection and try again",
   "expedition.unfinished_title": "Unfinished run",

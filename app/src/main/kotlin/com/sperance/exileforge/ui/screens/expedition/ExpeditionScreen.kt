@@ -101,7 +101,6 @@ private const val CARD_TOP = .48f
         // Голова карты (4.2.0): шапка, под ней - карточка текущей главы сюжета, ниже - масштаб
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
             WorldBar(
-                world,
                 Modifier,
                 onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
             )
@@ -124,18 +123,15 @@ private object LastWorld {
         ?: WorldMap(campaign, graph, progress).also { last = Triple(graph, progress, it) }
 }
 
-/** The map's head: how much of the world is passed and the way back to the frontier; the atlas and the trials live in «Развитие». */
-@Composable private fun WorldBar(world: WorldMap, modifier: Modifier, onFrontier: () -> Unit) {
+/** The map's head: the title and the way back to the frontier (счётчик пройденного убран в 4.4.x). */
+@Composable private fun WorldBar(modifier: Modifier, onFrontier: () -> Unit) {
     Row(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
             .padding(start = 16.dp, end = 12.dp, top = 8.dp, bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(Modifier.weight(1f)) {
-            Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            Text(ui("expedition.passed", world.passedCount, world.total), color = Muted, style = MaterialTheme.typography.labelMedium)
-        }
+        Text(ui("expedition.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
         OutlinedIconButton(onClick = onFrontier, border = androidx.compose.foundation.BorderStroke(1.dp, Gold.copy(alpha = .4f)), modifier = Modifier.size(38.dp)) {
             Icon(ForgeGlyphs.Target, ui("expedition.frontier"), tint = GoldBright, modifier = Modifier.size(20.dp))
         }

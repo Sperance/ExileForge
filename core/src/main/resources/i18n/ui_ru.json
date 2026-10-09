@@ -765,7 +765,6 @@
   "expedition.stunned": "Оглушение",
   "expedition.summary": "Убито: {0} · золото: {1} · опыт: {2}",
   "expedition.title": "Поход",
-  "expedition.passed": "Пройдено {0} из {1}",
   "expedition.frontier": "К границе",
   "expedition.unsent": "Журнал прошлого захода ещё не отправлен: проверьте связь и попробуйте снова",
   "expedition.unfinished_title": "Незаконченный заход",

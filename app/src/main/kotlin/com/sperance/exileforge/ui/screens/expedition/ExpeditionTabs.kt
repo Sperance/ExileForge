@@ -6,10 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
@@ -26,7 +24,6 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.ui.components.motionClock
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Bronze
@@ -52,7 +49,7 @@ enum class ExpeditionPage(val route: Route, private val title: String, val icon:
 
 /**
  * Полоса страниц «Похода» в оболочке (4.0.0, макет «Скрижали», компактный): каменная дорожка, у каждой страницы значок
- * и подпись в строку, под открытой пульсирует руна. Вне страниц «Похода» полосы нет. Закрытая уровнем страница
+ * и подпись в строку (руна под открытой убрана в 4.4.x). Вне страниц «Похода» полосы нет. Закрытая уровнем страница
  * отвечает тостом навигатора, Атлас готовит своё окно сам ([ExpeditionViewModel.openAtlas]).
  */
 @Composable fun ExpeditionChrome(route: Route) {
@@ -84,11 +81,6 @@ enum class ExpeditionPage(val route: Route, private val title: String, val icon:
             Icon(page.icon, null, tint = tint, modifier = Modifier.size(15.dp))
             Text(page.label, color = tint, style = relicName(12), maxLines = 1)
         }
-        if (on) {
-            // Руна под открытой страницей: дышит 2,4 с
-            val pulse = (1 - kotlin.math.cos(motionClock(RUNE_MS, "page-rune") * 2 * Math.PI).toFloat()) / 2
-            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp).width(28.dp).height(2.dp).background(Gold.copy(alpha = 1f - .55f * pulse), RoundedCornerShape(1.dp)))
-        }
     }
 }
 
@@ -96,4 +88,3 @@ private val TrackTop = Color(0xFF0B1116)
 private val TrackBottom = Color(0xFF0A0F13)
 private val StoneTop = Color(0xFF1C2A33)
 private val StoneBottom = Color(0xFF121B22)
-private const val RUNE_MS = 2400

@@ -55,6 +55,9 @@ val ManaBlue = Color(0xFF6FB6FF)
 val ShieldCyan = Color(0xFF63B7C4)
 val Blood = Color(0xFF8A2E2E)
 
+/** Ожидание итога (4.4.x): связь переподключается - жёлтый между красным «нет связи» и обычным видом. */
+val Caution = Color(0xFFF2C94C)
+
 /** Regeneration and success. */
 val Vital = Color(0xFF7BE0A6)
 

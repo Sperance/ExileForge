@@ -1172,11 +1172,9 @@
   "net.unknown_host": "the host name does not resolve: {0}",
   "link.foreign": "{0} commands of another account were dropped, not sent",
   "link.expired": "{0} commands were not sent: more than a day has passed, the server will no longer accept them",
-  "link.offline": "No connection",
   "link.pending": "pending",
   "link.queued": "No connection: the command is pending and goes out as soon as the server answers",
   "link.queued_later": "The command is pending and goes out after the ones before it",
-  "link.retry": "Check the connection",
   "link.waiting": "Pending: {0}",
   "net.queued": "queued: waiting for the connection",
   "orb.apply": "Apply the orb",
@@ -4064,5 +4062,7 @@
   "skills.xp_progress": "Experience {0} / {1} to level {2} · gathered in a slot from battle experience",
   "skills.xp_waiting": "Experience full: level {0} waits for its requirements — {1}",
   "forge.pick_pet": "Pick a pet",
-  "forge.change_pet": "Change pet"
+  "forge.change_pet": "Change pet",
+  "link.reconnect_failed": "Could not reconnect: {0}",
+  "link.reconnecting": "Reconnecting…"
 }

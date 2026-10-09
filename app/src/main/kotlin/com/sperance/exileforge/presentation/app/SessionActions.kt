@@ -26,8 +26,6 @@ import com.sperance.exileforge.presentation.hero.HeroCopy
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.TAB_ADMIN
-import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.phrase
 import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CancellationException
@@ -321,6 +319,16 @@ class SessionActions(
                 }
             }
         }
+    }
+
+    /**
+     * Касание красного облака (4.4.x): полное переподключение сразу - как возврат в игру, но проба связи без паузы повтора.
+     * До её итога облако «переподключается»; удача - связь в сети, неудача - снова красное облако и тост с причиной.
+     */
+    fun reconnectLink() {
+        links.update { it.reconnect() }
+        connectionActions.wake(now = true, verify = true)
+        reconnect()
     }
 
     /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */

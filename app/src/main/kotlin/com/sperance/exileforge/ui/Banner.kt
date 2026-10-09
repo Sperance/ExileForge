@@ -1,20 +1,17 @@
 package com.sperance.exileforge.ui
 
-import android.view.HapticFeedbackConstants
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CloudOff
+import androidx.compose.material.icons.outlined.CloudSync
 import androidx.compose.material.icons.outlined.CloudUpload
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
@@ -24,75 +21,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
-import androidx.navigation3.ui.NavDisplay
-import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.Link
-import com.sperance.exileforge.core.network.RequestLog
-import com.sperance.exileforge.data.settings.DraftStore
+import com.sperance.exileforge.core.network.LinkState
 import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
-import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.*
-import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.ui.components.BugSheet
 import com.sperance.exileforge.ui.components.GoldPrice
-import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalMailOpen
-import com.sperance.exileforge.ui.components.LocalMotion
-import com.sperance.exileforge.ui.components.LocalSettings
-import com.sperance.exileforge.ui.components.LocalUpdates
-import com.sperance.exileforge.ui.components.MailSheet
-import com.sperance.exileforge.ui.components.OrnateDivider
-import com.sperance.exileforge.ui.components.SuggestionsSheet
-import com.sperance.exileforge.ui.components.ToastHost
-import com.sperance.exileforge.ui.components.UpdateGate
-import com.sperance.exileforge.ui.components.WarmupScreen
-import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.admin.AdminScreen
-import com.sperance.exileforge.ui.screens.city.CityScreen
-import com.sperance.exileforge.ui.screens.crafts.CraftsScreen
-import com.sperance.exileforge.ui.screens.expedition.AtlasScreen
-import com.sperance.exileforge.ui.screens.expedition.ExpeditionPlay
-import com.sperance.exileforge.ui.screens.expedition.ExpeditionScreen
-import com.sperance.exileforge.ui.screens.expedition.TrialScreen
-import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.hero.HeroLine
-import com.sperance.exileforge.ui.screens.hero.HeroScreen
 import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
-import com.sperance.exileforge.ui.screens.progress.ProgressScreen
-import com.sperance.exileforge.ui.screens.redemption.RedemptionScreen
-import com.sperance.exileforge.ui.screens.server.ServerScreen
-import com.sperance.exileforge.ui.screens.server.SettingsScreen
-import com.sperance.exileforge.ui.screens.session.AuthScreen
-import com.sperance.exileforge.ui.screens.session.CharacterSelectScreen
-import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
-import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /** Шапка игры (3.80.24): сигил и аккаунт, имя героя, плашка ремесла, значок связи и меню «⋮». */
@@ -119,7 +69,7 @@ import org.koin.compose.viewmodel.koinViewModel
     if (hero != null) {
         HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
             GoldPrice(hero.money)
-            LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
+            LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink, onReconnect = shell::reconnectLink)
             MailBadge(feedback.unread)
             BannerMenu(settingsOpen = false, onBug = onBug, onSettings = shell::openSettings)
         }
@@ -151,7 +101,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
+        LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink, onReconnect = shell::reconnectLink)
         MailBadge(feedback.unread)
         BannerMenu(settingsOpen = route.tab == TAB_SETTINGS, onBug = onBug, onSettings = shell::openSettings)
     }
@@ -209,37 +159,55 @@ import org.koin.compose.viewmodel.koinViewModel
 private const val MAIL_SHOWN = 9
 
 /**
- * The link to the server (3.30.0): a small crossed cloud while it cannot be reached, and how many commands wait
- * to be sent. Nothing at all while the server answers and nothing waits. A tap on a cloud that only waits asks
- * the server again at once; on a crossed one (3.79.0) it says why — by cause, with the transport's words for an
- * administrator — and offers «Повторить». The server is asked again by itself meanwhile.
+ * The link to the server (3.30.0): nothing while the server answers and nothing waits. С 4.4.x - по [LinkState]: команды ждут -
+ * облако с числом, нажатие спрашивает сервер сразу ([onRetry]); нет связи - красное перечёркнутое облако, нажатие - полное
+ * переподключение ([onReconnect]); переподключается - жёлтое облако, не нажимается; неудача вернёт красное и скажет тостом
+ * почему. Долгое нажатие открывает подробности: причина, что делать, ждущие команды, слова транспорта для администратора.
  */
-@Composable internal fun LinkBadge(link: Link, admin: Boolean, onRetry: () -> Unit) {
-    if (!link.offline && link.waiting.isEmpty()) return
-    val tint = if (link.offline) LifeRed else Gold
-    val label = if (link.offline) link.outage?.title ?: ui("link.offline") else ui("link.waiting", link.waiting.size)
+@Composable internal fun LinkBadge(link: Link, admin: Boolean, onRetry: () -> Unit, onReconnect: () -> Unit) {
+    val state = link.state
+    val look = state.look ?: return
     var open by remember { mutableStateOf(false) }
+    val tap: (() -> Unit)? = when (state) {
+        is LinkState.Offline -> onReconnect
+        is LinkState.Queued -> onRetry
+        LinkState.Online, LinkState.Reconnecting -> null
+    }
     Box {
         Row(
-            Modifier.clickable(onClickLabel = ui("link.retry")) { if (link.offline) open = true else onRetry() }.padding(horizontal = 6.dp, vertical = 4.dp),
+            Modifier.combinedClickable(enabled = tap != null, onClickLabel = look.label, onLongClick = { open = true }) { tap?.invoke() }
+                .padding(horizontal = 6.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp),
         ) {
-            Icon(if (link.offline) Icons.Outlined.CloudOff else Icons.Outlined.CloudUpload, label, tint = tint, modifier = Modifier.size(18.dp))
-            if (link.waiting.isNotEmpty()) Text(link.waiting.size.toString(), color = tint, fontSize = 11.sp)
+            Icon(look.icon, look.label, tint = look.tint, modifier = Modifier.size(18.dp))
+            if (link.waiting.isNotEmpty()) Text(link.waiting.size.toString(), color = look.tint, fontSize = 11.sp)
         }
-        DropdownMenu(open && link.offline, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             Column(Modifier.widthIn(max = 280.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(label, color = LifeRed, style = MaterialTheme.typography.titleSmall)
-                link.outage?.let { Text(it.hint, color = Parchment, style = MaterialTheme.typography.bodySmall) }
+                Text(look.label, color = look.tint, style = MaterialTheme.typography.titleSmall)
+                (state as? LinkState.Offline)?.let { Text(it.outage.hint, color = Parchment, style = MaterialTheme.typography.bodySmall) }
                 Text(ui("link.auto_retry"), color = Muted, style = MaterialTheme.typography.labelSmall)
                 if (link.waiting.isNotEmpty()) Text(ui("link.waiting", link.waiting.size), color = Gold, style = MaterialTheme.typography.labelSmall)
                 if (admin) link.detail?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall) }
-                TextButton(onClick = {
-                    open = false
-                    onRetry()
-                }) { Text(ui("link.retry_now"), color = GoldBright) }
+                tap?.let {
+                    TextButton(onClick = {
+                        open = false
+                        it()
+                    }) { Text(ui("link.retry_now"), color = GoldBright) }
+                }
             }
         }
     }
 }
+
+/** Как значок связи рисует своё состояние: рисунок, цвет и подпись; в сети значка нет. */
+private class LinkLook(val icon: ImageVector, val tint: Color, val label: String)
+
+private val LinkState.look: LinkLook?
+    get() = when (this) {
+        LinkState.Online -> null
+        is LinkState.Queued -> LinkLook(Icons.Outlined.CloudUpload, Gold, ui("link.waiting", count))
+        is LinkState.Offline -> LinkLook(Icons.Outlined.CloudOff, LifeRed, outage.title)
+        LinkState.Reconnecting -> LinkLook(Icons.Outlined.CloudSync, Caution, ui("link.reconnecting"))
+    }

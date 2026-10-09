@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.network.FlushOutcome
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.Outage
-import com.sperance.exileforge.core.network.transportDetail
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
@@ -75,8 +74,18 @@ class ConnectionActions(
 
     /** The network failed under a read or a command: the icon goes up with [error]'s cause, and the server is asked again. */
     override fun lost(error: Throwable?) {
-        links.update { it.down(error) }
+        down(error)
         wake()
+    }
+
+    /**
+     * Связь упала из-за [error]. Шло переподключение по просьбе игрока (4.4.x) - тост называет причину: облако снова красное,
+     * но игрок узнаёт, почему его касание не помогло.
+     */
+    private fun down(error: Throwable?) {
+        val asked = links.state.value.reconnecting
+        links.update { it.down(error) }
+        if (asked) links.state.value.outage?.let { notices.toast(ui("link.reconnect_failed", it.title), NoticeKind.DONE) }
     }
 
     /** A command joined the queue: it goes out as soon as the server can be reached. */
@@ -120,7 +129,7 @@ class ConnectionActions(
                     val probe = probe()
                     verifying = false
                     if (probe != null) {
-                        links.update { it.down(probe) }
+                        down(probe)
                         step++
                         continue
                     }
@@ -146,7 +155,7 @@ class ConnectionActions(
                     if (wasOffline || delivered > 0) refreshScreen()
                     when (outcome) {
                         FlushOutcome.OFFLINE -> {
-                            links.update { it.down(null) }
+                            down(null)
                             step++
                         }
 
@@ -206,7 +215,7 @@ class ConnectionActions(
     /** A new session or a sign-out: nothing of the old link carries over but the queue on disk. */
     fun reset() {
         loop?.cancel()
-        links.update { it.copy(offline = false) }
+        links.update { it.copy(offline = false, reconnecting = false) }
     }
 
     private companion object {

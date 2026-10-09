@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
@@ -71,6 +72,7 @@ import org.koin.compose.viewmodel.koinViewModel
     accepted: (String) -> Boolean,
     needsOmen: (String) -> Boolean,
     lost: Int,
+    chanceUniques: List<String>,
     onApply: (String, String) -> Unit,
 ) {
     val code = smithy.orb
@@ -94,6 +96,10 @@ import org.koin.compose.viewmodel.koinViewModel
         )
         val resets = orb.code.value == Orb.QUALITY_ORB.name && lost > 0
         if (resets) Text(ui("forge.quality_reset", lost), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+        // Сфера удачи (4.2.1): какие уникалки может дать эта вещь - список правил ([OrbApplier.chanceUniques]).
+        if (orb.code.value == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
+            Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
+        }
         HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted && !waiting, rearm = true) {
             if (resets) confirming = true else onApply(instance.id, orb.code.value)
         }

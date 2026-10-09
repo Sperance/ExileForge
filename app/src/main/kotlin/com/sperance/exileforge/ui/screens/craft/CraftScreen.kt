@@ -134,6 +134,10 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
     val quality = remember(gear, index, smithy.omen) {
         if (index == null || gear == null) null else QualityForecast.of(index, gear.item, gear.template, Omen.of(smithy.omen))
     }
+    // Что может выйти из сферы удачи (4.2.1): уникалки правил того же семейства и уровня вещи, тот же список, что тянет сервер.
+    val chanceUniques = remember(gear, index) {
+        if (index == null || gear == null) emptyList() else OrbApplier(index).chanceUniques(gear.item, gear.template).map { it.value.code }
+    }
     val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     val petMode = smithy.petMode && hero?.pets?.pets?.isNotEmpty() == true
@@ -182,7 +186,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
         }
         if (hero != null && instance != null && !petMode) {
             when (section) {
-                ForgeSection.ORBS -> OrbBar(game, smithy, instance, enabled, accepted, { it in omenOnly }, quality?.lost ?: 0, vm::applyOrb)
+                ForgeSection.ORBS -> OrbBar(game, smithy, instance, enabled, accepted, { it in omenOnly }, quality?.lost ?: 0, chanceUniques, vm::applyOrb)
                 ForgeSection.BENCH -> view?.let { BenchBar(game, vm, it, benchLine, enabled) }
                 ForgeSection.ESSENCES -> EssenceBar(game, smithy.essence, instance, enabled, accepted, vm::applyEssence)
             }

@@ -205,7 +205,7 @@ internal fun RunePicker(
     val inspect = rememberInspect()
     val growth = index.skillGrowth
     val runes = index.itemsByCategory[Item.RUNE].orEmpty().mapNotNull { item -> growth.rune(item.code.value) }
-        .filter { skill.type in it.types && bagCount(game, it.code) > 0 }
+        .filter { skill.type in it.types && (game.bagAmount(it.code) ?: 0L) > 0 }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -240,7 +240,7 @@ internal fun RunePicker(
             Text(itemTitle(rune.code), color = if (fits) GoldBright else Muted, style = MaterialTheme.typography.bodyMedium)
             Text(RuneText.family(rune) + " · " + RuneText.effect(rune, runePower(game)), color = if (fits) ModBlue else Muted, style = MaterialTheme.typography.labelSmall)
         }
-        Text(ui("runes.owned", bagCount(game, rune.code)), color = Gold, style = MaterialTheme.typography.labelMedium)
+        Text(ui("runes.owned", game.bagAmount(rune.code) ?: 0L), color = Gold, style = MaterialTheme.typography.labelMedium)
     }
 }
 

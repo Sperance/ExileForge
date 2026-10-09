@@ -192,7 +192,7 @@ internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
         listOfNotNull(strike?.let { MonsterEffect(CoreStat.HEALTH.code, Op.MORE, -it.coerceAtMost(traps?.maxStrike ?: 0.0)) })
     val extra = (pacts[MapStat.MONSTER_MODS.code] ?: 0.0).toInt()
     val dice = run.streams.of("pactMods", member.agent.id * Run.PACK_SLOTS + member.index)
-    return spawns.buffed(MonsterRoller(index).empowered(member.monster, run.pool, zone.level, extra, dice), buffs)
+    return spawns.buffed(MonsterRoller(index).empowered(member.monster, run.pool, run.levelOf(zone), extra, dice), buffs)
 }
 
 /**

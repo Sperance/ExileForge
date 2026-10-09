@@ -24,7 +24,7 @@ internal fun ExpeditionRun.challengeFoes(agent: MonsterAgent): List<Foe> {
     val phases = PhaseFoes(index, rules)
     return agent.standing.map { i ->
         val monster = pactFoe(FightMember(agent, i))
-        phases.foe(monster, monster.level.takeIf { it > 0 } ?: zone.level)
+        phases.foe(monster, monster.level.takeIf { it > 0 } ?: run.levelOf(zone))
     }
 }
 

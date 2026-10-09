@@ -173,9 +173,15 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val weaponType: WeaponType? get() = template.weaponType
     val level: Int get() = item.level(template)
 
-    /** A map names its zone (3.45.0: one template for every zone), and its tier past level 98 rides the name: «Last Throne Map · tier 7». */
+    /**
+     * A map names its zone (3.45.0: one template for every zone), and its tier rides the name with the area level it lifts the
+     * zone to (4.2.1): «Rotten Heart Map · tier 8 · lv 85».
+     */
     val title: String get() = (if (item.mapZone.isNotEmpty()) mapItemTitle(item.mapZone) else equipmentTitle(code))
-        .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier) else name }
+        .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier, areaLevel ?: level) else name }
+
+    /** Уровень района карты (4.2.1): уровень её зоны, поднятый тиром (`MapRule.areaLevel` правил); у не-карты - null. */
+    val areaLevel: Int? get() = index.zone(item.mapZone)?.let { index.campaign.maps.areaLevel(it.level, item.mapTier) }
 
     /** A unique's or mythic's lore; a base carries no description. */
     val description: String get() = if (template.unique) equipmentDescription(code) else ""

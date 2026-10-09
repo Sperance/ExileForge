@@ -39,10 +39,10 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     }
 
     /** The zone's boss at this encounter: its signature lines and a few of its table, [extra] what the map does to it alone. */
-    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, moreRolls: Int = 0): RolledMonster? = guardian(zone.boss, zone.level, buffs, extra, run.streams.of("bossRoll"), moreRolls)
+    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, moreRolls: Int = 0): RolledMonster? = guardian(zone.boss, run.levelOf(zone), buffs, extra, run.streams.of("bossRoll"), moreRolls)
 
     /** The guardian of the Vaal zone behind the portal, sealing its exit. */
-    fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = guardian(zone.corrupted, zone.level, buffs, emptyList(), run.streams.of("corruptRoll"))
+    fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = guardian(zone.corrupted, run.levelOf(zone), buffs, emptyList(), run.streams.of("corruptRoll"))
 
     /** Страж [code]; [moreRolls] - сверх его строк (ступень раша, 3.96.0). */
     private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice, moreRolls: Int = 0): RolledMonster? {
@@ -59,10 +59,10 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         val monster = index.monster(crystal.guardian) ?: zone.monsters.firstOrNull()?.let(index::monster) ?: return null
         val dice = run.streams.of("crystalGuardian", place)
         val rule = campaign.rarity(MonsterRarity.RARE)
-        val picked = monsters.draw(run.pool, zone.level, rule, dice.between(rule.modifiers), dice)
+        val picked = monsters.draw(run.pool, run.levelOf(zone), rule, dice.between(rule.modifiers), dice)
         val essences = crystal.essences.mapNotNull { index.essence(it)?.kind?.monster }.distinct().mapNotNull(index::modifier)
-            .map { monsters.rolled(monsters.raise(it, 1, zone.level), 1.0, dice) }
-        return skilled(buffed(monsters.build(monster, zone.level, rule, picked + essences, dice, extra), buffs), dice)
+            .map { monsters.rolled(monsters.raise(it, 1, run.levelOf(zone)), 1.0, dice) }
+        return skilled(buffed(monsters.build(monster, run.levelOf(zone), rule, picked + essences, dice, extra), buffs), dice)
     }
 
     /** The map's [buffs] folded into the monster's stats and kept apart, so the arena can say which is which. */

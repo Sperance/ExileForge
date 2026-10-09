@@ -95,6 +95,10 @@ import com.sperance.exileforge.ui.theme.*
         color = rarityColor(rarity.name),
         style = MaterialTheme.typography.labelMedium,
     )
+    // Тир карты поднимает уровень района (4.2.1): по нему монстры, добыча и мифические захода
+    picked.view.areaLevel?.takeIf { picked.item.mapTier > 0 }?.let { area ->
+        Text(ui("expedition.launch_area", picked.item.mapTier, area, zone.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+    }
     // A map taken by an influence (3.52.0, server 1.50.0): stronger monsters — the risk pays for them — its influence on the loot;
     // the Abyss (server 1.65.0) only from its orb, with its cracks besides.
     val influence = picked.item.influence?.takeIf { index.campaign.maps.influence.accepts(it) }

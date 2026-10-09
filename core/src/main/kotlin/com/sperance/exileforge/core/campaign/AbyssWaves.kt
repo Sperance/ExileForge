@@ -36,13 +36,13 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
     fun depths(rule: AbyssRule, zone: Zone): List<AbyssDepth> {
         val bonus = run.hoardBonus(rule)
         val rifts = AbyssRifts(index)
-        return rule.waves.mapIndexed { i, wave -> AbyssDepth(zone.level + wave.level, wave.count, wave.magic, wave.rare, wave.leader, rifts.view(rule, i + 1, bonus)) }
+        return rule.waves.mapIndexed { i, wave -> AbyssDepth(run.levelOf(zone) + wave.level, wave.count, wave.magic, wave.rare, wave.leader, rifts.view(rule, i + 1, bonus)) }
     }
 
     /** The fights of depth [depth] of the crack at [place], in order; [effects] are the map's and the atlas's. */
     fun wave(rule: AbyssRule, depth: Int, place: Int, zone: Zone, effects: Map<String, Double>, extraRareMods: Int): List<List<RolledMonster>> {
         val floor = rule.waves.getOrNull(depth - 1) ?: return emptyList()
-        return fights(rule, floor, zone.level + floor.level, run.streams.of("abyssWave", place * 64 + depth), effects, extraRareMods)
+        return fights(rule, floor, run.levelOf(zone) + floor.level, run.streams.of("abyssWave", place * 64 + depth), effects, extraRareMods)
     }
 
     /**

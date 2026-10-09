@@ -56,7 +56,7 @@ import kotlin.random.Random
  * A fight with [agent]'s pack still standing, all at once, at [level] — the zone's, or a depth's of the Abyss. Пачка карты
  * не больше `fight.maxFoes` (4.2.0): соседние стаи в бой не втягиваются, каждая - свой бой.
  */
-internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = zone.level, abyssal: Boolean = false) {
+internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(zone), abyssal: Boolean = false) {
     fightPet = pet()
     fightAgent = agent
     abyssFight = abyssal

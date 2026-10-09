@@ -238,10 +238,8 @@ internal fun ExpeditionRun.play(dt: Double) {
 /** The hero's level on the experience the answers granted so far (3.81.0); never below the level they set out with. */
 internal fun ExpeditionRun.levelNow(): Int = index.classes.levelOf(heroExperience + granted.experience).coerceAtLeast(heroLevel)
 
-/** What the death costs by the rules: a share of the level's experience, never the level — on what the answers granted so far. */
-internal fun ExpeditionRun.deathLoss(): Double {
-    val classes = index.classes
-    val gained = heroExperience + granted.experience
-    val level = classes.levelOf(gained).coerceAtLeast(heroLevel)
-    return LootRoller(index).deathLoss(rules.death, zone.level, gained, classes.threshold(level) ?: 0.0, classes.nextThreshold(level))
-}
+/**
+ * What the death costs by the rules: a share of the level's experience, never the level — on what the answers granted so far.
+ * С уровня героя `combat.death.fromLevel` (4.4.1; прежде - уровня зоны), ниже - даром.
+ */
+internal fun ExpeditionRun.deathLoss(): Double = LootRoller(index).deathLoss(levelNow(), heroExperience + granted.experience)

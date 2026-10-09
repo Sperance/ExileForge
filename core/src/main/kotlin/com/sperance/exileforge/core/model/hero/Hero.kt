@@ -156,6 +156,18 @@ data class HeroView(
 }
 
 /**
+ * Итог сферы на питомце (4.4.1, сервер `PetOrbResponse`): строка [messageKey] с аргументами-ключами [messageArgs] - как у сферы на
+ * вещи ([CurrencyApplyResponse]), - и зверинец [pets] после сферы.
+ */
+@Serializable data class PetOrbResponse(
+    val messageKey: String = "",
+    val messageArgs: List<String> = emptyList(),
+    val pets: PetState = PetState(),
+) {
+    val message: String get() = loc(messageKey, messageArgs)
+}
+
+/**
  * The incubator (server 1.67.0): [slots] places open by the hero's sheet, [max] at most, the places shown in [entries]
  * (open ones and any busy one past them) and the server's clock [now] when it was read, so a countdown runs on its time.
  */

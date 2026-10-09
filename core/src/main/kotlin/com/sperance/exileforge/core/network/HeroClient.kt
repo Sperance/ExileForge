@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.CreateHeroCommand
 import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
 import com.sperance.exileforge.core.model.hero.HeroSummary
+import com.sperance.exileforge.core.model.hero.PetOrbResponse
 import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.core.model.hero.SellBatch
 import com.sperance.exileforge.core.model.hero.SellOutcome
@@ -154,8 +155,11 @@ class HeroClient internal constructor(private val http: Transport) {
     /** Takes the ripe egg of place [slot] out of the incubator: the pet hatches, its species and lines rolled now. */
     suspend fun collectPet(heroId: String, slot: Int): PetState = http.post("$HERO/pets/collect", heroQuery(heroId, "slot" to slot.toString()))
 
-    /** Any crafting orb on a pet (server 1.65.0), with an [omen] spent along with it when given; the pets' own growth orb too. */
-    suspend fun petOrb(heroId: String, petId: String, orb: String, omen: String? = null): PetState = http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
+    /**
+     * Any crafting orb on a pet (server 1.65.0), with an [omen] spent along with it when given; the pets' own growth orb too.
+     * Ответ (4.4.1) - строка итога, как у сферы на вещи, и зверинец.
+     */
+    suspend fun petOrb(heroId: String, petId: String, orb: String, omen: String? = null): PetOrbResponse = http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
 
     /** The Omen of Choice's line kept on a pet (server 1.65.0): [choice] of the ones it offers. */
     suspend fun choosePetLine(heroId: String, petId: String, choice: Int): PetState = http.post("$HERO/pets/choose", heroQuery(heroId, "petId" to petId.also(::requireItemId), "choice" to choice.toString()))

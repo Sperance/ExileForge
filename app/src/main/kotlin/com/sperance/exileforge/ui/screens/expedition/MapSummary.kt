@@ -135,8 +135,12 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
             MutedText(head.hint, style = MaterialTheme.typography.bodySmall)
             Tallies(tally)
             if (tally.end == MapEnd.FELL) {
-                hud.fall?.takeIf { it > 0 }?.let {
-                    Text(ui("expedition.fall_lost", number(it)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                val lost = hud.fall?.takeIf { it > 0 }
+                if (lost != null) {
+                    Text(ui("expedition.fall_lost", number(lost)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                } else {
+                    // Ниже уровня штрафа (4.4.1) гибель даром - игрок знает, с какого уровня это не так
+                    hud.fallFrom?.let { MutedText(ui("expedition.fall_from", it), style = MaterialTheme.typography.bodySmall) }
                 }
             }
             Loot(

@@ -318,6 +318,8 @@ data class RunHud(
     val report: FightReport? = null,
     /** What the death cost, by the rules' price until the server's answer replaces it. */
     val fall: Double? = null,
+    /** Уровень героя, с которого гибель стоит опыта (4.4.1), пока герой ниже него; null - цена уже действует. */
+    val fallFrom: Int? = null,
     /** The run's gold and experience as the server's answers granted them; [awaiting] of its rewarding events are not answered yet. */
     val gold: Long = 0,
     val experience: Double = 0.0,

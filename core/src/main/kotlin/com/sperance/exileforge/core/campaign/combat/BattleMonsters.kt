@@ -7,39 +7,11 @@ import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterSkill
-import com.sperance.exileforge.rules.content.MonsterTrait
 import com.sperance.exileforge.rules.content.Op
-import com.sperance.exileforge.rules.content.TraitAct
-import com.sperance.exileforge.rules.content.TraitLine
 import kotlin.math.max
 import kotlin.math.min
 
-// ==================== Monster traits (3.73.0) ====================
-
-/** The traits of [fighter] whose answer is [act], with the strength of its rarity. */
-private fun Battle.traits(fighter: Fighter, act: TraitAct): List<Pair<MonsterTrait, Double>> = if (fighter.side != Side.MONSTER) {
-    emptyList()
-} else {
-    foes[fighter.index].let { foe -> foe.traits.filter { it.trigger?.act == act }.map { it to foe.traitPower } }
-}
-
-private fun List<TraitLine>.lines(power: Double): List<StatLine> = map { StatLine(it.stat, it.op, if (it.op == Op.SET) it.value else it.value * power) }
-
-/** [me]'s weapon damage for this swing: a monster's first one grows by its first-strike traits. */
-internal fun Battle.firstStrike(me: Fighter): Map<DamageType, Double> {
-    if (me.side != Side.MONSTER || !swung.add(me.index)) return me.body.damage
-    val more = traits(me, TraitAct.FIRST_STRIKE).sumOf { (trait, power) -> trait.trigger!!.value * power }
-    if (more <= 0) return me.body.damage
-    traits(me, TraitAct.FIRST_STRIKE).forEach { (trait, _) -> note(me, NoteKind.TRAIT, trait.code, more) }
-    return me.body.damage.mapValues { it.value * (1 + more / 100) }
-}
-
-internal fun Battle.enrage(foe: Fighter) = traits(foe, TraitAct.ENRAGE).forEach { (trait, power) ->
-    val rule = trait.trigger!!
-    if (foe.life >= foe.body.maxLife * rule.threshold / 100 || !enraged.add(foe.index to trait.code)) return@forEach
-    buff(foe, trait.code, rule.lines.lines(power), FOREVER)
-    note(foe, NoteKind.TRAIT, trait.code)
-}
+// ==================== Ярость и умения монстров ====================
 
 /**
  * Ярость (3.95.0 - стража; 4.3.0 - любого боя): каждые `every` секунд правила вида боя [Battle.rageRule] урон всех живых врагов -
@@ -63,43 +35,6 @@ internal fun Battle.rage() {
 
 /** Источник баффа ярости: один на врага, каждая ступень заменяет прежнюю. */
 private const val RAGE = "GUARDIAN_RAGE"
-
-/** What a fallen foe's traits do as it falls: a burst at the hero, a rallying of the pack, a mending of it. */
-internal fun Battle.lastWords(fallen: Fighter) {
-    if (outcome != null) return
-    val pack = foeFighters.filter { it.alive && it !== fallen }
-    traits(fallen, TraitAct.RALLY).forEach { (trait, power) ->
-        val rule = trait.trigger!!
-        pack.forEach { buff(it, trait.code, rule.lines.lines(power), rule.duration) }
-        if (pack.isNotEmpty()) note(fallen, NoteKind.TRAIT, trait.code)
-    }
-    traits(fallen, TraitAct.MEND).forEach { (trait, power) ->
-        val share = trait.trigger!!.value * power / 100
-        pack.forEach { it.life = min(it.body.maxLife, it.life + it.body.maxLife * share) }
-        if (pack.isNotEmpty()) note(fallen, NoteKind.TRAIT, trait.code, share * 100)
-    }
-    traits(fallen, TraitAct.BURST).forEach { (trait, power) ->
-        val rule = trait.trigger!!
-        val type = DamageType.element(rule.element) ?: DamageType.PHYSICAL
-        if (heroFighter.alive) {
-            strike(
-                fallen,
-                foeTarget(),
-                Blow(
-                    mapOf(type to fallen.body.maxLife * rule.value * power / 100),
-                    Action.SKILL,
-                    spell = true,
-                    skill = trait.code,
-                    spread = false,
-                    primary = false,
-                ),
-            )
-        }
-        // The blast heals nobody: whatever its leech gave back, the fallen stays down.
-        fallen.life = 0.0
-        fallen.shield = 0.0
-    }
-}
 
 /** A monster's skills, the first ready one it has the mana for and a reason to use: a heal when hurt, a buff or a curse not already on. */
 internal fun Battle.monsterCast(me: Fighter) {

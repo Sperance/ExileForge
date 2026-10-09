@@ -27,7 +27,7 @@ internal fun Battle.shot(fighter: Fighter, blow: Blow? = null): FighterShot {
         fighter.effects.forEach { effect ->
             val kind = when (effect.kind) {
                 EffectKind.BUFF -> LineKind.BUFF
-                EffectKind.CURSE -> LineKind.CURSE
+                EffectKind.CURSE, EffectKind.HINDER -> LineKind.CURSE
                 EffectKind.FLASK -> LineKind.FLASK
             }
             effect.lines.forEach { add(LineSource(kind, effect.source, it)) }

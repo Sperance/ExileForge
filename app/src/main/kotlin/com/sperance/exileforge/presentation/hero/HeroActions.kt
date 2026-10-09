@@ -65,8 +65,8 @@ class HeroActions(
     fun incubatePet(egg: String, slot: Int? = null) = heroCommand { id -> api.hero.incubatePet(id, egg, slot) }
     fun collectPet(slot: Int) = heroCommand { id -> api.hero.collectPet(id, slot) }
 
-    /** Сфера ремесла на питомце (сервер 1.65.0), с предзнаменованием, если оно положено. */
-    fun petOrb(petId: String, orb: String, omen: String? = null) = heroCommand { id -> api.hero.petOrb(id, petId, orb, omen) }
+    /** Сфера ремесла на питомце (сервер 1.65.0), с предзнаменованием, если оно положено; фраза итога (4.4.1) - строка кузницы, как у вещи. */
+    fun petOrb(petId: String, orb: String, omen: String? = null) = forgeCommand { id -> heroes.forgeLine(api.hero.petOrb(id, petId, orb, omen).message) }
     fun choosePetLine(petId: String, choice: Int) = heroCommand { id -> api.hero.choosePetLine(id, petId, choice) }
     fun activatePet(petId: String) = heroCommand { id -> api.hero.activatePet(id, petId) }
     fun sellPet(petId: String) = heroCommand { id -> api.hero.sellPet(id, petId) }

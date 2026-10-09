@@ -69,8 +69,11 @@ data class Foe(
     val summoned: Boolean get() = summonOf != null
 }
 
-/** What lies on a fighter for a while (2.78.0). */
-enum class EffectKind { BUFF, CURSE, FLASK }
+/**
+ * What lies on a fighter for a while (2.78.0); [harmful] - во вред тому, на ком лежит. [HINDER] (4.4.1) - помеха свойства
+ * монстра на герое: вредит, но не проклятие (его не снимает и не считает ничто, что ищет проклятия).
+ */
+enum class EffectKind(val harmful: Boolean = false) { BUFF, CURSE(harmful = true), FLASK, HINDER(harmful = true) }
 
 /**
  * A buff, a curse or a flask's draught on a fighter (2.78.0): its [lines] until [until], named by its

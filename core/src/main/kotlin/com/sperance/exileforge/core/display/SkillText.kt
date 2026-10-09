@@ -18,6 +18,7 @@ import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.text.LocaleKey
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -32,7 +33,8 @@ object SkillText {
         // Удар фазы босса (3.92.0) - источник `<шаблон>#<шаг>`: назван фазой
         phaseTitle(code.substringBefore('#'))
     } else {
-        locOr("skill.$code.name", locOr("enum.EnumStatStock.$code", displayName(code)))
+        // Свойство монстра (4.4.1) - источник помехи и проклятия на герое: названо свойством
+        locOr("skill.$code.name", locOr(LocaleKey.traitName(code), locOr("enum.EnumStatStock.$code", displayName(code))))
     }
 
     /** What [skill] does at [level]: its blow, its poison, its buff or curse, its healing, its lines or its answer. */

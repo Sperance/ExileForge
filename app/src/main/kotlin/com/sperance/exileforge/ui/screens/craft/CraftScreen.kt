@@ -126,7 +126,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
         } else {
             val applier = OrbApplier(index)
             Orb.entries.filter { it.name in refused && hero.count(it.name) > 0 }.mapNotNull { orb ->
-                applier.refusal(orb, gear.item, gear.template)?.let { orb.name to refusalText(it) }
+                applier.refusal(orb, gear)?.let { orb.name to refusalText(it) }
             }.toMap()
         }
     }

@@ -68,7 +68,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
     var stunned = false
     val bars = rules.buildup
     if (bars != null && target.alive) {
-        stunned = buildUp(bars, me, target, taken, kind == HitKind.CRIT, blow.stun)
+        stunned = buildUp(bars, me, body, target, taken, kind == HitKind.CRIT, blow.stun)
     } // Only a fighter with a chance to avoid draws for it, so a sheet without one plays the same seed as before.
     else if (target.alive && !target.body.immuneStun && (
             dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold &&
@@ -116,6 +116,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
         if (chance > 0 && me.alive && random.nextDouble() * 100 < chance) curseOf()?.let { curse(it, listOf(me)) }
         watch()
     }
+    if (me.side == Side.MONSTER) traitsLanded(me, target)
     if (!target.alive) fell(target, blow.spell, me)
 }
 
@@ -151,9 +152,10 @@ private fun Battle.toLife(target: Fighter, amount: Double): Double {
  * The bars a landed blow fills (3.78.0): stun by its physical part whole and the rest by the rule's share (a critical
  * strike more), freeze by its cold, electrocute by its lightning, each against the struck one's pool — its life by its
  * rarity's share, the stun pool grown by the threshold — and a skill's stun chance straight onto the stun bar. A full
- * bar goes off and is shut for a while. True if the blow stunned.
+ * bar goes off and is shut for a while. True if the blow stunned. Прибавка набора - по листу удара [body] (4.4.1): строки
+ * первого удара монстра и умения героя ложатся только на свой удар.
  */
-private fun Battle.buildUp(rule: BuildupRule, me: Fighter, target: Fighter, taken: Map<DamageType, Double>, crit: Boolean, skillStun: Double): Boolean {
+private fun Battle.buildUp(rule: BuildupRule, me: Fighter, body: Combatant, target: Fighter, taken: Map<DamageType, Double>, crit: Boolean, skillStun: Double): Boolean {
     val rarity = if (target.side == Side.MONSTER) foes[target.index].rarity else null
     val pool = target.body.maxLife * (rarity?.let { rule.pools[it] } ?: rule.heroPool)
     if (pool <= 0) return false
@@ -168,7 +170,7 @@ private fun Battle.buildUp(rule: BuildupRule, me: Fighter, target: Fighter, take
     fills.forEach { (kind, fill) ->
         val i = kind.ordinal
         if (fill <= 0 || target.buildupShutUntil[i] > time || target.body.immuneTo(kind)) return@forEach
-        target.buildup[i] += fill * me.body.buildupGain(kind) * target.body.buildupTaken(kind)
+        target.buildup[i] += fill * body.buildupGain(kind) * target.body.buildupTaken(kind)
         target.builtAt = time
         if (target.buildup[i] < 1) return@forEach
         target.buildup[i] = 0.0
@@ -255,6 +257,22 @@ internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, take
     )
     if (target === heroFighter) powers.fire(PowerEvent.AILED, PowerMoment(me, taken, ailment = ailment))
     return ailment
+}
+
+/**
+ * Недуг [ailment] весом [amount] на [target] от [me] (4.4.1, взрыв свойства с недугом): урон во времени - [amount] за срок
+ * правила, прочие недуги - сила правила; иммунитет, избегание и длительность недугов цели действуют как у удара. True - лёг.
+ */
+internal fun Battle.burden(me: Fighter, target: Fighter, ailment: Ailment, amount: Double): Boolean {
+    val (rule, _) = ruleOf[ailment] ?: return false
+    if (target.body.immune(ailment)) return false
+    val avoid = target.body.avoid(ailment)
+    if (avoid > 0 && draw(RollKey.AVOID, avoid, ailment) < avoid) return false
+    val duration = rule.duration * target.body.ailmentDuration(ailment)
+    val magnitude = if (ailment.hurts) amount / rule.duration else rule.magnitude
+    place(target, ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0), spell = true), rule.stacks)
+    if (target === heroFighter) powers.fire(PowerEvent.AILED, PowerMoment(me, ailment = ailment))
+    return true
 }
 
 /** An ailment laid on: a stacking one adds up, the others keep the strongest of their kind and refresh how long it lasts. */

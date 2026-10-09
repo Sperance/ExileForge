@@ -68,7 +68,7 @@ internal fun Battle.step(dt: Double) {
     (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).sortedBy { it.nextAttack }.forEach { me ->
         if (!me.alive || me.held || me.nextAttack > time) return@forEach
         val target = if (me.side == Side.HERO) target() else foeTarget()
-        if (target != null) strike(me, target, Blow(firstStrike(me)))
+        if (target != null) strike(me, target, swingOf(me))
         me.nextAttack = time + me.attackInterval * me.slow() * cadence(me)
         if (finished()) return
     }
@@ -163,7 +163,7 @@ internal fun Battle.watch() {
         }
     }
     petWatch()
-    foeFighters.forEach { foe -> if (foe.alive) enrage(foe) }
+    traitsStand()
     foeFighters.forEach { foe -> if (foe.alive) phase(foe) }
     if (slotHolders.isNotEmpty()) totemTick()
     foeFighters.forEach { foe ->
@@ -185,13 +185,17 @@ internal fun Battle.petWatch(killer: Fighter? = null) {
 
 /** [fighter]'s body made again from its sheet with what lies on it — and the hero's under the auras of the foes still standing. */
 internal fun Battle.remake(fighter: Fighter) {
-    val lines = fighter.effects.flatMap { it.lines }
     if (fighter === heroFighter) {
         fighter.rebody(heroBody(emptyList()))
     } else {
-        val speed = fighter.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code]
-        fighter.rebody(fighter.model.body(lines + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()))
+        fighter.rebody(fighter.model.body(foeLines(fighter)))
     }
+}
+
+/** Что лежит на враге [fighter] сейчас: строки эффектов и прибавка скорости при низком здоровье. */
+internal fun Battle.foeLines(fighter: Fighter): List<StatLine> {
+    val speed = fighter.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code]
+    return fighter.effects.flatMap { it.lines } + if (fighter.low && speed > 0) listOf(StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, speed)) else emptyList()
 }
 
 /** The hero's body for one blow: what lies on them and [extra], a skill's own lines. */

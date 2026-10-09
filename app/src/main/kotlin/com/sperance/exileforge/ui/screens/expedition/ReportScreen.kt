@@ -239,7 +239,8 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
 
                 fall > 0 -> Text(ui("expedition.fall_lost", number(fall)), color = LifeRed, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
 
-                else -> MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
+                // Ниже уровня штрафа (4.4.1) гибель даром: с какого уровня она стоит опыта
+                else -> MutedText(hud.fallFrom?.let { ui("expedition.fall_from", it) } ?: ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
             }
             MutedText(ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
         }

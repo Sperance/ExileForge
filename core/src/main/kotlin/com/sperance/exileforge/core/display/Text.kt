@@ -48,9 +48,9 @@ fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) 
 fun monsterTitle(code: String): String = locOr(LocaleKey.monsterName(code), displayName(code))
 fun monsterTitle(code: MonsterCode): String = monsterTitle(code.value)
 
-/** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds. */
+/** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds, `{3}` - потолок складываний (4.4.1). */
 fun traitTitle(code: String): String = locOr(LocaleKey.traitName(code), displayName(code))
-fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds)))
+fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0, stacks: Int = 0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds), stacks.toString()))
 
 /** Фаза босса (3.92.0): название шаблона и что он делает. */
 fun phaseTitle(code: String): String = locOr("phase.$code.name", displayName(code))

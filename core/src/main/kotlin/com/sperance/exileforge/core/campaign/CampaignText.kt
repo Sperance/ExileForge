@@ -52,6 +52,6 @@ fun traitViews(monster: RolledMonster, index: ContentIndex): List<TraitView> {
             monsterLineText(MonsterLine(line.stat, line.op, rules.scaled(line, power), 0.0, false), index)
         }
         val value = trigger?.value?.times(power) ?: trait.lines.firstOrNull()?.let { rules.scaled(it, power) } ?: 0.0
-        TraitView(trait.code, trait.icon, traitTitle(trait.code), traitText(trait.code, value, trigger?.threshold ?: 0.0, trigger?.duration ?: 0.0), lines)
+        TraitView(trait.code, trait.icon, traitTitle(trait.code), traitText(trait.code, value, trigger?.threshold ?: 0.0, trigger?.duration ?: 0.0, trigger?.stacks ?: 0), lines)
     }
 }

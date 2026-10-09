@@ -54,6 +54,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
             trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin), pet = petLine,
         )
         if (kind == HitKind.BLOCKED) blocked(target)
+        if (kind == HitKind.EVADED) traitsEvaded(target)
         if (target === heroFighter) {
             trigger(if (kind == HitKind.EVADED) SkillEvent.EVADE else SkillEvent.BLOCK, me)
             powers.fire(if (kind == HitKind.EVADED) PowerEvent.EVADE else PowerEvent.BLOCK, PowerMoment(me))

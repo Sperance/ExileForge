@@ -62,9 +62,16 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
+/** Подсказка плитки эффекта по его виду (4.4.1: помеха свойства монстра - своя). */
+private val EffectKind.tipKey: String get() = when (this) {
+    EffectKind.BUFF, EffectKind.FLASK -> "fight.effect_buff"
+    EffectKind.CURSE -> "fight.effect_curse"
+    EffectKind.HINDER -> "fight.effect_hinder"
+}
+
 /** A buff or a curse (2.78.0) as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off. */
 @Composable internal fun EffectTile(view: EffectView, side: Dp = 30.dp) {
-    val tint = if (view.kind == EffectKind.CURSE) LifeRed else Gold
+    val tint = if (view.kind.harmful) LifeRed else Gold
     val shape = RoundedCornerShape(4.dp)
     // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill.
     val buff = view.buff
@@ -75,7 +82,7 @@ import com.sperance.exileforge.ui.theme.*
         if (lore != null) {
             null
         } else {
-            { Tip(title, ui(if (view.kind == EffectKind.CURSE) "fight.effect_curse" else "fight.effect_buff", fineNumber(view.seconds))) }
+            { Tip(title, ui(view.kind.tipKey, fineNumber(view.seconds))) }
         },
         Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Curse(view.source, null, view.seconds)) } else Modifier).size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
             .semantics { contentDescription = title },

@@ -62,7 +62,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),
         reward = reward, rank = rank, levelUp = levelNow().takeIf { report?.outcome == Outcome.WIN && it > levelShown }?.let { LevelUp(levelShown, it) },
         rewardAwaiting = fightEvents.count(::awaits), slain = slain, report = report,
-        fall = fall,
+        fall = fall, fallFrom = rules.death.fromLevel.takeIf { levelNow() < it },
         gold = granted.gold, experience = granted.experience, kills = kills, awaiting = awaiting,
         chestsLeft = world.chests.count { !it.opened },
         chest = chestEvent?.let { earned[it] ?: Reward.NONE }, chestAwaiting = chestEvent?.let(::awaits) == true,

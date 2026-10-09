@@ -482,6 +482,15 @@ class Battle(
     /** Foes whose rage has been lit, and by which trait: it lights once and holds to the end of the fight. */
     internal val enraged = mutableSetOf<Pair<Int, String>>()
 
+    /** Отклики свойств каждого врага (4.4.1), по его номеру: свойства с откликом на силе его редкости. */
+    internal val traitsAt: List<List<TraitAt>> = foes.map { foe -> foe.traits.mapNotNull { trait -> trait.trigger?.let { TraitAt(trait, it, foe.traitPower) } } }
+
+    /** Свойства, что ответят следующим замахом (4.4.1, [com.sperance.exileforge.rules.content.TraitAct.RIPOSTE]): номер врага и код. */
+    internal val riposting = mutableSetOf<Pair<Int, String>>()
+
+    /** Сколько раз сложилось свойство врага (4.4.1, [com.sperance.exileforge.rules.content.TraitAct.STACK]): номер врага и код - число. */
+    internal val stacked = mutableMapOf<Pair<Int, String>, Int>()
+
     /** Правило ярости этого боя (4.3.0): по его виду [kind]. */
     internal val rageRule: EnrageRule get() = rules.enrage(kind)
 

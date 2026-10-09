@@ -132,7 +132,10 @@ jobs:
       - name: Start isolated MongoDB
         # The backend pins mongodb://localhost:27017 in code, and its transactions need a replica set.
         run: |
-          docker run -d --name client-mongo -p 27017:27017 mongo:8.0 --replSet rs0 --bind_ip_all
+          # Docker Hub режет анонимные скачивания (toomanyrequests) - образ берётся с зеркала Google, с повтором
+          image=mirror.gcr.io/library/mongo:8.0
+          for attempt in 1 2 3; do docker pull "$image" && break; sleep $((attempt * 10)); done
+          docker run -d --name client-mongo -p 27017:27017 "$image" --replSet rs0 --bind_ip_all
           for attempt in $(seq 1 30); do
             if docker exec client-mongo mongosh --quiet --eval 'db.adminCommand({ping:1}).ok' >/dev/null 2>&1; then break; fi
             sleep 1

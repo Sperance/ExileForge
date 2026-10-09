@@ -62,6 +62,7 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
+import com.sperance.exileforge.rules.content.NodeRole
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
@@ -156,6 +157,8 @@ fun SkillTreePanel(
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
     val heroClass = game.heroClass
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
+    // Чужие ветки (4.2.1) - проходы: серые на карте, за одно очко и без бонусов.
+    val passages = remember(index, heroClass) { nodes.filter { it.roleFor(heroClass?.startNode) == NodeRole.PASSAGE }.mapTo(HashSet()) { it.code } }
     // The tag filter (3.47.0): every node whose lines carry the tag lights up.
     var tag by remember { mutableStateOf<String?>(null) }
     // The search (3.54.0): by a node's name or the stats it gives; every match lights up with the tag's.
@@ -168,7 +171,7 @@ fun SkillTreePanel(
     val filtering = tag != null || query.length >= 2
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
-        TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
+        TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode, passages = passages) { code ->
             onSelect(code)
             nodeOpen = true
         }
@@ -316,16 +319,12 @@ internal val PILL = RoundedCornerShape(16.dp)
 }
 
 /**
- * Which nodes are one step away: the class's own start while nothing is taken, otherwise every node
- * not yet taken that the rules call adjacent — a taken mastery opens no neighbours, and a node kept for
- * another class (the Scion's branches, 3.19.0) is never one.
+ * Which nodes are one step away - those the rules place next to the taken ones ([TreeAllocation.placement]): the class's
+ * own start while nothing is taken, otherwise every adjacent node, a passage through another class's branch (4.2.1) too.
  */
-internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>): Set<String> = if (taken.isEmpty()) {
-    setOfNotNull(heroClass?.startNode)
-} else {
-    index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
-        node.code.takeIf { it !in taken && (heroClass == null || node.openTo(heroClass.startNode)) && index.tree.isAdjacentTo(it, taken) }
-    }
+internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>): Set<String> {
+    val start = heroClass?.startNode ?: return emptySet()
+    return index.content.tree.nodes.mapNotNullTo(HashSet()) { node -> node.code.takeIf { TreeAllocation.placement(index.tree, node, taken, start) == null } }
 }
 
 @Composable internal fun TreeConfirmations(game: GameUi, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {

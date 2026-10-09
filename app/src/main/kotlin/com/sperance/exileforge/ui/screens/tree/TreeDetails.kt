@@ -41,13 +41,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.Term
+import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.display.requirementReason
@@ -56,6 +59,7 @@ import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
+import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
@@ -64,6 +68,7 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
+import com.sperance.exileforge.rules.content.NodeRole
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
@@ -121,7 +126,12 @@ import kotlin.math.sin
         return
     }
     val allocated = node.code in taken
-    val choosing = node.options.isNotEmpty()
+    // Режим узла для класса (4.2.1): чужая ветка - проход за одно очко, без бонусов и вариантов; цену и варианты дают правила.
+    val start = heroClass?.startNode
+    val passage = node.roleFor(start) == NodeRole.PASSAGE
+    val cost = index.tree.cost(node, start)
+    val options = index.tree.options(node, start)
+    val choosing = options.isNotEmpty()
     // The option the hero took is theirs: it is read from the snapshot, not from the tree.
     val chosen = game.hero?.tree?.firstOrNull { it.code == node.code }?.choice
     var picked by remember(node.code) { mutableStateOf<Int?>(null) }
@@ -132,7 +142,7 @@ import kotlin.math.sin
             MutedText(
                 listOf(
                     nodeTypeTitle(node.type, game.lang),
-                    "${ui("tree.cost")} ${node.cost}",
+                    "${ui("tree.cost")} $cost",
                     ui(if (allocated) "tree.taken" else "tree.not_taken"),
                 ).joinToString(" · "),
             )
@@ -141,6 +151,13 @@ import kotlin.math.sin
     }
     if (node.type == SkillNodeType.JEWEL_SOCKET) {
         SocketContents(game, index, node, allocated, enabled, onSocket, onUnsocket)
+    } else if (passage) {
+        // Ветка другого класса: узел держит путь дальше, но его строки и варианты этому классу не достаются - они зачёркнуты.
+        val owner = index.classes.classes.firstOrNull { it.startNode == node.only }?.code?.let(::classTitle).orEmpty()
+        Text(ui("tree.passage_note", owner, cost, plural("tree.passage_point", cost)), color = Bronze, style = MaterialTheme.typography.bodyMedium)
+        (node.lines + node.options.flatten()).forEach { line ->
+            Text(lineText(index, line), color = Muted, style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.LineThrough)
+        }
     } else if (choosing) {
         // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
         // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.
@@ -155,7 +172,7 @@ import kotlin.math.sin
             ),
             style = MaterialTheme.typography.labelMedium,
         )
-        node.options.forEachIndexed { at, option ->
+        options.forEachIndexed { at, option ->
             val on = when {
                 picked != null -> at == picked
                 allocated -> at == chosen
@@ -204,21 +221,27 @@ import kotlin.math.sin
             }
             MutedText(ui("tree.refund_branch_note", branch.size, owned))
         }
-    } else if (node.code in reachable || taken.isEmpty()) {
-        // Short of points the button says so and stays grey: the server would only refuse (ST_008).
-        val short = node.cost > available
-        NodeActions {
-            ForgeButton(
-                enabled = enabled && !short && (!choosing || picked != null),
-                onClick = { onAllocate(node.code, picked) },
-                modifier = Modifier.weight(1f),
-            ) {
-                Text(if (short) ui("tree.not_enough_points") else ui("tree.allocate"))
-            }
-        }
-        if (short) MutedText(ui("tree.path_short", node.cost, available))
-    } else {
+    } else if (start == null) {
         MutedText(ui("tree.path_none"))
+    } else {
+        // Почему узел не взять - причина правил (4.2.1), та же, что вернул бы сервер: сначала место узла, затем очки.
+        val placement = remember(node.code, taken, start) { TreeAllocation.placement(index.tree, node, taken, start) }
+        if (placement == null) {
+            val short = remember(node.code, taken, start, available) { TreeAllocation.refusal(index.tree, node, taken, start, available) }
+            NodeActions {
+                ForgeButton(
+                    enabled = enabled && short == null && (!choosing || picked != null),
+                    onClick = { onAllocate(node.code, picked) },
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Text(if (short != null) ui("tree.not_enough_points") else ui("tree.allocate"))
+                }
+            }
+            short?.let { MutedText(refusalText(it)) }
+        } else {
+            MutedText(refusalText(placement))
+            MutedText(ui("tree.path_none"))
+        }
     }
     if (node.type == SkillNodeType.START) MutedText(ui("tree.start_note"))
 }

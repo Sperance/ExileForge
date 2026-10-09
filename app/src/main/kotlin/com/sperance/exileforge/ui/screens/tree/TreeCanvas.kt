@@ -41,7 +41,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -101,9 +104,14 @@ import kotlin.math.sin
     view: TreeView,
     modifier: Modifier = Modifier,
     focus: String? = null,
+    passages: Set<String> = emptySet(),
     onSelect: (String) -> Unit,
 ) {
     val byCode = remember(nodes) { nodes.associateBy { it.code } }
+    // Пометка прохода (4.2.1) под серым узлом чужой ветки - видна, когда карта приближена.
+    val measurer = rememberTextMeasurer()
+    val passageWord = ui("tree.passage")
+    val passageLabel = remember(passageWord) { measurer.measure(passageWord, TextStyle(color = FAR_RIM, fontSize = 9.sp)) }
     val bounds = remember(nodes) { Bounds.of(nodes) }
     val select by rememberUpdatedState(onSelect)
     var area by remember { mutableStateOf(Size.Zero) }
@@ -204,7 +212,16 @@ import kotlin.math.sin
                     node.code in reachable,
                     node.code == selected,
                     pulse,
+                    passage = node.code in passages,
                 )
+            }
+            if (view.scale >= PASSAGE_LABEL_ZOOM) {
+                nodes.forEach { node ->
+                    if (node.code !in passages) return@forEach
+                    val at = place(node, bounds, width, height, view.scale, view.pan)
+                    val below = radius(node) * view.scale.coerceIn(.5f, 2.2f) + 2.dp.toPx()
+                    drawText(passageLabel, topLeft = Offset(at.x - passageLabel.size.width / 2f, at.y + below))
+                }
             }
             // Узлы фильтра носят зелёное кольцо поверх медальона, не вместо него.
             nodes.forEach { node ->
@@ -330,11 +347,15 @@ internal fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float
  * mockups) every node shines in its kind's colour so the tree reads at a glance: one out of reach is a dark stone with a
  * bright rim and a faint halo, one a step away is ringed thicker and breathes ([pulse]), a taken one is filled with its
  * colour under a light rim and a strong halo. Since 3.77.0 a node out of reach is grey and unlit: only what can be taken
- * and what is taken keep their colour.
+ * and what is taken keep their colour. A [passage] through another class's branch (4.2.1) is grey whatever its state.
  */
-internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float) {
+internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float, passage: Boolean = false) {
     val r = radius(node) * scale.coerceIn(.5f, 2.2f)
-    val tint = if (node.type == SkillNodeType.START) classTint(node.code) else nodeColour(node, false)
+    val tint = when {
+        passage -> FAR_RIM
+        node.type == SkillNodeType.START -> classTint(node.code)
+        else -> nodeColour(node, false)
+    }
     val glow = when {
         taken -> TAKEN_GLOW
         next -> NEXT_GLOW * pulse
@@ -402,3 +423,4 @@ internal const val NEXT_GLOW = .45f
 internal const val TAKEN_GLOW = .7f
 internal const val PULSE_LOW = .4f
 internal const val PULSE_MS = 800
+internal const val PASSAGE_LABEL_ZOOM = 1.2f

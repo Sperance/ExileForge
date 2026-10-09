@@ -110,9 +110,10 @@ internal object HeroLens {
     fun treeState(index: ContentIndex?, hero: HeroView?): TreeState? = index?.let { i ->
         hero?.let { h ->
             val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
-            val spent = i.tree.spent(h.tree)
+            val start = i.heroClass(h.heroClass)?.startNode
+            val spent = i.tree.spent(h.tree, start)
             val calculator = SheetCalculator(i)
-            TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))
+            TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree, start))))
         }
     }
 }

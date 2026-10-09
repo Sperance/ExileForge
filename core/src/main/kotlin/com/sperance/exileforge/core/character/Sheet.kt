@@ -12,7 +12,6 @@ import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SheetExplainer
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.WornCount
-import com.sperance.exileforge.rules.sheet.sourcedLines
 import kotlin.math.abs
 
 /** A line laid on a sheet for a while — a buff, a curse, a flask, a passive skill — shaped as a modifier's effect. */
@@ -86,9 +85,9 @@ object Sheets {
         items: List<ItemInstance>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
     ): HeroSheet {
-        // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
-        val lines = index.tree.sourcedLines(tree) + com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
-        val result = SheetCalculator(index).calculate(level, index.heroClass(heroClass), lines, items.filter { it.equipped }, tree.mapTo(HashSet()) { it.code })
+        // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them; проходы по чужим веткам листу ничего не дают.
+        val helpers = com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
+        val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped })
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index))
     }
 

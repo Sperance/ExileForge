@@ -19,7 +19,6 @@ import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotGroup
-import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.Dice
 
 /**

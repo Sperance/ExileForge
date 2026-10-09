@@ -41,7 +41,6 @@ import com.sperance.exileforge.ui.components.ExpandableText
 import com.sperance.exileforge.ui.components.TermsBlock
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
 
 /** A tray cell's side: compact, so two rows of the tray stay short (the owner's word on mockup B). */

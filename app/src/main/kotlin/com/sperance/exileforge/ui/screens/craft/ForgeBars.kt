@@ -1,22 +1,15 @@
 package com.sperance.exileforge.ui.screens.craft
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -24,30 +17,19 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
-import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.Item
-import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.content.Rarity
-import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
-import com.sperance.exileforge.rules.roll.OrbTarget
-import com.sperance.exileforge.rules.roll.Roll
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
-import org.koin.compose.viewmodel.koinViewModel
 
 /** Полосы кузницы над навигацией (3.80.24): выбранная сфера, эссенция или строка верстака с удерживаемой кнопкой. */
 /** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */

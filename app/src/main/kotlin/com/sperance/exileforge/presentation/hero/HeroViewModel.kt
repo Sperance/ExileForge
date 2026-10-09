@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi

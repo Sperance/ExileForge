@@ -77,7 +77,13 @@ data class ApiCapabilities(val routes: Set<String>) {
     }
 }
 
-/** A bug report (server 1.46.0): the words of the player and where they were; no request journal (3.91.0) - nobody reads it. */
+/**
+ * Неудачный запрос в отчёте об ошибке (4.3.1, server 1.84): метод и путь без запроса, статус HTTP (0 - ответа не было),
+ * код отказа сервера и время ISO-8601.
+ */
+@Serializable data class RequestFailure(val method: String, val path: String, val status: Int, val code: String = "", val at: String = "")
+
+/** A bug report (server 1.46.0): the words of the player and where they were; [failures] (4.3.1) - хвост неудачных запросов. */
 @Serializable data class BugReportRequest(
     val text: String,
     val screen: String,
@@ -88,6 +94,8 @@ data class ApiCapabilities(val routes: Set<String>) {
     val heroId: String? = null,
     val device: String = "",
     val clientVersion: String = "",
+    /** Последние неудачные запросы (4.3.1), не больше `rules.feedback.failures`: только у отчёта об ошибке. */
+    val failures: List<RequestFailure> = emptyList(),
 )
 
 /**

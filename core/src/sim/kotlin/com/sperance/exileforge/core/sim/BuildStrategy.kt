@@ -10,7 +10,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
-import com.sperance.exileforge.rules.content.NodeRole
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
@@ -189,7 +188,7 @@ class SimKit(val index: ContentIndex) {
         var base = value(taken.values)
         while (left > 0) {
             val options = taken.keys.flatMap(graph::neighbours).distinct().filter { it !in taken }.mapNotNull(graph::node)
-                .filter { it.type != SkillNodeType.JEWEL_SOCKET && it.roleFor(start) == NodeRole.OWN && TreeAllocation.refusal(graph, it, taken.keys, start, left) == null }
+                .filter { it.type != SkillNodeType.JEWEL_SOCKET && TreeAllocation.refusal(graph, it, taken.keys, start, left) == null }
                 .flatMap { node -> (if (node.options.isEmpty()) listOf(null) else node.options.indices.toList()).map { node to it } }
             val pick = options.maxWithOrNull(
                 compareBy<Pair<TreeNode, Int?>>({ (node, choice) -> (value(taken.values + TakenNode(node.code, choice)) - base) / graph.cost(node, start).coerceAtLeast(1) }, { it.first.code }),

@@ -76,6 +76,12 @@ import org.koin.compose.viewmodel.koinViewModel
                 Engraved(ui("bug.context"))
                 report.context.forEach { (key, value) -> MutedText("$key: $value", style = MaterialTheme.typography.labelSmall) }
             }
+            if (report.failures.isNotEmpty()) {
+                Engraved(ui("bug.failures"))
+                report.failures.forEach { f ->
+                    MutedText(ui("bug.failure", f.at, f.method, f.path, f.status, f.code), style = MaterialTheme.typography.labelSmall)
+                }
+            }
             Engraved(ui("feedback.set_status"))
             // Только допустимые переходы машины состояний сервера (4.3.0): нынешний статус и [AdminReport.moves]
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

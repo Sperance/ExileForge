@@ -86,7 +86,7 @@ object Sheets {
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         laws: List<String> = emptyList(),
     ): HeroSheet {
-        // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them; проходы по чужим веткам листу ничего не дают.
+        // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
         // Законы тронов героя - строки листа тем же правилом, что у сервера.
         val helpers = com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
         val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped }, laws)

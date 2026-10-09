@@ -20,7 +20,7 @@ class MainActivity : ComponentActivity() {
     private val shell: ShellViewModel by viewModel()
 
     /** Updates from GitHub Releases (3.72.0): checked against the server the game model is connected to. */
-    private val updates: UpdateViewModel by viewModel { parametersOf(shell.newerServer, shell.confused) }
+    private val updates: UpdateViewModel by viewModel { parametersOf(shell.newerServer, shell.serverFailed) }
 
     /** Сеть устройства (3.95.2): вернувшаяся будит связь сразу. */
     private val network by lazy { NetworkWatch(applicationContext, shell::networkBack) }

@@ -62,7 +62,6 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
-import com.sperance.exileforge.rules.content.NodeRole
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
@@ -157,8 +156,6 @@ fun SkillTreePanel(
     // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
     val heroClass = game.heroClass
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
-    // Чужие ветки (4.3.0) - проходы: серые на карте, за одно очко и без бонусов.
-    val passages = remember(index, heroClass) { nodes.filter { it.roleFor(heroClass?.startNode) == NodeRole.PASSAGE }.mapTo(HashSet()) { it.code } }
     // The tag filter (3.47.0): every node whose lines carry the tag lights up.
     var tag by remember { mutableStateOf<String?>(null) }
     // The search (3.54.0): by a node's name or the stats it gives; every match lights up with the tag's.
@@ -171,7 +168,7 @@ fun SkillTreePanel(
     val filtering = tag != null || query.length >= 2
     BackHandler(nodeOpen) { nodeOpen = false }
     Box(modifier) {
-        TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode, passages = passages) { code ->
+        TreeCanvas(nodes, selected, taken, reachable, highlight, view, Modifier.fillMaxSize(), focus = heroClass?.startNode) { code ->
             onSelect(code)
             nodeOpen = true
         }
@@ -320,7 +317,7 @@ internal val PILL = RoundedCornerShape(16.dp)
 
 /**
  * Which nodes are one step away - those the rules place next to the taken ones ([TreeAllocation.placement]): the class's
- * own start while nothing is taken, otherwise every adjacent node, a passage through another class's branch (4.3.0) too.
+ * own start while nothing is taken, otherwise every adjacent node of any branch (4.3.1).
  */
 internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>): Set<String> {
     val start = heroClass?.startNode ?: return emptySet()

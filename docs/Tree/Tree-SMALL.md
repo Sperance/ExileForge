@@ -1162,7 +1162,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Быстрый клинок](#scn_wa_2) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_2 <a href="#scn_wa_2" id="scn_wa_2"></a>
@@ -1181,7 +1180,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Закалка](Tree-NOTABLE.md#scn_wa_3) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_4 <a href="#scn_wa_4" id="scn_wa_4"></a>
@@ -1200,7 +1198,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Натиск](#scn_wa_5) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_5 <a href="#scn_wa_5" id="scn_wa_5"></a>
@@ -1219,7 +1216,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Защита](#scn_wa_6) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_6 <a href="#scn_wa_6" id="scn_wa_6"></a>
@@ -1238,7 +1234,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Мастер оружия](Tree-NOTABLE.md#scn_wa_7) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_8 <a href="#scn_wa_8" id="scn_wa_8"></a>
@@ -1257,7 +1252,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Быстрый клинок](#scn_wa_9) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_9 <a href="#scn_wa_9" id="scn_wa_9"></a>
@@ -1276,7 +1270,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Дублёная кожа](#scn_wa_10) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_10 <a href="#scn_wa_10" id="scn_wa_10"></a>
@@ -1295,7 +1288,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Стойкость бойца](Tree-NOTABLE.md#scn_wa_11) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_12 <a href="#scn_wa_12" id="scn_wa_12"></a>
@@ -1314,7 +1306,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Защита](#scn_wa_13) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_13 <a href="#scn_wa_13" id="scn_wa_13"></a>
@@ -1333,7 +1324,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Боевой ритм](Tree-NOTABLE.md#scn_wa_14) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_WA_15 <a href="#scn_wa_15" id="scn_wa_15"></a>
@@ -1352,7 +1342,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Кровопускатель](Tree-NOTABLE.md#scn_wa_16) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_1 <a href="#scn_ee_1" id="scn_ee_1"></a>
@@ -1371,7 +1360,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Точность](#scn_ee_2) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_2 <a href="#scn_ee_2" id="scn_ee_2"></a>
@@ -1390,7 +1378,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Призма](Tree-NOTABLE.md#scn_ee_3) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_4 <a href="#scn_ee_4" id="scn_ee_4"></a>
@@ -1409,7 +1396,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Заряженные удары](#scn_ee_5) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_5 <a href="#scn_ee_5" id="scn_ee_5"></a>
@@ -1428,7 +1414,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Сопротивление](#scn_ee_6) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_6 <a href="#scn_ee_6" id="scn_ee_6"></a>
@@ -1447,7 +1432,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Острие бури](Tree-NOTABLE.md#scn_ee_7) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_8 <a href="#scn_ee_8" id="scn_ee_8"></a>
@@ -1466,7 +1450,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Точность](#scn_ee_9) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_9 <a href="#scn_ee_9" id="scn_ee_9"></a>
@@ -1485,7 +1468,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Покров](#scn_ee_10) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_10 <a href="#scn_ee_10" id="scn_ee_10"></a>
@@ -1504,7 +1486,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Зимний закал](Tree-NOTABLE.md#scn_ee_11) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_12 <a href="#scn_ee_12" id="scn_ee_12"></a>
@@ -1523,7 +1504,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Сопротивление](#scn_ee_13) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_13 <a href="#scn_ee_13" id="scn_ee_13"></a>
@@ -1542,7 +1522,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Горнило](Tree-NOTABLE.md#scn_ee_14) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_15 <a href="#scn_ee_15" id="scn_ee_15"></a>
@@ -1561,7 +1540,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Стихийный заслон](Tree-NOTABLE.md#scn_ee_16) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_1 <a href="#scn_tm_1" id="scn_tm_1"></a>
@@ -1580,7 +1558,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Литания](#scn_tm_2) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_2 <a href="#scn_tm_2" id="scn_tm_2"></a>
@@ -1599,7 +1576,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Храмовая стража](Tree-NOTABLE.md#scn_tm_3) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_4 <a href="#scn_tm_4" id="scn_tm_4"></a>
@@ -1618,7 +1594,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Святилище](#scn_tm_5) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_5 <a href="#scn_tm_5" id="scn_tm_5"></a>
@@ -1637,7 +1612,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Эгида](#scn_tm_6) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_6 <a href="#scn_tm_6" id="scn_tm_6"></a>
@@ -1656,7 +1630,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Священное слово](Tree-NOTABLE.md#scn_tm_7) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_8 <a href="#scn_tm_8" id="scn_tm_8"></a>
@@ -1675,7 +1648,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Литания](#scn_tm_9) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_9 <a href="#scn_tm_9" id="scn_tm_9"></a>
@@ -1694,7 +1666,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Освящённый доспех](#scn_tm_10) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_10 <a href="#scn_tm_10" id="scn_tm_10"></a>
@@ -1713,7 +1684,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Обет стойкости](Tree-NOTABLE.md#scn_tm_11) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_12 <a href="#scn_tm_12" id="scn_tm_12"></a>
@@ -1732,7 +1702,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Эгида](#scn_tm_13) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_13 <a href="#scn_tm_13" id="scn_tm_13"></a>
@@ -1751,7 +1720,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Благословение](Tree-NOTABLE.md#scn_tm_14) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_15 <a href="#scn_tm_15" id="scn_tm_15"></a>
@@ -1770,7 +1738,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Аура веры](Tree-NOTABLE.md#scn_tm_16) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_1 <a href="#scn_mp_1" id="scn_mp_1"></a>
@@ -1789,7 +1756,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Выносливость](#scn_mp_2) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_2 <a href="#scn_mp_2" id="scn_mp_2"></a>
@@ -1808,7 +1774,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Гармония](Tree-NOTABLE.md#scn_mp_3) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_4 <a href="#scn_mp_4" id="scn_mp_4"></a>
@@ -1827,7 +1792,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Выдержка](#scn_mp_5) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_5 <a href="#scn_mp_5" id="scn_mp_5"></a>
@@ -1846,7 +1810,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Темп](#scn_mp_6) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_6 <a href="#scn_mp_6" id="scn_mp_6"></a>
@@ -1865,7 +1828,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Многогранность](Tree-NOTABLE.md#scn_mp_7) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_8 <a href="#scn_mp_8" id="scn_mp_8"></a>
@@ -1884,7 +1846,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Выносливость](#scn_mp_9) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_9 <a href="#scn_mp_9" id="scn_mp_9"></a>
@@ -1903,7 +1864,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Приспособляемость](#scn_mp_10) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_10 <a href="#scn_mp_10" id="scn_mp_10"></a>
@@ -1922,7 +1882,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Равновесие стихий](Tree-NOTABLE.md#scn_mp_11) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_12 <a href="#scn_mp_12" id="scn_mp_12"></a>
@@ -1941,7 +1900,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Темп](#scn_mp_13) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_13 <a href="#scn_mp_13" id="scn_mp_13"></a>
@@ -1960,7 +1918,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Золотая середина](Tree-NOTABLE.md#scn_mp_14) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_15 <a href="#scn_mp_15" id="scn_mp_15"></a>
@@ -1979,7 +1936,6 @@
 | --- | --- |
 | Тип · `type` | `SMALL` |
 | Связанные узлы · `connections` | [Непоколебимость](Tree-NOTABLE.md#scn_mp_16) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## MAR_IN_1 <a href="#mar_in_1" id="mar_in_1"></a>
@@ -5501,7 +5457,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Стая](#scn_n0_1); [Общая кровь](Tree-NOTABLE.md#scn_n0_5); [Сопротивление](#scn_r4_1) |
 
 
@@ -5520,7 +5475,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Вожак](Tree-NOTABLE.md#scn_n0_2) |
 
 
@@ -5539,7 +5493,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Верный клык](Tree-NOTABLE.md#scn_n0_4) |
 
 
@@ -5558,7 +5511,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Стая](#scn_n1_1); [Мать логова](Tree-NOTABLE.md#scn_n1_5); [Равновесие](#scn_r2_1) |
 
 
@@ -5577,7 +5529,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Воющая стая](Tree-NOTABLE.md#scn_n1_2) |
 
 
@@ -5596,7 +5547,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Звериные узы](Tree-NOTABLE.md#scn_n1_4) |
 
 
@@ -5615,7 +5565,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Ход боя](#scn_n2_1); [Наследник мгновений](Tree-NOTABLE.md#scn_n2_5); [Ход боя](#scn_np2_1) |
 
 
@@ -5634,7 +5583,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Перелом](Tree-NOTABLE.md#scn_n2_2); [Ход боя](#scn_t7_1) |
 
 
@@ -5653,7 +5601,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Холодный старт](Tree-NOTABLE.md#scn_n2_4) |
 
 
@@ -5672,7 +5619,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Равновесие](#scn_r4_2) |
 
 
@@ -5691,7 +5637,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Натиск](#scn_n3_1); [Неудержимый](Tree-NOTABLE.md#scn_n3_5); [Натиск](#scn_np3_2) |
 
 
@@ -5710,7 +5655,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Очертя голову](Tree-NOTABLE.md#scn_n3_2); [Натиск](#scn_t6_1) |
 
 
@@ -5729,7 +5673,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Прилив крови](Tree-NOTABLE.md#scn_n3_4) |
 
 
@@ -5748,7 +5691,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Равновесие](#scn_r2_2); [Натиск](#scn_np3_2) |
 
 
@@ -5767,7 +5709,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## MAR_N0_0 <a href="#mar_n0_0" id="mar_n0_0"></a>
@@ -7355,7 +7296,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_T7_1 <a href="#scn_t7_1" id="scn_t7_1"></a>
@@ -7373,7 +7313,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## FIL_1 <a href="#fil_1" id="fil_1"></a>
@@ -7481,7 +7420,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Острая кромка](Tree-NOTABLE.md#scn_ee_17); [Атрибут](Tree-ATTRIBUTE.md#sha_b4_1) |
 
 
@@ -7518,7 +7456,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Сопротивление](#scn_ee_13); [Жестокость](#sha_in_1) |
 
 
@@ -7537,7 +7474,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Бдительность](Tree-NOTABLE.md#scn_mp_17) |
 
 
@@ -7574,7 +7510,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Эгида](#scn_tm_13); [Стихии](#tem_in_1) |
 
 
@@ -7593,7 +7528,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Темп](#scn_mp_13) |
 
 
@@ -7647,7 +7581,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Несломленный дух](Tree-NOTABLE.md#scn_tm_17); [Перезарядка](#tem_b5_1) |
 
 
@@ -7755,7 +7688,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Защита](#scn_wa_13); [Живучесть](#mar_in_1); [Наследие](#fil_48) |
 
 
@@ -7918,7 +7850,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Сияние](#wit_in_2); [Ход боя](#scn_t7_1) |
 
 
@@ -8062,7 +7993,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Иммунитет](#wit_b5_1); [Ход боя](#scn_t7_1) |
 
 
@@ -8135,7 +8065,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Атрибут](Tree-ATTRIBUTE.md#ran_b4_1); [Натиск](#scn_t6_1) |
 
 
@@ -8172,7 +8101,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Равновесие](#scn_mp_1); [Непоколебимость](Tree-NOTABLE.md#scn_mp_16) |
 
 
@@ -8191,7 +8119,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Кровопускатель](Tree-NOTABLE.md#scn_wa_16); [Воинская выучка](#scn_wa_1) |
 
 
@@ -8210,7 +8137,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Покров](#scn_ee_4); [Наследие](#fil_8) |
 
 
@@ -8247,7 +8173,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Дублёная кожа](#scn_wa_4) |
 
 
@@ -8337,7 +8262,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Сила и грация](Tree-NOTABLE.md#scn_wa_17); [Здоровье](#mar_in_2) |
 
 

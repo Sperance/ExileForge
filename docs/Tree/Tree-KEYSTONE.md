@@ -53,7 +53,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `KEYSTONE` |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_K1 <a href="#scn_k1" id="scn_k1"></a>
@@ -73,7 +72,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `KEYSTONE` |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_K2 <a href="#scn_k2" id="scn_k2"></a>
@@ -95,7 +93,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `KEYSTONE` |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_K3 <a href="#scn_k3" id="scn_k3"></a>
@@ -118,7 +115,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `KEYSTONE` |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## MAR_K0 <a href="#mar_k0" id="mar_k0"></a>
@@ -646,7 +642,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `KEYSTONE` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Натиск](Tree-SMALL.md#scn_t6_1) |
 
 
@@ -666,7 +661,6 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `KEYSTONE` |
-| only | [Потомок](Tree-START.md#scion_start) |
 | Связанные узлы · `connections` | [Ход боя](Tree-SMALL.md#scn_t7_1) |
 
 ---

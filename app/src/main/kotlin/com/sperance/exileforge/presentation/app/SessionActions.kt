@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandStore
 import com.sperance.exileforge.core.network.FailureState
+import com.sperance.exileforge.core.network.ServerAlarm
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
@@ -405,8 +406,8 @@ class SessionActions(
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    /** Ответ сервера, которого клиент не понял (3.94.1): проверка обновлений в очередь. */
-    val confused = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    /** Сервер ответил ошибкой (4.3.1): проверка обновлений в очередь с порогом. */
+    val serverFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without being
@@ -432,7 +433,13 @@ class SessionActions(
         })
         created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
-        created.onConfused = { confused.tryEmit(Unit) }
+        // Любая ошибка ответа (4.3.1) - повод проверить сборку; 426 сервера - сразу, как сервер новее при входе.
+        created.onServerError = { alarm ->
+            when (alarm) {
+                ServerAlarm.OUTDATED -> newerServer.tryEmit(Unit)
+                ServerAlarm.FAILED -> serverFailed.tryEmit(Unit)
+            }
+        }
         // Отчёты подписаны устройством, версией и активным героем (3.88.0); заблокированный герой уводит к выбору (3.88.0).
         created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint, { heroes.heroId }, android.os.Build.MODEL.orEmpty())
         created.onHeroBlocked = { heroId, failure -> if (api === created) characterActions.blocked(heroId, failure) }

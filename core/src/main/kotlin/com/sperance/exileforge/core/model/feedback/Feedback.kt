@@ -64,6 +64,8 @@ import kotlinx.serialization.Serializable
     val asanaUrl: String = "",
     /** Код последнего отказа Asana (3.88.7, сервер 1.80.9): выгрузка не удалась; пусто - всё ушло. */
     val asanaError: String = "",
+    /** Последние неудачные запросы автора (4.3.1, сервер 1.84), новые первыми. */
+    val failures: List<com.sperance.exileforge.core.model.command.RequestFailure> = emptyList(),
 )
 
 /**

@@ -154,7 +154,6 @@
 | Тип · `type` | `MASTERY` |
 | Связанные узлы · `connections` | [Мастер оружия](Tree-NOTABLE.md#scn_wa_7); [Стойкость бойца](Tree-NOTABLE.md#scn_wa_11) |
 | Варианты · `options` | 18% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical); 4.5% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed); 30% увеличение брони · [Броня](../reference/Stats/Stats-HERO.md#stock_armor); 30% увеличение уклонения · [Уклонение](../reference/Stats/Stats-HERO.md#stock_evasion); +3 здоровья за каждый удар по врагу · [Здоровье за удар](../reference/Stats/Stats-HERO.md#stock_health_on_hit); +10 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength); +10 к ловкости · [Ловкость](../reference/Stats/Stats-HERO.md#stock_agility) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_EE_M <a href="#scn_ee_m" id="scn_ee_m"></a>
@@ -171,7 +170,6 @@
 | Тип · `type` | `MASTERY` |
 | Связанные узлы · `connections` | [Острие бури](Tree-NOTABLE.md#scn_ee_7); [Зимний закал](Tree-NOTABLE.md#scn_ee_11) |
 | Варианты · `options` | 21% увеличение урона от стихий · [Урон от стихий](../reference/Stats/Stats-HERO.md#stock_elemental_damage); 3% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed); +8% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all); +25 к максимуму энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield); 30% увеличение шанса критического удара · [Шанс критического удара](../reference/Stats/Stats-HERO.md#stock_critical_chance); +12% к множителю критического удара · [Множитель критического удара](../reference/Stats/Stats-HERO.md#stock_critical_multiplier) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_TM_M <a href="#scn_tm_m" id="scn_tm_m"></a>
@@ -188,7 +186,6 @@
 | Тип · `type` | `MASTERY` |
 | Связанные узлы · `connections` | [Священное слово](Tree-NOTABLE.md#scn_tm_7); [Обет стойкости](Tree-NOTABLE.md#scn_tm_11) |
 | Варианты · `options` | 8% увеличение максимума здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health); 12% увеличение энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield); +8% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all); +10% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos); 40% увеличение урона чар · [Урон чар](../reference/Stats/Stats-HERO.md#stock_spell_damage); 8% увеличение скорости сотворения · [Скорость применения](../reference/Stats/Stats-HERO.md#stock_cast_speed) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_MP_M <a href="#scn_mp_m" id="scn_mp_m"></a>
@@ -205,7 +202,6 @@
 | Тип · `type` | `MASTERY` |
 | Связанные узлы · `connections` | [Многогранность](Tree-NOTABLE.md#scn_mp_7); [Равновесие стихий](Tree-NOTABLE.md#scn_mp_11) |
 | Варианты · `options` | 8% увеличение максимума здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health); Восстанавливает 6 здоровья в секунду · [Восстановление здоровья](../reference/Stats/Stats-HERO.md#stock_health_regen); +8% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all); +10% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos); 19% увеличение урона умений · [Урон умений](../reference/Stats/Stats-HERO.md#stock_skill_damage); 3% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## MAR_C0_M <a href="#mar_c0_m" id="mar_c0_m"></a>
@@ -797,7 +793,6 @@
 | --- | --- |
 | Тип · `type` | `MASTERY` |
 | Варианты · `options` | Питомец наносит на 18% больше урона · [Урон питомца](../reference/Stats/Stats-HERO.md#stock_pet_damage); Питомец получает +6% к скорости атаки · [Скорость атаки питомца](../reference/Stats/Stats-HERO.md#stock_pet_attack_speed); Питомец получает +18% к максимуму здоровья · [Здоровье питомца](../reference/Stats/Stats-HERO.md#stock_pet_health); +12% к сопротивлению стихиям питомца · [Стихийные сопротивления питомца](../reference/Stats/Stats-HERO.md#stock_pet_resist); 12% увеличение урона (условие: PET_ALIVE) · [Урон](../reference/Stats/Stats-HERO.md#stock_damage); +25 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_N1_M <a href="#scn_n1_m" id="scn_n1_m"></a>
@@ -813,7 +808,6 @@
 | --- | --- |
 | Тип · `type` | `MASTERY` |
 | Варианты · `options` | Питомец наносит на 18% больше урона · [Урон питомца](../reference/Stats/Stats-HERO.md#stock_pet_damage); Питомец получает +6% к скорости атаки · [Скорость атаки питомца](../reference/Stats/Stats-HERO.md#stock_pet_attack_speed); Питомец получает +18% к максимуму здоровья · [Здоровье питомца](../reference/Stats/Stats-HERO.md#stock_pet_health); +12% к сопротивлению стихиям питомца · [Стихийные сопротивления питомца](../reference/Stats/Stats-HERO.md#stock_pet_resist); 12% увеличение урона (условие: PET_ALIVE) · [Урон](../reference/Stats/Stats-HERO.md#stock_damage); +25 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_N2_M <a href="#scn_n2_m" id="scn_n2_m"></a>
@@ -829,7 +823,6 @@
 | --- | --- |
 | Тип · `type` | `MASTERY` |
 | Варианты · `options` | 20% увеличение урона (условие: LOW_LIFE) · [Урон](../reference/Stats/Stats-HERO.md#stock_damage); +25 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health); 8% увеличение скорости атаки (условие: FULL_LIFE) · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed); +12% к множителю критического удара (условие: RECENT_CRIT) · [Множитель критического удара](../reference/Stats/Stats-HERO.md#stock_critical_multiplier); 15% увеличение урона (условие: RECENT_KILL) · [Урон](../reference/Stats/Stats-HERO.md#stock_damage); +8 ко всем характеристикам · [Все характеристики](../reference/Stats/Stats-HERO.md#stock_all_attributes) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## SCN_N3_M <a href="#scn_n3_m" id="scn_n3_m"></a>
@@ -845,7 +838,6 @@
 | --- | --- |
 | Тип · `type` | `MASTERY` |
 | Варианты · `options` | 12% шанс получить Натиск при убийстве · [Натиск при убийстве](../reference/Stats/Stats-HERO.md#stock_onslaught_on_kill); 5% увеличение скорости передвижения · [Скорость передвижения](../reference/Stats/Stats-HERO.md#stock_movement_speed); 18% увеличение урона (условие: ONSLAUGHT) · [Урон](../reference/Stats/Stats-HERO.md#stock_damage); 4% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed); 18% увеличение урона (условие: RECENT_KILL) · [Урон](../reference/Stats/Stats-HERO.md#stock_damage); +10 здоровья за убийство · [Здоровье за убийство](../reference/Stats/Stats-HERO.md#stock_health_on_kill) |
-| only | [Потомок](Tree-START.md#scion_start) |
 
 
 ## MAR_N0_M <a href="#mar_n0_m" id="mar_n0_m"></a>

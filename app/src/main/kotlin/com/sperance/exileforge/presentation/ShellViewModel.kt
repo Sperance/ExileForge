@@ -88,7 +88,7 @@ class ShellViewModel(
 
     /** Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. */
     fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = commands.task {
-        connection.api.reportBug(report)
+        connection.api.reportBug(report, game.value.index?.rules?.feedback?.failures ?: 0)
         onSent()
         notices.toast(ui("bug.sent"))
     }
@@ -169,5 +169,5 @@ class ShellViewModel(
 
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer: Flow<Unit> get() = session.newerServer
-    val confused: Flow<Unit> get() = session.confused
+    val serverFailed: Flow<Unit> get() = session.serverFailed
 }

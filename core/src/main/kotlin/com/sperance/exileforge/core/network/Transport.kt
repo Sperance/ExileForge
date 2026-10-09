@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.contract.text
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import kotlinx.coroutines.CancellationException
@@ -73,10 +74,16 @@ class Transport(
     internal var onHeroBlocked: (String, ApiFailure) -> Unit = { _, _ -> }
 
     /**
-     * Клиент и сервер друг друга не поняли (3.94.1): маршрута нет (404), ответ битый, код отказа незнаком словарю или сервер
-     * упал (500/501). Похоже на разные версии - приложение проверяет обновление. Обычные отказы правил и обрывы сети - нет.
+     * Сервер ответил ошибкой (4.3.1): любой не-2xx статус или битое тело - и у команд, и у файлов. Приложение проверяет
+     * обновление: [ServerAlarm.OUTDATED] - сервер прямо назвал сборку устаревшей (426 `CL_001`), проверка сразу; прочее -
+     * [ServerAlarm.FAILED], проверка в очередь с порогом. Обрыв сети без ответа сюда не попадает - сервер ничего не сказал.
      */
-    internal var onConfused: () -> Unit = {}
+    internal var onServerError: (ServerAlarm) -> Unit = {}
+
+    /** Ответ-ошибка сервера - сигнал [onServerError]; сбой самого сигнала запрос не роняет. */
+    private fun alarm(failure: ApiFailure) {
+        runCatching { onServerError(if (failure.code == OUTDATED_CLIENT) ServerAlarm.OUTDATED else ServerAlarm.FAILED) }
+    }
 
     /** Whose session is signed in, so a kept command is never replayed for another account. */
     internal var account: () -> String? = { null }
@@ -109,7 +116,7 @@ class Transport(
         var success = false
         try {
             val payload = client.newCall(
-                Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml")
+                Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml").header(API_REVISION_HEADER, API_REVISION.toString())
                     .apply { credential?.let { header("Authorization", "Bearer $it") } }
                     .apply { etag?.let { header("If-None-Match", it) } }.get().build(),
             ).awaitPayload()
@@ -119,14 +126,14 @@ class Transport(
                 return payload
             }
             responseText = payload.body.take(2_000)
-            if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status))
+            if (status !in 200..299) throw ApiFailure(status, null, ui("api.file_not_served", status)).also { alarm(it) }
             if (validate) {
                 try {
                     withContext(Dispatchers.Default) { WireJson.parseToJsonElement(payload.body) }
                 } catch (e: CancellationException) {
                     throw e
                 } catch (_: Exception) {
-                    throw ApiFailure(status, null, ui("api.malformed_json_at", path), malformed = true)
+                    throw ApiFailure(status, null, ui("api.malformed_json_at", path), malformed = true).also { alarm(it) }
                 }
             }
             success = true
@@ -170,7 +177,7 @@ class Transport(
         val queued = replay ?: waits?.command(method, path, query, body?.toString(), account())
         if (waits != null && queued != null && (holding || waits.busy())) {
             waits.add(queued)
-            journal.add(RequestLog(method, path, null, 0, body?.toString().orEmpty().take(12_000), ui("net.queued"), false))
+            journal.add(RequestLog(method, path, null, 0, body?.toString().orEmpty().take(12_000), ui("net.queued"), false, queued = true))
             throw CommandQueued(queued)
         }
         val key = queued?.key ?: if (command) java.util.UUID.randomUUID().toString() else null
@@ -186,12 +193,15 @@ class Transport(
         val request = Request.Builder().url(url).header("Accept", "application/json")
             // Язык игрока (3.88.7, сервер 1.80.9): по нему сервер пишет текст отказа, которого нет в словаре клиента.
             .header("Accept-Language", com.sperance.exileforge.core.i18n.uiLanguage.code)
+            // Ревизия API сборки (4.3.1): сервер новее отвечает 426 `CL_001`, и приложение сразу ищет обновление.
+            .header(API_REVISION_HEADER, API_REVISION.toString())
             .apply { credential?.let { header("Authorization", "Bearer $it") } }
             .apply { parts?.let { header(HeroParts.HEADER, it) } }
             .apply { key?.let { header(IDEMPOTENCY_HEADER, it) } }
             .apply { headers.forEach { (name, value) -> header(name, value) } }.method(method, payload).build()
         val start = System.nanoTime()
         var status: Int? = null
+        var code: String? = null
         var responseText = ""
         var success = false
         try {
@@ -213,7 +223,6 @@ class Transport(
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {
-                if (status != 401 && status != 403) runCatching { onConfused() }
                 throw ApiFailure(
                     status,
                     null,
@@ -225,7 +234,7 @@ class Transport(
                         ui("api.bad_json", status)
                     },
                     malformed = status != 401 && status != 403,
-                )
+                ).also { alarm(it) }
             }
             if (status !in 200..299 || (envelope["success"] as? JsonPrimitive)?.booleanOrNull != true) {
                 val error = envelope["error"] as? JsonObject
@@ -235,7 +244,7 @@ class Transport(
                     error?.text("message")?.takeIf { it.isNotBlank() } ?: ui("api.rejected", status),
                     (error?.get("messageArgs") as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.contentOrNull },
                 )
-                if (confusing(failure)) runCatching { onConfused() }
+                alarm(failure)
                 if (failure.code == HERO_BLOCKED) (query["heroId"] ?: query["id"])?.let { hero -> runCatching { onHeroBlocked(hero, failure) } }
                 if (failure.code == SANCTIONED) runCatching { onSanctioned(failure.args.firstOrNull().orEmpty()) }
                 throw failure
@@ -258,7 +267,10 @@ class Transport(
             responseText = ui("api.cancelled")
             throw e
         } catch (e: Exception) {
-            if (e is ApiFailure) status = e.status
+            if (e is ApiFailure) {
+                status = e.status
+                code = e.code
+            }
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             // The answer never came, or the server said "not yet": the command waits with its key, and the replay is the same command.
             val later = if (e is ApiFailure) CommandQueue.transient(e.status) else e is java.io.IOException
@@ -277,6 +289,7 @@ class Transport(
                     if (sensitive) ui("api.hidden") else bodyText.take(12_000),
                     if (sensitive) ui("api.hidden") else responseText,
                     success,
+                    code,
                 ),
             )
         }
@@ -307,6 +320,17 @@ const val HERO_BLOCKED = "CH_034"
 /** Доступ закрыт санкцией модерации (3.88.5, server 1.80.8): первый аргумент - id санкции. */
 const val SANCTIONED = "AUTH_006"
 
-/** Отказ, в котором клиент не узнаёт сервер (3.94.1): нет маршрута, падение сервера или код, которого нет в словаре. */
-private fun confusing(failure: ApiFailure): Boolean = failure.status == 404 || failure.status == 500 || failure.status == 501 ||
-    failure.code?.let { !com.sperance.exileforge.core.i18n.serverLocale.contains(com.sperance.exileforge.rules.text.LocaleKey.error(it)) } == true
+/** Сборка устарела для сервера (4.3.1, server 1.84): 426 на любой маршрут API. */
+const val OUTDATED_CLIENT = "CL_001"
+
+/** Заголовок ревизии API сборки (4.3.1): по нему сервер отвечает [OUTDATED_CLIENT]. */
+internal const val API_REVISION_HEADER = "X-Api-Revision"
+
+/** Что сказала ошибка сервера о сборке (4.3.1). */
+enum class ServerAlarm {
+    /** Сервер прямо назвал сборку устаревшей: обновление ищется сразу. */
+    OUTDATED,
+
+    /** Любая другая ошибка ответа: проверка обновления в очередь, не чаще порога. */
+    FAILED,
+}

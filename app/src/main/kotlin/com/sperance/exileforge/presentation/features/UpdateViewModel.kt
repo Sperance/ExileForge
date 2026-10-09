@@ -70,7 +70,7 @@ class UpdateViewModel(
     private val trace: StartupTrace,
     private val resources: GameResources,
     private val playing: Flow<Boolean>,
-    confused: Flow<Unit> = emptyFlow(),
+    serverFailed: Flow<Unit> = emptyFlow(),
 ) : AndroidViewModel(app) {
     private val updates = Updates(client = http)
 
@@ -109,13 +109,13 @@ class UpdateViewModel(
             // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour -
             // мимо очереди: без новой сборки игра дальше входа не пойдёт, и ресурсов ей ждать незачем.
             viewModelScope.launch { newerServer.collect { check() } }
-            // Ответ сервера, которого клиент не понял (3.94.1): сверка ресурсов и сборки в очередь, не чаще раза в
-            // [CONFUSED_GAP_MS] - на поток одинаковых отказов одна проверка.
+            // Сервер ответил ошибкой (4.3.1): сверка ресурсов и сборки в очередь, не чаще раза в [FAILED_GAP_MS] -
+            // на поток одинаковых отказов одна проверка.
             viewModelScope.launch {
                 var last = 0L
-                confused.collect {
+                serverFailed.collect {
                     val now = System.currentTimeMillis()
-                    if (now - last >= CONFUSED_GAP_MS) {
+                    if (now - last >= FAILED_GAP_MS) {
                         last = now
                         ask(Request.RECHECK)
                     }
@@ -248,8 +248,8 @@ class UpdateViewModel(
         /** A failed check is tried again this soon, unseen. */
         const val RETRY_MS = 60_000L
 
-        /** Не чаще одной проверки обновления на непонятные ответы сервера (3.94.1). */
-        const val CONFUSED_GAP_MS = 5 * 60_000L
+        /** Не чаще одной проверки обновления на ошибки ответов сервера (4.3.1). */
+        const val FAILED_GAP_MS = 5 * 60_000L
 
         /** Дольше этого первая проверка не ждёт ресурсов старта: без связи они не придут, а сборку искать надо. */
         const val RESOURCES_WAIT_MS = 30_000L

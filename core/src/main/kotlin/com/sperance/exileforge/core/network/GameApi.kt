@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ApiCapabilities
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.command.ClientIdentity
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.command.DeviceCredentials
 import com.sperance.exileforge.core.model.command.LoginCredentials
 import com.sperance.exileforge.core.model.command.PasswordChange
@@ -49,7 +50,7 @@ private val RATE_WAITS = listOf(2_000L, 5_000L, 12_000L)
  */
 class GameApi(
     server: String,
-    journal: RequestJournal = RequestJournal(),
+    private val journal: RequestJournal = RequestJournal(),
     client: OkHttpClient = ForgeHttp.client,
     private val onUnauthorized: () -> Unit = {},
 ) {
@@ -144,8 +145,10 @@ class GameApi(
      * Files a bug report (server 1.46.0): open before the sign-in too, signed when there is a session. Подписан
      * [identity] (3.88.0): устройство, версия клиента и активный герой.
      */
-    suspend fun reportBug(report: BugReportRequest) {
-        val stamped = identity?.stamp(report) ?: report
+    suspend fun reportBug(report: BugReportRequest, failures: Int = 0) {
+        // Отчёт об ошибке несёт хвост неудачных запросов (4.3.1): по нему видно, какой ответ сервера встретил игрок.
+        val traced = if (report.kind == FeedbackKind.BUG && failures > 0) report.copy(failures = journal.failures(failures)) else report
+        val stamped = identity?.stamp(traced) ?: traced
         http.request("POST", "api/v1/bugreport", body = WireJson.encodeToJsonElement(stamped), authenticated = http.token != null)
     }
 
@@ -302,11 +305,11 @@ class GameApi(
             http.onSanctioned = value
         }
 
-    /** Сервер и клиент друг друга не поняли (3.94.1): приложение проверяет обновление. */
-    var onConfused: () -> Unit
-        get() = http.onConfused
+    /** Сервер ответил ошибкой (4.3.1): приложение проверяет обновление - сразу, если сервер назвал сборку устаревшей. */
+    var onServerError: (ServerAlarm) -> Unit
+        get() = http.onServerError
         set(value) {
-            http.onConfused = value
+            http.onServerError = value
         }
 
     /** Герой запроса под санкцией (`CH_034`, 3.88.0; id санкции - 3.88.5): приложение уводит к выбору героя. */

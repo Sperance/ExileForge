@@ -41,16 +41,13 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.Term
-import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
 import com.sperance.exileforge.core.display.requirementReason
@@ -68,7 +65,6 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
-import com.sperance.exileforge.rules.content.NodeRole
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
@@ -126,11 +122,9 @@ import kotlin.math.sin
         return
     }
     val allocated = node.code in taken
-    // Режим узла для класса (4.3.0): чужая ветка - проход за одно очко, без бонусов и вариантов; цену и варианты дают правила.
     val start = heroClass?.startNode
-    val passage = node.roleFor(start) == NodeRole.PASSAGE
-    val cost = index.tree.cost(node, start)
-    val options = index.tree.options(node, start)
+    val cost = index.tree.cost(node)
+    val options = node.options
     val choosing = options.isNotEmpty()
     // The option the hero took is theirs: it is read from the snapshot, not from the tree.
     val chosen = game.hero?.tree?.firstOrNull { it.code == node.code }?.choice
@@ -151,13 +145,6 @@ import kotlin.math.sin
     }
     if (node.type == SkillNodeType.JEWEL_SOCKET) {
         SocketContents(game, index, node, allocated, enabled, onSocket, onUnsocket)
-    } else if (passage) {
-        // Ветка другого класса: узел держит путь дальше, но его строки и варианты этому классу не достаются - они зачёркнуты.
-        val owner = index.classes.classes.firstOrNull { it.startNode == node.only }?.code?.let(::classTitle).orEmpty()
-        Text(ui("tree.passage_note", owner, cost, plural("tree.passage_point", cost)), color = Bronze, style = MaterialTheme.typography.bodyMedium)
-        (node.lines + node.options.flatten()).forEach { line ->
-            Text(lineText(index, line), color = Muted, style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.LineThrough)
-        }
     } else if (choosing) {
         // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
         // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.

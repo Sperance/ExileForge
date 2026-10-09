@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.QualityKind
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
@@ -92,8 +93,8 @@ enum class QualityFilter {
     }
 }
 
-/** Потолок качества вещи: фляги - свой потолок правил, прочее - общий. */
-private val ItemView.qualityCap: Int get() = if (slot.isFlask) index.rules.flasks.maxQuality else index.rules.quality.max
+/** Потолок качества вещи - потолок её вида качества по правилам (4.2.1, [QualityKind]); вида нет - общий. */
+private val ItemView.qualityCap: Int get() = QualityKind.of(catalyst).gain(item, template, index)?.cap(index.rules) ?: index.rules.quality.max
 
 /** Порядки списка предметов (3.30.0, с 4.2.0 - общие для всех списков): новые первыми, по редкости, уровню предмета или цене списка. */
 @Serializable

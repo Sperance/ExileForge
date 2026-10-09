@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.QualityForecast
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.refusalText
@@ -129,6 +130,10 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
             }.toMap()
         }
     }
+    // Сфера качества над вещью (4.2.1): что поднимет вид качества выбранного знамения и сколько качества другого вида сбросится.
+    val quality = remember(gear, index, smithy.omen) {
+        if (index == null || gear == null) null else QualityForecast.of(index, gear.item, gear.template, Omen.of(smithy.omen))
+    }
     val sections = listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { !isMap && benchable }, ForgeSection.ESSENCES.takeIf { essential })
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     val petMode = smithy.petMode && hero?.pets?.pets?.isNotEmpty() == true
@@ -167,7 +172,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
                         LineChoice(game, it, it.offer, "forge.choice_title", "forge.choice_hint", enabled, vm::choose)
                     }
                     gear?.let { OmenLedger(game, smithy.orb, smithy.omen, it, omens, vm::selectOmen) }
-                    if (instance != null) OrbTray(game, smithy, accepted, orbRefusals, { it in omenOnly }, vm::selectOrb)
+                    if (instance != null) OrbTray(game, smithy, accepted, orbRefusals, { it in omenOnly }, quality, vm::selectOrb)
                 }
 
                 ForgeSection.BENCH -> view?.let { BenchLedger(game, index, hero, it, benchLine) { line -> benchLine = line } }
@@ -177,7 +182,7 @@ internal val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
         }
         if (hero != null && instance != null && !petMode) {
             when (section) {
-                ForgeSection.ORBS -> OrbBar(game, smithy, instance, enabled, accepted, { it in omenOnly }, vm::applyOrb)
+                ForgeSection.ORBS -> OrbBar(game, smithy, instance, enabled, accepted, { it in omenOnly }, quality?.lost ?: 0, vm::applyOrb)
                 ForgeSection.BENCH -> view?.let { BenchBar(game, vm, it, benchLine, enabled) }
                 ForgeSection.ESSENCES -> EssenceBar(game, smithy.essence, instance, enabled, accepted, vm::applyEssence)
             }

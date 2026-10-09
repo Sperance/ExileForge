@@ -70,9 +70,12 @@ import org.koin.compose.viewmodel.koinViewModel
     enabled: Boolean,
     accepted: (String) -> Boolean,
     needsOmen: (String) -> Boolean,
+    lost: Int,
     onApply: (String, String) -> Unit,
 ) {
     val code = smithy.orb
+    // Качество другого вида (4.2.1): сфера качества сбросит его - сначала подтверждение с тем, сколько пропадёт.
+    var confirming by remember(instance.id, code, smithy.omen) { mutableStateOf(false) }
     val owned = game.bagAmount(code) ?: 0L
     val orb = game.orbs.firstOrNull { it.code.value == code && owned > 0 && accepted(code) }
     ForgeBar {
@@ -89,9 +92,28 @@ import org.koin.compose.viewmodel.koinViewModel
             if (waiting) ui("forge.needs_omen") to true else stock(code, owned, 1),
             orb = Orb.of(orb.code.value),
         )
+        val resets = orb.code.value == Orb.QUALITY_ORB.name && lost > 0
+        if (resets) Text(ui("forge.quality_reset", lost), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !instance.corrupted && !waiting, rearm = true) {
-            onApply(instance.id, orb.code.value)
+            if (resets) confirming = true else onApply(instance.id, orb.code.value)
         }
+    }
+    if (confirming && orb != null) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            containerColor = PanelRaised,
+            shape = DialogShape,
+            tonalElevation = 0.dp,
+            title = { Text(ui("forge.quality_reset_title"), color = Gold) },
+            text = { Text(ui("forge.quality_reset_note", lost), color = Parchment) },
+            confirmButton = {
+                ForgeTextButton(enabled = enabled, onClick = {
+                    confirming = false
+                    onApply(instance.id, orb.code.value)
+                }) { Text(ui("forge.quality_reset_do")) }
+            },
+            dismissButton = { ForgeTextButton(onClick = { confirming = false }) { Text(ui("common.cancel")) } },
+        )
     }
 }
 

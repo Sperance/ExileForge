@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.QualityForecast
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
@@ -133,7 +134,15 @@ private const val ONE_ROW = 6
  * The orbs of the tray: the bag's, Regret left out (it is spent on the tree). Те, что вещь не примет ([refusals] - отказ правил
  * [OrbApplier.refusal] по коду, 4.2.0: сфера удачи без уникалки того же вида и прочие), серыми в конце; выбранная говорит почему.
  */
-@Composable internal fun OrbTray(game: GameUi, smithy: Smithy, accepted: (String) -> Boolean, refusals: Map<String, String>, needsOmen: (String) -> Boolean, onSelect: (String) -> Unit) {
+@Composable internal fun OrbTray(
+    game: GameUi,
+    smithy: Smithy,
+    accepted: (String) -> Boolean,
+    refusals: Map<String, String>,
+    needsOmen: (String) -> Boolean,
+    quality: QualityForecast?,
+    onSelect: (String) -> Unit,
+) {
     val hero = game.hero ?: return
     val orbs = game.orbs.map { it.code.value }.filter { hero.count(it) > 0 && it != Orb.ORB_OF_REGRET.name && (accepted(it) || it in refusals) }
         .sortedBy { it in refusals }
@@ -146,11 +155,16 @@ private const val ONE_ROW = 6
         ui("forge.no_orbs_fit"),
         Gold,
         onSelect,
-        note = ui("forge.needs_omen").takeIf { chosen in orbs && needsOmen(chosen) && smithy.omen.isBlank() },
+        note = if (chosen in orbs && needsOmen(chosen) && smithy.omen.isBlank()) ui("forge.needs_omen") else qualityNote(chosen, quality),
         refusal = refusals::get,
     ) { code ->
         OrbGlyph(Orb.of(code), Modifier.fillMaxSize())
     }
+}
+
+/** Подсказка сферы качества (4.2.1): что она поднимет на этой вещи с выбранным знамением и что сбросит. */
+private fun qualityNote(orb: String, quality: QualityForecast?): String? = quality?.takeIf { orb == Orb.QUALITY_ORB.name }?.let { forecast ->
+    listOfNotNull(forecast.raises, ui("forge.quality_reset", forecast.lost).takeIf { forecast.lost > 0 }).joinToString("\n")
 }
 
 /**

@@ -15,6 +15,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
@@ -28,6 +30,8 @@ data class Smithy(
     val pet: String = "",
     /** Кузница над питомцем, а не над предметом (3.81.0). */
     val petMode: Boolean = false,
+    /** Вещь, под которую выбрано знамение (4.2.1): катализатор подбирается к вещи, на другой его нет. */
+    val omenItem: String = "",
 )
 
 /** Кузница (3.80.18): выбор инструмента - состояние экрана, команды - общие действия героя; предмет под кузницей - в репозитории героя. */
@@ -42,18 +46,27 @@ class SmithyViewModel(
     val game: StateFlow<GameUi> = slice.ui
     private val mutable = MutableStateFlow(Smithy())
 
-    /** Выбор как он есть; пока сфера не выбрана - самая дешёвая валюта контента, когда он прочитан. */
-    val smithy: StateFlow<Smithy> = combine(mutable, world.state) { chosen, w ->
-        if (chosen.orb.isNotBlank()) chosen else chosen.copy(orb = w.content?.itemsByCategory?.get(Item.CURRENCY)?.minByOrNull { it.price }?.code?.value.orEmpty())
+    /**
+     * Выбор как он есть; пока сфера не выбрана - самая дешёвая валюта контента, когда он прочитан. Знамение держится только над
+     * вещью, под которую его выбрали (4.2.1): сменилась вещь под кузницей - знамения нет.
+     */
+    val smithy: StateFlow<Smithy> = combine(mutable, world.state, game.map { it.holding.selectedEquipment }.distinctUntilChanged()) { chosen, w, item ->
+        val omened = if (chosen.omenItem == item) chosen else chosen.copy(omen = "", omenItem = "")
+        if (omened.orb.isNotBlank()) omened else omened.copy(orb = w.content?.itemsByCategory?.get(Item.CURRENCY)?.minByOrNull { it.price }?.code?.value.orEmpty())
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Smithy())
     val activity: StateFlow<Activity> = commands.state
 
     fun ensure() = sync.ensure()
-    fun selectEquipment(itemId: String) = hero.selectEquipment(itemId)
+
+    /** Другая вещь под кузницей - знамение, выбранное под прежнюю, снимается (4.2.1). */
+    fun selectEquipment(itemId: String) {
+        hero.selectEquipment(itemId)
+        mutable.update { if (it.omenItem == itemId) it else it.copy(omen = "", omenItem = "") }
+    }
 
     /** Кузница над одним предметом на разделе, за которым пришёл игрок; `null` оставляет её предмет. */
     fun open(itemId: String?, section: ForgeSection) {
-        itemId?.let(hero::selectEquipment)
+        itemId?.let(::selectEquipment)
         mutable.update { it.copy(section = section, petMode = false) }
     }
 
@@ -67,12 +80,12 @@ class SmithyViewModel(
     fun section(section: ForgeSection) = mutable.update { it.copy(section = section) }
 
     /** Новая сфера - без предзнаменования: оно подбирается к сфере. */
-    fun selectOrb(code: String) = mutable.update { it.copy(orb = code, omen = "") }
-    fun selectOmen(code: String) = mutable.update { it.copy(omen = code) }
+    fun selectOrb(code: String) = mutable.update { it.copy(orb = code, omen = "", omenItem = "") }
+    fun selectOmen(code: String) = mutable.update { it.copy(omen = code, omenItem = game.value.holding.selectedEquipment) }
     fun selectEssence(code: String) = mutable.update { it.copy(essence = code) }
 
     /** Сфера тратится вместе с предзнаменованием: следующее применение начинается без него. */
-    fun applyOrb(itemId: String, orb: String) = hero.applyOrb(itemId, orb, smithy.value.omen) { mutable.update { it.copy(omen = "") } }
+    fun applyOrb(itemId: String, orb: String) = hero.applyOrb(itemId, orb, smithy.value.omen) { mutable.update { it.copy(omen = "", omenItem = "") } }
     fun applyEssence(itemId: String, essence: String) = hero.applyEssence(itemId, essence)
     fun unveil(itemId: String, choice: Int) = hero.unveil(itemId, choice)
     fun choose(itemId: String, choice: Int) = hero.choose(itemId, choice)

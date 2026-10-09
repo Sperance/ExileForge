@@ -1,26 +1,14 @@
 package com.sperance.exileforge.ui.screens.city
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.ChevronRight
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.GuildText
@@ -109,13 +97,7 @@ import org.koin.compose.viewmodel.koinViewModel
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
         ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep)
-        BuildingCard(ui("quest.title"), ForgeGlyphs.Scroll, questNews(board), game.lockOf(Building.QUESTS), accent = Vital) { shell.building(Building.QUESTS) }
-        BuildingCard(ui("merchant.title"), ForgeGlyphs.Coins, merchantNews(game.hero?.merchant), game.lockOf(Building.MERCHANT)) { shell.building(Building.MERCHANT) }
-        BuildingCard(ui("nav.auction"), ForgeGlyphs.Orb, auctionNews(trade), game.lockOf(Building.AUCTION)) { shell.building(Building.AUCTION) }
-        BuildingCard(ui("guild.title"), ForgeGlyphs.Banner, guildNews(guilds), game.lockOf(Building.GUILD), accent = Rune) { shell.building(Building.GUILD) }
-        BuildingCard(ui("history.title"), ForgeGlyphs.Tome, ui("city.history_idle"), game.lockOf(Building.HISTORY), accent = Parchment) { shell.building(Building.HISTORY) }
-        BuildingCard(ui("chronicle.title"), ForgeGlyphs.Scroll, chronicleNews(game), game.lockOf(Building.CHRONICLE), accent = GoldBright) { shell.building(Building.CHRONICLE) }
-        BuildingCard(ui("hall.title"), ForgeGlyphs.Gem, ui("city.hall_idle"), game.lockOf(Building.HALL), accent = rarityColor(Rarity.MYTHICAL.name)) { shell.building(Building.HALL) }
+        HubGrid(cityTiles(game, board, trade, guilds) { shell.building(it) })
         Spacer(Modifier.height(12.dp))
     }
 }
@@ -135,12 +117,34 @@ private fun chronicleNews(game: GameUi): String {
     ChronicleScreen(game, heroModel)
 }
 
+/**
+ * Здания площади плитками хаба (4.4.x, как «Развитие»): у каждого строка новостей и замок уровня; счётчик - что ждёт действия:
+ * награды заданий, приглашения в гильдию, свои лоты аукциона, что пора продлить.
+ */
+private fun cityTiles(game: GameUi, board: Quests, trade: Market, guilds: Guilds, open: (Building) -> Unit): List<HubTile> {
+    fun tile(building: Building, title: String, icon: ImageVector, accent: Color, news: String, badge: Int = 0) = HubTile(title, icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building)) { open(building) }
+    return listOf(
+        tile(Building.QUESTS, ui("quest.title"), ForgeGlyphs.Scroll, Vital, questNews(board), questsReady(board)),
+        tile(Building.MERCHANT, ui("merchant.title"), ForgeGlyphs.Coins, Gold, merchantNews(game.hero?.merchant)),
+        tile(Building.AUCTION, ui("nav.auction"), ForgeGlyphs.Orb, Gold, auctionNews(trade), lotsToExtend(game, trade)),
+        tile(Building.GUILD, ui("guild.title"), ForgeGlyphs.Banner, Rune, guildNews(guilds), guilds.mine?.takeIf { it.guild == null }?.invites?.size ?: 0),
+        tile(Building.HISTORY, ui("history.title"), ForgeGlyphs.Tome, Parchment, ui("city.history_idle")),
+        tile(Building.CHRONICLE, ui("chronicle.title"), ForgeGlyphs.Scroll, GoldBright, chronicleNews(game)),
+        tile(Building.HALL, ui("hall.title"), ForgeGlyphs.Gem, rarityColor(Rarity.MYTHICAL.name), ui("city.hall_idle")),
+    )
+}
+
+/** Задания доски, что ждут награды. */
+private fun questsReady(quests: Quests): Int = quests.board?.let { board -> (board.daily + board.weekly + board.contracts).count { it.done && !it.claimed } } ?: 0
+
+/** Свои лоты, срок которых подходит к концу и которые уже можно продлить (окно продления правил). */
+private fun lotsToExtend(game: GameUi, market: Market): Int = game.index?.rules?.auction?.let { rules -> market.myLots.count { it.extendable(rules.extendWindowMillis) } } ?: 0
+
 /** How many quests wait for their reward, or how many are under way; сюжет (4.2.0) - в «Походе», не здесь. */
 private fun questNews(quests: Quests): String {
     val board = quests.board ?: return ui("city.quests_idle")
-    val quests = board.daily + board.weekly + board.contracts
-    val ready = quests.count { it.done && !it.claimed }
-    return if (ready > 0) ui("city.quests_ready", ready) else ui("city.quests_active", quests.count { !it.claimed })
+    val ready = questsReady(quests)
+    return if (ready > 0) ui("city.quests_ready", ready) else ui("city.quests_active", (board.daily + board.weekly + board.contracts).count { !it.claimed })
 }
 
 private fun merchantNews(merchant: MerchantStock?): String = merchant?.takeIf { it.refreshAt > 0 }?.let { ui("merchant.renews", untilText(it.refreshAt)) } ?: ui("city.merchant_idle")
@@ -155,29 +159,5 @@ private fun guildNews(guilds: Guilds): String {
     return if (mine.invites.isNotEmpty()) ui("city.guild_invites", mine.invites.size) else ui("city.guild_none")
 }
 
-/** One building: its sign, its name and the line of news; the whole card is the door. */
-
 /** The level a building opens at (3.76.0), while the hero is below it. */
 private fun GameUi.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level(index?.rules)
-
-@Composable private fun BuildingCard(title: String, icon: ImageVector, news: String, lockedUntil: Int?, accent: Color = Gold, onOpen: () -> Unit) {
-    val shape = RoundedCornerShape(14.dp)
-    Row(
-        Modifier.fillMaxWidth().alpha(if (lockedUntil != null) LOCKED_ALPHA else 1f).clip(shape).background(Brush.horizontalGradient(listOf(accent.copy(alpha = .14f), Panel)), shape)
-            .border(1.dp, Bronze, shape).clickable(onClick = onOpen).padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Box(Modifier.size(52.dp).border(1.dp, accent.copy(alpha = .5f), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(30.dp))
-        }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            Text(lockedUntil?.let { ui("unlock.from", it) } ?: news, color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        }
-        Icon(if (lockedUntil != null) Icons.Outlined.Lock else Icons.Outlined.ChevronRight, null, tint = Muted)
-    }
-}
-
-/** How dim a place the hero's level has not opened is drawn (3.76.0). */
-internal const val LOCKED_ALPHA = .45f

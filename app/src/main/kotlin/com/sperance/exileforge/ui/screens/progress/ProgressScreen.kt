@@ -1,28 +1,14 @@
 package com.sperance.exileforge.ui.screens.progress
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
@@ -64,18 +50,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     val label: String get() = ui(title)
 }
 
-/** What each tile of the hub says: one line of what it holds, one of what waits, and a count when something does. */
-@Immutable private data class ProgressTile(
-    val title: String,
-    val icon: ImageVector,
-    val accent: Color,
-    val note: String,
-    val news: String?,
-    val badge: Int,
-    val lockedUntil: Int? = null,
-    val onOpen: () -> Unit,
-)
-
 /**
  * «Развитие» (variant A, «Плитки 2×2»): the hero's growth between runs gathered in one tab — the forge, the menagerie,
  * the tree and the grimoire. Each tile says in a line what it
@@ -98,7 +72,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
         val eggs = if (hero != null && index != null && incubator?.free != null) index.pets.eggs.values.flatMap { it.values }.toSet().sumOf { hero.count(it) } else 0L
         val tree = game.treeState
         listOf(
-            ProgressTile(
+            HubTile(
                 ui("nav.forge"),
                 ForgeGlyphs.Anvil,
                 Ember,
@@ -107,7 +81,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 0,
                 game.lockOf(Feature.FORGE),
             ) { shell.tab(TAB_CRAFT) },
-            ProgressTile(
+            HubTile(
                 ui("progress.pets"),
                 ForgeGlyphs.Exile,
                 Vital,
@@ -122,7 +96,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 game.lockOf(Feature.PETS),
             ) { shell.tab(TAB_PETS) },
             // Дерево и гримуар (3.90.5) - из полосы «Героя»: там остались только вещи.
-            ProgressTile(
+            HubTile(
                 ui("nav.tree"),
                 ForgeGlyphs.Constellation,
                 Gold,
@@ -130,7 +104,7 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 tree?.let { ui("tree.points", it.available, it.total) },
                 tree?.available ?: 0,
             ) { shell.tab(TAB_TREE) },
-            ProgressTile(
+            HubTile(
                 ui("nav.skills"),
                 ForgeGlyphs.Grimoire,
                 ManaBlue,
@@ -146,42 +120,8 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     OnReselect(TAB_PROGRESS) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader(ui("progress.title"), ui("progress.subtitle"), ForgeGlyphs.Sigil)
-        tiles.chunked(2).forEach { pair ->
-            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                pair.forEach { ProgressTileCard(it, Modifier.weight(1f).fillMaxHeight()) }
-            }
-        }
+        HubGrid(tiles)
         InfoCard(ui("progress.title"), ui("progress.hint"))
-    }
-}
-
-/** One tile: the glyph on its tinted square, the name, and the status at the foot; a badge in the corner when something waits. */
-@Composable private fun ProgressTileCard(tile: ProgressTile, modifier: Modifier) {
-    val shape = RoundedCornerShape(14.dp)
-    val locked = tile.lockedUntil
-    val hot = tile.badge > 0 && locked == null
-    Box(
-        modifier.heightIn(min = 150.dp).alpha(if (locked != null) LOCKED_TILE_ALPHA else 1f).clip(shape).depthPanel(shape)
-            .border(1.dp, if (hot) tile.accent.copy(alpha = .55f) else PanelRaised, shape)
-            .clickable(role = Role.Button, onClick = tile.onOpen).padding(12.dp),
-    ) {
-        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(44.dp).background(tile.accent.copy(alpha = .14f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
-                Icon(tile.icon, null, tint = tile.accent, modifier = Modifier.size(26.dp))
-            }
-            Text(tile.title, color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
-            Spacer(Modifier.weight(1f))
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                MutedText(locked?.let { ui("unlock.from", it) } ?: tile.note)
-                if (locked == null) tile.news?.let { Text(it, color = tile.accent, style = MaterialTheme.typography.bodySmall) }
-            }
-        }
-        if (locked != null) Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
-        if (hot) {
-            Box(Modifier.align(Alignment.TopEnd).background(tile.accent, CircleShape).padding(horizontal = 6.dp, vertical = 1.dp)) {
-                Text(tile.badge.toString(), color = Ink, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-            }
-        }
     }
 }
 
@@ -215,5 +155,3 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 
 /** The level a tile's place opens at (3.76.0), while the hero is below it. */
 private fun GameUi.lockOf(feature: Feature): Int? = feature.takeIf { !unlocked(it) }?.level(index?.rules)
-
-private const val LOCKED_TILE_ALPHA = .45f

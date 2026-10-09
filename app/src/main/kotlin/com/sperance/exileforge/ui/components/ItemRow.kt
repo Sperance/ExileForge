@@ -95,7 +95,6 @@ fun ItemRow(
                         else -> Brush.verticalGradient(listOf(DepthTop, DepthBottom))
                     },
                 )
-                .relicSky(look)
                 .border(
                     1.dp,
                     when {
@@ -130,10 +129,11 @@ fun ItemRow(
                 }
             }
             if (compact) {
-                // Вторая линия лута: значки тиров всех строк, качество, состояния и замок - важное одним взглядом.
+                // Вторая линия лута: значки тиров всех строк, уровень вещи (4.3.0), качество, состояния и замок - важное одним взглядом.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
                     item.lines.forEach { TierHex(it.marks, 16.dp) }
                     if (item.lines.isNotEmpty()) Spacer(Modifier.width(6.dp))
+                    Text(ui("row.level", item.level), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(end = 3.dp))
                     QualityBadge(item, compact = true)
                     item.summary.quality?.let { RollPill(it) }
                     RowStates(item)

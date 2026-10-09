@@ -152,7 +152,7 @@ fun ItemCard(
     val shown = if (detailed) rolled else rolled.take(3)
     var opened by remember { mutableStateOf<ItemLine?>(null) }
     Column(
-        Modifier.fillMaxWidth().relicGround(look, shape, selected)
+        Modifier.fillMaxWidth().relicGround(look, shape, selected, sky = detailed)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(start = 18.dp, end = 18.dp, top = if (legend) 6.dp else 18.dp, bottom = 14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

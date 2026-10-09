@@ -99,7 +99,7 @@ private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier:
     val look = worn?.let { relicLook(it.rarity) }
     val ground = when {
         look == null -> Modifier.border(1.dp, Color(0xFF26323B), shape)
-        look.legend != null -> Modifier.background(Brush.verticalGradient(listOf(look.top, look.bottom)), shape).relicSky(look).border(1.dp, look.gold.copy(alpha = .55f), shape)
+        look.legend != null -> Modifier.background(Brush.verticalGradient(listOf(look.top, look.bottom)), shape).border(1.dp, look.gold.copy(alpha = .55f), shape)
         else -> Modifier.depthPanel(shape, elevation = 6.dp).border(1.dp, look.rarity.copy(alpha = .2f), shape)
     }
     Column(

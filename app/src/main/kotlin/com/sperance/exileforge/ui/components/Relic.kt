@@ -123,9 +123,10 @@ fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = nam
 
 /**
  * Подложка вещи в облике редкости (3.90.0) - общая для полной карточки и плитки: градиент [RelicLook.top] → [RelicLook.bottom],
- * свечение редкости от верхнего края, небо легенды, завитки по углам у легенды и рамка - нить [RelicLook.gold], у выбранной - золото.
+ * свечение редкости от верхнего края, завитки по углам у легенды и рамка - нить [RelicLook.gold], у выбранной - золото.
+ * Небо легенды ([relicSky]) - только при [sky] (4.3.0): его зажигает полная карточка, в списках подложка без анимации.
  */
-@Composable fun Modifier.relicGround(look: RelicLook, shape: Shape, selected: Boolean = false): Modifier {
+@Composable fun Modifier.relicGround(look: RelicLook, shape: Shape, selected: Boolean = false, sky: Boolean = false): Modifier {
     val frame = Brush.verticalGradient(
         if (selected) {
             listOf(GoldBright, GoldBright)
@@ -136,7 +137,7 @@ fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = nam
     return clip(shape)
         .background(Brush.verticalGradient(listOf(look.top, look.bottom)))
         .drawBehind { drawRect(Brush.radialGradient(listOf(look.glow.copy(alpha = .16f), Color.Transparent), Offset(size.width / 2, 0f), size.width * .8f)) }
-        .relicSky(look)
+        .then(if (sky) Modifier.relicSky(look) else Modifier)
         .then(if (look.legend != null) Modifier.drawBehind { relicCorners(look.gold) } else Modifier)
         .border(if (selected) 2.dp else 1.dp, frame, shape)
 }
@@ -380,9 +381,9 @@ private val SPARKS = List(26) { i ->
 
 /**
  * Фон легенды: у мифической - мерцающие звёзды, у уникальной - искры, медленно поднимающиеся к имени.
- * Рисуется за содержимым и не трогает раскладку.
+ * Рисуется за содержимым и не трогает раскладку; только в полной карточке ([relicGround] с `sky`).
  */
-@Composable fun Modifier.relicSky(look: RelicLook): Modifier {
+@Composable private fun Modifier.relicSky(look: RelicLook): Modifier {
     val legend = look.legend ?: return this
     val time = motionClock(SKY_MS, "relic-sky")
     return drawBehind {

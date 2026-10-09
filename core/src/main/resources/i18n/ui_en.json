@@ -393,7 +393,7 @@
   "crafts.about": "≈ {0}",
   "crafts.metric_hour": "per hour",
   "crafts.metric_cycle": "cycle",
-  "crafts.metric_double": "double",
+  "crafts.metric_yield": "extra output",
   "crafts.metric_waste": "wasted",
   "crafts.metric_sure": "guaranteed",
   "crafts.free": "free",

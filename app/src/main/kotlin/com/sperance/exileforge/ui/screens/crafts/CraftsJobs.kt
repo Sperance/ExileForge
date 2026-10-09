@@ -107,13 +107,13 @@ import kotlin.math.ceil
             }
         }
         if (locked) return@Column
-        val double = profession.bonus.yield.coerceAtLeast(0.0)
+        val extra = profession.bonus.yield.coerceAtLeast(0.0)
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             val cell = Modifier.weight(1f)
             JobMetric(perHour(job, profession)?.let { ui("crafts.about", fineNumber(it)) } ?: "—", ui("crafts.metric_hour"), Parchment, cell)
             JobMetric(ui("crafts.duration_seconds", number(job.cycleMillis / 1000.0)), ui("crafts.metric_cycle"), Parchment, cell)
             when {
-                double > 0 -> JobMetric(ui("crafts.percent", number(double)), ui("crafts.metric_double"), Vital, cell)
+                extra > 0 -> JobMetric(ui("crafts.percent", number(extra)), ui("crafts.metric_yield"), Vital, cell)
                 job.nothing > 0 -> JobMetric(ui("crafts.percent", number(job.nothing)), ui("crafts.metric_waste"), LifeRed, cell)
                 else -> JobMetric("✓", ui("crafts.metric_sure"), Vital, cell)
             }

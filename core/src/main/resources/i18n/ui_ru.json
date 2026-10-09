@@ -393,7 +393,7 @@
   "crafts.about": "≈ {0}",
   "crafts.metric_hour": "в час",
   "crafts.metric_cycle": "цикл",
-  "crafts.metric_double": "удвоение",
+  "crafts.metric_yield": "лишняя добыча",
   "crafts.metric_waste": "впустую",
   "crafts.metric_sure": "гарантия",
   "crafts.free": "бесплатно",

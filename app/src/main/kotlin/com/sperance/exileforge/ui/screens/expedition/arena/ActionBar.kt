@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -36,6 +37,8 @@ import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -44,22 +47,17 @@ import com.sperance.exileforge.ui.screens.skills.SkillFacts
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The hero's skills and belt in the fight (2.78.0): the three active slots — dark while they recover,
- * dim while the mana is short — then the three flasks, filled to their charges and ringed while one runs.
- * A tap uses a skill or drinks a flask at once, whatever its condition; a long press on a skill, or its «i»,
- * opens its page (3.24.0).
+ * The hero's skills and belt in the fight (2.78.0): фляги слева, умения справа (4.4.1, решение владельца) - каждое квадратной
+ * иконкой «Неон рун» ([NeonSkillIcon]) своего тира: откат - тёмный сектор и секунды, нехватка маны - синяя подложка, пустой
+ * слот - пунктирный квадрат того же размера. A tap uses a skill or drinks a flask at once, whatever its condition; a long press
+ * on a skill, or its «i», opens its page (3.24.0).
  */
-@Composable internal fun ActionBar(fight: FightHud, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
+@Composable internal fun ActionBar(game: GameUi, fight: FightHud, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
     val live = fight.started && fight.outcome == null
+    val index = game.index
+    val skills = game.hero?.skills ?: HeroSkills()
+    val stats = fight.heroBody?.stats ?: game.hero?.stats.orEmpty()
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        fight.skills.forEach { view ->
-            if (view == null) {
-                Box(Modifier.weight(1f).height(52.dp).border(1.dp, Bronze.copy(alpha = .35f), RoundedCornerShape(8.dp)))
-            } else {
-                SkillButton(view, live, Modifier.weight(1f), onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
-            }
-        }
-        Spacer(Modifier.width(4.dp))
         fight.flasks.forEach { view ->
             if (view == null) {
                 Box(Modifier.size(44.dp).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
@@ -67,37 +65,81 @@ import com.sperance.exileforge.ui.theme.*
                 FlaskButton(view, live) { onCommand(RunCommand.Drink(view.slot)) }
             }
         }
+        Spacer(Modifier.weight(1f))
+        fight.skills.forEach { view ->
+            if (view == null) {
+                EmptySkillSlot()
+            } else {
+                val skill = index?.skills?.byCode?.get(view.code)
+                val tier = remember(skill, skills, stats) { skill?.let { index?.skillGrowth?.tier(it, skills, stats) } ?: HeroSkills.FIRST_TIER }
+                SkillButton(view, skill, tier, live, onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
+            }
+        }
+    }
+}
+
+/** Сторона квадрата умения в бою (4.4.1). */
+private val SKILL_SIDE = 52.dp
+
+/** Скругление плитки умения - как у [NeonSkillIcon]: четверть стороны. */
+private val SkillShape = RoundedCornerShape(SKILL_SIDE / 4)
+
+/** Пустой слот умения: пунктирный квадрат размера иконки. */
+@Composable private fun EmptySkillSlot() {
+    Canvas(Modifier.size(SKILL_SIDE)) {
+        val line = 1.dp.toPx()
+        drawRoundRect(
+            Bronze.copy(alpha = .6f),
+            topLeft = Offset(line / 2, line / 2),
+            size = Size(size.width - line, size.height - line),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.minDimension / 4),
+            style = Stroke(line, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))),
+        )
     }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SkillButton(view: SkillView, live: Boolean, modifier: Modifier, onInfo: () -> Unit, onTap: () -> Unit) {
-    val shape = RoundedCornerShape(8.dp)
+private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, live: Boolean, onInfo: () -> Unit, onTap: () -> Unit) {
     val ready = view.ready >= 1f && view.locked <= 0.0
-    // Готовое умение (3.88.3): зелёная рамка, без свечения.
     Box(
-        modifier.height(52.dp).clip(shape).background(PanelRaised, shape)
-            .border(if (ready && view.affordable) 1.5.dp else 1.dp, if (ready && view.affordable) Gold else Bronze, shape)
+        Modifier.size(SKILL_SIDE)
             .combinedClickable(onLongClick = onInfo) { if (live && ready && view.affordable) onTap() }
             .semantics { contentDescription = SkillText.title(view.code) },
     ) {
-        SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), if (view.affordable) GoldBright else Muted)
-        // What is left to recover darkens the button from the top, as a flask's charge fills it from the bottom.
-        if (!ready) Box(Modifier.fillMaxWidth().fillMaxHeight(1 - view.ready).background(Color.Black.copy(alpha = .6f)))
-        if (!ready && view.locked <= 0.0) Text(fineNumber(view.seconds), color = Parchment, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
-        if (view.locked > 0.0) SealedSlot(view.locked, shape)
+        if (skill != null) {
+            NeonSkillIcon(skill, tier, SKILL_SIDE)
+        } else {
+            SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), GoldBright)
+        }
+        // Нехватка маны (4.4.1): синяя подложка под отметками слота
+        if (!view.affordable) Box(Modifier.matchParentSize().clip(SkillShape).background(ManaBlue.copy(alpha = .28f)))
+        // Откат - тёмный сектор того, что ещё восстанавливается, по часовой от верха, и секунды
+        if (!ready && view.locked <= 0.0) {
+            Canvas(Modifier.matchParentSize().clip(SkillShape)) {
+                val reach = size.maxDimension * 1.5f
+                drawArc(
+                    Color.Black.copy(alpha = .62f),
+                    -90f + 360f * view.ready,
+                    360f * (1 - view.ready),
+                    useCenter = true,
+                    topLeft = Offset(center.x - reach / 2, center.y - reach / 2),
+                    size = Size(reach, reach),
+                )
+            }
+            Text(fineNumber(view.seconds), color = Parchment, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
+        }
+        if (view.locked > 0.0) SealedSlot(view.locked, SkillShape)
         Text(
             "${view.cost}",
             color = if (view.affordable) Rune else LifeRed,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 3.dp, bottom = 1.dp),
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = 4.dp, bottom = 2.dp),
         )
         if (view.condition == SlotCondition.MANUAL) {
-            Text("✋", fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(2.dp))
+            Text("✋", fontSize = 9.sp, modifier = Modifier.align(Alignment.TopStart).padding(3.dp))
         }
-        Text("${view.level}", color = Gold, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(end = 3.dp))
         Box(Modifier.align(Alignment.BottomStart).size(18.dp).clickable(onClickLabel = ui("fight.skill_info"), onClick = onInfo), contentAlignment = Alignment.Center) {
             Text(
                 "i",

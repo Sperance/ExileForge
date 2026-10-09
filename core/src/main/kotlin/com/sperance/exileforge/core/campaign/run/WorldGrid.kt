@@ -141,24 +141,41 @@ private class GridAxis(from: Double, to: Double) {
 /** Shares of a line closer than this cross both borders at once: the line goes through a corner. */
 private const val CORNER = 1e-9
 
-/** What the hero sees from the cell they stand in, worked out again only when they leave it. */
+/**
+ * What the hero sees from the cell they stand in, worked out again only when they leave it. Сначала открытые клетки по прямой
+ * [sight]; затем скала (4.3.1): видна, если до её центра дошла прямая или рядом (8 соседей) лежит видимая открытая клетка - так
+ * в туннеле в одну клетку стены видны вдоль всего освещённого пола, а не лишь у ног: прямая к центру дальней боковой стены
+ * режет соседнюю скалу под скользящим углом.
+ */
 internal fun ExpeditionWorld.light() {
     val here = Cell(floor(heroX).toInt(), floor(heroY).toInt())
     if (here == litFrom) return
     litFrom = here
     lit.fill(false)
     val reach = ceil(lightRadius).toInt()
+    val rocks = ArrayList<Cell>()
     for (y in here.y - reach..here.y + reach) {
         for (x in here.x - reach..here.x + reach) {
             if (x !in 0 until map.width || y !in 0 until map.height) continue
             if (hypot(x - here.x.toDouble(), y - here.y.toDouble()) > lightRadius) continue
-            // A rock face is seen when the line reaches it; what is behind it is not - [sight] skips the target's own cell.
-            if (!sight(heroX, heroY, x + 0.5, y + 0.5)) continue
-            lit[y * map.width + x] = true
-            explored[y * map.width + x] = true
+            if (!map.clear(x, y)) {
+                rocks += Cell(x, y)
+                continue
+            }
+            if (sight(heroX, heroY, x + 0.5, y + 0.5)) see(x, y)
         }
     }
+    // A rock face is seen when the line reaches it or it borders lit open ground; what is behind it is not.
+    rocks.forEach { (x, y) -> if (bordersLit(x, y) || sight(heroX, heroY, x + 0.5, y + 0.5)) see(x, y) }
 }
+
+private fun ExpeditionWorld.see(x: Int, y: Int) {
+    lit[y * map.width + x] = true
+    explored[y * map.width + x] = true
+}
+
+/** Лежит ли рядом со скалой (8 соседей) видимая открытая клетка. */
+private fun ExpeditionWorld.bordersLit(x: Int, y: Int): Boolean = ExpeditionWorld.STEPS.any { (dx, dy) -> map.clear(x + dx, y + dy) && lit(x + dx, y + dy) }
 
 /** A move that slides along walls: each axis is tried on its own, so a diagonal into a wall still glides. */
 internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Pair<Double, Double> {

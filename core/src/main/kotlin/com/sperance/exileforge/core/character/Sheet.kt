@@ -84,10 +84,12 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
+        laws: List<String> = emptyList(),
     ): HeroSheet {
         // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them; проходы по чужим веткам листу ничего не дают.
+        // Законы тронов героя - строки листа тем же правилом, что у сервера.
         val helpers = com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
-        val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped })
+        val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped }, laws)
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index))
     }
 
@@ -109,8 +111,9 @@ object Sheets {
         before: Map<String, Double>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         place: Slot? = null,
+        laws: List<String> = emptyList(),
     ): List<StatDelta> {
-        val next = worn(index, item, level, heroClass, tree, items, pets, place) ?: return emptyList()
+        val next = worn(index, item, level, heroClass, tree, items, pets, place, laws) ?: return emptyList()
         // The counts of what is worn (empty slots, uniques…) are the powers' reading of the sheet, not a figure to compare.
         return (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
             .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
@@ -131,7 +134,8 @@ object Sheets {
         before: Map<String, Double>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         place: Slot? = null,
-    ): SheetVerdict? = worn(index, item, level, heroClass, tree, items, pets, place)?.let { SheetVerdict.of(index, level, before, it) }
+        laws: List<String> = emptyList(),
+    ): SheetVerdict? = worn(index, item, level, heroClass, tree, items, pets, place, laws)?.let { SheetVerdict.of(index, level, before, it) }
 
     /**
      * The whole sheet with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),
@@ -146,6 +150,7 @@ object Sheets {
         items: List<ItemInstance>,
         pets: List<com.sperance.exileforge.rules.content.Pet>,
         place: Slot?,
+        laws: List<String>,
     ): Map<String, Double>? {
         val template = index.template(item.template) ?: return null
         val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
@@ -160,6 +165,6 @@ object Sheets {
                 else -> it
             }
         }
-        return calculate(index, level, heroClass, tree, after, pets).stats
+        return calculate(index, level, heroClass, tree, after, pets, laws).stats
     }
 }

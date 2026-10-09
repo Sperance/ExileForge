@@ -34,7 +34,7 @@ internal object HeroLens {
     fun wearDelta(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): List<StatDelta> {
         index ?: return emptyList()
         hero ?: return emptyList()
-        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place)
+        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place, hero.info.laws)
     }
 
     /** Память вердиктов (3.89.0): одна на приложение, сбрасывается сама с новым героем или контентом. */

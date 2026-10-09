@@ -26,7 +26,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     /** Every token of the zone — or of its Vaal zone — as the seed rolls it, with [buffs] of the map on each. */
     fun packs(vaal: Boolean, buffs: List<MonsterEffect>): List<List<RolledMonster>> {
         val casting = run.streams.of(if (vaal) "vaalCasting" else "casting")
-        return List(if (vaal) run.vaalCount else run.count) { i -> run.spawn(i, vaal).pack.map { skilled(buffed(it, buffs), casting) } }
+        return List(if (vaal) run.vaalCount else run.count) { i -> run.spawn(i, vaal).pack.map { skilled(buffed(sworn(it), buffs), casting) } }
     }
 
     /**
@@ -35,7 +35,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
      */
     fun summoned(token: Int, buffs: List<MonsterEffect>): List<RolledMonster> {
         val casting = run.streams.of("summonedCasting", token)
-        return run.spawn(token).pack.map { skilled(buffed(it, buffs), casting) }
+        return run.spawn(token).pack.map { skilled(buffed(sworn(it), buffs), casting) }
     }
 
     /** The zone's boss at this encounter: its signature lines and a few of its table, [extra] what the map does to it alone. */
@@ -48,7 +48,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice, moreRolls: Int = 0): RolledMonster? {
         if (code.value.isBlank() || index.monster(code) == null) return null
         val view = monsters.guardian(code, level).let { if (moreRolls > 0) it.copy(rolls = it.rolls.map { n -> n + moreRolls }) else it }
-        return skilled(buffed(monsters.boss(view, dice, extra), buffs), dice)
+        return skilled(buffed(sworn(monsters.boss(view, dice, extra)), buffs), dice)
     }
 
     /**
@@ -62,8 +62,14 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         val picked = monsters.draw(run.pool, run.levelOf(zone), rule, dice.between(rule.modifiers), dice)
         val essences = crystal.essences.mapNotNull { index.essence(it)?.kind?.monster }.distinct().mapNotNull(index::modifier)
             .map { monsters.rolled(monsters.raise(it, 1, run.levelOf(zone)), 1.0, dice) }
-        return skilled(buffed(monsters.build(monster, run.levelOf(zone), rule, picked + essences, dice, extra), buffs), dice)
+        return skilled(buffed(sworn(monsters.build(monster, run.levelOf(zone), rule, picked + essences, dice, extra)), buffs), dice)
     }
+
+    /**
+     * Цена законов тронов героя ([Run.lawEffects]): зеркала тронов ниже региона зоны, на карте Атласа - всех, - в статах монстра
+     * как его собственные строки, до баффов карты. Ложится один раз, при постановке монстра.
+     */
+    fun sworn(monster: RolledMonster): RolledMonster = if (run.lawEffects.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, run.lawEffects))
 
     /** The map's [buffs] folded into the monster's stats and kept apart, so the arena can say which is which. */
     fun buffed(monster: RolledMonster, buffs: List<MonsterEffect>): RolledMonster = if (buffs.isEmpty()) monster else monster.copy(stats = monsters.fold(monster.stats, buffs), mapBuffs = monster.mapBuffs + buffs)

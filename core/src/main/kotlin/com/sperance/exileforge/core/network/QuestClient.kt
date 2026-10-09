@@ -33,6 +33,12 @@ class QuestClient internal constructor(private val http: Transport) {
         return http.post("$HERO_QUESTS/reset", heroQuery(heroId, "offerId" to offerId))
     }
 
+    /**
+     * Взять закон трона [code] за пройденную главу (сервер, `API_REVISION` 63): один на трон и навсегда. Отказы - `QU_008` (закона
+     * нет), `QU_009` (глава трона не пройдена), `QU_010` (закон этого трона уже выбран).
+     */
+    suspend fun law(heroId: String, code: String): QuestBoard = http.post("$HERO_QUESTS/law", heroQuery(heroId, "code" to code))
+
     suspend fun guild(heroId: String): GuildQuests = http.get("$GUILD_QUESTS", heroQuery(heroId))
 
     /** The guild's reward: a personal quest by [questId], or a share of a common goal by its [goal] key. */

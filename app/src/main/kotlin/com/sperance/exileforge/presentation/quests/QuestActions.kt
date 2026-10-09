@@ -18,6 +18,7 @@ import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.QuestClaimed
 import com.sperance.exileforge.rules.content.QuestKind
+import com.sperance.exileforge.rules.text.LocaleKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -60,6 +61,9 @@ class QuestActions(
     /** Невзятый листок [offerId] снят с доски (4.2.0): место заполнится само по своему таймеру. */
     fun reset(offerId: String) = board(ui("quest.toast.reset")) { api.quests.reset(it, offerId) }
     fun abandon(questId: String) = board(ui("quest.toast.abandoned")) { api.quests.abandon(it, questId) }
+
+    /** Закон трона [code] за пройденную главу - навсегда; лист героя перечитывается снимком того же ответа. */
+    fun law(code: String) = board(ui("story.law.toast", loc(LocaleKey.lawName(code)))) { api.quests.law(it, code) }
 
     fun claimGuild(questId: String? = null, goal: String? = null) = command(ui("quest.toast.claimed")) { id ->
         val guild = api.quests.claimGuild(id, questId, goal)

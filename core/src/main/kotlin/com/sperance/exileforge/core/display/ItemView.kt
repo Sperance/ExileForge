@@ -62,7 +62,7 @@ enum class AffixKind(val letter: Char) {
                 Source.ALCHEMY -> ALCHEMY
                 Source.UNIQUE -> UNIQUE
                 Source.ESSENCE -> ESSENCE
-                Source.PASSIVE, Source.MONSTER, Source.ATLAS, Source.RULE, Source.ALTAR, null -> null
+                Source.PASSIVE, Source.MONSTER, Source.ATLAS, Source.RULE, Source.ALTAR, Source.LAW, null -> null
             }
         }
     }

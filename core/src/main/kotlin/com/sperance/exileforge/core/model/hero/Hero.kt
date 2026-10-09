@@ -46,6 +46,8 @@ import kotlinx.serialization.Serializable
     val autoSell: com.sperance.exileforge.rules.content.AutoSell = com.sperance.exileforge.rules.content.AutoSell(),
     /** Tree points beyond the level (3.73.0, server 1.69.0): only the testing window gives them. */
     val bonusPoints: Int = 0,
+    /** Взятые законы тронов (сюжет): строки листа героя, по одному закону на пройденный трон и навсегда. */
+    val laws: List<String> = emptyList(),
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */

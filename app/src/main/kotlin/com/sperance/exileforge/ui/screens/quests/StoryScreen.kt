@@ -25,6 +25,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.QuestBoard
+import com.sperance.exileforge.rules.content.ThroneLaws
+import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
@@ -32,7 +34,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /*
  * Сюжет (4.2.0): не раздел доски заданий, а свой экран «Похода», открытый с первого уровня. На карте мира - карточка текущей
- * главы (цель, прогресс, награда); нажатие открывает все главы.
+ * главы (цель, прогресс, награда); нажатие открывает все главы. «Девять тронов»: у главы - вступление, за её финал - эпилог и
+ * выбор закона трона ([LawChoice]), взятые законы - под главой.
  */
 
 /** Весь сюжет: глава, её шаги - пройденные, текущий заданием и будущие; «назад» - на карту «Похода». */
@@ -57,9 +60,23 @@ import org.koin.compose.viewmodel.koinViewModel
  * награда; нажатие - весь сюжет. Сюжет пройден или доска не прочитана - карточки нет.
  */
 @Composable fun StoryCard(game: GameUi, board: QuestBoard?, modifier: Modifier = Modifier, onOpen: () -> Unit) {
-    val chapter = board?.let { game.index?.quests?.story?.getOrNull(it.chapter) } ?: return
-    val quest = board.story ?: return
+    val index = game.index ?: return
+    board ?: return
     val shape = RoundedCornerShape(12.dp)
+    // Трон пройденной главы ждёт выбора закона - карточка зовёт к нему раньше шага, даже когда сюжет уже пройден
+    if (ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty()) {
+        Row(
+            modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = GoldBright).clickable(role = Role.Button, onClick = onOpen).padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            androidx.compose.material3.Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
+            Text(ui("story.card_law"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
+        }
+        return
+    }
+    val chapter = index.quests.story.getOrNull(board.chapter) ?: return
+    val quest = board.story ?: return
     Column(
         modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = Gold).clickable(role = Role.Button, onClick = onOpen).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
@@ -67,7 +84,7 @@ import org.koin.compose.viewmodel.koinViewModel
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             androidx.compose.material3.Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
             Text(
-                ui("story.card_chapter", loc("quest.chapter.${chapter.region}"), board.step + 1, chapter.steps.size),
+                ui("story.card_chapter", loc(LocaleKey.chapterTitle(chapter.region)), board.step + 1, chapter.steps.size),
                 color = Muted,
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
@@ -83,9 +100,19 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** The story: the chapter's name, its steps behind and ahead, and the step at hand as a quest. */
+/**
+ * The story: a throne waiting for its law first (the chapter's epilogue and the two laws), then the chapter - its name, its
+ * introduction, its steps behind and ahead, the step at hand as a quest, - and the laws already taken.
+ */
 private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
-    val chapters = game.index?.quests?.story.orEmpty()
+    val index = game.index ?: return
+    val chapters = index.quests.story
+    val laws = ThroneLaws(index)
+    val taken = game.heroInfo?.laws.orEmpty()
+    laws.pending(board.chapter, taken).forEach { throne ->
+        item(key = "law-${throne.region}") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { LawChoice(index, throne, busy, vm::law) } }
+    }
+    val chosen = taken.mapNotNull(laws::law)
     val chapter = chapters.getOrNull(board.chapter)
     if (chapter == null) {
         item {
@@ -94,12 +121,15 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
                 MutedText(ui("quest.story_done_text"))
             }
         }
+        item(key = "laws") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TakenLaws(index, chosen) } }
         return
     }
     item {
         ForgePanel {
-            Engraved(loc("quest.chapter.${chapter.region}"))
+            Engraved(loc(LocaleKey.chapterTitle(chapter.region)))
             MutedText(ui("quest.chapter_line", loc("region.${chapter.region}.name"), board.step + 1, chapter.steps.size))
+            Spacer(Modifier.height(6.dp))
+            Text(loc(LocaleKey.chapterIntro(chapter.region)), color = Parchment, style = MaterialTheme.typography.bodyMedium)
         }
     }
     items(chapter.steps.withIndex().toList(), key = { it.value.code }) { (index, step) ->
@@ -110,6 +140,7 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
             else -> StepLine("· " + loc("quest.story.${step.code}.name"), Muted)
         }
     }
+    item(key = "laws") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TakenLaws(index, chosen) } }
 }
 
 @Composable private fun StepLine(text: String, color: Color) {

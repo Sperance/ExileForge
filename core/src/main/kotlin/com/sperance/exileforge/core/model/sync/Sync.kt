@@ -34,7 +34,7 @@ import kotlinx.serialization.json.JsonElement
  * 61 - статусы отчётов `CREATED`/`SENT`, обзор Разлома (правило `SIGHT`, правила у даров), `campaign/start?forced=` механики тестировщика.
  * 63 - статус отчёта `REVIEW` и переходы `AdminReport.moves`, удаление `bugreport/delete`, без служебного журнала в отчёте,
  *      суточный вклад `GuildMember.dayLimit`/`dayLeft`, права гильдии `GuildPolicy` (офицер повышает участника), работа кузнеца
- *      `JobKind.TOOL` (инструменты профессий).
+ *      `JobKind.TOOL` (инструменты профессий), законы тронов: `quests/law` (`QU_008`-`QU_010`), `HeroInfo.laws`, `RunContext.laws`.
  */
 const val API_REVISION = 63
 

@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op
@@ -18,11 +19,12 @@ import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatBreakdown
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.StatSource
+import com.sperance.exileforge.rules.text.LocaleKey
 import kotlin.math.abs
 import kotlin.math.ln
 
 /** The cards of a figure's window, in the order they are read; the colour is the UI's, keyed by the kind. */
-enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, PET, SKILL, OTHER, AFTER }
+enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, PET, LAW, SKILL, OTHER, AFTER }
 
 /** One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. */
 data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null)
@@ -109,6 +111,7 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.NODE -> ShareKind.NODE
             SourceKind.ITEM -> ShareKind.ITEM
             SourceKind.PET -> ShareKind.PET
+            SourceKind.LAW -> ShareKind.LAW
             else -> ShareKind.OTHER
         }
     }
@@ -154,6 +157,7 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.NODE -> nodeTitle(source.ref)
             SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> game.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
             SourceKind.PET -> hero?.pets?.pet(source.ref)?.let { locOr("pet.${it.species}", it.species) } ?: ui("stat.kind.PET")
+            SourceKind.LAW -> loc(LocaleKey.lawName(source.ref))
             SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS -> statTitle(source.ref)
         }
     }

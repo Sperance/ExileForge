@@ -46,6 +46,9 @@ class QuestViewModel(
     fun take(offerId: String) = actions.take(offerId)
     fun reset(offerId: String) = actions.reset(offerId)
     fun abandon(questId: String) = actions.abandon(questId)
+
+    /** Закон трона за пройденную главу: выбор навсегда, без перевыбора. */
+    fun law(code: String) = actions.law(code)
     fun claimGuild(questId: String? = null, goal: String? = null) = actions.claimGuild(questId, goal)
 
     /** Весь сюжет - экран над картой «Похода». */

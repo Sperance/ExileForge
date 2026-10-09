@@ -108,7 +108,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
  * Since 2.48.0 the hero's class is gone from it and the account sits in its corner — it left the bottom bar; the plaque
  * of the craft under way is gone too (3.91.0). Since 3.75.0 the inbox, the beetle and the
- * account share one «⋮»: with every badge up the name of the game no longer fit.
+ * account share one «⋮»: with every badge up the name of the game no longer fit. С 4.3.0 почта - снова свой конверт ([MailBadge]).
  */
 @Composable internal fun ForgeBanner(game: GameUi, route: Route, onBug: () -> Unit) {
     val feedback by koinViewModel<FeedbackViewModel>().feedback.collectAsStateWithLifecycle()
@@ -120,7 +120,8 @@ import org.koin.compose.viewmodel.koinViewModel
         HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
             GoldPrice(hero.money)
             LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
-            BannerMenu(feedback.unread, settingsOpen = false, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
+            MailBadge(feedback.unread)
+            BannerMenu(settingsOpen = false, onBug = onBug, onSettings = shell::openSettings)
         }
         return
     }
@@ -151,45 +152,25 @@ import org.koin.compose.viewmodel.koinViewModel
             )
         }
         LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink)
-        BannerMenu(feedback.unread, settingsOpen = route.tab == TAB_SETTINGS, onMail = LocalMailOpen.current, onBug = onBug, onSettings = shell::openSettings)
+        MailBadge(feedback.unread)
+        BannerMenu(settingsOpen = route.tab == TAB_SETTINGS, onBug = onBug, onSettings = shell::openSettings)
     }
 }
 
 /**
- * The banner's «⋮» (3.75.0, the owner's pick «B» of three mockups): the inbox, the beetle and the account behind one button,
- * so the name of the game fits beside the badges. A letter unread marks the button itself with a dot.
+ * The banner's «⋮» (3.75.0, the owner's pick «B» of three mockups): the beetle and the settings behind one button, so the name
+ * of the game fits beside the badges. Почта с 4.3.0 - свой конверт рядом ([MailBadge]), у «⋮» поводов для отметки нет.
  */
-@Composable internal fun BannerMenu(unread: Int, settingsOpen: Boolean, onMail: (() -> Unit)?, onBug: () -> Unit, onSettings: () -> Unit) {
+@Composable internal fun BannerMenu(settingsOpen: Boolean, onBug: () -> Unit, onSettings: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
-            Box {
-                Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
-                if (unread > 0) Box(Modifier.align(Alignment.TopEnd).size(8.dp).background(LifeRed, CircleShape))
-            }
+            Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
         }
         DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             fun pick(action: () -> Unit) {
                 open = false
                 action()
-            }
-            onMail?.let { mail ->
-                DropdownMenuItem(
-                    text = { Text(ui("mail.title")) },
-                    onClick = { pick(mail) },
-                    leadingIcon = { Icon(Icons.Outlined.Mail, null, tint = Gold) },
-                    trailingIcon = {
-                        if (unread > 0) {
-                            Text(
-                                if (unread > 9) "9+" else unread.toString(),
-                                color = Ink,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.background(LifeRed, CircleShape).padding(horizontal = 6.dp),
-                            )
-                        }
-                    },
-                )
             }
             DropdownMenuItem(text = { Text(ui("bug.open")) }, onClick = { pick(onBug) }, leadingIcon = { Icon(Icons.Outlined.BugReport, null, tint = Gold) })
             DropdownMenuItem(
@@ -200,6 +181,32 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
+
+/**
+ * Конверт почты в шапке (4.3.0): всегда под рукой, рядом со значком связи; непрочитанные - красным числом в углу (больше
+ * девяти - «9+»). Открывает почту тот, кого дало приложение ([LocalMailOpen]); без него конверта нет.
+ */
+@Composable internal fun MailBadge(unread: Int) {
+    val open = LocalMailOpen.current ?: return
+    IconButton(onClick = open) {
+        Box {
+            Icon(Icons.Outlined.Mail, ui("mail.title"), tint = if (unread > 0) GoldBright else Gold, modifier = Modifier.size(22.dp))
+            if (unread > 0) {
+                Text(
+                    if (unread > MAIL_SHOWN) "$MAIL_SHOWN+" else unread.toString(),
+                    color = Ink,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 7.dp, y = (-5).dp).background(LifeRed, CircleShape).padding(horizontal = 4.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Больше скольких непрочитанных конверт пишет «N+». */
+private const val MAIL_SHOWN = 9
 
 /**
  * The link to the server (3.30.0): a small crossed cloud while it cannot be reached, and how many commands wait

@@ -9,7 +9,8 @@ import com.sperance.exileforge.core.campaign.Tile
  * Рельеф карты для сцены (4.2.0): что зависит только от клеток карты и потому считается раз на карту и её правку
  * ([ExpeditionMap.revision]), а не каждый кадр.
  *
- * - Массивы скалы: связные (по сторонам) клетки стены получают одну высоту [rise] - крышка массива ровная, без ступенек и швов.
+ * - Массивы скалы: связные (по сторонам и диагоналям - контур стены сливает и их) клетки стены получают одну высоту [rise] -
+ *   крышка массива ровная, без ступенек и швов.
  * - Контуры вод и пропастей ([outline]): соседние клетки - одна гладь со скруглёнными углами (marching squares по центрам клеток,
  *   затем сглаживание квадратичными кривыми); контур отступает от суши на [SHORE] клетки - там виден берег, и только снаружи.
  */
@@ -33,7 +34,9 @@ internal class MapRelief private constructor(private val map: ExpeditionMap) {
                 val at = queue.removeFirst()
                 val x = at % map.width
                 val y = at / map.width
-                for ((nx, ny) in listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1)) {
+                for ((dx, dy) in AROUND) {
+                    val nx = x + dx
+                    val ny = y + dy
                     if (nx !in 0 until map.width || ny !in 0 until map.height || !rock(nx, ny)) continue
                     val next = ny * map.width + nx
                     if (masses[next] < 0) {
@@ -145,6 +148,9 @@ internal class MapRelief private constructor(private val map: ExpeditionMap) {
 private const val SHORE = .32f
 
 private const val MASS_SALT = 61
+
+/** Восемь соседей клетки: массив скалы связен и по диагонали. */
+private val AROUND = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, -1 to -1, 1 to -1, -1 to 1)
 
 /** Стабильное значение в `[0, 1)` на клетку и [salt]. */
 internal fun cellNoise(x: Int, y: Int, salt: Int = 0): Float {

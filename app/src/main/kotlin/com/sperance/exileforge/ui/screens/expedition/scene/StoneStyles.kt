@@ -4,11 +4,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.lerp
 import kotlin.math.max
 import kotlin.math.sin
 
 /** I · Wet stone: flagstones split by mortar, puddles holding the torch, walls laid in courses. Капель с 4.2.0 нет - дождя на картах нет. */
 internal class WetStone : MapStyle() {
+    private val wet = Color(0xFFBED2E1)
+
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
         val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
         pen.color = tone(palette.floor, (.95f + noise(spot.x, spot.y) * .3f) * light)
@@ -26,54 +29,10 @@ internal class WetStone : MapStyle() {
         }
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * 1.5f
-        // Зерно камня - одно на массив (4.2.0): крышка не пестрит клетками
-        val grain = .9f + spot.rise * .25f
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, 1.15f * grain * light, alpha = alpha),
-            tone(palette.wallSide, .75f * grain * light, alpha = alpha),
-            tone(palette.wallTop, 1.1f * grain * light, alpha = alpha),
-        )
-        pen.color = Color.Black.copy(alpha = .45f * alpha)
-        val joint = unit * .03f
-        when (variant(spot)) {
-            // Courses laid level.
-            0 -> for (i in 1..2) {
-                val lift = h * i / 3f
-                Face.entries.forEach { face -> seam(spot, face, joint, 0f, lift, 1f, lift) }
-            }
+    override fun wallHeight(rise: Float) = 1.5f + rise * .3f
 
-            // Ashlar: four courses with their joints staggered.
-            1 -> for (i in 1..3) {
-                val lift = h * i / 4f
-                Face.entries.forEach { face -> seam(spot, face, joint, 0f, lift, 1f, lift) }
-                val shift = if (i % 2 == 0) .25f else .6f
-                Face.entries.forEach { face -> seam(spot, face, joint, shift, lift - h / 4f, shift, lift) }
-            }
-
-            // Rubble: odd stones pressed into mortar, a green stain of damp at the foot.
-            else -> {
-                repeat(4) { k ->
-                    val face = if (k % 2 == 0) Face.LEFT else Face.RIGHT
-                    if (!spot.shows(face)) return@repeat
-                    val t = .15f + noise(spot.x, spot.y, 40 + k) * .7f
-                    val z = h * (.2f + noise(spot.x, spot.y, 44 + k) * .6f)
-                    val (x, y) = on(face, spot, t, z).let { it[0] to it[1] }
-                    pen.color = tone(palette.wallSide, (if (k % 2 == 0) .85f else .55f) * light, alpha = alpha)
-                    pen.ellipse(x - unit * .16f, y - unit * .09f, unit * .32f, unit * .18f)
-                    pen.color = Color.Black.copy(alpha = .4f * alpha)
-                    pen.line(x - unit * .16f, y - unit * .09f, x + unit * .14f, y - unit * .09f, joint)
-                }
-                pen.color = Color(0xFF4F6B45).copy(alpha = .35f * light * alpha)
-                seam(spot, Face.LEFT, unit * .09f, 0f, unit * .06f, .5f, unit * .1f, 1f, unit * .05f)
-            }
-        }
-        // The wet shine along the cap.
-        frontEdges(spot, h, Color(0xFFBED2E1).copy(alpha = .3f * light * alpha), unit * .04f)
-    }
+    /** Мокрый блеск по кромке. */
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), tone(wet, light), .35f)
 }
 
 /** II · Rune dark: near-black ground where runes breathe, obsidian obelisks with glowing seams, crawling fog. */
@@ -106,41 +65,10 @@ internal class RuneDark : MapStyle() {
         }
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.7f + spot.rise * .9f)
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, .8f * light, alpha = alpha),
-            tone(palette.wallSide, .55f * light, alpha = alpha),
-            tone(palette.wallTop, .9f * light, alpha = alpha),
-        )
-        val a = (.3f + .3f * sin(time * 1.6f + spot.x + spot.y)) * max(.3f, light) * alpha
-        when (variant(spot)) {
-            // An obelisk whose edge seam glows - на углу массива, где видны обе грани.
-            0 -> if (spot.faces == Face.ALL && noise(spot.x, spot.y, 9) < .3f) {
-                for ((glow, stroke) in listOf(.3f to .14f, 1f to .04f)) {
-                    pen.color = palette.accent.copy(alpha = a * glow)
-                    pen.line(spot.cx, spot.cy - unit / 2 + unit * .1f, spot.cx, spot.cy - unit / 2 + h - unit * .1f, unit * stroke)
-                }
-            }
+    override fun wallHeight(rise: Float) = 1.7f + rise * .9f
 
-            // A carved panel: a rune cut in the right face, breathing.
-            1 -> for ((glow, stroke) in listOf(.3f to .12f, 1f to .035f)) {
-                pen.color = palette.accent.copy(alpha = a * glow * .8f)
-                seam(spot, Face.RIGHT, unit * stroke, .5f, h * .25f, .5f, h * .75f)
-                seam(spot, Face.RIGHT, unit * stroke, .3f, h * .6f, .5f, h * .45f, .7f, h * .6f)
-            }
-
-            // Cracked obsidian: a split down the left face, a sliver of light in it.
-            else -> {
-                pen.color = Color.Black.copy(alpha = .6f * alpha)
-                seam(spot, Face.LEFT, unit * .05f, .55f, h * .95f, .4f, h * .65f, .6f, h * .4f, .45f, h * .1f)
-                pen.color = palette.accent.copy(alpha = a * .5f)
-                seam(spot, Face.LEFT, unit * .015f, .55f, h * .95f, .4f, h * .65f, .6f, h * .4f, .45f, h * .1f)
-            }
-        }
-    }
+    /** Руна дышит в кромке обсидиана - волной по карте. */
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, .7f * light), palette.accent, ((.3f + .3f * sin(time * 1.6f + x + y)) * max(.3f, light)).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height
@@ -180,36 +108,10 @@ internal class Ashen : MapStyle() {
         pen.polyline(*crack, width = u * .035f)
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.2f + spot.rise * .6f)
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, 1.1f * light, alpha = alpha),
-            tone(palette.wallSide, .75f * light, alpha = alpha),
-            tone(palette.wallTop, 1.05f * light, alpha = alpha),
-        )
-        val ember = ((.35f + .3f * sin(time * 2f + spot.x * 3)) * light * alpha).coerceIn(0f, 1f)
-        frontEdges(spot, h, core.copy(alpha = ember), unit * .05f)
-        when (variant(spot)) {
-            // Plain charred rock.
-            0 -> Unit
+    override fun wallHeight(rise: Float) = 1.2f + rise * .6f
 
-            // Basalt: columns split top to bottom.
-            1 -> {
-                pen.color = Color.Black.copy(alpha = .45f * alpha)
-                for (t in listOf(.33f, .66f)) Face.entries.forEach { face -> seam(spot, face, unit * .03f, t, 0f, t, h) }
-            }
-
-            // Burning through: a glowing fissure down the left face.
-            else -> {
-                pen.color = lava.copy(alpha = ember * .35f)
-                seam(spot, Face.LEFT, unit * .12f, .3f, h * .9f, .55f, h * .55f, .4f, h * .15f)
-                pen.color = core.copy(alpha = ember)
-                seam(spot, Face.LEFT, unit * .035f, .3f, h * .9f, .55f, h * .55f, .4f, h * .15f)
-            }
-        }
-    }
+    /** Кромка тлеет углями. */
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, .8f * light), core, ((.35f + .3f * sin(time * 2f + x * 3)) * light).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height

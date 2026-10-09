@@ -4,8 +4,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.lerp
 import kotlin.math.max
 import kotlin.math.sin
+import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
 /** VI · Sky glass (3.43.0): ground fused to glass with the sky in it, pillars of crystal, a pale glow of sky overhead (без дождя с 4.2.0). */
 internal class SkyGlass : MapStyle() {
@@ -26,34 +28,10 @@ internal class SkyGlass : MapStyle() {
         }
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.6f + spot.rise * 1.1f)
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, 1.1f * light, alpha = alpha),
-            tone(palette.wallSide, .75f * light, alpha = alpha),
-            tone(palette.wallTop, 1.15f * light, alpha = alpha),
-        )
-        // A facet: a bright diagonal down the left face, as on cut crystal.
-        pen.color = tone(palette.accent, light, alpha = .3f * alpha)
-        seam(spot, Face.LEFT, unit * .05f, .15f, h * .9f, .85f, h * .2f)
-        when (variant(spot)) {
-            // A shard growing from the cap.
-            0 -> {
-                pen.color = tone(palette.accent, .9f * light, alpha = .8f * alpha)
-                pen.triangle(spot.cx - unit * .25f, spot.cy + h, spot.cx + unit * .2f, spot.cy + h, spot.cx - unit * .05f, spot.cy + h + unit * 1.1f)
-            }
+    override fun wallHeight(rise: Float) = 1.6f + rise * 1.1f
 
-            // Lightning sleeping in the rock.
-            1 -> if (noise(spot.x, spot.y, 52) < .4f) {
-                pen.color = palette.accent.copy(alpha = (.3f + .4f * sin(time * 7f + spot.y)).coerceAtLeast(0f) * alpha)
-                seam(spot, Face.RIGHT, unit * .03f, .3f, h * .85f, .55f, h * .6f, .4f, h * .45f, .65f, h * .15f)
-            }
-
-            else -> frontEdges(spot, h, tone(palette.accent, light, alpha = .45f * alpha), unit * .04f)
-        }
-    }
+    /** Грань кристалла ловит небо; изредка в ней вспыхивает спящая молния. */
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), palette.accent, (.45f + (if (cellNoise(x, y, 52) < .2f) .4f * sin(time * 7f + y) else 0f)).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height
@@ -78,41 +56,12 @@ internal class Drowned : MapStyle() {
         pen.ellipse(cx - u * .45f + sway * u * .1f, cy - u * .12f, u * .7f, u * .2f)
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.4f + spot.rise * .9f)
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, .95f * light, alpha = alpha),
-            tone(palette.wallSide, .65f * light, alpha = alpha),
-            tone(palette.wallTop, 1f * light, alpha = alpha),
-        )
-        when (variant(spot)) {
-            // Coral grown over the cap and the edge.
-            0 -> {
-                pen.color = tone(palette.decor, 1.1f * light, alpha = .85f * alpha)
-                pen.circle(spot.cx - unit * .3f, spot.cy + h + unit * .1f, unit * .22f)
-                pen.circle(spot.cx + unit * .1f, spot.cy + h + unit * .18f, unit * .3f)
-                pen.circle(spot.cx + unit * .45f, spot.cy + h + unit * .02f, unit * .18f)
-            }
+    override fun wallHeight(rise: Float) = 1.4f + rise * .9f
 
-            // Kelp hanging down the right face.
-            1 -> {
-                pen.color = tone(Color(0xFF3A7A4A), light, alpha = .8f * alpha)
-                seam(spot, Face.RIGHT, unit * .05f, .3f, h * .95f, .35f, h * .6f, .28f, h * .3f)
-                seam(spot, Face.RIGHT, unit * .05f, .7f, h * .95f, .64f, h * .55f, .72f, h * .2f)
-            }
+    /** Колонны утонувшей империи - «Обточенный камень»; по кромке - коралл. */
+    override fun texture(layout: Layout): WallTexture = Ashlar
 
-            // Barnacles along the left face.
-            else -> if (spot.shows(Face.LEFT)) {
-                pen.color = tone(palette.wallTop, 1.3f * light, alpha = .7f * alpha)
-                listOf(.2f to .3f, .45f to .55f, .7f to .25f, .35f to .8f).forEach { (t, z) ->
-                    val p = left(spot, t, h * z)
-                    pen.circle(p[0], p[1], unit * .07f)
-                }
-            }
-        }
-    }
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), tone(palette.decor, 1.1f * light), .5f)
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height
@@ -150,25 +99,12 @@ internal class Divine : MapStyle() {
         }
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.9f + spot.rise * .8f)
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, 1.05f * light, alpha = alpha),
-            tone(palette.wallSide, .75f * light, alpha = alpha),
-            tone(palette.wallTop, 1.1f * light, alpha = alpha),
-        )
-        // Fluting: the vertical grooves of a column.
-        pen.color = Color.Black.copy(alpha = .2f * alpha)
-        listOf(.25f, .5f, .75f).forEach { t -> Face.entries.forEach { face -> seam(spot, face, unit * .03f, t, h * .1f, t, h * .9f) } }
-        // A gold cap on every column, and a gold band on some.
-        frontEdges(spot, h, gold.copy(alpha = .7f * alpha * max(.4f, light)), unit * .06f)
-        if (variant(spot) == 1) {
-            pen.color = gold.copy(alpha = .5f * alpha)
-            Face.entries.forEach { face -> seam(spot, face, unit * .05f, 0f, h * .55f, 1f, h * .55f) }
-        }
-    }
+    override fun wallHeight(rise: Float) = 1.9f + rise * .8f
+
+    /** Чертоги богов - «Обточенный камень»: мрамор с золотой кромкой. */
+    override fun texture(layout: Layout): WallTexture = Ashlar
+
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = gold.copy(alpha = .9f * max(.4f, light))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height

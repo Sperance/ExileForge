@@ -9,28 +9,10 @@ import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.lerp
 import com.sperance.exileforge.core.campaign.Liquid
 import kotlin.math.sin
+import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
-/**
- * One tile as a style sees it: its cell, its centre in the pen's upward measure, and how many of its four sides are rock. У скалы
- * (4.2.0) ещё [faces] - какие грани видны камере (сосед там не скала) - и [rise], высота её массива в `[0, 1)`, одна на массив.
- */
-internal class TileSpot(val x: Int, val y: Int, val cx: Float, val cy: Float, val walls: Int, val faces: Int = Face.ALL, val rise: Float = 0f) {
-    fun shows(face: Face) = faces and face.bit != 0
-}
-
-/**
- * Грань блока скалы, обращённая к камере (4.2.0): левая смотрит на клетку `y + 1`, правая - на `x + 1`. Грань рисуется, только
- * где сосед не скала - внутри массива граней и швов нет.
- */
-internal enum class Face(val bit: Int, val dx: Int, val dy: Int) {
-    LEFT(1, 0, 1),
-    RIGHT(2, 1, 0),
-    ;
-
-    companion object {
-        const val ALL = 3
-    }
-}
+/** One tile as a style sees it: its cell, its centre in the pen's upward measure, and how many of its four sides are rock. */
+internal class TileSpot(val x: Int, val y: Int, val cx: Float, val cy: Float, val walls: Int)
 
 /** What every stroke of a frame shares: the pen, half a tile's width, and the scene's clock (декора: стоит без `LocalMotion`). */
 internal class SceneFrame(val pen: Pen, val unit: Float, val time: Float)
@@ -42,12 +24,77 @@ internal class PoolCell(val spot: TileSpot, val light: Float)
  * How a biome's ground and rock are drawn (2.64.0, the owner's map mockups I, II, III and V).
  *
  * The camera, the tile, the torch and the fog stay the scene's: a style only decides what a floor
- * tile and a block of rock look like, and what hangs in the air over the whole screen. Colours
- * still come from the biome's [Palette], so two biomes of one style differ at a glance.
+ * tile and the rock look like, and what hangs in the air over the whole screen. Colours
+ * still come from the biome's [Palette], so two biomes of one style differ at a glance. Скала - контурами массивов
+ * ([WallRelief]): стиль даёт им высоту, узор ([texture]), тона и отлив фаски.
  */
 internal abstract class MapStyle {
     abstract fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float)
-    abstract fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float)
+
+    /**
+     * Высота массива скалы в полуширинах клетки при его доле [rise] в `[0, 1)` - одна на массив.
+     */
+    abstract fun wallHeight(rise: Float): Float
+
+    /**
+     * Узор контурной стены по раскладке карты (утверждено владельцем, макеты «Стены v2»): залы - «Обточенный камень»,
+     * пещеры и пустоши - «Живая скала»; стиль может выбрать свой.
+     */
+    open fun texture(layout: Layout): WallTexture = if (layout == Layout.HALLS) Ashlar else LiveRock
+
+    /** Тона слоёв стены в палитре биома. */
+    open fun wallTones(palette: Palette): WallTones = WallTones.of(palette)
+
+    /**
+     * Цвет фаски по кромке куска клетки ([x], [y]) при свете [light]: у стиля - свой отлив (мокрый блеск, тлеющие угли, руны);
+     * [time] - часы декора, без `LocalMotion` стоят.
+     */
+    protected open fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float): Color = tone(tones.rim, light)
+
+    /** Земля под скалой клетки, где не лежит пол: подложка массива. */
+    fun wallGround(frame: SceneFrame, cell: WallCell, tones: WallTones, light: Float) {
+        cell.plate?.let { frame.pen.scope.drawPath(it, tone(tones.ground, light)) }
+    }
+
+    /** Мягкая тень у подножия массива, вперёд к камере: дальний край и ближний, плотнее. */
+    fun wallShadow(frame: SceneFrame, cell: WallCell) {
+        cell.far?.let { frame.pen.scope.drawPath(it, Color.Black.copy(alpha = SHADOW_FAR)) }
+        cell.near?.let { frame.pen.scope.drawPath(it, Color.Black.copy(alpha = SHADOW_NEAR)) }
+    }
+
+    /**
+     * Кусок массива клетки ([x], [y]) слоями: грани (светлее, что смотрят в `+y`, темнее - в `+x`, сумрак к подножию) и их узор,
+     * крышка, фаска, узор крышки, мелочь у подножия. [alpha] - прозрачность «окна» у героя, [light] - свет клетки.
+     */
+    fun wall(frame: SceneFrame, piece: WallPiece, x: Int, y: Int, tones: WallTones, palette: Palette, alpha: Float, light: Float) {
+        val scope = frame.pen.scope
+        piece.faces[0]?.let { face ->
+            scope.drawPath(face, tone(tones.face, light, alpha = alpha))
+            for (k in 1 until piece.faces.size) piece.faces[k]?.let { scope.drawPath(it, Color.Black.copy(alpha = FACE_SHADE * k / (piece.faces.size - 1) * alpha)) }
+            piece.dusk?.let { scope.drawPath(face, it, alpha = alpha) }
+        }
+        marks(frame, piece.faceMarks, tones, alpha, light)
+        scope.drawPath(piece.cap, tone(tones.cap, light, alpha = alpha))
+        piece.rim?.let { scope.drawPath(it, rim(tones, palette, x, y, frame.time, light).let { c -> c.copy(alpha = c.alpha * alpha) }) }
+        marks(frame, piece.capMarks, tones, alpha, light)
+        marks(frame, piece.footMarks, tones, alpha, light)
+    }
+
+    private fun marks(frame: SceneFrame, marks: Array<WallMark>, tones: WallTones, alpha: Float, light: Float) {
+        for (mark in marks) {
+            val color = when (mark.ink) {
+                WallInk.DIM -> Color.Black.copy(alpha = .2f * alpha)
+                WallInk.SHADOW -> Color.Black.copy(alpha = .42f * alpha)
+                WallInk.SHEEN -> tone(tones.light, light, alpha = .22f * alpha)
+                WallInk.ROOT -> tone(tones.root, light, alpha = alpha)
+                WallInk.STONE -> tone(tones.stone, light, alpha = alpha)
+                WallInk.GROWTH -> tone(tones.growth, light, alpha = alpha)
+                WallInk.LIGHT -> tone(tones.light, light, alpha = .85f * alpha)
+                WallInk.BLOOM -> tone(tones.bloom, light, alpha = .9f * alpha)
+            }
+            frame.pen.scope.drawPath(mark.path, color)
+        }
+    }
 
     /**
      * A chasm (3.91.0): the ground's rim around a sunken dark, the biome's accent glimmering at the bottom - a pit, a crack, a
@@ -108,67 +155,16 @@ internal abstract class MapStyle {
 
     protected fun Pen.diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = quad(cx - halfWidth, cy, cx, cy - halfHeight, cx + halfWidth, cy, cx, cy + halfHeight)
 
-    /**
-     * A block standing on the tile, [height] tall: the faces the camera sees and the cap. Автотайлинг (4.2.0): грань - только
-     * где сосед не скала ([TileSpot.faces]), высота - одна на массив, так что крышки соседних блоков сходятся без швов. Крышка
-     * чуть шире клетки - сглаживание краёв не оставляет щелей между крышками.
-     */
-    protected fun SceneFrame.block(spot: TileSpot, height: Float, left: Color, right: Color, cap: Color) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
-        val bottom = cy - u / 2
-        if (spot.shows(Face.LEFT)) {
-            pen.color = left
-            pen.quad(cx - u, cy, cx, bottom, cx, bottom + height, cx - u, cy + height)
-        }
-        if (spot.shows(Face.RIGHT)) {
-            pen.color = right
-            pen.quad(cx, bottom, cx + u, cy, cx + u, cy + height, cx, bottom + height)
-        }
-        pen.color = cap
-        val seal = if (cap.alpha >= 1f) CAP_SEAL else 0f
-        pen.diamond(cx, cy + height, u + seal, u / 2 + seal / 2)
-    }
-
-    /** The cap's edges that face the camera, where light and glow gather - только над видимыми гранями (4.2.0). */
-    protected fun SceneFrame.frontEdges(spot: TileSpot, height: Float, color: Color, width: Float) {
-        pen.color = color
-        if (spot.shows(Face.LEFT)) pen.line(spot.cx - unit, spot.cy + height, spot.cx, spot.cy - unit / 2 + height, width)
-        if (spot.shows(Face.RIGHT)) pen.line(spot.cx, spot.cy - unit / 2 + height, spot.cx + unit, spot.cy + height, width)
-    }
-
-    /**
-     * Which of the style's three wall textures a block wears (2.73.0): fixed per cell, so the rock
-     * of one map is a mix of kindred faces rather than one repeated.
-     */
-    protected fun variant(spot: TileSpot) = (noise(spot.x, spot.y, 77) * WALL_VARIANTS).toInt().coerceAtMost(WALL_VARIANTS - 1)
-
-    /** A point on the block's left face: [t] across it from the outer edge, [z] up from the ground. */
-    protected fun SceneFrame.left(spot: TileSpot, t: Float, z: Float) = floatArrayOf(spot.cx - unit + t * unit, spot.cy - t * unit / 2 + z)
-
-    /** A point on the block's right face: [t] across it from the front edge, [z] up from the ground. */
-    protected fun SceneFrame.right(spot: TileSpot, t: Float, z: Float) = floatArrayOf(spot.cx + t * unit, spot.cy - unit / 2 + t * unit / 2 + z)
-
-    /** Точка на грани [face] блока: [t] поперёк грани, [z] вверх от земли. */
-    protected fun SceneFrame.on(face: Face, spot: TileSpot, t: Float, z: Float) = if (face == Face.LEFT) left(spot, t, z) else right(spot, t, z)
-
-    /**
-     * A stroke along a face through its points, each a `t` and `z` pair. Скрытая грань (4.2.0) - внутри массива - не несёт ни
-     * швов, ни узора.
-     */
-    protected fun SceneFrame.seam(spot: TileSpot, face: Face, width: Float, vararg tz: Float) {
-        if (!spot.shows(face)) return
-        pen.polyline(*tz.toList().chunked(2).flatMap { (t, z) -> on(face, spot, t, z).toList() }.toFloatArray(), width = width)
-    }
-
     /** A value spread over the screen by [index] - particles that need no state of their own. */
     protected fun spread(index: Int, salt: Int) = noise(index, salt, 97)
 }
 
-/** How many kindred wall textures each style draws (2.73.0). */
-private const val WALL_VARIANTS = 3
+/** Тень грани, что смотрит в `+x`, против освещённой, что смотрит в `+y`. */
+private const val FACE_SHADE = .36f
 
-/** Запас крышки за край клетки в пикселях (4.2.0): соседние крышки перекрываются и не светят щелью сглаживания. */
-private const val CAP_SEAL = .6f
+/** Мягкая тень у подножия: дальний край и ближний. */
+private const val SHADOW_FAR = .18f
+private const val SHADOW_NEAR = .24f
 
 /** Which style draws which biome: halls of stone, the dark of crypts, the burnt land, the living cave, the sands. */
 internal object MapStyles {

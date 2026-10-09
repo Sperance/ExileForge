@@ -4,13 +4,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.lerp
 import kotlin.math.max
 import kotlin.math.sin
+import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
 /** V · Moss and roots: a living floor with grass swaying, mossy banks with roots and ferns, soft shade by the rock, fireflies. */
 internal class Overgrown : MapStyle() {
     private val grass = Color(0xFF6F9E4C)
-    private val root = Color(0xFF4A3624)
 
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
         val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
@@ -30,49 +31,24 @@ internal class Overgrown : MapStyle() {
         }
     }
 
-    /**
-     * Скала леса (4.2.0) - земляной вал массивом, как у всех стилей, через [block]: бока земли, мшистая крышка, корни по видимым
-     * граням; на крышке то камень со своим мхом, то папоротник.
-     */
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val (cx, cy) = spot.cx to spot.cy
-        val h = unit * (.9f + spot.rise * .5f)
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, light, alpha = alpha),
-            tone(palette.wallSide, .7f * light, alpha = alpha),
-            tone(palette.decor, .95f * light, alpha = alpha),
+    override fun wallHeight(rise: Float) = .9f + rise * .5f
+
+    /** Лес, болото, джунгли - «Заросли» при любой раскладке. */
+    override fun texture(layout: Layout): WallTexture = Thicket
+
+    /** Земляной вал под листвой: бока - земля, крышка и фаска - листва цвета декора. */
+    override fun wallTones(palette: Palette) = WallTones.of(palette).let {
+        WallTones(
+            face = tone(palette.wallSide, 1.1f),
+            cap = tone(palette.decor, .8f),
+            rim = tone(palette.decor, 1.45f),
+            ground = it.ground,
+            light = tone(palette.decor, 1.8f),
+            growth = tone(palette.decor, 1.05f),
+            bloom = tone(palette.decor, 1.5f),
+            root = it.root,
+            stone = it.stone,
         )
-        // Мох свисает с кромки над видимыми гранями
-        frontEdges(spot, h, tone(palette.decor, 1.15f * light, alpha = alpha), unit * .1f)
-        when (variant(spot)) {
-            // A root over the bank, now and then.
-            0 -> if (noise(spot.x, spot.y, 33) < .4f) {
-                pen.color = tone(root, light, alpha = alpha)
-                seam(spot, Face.RIGHT, unit * .05f, .3f, h * .95f, .5f, h * .6f, .4f, h * .3f, .6f, 0f)
-            }
-
-            // A stone settled on the moss, its own moss cap.
-            1 -> {
-                val small = unit * .4f
-                pen.color = tone(palette.wallSide, .9f * light, alpha = alpha)
-                pen.ellipse(cx - small * .9f, cy + h - small * .3f, small * 2, small * 1.1f)
-                pen.color = tone(palette.decor, 1.05f * light, alpha = alpha)
-                pen.ellipse(cx - small * .7f, cy + h + small * .35f, small * 1.4f, small * .45f)
-            }
-
-            // Ferns spilling from the moss.
-            else -> {
-                pen.color = tone(grass, light, alpha = alpha)
-                repeat(3) { k ->
-                    val bx = cx + (k - 1) * unit * .3f
-                    val by = cy + h
-                    val lean = (k - 1) * unit * .25f + sin(time * 1.5f + k) * unit * .03f
-                    pen.polyline(bx, by, bx + lean * .5f, by + unit * .25f, bx + lean, by + unit * .4f, width = unit * .05f)
-                }
-            }
-        }
     }
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
@@ -127,34 +103,10 @@ internal class BloodAltar : MapStyle() {
         }
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1.3f + spot.rise * .5f)
-        block(spot, h, tone(palette.wallSide, light, alpha = alpha), tone(palette.wallSide, .65f * light, alpha = alpha), tone(palette.wallTop, light, alpha = alpha))
-        val kind = variant(spot)
-        // Its teeth: a crown of spikes instead of a step.
-        if (kind == 2) {
-            pen.color = tone(palette.wallTop, 1.2f * light, alpha = alpha)
-            for (t in listOf(.25f, .75f)) {
-                Face.entries.filter(spot::shows).forEach { face ->
-                    val (x, y) = on(face, spot, t, h).let { it[0] to it[1] }
-                    pen.triangle(x - unit * .14f, y, x, y + unit * .45f, x + unit * .14f, y)
-                }
-            }
-            return@with
-        }
-        // A band of carved glyphs round the block, lit by the veins.
-        if (kind == 1) {
-            pen.color = vein.copy(alpha = ((.35f + .25f * sin(time * 2.2f - (spot.x + spot.y) * .6f)) * light * alpha).coerceIn(0f, 1f))
-            Face.entries.forEach { face -> seam(spot, face, unit * .03f, 0f, h * .55f, .2f, h * .65f, .4f, h * .55f, .6f, h * .65f, .8f, h * .55f, 1f, h * .65f) }
-        }
-        // Кровь сочится по видимой правой грани
-        if (spot.shows(Face.RIGHT) && noise(spot.x, spot.y, 9) < .35f) {
-            pen.color = weep.copy(alpha = ((.5f + .3f * sin(time * 1.5f + spot.x)) * light * alpha).coerceIn(0f, 1f))
-            val x = spot.cx + unit * (.2f + noise(spot.x, spot.y, 10) * .6f)
-            val top = spot.cy - unit / 2 + h - unit * .1f
-            pen.line(x, top, x, top - h * (.4f + noise(spot.x, spot.y, 11) * .4f), unit * .06f)
-        }
-    }
+    override fun wallHeight(rise: Float) = 1.3f + rise * .5f
+
+    /** Кромка - алая жила, пульсирует волной по карте, как жилы пола. */
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, .7f * light), vein, ((.35f + .25f * sin(time * 2.2f - (x + y) * .6f)) * light).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height
@@ -184,22 +136,10 @@ internal class Dunes : MapStyle() {
         }
     }
 
-    override fun wall(frame: SceneFrame, spot: TileSpot, palette: Palette, alpha: Float, light: Float): Unit = with(frame) {
-        val h = unit * (1f + spot.rise * .7f)
-        block(
-            spot,
-            h,
-            tone(palette.wallSide, 1.15f * light, alpha = alpha),
-            tone(palette.wallSide, .8f * light, alpha = alpha),
-            tone(palette.wallTop, 1.05f * light, alpha = alpha),
-        )
-        // Strata: the bands the sandstone was laid in, running across both faces.
-        pen.color = tone(palette.wallTop, .75f * light, alpha = .5f * alpha)
-        val bands = if (variant(spot) == 0) listOf(.3f, .6f) else listOf(.25f, .5f, .75f)
-        bands.forEach { z -> Face.entries.forEach { face -> seam(spot, face, unit * .04f, 0f, h * z, 1f, h * z) } }
-        // A sunlit crest on some of the rock.
-        if (variant(spot) == 2) frontEdges(spot, h, tone(palette.accent, light, alpha = .35f * alpha), unit * .04f)
-    }
+    override fun wallHeight(rise: Float) = 1f + rise * .7f
+
+    /** Залитый солнцем гребень песчаника. */
+    override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), tone(palette.accent, light), .4f)
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val (w, h) = scope.size.width to scope.size.height

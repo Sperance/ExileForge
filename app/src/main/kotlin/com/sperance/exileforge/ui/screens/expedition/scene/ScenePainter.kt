@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.ExpeditionMap
+import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.BlightSpot
@@ -59,6 +60,9 @@ internal class ScenePainter {
     /** Массивы скалы и контуры вод карты (4.2.0): считаются раз на карту и её правку. */
     private var relief: MapRelief? = null
 
+    /** Контуры стен карты: раз на карту, её правку, стиль и масштаб. */
+    private var walls: WallRelief? = null
+
     fun draw(scope: DrawScope, run: ExpeditionRun, time: Float, classCode: String?) {
         this.time = time
         sealed = run.sealed
@@ -81,6 +85,7 @@ internal class ScenePainter {
         val biome = run.zone.biome
         val style = MapStyles.of(biome)
         val shape = MapRelief.of(map, relief).also { relief = it }
+        val rock = WallRelief.of(map, shape, style, MapGenerator.styleOf(biome), palette, unit, walls).also { walls = it }
         // Узор земли, скалы и воды - декор (4.2.0): без `LocalMotion` стоит
         val frame = SceneFrame(pen, unit, decor)
         val width = scope.size.width
@@ -108,9 +113,17 @@ internal class ScenePainter {
         // than the diamond the screen shows.
         val across = (width / 2 / unit + 2).toDouble()
         fun visible(x: Int, y: Int) = world.explored(x, y) && abs((x - y) - (world.heroX - world.heroY)) < across
+
+        // Глубокую скалу герой не видит, но край массива каймы заходит в неё: он виден вместе с соседней клеткой
+        fun shown(x: Int, y: Int) = visible(x, y) || rock.deep(x, y) && (-1..1).any { dy -> (-1..1).any { dx -> visible(x + dx, y + dy) } }
+
+        // Свет скалы: глубокая клетка светится, как самый светлый сосед, - крышка массива не темнеет пятном
+        fun rockGlow(x: Int, y: Int) = if (rock.deep(x, y)) (-1..1).maxOf { dy -> (-1..1).maxOf { dx -> glow(x + dx, y + dy) } } else glow(x, y)
         scope.translate(width / 2 - cameraX, height * .55f + cameraY) {
             // The ground first, all of it: nothing stands below the floor.
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) style.floor(frame, spot(map, x, y), palette, glow(x, y))
+            // Земля под скалой: подложка массива, где нет пола
+            for (y in ys) for (x in xs) rock.cell(x, y)?.takeIf { it.plate != null && shown(x, y) }?.let { style.wallGround(frame, it, rock.tones, rockGlow(x, y)) }
             // Chasms (3.91.0) sink into the ground: drawn with it, under everything that stands. Вода (3.95.0): реки и озёра биома -
             // вровень с полом. С 4.2.0 и то и другое - одна гладь по контуру карты, неувиденное под ней закрыто тьмой
             fun cells(tile: Tile, near: Boolean) = buildList {
@@ -137,6 +150,8 @@ internal class ScenePainter {
                 hide(tile)
             }
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) decor(map, x, y, palette, biome, glow(x, y))
+            // Мягкая тень у подножия скалы ложится на пол и его мелочь
+            for (y in ys) for (x in xs) rock.cell(x, y)?.takeIf { shown(x, y) }?.let { style.wallShadow(frame, it) }
             // The torch's warmth on the ground, an ellipse because the ground is seen at a slant.
             val hxs = isoX(world.heroX, world.heroY)
             val hys = -isoY(world.heroX, world.heroY)
@@ -163,15 +178,14 @@ internal class ScenePainter {
                 world.agents.filter { it.alive && it.mode in ENGAGED && world.lit(floor(it.x).toInt(), floor(it.y).toInt()) }.forEach { add(Window(it.x, it.y)) }
                 world.screened().forEach { add(Window(it.x + .5, it.y + .5)) }
             }
-            fun drawn(x: Int, y: Int) = map.tile(x, y) == Tile.WALL && visible(x, y) && touchesFloor(map, x, y)
+            // Скала - кусками массива по клеткам (контур один на массив): кусок встаёт в очередь с глубиной своей клетки, как
+            // прежний блок, так что жетоны перед скалой и за ней сортируются как раньше
             for (y in ys) {
                 for (x in xs) {
-                    if (drawn(x, y)) {
-                        val depth = x + y + 1.0
-                        val alpha = windows.minOf { it.alpha(x, y) }
-                        val faces = Face.entries.filterNot { drawn(x + it.dx, y + it.dy) }.sumOf { it.bit }
-                        standing += depth to { style.wall(frame, spot(map, x, y, faces, shape.rise(x, y)), palette, alpha, glow(x, y)) }
-                    }
+                    val piece = rock.cell(x, y)?.piece ?: continue
+                    if (!shown(x, y)) continue
+                    val alpha = windows.minOf { it.alpha(x, y) }
+                    standing += piece.depth to { style.wall(frame, piece, x, y, rock.tones, palette, alpha, rockGlow(x, y)) }
                 }
             }
             // Выход и портал Ваал стоят по глубине, как всё стоящее (3.95.3): прежде их рисовала земля, и любая скала за ними
@@ -249,15 +263,13 @@ internal class ScenePainter {
         style.atmosphere(scope, palette, decor)
     }
 
-    /** A cell as the style reads it: where its centre falls and how much rock borders it; у скалы - видимые грани и высота массива. */
-    internal fun spot(map: ExpeditionMap, x: Int, y: Int, faces: Int = Face.ALL, rise: Float = 0f) = TileSpot(
+    /** A cell as the style reads it: where its centre falls and how much rock borders it. */
+    internal fun spot(map: ExpeditionMap, x: Int, y: Int) = TileSpot(
         x,
         y,
         isoX(x + .5, y + .5),
         isoY(x + .5, y + .5),
         listOf(x + 1 to y, x - 1 to y, x to y + 1, x to y - 1).count { (nx, ny) -> !map.walkable(nx, ny) },
-        faces,
-        rise,
     )
 
     /**
@@ -291,8 +303,6 @@ internal class ScenePainter {
         scope.drawToken(centre, radius, ring, draw)
         decor?.run { scope.over(centre, radius, clock) }
     }
-
-    internal fun touchesFloor(map: ExpeditionMap, x: Int, y: Int) = (-1..1).any { dy -> (-1..1).any { dx -> map.walkable(x + dx, y + dy) } }
 
     /** A stable, faint unevenness per tile, so the ground does not read as a printed grid; [light] darkens it. */
     internal fun shade(base: Color, x: Int, y: Int, spread: Float = .08f, alpha: Float = 1f, light: Float = 1f): Color {

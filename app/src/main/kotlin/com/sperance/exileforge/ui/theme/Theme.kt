@@ -55,6 +55,9 @@ val ManaBlue = Color(0xFF6FB6FF)
 val ShieldCyan = Color(0xFF63B7C4)
 val Blood = Color(0xFF8A2E2E)
 
+/** Тёплая бронза (4.4.x): нить плашек выбора раздела и цвет Башни. */
+val Brass = Color(0xFFC9A26B)
+
 /** Ожидание итога (4.4.x): связь переподключается - жёлтый между красным «нет связи» и обычным видом. */
 val Caution = Color(0xFFF2C94C)
 

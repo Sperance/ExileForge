@@ -4064,5 +4064,6 @@
   "forge.pick_pet": "Pick a pet",
   "forge.change_pet": "Change pet",
   "link.reconnect_failed": "Could not reconnect: {0}",
-  "link.reconnecting": "Reconnecting…"
+  "link.reconnecting": "Reconnecting…",
+  "hall.league": "League: {0}+"
 }

@@ -4064,5 +4064,6 @@
   "forge.pick_pet": "Выбрать питомца",
   "forge.change_pet": "Сменить питомца",
   "link.reconnect_failed": "Не удалось переподключиться: {0}",
-  "link.reconnecting": "Переподключение…"
+  "link.reconnecting": "Переподключение…",
+  "hall.league": "Лига: {0}+"
 }

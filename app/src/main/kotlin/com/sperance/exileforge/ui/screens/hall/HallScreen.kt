@@ -2,11 +2,9 @@ package com.sperance.exileforge.ui.screens.hall
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -63,21 +61,16 @@ fun HallScreen() {
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             CollapsibleHeader { ScreenHeader(ui("hall.title"), ui("hall.subtitle"), ForgeGlyphs.Gem) }
+            // Таблица с лигами (4.4.x): лига героя сама, выбора нет - лишь подпись, какая
+            leagueLine(index, pick, hall.table)?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
         }
         if (index == null || pick == null) {
             MutedText(ui("common.loading"), Modifier.padding(16.dp))
             return
         }
-        ScrollableTabRow(selectedTabIndex = pick.board.ordinal, containerColor = Abyss, contentColor = Gold, edgePadding = 12.dp) {
-            HallBoard.entries.forEach { board ->
-                Tab(
-                    selected = board == pick.board,
-                    onClick = { if (board != pick.board) vm.pick(HallPick(board, board.defaultScope(index))) },
-                    text = { Text(boardTitle(board), maxLines = 1) },
-                )
-            }
-        }
-        ScopePicker(index, pick, hall.table, vm::pick)
+        val boards = HallBoard.entries
+        StoneTabs(boards.map { it.tab }, boards.indexOf(pick.board), { i -> vm.pick(HallPick(boards[i], boards[i].defaultScope(index))) })
+        ScopePicker(index, pick, vm::pick)
         PullToRefreshBox(isRefreshing = Reads.HALL in activity.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             val table = hall.table
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -108,13 +101,21 @@ private fun HallBoard.defaultScope(index: ContentIndex): String = when (scope) {
 
 private fun rushScope(region: String, tier: Int) = "$region:$tier"
 
-/** Название таблицы реестра на вкладке. */
-private fun boardTitle(board: HallBoard): String = when (board) {
-    HallBoard.RIFT -> ui("hall.board.RIFT")
-    HallBoard.TOWER -> ui("hall.board.TOWER")
-    HallBoard.RUSH -> ui("hall.board.RUSH")
-    HallBoard.GUILD -> ui("hall.board.GUILD")
-    HallBoard.PROFESSION -> ui("hall.board.PROFESSION")
+/** Вкладка таблицы реестра: название, значок режима и цвет его механики. */
+private val HallBoard.tab: StoneTab
+    get() = when (this) {
+        HallBoard.RIFT -> StoneTab(ui("hall.board.RIFT"), ForgeGlyphs.Rift, ModeHue.Rift)
+        HallBoard.TOWER -> StoneTab(ui("hall.board.TOWER"), ForgeGlyphs.Keep, ModeHue.Tower)
+        HallBoard.RUSH -> StoneTab(ui("hall.board.RUSH"), ForgeGlyphs.Skull, ModeHue.Bosses)
+        HallBoard.GUILD -> StoneTab(ui("hall.board.GUILD"), ForgeGlyphs.Banner, ModeHue.Guilds)
+        HallBoard.PROFESSION -> StoneTab(ui("hall.board.PROFESSION"), ForgeGlyphs.Anvil, ModeHue.Professions)
+    }
+
+/** «Лига: X» таблицы с лигами ([HallBoard.leagues]) - лига героя, что назвал ответ; у прочих таблиц - ничего. */
+private fun leagueLine(index: ContentIndex?, pick: HallPick?, table: HallTable?): String? {
+    if (index == null || pick == null || !pick.board.leagues || table == null || table.board != pick.board) return null
+    val level = index.campaign.trials?.rift?.leagues?.getOrNull(table.league) ?: return null
+    return ui("hall.league", level)
 }
 
 /** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии. */
@@ -132,35 +133,27 @@ private fun about(entry: HallEntry): String = listOfNotNull(
     ui("hall.level", entry.level),
 ).joinToString(" · ")
 
-/** Фишка выбора раздела: подпись, выбрана ли, что делает нажатие. */
-private class ScopeChip(val label: String, val on: Boolean, val onClick: () -> Unit)
-
 /**
- * Выбор раздела под вкладками - ряд фишек на каждое деление таблицы: лига у таблиц с лигами ([HallBoard.leagues]), регион и
- * ступень у раша, профессия у профессий. Лига по умолчанию - та, что назвал ответ (лига героя).
+ * Выбор раздела под вкладками (4.4.x - бронзовые плашки [BronzePills]): регион и ступень у раша, профессия у профессий; у
+ * прочих таблиц раздела нет. Лига не выбирается - таблица с лигами берёт лигу героя.
  */
-@Composable private fun ScopePicker(index: ContentIndex, pick: HallPick, table: HallTable?, onPick: (HallPick) -> Unit) {
-    val trials = index.campaign.trials
-    val shown = pick.league ?: table?.league
-    val leagues = trials?.rift?.leagues.orEmpty().takeIf { pick.board.leagues }.orEmpty()
-        .mapIndexed { i, level -> ScopeChip(ui("rift.league", level), shown == i) { onPick(pick.copy(league = i)) } }
-    val scopes: List<List<ScopeChip>> = when (pick.board.scope) {
-        HallScope.NONE -> emptyList()
+@Composable private fun ScopePicker(index: ContentIndex, pick: HallPick, onPick: (HallPick) -> Unit) {
+    when (pick.board.scope) {
+        HallScope.NONE -> Unit
 
-        HallScope.PROFESSION -> listOf(index.professions.professions.map { ScopeChip(professionTitle(it.code), it.code == pick.scope) { onPick(pick.copy(scope = it.code)) } })
+        HallScope.PROFESSION -> {
+            val professions = index.professions.professions
+            BronzePills(professions.map { professionTitle(it.code) }, professions.indexOfFirst { it.code == pick.scope }, { onPick(pick.copy(scope = professions[it].code)) })
+        }
 
         HallScope.RUSH -> {
+            val regions = index.campaign.regions
             val region = pick.scope.substringBefore(':')
             val tier = pick.scope.substringAfter(':', "").toIntOrNull() ?: 0
-            listOf(
-                index.campaign.regions.map { ScopeChip(regionTitle(it.code), it.code == region) { onPick(pick.copy(scope = rushScope(it.code, tier))) } },
-                (0 until (trials?.rush?.tierCount ?: 1)).map { t -> ScopeChip(ui("hall.tier", roman(t + 1)), t == tier) { onPick(pick.copy(scope = rushScope(region, t))) } },
-            )
-        }
-    }
-    (listOf(leagues) + scopes).filter { it.isNotEmpty() }.forEach { row ->
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            row.forEach { chip -> FilterChip(selected = chip.on, onClick = chip.onClick, label = { Text(chip.label, maxLines = 1) }) }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                BronzePills(regions.map { regionTitle(it.code) }, regions.indexOfFirst { it.code == region }, { onPick(pick.copy(scope = rushScope(regions[it].code, tier))) })
+                BronzePills((0 until (index.campaign.trials?.rush?.tierCount ?: 1)).map { ui("hall.tier", roman(it + 1)) }, tier, { onPick(pick.copy(scope = rushScope(region, it))) })
+            }
         }
     }
 }

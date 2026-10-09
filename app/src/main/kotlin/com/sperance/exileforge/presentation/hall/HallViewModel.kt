@@ -17,9 +17,9 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Какая таблица доски славы открыта (4.2.0): [board] из реестра [HallBoard], её раздел [scope] (раш - `регион:ступень`,
- * профессия - код) и лига [league] (null - лига героя, её называет ответ).
+ * профессия - код). Лига - всегда лига героя (4.4.x), её называет ответ.
  */
-data class HallPick(val board: HallBoard, val scope: String = "", val league: Int? = null)
+data class HallPick(val board: HallBoard, val scope: String = "")
 
 /** Доска славы на экране: выбранная таблица [pick] и её ответ [table] (null - ещё читается или не прочитана). */
 data class HallUi(val pick: HallPick? = null, val table: HallTable? = null)
@@ -51,7 +51,7 @@ class HallViewModel(
         val pick = mutable.value.pick ?: return
         val heroId = heroes.heroId.takeIf { it.isNotBlank() } ?: return
         commands.read(Reads.HALL, restart = true) {
-            val table = connection.api.hall.table(heroId, pick.board, pick.scope, pick.league)
+            val table = connection.api.hall.table(heroId, pick.board, pick.scope)
             mutable.update { if (it.pick == pick && heroes.onScreen(heroId)) it.copy(table = table) else it }
         }
     }

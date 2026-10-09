@@ -8,9 +8,9 @@ import com.sperance.exileforge.rules.content.HallTable
  * игрового сервера. Отказы - [ApiFailure] (`BRT_003` неизвестная таблица, `CP_001` чужой раздел).
  */
 class HallClient internal constructor(private val http: Transport) {
-    /** Таблица [board] раздела [scope] (раш - `регион:ступень`, профессия - её код) в лиге [league] (null - лига героя). */
-    suspend fun table(heroId: String, board: HallBoard, scope: String = "", league: Int? = null): HallTable = http.get(
+    /** Таблица [board] раздела [scope] (раш - `регион:ступень`, профессия - её код) в лиге героя. */
+    suspend fun table(heroId: String, board: HallBoard, scope: String = ""): HallTable = http.get(
         "api/v1/hall/table",
-        heroQuery(heroId, "board" to board.name, "scope" to scope.takeIf { it.isNotEmpty() }, "league" to league?.toString()),
+        heroQuery(heroId, "board" to board.name, "scope" to scope.takeIf { it.isNotEmpty() }),
     )
 }

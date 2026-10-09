@@ -33,8 +33,6 @@ import com.sperance.exileforge.core.model.guild.levelProgress
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.rules.content.GuildAction
-import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.quests.GuildQuestsTab
@@ -52,13 +50,13 @@ internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: Gu
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     // Звено здания в цепочке «назад» (4.4.x) - «Гильдия [TAG]»
     TrailTitle(GuildText.title(ui("guild.title"), guild.tag))
-    val recruits = me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)
-    val tabs = GuildTab.entries.filter { it != GuildTab.APPLICATIONS || recruits }
+    // Разделы по праву таблицы (4.4.x): у каждого своё право [GuildTab.requires], раздела без права нет
+    val tabs = GuildTab.entries.filter { it.openTo(me?.role) }
     val tab = guilds.tab?.takeIf { it in tabs }
     if (tab == null) {
         PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                GuildHeader(game, guild)
+                GuildHeader(game, guild) { GuildExitMenu(game, vm, guild, me) }
                 tabs.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         row.forEach { each ->
@@ -143,7 +141,7 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
     }
 }
 
-@Composable private fun GuildHeader(game: GameUi, guild: GuildView) {
+@Composable private fun GuildHeader(game: GameUi, guild: GuildView, menu: @Composable () -> Unit) {
     val rules = game.index?.guilds
     val capacity = guild.capacity.takeIf { it > 0 } ?: rules?.capacity(guild.level) ?: 0
     ForgePanel(accent = guildColor(guild.color)) {
@@ -153,6 +151,7 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
                 Text(GuildText.title(guild.name, guild.tag), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 FactionLine(guild.faction, rules, ui("guild.header_line", guild.members.size, capacity))
             }
+            menu()
         }
         val progress = rules?.levelProgress(guild.level, guild.experience)
             ?: if (guild.next > 0) (guild.experience.toFloat() / guild.next).coerceIn(0f, 1f) else 1f

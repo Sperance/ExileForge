@@ -53,8 +53,17 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     /** Доля простоя, что открывает объект (трещина тайной комнаты), 0..1; у прочих - ноль. */
     open val progress: Double get() = 0.0
 
-    /** Виден ли объект герою: по умолчанию - когда его клетку уже видели. */
-    open fun shown(world: ExpeditionWorld): Boolean = world.explored(cell.x, cell.y)
+    /** Клетки, где объект можно увидеть: хоть одна исследована - объект на карте ([shown]). */
+    protected open val sites: List<Cell> get() = listOf(cell)
+
+    /** Заметил ли герой объект сверх исследованной клетки: ловушку замечает лишь свет; прочие - сразу. */
+    protected open fun noticed(world: ExpeditionWorld): Boolean = true
+
+    /**
+     * Виден ли объект герою (4.3.0) - одно правило для всех объектов карты: только на исследованной клетке ([sites]) и только
+     * замеченный ([noticed]). Восстановленный из журнала забег не рисует сработавшую ловушку в неувиденной пустоте.
+     */
+    fun shown(world: ExpeditionWorld): Boolean = sites.any { world.explored(it.x, it.y) } && noticed(world)
 
     /** Шаг героя на [dt] секунд: что объект просит у забега; null - ничего. */
     abstract fun touch(world: ExpeditionWorld, dt: Double): FeatureAction?
@@ -148,7 +157,7 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
     /** Взведена ли: сработавшая без повторного взвода стоит разряженной до конца карты. */
     val armed: Boolean get() = rearming <= 0 && (!spent || rearm > 0)
 
-    override fun shown(world: ExpeditionWorld): Boolean = seen || spent
+    override fun noticed(world: ExpeditionWorld): Boolean = seen || spent
 
     override fun touch(world: ExpeditionWorld, dt: Double): FeatureAction? {
         if (!seen && world.lit(cell.x, cell.y)) seen = true
@@ -183,7 +192,7 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
     override var progress = 0.0
         private set
 
-    override fun shown(world: ExpeditionWorld): Boolean = world.explored(entrance.x, entrance.y)
+    override val sites: List<Cell> get() = listOf(entrance)
 
     override fun touch(world: ExpeditionWorld, dt: Double): FeatureAction? {
         if (opened) return if (!looted && near(world, chest, world.rules.chestReach)) FeatureAction.Trigger(this, MapFeature.LOOT) else null

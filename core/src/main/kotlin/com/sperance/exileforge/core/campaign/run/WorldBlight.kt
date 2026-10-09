@@ -98,7 +98,7 @@ class BlightSpot(feature: MapFeature.Blight, val cells: List<Cell>) : FeatureSpo
     fun left(world: ExpeditionWorld, point: Int): Int = if (raised(point)) blight.tokens(point).count { !world.fell(it) } else blight.count(point)
 
     /** Видна точка, что Скверна уже раскрыла и герой видел. */
-    override fun shown(world: ExpeditionWorld): Boolean = (0 until revealed).any { world.explored(at(it).x, at(it).y) }
+    override val sites: List<Cell> get() = (0 until revealed).map(::at)
 
     override val landmarks: List<Cell> get() = cells.take(revealed)
 

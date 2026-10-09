@@ -101,7 +101,7 @@ fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized
         val uses = HashMap<String, MutableList<ItemUse>>()
         index.professions.professions.forEach { profession ->
             profession.jobs.forEach { job ->
-                val variants = if (job is Job.Refine) recipes.options(job, heroClass = "").map { it.job } else listOf(job)
+                val variants = if (job is Job.Refine || job is Job.Carve) recipes.options(job, heroClass = "").map { it.job } else listOf(job)
                 variants.forEach { variant ->
                     variant.inputs.forEach { input -> uses.getOrPut(input.item) { ArrayList() } += ItemUse(profession.code, variant.code, variant.level, input.amount) }
                 }
@@ -191,6 +191,9 @@ private class SourceIndex(private val index: ContentIndex) {
                     is Job.Book -> index.skills.skills.filter { it.unlock <= job.upTo }.forEach { work(it.book, job.level) }
 
                     is Job.Refine -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
+
+                    // Резьба руны (4.4.0): каждая руна, что падает не выше потолка работы
+                    is Job.Carve -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
 
                     else -> Unit
                 }

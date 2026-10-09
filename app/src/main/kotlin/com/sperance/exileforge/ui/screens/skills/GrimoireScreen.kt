@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -106,7 +107,7 @@ internal sealed interface Pick {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             val mana = body?.maxMana ?: 0.0
-            val reserved = if (body != null && book != null) Loadout.of(skills, book, classCode, emptyList()).reserved(body) else 0.0
+            val reserved = if (body != null && index != null) Loadout.of(skills, index, classCode, emptyList(), hero?.stats.orEmpty()).reserved(body) else 0.0
             ScreenHeader(
                 ui("skills.title"),
                 listOfNotNull(
@@ -123,11 +124,11 @@ internal sealed interface Pick {
         } else {
             when (section) {
                 GrimoireSection.SKILLS -> {
-                    item { Slots(index, skills, level) { pick = it } }
+                    item { Slots(index, skills, level, body.stats) { pick = it } }
                     item { Caption(ui("skills.book_of", classTitle(classCode))) }
                     // Only what the hero has learned (2.81.0): an unread book's skill appears once its book is read.
                     items(pages.filter { skills.level(it.code) > 0 }, key = { it.code }) { skill ->
-                        Page(game, index, skill, skills.level(skill.code), level, slotOf(skills, skill.code)) { page = skill.code }
+                        Page(game, index, skill, skills, level, body.stats, slotOf(skills, skill.code)) { page = skill.code }
                     }
                     item { Books(game, index, pages) { exchanging = true } }
                 }
@@ -195,7 +196,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 }
 
 /** The five slots: three active over two passive, each open from its level, a tap to fill, change or empty it. */
-@Composable internal fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, onPick: (Pick) -> Unit) {
+@Composable internal fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, stats: Map<String, Double>, onPick: (Pick) -> Unit) {
     val rules = index.skills.rules
     ForgePanel {
         val actives = rules.activeSlots.indices.map { skills.active.getOrNull(it) }
@@ -207,6 +208,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
                 SlotTile(
                     skill,
                     skills.level(skill?.code.orEmpty()),
+                    skill?.let { index.skillGrowth.tier(it, skills, stats) } ?: 1,
                     slot?.condition?.let(::conditionTitle),
                     opens,
                     level,
@@ -224,6 +226,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
                 SlotTile(
                     skill,
                     skills.level(skill?.code.orEmpty()),
+                    skill?.let { index.skillGrowth.tier(it, skills, stats) } ?: 1,
                     skill?.takeIf { it.reserve > 0 }?.let { ui("skills.reserve", number(it.reserve)) },
                     opens,
                     level,
@@ -237,11 +240,13 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 
 /**
  * One slot: the skill's mark and level, its name and the line under it — a slot's condition, an aura's
- * reserve — or a plus while empty, or the level it opens at while locked. [onSwap] puts another in.
+ * reserve — or a plus while empty, or the level it opens at while locked. [onSwap] puts another in. С 4.4.0 знак умения -
+ * «Неон рун» с тиром [tier].
  */
 @Composable internal fun SlotTile(
     skill: SkillDefinition?,
     level: Int,
+    tier: Int,
     line: String?,
     opens: Int,
     heroLevel: Int,
@@ -271,7 +276,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 
             else -> {
                 Box {
-                    SkillGlyph(skill.icon, Modifier.size(28.dp), GoldBright)
+                    NeonSkillIcon(skill, tier, 40.dp)
                     Text(
                         "$level",
                         color = Ink,
@@ -289,11 +294,13 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 }
 
 /**
- * A page of the class's book: what the skill is, its level, where it stands, and what comes next —
- * the requirements of the next book, a book ready to be read, or the level it opens at.
+ * A page of the class's book: what the skill is, its level, where it stands, and what comes next. С 4.4.0 - иконка «Неон рун»
+ * с тиром, тонкая полоса опыта и подпись роста: опыт, ожидание требования, потолок или книга в опыт.
  */
-@Composable internal fun Page(game: GameUi, index: ContentIndex, skill: SkillDefinition, learned: Int, heroLevel: Int, slot: String?, onOpen: () -> Unit) {
+@Composable internal fun Page(game: GameUi, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, stats: Map<String, Double>, slot: String?, onOpen: () -> Unit) {
     val books = bookCount(game, skill.code)
+    val view = remember(skill, skills, heroLevel, stats) { SkillGrowthView.of(index, skill, skills, heroLevel, stats) }
+    val learned = view.level
     val shape = RoundedCornerShape(8.dp)
     Row(
         Modifier.fillMaxWidth().clip(shape).depthPanel(shape).border(1.dp, if (slot != null) Gold.copy(alpha = .6f) else PanelRaised, shape)
@@ -301,14 +308,15 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SkillGlyph(skill.icon, Modifier.size(34.dp), if (learned > 0) GoldBright else Muted)
+        NeonSkillIcon(skill, view.tier, 48.dp, dim = learned == 0)
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Text(skillKindLine(skill), color = Muted, style = MaterialTheme.typography.labelSmall)
+            Text(skillKindLine(skill) + " · " + tierLine(view), color = Muted, style = MaterialTheme.typography.labelSmall)
             Text(SkillText.title(skill.code), color = if (learned > 0) GoldBright else Parchment, style = MaterialTheme.typography.titleSmall)
             slot?.let { Text(it, color = Rune, style = MaterialTheme.typography.labelSmall) }
+            if (learned > 0) XpBar(index, skill, view, compact = true)
             Text(
-                nextLine(index, skill, learned, heroLevel, books),
-                color = if (books > 0 && learned < SkillRules.MAX_LEVEL) Vital else Muted,
+                nextLine(index, skill, view, heroLevel, books),
+                color = if (books > 0 && !view.capped && !view.waiting) Vital else Muted,
                 style = MaterialTheme.typography.labelSmall,
             )
         }
@@ -316,13 +324,17 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
     }
 }
 
-/** What stands before the next level of a skill: the last one, a book to read, what its book asks, or the level it opens at. */
-internal fun nextLine(index: ContentIndex, skill: SkillDefinition, learned: Int, heroLevel: Int, books: Long): String = when {
-    learned >= SkillRules.MAX_LEVEL -> ui("skills.max_level")
-    books > 0 -> ui("skills.book_ready", books, learned + 1)
-    learned == 0 && heroLevel < skill.unlock -> ui("skills.no_book_opens", skill.unlock)
-    learned == 0 -> ui("skills.no_book")
-    else -> ui("skills.next_book", needLine(index, skill, learned + 1))
+/**
+ * What stands before the next level of a skill (4.4.0): неизученное - книга или уровень открытия; изученное - потолок, ожидание
+ * требования, книга в опыт или опыт к следующему уровню.
+ */
+internal fun nextLine(index: ContentIndex, skill: SkillDefinition, view: SkillGrowthView, heroLevel: Int, books: Long): String = when {
+    view.level == 0 && books > 0 -> ui("skills.book_learn", books)
+    view.level == 0 && heroLevel < skill.unlock -> ui("skills.no_book_opens", skill.unlock)
+    view.level == 0 -> ui("skills.no_book")
+    view.capped || view.waiting -> xpCaption(index, skill, view)
+    books > 0 -> ui("skills.book_ready_xp", books, number(view.bookXp))
+    else -> xpCaption(index, skill, view)
 }
 
 /** A level's requirements as the page prints them: the hero's level and each attribute. */

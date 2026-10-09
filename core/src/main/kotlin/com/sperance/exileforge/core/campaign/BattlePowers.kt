@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.campaign.combat.afflict
 import com.sperance.exileforge.core.campaign.combat.afflictSelf
 import com.sperance.exileforge.core.campaign.combat.chargeFlasks
 import com.sperance.exileforge.core.campaign.combat.consumeCharges
+import com.sperance.exileforge.core.campaign.combat.echoCast
 import com.sperance.exileforge.core.campaign.combat.enemies
 import com.sperance.exileforge.core.campaign.combat.flaskCharges
 import com.sperance.exileforge.core.campaign.combat.gainCharges
@@ -47,7 +48,8 @@ import kotlin.math.min
 
 /**
  * What a power's event was about (2.79.0): the foe struck or striking, what the blow did, whether a
- * spell's, the ailment laid, and a fallen foe's ailments before they were cleared.
+ * spell's, the ailment laid, and a fallen foe's ailments before they were cleared. С 4.4.0 у `SKILL_USE` - умение [cast]
+ * на уровне [level], что сила `RECAST` повторяет.
  */
 internal class PowerMoment(
     val target: Battle.Fighter? = null,
@@ -55,6 +57,8 @@ internal class PowerMoment(
     val spell: Boolean = false,
     val ailment: Ailment? = null,
     val ailments: List<ActiveAilment> = emptyList(),
+    val cast: KitSkill? = null,
+    val level: Int = 1,
 ) {
     val damage: Double get() = taken.values.sum()
 }
@@ -412,6 +416,9 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
             PowerAct.ONE_OF -> if (effect.options.isNotEmpty()) return act(power, effect.options[battle.random.nextInt(effect.options.size)], value, moment)
 
+            // Повтор (4.4.0): только что применённое умение ещё раз на amount% силы - эхом, без нового SKILL_USE
+            PowerAct.RECAST -> moment.cast?.let { battle.echoCast(it, moment.level, amount / 100) }
+
             PowerAct.RETALIATE -> {
                 if (moment.target?.side != Side.MONSTER) return 0.0
                 val damage = share(moment.taken, amount, effect.type)
@@ -485,7 +492,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         /** Effects that show nothing of their own in the log: a blow logs itself, a curse and an ailment land on the foe's line. */
         val SILENT = setOf(
             PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
-            PowerAct.CHARGE,
+            PowerAct.CHARGE, PowerAct.RECAST,
         )
         val MOVEMENT_SPEED: String = CoreStat.MOVEMENT_SPEED.code
 

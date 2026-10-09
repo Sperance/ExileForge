@@ -497,7 +497,7 @@ class ExpeditionActions(
         val h = hero ?: return null
         val conditions = h.skills.flasks
         val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
-        return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i.skills, h.heroClass, flasks, i.powers, i.rules.charges), i.stats.percent)
+        return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i, h.heroClass, flasks, h.stats, i.powers, i.rules.charges), i.stats.percent)
     }
 
     fun send(command: RunCommand) {

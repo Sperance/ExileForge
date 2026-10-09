@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.content.Scale
 import com.sperance.exileforge.rules.content.SkillAilment
 import com.sperance.exileforge.rules.content.SkillBarrier
 import com.sperance.exileforge.rules.content.SkillBuff
+import com.sperance.exileforge.rules.content.SkillCast
 import com.sperance.exileforge.rules.content.SkillCharges
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillHeal
@@ -56,6 +57,15 @@ object SkillText {
         }
         skill.trigger?.let { addAll(trigger(it, level)) }
         skill.charges?.let { addAll(charges(it, level)) }
+        // Руны (4.4.0): эхо и дары применения
+        skill.echo?.let { add(ui("skill.line.echo", number(it.chance), number(it.power))) }
+        skill.cast?.let { addAll(cast(it, level)) }
+    }
+
+    /** Дары применения (4.4.0, руны): барьер и заряды. */
+    private fun cast(cast: SkillCast, level: Int): List<String> = buildList {
+        cast.barrier?.let { add(ui("skill.line.cast_barrier", number(it.life.at(level)), fineNumber(it.duration))) }
+        cast.charge?.takeIf { cast.charges > 0 }?.let { add(ui("skill.line.cast_charges", cast.charges, ui("fight.charge.${it.name}"))) }
     }
 
     /** What a skill does with the hero's charges (3.33.0, server 1.32.0): gives some of a kind, or spends all for a heavier blow. */
@@ -94,6 +104,7 @@ object SkillText {
         hit.spell?.let { add(ui("skill.line.spell", number(it.min.at(level)), number(it.max.at(level)), element(it.element))) }
         if (hit.targets != 1) add(targets(hit.targets))
         if (hit.hits > 1) add(ui("skill.line.hits", hit.hits))
+        if (hit.chain > 0) add(ui("skill.line.chain", hit.chain, number(hit.falloff)))
         hit.convert?.let { convert ->
             add(
                 if (hit.element == "RANDOM") {

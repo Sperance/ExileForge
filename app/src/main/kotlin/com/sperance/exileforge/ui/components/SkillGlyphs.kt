@@ -11,15 +11,15 @@ import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.icons.NeonSprite
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.ManaBlue
 import com.sperance.exileforge.ui.theme.Rune
 
-/** A skill's drawing (2.78.0): the server's sprite it names, the grimoire's own mark without one. */
+/** A skill's drawing (2.78.0): the server's sprite it names - с 4.4.0 неоновым контуром, - the grimoire's own mark without one. */
 @Composable fun SkillGlyph(icon: String, modifier: Modifier = Modifier, tint: Color = Gold) {
-    if (!SpriteIcon(skillIcon(icon), tint, modifier, halo = false)) Icon(ForgeGlyphs.Grimoire, null, tint = tint, modifier = modifier)
+    if (!NeonSprite(skillIcon(icon), tint, modifier)) Icon(ForgeGlyphs.Grimoire, null, tint = tint, modifier = modifier)
 }
 
 /** A flask's colour by what it brings: life red, mana blue, the rest a rune's. */
@@ -33,7 +33,4 @@ fun flaskTint(kind: FlaskKind): Color = when (kind) {
 fun conditionTitle(condition: SlotCondition): String = ui("skills.condition.${condition.name}")
 
 /** What a skill is, as a page of the grimoire heads it: its type and, for a blow of an element, the element. */
-fun skillKindLine(skill: SkillDefinition): String {
-    val element = skill.hit?.spell?.element ?: skill.hit?.element?.takeIf { skill.hit?.convert != null } ?: skill.dot?.element
-    return listOfNotNull(ui("skills.type.${skill.type.name}"), element?.let(SkillText::element)).joinToString(" · ")
-}
+fun skillKindLine(skill: SkillDefinition): String = listOfNotNull(ui("skills.type.${skill.type.name}"), skill.element?.let(SkillText::element)).joinToString(" · ")

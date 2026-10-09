@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemSource
 import com.sperance.exileforge.core.display.ItemUse
 import com.sperance.exileforge.core.display.ItemVisualKind
+import com.sperance.exileforge.core.display.RuneText
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.chanceText
 import com.sperance.exileforge.core.display.essenceGuarantees
@@ -30,9 +31,11 @@ import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.content.RuneDefinition
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
@@ -53,6 +56,9 @@ enum class BagCategory(val key: String) {
     ORBS("bag.section_orbs"),
     ESSENCES("bag.section_essences"),
     BOOKS("bag.section_books"),
+
+    /** Руны умений (4.4.0): вставляются в гнёзда гримуара. */
+    RUNES("bag.section_runes"),
     MATERIALS("bag.section_materials"),
     PETS("bag.section_pets"),
     OTHER("bag.section_other"),
@@ -69,6 +75,7 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
         Item.CURRENCY, Item.OMEN -> BagCategory.ORBS
         Item.ESSENCE -> BagCategory.ESSENCES
         Item.BOOK -> BagCategory.BOOKS
+        Item.RUNE -> BagCategory.RUNES
         Item.MATERIAL -> BagCategory.MATERIALS
         Item.PET -> BagCategory.PETS
         Item.CHEST -> BagCategory.CHESTS
@@ -245,7 +252,17 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
         }
     }
     itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
+    game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
     game.index?.let { StackLore(it, code, game.hero?.crafts?.professions.orEmpty().mapValues { (_, p) -> p.level }) }
+}
+
+/** Руна умения (4.4.0): семейство, действие с силой рун героя [power] и виды умений, куда она встаёт. */
+@Composable private fun RuneLore(rune: RuneDefinition, power: Double) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Engraved(ui("runes.family", RuneText.family(rune)))
+        Text(RuneText.effect(rune, power), color = ModBlue, style = MaterialTheme.typography.bodyMedium)
+        MutedText(ui("runes.types", RuneText.types(rune)), style = MaterialTheme.typography.labelSmall)
+    }
 }
 
 /**

@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -64,8 +65,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /** Страница навыка (3.80.19): лист с ценой и строками, действия ячеек, выбор навыка и условия. */
 /**
- * A skill's page opened: what it does now — or at its first level, unlearned — and at the next, what the
- * next book asks and whether it is in the bag, and the slots it may go in.
+ * A skill's page opened: what it does now — or at its first level, unlearned — and at the next, the slots it may go in. С 4.4.0
+ * - иконка «Неон рун» с тиром, полоса опыта, книга в опыт, гнёзда рун и ритуал следующего тира; строки - умение в бою (тир и руны).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -79,48 +80,40 @@ internal fun SkillSheet(
     stats: Map<String, Double>,
     onDismiss: () -> Unit,
 ) {
-    val learned = skills.level(skill.code)
-    val books = bookCount(game, skill.code)
-    val next = (learned + 1).coerceAtMost(SkillRules.MAX_LEVEL)
-    val unmet = index.skillRules.unmet(skill, next, heroLevel, stats)
+    val view = remember(skill, skills, heroLevel, stats) { SkillGrowthView.of(index, skill, skills, heroLevel, stats) }
+    val forged = remember(skill, skills, stats) { index.skillForge.effective(skill, skills, stats) }
+    var socket by remember(skill.code) { mutableStateOf<Int?>(null) }
+    val learned = view.level
+    val next = (learned + 1).coerceAtMost(view.cap)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SkillGlyph(skill.icon, Modifier.size(40.dp), GoldBright)
+                NeonSkillIcon(skill, view.tier, 56.dp, dim = learned == 0)
                 Column(Modifier.weight(1f)) {
                     Text(SkillText.title(skill.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-                    Text(skillKindLine(skill), color = Muted, style = MaterialTheme.typography.labelMedium)
+                    Text(skillKindLine(skill) + " · " + tierLine(view), color = Muted, style = MaterialTheme.typography.labelMedium)
                 }
                 Text(if (learned > 0) ui("skills.level_short", learned) else "—", color = Gold, style = MaterialTheme.typography.titleLarge)
             }
-            SkillFacts(index, skill, learned.coerceAtLeast(1), stats)
-            if (learned in 1 until SkillRules.MAX_LEVEL) {
+            if (learned > 0) XpBar(index, skill, view)
+            SkillFacts(index, forged, learned.coerceAtLeast(1), stats)
+            if (learned in 1 until view.cap) {
                 Caption(ui("skills.at_level", next))
-                SkillFacts(index, skill, next, stats, ModBlue.copy(alpha = .75f))
+                SkillFacts(index, forged, next, stats, ModBlue.copy(alpha = .75f))
             }
-            if (learned < SkillRules.MAX_LEVEL) {
-                Text(ui("skills.requires", next, needLine(index, skill, next)), color = if (unmet.isEmpty()) Parchment else LifeRed, style = MaterialTheme.typography.bodySmall)
-                if (books > 0) {
-                    ForgeButton(
-                        enabled = unmet.isEmpty() && !game.busy,
-                        onClick = {
-                            onDismiss()
-                            vm.learnSkill(skill.code)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
-                    ) {
-                        Text(ui(if (learned == 0) "skills.learn" else "skills.read", books))
-                    }
-                } else {
-                    MutedText(ui(if (heroLevel < skill.unlock && learned == 0) "skills.no_book_opens" else "skills.no_book", skill.unlock))
+            if (!view.capped || learned == 0) {
+                BookButton(game, index, skill, view, heroLevel, stats) {
+                    onDismiss()
+                    vm.learnSkill(skill.code)
                 }
             }
-            // Only the slots of the skill's own kind, and a tap puts this very skill there (3.2.0): a passive page never offers an active slot
             if (learned > 0) {
+                RuneSockets(game, vm, skill, view) { socket = it }
+                RitualCard(game, vm, view)
+                // Only the slots of the skill's own kind, and a tap puts this very skill there (3.2.0): a passive page never offers an active slot
                 SlotActions(game, index, skill, skills, heroLevel) { kind, at, put ->
                     onDismiss()
                     vm.slotSkill(kind.name, at, if (put) skill.code else null)
@@ -128,6 +121,7 @@ internal fun SkillSheet(
             }
         }
     }
+    socket?.let { at -> RunePicker(game, vm, index, skill, skills, at, stats) { socket = null } }
 }
 
 /**
@@ -216,7 +210,7 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SkillGlyph(skill.icon, Modifier.size(26.dp), GoldBright)
+                    NeonSkillIcon(skill, skills.tier(skill.code), 34.dp)
                     Column(Modifier.weight(1f)) {
                         Text(SkillText.title(skill.code), color = GoldBright, style = MaterialTheme.typography.bodyMedium)
                         Text(skillKindLine(skill), color = Muted, style = MaterialTheme.typography.labelSmall)

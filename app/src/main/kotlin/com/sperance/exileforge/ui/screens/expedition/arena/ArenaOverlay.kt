@@ -137,6 +137,8 @@ private const val HERO_CARD = -1
             Controls(fight, hud, onCommand)
         }
         StrikeLine(fight.lunge, bounds, origin)
+        // «Жилы энергии» (4.4.0): сцена применения умения героя поверх боя, всегда - бой анимируется и без декора
+        SkillFx(fight.heroCast, bounds[HERO_CARD], bounds::get, origin)
         fight.boss?.let { BossCinema(fight, it) }
         inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
             FoeSheet(

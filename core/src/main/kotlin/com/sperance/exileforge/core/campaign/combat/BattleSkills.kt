@@ -16,6 +16,7 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.SkillAilment
 import com.sperance.exileforge.rules.content.SkillBarrier
+import com.sperance.exileforge.rules.content.SkillCast
 import com.sperance.exileforge.rules.content.SkillDot
 import com.sperance.exileforge.rules.content.SkillEvent
 import com.sperance.exileforge.rules.content.SkillHeal
@@ -25,6 +26,7 @@ import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.pow
 import kotlin.math.roundToInt
 
 // ==================== Skills, flasks and answers (2.78.0) ====================
@@ -98,23 +100,44 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     if (!free) hero.mana = max(0.0, hero.mana - cost)
     hero.readyAt[slotKey(slot)] = time + skill.cooldown / hero.body.recovery(skill.spell)
     perform(kitSkill, level)
+    // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
+    skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }
     trigger(SkillEvent.SKILL_USE, refund = if (free) 0.0 else cost)
-    powers.fire(PowerEvent.SKILL_USE, PowerMoment(target(), spell = skill.spell))
+    powers.fire(PowerEvent.SKILL_USE, PowerMoment(target(), spell = skill.spell, cast = kitSkill, level = level))
 }
 
-/** What a class skill does at [level]: strike, poison, curse, buff, heal, shield or ward — or several. */
-private fun Battle.perform(kitSkill: KitSkill, level: Int) {
+/**
+ * Эхо применения (4.4.0): умение [kitSkill] ещё раз на доле [power] своей силы - руной эха или силой `RECAST`. Строки лога
+ * помечены эхом; применением оно не считается: ни мана, ни перезарядка, ни отклики пассивных и сил на `SKILL_USE`.
+ */
+internal fun Battle.echoCast(kitSkill: KitSkill, level: Int, power: Double) {
+    if (power <= 0 || outcome != null || !heroFighter.alive || foeFighters.none { it.alive }) return
+    val was = echoing
+    echoing = true
+    try {
+        perform(kitSkill, level, power)
+    } finally {
+        echoing = was
+    }
+}
+
+/**
+ * What a class skill does at [level]: strike, poison, curse, buff, heal, shield or ward — or several. [power] (4.4.0, эхо) -
+ * доля силы: урона, лечения, щита и барьера; благо и проклятие ложатся как есть.
+ */
+private fun Battle.perform(kitSkill: KitSkill, level: Int, power: Double = 1.0) {
     val hero = heroFighter
     val skill = kitSkill.skill
     // Charges (3.33.0, server 1.32.0): a spender takes every charge of its kind as it is used, and its blow grows by each.
     val charged = skill.charges
     val spent = if (charged?.consume == true) consumeCharges(charged.kind) else 0
-    val bonus = 1 + (charged?.perCharge?.at(level) ?: 0.0) * spent / 100
+    val bonus = (1 + (charged?.perCharge?.at(level) ?: 0.0) * spent / 100) * power
     val landed = skill.hit?.let { heroHit(it, level, skill.code, skill.spell, skill.type == SkillType.ATTACK, bonus = bonus) } ?: false
-    skill.dot?.let { heroDot(it, level, skill.code, skill.spell) }
+    skill.dot?.let { heroDot(it, level, skill.code, skill.spell, power) }
     skill.curse?.let { curse(kitSkill, targets(it.targets), level) }
     // A generator gives its charges once its blow lands on a foe — or, with no blow, a warcry's, on use.
     charged?.gain?.let { gain -> if (skill.hit == null || landed) gainCharges(charged.kind, gain.at(level).roundToInt()) }
+    skill.cast?.let { gifts(it, level) }
     if (skill.hit != null || skill.dot != null || skill.curse != null) return
     val warcry = skill.type == SkillType.WARCRY
     skill.buff?.let { buff ->
@@ -129,11 +152,18 @@ private fun Battle.perform(kitSkill: KitSkill, level: Int) {
         )
         if (buff.nextCrit) nextCrit = true
     }
-    var healed = skill.heal?.let { heal(it, level, hero.body.skillHealing) } ?: 0.0
-    if (warcry && hero.body[CoreStat.WARCRY_HEAL.code] > 0) healed += restore(hero.body.maxLife * hero.body[CoreStat.WARCRY_HEAL.code] / 100)
-    skill.shield?.let { hero.shield = min(hero.body.maxShield, hero.shield + hero.body.maxShield * it.at(level) / 100) }
-    skill.barrier?.let { ward(it, level) }
+    var healed = skill.heal?.let { heal(it, level, hero.body.skillHealing * power) } ?: 0.0
+    if (warcry && hero.body[CoreStat.WARCRY_HEAL.code] > 0) healed += restore(hero.body.maxLife * hero.body[CoreStat.WARCRY_HEAL.code] / 100 * power)
+    skill.shield?.let { hero.shield = min(hero.body.maxShield, hero.shield + hero.body.maxShield * it.at(level) / 100 * power) }
+    skill.barrier?.let { ward(it, level, power, keep = power < 1) }
     self(skill.code, healed)
+}
+
+/** Дары применения (4.4.0, руны): барьер не ниже того, что уже стоит, и заряды своего вида. */
+private fun Battle.gifts(cast: SkillCast, level: Int) {
+    cast.barrier?.let { ward(it, level, keep = true) }
+    val kind = cast.charge ?: return
+    if (cast.charges > 0) gainCharges(kind, cast.charges)
 }
 
 /** A class skill's blow at its targets — a passive's answer at [only] — each struck [SkillHit.hits] times. */
@@ -146,11 +176,12 @@ private fun Battle.heroHit(hit: SkillHit, level: Int, code: String, spell: Boole
     val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
     val primary = struck.firstOrNull()
     var landed = false
-    struck.forEach { target ->
+    chained(hit, struck).forEach { (target, share) ->
         repeat(hit.hits.coerceAtLeast(1)) {
             if (!target.alive || !hero.alive || outcome != null) return@repeat
             val grown = heroDamage(hit, level, body, target, element, own)
-            val damage = if (bonus == 1.0) grown.damage else grown.damage.mapValues { it.value * bonus }
+            val scale = bonus * share
+            val damage = if (scale == 1.0) grown.damage else grown.damage.mapValues { it.value * scale }
             val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
             if (strike(
                     hero,
@@ -166,6 +197,18 @@ private fun Battle.heroHit(hit: SkillHit, level: Int, code: String, spell: Boole
         }
     }
     return landed
+}
+
+/**
+ * Цели удара с долей урона (4.4.0): [struck] - целиком, затем цепь руны - ещё [SkillHit.chain] врагов в досягаемости, каждый
+ * прыжок теряет [SkillHit.falloff]% урона прежнего.
+ */
+private fun Battle.chained(hit: SkillHit, struck: List<Fighter>): List<Pair<Fighter, Double>> {
+    val direct = struck.map { it to 1.0 }
+    if (hit.chain <= 0) return direct
+    val keep = 1 - hit.falloff.coerceIn(0.0, 100.0) / 100
+    val jumps = foeFighters.filter { it.alive && reachable(it.index) && it !in struck }.take(hit.chain)
+    return direct + jumps.mapIndexed { i, foe -> foe to keep.pow(i + 1) }
 }
 
 /** A hero skill's damage by type, and the increases in percent each type was grown by (server 1.57.0). */
@@ -220,14 +263,14 @@ internal fun Battle.resolve(ailment: SkillAilment, element: DamageType, level: I
  * A spell of damage over time: its roll grown like a spell's, taken by the target's resistance at once
  * and laid on as the ailment of its element — a poison stacks — for its duration.
  */
-private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boolean) {
+private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boolean, power: Double = 1.0) {
     val hero = heroFighter
     val type = DamageType.element(dot.element) ?: DamageType.CHAOS
     val ailment = Ailment.of(type).takeIf { it.hurts } ?: Ailment.POISONED
     val increase = heroIncrease(type) + hero.body[CoreStat.SPELL_DAMAGE.code] + hero.body[CoreStat.SKILL_DAMAGE.code]
     targets(dot.targets).forEach { target ->
         val low = dot.min.at(level)
-        val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * hero.body.damageMore
+        val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * hero.body.damageMore * power
         val mitigated = total * (1 - target.body.resist(type, hero.body.penetration(type))) * target.body.damageTaken(type)
         val inflicted = mutableListOf<Ailment>()
         if (mitigated > 0 && !target.body.immune(ailment)) {
@@ -302,10 +345,12 @@ internal fun Battle.restore(amount: Double): Double {
     return healed
 }
 
-private fun Battle.ward(barrier: SkillBarrier, level: Int) {
+/** Барьер умения в доле [scale]; [keep] (4.4.0: руна, эхо) - не ниже и не короче того, что уже стоит, иначе - заново. */
+private fun Battle.ward(barrier: SkillBarrier, level: Int, scale: Double = 1.0, keep: Boolean = false) {
     val hero = heroFighter
-    hero.barrier = hero.body.maxLife * barrier.life.at(level) / 100
-    hero.barrierUntil = time + barrier.duration
+    val value = hero.body.maxLife * barrier.life.at(level) / 100 * scale
+    hero.barrier = if (keep) max(hero.barrier, value) else value
+    hero.barrierUntil = if (keep) max(hero.barrierUntil, time + barrier.duration) else time + barrier.duration
 }
 
 /** A skill the hero used on themselves, for the log and the number over their card. */
@@ -334,6 +379,8 @@ internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: 
         depth++
         try {
             answer(code, answer, level, target, refund, taken)
+            // Дары рун (4.4.0) у срабатывания - при каждом срабатывании
+            passive.skill.cast?.let { gifts(it, level) }
         } finally {
             depth--
         }

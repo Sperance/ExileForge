@@ -90,7 +90,7 @@ class BossSim(private val index: ContentIndex, private val fights: Int, private 
     /** Снимок боя героя билда [build] против [foes], как его снимает поход: полные запасы, без питомца, вид боя - по врагам. */
     private fun plan(build: SimBuild, heroClass: HeroClass, level: Int, foes: List<com.sperance.exileforge.core.campaign.combat.Foe>, effects: Map<String, Double>, phases: PhaseFoes): Pair<OddsPlan, Combatant> {
         val sheet = Sheets.calculate(index, level, heroClass.code, build.tree, build.items)
-        val loadout = Loadout.of(build.skills, index.skills, heroClass.code, build.flasks, index.powers, index.rules.charges)
+        val loadout = Loadout.of(build.skills, index, heroClass.code, build.flasks, sheet.stats, index.powers, index.rules.charges)
         val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), loadout, index.stats.percent)
         val hero = HeroBuild(gear, effects, rules)
         val body = hero.body

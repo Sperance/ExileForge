@@ -37,6 +37,7 @@ import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RiftLaw
+import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -177,6 +178,23 @@ sealed interface SlotView {
     }
 }
 
+/**
+ * Применение умения героя на экране (4.4.0, «Жилы энергии»): умение [code] вида [type], его стихия [element] (null - без стихии),
+ * тир в бою [tier], по кому оно легло ([foes]), на себя ли ([self]), эхо ли это ([echo]) и как далеко сцена ([progress], 0..1).
+ * [serial] - номер строки лога: новая строка - новая сцена.
+ */
+data class HeroCastView(
+    val serial: Int,
+    val code: String,
+    val type: SkillType,
+    val element: String?,
+    val tier: Int,
+    val foes: List<Int>,
+    val self: Boolean,
+    val echo: Boolean,
+    val progress: Float,
+)
+
 /** Умение врага на подходе (3.92.0): [left] секунд до готовности из [total]. */
 data class CastView(val code: String, val left: Double, val total: Double) {
     val progress: Float get() = if (total <= 0) 1f else (1 - left / total).toFloat().coerceIn(0f, 1f)
@@ -236,6 +254,8 @@ data class FightHud(
     val boss: BossHud? = null,
     /** Ярость боя (4.3.0): ступень, прибавка урона врагов и отсчёт до следующей; null - бой кончен. */
     val rage: RageView? = null,
+    /** Последнее применение умения героя (4.4.0), пока его сцена на экране; null - сцены нет. */
+    val heroCast: HeroCastView? = null,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
 

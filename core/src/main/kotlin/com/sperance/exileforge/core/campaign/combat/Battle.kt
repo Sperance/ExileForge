@@ -301,6 +301,9 @@ class Battle(
 
     /** How deep in answers the fight is: an answer may set off one more, never a chain. */
     internal var depth = 0
+
+    /** Идёт эхо применения (4.4.0, руна эха или сила `RECAST`): строки лога, что оно оставит, помечены [CombatEvent.echo]. */
+    internal var echoing = false
     internal var belowLow = false
     internal var shieldUp = true
 

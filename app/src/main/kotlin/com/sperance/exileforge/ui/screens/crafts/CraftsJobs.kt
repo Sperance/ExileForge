@@ -137,9 +137,17 @@ import kotlin.math.ceil
 @Composable internal fun JobIcon(job: JobView, modifier: Modifier) {
     when (job.kind) {
         JobKind.ITEM, JobKind.CONDENSE, JobKind.REFINE -> if (job.output.isNotBlank()) BagIcon(job.output, modifier) else GlyphIcon(Glyph.CRAFT, Gold, modifier)
+
         JobKind.FLASK, JobKind.EQUIPMENT, JobKind.JEWEL, JobKind.TOOL -> if (!SpriteIcon(equipmentIcon(job.output), Gold, modifier, halo = false)) GlyphIcon(Glyph.ITEM, Gold, modifier)
+
         JobKind.MAP -> GlyphIcon(Glyph.MAP, Gold, modifier)
+
         JobKind.BOOK -> GlyphIcon(Glyph.TEXT, Gold, modifier)
+
+        // Ритуал тира (4.4.0) поднимает умение, резьба (4.4.0) делает руну - выбранный вариант резьбы рисует свою руну
+        JobKind.EVOLVE -> GlyphIcon(Glyph.LEVEL, Gold, modifier)
+
+        JobKind.CARVE -> if (job.output.isNotBlank()) BagIcon(job.output, modifier) else GlyphIcon(Glyph.GEM, Gold, modifier)
     }
 }
 
@@ -178,7 +186,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                                 selected = option.choice == picked,
                                 onClick = { picked = option.choice },
                                 label = { Text(choiceTitle(option.choice)) },
-                                leadingIcon = if (option.level > profession.level) ({ Icon(Icons.Outlined.Lock, null, Modifier.size(14.dp)) }) else null,
+                                leadingIcon = if (option.level > profession.level || !option.open) ({ Icon(Icons.Outlined.Lock, null, Modifier.size(14.dp)) }) else null,
                             )
                         }
                     }

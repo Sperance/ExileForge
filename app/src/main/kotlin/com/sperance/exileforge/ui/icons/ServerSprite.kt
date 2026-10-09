@@ -112,6 +112,45 @@ fun spriteVector(sprite: IconSprite): ImageVector? {
     }
 }
 
+private val outlined = ConcurrentHashMap<IconSprite, ImageVector>()
+
+/** Толщина неонового контура (4.4.0) - доля коробки спрайта: 1,6 из 24, как в макете «Неон рун». */
+private const val NEON_SHARE = .067f
+
+/**
+ * Моно-спрайт контуром (4.4.0, «Неон рун»): каждая линия только обводится, без заливки, - глиф умения светится нитью цвета.
+ * Стекло и битые линии - null: место рисует свой знак.
+ */
+fun neonVector(sprite: IconSprite): ImageVector? {
+    outlined[sprite]?.let { return it }
+    if (sprite.isGlass || sprite.paths.isEmpty() || sprite.viewBox <= 0f) return null
+    return try {
+        val outlines = sprite.paths.map { it to PathParser().parsePathString(it.d).toNodes() }
+        if (outlines.any { (_, nodes) -> nodes.isEmpty() }) return null
+        ImageVector.Builder(defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = sprite.viewBox, viewportHeight = sprite.viewBox).apply {
+            outlines.forEach { (path, nodes) ->
+                addPath(
+                    nodes,
+                    stroke = SolidColor(Color.Black),
+                    strokeAlpha = path.alpha.coerceIn(0f, 1f),
+                    strokeLineWidth = sprite.viewBox * NEON_SHARE,
+                    strokeLineCap = StrokeCap.Round,
+                    strokeLineJoin = StrokeJoin.Round,
+                )
+            }
+        }.build().also { outlined[sprite] = it }
+    } catch (_: Exception) {
+        null
+    }
+}
+
+/** Неоновый глиф (4.4.0): моно-спрайт контуром [neonVector] в цвете [color]; false - рисовать нечего. */
+@Composable fun NeonSprite(sprite: IconSprite?, color: Color, modifier: Modifier = Modifier): Boolean {
+    val vector = sprite?.let(::neonVector) ?: return false
+    Icon(vector, null, tint = color, modifier = modifier)
+    return true
+}
+
 /**
  * Stained glass (3.6.0): a piece is its colour with a diagonal sheen and a lead line round it, a
  * glaze (alpha below one) is a highlight or a shade laid over the pieces, a line is lead with colour

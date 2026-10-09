@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.HitKind
+import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SlotHolder
 import com.sperance.exileforge.core.campaign.combat.chargeViews
 import com.sperance.exileforge.core.campaign.combat.effects
@@ -19,6 +20,7 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FloatingHit
 import com.sperance.exileforge.core.campaign.run.FoeView
+import com.sperance.exileforge.core.campaign.run.HeroCastView
 import com.sperance.exileforge.core.campaign.run.LungeView
 import com.sperance.exileforge.core.campaign.run.RageView
 import com.sperance.exileforge.core.campaign.run.SlotView
@@ -138,6 +140,37 @@ internal fun Battle.hud(
         heroBody = h.body,
         boss = bossHud(),
         rage = RageView(enrage, rageRule.damage * enrage, rageRule.next(time)).takeIf { outcome == null },
+        heroCast = heroCast(),
+    )
+}
+
+/** Сцена применения умения (4.4.0) длится столько выпадов удара ([CombatRules.lunge]): 0,5-0,9 с макета «Жилы энергии». */
+private const val CAST_LUNGES = 4
+
+/**
+ * Последнее применение умения героя (4.4.0), пока его сцена идёт ([CAST_LUNGES] выпадов): умение из набора героя, все строки
+ * того же мига - по кому оно легло. Умение на себя - без целей.
+ */
+private fun Battle.heroCast(): HeroCastView? {
+    val window = CAST_LUNGES * rules.lunge
+    val last = log.indexOfLast { it.actor == Side.HERO && it.action == Action.SKILL && it.skill != null && it.pet == null && time - it.time < window }
+    if (last < 0 || log[last].time > time) return null
+    val event = log[last]
+    val used = (kit.actives.filterNotNull() + kit.passives).firstOrNull { it.skill.code == event.skill } ?: return null
+    var first = last
+    while (first > 0 && log[first - 1].time == event.time && log[first - 1].skill == event.skill) first--
+    val moment = log.subList(first, last + 1).filter { it.actor == Side.HERO && it.skill == event.skill }
+    val self = moment.all { it.onSelf }
+    return HeroCastView(
+        serial = first,
+        code = used.skill.code,
+        type = used.skill.type,
+        element = used.skill.element,
+        tier = used.tier,
+        foes = if (self) emptyList() else moment.filterNot { it.onSelf }.map { it.foe }.distinct(),
+        self = self,
+        echo = event.echo,
+        progress = ((time - event.time) / window).toFloat().coerceIn(0f, 1f),
     )
 }
 

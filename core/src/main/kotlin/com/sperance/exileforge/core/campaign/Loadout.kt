@@ -15,7 +15,6 @@ import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
-import com.sperance.exileforge.rules.content.SkillBook
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillType
@@ -57,13 +56,17 @@ val FlaskSheet.skillsFree: Boolean get() = own("FLASK_SKILLS_FREE") > 0
 /** Пока действует, удары накладывают проклятия класса. */
 val FlaskSheet.hexes: Boolean get() = own("FLASK_HITS_CURSE") > 0
 
-/** A skill as the fight uses it: what it is, the level it was learned to and when its slot fires. */
+/**
+ * A skill as the fight uses it: what it is, the level it was learned to and when its slot fires. С 4.4.0 [skill] - умение
+ * героя в бою ([com.sperance.exileforge.rules.content.SkillForge]: тир и руны поверх контента), [tier] - его тир в бою.
+ */
 data class KitSkill(
     val skill: SkillDefinition,
     val learned: Int,
     /** The rules' ceiling for a skill level boosted by gear, the atlas and the map (`skills.rules.boostedMaxLevel`). */
     val ceiling: Int,
     val condition: SlotCondition = skill.condition,
+    val tier: Int = HeroSkills.FIRST_TIER,
 ) {
     /**
      * The level it acts at on [hero]: the learned one and what gear, the atlas and the map add — every
@@ -128,24 +131,33 @@ data class Loadout(
 
     companion object {
         /**
-         * The hero's loadout from the character's [skills] as the server keeps them, the world's [book] and
-         * the flasks worn on the belt, in its order — [flasks] null where a place is empty.
+         * The hero's loadout from the character's [skills] as the server keeps them, the world's [index] and
+         * the flasks worn on the belt, in its order — [flasks] null where a place is empty. С 4.4.0 каждое умение -
+         * умение героя в бою (`SkillForge`: тир и руны) по листу героя [stats].
          */
         fun of(
             skills: HeroSkills,
-            book: SkillBook,
+            index: ContentIndex,
             heroClass: String,
             flasks: List<BeltFlask?>,
+            stats: Map<String, Double> = emptyMap(),
             powers: PowerBook = PowerBook(),
             charges: ChargeRules = ChargeRules(),
         ): Loadout {
-            fun kit(code: String?, condition: SlotCondition? = null) = code?.let(book.byCode::get)
-                ?.let { KitSkill(it, skills.level(it.code).coerceAtLeast(1), book.rules.boostedMaxLevel, condition ?: it.condition) }
+            val book = index.skills
+            fun forged(skill: SkillDefinition, condition: SlotCondition? = null) = KitSkill(
+                index.skillForge.effective(skill, skills, stats),
+                skills.level(skill.code).coerceAtLeast(1),
+                book.rules.boostedMaxLevel,
+                condition ?: skill.condition,
+                index.skillGrowth.tier(skill, skills, stats),
+            )
+            fun kit(code: String?, condition: SlotCondition? = null) = code?.let(book.byCode::get)?.let { forged(it, condition) }
             return Loadout(
                 actives = skills.active.map { slot -> slot?.let { kit(it.skill, it.condition) } },
                 passives = skills.passive.mapNotNull { kit(it) },
                 flasks = flasks,
-                curses = book.ofClass(heroClass).filter { it.type == SkillType.CURSE }.map { KitSkill(it, skills.level(it.code).coerceAtLeast(1), book.rules.boostedMaxLevel) },
+                curses = book.ofClass(heroClass).filter { it.type == SkillType.CURSE }.map { forged(it) },
                 powers = powers,
                 charges = charges,
             )

@@ -79,7 +79,7 @@ internal fun Battle.record(
     val m = foeFighters.getOrNull(foe)
     log += CombatEvent(
         time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
-        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet },
+        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet }, echo = echoing && actor == Side.HERO,
     )
         .also { it.trace = trace ?: skillTrace(actor, action, foe, skill, onSelf, healed) }
 }

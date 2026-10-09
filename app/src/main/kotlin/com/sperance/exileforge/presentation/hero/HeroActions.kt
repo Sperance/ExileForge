@@ -144,6 +144,9 @@ class HeroActions(
     fun flaskCondition(index: Int, condition: String?) = heroCommand { id -> api.hero.flaskCondition(id, index, condition) }
     fun exchangeBooks(books: List<String>, code: String) = heroCommand { id -> api.hero.exchangeBooks(id, books, code) }
 
+    /** Руна в гнездо умения или гнездо пустеет (4.4.0): вынутая и заменённая руна разрушаются. */
+    fun socketRune(code: String, socket: Int, rune: String?) = heroCommand { id -> api.hero.socketRune(id, code, socket, rune) }
+
     /** Древо навыков: взять узел, вернуть его или сбросить всё древо. Каждое правило - серверное. */
     fun allocateNode(code: String, choice: Int? = null) = heroCommand { id -> api.tree.allocate(id, code, choice) }
     fun refundNode(code: String) = heroCommand { id -> api.tree.refund(id, code) }

@@ -74,8 +74,8 @@ fun professionTitle(code: String): String = locOr(LocaleKey.professionName(code)
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
 fun jobTitle(code: String): String = locOr(LocaleKey.jobName(code), displayName(code))
 
-/** What a choosing work was told to make: the item, the smith's group and attribute (3.46.0) or the tool base (server 4.3.0). */
-fun choiceTitle(choice: String): String = locOr(LocaleKey.itemName(choice), locOr(LocaleKey.choiceName(choice), locOr(LocaleKey.equipmentName(choice), displayName(choice))))
+/** What a choosing work was told to make: the item, the smith's group and attribute (3.46.0), the tool base (server 4.3.0) or the skill of a tier ritual (4.4.0). */
+fun choiceTitle(choice: String): String = locOr(LocaleKey.itemName(choice), locOr(LocaleKey.choiceName(choice), locOr(LocaleKey.equipmentName(choice), locOr(LocaleKey.skillName(choice), displayName(choice)))))
 
 /** A work with its choice (3.45.0): «Condense Essence · Weeping Essence of Greed». */
 fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${choiceTitle(choice)}"

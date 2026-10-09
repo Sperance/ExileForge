@@ -71,7 +71,7 @@ class ExpeditionGoldenTest {
             val template = index.template(FLASK) ?: return@List null
             BeltFlask.of(ItemFactory(index).create("flask-$n", template, Rarity.COMMON, Dice(case.seed + n)), template, index, SlotCondition.READY)
         }
-        val gear = HeroGear(sheet.stats, case.level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(skills, index.skills, heroClass.code, flasks, index.powers, index.rules.charges), index.stats.percent)
+        val gear = HeroGear(sheet.stats, case.level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(skills, index, heroClass.code, flasks, sheet.stats, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, case.seed, RunContext(heroClass.code, case.level))
         val journal = RunJournal("run-${case.seed}", "hero", zone.code.value)
         val campaign = CampaignState(chests = mapOf(zone.code.value to ChestWindow(Long.MAX_VALUE, 2)))

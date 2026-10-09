@@ -35,8 +35,11 @@ import kotlinx.serialization.json.JsonElement
  * 63 - статус отчёта `REVIEW` и переходы `AdminReport.moves`, удаление `bugreport/delete`, без служебного журнала в отчёте,
  *      суточный вклад `GuildMember.dayLimit`/`dayLeft`, права гильдии `GuildPolicy` (офицер повышает участника), работа кузнеца
  *      `JobKind.TOOL` (инструменты профессий), законы тронов: `quests/law` (`QU_008`-`QU_010`), `HeroInfo.laws`, `RunContext.laws`.
+ * 64 - рост умений: руны в гнёздах `hero/skills/rune` (`SK_013`-`SK_018`), книга изученного умения читается в опыт, поля
+ *      `HeroSkills.xp`/`tiers`/`runes`, работы чар `JobKind.EVOLVE`/`CARVE` (`Job.once`, `WorkGains.done`), предметы `RUNE`,
+ *      `PowerAct.RECAST`, поля умения `echo`/`cast`/`hit.chain`.
  */
-const val API_REVISION = 63
+const val API_REVISION = 64
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

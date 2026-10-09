@@ -61,7 +61,7 @@ internal object HeroLens {
         index ?: return null
         hero ?: return null
         val body = Combatant(hero.stats, hero.level, index.campaign.combat)
-        return ManaReserve(body.maxMana, Loadout.of(hero.skills, index.skills, hero.heroClass, emptyList()).reserved(body))
+        return ManaReserve(body.maxMana, Loadout.of(hero.skills, index, hero.heroClass, emptyList(), hero.stats).reserved(body))
     }
 
     /**
@@ -74,7 +74,7 @@ internal object HeroLens {
         val model = hero.sheet.model ?: return PassiveShares()
         val before = model.plain[stat] ?: 0.0
         val body = Combatant(hero.stats, hero.level, index.campaign.combat)
-        val rows = Loadout.of(hero.skills, index.skills, hero.heroClass, emptyList()).passiveSources(body).mapNotNull { (kit, lines) ->
+        val rows = Loadout.of(hero.skills, index, hero.heroClass, emptyList(), hero.stats).passiveSources(body).mapNotNull { (kit, lines) ->
             val own = lines.filter { it.stat == stat }.ifEmpty { return@mapNotNull null }
             PassiveShare(kit.skill.code, own, (model.with(own)[stat] ?: 0.0) - before, kit.skill.lowLife)
         }

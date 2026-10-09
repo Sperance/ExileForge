@@ -38,6 +38,8 @@ data class CombatEvent(
      * [actor] is the hero's side, it was struck when the actor is a monster. The figures count as they always did.
      */
     val pet: String? = null,
+    /** Строка эха применения (4.4.0): умение повторилось само - руной эха или силой `RECAST`; бой рисует его бледнее. */
+    val echo: Boolean = false,
 ) {
     /** How this line came about (3.37.0), for its card; outside the event's identity, so two fights of one seed still compare equal. */
     var trace: Trace? = null

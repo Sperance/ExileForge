@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -27,6 +28,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
+import com.sperance.exileforge.ui.theme.LifeRed
 
 /** Что показать в карточке предмета (4.3.2): где бы его ни коснулись - строка, плитка, чип, значок. */
 sealed interface Inspect {
@@ -43,8 +45,11 @@ sealed interface Inspect {
     data class Stack(val code: String, override val action: InspectAction? = null) : Inspect
 }
 
-/** Действие места под карточкой: [label] на кнопке, [run] выполняется, и карточка закрывается. */
-data class InspectAction(val label: String, val enabled: Boolean = true, val run: () -> Unit)
+/**
+ * Действие места под карточкой: [label] на кнопке, [run] выполняется, и карточка закрывается. [reason] (4.4.0) - почему
+ * кнопка погашена, строкой под ней.
+ */
+data class InspectAction(val label: String, val enabled: Boolean = true, val reason: String? = null, val run: () -> Unit)
 
 /** Как открыть карточку предмета отсюда; null - хозяина нет, касание ничего не открывает. */
 val LocalItemInspector = staticCompositionLocalOf<((Inspect) -> Unit)?> { null }
@@ -104,4 +109,5 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
         enabled = action.enabled,
         modifier = Modifier.fillMaxWidth(),
     ) { Text(action.label) }
+    action.reason?.takeIf { !action.enabled }?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
 }

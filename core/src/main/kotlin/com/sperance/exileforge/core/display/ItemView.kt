@@ -395,6 +395,6 @@ fun effectUnit(stat: String, op: Op, index: ContentIndex? = null): String = if (
 fun bagVisualKind(item: com.sperance.exileforge.rules.content.Item): ItemVisualKind = when (item.category) {
     com.sperance.exileforge.rules.content.Item.CURRENCY -> ItemVisualKind.CURRENCY
     com.sperance.exileforge.rules.content.Item.BOOK -> ItemVisualKind.SCROLL
-    com.sperance.exileforge.rules.content.Item.ESSENCE -> ItemVisualKind.GEM
+    com.sperance.exileforge.rules.content.Item.ESSENCE, com.sperance.exileforge.rules.content.Item.RUNE -> ItemVisualKind.GEM
     else -> ItemVisualKind.ITEM
 }

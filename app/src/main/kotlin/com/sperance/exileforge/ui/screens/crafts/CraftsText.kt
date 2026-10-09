@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -45,6 +46,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionDescription
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.display.roman
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.crafts.JobView
@@ -120,6 +122,12 @@ fun jobProduct(view: JobView): String = when (val job = view.job) {
 
     // Инструмент кузнеца (server 4.3.0): выбранный вариант - база инструмента, сама работа - полоса уровней.
     is Job.Tool -> if (job.output.isNotEmpty()) equipmentTitle(job.output) else ui("crafts.kind_tool", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
+
+    // Ритуал тира (4.4.0): выбранный вариант - умение героя, сама работа - тир
+    is Job.Evolve -> if (job.skill.isNotEmpty()) ui("crafts.kind_evolve_skill", SkillText.title(job.skill), roman(job.tier)) else ui("crafts.kind_evolve", roman(job.tier))
+
+    // Резьба руны (4.4.0): выбранный вариант - обычная работа ITEM с руной на выходе
+    is Job.Carve -> ui("crafts.kind_carve", job.upTo)
 }
 
 /** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */
@@ -236,4 +244,13 @@ internal const val TILES = 3
  * the sheet names the level) — but for the condensing only the essences the bag can feed a cycle of, else a hundred and
  * forty chips would bury the few that can run.
  */
-internal fun choices(game: GameUi, work: JobView): List<JobView> = work.options.filter { option -> work.kind != JobKind.CONDENSE || option.inputs.all { bagCount(game, it.item) >= it.amount } }
+internal fun choices(game: GameUi, work: JobView): List<JobView> = work.options.filter { option ->
+    when (work.kind) {
+        JobKind.CONDENSE -> option.inputs.all { bagCount(game, it.item) >= it.amount }
+
+        // Ритуал тира (4.4.0): только изученные умения; почему вариант закрыт, называет низ листа
+        JobKind.EVOLVE -> (game.hero?.skills?.level(option.choice) ?: 0) > 0
+
+        else -> true
+    }
+}

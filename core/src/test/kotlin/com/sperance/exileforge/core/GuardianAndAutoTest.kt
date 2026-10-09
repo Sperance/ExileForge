@@ -34,7 +34,7 @@ class GuardianAndAutoTest {
         val heroClass = index.classes.classes.first()
         val level = 12
         val sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
-        val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(HeroSkills(), index.skills, heroClass.code, emptyList(), index.powers, index.rules.charges), index.stats.percent)
+        val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(HeroSkills(), index, heroClass.code, emptyList(), sheet.stats, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, 7L, RunContext(heroClass.code, level))
         val journal = RunJournal("run-7", "hero", zone.code.value)
         return ExpeditionRun.start(index, zone, run, journal, gear, campaign, NOW, 0.0, level, { 0L }, auto = AutoPlan.takeIf { auto })

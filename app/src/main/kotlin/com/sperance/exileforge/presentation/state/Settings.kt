@@ -22,10 +22,25 @@ data class GameSettings(
     val simpleEffects: Boolean = false,
     val buzzDanger: Boolean = true,
     val buzzButtons: Boolean = false,
+    /** Карточка сюжета над картой «Похода» (4.4.x): свёрнута ли и при каком шаге это решено. */
+    val storyFold: StoryFold = StoryFold(),
 ) {
     companion object {
         val SPEEDS = listOf(1, 2, 4)
         val PAUSES = listOf(0, 30, 50)
+    }
+}
+
+/**
+ * Свёрнутость карточки сюжета (4.4.x) и шаг, при котором игрок её видел: [quest] - id задания главы, [ready] - ждала ли награда.
+ * Новый шаг сюжета или награда, что стала ждать, раскрывают свёрнутую карточку сами.
+ */
+@Serializable
+data class StoryFold(val collapsed: Boolean = false, val quest: String = "", val ready: Boolean = false) {
+    /** Карточка увидела шаг [quest] с наградой [ready]: новый шаг или награда, что стала ждать, - раскрыть. */
+    fun seen(quest: String, ready: Boolean): StoryFold = when {
+        quest != this.quest || (ready && !this.ready) -> StoryFold(collapsed = false, quest = quest, ready = ready)
+        else -> copy(ready = ready)
     }
 }
 

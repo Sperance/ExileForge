@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
@@ -75,9 +76,9 @@ internal fun RewardChips(reward: QuestReward) {
     Box(Modifier.clip(RoundedCornerShape(6.dp)).background(PanelRaised).then(onClick?.let { Modifier.clickable(onClick = it) } ?: Modifier).padding(horizontal = 6.dp, vertical = 2.dp)) { content() }
 }
 
-@Composable internal fun QuestBar(progress: Long, target: Long, color: Color) {
+@Composable internal fun QuestBar(progress: Long, target: Long, color: Color, thickness: Dp = 6.dp) {
     val share = if (target <= 0) 1f else (progress.toFloat() / target).coerceIn(0f, 1f)
-    LinearProgressIndicator(progress = { share }, modifier = Modifier.fillMaxWidth().height(6.dp), color = color, trackColor = Bronze)
+    LinearProgressIndicator(progress = { share }, modifier = Modifier.fillMaxWidth().height(thickness), color = color, trackColor = Bronze)
 }
 
 /**

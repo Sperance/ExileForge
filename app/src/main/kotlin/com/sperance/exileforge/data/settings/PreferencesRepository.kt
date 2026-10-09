@@ -26,6 +26,12 @@ class PreferencesRepository(private val store: ServerStore, scope: CoroutineScop
 
     suspend fun saveSettings(value: GameSettings) = store.saveGameSettings(value)
 
+    /** Правка настроек от их текущего значения; ничего не изменилось - на устройство не пишется. */
+    suspend fun editSettings(edit: GameSettings.() -> GameSettings) {
+        val next = settings.value.edit()
+        if (next != settings.value) store.saveGameSettings(next)
+    }
+
     suspend fun saveItemFilter(shelf: ItemShelf, value: ItemFilter) = store.saveItemFilters(itemFilters.value.with(shelf, value))
 
     suspend fun saveLogFilter(value: Set<LogKind>) = store.saveLogFilter(LogKind.write(value))

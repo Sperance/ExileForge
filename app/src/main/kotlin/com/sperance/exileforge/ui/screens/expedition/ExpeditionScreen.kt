@@ -104,7 +104,7 @@ private const val CARD_TOP = .48f
                 Modifier,
                 onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
             )
-            StoryCard(game, quests.board, Modifier.padding(horizontal = 12.dp), onOpen = questModel::openStory)
+            StoryCard(game, quests.board, questModel, Modifier.padding(horizontal = 12.dp))
             ZoomButtons(camera, Modifier.align(Alignment.End).padding(top = 8.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
         }
         launch?.let { ZoneCard(game, vm, world, it, expedition.forced, Modifier.align(Alignment.BottomCenter)) }

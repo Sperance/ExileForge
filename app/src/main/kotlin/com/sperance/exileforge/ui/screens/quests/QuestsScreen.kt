@@ -16,8 +16,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.session.Reads
@@ -50,7 +48,7 @@ fun QuestsScreen() {
         Column(Modifier.padding(horizontal = 16.dp)) {
             CollapsibleHeader { ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll) }
             // Текущая глава сюжета (4.3.0) - та же карточка, что над картой Похода, ведёт на экран Сюжета
-            StoryCard(game, board, Modifier.padding(bottom = 8.dp), onOpen = vm::openStory)
+            StoryCard(game, board, vm, Modifier.padding(bottom = 8.dp))
         }
         TabRow(selectedTabIndex = current.ordinal, containerColor = Abyss) {
             QuestTab.entries.forEach { tab ->

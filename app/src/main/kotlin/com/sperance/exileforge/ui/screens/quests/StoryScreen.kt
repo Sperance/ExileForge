@@ -6,6 +6,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +29,7 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.StoryFold
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.ThroneLaws
 import com.sperance.exileforge.rules.text.LocaleKey
@@ -57,9 +63,19 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Карточка текущей главы над картой мира и сверху экрана «Задания» (4.3.0) - одна на оба места: глава, цель шага, прогресс и
- * награда; нажатие - весь сюжет. Сюжет пройден или доска не прочитана - карточки нет.
+ * награда; нажатие - весь сюжет. Сюжет пройден или доска не прочитана - карточки нет. С 4.4.x шеврон сворачивает её в строку
+ * «глава · задание» с тонкой полосой прогресса ([fold] - из настроек устройства); новый шаг сюжета или награда, что стала ждать,
+ * раскрывают её сами ([onSeen] сообщает, какой шаг карточка показала).
  */
-@Composable fun StoryCard(game: GameUi, board: QuestBoard?, modifier: Modifier = Modifier, onOpen: () -> Unit) {
+@Composable fun StoryCard(
+    game: GameUi,
+    board: QuestBoard?,
+    fold: StoryFold,
+    modifier: Modifier = Modifier,
+    onFold: (Boolean) -> Unit,
+    onSeen: (String, Boolean) -> Unit,
+    onOpen: () -> Unit,
+) {
     val index = game.index ?: return
     board ?: return
     val shape = RoundedCornerShape(12.dp)
@@ -70,35 +86,63 @@ import org.koin.compose.viewmodel.koinViewModel
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            androidx.compose.material3.Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
+            Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
             Text(ui("story.card_law"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
         }
         return
     }
     val chapter = index.quests.story.getOrNull(board.chapter) ?: return
     val quest = board.story ?: return
-    Column(
-        modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = Gold).clickable(role = Role.Button, onClick = onOpen).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.material3.Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
+    val ready = quest.done && !quest.claimed
+    LaunchedEffect(quest.id, ready) { onSeen(quest.id, ready) }
+    val collapsed = fold.collapsed && fold.quest == quest.id
+    val chapterTitle = loc(LocaleKey.chapterTitle(chapter.region))
+    Column(modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = Gold).clickable(role = Role.Button, onClick = onOpen)) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = FOLDED_HEIGHT).padding(start = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
             Text(
-                ui("story.card_chapter", loc(LocaleKey.chapterTitle(chapter.region)), board.step + 1, chapter.steps.size),
-                color = Muted,
+                if (collapsed) "$chapterTitle · ${questTitle(quest)}" else ui("story.card_chapter", chapterTitle, board.step + 1, chapter.steps.size),
+                color = if (collapsed) GoldBright else Muted,
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            if (quest.done && !quest.claimed) Text(ui("story.card_ready"), color = Vital, style = MaterialTheme.typography.labelMedium)
+            if (ready) Text(ui("story.card_ready"), color = Vital, style = MaterialTheme.typography.labelMedium)
+            IconButton(onClick = { onFold(!collapsed) }, modifier = Modifier.size(FOLDED_HEIGHT)) {
+                Icon(
+                    if (collapsed) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess,
+                    ui(if (collapsed) "common.expand" else "common.collapse"),
+                    tint = Gold,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
         }
-        Text(questTitle(quest), color = GoldBright, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        QuestBar(quest.progress, quest.target, Gold)
-        MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())))
-        RewardChips(quest.reward)
+        if (collapsed) {
+            QuestBar(quest.progress, quest.target, Gold, thickness = 2.dp)
+        } else {
+            Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(questTitle(quest), color = GoldBright, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                QuestBar(quest.progress, quest.target, Gold)
+                MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())))
+                RewardChips(quest.reward)
+            }
+        }
     }
 }
+
+/** Карточка сюжета над моделью заданий: свёрнутость из настроек, нажатие - весь сюжет. */
+@Composable fun StoryCard(game: GameUi, board: QuestBoard?, vm: QuestViewModel, modifier: Modifier = Modifier) {
+    val fold by vm.storyFold.collectAsStateWithLifecycle()
+    StoryCard(game, board, fold, modifier, onFold = vm::foldStory, onSeen = vm::seeStory, onOpen = vm::openStory)
+}
+
+/** Высота свёрнутой карточки сюжета: одна строка с шевроном. */
+private val FOLDED_HEIGHT = 36.dp
 
 /**
  * The story: a throne waiting for its law first (the chapter's epilogue and the two laws), then the chapter - its name, its

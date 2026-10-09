@@ -140,9 +140,9 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     val heroModel: HeroViewModel = koinViewModel()
     // The forge reads the hero itself; the menagerie has only this.
     LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
-    Column(Modifier.fillMaxSize()) {
-        BackRow("${ui("nav.progress")} · ${place.label}") { shell.tab(TAB_PROGRESS) }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+    // Цепочка «назад» (4.4.x): «← Развитие › Место»
+    BackTrailHost(ui("nav.progress")) {
+        TrailLevel(place.label, onBack = { shell.tab(TAB_PROGRESS) }) {
             when (place) {
                 ProgressPlace.FORGE -> CraftScreen()
                 ProgressPlace.PETS -> PetsPlace(game)

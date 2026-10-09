@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.guild
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -51,6 +50,8 @@ import com.sperance.exileforge.ui.theme.*
 @Composable
 internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
+    // Звено здания в цепочке «назад» (4.4.x) - «Гильдия [TAG]»
+    TrailTitle(GuildText.title(ui("guild.title"), guild.tag))
     val recruits = me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)
     val tabs = GuildTab.entries.filter { it != GuildTab.APPLICATIONS || recruits }
     val tab = guilds.tab?.takeIf { it in tabs }
@@ -75,17 +76,19 @@ internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: Gu
         }
         return
     }
-    BackRow("${GuildText.title(guild.name, guild.tag)} · ${tabTitle(tab)}") { vm.tab(null) }
-    PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
-        when (tab) {
-            GuildTab.MEMBERS -> MembersTab(game, vm, guild, me)
-            GuildTab.QUESTS -> GuildQuestsTab(game, guild)
-            GuildTab.TREE -> TreeTab(game, vm, guild, me)
-            GuildTab.STASH -> StashTab(game, vm, me)
-            GuildTab.APPLICATIONS -> ApplicationsTab(game, vm, guild)
-            GuildTab.CONTRIBUTE -> ContributeTab(game, vm, guild, me)
-            GuildTab.LOG -> LogTab(game, vm)
-            GuildTab.SETTINGS -> SettingsTab(game, vm, guild, me)
+    // Раздел гильдии - уровень цепочки «назад» (4.4.x): «← Город › Гильдия [TAG] › Раздел», стрелка - к хабу гильдии
+    TrailLevel(tabTitle(tab), onBack = { vm.tab(null) }) {
+        PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
+            when (tab) {
+                GuildTab.MEMBERS -> MembersTab(game, vm, guild, me)
+                GuildTab.QUESTS -> GuildQuestsTab(game, guild)
+                GuildTab.TREE -> TreeTab(game, vm, guild, me)
+                GuildTab.STASH -> StashTab(game, vm, me)
+                GuildTab.APPLICATIONS -> ApplicationsTab(game, vm, guild)
+                GuildTab.CONTRIBUTE -> ContributeTab(game, vm, guild, me)
+                GuildTab.LOG -> LogTab(game, vm)
+                GuildTab.SETTINGS -> SettingsTab(game, vm, guild, me)
+            }
         }
     }
 }

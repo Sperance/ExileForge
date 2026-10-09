@@ -18,4 +18,7 @@ class HistoryViewModel(slice: GameSlice, private val reads: HeroReads, private v
 
     fun openUniques() = navigator.open(Route.Uniques)
     fun back() = navigator.back()
+
+    /** На площадь Города: звено «Город» цепочки «назад» (4.4.x). */
+    fun city() = navigator.tab(Route.ofBuilding(null))
 }

@@ -55,9 +55,9 @@ import org.koin.compose.viewmodel.koinViewModel
         CitySquare()
         return
     }
-    Column(Modifier.fillMaxSize()) {
-        BackRow(ui("nav.city")) { shell.building(null) }
-        Box(Modifier.weight(1f)) {
+    // Цепочка «назад» (4.4.x): «← Город › Здание», вложенные уровни здания (гильдия) встают в ту же строку
+    BackTrailHost(ui("nav.city")) {
+        TrailLevel(ui(building.titleKey), onBack = { shell.building(null) }) {
             when (building) {
                 Building.QUESTS -> QuestsScreen()
                 Building.MERCHANT -> MerchantScreen()
@@ -70,6 +70,18 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
+
+/** Имя здания в словаре: на плитке площади и в цепочке «назад». */
+private val Building.titleKey: String
+    get() = when (this) {
+        Building.QUESTS -> "quest.title"
+        Building.MERCHANT -> "merchant.title"
+        Building.AUCTION -> "nav.auction"
+        Building.GUILD -> "guild.title"
+        Building.HISTORY -> "history.title"
+        Building.CHRONICLE -> "chronicle.title"
+        Building.HALL -> "hall.title"
+    }
 
 /** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
 @Composable private fun CitySquare() {
@@ -122,15 +134,15 @@ private fun chronicleNews(game: GameUi): String {
  * награды заданий, приглашения в гильдию, свои лоты аукциона, что пора продлить.
  */
 private fun cityTiles(game: GameUi, board: Quests, trade: Market, guilds: Guilds, open: (Building) -> Unit): List<HubTile> {
-    fun tile(building: Building, title: String, icon: ImageVector, accent: Color, news: String, badge: Int = 0) = HubTile(title, icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building)) { open(building) }
+    fun tile(building: Building, icon: ImageVector, accent: Color, news: String, badge: Int = 0) = HubTile(ui(building.titleKey), icon, accent, note = null, news = news, badge = badge, lockedUntil = game.lockOf(building)) { open(building) }
     return listOf(
-        tile(Building.QUESTS, ui("quest.title"), ForgeGlyphs.Scroll, Vital, questNews(board), questsReady(board)),
-        tile(Building.MERCHANT, ui("merchant.title"), ForgeGlyphs.Coins, Gold, merchantNews(game.hero?.merchant)),
-        tile(Building.AUCTION, ui("nav.auction"), ForgeGlyphs.Orb, Gold, auctionNews(trade), lotsToExtend(game, trade)),
-        tile(Building.GUILD, ui("guild.title"), ForgeGlyphs.Banner, Rune, guildNews(guilds), guilds.mine?.takeIf { it.guild == null }?.invites?.size ?: 0),
-        tile(Building.HISTORY, ui("history.title"), ForgeGlyphs.Tome, Parchment, ui("city.history_idle")),
-        tile(Building.CHRONICLE, ui("chronicle.title"), ForgeGlyphs.Scroll, GoldBright, chronicleNews(game)),
-        tile(Building.HALL, ui("hall.title"), ForgeGlyphs.Gem, rarityColor(Rarity.MYTHICAL.name), ui("city.hall_idle")),
+        tile(Building.QUESTS, ForgeGlyphs.Scroll, Vital, questNews(board), questsReady(board)),
+        tile(Building.MERCHANT, ForgeGlyphs.Coins, Gold, merchantNews(game.hero?.merchant)),
+        tile(Building.AUCTION, ForgeGlyphs.Orb, Gold, auctionNews(trade), lotsToExtend(game, trade)),
+        tile(Building.GUILD, ForgeGlyphs.Banner, Rune, guildNews(guilds), guilds.mine?.takeIf { it.guild == null }?.invites?.size ?: 0),
+        tile(Building.HISTORY, ForgeGlyphs.Tome, Parchment, ui("city.history_idle")),
+        tile(Building.CHRONICLE, ForgeGlyphs.Scroll, GoldBright, chronicleNews(game)),
+        tile(Building.HALL, ForgeGlyphs.Gem, rarityColor(Rarity.MYTHICAL.name), ui("city.hall_idle")),
     )
 }
 

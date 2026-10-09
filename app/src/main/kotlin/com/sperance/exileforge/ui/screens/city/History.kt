@@ -86,51 +86,57 @@ private sealed interface AlbumPick {
     var pick by remember { mutableStateOf<AlbumPick>(AlbumPick.All) }
     var opened by remember { mutableStateOf<FoundUnique?>(null) }
     var boss by remember { mutableStateOf<String?>(null) }
-    Column(Modifier.fillMaxSize()) {
-        BackRow(ui("history.title"), vm::back)
-        val known = finds
-        if (album == null || known == null) {
-            Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Gold) }
-            return@Column
-        }
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                ScreenHeader(ui("history.uniques"), ui("history.found", album.all.count { it.code in known }, album.all.size), ForgeGlyphs.Gem)
-            }
-            item {
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PoolChip(ui("common.all"), pick == AlbumPick.All) { pick = AlbumPick.All }
-                    album.pools.forEach { pool ->
-                        PoolChip(ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), pick == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
+    // Цепочка «назад» (4.4.x): «← Город › История › Уникалки»
+    BackTrailHost(ui("nav.city")) {
+        TrailLevel(ui("history.title"), onBack = vm::city) {
+            TrailLevel(ui("history.uniques"), onBack = vm::back) {
+                Column(Modifier.fillMaxSize()) {
+                    val known = finds
+                    if (album == null || known == null) {
+                        Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Gold) }
+                        return@Column
                     }
-                    if (album.bosses.isNotEmpty()) PoolChip(ui("history.bosses"), pick == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
-                }
-            }
-            when (val chosen = pick) {
-                AlbumPick.All -> {
-                    val all = album.found(known)
-                    if (all.isEmpty()) item { InfoCard(ui("history.empty"), ui("history.empty_hint")) }
-                    items(all, key = { it.template.code }) { found -> FoundRow(found) { opened = found } }
-                }
+                    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        item {
+                            ScreenHeader(ui("history.uniques"), ui("history.found", album.all.count { it.code in known }, album.all.size), ForgeGlyphs.Gem)
+                        }
+                        item {
+                            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                PoolChip(ui("common.all"), pick == AlbumPick.All) { pick = AlbumPick.All }
+                                album.pools.forEach { pool ->
+                                    PoolChip(ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), pick == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
+                                }
+                                if (album.bosses.isNotEmpty()) PoolChip(ui("history.bosses"), pick == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
+                            }
+                        }
+                        when (val chosen = pick) {
+                            AlbumPick.All -> {
+                                val all = album.found(known)
+                                if (all.isEmpty()) item { InfoCard(ui("history.empty"), ui("history.empty_hint")) }
+                                items(all, key = { it.template.code }) { found -> FoundRow(found) { opened = found } }
+                            }
 
-                is AlbumPick.Pool -> {
-                    val pool = album.pools.firstOrNull { it.tag == chosen.tag } ?: return@LazyColumn
-                    item { PoolPlate(pool, known) }
-                    items(pool.found(known), key = { it.template.code }) { found -> FoundRow(found) { opened = found } }
-                }
+                            is AlbumPick.Pool -> {
+                                val pool = album.pools.firstOrNull { it.tag == chosen.tag } ?: return@LazyColumn
+                                item { PoolPlate(pool, known) }
+                                items(pool.found(known), key = { it.template.code }) { found -> FoundRow(found) { opened = found } }
+                            }
 
-                AlbumPick.Bosses -> items(album.bosses, key = { it.tag }) { pool ->
-                    BossRow(pool, known, open = boss == pool.tag, onToggle = { boss = if (boss == pool.tag) null else pool.tag }) { opened = it }
+                            AlbumPick.Bosses -> items(album.bosses, key = { it.tag }) { pool ->
+                                BossRow(pool, known, open = boss == pool.tag, onToggle = { boss = if (boss == pool.tag) null else pool.tag }) { opened = it }
+                            }
+                        }
+                    }
                 }
-            }
-        }
-    }
-    opened?.let { found ->
-        val view = remember(found.template.code, index) { index?.let { ItemView.showcase(found.template, it) } }
-        ForgeSheet(onDismissRequest = { opened = null }) {
-            Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(ui("history.first_find", stampText(found.find.at), found.find.count), color = Muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                view?.let { ItemCard(it, enabled = false, detailed = true, action = false) }
+                opened?.let { found ->
+                    val view = remember(found.template.code, index) { index?.let { ItemView.showcase(found.template, it) } }
+                    ForgeSheet(onDismissRequest = { opened = null }) {
+                        Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(ui("history.first_find", stampText(found.find.at), found.find.count), color = Muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                            view?.let { ItemCard(it, enabled = false, detailed = true, action = false) }
+                        }
+                    }
+                }
             }
         }
     }

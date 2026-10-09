@@ -52,11 +52,13 @@ import org.koin.compose.viewmodel.koinViewModel
     val activity by vm.activity.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) { if (game.heroId.isNotBlank()) vm.open() }
     val board = quests.board
-    Column(Modifier.fillMaxSize()) {
-        BackRow(ui("expedition.title"), vm::back)
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            item { ScreenHeader(ui("story.title"), ui("story.subtitle"), ForgeGlyphs.Tome) }
-            if (board == null) item { MutedText(ui("quest.loading")) } else story(game, vm, activity.busy, board)
+    // Цепочка «назад» (4.4.x): «← Поход › Сюжет»
+    BackTrailHost(ui("expedition.title")) {
+        TrailLevel(ui("story.title"), onBack = vm::back) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                item { ScreenHeader(ui("story.title"), ui("story.subtitle"), ForgeGlyphs.Tome) }
+                if (board == null) item { MutedText(ui("quest.loading")) } else story(game, vm, activity.busy, board)
+            }
         }
     }
 }

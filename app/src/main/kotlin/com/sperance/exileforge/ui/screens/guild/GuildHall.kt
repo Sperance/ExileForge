@@ -24,9 +24,10 @@ import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildBranch
 import com.sperance.exileforge.rules.content.GuildNode
-import com.sperance.exileforge.rules.content.GuildRole
+import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -39,7 +40,7 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable internal fun TreeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val rule = game.index?.guilds?.tree ?: return
-    val leader = me?.role == GuildRole.LEADER
+    val leader = me != null && GuildPolicy.can(me.role, GuildAction.TREE)
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
@@ -123,7 +124,7 @@ import com.sperance.exileforge.ui.theme.*
                     color = Muted,
                     style = MaterialTheme.typography.bodySmall,
                 )
-                if (me?.role == GuildRole.LEADER && ranks.isNotEmpty()) {
+                if (me != null && GuildPolicy.can(me.role, GuildAction.STASH_TABS) && ranks.isNotEmpty()) {
                     Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !game.busy) {
                         vm.tabRank(tab, it.toInt())
                     }

@@ -9,9 +9,6 @@ import kotlinx.serialization.Serializable
  * ([com.sperance.exileforge.rules.content.GuildFaction], 3.27.0) — are the shared module's; these are only the wire.
  */
 
-/** Whether a role answers applications and shows members out: the leader and the officers. */
-val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
-
 /** One row of the guild list: enough to choose and to knock. */
 @Serializable data class GuildCard(
     val id: String,
@@ -44,6 +41,9 @@ val GuildRole.manages: Boolean get() = this != GuildRole.MEMBER
     val rank: String = "",
     val joinedAt: Long = 0,
     val lastSeenAt: Long = 0,
+    /** Суточный потолок вклада с бонусом древа и остаток на сегодня (4.2.1, сервер по `GuildRules.dailyLimit`). */
+    val dayLimit: Long = 0,
+    val dayLeft: Long = 0,
 )
 
 /** A hero asking to join an APPLY guild; only the leader and the officers are shown them. */

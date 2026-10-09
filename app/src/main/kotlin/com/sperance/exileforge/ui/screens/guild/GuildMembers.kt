@@ -17,10 +17,11 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
-import com.sperance.exileforge.core.model.guild.manages
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.GuildAction
+import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -28,40 +29,31 @@ import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * What [me] may do to [target], by the roles alone: the leader everything but to themself, an officer only to show a
- * member out. The server decides all the same; the list only keeps from offering what it would refuse on sight.
+ * Что [me] может сделать с [target] - по общей таблице прав [GuildPolicy]: себя целью не выбирают. Сервер решает так же;
+ * список лишь не предлагает того, что он отверг бы сразу. Повышение без свободного места офицера остаётся в списке
+ * неактивным - с причиной в карточке.
  */
-private fun commandsOn(me: GuildMember?, target: GuildMember, officersFull: Boolean): List<MemberCommand> {
+private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberCommand> {
     if (me == null || target.heroId == me.heroId) return emptyList()
-    return when (me.role) {
-        GuildRole.LEADER -> listOfNotNull(
-            MemberCommand.PROMOTE.takeIf { target.role == GuildRole.MEMBER && !officersFull },
-            MemberCommand.DEMOTE.takeIf { target.role == GuildRole.OFFICER },
-            MemberCommand.TRANSFER,
-            MemberCommand.KICK,
-        )
-
-        GuildRole.OFFICER -> listOfNotNull(MemberCommand.KICK.takeIf { target.role == GuildRole.MEMBER })
-
-        GuildRole.MEMBER -> emptyList()
-    }
+    return MemberCommand.entries.filter { GuildPolicy.can(me.role, it.action, target.role) }
 }
 
 /** The roll: the leader first, then the officers, each group by contribution; an officer or the leader may invite by name. */
 @Composable internal fun MembersTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var chosen by remember { mutableStateOf<GuildMember?>(null) }
     var pending by remember { mutableStateOf<Pair<GuildMember, MemberCommand>?>(null) }
-    val officersFull = guild.officers >= (game.index?.guilds?.officers ?: MAX_OFFICERS)
+    // Места офицеров - из `guilds.json`; без прочитанного контента повышение не предлагается
+    val officerSeat = game.index?.guilds?.officerSeat(guild.officers) == true
     val roll = guild.members.sortedWith(compareBy<GuildMember> { it.role.ordinal }.thenByDescending { it.contribution })
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (me?.role?.manages == true) item { InviteField(game, vm) }
+        if (me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)) item { InviteField(game, vm) }
         items(roll, key = { it.heroId }) { member ->
-            val commands = commandsOn(me, member, officersFull)
+            val commands = commandsOn(me, member)
             MemberRow(member, isMe = member.heroId == me?.heroId, onClick = if (commands.isEmpty()) null else ({ chosen = member }))
         }
     }
     chosen?.let { member ->
-        MemberSheet(game, member, commandsOn(me, member, officersFull), onDismiss = { chosen = null }) { command ->
+        MemberSheet(game, member, commandsOn(me, member), officerSeat, onDismiss = { chosen = null }) { command ->
             chosen = null
             pending = member to command
         }
@@ -125,14 +117,16 @@ private fun roleColor(role: GuildRole) = when (role) {
 /** A member's card with the commands this hero may give about them; each one asks again before it goes. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun MemberSheet(game: GameUi, member: GuildMember, commands: List<MemberCommand>, onDismiss: () -> Unit, onCommand: (MemberCommand) -> Unit) {
+private fun MemberSheet(game: GameUi, member: GuildMember, commands: List<MemberCommand>, officerSeat: Boolean, onDismiss: () -> Unit, onCommand: (MemberCommand) -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(member.name, color = GoldBright, style = MaterialTheme.typography.titleLarge)
             MutedText(ui("guild.member_line", GuildText.role(member.role), GuildText.rank(member.rank), member.level, classTitle(member.heroClass)))
             MutedText(ui("guild.member_joined", clockText(member.joinedAt), number(member.contribution.toDouble())))
             commands.forEach { command ->
-                ForgeOutlinedButton(enabled = !game.busy, onClick = { onCommand(command) }, modifier = Modifier.fillMaxWidth()) { Text(commandTitle(command)) }
+                val seatless = command == MemberCommand.PROMOTE && !officerSeat
+                ForgeOutlinedButton(enabled = !game.busy && !seatless, onClick = { onCommand(command) }, modifier = Modifier.fillMaxWidth()) { Text(commandTitle(command)) }
+                if (seatless) MutedText(ui("guild.officers_full", game.index?.guilds?.officers ?: 0))
             }
         }
     }
@@ -174,6 +168,3 @@ private fun confirmNote(command: MemberCommand): String? = when (command) {
         }
     }
 }
-
-/** The officers' ceiling when `guilds.json` has not been read. */
-private const val MAX_OFFICERS = 3

@@ -31,10 +31,11 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.model.guild.levelProgress
-import com.sperance.exileforge.core.model.guild.manages
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.GuildAction
+import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.quests.GuildQuestsTab
@@ -50,8 +51,8 @@ import com.sperance.exileforge.ui.theme.*
 @Composable
 internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
-    val manages = me?.role?.manages == true
-    val tabs = GuildTab.entries.filter { it != GuildTab.APPLICATIONS || manages }
+    val recruits = me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)
+    val tabs = GuildTab.entries.filter { it != GuildTab.APPLICATIONS || recruits }
     val tab = guilds.tab?.takeIf { it in tabs }
     if (tab == null) {
         PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {

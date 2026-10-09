@@ -28,11 +28,11 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Giving to the guild: gold or an orb of the bag, counted at the orb's price. The whole of it goes to the treasury, to the
- * guild's experience and to the hero's own contribution, which is their rank; a day holds a limit by the hero's level.
+ * guild's experience and to the hero's own contribution, which is their rank; a day holds a limit by the hero's level and
+ * the guild's tree, the server telling what is left of it today.
  * Under it, the treasury, the hero's way to the next rank and the week's givers.
  */
 @Composable internal fun ContributeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
-    val rules = game.index?.guilds
     val orbs = game.orbs.filter { (game.bagAmount(it.code.value) ?: 0L) > 0 }
     // The crafts' materials (3.79.0, server 1.74.0): they grow the guild at their price, the treasury does not keep them.
     val materials = game.index?.items?.values.orEmpty().filter { it.category in DONATED_STOCK && it.price > 0 && (game.bagAmount(it.code.value) ?: 0L) > 0 }.sortedBy { it.price }
@@ -66,17 +66,31 @@ import com.sperance.exileforge.ui.theme.*
                     supportingText = { have?.let { Text(ui("guild.give_have", number(it.toDouble()))) } },
                 )
                 if (item != GUILD_GOLD && count > 0) PropertyRow(ui("guild.give_worth"), number((count * price).toDouble()), Glyph.CURRENCY)
-                rules?.let { PropertyRow(ui("guild.daily_limit"), number(it.dailyLimit(game.heroLevel).toDouble()), Glyph.LEVEL) }
-                if (have != null && count > have) Text(ui("guild.give_short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                // Суточный лимит и остаток считает сервер по одной формуле `GuildRules.dailyLimit` (с бонусом древа)
+                val left = me?.dayLeft
+                me?.let {
+                    PropertyRow(ui("guild.daily_limit"), number(it.dayLimit.toDouble()), Glyph.LEVEL)
+                    MutedText(ui("guild.daily_left", number(it.dayLeft.toDouble())))
+                }
+                // «Макс.»: сколько штук влезает в сегодняшний остаток и в то, что есть у героя
+                val most = listOfNotNull(left?.let { l -> if (price > 0) l / price else 0L }, have).minOrNull()
+                if (most != null && most > 0) {
+                    ForgeTextButton(enabled = !game.busy, onClick = { amount = most.toString() }) { Text(ui("guild.give_max", number(most.toDouble()))) }
+                }
+                val over = left != null && count * price > left
+                val short = have != null && count > have
+                if (short) Text(ui("guild.give_short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                if (over) Text(ui("guild.give_over_limit", number((left ?: 0L).toDouble())), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                // Кнопка остаётся на экране: после каждого удержания она снова взводится, поле чистится только принятым вкладом
                 HoldButton(
                     ui("guild.give_do"),
                     Gold,
                     Modifier.fillMaxWidth(),
-                    enabled = !game.busy && count > 0 && (have == null || count <= have),
+                    enabled = !game.busy && count > 0 && price > 0 && !short && !over,
+                    rearm = true,
                     icon = ForgeGlyphs.Coins,
                 ) {
-                    vm.contribute(item, count)
-                    amount = ""
+                    vm.contribute(item, count) { amount = "" }
                 }
             }
         }

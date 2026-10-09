@@ -13,7 +13,8 @@ import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.rules.content.GuildRole
+import com.sperance.exileforge.rules.content.GuildAction
+import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
@@ -26,7 +27,8 @@ private enum class Exit { LEAVE, DISBAND }
  */
 @Composable internal fun SettingsTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val rules = game.index?.guilds
-    val leader = me?.role == GuildRole.LEADER
+    val leader = me != null && GuildPolicy.can(me.role, GuildAction.SETTINGS)
+    val disbands = me != null && GuildPolicy.can(me.role, GuildAction.DISBAND)
     var mode by remember(guild.mode) { mutableStateOf(guild.mode) }
     var minLevel by remember(guild.minLevel) { mutableStateOf(guild.minLevel.toString()) }
     var emblem by remember(guild.emblem) { mutableStateOf(guild.emblem) }
@@ -74,7 +76,7 @@ private enum class Exit { LEAVE, DISBAND }
         item {
             ForgePanel(accent = LifeRed) {
                 Engraved(ui("guild.exit"), LifeRed)
-                if (leader) {
+                if (disbands) {
                     MutedText(ui("guild.leader_exit_note"))
                     ForgeOutlinedButton(enabled = !game.busy, onClick = { exit = Exit.DISBAND }, modifier = Modifier.fillMaxWidth()) { Text(ui("guild.disband")) }
                 } else {

@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.model.guild.GuildLogEntry
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildPage
 import com.sperance.exileforge.core.model.guild.GuildView
+import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildMode
 
 private const val GUILD = "api/v1/guild"
@@ -15,7 +16,14 @@ private const val GUILD = "api/v1/guild"
 const val GUILD_LOG_PAGE_SIZE = 20
 
 /** The member commands, each about one other hero of the guild by `memberId`. */
-enum class MemberCommand(val path: String) { KICK("kick"), PROMOTE("promote"), DEMOTE("demote"), TRANSFER("transfer") }
+
+/** Команда над участником: путь сервера и действие таблицы прав `GuildPolicy`, по которой клиент её показывает. */
+enum class MemberCommand(val path: String, val action: GuildAction) {
+    PROMOTE("promote", GuildAction.PROMOTE),
+    DEMOTE("demote", GuildAction.DEMOTE),
+    TRANSFER("transfer", GuildAction.TRANSFER),
+    KICK("kick", GuildAction.KICK),
+}
 
 /**
  * Guilds (3.22.0, server 1.20.0). Every rule is the server's; the client names a guild or a member and prints the refusal.

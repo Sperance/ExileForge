@@ -41,8 +41,6 @@ import com.sperance.exileforge.ui.theme.rarityColor
             }
 
             blight.raised -> Text(ui("feature.blight.left", blight.left), color = BlightTint.bone, style = MaterialTheme.typography.labelSmall)
-
-            blight.point == 0 -> Text(ui("feature.blight.note"), color = BlightTint.bone.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall)
         }
     }
 }

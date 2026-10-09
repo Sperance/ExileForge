@@ -113,7 +113,6 @@ internal object BlightPortraits : FieldPortraitMotion() {
     // ---------------------------------------------------------------------------------- Матерь Скверны
 
     private const val BREATH = 5.5f
-    private const val BEAT = 1.4f
     private const val FLICKER = 3.2f
     private const val SWAY = 4f
 
@@ -140,24 +139,13 @@ internal object BlightPortraits : FieldPortraitMotion() {
     private val heartSize = Size(16f * 1.15f * 2, 19f * 1.15f * 2)
     private val motherEyes = listOf(motherAt(138f, 82f), motherAt(162f, 82f))
 
-    /** Двойной удар сердца: масштаб по ключам макета (0 - 1, 12% - 1.07, 24% - .98, 36% - 1.04, дальше покой). */
-    private fun beat(t: Float): Float {
-        val k = (t / BEAT) % 1f
-        val keys = floatArrayOf(0f, .12f, .24f, .36f, 1f)
-        val values = floatArrayOf(1f, 1.07f, .98f, 1.04f, 1f)
-        val i = (1 until keys.size).first { k <= keys[it] }
-        val f = (k - keys[i - 1]) / (keys[i] - keys[i - 1])
-        val e = f * f * (3 - 2 * f)
-        return values[i - 1] + (values[i] - values[i - 1]) * e
-    }
-
     private fun DrawScope.mother(t: Float, torn: Int) {
         val broken = torn.coerceIn(0, CORDS)
         cords.forEachIndexed { i, (root, c, tip) ->
             if (i < broken) tornCord(t, i, root, c, tip) else livingCord(t, i, root, c, tip)
         }
         // сердце: двойной удар, на пике вспышка
-        val k = beat(t)
+        val k = motherBeat(t)
         val surge = ((k - 1f) / .07f).coerceIn(0f, 1f)
         glow(heart, 44f + 10f * surge, hot, .2f + .35f * surge)
         val size = heartSize * k
@@ -192,7 +180,7 @@ internal object BlightPortraits : FieldPortraitMotion() {
         drawPath(curve(from, mid, to), vein.copy(alpha = .12f), style = Stroke(w0 + 8f, cap = StrokeCap.Round))
         drawPath(body, flesh)
         drawPath(body, pit, style = Stroke(1.4f))
-        val pulse = wave(t, BEAT, i * .1f)
+        val pulse = wave(t, MOTHER_BEAT, i * .1f)
         drawPath(curve(from, mid, to), vein.copy(alpha = .45f + .35f * pulse), style = Stroke(1.8f, cap = StrokeCap.Round))
         // узлы на пуповине
         listOf(.35f, .7f).forEach { s ->
@@ -350,4 +338,18 @@ internal object BlightPortraits : FieldPortraitMotion() {
         }
         portraitSparks(t, 8, vein)
     }
+}
+
+/** Удар сердца Матери Скверны, секунды: двойной удар (RULES.md, «Скверна»); в этот ритм бьются и жетоны её монстров. */
+internal const val MOTHER_BEAT = 1.4f
+
+/** Двойной удар сердца в момент [t]: масштаб по ключам макета (0 - 1, 12% - 1.07, 24% - .98, 36% - 1.04, дальше покой). */
+internal fun motherBeat(t: Float): Float {
+    val k = (t / MOTHER_BEAT) % 1f
+    val keys = floatArrayOf(0f, .12f, .24f, .36f, 1f)
+    val values = floatArrayOf(1f, 1.07f, .98f, 1.04f, 1f)
+    val i = (1 until keys.size).first { k <= keys[it] }
+    val f = (k - keys[i - 1]) / (keys[i] - keys[i - 1])
+    val e = f * f * (3 - 2 * f)
+    return values[i - 1] + (values[i] - values[i - 1]) * e
 }

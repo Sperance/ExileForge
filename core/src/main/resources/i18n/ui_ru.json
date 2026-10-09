@@ -930,7 +930,6 @@
   "map.legend_blight": "Очаг Скверны",
   "map.legend_blight_chest": "Сундук Скверны",
   "map.legend_mother": "Матерь Скверны",
-  "feature.blight.note": "Наступи на очаг: вокруг встанут монстры Скверны. Убей всех — получишь сундук, а Скверна может расползтись дальше.",
   "feature.blight.point": "Очаг {0} из {1}",
   "feature.blight.left": "Осталось монстров Скверны: {0}",
   "feature.blight.chest": "Открыть сундук Скверны",

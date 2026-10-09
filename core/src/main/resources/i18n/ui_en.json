@@ -930,7 +930,6 @@
   "map.legend_blight": "Blight hearth",
   "map.legend_blight_chest": "Blight chest",
   "map.legend_mother": "Mother of Blight",
-  "feature.blight.note": "Step on the hearth: Blight monsters rise around it. Slay them all for a chest — and the Blight may spread further.",
   "feature.blight.point": "Hearth {0} of {1}",
   "feature.blight.left": "Blight monsters left: {0}",
   "feature.blight.chest": "Open the Blight chest",

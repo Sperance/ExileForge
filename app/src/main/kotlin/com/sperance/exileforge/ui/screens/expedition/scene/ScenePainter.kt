@@ -204,6 +204,7 @@ internal class ScenePainter {
                 // Жетон кольца очага Скверны «выпрыгивает» по очереди (4.0.0); ещё не вставший не виден
                 val pop = blight?.age(agent.id)?.let { (age, n) -> blightPop(age, n) } ?: 1f
                 if (pop <= 0f) return@forEach
+                val mark = blight.decorOf(agent.id)
                 standing += (agent.x + agent.y) to {
                     val monster = agent.monster
                     // A rarer monster is a bigger one: the tier is read before the ring is noticed.
@@ -225,7 +226,7 @@ internal class ScenePainter {
                         AgentMode.CHASING, AgentMode.HUNTING -> abs(sin(time * 8f + agent.id)) * unit * .12f
                         else -> abs(sin(time * 3f + agent.id)) * unit * .08f
                     }
-                    token(isoX(agent.x, agent.y), isoY(agent.x, agent.y), size, ring, bob) {
+                    token(isoX(agent.x, agent.y), isoY(agent.x, agent.y), size, ring, bob, mark) {
                         Portraits.monster(this, monster.code.value, monster.form, ring, time)
                         if (agent.mode == AgentMode.ASLEEP) drawRect(Color.Black.copy(alpha = .35f))
                         // Печать стража (3.93.0): запечатанный босс - под фиолетовой пеленой с бегущим кругом
@@ -278,13 +279,17 @@ internal class ScenePainter {
     /**
      * A token standing on its feet at ([x], [y]) in the pen's upward measure: a shadow on the floor
      * and the disc above it, lifted by [bob]. The pen turns `y` over; a token is drawn on the scope
-     * itself, so it turns it over here.
+     * itself, so it turns it over here. [decor] - метка жетона слоем под ним и над ним (4.3.0), на часах декора.
      */
-    internal fun token(x: Float, y: Float, radius: Float, ring: Color, bob: Float, draw: DrawScope.() -> Unit) {
+    internal fun token(x: Float, y: Float, radius: Float, ring: Color, bob: Float, decor: TokenDecor? = null, draw: DrawScope.() -> Unit) {
         val scope = pen.scope
         val feet = -y
+        val centre = Offset(x, feet - radius * 1.1f - bob)
+        val clock = this.decor
         scope.drawOval(Color.Black.copy(alpha = .45f), Offset(x - radius * .8f, feet - radius * .22f), Size(radius * 1.6f, radius * .44f))
-        scope.drawToken(Offset(x, feet - radius * 1.1f - bob), radius, ring, draw)
+        decor?.run { scope.under(centre, radius, clock) }
+        scope.drawToken(centre, radius, ring, draw)
+        decor?.run { scope.over(centre, radius, clock) }
     }
 
     internal fun touchesFloor(map: ExpeditionMap, x: Int, y: Int) = (-1..1).any { dy -> (-1..1).any { dx -> map.walkable(x + dx, y + dy) } }

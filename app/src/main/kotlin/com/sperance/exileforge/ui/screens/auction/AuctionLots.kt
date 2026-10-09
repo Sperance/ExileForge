@@ -12,12 +12,16 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -30,15 +34,19 @@ import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.market.DealEntry
+import com.sperance.exileforge.core.market.DealLedger
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
@@ -49,6 +57,7 @@ import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.icons.orbArt
+import com.sperance.exileforge.ui.screens.hero.StackIcon
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.theme.*
 
@@ -112,13 +121,15 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
 
 /**
  * The hero's deals of the last days (3.73.0): what they sold and to whom, what they bought and from whom, the copy as it
- * changed hands a tap away, and the orbs earned and spent summed on top.
+ * changed hands a tap away; on top - две свёрнутые таблички «Получено» и «Потрачено» ([DealLedger], 4.3.0).
  */
 @Composable internal fun ColumnScope.HistoryTab(game: GameUi, market: Market) {
     var filter by remember { mutableStateOf(DealFilter.ALL) }
     var openLot by remember { mutableStateOf<String?>(null) }
     val heroId = game.heroId
     val deals = market.history.map { it.deal }
+    val ledger = remember(deals, heroId) { DealLedger.of(deals, heroId) }
+    var opened by remember { mutableStateOf<DealEntry?>(null) }
     val shown = deals.filter { deal ->
         when (filter) {
             DealFilter.ALL -> true
@@ -134,8 +145,8 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
                         FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text(ui("auction.history_${f.name.lowercase()}")) })
                     }
                 }
-                orbTotals(deals.filter { it.belongsTo(heroId) }).takeIf { it.isNotBlank() }?.let { PropertyRow(ui("auction.history_earned"), it, Glyph.CURRENCY) }
-                orbTotals(deals.filterNot { it.belongsTo(heroId) }).takeIf { it.isNotBlank() }?.let { PropertyRow(ui("auction.history_spent"), it, Glyph.CURRENCY) }
+                DealTable(game, ui("auction.history_earned"), ledger.received) { entry -> opened = entry }
+                DealTable(game, ui("auction.history_spent"), ledger.spent) { entry -> opened = entry }
                 MutedText(ui("auction.history_note"), style = MaterialTheme.typography.labelMedium)
             }
         }
@@ -147,7 +158,66 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
     shown.firstOrNull { it.id == openLot }?.let { deal ->
         LotSheet(game, deal, action = null, enabled = false, note = dealMark(deal, heroId), onDismiss = { openLot = null })
     }
+    // Строка табличек открывает своё (4.3.0): товар - карточку лота, стопку и сферу - их лист
+    when (val entry = opened) {
+        is DealEntry.Goods -> LotSheet(game, entry.lot, action = null, enabled = false, note = dealMark(entry.lot, heroId), onDismiss = { opened = null })
+        is DealEntry.Stack -> StackInfoSheet(game, entry.code) { opened = null }
+        is DealEntry.Gold, null -> Unit
+    }
 }
+
+/**
+ * Табличка итога истории (4.3.0): «Получено» или «Потрачено», свёрнутая, в заголовке - сколько строк. Строка - значок, название и
+ * количество (стопки и валюта сложены); нажатие на стопку, сферу, вещь или питомца - [onOpen]. Пустой таблички нет.
+ */
+@Composable private fun DealTable(game: GameUi, title: String, entries: List<DealEntry>, onOpen: (DealEntry) -> Unit) {
+    if (entries.isEmpty()) return
+    var open by rememberSaveable(title) { mutableStateOf(false) }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = title) { open = !open }.padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(title, color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+            Text(entries.size.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
+            Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Gold, modifier = Modifier.size(18.dp))
+        }
+        if (open) entries.forEach { DealLine(game, it, onOpen) }
+    }
+}
+
+/** Строка таблички: значок, название и количество; золото сборов не открывается. */
+@Composable private fun DealLine(game: GameUi, entry: DealEntry, onOpen: (DealEntry) -> Unit) {
+    val (title, amount) = when (entry) {
+        is DealEntry.Stack -> stackTitle(game, entry.code) to entry.amount
+        is DealEntry.Gold -> ui("auction.history_fee_gold") to entry.amount
+        is DealEntry.Goods -> entry.lot.title to entry.lot.amount
+    }
+    Row(
+        Modifier.fillMaxWidth().then(if (entry is DealEntry.Gold) Modifier else Modifier.clickable(onClickLabel = title) { onOpen(entry) }).padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when (entry) {
+            is DealEntry.Stack -> Orb.of(entry.code)?.let { OrbGlyph(it, Modifier.size(20.dp)) } ?: StackIcon(game, entry.code, 20)
+            is DealEntry.Gold -> Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(20.dp))
+            is DealEntry.Goods -> LotIcon(game, entry.lot, Modifier.size(20.dp))
+        }
+        Text(
+            title,
+            color = (entry as? DealEntry.Goods)?.let { lotColor(it.lot) } ?: Parchment,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(number(amount.toDouble()), color = GoldBright, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+    }
+}
+
+/** Имя стопки или сферы цены; сфера, которой правила не знают, - хвостом своего кода. */
+private fun stackTitle(game: GameUi, code: String): String = if (Orb.of(code) != null || game.index?.item(ItemCode(code)) != null) itemTitle(code) else ui("auction.orb_id", code.takeLast(6))
 
 /** «Продано: Имя · 12.10 14:30» or «Куплено у Имя · …». */
 internal fun dealMark(deal: AuctionLot, heroId: String): String {
@@ -158,6 +228,3 @@ internal fun dealMark(deal: AuctionLot, heroId: String): String {
         ui("auction.history_bought_from", sellerName(deal), at)
     }
 }
-
-/** The orbs of [deals] summed per orb: «12 × Сфера хаоса, 3 × Сфера соединения». */
-internal fun orbTotals(deals: List<AuctionLot>): String = deals.groupBy { it.priceOrb }.entries.joinToString(", ") { (orb, of) -> "${of.sumOf { it.price }} × ${orbTitle(of.first())}" }

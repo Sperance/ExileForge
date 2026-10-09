@@ -223,6 +223,7 @@
   "auction.history_bought": "Покупки",
   "auction.history_earned": "Получено",
   "auction.history_spent": "Потрачено",
+  "auction.history_fee_gold": "Золото сборов",
   "auction.history_note": "Сделки хранятся 7 дней.",
   "auction.history_empty": "Сделок пока нет",
   "auction.history_empty_hint": "Здесь появятся ваши продажи и покупки за последние 7 дней.",

@@ -223,6 +223,7 @@
   "auction.history_bought": "Purchases",
   "auction.history_earned": "Earned",
   "auction.history_spent": "Spent",
+  "auction.history_fee_gold": "Fee gold",
   "auction.history_note": "Deals are kept for 7 days.",
   "auction.history_empty": "No deals yet",
   "auction.history_empty_hint": "Your sales and purchases of the last 7 days will show here.",

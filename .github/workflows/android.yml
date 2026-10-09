@@ -28,11 +28,37 @@ jobs:
           cache-read-only: false
       - run: chmod +x gradlew
       - run: ./gradlew :core:ktlintCheck :app:ktlintCheck :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
-      # The release build is shrunk by R8, which removes what it cannot see being used; building it
-      # here is what catches a serializer or a class R8 took away. The APK is not published.
-      - run: ./gradlew :app:assembleRelease
-      # The same shrunk build with its instrumentation APK: the smoke test below runs over what R8 left.
+      # Сжатая R8 сборка с инструментальным APK: что R8 унёс лишнего, ловит смоук-тест ниже (4.3.1: единственная проверка R8).
       - run: ./gradlew :app:assembleMinifiedTest :app:assembleMinifiedTestAndroidTest -PminifiedTests
+      # Подписанный релиз собирается один раз, здесь, и уходит в job `release` артефактом (4.3.1): там больше не пересобирают.
+      - name: Build signed release APK
+        if: github.event_name == 'push'
+        env:
+          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        # A published APK is always signed with the release key, so each one installs over the last: no key, no release.
+        run: |
+          if [ -z "$RELEASE_KEYSTORE" ]; then echo "::error::RELEASE_KEYSTORE secret is missing"; exit 1; fi
+          echo "$RELEASE_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
+          ./gradlew :app:assembleRelease
+          apk=app/build/outputs/apk/release/app-release.apk
+          signer=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
+          "$signer" verify --print-certs "$apk" | tee signer.txt
+          expected=$(keytool -list -v -keystore "$RUNNER_TEMP/release.jks" -storepass "$RELEASE_KEYSTORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" | sed -n 's/.*SHA256: *//p' | tr -d ':' | tr 'A-F' 'a-f')
+          grep -qi "SHA-256 digest: $expected" signer.txt || { echo "::error::APK is not signed with the release key"; exit 1; }
+          rm -f "$RUNNER_TEMP/release.jks"
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: exile-forge-release
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 7
       - uses: actions/upload-artifact@v4
         with:
           name: exile-forge-debug
@@ -143,11 +169,10 @@ jobs:
       # token — which works only when Settings → Actions → General → Workflow permissions is «Read and write».
       GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
     steps:
+      # Публикации нужны только заметки, версии и ревизии из исходников: без истории, сборка - артефакт job `build`.
       - uses: actions/checkout@v4
         with:
           submodules: true
-          # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
-          fetch-depth: 0
           # Сервер - приватный репозиторий (3.88.4): токен с Contents: read на ExileForge и ktor-bestgame; без секрета - токен прогона
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
       - id: version
@@ -156,39 +181,10 @@ jobs:
           echo "tag=v$version" >> "$GITHUB_OUTPUT"
           if gh release view "v$version" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; else echo "exists=false" >> "$GITHUB_OUTPUT"; fi
       - if: steps.version.outputs.exists == 'false'
-        uses: actions/setup-java@v4
+        uses: actions/download-artifact@v4
         with:
-          distribution: temurin
-          java-version: '17'
-      - if: steps.version.outputs.exists == 'false'
-        uses: android-actions/setup-android@v3
-        with:
-          packages: 'platform-tools'
-      - if: steps.version.outputs.exists == 'false'
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          # Рабочая ветка не default: без этого кэш Gradle только читается, и каждый прогон собирает с нуля
-          cache-read-only: false
-      - if: steps.version.outputs.exists == 'false'
-        name: Build signed release APK
-        env:
-          RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
-          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
-          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
-          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
-        # A published APK is always signed with the release key, so each one installs over the last: no key, no release.
-        run: |
-          if [ -z "$RELEASE_KEYSTORE" ]; then echo "::error::RELEASE_KEYSTORE secret is missing"; exit 1; fi
-          echo "$RELEASE_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
-          export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
-          chmod +x gradlew
-          ./gradlew :app:assembleRelease
-          apk=app/build/outputs/apk/release/app-release.apk
-          signer=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
-          "$signer" verify --print-certs "$apk" | tee signer.txt
-          expected=$(keytool -list -v -keystore "$RUNNER_TEMP/release.jks" -storepass "$RELEASE_KEYSTORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" | sed -n 's/.*SHA256: *//p' | tr -d ':' | tr 'A-F' 'a-f')
-          grep -qi "SHA-256 digest: $expected" signer.txt || { echo "::error::APK is not signed with the release key"; exit 1; }
-          rm -f "$RUNNER_TEMP/release.jks"
+          name: exile-forge-release
+          path: app/build/outputs
       - if: steps.version.outputs.exists == 'false'
         name: Publish release
         run: |

@@ -60,7 +60,7 @@ with (root / 'build/client-server.log').open('w') as log:
                 time.sleep(.5)
         test_env = dict(os.environ, EF_LIVE_URL='http://localhost:8080/', EF_ADMIN_PASSWORD=admin_password,
                         EF_PLAYER_LOGIN=player_login, EF_PLAYER_PASSWORD=player_password)
-        subprocess.run(['bash', 'gradlew', ':core:test', '--tests', 'com.sperance.exileforge.core.ServerIntegrationTest', '--rerun-tasks'],
+        subprocess.run(['bash', 'gradlew', ':core:test', '--tests', 'com.sperance.exileforge.core.ServerIntegrationTest', '--rerun'],
                        cwd=root, env=test_env, check=True)
     except Exception:
         # The backend's own errors (SP_500 with its stack) are only in its log: show them where CI shows output.

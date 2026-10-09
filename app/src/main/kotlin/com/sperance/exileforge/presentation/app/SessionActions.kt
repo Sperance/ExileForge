@@ -9,10 +9,10 @@ import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandStore
 import com.sperance.exileforge.core.network.FailureState
-import com.sperance.exileforge.core.network.ServerAlarm
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
+import com.sperance.exileforge.core.network.ServerAlarm
 import com.sperance.exileforge.core.network.normalizeServer
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices

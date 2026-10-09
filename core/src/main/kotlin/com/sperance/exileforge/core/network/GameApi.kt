@@ -6,12 +6,12 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ApiCapabilities
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.command.ClientIdentity
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.command.DeviceCredentials
 import com.sperance.exileforge.core.model.command.LoginCredentials
 import com.sperance.exileforge.core.model.command.PasswordChange
 import com.sperance.exileforge.core.model.command.SignedIn
 import com.sperance.exileforge.core.model.command.UserProfile
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.model.sync.StaticManifest

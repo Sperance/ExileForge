@@ -11,6 +11,7 @@ class RequestJournal {
     fun add(entry: RequestLog) {
         mutable.update { (listOf(entry) + it).take(60) }
     }
+
     /** Последние [limit] неудач (4.3.1), новые первыми - хвост для отчёта об ошибке. */
     fun failures(limit: Int): List<RequestFailure> = entries.value.asSequence().mapNotNull(RequestLog::failure).take(limit).toList()
 

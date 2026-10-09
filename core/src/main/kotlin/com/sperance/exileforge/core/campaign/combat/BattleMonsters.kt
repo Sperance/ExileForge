@@ -42,21 +42,26 @@ internal fun Battle.enrage(foe: Fighter) = traits(foe, TraitAct.ENRAGE).forEach 
 }
 
 /**
- * Ярость стража (3.95.0, сервер 1.82.0): в бою со стражем каждые `combat.bossEnrage.every` секунд урон всех врагов боя -
- * стража, свиты, позже вставших - больше ещё на `damage` процентов; ступени складываются. Без бросков: бой остаётся тем же
- * на тех же костях.
+ * Ярость (3.95.0 - стража; 4.2.1 - любого боя): каждые `every` секунд правила вида боя [Battle.rageRule] урон всех живых врагов -
+ * стража, стаи, свиты, позже вставших - больше ещё на `damage` процентов; ступени складываются до `limit`. Вставший позже
+ * догоняет ступень, что уже идёт. Без бросков: бой остаётся тем же на тех же костях.
  */
 internal fun Battle.rage() {
-    if (guardian == null) return
-    val stacks = rules.bossEnrage.stacks(time)
-    if (stacks <= enrage) return
-    enrage = stacks
-    val lines = listOf(StatLine(CoreStat.DAMAGE.code, Op.MORE, rules.bossEnrage.damage * stacks))
-    foeFighters.filter { it.alive }.forEach { buff(it, RAGE, lines, FOREVER) }
-    note(foeFighters[guardian!!], NoteKind.RAGE, stacks.toString())
+    val stacks = rageRule.stacks(time)
+    if (stacks > enrage) {
+        enrage = stacks
+        (guardian?.let(foeFighters::get) ?: foeFighters.firstOrNull { it.alive })?.let { note(it, NoteKind.RAGE, stacks.toString()) }
+    }
+    if (enrage <= 0) return
+    val lines = listOf(StatLine(CoreStat.DAMAGE.code, Op.MORE, rageRule.damage * enrage))
+    foeFighters.forEach { foe ->
+        if (!foe.alive || raged[foe.index] == enrage) return@forEach
+        raged[foe.index] = enrage
+        buff(foe, RAGE, lines, FOREVER)
+    }
 }
 
-/** Источник баффа ярости стража: один на врага, каждая ступень заменяет прежнюю. */
+/** Источник баффа ярости: один на врага, каждая ступень заменяет прежнюю. */
 private const val RAGE = "GUARDIAN_RAGE"
 
 /** What a fallen foe's traits do as it falls: a burst at the hero, a rallying of the pack, a mending of it. */

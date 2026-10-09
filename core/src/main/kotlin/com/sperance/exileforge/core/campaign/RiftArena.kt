@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FeatureStat
+import com.sperance.exileforge.rules.content.FightKind
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
@@ -250,6 +251,7 @@ class RiftArena(
             rift = riftCombat().takeIf { fight.guardian != null || it.ambush > 0 },
             // Волна после выигранной (4.2.0): силы FIGHT_CLEAR
             cleared = wave > 0,
+            kind = FightKind.RIFT,
         )
         started = wave > 0
         paused = false

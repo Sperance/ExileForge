@@ -200,14 +200,8 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                 }
                 Spacer(Modifier.weight(1f))
                 // Ярость (3.95.0): сколько уже прибавил урон и когда следующая ступень; без неё - когда первая
-                if (foe.alive) {
-                    Text(
-                        if (boss.rage > 0) ui("boss.rage", number(boss.rage), ceil(boss.rageIn).toInt()) else ui("boss.rage_in", ceil(boss.rageIn).toInt()),
-                        color = if (boss.rage > 0) Ember else Muted,
-                        fontSize = 9.sp,
-                        style = TabularDigits,
-                    )
-                }
+                val rage = fight.rage
+                if (foe.alive && rage != null) RageMark(rage)
             }
         }
         if (boss.rift != null && foe.alive) RiftStrip(boss, time)
@@ -239,9 +233,6 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
         }
     }
 }
-
-/** Табулярные цифры: каждая цифра одной ширины, счётчик не дёргает строку. */
-private val TabularDigits = TextStyle(fontFeatureSettings = "tnum")
 
 /**
  * Имя босса в одну строку (4.2.0): серифы цвета [color] от [max] вниз до [min] - сколько влезет, дальше многоточие. Общее для

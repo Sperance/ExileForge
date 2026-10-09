@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FloatingHit
 import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.LungeView
+import com.sperance.exileforge.core.campaign.run.RageView
 import com.sperance.exileforge.core.campaign.run.SlotView
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -136,6 +137,7 @@ internal fun Battle.hud(
         round = round, rounds = rounds,
         heroBody = h.body,
         boss = bossHud(),
+        rage = RageView(enrage, rageRule.damage * enrage, rageRule.next(time)).takeIf { outcome == null },
     )
 }
 
@@ -155,8 +157,7 @@ private fun Battle.bossHud(): BossHud? {
             is SlotHolder.Totem -> holder.totem.let { t -> SlotView.Totem(t.serial, t.totem.totem.code, t.totem.totem.kind, (t.until - time).coerceAtLeast(0.0), t.until - t.raised, t.totem.totem.element) }
         }
     }
-    val rage = rules.bossEnrage
-    val hud = BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, rage.damage * enrage, (rage.every - time % rage.every).coerceAtLeast(0.0), tainted = foe.tainted)
+    val hud = BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, tainted = foe.tainted)
     return riftHud(hud)
 }
 

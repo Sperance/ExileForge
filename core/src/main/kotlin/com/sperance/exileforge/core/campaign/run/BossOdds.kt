@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.FightKind
 import com.sperance.exileforge.rules.content.FightRules
 import com.sperance.exileforge.rules.roll.Dice
 import kotlin.random.Random
@@ -21,7 +22,7 @@ import kotlin.random.Random
  * Почему герой проиграл бой прогона (4.2.0). Расширяемо: новая причина - новая реализация и правило в [LossCauses].
  */
 sealed interface LossCause {
-    /** Страж разъярился ко времени гибели героя. */
+    /** Враги боя разъярились ко времени гибели героя (4.2.1: ярость - в любом бою). */
     data object Enrage : LossCause
 
     /** Бой не кончился за лимит прогона. */
@@ -45,10 +46,13 @@ object LossCauses {
 
 /**
  * Исход прогона боёв со стражем (3.92.0; 4.2.0 - «Весы»): побед из [fights], средняя длина боя в секундах, средний остаток
- * здоровья героя в победах (доля, null - побед нет) и самая частая причина поражения (null - поражений нет).
+ * здоровья героя в победах (доля, null - побед нет) и поражения по причинам [causes] (4.2.1).
  */
-data class BossOdds(val wins: Int, val fights: Int, val seconds: Double, val lifeLeft: Double?, val cause: LossCause?) {
+data class BossOdds(val wins: Int, val fights: Int, val seconds: Double, val lifeLeft: Double?, val causes: Map<LossCause, Int> = emptyMap()) {
     val share: Double get() = if (fights > 0) wins.toDouble() / fights else 0.0
+
+    /** Самая частая причина поражения; null - поражений нет. */
+    val cause: LossCause? get() = causes.maxByOrNull { it.value }?.key
 }
 
 /**
@@ -69,6 +73,8 @@ class OddsPlan internal constructor(
     private val phases: PhaseFoes,
     /** Прошлый бой выигран: силы `FIGHT_CLEAR` открывают и бои прогона. */
     private val cleared: Boolean,
+    /** Вид предсказанного боя (4.2.1): прогон катит его правила - своей ярости у «Весов» нет. */
+    private val kind: FightKind,
 ) {
     /** [fights] боёв, каждый на своих костях, не дольше [cap] секунд (недоигранный - не победа). */
     fun run(fights: Int = FIGHTS, cap: Double = CAP): BossOdds {
@@ -79,7 +85,7 @@ class OddsPlan internal constructor(
         repeat(fights) { i ->
             val battle = Battle(
                 hero, phases.withRetinue(foes, Dice(SEED + i)), rules, fight, pools.life, Random(SEED + i), stance,
-                kit = kit, model = model, pools = pools, percent = percent, ally = ally, cleared = cleared,
+                kit = kit, model = model, pools = pools, percent = percent, ally = ally, cleared = cleared, kind = kind,
             )
             while (battle.outcome == null && battle.time < cap) battle.advance(1.0)
             seconds += battle.time
@@ -94,7 +100,7 @@ class OddsPlan internal constructor(
             fights,
             if (fights > 0) seconds / fights else 0.0,
             if (wins > 0) lifeLeft / wins else null,
-            causes.maxByOrNull { it.value }?.key,
+            causes,
         )
     }
 

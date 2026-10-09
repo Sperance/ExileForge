@@ -68,18 +68,13 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
     suspend fun pending(): BugReportRequest? = withContext(Dispatchers.IO) {
         val text = file.takeIf { it.isFile }?.readText() ?: return@withContext null
         val head = text.substringBefore("\n---\n").lines()
+        // Краткая причина - верх стека главного потока (его заголовок и первые кадры) - прямо в тексте отчёта
+        val reason = text.substringAfter("\n---\n", "").lines().filter { it.isNotBlank() }.take(REASON_LINES)
         BugReportRequest(
-            text = ui("stall.title") + " ${head.getOrNull(1).orEmpty()} ms",
+            text = (listOf(ui("stall.title") + " ${head.getOrNull(1).orEmpty()} ms") + reason).joinToString("\n"),
             screen = SCREEN,
             context = mapOf("version" to head.getOrNull(0).orEmpty(), "stalledMs" to head.getOrNull(1).orEmpty(), "at" to head.getOrNull(2).orEmpty()),
-            // Стек и шаги запуска (3.91.1) - служебной частью: её видит только задача Asana.
-            service = text.substringAfter("\n---\n", ""),
         )
-    }
-
-    /** Последнее записанное зависание (3.91.1) - стек и шаги запуска - для служебной части отчёта; пусто - не было. */
-    suspend fun lastStall(): String = withContext(Dispatchers.IO) {
-        runCatching { (file.takeIf { it.isFile } ?: last.takeIf { it.isFile })?.readText()?.substringAfter("\n---\n", "") }.getOrNull().orEmpty()
     }
 
     suspend fun sent() = withContext(Dispatchers.IO) {
@@ -126,6 +121,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         const val FILE = "stall.txt"
         const val LAST_FILE = "stall-last.txt"
         const val THREAD_FRAMES = 25
+        const val REASON_LINES = 4
         const val SCREEN = "stall"
         const val STALL_MS = 5_000L
         const val TICK_MS = 1_000L

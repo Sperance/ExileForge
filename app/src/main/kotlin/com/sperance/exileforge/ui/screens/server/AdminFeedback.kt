@@ -32,7 +32,8 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The administrator's reading of players' reports (3.73.0): bugs and suggestions apart, filtered by status, each with its
- * author, where it was written and the journal tail; a new status with a word for the author, who gets a letter about it.
+ * author and where it was written; a new status with a word for the author, who gets a letter about it. С 4.2.1 - только
+ * допустимые переходы статуса и удаление ошибок и предложений.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>()
@@ -54,6 +55,7 @@ import org.koin.compose.viewmodel.koinViewModel
     var open by remember(report.id) { mutableStateOf(false) }
     var reason by remember(report.id, report.reason) { mutableStateOf(report.reason) }
     var chosen by remember(report.id, report.status) { mutableStateOf(report.status) }
+    var deleting by remember(report.id) { mutableStateOf(false) }
     ForgePanel(Modifier.clickable { open = !open }) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(entry.login ?: ui("feedback.anonymous"), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
@@ -75,9 +77,11 @@ import org.koin.compose.viewmodel.koinViewModel
                 report.context.forEach { (key, value) -> MutedText("$key: $value", style = MaterialTheme.typography.labelSmall) }
             }
             Engraved(ui("feedback.set_status"))
+            // Только допустимые переходы машины состояний сервера (4.2.1): нынешний статус и [AdminReport.moves]
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                ReportStatus.entries.forEach { st -> FilterChip(selected = chosen == st, onClick = { chosen = st }, label = { Text(statusTitle(st)) }) }
+                (listOf(report.status) + entry.moves).distinct().forEach { st -> FilterChip(selected = chosen == st, onClick = { chosen = st }, label = { Text(statusTitle(st)) }) }
             }
+            if (report.status == ReportStatus.CREATED) MutedText(ui("feedback.review_hint", statusTitle(ReportStatus.REVIEW)))
             OutlinedTextField(
                 reason,
                 { reason = it.take(REASON) },
@@ -104,8 +108,11 @@ import org.koin.compose.viewmodel.koinViewModel
                     Text(ui("feedback.in_asana"))
                 }
             }
+            // Удаление (4.2.1): ошибку и предложение - с вопросом; задача в Asana остаётся
+            if (entry.deletable) ReportDeleteButton(!account.busy) { deleting = true }
         }
     }
+    if (deleting) ReportDeleteConfirm(account.busy, onDismiss = { deleting = false }) { vm.deleteReport(report.id) }
 }
 
 private const val REASON = 400

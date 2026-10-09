@@ -65,6 +65,13 @@ class FeedbackViewModel(
         api.feedback.toAsana(id)
     }
 
+    /** Удаление отчёта (4.2.1): уходит из своих, из общего списка и из окна модерации разом. */
+    fun deleteReport(id: String) = commands.task(writing = true) {
+        api.feedback.delete(id)
+        feedback { f -> f.copy(mine = f.mine.filterNot { it.id == id }, suggestions = f.suggestions.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
+        notices.toast(ui("feedback.deleted"))
+    }
+
     private fun answer(done: String, call: suspend () -> AdminReport) = commands.task(writing = true) {
         val answered = call()
         feedback { f -> f.copy(reports = f.reports.map { if (it.report.id == answered.report.id) answered else it }) }

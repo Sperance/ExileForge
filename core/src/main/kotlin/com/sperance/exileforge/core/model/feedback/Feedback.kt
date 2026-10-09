@@ -8,17 +8,11 @@ import kotlinx.serialization.Serializable
 @Serializable enum class FeedbackKind { BUG, SUGGESTION, APPEAL }
 
 /**
- * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [SENT] - администратор отправил его в Asana. Отправленное
- * предложение остаётся в общем списке, но голосовать за него больше нельзя.
+ * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.2.1: первый
+ * комментарий модерации к созданному), [SENT] - отправлен в Asana. Куда отчёт может перейти и можно ли голосовать,
+ * решает машина состояний сервера: она приходит полями [AdminReport.moves] и [Suggestion.votable].
  */
-@Serializable enum class ReportStatus {
-    CREATED,
-    SENT,
-    ;
-
-    /** Отчёт ещё не отправлен: за такое предложение голосуют. */
-    val open: Boolean get() = this == CREATED
-}
+@Serializable enum class ReportStatus { CREATED, REVIEW, SENT }
 
 /** A player's vote on a suggestion: one per account, switched by tapping again. */
 @Serializable enum class Vote { LIKE, DISLIKE, NONE }
@@ -33,9 +27,10 @@ import kotlinx.serialization.Serializable
     val vote: Vote,
     val mine: Boolean,
     val createdAt: String = "",
+    /** Можно ли зрителю голосовать (4.2.1): не своё и ещё не отправленное - решает сервер. */
+    val votable: Boolean = false,
 ) {
     val rating: Int get() = likes - dislikes
-    val votable: Boolean get() = !mine && status.open
 }
 
 /** One of the viewer's own reports, with the administrator's word. */
@@ -48,6 +43,8 @@ import kotlinx.serialization.Serializable
     val likes: Int = 0,
     val dislikes: Int = 0,
     val createdAt: String = "",
+    /** Автор может удалить его (4.2.1): ошибку и предложение - да, апелляцию - нет. */
+    val deletable: Boolean = false,
 )
 
 /** A report whole, as the administrator reads it. */
@@ -69,8 +66,17 @@ import kotlinx.serialization.Serializable
     val asanaError: String = "",
 )
 
-/** Отчёт для администратора: с логином и ролью автора (3.88.7). */
-@Serializable data class AdminReport(val report: FullReport, val login: String? = null, val role: com.sperance.exileforge.core.network.AccountRole? = null)
+/**
+ * Отчёт для модерации: с логином и ролью автора (3.88.7); [moves] - куда его можно перевести по машине состояний сервера,
+ * [deletable] - может ли смотрящий его удалить (4.2.1).
+ */
+@Serializable data class AdminReport(
+    val report: FullReport,
+    val login: String? = null,
+    val role: com.sperance.exileforge.core.network.AccountRole? = null,
+    val moves: List<ReportStatus> = emptyList(),
+    val deletable: Boolean = false,
+)
 
 /** A letter's thing to take (3.73.0): a template and its rarity, rolled at the hero's level when taken. */
 @Serializable data class MailEquipment(val template: String, val rarity: Rarity? = null)

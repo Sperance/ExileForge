@@ -39,16 +39,16 @@ class StallReports(
         return due
     }
 
+    /** Краткая причина - первые строки журнала раннера (кто держал полосу и откуда) - прямо в тексте отчёта. */
     private fun request(stall: Stall) = BugReportRequest(
-        text = "runner stall: ${stall.key}",
+        text = (listOf("runner stall: ${stall.key}") + stall.details.lines().filter { it.isNotBlank() }.take(REASON_LINES)).joinToString("\n"),
         screen = SCREEN,
         context = mapOf("key" to stall.key),
-        // Стек зависания (3.91.1) - служебной частью: её видит только задача Asana.
-        service = stall.details,
     )
 
     private companion object {
         const val SCREEN = "runner_stall"
         const val PERIOD_MS = 10 * 60 * 1000L
+        const val REASON_LINES = 3
     }
 }

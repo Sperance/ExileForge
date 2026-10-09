@@ -32,8 +32,10 @@ import kotlinx.serialization.json.JsonElement
  * 59 - server 1.83.0: Разлом недели `trials/rift/board|start|act`, таблицы испытаний `trials/table`, ступени раша, выбор строк башни, алтари сняты с карт.
  * 60 - Скверна: объект карты `BLIGHT` (жетоны очага, сундук точки выбором `FEATURE`), `MapFeature.accepts` с убитыми, доля добычи автозабега `expedition.autoYield`.
  * 61 - статусы отчётов `CREATED`/`SENT`, обзор Разлома (правило `SIGHT`, правила у даров), `campaign/start?forced=` механики тестировщика.
+ * 63 - статус отчёта `REVIEW` и переходы `AdminReport.moves`, удаление `bugreport/delete`, без служебного журнала в отчёте,
+ *      суточный вклад `GuildMember.dayLimit`/`dayLeft`, права гильдии `GuildPolicy` (офицер повышает участника).
  */
-const val API_REVISION = 62
+const val API_REVISION = 63
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

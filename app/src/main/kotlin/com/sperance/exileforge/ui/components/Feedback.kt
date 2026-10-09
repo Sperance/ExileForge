@@ -49,9 +49,10 @@ fun kindTitle(kind: FeedbackKind): String = kindTitle(kind.name)
 fun statusTitle(name: String): String = locOr("enum.BugStatus.$name", name)
 fun kindTitle(name: String): String = locOr("enum.FeedbackKind.$name", name)
 
-/** Цвет статуса: созданный - пергамент, отправленный - зелёный. */
+/** Цвет статуса: созданный - пергамент, на рассмотрении - руна, отправленный - зелёный. */
 fun statusTint(status: ReportStatus): Color = when (status) {
     ReportStatus.CREATED -> Parchment
+    ReportStatus.REVIEW -> Rune
     ReportStatus.SENT -> Vital
 }
 
@@ -77,6 +78,7 @@ fun SuggestionsSheet(onDismiss: () -> Unit) {
     val activity by model.activity.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { model.loadSuggestions() }
     var tab by remember { mutableIntStateOf(0) }
+    var deleting by remember { mutableStateOf<String?>(null) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
@@ -96,12 +98,28 @@ fun SuggestionsSheet(onDismiss: () -> Unit) {
                             Text(own.text, color = Parchment, style = MaterialTheme.typography.bodyMedium)
                             if (own.kind == FeedbackKind.SUGGESTION) MutedText(ui("feedback.votes", own.likes, own.dislikes))
                             if (own.reason.isNotBlank()) Text(ui("feedback.reason", own.reason), color = Rune, style = MaterialTheme.typography.labelMedium)
+                            if (own.deletable) ReportDeleteButton(!activity.busy) { deleting = own.id }
                         }
                     }
                 }
             }
+            deleting?.let { id -> ReportDeleteConfirm(activity.busy, onDismiss = { deleting = null }) { model.deleteReport(id) } }
         }
     }
+}
+
+/** Удаление отчёта (4.2.1) - всегда с вопросом: оно жёсткое и не возвращается. */
+@Composable fun ReportDeleteButton(enabled: Boolean, onClick: () -> Unit) {
+    ForgeTextButton(enabled = enabled, onClick = onClick) {
+        Icon(Icons.Outlined.Delete, null, tint = LifeRed, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(ui("feedback.delete"), color = LifeRed, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/** Вопрос перед удалением отчёта: удержание - [onDelete], отмена - [onDismiss]. */
+@Composable fun ReportDeleteConfirm(busy: Boolean, onDismiss: () -> Unit, onDelete: () -> Unit) {
+    ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, blocked = busy, onConfirm = onDelete)
 }
 
 @Composable private fun SuggestionCard(suggestion: Suggestion, enabled: Boolean, onVote: (Vote) -> Unit) {

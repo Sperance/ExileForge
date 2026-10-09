@@ -6,6 +6,8 @@ import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.PhaseFoes
 import com.sperance.exileforge.core.campaign.Spawns
+import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.FightKinds
 import com.sperance.exileforge.core.campaign.combat.HeroPools
@@ -19,6 +21,7 @@ import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
+import com.sperance.exileforge.rules.sheet.CombatProfile
 import java.io.File
 import java.util.Locale
 
@@ -34,6 +37,10 @@ data class SimCell(
     val fights: Int,
     val seconds: Double,
     val causes: Map<LossCause, Int>,
+    /** Герой в бою: здоровье и щит, среднее сопротивление стихиям после штрафа акта (доля), урон по [CombatProfile]. */
+    val heroPool: Double = 0.0,
+    val heroResist: Double = 0.0,
+    val heroDamage: Double = 0.0,
 ) {
     val share: Double get() = if (fights > 0) wins.toDouble() / fights else 0.0
     val cause: LossCause? get() = causes.maxByOrNull { it.value }?.key
@@ -66,19 +73,22 @@ class BossSim(private val index: ContentIndex, private val fights: Int, private 
         val effects = if (penalty > 0) mapOf(MapStats.HERO_RESIST to penalty) else emptyMap()
         return classes.flatMap { heroClass ->
             strategies.map { strategy ->
-                val plans = foes.map { pack -> plan(strategy.build(kit, heroClass, zone.level), heroClass, zone.level, pack, effects, phases) }
-                val odds = plans.map { it.run(fights / rolls) }
+                val build = strategy.build(kit, heroClass, zone.level, penalty)
+                val plans = foes.map { pack -> plan(build, heroClass, zone.level, pack, effects, phases) }
+                val odds = plans.map { it.first.run(fights / rolls) }
+                val body = plans.first().second
                 SimCell(
                     heroClass.code, strategy.name, zone.code.value, zone.boss.value, zone.level, foes.map { it.first().body.maxLife }.average(),
                     odds.sumOf { it.wins }, odds.sumOf { it.fights }, odds.sumOf { it.seconds * it.fights } / odds.sumOf { it.fights }.coerceAtLeast(1),
                     odds.flatMap { it.causes.entries }.groupingBy { it.key }.fold(0) { sum, entry -> sum + entry.value },
+                    body.maxLife + body.maxShield, DamageType.ELEMENTS.map(body::resist).average(), CombatProfile.of(index, body.stats).best,
                 )
             }
         }
     }
 
     /** Снимок боя героя билда [build] против [foes], как его снимает поход: полные запасы, без питомца, вид боя - по врагам. */
-    private fun plan(build: SimBuild, heroClass: HeroClass, level: Int, foes: List<com.sperance.exileforge.core.campaign.combat.Foe>, effects: Map<String, Double>, phases: PhaseFoes): OddsPlan {
+    private fun plan(build: SimBuild, heroClass: HeroClass, level: Int, foes: List<com.sperance.exileforge.core.campaign.combat.Foe>, effects: Map<String, Double>, phases: PhaseFoes): Pair<OddsPlan, Combatant> {
         val sheet = Sheets.calculate(index, level, heroClass.code, build.tree, build.items)
         val loadout = Loadout.of(build.skills, index.skills, heroClass.code, build.flasks, index.powers, index.rules.charges)
         val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), loadout, index.stats.percent)
@@ -91,7 +101,7 @@ class BossSim(private val index: ContentIndex, private val fights: Int, private 
             loadout.flasks.map { 0.0 },
             loadout.flasks.map { DraughtRate() },
         )
-        return OddsPlan(body, foes, rules, index.rules.fight, pools, gear.stance, loadout, hero, gear.percent, null, phases, false, FightKinds.expedition(foes))
+        return OddsPlan(body, foes, rules, index.rules.fight, pools, gear.stance, loadout, hero, gear.percent, null, phases, false, FightKinds.expedition(foes)) to body
     }
 }
 
@@ -137,6 +147,19 @@ object BossReport {
         }
         appendLine()
         appendLine("Out of corridor: $out of ${zones.size * strategies.size}")
+        appendLine()
+        appendLine("## Heroes by zone (mean over classes): life + shield, elemental resistance after the act's penalty, damage")
+        appendLine()
+        appendLine((listOf("zone", "lvl") + strategies.flatMap { listOf("${it.name} pool", "${it.name} resist", "${it.name} damage") }).joinToString(" | ", "| ", " |"))
+        appendLine((listOf("zone", "lvl") + strategies.flatMap { listOf("${it.name} pool", "${it.name} resist", "${it.name} damage") }).joinToString(" | ", "| ", " |") { "---" })
+        zones.forEach { zone ->
+            val level = cells.first { it.zone == zone }.level
+            val own = strategies.flatMap { strategy ->
+                val row = byZone[zone to strategy.name].orEmpty()
+                listOf(sec(row.map { it.heroPool }.average()), pct(row.map { it.heroResist }.average()), sec(row.map { it.heroDamage }.average()))
+            }
+            appendLine((listOf(zone, "$level") + own).joinToString(" | ", "| ", " |"))
+        }
         strategies.forEach { strategy ->
             appendLine()
             appendLine("## Build `${strategy.name}`: wins / mean seconds / most frequent loss")

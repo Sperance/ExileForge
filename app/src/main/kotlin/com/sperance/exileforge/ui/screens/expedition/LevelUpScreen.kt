@@ -16,6 +16,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -198,6 +200,7 @@ private val Feature.glyph: ImageVector get() = when (this) {
     Feature.TRIALS -> ForgeGlyphs.Skull
     Feature.PETS -> ForgeGlyphs.Exile
     Feature.GUILD -> ForgeGlyphs.Banner
+    Feature.MAIL -> Icons.Outlined.Mail
 }
 
 /** The rays behind the number: a slow golden wheel, still when the animations are off. */

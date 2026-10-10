@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.model.hero
 
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.rules.content.GuildRole
+import com.sperance.exileforge.rules.content.MailGate
 import kotlinx.serialization.Serializable
 
 /** Гильдия на карточке игрока (сервер 4.5.1): кто она и кем в ней герой. */
@@ -9,8 +10,8 @@ import kotlinx.serialization.Serializable
 data class CardGuild(val id: String, val name: String, val tag: String, val emblem: String = "", val color: String = "", val role: GuildRole = GuildRole.MEMBER)
 
 /**
- * Что модератор может сделать с героем карточки (сервер 4.5.1, по `ModerationPolicy` сервера): бан героя, аккаунта, устройства
- * и удаление. [userId] и [login] - аккаунт владельца: досье, письмо администратора.
+ * Что модератор может сделать с героем карточки (сервер 4.5.1, по `ModerationPolicy` сервера): бан героя, аккаунта, устройства,
+ * удаление и (4.6.3) немота. [userId] и [login] - аккаунт владельца: досье, письмо администратора.
  */
 @Serializable
 data class CardModeration(
@@ -20,18 +21,20 @@ data class CardModeration(
     val banAccount: Boolean = false,
     val banDevice: Boolean = false,
     val delete: Boolean = false,
+    val mute: Boolean = false,
 ) {
     /** Есть ли хоть одно действие модерации. */
-    val any: Boolean get() = banHero || banAccount || banDevice || delete
+    val any: Boolean get() = banHero || banAccount || banDevice || delete || mute
 }
 
 /**
- * Что смотрящий может сделать с героем карточки (сервер 4.5.1): [mail] - написать письмо (пишет только администратор, по логину
- * из [moderation]), [invite] - позвать в свою гильдию, [moderation] - только модератору и администратору. Права считает сервер,
- * клиент лишь прячет недоступное.
+ * Что смотрящий может сделать с героем карточки (сервер 4.5.1): [mail] - письмо администратора аккаунту (по логину из
+ * [moderation]), [invite] - позвать в свою гильдию, [moderation] - только модератору и администратору. С 4.6.3 [letter] - письмо
+ * герою: null - своя карточка, иначе можно ли писать или почему нет; [ignored] - смотрящий не принимает писем героя. Права
+ * считает сервер, клиент лишь прячет недоступное и называет причину.
  */
 @Serializable
-data class CardRights(val mail: Boolean = false, val invite: Boolean = false, val moderation: CardModeration? = null)
+data class CardRights(val mail: Boolean = false, val invite: Boolean = false, val moderation: CardModeration? = null, val letter: MailGate? = null, val ignored: Boolean = false)
 
 /**
  * Карточка игрока (сервер 4.5.1, `GET hero/card`): открытый профиль героя глазами героя смотрящего, на его игровом сервере.

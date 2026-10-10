@@ -1,7 +1,9 @@
 package com.sperance.exileforge.core.feedback
 
 import com.sperance.exileforge.core.model.feedback.AdminReport
+import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
+import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.Suggestion
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,12 @@ data class Feedback(
     val unread: Int = 0,
     /** Кому администратор пишет письмо (4.5.1): логин из карточки игрока, его берёт форма письма; пусто - не задан. */
     val mailTo: String = "",
+    /** Письмо, что пишет герой (4.6.3): открыто окно письма; null - закрыто. */
+    val letter: LetterDraft? = null,
+    /** Почта героя сейчас (4.6.3): квота окна письма; null - ещё не прочитана. */
+    val quota: MailQuota? = null,
+    /** Список игнора героя в игре (4.6.3). */
+    val ignored: List<IgnoredHero> = emptyList(),
 ) {
     /** Ящик, каким его теперь знает клиент, и счёт непрочитанного по нему. */
     fun withMail(mail: List<Mail>): Feedback = copy(mail = mail, unread = mail.count { !it.read })

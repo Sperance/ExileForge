@@ -2,12 +2,14 @@ package com.sperance.exileforge.presentation.player
 
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.feedback.FeedbackRepository
+import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.guild.GuildRepository
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.presentation.feedback.LetterActions
 import com.sperance.exileforge.presentation.guild.GuildActions
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.nav.Navigator
@@ -25,7 +27,8 @@ data class PlayerCardUi(val target: String? = null, val card: PlayerCard? = null
 /**
  * Карточка игрока (4.5.1): одна на приложение, открывается нажатием на имя или строку игрока где угодно (`LocalPlayerCard`).
  * Профиль и права на действия - у сервера (`GET hero/card`): клиент не дублирует права гильдии и модерации, а лишь прячет
- * недоступные кнопки. Действия карточки ведут в свои экраны: письмо администратора, гильдия, витрина лотов продавца.
+ * недоступные кнопки. Действия карточки ведут в свои экраны: письмо герою (4.6.3) и администратора, гильдия, витрина лотов
+ * продавца; игнор писем героя меняет карточку на месте.
  */
 class PlayerCardViewModel(
     private val connection: ServerConnection,
@@ -35,6 +38,7 @@ class PlayerCardViewModel(
     private val guildActions: GuildActions,
     private val market: MarketActions,
     private val feedback: FeedbackRepository,
+    private val letters: LetterActions,
     private val navigator: Navigator,
     slice: GameSlice,
 ) : ViewModel() {
@@ -76,8 +80,16 @@ class PlayerCardViewModel(
         close()
     }
 
-    /** «Написать» (только администратору): форма письма с логином владельца героя. */
-    fun write(card: PlayerCard) {
+    /** «Написать» (4.6.3): окно письма герою карточки; адресат - плашкой, не вводом. */
+    fun write(card: PlayerCard) = leave { letters.compose(LetterDraft.to(card.heroId, card.name, card.heroClass, card.level)) }
+
+    /** «Не принимать письма» ([on]) или снова принимать: карточка узнаёт об этом после ответа сервера. */
+    fun ignore(card: PlayerCard, on: Boolean) = letters.ignore(card.heroId, card.name, on) {
+        mutable.update { ui -> ui.card?.takeIf { it.heroId == card.heroId }?.let { ui.copy(card = it.copy(rights = it.rights.copy(ignored = on))) } ?: ui }
+    }
+
+    /** Письмо администратора аккаунту героя (только администратору): форма письма с логином владельца. */
+    fun writeAdmin(card: PlayerCard) {
         val login = card.rights.moderation?.login?.takeIf { it.isNotBlank() } ?: return
         leave {
             feedback.update { it.copy(mailTo = login) }

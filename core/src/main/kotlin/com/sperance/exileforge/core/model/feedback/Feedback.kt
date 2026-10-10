@@ -1,11 +1,12 @@
 package com.sperance.exileforge.core.model.feedback
 
+import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion. */
-@Serializable enum class FeedbackKind { BUG, SUGGESTION, APPEAL }
+/** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion; жалоба на письмо героя (4.6.3) - [COMPLAINT]. */
+@Serializable enum class FeedbackKind { BUG, SUGGESTION, APPEAL, COMPLAINT }
 
 /**
  * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.3.0: первый
@@ -99,11 +100,29 @@ import kotlinx.serialization.Serializable
     val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty() && instances.isEmpty() && pets.isEmpty()
 }
 
-@Serializable enum class MailKind { SYSTEM, ADMIN }
+/**
+ * Чьё письмо: игры, администратора; с 4.6.3 (сервер 1.84) - героя герою ([PLAYER]) и рассылка гильдии ([GUILD]).
+ *
+ * @property written письмо пишет герой: на него отвечают, жалуются и по нему игнорируют автора
+ * @property answerable на него отвечают и до уровня права писать - на рассылку гильдии отвечают сразу (как сервер)
+ */
+@Serializable enum class MailKind(val written: Boolean = false, val answerable: Boolean = false) {
+    SYSTEM,
+    ADMIN,
+    PLAYER(written = true),
+    GUILD(written = true, answerable = true),
+}
+
+/** Гильдия рассылки (4.6.3) - снимок на момент письма. */
+@Serializable data class MailGuild(val id: String, val name: String, val tag: String, val emblem: String = "", val color: String = "")
+
+/** Автор письма героя (4.6.3) - снимок на момент письма; у рассылки - и гильдия. Ответ уходит лично ему, [heroId]. */
+@Serializable data class MailSender(val heroId: String, val name: String, val heroClass: String = "", val level: Int = 1, val guild: MailGuild? = null)
 
 /**
  * A letter of the account (3.73.0): a system one names a dictionary [key] with its [args], the administrator's one its
- * [subject] and [body] as written. [claimedBy] — the hero that took the attachment; [expiresAt] — epoch millis.
+ * [subject] and [body] as written. [claimedBy] — the hero that took the attachment; [expiresAt] — epoch millis. Письмо героя
+ * (4.6.3): [from] - автор, [quote] - начало письма, на которое это ответ, [reported] - жалоба уже подана.
  */
 @Serializable data class Mail(
     @SerialName("_id") val id: String,
@@ -113,13 +132,52 @@ import kotlinx.serialization.Serializable
     val subject: String = "",
     val body: String = "",
     val attachment: MailAttachment = MailAttachment(),
+    val heroId: String? = null,
     val read: Boolean = false,
     val claimedBy: String? = null,
     val expiresAt: Long = 0,
     val createdAt: String = "",
+    val from: MailSender? = null,
+    val quote: String = "",
+    val reported: Boolean = false,
 ) {
     val claimable: Boolean get() = claimedBy == null && !attachment.empty
+
+    /** Письмо героя с автором: на него отвечают, жалуются, по нему игнорируют. */
+    val answerable: Boolean get() = kind.written && from != null
 }
+
+/**
+ * Письмо героя (4.6.3, сервер `POST mail/letter`): личное герою [to], ответ на письмо [replyTo] (адресат - его автор) или
+ * рассылка гильдии ([MailKind.GUILD]).
+ */
+@Serializable data class LetterRequest(val kind: MailKind = MailKind.PLAYER, val to: String = "", val replyTo: String = "", val subject: String, val body: String)
+
+/** Немота глазами немого (4.6.3): номер санкции, причина (имя `SanctionCategory`), слово модератора и срок (null - бессрочно). */
+@Serializable data class MailMute(val number: Long, val category: String, val comment: String = "", val until: String? = null)
+
+/** Рассылка гильдии главе или офицеру (4.6.3): кому уйдёт и сколько рассылок гильдии за сутки. */
+@Serializable data class GuildMailQuota(val tag: String, val name: String, val emblem: String = "", val color: String = "", val members: Int = 0, val sent: Int = 0, val perDay: Int = 0)
+
+/**
+ * Почта героя сейчас (4.6.3, сервер `GET mail/quota`): [gate] - можно ли писать (адресату, если назван) или почему нет;
+ * письма за сутки [sent] из [perDay], этому герою [toRecipient] из [perRecipient]; [readyAt] - конец паузы между письмами (мс
+ * эпохи); [level] - с какого уровня пишут; [mute] - немота; [guild] - рассылка, если роль её допускает.
+ */
+@Serializable data class MailQuota(
+    val gate: MailGate,
+    val sent: Int = 0,
+    val perDay: Int = 0,
+    val toRecipient: Int = 0,
+    val perRecipient: Int = 0,
+    val readyAt: Long = 0,
+    val level: Int = 1,
+    val mute: MailMute? = null,
+    val guild: GuildMailQuota? = null,
+)
+
+/** Строка списка игнора (4.6.3): чьи письма герой не принимает и с какого времени (мс эпохи). */
+@Serializable data class IgnoredHero(val heroId: String, val name: String, val heroClass: String = "", val at: Long = 0)
 
 /** The administrator's letter: [login] one account, blank every account. */
 @Serializable data class MailRequest(val login: String = "", val subject: String, val body: String, val attachment: MailAttachment = MailAttachment())

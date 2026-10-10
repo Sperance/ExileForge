@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.feedback
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.FeedbackRepository
+import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -20,7 +21,8 @@ import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Голоса игроков и почта аккаунта (3.73.0): предложения с голосами, свои отчёты, чтение администратора,
- * ящик с вложениями, письма администратора. Первая модель экрана на репозиториях :core (3.80.9).
+ * ящик с вложениями, письма администратора. Первая модель экрана на репозиториях :core (3.80.9). С 4.6.3 ящик - глазами
+ * героя в игре, и почта между героями ([LetterActions]).
  */
 class FeedbackViewModel(
     private val repository: FeedbackRepository,
@@ -28,6 +30,9 @@ class FeedbackViewModel(
     private val commands: CommandRunner,
     private val sessions: SessionRepository,
     private val notices: Notices,
+    private val heroes: HeroRepository,
+    /** Почта между героями (4.6.3): окно письма, ответ, игнор, жалоба - общие с карточкой игрока и гильдией. */
+    val letters: LetterActions,
 ) : ViewModel() {
     val feedback: StateFlow<Feedback> = repository.state
     val activity = commands.state
@@ -81,11 +86,11 @@ class FeedbackViewModel(
         notices.toast(done)
     }
 
-    /** Ящик, тихо - при открытии почты; счёт конверта в шапке едет в снимке героя (3.94.1). */
+    /** Ящик глазами героя в игре, тихо - при открытии почты; счёт конверта в шапке едет в снимке героя (3.94.1). */
     fun loadMail() {
         if (!sessions.state.value.signedIn) return
         commands.read(Reads.MAIL, silent = true) {
-            val mail = api.mail.inbox()
+            val mail = api.mail.inbox(heroes.heroId)
             feedback { it.withMail(mail) }
         }
     }
@@ -105,13 +110,13 @@ class FeedbackViewModel(
 
     /** «Прочитать все» (3.94.0). */
     fun readAllMail() = commands.task(writing = true) {
-        api.mail.readAll()
+        api.mail.readAll(heroes.heroId)
         feedback { f -> f.withMail(f.mail.map { it.copy(read = true) }) }
     }
 
     /** «Удалить прочитанные» (3.94.0): письма с незабранным вложением остаются. */
     fun deleteReadMail() = commands.task(writing = true) {
-        val gone = api.mail.deleteRead()
+        val gone = api.mail.deleteRead(heroes.heroId)
         feedback { f -> f.withMail(f.mail.filterNot { it.read && !it.claimable }) }
         notices.toast(ui("mail.deleted_n", gone))
     }

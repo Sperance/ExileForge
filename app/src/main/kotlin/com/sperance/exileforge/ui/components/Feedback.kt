@@ -5,11 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.ThumbDown
 import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.*
@@ -22,19 +20,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.display.equipmentTitle
-import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
-import com.sperance.exileforge.core.model.feedback.Mail
-import com.sperance.exileforge.core.model.feedback.MailKind
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Suggestion
 import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -150,146 +142,3 @@ fun SuggestionsSheet(onDismiss: () -> Unit) {
     }
 }
 
-/** A letter's subject and body in the player's language: a system letter is the dictionary's, the administrator's as written. */
-fun mailSubject(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) systemLine(mail, "subject") else mail.subject
-fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
-    listOf(
-        systemLine(mail, "body"),
-        mail.args.getOrNull(3)?.takeIf { it.isNotBlank() }?.let { loc("${mail.key}.reason", listOf(it)) },
-    ).filterNotNull().joinToString("\n\n")
-} else {
-    mail.body
-}
-
-/**
- * `mail.feedback_status`: its args are the kind, the status, an excerpt of the report and the administrator's word. The
- * auction's letters (3.79.0, server 1.74.0) name the lot's item by its code and its amount.
- */
-private fun systemLine(mail: Mail, part: String): String {
-    if (mail.key in AUCTION_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let(::lotItemTitle).orEmpty(), mail.args.getOrNull(1).orEmpty()))
-    val kind = mail.args.getOrNull(0)?.takeIf { it.isNotBlank() }?.let(::kindTitle).orEmpty()
-    val status = mail.args.getOrNull(1)?.takeIf { it.isNotBlank() }?.let(::statusTitle).orEmpty()
-    return when (part) {
-        "subject" -> loc("${mail.key}.subject", listOf(kind))
-        else -> loc("${mail.key}.body", listOf(status, mail.args.getOrNull(2).orEmpty()))
-    }
-}
-
-/** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает (4.3.2); у золота и питомца её нет. */
-fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
-    if (mail.attachment.gold > 0) add(ui("mail.gold", mail.attachment.gold) to null)
-    mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount" to Inspect.Stack(code)) }
-    mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}") to Inspect.Copy(it)) }
-    mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template)) }
-    mail.attachment.pets.forEach { add(locOr("pet.${it.species}", it.species) + " · " + ui("enum.rarity.${it.rarity.name}") to null) }
-}
-
-/**
- * The inbox (3.73.0): letters newest first, the unread marked; a letter opens to its whole text and what it carries, taken by
- * the hero in play at a tap, once. Letters keep for thirty days.
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
-    val model = koinViewModel<FeedbackViewModel>()
-    val feedback by model.feedback.collectAsStateWithLifecycle()
-    val activity by model.activity.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { model.loadMail() }
-    var open by remember { mutableStateOf<String?>(null) }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui("mail.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            MutedText(ui("mail.keep"))
-            val letter = feedback.mail.firstOrNull { it.id == open }
-            if (letter != null) {
-                LetterView(game, model, activity.busy, letter) { open = null }
-            } else {
-                // Разом (3.94.0): прочитать все и удалить прочитанные - с вопросом, сколько уйдёт; с вложением не удаляется
-                var purging by remember { mutableStateOf(false) }
-                val unread = feedback.mail.count { !it.read }
-                val removable = feedback.mail.count { it.read && !it.claimable }
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ForgeOutlinedButton(onClick = model::readAllMail, enabled = !activity.busy && unread > 0, modifier = Modifier.weight(1f)) {
-                        Text(ui("mail.read_all", unread), style = MaterialTheme.typography.labelMedium)
-                    }
-                    ForgeOutlinedButton(onClick = { purging = true }, enabled = !activity.busy && removable > 0, modifier = Modifier.weight(1f)) {
-                        Text(ui("mail.delete_read", removable), style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-                if (purging) {
-                    ConfirmSheet(
-                        ui("mail.delete_read_title", removable),
-                        ui("mail.delete_read_confirm"),
-                        onDismiss = { purging = false },
-                        note = ui("mail.delete_read_note"),
-                        danger = true,
-                    ) {
-                        purging = false
-                        model.deleteReadMail()
-                    }
-                }
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-                    if (feedback.mail.isEmpty()) item { MutedText(ui("mail.empty")) }
-                    items(feedback.mail, key = { it.id }) { mail ->
-                        ForgePanel(
-                            Modifier.clickable {
-                                open = mail.id
-                                if (!mail.read) model.readMail(mail.id)
-                            },
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                if (!mail.read) Box(Modifier.size(8.dp).background(LifeRed, CircleShape))
-                                Text(
-                                    mailSubject(mail),
-                                    color = if (mail.read) Parchment else GoldBright,
-                                    style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = if (mail.read) FontWeight.Normal else FontWeight.Bold,
-                                    modifier = Modifier.weight(1f),
-                                )
-                                if (mail.claimable) Text(ui("mail.has_gift"), color = Vital, style = MaterialTheme.typography.labelSmall)
-                            }
-                            MutedText(ui(if (mail.kind == MailKind.SYSTEM) "mail.from_game" else "mail.from_admin") + " · " + mail.createdAt.replace('T', ' ').take(16))
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable private fun LetterView(game: GameUi, model: FeedbackViewModel, busy: Boolean, mail: Mail, onBack: () -> Unit) {
-    ForgeTextButton(onClick = onBack) { Text(ui("mail.back")) }
-    ForgePanel {
-        Text(mailSubject(mail), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(mailBody(mail), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-        val lines = attachmentLines(mail)
-        if (lines.isNotEmpty()) {
-            Engraved(ui("mail.attachment"))
-            val inspect = rememberInspect()
-            lines.forEach { (line, card) ->
-                Text(line, color = Vital, style = MaterialTheme.typography.labelLarge, modifier = card?.let { Modifier.clickable { inspect(it) } } ?: Modifier)
-            }
-            if (mail.claimable) {
-                ForgeButton(enabled = !busy && game.heroId.isNotBlank(), onClick = { model.claimMail(mail.id, game.heroId) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("mail.claim", game.heroName))
-                }
-            } else {
-                MutedText(ui("mail.claimed_already"))
-            }
-        }
-        ForgeOutlinedButton(enabled = !busy, onClick = {
-            model.deleteMail(mail.id)
-            onBack()
-        }, modifier = Modifier.fillMaxWidth()) {
-            Icon(Icons.Outlined.Delete, null, tint = LifeRed, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(ui("mail.delete"), color = LifeRed)
-        }
-    }
-}
-
-/** The auction's system letters (3.79.0): a lot come back, a lot about to leave. */
-private val AUCTION_MAIL = setOf("mail.auction_expired", "mail.auction_expiring")
-
-/** A lot's item by its code: an equipment template or a stack of the bag. */
-private fun lotItemTitle(code: String): String = if (com.sperance.exileforge.core.i18n.serverLocale.contains(com.sperance.exileforge.rules.text.LocaleKey.equipmentName(code))) equipmentTitle(code) else itemTitle(code)

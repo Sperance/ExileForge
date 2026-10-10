@@ -9,12 +9,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
+import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.network.MemberCommand
+import com.sperance.exileforge.presentation.feedback.LetterActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildAction
@@ -23,6 +25,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.koinInject
 
 /**
  * Что [me] может сделать с [target] - по общей таблице прав [GuildPolicy]: себя целью не выбирают. Сервер решает так же;
@@ -59,6 +62,13 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
                 Spacer(Modifier.height(8.dp))
             }
         }
+        // Рассылка гильдии (4.6.3): главе и офицерам - окно письма всей гильдии
+        if (me != null && GuildPolicy.can(me.role, GuildAction.MAIL)) {
+            item {
+                BroadcastButton(game)
+                Spacer(Modifier.height(8.dp))
+            }
+        }
         item {
             RosterSearch(game, query) { query = it }
             Spacer(Modifier.height(6.dp))
@@ -90,6 +100,14 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
             danger = command == MemberCommand.KICK || command == MemberCommand.TRANSFER,
             blocked = game.busy,
         ) { vm.member(command, member.heroId) }
+    }
+}
+
+/** «Рассылка гильдии» (4.6.3): окно письма всей гильдии; пределы и право решает сервер. */
+@Composable private fun BroadcastButton(game: GameUi) {
+    val letters = koinInject<LetterActions>()
+    ForgeOutlinedButton(onClick = { letters.compose(LetterDraft.guild()) }, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) {
+        Text(ui("guild.broadcast"))
     }
 }
 

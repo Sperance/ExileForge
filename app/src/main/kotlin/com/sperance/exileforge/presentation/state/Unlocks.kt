@@ -18,6 +18,9 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
     TRIALS("trials.title", tab = TAB_TRIALS),
     PETS("progress.pets", tab = TAB_PETS),
     GUILD("guild.title", building = Building.GUILD),
+
+    /** Письма героям (4.6.3): своего входа нет - пишут из карточки игрока; ящик и ответ на рассылку гильдии открыты сразу. */
+    MAIL("mail.unlock"),
     ;
 
     companion object {

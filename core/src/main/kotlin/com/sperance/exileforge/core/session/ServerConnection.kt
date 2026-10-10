@@ -27,6 +27,10 @@ object Reads {
     const val SERVERS = "servers"
     const val NOTICE = "notice"
     const val MAIL = "mail"
+
+    /** Квота окна письма и список игнора (4.6.3): читаются рядом с ящиком, но не вместо него. */
+    const val MAIL_QUOTA = "mail_quota"
+    const val MAIL_IGNORES = "mail_ignores"
     const val HERO = "hero"
     const val CHARACTERS = "characters"
     const val AUCTION = "auction"

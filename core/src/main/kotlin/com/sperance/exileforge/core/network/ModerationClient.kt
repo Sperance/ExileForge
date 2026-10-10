@@ -7,8 +7,8 @@ import kotlinx.serialization.json.encodeToJsonElement
 private const val MODERATION = "api/v1/admin/moderation"
 private const val NOTICE = "api/v1/notice"
 
-/** Вид санкции (3.88.5, server 1.80.8): бан на срок или удаление в корзину. */
-@Serializable enum class SanctionKind { BAN, DELETION }
+/** Вид санкции (3.88.5, server 1.80.8): бан на срок или удаление в корзину; немота (4.6.3) - запрет писать письма, игру не закрывает. */
+@Serializable enum class SanctionKind { BAN, DELETION, MUTE }
 
 /** На что санкция: герой, аккаунт целиком или устройство. */
 @Serializable enum class SanctionTarget { HERO, ACCOUNT, DEVICE }
@@ -124,7 +124,7 @@ sealed interface ModerationFate {
 
 @Serializable data class ModerationPage(val total: Long = 0, val page: Int = 0, val size: Int = 0, val rows: List<ModerationRow> = emptyList())
 
-@Serializable data class DossierRights(val ban: Boolean = false, val banDevice: Boolean = false, val delete: Boolean = false)
+@Serializable data class DossierRights(val ban: Boolean = false, val banDevice: Boolean = false, val delete: Boolean = false, val mute: Boolean = false)
 
 @Serializable data class DossierAccount(
     val userId: String,
@@ -177,7 +177,7 @@ sealed interface ModerationFate {
     val rights: DossierRights = DossierRights(),
 )
 
-@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE }
+@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE }
 
 @Serializable data class ModerationEntryView(
     val id: String,
@@ -196,6 +196,7 @@ sealed interface ModerationFate {
 /** Бан: цель - герой [heroId], аккаунт [userId] или устройство [hardware] аккаунта [userId]; [hours] null - бессрочно. */
 @Serializable data class SanctionRequest(
     val target: SanctionTarget,
+    val kind: SanctionKind = SanctionKind.BAN,
     val heroId: String = "",
     val userId: String = "",
     val hardware: String = "",

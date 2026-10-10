@@ -53,6 +53,7 @@ import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.presentation.admin.ModerationTab
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
+import com.sperance.exileforge.rules.content.ModerationRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*
@@ -222,7 +223,7 @@ import org.koin.compose.viewmodel.koinViewModel
 // ==================== Досье ====================
 
 @Composable private fun DossierView(account: AccountUi, vm: ModerationViewModel, dossier: Dossier?) {
-    var banning by remember { mutableStateOf(false) }
+    var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
     var deleting by remember { mutableStateOf<SanctionTarget?>(null) }
     var device by remember { mutableStateOf<DeviceView?>(null) }
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -305,7 +306,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 if (dossier.rights.banDevice) {
                     ForgeTextButton(enabled = !account.busy, onClick = {
                         device = item
-                        banning = true
+                        sanctioning = SanctionKind.BAN
                     }) { Text(ui("moderation.ban_device"), color = LifeRed) }
                 }
             }
@@ -322,8 +323,15 @@ import org.koin.compose.viewmodel.koinViewModel
         if (dossier.rights.ban) {
             ForgeButton(enabled = !account.busy, onClick = {
                 device = null
-                banning = true
+                sanctioning = SanctionKind.BAN
             }, modifier = Modifier.weight(1f)) { Text(ui("moderation.ban")) }
+        }
+        // Немота (4.6.3): не пишет письма, играет как прежде
+        if (dossier.rights.mute) {
+            ForgeOutlinedButton(enabled = !account.busy, onClick = {
+                device = null
+                sanctioning = SanctionKind.MUTE
+            }) { Text(ui("moderation.mute"), color = Caution) }
         }
         if (dossier.rights.delete) {
             ForgeOutlinedButton(enabled = !account.busy, onClick = { deleting = if (hero != null && !hero.deleted) SanctionTarget.HERO else SanctionTarget.ACCOUNT }) {
@@ -332,9 +340,9 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     if (!dossier.rights.ban) MutedText(ui("moderation.protected"))
-    if (banning) {
-        BanSheet(account, dossier, device, onDismiss = { banning = false }) {
-            banning = false
+    sanctioning?.let { kind ->
+        BanSheet(account, dossier, device, kind, onDismiss = { sanctioning = null }) {
+            sanctioning = null
             vm.ban(it)
         }
     }
@@ -447,9 +455,12 @@ private const val SERVER_NAME = 32
 
 // ==================== Шторки ====================
 
-/** Шторка бана: цель (герой, аккаунт или устройство), срок - готовый или свой, категория и комментарий для игрока. */
-@Composable private fun BanSheet(account: AccountUi, dossier: Dossier, device: DeviceView?, onDismiss: () -> Unit, onBan: (SanctionRequest) -> Unit) {
-    val presets = account.index?.rules?.moderation?.banHours ?: DEFAULT_HOURS
+/**
+ * Шторка санкции на срок - бана или (4.6.3) немоты [kind]: цель (герой, аккаунт; у бана - и устройство), срок - готовый из
+ * контента или свой, категория и комментарий для игрока.
+ */
+@Composable private fun BanSheet(account: AccountUi, dossier: Dossier, device: DeviceView?, kind: SanctionKind, onDismiss: () -> Unit, onBan: (SanctionRequest) -> Unit) {
+    val presets = (account.index?.rules?.moderation ?: ModerationRules()).let { if (kind == SanctionKind.MUTE) it.muteHours else it.banHours }
     var target by remember {
         mutableStateOf(
             if (device != null) {
@@ -468,7 +479,9 @@ private const val SERVER_NAME = 32
     val limit = account.index?.rules?.inputs?.sanctionComment ?: COMMENT
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui("moderation.ban_title", dossier.hero?.name ?: dossier.account.login), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            val name = dossier.hero?.name ?: dossier.account.login
+            Text(ui(if (kind == SanctionKind.MUTE) "moderation.mute_title" else "moderation.ban_title", name), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            if (kind == SanctionKind.MUTE) MutedText(ui("moderation.mute_note"))
             Label(ui("moderation.target"))
             Chips {
                 if (dossier.hero != null) Chip(ui("moderation.target.HERO"), target == SanctionTarget.HERO) { target = SanctionTarget.HERO }
@@ -502,9 +515,9 @@ private const val SERVER_NAME = 32
             val term = custom.toIntOrNull() ?: hours
             ForgeButton(
                 enabled = !account.busy && (custom.isBlank() || (custom.toIntOrNull() ?: 0) > 0),
-                onClick = { onBan(SanctionRequest(target, dossier.hero?.heroId.orEmpty(), dossier.account.userId, device?.hardware.orEmpty(), term, category, comment)) },
+                onClick = { onBan(SanctionRequest(target, kind, dossier.hero?.heroId.orEmpty(), dossier.account.userId, device?.hardware.orEmpty(), term, category, comment)) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text(ui("moderation.ban_for", ui("moderation.target.$target"), term?.let(::hoursText) ?: ui("moderation.forever"))) }
+            ) { Text(ui(if (kind == SanctionKind.MUTE) "moderation.mute_for" else "moderation.ban_for", ui("moderation.target.$target"), term?.let(::hoursText) ?: ui("moderation.forever"))) }
         }
     }
 }
@@ -650,7 +663,6 @@ private fun trashShare(sanction: SanctionView): Float {
     return if (to <= from) 1f else ((System.currentTimeMillis() - from).toFloat() / (to - from)).coerceIn(0f, 1f)
 }
 
-private val DEFAULT_HOURS = listOf(1, 24, 168, 720)
 private const val PRESET_WEEK = 2
 private const val TRASH_DAYS = 30
 private const val COMMENT = 300

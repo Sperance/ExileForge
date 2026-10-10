@@ -50,6 +50,7 @@ import com.sperance.exileforge.presentation.expedition.RiftActions
 import com.sperance.exileforge.presentation.expedition.TrialActions
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
+import com.sperance.exileforge.presentation.feedback.LetterActions
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.guild.GuildActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
@@ -121,6 +122,7 @@ val appModule = module {
     singleOf(::MarketActions)
     single { GuildRepository() }
     singleOf(::GuildActions)
+    singleOf(::LetterActions)
     singleOf(::HeroReads)
     single { Buzzes() }
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }

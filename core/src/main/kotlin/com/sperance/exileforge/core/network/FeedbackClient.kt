@@ -3,7 +3,10 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.IgnoredHero
+import com.sperance.exileforge.core.model.feedback.LetterRequest
 import com.sperance.exileforge.core.model.feedback.Mail
+import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
@@ -40,16 +43,38 @@ class FeedbackClient internal constructor(private val http: Transport) {
     suspend fun toAsana(id: String): AdminReport = http.post("$ADMIN/feedback/asana", mapOf("id" to id))
 }
 
-/** The account's mail (3.73.0, server 1.69.0): the inbox, reading, taking an attachment with a hero, deleting; the administrator's sending. */
+/**
+ * The account's mail (3.73.0, server 1.69.0): the inbox, reading, taking an attachment with a hero, deleting; the administrator's
+ * sending. С 4.6.3 ящик - глазами героя [heroId] (письма героев видны лишь адресату), и почта между героями: письмо, квота,
+ * игнор, жалоба.
+ */
 class MailClient internal constructor(private val http: Transport) {
-    suspend fun inbox(): List<Mail> = http.get("$MAIL/inbox")
+    suspend fun inbox(heroId: String): List<Mail> = http.get("$MAIL/inbox", heroOf(heroId))
     suspend fun read(id: String): Mail = http.post("$MAIL/read", mapOf("id" to id))
 
-    /** Все письма прочитаны (3.94.0, server 1.81.14); сколько стало прочитанными. */
-    suspend fun readAll(): Long = http.post("$MAIL/read/all", emptyMap())
+    /** Все письма прочитаны (3.94.0, server 1.81.14); сколько стало прочитанными. Письма героев - только героя [heroId]. */
+    suspend fun readAll(heroId: String): Long = http.post("$MAIL/read/all", heroOf(heroId))
 
     /** Прочитанные удалены, кроме писем с незабранным вложением (3.94.0); сколько удалено. */
-    suspend fun deleteRead(): Long = http.post("$MAIL/delete/read", emptyMap())
+    suspend fun deleteRead(heroId: String): Long = http.post("$MAIL/delete/read", heroOf(heroId))
+
+    /** Письмо героя [heroId] (4.6.3): личное, ответ или рассылка гильдии; ответ - почта героя после письма. */
+    suspend fun letter(heroId: String, request: LetterRequest): MailQuota = http.post("$MAIL/letter", heroQuery(heroId), WireJson.encodeToJsonElement(request))
+
+    /** Почта героя [heroId] сейчас (4.6.3): можно ли писать адресату [to] (пусто - без адресата) и сколько осталось. */
+    suspend fun quota(heroId: String, to: String): MailQuota = http.get("$MAIL/quota", heroQuery(heroId, "to" to to.takeIf { it.isNotBlank() }))
+
+    /** Список игнора героя [heroId] (4.6.3), новые сверху. */
+    suspend fun ignores(heroId: String): List<IgnoredHero> = http.get("$MAIL/ignores", heroQuery(heroId))
+
+    /** Не принимать письма героя [target]; ответ - список игнора. */
+    suspend fun ignore(heroId: String, target: String): List<IgnoredHero> = http.post("$MAIL/ignore", heroQuery(heroId, "target" to target))
+
+    /** Снова принимать письма героя [target]; ответ - список игнора. */
+    suspend fun unignore(heroId: String, target: String): List<IgnoredHero> = http.post("$MAIL/unignore", heroQuery(heroId, "target" to target))
+
+    /** Жалоба на письмо [id] (4.6.3): уходит модерации с текстом письма; ответ - письмо с отметкой жалобы. */
+    suspend fun report(heroId: String, id: String): Mail = http.post("$MAIL/report", heroQuery(heroId, "id" to id))
     suspend fun claim(id: String, heroId: String): Mail = http.post("$MAIL/claim", heroQuery(heroId, "id" to id))
     suspend fun delete(id: String) {
         http.request("POST", "$MAIL/delete", mapOf("id" to id), authenticated = true)
@@ -57,4 +82,7 @@ class MailClient internal constructor(private val http: Transport) {
 
     /** How many letters went out. */
     suspend fun send(request: MailRequest): Int = http.post("$ADMIN/mail", body = WireJson.encodeToJsonElement(request))
+
+    /** Герой ящика: без героя (меню героев) - письма аккаунта без писем героев. */
+    private fun heroOf(heroId: String): Map<String, String> = if (heroId.isBlank()) emptyMap() else heroQuery(heroId)
 }

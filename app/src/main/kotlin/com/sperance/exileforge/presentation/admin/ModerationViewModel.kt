@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.network.ModerationFate
 import com.sperance.exileforge.core.network.ModerationPage
 import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.ModerationSort
-import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.core.network.TesterAccount
@@ -121,11 +120,12 @@ class ModerationViewModel(
         mutable.update { if (it.dossierKey == hero to user) it.copy(dossier = dossier) else it }
     }
 
-    fun ban(request: SanctionRequest) = act { api.ban(request).also { notices.toast(ui("moderation.banned", it.label)) } }
+    /** Санкция на срок - бан или (4.6.3) немота: подпись по виду санкции. */
+    fun ban(request: SanctionRequest) = act { api.ban(request).also { notices.toast(ui("moderation.imposed.${it.kind.name}", it.label)) } }
 
-    /** Снимает бан или восстанавливает удалённое из корзины. */
+    /** Снимает бан или немоту, восстанавливает удалённое из корзины. */
     fun lift(sanction: SanctionView) = act {
-        api.lift(sanction.id).also { notices.toast(ui(if (it.kind == SanctionKind.DELETION) "moderation.restored" else "moderation.unbanned", it.label)) }
+        api.lift(sanction.id).also { notices.toast(ui("moderation.lifted.${it.kind.name}", it.label)) }
     }
 
     /** Новая роль аккаунта [userId] (3.88.7): администратор выдаёт игрока, тестировщика или модератора. */

@@ -45,6 +45,8 @@ import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.player.PlayerCardViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.rules.content.MailGate
+import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Caution
@@ -55,6 +57,7 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Rune
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -114,6 +117,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 game,
                 card,
                 onWrite = { vm.write(card) },
+                onIgnore = { vm.ignore(card, it) },
                 onInvite = { vm.invite(card) },
                 onLots = { vm.sellerLots(card) },
             )
@@ -125,7 +129,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
             }
             card.rights.moderation?.takeIf { it.any }?.let { rights ->
                 val moderation = koinViewModel<ModerationViewModel>()
-                ModerationRow(game, rights) {
+                val adminMail: (() -> Unit)? = if (card.rights.mail && rights.login.isNotBlank()) ({ vm.writeAdmin(card) }) else null
+                ModerationRow(game, rights, adminMail) {
                     vm.close()
                     moderation.open(card.heroId, rights.userId)
                     vm.moderate()
@@ -181,27 +186,44 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
     }
 }
 
-/** Кнопки карточки: «Написать» и «В гильдию» - по правам сервера, «Лоты игрока» - всегда, с их числом. */
-@Composable private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
+/**
+ * Кнопки карточки: «Написать» герою (4.6.3) - всем, кроме своей карточки; нельзя писать - кнопка погашена, под ней причина
+ * ([MailGate] сервера). «Не принимать письма» - игнор героя; «В гильдию» - по правам сервера; «Лоты игрока» - всегда, с их числом.
+ */
+@Composable private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onIgnore: (Boolean) -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
     val rights = card.rights
-    val canWrite = rights.mail && !rights.moderation?.login.isNullOrBlank()
-    if (canWrite || rights.invite) {
+    val letter = rights.letter
+    if (letter != null || rights.invite) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (canWrite) ForgeButton(onClick = onWrite, enabled = !game.busy, modifier = Modifier.weight(1f)) { Text(ui("player.write")) }
+            if (letter != null) ForgeButton(onClick = onWrite, enabled = !game.busy && letter == MailGate.OPEN, modifier = Modifier.weight(1f)) { Text(ui("player.write")) }
             if (rights.invite) ForgeOutlinedButton(onClick = onInvite, enabled = !game.busy, modifier = Modifier.weight(1f)) { Text(ui("player.invite")) }
+        }
+    }
+    letter?.takeIf { it != MailGate.OPEN }?.let { gate ->
+        val rules = game.index?.rules
+        MutedText(gateText(gate, null, rules?.mail ?: MailRules(), rules?.unlockLevel(MailRules.SECTION) ?: 1))
+    }
+    if (letter != null) {
+        ForgeTextButton(onClick = { onIgnore(!rights.ignored) }, enabled = !game.busy) {
+            Text(ui(if (rights.ignored) "mail.ignore.off" else "mail.ignore.on_card"), color = Muted, style = MaterialTheme.typography.labelMedium)
         }
     }
     ForgeOutlinedButton(onClick = onLots, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) { Text(ui("player.lots", card.lots)) }
 }
 
-/** Строка модерации (только модератору и администратору): прежние бан и удаление - в досье окна модерации. */
-@Composable private fun ModerationRow(game: GameUi, rights: CardModeration, onDossier: () -> Unit) {
+/**
+ * Строка модерации (только модератору и администратору): бан, немота (4.6.3) и удаление - в досье окна модерации; письмо
+ * администратора аккаунту [onMail] - только ему.
+ */
+@Composable private fun ModerationRow(game: GameUi, rights: CardModeration, onMail: (() -> Unit)?, onDossier: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         HorizontalDivider(color = Bronze, thickness = 1.dp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             if (rights.banHero || rights.banAccount || rights.banDevice) {
                 ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.ban"), color = LifeRed) }
             }
+            if (rights.mute) ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.mute"), color = Caution) }
+            onMail?.let { ForgeTextButton(onClick = it, enabled = !game.busy) { Text(ui("player.write_admin"), color = Rune) } }
             if (rights.delete) ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.delete"), color = LifeRed) }
             Spacer(Modifier.weight(1f))
             ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.dossier"), color = Gold) }

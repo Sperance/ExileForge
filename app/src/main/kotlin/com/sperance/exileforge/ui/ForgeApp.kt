@@ -222,6 +222,8 @@ import org.koin.compose.viewmodel.koinViewModel
     if (suggestionsOpen) SuggestionsSheet { suggestionsOpen = false }
     // Вложения письма открывают карточку предмета (4.3.2): лист почты стоит вне хозяина игры - у него свой
     if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
+    // Новое письмо (4.6.3): из карточки игрока, «Ответить» и рассылки гильдии - лист поверх всего, и поверх ящика
+    if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
     // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
     if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }

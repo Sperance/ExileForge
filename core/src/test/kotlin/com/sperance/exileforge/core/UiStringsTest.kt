@@ -168,6 +168,13 @@ class UiStringsTest {
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
             // Причины санкций и роли гильдии (4.5.1): самоудаление и роли состава
             com.sperance.exileforge.core.network.SanctionCategory.entries.forEach { add("moderation.category.${it.name}") }
+            // Виды санкций и строки журнала (4.6.3: немота): подпись, тост наложения и снятия
+            com.sperance.exileforge.core.network.SanctionKind.entries.forEach {
+                add("moderation.kind.${it.name}")
+                add("moderation.imposed.${it.name}")
+                add("moderation.lifted.${it.name}")
+            }
+            com.sperance.exileforge.core.network.ModerationAction.entries.forEach { add("moderation.action.${it.name}") }
             com.sperance.exileforge.rules.content.GuildRole.entries.forEach { add("guild.role.${it.name}") }
             // Качество сундука Скверны (4.0.0): от обычного до редкого
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }

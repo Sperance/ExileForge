@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.character.FlaskVerdict
 import com.sperance.exileforge.core.character.WearPlace
+import com.sperance.exileforge.core.display.Comparison
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
@@ -26,12 +27,11 @@ import com.sperance.exileforge.presentation.state.wearDelta
 import com.sperance.exileforge.presentation.state.wearPlaces
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
-import com.sperance.exileforge.ui.components.FlaskTotals
 import com.sperance.exileforge.ui.components.GearVerdictSummary
-import com.sperance.exileforge.ui.components.HeroTotals
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.components.RelicLook
+import com.sperance.exileforge.ui.components.StatComparison
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -69,7 +69,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
 /**
  * «Если надеть» (2.46.0) в итоге героя карточки (3.88.6): что станет с листом с этой вещью, сложенное здесь формулой правил, -
  * строка на каждую сдвинутую характеристику, над ними - урон и защита двумя числами (3.89.0). Недоступная вещь говорит вместо этого красным, чего ей не хватает.
- * С 3.90.3 над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги (4.2.0) итог - «ИТОГ ФЛЯГИ» ([FlaskTotals]).
+ * С 3.90.3 над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги (4.2.0) итог - «ИТОГ ФЛЯГИ». Оба итога - сравнение «было → стало» ([StatComparison]), свёрнутое до важнейших строк.
  */
 @Composable private fun WearTotals(game: GameUi, item: ItemInstance, choice: WearChoice, look: RelicLook) {
     val unmet = game.unmetFor(item.template)
@@ -77,7 +77,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
     val place = choice.target
     // Фляга листа героя не меняет (4.2.0): вместо пустого итога героя - строки её листа против фляги в выбранном гнезде.
     val flask = game.index?.template(item.template)?.slot?.isFlask == true
-    val delta = remember(item, game.hero, game.index, place) { if (flask) emptyList() else game.wearDelta(item, place) }
+    val delta = remember(item, game.hero, game.index, place) { if (flask) null else Comparison.of(game.wearDelta(item, place)) }
     if (unmet.isEmpty()) {
         // Итог в двух числах (3.89.0) над построчным «Если надеть».
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -87,10 +87,10 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
             }
             val verdict = selected?.verdict
             verdict?.let { GearVerdictSummary(it) }
-            if (!flask) {
-                HeroTotals(delta, look)
+            if (delta != null) {
+                StatComparison(ui("relic.totals"), delta, look = look)
             } else if (verdict is FlaskVerdict) {
-                FlaskTotals(verdict, look)
+                StatComparison(ui("relic.flask_totals"), remember(verdict) { Comparison.of(verdict) }, look = look)
             }
         }
         return

@@ -97,13 +97,11 @@ internal object HeroLens {
     /** The hero's atlas as the rules count it: points earned and free. */
     fun atlasState(index: ContentIndex?, hero: HeroView?): AtlasState? = index?.let { i ->
         hero?.let { h ->
-            // Очки сверх заработанных - Предначертание «Звёздный путь» (4.6.0), тем же резолвером, что у сервера
-            val bonus = i.fates.effects(h.info.fate).atlasPoints(h.info.atlas.size)
             AtlasState(
                 listOf(i.atlasGraph.start) + h.info.atlas,
                 h.info.earned,
-                AtlasPoints.total(i.atlas.points, h.info.earned, i.atlas.cap, bonus),
-                AtlasPoints.available(i.atlas.points, h.info.earned, h.info.atlas, i.atlas.cap, bonus),
+                AtlasPoints.total(i.atlas.points, h.info.earned, i.atlas.cap),
+                AtlasPoints.available(i.atlas.points, h.info.earned, h.info.atlas, i.atlas.cap),
             )
         }
     }
@@ -111,8 +109,7 @@ internal object HeroLens {
     /** The hero's tree as the rules count it: the point balance and what the taken nodes give. */
     fun treeState(index: ContentIndex?, hero: HeroView?): TreeState? = index?.let { i ->
         hero?.let { h ->
-            // Закалка Предначертания (4.6.1) - очки сверх уровня тем же правилом, что принимает сервер
-            val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints + i.fates.effects(h.info.fate).treePoints(h.level)
+            val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
             val spent = i.tree.spent(h.tree)
             val calculator = SheetCalculator(i)
             TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))

@@ -68,6 +68,8 @@ data class KitSkill(
     val ceiling: Int,
     val condition: SlotCondition = skill.condition,
     val tier: Int = HeroSkills.FIRST_TIER,
+    /** Все открытые гнёзда рун умения заняты (4.6.2, `SkillGrowth.full`): его читает Рунный круг Предначертания. */
+    val filled: Boolean = false,
 ) {
     /**
      * The level it acts at on [hero]: the learned one and what gear, the atlas and the map add — every
@@ -155,6 +157,7 @@ data class Loadout(
                 book.rules.boostedMaxLevel,
                 condition ?: skill.condition,
                 index.skillGrowth.tier(skill, skills, stats),
+                index.skillGrowth.full(skill, skills, stats),
             )
             fun kit(code: String?, condition: SlotCondition? = null) = code?.let(book.byCode::get)?.let { forged(it, condition) }
             return Loadout(
@@ -177,8 +180,14 @@ class FateKit(val effects: FateEffects) {
     companion object {
         val NONE = FateKit(FateEffects.NONE)
 
-        /** Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`). */
-        fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>): FateKit = index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0).let { if (it.fate == null) NONE else FateKit(it) }
+        /**
+         * Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`) с судьбоносными строками надетого [equipped] (4.6.2). В
+         * заходе бой берёт замороженный дар захода ([of] от `Run.fate`).
+         */
+        fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>, equipped: Collection<ItemInstance> = emptyList()): FateKit = of(index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, equipped)))
+
+        /** Готовые рычаги [effects]; без дара - [NONE]. */
+        fun of(effects: FateEffects): FateKit = if (effects.fate == null) NONE else FateKit(effects)
     }
 }
 

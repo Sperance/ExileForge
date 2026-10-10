@@ -274,8 +274,8 @@ class Battle(
     /** Все бойцы боя: герой, питомцы, враги - в этом порядке. */
     internal val everyone: List<Fighter> get() = listOf(heroFighter) + pets + foeFighters
 
-    /** Рычаги Предначертания героя в бою (4.6.0) и их состояние в этом бою. */
-    internal val fated: List<FatedLever> = FatedLever.of(kit.fate.effects)
+    /** Отклики Предначертания героя в бою (4.6.0; 4.6.2 - и судьбоносных строк) и их состояние в этом бою. */
+    internal val fated: List<FateReaction> = FateReaction.of(kit)
     internal val fateFight = FateFight()
 
     /** Whom a monster's blow is for: a standing tank pet takes them all, any other pet its share, the hero the rest. */
@@ -574,7 +574,7 @@ class Battle(
     internal val riftFight: RiftFight? = rift?.let { RiftFight(it, kit.actives.size, kit.flasks.size) }
 
     init {
-        // Предначертание (4.6.0): барьер, уклонение и первый ход питомца - до засады Разлома, она сдвигает их ходы
+        // Предначертание (4.6.0): первый ход питомца и что несёт заход - до засады Разлома, она сдвигает их ходы
         fateOpens()
         riftFight?.let { riftOpen(it) }
     }

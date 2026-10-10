@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.equipmentIcon
@@ -48,6 +49,7 @@ import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.display.roman
 import com.sperance.exileforge.core.i18n.plural
+import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.crafts.JobView
 import com.sperance.exileforge.core.model.crafts.ProfessionView
@@ -56,10 +58,13 @@ import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.roll.Desecrations
+import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
@@ -128,7 +133,29 @@ fun jobProduct(view: JobView): String = when (val job = view.job) {
 
     // Резьба руны (4.4.0): выбранный вариант - обычная работа ITEM с руной на выходе
     is Job.Carve -> ui("crafts.kind_carve", job.upTo)
+
+    // Осквернение (4.6.2): выход - та же вещь с запечатанной судьбоносной строкой
+    is Job.Desecrate -> ui("crafts.kind_desecrate")
 }
+
+/**
+ * Вещи тайника, что примет работа над вещью героя [job] (4.6.2, `Job.targetsItem`): те, что пропустят правила, - та же проверка,
+ * что у сервера при запуске; у прочих работ - пусто.
+ */
+internal fun itemTargets(game: GameUi, job: Job): List<ItemView> {
+    val index = game.index ?: return emptyList()
+    val check: (ItemView) -> Unit = when (job) {
+        is Job.Desecrate -> Desecrations(index).let { rules -> { view -> rules.check(view.item, view.template) } }
+        else -> return emptyList()
+    }
+    return game.hero?.stash.orEmpty().mapNotNull { game.view(it) }.filter { ruleRefusal { check(it) } == null }
+}
+
+/** Вещь, что держит идущая работа (4.6.2, Осквернение): её нет среди вещей героя, пока работа идёт. */
+internal val GameUi.heldWork: ItemInstance? get() = hero?.crafts?.work?.held
+
+/** Имя идущей работы [work]: у работы над вещью - с именем этой вещи, иначе с выбранным вариантом. */
+internal fun workTitle(game: GameUi, work: WorkView): String = game.heldWork?.let { held -> "${jobTitle(work.job)} · ${game.view(held)?.title ?: equipmentTitle(held.template)}" } ?: workTitle(work)
 
 /** A crafting profession spends materials; a gathering one only brings them. The works say which, not a list of codes. */
 val ProfessionView.crafting get() = jobs.any { it.inputs.isNotEmpty() }

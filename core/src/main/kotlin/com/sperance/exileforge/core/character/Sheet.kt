@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SheetExplainer
+import com.sperance.exileforge.rules.sheet.SheetResult
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.WornCount
 import kotlin.math.abs
@@ -32,14 +33,14 @@ class SheetModel(
     private val base: Map<String, Double>,
     private val ops: List<StatOperation>,
     private val index: ContentIndex,
-    /** Предначертание листа (4.6.1): его преобразования готового листа (`FateLever.reshape`) - и после строк боя. */
+    /** Предначертание листа (4.6.1): его преобразования готового листа (рычаги и, 4.6.2, правила строк) - и после строк боя. */
     private val fate: FateEffects = FateEffects.NONE,
 ) {
     private val calculator = SheetCalculator(index)
     val plain: Map<String, Double> by lazy { shaped(calculator.compute(base, ops)) }
 
-    /** Лист после преобразований дара (4.6.1, «Равновесие»): без них - тот же. */
-    private fun shaped(stats: Map<String, Double>): Map<String, Double> = fate.effects.fold(stats) { shape, effect -> effect.lever.reshape(effect, shape, index) }
+    /** Лист после преобразований дара (4.6.1, «Равновесие»; 4.6.2 - и судьбоносных строк) одним резолвером правил: без них - тот же. */
+    private fun shaped(stats: Map<String, Double>): Map<String, Double> = fate.reshape(SheetResult(stats, emptyList(), emptyList(), base, ops), index).stats
 
     /** The sheet taken apart by source, for a figure's own window. */
     val explainer: SheetExplainer by lazy { SheetExplainer(index, base, ops) }
@@ -102,7 +103,7 @@ object Sheets {
         // Законы тронов героя - строки листа тем же правилом, что у сервера.
         val helpers = com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
         val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped }, laws, fate)
-        return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate)))
+        return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate, boons = index.fates.worn(index, fate, items.filter { it.equipped }))))
     }
 
     /** What an item's requirements miss for a hero with [stats], in the rules' words; empty means it can be worn. */

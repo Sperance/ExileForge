@@ -47,8 +47,11 @@ import kotlinx.serialization.json.JsonElement
  *      `CurrencyApplyResponse.kept`, обмен трофеев `POST hero/merchant/trophy?boss=` (`FT_003`-`FT_005`), чанк `fates.json`.
  * 68 - Предначертания без тем: `FateCard` - код, имя и описание; новые рычаги, `HeroView.fateFights`, сопротивления по
  *      максимумам стихий, без родовых строк (`Source.LINEAGE`).
+ * 69 - Осквернение Предначертания: `ItemInstance.desecration` (`FateBoon`), работа `DESECRATE` с вещью в `ActiveWork.held` (выбор -
+ *      id вещи, `CR_040`-`CR_044`), Сфера прозрения через `hero/orb` и выбор через `hero/unveil`; без `RunStart.mapKept`;
+ *      `Ceilings.spellBlock`.
  */
-const val API_REVISION = 68
+const val API_REVISION = 69
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

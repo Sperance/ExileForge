@@ -161,7 +161,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
         if (work != null) {
             item {
                 ForgePanel(accent = GoldBright) {
-                    Engraved(ui("crafts.now", workTitle(work)))
+                    Engraved(ui("crafts.now", workTitle(game, work)))
                     CycleBar(work, offset, crafts.last, height = 10, hourly = hourlyLine(crafts, work))
                     SessionTally(crafts.totals)
                 }

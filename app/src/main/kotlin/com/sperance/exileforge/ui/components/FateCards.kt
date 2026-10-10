@@ -94,10 +94,18 @@ object FateInk {
     val Parchment = listOf(Color(0xFF2E1C10), Color(0xFF1E120A), Color(0xFF2A190D))
     val Warn = Color(0xFFE8A35A)
     val Accepted = Color(0xFF3FB67A)
+
+    /** Осквернение (4.6.2, макеты «Руническая печать» и «Тлеющие письмена»): тлеющий уголь, сургуч печати, пепел спящей строки. */
+    val Cinder = Color(0xFFE0743A)
+    val CinderInk = Color(0xFFB48A70)
+    val Wax = listOf(Color(0xFFFFCF7A), Color(0xFFA5531D), Color(0xFF4A1F0A))
+    val WaxInk = Color(0xFF2A1206)
+    val Ash = Color(0xFF44515A)
+    val AshInk = Color(0xFF6F7D86)
 }
 
 /** Знак Предначертания в печати (4.6.1 - без тем): один на все дары. */
-private const val SIGIL = "✦"
+internal const val SIGIL = "✦"
 
 /** Подложка «Пепла предков»: жар снизу, уголь к верху. */
 fun Modifier.ashGround(): Modifier = drawBehind {

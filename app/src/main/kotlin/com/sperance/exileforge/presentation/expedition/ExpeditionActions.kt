@@ -257,8 +257,6 @@ class ExpeditionActions(
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
             heroSync.drawn()
             begin(id, started, toBoss)
-            // Пожиратель карт (4.6.0, Предначертание): карта входа осталась в тайнике
-            if (started.mapKept) notices.toast(ui("fate.map_kept"))
         }
     }
 
@@ -503,8 +501,8 @@ class ExpeditionActions(
         val h = hero ?: return null
         val conditions = h.skills.flasks
         val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
-        // Предначертание аккаунта (4.6.0): рычаги боя на силе листа
-        val fate = FateKit.of(i, h.info.fate, h.stats)
+        // Предначертание аккаунта (4.6.0): рычаги боя на силе листа, с судьбоносными строками надетого (4.6.2)
+        val fate = FateKit.of(i, h.info.fate, h.stats, h.equipped.values)
         return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i, h.heroClass, flasks, h.stats, i.powers, i.rules.charges, fate), i.stats.percent)
     }
 

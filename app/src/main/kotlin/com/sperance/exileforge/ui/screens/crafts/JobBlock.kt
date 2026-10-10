@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.crafts
 
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.refusalText
@@ -36,6 +37,16 @@ internal sealed interface JobBlock {
         override val text: String get() = ui("crafts.pick_variant")
     }
 
+    /** Работе нужна вещь героя (4.6.2, Осквернение), но ни одна в тайнике не подходит: [minLevel] - нижний уровень предмета. */
+    data class NoItem(val minLevel: Int) : JobBlock {
+        override val text: String get() = ui("crafts.no_desecrate_item", minLevel)
+    }
+
+    /** Подходящие вещи есть, но ни одна не выбрана (4.6.2). */
+    data object PickItem : JobBlock {
+        override val text: String get() = ui("crafts.pick_item_first")
+    }
+
     /** Карта региона, чья локация ещё не открыта в кампании. */
     data object LockedMap : JobBlock {
         override val text: String get() = ui("crafts.locked_map")
@@ -59,10 +70,23 @@ internal sealed interface JobBlock {
          * Первая причина по порядку проверки сервера: уровень, вариант, регион, инструмент, расход цикла [job] с добавками
          * [additives]; null - работу можно начать. [work] - сама работа, [choices] - её варианты, что лист предлагает.
          * Вариант выбирающей работы того же вида, что она сама (кузнец - EQUIPMENT, 3.90.2): не выбран лишь тот, у кого нет
-         * [JobView.choice].
+         * [JobView.choice]. Работа над вещью героя (4.6.2, `Job.targetsItem`) ждёт подходящую вещь из [items] и выбранную [picked].
          */
-        fun of(game: GameUi, profession: ProfessionView, work: JobView, choices: List<JobView>, job: JobView, additives: List<String>): JobBlock? = when {
+        fun of(
+            game: GameUi,
+            profession: ProfessionView,
+            work: JobView,
+            choices: List<JobView>,
+            job: JobView,
+            additives: List<String>,
+            items: List<ItemView> = emptyList(),
+            picked: String = "",
+        ): JobBlock? = when {
             job.level > profession.level -> Level(job.level, profession.code)
+
+            job.job.targetsItem && items.isEmpty() -> NoItem(game.index?.fates?.desecration?.minLevel ?: 0)
+
+            job.job.targetsItem && picked.isEmpty() -> PickItem
 
             work.options.isNotEmpty() && choices.isEmpty() && work.kind == JobKind.CONDENSE -> NothingToCondense
 

@@ -38,6 +38,7 @@ internal fun Battle.step(dt: Double) {
         mended(lifeBack(heroFighter, heroFighter.body.maxLife * ally!!.heal / 100 * dt))
     }
     expire()
+    fateTicks(dt)
     if (finished()) return
     rage()
     riftTick()
@@ -413,6 +414,7 @@ private fun Battle.end(how: Outcome) {
     lookLife()
     outcome = how
     duration = time
+    fateEnds()
 }
 
 /** Низшая доля здоровья героя за бой (3.96.0) - для Испытания чемпиона. */

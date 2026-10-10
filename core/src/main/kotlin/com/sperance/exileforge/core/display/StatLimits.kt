@@ -30,6 +30,7 @@ object StatLimits {
 
     private fun ceilings(rules: CombatRules): Map<String, Ceiling> = mapOf(
         CoreStat.BLOCK_CHANCE.code to rules.ceilings.block,
+        CoreStat.SPELL_BLOCK.code to rules.ceilings.spellBlock,
         CoreStat.CRITICAL_CHANCE.code to rules.ceilings.critical,
         CoreStat.SPELL_CRITICAL_CHANCE.code to rules.ceilings.critical,
         CoreStat.PHYSICAL_REDUCTION.code to rules.ceilings.physical,

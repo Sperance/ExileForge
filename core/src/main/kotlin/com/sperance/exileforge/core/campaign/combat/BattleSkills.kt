@@ -74,7 +74,7 @@ internal fun Battle.useSkills() {
         if (foeFighters.none { it.alive }) return
         val level = kitSkill.level(hero.body)
         val cost = cost(kitSkill, level)
-        if (hero.mana + fateSpare() + 1e-9 < cost && !skillsFree() && !fateFree(use = false)) continue
+        if (!skillsFree() && !affords(cost)) continue
         opened[slot] = true
         castSlot(slot, kitSkill, level, cost)
         if (!hero.alive || outcome != null) return
@@ -96,14 +96,12 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     val hero = heroFighter
     val skill = kitSkill.skill
     val chance = hero.body[CoreStat.FREE_SKILL_CHANCE.code]
-    // Предначертание (4.6.0, «Тихая мана»): первое умение боя - без маны и без перезарядки; кость шанса тогда не тянется
-    val fated = fateFree(use = true)
-    val free = fated || skillsFree() || chance > 0 && random.nextDouble() * 100 < chance
-    // Переполнение (4.6.1): цена - сперва из перелива маны
-    if (!free) hero.mana = max(0.0, hero.mana - fatePay(cost))
-    hero.readyAt[slotKey(slot)] = if (fated) time else time + skill.cooldown / hero.body.recovery(skill.spell)
-    // Резонанс (4.6.1): применение слышат до самого удара
+    val free = skillsFree() || chance > 0 && random.nextDouble() * 100 < chance
+    // Переполнение (4.6.1): цена - сперва из перелива маны; Обет крови (4.6.2) - здоровьем
+    if (!free) payFor(cost)
+    // Резонанс (4.6.1): применение слышат до самого удара - и до перезарядки, что он укорачивает (4.6.2)
     fateCast(skill.code)
+    hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery(skill.spell)
     perform(kitSkill, level)
     // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }

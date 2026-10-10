@@ -19,5 +19,6 @@
   "enum.orb.SHAPERS_ORB.trade": "Shaper's Orb",
   "enum.orb.VAAL_ORB.trade": "Vaal Orb",
   "enum.orb.UNVEILING_ORB.trade": "Unveiling Orb",
-  "enum.orb.QUALITY_ORB.trade": "Orb of Quality"
+  "enum.orb.QUALITY_ORB.trade": "Orb of Quality",
+  "enum.orb.INSIGHT_ORB.trade": "Orb of Insight"
 }

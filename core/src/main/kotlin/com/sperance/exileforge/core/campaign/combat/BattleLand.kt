@@ -22,7 +22,7 @@ import kotlin.math.min
  * around it; leech, stun and ailments follow, and the passives hear of it.
  */
 internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant) {
-    // Предначертание (4.6.0, «Каменная кожа»): удар по герою - не больше доли его максимума, до барьера и щита
+    // Предначертание (4.6.0, «Каменная кожа»): удар по герою и питомцу - что пропустят рычаги, до барьера и щита
     val taken = fateCapped(target, struck)
     val dealt = taken.values.sum()
     var rest = dealt
@@ -77,7 +77,8 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
                 !(target.body.avoidStun > 0 && draw(RollKey.AVOID_STUN, target.body.avoidStun) < target.body.avoidStun) || blow.stun > 0 && draw(RollKey.STUN, blow.stun / 100) * 100 < blow.stun
             )
     ) {
-        stunned = stun(target, rules.stun.duration)
+        stun(target, rules.stun.duration)
+        stunned = true
     }
     val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments, blow.spell) else emptyList()
     val trace = pendingHit?.copy(
@@ -118,8 +119,13 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         watch()
     }
     if (me.side == Side.MONSTER) traitsLanded(me, target)
-    fateLanded(me, target, taken, kind)
+    fateLanded(me, target, taken, kind, blow)
     if (!target.alive) fell(target, blow.spell, me)
+}
+
+/** Оглушение [target] на [seconds]: ничего не замахивается до его конца. */
+private fun Battle.stun(target: Fighter, seconds: Double) {
+    target.heldUntil = max(target.heldUntil, time + seconds)
 }
 
 /**
@@ -164,7 +170,7 @@ private fun Battle.buildUp(rule: BuildupRule, me: Fighter, body: Combatant, targ
     val physical = taken[DamageType.PHYSICAL] ?: 0.0
     val rest = taken.values.sum() - physical
     val fills = mapOf(
-        Buildup.STUN to (physical + rest * rule.stunOther) * (if (crit) rule.stunCrit else 1.0) / (pool * target.body.stunPool + target.body.stunThreshold) + skillStun / 100,
+        Buildup.STUN to ((physical + rest * rule.stunOther) * (if (crit) rule.stunCrit else 1.0) / (pool * target.body.stunPool + target.body.stunThreshold) + skillStun / 100) * fateStunning(me),
         Buildup.FREEZE to (taken[DamageType.COLD] ?: 0.0) / pool,
         Buildup.ELECTROCUTE to (taken[DamageType.LIGHTNING] ?: 0.0) / pool,
     )
@@ -184,7 +190,8 @@ private fun Battle.buildUp(rule: BuildupRule, me: Fighter, body: Combatant, targ
         }
         val held = if (rarity == MonsterRarity.UNIQUE) effect.bossDuration else effect.duration
         when (kind) {
-            Buildup.STUN -> if (stun(target, held)) {
+            Buildup.STUN -> {
+                stun(target, held)
                 target.stunnedUntil = time + held
                 stunned = true
             }
@@ -203,7 +210,7 @@ private fun Battle.buildUp(rule: BuildupRule, me: Fighter, body: Combatant, targ
     return stunned
 }
 
-private fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, extra: List<Pair<Ailment, Double>>, spell: Boolean): List<Ailment> {
+internal fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, extra: List<Pair<Ailment, Double>>, spell: Boolean): List<Ailment> {
     val rolled = ailmentRules.mapNotNull { (rule, what) ->
         val (ailment, type) = what
         // The freeze is a bar since 3.78.0: no chance to roll for it while the rule's bars are on.
@@ -228,7 +235,8 @@ internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, take
     val (rule, type) = ruleOf[ailment] ?: return null
     if (target.body.immune(ailment)) return null
     val avoid = target.body.avoid(ailment)
-    if (avoid > 0 && draw(RollKey.AVOID, avoid, ailment) < avoid) return null
+    // Удача рода (4.6.2): избежание недугов героем - лучший из двух бросков
+    if (avoid > 0 && checkDraw(target, RollKey.AVOID, avoid, ailment) < avoid) return null
     val amount = (taken[type] ?: 0.0).takeIf { it > 0 } ?: taken.values.sum()
     // 3.35.0: a faster damaging ailment deals the same in less time; the striker's shock and chill are stronger by their effect.
     val faster = if (ailment.hurts) 1 + me.body.fasterAilments else 1.0
@@ -268,7 +276,7 @@ internal fun Battle.burden(me: Fighter, target: Fighter, ailment: Ailment, amoun
     val (rule, _) = ruleOf[ailment] ?: return false
     if (target.body.immune(ailment)) return false
     val avoid = target.body.avoid(ailment)
-    if (avoid > 0 && draw(RollKey.AVOID, avoid, ailment) < avoid) return false
+    if (avoid > 0 && checkDraw(target, RollKey.AVOID, avoid, ailment) < avoid) return false
     val duration = rule.duration * target.body.ailmentDuration(ailment)
     val magnitude = if (ailment.hurts) amount / rule.duration else rule.magnitude
     place(target, ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0), spell = true), rule.stacks)

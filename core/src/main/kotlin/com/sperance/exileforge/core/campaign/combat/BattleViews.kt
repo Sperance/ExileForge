@@ -30,7 +30,7 @@ fun Battle.skillViews(): List<SkillView?> = kit.actives.mapIndexed { slot, kitSk
         val left = ((heroFighter.readyAt[slotKey(slot)] ?: 0.0) - time).coerceAtLeast(0.0)
         SkillView(
             slot, it.skill.code, it.skill.icon, level, cost.roundToInt(), if (cooldown > 0) (1 - left / cooldown).toFloat().coerceIn(0f, 1f) else 1f,
-            skillsFree() || heroFighter.mana + fateSpare() + 1e-9 >= cost, it.condition, left, skillLock(slot),
+            skillsFree() || affords(cost), it.condition, left, skillLock(slot),
         )
     }
 }

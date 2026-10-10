@@ -214,6 +214,8 @@ fun ItemCard(
             }
         }
         if (!detailed && rolled.size > shown.size) MutedText(ui("card.more_properties", rolled.size - shown.size), style = MaterialTheme.typography.labelMedium)
+        // Осквернение Предначертания (4.6.2): судьбоносная строка - под строками вещи, печатью или раскрытой
+        FatedSlot(item.item)
         if (detailed) {
             item.description.takeIf { it.isNotBlank() }?.let {
                 Text(

@@ -73,6 +73,8 @@ private val art = mapOf(
     // 3.36.0: the unveiling; server 1.65.0: one Orb of Quality for every kind of quality, its catalysts are omens now.
     Orb.UNVEILING_ORB to OrbArt(0xFFC0A0F0, Emblem.EYE, rays = true),
     Orb.QUALITY_ORB to OrbArt(0xFFD8A070, Emblem.FLAME),
+    // 4.6.2: Сфера прозрения раскрывает судьбоносную строку - золото Предначертания
+    Orb.INSIGHT_ORB to OrbArt(0xFFF0C76A, Emblem.EYE, rays = true),
 )
 
 /** An orb the client has no art for — one the server added later — is plain gold glass with a gem. */

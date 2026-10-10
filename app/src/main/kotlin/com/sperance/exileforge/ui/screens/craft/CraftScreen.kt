@@ -138,12 +138,15 @@ private fun essenceRefusals(index: ContentIndex, hero: HeroView, gear: ForgeTarg
     }
 }
 
-/** Строки на выбор, что ждут решения над целью: раскрытие и знамение выбора у вещи, знамение выбора у питомца. */
+/**
+ * Строки на выбор, что ждут решения над целью: скрытая строка вещи ([REVEALS] - аффикс или судьбоносная, 4.6.2) и знамение выбора
+ * у вещи, знамение выбора у питомца.
+ */
 @Composable private fun LineChoices(game: GameUi, target: ForgeTarget, enabled: Boolean, vm: SmithyViewModel) {
     when (target) {
         is ForgeTarget.Gear -> {
             val item = target.view.item
-            LineChoice(game, item, item.unveil, "forge.unveil_title", "forge.unveil_hint", enabled, vm::unveil)
+            REVEALS.firstOrNull { it.pending(item) }?.Choice(game, item, enabled, vm::unveil)
             LineChoice(game, item, item.offer, "forge.choice_title", "forge.choice_hint", enabled, vm::choose)
         }
 

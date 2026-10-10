@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
+import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.campaign.FightFigures
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
@@ -108,7 +109,10 @@ internal fun ExpeditionRun.preview(n: Int) {
     if (n in autoEvents) autoReward = (autoReward ?: Reward.NONE) + loot
 }
 
-/** The fight's battle on the hero's pools now, at the fight's level, on its own dice. */
+/**
+ * The fight's battle on the hero's pools now, at the fight's level, on its own dice. Предначертание - замороженное захода
+ * (4.6.2: сила, судьбоносные строки и счёт Разгона на входе, как их видит сервер).
+ */
 internal fun ExpeditionRun.battle(): Battle {
     val phases = PhaseFoes(this.index, rules)
     val foes = members.map { member ->
@@ -121,7 +125,7 @@ internal fun ExpeditionRun.battle(): Battle {
         hero,
         // Свита фаз босса (3.92.0) - в конце стаи, на своём потоке: бой без фаз катится как прежде
         phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
-        rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
+        rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit.copy(fate = FateKit.of(run.fate)), model = build, pools = pools,
         percent = build.gear.percent, ally = ally(), cleared = wonLast, fateRun = fateRun,
     )
 }
@@ -170,7 +174,7 @@ internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
  * рычага паки не перебираются.
  */
 internal fun ExpeditionRun.tallyWins() {
-    if (kit.fate.effects.has(FateLever.WIN_STREAK)) fateRun.recount(run)
+    if (run.fate.has(FateLever.WIN_STREAK)) fateRun.recount(run)
 }
 
 internal fun ExpeditionRun.play(dt: Double) {

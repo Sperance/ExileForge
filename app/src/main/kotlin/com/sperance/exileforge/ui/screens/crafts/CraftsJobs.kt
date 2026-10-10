@@ -148,6 +148,9 @@ import kotlin.math.ceil
         JobKind.EVOLVE -> GlyphIcon(Glyph.LEVEL, Gold, modifier)
 
         JobKind.CARVE -> if (job.output.isNotBlank()) BagIcon(job.output, modifier) else GlyphIcon(Glyph.GEM, Gold, modifier)
+
+        // Осквернение (4.6.2): вещь героя получает судьбоносную строку
+        JobKind.DESECRATE -> GlyphIcon(Glyph.RARITY, Gold, modifier)
     }
 }
 
@@ -170,7 +173,12 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     // The smith's random piece (3.81.0, server 1.76.0) takes no additives: its lines roll two tiers lower instead.
     val random = job.choice == SmithChoice.RANDOM.name
     val chosenAdditives = if (random) emptyList() else additives
-    val block = JobBlock.of(game, profession, work, choices, job, chosenAdditives)
+    // Работа над вещью героя (4.6.2, Осквернение): выбор - вещь тайника, что пропустят правила; касание выбирает, долгое - карточка
+    val targets = remember(work.code, game.hero?.items, game.index) { itemTargets(game, work.job) }
+    var target by remember(work.code) { mutableStateOf("") }
+    val item = target.takeIf { id -> targets.any { it.id == id } }.orEmpty()
+    val block = JobBlock.of(game, profession, work, choices, job, chosenAdditives, targets, item)
+    val inspect = rememberInspect()
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(jobTitle(job.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
@@ -190,6 +198,12 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                             )
                         }
                     }
+                }
+            }
+            if (work.job.targetsItem && targets.isNotEmpty()) {
+                Engraved(ui("crafts.pick_item"))
+                targets.forEach { view ->
+                    ItemRow(view, selected = view.id == item, price = game.sellPrice(view.item), onLongClick = { inspect(Inspect.Copy(view.item)) }) { target = view.id }
                 }
             }
             PropertyRow(ui("crafts.output"), jobProduct(job), Glyph.ITEM)
@@ -233,7 +247,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                 else -> ForgeButton(enabled = !game.busy, onClick = {
                     onDismiss()
                     if (smith) SmithChoice.of(job.choice)?.let { vm.rememberSmithChoice(game.heroId, it) }
-                    vm.start(job.code, job.choice, chosenAdditives)
+                    vm.start(job.code, if (job.job.targetsItem) item else job.choice, chosenAdditives)
                 }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.start")) }
             }
         }

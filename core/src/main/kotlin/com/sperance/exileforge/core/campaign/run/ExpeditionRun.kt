@@ -489,7 +489,7 @@ class ExpeditionRun(
             val vaalZone = campaign.vaalZone?.takeIf { it.mapCode == location.code }
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)
             // Обзор Предначертания (4.6.0) - дар, замороженный на заход
-            val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal, FateSight.of(run.fate))
+            val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
             val extraFountains = MapEffects.fountains(effects)

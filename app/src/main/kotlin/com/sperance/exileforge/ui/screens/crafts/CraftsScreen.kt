@@ -48,6 +48,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.Harvest
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -69,6 +70,7 @@ import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CRAFTS
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
@@ -166,11 +168,13 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(workTitle(work), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+                Text(workTitle(game, work), color = GoldBright, style = MaterialTheme.typography.titleMedium)
                 Text(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), color = Rune, style = MaterialTheme.typography.labelMedium)
             }
             ForgeOutlinedButton(enabled = !game.busy, onClick = vm::stop) { Text(ui("crafts.stop")) }
         }
+        // Вещь в работе (4.6.2, Осквернение): её нет среди вещей героя, пока работа идёт; касание открывает карточку
+        game.heldWork?.let { held -> game.view(held)?.let { HeldItem(it) } }
         CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
         levelLine(crafts, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
         // The server's tally: the rules' own sum.
@@ -182,6 +186,12 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         }
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
+}
+
+/** Вещь, что держит работа (4.6.2): строка плиты с подписью «в работе»; касание открывает её карточку. */
+@Composable private fun HeldItem(view: ItemView) {
+    val inspect = rememberInspect()
+    ItemRow(view, facts = listOf(ui("crafts.held"))) { inspect(Inspect.Copy(view.item)) }
 }
 
 /**

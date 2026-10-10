@@ -143,11 +143,22 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
      */
     fun resist(type: DamageType, penetration: Double = 0.0): Double {
         val name = type.resist ?: return 0.0
-        val chaos = name == CoreStat.RESIST_CHAOS.code
-        val ceiling = (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat(CoreStat.RESIST_MAX_ALL.code))).coerceIn(0.0, rules.resistHardCap)
+        val ceiling = resistCeiling(type)
         // Below zero since 3.18.0: the act's penalty and the map's curse can leave a resistance negative, as in PoE.
-        val own = (stat(name) + (if (chaos) 0.0 else stat(CoreStat.RESIST_ALL.code))).coerceIn(-rules.resistFloor, ceiling)
+        val own = rawResist(name).coerceIn(-rules.resistFloor, ceiling)
         return (own - penetration).coerceIn(-rules.resistFloor, ceiling) / 100
+    }
+
+    /** Сопротивление [type] сверх своего потолка (4.6.2, «Равновесие»), в процентах; не выше потолка - ноль. */
+    fun overcap(type: DamageType): Double = type.resist?.let { max(0.0, rawResist(it) - resistCeiling(type)) } ?: 0.0
+
+    /** Своё сопротивление [name] листа: стихии - и с общим. */
+    private fun rawResist(name: String): Double = stat(name) + if (name == CoreStat.RESIST_CHAOS.code) 0.0 else stat(CoreStat.RESIST_ALL.code)
+
+    /** Потолок сопротивления [type]: правило боя, свой максимум и, у стихий, общий - не выше жёсткого. */
+    private fun resistCeiling(type: DamageType): Double {
+        val chaos = type.resist == CoreStat.RESIST_CHAOS.code
+        return (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat(CoreStat.RESIST_MAX_ALL.code))).coerceIn(0.0, rules.resistHardCap)
     }
 
     /** How much of the target's [type] resistance this fighter's blows ignore, in percent (server 0.66.0). */
@@ -343,8 +354,13 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val suppression = percent(CoreStat.SPELL_SUPPRESSION.code, rules.defence.suppressionCap)
     val deflection = percent(CoreStat.DEFLECTION.code, rules.defence.deflectionCap)
 
-    /** Its chance to block a spell: the block, and the spell block on top, under the same ceiling. */
-    val spellBlock = (stat(CoreStat.BLOCK_CHANCE.code) + stat(CoreStat.SPELL_BLOCK.code)).coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
+    /**
+     * Шанс блока чар (4.6.2, как в PoE - отдельно от блока): свой блок чар под своим потолком `ceilings.spellBlock`; у монстра
+     * ([monster]) сверх него - `combat.monsterSpellBlock`% его шанса блока атак.
+     */
+    fun spellBlock(monster: Boolean): Double = if (monster) monsterSpellBlock else ownSpellBlock
+    private val ownSpellBlock = stat(CoreStat.SPELL_BLOCK.code).coerceIn(0.0, ceiling(rules.ceilings.spellBlock)) / 100
+    private val monsterSpellBlock = (stat(CoreStat.SPELL_BLOCK.code) + block * rules.monsterSpellBlock).coerceIn(0.0, ceiling(rules.ceilings.spellBlock)) / 100
     val lifeOnBlock = max(0.0, stat(CoreStat.HEALTH_ON_BLOCK.code))
     val manaOnBlock = max(0.0, stat(CoreStat.MANA_ON_BLOCK.code))
     val shieldOnBlock = max(0.0, stat(CoreStat.SHIELD_ON_BLOCK.code))

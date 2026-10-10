@@ -33,14 +33,15 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         return false
     }
     val sure = me === heroFighter && nextCrit
-    // Предначертание (4.6.0): месть и первый удар - крит наверняка; заряд «из-под плаща» при этом цел
+    // Предначертание (4.6.0): месть - крит наверняка; заряд «из-под плаща» при этом цел. Её множитель крита (4.6.2) - до траты заряда
     val fatedSure = !sure && fateSure(me)
+    val keener = fateKeener(me)
     // 3.37.0: every draw of this blow goes on its tape, and the shots are taken before anything changes.
     tape = mutableListOf()
     val striker = shot(me, blow)
     val struck = shot(target)
     val evade = evasion(me, target)
-    val blockChance = if (blow.spell) target.body.spellBlock else target.body.block
+    val blockChance = if (blow.spell) target.body.spellBlock(target.side == Side.MONSTER) else target.body.block
     val kind = when {
         target.frozen() -> if (sure || fatedSure || crit(me, body, blow.spell)) HitKind.CRIT else HitKind.HIT
 
@@ -52,7 +53,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         sure || fatedSure || crit(me, body, blow.spell) -> HitKind.CRIT
 
         else -> HitKind.HIT
-    }.let { if (it == HitKind.CRIT && critBanned(me)) HitKind.HIT else it }
+    }.let { if (it == HitKind.CRIT && (critBanned(me) || fateWarded(target))) HitKind.HIT else it }
     if (sure && kind == HitKind.CRIT) nextCrit = false
     fateSwung(me, kind)
     if (me.side == Side.MONSTER) lastStriker = me.index
@@ -71,7 +72,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         return false
     }
     // Server 1.32.0: a critical strike no heavier than a hit on one who takes none, and the non-critical ones more or less.
-    val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier(blow.spell) + target.body.critTaken) else body.nonCritMore
+    val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier(blow.spell) * keener + target.body.critTaken) else body.nonCritMore
     // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
     val doubled = if (body.doubleDamage > 0 && draw(RollKey.DOUBLE, body.doubleDamage) < body.doubleDamage) 2.0 else 1.0
     // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
@@ -86,8 +87,10 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
     // Разлом (3.96.0): «Тяжкие удары» героя, печати Стража, «Одна стихия» Владыки
     val heavy = heavy(me, blow)
-    // Предначертание (4.6.0): «Кровь предков» - удар героя тяжелее с потерянным здоровьем
-    val fateMore = fateHeavier(me, blow)
+    // Предначертание (4.6.0): удар героя тяжелее по его рычагам и строкам, удар врага - легче
+    val fateMore = fateHeavier(me, target, blow)
+    // Удача рода (4.6.2): разброс урона героя - больший из двух бросков
+    val luckySpread = blow.spread && fateLuckySpread(me)
     val seals = sealed(target)
     var unruled = 0.0
     val types = mutableListOf<TypeTrace>()
@@ -99,7 +102,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val stored = fateExtra(me)
     val partsSum = parts.values.sum()
     val taken = parts.mapValues { (type, base) ->
-        val spread = if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0
+        val spread = if (blow.spread) 1 + ((if (luckySpread) max(random.nextDouble(), random.nextDouble()) else random.nextDouble()) * 2 - 1) * rules.variance / 100 else 1.0
         val grown = base * spread * multiplier * against * body.damageMore * doubled * versus * fateMore
         val heavied = if (heavy == 1.0) grown else grown * heavy
         val raw = if (stored > 0 && partsSum > 0) heavied + stored * base / partsSum else heavied
@@ -198,6 +201,7 @@ private fun Battle.blocked(target: Fighter) {
     manaBack(target, body.manaOnBlock)
     target.shield = min(body.maxShield, target.shield + body.shieldOnBlock)
     if (target === heroFighter) blockedAt = time
+    fateBlocked(target)
 }
 
 /**

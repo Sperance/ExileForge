@@ -45,6 +45,9 @@ enum class Glyph {
     IMAGE,
     INFO,
     ALERT,
+
+    /** Аура и пассивное умение в бою (4.6.4): строка сводки, что они сдвинули. */
+    AURA,
     ;
 
     companion object {

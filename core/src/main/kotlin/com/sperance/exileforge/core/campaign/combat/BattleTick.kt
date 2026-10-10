@@ -81,7 +81,7 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     if (!me.alive) return
     // The bars melt once no blow has filled them for the rule's delay (3.78.0).
     rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
-    val regenerated = lifeBack(me, recovery(me, (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt))
+    val regenerated = lifeBack(me, recovery(me, me.body.regen(RegenPool.LIFE) * me.body.recoveryRate * dt))
     if (me === heroFighter) regenLogged += regenerated
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
     // Регенерация не переливается (4.6.3, Переполнение): перелив копит только избыток восстановления

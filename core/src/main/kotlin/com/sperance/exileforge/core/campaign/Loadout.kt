@@ -111,7 +111,12 @@ data class Loadout(
     val fate: FateKit = FateKit.NONE,
 ) {
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
-    fun reserved(hero: Combatant): Double = (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / max(0.1, 1 + hero[CoreStat.RESERVATION.code] / 100)).coerceIn(0.0, 100.0)
+    fun reserved(hero: Combatant): Double = (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / efficiency(hero)).coerceIn(0.0, 100.0)
+
+    /** Сколько процентов максимума маны держит пассивное умение [passive] (4.6.4): аура - свою долю на эффективности резерва листа. */
+    fun reserve(passive: KitSkill, hero: Combatant): Double = if (passive.skill.type == SkillType.AURA) passive.skill.reserve / efficiency(hero) else 0.0
+
+    private fun efficiency(hero: Combatant): Double = max(0.1, 1 + hero[CoreStat.RESERVATION.code] / 100)
 
     /**
      * What the passives lay on the sheet all the time: an aura's lines stronger by the aura effect, a bonus's

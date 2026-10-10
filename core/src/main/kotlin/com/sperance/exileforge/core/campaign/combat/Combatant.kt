@@ -237,6 +237,9 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     }
     val lifeRegen = max(0.0, stat(CoreStat.HEALTH_REGEN.code))
     val shieldRegen = max(0.0, stat(CoreStat.ENERGY_REGEN.code))
+
+    /** Восстановление запаса [pool] в секунду (4.6.4): плоское и доля максимума - одно чтение боя и сводки героя. */
+    fun regen(pool: RegenPool): Double = pool.flat(this) + pool.fromShare(this)
     val leechPhysical = max(0.0, stat(CoreStat.LEECH_PHYSICAL.code)) / 100
     val leechAll = max(0.0, stat(CoreStat.LEECH_ALL.code)) / 100
     val critLeech = max(0.0, stat(CoreStat.CRITICAL_VAMPIRE.code)) / 100
@@ -386,4 +389,26 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** The damage type most of its blow is made of. */
     val leading: DamageType get() = damage.maxBy { it.value }.key
+}
+
+/**
+ * Запас, что восстанавливается сам (4.6.4): плоская регенерация листа [flatStat] и доля максимума в секунду [shareStat] - как их
+ * читает бой ([Combatant.regen]); сводка героя показывает ту же сумму.
+ */
+enum class RegenPool(val flatStat: String, val shareStat: String) {
+    LIFE(CoreStat.HEALTH_REGEN.code, CoreStat.LIFE_REGEN_PERCENT.code) {
+        override fun flat(body: Combatant) = body.lifeRegen
+        override fun fromShare(body: Combatant) = body.maxLife * body.lifeRegenShare
+    },
+    SHIELD(CoreStat.ENERGY_REGEN.code, CoreStat.ENERGY_REGEN_PERCENT.code) {
+        override fun flat(body: Combatant) = body.shieldRegen
+        override fun fromShare(body: Combatant) = body.maxShield * body.shieldRegenShare
+    },
+    ;
+
+    /** Плоское восстановление в секунду. */
+    abstract fun flat(body: Combatant): Double
+
+    /** Восстановление в секунду от доли максимума. */
+    abstract fun fromShare(body: Combatant): Double
 }

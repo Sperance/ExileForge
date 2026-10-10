@@ -8,6 +8,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 /**
  * Hand-drawn glyph set in the Path of Exile key art idiom: struck metal, orbs and sigils.
@@ -42,7 +45,21 @@ private fun PathBuilder.ring(cx: Float, cy: Float, r: Float) {
     close()
 }
 
+/** Пунктирное кольцо радиуса [r] из [dashes] дуг: каждая занимает [fill] своего шага. */
+private fun PathBuilder.dashedRing(cx: Float, cy: Float, r: Float, dashes: Int, fill: Float) {
+    val step = 2 * PI / dashes
+    repeat(dashes) { i ->
+        val from = i * step
+        val to = from + step * fill
+        moveTo(cx + r * cos(from).toFloat(), cy + r * sin(from).toFloat())
+        arcTo(r, r, 0f, false, true, cx + r * cos(to).toFloat(), cy + r * sin(to).toFloat())
+    }
+}
+
 object ForgeGlyphs {
+    /** Аура (4.6.4): ядро и пунктирное кольцо вокруг - строка, что сдвинули ауры и пассивные умения. */
+    val Aura = glyph("Aura", { ring(12f, 12f, 3f) }, { dashedRing(12f, 12f, 8.5f, 8, .55f) })
+
     /** Anvil under a raised hammer — the crafting bench. */
     val Anvil = glyph("Anvil", { poly(3f to 12f, 21f to 12f, 17f to 16f, 7f to 16f) }, { poly(9f to 16f, 15f to 16f, 17f to 21f, 7f to 21f) }, {
         line(13f, 3f, 20f, 8f)

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.hero
 
+import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.character.HeroSheet
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.model.campaign.CampaignState
@@ -106,6 +107,8 @@ data class HeroView(
     val sheet: HeroSheet = HeroSheet.EMPTY,
     /** The menagerie (3.5.0, server 1.5.0). */
     val pets: PetState = PetState(),
+    /** Лист боя (4.6.4): цифры сводки, разбор и сравнения - с пассивными умениями и Предначертанием; null - листа ещё нет. */
+    val combat: CombatSheet? = null,
 ) {
     val id: String get() = info.id
     val level: Int get() = info.level

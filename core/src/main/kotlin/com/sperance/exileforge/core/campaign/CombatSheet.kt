@@ -1,0 +1,188 @@
+package com.sperance.exileforge.core.campaign
+
+import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.RegenPool
+import com.sperance.exileforge.core.character.HeroSheet
+import com.sperance.exileforge.core.character.SheetModel
+import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.FateEffects
+import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.StatSpread
+import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.Grant
+import com.sperance.exileforge.rules.sheet.Shift
+import com.sperance.exileforge.rules.sheet.SourceKind
+import com.sperance.exileforge.rules.sheet.StatBreakdown
+import com.sperance.exileforge.rules.sheet.StatOperation
+import com.sperance.exileforge.rules.sheet.StatSource
+import kotlin.math.abs
+
+/**
+ * Пассивное умение героя в бою (4.6.4): код [skill], уровень [level], на котором оно действует, доля маны [reserve], что держит аура,
+ * его строки [lines] на листе (аура - на силе `STOCK_AURA_EFFECT`) и ждёт ли оно низкого здоровья ([lowLife]).
+ */
+data class PassiveSource(val skill: String, val level: Int, val reserve: Double, val lines: List<StatLine>, val lowLife: Boolean)
+
+/**
+ * Что бой читает вместе с характеристикой (4.6.4, как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] - общее
+ * сопротивление стихиям к каждой стихии, долю максимума к плоской регенерации. [creates] - строка сводки появляется и без своей
+ * характеристики (общее сопротивление даёт строки стихий); иначе прибавка ложится лишь на уже бывшую строку.
+ */
+enum class FightReading(val stat: String, val from: String, val creates: Boolean, private val pool: RegenPool? = null) {
+    FIRE(CoreStat.RESIST_FIRE.code, CoreStat.RESIST_ALL.code, true),
+    COLD(CoreStat.RESIST_COLD.code, CoreStat.RESIST_ALL.code, true),
+    LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.RESIST_ALL.code, true),
+    LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, false, RegenPool.LIFE),
+    SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, false, RegenPool.SHIELD),
+    ;
+
+    /** Что бой прибавляет к цифре [stat] тела [body]: долю максимума запаса или характеристику [from]. */
+    fun adds(body: Combatant): Double = pool?.fromShare(body) ?: body[from]
+}
+
+/**
+ * Цифры сводки героя (4.6.4): [values] - что показывает строка, [rates] - восстановление в секунду от доли максимума у строк-долей
+ * ([RegenPool.shareStat]), [skilled] - строки, что сдвинули пассивные умения (значок ауры), [fated] - Предначертание (✦).
+ */
+data class StatFigures(
+    val values: Map<String, Double>,
+    val rates: Map<String, Double> = emptyMap(),
+    val skilled: Set<String> = emptySet(),
+    val fated: Set<String> = emptySet(),
+    /** Характеристики, из которых прочтены цифры: по ним бой режет потолки (`StatLimits`). */
+    val stats: Map<String, Double> = values,
+)
+
+/**
+ * Лист героя, как его читает бой (4.6.4): лист правил с пассивными умениями (ауры - на силе `STOCK_AURA_EFFECT`, с резервом маны) и
+ * преобразованиями Предначертания - тем же [HeroBuild], что строит тело героя в заходе, без карты. Одна точка для сводки, разбора
+ * характеристики и сравнений вещи и узла дерева: их цифры не расходятся с боем и между собой.
+ */
+class CombatSheet(private val index: ContentIndex, private val model: SheetModel, sheet: Map<String, Double>, level: Int, val kit: Loadout) {
+    private val build = HeroBuild(HeroGear(sheet, level, model, kit = kit, percent = index.stats.percent), emptyMap(), index.campaign.combat)
+
+    /** Тело героя между боями: лист с пассивными умениями. */
+    val body: Combatant get() = build.body
+
+    /** Характеристики боя. */
+    val stats: Map<String, Double> get() = body.stats
+
+    /** Предначертание героя на силе его листа, с действующими судьбоносными строками. */
+    val fate: FateEffects get() = kit.fate.effects
+
+    /** Сколько процентов максимума маны держат ауры - как её держит бой (`Battle.manaCap`). */
+    val reserved: Double by lazy { kit.reserved(body) }
+
+    /** Пассивные умения героя с их уровнем, резервом и строками - уровень и сила аур читаются с листа без них, как в бою. */
+    val passives: List<PassiveSource> by lazy {
+        val bare = build.bare
+        kit.passiveSources(bare).map { (skill, lines) -> PassiveSource(skill.skill.code, skill.level(bare), kit.reserve(skill, bare), lines, skill.skill.lowLife) }
+    }
+
+    private val steady: List<PassiveSource> get() = passives.filterNot { it.lowLife }
+
+    /** Разбивка листа со строками пассивных умений среди его операций, каждая со своим умением. */
+    private val explainer by lazy {
+        model.explainer(steady.flatMap { passive -> passive.lines.filter(model::folds).map { StatOperation(it.stat, it.op, it.value, source = StatSource(SourceKind.SKILL, passive.skill)) } })
+    }
+
+    /** «Больше» процент-стата от умений ([SheetModel.folds]): бой кладёт его поверх свода - сдвигом своего умения, по порядку строк. */
+    private val scaled: Map<String, List<Shift>> by lazy {
+        val out = LinkedHashMap<String, MutableList<Shift>>()
+        var lines = steady.flatMap { passive -> passive.lines.filter(model::folds) }
+        var before = model.with(lines)
+        steady.forEach { passive ->
+            val own = passive.lines.filterNot(model::folds).ifEmpty { return@forEach }
+            lines = lines + own
+            val after = model.with(lines)
+            moved(before, after).forEach { (stat, delta) -> out.getOrPut(stat) { mutableListOf() } += Shift(StatSource(SourceKind.SKILL, passive.skill), delta) }
+            before = after
+        }
+        out
+    }
+
+    /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
+    val values: Map<String, Double> by lazy { read(body) }
+
+    /** Цифры сводки с отметками ауры и Предначертания. */
+    val figures: StatFigures by lazy { figures(stats) }
+
+    /**
+     * Цифры сводки над листом боя [stats] - своим или под эффектами карты: что бой читает вместе с характеристикой ([FightReading]),
+     * восстановление строк-долей и отметки.
+     */
+    fun figures(stats: Map<String, Double>): StatFigures {
+        val fighter = Combatant(stats, body.level, body.rules)
+        val values = read(fighter)
+        val rates = RegenPool.entries.filter { it.shareStat in values }.associate { it.shareStat to it.fromShare(fighter) }
+        return StatFigures(values, rates, marked(skilled, values.keys), marked(fated, values.keys), stats)
+    }
+
+    private fun read(fighter: Combatant): Map<String, Double> {
+        val values = fighter.stats.toMutableMap()
+        FightReading.entries.forEach { reading ->
+            val add = reading.adds(fighter)
+            if (reading.stat in fighter.stats || (reading.creates && add != 0.0)) values[reading.stat] = (fighter.stats[reading.stat] ?: 0.0) + add
+        }
+        return values
+    }
+
+    /** Прямые цели строк пассивных умений и всё, что от них сдвинулось. */
+    private val skilled: Set<String> by lazy {
+        val direct = steady.flatMap { it.lines }.flatMap { StatSpread.targets(it.stat, it.op) }
+        direct.toSet() + moved(read(build.bare), read(body)).keys
+    }
+
+    /** Прямые цели строк дара и шаги его преобразований листа. */
+    private val fated: Set<String> by lazy {
+        val direct = model.operations.filter { it.source?.kind == SourceKind.FATE }.flatMap { StatSpread.targets(it.stat, it.op) }
+        direct.toSet() + model.reshapes(steady.flatMap { it.lines }).keys
+    }
+
+    /** Отмеченные [marks] с цифрами, что бой читает из них ([FightReading.from]), среди строк сводки [shown]. */
+    private fun marked(marks: Set<String>, shown: Set<String>): Set<String> = (marks + FightReading.entries.filter { it.from in marks }.map { it.stat }).filterTo(HashSet()) { it in shown }
+
+    /**
+     * Из чего сложилась цифра сводки [stat]: лист по источникам с пассивными умениями и шагами Предначертания, «больше» процент-стата
+     * от умений и что бой читает вместе с ней ([FightReading], источник [SourceKind.FIGHT]) - итог равен [figures].
+     */
+    fun explain(stat: String): StatBreakdown {
+        val fight = FightReading.entries.filter { it.stat == stat }.map { Shift(StatSource(SourceKind.FIGHT, it.from), it.adds(body), it.from) }.filter { it.delta != 0.0 }
+        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + fight)
+    }
+
+    fun grants(stat: String): List<Grant> = explainer.grants(stat)
+
+    fun holders(power: String): List<StatSource> = explainer.holders(power)
+
+    /** Бонусы низкого здоровья на цифре [stat], каждый с тем, что прибавит, пока здоровья мало: в цифру сводки они не входят. */
+    fun lowLife(stat: String): List<Pair<PassiveSource, Double>> {
+        val steadyLines = steady.flatMap { it.lines }
+        val now = model.with(steadyLines)[stat] ?: 0.0
+        return passives.filter { passive -> passive.lowLife && passive.lines.any { stat in StatSpread.targets(it.stat, it.op) } }
+            .map { passive -> passive to (model.with(steadyLines + passive.lines)[stat] ?: 0.0) - now }
+    }
+
+    override fun equals(other: Any?): Boolean = other is CombatSheet && other.stats == stats && other.passives == passives && other.fate.effects == fate.effects
+    override fun hashCode(): Int = stats.hashCode()
+
+    companion object {
+        /** Сдвиг меньше этого - не сдвиг: десятые листа. */
+        private const val MOVED = 0.05
+
+        private fun moved(before: Map<String, Double>, after: Map<String, Double>): Map<String, Double> = (before.keys + after.keys)
+            .associateWith { (after[it] ?: 0.0) - (before[it] ?: 0.0) }.filterValues { abs(it) >= MOVED }
+
+        /**
+         * Лист боя героя: его лист [sheet] (без модели - null), уровень [level], класс [heroClass], умения [skills] и Предначертание
+         * [fate] с надетым [equipped] (судьбоносные строки) - те же рычаги, что берёт заход (`ExpeditionActions.gear`), без фляг.
+         */
+        fun of(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, equipped: Collection<ItemInstance>): CombatSheet? {
+            val model = sheet.model ?: return null
+            val kit = Loadout.of(skills, index, heroClass, emptyList(), sheet.stats, index.powers, index.rules.charges, FateKit.of(index, fate, sheet.stats, equipped))
+            return CombatSheet(index, model, sheet.stats, level, kit)
+        }
+    }
+}

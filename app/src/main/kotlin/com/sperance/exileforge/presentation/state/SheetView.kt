@@ -1,7 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
-import com.sperance.exileforge.core.campaign.Loadout
-import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdicts
 import com.sperance.exileforge.core.character.Sheets
@@ -35,7 +34,7 @@ internal object HeroLens {
     fun wearDelta(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): List<StatDelta> {
         index ?: return emptyList()
         hero ?: return emptyList()
-        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place, hero.info.laws, hero.info.fate)
+        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.pets.active, place, hero.info.laws, hero.info.fate, hero.skills)
     }
 
     /**
@@ -46,7 +45,7 @@ internal object HeroLens {
         index ?: return emptyList()
         hero ?: return emptyList()
         if (hero.tree.any { it.code == code }) return emptyList()
-        return Sheets.allocating(index, TakenNode(code, choice), hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, hero.info.laws, hero.info.fate)
+        return Sheets.allocating(index, TakenNode(code, choice), hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.pets.active, hero.info.laws, hero.info.fate, hero.skills)
     }
 
     /** Память вердиктов (3.89.0): одна на приложение, сбрасывается сама с новым героем или контентом. */
@@ -68,31 +67,8 @@ internal object HeroLens {
         return Sheets.unmet(index, code, hero.level, hero.stats)
     }
 
-    /** What the hero's auras hold of the mana; null until the hero and the content are both here. */
-    fun manaReserve(index: ContentIndex?, hero: HeroView?): ManaReserve? {
-        index ?: return null
-        hero ?: return null
-        val body = Combatant(hero.stats, hero.level, index.campaign.combat)
-        return ManaReserve(body.maxMana, Loadout.of(hero.skills, index, hero.heroClass, emptyList(), hero.stats).reserved(body))
-    }
-
-    /**
-     * The hero's passive skills whose lines name [stat], each with what it adds to the sheet's figure: they are laid on in
-     * a fight, not on the sheet, so a figure's window lists them apart. Empty until the hero and the content are here.
-     */
-    fun passiveShares(index: ContentIndex?, hero: HeroView?, stat: String): PassiveShares {
-        index ?: return PassiveShares()
-        hero ?: return PassiveShares()
-        val model = hero.sheet.model ?: return PassiveShares()
-        val before = model.plain[stat] ?: 0.0
-        val body = Combatant(hero.stats, hero.level, index.campaign.combat)
-        val rows = Loadout.of(hero.skills, index, hero.heroClass, emptyList(), hero.stats).passiveSources(body).mapNotNull { (kit, lines) ->
-            val own = lines.filter { it.stat == stat }.ifEmpty { return@mapNotNull null }
-            PassiveShare(kit.skill.code, own, (model.with(own)[stat] ?: 0.0) - before, kit.skill.lowLife)
-        }
-        val steady = rows.filterNot { it.lowLife }.flatMap { it.lines }
-        return PassiveShares(rows, if (steady.isEmpty()) 0.0 else (model.with(steady)[stat] ?: 0.0) - before)
-    }
+    /** What the hero's auras hold of the mana, as the fight holds it (4.6.4, лист боя); null until the hero's sheet is here. */
+    fun manaReserve(hero: HeroView?): ManaReserve? = hero?.combat?.let { ManaReserve(it.body.maxMana, it.reserved) }
 
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
     fun orbs(index: ContentIndex?): List<Item> = index?.itemsByCategory?.get(Item.CURRENCY).orEmpty().sortedBy { it.price }
@@ -136,8 +112,13 @@ fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLe
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)
 fun GameUi.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)
-fun GameUi.manaReserve(): ManaReserve? = HeroLens.manaReserve(index, hero)
-fun GameUi.passiveShares(stat: String): PassiveShares = HeroLens.passiveShares(index, hero, stat)
+fun GameUi.manaReserve(): ManaReserve? = HeroLens.manaReserve(hero)
+
+/**
+ * Цифры сводки героя (4.6.4): лист боя с пассивными умениями и Предначертанием ([CombatSheet]); до него - лист как есть. Сводка,
+ * разбор и сравнения вещи и узла дерева читают одни и те же цифры.
+ */
+val HeroView.figures: StatFigures get() = combat?.figures ?: StatFigures(stats)
 
 /** The hero's mana [pool] and the [percent] of it the passive auras hold, as the fight reserves it. */
 data class ManaReserve(val pool: Double, val percent: Double) {

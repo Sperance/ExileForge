@@ -24,7 +24,7 @@ enum class StatGroup {
 
     companion object {
         private val reserve = setOf(
-            CoreStat.HEALTH.code, CoreStat.MANA.code, CoreStat.ENERGY_SHIELD.code, CoreStat.ENERGY.code, CoreStat.HEALTH_REGEN.code, CoreStat.MANA_REGEN.code,
+            CoreStat.HEALTH.code, CoreStat.MANA.code, CoreStat.ENERGY_SHIELD.code, CoreStat.ENERGY.code, CoreStat.HEALTH_REGEN.code, CoreStat.LIFE_REGEN_PERCENT.code, CoreStat.MANA_REGEN.code,
             CoreStat.ENERGY_REGEN.code, CoreStat.ENERGY_REGEN_PERCENT.code, CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_HIT.code,
         )
         private val defence = setOf(

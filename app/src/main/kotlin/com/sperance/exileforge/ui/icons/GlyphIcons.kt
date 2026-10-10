@@ -50,6 +50,7 @@ val Glyph.vector: ImageVector get() = when (this) {
     Glyph.IMAGE -> Icons.Outlined.Image
     Glyph.INFO -> ForgeGlyphs.Sigil
     Glyph.ALERT -> Icons.Outlined.ErrorOutline
+    Glyph.AURA -> ForgeGlyphs.Aura
 }
 
 @Composable fun GlyphIcon(glyph: Glyph, tint: Color, modifier: Modifier = Modifier) = Icon(glyph.vector, null, tint = tint, modifier = modifier)

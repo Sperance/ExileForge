@@ -7,8 +7,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.MapEffects
+import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.figures
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
@@ -23,10 +25,13 @@ import com.sperance.exileforge.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
-    val own = game.hero?.stats.orEmpty()
-    val onMap = remember(own, mapEffects) { MapEffects.hero(own, mapEffects) }
-    val shifts = remember(own, mapEffects) { MapEffects.heroShifts(own, mapEffects) }
-    val changed = remember(own, onMap) { onMap.count { (key, value) -> (own[key] ?: 0.0) != value } }
+    // Лист боя героя (4.6.4): карта ложится на него, как в заходе (`HeroBuild`)
+    val combat = game.hero?.combat
+    val mine = game.hero?.figures ?: StatFigures(emptyMap())
+    val own = mine.stats
+    val onMap = remember(combat, mapEffects) { MapEffects.hero(own, mapEffects).let { combat?.figures(it) ?: StatFigures(it) } }
+    val shifts = remember(combat, mapEffects) { MapEffects.heroShifts(own, mapEffects) }
+    val changed = remember(mine, onMap) { onMap.values.count { (key, value) -> (mine.values[key] ?: 0.0) != value } }
     var mapTab by remember { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.85f).navigationBarsPadding()) {
@@ -43,7 +48,7 @@ fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>, onDismiss: () -> U
                         },
                     )
                 }
-                item { if (mapTab) StatSheet(game, onMap, before = own, shifts = shifts) else StatSheet(game, own) }
+                item { if (mapTab) StatSheet(game, onMap, before = mine.values, shifts = shifts) else StatSheet(game, mine) }
             }
             TabRow(selectedTabIndex = if (mapTab) 1 else 0, containerColor = Abyss, contentColor = Gold) {
                 Tab(selected = !mapTab, onClick = { mapTab = false }, text = { Text(ui("expedition.stats_hero")) })

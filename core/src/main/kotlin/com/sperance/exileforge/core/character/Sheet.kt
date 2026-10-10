@@ -1,10 +1,12 @@
 package com.sperance.exileforge.core.character
 
+import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.EquipSlots
 import com.sperance.exileforge.rules.content.FateEffects
+import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
@@ -13,6 +15,7 @@ import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SheetExplainer
 import com.sperance.exileforge.rules.sheet.SheetResult
+import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.WornCount
 import kotlin.math.abs
@@ -35,20 +38,35 @@ class SheetModel(
     private val ops: List<StatOperation>,
     private val index: ContentIndex,
     /** Предначертание листа (4.6.1): его преобразования готового листа (рычаги и, 4.6.2, правила строк) - и после строк боя. */
-    private val fate: FateEffects = FateEffects.NONE,
+    val fate: FateEffects = FateEffects.NONE,
 ) {
     private val calculator = SheetCalculator(index)
     val plain: Map<String, Double> by lazy { shaped(calculator.compute(base, ops)) }
 
+    /** Операции листа с их источниками (4.6.4): чьи строки легли на какую характеристику. */
+    val operations: List<StatOperation> get() = ops
+
     /** Лист после преобразований дара (4.6.1, «Равновесие»; 4.6.2 - и судьбоносных строк) одним резолвером правил: без них - тот же. */
     private fun shaped(stats: Map<String, Double>): Map<String, Double> = fate.reshape(SheetResult(stats, emptyList(), emptyList(), base, ops), index).stats
 
-    /** The sheet taken apart by source, for a figure's own window. */
-    val explainer: SheetExplainer by lazy { SheetExplainer(index, base, ops) }
+    /** The sheet taken apart by source, for a figure's own window; преобразования дара - его последним шагом (4.6.4). */
+    val explainer: SheetExplainer by lazy { explainer(emptyList()) }
+
+    /**
+     * Разбивка листа с операциями [extra] среди его собственных (4.6.4): строки боя, что [with] складывает сводом ([folds]), со
+     * своими источниками - итог разбивки равен [with] от них.
+     */
+    fun explainer(extra: List<StatOperation>): SheetExplainer = SheetExplainer(index, base, ops + extra, fate)
+
+    /** Что преобразования дара сдвинули на листе со строками боя [lines] (4.6.4), по характеристике: те же шаги, что в [explainer]. */
+    fun reshapes(lines: List<StatLine>): Map<String, List<Shift>> = fate.shifts(calculator.compute(base, ops + lines.filter(::folds).map { StatOperation(it.stat, it.op, it.value) }), index)
+
+    /** Строка боя ложится сводом листа; «больше» процент-стата [with] берёт на весь его множитель, поверх свода. */
+    fun folds(line: StatLine): Boolean = !(line.op == Op.MORE && index.stats.isPercent(line.stat))
 
     fun with(lines: List<StatLine>): Map<String, Double> {
         if (lines.isEmpty()) return plain
-        val (scaling, folding) = lines.partition { it.op == Op.MORE && index.stats.isPercent(it.stat) }
+        val (folding, scaling) = lines.partition(::folds)
         val stats = calculator.compute(base, ops + folding.map { StatOperation(it.stat, it.op, it.value) }).toMutableMap()
         scaling.forEach { line -> stats[line.stat] = (100 + (stats[line.stat] ?: 0.0)) * (1 + line.value / 100) - 100 }
         return shaped(stats)
@@ -114,6 +132,7 @@ object Sheets {
      * What wearing [item] would change, by the rules' own placement: a ring takes a free one of two, a
      * two-handed weapon frees both hands, a bow pairs with a quiver. Only the characteristics that move are returned.
      * [place] (3.90.3) - место из нескольких (второе кольцо, третья фляга), куда вещь надевают; null - решают правила.
+     * 4.6.4: цифры сводки - лист боя ([figures]) с умениями героя [skills]; [before] - цифры сводки героя сейчас.
      */
     fun wearing(
         index: ContentIndex,
@@ -127,9 +146,10 @@ object Sheets {
         place: Slot? = null,
         laws: List<String> = emptyList(),
         fate: String? = null,
+        skills: HeroSkills = HeroSkills(),
     ): List<StatDelta> {
-        val next = worn(index, item, level, heroClass, tree, items, pets, place, laws, fate) ?: return emptyList()
-        return changes(index, before, next)
+        val after = worn(index, item, items, place) ?: return emptyList()
+        return changes(index, before, figures(index, calculate(index, level, heroClass, tree, after, pets, laws, fate), level, heroClass, skills, fate, after))
     }
 
     /**
@@ -147,7 +167,14 @@ object Sheets {
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         laws: List<String> = emptyList(),
         fate: String? = null,
-    ): List<StatDelta> = changes(index, before, calculate(index, level, heroClass, tree + node, items, pets, laws, fate).stats)
+        skills: HeroSkills = HeroSkills(),
+    ): List<StatDelta> = changes(index, before, figures(index, calculate(index, level, heroClass, tree + node, items, pets, laws, fate), level, heroClass, skills, fate, items))
+
+    /**
+     * Цифры сводки героя с листом [sheet] (4.6.4): лист боя ([CombatSheet]) с умениями [skills] и Предначертанием [fate] надетого
+     * из [items] - одно правило сводки, сравнения вещи и узла дерева; без модели листа - сам лист.
+     */
+    fun figures(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, items: List<ItemInstance>): Map<String, Double> = CombatSheet.of(index, sheet, level, heroClass, skills, fate, items.filter { it.equipped })?.values ?: sheet.stats
 
     /**
      * Сдвинутые характеристики листа [next] против [before] в порядке подсчёта. Счётчики надетого (пустые места,
@@ -173,37 +200,25 @@ object Sheets {
         place: Slot? = null,
         laws: List<String> = emptyList(),
         fate: String? = null,
-    ): SheetVerdict? = worn(index, item, level, heroClass, tree, items, pets, place, laws, fate)?.let { SheetVerdict.of(index, level, before, it) }
+    ): SheetVerdict? = worn(index, item, items, place)?.let { SheetVerdict.of(index, level, before, calculate(index, level, heroClass, tree, it, pets, laws, fate).stats) }
 
     /**
-     * The whole sheet with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),
+     * The hero's items with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),
      * a two-handed weapon freeing both hands, a bow pairing with a quiver; null when the content does not know the item.
      */
-    private fun worn(
-        index: ContentIndex,
-        item: ItemInstance,
-        level: Int,
-        heroClass: String,
-        tree: List<TakenNode>,
-        items: List<ItemInstance>,
-        pets: List<com.sperance.exileforge.rules.content.Pet>,
-        place: Slot?,
-        laws: List<String>,
-        fate: String?,
-    ): Map<String, Double>? {
+    private fun worn(index: ContentIndex, item: ItemInstance, items: List<ItemInstance>, place: Slot?): List<ItemInstance>? {
         val template = index.template(item.template) ?: return null
         val worn = items.filter { it.equipped && !it.socketed && it.id != item.id }
         val target = EquipSlots.target(template.slot, place, worn.mapNotNull { it.slot })
         val wornWeapon = worn.firstOrNull { it.slot == Slot.WEAPON_1H }?.let { index.template(it.template)?.weaponType }
         val freed = EquipSlots.displaced(template.slot, template.weaponType, wornWeapon) + target
         // An item not yet the hero's — a merchant's offer, a lot — is weighed as if it were in the stash.
-        val after = (if (items.none { it.id == item.id }) items + item else items).map {
+        return (if (items.none { it.id == item.id }) items + item else items).map {
             when {
                 it.id == item.id -> it.copy(slot = target, socket = null)
                 !it.socketed && it.slot in freed -> it.copy(slot = null)
                 else -> it
             }
         }
-        return calculate(index, level, heroClass, tree, after, pets, laws, fate).stats
     }
 }

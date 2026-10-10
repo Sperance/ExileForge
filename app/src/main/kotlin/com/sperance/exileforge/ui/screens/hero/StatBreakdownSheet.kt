@@ -32,7 +32,6 @@ import com.sperance.exileforge.presentation.state.ShareRow
 import com.sperance.exileforge.presentation.state.StatExplainer
 import com.sperance.exileforge.presentation.state.StatExplanation
 import com.sperance.exileforge.presentation.state.manaReserve
-import com.sperance.exileforge.presentation.state.passiveShares
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.ForgeSheet
@@ -47,9 +46,13 @@ internal fun ShareKind.color(): Color = when (this) {
     ShareKind.ITEM -> Color(0xFFFFFF77)
     ShareKind.PET -> Elder
     ShareKind.LAW -> GoldBright
-    ShareKind.SKILL -> ManaBlue
+    ShareKind.SKILL -> Rune
+    ShareKind.FATE -> Caution
     ShareKind.OTHER -> Parchment
+    ShareKind.RESHAPE -> Ember
     ShareKind.AFTER -> Handcrafted
+    ShareKind.FIGHT -> ShieldCyan
+    ShareKind.LOW_LIFE -> Muted
 }
 
 /**
@@ -57,19 +60,20 @@ internal fun ShareKind.color(): Color = when (this) {
  * a card per kind with every source by name, the formula, and for a stat others take from, what it
  * gives them now. A linked stat opens in the same window; the chip on top goes back.
  *
- * [shifts] are what lies over the hero's own sheet — a map's and the atlas's effects — by stat.
+ * [shifts] are what lies over the hero's own sheet — a map's and the atlas's effects — by stat. 4.6.4: цифра - лист боя ([CombatSheet]):
+ * пассивные умения и шаги Предначертания - доли итога, полосы и формулы.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
-    val explainer = game.hero?.sheet?.model?.explainer ?: run {
+    val combat = game.hero?.combat ?: run {
         LaunchedEffect(stat) { onDismiss() }
         return
     }
     var trail by remember(stat) { mutableStateOf(listOf(stat)) }
     val current = trail.last()
-    val view = remember(current, explainer, shifts, game.lang, game.hero?.skills) {
-        StatExplainer(game).explain(explainer.explain(current).shifted(shifts[current].orEmpty()), explainer.grants(current), explainer::holders, game.passiveShares(current))
+    val view = remember(current, combat, shifts, game.lang) {
+        StatExplainer(game).explain(combat.explain(current).shifted(shifts[current].orEmpty()), combat.grants(current), combat::holders, combat.lowLife(current))
     }
     val accent = StatGroup.of(current).accent()
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -84,7 +88,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
                 }
             }
             item { Header(current, view, accent, game) }
-            game.index?.campaign?.combat?.let { StatLimits.of(current, game.hero?.stats.orEmpty(), it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
+            game.index?.campaign?.combat?.let { StatLimits.of(current, combat.stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
             if (current == MANA_STAT) game.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
@@ -191,7 +195,7 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KindTag(card.kind)
-            Text(ui("stat.kind.${card.kind.name}"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(card.title ?: ui("stat.kind.${card.kind.name}"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Text(card.summary, color = if (card.summary.startsWith("−")) LifeRed else Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
         card.rows.forEach { SourceLine(it, open) }

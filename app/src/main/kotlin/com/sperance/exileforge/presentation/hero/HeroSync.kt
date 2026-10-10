@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.hero
 
+import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.feedback.FeedbackRepository
@@ -129,7 +130,9 @@ class HeroSync(
             val view = withContext(Dispatchers.Default) {
                 val info = merged.hero
                 val sheet = Sheets.calculate(index, info.level, info.heroClass, merged.tree, merged.items, merged.pets.active, info.laws, info.fate)
-                HeroView(info, merged.items, merged.overflow, merged.bag, merged.tree, merged.campaign, merged.crafts, merged.merchant, sheet, merged.pets)
+                // Лист боя сводки (4.6.4) складывается здесь же, вне главного потока: цифры и отметки - сразу
+                val combat = CombatSheet.of(index, sheet, info.level, info.heroClass, info.skills, info.fate, merged.items.filter { it.equipped })?.also { it.figures }
+                HeroView(info, merged.items, merged.overflow, merged.bag, merged.tree, merged.campaign, merged.crafts, merged.merchant, sheet, merged.pets, combat)
             }
             if (ticket != drawing || parts !== merged) return@launch
             heroes.set(view, System.currentTimeMillis())

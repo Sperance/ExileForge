@@ -1,9 +1,10 @@
 package com.sperance.exileforge.presentation.state
 
-import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.core.campaign.PassiveSource
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.nodeTitle
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.shareNumber
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statNumber
@@ -13,8 +14,10 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.sheet.Grant
 import com.sperance.exileforge.rules.sheet.Share
+import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatBreakdown
 import com.sperance.exileforge.rules.sheet.StatOperation
@@ -23,26 +26,18 @@ import com.sperance.exileforge.rules.text.LocaleKey
 import kotlin.math.abs
 import kotlin.math.ln
 
-/** The cards of a figure's window, in the order they are read; the colour is the UI's, keyed by the kind. */
-enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, PET, LAW, SKILL, OTHER, AFTER }
+/**
+ * The cards of a figure's window, in the order they are read; the colour is the UI's, keyed by the kind. 4.6.4: [SKILL] - пассивные
+ * умения в бою (входят в итог), [FATE] - строки Предначертания, [RESHAPE] - его преобразования листа, [FIGHT] - что бой читает вместе
+ * с цифрой, [LOW_LIFE] - бонусы низкого здоровья (в итог не входят).
+ */
+enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, PET, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE }
 
 /** One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. */
 data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null)
 
-/**
- * A passive skill's [lines] on a figure and what they add to it: the passives are laid on in a fight, not on the
- * sheet, so their [gain] is the sheet's figure with them less without; a [lowLife] bonus holds only at low life.
- */
-data class PassiveShare(val skill: String, val lines: List<StatLine>, val gain: Double, val lowLife: Boolean)
-
-/**
- * The passives on one figure: a row each, and the [total] they give together outside low life — the lines laid on at
- * once, since an increase multiplies what the others add and a sum of each one's own gain would miss it.
- */
-data class PassiveShares(val rows: List<PassiveShare> = emptyList(), val total: Double = 0.0)
-
-/** A card of one kind of source: its rows and what they give together, one figure per operation. */
-data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String)
+/** A card of one kind of source: its rows and what they give together, one figure per operation; [title] - своё имя карточки (дар). */
+data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String, val title: String? = null)
 
 /**
  * A figure's window as it is read: the cards, each kind's share of the total for the bar (positive
@@ -64,8 +59,10 @@ data class StatExplanation(
 class StatExplainer(private val game: GameUi) {
     private val hero = game.hero
     private val index = game.index
+    private val passives = hero?.combat?.passives.orEmpty().associateBy { it.skill }
 
-    fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, passives: PassiveShares = PassiveShares()): StatExplanation {
+    /** [lowLife] - бонусы низкого здоровья на цифре с тем, что прибавят (4.6.4, [CombatSheet.lowLife]): в итог не входят. */
+    fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, lowLife: List<Pair<PassiveSource, Double>> = emptyList()): StatExplanation {
         val stat = breakdown.stat
         val cards = mutableListOf<ShareCard>()
         if (breakdown.base != 0.0) {
@@ -76,21 +73,21 @@ class StatExplainer(private val game: GameUi) {
             )
         }
         breakdown.shares.groupBy(::kindOf).toSortedMap().forEach { (kind, shares) ->
-            cards += ShareCard(kind, merged(shares).map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent))
+            cards += ShareCard(kind, merged(shares).map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent), cardTitle(kind, shares.first().source))
         }
-        // Every passive that names the figure has its row, an increase with nothing to increase too: «+10% · в бою: +0».
-        if (passives.rows.isNotEmpty()) {
-            cards += ShareCard(
-                ShareKind.SKILL,
-                passives.rows.map { ShareRow(SkillText.title(it.skill), it.lines.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, passiveNote(stat, it, breakdown)) },
-                signed(stat, passives.total, breakdown.percent),
-            )
+        // Сдвиги поверх свода (4.6.4): «больше» умений - к их карточке, шаги дара - «Перестройка», чтение боя - своя карточка
+        breakdown.shifts.groupBy(::shiftKind).toSortedMap().forEach { (kind, shifts) ->
+            val rows = shifts.map { shiftRow(stat, it, holders, breakdown.percent) }
+            val sum = signed(stat, shifts.sumOf { it.delta }, breakdown.percent)
+            val at = cards.indexOfFirst { it.kind == kind }
+            if (at >= 0) cards[at] = cards[at].let { it.copy(rows = it.rows + rows, summary = "${it.summary} · $sum") } else cards += ShareCard(kind, rows, sum, cardTitle(kind, shifts.first().source))
         }
-        if (breakdown.shifts.isNotEmpty()) {
+        // Бонус низкого здоровья - строкой с тем, что прибавит, и в итог не входит: «+10% · при низком здоровье: +40».
+        if (lowLife.isNotEmpty()) {
             cards += ShareCard(
-                ShareKind.AFTER,
-                breakdown.shifts.map { ShareRow(shiftTitle(it.source, holders), signed(stat, it.delta, breakdown.percent), it.from?.let { from -> ui("stat.from", statTitle(from)) }) },
-                signed(stat, breakdown.shifts.sumOf { it.delta }, breakdown.percent),
+                ShareKind.LOW_LIFE,
+                lowLife.map { (passive, gain) -> ShareRow(skillTitle(passive.skill), passive.lines.filter { stat in StatSpread.targets(it.stat, it.op) }.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, lowLifeNote(stat, passive, gain, breakdown)) },
+                "",
             )
         }
         return StatExplanation(
@@ -112,9 +109,39 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.ITEM -> ShareKind.ITEM
             SourceKind.PET -> ShareKind.PET
             SourceKind.LAW -> ShareKind.LAW
+            SourceKind.SKILL -> ShareKind.SKILL
+            SourceKind.FATE -> ShareKind.FATE
             else -> ShareKind.OTHER
         }
     }
+
+    /** Карточка сдвига (4.6.4): умение, шаг дара, чтение боя; сила уникалки, карта и Атлас - «После расчёта». */
+    private fun shiftKind(shift: Shift): ShareKind = when (shift.source.kind) {
+        SourceKind.SKILL -> ShareKind.SKILL
+        SourceKind.FATE -> ShareKind.FATE
+        SourceKind.RESHAPE -> ShareKind.RESHAPE
+        SourceKind.FIGHT -> ShareKind.FIGHT
+        else -> ShareKind.AFTER
+    }
+
+    /** Карточка дара называется им (4.6.4): «Предначертание: Живая крепость»; прочие - своим видом. */
+    private fun cardTitle(kind: ShareKind, source: StatSource?): String? = if (kind == ShareKind.FATE) sourceTitle(source) else null
+
+    /** Строка сдвига: шаг дара - его правилом, чтение боя - характеристикой, откуда прибавка (касание открывает её). */
+    private fun shiftRow(stat: String, shift: Shift, holders: (String) -> List<StatSource>, percent: Boolean): ShareRow {
+        val value = signed(stat, shift.delta, percent)
+        return when (shift.source.kind) {
+            SourceKind.FIGHT -> ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = shift.source.ref)
+            SourceKind.SKILL, SourceKind.RESHAPE -> ShareRow(sourceTitle(shift.source), value, skillNote(shift.source))
+            else -> ShareRow(shiftTitle(shift.source, holders), value, shift.from?.let { from -> ui("stat.from", statTitle(from)) })
+        }
+    }
+
+    /** Пассивное умение с уровнем, на котором действует: «Решимость ур. 12». */
+    private fun skillTitle(code: String): String = passives[code]?.let { ui("stat.src.skill", SkillText.title(code), it.level) } ?: SkillText.title(code)
+
+    /** Резерв маны ауры под её строкой: «резерв 25% маны». */
+    private fun skillNote(source: StatSource?): String? = source?.takeIf { it.kind == SourceKind.SKILL }?.let { passives[it.ref] }?.reserve?.takeIf { it > 0 }?.let { ui("stat.src.reserve", number(it)) }
 
     /**
      * Sources of one name and one operation as one row (3.81.0): ten tree nodes «Здоровье» or two rings of the same name
@@ -131,17 +158,19 @@ class StatExplainer(private val game: GameUi) {
 
     private fun row(stat: String, share: Share, percent: Boolean): ShareRow {
         val value = fmt(stat, share.value, share.op, percent)
-        val per = share.perStat ?: return ShareRow(sourceTitle(share.source), value, localNote(share.local))
+        val per = share.perStat ?: return ShareRow(rowTitle(share.source), value, localNote(share.local) ?: skillNote(share.source))
         val rule = ui("stat.per", fmt(stat, share.each, share.op, percent), statNumber(per, share.per), statTitle(per))
         val by = share.source?.takeIf { it.kind != SourceKind.CLASS }?.let { "${sourceTitle(it)}: " }.orEmpty()
         return ShareRow("${statTitle(per)} ${statNumber(per, share.perValue)}", value, by + rule, link = per)
     }
 
-    /** What a passive adds in a fight; an increase or a «more» over no base says why it adds nothing. */
-    private fun passiveNote(stat: String, passive: PassiveShare, b: StatBreakdown): String {
-        val idle = abs(passive.gain) < 0.05 && b.flatSum == 0.0 && passive.lines.any { it.op == Op.INCREASED || it.op == Op.MORE }
-        val gain = ui(if (idle) "stat.passive.idle" else "stat.passive.gain", signed(stat, passive.gain, b.percent))
-        return if (passive.lowLife) "${ui("stat.passive.low_life")} · $gain" else gain
+    /** Строка в карточке дара - его именем: карточка уже называется «Предначертание: …». */
+    private fun rowTitle(source: StatSource?): String = if (source?.kind == SourceKind.FATE) fateTitle(source.ref) else sourceTitle(source)
+
+    /** What a low-life bonus adds in a fight; an increase or a «more» over no base says why it adds nothing. */
+    private fun lowLifeNote(stat: String, passive: PassiveSource, gain: Double, b: StatBreakdown): String {
+        val idle = abs(gain) < 0.05 && b.flatSum == 0.0 && passive.lines.any { it.op == Op.INCREASED || it.op == Op.MORE }
+        return "${ui("stat.passive.low_life")} · ${ui(if (idle) "stat.passive.idle" else "stat.passive.gain", signed(stat, gain, b.percent))}"
     }
 
     /** The local lines an item folded into this figure: «локально: +200, +40%». */
@@ -166,7 +195,12 @@ class StatExplainer(private val game: GameUi) {
             // Предначертание аккаунта (4.6.0): строка листа называется даром
             SourceKind.FATE -> ui("stat.src.fate", locOr("fate.${source.ref}.name", source.ref))
 
-            SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS -> statTitle(source.ref)
+            SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS, SourceKind.FIGHT -> statTitle(source.ref)
+
+            // Пассивное умение в бою и шаг дара (4.6.4)
+            SourceKind.SKILL -> skillTitle(source.ref)
+
+            SourceKind.RESHAPE -> hero?.combat?.fate?.let { fate -> index?.let { reshapeText(it, fate, source.ref) } } ?: source.ref
         }
     }
 
@@ -215,7 +249,7 @@ class StatExplainer(private val game: GameUi) {
                 else -> Unit
             }
         }
-        b.shifts.forEach { add(ShareKind.AFTER, it.delta) }
+        b.shifts.forEach { add(shiftKind(it), it.delta) }
         return weights
     }
 

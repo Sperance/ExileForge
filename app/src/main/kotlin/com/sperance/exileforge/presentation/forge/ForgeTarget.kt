@@ -6,13 +6,13 @@ import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.roll.Dice
-import com.sperance.exileforge.rules.roll.Menagerie
+import com.sperance.exileforge.rules.roll.AtlasSeals
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 
@@ -48,8 +48,11 @@ sealed interface ForgeTarget {
     /** Ключ словаря: кнопка карточки цели, что открывает выбор другой. */
     val changeKey: String
 
-    /** Свои сферы цели сверх сфер ремесла, что на ней сейчас что-то сделают (рост питомца); у вещи своих нет. */
-    fun ownOrbs(index: ContentIndex): List<String> = emptyList()
+    /** Печати Атласа сумки, что лягут на цель (4.6.4): сами или со знамением сумки [omens]; лягут только на карту. */
+    fun seals(index: ContentIndex, omens: List<Omen>, held: (String) -> Long): List<OrbChoice> = emptyList()
+
+    /** Знамения сумки [held], что меняют печать [seal] на цели (4.6.4). */
+    fun sealOmens(index: ContentIndex, seal: String, held: List<Omen>): List<Omen> = emptyList()
 
     /** Что поднимет сфера качества со знамением [omen] и сколько качества другого вида сбросится; null - прогноза нет. */
     fun quality(index: ContentIndex, omen: Omen?): QualityForecast? = null
@@ -57,7 +60,7 @@ sealed interface ForgeTarget {
     /** Уникалки, что может дать сфера удачи, - тот же список правил, что тянет сервер. */
     fun chanceUniques(index: ContentIndex): List<String> = emptyList()
 
-    /** Вещь под кузницей: сферы, верстак (не у карты, с волшебной редкости) и эссенции (только снаряжение). */
+    /** Вещь под кузницей: сферы, печати Атласа (только карта), верстак (не у карты, с волшебной редкости) и эссенции (только снаряжение). */
     data class Gear(val view: ItemView) : ForgeTarget {
         override val id: String get() = view.id
         override val orbTarget: OrbTarget get() = OrbTarget.Gear(view.item, view.template)
@@ -71,15 +74,33 @@ sealed interface ForgeTarget {
                 val slot = view.slot
                 val benchable = slot != Slot.MAP && view.rarity in BENCHABLE
                 val essential = !slot.isJewelLike && !slot.isFlask && !slot.isTool && view.rarity in ESSENTIAL
-                return listOfNotNull(ForgeSection.ORBS, ForgeSection.BENCH.takeIf { benchable }, ForgeSection.ESSENCES.takeIf { essential })
+                return listOfNotNull(ForgeSection.ORBS, ForgeSection.SEALS.takeIf { slot == Slot.MAP }, ForgeSection.BENCH.takeIf { benchable }, ForgeSection.ESSENCES.takeIf { essential })
             }
+
+        override fun seals(index: ContentIndex, omens: List<Omen>, held: (String) -> Long): List<OrbChoice> {
+            if (view.slot != Slot.MAP) return emptyList()
+            val seals = AtlasSeals(index)
+            return index.itemsByCategory[Item.ATLAS_SEAL].orEmpty().map { it.code.value }.filter { held(it) > 0 }.mapNotNull { code ->
+                when {
+                    seals.accepts(code, view.item, view.template) -> OrbChoice(code, needsOmen = false)
+                    sealOmens(index, code, omens).isNotEmpty() -> OrbChoice(code, needsOmen = true)
+                    else -> null
+                }
+            }
+        }
+
+        override fun sealOmens(index: ContentIndex, seal: String, held: List<Omen>): List<Omen> {
+            val omens = index.seal(seal)?.omens.orEmpty()
+            val seals = AtlasSeals(index)
+            return held.filter { it in omens && seals.accepts(seal, view.item, view.template, it) }
+        }
 
         override fun quality(index: ContentIndex, omen: Omen?): QualityForecast? = QualityForecast.of(index, view.item, view.template, omen)
 
         override fun chanceUniques(index: ContentIndex): List<String> = OrbApplier(index).chanceUniques(view.item, view.template).map { it.value.code }
     }
 
-    /** Питомец под кузницей (3.81.0): только сферы - ремесла, как у вещи, и свои сферы роста ([Menagerie.orb]). */
+    /** Питомец под кузницей (3.81.0): только сферы ремесла, как у вещи; своих сфер у питомца с 4.6.4 нет - уровень не растёт. */
     data class Beast(val pet: Pet) : ForgeTarget {
         override val id: String get() = pet.id
         override val orbTarget: OrbTarget get() = OrbTarget.Beast(pet)
@@ -88,11 +109,6 @@ sealed interface ForgeTarget {
         override val noOrbsKey: String get() = "pets.no_orbs"
         override val changeKey: String get() = "forge.change_pet"
         override val socketKey: String get() = "forge.target_pet"
-
-        override fun ownOrbs(index: ContentIndex): List<String> {
-            val menagerie = Menagerie(index)
-            return index.pets.orbs.keys.filter { code -> menagerie.orb(code)?.let { menagerie.apply(it, pet, Dice(0)) } != null }
-        }
     }
 }
 
@@ -100,7 +116,7 @@ sealed interface ForgeTarget {
 fun GameUi.forgeTarget(pet: String): ForgeTarget? = hero?.pets?.pets?.firstOrNull { it.id == pet }?.let(ForgeTarget::Beast)
     ?: hero?.item(holding.selectedEquipment)?.let { view(it) }?.let(ForgeTarget::Gear)
 
-/** Сфера лотка кузницы: код стопки и ждёт ли она знамения - сама цель её не примет, со знамением из сумки примет. */
+/** Сфера или печать лотка кузницы: код стопки и ждёт ли она знамения - сама цель её не примет, со знамением из сумки примет. */
 data class OrbChoice(val code: String, val needsOmen: Boolean)
 
 /**
@@ -110,12 +126,11 @@ data class OrbChoice(val code: String, val needsOmen: Boolean)
 fun ForgeTarget.orbChoices(index: ContentIndex, shelf: List<String>, omens: List<Omen>, held: (String) -> Long): List<OrbChoice> {
     val applier = OrbApplier(index)
     val target = orbTarget
-    val crafting = shelf.mapNotNull { code -> Orb.of(code)?.takeIf { it != Orb.ORB_OF_REGRET && held(code) > 0 } }.mapNotNull { orb ->
+    return shelf.mapNotNull { code -> Orb.of(code)?.takeIf { it != Orb.ORB_OF_REGRET && held(code) > 0 } }.mapNotNull { orb ->
         when {
             applier.accepts(orb, target) -> OrbChoice(orb.name, needsOmen = false)
             omens.any { it.fits(orb) && applier.accepts(orb, target, it) } -> OrbChoice(orb.name, needsOmen = true)
             else -> null
         }
     }
-    return crafting + ownOrbs(index).filter { held(it) > 0 }.map { OrbChoice(it, needsOmen = false) }
 }

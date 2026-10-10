@@ -18,9 +18,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 
-/** Что выбрано в кузнице: сфера, эссенция, предзнаменование к сфере и открытый раздел. Сфера переживает смену героя. */
+/** Что выбрано в кузнице: сфера, печать Атласа, эссенция, предзнаменование к сфере или печати и открытый раздел. Сфера переживает смену героя. */
 data class Smithy(
     val orb: String = "",
+    /** Печать Атласа (4.6.4) - раздел печатей карты. */
+    val seal: String = "",
     val essence: String = "",
     val omen: String = "",
     val section: ForgeSection = ForgeSection.ORBS,
@@ -82,10 +84,12 @@ class SmithyViewModel(
 
     fun choosePetLine(petId: String, choice: Int) = hero.choosePetLine(petId, choice)
 
-    fun section(section: ForgeSection) = mutable.update { it.copy(section = section) }
+    /** Другой раздел: знамение подбиралось к валюте прежнего раздела - оно снимается. */
+    fun section(section: ForgeSection) = mutable.update { if (it.section == section) it else it.copy(section = section, omen = "", omenTarget = "") }
 
     /** Новая сфера - без предзнаменования: оно подбирается к сфере. */
     fun selectOrb(code: String) = mutable.update { it.copy(orb = code, omen = "", omenTarget = "") }
+    fun selectSeal(code: String) = mutable.update { it.copy(seal = code, omen = "", omenTarget = "") }
     fun selectOmen(code: String) = mutable.update { it.copy(omen = code, omenTarget = it.targetId(game.value.holding.selectedEquipment)) }
     fun selectEssence(code: String) = mutable.update { it.copy(essence = code) }
 
@@ -97,6 +101,9 @@ class SmithyViewModel(
 
     /** Сфера на вещь [itemId] (и с панели администратора, где цель - любая вещь героя). */
     fun applyOrb(itemId: String, orb: String) = hero.applyOrb(itemId, orb, smithy.value.omen, ::omenSpent)
+
+    /** Печать Атласа на карту [itemId] (4.6.4): знамение тратится вместе с ней. */
+    fun applySeal(itemId: String, seal: String) = hero.applySeal(itemId, seal, smithy.value.omen, ::omenSpent)
 
     private fun omenSpent() = mutable.update { it.copy(omen = "", omenTarget = "") }
     fun applyEssence(itemId: String, essence: String) = hero.applyEssence(itemId, essence)

@@ -125,6 +125,15 @@ class HeroActions(
         onApplied()
     }
 
+    /** Печать Атласа [seal] на карту [itemId] (4.6.4): как сфера - строка итога, бережливость Предначертания, знамение тратится с ней. */
+    fun applySeal(itemId: String, seal: String, omen: String, onApplied: () -> Unit = {}) = forgeCommand { id ->
+        val outcome = api.hero.applySeal(id, itemId, seal, omen)
+        heroes.forgeLine(outcome.message)
+        if (outcome.kept) notices.toast(ui("fate.seal_kept", itemTitle(seal)), NoticeKind.CRAFT)
+        heroes.selectEquipment(outcome.item.id)
+        onApplied()
+    }
+
     /** Закалка кузнеца (3.79.0): фраза о том, что поднялось, уходит тостом. */
     fun temper(itemId: String) = forgeCommand { id -> notices.toast(api.hero.temper(id, itemId).message, NoticeKind.CRAFT) }
 

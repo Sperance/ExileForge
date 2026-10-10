@@ -54,7 +54,7 @@ private fun essenceShare(index: ContentIndex, essence: Essence): Double {
 }
 
 /** Where a stack comes from, by kind; the order is the order a card lists them in. */
-enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAAL, EGGS, TRIALS, KEY, ABYSS, RUSH, MERCHANT, SALE, FIND }
+enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAAL, EGGS, TRIALS, KEY, MAPS, ABYSS, RUSH, MERCHANT, SALE, FIND }
 
 /**
  * One way to come by a stack: its [kind], the zone [levels] it is found in, the best [chance] in percent where the
@@ -127,6 +127,8 @@ private class SourceIndex(private val index: ContentIndex) {
         works()
         eggs()
         trials()
+        // Печати Атласа (4.6.4): любая награда захода по карте-предмету
+        stacks(index.campaign.maps.seals.table).keys.forEach { add(it, ItemSource(SourceKind.MAPS)) }
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
         index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
         index.rules.merchant.orbs.codes.forEach { add(it, ItemSource(SourceKind.MERCHANT)) }

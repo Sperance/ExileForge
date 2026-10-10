@@ -54,6 +54,9 @@ data class BagStack(val code: String, val amount: Long)
 enum class BagCategory(val key: String) {
     CHESTS("bag.section_chests"),
     ORBS("bag.section_orbs"),
+
+    /** Печати Атласа (4.6.4): валюта только для карт. */
+    SEALS("bag.section_seals"),
     ESSENCES("bag.section_essences"),
     BOOKS("bag.section_books"),
 
@@ -73,6 +76,7 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
     val index = game.index
     fun category(code: String) = when (index?.item(ItemCode(code))?.category) {
         Item.CURRENCY, Item.OMEN -> BagCategory.ORBS
+        Item.ATLAS_SEAL -> BagCategory.SEALS
         Item.ESSENCE -> BagCategory.ESSENCES
         Item.BOOK -> BagCategory.BOOKS
         Item.RUNE -> BagCategory.RUNES
@@ -178,6 +182,8 @@ internal fun compactCount(amount: Long): String = when {
     onEssence: (String) -> Unit = {},
     /** A loot chest opened where it lies (3.76.0). */
     onOpenChest: (String) -> Unit = {},
+    /** Печать Атласа (4.6.4) - в кузницу, в раздел печатей карты. */
+    onSeal: (String) -> Unit = {},
 ) {
     val code = stack.code
     val orb = Orb.of(code)
@@ -185,6 +191,7 @@ internal fun compactCount(amount: Long): String = when {
     val skill = game.index?.skills?.byBook(code)
     val readable = skill != null && skill.heroClass == game.hero?.heroClass
     val essence = game.index?.essence(code) != null
+    val seal = game.index?.seal(code) != null
     // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.
     val chest = game.index?.item(ItemCode(code))?.category == Item.CHEST
     StackPanel(onDismiss) {
@@ -197,6 +204,11 @@ internal fun compactCount(amount: Long): String = when {
             }
             if (essence) {
                 ForgeButton(enabled = !game.busy, onClick = { onEssence(code) }, modifier = Modifier.weight(1f)) {
+                    Text(ui("bag.to_forge"))
+                }
+            }
+            if (seal) {
+                ForgeButton(enabled = !game.busy, onClick = { onSeal(code) }, modifier = Modifier.weight(1f)) {
                     Text(ui("bag.to_forge"))
                 }
             }

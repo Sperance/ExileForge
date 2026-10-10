@@ -136,12 +136,12 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/", "api/v1/fate/", "api/v1/mail/letter")
 
         /**
-         * Commands whose outcome is rolled (3.55.0): an orb, an essence, an unveiling or a chosen line, a bench craft, a
+         * Commands whose outcome is rolled (3.55.0): an orb, an Atlas seal (4.6.4), an essence, an unveiling or a chosen line, a bench craft, a
          * hatching (an egg laid or collected), a pet's orb or chosen line, a job started. Offline they are refused rather than kept: a second press would act on an item
          * the player has not yet seen, and the whole row would land blind once the link is back.
          */
         private val ROLLED = listOf(
-            "api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/choose", "api/v1/hero/craft",
+            "api/v1/hero/orb", "api/v1/hero/seal", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/choose", "api/v1/hero/craft",
             "api/v1/hero/pets/incubate", "api/v1/hero/pets/collect", "api/v1/hero/pets/orb", "api/v1/hero/pets/choose", "api/v1/hero/crafts/start",
             "api/v1/hero/chest/open", "api/v1/hero/merchant/trophy",
         )

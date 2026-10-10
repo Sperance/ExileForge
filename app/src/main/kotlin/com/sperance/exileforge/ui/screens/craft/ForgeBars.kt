@@ -109,6 +109,29 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
+/**
+ * Выбранная печать Атласа над навигацией (4.6.4): что она, сколько в сумке и удерживаемая кнопка; печать, что ляжет только со
+ * знамением, ждёт его - одна она сервером отвергнута.
+ */
+@Composable internal fun SealBar(game: GameUi, smithy: Smithy, target: ForgeTarget, chosen: OrbChoice?, enabled: Boolean, onApply: (String) -> Unit) {
+    ForgeBar {
+        if (chosen == null) {
+            Text(ui("forge.pick_seal"), color = Muted)
+            return@ForgeBar
+        }
+        val code = chosen.code
+        val waiting = chosen.needsOmen && smithy.omen.isBlank()
+        BarTitle(
+            ForgeGlyphs.Sigil,
+            Gold,
+            itemTitle(code) + smithy.omen.takeIf { it.isNotBlank() }?.let { " + ${itemTitle(it)}" }.orEmpty(),
+            if (waiting) ui("forge.needs_omen") to true else stock(code, game.bagAmount(code) ?: 0L, 1),
+            code = code,
+        )
+        HoldButton(ui("confirm.hold", ui("forge.apply_seal")), Gold, enabled = enabled && !target.corrupted && !waiting, rearm = true) { onApply(code) }
+    }
+}
+
 /** The chosen bench line over the navigation, priced, with the same held button; рецепт, что не встанет (4.2.0), не предлагается. */
 @Composable internal fun BenchBar(game: GameUi, vm: SmithyViewModel, item: ItemView, chosen: String, enabled: Boolean) {
     val index = game.index ?: return

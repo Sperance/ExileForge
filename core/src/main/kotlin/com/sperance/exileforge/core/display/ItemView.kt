@@ -393,7 +393,7 @@ fun effectUnit(stat: String, op: Op, index: ContentIndex? = null): String = if (
 
 /** How a stacking item of the bag is drawn when the server has no icon for it: by its category. */
 fun bagVisualKind(item: com.sperance.exileforge.rules.content.Item): ItemVisualKind = when (item.category) {
-    com.sperance.exileforge.rules.content.Item.CURRENCY -> ItemVisualKind.CURRENCY
+    com.sperance.exileforge.rules.content.Item.CURRENCY, com.sperance.exileforge.rules.content.Item.ATLAS_SEAL -> ItemVisualKind.CURRENCY
     com.sperance.exileforge.rules.content.Item.BOOK -> ItemVisualKind.SCROLL
     com.sperance.exileforge.rules.content.Item.ESSENCE, com.sperance.exileforge.rules.content.Item.RUNE -> ItemVisualKind.GEM
     else -> ItemVisualKind.ITEM

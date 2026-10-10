@@ -130,6 +130,12 @@ fun HeroScreen() {
                     smithy.open(null, ForgeSection.ESSENCES)
                     shell.tab(TAB_CRAFT)
                 },
+                onSeal = { seal ->
+                    stackCode = null
+                    smithy.selectSeal(seal)
+                    smithy.open(null, ForgeSection.SEALS)
+                    shell.tab(TAB_CRAFT)
+                },
                 onOpenChest = { chest ->
                     stackCode = null
                     model.openChest(chest)

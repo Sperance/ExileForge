@@ -19,8 +19,16 @@ enum class AppPhase { AUTH, CHARACTERS, GAME }
 /** Вещь, принесённая походом, - из :core (3.80.20). */
 typealias LootEntry = com.sperance.exileforge.core.campaign.LootEntry
 
-/** The forge's sections: orbs, the bench and the essences work on one item. */
-enum class ForgeSection { ORBS, BENCH, ESSENCES }
+/**
+ * The forge's sections: orbs, the bench and the essences work on one item; печати Атласа (4.6.4) - только у карты. [omens] - раздел
+ * кладёт рядом с валютой знамение.
+ */
+enum class ForgeSection(val omens: Boolean = false) {
+    ORBS(omens = true),
+    SEALS(omens = true),
+    BENCH,
+    ESSENCES,
+}
 
 /**
  * The City's buildings (3.22.0): each one a screen of its own behind the square; «История» (3.90.2) - прошлое героя,

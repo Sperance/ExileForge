@@ -69,6 +69,13 @@ internal const val UNCRAFT = "-"
     LaunchedEffect(target?.id, choices, smithy.orb) {
         if (target != null && smithy.orb.isNotBlank() && choices.none { it.code == smithy.orb }) vm.selectOrb("")
     }
+    // Печати Атласа сумки, что лягут на карту (4.6.4): сами или со знамением сумки; у прочих целей их нет.
+    val seals = remember(target, index, omens, hero?.bag) {
+        if (index == null || hero == null || target == null) emptyList() else target.seals(index, omens, hero::count)
+    }
+    LaunchedEffect(target?.id, seals, smithy.seal) {
+        if (target != null && smithy.seal.isNotBlank() && seals.none { it.code == smithy.seal }) vm.selectSeal("")
+    }
     val gear = target as? ForgeTarget.Gear
     // Эссенции сумки, что на эту вещь не лягут (3.94.1): лоток показывает их серыми, с отказом правил словами игрока.
     val essenceRefusals = remember(gear, index, hero?.bag) {
@@ -81,6 +88,7 @@ internal const val UNCRAFT = "-"
     val sections = target?.sections ?: listOf(ForgeSection.ORBS)
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     val chosen = choices.firstOrNull { it.code == smithy.orb }
+    val sealChosen = seals.firstOrNull { it.code == smithy.seal }
     Column(Modifier.fillMaxSize()) {
         // Шапка над прокруткой (3.88.7): уходит при прокрутке вниз и возвращается вверх.
         Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil) } }
@@ -95,7 +103,7 @@ internal const val UNCRAFT = "-"
                 Anvil(
                     game,
                     target,
-                    toolSocket(game, smithy, section, index, benchLine, chosen, essenceRefusals),
+                    toolSocket(game, smithy, section, index, benchLine, if (section == ForgeSection.SEALS) sealChosen else chosen, essenceRefusals),
                     omenSocket(game, smithy, section, vm::selectOmen),
                     onPick = { picking = if (target is ForgeTarget.Beast) PickerSection.PETS else PickerSection.ITEMS },
                     modifier = Modifier.weight(1f),
@@ -108,6 +116,12 @@ internal const val UNCRAFT = "-"
                     OrbTray(game, smithy, choices, ui(it.noOrbsKey), quality, vm::selectOrb)
                 }
 
+                ForgeSection.SEALS -> gear?.let {
+                    LineChoices(game, it, enabled, vm)
+                    OmenList(game, it.sealOmens(index, smithy.seal, omens), smithy.omen, vm::selectOmen)
+                    SealTray(game, smithy, seals, vm::selectSeal)
+                }
+
                 ForgeSection.BENCH -> gear?.let { BenchLedger(game, index, hero, it.view, benchLine) { line -> benchLine = line } }
 
                 ForgeSection.ESSENCES -> EssenceTray(game, smithy.essence, essenceRefusals, vm::selectEssence)
@@ -116,6 +130,7 @@ internal const val UNCRAFT = "-"
         if (hero != null && target != null) {
             when (section) {
                 ForgeSection.ORBS -> OrbBar(game, smithy, target, chosen, enabled, quality?.lost ?: 0, chanceUniques) { vm.applyOrb(target, it) }
+                ForgeSection.SEALS -> gear?.let { SealBar(game, smithy, it, sealChosen, enabled) { code -> vm.applySeal(it.id, code) } }
                 ForgeSection.BENCH -> gear?.let { BenchBar(game, vm, it.view, benchLine, enabled) }
                 ForgeSection.ESSENCES -> gear?.let { EssenceBar(game, smithy.essence, it.view.item, enabled, { code -> code !in essenceRefusals }, vm::applyEssence) }
             }
@@ -156,15 +171,24 @@ private fun essenceRefusals(index: ContentIndex, hero: HeroView, gear: ForgeTarg
 
 internal val ForgeSection.title get() = when (this) {
     ForgeSection.ORBS -> "forge.section_orbs"
+    ForgeSection.SEALS -> "forge.section_seals"
     ForgeSection.BENCH -> "forge.section_bench"
     ForgeSection.ESSENCES -> "forge.section_essences"
 }
 
-/** The anvil's tool socket: the orb ([chosen] из лотка), the essence or the bench line the section lays on the target, when one is chosen and fits. */
+/**
+ * The anvil's tool socket: the orb or the Atlas seal ([chosen] из лотка своего раздела), the essence or the bench line the section lays
+ * on the target, when one is chosen and fits.
+ */
 internal fun toolSocket(game: GameUi, smithy: Smithy, section: ForgeSection, index: ContentIndex, benchLine: String, chosen: OrbChoice?, essenceRefusals: Map<String, String>): Socket = when (section) {
     ForgeSection.ORBS -> {
         val glyph: (@Composable () -> Unit)? = chosen?.let { { BagIcon(it.code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY) } }
         Socket(chosen?.let { itemTitle(it.code) } ?: ui("forge.socket_orb"), Gold, glyph)
+    }
+
+    ForgeSection.SEALS -> {
+        val glyph: (@Composable () -> Unit)? = chosen?.let { { BagIcon(it.code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY) } }
+        Socket(chosen?.let { itemTitle(it.code) } ?: ui("forge.socket_seal"), Gold, glyph)
     }
 
     ForgeSection.ESSENCES -> {
@@ -187,9 +211,9 @@ internal fun toolSocket(game: GameUi, smithy: Smithy, section: ForgeSection, ind
     }
 }
 
-/** The omen's socket beside an orb: the omen laid with it, a tap taking it off; none for the bench or an essence. */
+/** The omen's socket beside an orb or a seal: the omen laid with it, a tap taking it off; none for the bench or an essence. */
 internal fun omenSocket(game: GameUi, smithy: Smithy, section: ForgeSection, onSelect: (String) -> Unit): Socket? {
-    if (section != ForgeSection.ORBS) return null
+    if (!section.omens) return null
     val omen = smithy.omen.takeIf { it.isNotBlank() && (game.bagAmount(it) ?: 0L) > 0 }
     val glyph: (@Composable () -> Unit)? = if (omen == null) {
         null

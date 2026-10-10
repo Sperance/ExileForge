@@ -165,6 +165,24 @@ private const val ONE_ROW = 6
     }
 }
 
+/** Печати Атласа лотка (4.6.4): только [choices] - печати сумки, что лягут на карту сами или со знамением сумки; ждущая знамения помечена. */
+@Composable internal fun SealTray(game: GameUi, smithy: Smithy, choices: List<OrbChoice>, onSelect: (String) -> Unit) {
+    val waiting = remember(choices) { choices.filter { it.needsOmen }.map { it.code }.toSet() }
+    ForgeTray(
+        game,
+        ui("forge.tray_seals"),
+        choices.map { it.code },
+        smithy.seal,
+        ui("forge.no_seals"),
+        Gold,
+        onSelect,
+        note = if (smithy.seal in waiting && smithy.omen.isBlank()) ui("forge.needs_omen") else null,
+        marked = { it in waiting },
+    ) { code ->
+        BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
+    }
+}
+
 /** Подсказка сферы качества (4.3.0): что она поднимет на этой вещи с выбранным знамением и что сбросит. */
 private fun qualityNote(orb: String, quality: QualityForecast?): String? = quality?.takeIf { orb == Orb.QUALITY_ORB.name }?.let { forecast ->
     listOfNotNull(forecast.raises, ui("forge.quality_reset", forecast.lost).takeIf { forecast.lost > 0 }).joinToString("\n")
@@ -200,11 +218,16 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
  * an item or, since server 1.65.0, a pet. Chosen again, it is taken off. Each is the orb's pair on the anvil (mockup B).
  */
 @Composable fun OmenLedger(game: GameUi, orbCode: String, chosenOmen: String, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
-    val hero = game.hero ?: return
     val index = game.index ?: return
     val orb = Orb.of(orbCode) ?: return
     val applier = remember(index) { OrbApplier(index) }
     val omens = remember(applier, orb, target, held) { held.filter { it.fits(orb) && applier.accepts(orb, target, it) } }
+    OmenList(game, omens, chosenOmen, onSelect)
+}
+
+/** Знамения [omens], что лягут рядом с валютой на наковальне (сфера или печать Атласа, 4.6.4): выбранное снова - снимается. */
+@Composable fun OmenList(game: GameUi, omens: List<Omen>, chosenOmen: String, onSelect: (String) -> Unit) {
+    val hero = game.hero ?: return
     if (omens.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         omens.forEach { omen ->

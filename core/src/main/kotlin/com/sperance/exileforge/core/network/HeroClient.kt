@@ -236,6 +236,13 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
     }
 
+    /** Печать Атласа [seal] на карту [itemId] (сервер 4.6.4) со знамением [omen], если печать его берёт; ответ - как у сферы. */
+    suspend fun applySeal(heroId: String, itemId: String, seal: String, omen: String? = null): CurrencyApplyResponse {
+        requireItemId(itemId)
+        require(seal.isNotBlank()) { ui("api.choose_seal") }
+        return http.post("$HERO/seal", heroQuery(heroId, "itemId" to itemId, "seal" to seal, "omen" to omen?.takeIf { it.isNotBlank() }))
+    }
+
     /** The unveiling's choice (3.36.0): which of the offered modifiers takes the veiled one's place. */
     suspend fun unveil(heroId: String, itemId: String, choice: Int): CurrencyApplyResponse {
         requireItemId(itemId)

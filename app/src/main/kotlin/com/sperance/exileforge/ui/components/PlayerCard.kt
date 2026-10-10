@@ -210,4 +210,4 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 }
 
 /** Нижняя граница лиги Разлома [league] уровнем; таблицы лиг нет - null. */
-private fun leagueLevel(game: GameUi, league: Int): Int? = game.index?.campaign?.trials?.rift?.leagues?.getOrNull(league)
+internal fun leagueLevel(game: GameUi, league: Int): Int? = game.index?.campaign?.trials?.rift?.leagues?.getOrNull(league)

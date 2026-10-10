@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.guild
 
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRole
 import kotlinx.serialization.Serializable
@@ -46,7 +47,21 @@ import kotlinx.serialization.Serializable
     val dayLeft: Long = 0,
     /** В сети ли герой (4.5.1, сервер по `rules.onlineMinutes`); [lastSeenAt] с 4.5.1 - позднее из захода в гильдию и последней команды. */
     val online: Boolean = false,
+    /** Код титула летописи (4.6.3); пусто - без титула. */
+    val title: String = "",
+    /** Лига Разлома по уровню героя (4.6.3) - индекс границы `trials.rift.leagues`, как на карточке игрока. */
+    val league: Int = 0,
+    /** Предначертание аккаунта героя (4.6.3); null - не выбрано. */
+    val fate: FateCard? = null,
+    /** Профессия строки состава (4.6.3); null - герой ещё ни в одной не работал. */
+    val craft: GuildMemberCraft? = null,
 )
+
+/**
+ * Профессия участника в строке состава (4.6.3, сервер `GuildMemberCraft.of`): у работающего - профессия текущей работы
+ * ([working]), у прочих - лучшая по уровню; [level] - уровень в ней.
+ */
+@Serializable data class GuildMemberCraft(val profession: String, val level: Int = 1, val working: Boolean = false)
 
 /** A hero asking to join an APPLY guild; only the leader and the officers are shown them. */
 @Serializable data class GuildApplicant(val heroId: String, val name: String = "", val heroClass: String = "", val level: Int = 1, val at: Long = 0)

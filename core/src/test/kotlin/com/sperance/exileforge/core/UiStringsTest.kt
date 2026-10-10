@@ -166,12 +166,9 @@ class UiStringsTest {
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
             MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
-            // Причины санкций и роли гильдии (4.5.1): самоудаление и короткие плашки состава
+            // Причины санкций и роли гильдии (4.5.1): самоудаление и роли состава
             com.sperance.exileforge.core.network.SanctionCategory.entries.forEach { add("moderation.category.${it.name}") }
-            com.sperance.exileforge.rules.content.GuildRole.entries.forEach {
-                add("guild.role.${it.name}")
-                add("guild.role_short.${it.name}")
-            }
+            com.sperance.exileforge.rules.content.GuildRole.entries.forEach { add("guild.role.${it.name}") }
             // Качество сундука Скверны (4.0.0): от обычного до редкого
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }
             // Насильные механики тестировщика (4.0.1)

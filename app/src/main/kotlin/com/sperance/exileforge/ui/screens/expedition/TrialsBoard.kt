@@ -3,18 +3,31 @@ package com.sperance.exileforge.ui.screens.expedition
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
@@ -127,64 +140,107 @@ import org.koin.compose.viewmodel.koinViewModel
                 if (crests < rules.rush.key) MutedText(ui("trials.key_short", rules.rush.key - crests), style = MaterialTheme.typography.labelSmall)
             }
             unlocked.forEach { region -> RushRegion(game, vm, rules, region, keys, free) }
+            // Ближайший закрытый регион (макет «Испытания боссов», вариант A) - один, с тем, что осталось зачистить; дальние не рисуются
+            index.campaign.regions.filterNot { it in unlocked }.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
+                LockedRegion(near, near.zones.count { it.code !in cleared })
+            }
         }
     }
 }
 
-/** Регион раша: ступени, лучшее время и вход; тестировщику (4.0.0) открыты все ступени. */
+/**
+ * Регион раша (макет «Испытания боссов», вариант A): имя и «зачищен», боссы и лучшее время, лента ступеней - все пройденные
+ * (зелёные) и ровно одна следующая (золотая, выбрана по умолчанию); дальше ступени не рисуются. Под лентой - сила и награда
+ * выбранной ступени и «Войти» с числом ключей. Тестировщику (4.0.0, `ProgressGate`) лента показывает все ступени.
+ */
 @Composable private fun RushRegion(game: GameUi, vm: ExpeditionViewModel, rules: TrialRules, region: Region, keys: Long, free: Boolean) {
     val trials = game.hero?.campaign?.trials ?: return
     val idle = !game.busy
     val best = trials.rushBest[region.code]
-    // Ступени (3.96.0): открыта следующая за зачищенными. Выбранная по умолчанию (4.2.0) - низшая непройденная, и у
-    // тестировщика тоже: ему открыты все, но начинает он не с высшей
-    val lowest = (trials.rushTiers[region.code] ?: 0).coerceAtMost(rules.rush.tierCount - 1)
-    val open = if (free) rules.rush.tierCount - 1 else lowest
+    val count = rules.rush.tierCount
+    // Пройдено ступеней; следующая - первая непройденная, её и выбирают по умолчанию (4.2.0), у тестировщика тоже
+    val passed = (trials.rushTiers[region.code] ?: 0).coerceIn(0, count)
+    val lowest = passed.coerceAtMost(count - 1)
+    val shown = if (free) count else minOf(passed + 1, count)
     var tier by remember(region.code, lowest) { mutableStateOf(lowest) }
-    Plate(Gold) {
-        if (rules.rush.tierCount > 1) {
-            MutedText(ui("trials.rush_tier_title"), style = MaterialTheme.typography.labelMedium)
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                (0 until rules.rush.tierCount).forEach { t ->
-                    val unlockedTier = t <= open
-                    val shape = RoundedCornerShape(8.dp)
-                    val edge = when {
-                        t == tier -> GoldBright
-                        unlockedTier -> Gold.copy(alpha = .5f)
-                        else -> Muted.copy(alpha = .3f)
-                    }
-                    Box(Modifier.border(1.dp, edge, shape).clickable(enabled = unlockedTier) { tier = t }.padding(horizontal = 10.dp, vertical = 4.dp)) {
-                        Text(roman(t + 1), color = if (unlockedTier) Parchment else Muted, style = MaterialTheme.typography.labelLarge)
-                    }
-                }
-            }
-            Text(rushTierText(rules.rush.tier(tier)), color = Parchment, style = MaterialTheme.typography.bodySmall)
-            if (open < rules.rush.tierCount - 1) MutedText(ui("trials.rush_tier_next", roman(open + 2), roman(open + 1)), style = MaterialTheme.typography.labelSmall)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(regionTitle(region.code), color = Parchment, style = MaterialTheme.typography.titleSmall)
-                MutedText(
-                    listOfNotNull(
-                        ui("trials.rush_bosses", minOf(region.zones.size, rules.rush.bosses)),
-                        best?.let { ui("trials.rush_best", clock(it.toDouble())) },
-                        ui("trials.rush_cleared").takeIf { region.code in trials.rushCleared },
-                    ).joinToString(" · "),
+    val cleared = region.code in trials.rushCleared
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, if (cleared) Vital.copy(alpha = .3f) else Brass.copy(alpha = .3f), shape).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(regionTitle(region.code), color = GoldBright, fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (cleared) {
+                Text(
+                    "✓ " + ui("trials.rush_cleared"),
+                    color = Vital,
+                    fontSize = 10.sp,
+                    modifier = Modifier.background(Vital.copy(alpha = .1f), TagShape).border(1.dp, Vital.copy(alpha = .35f), TagShape).padding(horizontal = 6.dp, vertical = 1.dp),
                 )
             }
-            Column(horizontalAlignment = Alignment.End) {
-                ForgeOutlinedButton(onClick = { vm.enterRush(region.code, tier) }, enabled = idle && keys >= 1 && trials.run == null) {
-                    Text(ui("trials.rush_enter"))
-                }
-                // Причина у неактивной кнопки (3.94.0)
-                when {
-                    trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)
-                    keys < 1 -> MutedText(ui("trials.rush_no_key"), style = MaterialTheme.typography.labelSmall)
-                }
+        }
+        MutedText(
+            listOfNotNull(ui("trials.rush_bosses", minOf(region.zones.size, rules.rush.bosses)), best?.let { ui("trials.rush_best", clock(it.toDouble())) }).joinToString(" · "),
+            style = MaterialTheme.typography.labelSmall,
+        )
+        if (count > 1) {
+            Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                (0 until shown).forEach { t -> TierPlate(t, done = t < passed, selected = t == tier) { tier = t } }
+                if (passed == 0 && !free) MutedText(ui("trials.rush_tier_first"), style = MaterialTheme.typography.labelSmall)
             }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(ui("trials.rush_tier_named", roman(tier + 1), rushTierText(rules.rush.tier(tier))), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            ForgeOutlinedButton(onClick = { vm.enterRush(region.code, tier) }, enabled = idle && keys >= 1 && trials.run == null, contentPadding = PaddingValues(horizontal = 12.dp)) {
+                Text(ui("trials.rush_enter"))
+                Spacer(Modifier.width(6.dp))
+                BagIcon(TrialRules.KEY, Modifier.size(16.dp))
+                Text(compactCount(keys))
+            }
+        }
+        // Причина у неактивной кнопки (3.94.0)
+        when {
+            trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)
+            keys < 1 -> MutedText(ui("trials.rush_no_key"), style = MaterialTheme.typography.labelSmall)
         }
     }
 }
+
+/** Плашка ступени ленты: пройденная - зелёная, следующая - золотая; выбранная - в яркой нити. */
+@Composable private fun TierPlate(tier: Int, done: Boolean, selected: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(7.dp)
+    val tint = if (done) Vital else Brass
+    Box(
+        Modifier.heightIn(min = 26.dp).widthIn(min = 30.dp).clip(shape).background(tint.copy(alpha = if (done) .08f else .12f))
+            .border(if (selected) 2.dp else 1.dp, if (selected) Brass else tint.copy(alpha = .45f), shape).clickable(onClick = onClick).padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(roman(tier + 1), color = if (done) Vital else GoldBright, fontFamily = RelicSerif, fontSize = 12.sp)
+    }
+}
+
+/** Ближайший закрытый регион раша: замок, имя и сколько зон осталось зачистить, пунктирная рамка без входа. */
+@Composable private fun LockedRegion(region: Region, left: Int) {
+    val shape = RoundedCornerShape(12.dp)
+    Column(
+        Modifier.fillMaxWidth().alpha(.8f).dashedBorder(Bronze, shape).padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Outlined.Lock, null, tint = Muted, modifier = Modifier.size(16.dp))
+            Text(regionTitle(region.code), color = Muted, fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        MutedText(ui("trials.rush_locked_zones", left), style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** Рамка закрытого региона пунктиром. */
+private fun Modifier.dashedBorder(color: Color, shape: RoundedCornerShape): Modifier = drawBehind {
+    drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))))
+}
+
+private val TagShape = RoundedCornerShape(6.dp)
 
 /** Чем ступень раша тяжелее и щедрее (4.2.0), из её записи в контенте: «Боссы +X% здоровья и урона · +N строк · Сферы ×R». */
 private fun rushTierText(tier: RushTier): String = listOfNotNull(

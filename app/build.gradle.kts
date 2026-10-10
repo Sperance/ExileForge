@@ -16,8 +16,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 336
-        versionName = "4.5.1"
+        versionCode = 337
+        versionName = "4.6.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Updates from GitHub Releases (3.72.0) close the game until checked: only the published build does that.
         buildConfigField("boolean", "UPDATES", "false")

@@ -16,14 +16,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +39,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
@@ -57,7 +56,8 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -66,7 +66,6 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.Parchment
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
@@ -74,7 +73,7 @@ import kotlin.math.roundToInt
 
 /*
  * Предначертание (4.6.0, макет «Пепел предков», утверждён владельцем): палитра уголь и золото, как у уникальных вещей. Части
- * экрана выбора - угли, алтарь, карта-таро, кнопка удержания - и плашка дара для карточки игрока и шапки героя. Декор
+ * экрана выбора - угли, алтарь, карта-таро, кнопка удержания - и лента дара (4.6.3) для карточек героя, выбора героя и досье. Декор
  * (угли, дыхание алтаря, кольцо печати) стоит при выключенном `LocalMotion`.
  */
 
@@ -102,6 +101,9 @@ object FateInk {
     val WaxInk = Color(0xFF2A1206)
     val Ash = Color(0xFF44515A)
     val AshInk = Color(0xFF6F7D86)
+
+    /** Лента дара (4.6.3, макет «Лента и свиток»): описание на свитке - тёплая бумага. */
+    val Vellum = Color(0xFFE9D9BF)
 }
 
 /** Знак Предначертания в печати (4.6.1 - без тем): один на все дары. */
@@ -349,30 +351,66 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
 }
 
 /**
- * Плашка Предначертания (4.6.0) для карточки игрока и шапки героя: печать и имя (4.6.1 - без темы); касание раскрывает описание
- * и [progress] - что дар копит (например, бои до Щедрости судьбы).
+ * Лента Предначертания (4.6.3, утверждена владельцем по макету «Лента и свиток», вариант A): угольная лента во всю ширину -
+ * печать [FateSigil], имя дара [card] Cinzel заглавными и подпись [caption] (что это за дар или что он копит). Касание
+ * разворачивает под лентой свиток: узор, описание серифом курсивом и «Изменить нельзя никогда». Одна на карточку игрока, шапку
+ * выбора героя, лист героя и досье модерации; без `LocalMotion` свиток раскрывается сразу, кольцо печати стоит.
  */
-@Composable fun FateBadge(card: FateCard, modifier: Modifier = Modifier, compact: Boolean = false, progress: String? = null) {
+@Composable fun FateRibbon(card: FateCard, caption: String, modifier: Modifier = Modifier) {
     var open by rememberSaveable(card.code) { mutableStateOf(false) }
+    val motion = LocalMotion.current
     val shape = RoundedCornerShape(12.dp)
     Column(
-        modifier.background(Brush.verticalGradient(FateInk.Face), shape).border(1.dp, FateInk.Rim, shape).clickable { open = !open }
-            .padding(horizontal = 10.dp, vertical = 8.dp).animateContentSize(),
+        modifier.clip(shape).border(1.dp, FateInk.Rim, shape).then(if (motion) Modifier.animateContentSize() else Modifier),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            FateSigil(if (compact) 22.dp else 28.dp)
-            Spacer(Modifier.width(8.dp))
+        Row(
+            Modifier.fillMaxWidth().background(Brush.horizontalGradient(RIBBON)).clickable { open = !open }.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FateSigil(RIBBON_SIGIL)
             Column(Modifier.weight(1f)) {
-                Text(card.title, style = relicName(if (compact) 13 else 15).copy(color = FateInk.GoldLight, shadow = Shadow(FateInk.Gold.copy(alpha = .4f), blurRadius = 10f)), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    card.title.uppercase(),
+                    style = relicName(14).copy(color = FateInk.GoldLight, shadow = Shadow(FateInk.Gold.copy(alpha = .4f), blurRadius = 10f)),
+                    letterSpacing = 1.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(caption, color = FateInk.CinderInk, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            Text(if (open) "▴" else "▾", color = Muted, style = MaterialTheme.typography.labelMedium)
+            Text(if (open) "▴" else "▾", color = FateInk.Gold, style = MaterialTheme.typography.labelMedium)
         }
-        if (open) {
-            Spacer(Modifier.height(6.dp))
-            Text(card.text, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
-            progress?.let { Text(it, color = FateInk.GoldLight, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp)) }
-            Text(ui("fate.forever"), color = FateInk.Warn, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+        if (open) FateUnrolled(card)
+    }
+}
+
+/** Метка дара в строке (4.6.3): знак Предначертания и имя дара [card] золотом - рядом с классом в списках. */
+@Composable fun FateMark(card: FateCard, modifier: Modifier = Modifier) {
+    Text("$SIGIL ${card.title}", modifier, color = FateInk.GoldLight, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+/** Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом и предупреждение, что дар навсегда. */
+@Composable private fun FateUnrolled(card: FateCard) {
+    Box(Modifier.fillMaxWidth().height(1.dp).background(FateInk.Rim))
+    Column(
+        Modifier.fillMaxWidth().background(Brush.verticalGradient(FateInk.Parchment.drop(1))).padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text("❧ $SIGIL ❧", color = FateInk.Gold, fontSize = 11.sp, letterSpacing = 6.sp)
+        card.text.takeIf { it.isNotBlank() }?.let { text ->
+            Text(
+                ui("fate.ribbon.quote", text),
+                color = FateInk.Vellum,
+                fontFamily = FontFamily.Serif,
+                fontStyle = FontStyle.Italic,
+                fontSize = 15.sp,
+                lineHeight = 20.sp,
+                textAlign = TextAlign.Center,
+            )
         }
+        Text(ui("fate.ribbon.never"), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
     }
 }
 
@@ -380,6 +418,10 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
 private const val EMBER_MS = 9_000
 private const val ALTAR_MS = 3_000
 private const val SIGIL_MS = 14_000
+
+/** Лента (4.6.3): уголь к краям, жар в середине; размер печати. */
+private val RIBBON = listOf(FateInk.Face.first(), FateInk.Back.first(), FateInk.Face.first())
+private val RIBBON_SIGIL = 20.dp
 
 /** Свиток: вся анимация, доля подъёма в ней и предел высоты текста. */
 private const val SCROLL_MS = 900

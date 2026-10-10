@@ -93,7 +93,31 @@ private const val DAY_MS = 86_400_000L
     val protected: Boolean = false,
     /** Последняя команда героя (3.94.0, server 1.81.14), мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
+    /** Предначертание аккаунта (4.6.3) - код дара `fates.json`; null - не выбрано или сервер старее. */
+    val fate: String? = null,
 )
+
+/**
+ * Отбор списка модерации по Предначертанию (4.6.3), параметр `fate` маршрута `rows`: [param] - его значение, пусто - отбора нет.
+ */
+sealed interface ModerationFate {
+    val param: String
+
+    /** Все герои. */
+    data object All : ModerationFate {
+        override val param: String = ""
+    }
+
+    /** Аккаунт ещё не выбрал дар. */
+    data object Fateless : ModerationFate {
+        override val param: String = "none"
+    }
+
+    /** Аккаунт выбрал дар [code]. */
+    data class Chosen(val code: String) : ModerationFate {
+        override val param: String get() = code
+    }
+}
 
 /** Порядок списка модерации (3.94.0): последняя активность, уровень, дата создания, имя. */
 @Serializable enum class ModerationSort { ACTIVITY, LEVEL, CREATED, NAME }
@@ -111,6 +135,10 @@ private const val DAY_MS = 86_400_000L
     val clientVersion: String = "",
     val heroes: Int = 0,
     val deleted: Boolean = false,
+    /** Предначертание аккаунта (4.6.3) - код дара `fates.json`; null - не выбрано. */
+    val fate: String? = null,
+    /** Когда выбрано Предначертание (4.6.3), мс эпохи; null - не выбрано или выбрано раньше, чем сервер это пишет. */
+    val fateAt: Long? = null,
 )
 
 @Serializable data class DossierHero(
@@ -185,7 +213,14 @@ private const val DAY_MS = 86_400_000L
  * и администратору. Экран санкции и апелляция ([notice], [appeal]) - без входа: забаненный уже без сессии.
  */
 class ModerationClient internal constructor(private val http: Transport) {
-    suspend fun rows(query: String, segment: ModerationSegment, page: Int, sort: ModerationSort = ModerationSort.ACTIVITY): ModerationPage = http.get("$MODERATION/rows", mapOf("q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name))
+    /** Страница [page] раздела [segment]: поиск [query], порядок [sort] и отбор по Предначертанию [fate] (4.6.3). */
+    suspend fun rows(
+        query: String,
+        segment: ModerationSegment,
+        page: Int,
+        sort: ModerationSort = ModerationSort.ACTIVITY,
+        fate: ModerationFate = ModerationFate.All,
+    ): ModerationPage = http.get("$MODERATION/rows", mapOf("q" to query.trim(), "segment" to segment.name, "page" to page.toString(), "sort" to sort.name, "fate" to fate.param))
 
     /** Досье героя [heroId] или, без героя, аккаунта [userId]. */
     suspend fun dossier(heroId: String, userId: String): Dossier = http.get("$MODERATION/dossier", mapOf("hero" to heroId, "user" to userId))

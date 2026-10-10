@@ -108,6 +108,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 return@Column
             }
             Scroll(game, vm, card)
+            // Предначертание аккаунта (4.6.3, «Лента и свиток»): лента во всю ширину под строками; не выбрано - ленты нет
+            card.fate?.let { fate -> FateRibbon(fate, ui("fate.ribbon.caption"), Modifier.fillMaxWidth()) }
             CardActions(
                 game,
                 card,
@@ -149,11 +151,6 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
             }
             leagueLevel(game, card.league)?.let { ReferenceRow(ui("player.league"), ui("rift.league", it), Parchment) }
             ReferenceRow(ui("player.online"), presenceText(card.online, card.lastSeenAt), Presence.of(card.online, card.lastSeenAt).color.takeIf { card.online } ?: Parchment)
-            // Предначертание аккаунта (4.6.0): имя, касание - описание; не выбрано - строки нет
-            card.fate?.let { fate ->
-                Text(ui("player.fate"), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
-                FateBadge(fate, Modifier.fillMaxWidth(), compact = true)
-            }
         }
     }
 }

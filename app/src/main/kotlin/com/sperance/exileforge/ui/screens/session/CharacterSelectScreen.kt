@@ -17,6 +17,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.session.Reads
@@ -118,6 +119,8 @@ import org.koin.compose.viewmodel.koinViewModel
                     ForgeGlyphs.Exile,
                 )
             }
+            // Предначертание аккаунта (4.6.3, «Лента и свиток») шапкой над героями: дар один на всех героев аккаунта
+            accountFate(game)?.let { fate -> item(key = "fate") { FateRibbon(fate, ui("fate.ribbon.account"), Modifier.fillMaxWidth()) } }
             items(game.session.characters, key = { it.id }) { character ->
                 CharacterCard(
                     game,
@@ -144,6 +147,9 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
+
+/** Предначертание аккаунта карточкой (4.6.3), `UserProfile.fate`; не выбрано или нет в контенте - null. */
+private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.session.profile?.fate)?.let(FateCard::of)
 
 /** The creation form on its own page: there is nothing to choose between while it is open. */
 @Composable private fun ColumnScope.CreatingColumn(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {

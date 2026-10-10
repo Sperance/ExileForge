@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
 import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
+import com.sperance.exileforge.core.network.ModerationFate
 import com.sperance.exileforge.core.network.ModerationPage
 import com.sperance.exileforge.core.network.ModerationSegment
 import com.sperance.exileforge.core.network.ModerationSort
@@ -37,6 +38,8 @@ data class ModerationState(
     val query: String = "",
     /** Порядок списка (3.94.0). */
     val sort: ModerationSort = ModerationSort.ACTIVITY,
+    /** Отбор по Предначертанию (4.6.3). */
+    val fate: ModerationFate = ModerationFate.All,
     val page: ModerationPage = ModerationPage(),
     val journal: List<ModerationEntryView> = emptyList(),
     val journalPage: Int = 0,
@@ -73,6 +76,12 @@ class ModerationViewModel(
         load(0)
     }
 
+    /** Новый отбор по Предначертанию (4.6.3): с первой страницы. */
+    fun fate(fate: ModerationFate) {
+        mutable.update { it.copy(fate = fate) }
+        load(0)
+    }
+
     fun tab(tab: ModerationTab) {
         mutable.update { it.copy(tab = tab) }
         if (tab == ModerationTab.JOURNAL) journal(0) else load(0)
@@ -87,7 +96,7 @@ class ModerationViewModel(
             ModerationTab.TRASH -> ModerationSegment.TRASH
             else -> ModerationSegment.ALL
         }
-        val answer = api.rows(state.query, segment, page.coerceAtLeast(0), state.sort)
+        val answer = api.rows(state.query, segment, page.coerceAtLeast(0), state.sort, state.fate)
         mutable.update { it.copy(page = answer) }
     }
 

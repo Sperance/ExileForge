@@ -91,8 +91,8 @@ fun HeroScreen() {
                     }
 
                     else -> {
-                        // Предначертание аккаунта (4.6.0) над листом: имя, касание - описание и что дар копит
-                        heroFate(game)?.let { fate -> item(key = "fate") { FateBadge(fate, Modifier.fillMaxWidth(), progress = fateProgress(game)) } }
+                        // Предначертание аккаунта (4.6.3, «Лента и свиток») над листом: в подписи - что дар копит, касание - описание
+                        heroFate(game)?.let { fate -> item(key = "fate") { FateRibbon(fate, fateProgress(game) ?: ui("fate.ribbon.caption"), Modifier.fillMaxWidth()) } }
                         item { HeroSummary(game) }
                     }
                 }

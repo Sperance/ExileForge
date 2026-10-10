@@ -30,14 +30,18 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.DeviceView
 import com.sperance.exileforge.core.network.Dossier
+import com.sperance.exileforge.core.network.DossierAccount
 import com.sperance.exileforge.core.network.DossierHero
 import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
+import com.sperance.exileforge.core.network.ModerationFate
 import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.SanctionCategory
@@ -106,11 +110,12 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     val page = state.page
-    // Порядок (3.94.0): корзина идёт по номеру удаления, у неё сортировки нет
+    // Порядок (3.94.0) и отбор по дару (4.6.3): корзина идёт по номеру удаления, у неё ни того, ни другого
     if (state.tab != ModerationTab.TRASH) {
         Chips {
             ModerationSort.entries.forEach { sort -> Chip(ui("moderation.sort.${sort.name}"), state.sort == sort) { if (!account.busy) vm.sort(sort) } }
         }
+        FateChips(account, state.fate) { if (!account.busy) vm.fate(it) }
     }
     MutedText(ui("moderation.total", page.total))
     if (page.rows.isEmpty()) MutedText(ui("moderation.none"))
@@ -123,6 +128,21 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     val pages = if (page.size > 0) ((page.total + page.size - 1) / page.size).toInt() else 1
     Pager(page.page, pages, account.busy, vm::load)
+}
+
+/**
+ * Отбор по Предначертанию (4.6.3): «Все дары», «Без дара» и дары контента по имени; выбранный - [selected], смена - [onSelect].
+ */
+@Composable private fun FateChips(account: AccountUi, selected: ModerationFate, onSelect: (ModerationFate) -> Unit) {
+    val fates = account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title }
+    Chips {
+        Chip(ui("moderation.fate.all"), selected == ModerationFate.All) { onSelect(ModerationFate.All) }
+        Chip(ui("moderation.fate.none"), selected == ModerationFate.Fateless) { onSelect(ModerationFate.Fateless) }
+        fates.forEach { card ->
+            val filter = ModerationFate.Chosen(card.code)
+            Chip(card.title, selected == filter) { onSelect(filter) }
+        }
+    }
 }
 
 @Composable private fun Pager(page: Int, pages: Int, busy: Boolean, onPage: (Int) -> Unit) {
@@ -152,7 +172,11 @@ import org.koin.compose.viewmodel.koinViewModel
                 Text(row.heroName, color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                 RoleMark(row.role)
             }
-            MutedText(listOf(classTitle(row.heroClass), ui("pets.level", row.level), row.login).filter { it.isNotBlank() }.joinToString(" · "))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                MutedText(listOf(classTitle(row.heroClass), ui("pets.level", row.level), row.login).filter { it.isNotBlank() }.joinToString(" · "), Modifier.weight(1f, fill = false))
+                // Предначертание аккаунта (4.6.3): печать и имя дара рядом с классом
+                row.fate?.let { FateMark(FateCard(it)) }
+            }
             MutedText(seenText(row.lastSeenAt), style = MaterialTheme.typography.labelSmall)
             banned?.let { Text(sanctionLine(it), color = LifeRed, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
@@ -235,6 +259,7 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     if (account.isAdmin && hero != null) ServerSection(account, vm, hero)
+    FateSection(dossier.account)
     dossier.sanctions.firstOrNull { it.active }?.let { active ->
         Text(
             sanctionLine(active),
@@ -518,6 +543,18 @@ private const val SERVER_NAME = 32
         Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
         // Перенос строки - только явный (вход: дата и время), длинное значение по-прежнему обрывается многоточием
         Text(value, color = if (flagged) Ember else GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = false, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** Предначертание аккаунта в досье (4.6.3): лента дара с датой выбора в подписи; не выбрано - «—». */
+@Composable private fun FateSection(owner: DossierAccount) {
+    Section(ui("moderation.fate.title")) {
+        val fate = owner.fate
+        if (fate == null) {
+            MutedText("—")
+        } else {
+            FateRibbon(FateCard(fate), ui("moderation.fate.chosen", owner.fateAt?.let { stampText(it).take(DATE) } ?: "—"), Modifier.fillMaxWidth())
+        }
     }
 }
 

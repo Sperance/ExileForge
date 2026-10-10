@@ -130,7 +130,6 @@
 | `auction.minLevel` | 1 |
 | `auction.buyerFee` | 10 |
 | `auction.lotDays` | 7 |
-| `auction.currencies` | [Orb of Transmutation](../Items/Items-CURRENCY.md#orb_of_transmutation); [Orb of Augmentation](../Items/Items-CURRENCY.md#orb_of_augmentation); [Orb of Alteration](../Items/Items-CURRENCY.md#orb_of_alteration); [Orb of Alchemy](../Items/Items-CURRENCY.md#orb_of_alchemy); [Regal Orb](../Items/Items-CURRENCY.md#regal_orb); [Chaos Orb](../Items/Items-CURRENCY.md#chaos_orb); [Exalted Orb](../Items/Items-CURRENCY.md#exalted_orb); [Divine Orb](../Items/Items-CURRENCY.md#divine_orb); [Orb of Annulment](../Items/Items-CURRENCY.md#orb_of_annulment); [Orb of Scouring](../Items/Items-CURRENCY.md#orb_of_scouring); [Blessed Orb](../Items/Items-CURRENCY.md#blessed_orb); [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `inputs.heroName` | 24 |
 | `inputs.login` | 32 |
 | `inputs.password` | 64 |

@@ -7,7 +7,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.PriceHint
@@ -18,17 +17,13 @@ import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
-import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.*
-
-/** The auction's currencies as a picker's options (3.0.0; server 1.65.0 - the base orbs alone): keyed by item code, named by the dictionary, cheapest first. */
-internal fun orbOptions(game: GameUi): Map<String, String> = game.currencies.associate { it.code.value to itemTitle(it.code.value) }
 
 /**
  * Listing something on the auction: one item from its card or the sell tab, or part of a stack.
  *
- * The price is counted in the base orbs alone (`AU_007`), so the orb is picked from the auction's currencies
- * and the amount typed; whether the listing stands is the server's to say. [owned] is given for a
+ * The price is counted in any orb (`AU_007`; server 1.84.36), so the orb is picked from the auction's currencies
+ * by the orb grid ([OrbGrid], 4.6.3) and the amount typed; whether the listing stands is the server's to say. [owned] is given for a
  * stack, and then the sheet also asks how many of them — how many there are is said, not enforced.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -66,7 +61,7 @@ fun ListingSheet(
             if (game.currencies.isEmpty()) {
                 Text(ui("orb.none"), color = Muted)
             } else {
-                Spinner(ui("orb.orb"), orb, orbOptions(game), !game.busy, glyph = Glyph.CURRENCY, optionArt = orbArt(game.currencies)) { orb = it }
+                OrbGrid(ui("orb.orb"), game.currencies, orb, { orb = it }, enabled = !game.busy)
             }
             OutlinedTextField(
                 price,

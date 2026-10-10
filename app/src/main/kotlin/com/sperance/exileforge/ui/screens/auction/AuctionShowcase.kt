@@ -23,7 +23,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.equipmentIcon
@@ -52,7 +51,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
-import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.*
 
 /** Витрина аукциона (3.80.24): список лотов, строка поиска и фильтры. */
@@ -284,17 +282,10 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
                 )
             }
         },
-        // The price's orb is an item code (3.0.0): the auction's currencies, in the order of their price.
+        // The price's orb is an item code (3.0.0): the auction's currencies in the orb grid (4.6.3), «любая» - empty.
         AccordionGroup("price", ui("auction.price"), listOfNotNull(draft.priceOrb.takeIf { it.isNotBlank() }?.let(::itemTitle), draft.maxPrice.takeIf { it.isNotBlank() }?.let { ui("auction.chip_max_price", it) }).joinToString(" · ").ifBlank { any }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Spinner(
-                    ui("auction.priced_in"),
-                    draft.priceOrb,
-                    mapOf("" to any) + orbOptions(game),
-                    true,
-                    glyph = Glyph.CURRENCY,
-                    optionArt = orbArt(game.currencies),
-                ) { draft = draft.copy(priceOrb = it) }
+                OrbGrid(ui("auction.priced_in"), game.currencies, draft.priceOrb, { draft = draft.copy(priceOrb = it) }, any = any)
                 OutlinedTextField(
                     draft.maxPrice,
                     { draft = draft.copy(maxPrice = it.filter(Char::isDigit).take(game.inputs.number)) },

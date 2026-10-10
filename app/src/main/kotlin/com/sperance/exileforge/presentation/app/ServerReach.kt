@@ -85,11 +85,32 @@ class ServerReach(
         nudge.trySend(Unit)
     }
 
+    /**
+     * Провод сервера сейчас: манифест спрашивается заново - сервер мог смениться, пока игра была в фоне, и провод старта
+     * устарел. Ответ обновляет [state] (после старта); не ответил за [FRESH_MS] - прежний провод, null - сервер ни разу не
+     * ответил.
+     */
+    suspend fun freshWire(): Wire? {
+        val api = connection.current.value ?: return state.value.wire
+        val wire = try {
+            withTimeoutOrNull(FRESH_MS) { api.liveManifest() }?.let { Wire(it.revision, it.rules) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+        if (wire != null) mutable.update { if (it.reach == Reach.ANSWERED) it.copy(wire = wire) else it }
+        return wire ?: state.value.wire
+    }
+
     /** Провод сервера, как только он ответит; null - не ответил за [wait]. */
     suspend fun wire(wait: Long): Wire? = withTimeoutOrNull(wait) { state.first { it.reach == Reach.ANSWERED }.wire }
 
     private companion object {
         const val RETRY_MS = 10_000L
+
+        /** Дольше этого свежий провод не ждётся: проверка обновления идёт с прежним. */
+        const val FRESH_MS = 10_000L
         const val TICK_MS = 500L
     }
 }

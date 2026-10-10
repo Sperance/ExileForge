@@ -41,4 +41,12 @@ class UpdatePolicyTest {
     fun a_server_moved_on_without_a_matching_build_offers_nothing() {
         assertFalse(UpdatePolicy.required(build(11, own), 10, own, next))
     }
+
+    @Test
+    fun a_server_that_called_the_build_outdated_requires_any_newer_one() {
+        // 426 `CL_001`: провод сервера не узнали или он устарел в памяти - сборка новее нужна всё равно.
+        assertTrue(UpdatePolicy.required(build(11, next), 10, own, null, outdated = true))
+        assertTrue(UpdatePolicy.required(build(11, next), 10, own, own, outdated = true))
+        assertFalse(UpdatePolicy.required(build(10, next), 10, own, null, outdated = true))
+    }
 }

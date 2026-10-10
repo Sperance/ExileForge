@@ -76,13 +76,21 @@ class Transport(
     /**
      * Сервер ответил ошибкой (4.3.1): любой не-2xx статус или битое тело - и у команд, и у файлов. Приложение проверяет
      * обновление: [ServerAlarm.OUTDATED] - сервер прямо назвал сборку устаревшей (426 `CL_001`), проверка сразу; прочее -
-     * [ServerAlarm.FAILED], проверка в очередь с порогом. Обрыв сети без ответа сюда не попадает - сервер ничего не сказал.
+     * [ServerAlarm.FAILED], проверка в очередь с порогом. Обрыв сети без ответа - [ServerAlarm.UNREACHED], с тем же порогом:
+     * сервер мог лечь на деплой, после которого эта сборка ему уже не годится.
      */
     internal var onServerError: (ServerAlarm) -> Unit = {}
 
     /** Ответ-ошибка сервера - сигнал [onServerError]; сбой самого сигнала запрос не роняет. */
-    private fun alarm(failure: ApiFailure) {
-        runCatching { onServerError(if (failure.code == OUTDATED_CLIENT) ServerAlarm.OUTDATED else ServerAlarm.FAILED) }
+    private fun alarm(failure: ApiFailure) = alarm(if (failure.code == OUTDATED_CLIENT) ServerAlarm.OUTDATED else ServerAlarm.FAILED)
+
+    private fun alarm(kind: ServerAlarm) {
+        runCatching { onServerError(kind) }
+    }
+
+    /** Запрос оборвался без ответа ([java.io.IOException], не отмена) - сигнал [ServerAlarm.UNREACHED]. */
+    private fun unreached(e: Exception) {
+        if (e is java.io.IOException) alarm(ServerAlarm.UNREACHED)
     }
 
     /** Whose session is signed in, so a kept command is never replayed for another account. */
@@ -142,6 +150,7 @@ class Transport(
             throw e
         } catch (e: Exception) {
             if (e is ApiFailure) status = e.status
+            unreached(e)
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             throw e
         } finally {
@@ -271,6 +280,7 @@ class Transport(
                 status = e.status
                 code = e.code
             }
+            unreached(e)
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             // The answer never came, or the server said "not yet": the command waits with its key, and the replay is the same command.
             val later = if (e is ApiFailure) CommandQueue.transient(e.status) else e is java.io.IOException
@@ -333,4 +343,7 @@ enum class ServerAlarm {
 
     /** Любая другая ошибка ответа: проверка обновления в очередь, не чаще порога. */
     FAILED,
+
+    /** Ответа нет - обрыв сети или сервер недоступен: проверка обновления с тем же порогом, что [FAILED]. */
+    UNREACHED,
 }

@@ -9,6 +9,7 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
+import okhttp3.CacheControl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
@@ -55,10 +56,11 @@ data class AvailableUpdate(val info: AppBuild, val apkUrl: String, val pageUrl: 
 /**
  * Нужна ли сборка. Обязательна любая новее этой, что говорит на проводе сервера (или этой сборки, пока сервер не
  * ответил): сервер на другом проводе - старая играть не может, на том же - всё равно ставится до входа. Сборка на
- * проводе, которого сервер ещё не знает, не предлагается: она не войдёт.
+ * проводе, которого сервер ещё не знает, не предлагается: она не войдёт. Исключение - [outdated]: сервер сам назвал эту
+ * сборку устаревшей (426 `CL_001`), значит, его провод уже не её, даже если узнать его не вышло, - нужна любая новее.
  */
 object UpdatePolicy {
-    fun required(build: AppBuild, versionCode: Int, own: Wire, server: Wire?): Boolean = build.versionCode > versionCode && build.wire == (server ?: own)
+    fun required(build: AppBuild, versionCode: Int, own: Wire, server: Wire?, outdated: Boolean = false): Boolean = build.versionCode > versionCode && (outdated || build.wire == (server ?: own))
 }
 
 /**
@@ -73,15 +75,19 @@ class Updates(client: OkHttpClient = ForgeHttp.client) {
     // Описание сборки маленькое: вызов, который тянется, обрывается - проверка всегда возвращается.
     private val small = http.newBuilder().callTimeout(SMALL_CALL_S, TimeUnit.SECONDS).build()
 
-    /** Обновление сборки [versionCode] для сервера на проводе [server] (null - не ответил); null - обновляться не на что. */
-    suspend fun check(versionCode: Int, server: Wire?): AvailableUpdate? = withContext(Dispatchers.IO) {
-        val text = small.newCall(Request.Builder().url(LATEST).build()).execute().use { response ->
+    /**
+     * Обновление сборки [versionCode] для сервера на проводе [server] (null - не ответил; [outdated] - сервер назвал сборку
+     * устаревшей, см. [UpdatePolicy]); null - обновляться не на что. Описание берётся мимо любых кешей (`no-cache`): адрес
+     * последнего релиза постоянный, а ответ на него меняется с каждым релизом.
+     */
+    suspend fun check(versionCode: Int, server: Wire?, outdated: Boolean = false): AvailableUpdate? = withContext(Dispatchers.IO) {
+        val text = small.newCall(Request.Builder().url(LATEST).cacheControl(CacheControl.FORCE_NETWORK).build()).execute().use { response ->
             if (response.code == 404) return@withContext null
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
             response.body.string()
         }
         val info = WireJson.decodeFromString(AppBuild.serializer(), text)
-        info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server) }?.available()
+        info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server, outdated) }?.available()
     }
 
     /** Заметки [count] последних релизов (3.93.0), новые первыми; GitHub не ответил - ошибка. */

@@ -3437,6 +3437,7 @@
   "update.version": "Версия {0} (сборка {1})",
   "update.up_to_date": "Установлена последняя версия",
   "update.found": "Доступна {0}",
+  "update.after_fight": "Обновление {0} установится после боя",
   "update.checking": "Проверка…",
   "tester.window": "Окно тестирования",
   "account.tester": "тестировщик",

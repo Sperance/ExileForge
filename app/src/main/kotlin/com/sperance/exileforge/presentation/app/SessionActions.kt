@@ -414,7 +414,7 @@ class SessionActions(
     /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
     val newerServer = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    /** Сервер ответил ошибкой (4.3.1): проверка обновлений в очередь с порогом. */
+    /** Сервер ответил ошибкой (4.3.1) или не ответил вовсе: проверка обновлений с порогом. */
     val serverFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /**
@@ -441,11 +441,11 @@ class SessionActions(
         })
         created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
-        // Любая ошибка ответа (4.3.1) - повод проверить сборку; 426 сервера - сразу, как сервер новее при входе.
+        // Любая ошибка ответа (4.3.1) и обрыв без ответа - повод проверить сборку; 426 сервера - сразу, как сервер новее при входе.
         created.onServerError = { alarm ->
             when (alarm) {
                 ServerAlarm.OUTDATED -> newerServer.tryEmit(Unit)
-                ServerAlarm.FAILED -> serverFailed.tryEmit(Unit)
+                ServerAlarm.FAILED, ServerAlarm.UNREACHED -> serverFailed.tryEmit(Unit)
             }
         }
         // Отчёты подписаны устройством, версией и активным героем (3.88.0); заблокированный герой уводит к выбору (3.88.0).

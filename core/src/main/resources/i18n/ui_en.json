@@ -3437,6 +3437,7 @@
   "update.version": "Version {0} (build {1})",
   "update.up_to_date": "The latest version is installed",
   "update.found": "{0} is available",
+  "update.after_fight": "Update {0} installs after the fight",
   "update.checking": "Checking…",
   "tester.window": "Testing window",
   "account.tester": "tester",

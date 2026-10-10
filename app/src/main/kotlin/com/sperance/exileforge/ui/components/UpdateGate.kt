@@ -47,7 +47,8 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
  * Окно запуска и обновлений (3.86.0). Пока сервер не ответил - несколько строк: версия и данные устройства. Ответил -
  * окна нет ([StartGate]), догрузка видна на экранах. Сервер молчит - так и написано, повтор сам через 10 с, «Повторить
  * сейчас» и «Играть без связи». Любая найденная сборка закрывает игру до установки. Ни одно окно запуска и обновления не
- * закрывается «назад» или касанием мимо. [busy] - идёт поход или испытание: обновление ждёт его конца.
+ * закрывается «назад» или касанием мимо. [busy] - идёт поход или испытание: найденное обновление ждёт его конца, а пока
+ * о нём говорит плашка сверху ([UpdateHint]), не мешая бою.
  */
 @Composable fun UpdateGate(
     updates: UpdateViewModel,
@@ -61,7 +62,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     val s by updates.state.collectAsState()
     val reach = window.reach
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    // Back in the app (3.76.0): the build is asked again; с 3.90.3 поход и испытание откладывает сама модель - до их конца.
+    // Back in the app (3.76.0): the build is asked again at once, в походе тоже; сверку ресурсов модель откладывает до его конца.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.resumed() }
     // Back from the settings or the system installer: the permission is asked again, a closed installer stops waiting.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updates.foreground() }
@@ -99,6 +100,21 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
         }
 
         s.askSources -> Locked { SourcesBody() }
+
+        // Сборка найдена в походе или испытании: игру она закроет по их концу, а пока - плашка сверху, ничего не держит
+        busy -> s.update?.let { UpdateHint(it.info.versionName) }
+    }
+}
+
+/** Плашка сверху над боем: найдено обновление, оно встанет по концу похода или испытания; касания идут мимо неё. */
+@Composable private fun UpdateHint(version: String) {
+    Box(Modifier.fillMaxSize().statusBarsPadding().padding(top = 56.dp), contentAlignment = Alignment.TopCenter) {
+        Text(
+            ui("update.after_fight", version),
+            color = GoldBright,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.background(PanelRaised.copy(alpha = .92f), MaterialTheme.shapes.small).padding(horizontal = 12.dp, vertical = 6.dp),
+        )
     }
 }
 

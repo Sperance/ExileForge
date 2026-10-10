@@ -29,16 +29,26 @@ import kotlinx.coroutines.flow.update
 enum class ModerationTab { ALL, BANNED, TRASH, JOURNAL }
 
 /**
+ * Порядок и отбор списка модерации (макет «Фильтры модерации», вариант B): [sort] - порядок (3.94.0), [fate] - дар (4.6.3);
+ * [active] - сколько из них не обычные, число на значке кнопки фильтров. Новый отбор - поле здесь и строка в [active].
+ */
+data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY, val fate: ModerationFate = ModerationFate.All) {
+    val active: Int get() = listOf(sort != DEFAULT.sort, fate != DEFAULT.fate).count { it }
+
+    companion object {
+        val DEFAULT = ModerationFilters()
+    }
+}
+
+/**
  * Окно модерации (3.88.5, вариант B «Досье-карточки»): раздел, поиск, страница строк или журнала; открытое досье - поверх
  * списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
  */
 data class ModerationState(
     val tab: ModerationTab = ModerationTab.ALL,
     val query: String = "",
-    /** Порядок списка (3.94.0). */
-    val sort: ModerationSort = ModerationSort.ACTIVITY,
-    /** Отбор по Предначертанию (4.6.3). */
-    val fate: ModerationFate = ModerationFate.All,
+    /** Порядок списка (3.94.0) и отбор по Предначертанию (4.6.3). */
+    val filters: ModerationFilters = ModerationFilters.DEFAULT,
     val page: ModerationPage = ModerationPage(),
     val journal: List<ModerationEntryView> = emptyList(),
     val journalPage: Int = 0,
@@ -69,15 +79,9 @@ class ModerationViewModel(
 
     fun search(query: String) = mutable.update { it.copy(query = query) }
 
-    /** Новый порядок списка (3.94.0): с первой страницы. */
-    fun sort(sort: ModerationSort) {
-        mutable.update { it.copy(sort = sort) }
-        load(0)
-    }
-
-    /** Новый отбор по Предначертанию (4.6.3): с первой страницы. */
-    fun fate(fate: ModerationFate) {
-        mutable.update { it.copy(fate = fate) }
+    /** Новые порядок и отбор списка (лист «Фильтры»): с первой страницы, одним запросом. */
+    fun filter(filters: ModerationFilters) {
+        mutable.update { it.copy(filters = filters) }
         load(0)
     }
 
@@ -95,7 +99,7 @@ class ModerationViewModel(
             ModerationTab.TRASH -> ModerationSegment.TRASH
             else -> ModerationSegment.ALL
         }
-        val answer = api.rows(state.query, segment, page.coerceAtLeast(0), state.sort, state.fate)
+        val answer = api.rows(state.query, segment, page.coerceAtLeast(0), state.filters.sort, state.filters.fate)
         mutable.update { it.copy(page = answer) }
     }
 

@@ -4,6 +4,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -14,19 +17,23 @@ import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Smartphone
+import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
@@ -50,6 +57,7 @@ import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.core.network.TesterAccount
+import com.sperance.exileforge.presentation.admin.ModerationFilters
 import com.sperance.exileforge.presentation.admin.ModerationTab
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
@@ -73,6 +81,7 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     var creating by remember { mutableStateOf(false) }
+    var filtering by remember { mutableStateOf(false) }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         OutlinedTextField(
             state.query,
@@ -84,6 +93,10 @@ import org.koin.compose.viewmodel.koinViewModel
             keyboardActions = KeyboardActions(onSearch = { vm.load(0) }),
             modifier = Modifier.weight(1f),
         )
+        // Порядок и отбор по дару - за кнопкой с числом активных (макет «Фильтры модерации», вариант B); у корзины их нет.
+        if (state.tab != ModerationTab.TRASH && state.tab != ModerationTab.JOURNAL) {
+            FilterButton(state.filters.active, enabled = !account.busy) { filtering = true }
+        }
         // «+» администратора (3.88.7): новый аккаунт тестировщика.
         if (account.isAdmin) {
             ForgeButton(onClick = { creating = true }, enabled = !account.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
@@ -111,14 +124,15 @@ import org.koin.compose.viewmodel.koinViewModel
         return
     }
     val page = state.page
-    // Порядок (3.94.0) и отбор по дару (4.6.3): корзина идёт по номеру удаления, у неё ни того, ни другого
-    if (state.tab != ModerationTab.TRASH) {
-        Chips {
-            ModerationSort.entries.forEach { sort -> Chip(ui("moderation.sort.${sort.name}"), state.sort == sort) { if (!account.busy) vm.sort(sort) } }
+    if (filtering) {
+        FiltersSheet(account, state.filters, onDismiss = { filtering = false }) {
+            filtering = false
+            vm.filter(it)
         }
-        FateChips(account, state.fate) { if (!account.busy) vm.fate(it) }
     }
-    MutedText(ui("moderation.total", page.total))
+    // Над списком - что отобрано и сколько найдено: «По уровню · ✦ Кровь за кровь - Найдено: 27». Корзина идёт по номеру удаления
+    val chosen = if (state.tab == ModerationTab.TRASH) emptyList() else filterLabels(account, state.filters)
+    MutedText((chosen + ui("moderation.total", page.total)).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
     if (page.rows.isEmpty()) MutedText(ui("moderation.none"))
     page.rows.forEach { row ->
         if (state.tab == ModerationTab.TRASH) {
@@ -131,20 +145,119 @@ import org.koin.compose.viewmodel.koinViewModel
     Pager(page.page, pages, account.busy, vm::load)
 }
 
-/**
- * Отбор по Предначертанию (4.6.3): «Все дары», «Без дара» и дары контента по имени; выбранный - [selected], смена - [onSelect].
- */
-@Composable private fun FateChips(account: AccountUi, selected: ModerationFate, onSelect: (ModerationFate) -> Unit) {
-    val fates = account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title }
-    Chips {
-        Chip(ui("moderation.fate.all"), selected == ModerationFate.All) { onSelect(ModerationFate.All) }
-        Chip(ui("moderation.fate.none"), selected == ModerationFate.Fateless) { onSelect(ModerationFate.Fateless) }
-        fates.forEach { card ->
-            val filter = ModerationFate.Chosen(card.code)
-            Chip(card.title, selected == filter) { onSelect(filter) }
+/** Кнопка фильтров у поиска: значок отбора, на нём - число активных фильтров [active] (без него - отбор обычный). */
+@Composable private fun FilterButton(active: Int, enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        Modifier.size(48.dp).border(1.dp, if (active > 0) Gold.copy(alpha = .6f) else Bronze, shape).clip(shape)
+            .clickable(enabled = enabled, onClickLabel = ui("moderation.filters"), onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(Icons.Outlined.Tune, ui("moderation.filters"), tint = if (active > 0) GoldBright else Muted, modifier = Modifier.size(22.dp))
+        if (active > 0) {
+            Text(
+                active.toString(),
+                color = Ink,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.align(Alignment.TopEnd).padding(3.dp).widthIn(min = 16.dp).background(Gold, RoundedCornerShape(8.dp)).padding(horizontal = 4.dp),
+            )
         }
     }
 }
+
+/** Подписи активных фильтров над списком: порядок, если не обычный, и дар, если выбран. */
+private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<String> = buildList {
+    if (filters.sort != ModerationFilters.DEFAULT.sort) add(ui("moderation.sort.${filters.sort.name}"))
+    when (val fate = filters.fate) {
+        ModerationFate.All -> Unit
+        ModerationFate.Fateless -> add(ui("moderation.fate.none"))
+        is ModerationFate.Chosen -> add("✦ " + (account.index?.fates?.all?.firstOrNull { it.code == fate.code }?.let(FateCard::of)?.title ?: fate.code))
+    }
+}
+
+/**
+ * Лист «Фильтры» (макет «Фильтры модерации», вариант B): «Сбросить» в заголовке, порядок сегментами, дары - поиск и
+ * сетка в два столбца («Все дары», «Без дара», дары контента по имени). Выбор - черновик листа: в список он уходит по
+ * «Показать» ([onApply]), «Сбросить» возвращает обычный отбор.
+ */
+@Composable private fun FiltersSheet(account: AccountUi, current: ModerationFilters, onDismiss: () -> Unit, onApply: (ModerationFilters) -> Unit) {
+    var draft by remember(current) { mutableStateOf(current) }
+    var query by remember { mutableStateOf("") }
+    val fates = remember(account.index) { account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title } }
+    val options = remember(fates, query) {
+        val found = fates.filter { query.isBlank() || it.title.contains(query.trim(), ignoreCase = true) }.map { it.title to ModerationFate.Chosen(it.code) }
+        val fixed = listOf(ui("moderation.fate.all") to ModerationFate.All, ui("moderation.fate.none") to ModerationFate.Fateless)
+        (if (query.isBlank()) fixed else emptyList()) + found
+    }
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(ui("moderation.filters"), color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                ForgeTextButton(onClick = { draft = ModerationFilters.DEFAULT }, enabled = draft != ModerationFilters.DEFAULT) {
+                    Text(ui("moderation.filters.reset"), color = Gold)
+                }
+            }
+            SheetLabel(ui("moderation.filters.sort"))
+            PillTabs(
+                ModerationSort.entries.map { ui("moderation.sort_short.${it.name}") },
+                draft.sort.ordinal,
+                { draft = draft.copy(sort = ModerationSort.entries[it]) },
+                segmented = true,
+            )
+            SheetLabel(ui("moderation.fate.title"))
+            OutlinedTextField(
+                query,
+                { query = it },
+                placeholder = { Text(ui("moderation.filters.fate_search")) },
+                leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            LazyVerticalGrid(
+                GridCells.Fixed(2),
+                Modifier.fillMaxWidth().heightIn(max = FATE_GRID_HEIGHT),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(options, key = { it.second.param.ifEmpty { "*" } }) { (title, fate) ->
+                    FateOption(title, mark = fate is ModerationFate.Chosen, selected = draft.fate == fate) { draft = draft.copy(fate = fate) }
+                }
+            }
+            if (options.isEmpty()) MutedText(ui("moderation.none"))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ForgeOutlinedButton(onClick = { onApply(ModerationFilters.DEFAULT) }, modifier = Modifier.weight(1f)) { Text(ui("moderation.filters.reset")) }
+                ForgeButton(onClick = { onApply(draft) }, modifier = Modifier.weight(2f)) { Text(ui("common.show")) }
+            }
+        }
+    }
+}
+
+/** Подпись раздела листа фильтров: мелко, заглавными, приглушённо. */
+@Composable private fun SheetLabel(text: String) = Text(text.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
+
+/** Плитка дара в сетке листа фильтров: выбранная - в нити и на подложке `Gold`, дар контента - со знаком ✦. */
+@Composable private fun FateOption(title: String, mark: Boolean, selected: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Text(
+        if (mark) "✦ $title" else title,
+        color = when {
+            selected -> Vital
+            mark -> Parchment
+            else -> Muted
+        },
+        style = MaterialTheme.typography.labelMedium,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth().height(32.dp).clip(shape).background(if (selected) Gold.copy(alpha = .14f) else Panel)
+            .border(1.dp, if (selected) Gold.copy(alpha = .6f) else Bronze, shape).clickable(onClick = onClick)
+            .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp),
+    )
+}
+
+/** Наибольшая высота сетки даров в листе фильтров: дальше - прокрутка внутри сетки. */
+private val FATE_GRID_HEIGHT = 228.dp
 
 @Composable private fun Pager(page: Int, pages: Int, busy: Boolean, onPage: (Int) -> Unit) {
     if (pages <= 1 && page == 0) return

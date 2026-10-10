@@ -175,6 +175,10 @@ class UiStringsTest {
                 add("moderation.lifted.${it.name}")
             }
             com.sperance.exileforge.core.network.ModerationAction.entries.forEach { add("moderation.action.${it.name}") }
+            com.sperance.exileforge.core.network.ModerationSort.entries.forEach {
+                add("moderation.sort.${it.name}")
+                add("moderation.sort_short.${it.name}")
+            }
             com.sperance.exileforge.rules.content.GuildRole.entries.forEach { add("guild.role.${it.name}") }
             // Качество сундука Скверны (4.0.0): от обычного до редкого
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }

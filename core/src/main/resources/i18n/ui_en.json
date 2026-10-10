@@ -1253,6 +1253,7 @@
   "tree.jewel_unique_taken": "Already socketed: one of a kind per hero",
   "tree.jewel_out": "Take the jewel out",
   "tree.no_bonuses": "No bonuses",
+  "tree.changes": "STAT CHANGES",
   "tree.no_hero": "The hero is not loaded",
   "tree.no_hero_hint": "Refresh the hero on the Hero tab.",
   "tree.no_jewels": "No free jewels.",

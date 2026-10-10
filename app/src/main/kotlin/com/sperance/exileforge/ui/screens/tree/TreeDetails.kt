@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.display.Comparison
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.itemTitle
@@ -60,6 +61,7 @@ import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.allocationDelta
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
@@ -79,6 +81,8 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.PI
 import kotlin.math.atan2
@@ -189,6 +193,8 @@ import kotlin.math.sin
         node.lines.forEach { line -> ModifierLine(index, line) }
     }
 
+    if (!allocated) AllocationChange(game, index, node, picked.takeIf { choosing })
+
     // The game's words the lines use (3.81.0): «Всплеск магии», a charge, an ailment — each with its rule on a tap.
     val terms = remember(node.code, index) { Term.ofLines(index, node.lines + node.options.flatten()) }
     TermsBlock(terms)
@@ -231,6 +237,19 @@ import kotlin.math.sin
         }
     }
     if (node.type == SkillNodeType.START) MutedText(ui("tree.start_note"))
+}
+
+/**
+ * Что станет с листом героя, если взять узел (макет «Изменения характеристик», вариант B): сравнение «было → стало» тем же
+ * расчётом, что сервер, сложенное вне главного потока, без запроса. У узла с выбором - по выбранному варианту [choice],
+ * пока вариант не выбран - ничего; гнездо самоцвета само ничего не даёт.
+ */
+@Composable private fun AllocationChange(game: GameUi, index: ContentIndex, node: TreeNode, choice: Int?) {
+    if (node.type == SkillNodeType.JEWEL_SOCKET || (node.options.isNotEmpty() && choice == null)) return
+    val change by produceState<Comparison?>(null, node.code, choice, game.hero, index) {
+        value = withContext(Dispatchers.Default) { Comparison.of(game.allocationDelta(node.code, choice)) }
+    }
+    change?.let { StatComparison(ui("tree.changes"), it) }
 }
 
 /** Ряд команд узла: та, что его берёт. */

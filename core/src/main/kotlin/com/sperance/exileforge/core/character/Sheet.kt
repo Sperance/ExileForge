@@ -129,11 +129,33 @@ object Sheets {
         fate: String? = null,
     ): List<StatDelta> {
         val next = worn(index, item, level, heroClass, tree, items, pets, place, laws, fate) ?: return emptyList()
-        // The counts of what is worn (empty slots, uniques…) are the powers' reading of the sheet, not a figure to compare.
-        return (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
-            .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
-            .filter { abs(it.change) >= 0.05 }
+        return changes(index, before, next)
     }
+
+    /**
+     * Что изменит в листе взятие узла дерева [node] (с выбранным вариантом у узла с выбором) - тем же расчётом, что сервер,
+     * без запроса: лист с деревом героя и этим узлом против [before]. Только сдвинутые характеристики, как у [wearing].
+     */
+    fun allocating(
+        index: ContentIndex,
+        node: TakenNode,
+        level: Int,
+        heroClass: String,
+        tree: List<TakenNode>,
+        items: List<ItemInstance>,
+        before: Map<String, Double>,
+        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
+        laws: List<String> = emptyList(),
+        fate: String? = null,
+    ): List<StatDelta> = changes(index, before, calculate(index, level, heroClass, tree + node, items, pets, laws, fate).stats)
+
+    /**
+     * Сдвинутые характеристики листа [next] против [before] в порядке подсчёта. Счётчики надетого (пустые места,
+     * уникалки…) - чтение листа силами, а не число для сравнения.
+     */
+    private fun changes(index: ContentIndex, before: Map<String, Double>, next: Map<String, Double>): List<StatDelta> = (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
+        .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
+        .filter { abs(it.change) >= 0.05 }
 
     /**
      * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на место [place] (3.90.3) или, без него,

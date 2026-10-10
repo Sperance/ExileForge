@@ -17,6 +17,7 @@ import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 
@@ -35,6 +36,17 @@ internal object HeroLens {
         index ?: return emptyList()
         hero ?: return emptyList()
         return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place, hero.info.laws, hero.info.fate)
+    }
+
+    /**
+     * Что изменит в листе взятие узла [code] дерева с вариантом [choice] (у узла с выбором); пусто - героя или контента нет
+     * или узел уже взят. Считается клиентом без запроса - вызывать вне главного потока.
+     */
+    fun allocationDelta(index: ContentIndex?, hero: HeroView?, code: String, choice: Int?): List<StatDelta> {
+        index ?: return emptyList()
+        hero ?: return emptyList()
+        if (hero.tree.any { it.code == code }) return emptyList()
+        return Sheets.allocating(index, TakenNode(code, choice), hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, hero.info.laws, hero.info.fate)
     }
 
     /** Память вердиктов (3.89.0): одна на приложение, сбрасывается сама с новым героем или контентом. */
@@ -120,6 +132,7 @@ internal object HeroLens {
 fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, hero, item)
 fun GameUi.wearDelta(item: ItemInstance, place: Slot? = null): List<StatDelta> = HeroLens.wearDelta(index, hero, item, place)
+fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)
 fun GameUi.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)

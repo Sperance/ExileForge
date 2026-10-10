@@ -35,7 +35,10 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.level
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity
@@ -117,7 +120,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     }
 }
 
-/** Входное меню «Врата»: портал, неделя и лига, стражи силуэтами, мутаторы, счёт, вход и схема недели в тумане. */
+/** Входное меню «Врата»: портал, неделя и уровень Разлома (закреплённый первым забегом недели), стражи силуэтами, мутаторы, счёт, вход и схема недели в тумане. */
 @Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine) {
     val hero = game.hero ?: return
     val idle = !game.busy
@@ -132,10 +135,11 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             Text(ui("rift.title").uppercase(), color = RiftColors.Rift, style = relicName(19), modifier = Modifier.align(Alignment.Center))
             ForgeTextButton(onClick = model::closeRift, modifier = Modifier.align(Alignment.CenterEnd)) { Text(ui("rift.close"), color = RiftColors.Muted) }
         }
-        val league = board.league
+        val open = game.unlocked(Feature.RIFT)
+        val riftLevel = board.progress.level.takeIf { it > 0 } ?: hero.level
         val left = ((board.endsAt - System.currentTimeMillis()) / 1000.0).coerceAtLeast(0.0)
         Text(
-            listOf(ui("rift.ends", clock(left)), league?.let { ui("rift.league", rules.leagues[it]) } ?: ui("rift.league_none", rules.leagues.first())).joinToString(" · "),
+            listOf(ui("rift.ends", clock(left)), ui("rift.level", riftLevel)).joinToString(" · "),
             color = RiftColors.Muted,
             style = MaterialTheme.typography.bodySmall,
             textAlign = TextAlign.Center,
@@ -159,10 +163,10 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             Text(ui("rift.free", board.free, rules.free), color = RiftColors.Text, style = MaterialTheme.typography.bodySmall)
             if (board.progress.best > 0) Text(ui("rift.best", board.progress.best), color = RiftColors.Hot, style = MaterialTheme.typography.bodySmall)
         }
-        // Причина у неактивной кнопки: уровень лиги, ключ сверх бесплатных
+        // Причина у неактивной кнопки: уровень входа (`unlocks`), ключ сверх бесплатных
         val keys = hero.bag[RiftRules.KEY] ?: 0L
         val reason = when {
-            league == null -> ui("rift.league_none", rules.leagues.first())
+            !open -> ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(game.index?.rules))
             board.free <= 0 && keys < 1 -> ui("rift.start_locked")
             else -> null
         }

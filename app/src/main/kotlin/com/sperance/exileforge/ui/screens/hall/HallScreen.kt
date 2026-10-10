@@ -62,8 +62,6 @@ fun HallScreen() {
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             CollapsibleHeader { ScreenHeader(ui("hall.title"), ui("hall.subtitle"), ForgeGlyphs.Gem) }
-            // Таблица с лигами (4.4.x): лига героя сама, выбора нет - лишь подпись, какая
-            leagueLine(index, pick, hall.table)?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
         }
         if (index == null || pick == null) {
             MutedText(ui("common.loading"), Modifier.padding(16.dp))
@@ -111,13 +109,6 @@ private val HallBoard.tab: StoneTab
         HallBoard.GUILD -> StoneTab(ui("hall.board.GUILD"), ForgeGlyphs.Banner, ModeHue.Guilds)
         HallBoard.PROFESSION -> StoneTab(ui("hall.board.PROFESSION"), ForgeGlyphs.Anvil, ModeHue.Professions)
     }
-
-/** «Лига: X» таблицы с лигами ([HallBoard.leagues]) - лига героя, что назвал ответ; у прочих таблиц - ничего. */
-private fun leagueLine(index: ContentIndex?, pick: HallPick?, table: HallTable?): String? {
-    if (index == null || pick == null || !pick.board.leagues || table == null || table.board != pick.board) return null
-    val level = index.campaign.trials?.rift?.leagues?.getOrNull(table.league) ?: return null
-    return ui("hall.league", level)
-}
 
 /** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии. */
 private fun HallBoard.measure(value: Long): String = when (this) {

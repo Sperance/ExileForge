@@ -154,7 +154,6 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 val opens = vm.guildOpens(card)
                 ReferenceRow(ui("player.guild"), ui("player.guild_value", guild.tag, ui("guild.role.${guild.role.name}")), Parchment, onClick = if (opens) ({ vm.openGuild(card) }) else null)
             }
-            leagueLevel(game, card.league)?.let { ReferenceRow(ui("player.league"), ui("rift.league", it), Parchment) }
             ReferenceRow(ui("player.online"), presenceText(card.online, card.lastSeenAt), Presence.of(card.online, card.lastSeenAt).color.takeIf { card.online } ?: Parchment)
         }
     }
@@ -230,6 +229,3 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
         }
     }
 }
-
-/** Нижняя граница лиги Разлома [league] уровнем; таблицы лиг нет - null. */
-internal fun leagueLevel(game: GameUi, league: Int): Int? = game.index?.campaign?.trials?.rift?.leagues?.getOrNull(league)

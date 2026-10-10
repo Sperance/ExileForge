@@ -24,7 +24,10 @@ import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
+import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.level
+import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.RushPlan
@@ -49,7 +52,7 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * «Испытания» (3.49.0; 4.0.0 - страница «Похода», макет «Скрижали»): ключи под рукой, незавершённое испытание и три режима
  * плитами [TrialMode] - Разлом недели, Башня и Босс-раш; плита раскрывается касанием, внутри - вход и подробности.
- * Тестировщику (4.0.0) замки прогресса не мешают: лига Разлома, зачистка региона и ступень раша открыты.
+ * Тестировщику (4.0.0) замки прогресса не мешают: вход в Разлом, зачистка региона и ступень раша открыты.
  */
 @Composable fun TrialsBoard(game: GameUi, vm: ExpeditionViewModel, modifier: Modifier = Modifier) {
     val index = game.index ?: return
@@ -81,9 +84,9 @@ import org.koin.compose.viewmodel.koinViewModel
             val left = rift.board?.free
             TrialModeCard(TrialMode.RIFT, ui("trials.mode_rift_note"), left?.let { ui("trials.chip_free", it, riftRules.free) }, opened == TrialMode.RIFT, 0f, { toggle(TrialMode.RIFT) }) {
                 MutedText(ui("rift.hint", riftRules.acts, riftRules.layout.rows, riftRules.free))
-                val league = riftRules.league(hero.level) ?: 0.takeIf { free }
-                ForgeButton(onClick = vm::openRift, enabled = idle && league != null, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.open")) }
-                if (league == null) Text(ui("rift.league_none", riftRules.leagues.first()), color = LifeRed, style = MaterialTheme.typography.labelSmall)
+                val open = game.unlocked(Feature.RIFT)
+                ForgeButton(onClick = vm::openRift, enabled = idle && open, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.open")) }
+                if (!open) Text(ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(index.rules)), color = LifeRed, style = MaterialTheme.typography.labelSmall)
             }
         }
         val tower = rules.tower

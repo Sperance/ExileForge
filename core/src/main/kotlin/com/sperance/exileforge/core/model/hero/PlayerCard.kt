@@ -40,7 +40,6 @@ data class CardRights(val mail: Boolean = false, val invite: Boolean = false, va
  * Карточка игрока (сервер 4.5.1, `GET hero/card`): открытый профиль героя глазами героя смотрящего, на его игровом сервере.
  *
  * @property title код титула летописи; пусто - без титула
- * @property league номер лиги Разлома по уровню героя (граница - `rift.leagues`)
  * @property online последняя команда героя свежая; [lastSeenAt] - её время (мс эпохи, 0 - неизвестно)
  * @property lots сколько лотов героя на витрине аукциона
  * @property fate Предначертание аккаунта героя (4.6.0); null - аккаунт его ещё не выбрал
@@ -52,7 +51,6 @@ data class PlayerCard(
     val heroClass: String = "",
     val level: Int = 1,
     val title: String = "",
-    val league: Int = 0,
     val guild: CardGuild? = null,
     val online: Boolean = false,
     val lastSeenAt: Long = 0,

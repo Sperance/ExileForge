@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.FilterChip
@@ -31,20 +30,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
-import com.sperance.exileforge.core.model.guild.GuildMemberCraft
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.GuildRules
@@ -54,17 +48,14 @@ import com.sperance.exileforge.ui.components.GuildRoleMark
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PresenceDot
 import com.sperance.exileforge.ui.components.inputs
-import com.sperance.exileforge.ui.components.leagueLevel
 import com.sperance.exileforge.ui.components.ring
 import com.sperance.exileforge.ui.components.seenAgoText
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink
-import com.sperance.exileforge.ui.theme.ModeHue
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
 
@@ -227,51 +218,15 @@ private val RosterColumn.width: Dp get() = if (this == RosterColumn.LEVEL) 36.dp
 }
 
 /**
- * Значки под именем: лига Разлома, метка дара, профессия; у себя - сколько вклада внесено из суточного потолка, у прочих не в
+ * Значки под именем: метка дара; у себя - сколько вклада внесено из суточного потолка, у прочих не в
  * сети - «был N назад». Нет данных - нет и значка.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MemberMarks(game: GameUi, member: GuildMember, isMe: Boolean) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        leagueLevel(game, member.league)?.let { LeagueTag(it) }
         member.fate?.let { FateMark(it) }
-        member.craft?.let { CraftTag(it) }
         presenceTail(member, isMe)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-    }
-}
-
-/** Плашка лиги Разлома «Р 70+» - зелёным Разлома. */
-@Composable private fun LeagueTag(level: Int) {
-    val shape = RoundedCornerShape(6.dp)
-    Text(
-        ui("guild.league_short", level),
-        color = ModeHue.Rift,
-        style = MaterialTheme.typography.labelSmall,
-        maxLines = 1,
-        modifier = Modifier.border(1.dp, ModeHue.Rift.copy(alpha = .35f), shape).padding(horizontal = 4.dp),
-    )
-}
-
-/** Профессия с уровнем: молот, имя и уровень ярче; идёт работа - цветом профессий и «сейчас». */
-@Composable private fun CraftTag(craft: GuildMemberCraft) {
-    val tint = if (craft.working) ModeHue.Professions else Muted
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        Icon(ForgeGlyphs.Anvil, null, tint = tint, modifier = Modifier.size(12.dp))
-        Text(
-            buildAnnotatedString {
-                append(professionTitle(craft.profession))
-                append(' ')
-                withStyle(SpanStyle(color = if (craft.working) ModeHue.Professions else Parchment, fontWeight = FontWeight.Bold)) { append(craft.level.toString()) }
-                if (craft.working) {
-                    append(" · ")
-                    append(ui("guild.craft_now"))
-                }
-            },
-            color = tint,
-            style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
-        )
     }
 }
 

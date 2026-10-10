@@ -49,19 +49,9 @@ import kotlinx.serialization.Serializable
     val online: Boolean = false,
     /** Код титула летописи (4.6.3); пусто - без титула. */
     val title: String = "",
-    /** Лига Разлома по уровню героя (4.6.3) - индекс границы `trials.rift.leagues`, как на карточке игрока. */
-    val league: Int = 0,
     /** Предначертание аккаунта героя (4.6.3); null - не выбрано. */
     val fate: FateCard? = null,
-    /** Профессия строки состава (4.6.3); null - герой ещё ни в одной не работал. */
-    val craft: GuildMemberCraft? = null,
 )
-
-/**
- * Профессия участника в строке состава (4.6.3, сервер `GuildMemberCraft.of`): у работающего - профессия текущей работы
- * ([working]), у прочих - лучшая по уровню; [level] - уровень в ней.
- */
-@Serializable data class GuildMemberCraft(val profession: String, val level: Int = 1, val working: Boolean = false)
 
 /** A hero asking to join an APPLY guild; only the leader and the officers are shown them. */
 @Serializable data class GuildApplicant(val heroId: String, val name: String = "", val heroClass: String = "", val level: Int = 1, val at: Long = 0)

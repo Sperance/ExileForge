@@ -19,6 +19,9 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
     PETS("progress.pets", tab = TAB_PETS),
     GUILD("guild.title", building = Building.GUILD),
 
+    /** Разлом недели (4.6.4): своего входа нет - он внутри «Испытаний»; кнопка входа на доске испытаний и у Врат. */
+    RIFT("rift.title"),
+
     /** Письма героям (4.6.3): своего входа нет - пишут из карточки игрока; ящик и ответ на рассылку гильдии открыты сразу. */
     MAIL("mail.unlock"),
     ;

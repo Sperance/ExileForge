@@ -37,15 +37,17 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Герой одной строкой (3.90.3, макет «Тайник» В): портрет, «имя · ур.», класс мелко, [trailing] справа (по умолчанию -
- * золото) и под ними полоса опыта с подписью «42% · 1 240 / 2 950» в той же строке (3.94.0), без нажатия. С 3.90.5 это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
- * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - золото, ремесло, связь, конверт почты (4.3.0) и меню.
+ * Герой одной строкой (3.90.3, макет «Тайник» В): портрет, «имя · ур.», класс мелко, [trailing] справа и под ними полоса
+ * опыта (3.94.0), без нажатия. С 3.90.5 это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
+ * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - связь, конверт почты (4.3.0) и меню. Золото (макет
+ * «Золото в баннере», вариант A) - справа под полосой опыта, в строке её подписи: длинное имя сокращается многоточием и не
+ * выталкивает ни значки, ни число золота.
  */
 @Composable fun HeroLine(
     hero: HeroHeaderState,
     modifier: Modifier = Modifier,
     onPortrait: (() -> Unit)? = null,
-    trailing: @Composable RowScope.() -> Unit = { GoldPrice(hero.money) },
+    trailing: @Composable RowScope.() -> Unit = {},
 ) {
     val xp = experienceOf(hero.classes, hero.level, hero.experience)
     Column(
@@ -71,14 +73,15 @@ import com.sperance.exileforge.ui.theme.*
             }
             trailing()
         }
-        // Опыт (3.94.0): полоса и подпись одной строкой, всегда на виду - шапка игры не сворачивается
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (hero.classes != null) {
-                Box(Modifier.weight(1f).height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp)).semantics { contentDescription = xp.label }) {
-                    Box(Modifier.fillMaxWidth(xp.fraction).fillMaxHeight().background(Brush.horizontalGradient(listOf(Gold, GoldBright)), RoundedCornerShape(2.dp)))
-                }
+        // Опыт (3.94.0): полоса во всю ширину, под ней подпись и золото справа - шапка игры не сворачивается
+        if (hero.classes != null) {
+            Box(Modifier.fillMaxWidth().height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp)).semantics { contentDescription = xp.label }) {
+                Box(Modifier.fillMaxWidth(xp.fraction).fillMaxHeight().background(Brush.horizontalGradient(listOf(Gold, GoldBright)), RoundedCornerShape(2.dp)))
             }
-            Text(xp.label, color = Muted, fontSize = 10.sp, maxLines = 1, softWrap = false)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(xp.label, color = Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            GoldPrice(hero.money)
         }
     }
 }

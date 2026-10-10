@@ -37,7 +37,6 @@ import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.HeroLine
@@ -68,7 +67,6 @@ import org.koin.compose.viewmodel.koinViewModel
     val hero = rememberHeroHeader(game)?.takeIf { route.tab == TAB_HERO }
     if (hero != null) {
         HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
-            GoldPrice(hero.money)
             LinkBadge(game.link, admin = game.isAdmin, onRetry = shell::retryLink, onReconnect = shell::reconnectLink)
             MailBadge(feedback.unread)
             BannerMenu(settingsOpen = false, onBug = onBug, onSettings = shell::openSettings)

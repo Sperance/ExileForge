@@ -231,7 +231,8 @@ private val RosterColumn.width: Dp get() = if (this == RosterColumn.LEVEL) 36.dp
  * сети - «был N назад». Нет данных - нет и значка.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun MemberMarks(game: GameUi, member: GuildMember, isMe: Boolean) {
+@Composable
+private fun MemberMarks(game: GameUi, member: GuildMember, isMe: Boolean) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         leagueLevel(game, member.league)?.let { LeagueTag(it) }
         member.fate?.let { FateMark(it) }

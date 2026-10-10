@@ -141,4 +141,3 @@ fun SuggestionsSheet(onDismiss: () -> Unit) {
         Text(count.toString(), color = if (chosen) tint else Parchment, style = MaterialTheme.typography.labelLarge)
     }
 }
-

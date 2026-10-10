@@ -74,7 +74,7 @@ private fun OrbTile(on: Boolean, enabled: Boolean, onClick: () -> Unit, art: @Co
     Box(
         Modifier.size(44.dp).clip(tile).background(if (on) Gold.copy(alpha = .18f) else PanelRaised, tile)
             .border(if (on) 2.dp else 1.dp, if (on) Gold else Color.Transparent, tile)
-            .selectable(on, enabled, Role.RadioButton, onClick).alpha(if (enabled) 1f else .55f),
+            .selectable(selected = on, enabled = enabled, role = Role.RadioButton, onClick = onClick).alpha(if (enabled) 1f else .55f),
         contentAlignment = Alignment.Center,
     ) { art() }
 }

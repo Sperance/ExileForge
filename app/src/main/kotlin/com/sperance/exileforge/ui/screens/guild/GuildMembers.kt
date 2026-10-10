@@ -9,9 +9,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.GuildText
-import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView

@@ -271,6 +271,7 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())
         NoteKind.REGEN -> ui("expedition.log_note_regen", note.value.roundToInt())
+        NoteKind.FATE -> ui("expedition.log_note_fate", locOr("fate.${note.ref}.name", note.ref))
     }
 }
 

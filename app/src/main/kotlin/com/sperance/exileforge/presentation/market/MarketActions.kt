@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.market
 
+import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.phrase
@@ -15,6 +16,7 @@ import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
+import com.sperance.exileforge.core.session.NoticeKind
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
@@ -95,6 +97,15 @@ class MarketActions(
 
     fun buyOrb(code: String) = trade(writing = true) {
         api.merchant.buyOrb(heroes.heroId, code)
+    }
+
+    /**
+     * Трофеи босса [boss] - на его уникалку (4.6.0, Предначертание «Трофейщик»): копия в тайнике, тост называет её. Отказы
+     * `FT_003`-`FT_005` - словами сервера.
+     */
+    fun tradeTrophy(boss: String) = trade(writing = true) {
+        val bought = api.merchant.trophy(heroes.heroId, boss)
+        notices.toast(ui("fate.trophy_traded", equipmentTitle(bought.item.template)), NoticeKind.LOOT)
     }
 
     fun buy(lotId: String) = trade(writing = true) {

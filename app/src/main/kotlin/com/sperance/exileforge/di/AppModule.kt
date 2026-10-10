@@ -68,6 +68,7 @@ import com.sperance.exileforge.presentation.quests.QuestActions
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.session.CharactersViewModel
+import com.sperance.exileforge.presentation.session.FateViewModel
 import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
@@ -156,6 +157,7 @@ val appModule = module {
     viewModelOf(::NoticeViewModel)
     viewModelOf(::SessionViewModel)
     viewModelOf(::CharactersViewModel)
+    viewModelOf(::FateViewModel)
     viewModelOf(::FeedbackViewModel)
     viewModelOf(::QuestViewModel)
     viewModelOf(::MarketViewModel)

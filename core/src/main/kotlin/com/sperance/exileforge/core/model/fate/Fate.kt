@@ -1,0 +1,40 @@
+package com.sperance.exileforge.core.model.fate
+
+import com.sperance.exileforge.core.i18n.locOr
+import com.sperance.exileforge.rules.content.Fate
+import com.sperance.exileforge.rules.content.FateTheme
+import kotlinx.serialization.Serializable
+
+/**
+ * Предначертание в ответе сервера (4.6.0, `FateCard`): код дара `fates.json`, его тема и ключи словаря сервера - имя [name],
+ * описание [description] и тема [themeName]. Рычаги клиент читает из своего чанка тем же резолвером правил (`FateEffects`).
+ */
+@Serializable
+data class FateCard(
+    val code: String,
+    val theme: FateTheme,
+    val name: String = "fate.$code.name",
+    val description: String = "fate.$code.description",
+    val themeName: String = "fate.theme.${theme.name}",
+) {
+    /** Имя дара на языке игрока; нет ключа - код. */
+    val title: String get() = locOr(name, code)
+
+    /** Что дар делает, словами сервера. */
+    val text: String get() = locOr(description, "")
+
+    /** Подпись темы. */
+    val themeTitle: String get() = locOr(themeName, theme.name)
+
+    companion object {
+        /** Карточка дара из контента - для дара, известного лишь кодом (герой, `UserProfile.fate`). */
+        fun of(fate: Fate) = FateCard(fate.code, fate.theme)
+    }
+}
+
+/**
+ * Предначертание аккаунта (4.6.0, `GET fate`): [chosen] - выбранный дар (тогда [offers] пусто), иначе три дара на выбор из разных
+ * тем - одни и те же при каждом чтении.
+ */
+@Serializable
+data class FateView(val chosen: FateCard? = null, val offers: List<FateCard> = emptyList())

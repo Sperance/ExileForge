@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.AtlasWindow
 import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.Expedition
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
+import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.LootEntry
@@ -255,6 +256,8 @@ class ExpeditionActions(
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
             heroSync.drawn()
             begin(id, started, toBoss)
+            // Пожиратель карт (4.6.0, Предначертание): карта входа осталась в тайнике
+            if (started.mapKept) notices.toast(ui("fate.map_kept"))
         }
     }
 
@@ -497,7 +500,9 @@ class ExpeditionActions(
         val h = hero ?: return null
         val conditions = h.skills.flasks
         val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
-        return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i, h.heroClass, flasks, h.stats, i.powers, i.rules.charges), i.stats.percent)
+        // Предначертание аккаунта (4.6.0): рычаги боя на силе листа и помощник - вторым боевым
+        val fate = FateKit.of(i, h.info.fate, h.stats, h.pets.pet(h.pets.helper))
+        return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i, h.heroClass, flasks, h.stats, i.powers, i.rules.charges, fate), i.stats.percent)
     }
 
     fun send(command: RunCommand) {

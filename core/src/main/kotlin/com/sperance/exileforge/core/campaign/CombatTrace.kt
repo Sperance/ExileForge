@@ -35,8 +35,11 @@ enum class RollKey { EVADE, BLOCK, CRIT, CRIT_LUCKY, SUPPRESS, DEFLECT, DOUBLE, 
  */
 data class FactorTrace(val key: FactorKey, val value: Double, val attacker: List<String> = emptyList(), val target: List<String> = emptyList())
 
-/** Множители удара по порядку; [SEALS] - печати Стража Врат, [LAW] - Закон Владыки Разлома (3.96.0). */
-enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, AGAINST, DOUBLE, VERSUS, DEFENCE, SHOCK, TAKEN, EASED, SEALS, LAW, TOTAL }
+/**
+ * Множители удара по порядку; [SEALS] - печати Стража Врат, [LAW] - Закон Владыки Разлома (3.96.0), [FATE] (4.6.0) - множитель
+ * Предначертания героя.
+ */
+enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, AGAINST, DOUBLE, VERSUS, FATE, DEFENCE, SHOCK, TAKEN, EASED, SEALS, LAW, TOTAL }
 
 /** One damage type of a hit: its [base], [raw] after the striker's multipliers, the [armour] and [resist] shares it lost, and what landed. */
 data class TypeTrace(val type: DamageType, val base: Double, val raw: Double, val armour: Double, val resist: Double, val penetration: Double, val dealt: Double)
@@ -150,6 +153,9 @@ enum class NoteKind {
     RECOVER_RECOUP,
     RECOVER_WASTE,
     REGEN,
+
+    /** Предначертание героя сработало (4.6.0): ref - код дара, value - число рычага, если оно есть. */
+    FATE,
     ;
 
     val recovery: Boolean get() = this in RECOVERY

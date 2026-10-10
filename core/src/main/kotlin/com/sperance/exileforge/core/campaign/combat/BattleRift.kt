@@ -41,7 +41,7 @@ internal fun Battle.riftOpen(fight: RiftFight) {
     val ambush = fight.rules.ambush
     if (ambush > 0) {
         heroFighter.nextAttack += ambush
-        allyFighter?.let { it.nextAttack += ambush }
+        pets.forEach { it.nextAttack += ambush }
     }
     val boss = riftBoss() ?: return
     if (fight.devoured > 0) {

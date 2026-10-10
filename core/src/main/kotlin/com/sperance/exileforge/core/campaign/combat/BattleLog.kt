@@ -79,13 +79,13 @@ internal fun Battle.record(
     val m = foeFighters.getOrNull(foe)
     log += CombatEvent(
         time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
-        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet }, echo = echoing && actor == Side.HERO,
+        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, (ally ?: helper)?.code?.takeIf { pet }, echo = echoing && actor == Side.HERO,
     )
         .also { it.trace = trace ?: skillTrace(actor, action, foe, skill, onSelf, healed) }
 }
 
 /** [fighter] is the combat pet. */
-internal fun Battle.isPet(fighter: Fighter): Boolean = allyFighter != null && fighter === allyFighter
+internal fun Battle.isPet(fighter: Fighter): Boolean = fighter.side == Side.HERO && fighter !== heroFighter
 
 internal fun Battle.mended(amount: Double) {
     petMend += amount

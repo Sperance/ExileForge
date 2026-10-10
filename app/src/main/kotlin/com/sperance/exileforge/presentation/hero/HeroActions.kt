@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.hero
 
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.display.shardsText
 import com.sperance.exileforge.core.display.withShards
@@ -118,6 +119,8 @@ class HeroActions(
     fun applyOrb(itemId: String, orb: String, omen: String, onApplied: () -> Unit = {}) = forgeCommand { id ->
         val outcome = api.hero.applyOrb(id, itemId, orb, omen)
         heroes.forgeLine(outcome.message)
+        // Бережливый кузнец (4.6.0, Предначертание): сфера осталась в сумке
+        if (outcome.kept) notices.toast(ui("fate.orb_kept", itemTitle(orb)), NoticeKind.CRAFT)
         heroes.selectEquipment(outcome.created?.id ?: outcome.item.id)
         onApplied()
     }

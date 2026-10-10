@@ -148,7 +148,7 @@ class GearVerdicts {
                 // Фляга листа героя не меняет (4.2.0): её меряют строками листа фляги против надетой в этом гнезде.
                 slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])
 
-                else -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place, hero.info.laws)
+                else -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place, hero.info.laws, hero.info.fate)
             }
             WearPlace(place, worn[place], verdict)
         }

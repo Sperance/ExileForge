@@ -263,6 +263,12 @@ class ExpeditionRun(
     internal var fightPet: Pet? = null
     internal fun ally(): Ally? = allies.of(hero.stats, fightPet)
 
+    /** Питомец-помощник вторым боевым (4.6.0, Предначертание `SECOND_PET`). */
+    internal fun helper(): Ally? = allies.helper(hero.stats, kit.fate)
+
+    /** Счёт Предначертания захода (4.6.0): «Второе дыхание» - раз на заход, бои его делят. */
+    internal val fateRun = com.sperance.exileforge.core.campaign.combat.FateRun()
+
     /**
      * The hero's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not.
      * Off a fight it wounds to the last point: only a fight ends a run.
@@ -477,7 +483,8 @@ class ExpeditionRun(
             val bossDown = !vaal && campaign.bossDown(location.code, now)
             val vaalZone = campaign.vaalZone?.takeIf { it.mapCode == location.code }
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)
-            val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
+            // Обзор Предначертания (4.6.0) - дар, замороженный на заход
+            val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal, FateSight.of(run.fate))
             if (bossDown) world.bossAbsent()
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
             val extraFountains = MapEffects.fountains(effects)
@@ -500,6 +507,8 @@ class ExpeditionRun(
                 it.bargain(if (vaal) inherited else run.features.bonuses(features))
                 // Стражи сокровищ (3.90.0, строка карты) - у комнат и узлов, тоже до павших
                 if (!vaal) it.guard()
+                // Стаи Следопыта (4.6.0, Предначертание) - на карте Атласа, тоже до павших
+                if (!vaal) it.track()
                 // Монстры объектов, что уже стояли (4.0.0, кольцо очага Скверны, Матерь), - тоже до павших
                 if (!vaal) world.features.forEach { spot -> spot.resume(it, killed) }
                 world.restore(killed, Run.PACK_SLOTS)

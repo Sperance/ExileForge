@@ -48,6 +48,10 @@ import kotlinx.serialization.Serializable
     val bonusPoints: Int = 0,
     /** Взятые законы тронов (сюжет): строки листа героя, по одному закону на пройденный трон и навсегда. */
     val laws: List<String> = emptyList(),
+    /** Предначертание аккаунта (4.6.0, код `fates.json`): строки листа и рычаги боя, забега и Атласа; null - не выбрано. */
+    val fate: String? = null,
+    /** Трофеи боссов (4.6.0, Предначертание «Трофейщик»): код босса - сколько; торговец меняет их на его уникалку. */
+    val trophies: Map<String, Int> = emptyMap(),
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
@@ -77,6 +81,8 @@ import kotlinx.serialization.Serializable
     val messageArgs: List<String> = emptyList(),
     val item: ItemInstance,
     val created: ItemInstance? = null,
+    /** Сфера осталась в сумке (4.6.0, Предначертание «Бережливый кузнец»). */
+    val kept: Boolean = false,
 ) {
     val message: String get() = loc(messageKey, messageArgs)
 }

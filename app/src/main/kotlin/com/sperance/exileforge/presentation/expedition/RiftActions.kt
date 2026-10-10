@@ -117,6 +117,9 @@ class RiftActions(
         mutable.update { it.copy(board = board, arena = arena) }
     }
 
+    /** Счёт Предначертания забега (4.6.0) по id забега: арены одного забега делят «Второе дыхание». */
+    private var fateRun: Pair<String, com.sperance.exileforge.core.campaign.combat.FateRun>? = null
+
     private fun arena(board: RiftBoard): RiftArena? {
         val index = world.state.value.content ?: return null
         val rules: RiftRules = index.campaign.trials?.rift ?: return null
@@ -125,7 +128,8 @@ class RiftActions(
         val run = board.progress.run ?: return null
         val fight = board.fight ?: return null
         val engine = RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
-        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, hero.pets.pet(hero.pets.combat)) { end -> act(end) }
+        val fate = fateRun?.takeIf { it.first == run.id }?.second ?: com.sperance.exileforge.core.campaign.combat.FateRun().also { fateRun = run.id to it }
+        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, hero.pets.pet(hero.pets.combat), fate) { end -> act(end) }
             .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     }
 }

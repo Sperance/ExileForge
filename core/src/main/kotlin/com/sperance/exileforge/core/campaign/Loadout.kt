@@ -9,11 +9,13 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.FlaskStat
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillStat
@@ -104,6 +106,8 @@ data class Loadout(
     val powers: PowerBook = PowerBook(),
     /** The rules of the hero's frenzy, power and endurance charges (3.33.0, server 1.32.0). */
     val charges: ChargeRules = ChargeRules(),
+    /** Предначертание аккаунта (4.6.0): рычаги боя и питомец-помощник второго боевого ([FateKit]). */
+    val fate: FateKit = FateKit.NONE,
 ) {
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
     fun reserved(hero: Combatant): Double = (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / max(0.1, 1 + hero[CoreStat.RESERVATION.code] / 100)).coerceIn(0.0, 100.0)
@@ -143,6 +147,7 @@ data class Loadout(
             stats: Map<String, Double> = emptyMap(),
             powers: PowerBook = PowerBook(),
             charges: ChargeRules = ChargeRules(),
+            fate: FateKit = FateKit.NONE,
         ): Loadout {
             val book = index.skills
             fun forged(skill: SkillDefinition, condition: SlotCondition? = null) = KitSkill(
@@ -160,8 +165,22 @@ data class Loadout(
                 curses = book.ofClass(heroClass).filter { it.type == SkillType.CURSE }.map { forged(it) },
                 powers = powers,
                 charges = charges,
+                fate = fate,
             )
         }
+    }
+}
+
+/**
+ * Предначертание в бою (4.6.0): рычаги дара на его силе ([effects], один резолвер правил) и питомец-помощник [helper], которого
+ * рычаг `SECOND_PET` выводит вторым боевым. Без дара - [NONE]: бой идёт, как шёл.
+ */
+class FateKit(val effects: FateEffects, val helper: Pet? = null) {
+    companion object {
+        val NONE = FateKit(FateEffects.NONE)
+
+        /** Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`) с помощником [helper]. */
+        fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>, helper: Pet?): FateKit = index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0).let { if (it.fate == null) NONE else FateKit(it, helper) }
     }
 }
 

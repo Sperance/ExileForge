@@ -121,7 +121,7 @@ internal fun ExpeditionRun.battle(): Battle {
         // Свита фаз босса (3.92.0) - в конце стаи, на своём потоке: бой без фаз катится как прежде
         phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
         rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
-        percent = build.gear.percent, ally = ally(), cleared = wonLast,
+        percent = build.gear.percent, ally = ally(), cleared = wonLast, helper = helper(), fateRun = fateRun,
     )
 }
 

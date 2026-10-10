@@ -197,7 +197,7 @@ internal class ScenePainter {
             world.fountains.filter { world.explored(it.cell.x, it.cell.y) }.forEach { fountain ->
                 standing += (fountain.cell.x + fountain.cell.y + 1.0) to { drawFountain(fountain.cell.x + .5, fountain.cell.y + .5, fountain.used, glow(fountain.cell.x, fountain.cell.y)) }
             }
-            world.chests.filter { world.explored(it.cell.x, it.cell.y) }.forEach { chest ->
+            world.chests.filter { world.shows(it) }.forEach { chest ->
                 standing += (chest.cell.x + chest.cell.y + 1.0) to { drawChest(chest.cell.x + .5, chest.cell.y + .5, chest.opened, glow(chest.cell.x, chest.cell.y)) }
             }
             // A crystal of essences stands once seen (2.78.0): humming until its guardian is slain, dull after.
@@ -213,8 +213,8 @@ internal class ScenePainter {
             val blight = world.features.firstNotNullOfOrNull { it as? BlightSpot }
             // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
             // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
-            // Since 2.32.0 a monster is drawn only where the hero's light reaches.
-            world.agents.filter { it.alive && world.lit(floor(it.x).toInt(), floor(it.y).toInt()) }.forEach { agent ->
+            // Since 2.32.0 a monster is drawn only where the hero's light reaches - или сквозь туман по Предначертанию (4.6.0).
+            world.agents.filter { it.alive && world.shows(it) }.forEach { agent ->
                 // Жетон кольца очага Скверны «выпрыгивает» по очереди (4.0.0); ещё не вставший не виден
                 val pop = blight?.age(agent.id)?.let { (age, n) -> blightPop(age, n) } ?: 1f
                 if (pop <= 0f) return@forEach

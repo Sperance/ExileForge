@@ -42,6 +42,12 @@ sealed interface Route : NavKey {
         override val bars get() = false
     }
 
+    /** Выбор Предначертания аккаунта (4.6.0): до списка героев, пока дар не выбран. */
+    @Serializable data object Fate : Route {
+        override val phase get() = AppPhase.CHARACTERS
+        override val bars get() = false
+    }
+
     @Serializable data object Hero : Route
 
     @Serializable data object Tree : Route {

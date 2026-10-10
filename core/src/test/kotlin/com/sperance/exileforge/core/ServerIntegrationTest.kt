@@ -64,6 +64,8 @@ class ServerIntegrationTest {
         var delivered: HeroSnapshot? = null
         api.heroSync({ HeroParts(it).header() }) { _, snapshot -> delivered = snapshot }
         val heroClass = index.classes.classes.first().code
+        // Без Предначертания герой не создаётся (4.6.0, `CH_042`): аккаунт выбирает первый из предложенных, если ещё не выбрал
+        api.fated()
         val created = api.hero.create(admin.id, "Contract", "", heroClass)
         val heroId = created.id
         try {
@@ -130,6 +132,7 @@ class ServerIntegrationTest {
             val player = GameApi(url)
             player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))
             assertEquals(403, assertFailsWith<ApiFailure> { player.hero.view(heroId, HeroParts(heroId)) }.status)
+            player.fated()
             val own = player.hero.create(assertNotNull(player.currentUser()).id, "Player", "", heroClass)
             try {
                 assertEquals(403, assertFailsWith<ApiFailure> { player.hero.grantItem(own.id, Orb.CHAOS_ORB.name, 1) }.status)
@@ -140,4 +143,10 @@ class ServerIntegrationTest {
             api.hero.delete(heroId)
         }
     }
+}
+
+/** Предначертание аккаунта выбрано (4.6.0): невыбранное - первый из трёх предложенных, выбранное остаётся. */
+private suspend fun GameApi.fated() {
+    val view = fate.view()
+    if (view.chosen == null) assertEquals(view.offers.first().code, assertNotNull(fate.choose(view.offers.first().code).chosen).code)
 }

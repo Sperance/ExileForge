@@ -143,6 +143,8 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
             } else {
                 // Таймер обновления (3.90.3) - шапка списка товаров: тикает и уходит с прокруткой.
                 stock?.refreshAt?.takeIf { it > 0 }?.let { at -> item(key = "renews") { RenewalRow(at) } }
+                // Трофеи боссов (4.6.0, Предначертание «Трофейщик») - над товаром
+                if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
                 if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
                 if (offers.isNotEmpty()) item(key = "filter") { ItemFilterBar(filterState, visible.size, onOpen = { filtering = true }) }
                 if (offers.isNotEmpty() && visible.isEmpty()) item { InfoCard(ui("tree.nothing_found"), ui("filter.empty")) }

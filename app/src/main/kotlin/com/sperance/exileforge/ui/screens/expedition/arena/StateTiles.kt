@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
+import com.sperance.exileforge.core.campaign.combat.FATE_SOURCE
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.fineNumber
@@ -75,7 +76,8 @@ private val EffectKind.tipKey: String get() = when (this) {
     val shape = RoundedCornerShape(4.dp)
     // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill.
     val buff = view.buff
-    val title = buff?.let { ui("fight.buff.${it.name}") } ?: SkillText.title(view.source)
+    // Бафф Предначертания (4.6.0) - не умение: называется даром
+    val title = buff?.let { ui("fight.buff.${it.name}") } ?: if (view.source == FATE_SOURCE) ui("fight.fate_buff") else SkillText.title(view.source)
     // Проклятие (3.92.0) открывает лист: что меняет, сколько ещё, чем снять; бафф - прежнюю подсказку
     val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
     Tipped(

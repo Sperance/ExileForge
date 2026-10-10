@@ -154,10 +154,18 @@ class StatExplainer(private val game: GameUi) {
     } else {
         when (source.kind) {
             SourceKind.CLASS -> ui("stat.src.class", classTitle(source.ref))
+
             SourceKind.NODE -> nodeTitle(source.ref)
+
             SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> game.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
+
             SourceKind.PET -> hero?.pets?.pet(source.ref)?.let { locOr("pet.${it.species}", it.species) } ?: ui("stat.kind.PET")
+
             SourceKind.LAW -> loc(LocaleKey.lawName(source.ref))
+
+            // Предначертание аккаунта (4.6.0): строка листа называется даром
+            SourceKind.FATE -> ui("stat.src.fate", locOr("fate.${source.ref}.name", source.ref))
+
             SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS -> statTitle(source.ref)
         }
     }

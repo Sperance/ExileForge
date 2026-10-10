@@ -55,10 +55,6 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
@@ -153,8 +149,11 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
             }
             leagueLevel(game, card.league)?.let { ReferenceRow(ui("player.league"), ui("rift.league", it), Parchment) }
             ReferenceRow(ui("player.online"), presenceText(card.online, card.lastSeenAt), Presence.of(card.online, card.lastSeenAt).color.takeIf { card.online } ?: Parchment)
-            // Судьба (механика впереди): пока сервер шлёт null, строки нет
-            fateText(card)?.let { ReferenceRow(ui("player.fate"), "✦ $it", Caution) }
+            // Предначертание аккаунта (4.6.0): тема и имя, касание - описание; не выбрано - строки нет
+            card.fate?.let { fate ->
+                Text(ui("player.fate"), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
+                FateBadge(fate, Modifier.fillMaxWidth(), compact = true)
+            }
         }
     }
 }
@@ -215,13 +214,3 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 
 /** Нижняя граница лиги Разлома [league] уровнем; таблицы лиг нет - null. */
 private fun leagueLevel(game: GameUi, league: Int): Int? = game.index?.campaign?.trials?.rift?.leagues?.getOrNull(league)
-
-/**
- * Судьба аккаунта строкой (форму задаст её механика): текст, поле `name` или `title` объекта; иначе - null, строка скрыта.
- */
-private fun fateText(card: PlayerCard): String? {
-    val fate = card.fate ?: return null
-    return runCatching {
-        (fate as? JsonPrimitive)?.contentOrNull ?: fate.jsonObject.let { (it["name"] ?: it["title"])?.jsonPrimitive?.contentOrNull }
-    }.getOrNull()?.takeIf { it.isNotBlank() }
-}

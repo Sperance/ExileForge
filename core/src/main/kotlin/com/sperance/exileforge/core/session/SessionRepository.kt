@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.session
 
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
+import com.sperance.exileforge.core.model.fate.FateView
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.network.SanctionView
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,8 @@ data class Session(
     val notice: String? = null,
     /** Ответ сервера на проверку здоровья, как есть. */
     val health: String = ui("runtime.not_checked"),
+    /** Предначертание аккаунта (4.6.0): выбранное или три на выбор; null - ещё не читали. */
+    val fate: FateView? = null,
 ) {
     val isAdmin: Boolean get() = signedIn && profile?.role == "ADMIN"
 
@@ -54,5 +57,5 @@ class SessionRepository(initialServer: String) {
     fun update(transform: (Session) -> Session) = mutable.update(transform)
 
     /** Выход или смена сервера: всё, что принадлежало аккаунту, забывается, эпоха растёт. */
-    fun clear() = update { it.copy(resumable = false, characters = emptyList(), charactersRead = false, sanctions = emptyMap(), signedIn = false, profile = null, sessionEpoch = it.sessionEpoch + 1) }
+    fun clear() = update { it.copy(resumable = false, characters = emptyList(), charactersRead = false, sanctions = emptyMap(), signedIn = false, profile = null, fate = null, sessionEpoch = it.sessionEpoch + 1) }
 }

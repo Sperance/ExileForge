@@ -244,6 +244,7 @@ import org.koin.compose.viewmodel.koinViewModel
             entryProvider = entryProvider {
                 entry<Route.Auth> { AuthScreen() }
                 entry<Route.Characters> { CharacterSelectScreen() }
+                entry<Route.Fate> { com.sperance.exileforge.ui.screens.session.FateScreen() }
                 entry<Route.Account> { ServerScreen() }
                 entry<Route.Settings> { key -> SettingsScreen(key.page, logs) }
                 entry<Route.Hero> { HeroScreen() }

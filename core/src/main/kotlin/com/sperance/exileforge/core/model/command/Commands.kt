@@ -19,6 +19,8 @@ const val AUCTION_PAGE_SIZE = 20
     val role: String = "USER",
     val isActive: Boolean = true,
     val countCharacters: Int = 0,
+    /** Предначертание аккаунта (4.6.0, код `fates.json`); null - не выбрано: до списка героев - выбор (`GET fate`). */
+    val fate: String? = null,
 )
 
 /** What every sign-in answers: the account and the token that stands for it. */
@@ -73,6 +75,7 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/redemptioncodes/redeem",
             "GET" to "/api/v1/hero/card", "GET" to "/api/v1/hero/deletion/preview", "POST" to "/api/v1/hero/deletion/mark",
             "POST" to "/api/v1/hero/deletion/restore", "POST" to "/api/v1/hero/deletion/erase",
+            "GET" to "/api/v1/fate", "POST" to "/api/v1/fate/choose", "POST" to "/api/v1/hero/merchant/trophy",
             "GET" to "/content/{file}", "GET" to "/static/index.json",
         )
 

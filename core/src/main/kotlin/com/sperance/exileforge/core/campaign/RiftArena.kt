@@ -87,6 +87,8 @@ class RiftArena(
     context: RunContext,
     private val gear: HeroGear,
     pet: Pet?,
+    /** Счёт Предначертания забега (4.6.0): «Второе дыхание» - раз на забег, арены забега делят его. */
+    private val fateRun: com.sperance.exileforge.core.campaign.combat.FateRun = com.sperance.exileforge.core.campaign.combat.FateRun(),
     private val onEnd: (RiftAct.Fight) -> Unit,
 ) {
     val combat = index.campaign.combat
@@ -99,7 +101,9 @@ class RiftArena(
     private val altar = run.hero.altar
 
     /** Испытание чемпиона «В одиночку» и «Оскудение» - питомец не встаёт. */
-    private val pet: Pet? = pet.takeIf { node.trial != RiftTrial.NO_PET && (touch.rules[RiftRule.BARREN] ?: 0.0) <= 0 }
+    private val petsAllowed: Boolean = node.trial != RiftTrial.NO_PET && (touch.rules[RiftRule.BARREN] ?: 0.0) <= 0
+    private val pet: Pet? = pet.takeIf { petsAllowed }
+
     private val allies = PetAllies(index, combat)
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
@@ -248,6 +252,8 @@ class RiftArena(
         battle = Battle(
             hero, foes, combat, index.rules.fight, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, stream)), gear.stance,
             kit = kit, model = build, pools = pools, percent = gear.percent, ally = allies.of(hero.stats, pet),
+            // Испытание «без питомца» и «Пустошь» (4.6.0) не пускают и помощника
+            helper = allies.helper(hero.stats, kit.fate).takeIf { petsAllowed }, fateRun = fateRun,
             rift = riftCombat().takeIf { fight.guardian != null || it.ambush > 0 },
             // Волна после выигранной (4.2.0): силы FIGHT_CLEAR
             cleared = wave > 0,

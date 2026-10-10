@@ -24,6 +24,7 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.Roll
+import com.sperance.exileforge.rules.roll.Veils
 import com.sperance.exileforge.rules.sheet.SellPrice
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import kotlin.math.round
@@ -31,7 +32,8 @@ import kotlin.math.round
 /**
  * What put a line on an item, lettered as Path of Exile's trade site letters it: P prefix, S suffix,
  * I implicit, C the bench, F fractured, U unique — and this game's own H for the smith's
- * handcraft, V for a corruption, A for a map's alchemy, X for a special essence's line.
+ * handcraft, V for a corruption, A for a map's alchemy, X for a special essence's line; L - родовая строка (4.6.0,
+ * Предначертание «Родовое клеймо»): сверх мест аффиксов, скрытая до сферы раскрытия.
  */
 enum class AffixKind(val letter: Char) {
     PREFIX('P'),
@@ -44,6 +46,7 @@ enum class AffixKind(val letter: Char) {
     ALCHEMY('A'),
     UNIQUE('U'),
     ESSENCE('X'),
+    LINEAGE('L'),
     ;
 
     companion object {
@@ -62,6 +65,7 @@ enum class AffixKind(val letter: Char) {
                 Source.ALCHEMY -> ALCHEMY
                 Source.UNIQUE -> UNIQUE
                 Source.ESSENCE -> ESSENCE
+                Source.LINEAGE -> LINEAGE
                 Source.PASSIVE, Source.MONSTER, Source.ATLAS, Source.RULE, Source.ALTAR, Source.LAW, null -> null
             }
         }
@@ -87,8 +91,11 @@ data class AffixMarks(
             fractured = roll.fractured,
             handcrafted = def?.source == Source.HANDCRAFTED,
             alchemy = def?.source == Source.ALCHEMY,
-            kind = AffixKind.of(def?.source, def?.crafted == true, roll.fractured),
+            kind = AffixKind.of(def?.source ?: veiledSource(roll), def?.crafted == true, roll.fractured),
         )
+
+        /** Скрытая родовая строка (4.6.0, `Veils.LINEAGE`) описания в контенте не имеет - её место родовое. */
+        private fun veiledSource(roll: Roll): Source? = Source.LINEAGE.takeIf { roll.code == Veils.LINEAGE }
     }
 }
 
@@ -197,7 +204,9 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
             val def = index.modifier(roll.code)
             val values = def?.let(roll::values).orEmpty()
             val tier = def?.tier(roll.tier)?.takeIf { ranged }
-            val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values) } ?: modifierLine(index, it, values) } ?: displayName(roll.code.value)
+            // Скрытая родовая строка (4.6.0) - своими словами: описания у неё нет, раскрывает сфера раскрытия
+            val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values) } ?: modifierLine(index, it, values) }
+                ?: if (roll.code == Veils.LINEAGE) ui("card.veiled_lineage") else displayName(roll.code.value)
             ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level)
         }
     }

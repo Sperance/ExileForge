@@ -128,7 +128,7 @@ class HeroSync(
         draw = scope.launch {
             val view = withContext(Dispatchers.Default) {
                 val info = merged.hero
-                val sheet = Sheets.calculate(index, info.level, info.heroClass, merged.tree, merged.items, merged.pets.active, info.laws)
+                val sheet = Sheets.calculate(index, info.level, info.heroClass, merged.tree, merged.items, merged.pets.active, info.laws, info.fate)
                 HeroView(info, merged.items, merged.overflow, merged.bag, merged.tree, merged.campaign, merged.crafts, merged.merchant, sheet, merged.pets)
             }
             if (ticket != drawing || parts !== merged) return@launch

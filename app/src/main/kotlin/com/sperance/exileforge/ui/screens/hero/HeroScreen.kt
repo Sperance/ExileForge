@@ -13,11 +13,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.ForgeSection
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.HeroPage
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_HERO
@@ -87,7 +89,11 @@ fun HeroScreen() {
                         if (sections.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) } else item(key = "bag") { BagGrid(game, sections) { stackCode = it } }
                     }
 
-                    else -> item { HeroSummary(game) }
+                    else -> {
+                        // Предначертание аккаунта (4.6.0) над листом: тема и имя, касание - описание
+                        heroFate(game)?.let { fate -> item(key = "fate") { FateBadge(fate, Modifier.fillMaxWidth()) } }
+                        item { HeroSummary(game) }
+                    }
                 }
             }
         }
@@ -139,3 +145,6 @@ fun HeroScreen() {
     // The place goes with the pick: a ring chosen for the second line lands in the second ring, a flask in its own bay.
     pickPlace?.let { place -> SlotPicker(game, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> model.equip(itemId, place.place) }) }
 }
+
+/** Предначертание аккаунта героя карточкой (4.6.0); не выбрано или нет в контенте - null. */
+private fun heroFate(game: GameUi): FateCard? = game.index?.fates?.of(game.hero?.info?.fate)?.let(FateCard::of)

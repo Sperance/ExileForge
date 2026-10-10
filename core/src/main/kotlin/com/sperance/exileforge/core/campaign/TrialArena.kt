@@ -107,6 +107,9 @@ class TrialArena(
     private val picks = picks.toMutableList()
     private var choice: List<TowerMod>? = null
     private val allies = PetAllies(index, rules)
+
+    /** Счёт Предначертания испытания (4.6.0): «Второе дыхание» - раз на испытание. */
+    private val fateRun = com.sperance.exileforge.core.campaign.combat.FateRun()
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
     private val gear = gear
@@ -286,6 +289,7 @@ class TrialArena(
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
             percent = gear.percent, ally = allies.of(hero.stats, pet), cleared = wonLast, kind = trial.kind.fight,
+            helper = allies.helper(hero.stats, kit.fate), fateRun = fateRun,
         )
     }
 
@@ -296,7 +300,7 @@ class TrialArena(
     fun oddsPlan(): OddsPlan? {
         if (monsters.none { it.rarity == MonsterRarity.UNIQUE }) return null
         val phases = PhaseFoes(index, rules)
-        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero.stats, pet), phases, wonLast, trial.kind.fight)
+        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero.stats, pet), phases, wonLast, trial.kind.fight, allies.helper(hero.stats, kit.fate))
     }
 
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */

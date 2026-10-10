@@ -21,7 +21,9 @@ import kotlin.math.min
  * A blow that got through: a barrier soaks it first (2.78.0), the shield takes what it can, chaos goes
  * around it; leech, stun and ailments follow, and the passives hear of it.
  */
-internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant) {
+internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant) {
+    // Предначертание (4.6.0, «Каменная кожа»): удар по герою - не больше доли его максимума, до барьера и щита
+    val taken = fateCapped(target, struck)
     val dealt = taken.values.sum()
     var rest = dealt
     var soakedBarrier = 0.0
@@ -75,8 +77,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
                 !(target.body.avoidStun > 0 && draw(RollKey.AVOID_STUN, target.body.avoidStun) < target.body.avoidStun) || blow.stun > 0 && draw(RollKey.STUN, blow.stun / 100) * 100 < blow.stun
             )
     ) {
-        stunned = true
-        target.heldUntil = max(target.heldUntil, time + rules.stun.duration)
+        stunned = stun(target, rules.stun.duration)
     }
     val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments, blow.spell) else emptyList()
     val trace = pendingHit?.copy(
@@ -117,6 +118,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, taken: Map
         watch()
     }
     if (me.side == Side.MONSTER) traitsLanded(me, target)
+    fateLanded(me, target, taken, kind)
     if (!target.alive) fell(target, blow.spell, me)
 }
 
@@ -182,15 +184,14 @@ private fun Battle.buildUp(rule: BuildupRule, me: Fighter, body: Combatant, targ
         }
         val held = if (rarity == MonsterRarity.UNIQUE) effect.bossDuration else effect.duration
         when (kind) {
-            Buildup.STUN -> {
-                target.heldUntil = max(target.heldUntil, time + held)
+            Buildup.STUN -> if (stun(target, held)) {
                 target.stunnedUntil = time + held
                 stunned = true
             }
 
             Buildup.FREEZE -> {
-                place(target, ActiveAilment(Ailment.FROZEN, time + held, 0.0, held, me.side, me.index.coerceAtLeast(0), false), false)
-                target.shatter = true
+                // Лёд, что Предначертание сделало замедлением (4.6.0), не колется
+                if (place(target, ActiveAilment(Ailment.FROZEN, time + held, 0.0, held, me.side, me.index.coerceAtLeast(0), false), false).ailment == Ailment.FROZEN) target.shatter = true
             }
 
             Buildup.ELECTROCUTE -> {
@@ -275,8 +276,12 @@ internal fun Battle.burden(me: Fighter, target: Fighter, ailment: Ailment, amoun
     return true
 }
 
-/** An ailment laid on: a stacking one adds up, the others keep the strongest of their kind and refresh how long it lasts. */
-internal fun Battle.place(target: Fighter, fresh: ActiveAilment, stacks: Boolean) {
+/**
+ * An ailment laid on: a stacking one adds up, the others keep the strongest of their kind and refresh how long it lasts. На
+ * героя - каким его сделает Предначертание (4.6.0, заморозка - замедлением); ответ - что легло.
+ */
+internal fun Battle.place(target: Fighter, laid: ActiveAilment, stacks: Boolean): ActiveAilment {
+    val fresh = fateAiled(target, laid)
     val ailment = fresh.ailment
     if (ailment.hurts) target.tickedAt.putIfAbsent(ailment, time)
     val existing = target.ailments.filter { it.ailment == ailment }
@@ -294,6 +299,7 @@ internal fun Battle.place(target: Fighter, fresh: ActiveAilment, stacks: Boolean
             target.ailments += kept.copy(until = max(kept.until, fresh.until))
         }
     }
+    return fresh
 }
 
 /** A foe down: a kill to report, life and mana on kill and the flasks' charges for the hero (2.78.0), its aura lifted, and a focus on it let go. */
@@ -330,4 +336,5 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing))
     if (killer != null && killer === allyFighter) powers.fire(PowerEvent.PET_KILL, PowerMoment(fighter, spell = spell, ailments = ailing))
     lastWords(fighter)
+    fateFell(fighter, ailing)
 }

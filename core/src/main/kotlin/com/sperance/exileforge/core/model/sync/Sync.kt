@@ -42,8 +42,11 @@ import kotlinx.serialization.json.JsonElement
  *      `HINDER`/`HEX`/`RIPOSTE`/`STACK`, недуг `BURST`, строки `FIRST_STRIKE`, `LootRoller.deathLoss(heroLevel, experience)`.
  * 66 - самоудаление героя `hero/deletion/preview|mark|restore|erase` (`CH_040`, `CH_041`, причина санкции `SELF`, `MOD_010`),
  *      общий `DELETE hero` - только администратору, карточка игрока `GET hero/card`, `GuildMember.online`.
+ * 67 - Предначертание аккаунта: `GET fate`, `POST fate/choose?code=` (`FT_001`, `FT_002`), без дара герой не создаётся (`CH_042`),
+ *      `UserProfile.fate`, `HeroInfo.fate|trophies`, `PlayerCard.fate` - `FateCard`, `RunContext.fate`, `RunStart.mapKept`,
+ *      `CurrencyApplyResponse.kept`, обмен трофеев `POST hero/merchant/trophy?boss=` (`FT_003`-`FT_005`), чанк `fates.json`.
  */
-const val API_REVISION = 66
+const val API_REVISION = 67
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

@@ -142,7 +142,7 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
     }
     val dot = (cell * .5f).coerceAtLeast(2.5f)
     fun mark(x: Double, y: Double, color: Color, size: Float = dot) = drawCircle(color, size, Offset(origin.x + x.toFloat() * cell, origin.y + y.toFloat() * cell))
-    world.chests.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, GoldBright) }
+    world.chests.filter { !it.opened && world.shows(it) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, GoldBright) }
     world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, ShieldCyan) }
     world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
     world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
@@ -152,7 +152,7 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
     world.features.filterIsInstance<RoomSpot>().mapNotNull { spot -> spot.lever?.takeIf { !spot.opened && world.explored(it.x, it.y) } }.forEach { mark(it.x + .5, it.y + .5, RoomMark.tint) }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
     if (monsters) {
-        world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.forEach { agent ->
+        world.agents.filter { it.alive && world.shows(it) }.forEach { agent ->
             mark(agent.x, agent.y, Color.Black, dot * 1.25f)
             mark(agent.x, agent.y, rarityTint(agent.monster.rarity), dot)
         }
@@ -244,7 +244,7 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
     }
     val exit = world.map.exit
     if (world.explored(exit.x, exit.y)) add(if (world.sealed) LifeRed to ui("map.legend_sealed") else Vital to ui("map.legend_exit"))
-    world.agents.filter { it.alive && world.lit(it.x.toInt(), it.y.toInt()) }.map { it.monster.rarity }.distinct().sorted()
+    world.agents.filter { it.alive && world.shows(it) }.map { it.monster.rarity }.distinct().sorted()
         .forEach { add(rarityTint(it) to ui(it.key())) }
 }
 

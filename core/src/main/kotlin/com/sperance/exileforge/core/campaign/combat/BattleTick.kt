@@ -28,7 +28,7 @@ import kotlin.math.min
 internal fun Battle.step(dt: Double) {
     time += dt
     lookLife()
-    (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach {
+    everyone.forEach {
         regenerate(it, dt)
         degenerate(it, dt)
         burn(it, dt)
@@ -65,7 +65,7 @@ internal fun Battle.step(dt: Double) {
     foeFighters.forEach { if (it.alive && !it.held) monsterCast(it) }
     if (finished()) return
     // Whoever is due first acts first; several may be due in one slice.
-    (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).sortedBy { it.nextAttack }.forEach { me ->
+    everyone.sortedBy { it.nextAttack }.forEach { me ->
         if (!me.alive || me.held || me.nextAttack > time) return@forEach
         val target = if (me.side == Side.HERO) target() else foeTarget()
         if (target != null) strike(me, target, swingOf(me))
@@ -117,7 +117,7 @@ private fun Battle.logRecovery(recovery: Recovery) {
 
 /** What ran out this slice goes: buffs, curses, draughts, a barrier, and the body is made again without them. */
 private fun Battle.expire() {
-    (listOf(heroFighter) + listOfNotNull(allyFighter) + foeFighters).forEach { fighter ->
+    everyone.forEach { fighter ->
         if (fighter.barrier > 0 && fighter.barrierUntil <= time) fighter.barrier = 0.0
         if (fighter.effects.removeAll { it.until <= time }) remake(fighter)
     }
@@ -390,8 +390,9 @@ internal fun Battle.evasion(me: Fighter, target: Fighter): Double = rules.accura
 
 private fun Battle.finished(): Boolean {
     if (outcome != null) return true
-    // A power may answer the hero's fall (2.79.0) and stand them back up.
+    // A power may answer the hero's fall (2.79.0) and stand them back up; then Предначертание (4.6.0, «Второе дыхание»).
     if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
+    if (!heroFighter.alive) fateDies()
     when {
         !heroFighter.alive -> end(Outcome.LOSS)
         foeFighters.none { it.alive } && !nextRound() -> end(Outcome.WIN)

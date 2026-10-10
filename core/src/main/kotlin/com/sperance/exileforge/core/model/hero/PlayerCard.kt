@@ -1,8 +1,8 @@
 package com.sperance.exileforge.core.model.hero
 
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.rules.content.GuildRole
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonElement
 
 /** Гильдия на карточке игрока (сервер 4.5.1): кто она и кем в ней герой. */
 @Serializable
@@ -40,7 +40,7 @@ data class CardRights(val mail: Boolean = false, val invite: Boolean = false, va
  * @property league номер лиги Разлома по уровню героя (граница - `rift.leagues`)
  * @property online последняя команда героя свежая; [lastSeenAt] - её время (мс эпохи, 0 - неизвестно)
  * @property lots сколько лотов героя на витрине аукциона
- * @property fate Судьба аккаунта; null - её нет (форму задаст механика Судьбы, до неё строка скрыта)
+ * @property fate Предначертание аккаунта героя (4.6.0); null - аккаунт его ещё не выбрал
  */
 @Serializable
 data class PlayerCard(
@@ -55,7 +55,7 @@ data class PlayerCard(
     val lastSeenAt: Long = 0,
     val lots: Int = 0,
     val rights: CardRights = CardRights(),
-    val fate: JsonElement? = null,
+    val fate: FateCard? = null,
 )
 
 /** Что станет с гильдией после ухода героя (сервер 4.5.1): он просто выходит, главенство переходит наследнику или гильдия распускается. */

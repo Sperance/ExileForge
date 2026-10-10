@@ -33,6 +33,8 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         return false
     }
     val sure = me === heroFighter && nextCrit
+    // Предначертание (4.6.0): месть и первый удар - крит наверняка; заряд «из-под плаща» при этом цел
+    val fatedSure = !sure && fateSure(me)
     // 3.37.0: every draw of this blow goes on its tape, and the shots are taken before anything changes.
     tape = mutableListOf()
     val striker = shot(me, blow)
@@ -40,13 +42,14 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val evade = evasion(me, target)
     val blockChance = if (blow.spell) target.body.spellBlock else target.body.block
     val kind = when {
-        target.frozen() -> if (sure || crit(body, blow.spell)) HitKind.CRIT else HitKind.HIT
+        target.frozen() -> if (sure || fatedSure || crit(body, blow.spell)) HitKind.CRIT else HitKind.HIT
         !blow.spell && draw(RollKey.EVADE, evade) < evade -> HitKind.EVADED
         draw(RollKey.BLOCK, blockChance) < blockChance -> HitKind.BLOCKED
-        sure || crit(body, blow.spell) -> HitKind.CRIT
+        sure || fatedSure || crit(body, blow.spell) -> HitKind.CRIT
         else -> HitKind.HIT
     }.let { if (it == HitKind.CRIT && critBanned(me)) HitKind.HIT else it }
     if (sure && kind == HitKind.CRIT) nextCrit = false
+    fateSwung(me, kind)
     if (me.side == Side.MONSTER) lastStriker = me.index
     if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
         record(
@@ -78,6 +81,8 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
     // Разлом (3.96.0): «Тяжкие удары» героя, печати Стража, «Одна стихия» Владыки
     val heavy = heavy(me, blow)
+    // Предначертание (4.6.0): «Кровь предков» - удар героя тяжелее с потерянным здоровьем
+    val fateMore = fateHeavier(me)
     val seals = sealed(target)
     var unruled = 0.0
     val types = mutableListOf<TypeTrace>()
@@ -86,7 +91,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     var defended = 0.0
     val taken = converted(body, target.body, blow.damage.filterValues { it > 0 }).mapValues { (type, base) ->
         val spread = if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0
-        val grown = base * spread * multiplier * against * body.damageMore * doubled * versus
+        val grown = base * spread * multiplier * against * body.damageMore * doubled * versus * fateMore
         val raw = if (heavy == 1.0) grown else grown * heavy
         val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
         val armour = when (type) {
@@ -139,6 +144,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         if (against != 1.0) add(FactorTrace(FactorKey.AGAINST, against, listOf(CoreStat.DAMAGE_VS_AILED.code, CoreStat.DAMAGE_VS_CURSED.code) + Ailment.entries.map { it.against }))
         if (doubled != 1.0) add(FactorTrace(FactorKey.DOUBLE, doubled, listOf(CoreStat.DOUBLE_DAMAGE.code)))
         if (versus != 1.0) add(FactorTrace(FactorKey.VERSUS, versus))
+        if (fateMore != 1.0) add(FactorTrace(FactorKey.FATE, fateMore))
         if (rawSum > 0) {
             add(
                 FactorTrace(

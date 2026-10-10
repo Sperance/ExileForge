@@ -37,9 +37,13 @@ class CharacterActions(
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val warmupActions: WarmupActions get() = lazyWarmup.value
 
-    /** The account's heroes; [autoEnter] skips the menu for a single hero straight after a sign-in. */
+    /**
+     * The account's heroes; [autoEnter] skips the menu for a single hero straight after a sign-in. Аккаунт без Предначертания
+     * (4.6.0) сначала выбирает его - список героев ждёт выбора.
+     */
     suspend fun readCharacters(autoEnter: Boolean = false) {
         run {
+            if (!fated()) return
             val owner = sessions.state.value.profile?.id.orEmpty()
             // Герои вместе с санкциями (3.94.1): карточки сразу знают, кто под баном или в корзине
             val roster = if (owner.isBlank()) HeroRoster() else api.hero.rosterOf(owner)
@@ -52,6 +56,51 @@ class CharacterActions(
 
     fun refresh() {
         run { read(Reads.CHARACTERS) { readCharacters() } }
+    }
+
+    /**
+     * Предначертание аккаунта (4.6.0) до списка героев - один путь нового и прежнего аккаунта: выбранное ложится в профиль,
+     * невыбранное открывает экран выбора с тремя дарами сервера. True - выбрано.
+     */
+    private suspend fun fated(): Boolean {
+        if (sessions.state.value.profile?.fate != null) return true
+        val view = api.fate.view()
+        val chosen = view.chosen
+        sessions.update { it.copy(fate = view, profile = it.profile?.let { p -> p.copy(fate = chosen?.code ?: p.fate) }) }
+        if (chosen != null) return true
+        navigator.reset(com.sperance.exileforge.presentation.nav.Route.Fate)
+        return false
+    }
+
+    /** Три дара заново (4.6.0): экран выбора открыт, а прочитать их не вышло. */
+    fun refreshFate() {
+        run { read(Reads.CHARACTERS) { readCharacters() } }
+    }
+
+    /**
+     * Выбор Предначертания [code] (4.6.0) - раз и навсегда; ответ - выбранный дар, экран играет вспышку и уходит к героям
+     * ([fateAccepted]). Отказ `FT_001` - дар уже выбран (другим устройством): читается заново.
+     */
+    fun chooseFate(code: String) {
+        run {
+            task(writing = true, touches = setOf(Reads.CHARACTERS)) {
+                val view = try {
+                    api.fate.choose(code)
+                } catch (e: ApiFailure) {
+                    if (e.code == com.sperance.exileforge.rules.content.Fates.CHOSEN) api.fate.view() else throw e
+                }
+                sessions.update { it.copy(fate = view, profile = it.profile?.let { p -> p.copy(fate = view.chosen?.code ?: p.fate) }) }
+            }
+        }
+    }
+
+    /** Дар принят и вспышка сыграна (4.6.0): к героям - у нового аккаунта сразу форма создания. */
+    fun fateAccepted() {
+        run {
+            if (sessions.state.value.profile?.fate == null) return
+            navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
+            read(Reads.CHARACTERS) { readCharacters() }
+        }
     }
 
     fun enter(id: String) {
@@ -115,7 +164,16 @@ class CharacterActions(
                 val owner = sessions.state.value.profile?.id.orEmpty()
                 check(owner.isNotBlank()) { ui("catalog.sign_in") }
                 check(characterSlotsLeft() > 0) { ui("character.limit", sessions.state.value.slotHolders) }
-                val created = api.hero.create(owner, name, "", heroClass)
+                val created = try {
+                    api.hero.create(owner, name, "", heroClass)
+                } catch (e: ApiFailure) {
+                    // Без Предначертания герой не создаётся (4.6.0, `CH_042`): сначала выбор
+                    if (e.code == NO_FATE) {
+                        sessions.update { it.copy(profile = it.profile?.copy(fate = null)) }
+                        fated()
+                    }
+                    throw e
+                }
                 readCharacters()
                 entered(created.id)
             }
@@ -150,6 +208,11 @@ class CharacterActions(
     /** The classes the creation form offers come with the content. */
     fun ensureClasses() {
         run { read(Reads.CONTENT) { loader.ensureContent() } }
+    }
+
+    private companion object {
+        /** Отказ сервера: аккаунт ещё не выбрал Предначертание (4.6.0). */
+        const val NO_FATE = "CH_042"
     }
 
     /** Сколько героев ещё можно создать: по правилам контента, пока их не прочли - по умолчанию. */

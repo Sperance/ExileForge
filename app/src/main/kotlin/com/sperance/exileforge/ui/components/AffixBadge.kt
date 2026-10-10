@@ -54,6 +54,9 @@ fun affixTint(kind: AffixKind?): Color = when (kind) {
 
     // A special essence (2.78.0), violet as its crystal.
     AffixKind.ESSENCE -> Color(0xFFB07FE0)
+
+    // Родовая строка (4.6.0) - бронза рода
+    AffixKind.LINEAGE -> LineageBronze
 }
 
 /**

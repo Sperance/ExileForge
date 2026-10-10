@@ -34,7 +34,7 @@ internal object HeroLens {
     fun wearDelta(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): List<StatDelta> {
         index ?: return emptyList()
         hero ?: return emptyList()
-        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place, hero.info.laws)
+        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, hero.pets.active, place, hero.info.laws, hero.info.fate)
     }
 
     /** Память вердиктов (3.89.0): одна на приложение, сбрасывается сама с новым героем или контентом. */
@@ -97,11 +97,13 @@ internal object HeroLens {
     /** The hero's atlas as the rules count it: points earned and free. */
     fun atlasState(index: ContentIndex?, hero: HeroView?): AtlasState? = index?.let { i ->
         hero?.let { h ->
+            // Очки сверх заработанных - Предначертание «Звёздный путь» (4.6.0), тем же резолвером, что у сервера
+            val bonus = i.fates.effects(h.info.fate).atlasPoints(h.info.atlas.size)
             AtlasState(
                 listOf(i.atlasGraph.start) + h.info.atlas,
                 h.info.earned,
-                AtlasPoints.total(i.atlas.points, h.info.earned, i.atlas.cap),
-                AtlasPoints.available(i.atlas.points, h.info.earned, h.info.atlas, i.atlas.cap),
+                AtlasPoints.total(i.atlas.points, h.info.earned, i.atlas.cap, bonus),
+                AtlasPoints.available(i.atlas.points, h.info.earned, h.info.atlas, i.atlas.cap, bonus),
             )
         }
     }

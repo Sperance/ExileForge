@@ -82,6 +82,9 @@ class GameApi(
     val feedback = FeedbackClient(http)
     val mail = MailClient(http)
 
+    /** Предначертание аккаунта (4.6.0). */
+    val fate = FateClient(http)
+
     /** Credentials travel in the body: a query string settles in every proxy log on the way. */
     suspend fun login(login: String, password: String): UserProfile {
         logout()

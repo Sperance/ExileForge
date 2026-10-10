@@ -44,5 +44,5 @@ internal fun ExpeditionRun.challengeView(): ChallengeView? {
 fun ExpeditionRun.oddsPlan(): OddsPlan? {
     val agent = challenge ?: return null
     val foes = challengeFoes(agent)
-    return OddsPlan(hero, foes, rules, index.rules.fight, pools, stance, kit, build, build.gear.percent, allies.of(hero.stats, pet()), PhaseFoes(index, rules), wonLast, FightKinds.expedition(foes))
+    return OddsPlan(hero, foes, rules, index.rules.fight, pools, stance, kit, build, build.gear.percent, allies.of(hero.stats, pet()), PhaseFoes(index, rules), wonLast, FightKinds.expedition(foes), helper())
 }

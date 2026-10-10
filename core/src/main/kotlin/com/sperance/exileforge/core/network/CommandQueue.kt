@@ -128,8 +128,11 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         const val TTL_MS = 60 * 60 * 1000L
         private val Codec = ListSerializer(QueuedCommand.serializer())
 
-        /** The commands that never wait here: the session's own, and the run's journal, which keeps its own retry. */
-        private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/")
+        /**
+         * The commands that never wait here: the session's own, and the run's journal, which keeps its own retry. Выбор
+         * Предначертания (4.6.0) - тоже: он навсегда, экран выбора ждёт ответа сам, а не очереди.
+         */
+        private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/", "api/v1/fate/")
 
         /**
          * Commands whose outcome is rolled (3.55.0): an orb, an essence, an unveiling or a chosen line, a bench craft, a
@@ -139,7 +142,7 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         private val ROLLED = listOf(
             "api/v1/hero/orb", "api/v1/hero/essence", "api/v1/hero/unveil", "api/v1/hero/choose", "api/v1/hero/craft",
             "api/v1/hero/pets/incubate", "api/v1/hero/pets/collect", "api/v1/hero/pets/orb", "api/v1/hero/pets/choose", "api/v1/hero/crafts/start",
-            "api/v1/hero/chest/open",
+            "api/v1/hero/chest/open", "api/v1/hero/merchant/trophy",
         )
 
         /** Команды администратора (3.88.0) не ждут сети: уходят сразу или падают видимой ошибкой - блок героя не ложится вслепую. */

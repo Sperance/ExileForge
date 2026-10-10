@@ -40,16 +40,24 @@ class ExpeditionWorld(
     lightRadius: Double = rules.defaultLight,
     bossMonster: RolledMonster? = null,
     hasPortal: Boolean = false,
+    /** Обзор Предначертания (4.6.0): туман дальше, вожаки и сундуки сквозь него. */
+    val fateSight: FateSight = FateSight.NONE,
 ) {
-    /** The hero's pace and sight; both follow the gear when it is changed on the map (since 2.40.0). */
+    /** The hero's pace and sight; both follow the gear when it is changed on the map (since 2.40.0). Обзор дара - сверх листа. */
     internal var heroSpeed = heroSpeed
-    var lightRadius = lightRadius
+    var lightRadius = lightRadius + fateSight.radius
         internal set
 
     fun regear(speed: Double, light: Double) {
         heroSpeed = speed
-        lightRadius = light
+        lightRadius = light + fateSight.radius
     }
+
+    /** Виден ли стоящий жетон [agent] сейчас: в свете или (4.6.0) сквозь туман по Предначертанию. */
+    fun shows(agent: MonsterAgent): Boolean = fateSight.throughFog || lit(floor(agent.x).toInt(), floor(agent.y).toInt())
+
+    /** Виден ли сундук [chest]: разведанный или (4.6.0) сквозь туман по Предначертанию. */
+    fun shows(chest: Chest): Boolean = fateSight.throughFog || explored(chest.cell.x, chest.cell.y)
 
     internal val random = Random(seed)
 
@@ -389,9 +397,18 @@ class ExpeditionWorld(
          * A new world of [zone]: the ground carved from [seed], one spawn per pack of [packs] (the run's own
          * rolls), the boss at the exit and, [hasPortal], a Vaal portal.
          */
-        fun create(rules: ExpeditionRules, zone: Zone, packs: List<List<RolledMonster>>, heroStats: Map<String, Double>, seed: Long, boss: RolledMonster?, hasPortal: Boolean): ExpeditionWorld {
+        fun create(
+            rules: ExpeditionRules,
+            zone: Zone,
+            packs: List<List<RolledMonster>>,
+            heroStats: Map<String, Double>,
+            seed: Long,
+            boss: RolledMonster?,
+            hasPortal: Boolean,
+            fateSight: FateSight = FateSight.NONE,
+        ): ExpeditionWorld {
             val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size)
-            return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
+            return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal, fateSight)
         }
 
         /** The hero's pace, sped up by movement speed from the sheet. */

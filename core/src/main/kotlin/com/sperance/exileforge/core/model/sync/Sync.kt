@@ -50,8 +50,10 @@ import kotlinx.serialization.json.JsonElement
  * 69 - Осквернение Предначертания: `ItemInstance.desecration` (`FateBoon`), работа `DESECRATE` с вещью в `ActiveWork.held` (выбор -
  *      id вещи, `CR_040`-`CR_044`), Сфера прозрения через `hero/orb` и выбор через `hero/unveil`; без `RunStart.mapKept`;
  *      `Ceilings.spellBlock`.
+ * 70 - почта героев (`MailKind.PLAYER|GUILD`, `mail/letter|quota|ignore|report`, немота `SanctionKind.MUTE`), валюта аукциона -
+ *      любая сфера, расширенный `GuildMember`, дар в модерации, рост даров от силы и призрачный волк.
  */
-const val API_REVISION = 69
+const val API_REVISION = 70
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

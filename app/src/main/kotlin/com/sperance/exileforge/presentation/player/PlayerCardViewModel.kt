@@ -83,11 +83,6 @@ class PlayerCardViewModel(
     /** «Написать» (4.6.3): окно письма герою карточки; адресат - плашкой, не вводом. */
     fun write(card: PlayerCard) = leave { letters.compose(LetterDraft.to(card.heroId, card.name, card.heroClass, card.level)) }
 
-    /** «Не принимать письма» ([on]) или снова принимать: карточка узнаёт об этом после ответа сервера. */
-    fun ignore(card: PlayerCard, on: Boolean) = letters.ignore(card.heroId, card.name, on) {
-        mutable.update { ui -> ui.card?.takeIf { it.heroId == card.heroId }?.let { ui.copy(card = it.copy(rights = it.rights.copy(ignored = on))) } ?: ui }
-    }
-
     /** Письмо администратора аккаунту героя (только администратору): форма письма с логином владельца. */
     fun writeAdmin(card: PlayerCard) {
         val login = card.rights.moderation?.login?.takeIf { it.isNotBlank() } ?: return

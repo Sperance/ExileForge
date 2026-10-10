@@ -74,12 +74,11 @@ class LetterActions(
         }
     }
 
-    /** «Не принимать письма от героя» [heroId] ([on]) или снова принимать; [then] - после ответа сервера (карточка игрока). */
-    fun ignore(heroId: String, name: String, on: Boolean, then: () -> Unit = {}) = commands.task(writing = true) {
+    /** «Не принимать письма от героя» [heroId] ([on]) или снова принимать: из письма и списка игнора почты. */
+    fun ignore(heroId: String, name: String, on: Boolean) = commands.task(writing = true) {
         val hero = author ?: return@task
         val ignored = if (on) api.mail.ignore(hero, heroId) else api.mail.unignore(hero, heroId)
         repository.update { it.copy(ignored = ignored) }
-        then()
         notices.toast(ui(if (on) "mail.ignore.added" else "mail.ignore.removed", name))
     }
 

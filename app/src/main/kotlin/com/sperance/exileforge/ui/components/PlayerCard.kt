@@ -117,7 +117,6 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 game,
                 card,
                 onWrite = { vm.write(card) },
-                onIgnore = { vm.ignore(card, it) },
                 onInvite = { vm.invite(card) },
                 onLots = { vm.sellerLots(card) },
             )
@@ -187,9 +186,10 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 
 /**
  * Кнопки карточки: «Написать» герою (4.6.3) - всем, кроме своей карточки; нельзя писать - кнопка погашена, под ней причина
- * ([MailGate] сервера). «Не принимать письма» - игнор героя; «В гильдию» - по правам сервера; «Лоты игрока» - всегда, с их числом.
+ * ([MailGate] сервера); «В гильдию» - по правам сервера; «Лоты игрока» - всегда, с их числом. Игнор героя - из полученного
+ * письма и списка игнора почты, не из карточки.
  */
-@Composable private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onIgnore: (Boolean) -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
+@Composable private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
     val rights = card.rights
     val letter = rights.letter
     if (letter != null || rights.invite) {
@@ -201,11 +201,6 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
     letter?.takeIf { it != MailGate.OPEN }?.let { gate ->
         val rules = game.index?.rules
         MutedText(gateText(gate, null, rules?.mail ?: MailRules(), rules?.unlockLevel(MailRules.SECTION) ?: 1))
-    }
-    if (letter != null) {
-        ForgeTextButton(onClick = { onIgnore(!rights.ignored) }, enabled = !game.busy) {
-            Text(ui(if (rights.ignored) "mail.ignore.off" else "mail.ignore.on_card"), color = Muted, style = MaterialTheme.typography.labelMedium)
-        }
     }
     ForgeOutlinedButton(onClick = onLots, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) { Text(ui("player.lots", card.lots)) }
 }

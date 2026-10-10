@@ -288,7 +288,7 @@ class TrialArena(
             // Фазы и свита боссов (3.92.0): свита - на своём потоке
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
-            percent = gear.percent, ally = allies.of(hero.stats, pet), cleared = wonLast, kind = trial.kind.fight,
+            percent = gear.percent, ally = allies.of(hero, pet, kit.fate.effects.spirit), cleared = wonLast, kind = trial.kind.fight,
             fateRun = fateRun,
         )
     }
@@ -300,7 +300,7 @@ class TrialArena(
     fun oddsPlan(): OddsPlan? {
         if (monsters.none { it.rarity == MonsterRarity.UNIQUE }) return null
         val phases = PhaseFoes(index, rules)
-        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero.stats, pet), phases, wonLast, trial.kind.fight)
+        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero, pet, kit.fate.effects.spirit), phases, wonLast, trial.kind.fight)
     }
 
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */

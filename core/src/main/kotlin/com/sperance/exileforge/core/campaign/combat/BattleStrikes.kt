@@ -177,7 +177,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         add(FactorTrace(FactorKey.TOTAL, taken.values.sum()))
     }
     pendingHit = HitTrace(striker, struck, emptyList(), factors, types, null, origin)
-    land(me, target, kind, taken, foe, blow, body)
+    land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw })
     if (me.alive && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
     return true
 }

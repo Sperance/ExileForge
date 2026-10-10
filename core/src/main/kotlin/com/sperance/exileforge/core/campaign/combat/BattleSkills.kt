@@ -397,7 +397,8 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     answer.barrier?.let { ward(it, level) }
     answer.buff?.let { buff(hero, code, it.stats.lines(level), it.duration, it.counter?.at(level) ?: 0.0) }
     if (answer.flaskCharges > 0) kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.sheet.maxCharges, charges[i] + answer.flaskCharges) } }
-    if (answer.refund && refund > 0) manaBack(hero, refund)
+    // Возврат цены - не избыток восстановления (4.6.3): перелив Предначертания его не копит
+    if (answer.refund && refund > 0) manaBack(hero, refund, spill = false)
     val hit = answer.hit
     if (hit != null) {
         heroHit(hit, level, code, spell = false, attack = true, only = target?.takeIf { hit.targets == 1 && it.alive && it.side == Side.MONSTER })

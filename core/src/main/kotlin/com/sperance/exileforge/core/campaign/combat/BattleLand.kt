@@ -19,11 +19,12 @@ import kotlin.math.min
 
 /**
  * A blow that got through: a barrier soaks it first (2.78.0), the shield takes what it can, chaos goes
- * around it; leech, stun and ailments follow, and the passives hear of it.
+ * around it; leech, stun and ailments follow, and the passives hear of it. [raw] - the blow by type before the target's defences
+ * (Предначертание, 4.6.3).
  */
-internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant) {
+internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant, raw: Map<DamageType, Double>) {
     // Предначертание (4.6.0, «Каменная кожа»): удар по герою и питомцу - что пропустят рычаги, до барьера и щита
-    val taken = fateCapped(target, struck)
+    val taken = fateCapped(me, target, struck)
     val dealt = taken.values.sum()
     var rest = dealt
     var soakedBarrier = 0.0
@@ -56,7 +57,9 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     val physical = taken[DamageType.PHYSICAL] ?: 0.0
     // Vampirism is capped per second (server 1.76.0): a share of the maximum life, whatever the blows.
     // Монстр (4.2.0): подавление героя и потолок восстановления, общий с регенерацией.
-    val leech = recovery(me, me.leechRoom((physical * body.leechPhysical + dealt * body.leechAll + (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0)) * body.recoveryRate, time, rules.caps.leechPerSecond))
+    // Обет крови (4.6.3): похищение умений за здоровье - тем же вампиризмом, под его потолком
+    val leeched = physical * body.leechPhysical + dealt * (body.leechAll + fateLeech(me, blow)) + (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0)
+    val leech = recovery(me, me.leechRoom(leeched * body.recoveryRate, time, rules.caps.leechPerSecond))
     val onHit = (if (blow.weapon) body.lifeOnHit else 0.0) * body.recoveryRate
     // Life leech into the shield (server 1.32.0): what it restores is not life.
     if (body.leechToShield) me.shield = min(me.body.maxShield, me.shield + leech)
@@ -119,7 +122,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         watch()
     }
     if (me.side == Side.MONSTER) traitsLanded(me, target)
-    fateLanded(me, target, taken, kind, blow)
+    fateLanded(me, target, taken, kind, blow, raw)
     if (!target.alive) fell(target, blow.spell, me)
 }
 
@@ -228,10 +231,19 @@ internal fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType,
 }
 
 /**
- * [ailment] on [target] by [me], from a blow that dealt [taken]: a damage over time is a share of the
- * damage of its own type — of the whole blow when it had none — the rest are the rule's magnitude.
+ * Сила недуга без урона от удара (4.6.3, Триада стихий): доля [step]% максимума здоровья цели даёт силу правила, больше - сильнее,
+ * но не выше [cap]% силы правила.
  */
-internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, taken: Map<DamageType, Double>, spell: Boolean = false): Ailment? {
+internal class AilmentWeight(private val step: Double, private val cap: Double) {
+    fun of(amount: Double, maxLife: Double): Double = if (maxLife <= 0 || step <= 0) cap / 100 else min(cap / 100, amount / (maxLife * step / 100))
+}
+
+/**
+ * [ailment] on [target] by [me], from a blow that dealt [taken]: a damage over time is a share of the
+ * damage of its own type — of the whole blow when it had none — the rest are the rule's magnitude, или ([weight], 4.6.3) - сила
+ * правила от удара.
+ */
+internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, taken: Map<DamageType, Double>, spell: Boolean = false, weight: AilmentWeight? = null): Ailment? {
     val (rule, type) = ruleOf[ailment] ?: return null
     if (target.body.immune(ailment)) return null
     val avoid = target.body.avoid(ailment)
@@ -244,7 +256,7 @@ internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, take
     val magnitude = if (ailment.hurts) {
         amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) * faster
     } else {
-        rule.magnitude * when (ailment) {
+        rule.magnitude * (weight?.of(amount, target.body.maxLife) ?: 1.0) * when (ailment) {
             Ailment.SHOCKED -> me.body.shockEffect
             Ailment.CHILLED -> me.body.chillEffect
             else -> 1.0

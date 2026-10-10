@@ -84,7 +84,8 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     val regenerated = lifeBack(me, recovery(me, (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt))
     if (me === heroFighter) regenLogged += regenerated
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
-    if (!manaless(me)) manaBack(me, me.body.manaRegen(rules.mana) * dt)
+    // Регенерация не переливается (4.6.3, Переполнение): перелив копит только избыток восстановления
+    if (!manaless(me)) manaBack(me, me.body.manaRegen(rules.mana) * dt, spill = false)
     if (me === heroFighter) {
         recoveries.forEach { draught ->
             val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)

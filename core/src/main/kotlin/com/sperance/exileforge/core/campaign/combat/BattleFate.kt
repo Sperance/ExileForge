@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign.combat
 
+import com.sperance.exileforge.core.campaign.KitSkill
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.RollKey
@@ -158,8 +159,14 @@ internal sealed interface FateReaction {
     /** Герой заблокировал удар (и чары). */
     fun blocked(battle: Battle) = Unit
 
-    /** Удар героя [blow] попал в [target], отдав [taken]; [Battle.fateFight] уже счёл его. */
-    fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow) = Unit
+    /**
+     * Удар героя [blow] попал в [target], отдав [taken]; [raw] (4.6.3) - тот же удар по типам до защит цели. [Battle.fateFight] уже
+     * счёл его.
+     */
+    fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow, raw: Map<DamageType, Double>) = Unit
+
+    /** Какую долю урона удара героя [blow] он ещё похищает общим вампиризмом героя (4.6.3), сверх своего. */
+    fun leech(battle: Battle, blow: Blow): Double = 0.0
 
     /** Удар питомца попал в [target]. */
     fun petLanded(battle: Battle, target: Fighter) = Unit
@@ -167,8 +174,8 @@ internal sealed interface FateReaction {
     /** По герою попал [attacker]: [kind] - как, [amount] - сколько удар снял (барьер, щит и здоровье вместе). */
     fun struck(battle: Battle, attacker: Fighter, kind: HitKind, amount: Double) = Unit
 
-    /** Что из [amount] одного удара по герою доходит до барьера и щита. */
-    fun capped(battle: Battle, amount: Double): Double = amount
+    /** Что из [amount] одного удара [attacker] по герою доходит до барьера и щита. */
+    fun capped(battle: Battle, attacker: Fighter, amount: Double): Double = amount
 
     /** Что из [amount] одного удара по питомцу доходит до него. */
     fun petCapped(battle: Battle, amount: Double): Double = amount
@@ -247,7 +254,7 @@ internal sealed interface FateReaction {
 
             FateLever.LUCKY_ROLLS -> LuckyRolls(effect, fate)
 
-            FateLever.BLOOD_PRICE -> BloodPrice(effect, fate, kit.actives.filterNotNull().mapTo(HashSet()) { it.skill.code })
+            FateLever.BLOOD_PRICE -> BloodPrice(effect, fate, kit.actives.filterNotNull().associateBy { it.skill.code })
 
             FateLever.PHANTOM_ECHO -> PhantomEcho(effect, fate)
 
@@ -318,15 +325,17 @@ private class MissingLifeDamage(effect: FateEffect, fate: FateEffects) : LeverRe
 }
 
 /**
- * Принятый крит заряжает следующий удар героя критом (заряд один), его множитель крита - больше ([FateKnob.AVENGE_CRIT_MULTI]); крит
- * даёт заслон от критов ([FateKnob.CRIT_WARD]), блок - шанс заряда ([FateKnob.AVENGE_ON_BLOCK]).
+ * Принятый крит - или удар, снявший не меньше `value`% максимума здоровья (4.6.3), - заряжает следующий попавший удар героя критом
+ * (заряд один), его множитель крита - больше ([FateKnob.AVENGE_CRIT_MULTI]); крит даёт заслон от критов ([FateKnob.CRIT_WARD]),
+ * блок - шанс заряда ([FateKnob.AVENGE_ON_BLOCK]).
  */
 private class AvengeCrit(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
     override fun struck(battle: Battle, attacker: Fighter, kind: HitKind, amount: Double) {
-        if (kind != HitKind.CRIT) return
+        val crit = kind == HitKind.CRIT
+        if (!crit && amount < battle.heroFighter.body.maxLife * value / 100) return
         val fight = battle.fateFight
         fight.avenge = true
-        fate.of(FateKnob.CRIT_WARD)?.let { fight.critWardUntil = battle.time + it.value }
+        if (crit) fate.of(FateKnob.CRIT_WARD)?.let { fight.critWardUntil = battle.time + it.value }
     }
 
     override fun blocked(battle: Battle) {
@@ -341,10 +350,15 @@ private class AvengeCrit(effect: FateEffect, fate: FateEffects) : LeverReaction(
 
     override fun warded(battle: Battle): Boolean = battle.time < battle.fateFight.critWardUntil
 
+    /** Заряд уходит лишь с попавшим ударом (4.6.3): уклонение и блок цели его не тратят. */
     override fun swung(battle: Battle, kind: HitKind) {
-        if (!battle.fateFight.avenge) return
+        if (!battle.fateFight.avenge || kind !in LANDED) return
         battle.fateFight.avenge = false
         if (kind == HitKind.CRIT) battle.fateNote()
+    }
+
+    private companion object {
+        val LANDED = setOf(HitKind.HIT, HitKind.CRIT)
     }
 }
 
@@ -368,20 +382,22 @@ private class KillSpread(effect: FateEffect, fate: FateEffects) : LeverReaction(
 }
 
 /**
- * Каждый N-й попавший удар героя вешает случайный недуг из списка - как от доли удара его стихией; по врагу хотя бы с `param`
+ * Каждый N-й попавший удар героя вешает случайный недуг из списка - как от доли удара его стихией, по общему правилу наложения:
+ * сила недуга без урона - от доли к `step`% здоровья цели, до `cap`% силы правила ([AilmentWeight]); по врагу хотя бы с `param`
  * разными недугами урон героя больше ([FateKnob.AILMENTED_DAMAGE]).
  */
 private class EveryNthAilment(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
     private val ailed = fate.of(FateKnob.AILMENTED_DAMAGE)
+    private val weight = AilmentWeight(effect.step, effect.cap)
 
-    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow) {
+    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow, raw: Map<DamageType, Double>) {
         if (battle.fateFight.hits % effect.every != 0 || !target.alive) return
         val ailments = effect.ailments.mapNotNull { Ailment.of(it) }
         if (ailments.isEmpty()) return
         val ailment = ailments[battle.random.nextInt(ailments.size)]
         val type = battle.ruleOf[ailment]?.second ?: return
         val share = taken.values.sum() * value / 100
-        if (share > 0 && battle.afflict(battle.heroFighter, target, ailment, mapOf(type to share)) != null) battle.fateNote()
+        if (share > 0 && battle.afflict(battle.heroFighter, target, ailment, mapOf(type to share), weight = weight) != null) battle.fateNote()
     }
 
     override fun heavier(battle: Battle, blow: Blow, target: Fighter): Double {
@@ -411,10 +427,9 @@ private class KillBurst(effect: FateEffect, fate: FateEffects) : LeverReaction(e
 
 /** Попавший удар героя добивает врага ниже порога здоровья (у босса и стража - своего) и лечит героя ([FateKnob.EXECUTE_HEAL]). */
 private class Execute(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
-    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow) {
+    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow, raw: Map<DamageType, Double>) {
         if (!target.alive || target.invulnerable || target.side != Side.MONSTER) return
-        val foe = battle.foes[target.index]
-        val threshold = if (foe.rarity == MonsterRarity.UNIQUE || foe.guards) effect.boss else value
+        val threshold = if (battle.towering(target)) effect.boss else value
         if (target.life >= target.body.maxLife * threshold / 100) return
         target.life = 0.0
         target.shield = 0.0
@@ -454,12 +469,16 @@ private class FreezeToSlow(effect: FateEffect, fate: FateEffects) : LeverReactio
     override fun heavier(battle: Battle, blow: Blow, target: Fighter): Double = if (target.frozen()) 1 + fate.add(FateKnob.FROZEN_DAMAGE) / 100 else 1.0
 }
 
-/** Один удар снимает не больше доли максимума здоровья героя; срезанный удар на `param` с делает урон меньше ([FateKnob.CAPPED_GUARD]). */
+/**
+ * Один удар снимает не больше доли максимума здоровья героя - у босса и стража не ниже `boss` (4.6.3); срезанный удар на `param` с
+ * делает урон меньше ([FateKnob.CAPPED_GUARD]).
+ */
 private class HitCap(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
-    override fun capped(battle: Battle, amount: Double): Double {
+    override fun capped(battle: Battle, attacker: Fighter, amount: Double): Double {
         val fight = battle.fateFight
         val guarded = if (battle.time < fight.guardedUntil) amount * max(0.0, 1 - fate.add(FateKnob.CAPPED_GUARD) / 100) else amount
-        val ceiling = battle.heroFighter.body.maxLife * value / 100
+        val share = if (battle.towering(attacker)) max(value, effect.boss) else value
+        val ceiling = battle.heroFighter.body.maxLife * share / 100
         if (guarded <= ceiling) return guarded
         fate.of(FateKnob.CAPPED_GUARD)?.let { fight.guardedUntil = battle.time + it.param }
         return ceiling
@@ -503,9 +522,10 @@ private class AlternateSkill(effect: FateEffect, fate: FateEffects) : LeverReact
 }
 
 /**
- * Переполнение: мана сверх максимума копится переливом до `pool`% максимума на весь заход, цена умений - сперва из него; умения
- * «больше» на `value`% за каждые полные `step`% максимума в переливе, до `cap`. Перелив отдаёт ману каждую секунду
- * ([FateKnob.OVERFLOW_REGEN]) и принимает долю урона по герою ([FateKnob.OVERFLOW_SHIELD]).
+ * Переполнение: избыток восстановления маны (не регенерации, [manaBack]) копится переливом до `pool`% максимума на весь заход и тает
+ * на `decay`% в секунду (4.6.3), цена умений - сперва из него; умения «больше» на `value`% за каждые полные `step`% максимума в
+ * переливе, до `cap`. Перелив отдаёт ману каждую секунду ([FateKnob.OVERFLOW_REGEN]) и принимает долю урона по герою
+ * ([FateKnob.OVERFLOW_SHIELD]).
  */
 private class ManaOverflow(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
     private val regen = fate.of(FateKnob.OVERFLOW_REGEN)
@@ -532,9 +552,10 @@ private class ManaOverflow(effect: FateEffect, fate: FateEffects) : LeverReactio
     }
 
     override fun ticks(battle: Battle, dt: Double) {
+        val run = battle.fateRun
+        if (run.overflow > 0) run.overflow *= max(0.0, 1 - effect.decay / 100 * dt)
         val knob = regen ?: return
         val hero = battle.heroFighter
-        val run = battle.fateRun
         if (run.overflow <= 0 || battle.manaless(hero)) return
         val flow = minOf(run.overflow, hero.body.maxMana * knob.value / 100 * dt, battle.manaCap() - hero.mana)
         if (flow <= 0) return
@@ -542,7 +563,7 @@ private class ManaOverflow(effect: FateEffect, fate: FateEffects) : LeverReactio
         run.overflow -= flow
     }
 
-    override fun capped(battle: Battle, amount: Double): Double {
+    override fun capped(battle: Battle, attacker: Fighter, amount: Double): Double {
         val share = fate.add(FateKnob.OVERFLOW_SHIELD)
         val run = battle.fateRun
         if (share <= 0 || run.overflow <= 0) return amount
@@ -575,7 +596,7 @@ private class StoreTaken(effect: FateEffect, fate: FateEffects) : LeverReaction(
 
     override fun stunning(battle: Battle): Double = if (battle.fateFight.stored > 0) 1 + fate.add(FateKnob.STORE_STUN) / 100 else 1.0
 
-    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow) {
+    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow, raw: Map<DamageType, Double>) {
         val fight = battle.fateFight
         if (fight.stored <= 0 || taken.values.sum() <= 0) return
         battle.fateNote(fight.stored)
@@ -588,11 +609,11 @@ private class StoreTaken(effect: FateEffect, fate: FateEffects) : LeverReaction(
  * удар за бой - доля снятого ударившему физическим уроном ([FateKnob.FULL_LIFE_REFLECT]).
  */
 private class FullLifeGuard(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
-    override fun capped(battle: Battle, amount: Double): Double {
+    override fun capped(battle: Battle, attacker: Fighter, amount: Double): Double {
         val hero = battle.heroFighter
         val full = hero.life >= hero.body.maxLife * (1 - fate.add(FateKnob.FULL_LIFE_MARGIN) / 100)
         battle.fateFight.full = full
-        return if (full) amount * (1 - value / 100) else amount
+        return if (full) amount * max(0.0, 1 - value / 100) else amount
     }
 
     override fun struck(battle: Battle, attacker: Fighter, kind: HitKind, amount: Double) {
@@ -654,34 +675,43 @@ private class LuckyRolls(effect: FateEffect, fate: FateEffects) : LeverReaction(
 }
 
 /**
- * Обет крови: умения героя стоят здоровья - `pool`% своей цены в мане ([paid] - умения слотов), не маны; такие умения «больше» на
- * `value`% и лечат героя долей нанесённого ([FateKnob.BLOOD_SKILL_LEECH]).
+ * Обет крови: умения героя ([paid] - умения слотов по коду) стоят здоровья, не маны, - той же доли максимума, что их цена в мане от
+ * максимума маны (4.6.3), × `pool`%; умения с ценой больше нуля «больше» на `value`% и похищают долю нанесённого общим
+ * вампиризмом ([FateKnob.BLOOD_SKILL_LEECH]).
  */
-private class BloodPrice(effect: FateEffect, fate: FateEffects, private val paid: Set<String>) : LeverReaction(effect, fate) {
-    override fun price(battle: Battle, cost: Double): Double = cost * effect.pool / 100
-
-    override fun heavier(battle: Battle, blow: Blow, target: Fighter): Double = if (blow.skill in paid) 1 + value / 100 else 1.0
-
-    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow) {
-        val share = fate.add(FateKnob.BLOOD_SKILL_LEECH)
-        if (share > 0 && blow.skill in paid) battle.lifeBack(battle.heroFighter, taken.values.sum() * share / 100)
+private class BloodPrice(effect: FateEffect, fate: FateEffects, private val paid: Map<String, KitSkill>) : LeverReaction(effect, fate) {
+    override fun price(battle: Battle, cost: Double): Double {
+        val body = battle.heroFighter.body
+        val life = if (body.maxMana > 0) cost / body.maxMana * body.maxLife else cost
+        return life * effect.pool / 100
     }
+
+    /** Удар умения, что стоит здоровья: умение слота с ценой больше нуля. */
+    private fun bloody(battle: Battle, blow: Blow): Boolean = blow.skill?.let(paid::get)?.let { battle.cost(it, it.level(battle.heroFighter.body)) > 0 } == true
+
+    override fun heavier(battle: Battle, blow: Blow, target: Fighter): Double = if (bloody(battle, blow)) 1 + value / 100 else 1.0
+
+    override fun leech(battle: Battle, blow: Blow): Double = if (bloody(battle, blow)) fate.add(FateKnob.BLOOD_SKILL_LEECH) / 100 else 0.0
 }
 
 /**
  * Призрачный клинок: каждый `every`-й попавший удар героя за бой призрак повторяет по другому живому врагу (по порядку целей героя) -
- * `value`% дошедшего урона теми же типами, защиты новой цели режут заново. Без другого врага - ту же цель
- * ([FateKnob.PHANTOM_SAME_TARGET]) или ничего; недуги - лишь со строкой [FateKnob.PHANTOM_AILMENTS].
+ * `value`% удара до защит (4.6.3) теми же типами, защиты цели призрака режут его один раз. Без другого врага - ту же цель на `solo`%
+ * (4.6.3), сильнее со строкой [FateKnob.PHANTOM_SAME_TARGET]; недуги - лишь со строкой [FateKnob.PHANTOM_AILMENTS].
  */
 private class PhantomEcho(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
-    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow) {
+    override fun landed(battle: Battle, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow, raw: Map<DamageType, Double>) {
         if (battle.fateFight.hits % effect.every != 0) return
-        val other = battle.targets(0).firstOrNull { it !== target && !it.invulnerable } ?: target.takeIf { it.alive && fate.has(FateKnob.PHANTOM_SAME_TARGET) } ?: return
-        val share = value / 100
-        val dealt = battle.fateHit(other, taken.mapValues { it.value * share })
+        val other = battle.targets(0).firstOrNull { it !== target && !it.invulnerable }
+        val (aim, share) = when {
+            other != null -> other to value / 100
+            target.alive -> target to effect.solo / 100 * (1 + fate.add(FateKnob.PHANTOM_SAME_TARGET) / 100)
+            else -> return
+        }
+        val dealt = battle.fateHit(aim, raw.mapValues { it.value * share })
         if (dealt.isEmpty()) return
         battle.fateNote(dealt.values.sum())
-        if (fate.has(FateKnob.PHANTOM_AILMENTS) && other.alive) battle.inflict(battle.heroFighter, other, dealt, blow.ailments, blow.spell)
+        if (fate.has(FateKnob.PHANTOM_AILMENTS) && aim.alive) battle.inflict(battle.heroFighter, aim, dealt, blow.ailments, blow.spell)
     }
 }
 
@@ -797,29 +827,38 @@ internal fun Battle.fateBlocked(target: Fighter) {
     if (target === heroFighter) fated.forEach { it.blocked(this) }
 }
 
-/** Удар [me] попал в [target]: удар героя - рычагам героя (счёт попаданий боя - до них), удар питомца и удар по герою - своим. */
-internal fun Battle.fateLanded(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow) {
+/**
+ * Удар [me] попал в [target], отдав [taken] ([raw] - до защит цели): удар героя - рычагам героя (счёт попаданий боя - до них), удар
+ * питомца и удар по герою - своим.
+ */
+internal fun Battle.fateLanded(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow, raw: Map<DamageType, Double>) {
     if (fated.isEmpty()) return
     if (me === heroFighter) {
         fateFight.hits++
-        fated.forEach { it.landed(this, target, taken, kind, blow) }
+        fated.forEach { it.landed(this, target, taken, kind, blow, raw) }
     }
     if (isPet(me)) fated.forEach { it.petLanded(this, target) }
     if (target === heroFighter) taken.values.sum().let { amount -> fated.forEach { it.struck(this, me, kind, amount) } }
 }
 
-/** Удар по [target] с потолком Предначертания: у героя и питомца - что рычаги пропустят, урон по типам - в той же доле. */
-internal fun Battle.fateCapped(target: Fighter, taken: Map<DamageType, Double>): Map<DamageType, Double> {
+/** Удар [me] по [target] с потолком Предначертания: у героя и питомца - что рычаги пропустят, урон по типам - в той же доле. */
+internal fun Battle.fateCapped(me: Fighter, target: Fighter, taken: Map<DamageType, Double>): Map<DamageType, Double> {
     if (fated.isEmpty()) return taken
     val total = taken.values.sum()
     val capped = when {
-        target === heroFighter -> fated.fold(total) { amount, it -> it.capped(this, amount) }
+        target === heroFighter -> fated.fold(total) { amount, it -> it.capped(this, me, amount) }
         isPet(target) -> fated.fold(total) { amount, it -> it.petCapped(this, amount) }
         else -> return taken
     }
     if (capped >= total || total <= 0) return taken
     return taken.mapValues { it.value * capped / total }
 }
+
+/** Доля урона удара [me] ([blow]), что Предначертание похищает общим вампиризмом (4.6.3): только удар героя. */
+internal fun Battle.fateLeech(me: Fighter, blow: Blow): Double = if (me !== heroFighter || fated.isEmpty()) 0.0 else fated.sumOf { it.leech(this, blow) }
+
+/** Враг [f] - босс или страж: у них свои пороги Предначертания (добивание, потолок удара). */
+internal fun Battle.towering(f: Fighter): Boolean = f.side == Side.MONSTER && foes[f.index].let { it.rarity == MonsterRarity.UNIQUE || it.guards }
 
 /** Во сколько раз сильнее попавший удар [me] копит оглушение по Предначертанию (4.6.2): только удар героя. */
 internal fun Battle.fateStunning(me: Fighter): Double = if (me !== heroFighter || fated.isEmpty()) 1.0 else fated.fold(1.0) { k, it -> k * it.stunning(this) }
@@ -859,13 +898,13 @@ internal fun Battle.payFor(cost: Double) {
 
 /**
  * Мана [amount] бойцу [me] (4.6.1): все пути восстановления маны идут через неё - не выше запаса; излишек героя - Предначертанию
- * (перелив).
+ * (перелив), если [spill]: регенерация и возврат цены умения (4.6.3) не переливаются.
  */
-internal fun Battle.manaBack(me: Fighter, amount: Double) {
+internal fun Battle.manaBack(me: Fighter, amount: Double, spill: Boolean = true) {
     val cap = manaCap(me)
     val sum = me.mana + amount
     me.mana = min(cap, sum)
-    if (me === heroFighter && sum > cap && fated.isNotEmpty()) fated.forEach { it.spilled(this, sum - cap) }
+    if (spill && me === heroFighter && sum > cap && fated.isNotEmpty()) fated.forEach { it.spilled(this, sum - cap) }
 }
 
 /** Лечение героя сверх полного здоровья [excess] (4.6.1, Кровь за кровь): похищение, за удар и убийство, фляги. */

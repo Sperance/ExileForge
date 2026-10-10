@@ -36,18 +36,30 @@ import kotlin.math.roundToInt
 /**
  * The combat pet as a fighter: its sheet at its level, what its role does; a new one each fight stands up whole. Since 3.33.0
  * (server 1.32.0) the hero's sheet reaches it — its levels, damage, life, speed, armour and resistances — made again only
- * when those change. Shared by the map's runs and the trials (3.49.0).
+ * when those change. Shared by the map's runs and the trials (3.49.0). Без питомца (4.6.3, Предначертание `PET_FIRST`) в бой
+ * встаёт дух дара уровня героя - лист обычного питомца этого уровня без строк; настоящий питомец его заменяет.
  */
 internal class PetAllies(private val index: ContentIndex, private val rules: CombatRules) {
-    private var made: Triple<Pet?, Map<String, Double>, Ally?>? = null
+    /** Из чего собран последний боец: питомец, или дух и уровень героя, и что героя до них доходит. */
+    private data class Made(val pet: Pet?, val spirit: String?, val level: Int, val boons: Map<String, Double>)
+
+    private var made: Pair<Made, Ally?>? = null
     private val menagerie by lazy { Menagerie(index) }
 
-    /** [pet] as a fighter under the hero's [heroStats]; since 3.70.0 the pet is the caller's, so one put to work mid-run joins the next fight. */
-    fun of(heroStats: Map<String, Double>, pet: Pet?): Ally? {
-        val boons = PetBoons.of(heroStats)
-        made?.takeIf { it.first == pet && it.second == boons }?.let { return it.third }
-        val ally = pet?.let { make(it, boons) }
-        made = Triple(pet, boons, ally)
+    /**
+     * [pet] as a fighter under the [hero]'s sheet; since 3.70.0 the pet is the caller's, so one put to work mid-run joins the next
+     * fight. Без питомца - дух Предначертания [spirit] (вид `pets.json`, null - нет) уровня героя.
+     */
+    fun of(hero: Combatant, pet: Pet?, spirit: String?): Ally? {
+        val summoned = spirit.takeIf { pet == null }
+        val key = Made(pet, summoned, if (summoned != null) hero.level else 0, PetBoons.of(hero.stats))
+        made?.takeIf { it.first == key }?.let { return it.second }
+        val ally = when {
+            pet != null -> make(pet, key.boons)
+            summoned != null -> summon(summoned, hero.level, key.boons)
+            else -> null
+        }
+        made = key to ally
         return ally
     }
 
@@ -55,14 +67,24 @@ internal class PetAllies(private val index: ContentIndex, private val rules: Com
         val kind = menagerie.species(own.species) ?: return null
         val levels = (boons[PetBoons.LEVEL] ?: 0.0).toInt()
         val p = if (levels != 0) own.copy(level = (own.level + levels).coerceAtLeast(1)) else own
-        return Ally(
-            p.species,
-            Combatant(PetBoons.apply(menagerie.sheet(p), boons), p.level, rules),
-            (p.role ?: kind.role) == PetRole.TANK,
-            if ((p.role ?: kind.role) == PetRole.SUPPORT) menagerie.supportHeal(p) else 0.0,
-            index.pets.drawFire,
-        )
+        return ally(p.species, p.role ?: kind.role, p.level, menagerie.sheet(p), boons)
     }
+
+    /** Дух [code] уровня героя [level] - с прибавкой уровней питомцу, как у обычного питомца. */
+    private fun summon(code: String, level: Int, boons: Map<String, Double>): Ally? {
+        val kind = menagerie.species(code) ?: return null
+        val grown = (level + (boons[PetBoons.LEVEL] ?: 0.0).toInt()).coerceAtLeast(1)
+        val sheet = menagerie.spirit(code, grown) ?: return null
+        return ally(code, kind.role, grown, sheet, boons)
+    }
+
+    private fun ally(species: String, role: PetRole?, level: Int, sheet: Map<String, Double>, boons: Map<String, Double>): Ally = Ally(
+        species,
+        Combatant(PetBoons.apply(sheet, boons), level, rules),
+        role == PetRole.TANK,
+        if (role == PetRole.SUPPORT) menagerie.supportHeal(level) else 0.0,
+        index.pets.drawFire,
+    )
 }
 
 /**

@@ -10,6 +10,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -150,9 +151,14 @@ fun HeroScreen() {
 /** Предначертание аккаунта героя карточкой (4.6.0); не выбрано или нет в контенте - null. */
 private fun heroFate(game: GameUi): FateCard? = game.index?.fates?.of(game.hero?.info?.fate)?.let(FateCard::of)
 
-/** Боёв до сферы Щедрости судьбы (4.6.1, `FateLever.FIGHT_BOUNTY`, счёт сервера `fateFights`); у дара без рычага - null. */
+/**
+ * Боёв до сферы Щедрости судьбы (4.6.1, `FateLever.FIGHT_BOUNTY`, счёт сервера `fateFights`) - с судьбоносными строками надетого
+ * (4.6.3: строка «раньше» сокращает счёт); у дара без рычага - null.
+ */
 private fun fateProgress(game: GameUi): String? {
-    val info = game.hero?.info ?: return null
-    val every = game.index?.fates?.effects(info.fate)?.of(FateLever.FIGHT_BOUNTY)?.every?.takeIf { it > 0 } ?: return null
+    val hero = game.hero ?: return null
+    val index = game.index ?: return null
+    val info = hero.info
+    val every = FateKit.of(index, info.fate, hero.stats, hero.equipped.values).effects.of(FateLever.FIGHT_BOUNTY)?.every?.takeIf { it > 0 } ?: return null
     return ui("fate.bounty_next", every - (info.fateFights % every).toInt())
 }

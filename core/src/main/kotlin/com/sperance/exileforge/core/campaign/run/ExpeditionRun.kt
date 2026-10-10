@@ -267,7 +267,7 @@ class ExpeditionRun(
 
     /** The pet of the fight under way, taken as it began: a change mid-fight waits for the next. */
     internal var fightPet: Pet? = null
-    internal fun ally(): Ally? = allies.of(hero.stats, fightPet)
+    internal fun ally(): Ally? = allies.of(hero, fightPet, kit.fate.effects.spirit)
 
     /**
      * The hero's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not.

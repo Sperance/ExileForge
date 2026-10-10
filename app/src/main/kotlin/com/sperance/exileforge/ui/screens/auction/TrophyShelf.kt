@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
@@ -32,7 +33,8 @@ import com.sperance.exileforge.ui.theme.Parchment
     val index = game.index ?: return
     val trophies = hero.info.trophies.filterValues { it > 0 }
     if (trophies.isEmpty()) return
-    val price = index.fates.effects(hero.info.fate).of(FateLever.TROPHIES)?.value?.toInt()
+    // Цена обмена - на силе дара (4.6.3), как её считает сервер
+    val price = FateKit.of(index, hero.info.fate, hero.stats, hero.equipped.values).effects.of(FateLever.TROPHIES)?.value?.toInt()
     ForgePanel(accent = FateInk.Gold) {
         Text(ui("fate.trophies_title"), color = FateInk.GoldLight, style = MaterialTheme.typography.titleSmall)
         Text(ui("fate.trophies_hint"), color = Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))

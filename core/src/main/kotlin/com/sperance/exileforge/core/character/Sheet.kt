@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.character
 
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.EquipSlots
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.Op
@@ -103,7 +104,7 @@ object Sheets {
         // Законы тронов героя - строки листа тем же правилом, что у сервера.
         val helpers = com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
         val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped }, laws, fate)
-        return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate, boons = index.fates.worn(index, fate, items.filter { it.equipped }))))
+        return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate, result.stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, items.filter { it.equipped }))))
     }
 
     /** What an item's requirements miss for a hero with [stats], in the rules' words; empty means it can be worn. */

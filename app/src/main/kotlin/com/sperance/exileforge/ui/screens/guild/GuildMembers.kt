@@ -39,7 +39,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
 
 /**
  * Состав таблицей (4.6.3, утверждён макет «Плотная таблица», вариант A; таблица - с 4.5.1): над ней поиск по имени и чипы отбора
- * ([RosterFilter]), заголовки «Ур.», «Неделя», «Всего» сортируют по нажатию (повтор - обратный порядок), без выбора - глава,
+ * ([RosterFilter]), порядок - кнопкой «⇅» у поиска: «Ур.», «Неделя», «Всего» (повтор - обратный порядок), без выбора - глава,
  * офицеры, участники, внутри по вкладу. Нажатие строки открывает карточку игрока; у кого есть права, тот находит в ней прежний
  * лист званий. Офицер и глава зовут по имени.
  */
@@ -70,12 +70,12 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
             }
         }
         item {
-            RosterSearch(game, query) { query = it }
+            RosterSearch(game, query, order, onQuery = { query = it }, onOrder = { order = it })
             Spacer(Modifier.height(6.dp))
             RosterFilters(guild.members, filter, scope) { filter = it }
             Spacer(Modifier.height(4.dp))
         }
-        item { RosterHeader(order) { column -> order = order.next(column) } }
+        item { RosterHeader() }
         items(shown, key = { it.heroId }) { member ->
             val commands = commandsOn(me, member)
             val manage = commands.takeIf { it.isNotEmpty() }?.let { PlayerAction(ui("guild.manage")) { chosen = member } }

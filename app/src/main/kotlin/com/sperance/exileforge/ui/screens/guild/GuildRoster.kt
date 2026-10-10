@@ -3,37 +3,33 @@ package com.sperance.exileforge.ui.screens.guild
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.FilterChip
+import androidx.compose.material.icons.outlined.SwapVert
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.number
@@ -43,26 +39,31 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.ClassPortrait
+import com.sperance.exileforge.ui.components.CompactSearchField
 import com.sperance.exileforge.ui.components.FateMark
 import com.sperance.exileforge.ui.components.GuildRoleMark
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.Presence
 import com.sperance.exileforge.ui.components.PresenceDot
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.ring
 import com.sperance.exileforge.ui.components.seenAgoText
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.Bronze
-import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Panel
+import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Vital
 
 /*
- * Состав гильдии (4.6.3, утверждён макет «Плотная таблица», вариант A): поиск по имени, чипы отбора со счётчиками, таблица
- * с сортируемыми «Ур.», «Неделя», «Всего» и итог. Строка - портрет класса в кольце роли с точкой присутствия, титул над
- * именем, знак роли перед ним, под именем значки: лига Разлома, дар, профессия.
+ * Состав гильдии (4.6.3, макет «Плотная таблица», вариант A; строки - макет «Состав гильдии», вариант A): плотный поиск по
+ * имени с кнопкой порядка, плотные чипы отбора со счётчиками, таблица «Участник» / «Неделя / всего» и итог. Строка - две
+ * плотные строки ~60dp: портрет класса в кольце роли с точкой присутствия и уровнем в углу; знак роли, имя и титул; «был N
+ * назад» и дар; у себя - полоса вклада за сутки.
  */
 
 /** Чем отбирается состав: правила гильдий (порог неактивности) и момент отбора [now] (мс эпохи). */
@@ -98,26 +99,69 @@ internal enum class RosterFilter(private val key: String, val keeps: (GuildMembe
 /** Подходит ли участник под поиск [query] - часть имени без учёта регистра; пустой поиск пропускает всех. */
 internal fun GuildMember.named(query: String): Boolean = name.contains(query.trim(), ignoreCase = true)
 
-/** Поиск по имени над составом. */
-@Composable internal fun RosterSearch(game: GameUi, query: String, onQuery: (String) -> Unit) {
-    OutlinedTextField(
-        query,
-        { onQuery(it.take(game.inputs.heroName)) },
-        placeholder = { Text(ui("guild.roster_search")) },
-        leadingIcon = { Icon(Icons.Outlined.Search, null) },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
-    )
+/** Поиск по имени над составом - плотное поле; справа - кнопка порядка ([RosterSort]). */
+@Composable internal fun RosterSearch(game: GameUi, query: String, order: RosterOrder?, onQuery: (String) -> Unit, onOrder: (RosterOrder?) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        CompactSearchField(query, { onQuery(it.take(game.inputs.heroName)) }, ui("guild.roster_search"), Modifier.weight(1f))
+        RosterSort(order, onOrder)
+    }
 }
 
-/** Чипы отбора: у каждого - сколько участников [members] под ним проходит. */
+/**
+ * Кнопка порядка «⇅»: меню столбцов ([RosterColumn]) и порядок по ролям; повторный выбор столбца - обратный порядок.
+ * Выбранный порядок подсвечивает кнопку.
+ */
+@Composable private fun RosterSort(order: RosterOrder?, onOrder: (RosterOrder?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val shape = RoundedCornerShape(10.dp)
+    Box {
+        Box(
+            Modifier.size(40.dp).clip(shape).background(Panel).border(1.dp, if (order != null) Gold.copy(alpha = .6f) else Bronze, shape)
+                .clickable(onClickLabel = ui("guild.sort")) { open = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Outlined.SwapVert, ui("guild.sort"), tint = if (order != null) GoldBright else Muted, modifier = Modifier.size(20.dp))
+        }
+        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+            DropdownMenuItem(
+                text = { Text(ui("guild.sort_role"), color = if (order == null) GoldBright else Parchment) },
+                onClick = {
+                    open = false
+                    onOrder(null)
+                },
+            )
+            RosterColumn.entries.forEach { column ->
+                val mark = when {
+                    order?.column != column -> ""
+                    order.descending -> " ↓"
+                    else -> " ↑"
+                }
+                DropdownMenuItem(
+                    text = { Text(ui(column.title) + mark, color = if (order?.column == column) GoldBright else Parchment) },
+                    onClick = {
+                        open = false
+                        onOrder(order.next(column))
+                    },
+                )
+            }
+        }
+    }
+}
+
+/** Плотные чипы отбора: у каждого - сколько участников [members] под ним проходит; выбранный - в нити `Gold`. */
 @Composable internal fun RosterFilters(members: List<GuildMember>, chosen: RosterFilter, scope: RosterScope, onChoose: (RosterFilter) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items(RosterFilter.entries, key = { it.name }) { filter ->
-            FilterChip(
-                selected = filter == chosen,
-                onClick = { onChoose(filter) },
-                label = { Text(ui("guild.roster_count", filter.label(scope), members.count { filter.keeps(it, scope) })) },
+            val on = filter == chosen
+            val shape = RoundedCornerShape(8.dp)
+            Text(
+                ui("guild.roster_count", filter.label(scope), members.count { filter.keeps(it, scope) }),
+                color = if (on) GoldBright else Muted,
+                style = MaterialTheme.typography.labelMedium,
+                maxLines = 1,
+                modifier = Modifier.height(28.dp).clip(shape).background(if (on) PanelRaised else Color.Transparent)
+                    .border(1.dp, if (on) Gold.copy(alpha = .5f) else Bronze, shape).clickable { onChoose(filter) }
+                    .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp),
             )
         }
     }
@@ -146,25 +190,19 @@ internal data class RosterOrder(val column: RosterColumn, val descending: Boolea
 /** Нажатие на заголовок [column]: новый столбец - по убыванию, тот же - обратный порядок. */
 internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.column == column) copy(descending = !descending) else RosterOrder(column)
 
-@Composable internal fun RosterHeader(order: RosterOrder?, onSort: (RosterColumn) -> Unit) {
+/** Заголовок таблицы: «Участник» и «Неделя / всего»; порядок - кнопкой у поиска ([RosterSort]). */
+@Composable internal fun RosterHeader() {
     Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         HeaderCell(ui("guild.col_member"), Modifier.weight(1f), TextAlign.Start)
-        RosterColumn.entries.forEach { column ->
-            val mark = when {
-                order?.column != column -> ""
-                order.descending -> " ↓"
-                else -> " ↑"
-            }
-            HeaderCell(ui(column.title) + mark, Modifier.width(column.width).clickable { onSort(column) }, TextAlign.End, active = order?.column == column)
-        }
+        HeaderCell(ui("guild.col_week_total"), Modifier, TextAlign.End)
     }
     HorizontalDivider(color = Bronze, thickness = 1.dp)
 }
 
-@Composable private fun HeaderCell(text: String, modifier: Modifier, align: TextAlign, active: Boolean = false) {
+@Composable private fun HeaderCell(text: String, modifier: Modifier, align: TextAlign) {
     Text(
         text.uppercase(),
-        color = if (active) GoldBright else Muted,
+        color = Muted,
         style = MaterialTheme.typography.labelSmall,
         fontWeight = FontWeight.SemiBold,
         textAlign = align,
@@ -173,22 +211,22 @@ internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.co
     )
 }
 
-private val RosterColumn.width: Dp get() = if (this == RosterColumn.LEVEL) 36.dp else 64.dp
-
 /**
- * Строка состава: портрет класса в кольце роли с точкой присутствия, титул над именем, знак роли перед именем, под ним значки
- * ([MemberMarks]); справа уровень, вклад за неделю и за всё время. Своя строка подсвечена.
+ * Строка состава - две плотные строки (~60dp): портрет ([MemberPortrait]); знак роли, имя и титул курсивом; ниже «был N назад»
+ * у не в сети и дар ([FateMark]); справа вклад за неделю крупно и «Σ всего». Своя строка подсвечена чертой `Gold` слева и
+ * несёт полосу вклада за сутки из потолка ([DayContribution]).
  */
 @Composable internal fun MemberRow(game: GameUi, member: GuildMember, isMe: Boolean, onClick: () -> Unit) {
-    Column(Modifier.fillMaxWidth().background(if (isMe) Gold.copy(alpha = .06f) else Color.Transparent).clickable(onClick = onClick)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 60.dp).then(if (isMe) Modifier.background(Gold.copy(alpha = .06f)).ownMark() else Modifier)
+                .padding(horizontal = 6.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             MemberPortrait(game, member)
-            Spacer(Modifier.width(9.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                member.title.takeIf { it.isNotBlank() }?.let {
-                    Text(titleName(it).uppercase(), color = Caution, style = MaterialTheme.typography.labelSmall, letterSpacing = .8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     GuildRoleMark(member.role)
                     Text(
                         if (isMe) ui("guild.me", member.name) else member.name,
@@ -197,49 +235,64 @@ private val RosterColumn.width: Dp get() = if (this == RosterColumn.LEVEL) 36.dp
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
+                    member.title.takeIf { it.isNotBlank() }?.let {
+                        Text("· " + titleName(it), color = Muted, fontSize = 11.sp, fontStyle = FontStyle.Italic, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    }
                 }
-                MemberMarks(game, member, isMe)
+                val seen = seenTail(member, isMe)
+                if (seen != null || member.fate != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        seen?.let { Text(it, color = Presence.of(member.online, member.lastSeenAt).color, fontSize = 11.sp, maxLines = 1) }
+                        member.fate?.let { FateMark(it, Modifier.weight(1f, fill = false)) }
+                    }
+                }
+                if (isMe && member.dayLimit > 0) DayContribution(member)
             }
-            NumberCell(member.level.toString(), RosterColumn.LEVEL)
-            NumberCell(number(member.weekContribution.toDouble()), RosterColumn.WEEK, dim = member.weekContribution == 0L)
-            NumberCell(number(member.contribution.toDouble()), RosterColumn.TOTAL)
+            Column(Modifier.width(76.dp), horizontalAlignment = Alignment.End) {
+                Text(number(member.weekContribution.toDouble()), color = if (member.weekContribution == 0L) Muted else GoldBright, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text("Σ " + number(member.contribution.toDouble()), color = Muted, fontSize = 11.sp, maxLines = 1)
+            }
         }
         HorizontalDivider(color = Bronze.copy(alpha = .5f), thickness = 1.dp)
     }
 }
 
-/** Портрет класса в кольце цвета роли; в углу - точка присутствия в ободке фона. */
+/** Черта своей строки - 2dp `Gold` по левому краю. */
+private fun Modifier.ownMark(): Modifier = drawBehind { drawRect(Gold, size = Size(2.dp.toPx(), size.height)) }
+
+/** Портрет класса в кольце цвета роли; в углу - точка присутствия в ободке фона, в другом - уровень плашкой. */
 @Composable private fun MemberPortrait(game: GameUi, member: GuildMember) {
-    Box(Modifier.size(36.dp)) {
-        ClassPortrait(member.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(36.dp), round = true, ring = member.role.ring)
+    Box(Modifier.size(40.dp)) {
+        ClassPortrait(member.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(36.dp).align(Alignment.Center), round = true, ring = member.role.ring)
         PresenceDot(member.online, member.lastSeenAt, 11.dp, Modifier.align(Alignment.BottomEnd).border(2.dp, Ink, CircleShape))
+        Text(
+            member.level.toString(),
+            color = Parchment,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            modifier = Modifier.align(Alignment.TopStart).background(PanelRaised, LevelShape).border(1.dp, Bronze, LevelShape).padding(horizontal = 3.dp),
+        )
     }
 }
 
-/**
- * Значки под именем: метка дара; у себя - сколько вклада внесено из суточного потолка, у прочих не в
- * сети - «был N назад». Нет данных - нет и значка.
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun MemberMarks(game: GameUi, member: GuildMember, isMe: Boolean) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        member.fate?.let { FateMark(it) }
-        presenceTail(member, isMe)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+private val LevelShape = RoundedCornerShape(6.dp)
+
+/** Свой вклад за сутки: тонкая полоса из суточного потолка и «сегодня X/N». */
+@Composable private fun DayContribution(member: GuildMember) {
+    val done = (member.dayLimit - member.dayLeft).coerceIn(0L, member.dayLimit)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.weight(1f).height(3.dp).background(Bronze, RoundedCornerShape(2.dp))) {
+            Box(Modifier.fillMaxWidth(done.toFloat() / member.dayLimit).fillMaxHeight().background(Gold, RoundedCornerShape(2.dp)))
+        }
+        Text(ui("guild.day_limit", number(done.toDouble()), number(member.dayLimit.toDouble())), color = Vital, fontSize = 10.sp, maxLines = 1)
     }
 }
 
-/** Хвост строки: у себя - вклад за сутки из потолка, у прочих не в сети - «был N назад», в сети - ничего. */
-private fun presenceTail(member: GuildMember, isMe: Boolean): String? = when {
-    isMe && member.dayLimit > 0 -> ui("guild.day_limit", number((member.dayLimit - member.dayLeft).coerceAtLeast(0).toDouble()), number(member.dayLimit.toDouble()))
-    member.online -> null
-    else -> seenAgoText(false, member.lastSeenAt)
-}
-
-@Composable private fun NumberCell(text: String, column: RosterColumn, dim: Boolean = false) {
-    Text(text, color = if (dim) Muted else Parchment, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, maxLines = 1, modifier = Modifier.width(column.width))
-}
+/** «был N назад» - у не в сети, кроме себя; в сети - точка на портрете. */
+private fun seenTail(member: GuildMember, isMe: Boolean): String? = if (isMe || member.online) null else seenAgoText(false, member.lastSeenAt)
 
 /** Итог состава: «В сети X из N · Неделя: Σ». */
 @Composable internal fun RosterFooter(members: List<GuildMember>) {

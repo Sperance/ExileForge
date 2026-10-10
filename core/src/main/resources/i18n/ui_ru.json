@@ -4102,8 +4102,6 @@
   "player.invite": "В гильдию",
   "player.lots": "Лоты игрока · {0}",
   "feedback.hero": "Герой: {0}",
-  "mod.kind.LINEAGE": "Родовая строка",
-  "card.veiled_lineage": "Скрытая родовая строка",
   "trace.factor.FATE": "предначертание",
   "trace.factor.FATE.about": "Удар героя тяжелее по Предначертанию аккаунта: например, «Кровь предков» - за потерянное здоровье.",
   "expedition.log_note_fate": "Предначертание: {0}",
@@ -4127,5 +4125,6 @@
   "fate.trophies_no_fate": "Трофеи меняет только Предначертание «Трофейщик»",
   "fate.trophies_trade": "Обменять",
   "stat.src.fate": "Предначертание: {0}",
-  "fight.fate_buff": "Предначертание"
+  "fight.fate_buff": "Предначертание",
+  "fate.bounty_next": "Боёв до сферы дара: {0}"
 }

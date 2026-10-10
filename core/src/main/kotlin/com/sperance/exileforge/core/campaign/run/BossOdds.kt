@@ -75,8 +75,6 @@ class OddsPlan internal constructor(
     private val cleared: Boolean,
     /** Вид предсказанного боя (4.3.0): прогон катит его правила - своей ярости у «Весов» нет. */
     private val kind: FightKind,
-    /** Питомец-помощник (4.6.0, Предначертание `SECOND_PET`). */
-    private val helper: Ally? = null,
 ) {
     /** [fights] боёв, каждый на своих костях, не дольше [cap] секунд (недоигранный - не победа). */
     fun run(fights: Int = FIGHTS, cap: Double = CAP): BossOdds {
@@ -87,7 +85,7 @@ class OddsPlan internal constructor(
         repeat(fights) { i ->
             val battle = Battle(
                 hero, phases.withRetinue(foes, Dice(SEED + i)), rules, fight, pools.life, Random(SEED + i), stance,
-                kit = kit, model = model, pools = pools, percent = percent, ally = ally, cleared = cleared, kind = kind, helper = helper,
+                kit = kit, model = model, pools = pools, percent = percent, ally = ally, cleared = cleared, kind = kind,
             )
             while (battle.outcome == null && battle.time < cap) battle.advance(1.0)
             seconds += battle.time

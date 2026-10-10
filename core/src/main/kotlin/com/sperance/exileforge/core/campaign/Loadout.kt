@@ -15,7 +15,6 @@ import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillStat
@@ -106,7 +105,7 @@ data class Loadout(
     val powers: PowerBook = PowerBook(),
     /** The rules of the hero's frenzy, power and endurance charges (3.33.0, server 1.32.0). */
     val charges: ChargeRules = ChargeRules(),
-    /** Предначертание аккаунта (4.6.0): рычаги боя и питомец-помощник второго боевого ([FateKit]). */
+    /** Предначертание аккаунта (4.6.0): рычаги боя ([FateKit]). */
     val fate: FateKit = FateKit.NONE,
 ) {
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
@@ -172,15 +171,14 @@ data class Loadout(
 }
 
 /**
- * Предначертание в бою (4.6.0): рычаги дара на его силе ([effects], один резолвер правил) и питомец-помощник [helper], которого
- * рычаг `SECOND_PET` выводит вторым боевым. Без дара - [NONE]: бой идёт, как шёл.
+ * Предначертание в бою (4.6.0): рычаги дара на его силе ([effects], один резолвер правил). Без дара - [NONE]: бой идёт, как шёл.
  */
-class FateKit(val effects: FateEffects, val helper: Pet? = null) {
+class FateKit(val effects: FateEffects) {
     companion object {
         val NONE = FateKit(FateEffects.NONE)
 
-        /** Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`) с помощником [helper]. */
-        fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>, helper: Pet?): FateKit = index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0).let { if (it.fate == null) NONE else FateKit(it, helper) }
+        /** Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`). */
+        fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>): FateKit = index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0).let { if (it.fate == null) NONE else FateKit(it) }
     }
 }
 

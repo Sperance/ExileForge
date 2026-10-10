@@ -24,6 +24,7 @@ import com.sperance.exileforge.presentation.state.HeroPage
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
+import com.sperance.exileforge.rules.content.FateLever
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
 import org.koin.compose.viewmodel.koinViewModel
@@ -90,8 +91,8 @@ fun HeroScreen() {
                     }
 
                     else -> {
-                        // Предначертание аккаунта (4.6.0) над листом: тема и имя, касание - описание
-                        heroFate(game)?.let { fate -> item(key = "fate") { FateBadge(fate, Modifier.fillMaxWidth()) } }
+                        // Предначертание аккаунта (4.6.0) над листом: имя, касание - описание и что дар копит
+                        heroFate(game)?.let { fate -> item(key = "fate") { FateBadge(fate, Modifier.fillMaxWidth(), progress = fateProgress(game)) } }
                         item { HeroSummary(game) }
                     }
                 }
@@ -148,3 +149,10 @@ fun HeroScreen() {
 
 /** Предначертание аккаунта героя карточкой (4.6.0); не выбрано или нет в контенте - null. */
 private fun heroFate(game: GameUi): FateCard? = game.index?.fates?.of(game.hero?.info?.fate)?.let(FateCard::of)
+
+/** Боёв до сферы Щедрости судьбы (4.6.1, `FateLever.FIGHT_BOUNTY`, счёт сервера `fateFights`); у дара без рычага - null. */
+private fun fateProgress(game: GameUi): String? {
+    val info = game.hero?.info ?: return null
+    val every = game.index?.fates?.effects(info.fate)?.of(FateLever.FIGHT_BOUNTY)?.every?.takeIf { it > 0 } ?: return null
+    return ui("fate.bounty_next", every - (info.fateFights % every).toInt())
+}

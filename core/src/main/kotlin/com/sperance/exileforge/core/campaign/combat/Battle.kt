@@ -75,8 +75,6 @@ class Battle(
     val cleared: Boolean = false,
     /** Вид боя (4.3.0): по нему правила ярости `combat.enrage`; без него - бой похода, со стражем или со стаей. */
     val kind: FightKind = FightKinds.expedition(foes),
-    /** Питомец-помощник вторым боевым (4.6.0, Предначертание `SECOND_PET`); null - его нет. */
-    val helper: Ally? = null,
     /** Счёт Предначертания на заход (4.6.0): бои захода делят его; без захода - свой. */
     val fateRun: FateRun = FateRun(),
 ) {
@@ -270,11 +268,8 @@ class Battle(
     /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
     val allyFighter: Fighter? = ally?.let { Fighter(Side.HERO, it.body, it.body.maxLife, ALLY) }
 
-    /** Питомец-помощник в бою (4.6.0): бьёт цель героя и, как боевой, принимает удары. */
-    val helperFighter: Fighter? = helper?.let { Fighter(Side.HERO, it.body, it.body.maxLife, HELPER) }
-
-    /** Питомцы на стороне героя (4.6.0): боевой и помощник. */
-    internal val pets: List<Fighter> = listOfNotNull(allyFighter, helperFighter)
+    /** Питомцы на стороне героя: боевой. */
+    internal val pets: List<Fighter> = listOfNotNull(allyFighter)
 
     /** Все бойцы боя: герой, питомцы, враги - в этом порядке. */
     internal val everyone: List<Fighter> get() = listOf(heroFighter) + pets + foeFighters
@@ -283,16 +278,10 @@ class Battle(
     internal val fated: List<FatedLever> = FatedLever.of(kit.fate.effects)
     internal val fateFight = FateFight()
 
-    /**
-     * Whom a monster's blow is for: a standing tank pet takes them all, any other pet its share, the hero the rest. Два питомца
-     * (4.6.0): доля удара уходит одному из стоящих - кость тянется лишь при двух.
-     */
+    /** Whom a monster's blow is for: a standing tank pet takes them all, any other pet its share, the hero the rest. */
     internal fun foeTarget(): Fighter {
-        val standing = listOfNotNull(allyFighter?.takeIf { it.alive }?.let { it to ally!! }, helperFighter?.takeIf { it.alive }?.let { it to helper!! })
-        if (standing.isEmpty()) return heroFighter
-        standing.firstOrNull { it.second.tank }?.let { return it.first }
-        if (random.nextDouble() >= standing.first().second.drawFire) return heroFighter
-        return if (standing.size == 1) standing.first().first else standing[random.nextInt(standing.size)].first
+        val pet = allyFighter?.takeIf { it.alive } ?: return heroFighter
+        return if (ally!!.tank || random.nextDouble() < ally.drawFire) pet else heroFighter
     }
 
     /** The auras of the foes still standing, summed per stat (server 0.66.0). */
@@ -601,9 +590,6 @@ class Battle(
 
         /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
         const val ALLY = -2
-
-        /** Место питомца-помощника (4.6.0). */
-        const val HELPER = -3
 
         /** How often, in seconds, a support pet's healing is written as a line of the log (3.70.0). */
 

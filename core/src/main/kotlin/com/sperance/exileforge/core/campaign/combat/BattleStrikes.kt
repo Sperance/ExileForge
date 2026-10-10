@@ -42,10 +42,15 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val evade = evasion(me, target)
     val blockChance = if (blow.spell) target.body.spellBlock else target.body.block
     val kind = when {
-        target.frozen() -> if (sure || fatedSure || crit(body, blow.spell)) HitKind.CRIT else HitKind.HIT
-        !blow.spell && draw(RollKey.EVADE, evade) < evade -> HitKind.EVADED
-        draw(RollKey.BLOCK, blockChance) < blockChance -> HitKind.BLOCKED
-        sure || fatedSure || crit(body, blow.spell) -> HitKind.CRIT
+        target.frozen() -> if (sure || fatedSure || crit(me, body, blow.spell)) HitKind.CRIT else HitKind.HIT
+
+        // Удача рода (4.6.1): уклонение и блок героя, крит героя - лучший из двух бросков
+        !blow.spell && checkDraw(target, RollKey.EVADE, evade) < evade -> HitKind.EVADED
+
+        checkDraw(target, RollKey.BLOCK, blockChance) < blockChance -> HitKind.BLOCKED
+
+        sure || fatedSure || crit(me, body, blow.spell) -> HitKind.CRIT
+
         else -> HitKind.HIT
     }.let { if (it == HitKind.CRIT && critBanned(me)) HitKind.HIT else it }
     if (sure && kind == HitKind.CRIT) nextCrit = false
@@ -82,17 +87,22 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Разлом (3.96.0): «Тяжкие удары» героя, печати Стража, «Одна стихия» Владыки
     val heavy = heavy(me, blow)
     // Предначертание (4.6.0): «Кровь предков» - удар героя тяжелее с потерянным здоровьем
-    val fateMore = fateHeavier(me)
+    val fateMore = fateHeavier(me, blow)
     val seals = sealed(target)
     var unruled = 0.0
     val types = mutableListOf<TypeTrace>()
     var spreadSum = 0.0
     var takenSum = 0.0
     var defended = 0.0
-    val taken = converted(body, target.body, blow.damage.filterValues { it > 0 }).mapValues { (type, base) ->
+    val parts = converted(body, target.body, blow.damage.filterValues { it > 0 })
+    // Зеркало урона (4.6.1): запас сверх удара - теми же типами по их долям, до защит цели
+    val stored = fateExtra(me)
+    val partsSum = parts.values.sum()
+    val taken = parts.mapValues { (type, base) ->
         val spread = if (blow.spread) 1 + (random.nextDouble() * 2 - 1) * rules.variance / 100 else 1.0
         val grown = base * spread * multiplier * against * body.damageMore * doubled * versus * fateMore
-        val raw = if (heavy == 1.0) grown else grown * heavy
+        val heavied = if (heavy == 1.0) grown else grown * heavy
+        val raw = if (stored > 0 && partsSum > 0) heavied + stored * base / partsSum else heavied
         val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
         val armour = when (type) {
             DamageType.PHYSICAL -> target.body.physicalMitigation(raw, rules.armour.factor)
@@ -170,9 +180,9 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
 }
 
 /** A critical roll of [body]'s chance — a spell's own (server 1.56.0); a lucky one (server 1.32.0) gets a second. */
-private fun Battle.crit(body: Combatant, spell: Boolean = false): Boolean {
+private fun Battle.crit(me: Fighter, body: Combatant, spell: Boolean = false): Boolean {
     val chance = body.critChance(spell)
-    return draw(RollKey.CRIT, chance) < chance || body.luckyCrit && draw(RollKey.CRIT_LUCKY, chance) < chance
+    return checkDraw(me, RollKey.CRIT, chance) < chance || body.luckyCrit && draw(RollKey.CRIT_LUCKY, chance) < chance
 }
 
 /** The share of an elemental hit of [raw] the armour turns aside where some of it applies to elements (3.35.0). */
@@ -185,7 +195,7 @@ private fun Battle.elementalArmour(target: Combatant, type: DamageType, raw: Dou
 private fun Battle.blocked(target: Fighter) {
     val body = target.body
     lifeBack(target, body.lifeOnBlock * body.recoveryRate)
-    target.mana = min(manaCap(target), target.mana + body.manaOnBlock)
+    manaBack(target, body.manaOnBlock)
     target.shield = min(body.maxShield, target.shield + body.shieldOnBlock)
     if (target === heroFighter) blockedAt = time
 }

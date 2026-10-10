@@ -26,6 +26,7 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.EffectView
+import com.sperance.exileforge.core.campaign.combat.FateRun
 import com.sperance.exileforge.core.campaign.combat.FlaskView
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.HeroPools
@@ -104,6 +105,11 @@ class ExpeditionRun(
     internal var autopilot: AutoPilot? = null,
     /** The combat pet at work (3.5.0), read again as each fight begins (3.70.0): one put to work mid-run joins the next. */
     internal val pet: () -> Pet? = { null },
+    /**
+     * Счёт Предначертания захода (4.6.0): бои захода и его Ваал-зоны делят его - перелив маны, выигранные бои Разгона
+     * ([tallyWins]).
+     */
+    val fateRun: FateRun = FateRun(),
 ) {
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
@@ -262,12 +268,6 @@ class ExpeditionRun(
     /** The pet of the fight under way, taken as it began: a change mid-fight waits for the next. */
     internal var fightPet: Pet? = null
     internal fun ally(): Ally? = allies.of(hero.stats, fightPet)
-
-    /** Питомец-помощник вторым боевым (4.6.0, Предначертание `SECOND_PET`). */
-    internal fun helper(): Ally? = allies.helper(hero.stats, kit.fate)
-
-    /** Счёт Предначертания захода (4.6.0): «Второе дыхание» - раз на заход, бои его делят. */
-    internal val fateRun = com.sperance.exileforge.core.campaign.combat.FateRun()
 
     /**
      * The hero's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not.
@@ -465,6 +465,11 @@ class ExpeditionRun(
             auto: AutoPlan? = null,
             /** The combat pet at work (3.5.0): it fights every fight at the hero's side, read again as each begins (3.70.0). */
             pet: () -> Pet? = { null },
+            /**
+             * Счёт Предначертания захода (4.6.1): Ваал-зона берёт счёт карты, из которой вошли; по умолчанию - павшие [killed] этой
+             * зоны.
+             */
+            fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location) ?: location else location
             val context = run.context
@@ -500,8 +505,9 @@ class ExpeditionRun(
             val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, if (vaal) run.seed xor VAAL_SALT else run.seed) }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet,
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet, fateRun,
             ).also {
+                it.tallyWins()
                 it.atlas = context.atlas.filterValues { value -> value != 0.0 }
                 // Сделки алтарей - до павших: стаи подкрепления встают, и уже убитые из них остаются лежать
                 it.bargain(if (vaal) inherited else run.features.bonuses(features))

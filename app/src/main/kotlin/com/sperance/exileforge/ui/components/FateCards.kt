@@ -2,6 +2,7 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -19,14 +20,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -36,18 +41,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,12 +65,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
-import com.sperance.exileforge.rules.content.FateTheme
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
 import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.roundToInt
 
 /*
  * Предначертание (4.6.0, макет «Пепел предков», утверждён владельцем): палитра уголь и золото, как у уникальных вещей. Части
@@ -82,22 +91,13 @@ object FateInk {
     val Sigil = listOf(Color(0xFF5A3418), Color(0xFF1C0F08))
     val Ground = listOf(Color(0xFF5A2310), Color(0xFF24100A), Color(0xFF0B0605))
     val Text = Color(0xFFD7DBE4)
-    val Tag = Color(0xFF9AA1B2)
+    val Parchment = listOf(Color(0xFF2E1C10), Color(0xFF1E120A), Color(0xFF2A190D))
     val Warn = Color(0xFFE8A35A)
     val Accepted = Color(0xFF3FB67A)
 }
 
-/** Знак темы дара в печати карты: символ, не слово. */
-fun FateTheme.sigil(): String = when (this) {
-    FateTheme.OFFENCE -> "⚔"
-    FateTheme.DEFENCE -> "⛨"
-    FateTheme.SKILLS -> "✧"
-    FateTheme.LOOT -> "◈"
-    FateTheme.ATLAS -> "✵"
-    FateTheme.TRIALS -> "♜"
-    FateTheme.CRAFT -> "⚒"
-    FateTheme.PROGRESS -> "➶"
-}
+/** Знак Предначертания в печати (4.6.1 - без тем): один на все дары. */
+private const val SIGIL = "✦"
 
 /** Подложка «Пепла предков»: жар снизу, уголь к верху. */
 fun Modifier.ashGround(): Modifier = drawBehind {
@@ -143,8 +143,8 @@ private val SPARKS = List(26) { i ->
     }
 }
 
-/** Печать дара: круг уголь-золото со знаком темы и медленно вращающимся пунктирным кольцом (14 с). */
-@Composable fun FateSigil(theme: FateTheme, size: Dp = 54.dp) {
+/** Печать дара: круг уголь-золото со знаком Предначертания и медленно вращающимся пунктирным кольцом (14 с). */
+@Composable fun FateSigil(size: Dp = 54.dp) {
     val turn = motionClock(SIGIL_MS, "fate-sigil")
     Box(
         Modifier.size(size + 12.dp).drawBehind {
@@ -161,13 +161,14 @@ private val SPARKS = List(26) { i ->
         Box(
             Modifier.size(size).background(Brush.radialGradient(FateInk.Sigil), CircleShape).border(1.dp, FateInk.Gold.copy(alpha = .6f), CircleShape),
             contentAlignment = Alignment.Center,
-        ) { Text(theme.sigil(), color = FateInk.GoldLight, fontSize = (size.value * .44f).sp) }
+        ) { Text(SIGIL, color = FateInk.GoldLight, fontSize = (size.value * .44f).sp) }
     }
 }
 
 /**
- * Карта-таро дара [card]: лицо - тема, печать, имя Cinzel и описание словами сервера; рубашка - узор и звезда. [turn] - поворот
- * вокруг вертикали в градусах (0 - лицом, 180 - рубашкой); лицо и рубашка не просвечивают друг сквозь друга.
+ * Карта-таро дара [card] (4.6.1, решение владельца): на лице - только имя, крупно Cinzel между золотыми узорами, чтобы
+ * помещалось всегда; описание - свиток под веером ([FateScroll]). Рубашка - узор и звезда. [turn] - поворот вокруг вертикали
+ * в градусах (0 - лицом, 180 - рубашкой); лицо и рубашка не просвечивают друг сквозь друга.
  */
 @Composable fun FateTarot(card: FateCard, turn: Float, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
@@ -186,15 +187,102 @@ private val SPARKS = List(26) { i ->
         } else {
             Column(
                 Modifier.fillMaxSize().background(Brush.linearGradient(FateInk.Face), shape).border(1.dp, FateInk.Rim, shape)
-                    .padding(3.dp).border(1.dp, FateInk.Gold.copy(alpha = .35f), RoundedCornerShape(11.dp)).padding(horizontal = 7.dp, vertical = 10.dp),
+                    .padding(3.dp).border(1.dp, FateInk.Gold.copy(alpha = .35f), RoundedCornerShape(11.dp)).padding(horizontal = 6.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically),
             ) {
-                Text(card.themeTitle.uppercase(), color = FateInk.Tag, fontSize = 8.5.sp, letterSpacing = 1.4.sp, textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                FateSigil(card.theme, 44.dp)
-                Text(card.title, style = relicName(13).copy(color = FateInk.GoldLight), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(card.text, color = FateInk.Text, fontSize = 10.5.sp, lineHeight = 14.sp, textAlign = TextAlign.Center, maxLines = 7, overflow = TextOverflow.Ellipsis)
+                FateFlourish(Modifier.fillMaxWidth(.7f).height(10.dp))
+                Text(
+                    card.title.uppercase(),
+                    style = relicName(nameSize(card.title)).copy(color = FateInk.GoldLight, shadow = Shadow(FateInk.Gold.copy(alpha = .45f), blurRadius = 14f)),
+                    textAlign = TextAlign.Center,
+                    lineHeight = (nameSize(card.title) + 5).sp,
+                )
+                FateFlourish(Modifier.fillMaxWidth(.7f).height(10.dp))
             }
+        }
+    }
+}
+
+/**
+ * Кегль имени на лице карты (4.6.1): по самому длинному слову - Cinzel заглавными, чтобы слово не рвалось на узкой карте.
+ */
+private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNull { it.length } ?: 0) {
+    in 0..7 -> 17
+    in 8..9 -> 15
+    in 10..11 -> 13
+    else -> 11
+}
+
+/** Золотой узор: тонкая черта, к краям гаснет, в середине - ромб. */
+@Composable fun FateFlourish(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val mid = size.height / 2
+        val fade = Brush.horizontalGradient(listOf(Color.Transparent, FateInk.Gold.copy(alpha = .7f), Color.Transparent))
+        drawLine(fade, Offset(0f, mid), Offset(size.width, mid), 1.dp.toPx())
+        val r = size.height / 2
+        val diamond = Path().apply {
+            moveTo(center.x, mid - r)
+            lineTo(center.x + r, mid)
+            lineTo(center.x, mid + r)
+            lineTo(center.x - r, mid)
+            close()
+        }
+        drawPath(diamond, FateInk.Face.last())
+        drawPath(diamond, FateInk.Gold, style = Stroke(1.dp.toPx()))
+    }
+}
+
+/**
+ * Свиток судьбы (4.6.1, решение владельца): описание выбранного дара [card] - выезжает снизу и разворачивается между двумя
+ * золотыми валиками (подъём, затем развёртка, ~0,9 с); новая карта - свиток разворачивается заново. Без анимаций - сразу
+ * развёрнут. Имя - Cinzel, текст - словами сервера, длинный листается.
+ */
+@Composable fun FateScroll(card: FateCard, modifier: Modifier = Modifier) {
+    val motion = LocalMotion.current
+    val open = remember(card.code) { Animatable(if (motion) 0f else 1f) }
+    LaunchedEffect(card.code) { open.animateTo(1f, tween(SCROLL_MS, easing = LinearEasing)) }
+    val rise = FastOutSlowInEasing.transform((open.value / SCROLL_RISE).coerceIn(0f, 1f))
+    val unroll = FastOutSlowInEasing.transform(((open.value - SCROLL_RISE / 2) / (1 - SCROLL_RISE / 2)).coerceIn(0f, 1f))
+    Column(
+        modifier.graphicsLayer {
+            alpha = rise
+            translationY = (1 - rise) * 48.dp.toPx()
+        },
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        ScrollRod()
+        Box(
+            Modifier.fillMaxWidth().padding(horizontal = 6.dp).clipToBounds().layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints)
+                layout(placeable.width, (placeable.height * unroll).roundToInt()) { placeable.place(0, 0) }
+            },
+        ) {
+            Column(
+                Modifier.fillMaxWidth().background(Brush.verticalGradient(FateInk.Parchment)).drawBehind {
+                    // Края свитка темнее - бумага загибается к валикам
+                    drawRect(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = .35f), Color.Transparent, Color.Transparent, Color.Black.copy(alpha = .35f))))
+                }.heightIn(max = SCROLL_MAX).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(card.title, style = relicName(15).copy(color = FateInk.GoldLight), textAlign = TextAlign.Center)
+                FateFlourish(Modifier.padding(vertical = 6.dp).fillMaxWidth(.5f).height(8.dp))
+                Text(card.text, color = FateInk.Text, fontSize = 13.sp, lineHeight = 19.sp, textAlign = TextAlign.Center)
+            }
+        }
+        ScrollRod()
+    }
+}
+
+/** Валик свитка: золотой стержень с круглыми навершиями по краям. */
+@Composable private fun ScrollRod() {
+    Canvas(Modifier.fillMaxWidth().height(12.dp)) {
+        val knob = size.height / 2
+        val rod = Brush.verticalGradient(listOf(FateInk.GoldLight, FateInk.Rim, Color(0xFF3A2110)))
+        drawRoundRect(rod, Offset(knob, size.height * .2f), Size(size.width - 2 * knob, size.height * .6f), CornerRadius(size.height * .3f))
+        listOf(knob, size.width - knob).forEach { x ->
+            drawCircle(FateInk.Rim, knob, Offset(x, knob))
+            drawCircle(FateInk.Gold, knob * .55f, Offset(x - knob * .15f, knob * .85f))
         }
     }
 }
@@ -253,9 +341,10 @@ private val SPARKS = List(26) { i ->
 }
 
 /**
- * Плашка Предначертания (4.6.0) для карточки игрока и шапки героя: печать темы, тема и имя; касание раскрывает описание.
+ * Плашка Предначертания (4.6.0) для карточки игрока и шапки героя: печать и имя (4.6.1 - без темы); касание раскрывает описание
+ * и [progress] - что дар копит (например, бои до Щедрости судьбы).
  */
-@Composable fun FateBadge(card: FateCard, modifier: Modifier = Modifier, compact: Boolean = false) {
+@Composable fun FateBadge(card: FateCard, modifier: Modifier = Modifier, compact: Boolean = false, progress: String? = null) {
     var open by rememberSaveable(card.code) { mutableStateOf(false) }
     val shape = RoundedCornerShape(12.dp)
     Column(
@@ -263,10 +352,9 @@ private val SPARKS = List(26) { i ->
             .padding(horizontal = 10.dp, vertical = 8.dp).animateContentSize(),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            FateSigil(card.theme, if (compact) 22.dp else 28.dp)
+            FateSigil(if (compact) 22.dp else 28.dp)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text(card.themeTitle.uppercase(), color = FateInk.Tag, fontSize = 9.sp, letterSpacing = 1.2.sp, maxLines = 1)
                 Text(card.title, style = relicName(if (compact) 13 else 15).copy(color = FateInk.GoldLight, shadow = Shadow(FateInk.Gold.copy(alpha = .4f), blurRadius = 10f)), maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             Text(if (open) "▴" else "▾", color = Muted, style = MaterialTheme.typography.labelMedium)
@@ -274,6 +362,7 @@ private val SPARKS = List(26) { i ->
         if (open) {
             Spacer(Modifier.height(6.dp))
             Text(card.text, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.fillMaxWidth())
+            progress?.let { Text(it, color = FateInk.GoldLight, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 4.dp)) }
             Text(ui("fate.forever"), color = FateInk.Warn, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
         }
     }
@@ -283,6 +372,11 @@ private val SPARKS = List(26) { i ->
 private const val EMBER_MS = 9_000
 private const val ALTAR_MS = 3_000
 private const val SIGIL_MS = 14_000
+
+/** Свиток: вся анимация, доля подъёма в ней и предел высоты текста. */
+private const val SCROLL_MS = 900
+private const val SCROLL_RISE = .35f
+private val SCROLL_MAX = 190.dp
 
 /** Сколько держать кнопку принятия, мс. */
 const val HOLD_MS = 1_200

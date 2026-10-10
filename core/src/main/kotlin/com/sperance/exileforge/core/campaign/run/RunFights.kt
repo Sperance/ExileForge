@@ -31,6 +31,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
+import com.sperance.exileforge.rules.content.FateLever
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -121,7 +122,7 @@ internal fun ExpeditionRun.battle(): Battle {
         // Свита фаз босса (3.92.0) - в конце стаи, на своём потоке: бой без фаз катится как прежде
         phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
         rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit, model = build, pools = pools,
-        percent = build.gear.percent, ally = ally(), cleared = wonLast, helper = helper(), fateRun = fateRun,
+        percent = build.gear.percent, ally = ally(), cleared = wonLast, fateRun = fateRun,
     )
 }
 
@@ -157,10 +158,19 @@ internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
     }
     rewarding(event, fought = true)
     when (event) {
-        is RunEvent.Boss -> killed(event.n, FightKey.BOSS, 0)
-        is RunEvent.Kill -> killed(event.n, FightKey(event.i, event.vaal, boss = false), event.m)
-        else -> Unit
+        is RunEvent.Boss -> killed(event.n, FightKey.BOSS, 0).also { fateRun.bossSlain() }
+        is RunEvent.Kill -> killed(event.n, FightKey(event.i, event.vaal, boss = false), event.m).also { fateRun.slain(event.i * Run.PACK_SLOTS + event.m, event.vaal) }
+        else -> return
     }
+    tallyWins()
+}
+
+/**
+ * Выигранные бои захода (4.6.1, Разгон [FateLever.WIN_STREAK]) - тем же правилом, что считает сервер ([Run.fightsWon]); без
+ * рычага паки не перебираются.
+ */
+internal fun ExpeditionRun.tallyWins() {
+    if (kit.fate.effects.has(FateLever.WIN_STREAK)) fateRun.recount(run)
 }
 
 internal fun ExpeditionRun.play(dt: Double) {

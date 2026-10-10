@@ -83,15 +83,15 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     val regenerated = lifeBack(me, recovery(me, (me.body.lifeRegen + me.body.maxLife * me.body.lifeRegenShare) * me.body.recoveryRate * dt))
     if (me === heroFighter) regenLogged += regenerated
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
-    if (!manaless(me)) me.mana = min(manaCap(me), me.mana + me.body.manaRegen(rules.mana) * dt)
+    if (!manaless(me)) manaBack(me, me.body.manaRegen(rules.mana) * dt)
     if (me === heroFighter) {
         recoveries.forEach { draught ->
             val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)
             val gain = draught.life * slice
-            val restored = lifeBack(me, gain)
+            val restored = lifeBack(me, gain, overheal = draught.slot >= 0)
             draught.restored += restored
             draught.wasted += gain - restored
-            me.mana = min(manaCap(), me.mana + draught.mana * slice)
+            manaBack(me, draught.mana * slice)
             if (draught.stopsAtFull && me.life >= me.body.maxLife) stopDraught(draught)
         }
         if (time - regenLoggedAt >= 1.0) {
@@ -390,9 +390,8 @@ internal fun Battle.evasion(me: Fighter, target: Fighter): Double = rules.accura
 
 private fun Battle.finished(): Boolean {
     if (outcome != null) return true
-    // A power may answer the hero's fall (2.79.0) and stand them back up; then Предначертание (4.6.0, «Второе дыхание»).
+    // A power may answer the hero's fall (2.79.0) and stand them back up.
     if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
-    if (!heroFighter.alive) fateDies()
     when {
         !heroFighter.alive -> end(Outcome.LOSS)
         foeFighters.none { it.alive } && !nextRound() -> end(Outcome.WIN)

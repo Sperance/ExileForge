@@ -52,6 +52,8 @@ import kotlinx.serialization.Serializable
     val fate: String? = null,
     /** Трофеи боссов (4.6.0, Предначертание «Трофейщик»): код босса - сколько; торговец меняет их на его уникалку. */
     val trophies: Map<String, Int> = emptyMap(),
+    /** Выигранных в заходах боёв (4.6.1, Предначертание «Щедрость судьбы»): каждый `every`-й приносит сферу; копится навсегда. */
+    val fateFights: Long = 0,
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */

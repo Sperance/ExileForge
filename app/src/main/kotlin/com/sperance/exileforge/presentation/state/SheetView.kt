@@ -111,7 +111,8 @@ internal object HeroLens {
     /** The hero's tree as the rules count it: the point balance and what the taken nodes give. */
     fun treeState(index: ContentIndex?, hero: HeroView?): TreeState? = index?.let { i ->
         hero?.let { h ->
-            val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
+            // Закалка Предначертания (4.6.1) - очки сверх уровня тем же правилом, что принимает сервер
+            val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints + i.fates.effects(h.info.fate).treePoints(h.level)
             val spent = i.tree.spent(h.tree)
             val calculator = SheetCalculator(i)
             TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))

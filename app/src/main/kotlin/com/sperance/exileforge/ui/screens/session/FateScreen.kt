@@ -49,6 +49,7 @@ import com.sperance.exileforge.presentation.session.FateViewModel
 import com.sperance.exileforge.ui.components.AltarGlow
 import com.sperance.exileforge.ui.components.EmberField
 import com.sperance.exileforge.ui.components.FateInk
+import com.sperance.exileforge.ui.components.FateScroll
 import com.sperance.exileforge.ui.components.FateTarot
 import com.sperance.exileforge.ui.components.HoldToAccept
 import com.sperance.exileforge.ui.components.LanguageButton
@@ -65,9 +66,9 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Выбор Предначертания аккаунта (4.6.0, макет «Пепел предков» - вариант 1, утверждён владельцем): до списка героев, пока дар
  * не выбран, - у нового аккаунта и у прежнего одинаково. Тёплый алтарь дышит внизу, со дна поднимаются угли; заголовок
- * проявляется золотом; три карты выезжают из огня веером и переворачиваются по одной. Касание выбирает карту (она поднимается
- * и светится, прочие гаснут), кнопку держат ~1,2 с - золотая вспышка, и экран уходит к героям. Декор стоит при выключенных
- * анимациях, раздача тогда мгновенна.
+ * проявляется золотом; три карты выезжают из огня веером и переворачиваются по одной - на лице лишь имя дара. Касание выбирает
+ * карту (она поднимается и светится, прочие гаснут) и разворачивает снизу свиток с её описанием (4.6.1); кнопку держат ~1,2 с -
+ * золотая вспышка, и экран уходит к героям. Декор стоит при выключенных анимациях, раздача и свиток тогда мгновенны.
  */
 @Composable fun FateScreen() {
     val vm = koinViewModel<FateViewModel>()
@@ -93,6 +94,10 @@ import org.koin.compose.viewmodel.koinViewModel
 
                     else -> TextButton(onClick = vm::refresh) { Text(ui("fate.retry"), color = FateInk.GoldLight) }
                 }
+            }
+            // Свиток судьбы (4.6.1): описание выбранной карты разворачивается под веером
+            offers.firstOrNull { it.code == (picked ?: chosen?.code) }?.let { card ->
+                FateScroll(card, Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 10.dp))
             }
             FateFooter(motion, offers.isNotEmpty(), picked != null, chosen != null, hint) { refused ->
                 if (refused) hint = true else picked?.let(vm::choose)

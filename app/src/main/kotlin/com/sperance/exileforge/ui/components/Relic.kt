@@ -165,9 +165,6 @@ private val TierAsh = Color(0xFF9FB3C0)
 private val UniqueGold = Color(0xFFF0C76A)
 private val BenchLilac = Color(0xFFB4B4FF)
 
-/** Родовая строка (4.6.0): бронза рода - значок и подсказка вида. */
-val LineageBronze = Color(0xFFD9A066)
-
 /** Заливка значка строки: по тиру для роллов, свой цвет у уникальной, ремесла, порчи и прочих источников. */
 fun tierColor(marks: AffixMarks): Color = when (marks.kind) {
     AffixKind.UNIQUE -> UniqueGold
@@ -186,8 +183,6 @@ fun tierColor(marks: AffixMarks): Color = when (marks.kind) {
 
     AffixKind.ESSENCE -> Color(0xFFC8A0FF)
 
-    AffixKind.LINEAGE -> LineageBronze
-
     AffixKind.PREFIX, AffixKind.SUFFIX, null -> when (marks.tier) {
         1 -> TierAmber
         2 -> TierMint
@@ -201,7 +196,6 @@ fun modColor(marks: AffixMarks): Color = when (marks.kind) {
     AffixKind.UNIQUE -> Color(0xFFFFDDB0)
     AffixKind.CRAFTED -> Color(0xFFC9C6FF)
     AffixKind.IMPLICIT -> TierAsh
-    AffixKind.LINEAGE -> Color(0xFFF1CFA0)
     else -> Color(0xFFA9CFFF)
 }
 

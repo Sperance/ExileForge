@@ -61,10 +61,10 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     // Life leech into the shield (server 1.32.0): what it restores is not life.
     if (body.leechToShield) me.shield = min(me.body.maxShield, me.shield + leech)
     val healed = if (body.leechToShield) onHit else leech + onHit
-    lifeBack(me, healed)
+    lifeBack(me, healed, overheal = true)
     bloodPrice(me)
     // Mana (server 0.69.0): leeched and gained on hit; a burning blow takes the struck one's.
-    if (me.body.maxMana > 0) me.mana = min(manaCap(me), me.mana + dealt * body.leechMana + if (blow.weapon) body.manaOnHit else 0.0)
+    if (me.body.maxMana > 0) manaBack(me, dealt * body.leechMana + if (blow.weapon) body.manaOnHit else 0.0)
     if (body.manaBurn > 0) target.mana = max(0.0, target.mana - target.body.maxMana * body.manaBurn)
 
     var stunned = false
@@ -211,11 +211,11 @@ private fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType, 
         val amount = taken[type] ?: 0.0
         val base = if (me.side == Side.HERO) rule.heroChance ?: rule.chance else rule.chance
         val chance = (base + me.body.inflictChance(ailment)).coerceAtMost(100.0) / 100
-        if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || draw(RollKey.AILMENT, chance, ailment) >= chance) return@mapNotNull null
+        if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || checkDraw(me, RollKey.AILMENT, chance, ailment) >= chance) return@mapNotNull null
         afflict(me, target, ailment, taken, spell)
     }
     val forced = extra.filter { it.first !in rolled && it.second > 0 }.mapNotNull { (ailment, chance) ->
-        if (draw(RollKey.AILMENT, chance / 100, ailment) * 100 < chance) afflict(me, target, ailment, taken, spell) else null
+        if (checkDraw(me, RollKey.AILMENT, chance / 100, ailment) * 100 < chance) afflict(me, target, ailment, taken, spell) else null
     }
     return rolled + forced
 }
@@ -317,8 +317,8 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     if (fighter.body.auras.isNotEmpty()) remake(heroFighter)
     val hero = heroFighter
     if (!hero.alive) return
-    note(fighter, NoteKind.KILL, "", lifeBack(hero, (hero.body.lifeOnKill + hero.body.maxLife * hero.body.lifeOnKillShare) * hero.body.recoveryRate))
-    hero.mana = min(manaCap(), hero.mana + hero.body.manaOnKill)
+    note(fighter, NoteKind.KILL, "", lifeBack(hero, (hero.body.lifeOnKill + hero.body.maxLife * hero.body.lifeOnKillShare) * hero.body.recoveryRate, overheal = true))
+    manaBack(hero, hero.body.manaOnKill)
     hero.shield = min(hero.body.maxShield, hero.shield + hero.body.shieldOnKill)
     killedAt = time
     BuffKind.entries.filterNot { it.onHit }.forEach(::chanceBuff)

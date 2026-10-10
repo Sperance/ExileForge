@@ -74,7 +74,7 @@ internal fun Battle.useSkills() {
         if (foeFighters.none { it.alive }) return
         val level = kitSkill.level(hero.body)
         val cost = cost(kitSkill, level)
-        if (hero.mana + 1e-9 < cost && !skillsFree() && !fateFree(use = false)) continue
+        if (hero.mana + fateSpare() + 1e-9 < cost && !skillsFree() && !fateFree(use = false)) continue
         opened[slot] = true
         castSlot(slot, kitSkill, level, cost)
         if (!hero.alive || outcome != null) return
@@ -99,8 +99,11 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     // Предначертание (4.6.0, «Тихая мана»): первое умение боя - без маны и без перезарядки; кость шанса тогда не тянется
     val fated = fateFree(use = true)
     val free = fated || skillsFree() || chance > 0 && random.nextDouble() * 100 < chance
-    if (!free) hero.mana = max(0.0, hero.mana - cost)
+    // Переполнение (4.6.1): цена - сперва из перелива маны
+    if (!free) hero.mana = max(0.0, hero.mana - fatePay(cost))
     hero.readyAt[slotKey(slot)] = if (fated) time else time + skill.cooldown / hero.body.recovery(skill.spell)
+    // Резонанс (4.6.1): применение слышат до самого удара
+    fateCast(skill.code)
     perform(kitSkill, level)
     // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }
@@ -334,7 +337,7 @@ internal fun Battle.lay(fighter: Fighter, effect: TimedEffect) {
 private fun Battle.heal(heal: SkillHeal, level: Int, scale: Double = 1.0): Double {
     val hero = heroFighter
     val life = heal.life?.let { restore(hero.body.maxLife * it.at(level) / 100 * scale) } ?: 0.0
-    heal.mana?.let { hero.mana = min(manaCap(), hero.mana + manaCap() * it.at(level) / 100 * scale) }
+    heal.mana?.let { manaBack(hero, manaCap() * it.at(level) / 100 * scale) }
     if (heal.cleanse) hero.ailments.maxByOrNull { it.until }?.let { worst -> hero.ailments.removeAll { it.ailment == worst.ailment } }
     return life
 }
@@ -396,7 +399,7 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     answer.barrier?.let { ward(it, level) }
     answer.buff?.let { buff(hero, code, it.stats.lines(level), it.duration, it.counter?.at(level) ?: 0.0) }
     if (answer.flaskCharges > 0) kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.sheet.maxCharges, charges[i] + answer.flaskCharges) } }
-    if (answer.refund && refund > 0) hero.mana = min(manaCap(), hero.mana + refund)
+    if (answer.refund && refund > 0) manaBack(hero, refund)
     val hit = answer.hit
     if (hit != null) {
         heroHit(hit, level, code, spell = false, attack = true, only = target?.takeIf { hit.targets == 1 && it.alive && it.side == Side.MONSTER })
@@ -444,12 +447,12 @@ internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
     lay(hero, TimedEffect(EffectKind.FLASK, flask.code, draught.lines, time + draught.duration, draught.duration, slot = slot))
     // An immunity drunk lifts what it guards against at once.
     hero.ailments.removeAll { hero.body.immune(it.ailment) }
-    hero.mana = min(manaCap(), hero.mana + draught.mana)
+    manaBack(hero, draught.mana)
     hero.shield = min(hero.body.maxShield, hero.shield + draught.shield)
     if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration, slot, draught.lifeOnly)
     if (draught.invulnerable > 0) hero.invulnerableUntil = time + draught.invulnerable
     if (!free) trial.flasks++
-    val healed = lifeBack(hero, draught.life)
+    val healed = lifeBack(hero, draught.life, overheal = true)
     record(
         Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, healed, false, emptyList(), null, target()?.index ?: 0, flask.code, onSelf = true,
         trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, healed, flask.effect(hero.body::get), shot(hero), origin),

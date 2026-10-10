@@ -24,12 +24,8 @@ import com.sperance.exileforge.core.campaign.run.HeroCastView
 import com.sperance.exileforge.core.campaign.run.LungeView
 import com.sperance.exileforge.core.campaign.run.RageView
 import com.sperance.exileforge.core.campaign.run.SlotView
-import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.CoreStat
-import com.sperance.exileforge.rules.content.FateLever
-import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PetRole
 import com.sperance.exileforge.rules.content.RiftLaw
@@ -44,7 +40,6 @@ import kotlin.math.roundToInt
  */
 internal class PetAllies(private val index: ContentIndex, private val rules: CombatRules) {
     private var made: Triple<Pet?, Map<String, Double>, Ally?>? = null
-    private var helped: Triple<Pet?, Map<String, Double>, Ally?>? = null
     private val menagerie by lazy { Menagerie(index) }
 
     /** [pet] as a fighter under the hero's [heroStats]; since 3.70.0 the pet is the caller's, so one put to work mid-run joins the next fight. */
@@ -53,22 +48,6 @@ internal class PetAllies(private val index: ContentIndex, private val rules: Com
         made?.takeIf { it.first == pet && it.second == boons }?.let { return it.third }
         val ally = pet?.let { make(it, boons) }
         made = Triple(pet, boons, ally)
-        return ally
-    }
-
-    /**
-     * Питомец-помощник вторым боевым (4.6.0, рычаг `SECOND_PET` Предначертания [fate]): он же боевым ([of]) на долю силы рычага -
-     * здоровье и урон «меньше»; лечит ли он героя - не меняется (строки помощника и так на листе). Без рычага или помощника - null.
-     */
-    fun helper(heroStats: Map<String, Double>, fate: FateKit): Ally? {
-        val share = fate.effects.of(FateLever.SECOND_PET)?.value ?: return null
-        val pet = fate.helper ?: return null
-        val boons = PetBoons.of(heroStats)
-        helped?.takeIf { it.first == pet && it.second == boons }?.let { return it.third }
-        val less = share - 100
-        val weaker = listOf(StatLine(CoreStat.HEALTH.code, Op.MORE, less), StatLine(StatLines.DAMAGE, Op.MORE, less))
-        val ally = make(pet, boons)?.let { Ally(it.code, BodyModel.of(it.body).body(weaker), it.tank, 0.0, it.drawFire) }
-        helped = Triple(pet, boons, ally)
         return ally
     }
 

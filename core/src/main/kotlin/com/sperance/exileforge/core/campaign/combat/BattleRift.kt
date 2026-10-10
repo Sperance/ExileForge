@@ -240,14 +240,16 @@ internal fun Battle.bloodPrice(me: Fighter) {
 
 /**
  * Жизнь [amount], данная [me] (3.96.0): все пути лечения героя идут через неё. Под «Лечение ранит» герой теряет её, но не
- * последнюю единицу; вне Закона - прежняя формула. Сколько вылечено.
+ * последнюю единицу; вне Закона - прежняя формула. Сколько вылечено. [overheal] (4.6.1) - лечение, излишек которого сверх
+ * полного здоровья героя берёт Предначертание (похищение, за удар и убийство, фляги).
  */
-internal fun Battle.lifeBack(me: Fighter, amount: Double): Double {
+internal fun Battle.lifeBack(me: Fighter, amount: Double, overheal: Boolean = false): Double {
     val before = me.life
     if (amount > 0 && me === heroFighter && inForce(RiftLaw.HEALING_HURTS)) {
         me.life = max(min(before, 1.0), before - amount)
         return 0.0
     }
     me.life = min(me.body.maxLife, me.life + amount)
+    if (overheal && me === heroFighter) fateOverheal(before + amount - me.life)
     return me.life - before
 }

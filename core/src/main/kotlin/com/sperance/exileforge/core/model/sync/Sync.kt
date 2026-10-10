@@ -45,8 +45,10 @@ import kotlinx.serialization.json.JsonElement
  * 67 - Предначертание аккаунта: `GET fate`, `POST fate/choose?code=` (`FT_001`, `FT_002`), без дара герой не создаётся (`CH_042`),
  *      `UserProfile.fate`, `HeroInfo.fate|trophies`, `PlayerCard.fate` - `FateCard`, `RunContext.fate`, `RunStart.mapKept`,
  *      `CurrencyApplyResponse.kept`, обмен трофеев `POST hero/merchant/trophy?boss=` (`FT_003`-`FT_005`), чанк `fates.json`.
+ * 68 - Предначертания без тем: `FateCard` - код, имя и описание; новые рычаги, `HeroView.fateFights`, сопротивления по
+ *      максимумам стихий, без родовых строк (`Source.LINEAGE`).
  */
-const val API_REVISION = 67
+const val API_REVISION = 68
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

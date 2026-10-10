@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.campaign.NoteKind
+import com.sperance.exileforge.core.campaign.RollKey
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.character.StatLine
@@ -11,6 +12,7 @@ import com.sperance.exileforge.rules.content.FateLever
 import com.sperance.exileforge.rules.content.FateSide
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.run.Run
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -18,12 +20,38 @@ import kotlin.math.min
 // ==================== Предначертание в бою (4.6.0) ====================
 
 /**
- * Счёт Предначертания на весь заход (забег, испытание, Разлом): сколько раз «Второе дыхание» ([FateLever.CHEAT_DEATH]) уже
- * спасло героя. Один на заход - бои захода делят его; прогон шансов берёт свой, свежий.
+ * Счёт Предначертания на весь заход (забег, испытание, Разлом): бои захода делят его, прогон шансов берёт свой, свежий.
+ * [overflow] - перелив маны ([FateLever.MANA_OVERFLOW]) до конца захода; [won] - боёв, выигранных в заходе
+ * ([FateLever.WIN_STREAK]): павшие паки жетонов [killed] и [vaalKilled] (ключи `жетон × PACK_SLOTS + член`) и стражи, счёт -
+ * правилом сервера [Run.fightsWon] ([recount]). В испытаниях и Разломе счёта нет - он ноль.
  */
-class FateRun {
-    var cheated: Int = 0
+class FateRun(killed: Collection<Int> = emptyList(), vaalKilled: Collection<Int> = emptyList()) {
+    private val killed = killed.toMutableSet()
+    private val vaalKilled = vaalKilled.toMutableSet()
+    private var bosses = 0
+
+    /** Перелив маны сверх максимума, в единицах маны. */
+    var overflow: Double = 0.0
         internal set
+
+    /** Выигранных в заходе боёв на последнем [recount]. */
+    var won: Int = 0
+        private set
+
+    /** Пал член пака жетона: [key] - `жетон × PACK_SLOTS + член`, [vaal] - в Ваал-зоне. */
+    fun slain(key: Int, vaal: Boolean) {
+        (if (vaal) vaalKilled else killed) += key
+    }
+
+    /** Пал страж зоны захода. */
+    fun bossSlain() {
+        bosses++
+    }
+
+    /** Пересчёт [won] по павшим - заходом [run], как его катит сервер. */
+    fun recount(run: Run) {
+        won = run.fightsWon(killed, vaalKilled, bosses)
+    }
 }
 
 /**
@@ -42,6 +70,14 @@ internal class FateFight {
 
     /** Первое умение боя ещё бесплатно ([FateLever.FIRST_SKILL_FREE]). */
     var freeSkill = true
+
+    /** Последнее применённое умение и когда ([FateLever.ALTERNATE_SKILL]); [resonant] - умение, чьё применение звучит сейчас. */
+    var lastSkill: String? = null
+    var lastSkillAt = 0.0
+    var resonant: String? = null
+
+    /** Запас Зеркала урона ([FateLever.STORE_TAKEN]): уйдёт следующим попавшим ударом героя, в конце боя сгорает. */
+    var stored = 0.0
 }
 
 /** Рычаг клиента [effect] с его откликом [reaction] (4.6.0): числа уже на силе дара ([FateEffects]). */
@@ -49,8 +85,11 @@ internal class FatedLever(val effect: FateEffect, val reaction: FateReaction) {
     val value: Double get() = effect.value
 
     companion object {
-        /** Рычаги боя дара [fate]: только клиентские, у каждого - свой отклик; рычаг без отклика в бою (обзор карты) пропущен. */
-        fun of(fate: FateEffects): List<FatedLever> = fate.effects.filter { it.lever.side == FateSide.CLIENT }.mapNotNull { e -> FateReaction.of(e.lever)?.let { FatedLever(e, it) } }
+        /**
+         * Рычаги боя дара [fate]: клиентские и боевые половины рычагов обеих сторон, у каждого - свой отклик; рычаг без отклика
+         * в бою (обзор карты, лист, дерево) пропущен.
+         */
+        fun of(fate: FateEffects): List<FatedLever> = fate.effects.filter { it.lever.side != FateSide.SERVER }.mapNotNull { e -> FateReaction.of(e.lever)?.let { FatedLever(e, it) } }
     }
 }
 
@@ -62,11 +101,17 @@ internal sealed interface FateReaction {
     /** Бой открылся: барьер, уклонение, первый ход питомца. */
     fun opens(battle: Battle, at: FatedLever) = Unit
 
-    /** Во сколько раз удар героя тяжелее сейчас. */
-    fun heavier(battle: Battle, at: FatedLever): Double = 1.0
+    /** Во сколько раз удар героя [blow] тяжелее сейчас. */
+    fun heavier(battle: Battle, at: FatedLever, blow: Blow): Double = 1.0
+
+    /** Сколько урона сверх своего несёт удар героя (до защит цели); тратится, лишь когда удар попал ([landed]). */
+    fun extra(battle: Battle, at: FatedLever): Double = 0.0
 
     /** Этот удар героя - крит наверняка. */
     fun sure(battle: Battle, at: FatedLever): Boolean = false
+
+    /** Проверка шанса героя удачна: кость бросят дважды. Сама тянет свою кость. */
+    fun lucky(battle: Battle, at: FatedLever): Boolean = false
 
     /** Удар героя вышел - [kind] - и забрал заряды «наверняка». */
     fun swung(battle: Battle, at: FatedLever, kind: HitKind) = Unit
@@ -74,8 +119,8 @@ internal sealed interface FateReaction {
     /** Удар героя попал в [target], отдав [taken]. */
     fun landed(battle: Battle, at: FatedLever, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind) = Unit
 
-    /** По герою попали: [kind] - как. */
-    fun struck(battle: Battle, at: FatedLever, kind: HitKind) = Unit
+    /** По герою попали: [kind] - как, [amount] - сколько удар снял (барьер, щит и здоровье вместе). */
+    fun struck(battle: Battle, at: FatedLever, kind: HitKind, amount: Double) = Unit
 
     /** Что из [amount] одного удара по герою доходит до барьера и щита. */
     fun capped(battle: Battle, at: FatedLever, amount: Double): Double = amount
@@ -86,14 +131,26 @@ internal sealed interface FateReaction {
     /** Героя оглушают на [seconds]: true - рычаг ответил вместо оглушения. */
     fun stunned(battle: Battle, at: FatedLever, seconds: Double): Boolean = false
 
-    /** Герой пал: true - рычаг поднял его. */
-    fun dies(battle: Battle, at: FatedLever): Boolean = false
-
     /** Враг [fallen] пал с недугами [ailing]. */
     fun fell(battle: Battle, at: FatedLever, fallen: Fighter, ailing: List<ActiveAilment>) = Unit
 
     /** Умение героя сейчас бесплатно и без перезарядки; [use] - его применяют. */
     fun free(battle: Battle, at: FatedLever, use: Boolean): Boolean = false
+
+    /** Герой применил умение [skill]. */
+    fun cast(battle: Battle, at: FatedLever, skill: String) = Unit
+
+    /** Мана героя перелилась через максимум на [excess]. */
+    fun spilled(battle: Battle, at: FatedLever, excess: Double) = Unit
+
+    /** Сколько маны сверх запаса героя рычаг держит для умений. */
+    fun spare(battle: Battle, at: FatedLever): Double = 0.0
+
+    /** Цена [cost] умения: рычаг платит из своего, ответ - что осталось заплатить мане героя. */
+    fun pay(battle: Battle, at: FatedLever, cost: Double): Double = cost
+
+    /** Лечение героя перелилось через полное здоровье на [excess]. */
+    fun overhealed(battle: Battle, at: FatedLever, excess: Double) = Unit
 
     companion object {
         fun of(lever: FateLever): FateReaction? = when (lever) {
@@ -113,10 +170,6 @@ internal sealed interface FateReaction {
 
             FateLever.PET_FIRST -> PetFirst
 
-            FateLever.SECOND_PET -> null
-
-            FateLever.CHEAT_DEATH -> CheatDeath
-
             FateLever.OPENING_EVASION -> OpeningEvasion
 
             FateLever.FREEZE_TO_SLOW -> FreezeToSlow
@@ -129,12 +182,25 @@ internal sealed interface FateReaction {
 
             FateLever.FIRST_SKILL_FREE -> FirstSkillFree
 
-            // Обзор карты - забег (`FateSight`), второй питомец - состав боя ([Battle.helper]), прочие - сервер
-            FateLever.FOG_SIGHT, FateLever.HERO_EXPERIENCE, FateLever.SKILL_EXPERIENCE, FateLever.GOLD, FateLever.DEATH_PENALTY,
-            FateLever.MAP_DROP, FateLever.MAP_TIER, FateLever.MAP_RARITY, FateLever.MAP_LINES, FateLever.MAP_KEEP, FateLever.MAP_CHEST_STEP,
-            FateLever.BOSS_MAP, FateLever.LINEAGE, FateLever.COLLECTOR, FateLever.ATLAS_POINTS, FateLever.TRACKER_PACK, FateLever.ABYSS_DEPTH,
-            FateLever.RIFT_GIFT, FateLever.TROPHIES, FateLever.ORB_KEEP, FateLever.AFFIX_TIER, FateLever.MERCHANT_OFFERS,
-            FateLever.MERCHANT_DISCOUNT, FateLever.AUCTION_FEE, FateLever.AUCTION_SLOTS,
+            FateLever.ALTERNATE_SKILL -> AlternateSkill
+
+            FateLever.MANA_OVERFLOW -> ManaOverflow
+
+            FateLever.STORE_TAKEN -> StoreTaken
+
+            FateLever.FULL_LIFE_GUARD -> FullLifeGuard
+
+            FateLever.OVERHEAL_BARRIER -> OverhealBarrier
+
+            FateLever.LUCKY_ROLLS -> LuckyRolls
+
+            FateLever.WIN_STREAK -> WinStreak
+
+            // Обзор карты - забег (`FateSight`), равновесие - лист героя, очки дерева - дерево, прочие - сервер
+            FateLever.FOG_SIGHT, FateLever.RESIST_BALANCE, FateLever.TREE_POINTS, FateLever.HERO_EXPERIENCE, FateLever.SKILL_EXPERIENCE,
+            FateLever.GOLD, FateLever.DEATH_PENALTY, FateLever.MAP_DROP, FateLever.MAP_TIER, FateLever.MAP_RARITY, FateLever.MAP_LINES,
+            FateLever.MAP_KEEP, FateLever.COLLECTOR, FateLever.ATLAS_POINTS, FateLever.TRACKER_PACK, FateLever.TROPHIES, FateLever.ORB_KEEP,
+            FateLever.AFFIX_TIER, FateLever.FIGHT_BOUNTY,
             -> null
         }
     }
@@ -142,7 +208,7 @@ internal sealed interface FateReaction {
 
 /** Урон героя больше за каждые `step`% недостающего здоровья, до `cap`. */
 private data object MissingLifeDamage : FateReaction {
-    override fun heavier(battle: Battle, at: FatedLever): Double {
+    override fun heavier(battle: Battle, at: FatedLever, blow: Blow): Double {
         val hero = battle.heroFighter
         if (hero.body.maxLife <= 0) return 1.0
         val missing = (1 - hero.life / hero.body.maxLife).coerceIn(0.0, 1.0) * 100
@@ -152,7 +218,7 @@ private data object MissingLifeDamage : FateReaction {
 
 /** Принятый крит заряжает следующий удар героя критом; заряд один. */
 private data object AvengeCrit : FateReaction {
-    override fun struck(battle: Battle, at: FatedLever, kind: HitKind) {
+    override fun struck(battle: Battle, at: FatedLever, kind: HitKind, amount: Double) {
         if (kind == HitKind.CRIT) battle.fateFight.avenge = true
     }
 
@@ -234,23 +300,10 @@ private data object Execute : FateReaction {
     }
 }
 
-/** Боевой питомец (и второй) бьёт первым: его первая атака - с начала боя. */
+/** Боевой питомец бьёт первым: его первая атака - с начала боя. */
 private data object PetFirst : FateReaction {
     override fun opens(battle: Battle, at: FatedLever) {
-        listOfNotNull(battle.allyFighter, battle.helperFighter).forEach { it.nextAttack = 0.0 }
-    }
-}
-
-/** Смертельный удар оставляет немного здоровья и неуязвимость; заряды - на заход. */
-private data object CheatDeath : FateReaction {
-    override fun dies(battle: Battle, at: FatedLever): Boolean {
-        if (battle.fateRun.cheated >= at.effect.charges) return false
-        battle.fateRun.cheated++
-        val hero = battle.heroFighter
-        hero.life = min(hero.body.maxLife, max(1.0, at.value))
-        hero.invulnerableUntil = max(hero.invulnerableUntil, battle.time + at.effect.duration)
-        battle.fateNote(at.value)
-        return true
+        battle.pets.forEach { it.nextAttack = 0.0 }
     }
 }
 
@@ -302,6 +355,92 @@ private data object FirstSkillFree : FateReaction {
     }
 }
 
+/** Резонанс: умение вслед иному в пределах `duration` - «больше» на `value`%; то же умение подряд цепочку не продолжает. */
+private data object AlternateSkill : FateReaction {
+    override fun cast(battle: Battle, at: FatedLever, skill: String) {
+        val fight = battle.fateFight
+        val last = fight.lastSkill
+        fight.resonant = skill.takeIf { last != null && last != skill && battle.time - fight.lastSkillAt <= at.effect.duration }
+        if (fight.resonant != null) battle.fateNote(at.value)
+        fight.lastSkill = skill
+        fight.lastSkillAt = battle.time
+    }
+
+    override fun heavier(battle: Battle, at: FatedLever, blow: Blow): Double = if (blow.skill != null && blow.skill == battle.fateFight.resonant) 1 + at.value / 100 else 1.0
+}
+
+/**
+ * Переполнение: мана сверх максимума копится переливом до `pool`% максимума на весь заход, цена умений - сперва из него; умения
+ * «больше» на `value`% за каждые полные `step`% максимума в переливе, до `cap`.
+ */
+private data object ManaOverflow : FateReaction {
+    override fun spilled(battle: Battle, at: FatedLever, excess: Double) {
+        val run = battle.fateRun
+        run.overflow = min(battle.heroFighter.body.maxMana * at.effect.pool / 100, run.overflow + excess).coerceAtLeast(run.overflow)
+    }
+
+    override fun spare(battle: Battle, at: FatedLever): Double = battle.fateRun.overflow
+
+    override fun pay(battle: Battle, at: FatedLever, cost: Double): Double {
+        val run = battle.fateRun
+        val paid = min(run.overflow, cost)
+        run.overflow -= paid
+        return cost - paid
+    }
+
+    override fun heavier(battle: Battle, at: FatedLever, blow: Blow): Double {
+        val max = battle.heroFighter.body.maxMana
+        if (blow.action != Action.SKILL || blow.skill == null || max <= 0 || battle.fateRun.overflow <= 0) return 1.0
+        val steps = floor(battle.fateRun.overflow / max * 100 / at.effect.step)
+        return 1 + min(at.effect.cap, steps * at.value) / 100
+    }
+}
+
+/** Зеркало урона: доля снятого с героя - в запас, запас уходит следующим попавшим ударом героя; в конце боя сгорает. */
+private data object StoreTaken : FateReaction {
+    override fun struck(battle: Battle, at: FatedLever, kind: HitKind, amount: Double) {
+        if (amount > 0) battle.fateFight.stored += amount * at.value / 100
+    }
+
+    override fun extra(battle: Battle, at: FatedLever): Double = battle.fateFight.stored
+
+    override fun landed(battle: Battle, at: FatedLever, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind) {
+        val fight = battle.fateFight
+        if (fight.stored <= 0 || taken.values.sum() <= 0) return
+        battle.fateNote(fight.stored)
+        fight.stored = 0.0
+    }
+}
+
+/** Живая крепость: пока здоровье героя полное, удар по нему «меньше» на `value`%. */
+private data object FullLifeGuard : FateReaction {
+    override fun capped(battle: Battle, at: FatedLever, amount: Double): Double {
+        val hero = battle.heroFighter
+        return if (hero.life >= hero.body.maxLife) amount * (1 - at.value / 100) else amount
+    }
+}
+
+/** Кровь за кровь: лечение сверх полного здоровья - барьер до `value`% максимума здоровья, до конца боя. */
+private data object OverhealBarrier : FateReaction {
+    override fun overhealed(battle: Battle, at: FatedLever, excess: Double) {
+        val hero = battle.heroFighter
+        val ceiling = hero.body.maxLife * at.value / 100
+        if (hero.barrier >= ceiling) return
+        hero.barrier = min(ceiling, hero.barrier + excess)
+        hero.barrierUntil = FOREVER
+    }
+}
+
+/** Удача рода: проверка шанса героя с шансом `value`% удачна - своей костью боя до самой проверки. */
+private data object LuckyRolls : FateReaction {
+    override fun lucky(battle: Battle, at: FatedLever): Boolean = battle.random.nextDouble() * 100 < at.value
+}
+
+/** Разгон: урон героя «больше» за каждый выигранный в заходе бой - тем же резолвером, что количество добычи сервера. */
+private data object WinStreak : FateReaction {
+    override fun heavier(battle: Battle, at: FatedLever, blow: Blow): Double = 1 + battle.kit.fate.effects.streak(battle.fateRun.won) / 100
+}
+
 /** Источник строк и эффектов Предначертания на герое. */
 const val FATE_SOURCE = "FATE"
 
@@ -310,8 +449,21 @@ const val FATE_SOURCE = "FATE"
 /** Бой открылся: рычаги начала боя. */
 internal fun Battle.fateOpens() = fated.forEach { it.reaction.opens(this, it) }
 
-/** Во сколько раз удар [me] тяжелее по Предначертанию: только удар героя. */
-internal fun Battle.fateHeavier(me: Fighter): Double = if (me !== heroFighter || fated.isEmpty()) 1.0 else fated.fold(1.0) { k, at -> k * at.reaction.heavier(this, at) }
+/** Во сколько раз удар [me] тяжелее по Предначертанию: только удар героя [blow]. */
+internal fun Battle.fateHeavier(me: Fighter, blow: Blow): Double = if (me !== heroFighter || fated.isEmpty()) 1.0 else fated.fold(1.0) { k, at -> k * at.reaction.heavier(this, at, blow) }
+
+/** Урон сверх своего у удара [me] по Предначертанию (4.6.1, до защит цели): только удар героя. */
+internal fun Battle.fateExtra(me: Fighter): Double = if (me !== heroFighter || fated.isEmpty()) 0.0 else fated.sumOf { it.reaction.extra(this, it) }
+
+/**
+ * Кость проверки шанса [key] бойца [owner] (4.6.1, Удача рода): у героя удачная проверка - лучший из двух бросков; кость удачи
+ * тянется раньше самой проверки и лишь при рычаге. Успех проверки - бросок меньше шанса.
+ */
+internal fun Battle.checkDraw(owner: Fighter, key: RollKey, chance: Double, ailment: Ailment? = null): Double {
+    val lucky = owner === heroFighter && fated.isNotEmpty() && fated.any { it.reaction.lucky(this, it) }
+    val first = draw(key, chance, ailment)
+    return if (lucky) min(first, draw(key, chance, ailment)) else first
+}
 
 /** Удар героя - крит наверняка по Предначертанию. */
 internal fun Battle.fateSure(me: Fighter): Boolean = me === heroFighter && fated.any { it.reaction.sure(this, it) }
@@ -325,7 +477,7 @@ internal fun Battle.fateSwung(me: Fighter, kind: HitKind) {
 internal fun Battle.fateLanded(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind) {
     if (fated.isEmpty()) return
     if (me === heroFighter) fated.forEach { it.reaction.landed(this, it, target, taken, kind) }
-    if (target === heroFighter) fated.forEach { it.reaction.struck(this, it, kind) }
+    if (target === heroFighter) taken.values.sum().let { amount -> fated.forEach { it.reaction.struck(this, it, kind, amount) } }
 }
 
 /** Удар по [target] с потолком Предначертания: у героя - не больше доли максимума, урон по типам - в той же доле. */
@@ -349,14 +501,36 @@ internal fun Battle.stun(target: Fighter, seconds: Double): Boolean {
     return true
 }
 
-/** Герой пал: рычаг может поднять его. True - поднят. */
-internal fun Battle.fateDies(): Boolean = !heroFighter.alive && fated.any { it.reaction.dies(this, it) }
-
 /** Враг пал: его недуги и взрыв. */
 internal fun Battle.fateFell(fallen: Fighter, ailing: List<ActiveAilment>) = fated.forEach { it.reaction.fell(this, it, fallen, ailing) }
 
 /** Умение сейчас бесплатно по Предначертанию; [use] - его применяют, заряд уходит. */
 internal fun Battle.fateFree(use: Boolean): Boolean = fated.any { it.reaction.free(this, it, use) }
+
+/** Герой применил умение [skill] (4.6.1). */
+internal fun Battle.fateCast(skill: String) = fated.forEach { it.reaction.cast(this, it, skill) }
+
+/** Мана сверх запаса героя, что держит Предначертание для умений (4.6.1, перелив). */
+internal fun Battle.fateSpare(): Double = if (fated.isEmpty()) 0.0 else fated.sumOf { it.reaction.spare(this, it) }
+
+/** Цена умения [cost] героя: сперва из запаса Предначертания (4.6.1), остаток - мане героя. */
+internal fun Battle.fatePay(cost: Double): Double = fated.fold(cost) { rest, at -> if (rest <= 0) 0.0 else at.reaction.pay(this, at, rest) }
+
+/**
+ * Мана [amount] бойцу [me] (4.6.1): все пути восстановления маны идут через неё - не выше запаса; излишек героя - Предначертанию
+ * (перелив).
+ */
+internal fun Battle.manaBack(me: Fighter, amount: Double) {
+    val cap = manaCap(me)
+    val sum = me.mana + amount
+    me.mana = min(cap, sum)
+    if (me === heroFighter && sum > cap && fated.isNotEmpty()) fated.forEach { it.reaction.spilled(this, it, sum - cap) }
+}
+
+/** Лечение героя сверх полного здоровья [excess] (4.6.1, Кровь за кровь): похищение, за удар и убийство, фляги. */
+internal fun Battle.fateOverheal(excess: Double) {
+    if (excess > 0 && fated.isNotEmpty()) fated.forEach { it.reaction.overhealed(this, it, excess) }
+}
 
 /** Строка лога: Предначертание героя сработало. */
 internal fun Battle.fateNote(value: Double = 0.0) = note(heroFighter, NoteKind.FATE, kit.fate.effects.fate?.code.orEmpty(), value)

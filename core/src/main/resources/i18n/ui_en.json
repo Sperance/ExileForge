@@ -4102,8 +4102,6 @@
   "player.invite": "Invite to guild",
   "player.lots": "Player's lots · {0}",
   "feedback.hero": "Hero: {0}",
-  "mod.kind.LINEAGE": "Lineage line",
-  "card.veiled_lineage": "Veiled lineage line",
   "trace.factor.FATE": "fate",
   "trace.factor.FATE.about": "The hero's blow is heavier by the account's Fate: Ancestral Blood, for instance, for missing life.",
   "expedition.log_note_fate": "Fate: {0}",
@@ -4127,5 +4125,6 @@
   "fate.trophies_no_fate": "Only the Trophy Hunter fate trades trophies",
   "fate.trophies_trade": "Trade",
   "stat.src.fate": "Fate: {0}",
-  "fight.fate_buff": "Fate"
+  "fight.fate_buff": "Fate",
+  "fate.bounty_next": "Fights until the gift's orb: {0}"
 }

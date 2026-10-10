@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.character
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EquipSlots
+import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
@@ -27,9 +28,18 @@ data class StatDelta(val stat: String, val before: Double, val after: Double) {
  * fight can lay [StatLine]s among them and add the sheet up again as the rules would — an increase joins
  * the increases of its stat instead of multiplying the total. A percent stat takes MORE on its whole multiplier.
  */
-class SheetModel(private val base: Map<String, Double>, private val ops: List<StatOperation>, private val index: ContentIndex) {
+class SheetModel(
+    private val base: Map<String, Double>,
+    private val ops: List<StatOperation>,
+    private val index: ContentIndex,
+    /** Предначертание листа (4.6.1): его преобразования готового листа (`FateLever.reshape`) - и после строк боя. */
+    private val fate: FateEffects = FateEffects.NONE,
+) {
     private val calculator = SheetCalculator(index)
-    val plain: Map<String, Double> by lazy { calculator.compute(base, ops) }
+    val plain: Map<String, Double> by lazy { shaped(calculator.compute(base, ops)) }
+
+    /** Лист после преобразований дара (4.6.1, «Равновесие»): без них - тот же. */
+    private fun shaped(stats: Map<String, Double>): Map<String, Double> = fate.effects.fold(stats) { shape, effect -> effect.lever.reshape(effect, shape, index) }
 
     /** The sheet taken apart by source, for a figure's own window. */
     val explainer: SheetExplainer by lazy { SheetExplainer(index, base, ops) }
@@ -39,7 +49,7 @@ class SheetModel(private val base: Map<String, Double>, private val ops: List<St
         val (scaling, folding) = lines.partition { it.op == Op.MORE && index.stats.isPercent(it.stat) }
         val stats = calculator.compute(base, ops + folding.map { StatOperation(it.stat, it.op, it.value) }).toMutableMap()
         scaling.forEach { line -> stats[line.stat] = (100 + (stats[line.stat] ?: 0.0)) * (1 + line.value / 100) - 100 }
-        return stats
+        return shaped(stats)
     }
 
     /** The sheet's conditional lines (3.35.0, server 1.34.0): kept out of the sheet, laid on by a fight while they hold. */
@@ -85,14 +95,14 @@ object Sheets {
         items: List<ItemInstance>,
         pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         laws: List<String> = emptyList(),
-        /** Предначертание аккаунта (4.6.0): его строки листа, как у сервера. */
+        /** Предначертание аккаунта (4.6.0): его строки листа и преобразования листа (4.6.1), как у сервера. */
         fate: String? = null,
     ): HeroSheet {
         // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
         // Законы тронов героя - строки листа тем же правилом, что у сервера.
         val helpers = com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
         val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped }, laws, fate)
-        return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index))
+        return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate)))
     }
 
     /** What an item's requirements miss for a hero with [stats], in the rules' words; empty means it can be worn. */

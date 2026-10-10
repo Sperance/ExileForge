@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.campaign.LootEntry
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.UnfinishedRun
+import com.sperance.exileforge.core.campaign.combat.FateRun
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
@@ -277,6 +278,8 @@ class ExpeditionActions(
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features, auto = autoPlan,
             pet = ::combatPet,
+            // Счёт Предначертания захода (4.6.1): павшие карты и её Ваал-зоны - как их считает сервер
+            fateRun = FateRun(started.killed, started.vaalKilled),
         ).also { r ->
             repeat(speedSteps) { r.send(RunCommand.Speed) }
             // Тестировщик (3.92.0): сразу бой со стражем
@@ -500,8 +503,8 @@ class ExpeditionActions(
         val h = hero ?: return null
         val conditions = h.skills.flasks
         val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
-        // Предначертание аккаунта (4.6.0): рычаги боя на силе листа и помощник - вторым боевым
-        val fate = FateKit.of(i, h.info.fate, h.stats, h.pets.pet(h.pets.helper))
+        // Предначертание аккаунта (4.6.0): рычаги боя на силе листа
+        val fate = FateKit.of(i, h.info.fate, h.stats)
         return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i, h.heroClass, flasks, h.stats, i.powers, i.rules.charges, fate), i.stats.percent)
     }
 
@@ -522,7 +525,7 @@ class ExpeditionActions(
             i, outer.run.zone, outer.run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts, auto = autoPlan.takeIf { outer.hud.value.auto != null },
-            pet = ::combatPet,
+            pet = ::combatPet, fateRun = outer.fateRun,
         ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         parent = outer
         mutableRun.value = inner

@@ -149,7 +149,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
             }
             leagueLevel(game, card.league)?.let { ReferenceRow(ui("player.league"), ui("rift.league", it), Parchment) }
             ReferenceRow(ui("player.online"), presenceText(card.online, card.lastSeenAt), Presence.of(card.online, card.lastSeenAt).color.takeIf { card.online } ?: Parchment)
-            // Предначертание аккаунта (4.6.0): тема и имя, касание - описание; не выбрано - строки нет
+            // Предначертание аккаунта (4.6.0): имя, касание - описание; не выбрано - строки нет
             card.fate?.let { fate ->
                 Text(ui("player.fate"), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp))
                 FateBadge(fate, Modifier.fillMaxWidth(), compact = true)

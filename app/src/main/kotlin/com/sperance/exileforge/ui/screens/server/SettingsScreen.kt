@@ -7,7 +7,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Animation
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -44,7 +43,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
-import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.presentation.server.ServerViewModel
@@ -60,7 +58,6 @@ internal enum class SettingsPage(val title: String) {
     LANGUAGE("account.language"),
     SERVER("account.server"),
     CLIENT("account.client"),
-    JOURNAL("account.journal"),
     TESTING("tester.window"),
     FEEDBACK("feedback.admin"),
     MODERATION("moderation.title"),
@@ -73,7 +70,7 @@ internal enum class SettingsPage(val title: String) {
  * ones, the fight, the interface, the vibration — with its switch in its row; the developers' tools at the foot for a
  * tester or an administrator only. «Back» returns to the tab the settings were opened over.
  */
-@Composable internal fun SettingsScreen(direct: String? = null, logs: List<RequestLog> = emptyList()) {
+@Composable internal fun SettingsScreen(direct: String? = null) {
     val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
@@ -93,14 +90,11 @@ internal enum class SettingsPage(val title: String) {
 
                 SettingsPage.LANGUAGE -> ForgePanel {
                     LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
-                    MutedText(ui("account.language_note"))
                 }
 
                 SettingsPage.SERVER -> ServerPage(account)
 
                 SettingsPage.CLIENT -> ClientPage(account)
-
-                SettingsPage.JOURNAL -> RequestJournalPanel(logs)
 
                 SettingsPage.TESTING -> TestingPage(account)
 
@@ -180,7 +174,6 @@ internal enum class SettingsPage(val title: String) {
                 dot = if (account.link.offline) LifeRed else Vital,
             ) { onPage(SettingsPage.SERVER) }
             AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(SettingsPage.CLIENT) }
-            AccountRow(Icons.AutoMirrored.Outlined.ReceiptLong, ui("account.journal")) { onPage(SettingsPage.JOURNAL) }
             if (account.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
             // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.

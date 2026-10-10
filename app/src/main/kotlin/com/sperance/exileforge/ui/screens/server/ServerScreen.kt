@@ -7,10 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CardGiftcard
@@ -37,10 +35,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.contract.SERVER_BRANCH
@@ -50,7 +46,6 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
-import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
@@ -104,7 +99,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ScreenHeader(ui("account.title"), ui("account.subtitle"), ForgeGlyphs.Portal)
+        ScreenHeader(ui("account.title"), icon = ForgeGlyphs.Portal)
         ProfileCard(account)
         RowGroup(ui("account.group_game")) {
             // A hero is swapped by leaving the game, never from inside a tab: every button elsewhere is
@@ -332,38 +327,4 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         },
         dismissButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.cancel")) } },
     )
-}
-
-/**
- * The request journal, a page beside the server's.
- *
- * A broken connection is exactly when nothing else on screen can be reached, so every failed
- * attempt is readable here, before any sign-in: method, path, status and both bodies.
- */
-@Composable internal fun RequestJournalPanel(logs: List<RequestLog>) {
-    val shell: ShellViewModel = koinViewModel()
-    ForgePanel {
-        MutedText(ui("account.journal_note", logs.size))
-        ForgeTextButton(enabled = logs.isNotEmpty(), onClick = shell::clearLogs) { Text(ui("common.clear")) }
-        if (logs.isEmpty()) Text(ui("account.journal_empty"), color = Muted)
-        logs.take(12).forEach { LogCard(it) }
-    }
-}
-
-/** One request of the journal: the verb, the status and the time on one line, the path under it, both bodies on a tap. */
-@Composable private fun LogCard(log: RequestLog) {
-    var expanded by remember(log) { mutableStateOf(false) }
-    val accent = if (log.ok) Gold else MaterialTheme.colorScheme.error
-    ForgePanel(Modifier.clickable { expanded = !expanded }, accent = accent) {
-        Text("${log.method}  ${log.status ?: "NETWORK"}  ·  ${log.elapsedMs} ms", color = accent, style = MaterialTheme.typography.labelLarge)
-        Text(log.path, fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Muted)
-        if (expanded) {
-            SelectionContainer {
-                Column {
-                    if (log.request.isNotBlank()) Text("REQUEST\n${log.request}", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                    Text("RESPONSE\n${log.response}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = Muted)
-                }
-            }
-        }
-    }
 }

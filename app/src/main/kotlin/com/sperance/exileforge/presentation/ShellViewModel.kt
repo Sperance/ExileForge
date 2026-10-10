@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
-import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
@@ -49,7 +48,6 @@ class ShellViewModel(
     private val commands: CommandRunner,
     private val notices: Notices,
     private val buzzer: Buzzes,
-    private val journal: RequestJournal,
     private val prefs: PreferencesRepository,
     private val connection: ServerConnection,
     private val sessions: SessionRepository,
@@ -79,7 +77,6 @@ class ShellViewModel(
 
     /** Разлом недели (3.96.0): открыт - экран Разлома поверх стека. */
     val rift: StateFlow<com.sperance.exileforge.presentation.expedition.RiftState> = rift.state
-    val logs = journal.entries
 
     /** Что телефон отзывает вибрацией (3.77.0), уже по настройкам. */
     val buzzes: SharedFlow<Buzz> get() = buzzer.flow
@@ -149,7 +146,6 @@ class ShellViewModel(
     fun dismissMessage() = commands.dismissMessage()
     fun dismissNotice() = notices.dismiss()
     fun buzz(kind: Buzz) = buzzer.buzz(kind)
-    fun clearLogs() = journal.clear()
 
     /** Настройка устройства, в хранилище устройства: фильтр журнала боя. Фильтры списков предметов - у самих списков (4.2.0). */
     fun logFilter(kinds: Set<LogKind>) {

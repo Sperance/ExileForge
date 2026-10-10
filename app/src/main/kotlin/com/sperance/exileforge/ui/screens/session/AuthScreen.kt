@@ -88,8 +88,6 @@ import org.koin.compose.viewmodel.koinViewModel
             game.refusal?.let { InfoCard(ui("auth.failed"), it.read(), failure = true) }
             // The build, dim at the foot of the way in (3.72.0).
             VersionLabel()
-            // The id of the account names it in a support log; the secret of the device is never shown (3.48.0).
-            game.session.profile?.id?.let { MutedText(ui("auth.device", it.takeLast(12)), style = MaterialTheme.typography.labelSmall) }
         }
     }
 }
@@ -138,8 +136,6 @@ import org.koin.compose.viewmodel.koinViewModel
             ) {
                 Text(ui("account.sign_in"))
             }
-            // Where the password goes and how long the session lasts are worth saying out loud.
-            MutedText(ui("auth.password_note"))
         }
     }
 }

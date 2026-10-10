@@ -45,7 +45,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.network.RequestLog
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.app.StallWatchdog
@@ -149,7 +148,6 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable internal fun ForgeScreens() {
     val shell: ShellViewModel = koinViewModel()
     val game by shell.game.collectAsStateWithLifecycle()
-    val logs by shell.logs.collectAsStateWithLifecycle()
     val expedition by shell.run.collectAsStateWithLifecycle()
     val trial by shell.arena.collectAsStateWithLifecycle()
     val rift by shell.rift.collectAsStateWithLifecycle()
@@ -201,7 +199,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
                                     rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
 
-                                    else -> Shell(game, logs, route, navigator) { bugOpen = true }
+                                    else -> Shell(game, route, navigator) { bugOpen = true }
                                 }
                             }
                         }
@@ -232,7 +230,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * Стек экранов (3.80.23): `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
  * Путь Изгнанника, полоска героя и нижняя панель; вход, меню героев и атлас - без неё.
  */
-@Composable internal fun Shell(game: GameUi, logs: List<RequestLog>, route: Route, navigator: Navigator, onBug: () -> Unit) {
+@Composable internal fun Shell(game: GameUi, route: Route, navigator: Navigator, onBug: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val heroModel: HeroViewModel = koinViewModel()
     val screens: @Composable (Modifier) -> Unit = { modifier ->
@@ -249,7 +247,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Characters> { CharacterSelectScreen() }
                 entry<Route.Fate> { com.sperance.exileforge.ui.screens.session.FateScreen() }
                 entry<Route.Account> { ServerScreen() }
-                entry<Route.Settings> { key -> SettingsScreen(key.page, logs) }
+                entry<Route.Settings> { key -> SettingsScreen(key.page) }
                 entry<Route.Hero> { HeroScreen() }
                 entry<Route.Tree> { ProgressPlaceScreen(ProgressPlace.TREE) }
                 entry<Route.Grimoire> { ProgressPlaceScreen(ProgressPlace.GRIMOIRE) }

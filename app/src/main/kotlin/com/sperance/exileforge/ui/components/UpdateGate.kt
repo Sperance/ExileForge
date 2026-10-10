@@ -44,7 +44,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
 }
 
 /**
- * Окно запуска и обновлений (3.86.0). Пока сервер не ответил - несколько строк: связь, версия, данные устройства. Ответил -
+ * Окно запуска и обновлений (3.86.0). Пока сервер не ответил - несколько строк: версия и данные устройства. Ответил -
  * окна нет ([StartGate]), догрузка видна на экранах. Сервер молчит - так и написано, повтор сам через 10 с, «Повторить
  * сейчас» и «Играть без связи». Любая найденная сборка закрывает игру до установки. Ни одно окно запуска и обновления не
  * закрывается «назад» или касанием мимо. [busy] - идёт поход или испытание: обновление ждёт его конца.
@@ -102,7 +102,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     }
 }
 
-/** Строки окна запуска: что проверяется или качается сейчас, по пункту на строку. */
+/** Строки окна запуска: что проверяется или качается сейчас, по пункту на строку; связь - только когда её нет. */
 @Composable private fun StartRows(s: UpdateState, stages: StartStages, reach: ReachState) {
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
@@ -111,10 +111,9 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
         }
     }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        when (reach.reach) {
-            Reach.CONNECTING -> StartRow(ui("start.row.server"), RowState.RUN, ui("start.state.connecting"))
-            Reach.ANSWERED -> StartRow(ui("start.row.server"), RowState.DONE, ui("start.state.answered"))
-            Reach.UNREACHABLE -> StartRow(ui("start.row.server"), RowState.FAIL, ui("start.state.retry_in", ((reach.retryAt - now + 999) / 1000).coerceAtLeast(0)))
+        // Связь - не пункт для игрока: строка появляется только с ошибкой, вместе с отсчётом до повтора.
+        if (reach.reach == Reach.UNREACHABLE) {
+            StartRow(ui("start.row.server"), RowState.FAIL, ui("start.state.retry_in", ((reach.retryAt - now + 999) / 1000).coerceAtLeast(0)))
         }
         when {
             s.progress != null -> StartRow(ui("start.row.version"), RowState.RUN, ui("start.state.downloading", (s.progress * 100).toInt()))

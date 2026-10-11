@@ -35,4 +35,3 @@ internal fun ExpeditionRun.challengeView(): ChallengeView? {
     val origin = boss.origin ?: return null
     return ChallengeView(origin, boss.level, boss.body.maxLife, boss.phase, boss.phases.map { it.step.at }, vaal)
 }
-

@@ -146,7 +146,7 @@ object MapGenerator {
 
     /**
      * Chasms (3.91.0): shapes of the biome are tried until about [CHASM_SHARE] of the ground is gone; a lone shape smaller than
-     * [minimum] cells is not cut (4.6.6). A shape is cut only on
+     * [minimum] cells is not cut (4.7.0). A shape is cut only on
      * open ground two steps or more from [keep] and only if every remaining piece of ground is still reachable from the
      * first kept cell, so a map never splits; a shape that would split it is put back.
      */
@@ -162,7 +162,7 @@ object MapGenerator {
                 ChasmShape.CRACK -> crack(seed, random.nextInt(4, 10), random)
             }.filter { it.x in 1 until size - 1 && it.y in 1 until size - 1 && grid[it.y * size + it.x] == Tile.FLOOR }
             if (cells.isEmpty() || cells.any { cell -> keep.any { abs(it.x - cell.x) + abs(it.y - cell.y) < 2 } }) return@repeat
-            // Меньше [minimum] клеток - не пропасть, а пятно (4.6.6): режется, только если прирастает к уже вырезанной
+            // Меньше [minimum] клеток - не пропасть, а пятно (4.7.0): режется, только если прирастает к уже вырезанной
             if (cells.size < minimum && cells.none { cell -> STEPS.any { (dx, dy) -> grid.getOrNull((cell.y + dy) * size + cell.x + dx) == Tile.CHASM } }) return@repeat
             cells.forEach { grid[it.y * size + it.x] = Tile.CHASM }
             val reach = distances(grid, size, from)

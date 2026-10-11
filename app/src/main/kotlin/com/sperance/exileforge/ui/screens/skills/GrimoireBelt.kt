@@ -200,7 +200,7 @@ internal fun Exchange(
                 }
             }
             Caption(ui("skills.exchange_take"))
-            // Книга обмена сразу читается (4.6.6): цель, чью книгу не прочесть, погашена со своей причиной
+            // Книга обмена сразу читается (4.7.0): цель, чью книгу не прочесть, погашена со своей причиной
             pages.filter { it.unlock <= hero.level }.forEach { skill ->
                 val refusal = remember(skill, hero.skills, stats) { bookRefusal(index, skill, SkillGrowthView.of(index, skill, hero.skills, hero.level, stats), hero.level, stats) }
                 val on = target == skill.code

@@ -33,7 +33,7 @@ import com.sperance.exileforge.ui.icons.spriteVector
 @Composable fun ExpeditionScene(run: ExpeditionRun, clock: FloatState, classCode: String?, modifier: Modifier = Modifier) {
     val painter = remember { ScenePainter() }
     painter.motion = LocalMotion.current
-    // Значок материала над узлами ремесла (4.6.6, макет «Растения», вариант C): спрайт предмета из сумки сервера, по узлу
+    // Значок материала над узлами ремесла (4.7.0, макет «Растения», вариант C): спрайт предмета из сумки сервера, по узлу
     painter.materials = run.world.features.filterIsInstance<NodeSpot>().map { it.node.job.output }.distinct().mapNotNull { code ->
         key(code) { itemIcon(code)?.let(::spriteVector)?.let { code to MaterialMark(rememberVectorPainter(it), materialTier(run.index, code)) } }
     }.toMap()

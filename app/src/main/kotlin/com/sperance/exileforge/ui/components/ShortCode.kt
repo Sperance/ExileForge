@@ -29,7 +29,7 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 import org.koin.compose.koinInject
 
 /**
- * Короткий номер плашкой (4.6.6): подпись [label], шесть цифр [code] разрядкой и копирование касанием - номер героя в карточке
+ * Короткий номер плашкой (4.7.0): подпись [label], шесть цифр [code] разрядкой и копирование касанием - номер героя в карточке
  * и листе героя, код вступления гильдии. Пустой номер (сервер старше) не рисуется.
  */
 @Composable fun ShortCodeChip(label: String, code: String, modifier: Modifier = Modifier) {

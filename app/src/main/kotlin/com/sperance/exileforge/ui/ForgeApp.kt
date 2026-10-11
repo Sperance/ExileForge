@@ -143,7 +143,7 @@ import org.koin.compose.viewmodel.koinViewModel
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
     // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
-    // Системные листы (4.6.6): отчёт об ошибке и настройки - и из оболочки, и из меню забега
+    // Системные листы (4.7.0): отчёт об ошибке и настройки - и из оболочки, и из меню забега
     val sheets = remember { com.sperance.exileforge.ui.components.SystemSheets() }
     val drafts = koinInject<DraftStore>()
     // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
@@ -196,7 +196,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
     }
-    // Настройки поверх забега (4.6.6): из оболочки они - экран стека, из меню забега - этот лист, забег под ним держится
+    // Настройки поверх забега (4.7.0): из оболочки они - экран стека, из меню забега - этот лист, забег под ним держится
     if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
     if (sheets.bug) {
         BugSheet(
@@ -214,7 +214,7 @@ import org.koin.compose.viewmodel.koinViewModel
     if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
     // Новое письмо (4.6.3): из карточки игрока, «Ответить» и рассылки гильдии - лист поверх всего, и поверх ящика
     if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
-    // Продолжение сюжета (4.6.6): шаг выполнен - сюжетный экран, когда забег уже не на экране
+    // Продолжение сюжета (4.7.0): шаг выполнен - сюжетный экран, когда забег уже не на экране
     if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
     // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
     if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()

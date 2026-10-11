@@ -121,7 +121,7 @@ class RiftArena(
     private var started = false
     private var paused = false
 
-    /** Листы поверх боя, что его держат (4.6.6: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
+    /** Листы поверх боя, что его держат (4.7.0: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
     private var holds = 0
     private var speed = 1
     private var elapsed = 0.0
@@ -313,7 +313,7 @@ class RiftArena(
             heroReserved = (hero.maxMana - manaCap).roundToInt(),
         )
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
-        // Номер волны не выходит за их число: после последней счёт уже не растёт (4.6.6, «3 из 2»)
+        // Номер волны не выходит за их число: после последней счёт уже не растёт (4.7.0, «3 из 2»)
         val round = wave.coerceAtMost(waves.size - 1).coerceAtLeast(0) + 1
         val fightHud = if (fight != null && leader != null) {
             fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, round = round, rounds = waves.size)

@@ -96,7 +96,7 @@ internal fun RewardChips(reward: QuestReward) {
 @Composable internal fun QuestRow(quest: Quest, actions: @Composable RowScope.() -> Unit = {}) {
     val color = rarityColor(quest.rarity.name)
     val shape = RoundedCornerShape(8.dp)
-    // Сданное задание (4.6.6) - серым целиком: оно уже ничего не ждёт
+    // Сданное задание (4.7.0) - серым целиком: оно уже ничего не ждёт
     Row(Modifier.fillMaxWidth().greyed(quest.claimed).clip(shape).depthPanel(shape).raritySpine(if (quest.claimed) Muted else color)) {
         Spacer(Modifier.width(4.dp))
         Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -124,7 +124,7 @@ internal fun RewardChips(reward: QuestReward) {
     }
 }
 
-/** Серая «отработанная» строка (4.6.6): без цвета и вполсилы. */
+/** Серая «отработанная» строка (4.7.0): без цвета и вполсилы. */
 private fun Modifier.greyed(on: Boolean): Modifier = if (!on) {
     this
 } else {

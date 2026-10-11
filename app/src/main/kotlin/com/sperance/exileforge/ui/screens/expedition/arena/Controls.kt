@@ -67,7 +67,7 @@ import com.sperance.exileforge.ui.theme.*
         ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
         }
-        // Меню забега (4.6.6): настройки и жук посреди боя; пока открыто - бой стоит
+        // Меню забега (4.7.0): настройки и жук посреди боя; пока открыто - бой стоит
         RunMenu(
             items = emptyList(),
             hold = { ArenaHold(onCommand) },
@@ -95,7 +95,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Держит бой арены, пока лист на экране (4.6.6). */
+/** Держит бой арены, пока лист на экране (4.7.0). */
 @Composable private fun ArenaHold(onCommand: (RunCommand) -> Unit) {
     DisposableEffect(Unit) {
         onCommand(RunCommand.Hold(true))

@@ -56,7 +56,7 @@ import kotlinx.serialization.json.JsonElement
  *      `GuildMember` без лиги и профессии, шаги перестройки дара в разборе листа.
  * 72 - башня по этажам (`tower.firstLevel|maxLevel|leaders`), разделы сводки `StatDef.section|partOf`, без `STOCK_INVENTORY_SIZE`.
  * 73 - номер героя (`HeroView.number`, `PlayerCard.number`), код гильдии (`GuildView.code`, `guild/code`, `guild/join-code`,
- *      `guild/lookup`), обмен книг сразу учит умение, взятие из хранилища гильдии платное, `fight.speeds|minWaveSeconds` (4.6.6).
+ *      `guild/lookup`), обмен книг сразу учит умение, взятие из хранилища гильдии платное, `fight.speeds|minWaveSeconds` (4.7.0).
  */
 const val API_REVISION = 73
 

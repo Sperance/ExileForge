@@ -165,7 +165,7 @@ class HeroActions(
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = heroCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) }
     fun flaskCondition(index: Int, condition: String?) = heroCommand { id -> api.hero.flaskCondition(id, index, condition) }
 
-    /** Обмен книг (4.6.6): полученная книга сразу читается сервером - умение изучено или выросло. */
+    /** Обмен книг (4.7.0): полученная книга сразу читается сервером - умение изучено или выросло. */
     fun exchangeBooks(books: List<String>, code: String) = heroCommand { id ->
         api.hero.exchangeBooks(id, books, code)
         notices.toast(ui("skills.exchanged", com.sperance.exileforge.core.display.SkillText.title(code)))

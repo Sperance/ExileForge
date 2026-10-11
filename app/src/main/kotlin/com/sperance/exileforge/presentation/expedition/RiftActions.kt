@@ -38,7 +38,7 @@ import java.util.UUID
 
 /**
  * Разлом на экране (3.96.0): доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
- * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер (4.6.6).
+ * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер (4.7.0).
  */
 data class RiftState(
     val open: Boolean = false,
@@ -48,7 +48,7 @@ data class RiftState(
     val delivery: RiftDelivery? = null,
 )
 
-/** Итог боя Разлома в пути (4.6.6): уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
+/** Итог боя Разлома в пути (4.7.0): уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
 sealed interface RiftDelivery {
     /** Отправка; [attempt] - какая по счёту (с 2 - нет связи, повтор). */
     data class Sending(val attempt: Int) : RiftDelivery
@@ -112,7 +112,7 @@ class RiftActions(
     }
 
     /**
-     * Итог боя (4.6.6): не через раннер команд - тот отказывает, пока занят, и итог пропадал, а арена ждала вечно. Итог уходит
+     * Итог боя (4.7.0): не через раннер команд - тот отказывает, пока занят, и итог пропадал, а арена ждала вечно. Итог уходит
      * сам, под одним ключом, с повтором при сбое сети; отказ сервера - на экран, с выходом к карте.
      */
     private fun deliver(end: RiftAct.Fight) {
@@ -152,7 +152,7 @@ class RiftActions(
     }
 
     /** Ответ на шаг: тосты переполнения, итог забега, новая доска. */
-    private fun land(report: RiftReport) {
+    private suspend fun land(report: RiftReport) {
         report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
         report.result?.let { result -> mutable.update { it.copy(result = result) } }
         show(report.board)

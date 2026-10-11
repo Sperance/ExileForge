@@ -27,7 +27,7 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * The roll quality in steps of twenty (3.2.0): each step louder than the one below — from a quiet grey
- * with no frame to a gold that glows — and a perfect hundred is molten gold (4.6.6, макет «Идеальный ролл», вариант A:
+ * with no frame to a gold that glows — and a perfect hundred is molten gold (4.7.0, макет «Идеальный ролл», вариант A:
  * радуга выбивалась из тёмного фэнтези).
  */
 private enum class RollTier(val key: String, val tint: Color, val fill: Float, val edge: Float, val glow: Dp) {
@@ -44,7 +44,7 @@ private enum class RollTier(val key: String, val tint: Color, val fill: Float, v
     }
 }
 
-/** Расплавленное золото идеального ролла (4.6.6): тёмная бронза, золото и белый жар посередине. */
+/** Расплавленное золото идеального ролла (4.7.0): тёмная бронза, золото и белый жар посередине. */
 private val Molten = listOf(Color(0xFF8A5A12), Color(0xFFF2D27A), Color(0xFFFFF1C2), Color(0xFFF2D27A), Color(0xFF8A5A12))
 
 /** Свет идеального ролла: жар медленно течёт по золоту; без анимаций (`LocalMotion`) - стоит. */

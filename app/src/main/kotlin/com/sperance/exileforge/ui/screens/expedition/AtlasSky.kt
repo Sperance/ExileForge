@@ -47,7 +47,7 @@ import kotlin.math.sin
     var scale by remember { mutableFloatStateOf(OPEN_ZOOM) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var framed by remember { mutableStateOf(false) }
-    // The clock (3.56.0; 4.6.6 - общие часы декора, 30 к/с): мерцание стоит без анимаций и вне экрана; only the layers that
+    // The clock (3.56.0; 4.7.0 - общие часы декора, 30 к/с): мерцание стоит без анимаций и вне экрана; only the layers that
     // breathe are drawn on its tick — the glows, threads and rings are drawn again on a pan, a zoom or a take.
     val clock = com.sperance.exileforge.ui.components.decorSeconds()
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }

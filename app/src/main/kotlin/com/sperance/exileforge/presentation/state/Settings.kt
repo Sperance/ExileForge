@@ -26,9 +26,9 @@ data class GameSettings(
     val storyFold: StoryFold = StoryFold(),
     /** Где стояла камера карты «Похода» у каждого героя (4.6.5): по id героя; вход на вкладку возвращает её туда же. */
     val worldViews: Map<String, WorldView> = emptyMap(),
-    /** Пролог (4.6.6) уже показан на этом устройстве: дальше перед созданием героя его можно пропустить сразу. */
+    /** Пролог (4.7.0) уже показан на этом устройстве: дальше перед созданием героя его можно пропустить сразу. */
     val prologueSeen: Boolean = false,
-    /** Продолжения шагов сюжета, что уже показаны (4.6.6): `герой:шаг`; повтор - из «Всего сюжета». */
+    /** Продолжения шагов сюжета, что уже показаны (4.7.0): `герой:шаг`; повтор - из «Всего сюжета». */
     val storySeen: Set<String> = emptySet(),
 ) {
     companion object {
@@ -65,7 +65,7 @@ enum class TextSize(val scale: Float) { S(.9f), M(1f), L(1.15f) }
 /** Вибрации - из :core (3.80.14). */
 typealias Buzz = com.sperance.exileforge.core.session.Buzz
 
-/** Скорости боя из правил (`fight.speeds`, 4.6.6); контента ещё нет - умолчания правил. */
+/** Скорости боя из правил (`fight.speeds`, 4.7.0); контента ещё нет - умолчания правил. */
 fun fightSpeeds(index: com.sperance.exileforge.rules.content.ContentIndex?): List<Int> = (index?.rules?.fight ?: com.sperance.exileforge.rules.content.FightRules()).speeds
 
 /** Сколько нажатий кнопки скорости боя дают скорость [speed] из настроек: 1 → 2 → 4. */

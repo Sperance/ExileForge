@@ -160,7 +160,7 @@ fun ItemCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Плашки состояний и замок - в углу, их видят, а не читают. У легенды (4.6.6) - ниже и от края: золотые завитки рамки
+        // Плашки состояний и замок - в углу, их видят, а не читают. У легенды (4.7.0) - ниже и от края: золотые завитки рамки
         // ([relicCorners]) лежали на кольце роллов
         Row(
             Modifier.fillMaxWidth().then(if (legend) Modifier.padding(top = LEGEND_CORNER_TOP, start = LEGEND_CORNER_SIDE, end = LEGEND_CORNER_SIDE) else Modifier),
@@ -349,6 +349,6 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
     }
 }
 
-/** Отступ значков шапки легенды от верха и края - мимо завитков рамки (4.6.6). */
+/** Отступ значков шапки легенды от верха и края - мимо завитков рамки (4.7.0). */
 private val LEGEND_CORNER_TOP = 14.dp
 private val LEGEND_CORNER_SIDE = 22.dp

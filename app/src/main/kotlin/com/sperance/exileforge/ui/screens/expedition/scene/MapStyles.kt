@@ -103,7 +103,7 @@ internal abstract class MapStyle {
      * контуру [outline]; край - только снаружи.
      */
     open fun chasm(frame: SceneFrame, cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, palette: Palette): Unit = with(frame) {
-        // Глубина (4.6.6): дальняя стенка провала - тёмный камень, сама тьма сдвинута к зрителю, по краю - светлая кромка; яма
+        // Глубина (4.7.0): дальняя стенка провала - тёмный камень, сама тьма сдвинута к зрителю, по краю - светлая кромка; яма
         // читается и на тёмном полу
         val face = tone(palette.floor, .42f)
         pool(cells, shade, outline, { tone(palette.floor, .9f * it) }, face, CHASM_LIP, depth = {
@@ -178,10 +178,10 @@ internal abstract class MapStyle {
 /** Тень грани, что смотрит в `+x`, против освещённой, что смотрит в `+y`. */
 private const val FACE_SHADE = .36f
 
-/** Глубина пропасти (4.6.6): на сколько клетки тьма сдвинута к зрителю - видна дальняя стенка. */
+/** Глубина пропасти (4.7.0): на сколько клетки тьма сдвинута к зрителю - видна дальняя стенка. */
 private const val CHASM_DEPTH = .24f
 
-/** Светлая кромка края пропасти (4.6.6). */
+/** Светлая кромка края пропасти (4.7.0). */
 private val CHASM_LIP = Color(0xFFA89878).copy(alpha = .6f)
 
 /** Мягкая тень у подножия: дальний край и ближний. */

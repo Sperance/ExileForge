@@ -78,10 +78,10 @@ internal class Blow(
      * against the target's state — adds to them instead of multiplying. Null: the sheet's own increases of each type.
      */
     val increase: Map<DamageType, Double>? = null,
-    /** Вторичный урон (4.6.6): взрыв фазы и прочее, что не удар и не чары, - как в PoE, от него не уклониться. */
+    /** Вторичный урон (4.7.0): взрыв фазы и прочее, что не удар и не чары, - как в PoE, от него не уклониться. */
     val secondary: Boolean = false,
 ) {
-    /** От удара уклоняются (4.6.6, как в PoE): только атаки - удар оружием и атакующий навык; чары и вторичный урон - нет. */
+    /** От удара уклоняются (4.7.0, как в PoE): только атаки - удар оружием и атакующий навык; чары и вторичный урон - нет. */
     val evadable: Boolean get() = !spell && !secondary
 
     /** A weapon's blow: attacks, not spells, bring life on hit. */

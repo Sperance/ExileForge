@@ -160,16 +160,16 @@ class ExpeditionWorld(
             crystals.mapTo(this) { it.cell }
             cracks.mapTo(this) { it.cell }
             features.forEach { spot -> addAll(spot.landmarks) }
-            // Пропасти (4.6.6): середина каждой - ориентир, скала перед ней прозрачна
+            // Пропасти (4.7.0): середина каждой - ориентир, скала перед ней прозрачна
             addAll(chasmMarks)
         }
         return landmarks.filter { explored(it.x, it.y) && !SceneSight.inView(it.x, it.y) { x, y -> !map.clear(x, y) } }
     }
 
-    /** Тела в скале (4.6.6): круг против клеток со скруглёнными углами, как их рисует сцена. */
+    /** Тела в скале (4.7.0): круг против клеток со скруглёнными углами, как их рисует сцена. */
     internal val body = WallBody(map, rules.cornerRadius)
 
-    /** Середины пропастей карты (4.6.6): по клетке на связную пропасть - ближайшая к её центру; считаются раз на карту. */
+    /** Середины пропастей карты (4.7.0): по клетке на связную пропасть - ближайшая к её центру; считаются раз на карту. */
     private val chasmMarks: List<Cell> by lazy {
         val seen = HashSet<Cell>()
         buildList {

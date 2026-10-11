@@ -159,7 +159,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 Text(titleName(it).uppercase(), color = Caution, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
             }
             Text(card.name, style = relicName(19).copy(color = GoldBright), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            // Номер героя (4.6.6): по нему зовут в гильдию; касание копирует
+            // Номер героя (4.7.0): по нему зовут в гильдию; касание копирует
             ShortCodeChip(ui("hero.number"), card.number, Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(6.dp))
             card.guild?.let { guild ->
@@ -207,7 +207,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
     val rights = card.rights
     val letter = rights.letter
-    // Малые кнопки одной строкой (4.6.6, макет «Компактные кнопки», вариант A)
+    // Малые кнопки одной строкой (4.7.0, макет «Компактные кнопки», вариант A)
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (letter != null) SmallAction(Icons.Outlined.Mail, ui("player.write"), onWrite, primary = true, enabled = !game.busy && letter == MailGate.OPEN)
         if (rights.invite) SmallAction(Icons.Outlined.Flag, ui("player.invite"), onInvite, enabled = !game.busy)

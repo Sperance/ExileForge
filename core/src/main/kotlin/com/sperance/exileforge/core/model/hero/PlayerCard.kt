@@ -57,7 +57,7 @@ data class PlayerCard(
     val lots: Int = 0,
     val rights: CardRights = CardRights(),
     val fate: FateCard? = null,
-    /** Номер героя (4.6.6): шесть цифр для приглашения в гильдию. */
+    /** Номер героя (4.7.0): шесть цифр для приглашения в гильдию. */
     val number: String = "",
 )
 

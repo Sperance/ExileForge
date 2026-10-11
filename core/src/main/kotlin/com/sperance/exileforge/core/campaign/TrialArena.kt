@@ -139,7 +139,7 @@ class TrialArena(
     private var started = false
     private var paused = false
 
-    /** Листы поверх боя, что его держат (4.6.6: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
+    /** Листы поверх боя, что его держат (4.7.0: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
     private var holds = 0
     private var speed = 1
     private var reported = 0

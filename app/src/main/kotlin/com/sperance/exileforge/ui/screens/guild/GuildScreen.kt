@@ -104,7 +104,7 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
                     }
                 }
             }
-            // Вступление по коду (4.6.6): шесть цифр от главы или офицера - сразу в гильдию, мимо её режима
+            // Вступление по коду (4.7.0): шесть цифр от главы или офицера - сразу в гильдию, мимо её режима
             item { JoinByCode(game, vm, enabled = waiting == null) }
             item {
                 ForgePanel {

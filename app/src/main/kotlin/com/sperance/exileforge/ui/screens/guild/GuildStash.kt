@@ -89,7 +89,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
 
 /**
  * The guild stash (3.79.0, server 1.74.0): tabs of the rules' places; anyone puts in, taking needs the tab's rank and,
- * for a member, one of the day's takes — a stack is one take. What lies here is the guild's. С 4.6.6 список - плиты
+ * for a member, one of the day's takes — a stack is one take. What lies here is the guild's. С 4.7.0 список - плиты
  * «Ценника», как витрина аукциона, с её отбором (на клиенте, [StashFilter]); ярлык - цена взятия в золоте
  * ([StashTakePrice]), взять и положить - удержанием.
  */
@@ -241,7 +241,7 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
 }
 
 /**
- * Плита записи хранилища «Ценником» (4.6.6): копия - со всеми строками, как лот, стопка - иконка, имя и число; ярлык - цена
+ * Плита записи хранилища «Ценником» (4.7.0): копия - со всеми строками, как лот, стопка - иконка, имя и число; ярлык - цена
  * взятия в золоте. Касание - карточка, «Взять» в ней по удержанию; погашено, если взятий на сегодня нет или золота мало.
  */
 @Composable private fun EntryRow(game: GameUi, stash: GuildStashView, entry: GuildStashEntry, onTake: () -> Unit) {
@@ -273,7 +273,7 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
     }
 }
 
-/** What the hero may put in: a loose item of the stash, or part of a stack of the bag; кладётся удержанием (4.6.6). */
+/** What the hero may put in: a loose item of the stash, or part of a stack of the bag; кладётся удержанием (4.7.0). */
 @Composable
 private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
     val hero = game.hero ?: return

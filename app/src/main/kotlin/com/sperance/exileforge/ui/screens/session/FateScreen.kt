@@ -72,7 +72,7 @@ import org.koin.compose.viewmodel.koinViewModel
  */
 @Composable fun FateScreen() = com.sperance.exileforge.ui.components.PrologueGate(always = false) { FateChoice() }
 
-/** Выбор дара (4.6.0) - после пролога (4.6.6). */
+/** Выбор дара (4.6.0) - после пролога (4.7.0). */
 @Composable private fun FateChoice() {
     val vm = koinViewModel<FateViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()

@@ -219,7 +219,7 @@ import kotlin.math.roundToInt
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
             // The gear right under it, on the same line (2.73.0), and the hero's figures under the gear (2.75.0).
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Меню захода (4.6.6) первым в углу: выход, настройки и жук - в нём, а не отдельными кнопками
+                // Меню захода (4.7.0) первым в углу: выход, настройки и жук - в нём, а не отдельными кнопками
                 RunMenu(
                     items = listOfNotNull(onLeave?.let { RunMenuItem(ForgeGlyphs.Portal, ui("expedition.leave"), danger = true, onClick = it) }),
                     hold = { HoldsRun(run) },
@@ -441,7 +441,7 @@ internal const val FOUNTAIN_TAP = .9
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(14.dp)
-    // Панель не выше доли экрана (4.6.6): длинное тело (сундук с горой добычи) прокручивается, а [footer] - кнопки - всегда на виду
+    // Панель не выше доли экрана (4.7.0): длинное тело (сундук с горой добычи) прокручивается, а [footer] - кнопки - всегда на виду
     val cap = LocalConfiguration.current.screenHeightDp.dp * PANEL_SHARE
     Column(
         modifier.navigationBarsPadding().padding(12.dp).fillMaxWidth().heightIn(max = cap).depthPanel(shape).border(1.dp, accent.copy(alpha = .5f), shape)

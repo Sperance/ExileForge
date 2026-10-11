@@ -104,7 +104,7 @@ internal fun xpCaption(index: ContentIndex, skill: SkillDefinition, view: SkillG
  * книга не читается - кнопка погашена, причина под ней. Без книг - откуда их взять.
  */
 
-/** Почему книгу [skill] сейчас не прочесть (4.6.6: и кнопка книги, и цель обмена); null - читается. */
+/** Почему книгу [skill] сейчас не прочесть (4.7.0: и кнопка книги, и цель обмена); null - читается. */
 internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: SkillGrowthView, heroLevel: Int, stats: Map<String, Double>): String? = when {
     view.level == 0 -> index.skillRules.unmet(skill, 1, heroLevel, stats).takeIf { it.isNotEmpty() }?.let { ui("skills.requires", 1, needLine(index, skill, 1)) }
     view.capped -> ui("skills.book_capped")

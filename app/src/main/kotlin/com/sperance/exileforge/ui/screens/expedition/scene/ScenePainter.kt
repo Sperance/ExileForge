@@ -45,7 +45,7 @@ internal class ScenePainter {
     /** Анимации-декор включены (`LocalMotion`): без них декор стоит в покое ([decor]). */
     internal var motion = true
 
-    /** Значки материалов узлов ремесла по коду материала (4.6.6), их готовит сцена. */
+    /** Значки материалов узлов ремесла по коду материала (4.7.0), их готовит сцена. */
     internal var materials: Map<String, MaterialMark> = emptyMap()
 
     /** Часы декора: при выключенных анимациях стоят на нуле. */
@@ -307,10 +307,10 @@ internal class ScenePainter {
     internal fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
 }
 
-/** Прозрачность скалы в центре «окна» (4.2.0; 4.6.6 - почти насквозь). */
+/** Прозрачность скалы в центре «окна» (4.2.0; 4.7.0 - почти насквозь). */
 private const val WINDOW_ALPHA = .08f
 
-/** Радиус «окна» в клетках (4.2.0; 4.6.6 - шире: стены, закрывающие героя и ямы). */
+/** Радиус «окна» в клетках (4.2.0; 4.7.0 - шире: стены, закрывающие героя и ямы). */
 private const val WINDOW_CELLS = 5f
 
 /** Шаг клетки на экране в полуширинах клетки: сдвиг на клетку по x - полуширина вбок и четверть ширины вниз. */

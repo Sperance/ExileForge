@@ -200,7 +200,7 @@ internal fun ScenePainter.drawTrap(spot: TrapSpot, light: Float) {
 private const val FLASH_SECONDS = .45
 
 /**
- * Вход в комнату на стене: тайная - светлая трещина, что ярче, пока герой стоит рядом; запертая (4.6.6, макет «Рычаги и
+ * Вход в комнату на стене: тайная - светлая трещина, что ярче, пока герой стоит рядом; запертая (4.7.0, макет «Рычаги и
  * двери», вариант A) - арка в камне, створка в кованых полосах и замок-ромб, что тлеет, пока дверь заперта.
  */
 internal fun ScenePainter.drawEntrance(x: Double, y: Double, door: Boolean, progress: Float, light: Float) {
@@ -238,7 +238,7 @@ private fun ScenePainter.drawDoor(cx: Float, cy: Float, light: Float) {
 }
 
 /**
- * Рычаг (4.6.6, макет «Рычаги и двери», вариант A): каменный постамент с шестернёй и рукоять с латунным набалдашником, вдвое
+ * Рычаг (4.7.0, макет «Рычаги и двери», вариант A): каменный постамент с шестернёй и рукоять с латунным набалдашником, вдвое
  * крупнее прежнего; невзведённый - с тёплым ореолом-подсказкой, потянутый - рукоять откинута, набалдашник погас.
  */
 internal fun ScenePainter.drawLever(x: Double, y: Double, pulled: Boolean, light: Float) {
@@ -268,7 +268,7 @@ internal fun ScenePainter.drawLever(x: Double, y: Double, pulled: Boolean, light
 }
 
 /**
- * Значок материала над узлом (4.6.6, макет «Растения», вариант C): спрайт того, что даст узел, в тёмном кольце цвета ступени
+ * Значок материала над узлом (4.7.0, макет «Растения», вариант C): спрайт того, что даст узел, в тёмном кольце цвета ступени
  * материала; парит над узлом и чуть покачивается (стоит без анимаций). Собранный узел значка не несёт.
  */
 internal fun ScenePainter.drawMaterial(x: Double, y: Double, mark: MaterialMark, light: Float) {
@@ -289,7 +289,7 @@ internal fun ScenePainter.drawMaterial(x: Double, y: Double, mark: MaterialMark,
 internal class MaterialMark(val icon: Painter, val tier: Color)
 
 /**
- * Цвет ступени материала [code] (4.6.6): по месту работы-источника в лестнице её профессии - нижняя треть пепельная, середина
+ * Цвет ступени материала [code] (4.7.0): по месту работы-источника в лестнице её профессии - нижняя треть пепельная, середина
  * ледяная, верх золотой; материал без источника - золотой.
  */
 internal fun materialTier(index: ContentIndex, code: String): Color {

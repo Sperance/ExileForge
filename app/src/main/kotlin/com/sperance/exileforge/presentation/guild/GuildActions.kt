@@ -82,7 +82,7 @@ class GuildActions(
         api.guild.invite(it, target).also { guild { state -> state.copy(recruit = null) } }
     }
 
-    /** Превью приглашения (4.6.6): одно чтение по нажатию «Найти», не на каждую букву - сервер не нагружается вводом. */
+    /** Превью приглашения (4.7.0): одно чтение по нажатию «Найти», не на каждую букву - сервер не нагружается вводом. */
     fun lookup(target: String) = commands.read(Reads.GUILD_SEARCH, restart = true) {
         val id = hero()
         val found = api.guild.lookup(id, target)
@@ -91,10 +91,10 @@ class GuildActions(
 
     fun clearRecruit() = guild { it.copy(recruit = null) }
 
-    /** Новый код вступления (4.6.6). */
+    /** Новый код вступления (4.7.0). */
     fun renewCode() = inside(ui("guild.toast.code_renewed")) { api.guild.renewCode(it) }
 
-    /** Вступление по коду гильдии (4.6.6). */
+    /** Вступление по коду гильдии (4.7.0). */
     fun joinByCode(code: String) = moving(ui("guild.toast.joined_code")) { api.guild.joinByCode(it, code) }
     fun member(command: MemberCommand, memberId: String) = inside(ui("guild.toast.done")) { api.guild.member(it, command, memberId) }
     fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) = inside(ui("guild.toast.saved")) { api.guild.settings(it, mode, minLevel, emblem, color, announcement) }

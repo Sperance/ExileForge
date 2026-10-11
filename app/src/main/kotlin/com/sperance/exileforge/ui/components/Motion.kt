@@ -22,7 +22,7 @@ val LocalMotion = staticCompositionLocalOf { true }
 val LocalSettings = staticCompositionLocalOf { GameSettings() }
 
 /**
- * Общие часы декора (4.6.6): секунды одним циклом на всё приложение, шагом [STEP_NS] (30 раз в секунду) - декор не держит
+ * Общие часы декора (4.7.0): секунды одним циклом на всё приложение, шагом [STEP_NS] (30 раз в секунду) - декор не держит
  * экран в 60 кадрах и не заводит свой бесконечный переход на каждый пульс. Стоят, когда анимации выключены (`LocalMotion`) и
  * когда приложение не на экране. Бой и сцена забега идут своими часами - их анимация не декор.
  */
@@ -59,7 +59,7 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
     CompositionLocalProvider(LocalDecorClock provides clock, content = content)
 }
 
-/** Часы декора (4.0.0; 4.6.6 - от общих часов): доля круга от 0 до 1 за [periodMs]; стоят на месте, когда анимации выключены. */
+/** Часы декора (4.0.0; 4.7.0 - от общих часов): доля круга от 0 до 1 за [periodMs]; стоят на месте, когда анимации выключены. */
 @Composable fun motionClock(periodMs: Int, @Suppress("UNUSED_PARAMETER") label: String = ""): Float {
     if (!LocalMotion.current) return 0f
     val seconds = LocalDecorClock.current?.now ?: return 0f
@@ -67,7 +67,7 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
 }
 
 /**
- * Доля круга за [periodMs] состоянием (4.6.6): читать в фазе рисования - декор перерисовывается шагом часов без перекомпозиции;
+ * Доля круга за [periodMs] состоянием (4.7.0): читать в фазе рисования - декор перерисовывается шагом часов без перекомпозиции;
  * без анимаций - [still].
  */
 @Composable fun motionPhase(periodMs: Int, still: Float = 0f): State<Float> {
@@ -76,7 +76,7 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
     return remember(clock, moving, periodMs, still) { derivedStateOf { if (!moving || clock == null) still else (clock.now * MS_PER_S % periodMs) / periodMs } }
 }
 
-/** Часы декора в секундах (4.6.6) - для рисунков, что сами считают фазы. */
+/** Часы декора в секундах (4.7.0) - для рисунков, что сами считают фазы. */
 @Composable fun decorSeconds(): Float = if (LocalMotion.current) LocalDecorClock.current?.now ?: 0f else 0f
 
 /** Шаг часов декора: 30 раз в секунду. */

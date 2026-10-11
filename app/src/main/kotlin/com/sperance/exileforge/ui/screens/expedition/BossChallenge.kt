@@ -40,7 +40,7 @@ import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.roundToInt
 
-/** Экран-вызов перед стражем карты (3.92.0): досье стража и «В бой» - бой (4.6.6: «Весы» прогона убраны). */
+/** Экран-вызов перед стражем карты (3.92.0): досье стража и «В бой» - бой (4.7.0: «Весы» прогона убраны). */
 @Composable internal fun BossChallenge(game: GameUi, model: ExpeditionViewModel, run: ExpeditionRun, view: ChallengeView, onCommand: (RunCommand) -> Unit) {
     BossDossier(
         game,

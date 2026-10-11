@@ -79,7 +79,7 @@ import kotlin.math.sin
     }
     // The reachable nodes breathe (3.76.0, «Неон»): their glow swells and fades, drawn again on the draw pass alone.
     // With the animations off in the settings (3.77.0) they glow steadily.
-    // 4.6.6: общие часы декора; дыхание туда и обратно - треугольником от доли круга
+    // 4.7.0: общие часы декора; дыхание туда и обратно - треугольником от доли круга
     val phase = motionPhase(PULSE_MS * 2, still = .5f)
     val breathing: State<Float> = remember(phase) { derivedStateOf { PULSE_LOW + (1f - PULSE_LOW) * (1f - kotlin.math.abs(phase.value * 2 - 1f)) } }
     val pulse by breathing

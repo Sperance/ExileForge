@@ -74,12 +74,12 @@ fun WorldCanvas(
     selected: String?,
     stash: Map<String, Int>,
     modifier: Modifier = Modifier,
-    /** Зона текущего шага сюжета (4.6.6): вокруг жетона вращается руническое кольцо; null - сюжета на карте нет. */
+    /** Зона текущего шага сюжета (4.7.0): вокруг жетона вращается руническое кольцо; null - сюжета на карте нет. */
     story: String? = null,
     onTap: (String?) -> Unit,
 ) {
     val measurer = rememberTextMeasurer()
-    // With the animations off in the settings (3.77.0) the tokens and the roads stand still. 4.6.6: общие часы декора (30 к/с)
+    // With the animations off in the settings (3.77.0) the tokens and the roads stand still. 4.7.0: общие часы декора (30 к/с)
     // вместо своего бесконечного перехода - карта мира больше не держит экран в 60 кадрах ради пульса жетонов
     val pulse by motionPhase(PULSE_MS, still = .5f)
     val marchPhase by motionPhase(MARCH_MS)
@@ -246,7 +246,7 @@ private fun DrawScope.token(token: WorldToken, height: Float, pulse: Float, sele
 }
 
 /**
- * Руническое кольцо зоны сюжета (4.6.6, макет «Сюжетные зоны», вариант B): засечки по кругу вокруг жетона медленно вращаются
+ * Руническое кольцо зоны сюжета (4.7.0, макет «Сюжетные зоны», вариант B): засечки по кругу вокруг жетона медленно вращаются
  * (доля круга [spin]); без анимаций стоят.
  */
 private fun DrawScope.storyRing(token: WorldToken, height: Float, spin: Float) {

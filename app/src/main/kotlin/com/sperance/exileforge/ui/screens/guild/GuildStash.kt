@@ -74,6 +74,7 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PropertyRow
 import com.sperance.exileforge.ui.components.RarityTiles
 import com.sperance.exileforge.ui.components.Spinner
+import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ItemIcon

@@ -6,6 +6,9 @@ import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.hero.HeroRepository
+import com.sperance.exileforge.core.model.campaign.RiftReport
+import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
@@ -22,19 +25,16 @@ import com.sperance.exileforge.rules.rift.RiftEngine
 import com.sperance.exileforge.rules.rift.RiftResult
 import com.sperance.exileforge.rules.rift.RiftStage
 import com.sperance.exileforge.rules.run.RunContext
-import com.sperance.exileforge.core.network.ApiFailure
-import com.sperance.exileforge.core.network.CommandQueue
-import com.sperance.exileforge.core.model.campaign.RiftReport
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import java.util.UUID
 
 /**
  * Разлом на экране (3.96.0): доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
@@ -173,9 +173,12 @@ class RiftActions(
         val current = mutable.value.arena
         val arena = when {
             fight == null || run == null || run.stage != RiftStage.FIGHT -> null
+
             current != null && current.hud.value.phase == com.sperance.exileforge.core.campaign.TrialPhase.FIGHT -> current
+
             // Итог ещё в пути: доска до него стоит на том же бою, арена с итогом остаётся
             current != null && mutable.value.delivery != null -> current
+
             else -> arena(board)
         }
         mutable.update { it.copy(board = board, arena = arena) }

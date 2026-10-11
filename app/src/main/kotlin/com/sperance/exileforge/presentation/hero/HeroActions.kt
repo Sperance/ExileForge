@@ -164,6 +164,7 @@ class HeroActions(
     fun dismissChest() = heroes.chest(null)
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = heroCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) }
     fun flaskCondition(index: Int, condition: String?) = heroCommand { id -> api.hero.flaskCondition(id, index, condition) }
+
     /** Обмен книг (4.6.6): полученная книга сразу читается сервером - умение изучено или выросло. */
     fun exchangeBooks(books: List<String>, code: String) = heroCommand { id ->
         api.hero.exchangeBooks(id, books, code)

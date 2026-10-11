@@ -1,12 +1,11 @@
 package com.sperance.exileforge.ui.screens.skills
 
-import androidx.compose.foundation.layout.Column
-import com.sperance.exileforge.core.display.SkillGrowthView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -30,6 +29,7 @@ import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.SkillGrowthView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.number
@@ -212,7 +212,16 @@ internal fun Exchange(
                 ) {
                     RadioButton(selected = on, enabled = refusal == null, onClick = { target = skill.code }, colors = RadioButtonDefaults.colors(selectedColor = Gold))
                     Column(Modifier.weight(1f)) {
-                        Text(SkillText.title(skill.code), color = if (refusal != null) Muted else if (on) GoldBright else Parchment)
+                        Text(
+                            SkillText.title(skill.code),
+                            color = if (refusal != null) {
+                                Muted
+                            } else if (on) {
+                                GoldBright
+                            } else {
+                                Parchment
+                            },
+                        )
                         Text(refusal ?: ui(if (hero.skills.level(skill.code) > 0) "skills.exchange_reads" else "skills.exchange_learns"), color = if (refusal != null) LifeRed else Muted, style = MaterialTheme.typography.labelSmall)
                     }
                 }

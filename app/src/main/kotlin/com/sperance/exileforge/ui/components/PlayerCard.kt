@@ -1,22 +1,13 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material.icons.outlined.DeleteOutline
-import androidx.compose.material.icons.outlined.MarkEmailUnread
-import androidx.compose.material.icons.outlined.VolumeOff
-import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.Gavel
-import androidx.compose.material.icons.outlined.Flag
-import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +19,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.Mail
+import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -203,7 +203,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
  * письма и списка игнора почты, не из карточки.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
+@Composable
+private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
     val rights = card.rights
     val letter = rights.letter
     // Малые кнопки одной строкой (4.6.6, макет «Компактные кнопки», вариант A)
@@ -223,7 +224,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
  * администратора аккаунту [onMail] - только ему.
  */
 @OptIn(ExperimentalLayoutApi::class)
-@Composable private fun ModerationRow(game: GameUi, rights: CardModeration, onMail: (() -> Unit)?, onDossier: () -> Unit) {
+@Composable
+private fun ModerationRow(game: GameUi, rights: CardModeration, onMail: (() -> Unit)?, onDossier: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         HorizontalDivider(color = Bronze, thickness = 1.dp)
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {

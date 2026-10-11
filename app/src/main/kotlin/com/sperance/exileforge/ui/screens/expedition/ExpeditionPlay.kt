@@ -1,16 +1,12 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.compose.foundation.layout.heightIn
-import com.sperance.exileforge.ui.components.raritySpine
-import androidx.compose.ui.platform.LocalConfiguration
-import com.sperance.exileforge.ui.components.RunMenuItem
-import com.sperance.exileforge.ui.components.RunMenu
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -47,6 +44,9 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.RunMenu
+import com.sperance.exileforge.ui.components.RunMenuItem
+import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene

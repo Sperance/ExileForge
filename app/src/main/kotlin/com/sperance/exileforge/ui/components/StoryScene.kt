@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,14 +33,13 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.rules.text.LocaleKey
-import org.koin.compose.viewmodel.koinViewModel
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * Сюжетный экран (4.6.6, макет «Пролог и продолжение», вариант A «Пепел и свиток»): палитра Предначертания, жар снизу и угли,
@@ -77,10 +77,12 @@ import kotlinx.coroutines.delay
     fun advance() {
         when {
             typed < current.length -> typed = Int.MAX_VALUE
+
             shown < paragraphs.size -> {
                 shown++
                 if (!moving) typed = Int.MAX_VALUE
             }
+
             else -> onDone()
         }
     }

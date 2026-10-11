@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.tree
 
-import com.sperance.exileforge.ui.components.motionPhase
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -24,6 +23,7 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.TreeNode
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.atan2

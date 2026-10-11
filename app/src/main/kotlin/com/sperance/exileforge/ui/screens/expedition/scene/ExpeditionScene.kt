@@ -1,23 +1,23 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
-import com.sperance.exileforge.ui.icons.spriteVector
-import com.sperance.exileforge.core.display.itemIcon
-import com.sperance.exileforge.core.campaign.run.NodeSpot
-import androidx.compose.ui.graphics.vector.rememberVectorPainter
-import androidx.compose.runtime.key
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.FloatState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.NodeSpot
+import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.icons.spriteVector
 
 /**
  * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking — its ground,

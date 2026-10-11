@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import com.sperance.exileforge.ui.components.motionClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -43,6 +42,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.components.motionClock
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay

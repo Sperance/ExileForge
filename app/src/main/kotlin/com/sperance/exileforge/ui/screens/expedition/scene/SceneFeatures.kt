@@ -1,15 +1,10 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
-import com.sperance.exileforge.ui.theme.Rune
-import com.sperance.exileforge.ui.theme.Parchment
-import com.sperance.exileforge.ui.theme.GoldBright
-import com.sperance.exileforge.rules.content.Job
-import com.sperance.exileforge.rules.content.ContentIndex
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.painter.Painter
 import com.sperance.exileforge.core.campaign.run.AltarSpot
 import com.sperance.exileforge.core.campaign.run.BlightSpot
 import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
@@ -18,7 +13,12 @@ import com.sperance.exileforge.core.campaign.run.MerchantSpot
 import com.sperance.exileforge.core.campaign.run.NodeSpot
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.campaign.run.TrapSpot
+import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.run.FeatureKind
+import com.sperance.exileforge.ui.theme.GoldBright
+import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Rune
 import kotlin.math.abs
 import kotlin.math.sin
 

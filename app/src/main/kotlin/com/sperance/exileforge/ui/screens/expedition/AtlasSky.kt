@@ -131,7 +131,6 @@ internal class SkyBrushes {
     fun halo(hue: Color, r: Float): Brush = halos.getOrPut(hue to r) { Brush.radialGradient(listOf(hue.copy(alpha = .55f), Color.Transparent), Offset.Zero, r) }
 }
 
-
 /**
  * How far the sky zooms out and in, and where it opens. With [SPREAD] the closest pair of the server's atlas (4.6 units,
  * server 1.65.0) is some 30 dp apart at [OPEN_ZOOM] on a phone and a hundred at [MAX_ZOOM]; [MIN_ZOOM] shows the whole sky.

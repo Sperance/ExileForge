@@ -1,11 +1,9 @@
 package com.sperance.exileforge.ui.screens.expedition.arena
 
-import androidx.compose.runtime.DisposableEffect
-import com.sperance.exileforge.ui.components.RunMenuButton
-import com.sperance.exileforge.ui.components.RunMenu
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -13,6 +11,8 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.RunMenu
+import com.sperance.exileforge.ui.components.RunMenuButton
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.AutoFinish
 import com.sperance.exileforge.ui.theme.*

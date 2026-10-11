@@ -1,8 +1,8 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.core.model.hero.UniqueFind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ItemTemplate
@@ -40,11 +40,17 @@ class UniqueAlbum(index: ContentIndex, lang: Lang = uiLanguage) {
         }
         val (boss, rest) = tables.partition { (tag, _) -> tag.startsWith(BOSS) }
         pools = rest.filter { (_, members) -> members.all { it.unique } }
-            .map { (tag, members) -> UniquePool(tag, uiOr(lang, "history.pool.$tag", displayName(tag.substringAfter(':'), lang)), members) }
+            .map { (tag, members) -> UniquePool(tag, ui(lang, "history.pool.$tag"), members) }
             .sortedByDescending { it.templates.size }
         bosses = boss.mapNotNull { (tag, members) -> members.filter { it.unique }.takeIf { it.isNotEmpty() }?.let { UniquePool(tag, monsterTitle(tag.removePrefix(BOSS)), it) } }
             .sortedBy { it.title }
     }
+
+    /** Сколько шаблонов контента найдено: шаблон, которого контент больше не знает, не в счёт. */
+    fun count(finds: Map<String, UniqueFind>): Int = all.count { it.code in finds }
+
+    /** Боссы, с которых найдена хоть одна вещь (4.6.5): без находок босс в Истории не показывается. */
+    fun bossesFound(finds: Map<String, UniqueFind>): List<UniquePool> = bosses.filter { it.count(finds) > 0 }
 
     /** Все найденные, свежие первыми; шаблон, которого контент больше не знает, пропускается. */
     fun found(finds: Map<String, UniqueFind>): List<FoundUnique> = all.mapNotNull { t -> finds[t.code]?.let { FoundUnique(t, it) } }.sortedByDescending { it.find.at }

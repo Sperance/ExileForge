@@ -12,8 +12,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.lerp
+import com.sperance.exileforge.presentation.state.WorldView
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.rules.content.WorldRule
+import kotlin.math.roundToInt
 
 /**
  * The world map's camera (2.76.0): how near it is and where it looks.
@@ -65,6 +67,15 @@ class WorldCamera(val world: WorldRule, private val density: Float) {
         clamp()
         placed = true
     }
+
+    /** Где стоит камера (4.6.5): точка мира в середине экрана и приближение - чтобы вернуть её туда же ([restore]). */
+    fun view(): WorldView {
+        val middle = toWorld(Offset(viewport.width / 2f, viewport.height / 2f))
+        return WorldView(middle.x.roundToInt(), middle.y.roundToInt(), scale)
+    }
+
+    /** Камера туда, где была ([view]): на другом экране середина та же, края - сколько влезет. */
+    fun restore(view: WorldView) = look(WorldPoint(view.x, view.y), view.scale)
 
     /** The same move as [look], flown. */
     suspend fun glide(point: WorldPoint, nearness: Float, down: Float = .5f) {

@@ -185,7 +185,6 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
                 slotTitle(item.slot),
                 ui("row.level", item.level),
                 item.sides?.let(::sidesText),
-                item.baseQuality?.let { ui("card.base_quality", it) },
             ).joinToString(" · "),
             style = MaterialTheme.typography.labelSmall,
         )

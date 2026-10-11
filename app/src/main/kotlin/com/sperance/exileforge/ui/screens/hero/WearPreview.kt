@@ -77,7 +77,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
     val place = choice.target
     // Фляга листа героя не меняет (4.2.0): вместо пустого итога героя - строки её листа против фляги в выбранном гнезде.
     val flask = game.index?.template(item.template)?.slot?.isFlask == true
-    val delta = remember(item, game.hero, game.index, place) { if (flask) null else Comparison.of(game.wearDelta(item, place)) }
+    val delta = remember(item, game.hero, game.index, place) { if (flask) null else Comparison.of(game.wearDelta(item, place), game.index) }
     if (unmet.isEmpty()) {
         // Итог в двух числах (3.89.0) над построчным «Если надеть».
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {

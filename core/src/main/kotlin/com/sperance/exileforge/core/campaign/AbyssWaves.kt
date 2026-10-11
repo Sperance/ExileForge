@@ -6,6 +6,7 @@ import com.sperance.exileforge.rules.content.AbyssRule
 import com.sperance.exileforge.rules.content.AbyssWave
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.LeaderPower
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
@@ -47,7 +48,7 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
 
     /**
      * The fights of [floor] at [level] on [dice]: a depth's wave, or a floor of the tower (3.49.0) with [extra] — the floor's
-     * growth — on every monster, its leader included.
+     * growth — on every monster, its leader included; [leaderPower] - the tower leader's own strength (4.6.5).
      */
     fun fights(
         rule: AbyssRule,
@@ -57,6 +58,7 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
         effects: Map<String, Double>,
         extraRareMods: Int,
         extra: List<MonsterEffect> = emptyList(),
+        leaderPower: LeaderPower? = null,
     ): List<List<RolledMonster>> {
         if (rule.monsters.isEmpty()) return emptyList()
         val swarm = 1 + (effects[MapStats.ABYSS_SWARM] ?: 0.0) / 100
@@ -76,7 +78,9 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
             spawns.skilled(spawns.buffed(spawns.sworn(monsters.build(monster, level, ruleOf, monsters.draw(pool, level, ruleOf, mods, dice), dice)), buffs), dice)
         }
         val leader = floor.leader?.takeIf { index.monster(it) != null }?.let { code ->
-            spawns.skilled(spawns.buffed(spawns.sworn(monsters.boss(monsters.guardian(code, level, rule.modifiers, rule.rolls, rule.tierReach), dice, leaderBuffs(effects))), buffs), dice)
+            // Вождь башни (4.6.5) - своя кривая силы по этажу и число строк вместо кривой боссов по уровню
+            val view = leaderPower?.let { monsters.guardian(code, level, rule.modifiers, it.rolls, rule.tierReach, it.power) } ?: monsters.guardian(code, level, rule.modifiers, rule.rolls, rule.tierReach)
+            spawns.skilled(spawns.buffed(spawns.sworn(monsters.boss(view, dice, leaderBuffs(effects))), buffs), dice)
         }
         return index.rules.fight.fights(foes + listOfNotNull(leader))
     }

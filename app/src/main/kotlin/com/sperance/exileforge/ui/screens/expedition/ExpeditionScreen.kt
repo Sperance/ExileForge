@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -30,8 +31,12 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCamera
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCanvas
-import com.sperance.exileforge.ui.screens.quests.StoryCard
+import com.sperance.exileforge.ui.screens.quests.StoryButton
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -83,9 +88,19 @@ private const val CARD_TOP = .48f
     val launch = expedition.launch?.takeIf { world.token(it.mapCode) != null }
     val stash = remember(game.hero?.items, index) { stashCounts(game) }
     BackHandler(launch != null) { vm.closeZone() }
-    // The map opens on the frontier; a zone picked elsewhere — a map's sheet in the stash — is flown to above its card.
+    // The map opens where the hero left it (4.6.5, настройки устройства), впервые - на фронтире; a zone picked elsewhere — a map's
+    // sheet in the stash — is flown to above its card.
     LaunchedEffect(camera, camera.viewport) {
-        if (!camera.placed && camera.viewport != IntSize.Zero) camera.look(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f)
+        if (camera.placed || camera.viewport == IntSize.Zero) return@LaunchedEffect
+        val kept = vm.worldView(game.heroId)?.takeIf { launch == null }
+        if (kept != null) camera.restore(kept) else camera.look(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f)
+    }
+    // Камера запоминается, когда встала (4.6.5): запись на устройство - после паузы, не на каждый кадр жеста.
+    LaunchedEffect(camera, game.heroId) {
+        snapshotFlow { if (camera.placed) camera.view() else null }.filterNotNull().distinctUntilChanged().collectLatest { view ->
+            delay(KEEP_VIEW_MS)
+            vm.keepWorldView(game.heroId, view)
+        }
     }
     LaunchedEffect(launch?.mapCode, camera.placed) {
         val zone = launch?.let { world.token(it.mapCode) }?.zone ?: return@LaunchedEffect
@@ -98,14 +113,16 @@ private const val CARD_TOP = .48f
         } else {
             WorldCanvas(world, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
-        // Голова карты (4.2.0): шапка, под ней - карточка текущей главы сюжета, ниже - масштаб
+        // Голова карты (4.2.0): шапка, под ней справа - кнопка сюжета (4.6.5, вместо карточки над картой) и масштаб
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
             WorldBar(
                 Modifier,
                 onFrontier = { scope.launch { camera.glide(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f) } },
             )
-            StoryCard(game, quests.board, questModel, Modifier.padding(horizontal = 12.dp))
-            ZoomButtons(camera, Modifier.align(Alignment.End).padding(top = 8.dp, end = 12.dp)) { factor -> scope.launch { camera.zoomBy(factor) } }
+            Column(Modifier.align(Alignment.End).padding(end = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                StoryButton(game, quests.board, questModel)
+                ZoomButtons(camera, Modifier) { factor -> scope.launch { camera.zoomBy(factor) } }
+            }
         }
         launch?.let { ZoneCard(game, vm, world, it, expedition.forced, Modifier.align(Alignment.BottomCenter)) }
     }
@@ -153,6 +170,9 @@ private object LastWorld {
 }
 
 private const val ZOOM_STEP = 1.35f
+
+/** Сколько камера стоит, прежде чем запомниться (4.6.5), мс. */
+private const val KEEP_VIEW_MS = 600L
 
 /** The chart's own colour, shown for the one frame before the map is laid out. */
 private val CHART_BARE = androidx.compose.ui.graphics.Color(0xFF1B150D)

@@ -31,7 +31,9 @@ import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemLine
+import com.sperance.exileforge.core.display.ItemNeed
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.NeedKind
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.lineText
@@ -120,7 +122,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * под ним что это и плашки уровня, качества и цены; база - крупными числами в три колонки; строки - со значком тира и вилкой
  * справа, нажатие открывает тир и место ролла. Уникальная и мифическая вещь лежат в «Астролябии»: кольца вокруг гнезда, искры
  * или звёзды, завитки по углам и номер экземпляра печатью. [totals] - итог героя «сейчас → станет» под строками,
- * [requirementsMet] красит строку требований. Всё напечатанное - вид [item] (3.0.0): копия поверх шаблона и контента.
+ * [unmet] отмечает чипы требований. Всё напечатанное - вид [item] (3.0.0): копия поверх шаблона и контента.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -140,8 +142,8 @@ fun ItemCard(
     waiting: Boolean = false,
     /** Итог героя «если надеть» (3.88.6) - таблица под строками; null - без неё. */
     totals: (@Composable (RelicLook) -> Unit)? = null,
-    /** Выполнены ли требования (3.88.6): зелёная галка, красный крест или нейтрально, когда героя не с чем сравнить. */
-    requirementsMet: Boolean? = null,
+    /** Невыполненные требования (4.6.5): у чипа - зелёная галка или красный крест; null - героя не с чем сравнить, без отметок. */
+    unmet: Set<NeedKind>? = null,
     onClick: () -> Unit = {},
 ) {
     val look = relicLook(item.rarity)
@@ -164,7 +166,8 @@ fun ItemCard(
             if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
             if (waiting) PendingMark()
             Spacer(Modifier.weight(1f))
-            if (detailed && rolled.isNotEmpty() && !legend) item.summary.quality?.let { RollRing(it) }
+            // Кольцо качества роллов (4.6.5) - у всех редкостей, легенда тоже: по строкам с вилкой
+            if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
             if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
         }
         if (legend) {
@@ -196,7 +199,6 @@ fun ItemCard(
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             RelicChip { Text(ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
             QualityBadge(item)
-            item.baseQuality?.let { RelicChip { Text(ui("card.base_quality", it), color = Parchment, style = MaterialTheme.typography.labelMedium) } }
             (price ?: item.template.price?.toLong())?.let { RelicChip { GoldPrice(it) } }
         }
         RelicDivider(look, Modifier.padding(horizontal = 4.dp))
@@ -236,7 +238,7 @@ fun ItemCard(
                 HorizontalDivider(thickness = 1.dp, color = look.gold.copy(alpha = .2f))
                 it(look)
             }
-            RelicFolds(item, look, requirementsMet)
+            RelicFolds(item, look, unmet)
         }
         if (action) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
@@ -280,34 +282,44 @@ fun ItemCard(
 }
 
 /**
- * Свёрнутые строки внизу карточки (3.88.6): требования одной строкой с отметкой, выполнены ли они, и термины строк -
- * раскрываются нажатием.
+ * Свёрнутые строки внизу карточки (3.88.6): требования и термины строк. Требования (4.6.5, макет «Требования», вариант A) -
+ * заголовок и под ним чипы с переносом, у каждого своя отметка: длинный набор (уровень, атрибуты, класс) не обрезается.
  */
-@Composable private fun RelicFolds(item: ItemView, look: RelicLook, met: Boolean?) {
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
     val terms = remember(item) { Term.ofItem(item) }
     var termsOpen by remember(item) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
         item.requirements.takeIf { it.isNotEmpty() }?.let { needs ->
-            FoldRow(
-                ui("relic.requirements"),
-                needs.joinToString(" · ") + when (met) {
-                    true -> " ✓"
-                    false -> " ✕"
-                    null -> ""
-                },
-                when (met) {
-                    true -> Vital
-                    false -> LifeRed
-                    null -> look.muted
-                },
-                open = null,
-            )
+            HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = .06f))
+            Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(ui("relic.requirements"), color = Parchment, style = MaterialTheme.typography.labelLarge)
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    needs.forEach { need -> NeedChip(need, unmet?.let { need.kind !in it }, look) }
+                }
+            }
         }
         if (terms.isNotEmpty()) {
             FoldRow(ui("term.title"), terms.size.toString(), look.muted, open = termsOpen) { termsOpen = !termsOpen }
             if (termsOpen) TermsBlock(terms, Modifier.padding(bottom = 6.dp))
         }
     }
+}
+
+/** Чип требования: подпись и отметка - ✓ `Vital`, ✕ `LifeRed`, без отметки и цвета, когда [met] неизвестно. */
+@Composable private fun NeedChip(need: ItemNeed, met: Boolean?, look: RelicLook) {
+    val tint = when (met) {
+        true -> Vital
+        false -> LifeRed
+        null -> look.muted
+    }
+    val mark = when (met) {
+        true -> " ✓"
+        false -> " ✕"
+        null -> ""
+    }
+    RelicChip { Text(need.text + mark, color = tint, style = MaterialTheme.typography.labelMedium) }
 }
 
 /** Строка свёртки: название слева, сводка справа и шеврон, когда раскрывается. */

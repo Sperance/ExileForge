@@ -44,7 +44,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val game by vm.game.collectAsStateWithLifecycle()
     val index = game.index
     val finds by produceState<Map<String, UniqueFind>?>(null, game.heroId) { value = game.heroId.takeIf { it.isNotBlank() }?.let { vm.uniques(it) } }
-    val total = remember(index) { index?.let { UniqueAlbum(it).all.size } }
+    val album = remember(index) { index?.let { UniqueAlbum(it) } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader(ui("history.title"), ui("history.subtitle"), ForgeGlyphs.Tome)
         val shape = RoundedCornerShape(14.dp)
@@ -56,8 +56,8 @@ import org.koin.compose.viewmodel.koinViewModel
             Icon(ForgeGlyphs.Gem, null, tint = rarityColor("UNIQUE"), modifier = Modifier.size(28.dp))
             Column(Modifier.weight(1f)) {
                 Text(ui("history.uniques"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                val count = finds?.size
-                MutedText(if (count != null && total != null) ui("history.found", count, total) else ui("history.uniques_hint"))
+                val known = finds
+                MutedText(if (known != null && album != null) ui("history.found", album.count(known), album.all.size) else ui("history.uniques_hint"))
             }
             Icon(Icons.Outlined.ChevronRight, null, tint = Muted)
         }
@@ -74,7 +74,7 @@ private sealed interface AlbumPick {
 /**
  * Найденные уникалки (3.90.2, макет А2): сверху общий счёт «найдено из всех», ниже чипы пулов со счётом; выбранный пул -
  * плашка с прогрессом и числом ненайденных, под ней найденные с датой первой находки, свежие первыми. Ненайденные не
- * называются - только числом. Чип «Боссы» - список боссов со счётом, раскрытый босс показывает свои находки. Нажатие на
+ * называются - только числом. Чип «Боссы» - список боссов со счётом, только с находками (4.6.5), раскрытый босс показывает свои находки. Нажатие на
  * находку - полная карточка шаблона со вилками строк.
  */
 @Composable fun UniquesScreen() {
@@ -96,9 +96,10 @@ private sealed interface AlbumPick {
                         Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Gold) }
                         return@Column
                     }
+                    val bosses = album.bossesFound(known)
                     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         item {
-                            ScreenHeader(ui("history.uniques"), ui("history.found", album.all.count { it.code in known }, album.all.size), ForgeGlyphs.Gem)
+                            ScreenHeader(ui("history.uniques"), ui("history.found", album.count(known), album.all.size), ForgeGlyphs.Gem)
                         }
                         item {
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -106,7 +107,7 @@ private sealed interface AlbumPick {
                                 album.pools.forEach { pool ->
                                     PoolChip(ui("history.pool_count", pool.title, pool.count(known), pool.templates.size), pick == AlbumPick.Pool(pool.tag)) { pick = AlbumPick.Pool(pool.tag) }
                                 }
-                                if (album.bosses.isNotEmpty()) PoolChip(ui("history.bosses"), pick == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
+                                if (bosses.isNotEmpty()) PoolChip(ui("history.bosses"), pick == AlbumPick.Bosses) { pick = AlbumPick.Bosses }
                             }
                         }
                         when (val chosen = pick) {
@@ -122,7 +123,7 @@ private sealed interface AlbumPick {
                                 items(pool.found(known), key = { it.template.code }) { found -> FoundRow(found) { opened = found } }
                             }
 
-                            AlbumPick.Bosses -> items(album.bosses, key = { it.tag }) { pool ->
+                            AlbumPick.Bosses -> items(bosses, key = { it.tag }) { pool ->
                                 BossRow(pool, known, open = boss == pool.tag, onToggle = { boss = if (boss == pool.tag) null else pool.tag }) { opened = it }
                             }
                         }

@@ -54,8 +54,9 @@ import kotlinx.serialization.json.JsonElement
  *      любая сфера, расширенный `GuildMember`, дар в модерации, рост даров от силы и призрачный волк.
  * 71 - Печати Атласа `hero/seal`, питомцы без опыта и сферы роста, Разлом без лиг (`unlocks.RIFT`, `RiftProgress.level`),
  *      `GuildMember` без лиги и профессии, шаги перестройки дара в разборе листа.
+ * 72 - башня по этажам (`tower.firstLevel|maxLevel|leaders`), разделы сводки `StatDef.section|partOf`, без `STOCK_INVENTORY_SIZE`.
  */
-const val API_REVISION = 71
+const val API_REVISION = 72
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

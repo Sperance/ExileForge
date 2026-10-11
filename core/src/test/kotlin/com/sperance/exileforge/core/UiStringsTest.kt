@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.TargetRule
 import com.sperance.exileforge.core.display.AffixKind
-import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.UiStrings
@@ -24,6 +23,7 @@ import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.reward.RedemptionKind
 import com.sperance.exileforge.rules.text.LocaleKey
@@ -198,7 +198,9 @@ class UiStringsTest {
                 add("challenge.cause_damage.${it.name}")
             }
             AffixKind.entries.forEach { add("mod.kind.${it.name}") }
-            StatGroup.entries.forEach { add("enum.stat_group.${it.name}") }
+            StatSection.entries.filter { it != StatSection.NONE }.forEach { add("enum.stat_group.${it.name}") }
+            // Что даёт строка сводки (4.6.5): у каждой характеристики с разделом - фраза в шапке её разбора
+            TestContent.index.stats.stats.filter { it.section != null && it.section != StatSection.NONE }.forEach { add("stat.desc.${it.code}") }
             TargetRule.entries.forEach { add("fight.rule.${it.name}") }
             Outcome.entries.forEach { add("expedition.outcome_${it.name.lowercase()}") }
             AtlasNodeKind.entries.forEach { add("atlas.kind.${it.name}") }
@@ -212,7 +214,10 @@ class UiStringsTest {
             listOf(EssenceBook.VAAL_UPGRADE, EssenceBook.VAAL_SPECIAL, EssenceBook.VAAL_STRONGER).forEach { add("crystal.outcome.$it") }
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
             listOf("level", "strength", "dexterity", "intelligence").forEach { add("req.need.$it") }
-            listOf("corrupted", "mirrored", "equipped", "socketed").forEach { add("state.$it") }
+            (listOf("corrupted", "mirrored", "fractured", "crafted", "equipped", "socketed") + com.sperance.exileforge.rules.content.Influence.entries.map { it.name.lowercase() }).forEach { add("state.$it") }
+            // Имена из кодов контента (4.6.5): разделы Истории и биомы зон - без кода на месте имени
+            com.sperance.exileforge.core.display.UniqueAlbum(TestContent.index).pools.forEach { add("history.pool.${it.tag}") }
+            TestContent.index.campaign.zones.map { it.biome }.filter { it.isNotBlank() }.forEach { add("expedition.biome.$it") }
             // The chronicle (3.54.0): every counter and section, every statistic and group the server writes.
             com.sperance.exileforge.rules.content.Counter.SECTIONS.forEach { (section, counters) ->
                 add("chronicle.section.$section")

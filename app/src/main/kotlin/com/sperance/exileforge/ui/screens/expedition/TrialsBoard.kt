@@ -109,7 +109,7 @@ import org.koin.compose.viewmodel.koinViewModel
         TrialModeCard(TrialMode.TOWER, towerNote, ui("trials.chip_seals", seals), opened == TrialMode.TOWER, 1f / 3, { toggle(TrialMode.TOWER) }) {
             MutedText(
                 ui(
-                    "trials.tower_hint", tower.levelOffset, tower.levelStep, index.rules.fight.maxFoes, tower.life.toInt(), number(tower.flaskCharges),
+                    "trials.tower_hint", tower.firstLevel, tower.levelStep, index.rules.fight.maxFoes, tower.life.toInt(), number(tower.flaskCharges),
                     tower.hoardEvery, tower.modEvery, tower.checkpoint,
                 ),
             )

@@ -1,14 +1,18 @@
 package com.sperance.exileforge.ui.screens.quests
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -16,6 +20,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -77,6 +84,7 @@ import org.koin.compose.viewmodel.koinViewModel
     onFold: (Boolean) -> Unit,
     onSeen: (String, Boolean) -> Unit,
     onOpen: () -> Unit,
+    folding: Boolean = true,
 ) {
     val index = game.index ?: return
     board ?: return
@@ -115,13 +123,15 @@ import org.koin.compose.viewmodel.koinViewModel
                 modifier = Modifier.weight(1f),
             )
             if (ready) Text(ui("story.card_ready"), color = Vital, style = MaterialTheme.typography.labelMedium)
-            IconButton(onClick = { onFold(!collapsed) }, modifier = Modifier.size(FOLDED_HEIGHT)) {
-                Icon(
-                    if (collapsed) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess,
-                    ui(if (collapsed) "common.expand" else "common.collapse"),
-                    tint = Gold,
-                    modifier = Modifier.size(18.dp),
-                )
+            if (folding) {
+                IconButton(onClick = { onFold(!collapsed) }, modifier = Modifier.size(FOLDED_HEIGHT)) {
+                    Icon(
+                        if (collapsed) Icons.Outlined.ExpandMore else Icons.Outlined.ExpandLess,
+                        ui(if (collapsed) "common.expand" else "common.collapse"),
+                        tint = Gold,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
             }
         }
         if (collapsed) {
@@ -141,6 +151,48 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable fun StoryCard(game: GameUi, board: QuestBoard?, vm: QuestViewModel, modifier: Modifier = Modifier) {
     val fold by vm.storyFold.collectAsStateWithLifecycle()
     StoryCard(game, board, fold, modifier, onFold = vm::foldStory, onSeen = vm::seeStory, onOpen = vm::openStory)
+}
+
+/**
+ * Кнопка сюжета над картой «Похода» (4.6.5, макет «Сюжет в Походе», вариант A): том в кольце прогресса шага, точка `Vital` -
+ * награда ждёт, свечение - трон ждёт закона. Нажатие - лист с текущим шагом: глава, цель, прогресс, награда и «Весь сюжет».
+ * Сюжет пройден и закон выбран - кнопки нет.
+ */
+@Composable fun StoryButton(game: GameUi, board: QuestBoard?, vm: QuestViewModel, modifier: Modifier = Modifier) {
+    val index = game.index ?: return
+    board ?: return
+    val law = ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty()
+    val quest = board.story
+    if (!law && (quest == null || index.quests.story.getOrNull(board.chapter) == null)) return
+    var open by remember { mutableStateOf(false) }
+    val ready = law || quest?.let { it.done && !it.claimed } == true
+    val share = quest?.let { (it.progress.toFloat() / it.target.coerceAtLeast(1)).coerceIn(0f, 1f) } ?: 1f
+    val shape = RoundedCornerShape(12.dp)
+    Box(modifier.size(40.dp)) {
+        Box(
+            Modifier.fillMaxSize().clip(shape).background(Abyss.copy(alpha = .88f)).border(1.dp, (if (law) GoldBright else Gold).copy(alpha = .5f), shape)
+                .clickable(role = Role.Button, onClickLabel = ui("story.button")) { open = true },
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(progress = { share }, Modifier.size(32.dp), color = Caution, trackColor = Bronze, strokeWidth = 2.dp)
+            Icon(ForgeGlyphs.Tome, ui("story.button"), tint = GoldBright, modifier = Modifier.size(16.dp))
+        }
+        if (ready) Box(Modifier.align(Alignment.TopEnd).padding(3.dp).size(8.dp).clip(CircleShape).background(Vital))
+    }
+    if (open) {
+        ForgeSheet(onDismissRequest = { open = false }) {
+            Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                StoryCard(game, board, StoryFold(), onFold = {}, onSeen = vm::seeStory, onOpen = {
+                    open = false
+                    vm.openStory()
+                }, folding = false)
+                ForgeButton(onClick = {
+                    open = false
+                    vm.openStory()
+                }, modifier = Modifier.fillMaxWidth()) { Text(ui("story.open_all")) }
+            }
+        }
+    }
 }
 
 /** Высота свёрнутой карточки сюжета: одна строка с шевроном. */

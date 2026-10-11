@@ -27,28 +27,37 @@ data class PassiveSource(val skill: String, val level: Int, val reserve: Double,
 
 /**
  * Что бой читает вместе с характеристикой (4.6.4, как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] - общее
- * сопротивление стихиям к каждой стихии, долю максимума к плоской регенерации. [creates] - строка сводки появляется и без своей
- * характеристики (общее сопротивление даёт строки стихий); иначе прибавка ложится лишь на уже бывшую строку.
+ * сопротивление стихиям к каждой стихии, долю максимума к плоской регенерации и к здоровью за убийство, проклятие в ответ
+ * второй строкой (4.6.5). [creates] - строка сводки появляется и без своей характеристики (общее сопротивление даёт строки
+ * стихий, доля максимума - строку регенерации); иначе прибавка ложится лишь на уже бывшую строку. Часть строки сводки из
+ * контента (`StatDef.partOf`) читается здесь же - так строка и её разбор сходятся с боем.
  */
-enum class FightReading(val stat: String, val from: String, val creates: Boolean, private val pool: RegenPool? = null) {
+enum class FightReading(val stat: String, val from: String, val creates: Boolean) {
     FIRE(CoreStat.RESIST_FIRE.code, CoreStat.RESIST_ALL.code, true),
     COLD(CoreStat.RESIST_COLD.code, CoreStat.RESIST_ALL.code, true),
     LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.RESIST_ALL.code, true),
-    LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, false, RegenPool.LIFE),
-    SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, false, RegenPool.SHIELD),
+    LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, true) {
+        override fun adds(body: Combatant): Double = RegenPool.LIFE.fromShare(body)
+    },
+    SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, true) {
+        override fun adds(body: Combatant): Double = RegenPool.SHIELD.fromShare(body)
+    },
+    LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true) {
+        override fun adds(body: Combatant): Double = body.maxLife * body.lifeOnKillShare
+    },
+    CURSE_WHEN_HIT(CoreStat.CURSE_ON_HIT.code, CoreStat.CURSE_WHEN_HIT.code, true),
     ;
 
-    /** Что бой прибавляет к цифре [stat] тела [body]: долю максимума запаса или характеристику [from]. */
-    fun adds(body: Combatant): Double = pool?.fromShare(body) ?: body[from]
+    /** Что бой прибавляет к цифре [stat] тела [body]: по умолчанию - саму характеристику [from]. */
+    open fun adds(body: Combatant): Double = body[from]
 }
 
 /**
- * Цифры сводки героя (4.6.4): [values] - что показывает строка, [rates] - восстановление в секунду от доли максимума у строк-долей
- * ([RegenPool.shareStat]), [skilled] - строки, что сдвинули пассивные умения (значок ауры), [fated] - Предначертание (✦).
+ * Цифры сводки героя (4.6.4): [values] - что показывает строка (с частями, что бой читает вместе с ней, [FightReading]),
+ * [skilled] - строки, что сдвинули пассивные умения (значок ауры), [fated] - Предначертание (✦).
  */
 data class StatFigures(
     val values: Map<String, Double>,
-    val rates: Map<String, Double> = emptyMap(),
     val skilled: Set<String> = emptySet(),
     val fated: Set<String> = emptySet(),
     /** Характеристики, из которых прочтены цифры: по ним бой режет потолки (`StatLimits`). */
@@ -116,8 +125,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     fun figures(stats: Map<String, Double>): StatFigures {
         val fighter = Combatant(stats, body.level, body.rules)
         val values = read(fighter)
-        val rates = RegenPool.entries.filter { it.shareStat in values }.associate { it.shareStat to it.fromShare(fighter) }
-        return StatFigures(values, rates, marked(skilled, values.keys), marked(fated, values.keys), stats)
+        return StatFigures(values, marked(skilled, values.keys), marked(fated, values.keys), stats)
     }
 
     private fun read(fighter: Combatant): Map<String, Double> {

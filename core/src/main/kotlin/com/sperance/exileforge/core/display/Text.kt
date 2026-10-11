@@ -27,12 +27,13 @@ import com.sperance.exileforge.rules.text.ModifierText
 fun displayName(value: String, lang: Lang = uiLanguage): String = value.substringAfterLast('/').substringAfterLast('.').replace('_', ' ')
     .replace(CAMEL_GAP, "$1 $2").ifBlank { ui(lang, "item.unnamed") }
 
-fun slotTitle(slot: Slot, lang: Lang = uiLanguage): String = uiOr(lang, "enum.slot.${slot.name}", displayName(slot.name, lang))
-fun slotTitle(slot: String, lang: Lang = uiLanguage): String = uiOr(lang, "enum.slot.$slot", displayName(slot, lang))
-fun rarityTitle(rarity: Rarity, lang: Lang = uiLanguage): String = uiOr(lang, "enum.rarity.${rarity.name}", displayName(rarity.name, lang))
-fun rarityTitle(value: String, lang: Lang = uiLanguage): String = uiOr(lang, "enum.rarity.$value", displayName(value, lang))
-fun weaponTitle(value: WeaponType, lang: Lang = uiLanguage): String = uiOr(lang, "enum.weapon.${value.name}", displayName(value.name, lang))
-fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = uiOr(lang, "enum.node.${type.name}", displayName(type.name, lang))
+/** Имена из кодов (4.6.5) - только из словаря, без кода на месте имени: полноту держит `UiStringsTest`. */
+fun slotTitle(slot: Slot, lang: Lang = uiLanguage): String = ui(lang, "enum.slot.${slot.name}")
+fun slotTitle(slot: String, lang: Lang = uiLanguage): String = ui(lang, "enum.slot.$slot")
+fun rarityTitle(rarity: Rarity, lang: Lang = uiLanguage): String = ui(lang, "enum.rarity.${rarity.name}")
+fun rarityTitle(value: String, lang: Lang = uiLanguage): String = ui(lang, "enum.rarity.$value")
+fun weaponTitle(value: WeaponType, lang: Lang = uiLanguage): String = ui(lang, "enum.weapon.${value.name}")
+fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = ui(lang, "enum.node.${type.name}")
 
 /** The name of an equipment template, out of the dictionary; a code it does not know reads as the code. */
 fun equipmentTitle(code: String): String = if (code.isBlank()) ui("item.equipment") else locOr(LocaleKey.equipmentName(code), displayName(code))
@@ -94,8 +95,18 @@ private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")
 /** Whether a stat reads in percent: its name carries the mark, or the registry counts it so. */
 fun statPercent(stat: String, index: ContentIndex? = null): Boolean = PERCENT_MARK.containsMatchIn(rawStatTitle(stat, uiLanguage)) || index?.stats?.isPercent(stat) == true
 
-/** A stat's figure as a sheet shows it, the percent sign at the number rather than in the name: «Шанс крита 5%». */
-fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
+/**
+ * A stat's figure as a sheet shows it, the percent sign at the number rather than in the name: «Шанс крита 5%». Множитель
+ * (4.6.5, `StatDef.multiplier`) читается «×0.60» - «на 40% меньше урона», а не «−40%».
+ */
+fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = if (index?.stats?.get(stat)?.multiplier == true) {
+    multiplierText(value)
+} else {
+    statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
+}
+
+/** Процент «больше/меньше» [percent] множителем: −40 → «×0.60». */
+fun multiplierText(percent: Double): String = "×" + String.format(java.util.Locale.ROOT, "%.2f", 1 + percent / 100)
 
 /** The rules' modifier text over the server's dictionary as it stands now. */
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)

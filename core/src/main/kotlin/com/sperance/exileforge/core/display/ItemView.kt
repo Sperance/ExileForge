@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.display
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.BaseVariance
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -186,7 +185,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     /** A unique's or mythic's lore; a base carries no description. */
     val description: String get() = if (template.unique) equipmentDescription(code) else ""
     val trade: String? get() = tradeName(code, equipment = true)
-    val requirements: List<String> get() = itemRequirements(template)
+    val requirements: List<ItemNeed> get() = itemRequirements(template)
     val visualKind: ItemVisualKind get() = itemVisualKind(template)
 
     private val text by lazy { modifierText(index) }
@@ -228,13 +227,9 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         }
     }
 
-    /** The copy's base quality in percent (server 1.67.0), or null when it is neutral or the template has no line it scales. */
-    val baseQuality: Int? get() = item.baseQuality.takeIf { quality ->
-        quality > 0 && quality != BaseVariance.NEUTRAL && template.base.any { it.code in index.rules.loot.baseVariance.lines }
-    }
-
+    /** Качество роллов (4.6.5): только строки с вилкой - фиксированная строка не «идеальна», ей некуда было выпасть. */
     val summary: RollSummary by lazy {
-        val qualities = lines.mapNotNull { it.quality }
+        val qualities = lines.filterNot { it.fixed }.mapNotNull { it.quality }
         RollSummary(
             quality = qualities.takeIf { it.isNotEmpty() }?.let { Math.round(it.average() * 100).toInt() },
             bestTier = lines.filter { it.marks.kind in RANKED }.mapNotNull { it.roll.tier.takeIf { t -> t > 0 } }.minOrNull(),
@@ -296,15 +291,39 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     }
 }
 
+/**
+ * Вид требования вещи (4.6.5): [word] - как его называют правила в причине отказа (`Requirements.unmet`: «strength: need 130…»);
+ * у класса слова нет - правила его не называют, класс сверяет [unmetNeeds].
+ */
+enum class NeedKind(val word: String?) {
+    LEVEL("level"),
+    STRENGTH("strength"),
+    DEXTERITY("dexterity"),
+    INTELLIGENCE("intelligence"),
+    CLASS(null),
+    ;
+
+    companion object {
+        /** Вид причины отказа правил [reason]; не требование вещи - null. */
+        fun of(reason: String): NeedKind? = entries.firstOrNull { it.word != null && reason.substringBefore(':').trim() == it.word }
+    }
+}
+
+/** Требование вещи: вид и короткая подпись «130 сил». */
+data class ItemNeed(val kind: NeedKind, val text: String)
+
 /** What a hero must reach before an item counts, shortened for a line; level 1 is not a requirement at all. */
-fun itemRequirements(template: ItemTemplate, lang: Lang = uiLanguage): List<String> = listOfNotNull(
-    template.requiredLevel.takeIf { it > 1 }?.let { "$it ${ui(lang, "req.short.requiredLevel")}" },
-    template.requiredStrength.takeIf { it > 0 }?.let { "$it ${ui(lang, "req.short.requiredStrength")}" },
-    template.requiredDexterity.takeIf { it > 0 }?.let { "$it ${ui(lang, "req.short.requiredDexterity")}" },
-    template.requiredIntelligence.takeIf { it > 0 }?.let { "$it ${ui(lang, "req.short.requiredIntelligence")}" },
+fun itemRequirements(template: ItemTemplate, lang: Lang = uiLanguage): List<ItemNeed> = listOfNotNull(
+    template.requiredLevel.takeIf { it > 1 }?.let { ItemNeed(NeedKind.LEVEL, "$it ${ui(lang, "req.short.requiredLevel")}") },
+    template.requiredStrength.takeIf { it > 0 }?.let { ItemNeed(NeedKind.STRENGTH, "$it ${ui(lang, "req.short.requiredStrength")}") },
+    template.requiredDexterity.takeIf { it > 0 }?.let { ItemNeed(NeedKind.DEXTERITY, "$it ${ui(lang, "req.short.requiredDexterity")}") },
+    template.requiredIntelligence.takeIf { it > 0 }?.let { ItemNeed(NeedKind.INTELLIGENCE, "$it ${ui(lang, "req.short.requiredIntelligence")}") },
     // A class's unique (3.76.0, server 1.71.0): only that class wears it.
-    template.heroClass?.let { ui(lang, "req.short.heroClass", classTitle(it)) },
+    template.heroClass?.let { ItemNeed(NeedKind.CLASS, ui(lang, "req.short.heroClass", classTitle(it))) },
 )
+
+/** Невыполненные требования вещи [template] у героя класса [heroClass] по причинам правил [reasons] (`Requirements.unmet`). */
+fun unmetNeeds(template: ItemTemplate, heroClass: String, reasons: List<String>): Set<NeedKind> = reasons.mapNotNullTo(HashSet()) { NeedKind.of(it) }.apply { if (template.heroClass?.let { it != heroClass } == true) add(NeedKind.CLASS) }
 
 fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
     template.weaponType == WeaponType.BOW || template.slot == Slot.QUIVER -> ItemVisualKind.BOW
@@ -341,7 +360,7 @@ fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
 }
 
 /** What a state is called; a flag the dictionary has no name for yet reads as its own word, capitalised. */
-fun stateTitle(state: String, lang: Lang = uiLanguage): String = uiOr(lang, "state.$state", displayName(state, lang).replaceFirstChar { it.uppercase() })
+fun stateTitle(state: String, lang: Lang = uiLanguage): String = ui(lang, "state.$state")
 
 /** The tier's ranges as text: "70–79" per value, a point as its number, values split by " / ". */
 fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNotNull { index, range ->

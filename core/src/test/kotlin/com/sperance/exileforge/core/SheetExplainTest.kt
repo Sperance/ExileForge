@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.campaign.CombatSheet
+import com.sperance.exileforge.core.campaign.FightReading
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -42,11 +43,18 @@ class SheetExplainTest {
                     assertTrue(abs(b.formed + b.shifts.sumOf { it.delta } - value) < 0.25, "${heroClass.code} $fate $stat formed ${b.formed} + shifts != $value")
                 }
                 if (fate == LIVING_FORTRESS) {
-                    val regen = CoreStat.LIFE_REGEN_PERCENT.code
-                    assertTrue(regen in combat.figures.fated && (combat.figures.rates[regen] ?: 0.0) > 0, "${heroClass.code}: регенерация Живой крепости не в сводке")
+                    val regen = CoreStat.HEALTH_REGEN.code
+                    assertTrue(regen in combat.figures.fated && (combat.figures.values[regen] ?: 0.0) > 0, "${heroClass.code}: регенерация Живой крепости не в сводке")
                 }
             }
         }
+    }
+
+    /** Часть строки сводки из контента (`partOf`, 4.6.5) читается боем вместе со строкой: иначе её цифра пропала бы из сводки. */
+    @Test fun everyRowPartIsReadByTheFight() {
+        val registry = TestContent.index.stats
+        val read = FightReading.entries.map { it.stat to it.from }.toSet()
+        registry.stats.filter { it.partOf != null }.forEach { part -> assertTrue(part.partOf to part.code in read, "${part.code}: часть ${part.partOf} без FightReading") }
     }
 
     private companion object {

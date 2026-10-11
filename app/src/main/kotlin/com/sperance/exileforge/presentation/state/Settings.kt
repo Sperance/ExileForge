@@ -24,12 +24,18 @@ data class GameSettings(
     val buzzButtons: Boolean = false,
     /** Карточка сюжета над картой «Похода» (4.4.x): свёрнута ли и при каком шаге это решено. */
     val storyFold: StoryFold = StoryFold(),
+    /** Где стояла камера карты «Похода» у каждого героя (4.6.5): по id героя; вход на вкладку возвращает её туда же. */
+    val worldViews: Map<String, WorldView> = emptyMap(),
 ) {
     companion object {
         val SPEEDS = listOf(1, 2, 4)
         val PAUSES = listOf(0, 30, 50)
     }
 }
+
+/** Камера карты «Похода» (4.6.5): точка мира в середине экрана ([x], [y]) и приближение [scale]. */
+@Serializable
+data class WorldView(val x: Int, val y: Int, val scale: Float)
 
 /**
  * Свёрнутость карточки сюжета (4.4.x) и шаг, при котором игрок её видел: [quest] - id задания главы, [ready] - ждала ли награда.

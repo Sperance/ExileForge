@@ -7,6 +7,8 @@ import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.character.WearPlace
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.NeedKind
+import com.sperance.exileforge.core.display.unmetNeeds
 import com.sperance.exileforge.core.model.atlas.AtlasState
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.hero.HeroView
@@ -112,6 +114,13 @@ fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLe
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)
 fun GameUi.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)
+
+/** Какие требования вещи [code] герой не выполняет (4.6.5) - по чипу карточки; героя или шаблона нет - null (без отметок). */
+fun GameUi.unmetNeeds(code: String): Set<NeedKind>? {
+    val hero = hero ?: return null
+    val template = index?.template(code) ?: return null
+    return unmetNeeds(template, hero.heroClass, unmetFor(code))
+}
 fun GameUi.manaReserve(): ManaReserve? = HeroLens.manaReserve(hero)
 
 /**

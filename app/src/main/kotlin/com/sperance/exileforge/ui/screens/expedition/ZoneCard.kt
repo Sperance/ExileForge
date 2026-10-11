@@ -47,8 +47,6 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
@@ -206,7 +204,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
     val locked = token.state == TokenState.LOCKED
     val kicker = listOfNotNull(
         ui("expedition.map_level", zone.level),
-        zone.biome.takeUnless { locked || it.isBlank() }?.let { uiOr(uiLanguage, "expedition.biome.$it", "") }?.takeIf { it.isNotBlank() },
+        zone.biome.takeUnless { locked || it.isBlank() }?.let { ui("expedition.biome.$it") },
         ui("expedition.finale").takeIf { zone.finale && !locked },
         region?.let(::regionTitle),
     ).joinToString(" · ")

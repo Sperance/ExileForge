@@ -42,6 +42,7 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.unmetNeeds
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
@@ -57,6 +58,8 @@ import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.screens.hero.PetCard
+import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
+import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -175,12 +178,21 @@ internal fun LotSheet(
     extra: (@Composable () -> Unit)? = null,
     onAction: () -> Unit = {},
 ) {
-    val view = lot.equipment?.let { game.view(it) }
+    val copy = lot.equipment
+    val view = copy?.let { game.view(it) }
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (view != null) {
+            if (copy != null && view != null) {
                 item {
-                    ItemCard(view, enabled = false, detailed = true, actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}")
+                    // Сравнение с надетым (4.6.5): лот несёт копию целиком - итог «если надеть» и требования, как у торговца
+                    ItemCard(
+                        view,
+                        enabled = false,
+                        detailed = true,
+                        actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}",
+                        totals = wearTotals(game, copy, rememberWearChoice(game, copy)),
+                        unmet = game.unmetNeeds(copy.template),
+                    )
                 }
             }
             lot.pet?.let { pet ->

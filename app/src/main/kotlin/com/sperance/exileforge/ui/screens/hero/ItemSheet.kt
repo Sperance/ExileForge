@@ -35,6 +35,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.unmetNeeds
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
@@ -98,7 +99,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         price = price,
                         waiting = waiting,
                         totals = wearTotals(game, instance, wear),
-                        requirementsMet = reachable,
+                        unmet = game.unmetNeeds(instance.template),
                     )
                 }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }

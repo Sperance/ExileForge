@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.expedition
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.campaign.Expedition
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.campaign.TrialArena
@@ -9,13 +10,16 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.WorldView
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.run.MapMechanic
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 
 /** Экраны похода (3.80.21): карта мира, карточка зоны, бег похода, испытания и атлас - над общими действиями. */
 class ExpeditionViewModel(
@@ -26,7 +30,17 @@ class ExpeditionViewModel(
     repository: ExpeditionRepository,
     commands: CommandRunner,
     slice: GameSlice,
+    private val prefs: PreferencesRepository,
 ) : ViewModel() {
+    /** Где стояла камера карты у героя [heroId] (4.6.5); не стояла - null, карта откроется на фронтире. */
+    fun worldView(heroId: String): WorldView? = prefs.settings.value.worldViews[heroId]
+
+    /** Запомнить камеру карты героя [heroId] на устройстве (4.6.5): только настройки, сервер не знает. */
+    fun keepWorldView(heroId: String, view: WorldView) {
+        if (heroId.isBlank()) return
+        viewModelScope.launch { prefs.editSettings { copy(worldViews = worldViews + (heroId to view)) } }
+    }
+
     /** Срез «игра» для экранов этой модели (3.80.33). */
     val game: StateFlow<GameUi> = slice.ui
     val state: StateFlow<Expedition> = repository.state

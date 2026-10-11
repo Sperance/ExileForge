@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.unmetNeeds
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
@@ -87,7 +88,7 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
 @Composable private fun CopySheet(game: GameUi, view: ItemView, footer: @Composable ColumnScope.() -> Unit, onDismiss: () -> Unit) {
     val item = view.item
     CardSheet(onDismiss) {
-        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, rememberWearChoice(game, item)), requirementsMet = game.unmetFor(item.template).isEmpty())
+        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template))
         footer()
     }
 }

@@ -35,6 +35,7 @@ import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.presentation.state.itemShelf
 import com.sperance.exileforge.presentation.state.railGroups
 import com.sperance.exileforge.presentation.state.unmetFor
+import com.sperance.exileforge.presentation.state.unmetNeeds
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -251,7 +252,7 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, money: Lo
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, rememberWearChoice(game, item)), requirementsMet = game.unmetFor(item.template).isEmpty()) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template)) }
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

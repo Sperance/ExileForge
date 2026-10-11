@@ -255,14 +255,14 @@ class TrialArena(
                         battle = null
                         return
                     }
-                    val next = trials.tower.floor(abyss, trial.heroLevel, step, picks)
+                    val next = trials.tower.floor(abyss, step, picks)
                     if (next.mods != floor?.mods) {
                         floor = next
                         rebuild()
                     }
                     floor = next
                     level = next.level
-                    fights = waves.fights(abyss, next.wave, next.level, run.streams.of("towerFloor", next.floor), effects(), run.context.extraRareMods, growth(next.power))
+                    fights = waves.fights(abyss, next.wave, next.level, run.streams.of("towerFloor", next.floor), effects(), run.context.extraRareMods, growth(next.power), next.leader)
                     if (fights.isEmpty()) return finish(fallen = false)
                 }
             }

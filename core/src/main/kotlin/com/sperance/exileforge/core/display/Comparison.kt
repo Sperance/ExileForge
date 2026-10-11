@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.character.FlaskVerdict
 import com.sperance.exileforge.core.character.GearVerdict.Shift
 import com.sperance.exileforge.core.character.StatDelta
 import com.sperance.exileforge.core.character.StatPriority
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.text.ModifierText
 import kotlin.math.abs
 
@@ -45,14 +46,18 @@ class Comparison(lines: List<ComparisonLine>) {
         /** Сколько строк видно в свёрнутом сравнении. */
         const val LEADING = 4
 
-        /** Сравнение листа героя: каждая сдвинутая характеристика [delta]; рост - к лучшему. */
-        fun of(delta: List<StatDelta>): Comparison = Comparison(
-            delta.map {
+        /**
+         * Сравнение листа героя: каждая сдвинутая характеристика [delta]; рост - к лучшему. С контентом [index] (4.6.5) - только
+         * строки сводки (часть строки и сила уникальной - внутри своей строки), множитель - «×1.00 → ×0.60», разница - «×0.60».
+         */
+        fun of(delta: List<StatDelta>, index: ContentIndex? = null): Comparison = Comparison(
+            delta.filter { index == null || index.stats.section(it.stat) != null && index.stats[it.stat]?.partOf == null }.map {
+                val multiplier = index?.stats?.get(it.stat)?.multiplier == true
                 ComparisonLine(
                     statTitle(it.stat),
-                    statValue(it.stat, it.before),
-                    statValue(it.stat, it.after),
-                    signed(it.change) { size -> statValue(it.stat, size) },
+                    statValue(it.stat, it.before, index),
+                    statValue(it.stat, it.after, index),
+                    if (multiplier) "×" + String.format(java.util.Locale.ROOT, "%.2f", (100 + it.after) / (100 + it.before)) else signed(it.change) { size -> statValue(it.stat, size, index) },
                     it.change > 0,
                     StatPriority.rank(it.stat),
                     share(it.before, it.after),

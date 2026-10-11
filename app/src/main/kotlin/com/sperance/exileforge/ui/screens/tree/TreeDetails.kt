@@ -247,7 +247,7 @@ import kotlin.math.sin
 @Composable private fun AllocationChange(game: GameUi, index: ContentIndex, node: TreeNode, choice: Int?) {
     if (node.type == SkillNodeType.JEWEL_SOCKET || (node.options.isNotEmpty() && choice == null)) return
     val change by produceState<Comparison?>(null, node.code, choice, game.hero, index) {
-        value = withContext(Dispatchers.Default) { Comparison.of(game.allocationDelta(node.code, choice)) }
+        value = withContext(Dispatchers.Default) { Comparison.of(game.allocationDelta(node.code, choice), game.index) }
     }
     change?.let { StatComparison(ui("tree.changes"), it) }
 }

@@ -13,16 +13,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.display.StatGroup
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
+import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.ManaReserve
@@ -75,7 +76,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
     val view = remember(current, combat, shifts, game.lang) {
         StatExplainer(game).explain(combat.explain(current).shifted(shifts[current].orEmpty()), combat.grants(current), combat::holders, combat.lowLife(current))
     }
-    val accent = StatGroup.of(current).accent()
+    val accent = game.index?.stats?.section(current)?.accent() ?: Muted
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(
             Modifier.fillMaxWidth().fillMaxHeight(.9f).navigationBarsPadding(),
@@ -100,16 +101,29 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
 }
 
 @Composable private fun Header(stat: String, view: StatExplanation, accent: Color, game: GameUi) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        val shape = RoundedCornerShape(10.dp)
-        Box(Modifier.size(40.dp).clip(shape).background(accent.copy(alpha = .13f)).border(1.dp, accent.copy(alpha = .4f), shape), contentAlignment = Alignment.Center) {
-            StatIcon(stat, accent, Modifier.size(22.dp))
+    val section = game.index?.stats?.section(stat)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            val shape = RoundedCornerShape(10.dp)
+            Box(Modifier.size(40.dp).clip(shape).background(accent.copy(alpha = .13f)).border(1.dp, accent.copy(alpha = .4f), shape), contentAlignment = Alignment.Center) {
+                StatIcon(stat, accent, Modifier.size(22.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                section?.let { Text(it.title(game.lang).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall) }
+                Text(statTitle(stat, game.lang), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+            }
+            Text(view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
-        Column(Modifier.weight(1f)) {
-            Text(StatGroup.of(stat).title(game.lang).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
-            Text(statTitle(stat, game.lang), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+        // Что даёт строка сводки (4.6.5, макет «Описание характеристики», вариант C): одна фраза серифом в кавычках под шапкой
+        if (section != null) {
+            Text(
+                "«${ui(game.lang, "stat.desc.$stat")}»",
+                color = Muted,
+                style = MaterialTheme.typography.bodyLarge,
+                fontFamily = FontFamily.Serif,
+                fontStyle = FontStyle.Italic,
+            )
         }
-        Text(view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
     }
 }
 

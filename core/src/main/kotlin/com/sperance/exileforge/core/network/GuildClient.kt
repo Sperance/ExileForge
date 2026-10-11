@@ -75,10 +75,20 @@ class GuildClient internal constructor(private val http: Transport) {
     suspend fun acceptApplicant(heroId: String, applicantId: String): GuildView = onApplicant("accept", heroId, applicantId)
     suspend fun declineApplicant(heroId: String, applicantId: String): GuildView = onApplicant("decline", heroId, applicantId)
 
-    suspend fun invite(heroId: String, name: String): GuildView {
-        require(name.isNotBlank()) { ui("guild.api.hero_name") }
-        return http.post("$GUILD/invite", heroQuery(heroId, "name" to name.trim()))
+    /** Приглашение по номеру героя или имени (4.6.6): сервер сам различит шесть цифр. */
+    suspend fun invite(heroId: String, target: String): GuildView {
+        require(target.isNotBlank()) { ui("guild.api.hero_name") }
+        return http.post("$GUILD/invite", heroQuery(heroId, "name" to target.trim()))
     }
+
+    /** Кого позовёт приглашение (4.6.6): превью до отправки. */
+    suspend fun lookup(heroId: String, target: String): com.sperance.exileforge.core.model.guild.GuildRecruit = http.get("$GUILD/lookup", heroQuery(heroId, "name" to target.trim()))
+
+    /** Новый код вступления (4.6.6): прежний перестаёт действовать. */
+    suspend fun renewCode(heroId: String): GuildView = http.post("$GUILD/code", heroQuery(heroId))
+
+    /** Вступление по коду гильдии (4.6.6). */
+    suspend fun joinByCode(heroId: String, code: String): GuildMine = http.post("$GUILD/join-code", heroQuery(heroId, "code" to code.trim()))
 
     suspend fun member(heroId: String, command: MemberCommand, memberId: String): GuildView {
         requireId(memberId)

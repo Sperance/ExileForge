@@ -94,6 +94,8 @@ fun HeroScreen() {
                     else -> {
                         // Предначертание аккаунта (4.6.3, «Лента и свиток») над листом: в подписи - что дар копит, касание - описание
                         heroFate(game)?.let { fate -> item(key = "fate") { FateRibbon(fate, fateProgress(game) ?: ui("fate.ribbon.caption"), Modifier.fillMaxWidth()) } }
+                        // Свой номер героя (4.6.6): его диктуют главе, чтобы позвал в гильдию; касание копирует
+                        game.hero?.info?.number?.takeIf { it.isNotBlank() }?.let { number -> item(key = "number") { ShortCodeChip(ui("hero.number_own"), number) } }
                         item { HeroSummary(game) }
                     }
                 }

@@ -1,5 +1,14 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
+import com.sperance.exileforge.ui.theme.Rune
+import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.GoldBright
+import com.sperance.exileforge.rules.content.Job
+import com.sperance.exileforge.rules.content.ContentIndex
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import com.sperance.exileforge.core.campaign.run.AltarSpot
 import com.sperance.exileforge.core.campaign.run.BlightSpot
@@ -24,7 +33,12 @@ internal fun ScenePainter.featureParts(spot: FeatureSpot, world: ExpeditionWorld
 
     is MerchantSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawMerchant(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y)) })
 
-    is NodeSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawNode(spot.cell.x + .5, spot.cell.y + .5, spot.node.profession, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+    is NodeSpot -> listOf(
+        depth(spot.cell.x, spot.cell.y) to {
+            drawNode(spot.cell.x + .5, spot.cell.y + .5, spot.node.profession, spot.spent, glow(spot.cell.x, spot.cell.y))
+            if (!spot.spent) materials[spot.node.job.output]?.let { drawMaterial(spot.cell.x + .5, spot.cell.y + .5, it, glow(spot.cell.x, spot.cell.y)) }
+        },
+    )
 
     is TrapSpot -> listOf(depth(spot.cell.x, spot.cell.y) - .4 to { drawTrap(spot, glow(spot.cell.x, spot.cell.y)) })
 
@@ -185,32 +199,108 @@ internal fun ScenePainter.drawTrap(spot: TrapSpot, light: Float) {
 /** Сколько секунд горит вспышка сработавшей ловушки. */
 private const val FLASH_SECONDS = .45
 
-/** Вход в комнату на стене: тайная - светлая трещина, что ярче, пока герой стоит рядом; запертая - окованная дверь. */
+/**
+ * Вход в комнату на стене: тайная - светлая трещина, что ярче, пока герой стоит рядом; запертая (4.6.6, макет «Рычаги и
+ * двери», вариант A) - арка в камне, створка в кованых полосах и замок-ромб, что тлеет, пока дверь заперта.
+ */
 internal fun ScenePainter.drawEntrance(x: Double, y: Double, door: Boolean, progress: Float, light: Float) {
     val cx = isoX(x, y)
     val cy = isoY(x, y)
-    if (door) {
-        pen.color = tone(Color(0xFF5A3A20), light)
-        pen.rect(cx - unit * .25f, cy + unit * .1f, unit * .5f, unit * .8f)
-        pen.color = tone(Color(0xFF3A3A40), light)
-        pen.line(cx - unit * .25f, cy + unit * .5f, cx + unit * .25f, cy + unit * .5f, unit * .05f)
-        pen.circle(cx + unit * .15f, cy + unit * .45f, unit * .05f)
-        return
-    }
+    if (door) return drawDoor(cx, cy, light)
     pen.color = Color(0xFFE8E0C8).copy(alpha = (.35f + .55f * progress) * light)
     pen.polyline(cx - unit * .05f, cy + unit * .95f, cx + unit * .08f, cy + unit * .7f, cx - unit * .06f, cy + unit * .5f, cx + unit * .05f, cy + unit * .25f, width = unit * .04f)
 }
 
-/** Рычаг: столб и рукоять, опущенная, когда дверь открыта. */
+/** Запертая дверь: каменный проём с аркой, тёмное дерево, две кованые полосы, шов створок и тлеющий замок. */
+private fun ScenePainter.drawDoor(cx: Float, cy: Float, light: Float) {
+    val half = unit * .32f
+    val top = cy + unit * 1.05f
+    // Проём: камень вокруг арки
+    pen.color = tone(Color(0xFF4A4540), light)
+    pen.rect(cx - half - unit * .07f, cy + unit * .05f, (half + unit * .07f) * 2, unit * .82f)
+    pen.circle(cx, cy + unit * .87f, half + unit * .07f)
+    // Створка: тёмное дерево до арки
+    pen.color = tone(Color(0xFF4A2E18), light)
+    pen.rect(cx - half, cy + unit * .08f, half * 2, unit * .79f)
+    pen.circle(cx, cy + unit * .87f, half)
+    // Кованые полосы и шов
+    pen.color = tone(Color(0xFF5A5B62), light)
+    pen.line(cx - half, cy + unit * .32f, cx + half, cy + unit * .32f, unit * .055f)
+    pen.line(cx - half, cy + unit * .66f, cx + half, cy + unit * .66f, unit * .055f)
+    pen.color = tone(Color(0xFF2A1A0E), light)
+    pen.line(cx, cy + unit * .08f, cx, top - unit * .1f, unit * .025f)
+    // Замок: ромб, что тлеет, пока дверь заперта
+    val glow = .65f + .35f * sin(time * 2.4f)
+    pen.color = Palettes.torch.copy(alpha = .3f * glow * light)
+    pen.circle(cx, cy + unit * .5f, unit * .16f)
+    pen.color = Color(0xFFF2B45A).copy(alpha = glow * light)
+    pen.quad(cx, cy + unit * .6f, cx + unit * .07f, cy + unit * .5f, cx, cy + unit * .4f, cx - unit * .07f, cy + unit * .5f)
+}
+
+/**
+ * Рычаг (4.6.6, макет «Рычаги и двери», вариант A): каменный постамент с шестернёй и рукоять с латунным набалдашником, вдвое
+ * крупнее прежнего; невзведённый - с тёплым ореолом-подсказкой, потянутый - рукоять откинута, набалдашник погас.
+ */
 internal fun ScenePainter.drawLever(x: Double, y: Double, pulled: Boolean, light: Float) {
     val cx = isoX(x, y)
     val cy = isoY(x, y)
-    pen.color = tone(Color(0xFF3A3A40), light)
-    pen.rect(cx - unit * .08f, cy, unit * .16f, unit * .3f)
+    if (!pulled) {
+        pen.color = Palettes.torch.copy(alpha = (.18f + .12f * sin(time * 2.4f)) * light)
+        pen.ellipse(cx - unit * .55f, cy - unit * .2f, unit * 1.1f, unit * .44f)
+    }
+    // Постамент
+    pen.color = tone(Color(0xFF4A4C52), light)
+    pen.rect(cx - unit * .26f, cy - unit * .02f, unit * .52f, unit * .3f)
+    pen.color = tone(Color(0xFF62656C), light)
+    pen.rect(cx - unit * .26f, cy + unit * .26f, unit * .52f, unit * .08f)
+    // Шестерня
+    val hub = cy + unit * .16f
+    pen.color = tone(Color(0xFF3A3C42), light)
+    pen.circle(cx, hub, unit * .13f)
     pen.color = tone(Color(0xFF8A6A3A), light)
-    if (pulled) pen.line(cx, cy + unit * .25f, cx + unit * .35f, cy + unit * .1f, unit * .05f) else pen.line(cx, cy + unit * .25f, cx - unit * .2f, cy + unit * .6f, unit * .05f)
-    pen.color = Palettes.torch.copy(alpha = (if (pulled) .3f else .8f) * light)
-    pen.circle(if (pulled) cx + unit * .35f else cx - unit * .2f, if (pulled) cy + unit * .1f else cy + unit * .6f, unit * .06f)
+    pen.ring(cx - unit * .13f, hub - unit * .13f, unit * .26f, unit * .26f, unit * .035f)
+    // Рукоять и набалдашник
+    val (tipX, tipY) = if (pulled) cx + unit * .42f to hub + unit * .22f else cx - unit * .3f to hub + unit * .62f
+    pen.color = tone(Color(0xFF6B4A2A), light)
+    pen.line(cx, hub, tipX, tipY, unit * .08f)
+    pen.color = if (pulled) tone(Color(0xFF7A6A4A), light) else Color(0xFFE0A64A).copy(alpha = light)
+    pen.circle(tipX, tipY, unit * .1f)
+}
+
+/**
+ * Значок материала над узлом (4.6.6, макет «Растения», вариант C): спрайт того, что даст узел, в тёмном кольце цвета ступени
+ * материала; парит над узлом и чуть покачивается (стоит без анимаций). Собранный узел значка не несёт.
+ */
+internal fun ScenePainter.drawMaterial(x: Double, y: Double, mark: MaterialMark, light: Float) {
+    val cx = isoX(x, y)
+    val cy = isoY(x, y) + unit * (1.05f + if (motion) .05f * sin(time * 2f + x.toFloat()) else 0f)
+    val r = unit * .3f
+    pen.color = Color(0xE60A0D12).copy(alpha = .9f * light)
+    pen.circle(cx, cy, r)
+    pen.color = mark.tier.copy(alpha = light)
+    pen.ring(cx - r, cy - r, r * 2, r * 2, unit * .045f)
+    val side = r * 1.3f
+    pen.scope.translate(cx - side / 2, -cy - side / 2) {
+        with(mark.icon) { draw(Size(side, side), alpha = light, colorFilter = ColorFilter.tint(mark.tier)) }
+    }
+}
+
+/** Значок материала узла: рисунок и цвет ступени. */
+internal class MaterialMark(val icon: Painter, val tier: Color)
+
+/**
+ * Цвет ступени материала [code] (4.6.6): по месту работы-источника в лестнице её профессии - нижняя треть пепельная, середина
+ * ледяная, верх золотой; материал без источника - золотой.
+ */
+internal fun materialTier(index: ContentIndex, code: String): Color {
+    val source = index.professions.professions.firstOrNull { p -> p.jobs.any { it is Job.Item && it.output == code } } ?: return GoldBright
+    val ladder = source.jobs.filterIsInstance<Job.Item>().sortedBy { it.level }
+    val share = ladder.indexOfFirst { it.output == code }.toFloat() / (ladder.size - 1).coerceAtLeast(1)
+    return when {
+        share < 1f / 3 -> Parchment
+        share < 2f / 3 -> Rune
+        else -> GoldBright
+    }
 }
 
 private const val HERBALISM = "HERBALISM"

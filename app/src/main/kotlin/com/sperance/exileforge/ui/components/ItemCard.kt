@@ -160,8 +160,13 @@ fun ItemCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Плашки состояний и замок - в углу, их видят, а не читают.
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Плашки состояний и замок - в углу, их видят, а не читают. У легенды (4.6.6) - ниже и от края: золотые завитки рамки
+        // ([relicCorners]) лежали на кольце роллов
+        Row(
+            Modifier.fillMaxWidth().then(if (legend) Modifier.padding(top = LEGEND_CORNER_TOP, start = LEGEND_CORNER_SIDE, end = LEGEND_CORNER_SIDE) else Modifier),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
             item.states.forEach { Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp)) }
             if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
             if (waiting) PendingMark()
@@ -343,3 +348,7 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
         Text(ui("link.pending"), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
     }
 }
+
+/** Отступ значков шапки легенды от верха и края - мимо завитков рамки (4.6.6). */
+private val LEGEND_CORNER_TOP = 14.dp
+private val LEGEND_CORNER_SIDE = 22.dp

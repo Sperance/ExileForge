@@ -79,7 +79,6 @@ import org.koin.compose.viewmodel.koinViewModel
                     ui(if (hud.kind == TrialKind.RUSH) "trials.boss_of" else "trials.floor", hud.step, hud.steps),
                     fight.heroBody,
                     arena.rules,
-                    plan = remember(stage) { arena.oddsPlan() },
                     record = { model.bossRecord(foe.monster.code.value) },
                 ) {
                     seen = stage

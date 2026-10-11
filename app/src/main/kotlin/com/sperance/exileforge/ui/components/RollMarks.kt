@@ -1,25 +1,14 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -30,18 +19,16 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.display.ItemLine
-import com.sperance.exileforge.core.display.RollSummary
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.*
 
 /**
  * The roll quality in steps of twenty (3.2.0): each step louder than the one below — from a quiet grey
- * with no frame to a gold that glows — and a perfect hundred shimmers through every colour.
+ * with no frame to a gold that glows — and a perfect hundred is molten gold (4.6.6, макет «Идеальный ролл», вариант A:
+ * радуга выбивалась из тёмного фэнтези).
  */
 private enum class RollTier(val key: String, val tint: Color, val fill: Float, val edge: Float, val glow: Dp) {
     POOR("card.roll_poor", Muted, .06f, .25f, 0.dp),
@@ -57,26 +44,25 @@ private enum class RollTier(val key: String, val tint: Color, val fill: Float, v
     }
 }
 
-/** The colours a perfect roll runs through. */
-private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A6), Color(0xFF8FD3FF), Color(0xFFB48CFF), Color(0xFFFF6B6B))
+/** Расплавленное золото идеального ролла (4.6.6): тёмная бронза, золото и белый жар посередине. */
+private val Molten = listOf(Color(0xFF8A5A12), Color(0xFFF2D27A), Color(0xFFFFF1C2), Color(0xFFF2D27A), Color(0xFF8A5A12))
 
-/** A perfect roll's light: a band of every colour sliding along, for its frame and its figure. */
-@Composable private fun prismBrush(): Brush {
-    val shift by rememberInfiniteTransition(label = "prism").animateFloat(
-        0f,
-        1f,
-        infiniteRepeatable(tween(2400, easing = LinearEasing)),
-        label = "prism",
-    )
+/** Свет идеального ролла: жар медленно течёт по золоту; без анимаций (`LocalMotion`) - стоит. */
+@Composable private fun moltenBrush(): Brush {
     val span = 240f
-    return Brush.linearGradient(Prism, start = Offset(shift * span * 2 - span, 0f), end = Offset(shift * span * 2, span / 3), tileMode = TileMode.Mirror)
+    if (!LocalMotion.current) return Brush.linearGradient(Molten, start = Offset(0f, 0f), end = Offset(span, span / 3), tileMode = TileMode.Mirror)
+    val shift = motionClock(MOLTEN_MS)
+    return Brush.linearGradient(Molten, start = Offset(shift * span * 2 - span, 0f), end = Offset(shift * span * 2, span / 3), tileMode = TileMode.Mirror)
 }
 
-/** The frame, fill and glow a roll quality wears on [shape]; a perfect one is [solid]ly prismatic on a pill, framed on a card. */
+/** Сколько течёт жар по идеальному роллу, мс. */
+private const val MOLTEN_MS = 3600
+
+/** The frame, fill and glow a roll quality wears on [shape]; a perfect one is [solid]ly molten on a pill, framed on a card. */
 @Composable private fun Modifier.rollShine(tier: RollTier, shape: Shape, solid: Boolean = false): Modifier {
     val base = glow(tier.tint, on = tier.glow > 0.dp, radius = tier.glow, shape = shape)
     return if (tier == RollTier.PERFECT) {
-        base.background(if (solid) prismBrush() else Brush.horizontalGradient(listOf(PanelRaised, Abyss)), shape).border(1.5.dp, prismBrush(), shape)
+        base.background(if (solid) moltenBrush() else Brush.horizontalGradient(listOf(PanelRaised, Abyss)), shape).border(1.5.dp, moltenBrush(), shape)
     } else {
         base.background(Brush.horizontalGradient(listOf(tier.tint.copy(alpha = tier.fill), tier.tint.copy(alpha = tier.fill / 3))), shape)
             .border(1.dp, tier.tint.copy(alpha = tier.edge), shape)
@@ -92,12 +78,17 @@ private val Prism = listOf(Color(0xFFFF6B6B), Color(0xFFFFD166), Color(0xFF7BE0A
     val tint = tier.tint
     Tipped({ Tip(ui("card.roll_quality", ui(tier.key), quality), tint = tint) }, modifier) {
         Box(Modifier.size(34.dp).glow(tint, on = tier.glow > 0.dp, radius = tier.glow / 2, shape = CircleShape), contentAlignment = Alignment.Center) {
+            val molten = if (tier == RollTier.PERFECT) moltenBrush() else null
             Canvas(Modifier.fillMaxSize()) {
                 val width = 3.5.dp.toPx()
                 val arc = Size(size.width - width, size.height - width)
                 val corner = Offset(width / 2, width / 2)
                 drawArc(PanelRaised, -90f, 360f, false, corner, arc, style = Stroke(width))
-                drawArc(tint, -90f, 360f * quality / 100f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
+                if (molten != null) {
+                    drawArc(molten, -90f, 360f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
+                } else {
+                    drawArc(tint, -90f, 360f * quality / 100f, false, corner, arc, style = Stroke(width, cap = StrokeCap.Round))
+                }
             }
             Text("$quality", color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
         }

@@ -5,16 +5,12 @@ import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
-import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.surrender
-import com.sperance.exileforge.core.campaign.combat.traitsIn
-import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FightHud
-import com.sperance.exileforge.core.campaign.run.OddsPlan
 import com.sperance.exileforge.core.campaign.run.PackHit
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
@@ -22,7 +18,6 @@ import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapCode
-import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RushPlan
@@ -143,6 +138,9 @@ class TrialArena(
     private var monsters: List<RolledMonster> = emptyList()
     private var started = false
     private var paused = false
+
+    /** Листы поверх боя, что его держат (4.6.6: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
+    private var holds = 0
     private var speed = 1
     private var reported = 0
     private var fought = 0L
@@ -200,7 +198,7 @@ class TrialArena(
     private fun apply(command: RunCommand) {
         val fight = battle
         when (command) {
-            RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
+            RunCommand.Speed -> speed = index.rules.fight.next(speed)
 
             RunCommand.Begin -> if (fight != null && phase == TrialPhase.FIGHT) {
                 started = true
@@ -208,6 +206,8 @@ class TrialArena(
             }
 
             RunCommand.Pause -> if (fight != null && started && fight.outcome == null) paused = !paused
+
+            is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
 
             RunCommand.Surrender -> if (fight != null && fight.outcome == null) {
                 fight.surrender()
@@ -293,16 +293,6 @@ class TrialArena(
         )
     }
 
-    /**
-     * Снимок боя с боссом шага для прогона (3.92.0; 4.2.0 - снимок): герой, каков он сейчас, против стаи боя; null - босса в стае
-     * нет. Снимать в потоке арены; прогон [OddsPlan.run] - вне главного потока.
-     */
-    fun oddsPlan(): OddsPlan? {
-        if (monsters.none { it.rarity == MonsterRarity.UNIQUE }) return null
-        val phases = PhaseFoes(index, rules)
-        return OddsPlan(hero, monsters.map { phases.foe(it, level) }, rules, index.rules.fight, pools, gear.stance, kit, build, gear.percent, allies.of(hero, pet, kit.fate.effects.spirit), phases, wonLast, trial.kind.fight)
-    }
-
     /** The floor's lines and the atlas over the hero and the monsters, as a map's. */
     private fun effects(): Map<String, Double> = MapEffects.sum(atlas, floor?.mods.orEmpty().groupBy { it.stat }.mapValues { (_, lines) -> lines.sumOf { it.value } })
 
@@ -320,7 +310,7 @@ class TrialArena(
 
     private fun play(dt: Double) {
         val fight = battle ?: return
-        if (!started || paused) return
+        if (!started || paused || holds > 0) return
         fight.advance(dt * speed)
         while (reported < fight.fallen.size) {
             reported++

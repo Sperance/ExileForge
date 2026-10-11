@@ -15,12 +15,10 @@ import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.FastForward
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.Gavel
-import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.LightMode
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Mail
 import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material.icons.outlined.Science
@@ -66,11 +64,21 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
+ * Настройки поверх забега (4.6.6): тот же экран во весь экран над походом, Разломом или испытанием - стек экранов под ними
+ * не трогается; «Назад» и системный «назад» закрывают его.
+ */
+@Composable internal fun SettingsOverlay(onClose: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        Box(Modifier.fillMaxSize().background(Ink).systemBarsPadding()) { SettingsScreen(onClose = onClose) }
+    }
+}
+
+/**
  * «Настройки» (3.77.0, variant A of three mockups, «Список с группами»): every setting on one screen in groups — the general
  * ones, the fight, the interface, the vibration — with its switch in its row; the developers' tools at the foot for a
  * tester or an administrator only. «Back» returns to the tab the settings were opened over.
  */
-@Composable internal fun SettingsScreen(direct: String? = null) {
+@Composable internal fun SettingsScreen(direct: String? = null, onClose: (() -> Unit)? = null) {
     val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
@@ -79,7 +87,9 @@ internal enum class SettingsPage(val title: String) {
     var page by rememberSaveable(direct) { mutableStateOf(opened) }
     val open = page
     Column(Modifier.fillMaxSize()) {
-        BackRow(ui(if (open == null || opened != null) "common.back" else "settings.title")) { if (open == null || opened != null) shell.closeSettings() else page = null }
+        BackRow(ui(if (open == null || opened != null) "common.back" else "settings.title")) {
+            if (open == null || opened != null) onClose?.invoke() ?: shell.closeSettings() else page = null
+        }
         Column(
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -127,7 +137,7 @@ internal enum class SettingsPage(val title: String) {
         AccountRow(Icons.Outlined.History, ui("settings.whats_new")) { onPage(SettingsPage.WHATS_NEW) }
     }
     RowGroup(ui("settings.fight")) {
-        ChoiceRow(Icons.Outlined.FastForward, ui("settings.speed"), GameSettings.SPEEDS, set.fightSpeed, { "×$it" }) { change { copy(fightSpeed = it) } }
+        ChoiceRow(Icons.Outlined.FastForward, ui("settings.speed"), settingsModel.speeds, set.fightSpeed, { "×$it" }) { change { copy(fightSpeed = it) } }
         ChoiceRow(Icons.Outlined.Whatshot, ui("settings.damage"), DamageNumbers.entries, set.damageNumbers, { ui("settings.damage.${it.name}") }) {
             change { copy(damageNumbers = it) }
         }
@@ -220,7 +230,7 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /** A row of the settings: the glyph, the name with a line under it, and what sets it on the right. */
-@Composable private fun SettingRow(icon: ImageVector, label: String, note: String? = null, trailing: @Composable RowScope.() -> Unit) {
+@Composable internal fun SettingRow(icon: ImageVector, label: String, note: String? = null, trailing: @Composable RowScope.() -> Unit) {
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -235,12 +245,12 @@ internal enum class SettingsPage(val title: String) {
     }
 }
 
-@Composable private fun SwitchRow(icon: ImageVector, label: String, note: String?, on: Boolean, onChange: (Boolean) -> Unit) = SettingRow(icon, label, note) {
+@Composable internal fun SwitchRow(icon: ImageVector, label: String, note: String?, on: Boolean, onChange: (Boolean) -> Unit) = SettingRow(icon, label, note) {
     Switch(on, onChange, colors = SwitchDefaults.colors(checkedTrackColor = Gold, checkedThumbColor = Parchment, uncheckedTrackColor = PanelRaised))
 }
 
 /** A choice of a few: the options side by side as one segmented strip, the chosen one lit. */
-@Composable private fun <T> ChoiceRow(
+@Composable internal fun <T> ChoiceRow(
     icon: ImageVector,
     label: String,
     options: List<T>,

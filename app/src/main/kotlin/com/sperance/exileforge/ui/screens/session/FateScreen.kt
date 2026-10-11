@@ -70,7 +70,10 @@ import org.koin.compose.viewmodel.koinViewModel
  * карту (она поднимается и светится, прочие гаснут) и разворачивает снизу свиток с её описанием (4.6.1); кнопку держат ~1,2 с -
  * золотая вспышка, и экран уходит к героям. Декор стоит при выключенных анимациях, раздача и свиток тогда мгновенны.
  */
-@Composable fun FateScreen() {
+@Composable fun FateScreen() = com.sperance.exileforge.ui.components.PrologueGate(always = false) { FateChoice() }
+
+/** Выбор дара (4.6.0) - после пролога (4.6.6). */
+@Composable private fun FateChoice() {
     val vm = koinViewModel<FateViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
     val view = game.session.fate

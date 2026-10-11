@@ -192,11 +192,7 @@ class UiStringsTest {
                 add("enum.ailment.${it.name}")
                 add("fight.effect.${it.name}")
             }
-            DamageType.entries.forEach {
-                add("enum.damage.${it.name}")
-                // Причина поражения «Весов» (4.2.0)
-                add("challenge.cause_damage.${it.name}")
-            }
+            DamageType.entries.forEach { add("enum.damage.${it.name}") }
             AffixKind.entries.forEach { add("mod.kind.${it.name}") }
             StatSection.entries.filter { it != StatSection.NONE }.forEach { add("enum.stat_group.${it.name}") }
             // Что даёт строка сводки (4.6.5): у каждой характеристики с разделом - фраза в шапке её разбора

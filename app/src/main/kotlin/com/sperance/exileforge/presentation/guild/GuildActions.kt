@@ -14,14 +14,12 @@ import com.sperance.exileforge.core.network.GUILD_LOG_PAGE_SIZE
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.GuildMode
-import kotlinx.coroutines.CancellationException
 
 /**
  * Гильдии (3.22.0, сервер 1.20.0). Все правила у сервера; клиент называет гильдию или участника, печатает отказ и
@@ -80,7 +78,24 @@ class GuildActions(
 
     fun acceptApplicant(applicantId: String) = inside(ui("guild.toast.accepted")) { api.guild.acceptApplicant(it, applicantId) }
     fun declineApplicant(applicantId: String) = inside(ui("guild.toast.declined")) { api.guild.declineApplicant(it, applicantId) }
-    fun invite(name: String) = inside(ui("guild.toast.invited", name.trim())) { api.guild.invite(it, name) }
+    fun invite(target: String) = inside(ui("guild.toast.invited", guilds.recruit?.name ?: target.trim())) {
+        api.guild.invite(it, target).also { guild { state -> state.copy(recruit = null) } }
+    }
+
+    /** Превью приглашения (4.6.6): одно чтение по нажатию «Найти», не на каждую букву - сервер не нагружается вводом. */
+    fun lookup(target: String) = commands.read(Reads.GUILD_SEARCH, restart = true) {
+        val id = hero()
+        val found = api.guild.lookup(id, target)
+        if (heroes.onScreen(id)) guild { it.copy(recruit = found) }
+    }
+
+    fun clearRecruit() = guild { it.copy(recruit = null) }
+
+    /** Новый код вступления (4.6.6). */
+    fun renewCode() = inside(ui("guild.toast.code_renewed")) { api.guild.renewCode(it) }
+
+    /** Вступление по коду гильдии (4.6.6). */
+    fun joinByCode(code: String) = moving(ui("guild.toast.joined_code")) { api.guild.joinByCode(it, code) }
     fun member(command: MemberCommand, memberId: String) = inside(ui("guild.toast.done")) { api.guild.member(it, command, memberId) }
     fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) = inside(ui("guild.toast.saved")) { api.guild.settings(it, mode, minLevel, emblem, color, announcement) }
 

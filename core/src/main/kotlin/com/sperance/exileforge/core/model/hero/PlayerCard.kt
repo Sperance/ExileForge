@@ -57,6 +57,8 @@ data class PlayerCard(
     val lots: Int = 0,
     val rights: CardRights = CardRights(),
     val fate: FateCard? = null,
+    /** Номер героя (4.6.6): шесть цифр для приглашения в гильдию. */
+    val number: String = "",
 )
 
 /** Что станет с гильдией после ухода героя (сервер 4.5.1): он просто выходит, главенство переходит наследнику или гильдия распускается. */

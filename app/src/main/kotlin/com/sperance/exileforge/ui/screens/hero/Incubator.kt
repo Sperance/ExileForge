@@ -49,6 +49,9 @@ import kotlinx.coroutines.delay
     val eggs = index.pets.eggs.values.flatMap { it.values }.filter { hero.count(it) > 0 }.sortedByDescending { menagerie.egg(it)?.rarity?.ordinal ?: 0 }
     val now = rememberServerNow(incubator)
     val full = pets.pets.size >= pets.cap
+    // Вылупившийся - сразу подробной карточкой: видно, кто вылупился
+    var hatched by remember { mutableStateOf<String?>(null) }
+    hatched?.let(pets::pet)?.let { pet -> PetCardSheet(game, pet) { hatched = null } }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (titled) Text(ui("incubator.title", incubator.entries.count { it.busy }, incubator.slots), color = Gold, style = MaterialTheme.typography.labelLarge)
         val shown = maxOf(incubator.max, (incubator.entries.maxOfOrNull { it.slot } ?: -1) + 1)
@@ -57,7 +60,7 @@ import kotlinx.coroutines.delay
             when {
                 slot == null || (!slot.open && !slot.busy) -> LockedSlot()
                 !slot.busy -> EmptySlot(game, eggs, enabled = !game.busy) { egg -> vm.incubatePet(egg, place) }
-                else -> BusySlot(game, slot, now, collectable = !game.busy && !full) { vm.collectPet(place) }
+                else -> BusySlot(game, slot, now, collectable = !game.busy && !full) { vm.collectPet(place) { hatched = it } }
             }
         }
         if (full && incubator.ready > 0) MutedText(ui("incubator.full"))

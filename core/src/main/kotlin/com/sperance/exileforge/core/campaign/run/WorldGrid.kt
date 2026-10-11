@@ -1,16 +1,11 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.campaign.Cell
-import com.sperance.exileforge.rules.content.BehaviourRule
-import com.sperance.exileforge.rules.content.Zone
-import com.sperance.exileforge.rules.roll.Crystal
-import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.sign
-import kotlin.random.Random
 
 // ==================== The grid ====================
 
@@ -177,12 +172,7 @@ private fun ExpeditionWorld.see(x: Int, y: Int) {
 /** Лежит ли рядом со скалой (8 соседей) видимая открытая клетка. */
 private fun ExpeditionWorld.bordersLit(x: Int, y: Int): Boolean = ExpeditionWorld.STEPS.any { (dx, dy) -> map.clear(x + dx, y + dy) && lit(x + dx, y + dy) }
 
-/** A move that slides along walls: each axis is tried on its own, so a diagonal into a wall still glides. */
-internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Pair<Double, Double> {
-    val nx = if (free(x + dx, y, radius)) x + dx else x
-    val ny = if (free(nx, y + dy, radius)) y + dy else y
-    return nx to ny
-}
+/** A move that slides along walls (4.6.6 - по скруглённым углам, [WallBody]). */
+internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Pair<Double, Double> = body.slide(x, y, dx, dy, radius)
 
-internal fun ExpeditionWorld.free(x: Double, y: Double, radius: Double): Boolean = listOf(-radius to -radius, radius to -radius, -radius to radius, radius to radius)
-    .all { (ox, oy) -> map.walkable(floor(x + ox).toInt(), floor(y + oy).toInt()) }
+internal fun ExpeditionWorld.free(x: Double, y: Double, radius: Double): Boolean = body.free(x, y, radius)

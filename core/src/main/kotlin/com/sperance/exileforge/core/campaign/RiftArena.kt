@@ -120,6 +120,9 @@ class RiftArena(
     private var monsters: List<RolledMonster> = emptyList()
     private var started = false
     private var paused = false
+
+    /** Листы поверх боя, что его держат (4.6.6: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
+    private var holds = 0
     private var speed = 1
     private var elapsed = 0.0
     private var hurt = false
@@ -147,7 +150,7 @@ class RiftArena(
     private fun apply(command: RunCommand) {
         val fight = battle
         when (command) {
-            RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
+            RunCommand.Speed -> speed = index.rules.fight.next(speed)
 
             RunCommand.Begin -> if (fight != null && phase == TrialPhase.FIGHT) {
                 started = true
@@ -155,6 +158,8 @@ class RiftArena(
             }
 
             RunCommand.Pause -> if (fight != null && started && fight.outcome == null) paused = !paused
+
+            is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
 
             RunCommand.Surrender -> if (fight != null && fight.outcome == null) {
                 fight.surrender()
@@ -263,7 +268,7 @@ class RiftArena(
 
     private fun play(dt: Double) {
         val fight = battle ?: return
-        if (!started || paused) return
+        if (!started || paused || holds > 0) return
         val before = fight.time
         fight.advance(dt * speed)
         elapsed += fight.time - before
@@ -308,14 +313,16 @@ class RiftArena(
             heroReserved = (hero.maxMana - manaCap).roundToInt(),
         )
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
+        // Номер волны не выходит за их число: после последней счёт уже не растёт (4.6.6, «3 из 2»)
+        val round = wave.coerceAtMost(waves.size - 1).coerceAtLeast(0) + 1
         val fightHud = if (fight != null && leader != null) {
-            fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, round = wave + 1, rounds = waves.size)
+            fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, round = round, rounds = waves.size)
         } else {
             null
         }
         // Условие Чемпиона вскрывается, когда бой начался
         val trial = node.trial?.takeIf { started || wave > 0 || phase != TrialPhase.FIGHT }
-        return RiftFightHud(phase, runHud, fightHud, node.kind, wave + 1, waves.size, this.fight.level, elapsed, trial, trial != null && met())
+        return RiftFightHud(phase, runHud, fightHud, node.kind, round, waves.size, this.fight.level, elapsed, trial, trial != null && met())
     }
 
     private companion object {

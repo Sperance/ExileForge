@@ -1,11 +1,12 @@
 package com.sperance.exileforge.ui.screens.expedition.arena
 
+import androidx.compose.runtime.DisposableEffect
+import com.sperance.exileforge.ui.components.RunMenuButton
+import com.sperance.exileforge.ui.components.RunMenu
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.*
@@ -56,9 +57,6 @@ import com.sperance.exileforge.ui.theme.*
         ) {
             Text(ui(if (fight.paused) "fight.resume" else "fight.pause"), style = MaterialTheme.typography.labelMedium)
         }
-        ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
-            Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
-        }
         if (auto != null) {
             AutoFinish(hud, auto, onFinish = { onCommand(RunCommand.FinishAuto) }) { enabled, label, onClick ->
                 ForgeOutlinedButton(onClick = onClick, enabled = enabled, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
@@ -66,6 +64,15 @@ import com.sperance.exileforge.ui.theme.*
                 }
             }
         }
+        ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
+            Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
+        }
+        // Меню забега (4.6.6): настройки и жук посреди боя; пока открыто - бой стоит
+        RunMenu(
+            items = emptyList(),
+            hold = { ArenaHold(onCommand) },
+            trigger = { onClick -> RunMenuButton(onClick = onClick) },
+        )
     }
     // «Сдаться» (3.95.0): только на паузе, с подтверждением - бой, что сам не кончается, иначе не покинуть
     if (fight.paused && live) {
@@ -85,5 +92,13 @@ import com.sperance.exileforge.ui.theme.*
                 onCommand(RunCommand.Surrender)
             }
         }
+    }
+}
+
+/** Держит бой арены, пока лист на экране (4.6.6). */
+@Composable private fun ArenaHold(onCommand: (RunCommand) -> Unit) {
+    DisposableEffect(Unit) {
+        onCommand(RunCommand.Hold(true))
+        onDispose { onCommand(RunCommand.Hold(false)) }
     }
 }

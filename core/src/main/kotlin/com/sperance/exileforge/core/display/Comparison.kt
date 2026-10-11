@@ -48,7 +48,7 @@ class Comparison(lines: List<ComparisonLine>) {
 
         /**
          * Сравнение листа героя: каждая сдвинутая характеристика [delta]; рост - к лучшему. С контентом [index] (4.6.5) - только
-         * строки сводки (часть строки и сила уникальной - внутри своей строки), множитель - «×1.00 → ×0.60», разница - «×0.60».
+         * строки сводки (часть строки и сила уникальной - внутри своей строки), множитель - «100% → 60%», разница - «−40%».
          */
         fun of(delta: List<StatDelta>, index: ContentIndex? = null): Comparison = Comparison(
             delta.filter { index == null || index.stats.section(it.stat) != null && index.stats[it.stat]?.partOf == null }.map {
@@ -57,7 +57,7 @@ class Comparison(lines: List<ComparisonLine>) {
                     statTitle(it.stat),
                     statValue(it.stat, it.before, index),
                     statValue(it.stat, it.after, index),
-                    if (multiplier) "×" + String.format(java.util.Locale.ROOT, "%.2f", (100 + it.after) / (100 + it.before)) else signed(it.change) { size -> statValue(it.stat, size, index) },
+                    if (multiplier) factorChange((100 + it.after) / (100 + it.before)) else signed(it.change) { size -> statValue(it.stat, size, index) },
                     it.change > 0,
                     StatPriority.rank(it.stat),
                     share(it.before, it.after),

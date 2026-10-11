@@ -103,6 +103,14 @@ internal fun xpCaption(index: ContentIndex, skill: SkillDefinition, view: SkillG
  * Книга умения (4.4.0): неизученное - «Изучить», изученное - «Прочитать книгу: +N опыта»; на потолке и в ожидании требования
  * книга не читается - кнопка погашена, причина под ней. Без книг - откуда их взять.
  */
+/** Почему книгу [skill] сейчас не прочесть (4.6.6: и кнопка книги, и цель обмена); null - читается. */
+internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: SkillGrowthView, heroLevel: Int, stats: Map<String, Double>): String? = when {
+    view.level == 0 -> index.skillRules.unmet(skill, 1, heroLevel, stats).takeIf { it.isNotEmpty() }?.let { ui("skills.requires", 1, needLine(index, skill, 1)) }
+    view.capped -> ui("skills.book_capped")
+    view.waiting -> ui("skills.book_waiting", view.level + 1)
+    else -> null
+}
+
 @Composable internal fun BookButton(
     game: GameUi,
     index: ContentIndex,
@@ -117,12 +125,7 @@ internal fun xpCaption(index: ContentIndex, skill: SkillDefinition, view: SkillG
         MutedText(ui(if (heroLevel < skill.unlock && view.level == 0) "skills.no_book_opens" else "skills.no_book", skill.unlock))
         return
     }
-    val reason = when {
-        view.level == 0 -> index.skillRules.unmet(skill, 1, heroLevel, stats).takeIf { it.isNotEmpty() }?.let { ui("skills.requires", 1, needLine(index, skill, 1)) }
-        view.capped -> ui("skills.book_capped")
-        view.waiting -> ui("skills.book_waiting", view.level + 1)
-        else -> null
-    }
+    val reason = bookRefusal(index, skill, view, heroLevel, stats)
     ForgeButton(
         enabled = reason == null && !game.busy,
         onClick = onRead,

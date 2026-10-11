@@ -1,4 +1,4 @@
-package com.sperance.exileforge.core.campaign.run
+package com.sperance.exileforge.core.sim
 
 import com.sperance.exileforge.core.campaign.HeroModel
 import com.sperance.exileforge.core.campaign.Loadout
@@ -19,6 +19,9 @@ import com.sperance.exileforge.rules.roll.Dice
 import kotlin.random.Random
 
 /**
+ * Прогон боёв со стражем - только для симуляции баланса (4.6.6: «Весы» убраны из игры, прогон 40 боёв на каждом вызове грел
+ * телефон и врал - бой похода собирает стаи вокруг, прогон их не видел).
+ *
  * Почему герой проиграл бой прогона (4.2.0). Расширяемо: новая причина - новая реализация и правило в [LossCauses].
  */
 sealed interface LossCause {

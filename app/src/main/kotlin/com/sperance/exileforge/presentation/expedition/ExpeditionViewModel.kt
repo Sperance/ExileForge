@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroActions
-import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.WorldView
@@ -105,6 +104,8 @@ class ExpeditionViewModel(
     fun riftAct(act: com.sperance.exileforge.rules.rift.RiftAct) = rift.act(act)
     fun riftCommand(command: RunCommand) = rift.send(command)
     fun dismissRiftResult() = rift.dismissResult()
+
+    fun leaveRiftRefused() = rift.leaveRefused()
 
     /** Таблица испытаний (3.96.0); null - закрыть. */
 }

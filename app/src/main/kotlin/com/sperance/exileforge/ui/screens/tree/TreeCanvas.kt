@@ -1,80 +1,30 @@
 package com.sperance.exileforge.ui.screens.tree
 
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import com.sperance.exileforge.ui.components.motionPhase
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Functions
-import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.nodeTitle
-import com.sperance.exileforge.core.display.nodeTypeTitle
-import com.sperance.exileforge.core.display.requirementReason
-import com.sperance.exileforge.core.display.statNumber
-import com.sperance.exileforge.core.display.statPercent
-import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.view
-import com.sperance.exileforge.presentation.tree.TreeViewModel
-import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.HeroClass
-import com.sperance.exileforge.rules.content.Op
-import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.SkillNodeType
-import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.content.TakenNode
-import com.sperance.exileforge.rules.content.TreeAllocation
 import com.sperance.exileforge.rules.content.TreeNode
-import com.sperance.exileforge.rules.sheet.SheetCalculator
-import com.sperance.exileforge.rules.sheet.StatContribution
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
-import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.PI
 import kotlin.math.atan2
 import kotlin.math.cos
@@ -129,16 +79,9 @@ import kotlin.math.sin
     }
     // The reachable nodes breathe (3.76.0, «Неон»): their glow swells and fades, drawn again on the draw pass alone.
     // With the animations off in the settings (3.77.0) they glow steadily.
-    val breathing: State<Float> = if (LocalMotion.current) {
-        rememberInfiniteTransition(label = "tree").animateFloat(
-            PULSE_LOW,
-            1f,
-            infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing), RepeatMode.Reverse),
-            label = "pulse",
-        )
-    } else {
-        remember { mutableFloatStateOf(1f) }
-    }
+    // 4.6.6: общие часы декора; дыхание туда и обратно - треугольником от доли круга
+    val phase = motionPhase(PULSE_MS * 2, still = .5f)
+    val breathing: State<Float> = remember(phase) { derivedStateOf { PULSE_LOW + (1f - PULSE_LOW) * (1f - kotlin.math.abs(phase.value * 2 - 1f)) } }
     val pulse by breathing
     Box(modifier.fillMaxWidth()) {
         // Both detectors are keyed on the graph alone and read the view as it is now. Keyed on the zoom and

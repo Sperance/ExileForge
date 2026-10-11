@@ -12,9 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestTab
@@ -50,22 +48,15 @@ fun QuestsScreen() {
             // Текущая глава сюжета (4.3.0) - та же карточка, что над картой Похода, ведёт на экран Сюжета
             StoryCard(game, board, vm, Modifier.padding(bottom = 8.dp))
         }
-        TabRow(selectedTabIndex = current.ordinal, containerColor = Abyss) {
-            QuestTab.entries.forEach { tab ->
-                val ready = readyCount(tab, board)
-                // A glyph over a short word, the ready count a badge on the glyph: four long titles did not fit a row.
-                Tab(
-                    selected = tab == current,
-                    onClick = { vm.tab(tab) },
-                    icon = {
-                        BadgedBox(badge = { if (ready > 0) Badge(containerColor = Vital, contentColor = Ink) { Text(ready.toString(), fontSize = 9.sp) } }) {
-                            Icon(tab.glyph, null, modifier = Modifier.size(20.dp))
-                        }
-                    },
-                    text = { Text(ui("quest.tab.${tab.name.lowercase()}"), style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false) },
-                )
-            }
-        }
+        // Вкладки сегментами (4.6.6, макет «Компактные кнопки», вариант A): капсула 32dp, число готовых к сдаче - плашкой
+        Segments(
+            QuestTab.entries,
+            current,
+            label = { ui("quest.tab.${it.name.lowercase()}") },
+            badge = { readyCount(it, board) },
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+            onPick = vm::tab,
+        )
         PullToRefreshBox(isRefreshing = Reads.QUESTS in activity.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (board == null) {
@@ -88,12 +79,6 @@ private fun readyCount(tab: QuestTab, board: QuestBoard?): Int = when (tab) {
     QuestTab.WEEKLY -> board?.weekly
     QuestTab.CONTRACTS -> board?.contracts
 }.orEmpty().count { it.done && !it.claimed }
-
-private val QuestTab.glyph: ImageVector get() = when (this) {
-    QuestTab.DAILY -> ForgeGlyphs.Target
-    QuestTab.WEEKLY -> ForgeGlyphs.Banner
-    QuestTab.CONTRACTS -> ForgeGlyphs.Scroll
-}
 
 private fun LazyListScope.daily(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
     // Dailies are not swapped for gold since 3.24.0 (server 1.22.0): what the day rolled is the day's.

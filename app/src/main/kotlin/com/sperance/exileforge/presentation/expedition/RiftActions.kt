@@ -14,7 +14,7 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroSync
-import com.sperance.exileforge.presentation.state.GameSettings
+import com.sperance.exileforge.presentation.state.speedPresses
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard
@@ -22,6 +22,15 @@ import com.sperance.exileforge.rules.rift.RiftEngine
 import com.sperance.exileforge.rules.rift.RiftResult
 import com.sperance.exileforge.rules.rift.RiftStage
 import com.sperance.exileforge.rules.run.RunContext
+import com.sperance.exileforge.core.network.ApiFailure
+import com.sperance.exileforge.core.network.CommandQueue
+import com.sperance.exileforge.core.model.campaign.RiftReport
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import java.util.UUID
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,14 +38,24 @@ import kotlinx.coroutines.flow.update
 
 /**
  * Разлом на экране (3.96.0): доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
- * [open] - экран Разлома открыт.
+ * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер (4.6.6).
  */
 data class RiftState(
     val open: Boolean = false,
     val board: RiftBoard? = null,
     val arena: RiftArena? = null,
     val result: RiftResult? = null,
+    val delivery: RiftDelivery? = null,
 )
+
+/** Итог боя Разлома в пути (4.6.6): уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
+sealed interface RiftDelivery {
+    /** Отправка; [attempt] - какая по счёту (с 2 - нет связи, повтор). */
+    data class Sending(val attempt: Int) : RiftDelivery
+
+    /** Сервер итог не принял: [reason] - его слова; забег стоит на бою, «К карте» перечитывает доску. */
+    data class Refused(val reason: String) : RiftDelivery
+}
 
 /**
  * Разлом недели (3.96.0, сервер 1.83.0): доска с сервера, каждый шаг забега - действие [RiftAct], которое сервер применяет
@@ -51,12 +70,13 @@ class RiftActions(
     private val commands: CommandRunner,
     private val notices: Notices,
     private val prefs: PreferencesRepository,
+    private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
     private val mutable = MutableStateFlow(RiftState())
     val state: StateFlow<RiftState> = mutable.asStateFlow()
 
-    private val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(prefs.settings.value.fightSpeed).coerceAtLeast(0)
+    private val speedSteps: Int get() = speedPresses(world.state.value.content, prefs.settings.value.fightSpeed)
 
     /** «Разлом недели»: экран открывается, доска читается. */
     fun open() {
@@ -85,16 +105,58 @@ class RiftActions(
         }
     }
 
-    /** Шаг забега [act]: ответ - новая доска, а у конца - итог и сундук. */
+    /** Шаг забега [act] по нажатию игрока: ответ - новая доска, а у конца - итог и сундук. */
     fun act(act: RiftAct) {
         val run = mutable.value.board?.progress?.run ?: return
-        commands.task(writing = true, touches = setOf(Reads.HERO)) {
-            val report = api.trials.riftAct(heroes.heroId, run.id, act)
-            report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
-            report.result?.let { result -> mutable.update { it.copy(result = result) } }
-            show(report.board)
-            if (report.result != null) heroSync.readHero()
+        commands.task(writing = true, touches = setOf(Reads.HERO)) { land(api.trials.riftAct(heroes.heroId, run.id, act)) }
+    }
+
+    /**
+     * Итог боя (4.6.6): не через раннер команд - тот отказывает, пока занят, и итог пропадал, а арена ждала вечно. Итог уходит
+     * сам, под одним ключом, с повтором при сбое сети; отказ сервера - на экран, с выходом к карте.
+     */
+    private fun deliver(end: RiftAct.Fight) {
+        val run = mutable.value.board?.progress?.run ?: return
+        val heroId = heroes.heroId
+        val key = UUID.randomUUID().toString()
+        sending?.cancel()
+        sending = scope.launch {
+            var attempt = 1
+            while (true) {
+                mutable.update { it.copy(delivery = RiftDelivery.Sending(attempt)) }
+                try {
+                    val report = api.trials.riftAct(heroId, run.id, end, key)
+                    mutable.update { it.copy(delivery = null) }
+                    land(report)
+                    return@launch
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: ApiFailure) {
+                    if (!CommandQueue.transient(e.status)) {
+                        mutable.update { it.copy(delivery = RiftDelivery.Refused(e.message.orEmpty())) }
+                        return@launch
+                    }
+                } catch (_: Exception) {
+                    // Сеть: тот же ключ позже
+                }
+                delay(RETRY_FIRST shl (attempt - 1).coerceAtMost(RETRY_DOUBLINGS))
+                attempt++
+            }
         }
+    }
+
+    /** «К карте» после отказа: арена снимается, доска перечитывается - сервер скажет, где стоит забег. */
+    fun leaveRefused() {
+        mutable.update { it.copy(arena = null, delivery = null) }
+        refresh()
+    }
+
+    /** Ответ на шаг: тосты переполнения, итог забега, новая доска. */
+    private fun land(report: RiftReport) {
+        report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
+        report.result?.let { result -> mutable.update { it.copy(result = result) } }
+        show(report.board)
+        if (report.result != null) heroSync.readHero()
     }
 
     /** Итог прочитан. */
@@ -112,10 +174,14 @@ class RiftActions(
         val arena = when {
             fight == null || run == null || run.stage != RiftStage.FIGHT -> null
             current != null && current.hud.value.phase == com.sperance.exileforge.core.campaign.TrialPhase.FIGHT -> current
+            // Итог ещё в пути: доска до него стоит на том же бою, арена с итогом остаётся
+            current != null && mutable.value.delivery != null -> current
             else -> arena(board)
         }
         mutable.update { it.copy(board = board, arena = arena) }
     }
+
+    private var sending: Job? = null
 
     /** Счёт Предначертания забега (4.6.0) по id забега: арены одного забега делят «Второе дыхание». */
     private var fateRun: Pair<String, com.sperance.exileforge.core.campaign.combat.FateRun>? = null
@@ -129,7 +195,12 @@ class RiftActions(
         val fight = board.fight ?: return null
         val engine = RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
         val fate = fateRun?.takeIf { it.first == run.id }?.second ?: com.sperance.exileforge.core.campaign.combat.FateRun().also { fateRun = run.id to it }
-        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, hero.pets.pet(hero.pets.combat), fate) { end -> act(end) }
+        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, hero.pets.pet(hero.pets.combat), fate) { end -> deliver(end) }
             .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
+    }
+
+    private companion object {
+        const val RETRY_FIRST = 2_000L
+        const val RETRY_DOUBLINGS = 3
     }
 }

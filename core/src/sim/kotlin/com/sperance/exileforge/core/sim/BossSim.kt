@@ -12,8 +12,6 @@ import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.FightKinds
 import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
-import com.sperance.exileforge.core.campaign.run.LossCause
-import com.sperance.exileforge.core.campaign.run.OddsPlan
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader

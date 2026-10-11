@@ -1,21 +1,11 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
@@ -29,23 +19,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.atlas.AtlasBranch
-import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
-import com.sperance.exileforge.core.display.atlasNodeTitle
-import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.core.display.lineText
-import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.Line
-import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.abs
@@ -67,21 +47,9 @@ import kotlin.math.sin
     var scale by remember { mutableFloatStateOf(OPEN_ZOOM) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var framed by remember { mutableStateOf(false) }
-    // The clock (3.56.0) ticks [CLOCK_FPS] times a second, not on every frame: a twinkle needs no 120 Hz, and only the
-    // layers that breathe are drawn on its tick — the glows, threads and rings are drawn again on a pan, a zoom or a take.
-    val clock by produceState(0f) {
-        var start = 0L
-        var last = 0L
-        while (true) {
-            withFrameNanos { now ->
-                if (start == 0L) start = now
-                if (now - last >= CLOCK_STEP_NS) {
-                    last = now
-                    value = (now - start) / 1e9f
-                }
-            }
-        }
-    }
+    // The clock (3.56.0; 4.6.6 - общие часы декора, 30 к/с): мерцание стоит без анимаций и вне экрана; only the layers that
+    // breathe are drawn on its tick — the glows, threads and rings are drawn again on a pan, a zoom or a take.
+    val clock = com.sperance.exileforge.ui.components.decorSeconds()
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
     // No fog (3.54.0): the whole sky is drawn and tappable; what cannot be taken yet is only dim.
     val shown = nodes
@@ -163,9 +131,6 @@ internal class SkyBrushes {
     fun halo(hue: Color, r: Float): Brush = halos.getOrPut(hue to r) { Brush.radialGradient(listOf(hue.copy(alpha = .55f), Color.Transparent), Offset.Zero, r) }
 }
 
-/** How often the sky's clock ticks. */
-internal const val CLOCK_FPS = 20
-internal const val CLOCK_STEP_NS = 1_000_000_000L / CLOCK_FPS
 
 /**
  * How far the sky zooms out and in, and where it opens. With [SPREAD] the closest pair of the server's atlas (4.6 units,

@@ -58,7 +58,7 @@ data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val he
 
 /**
  * One blow of a fighter (2.78.0): a weapon's swing, a skill's hit or a spell — its damage by type before
- * anyone's defences, and what the skill adds. A [spell] is not evaded; its damage was rolled already
+ * anyone's defences, and what the skill adds. A [spell] and [secondary] damage are not evaded ([evadable]); its damage was rolled already
  * unless it [spread]s by the rule's variance as a weapon's does. [body] is the striker's sheet for this
  * blow with the skill's own lines laid on; [stun] and [ailments] are chances in percent beyond the rules.
  */
@@ -78,7 +78,12 @@ internal class Blow(
      * against the target's state — adds to them instead of multiplying. Null: the sheet's own increases of each type.
      */
     val increase: Map<DamageType, Double>? = null,
+    /** Вторичный урон (4.6.6): взрыв фазы и прочее, что не удар и не чары, - как в PoE, от него не уклониться. */
+    val secondary: Boolean = false,
 ) {
+    /** От удара уклоняются (4.6.6, как в PoE): только атаки - удар оружием и атакующий навык; чары и вторичный урон - нет. */
+    val evadable: Boolean get() = !spell && !secondary
+
     /** A weapon's blow: attacks, not spells, bring life on hit. */
     val weapon: Boolean get() = !spell && (action == Action.ATTACK || action == Action.SKILL)
 }

@@ -46,7 +46,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         target.frozen() -> if (sure || fatedSure || crit(me, body, blow.spell)) HitKind.CRIT else HitKind.HIT
 
         // Удача рода (4.6.1): уклонение и блок героя, крит героя - лучший из двух бросков
-        !blow.spell && checkDraw(target, RollKey.EVADE, evade) < evade -> HitKind.EVADED
+        blow.evadable && checkDraw(target, RollKey.EVADE, evade) < evade -> HitKind.EVADED
 
         checkDraw(target, RollKey.BLOCK, blockChance) < blockChance -> HitKind.BLOCKED
 

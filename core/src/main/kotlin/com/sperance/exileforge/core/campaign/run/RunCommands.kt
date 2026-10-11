@@ -1,53 +1,16 @@
 package com.sperance.exileforge.core.campaign.run
 
-import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.MapEnd
-import com.sperance.exileforge.core.campaign.combat.Action
-import com.sperance.exileforge.core.campaign.combat.Ailment
-import com.sperance.exileforge.core.campaign.combat.Ally
-import com.sperance.exileforge.core.campaign.combat.Battle
-import com.sperance.exileforge.core.campaign.combat.Buildup
-import com.sperance.exileforge.core.campaign.combat.CombatEvent
-import com.sperance.exileforge.core.campaign.combat.Combatant
-import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
-import com.sperance.exileforge.core.campaign.combat.EffectView
-import com.sperance.exileforge.core.campaign.combat.FlaskView
-import com.sperance.exileforge.core.campaign.combat.Foe
-import com.sperance.exileforge.core.campaign.combat.HeroPools
-import com.sperance.exileforge.core.campaign.combat.HeroStance
-import com.sperance.exileforge.core.campaign.combat.HitKind
-import com.sperance.exileforge.core.campaign.combat.Outcome
-import com.sperance.exileforge.core.campaign.combat.Side
-import com.sperance.exileforge.core.campaign.combat.SkillView
-import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.surrender
-import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.usesAll
-import com.sperance.exileforge.core.model.campaign.CampaignState
-import com.sperance.exileforge.rules.content.CombatRules
-import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
-import com.sperance.exileforge.rules.content.Pet
-import com.sperance.exileforge.rules.content.Zone
-import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
-import com.sperance.exileforge.rules.roll.LootRoller
-import com.sperance.exileforge.rules.roll.RolledMonster
-import com.sperance.exileforge.rules.roll.Streams
-import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import java.util.concurrent.ConcurrentLinkedQueue
-import kotlin.math.min
-import kotlin.math.roundToInt
-import kotlin.random.Random
 
 // ==================== Commands and the server's answers ====================
 internal fun ExpeditionRun.settle(answer: RunCommand.Settled) {
@@ -124,7 +87,7 @@ internal fun ExpeditionRun.vaalOutcome(before: Crystal, after: Crystal): String 
 
 internal fun ExpeditionRun.handle(command: RunCommand) {
     when (command) {
-        RunCommand.Speed -> speed = if (speed >= 4) 1 else speed * 2
+        RunCommand.Speed -> speed = index.rules.fight.next(speed)
 
         RunCommand.FinishAuto -> autopilot?.finish()
 

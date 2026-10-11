@@ -1,5 +1,16 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material.icons.outlined.DeleteOutline
+import androidx.compose.material.icons.outlined.MarkEmailUnread
+import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material.icons.outlined.Block
+import androidx.compose.material.icons.outlined.Gavel
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Mail
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -121,10 +132,10 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 onLots = { vm.sellerLots(card) },
             )
             extra?.let { action ->
-                ForgeOutlinedButton(onClick = {
+                SmallAction(null, action.label, onClick = {
                     vm.close()
                     action.run()
-                }, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) { Text(action.label) }
+                }, enabled = !game.busy, modifier = Modifier.align(Alignment.CenterHorizontally))
             }
             card.rights.moderation?.takeIf { it.any }?.let { rights ->
                 val moderation = koinViewModel<ModerationViewModel>()
@@ -148,6 +159,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 Text(titleName(it).uppercase(), color = Caution, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
             }
             Text(card.name, style = relicName(19).copy(color = GoldBright), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            // Номер героя (4.6.6): по нему зовут в гильдию; касание копирует
+            ShortCodeChip(ui("hero.number"), card.number, Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(6.dp))
             card.guild?.let { guild ->
                 val opens = vm.guildOpens(card)
@@ -189,38 +202,37 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
  * ([MailGate] сервера); «В гильдию» - по правам сервера; «Лоты игрока» - всегда, с их числом. Игнор героя - из полученного
  * письма и списка игнора почты, не из карточки.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
     val rights = card.rights
     val letter = rights.letter
-    if (letter != null || rights.invite) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (letter != null) ForgeButton(onClick = onWrite, enabled = !game.busy && letter == MailGate.OPEN, modifier = Modifier.weight(1f)) { Text(ui("player.write")) }
-            if (rights.invite) ForgeOutlinedButton(onClick = onInvite, enabled = !game.busy, modifier = Modifier.weight(1f)) { Text(ui("player.invite")) }
-        }
+    // Малые кнопки одной строкой (4.6.6, макет «Компактные кнопки», вариант A)
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (letter != null) SmallAction(Icons.Outlined.Mail, ui("player.write"), onWrite, primary = true, enabled = !game.busy && letter == MailGate.OPEN)
+        if (rights.invite) SmallAction(Icons.Outlined.Flag, ui("player.invite"), onInvite, enabled = !game.busy)
+        SmallAction(Icons.Outlined.Gavel, ui("player.lots", card.lots), onLots, enabled = !game.busy)
     }
     letter?.takeIf { it != MailGate.OPEN }?.let { gate ->
         val rules = game.index?.rules
         MutedText(gateText(gate, null, rules?.mail ?: MailRules(), rules?.unlockLevel(MailRules.SECTION) ?: 1))
     }
-    ForgeOutlinedButton(onClick = onLots, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) { Text(ui("player.lots", card.lots)) }
 }
 
 /**
  * Строка модерации (только модератору и администратору): бан, немота (4.6.3) и удаление - в досье окна модерации; письмо
  * администратора аккаунту [onMail] - только ему.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable private fun ModerationRow(game: GameUi, rights: CardModeration, onMail: (() -> Unit)?, onDossier: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         HorizontalDivider(color = Bronze, thickness = 1.dp)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (rights.banHero || rights.banAccount || rights.banDevice) {
-                ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.ban"), color = LifeRed) }
-            }
-            if (rights.mute) ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.mute"), color = Caution) }
-            onMail?.let { ForgeTextButton(onClick = it, enabled = !game.busy) { Text(ui("player.write_admin"), color = Rune) } }
-            if (rights.delete) ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.delete"), color = LifeRed) }
-            Spacer(Modifier.weight(1f))
-            ForgeTextButton(onClick = onDossier, enabled = !game.busy) { Text(ui("moderation.dossier"), color = Gold) }
+        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val free = !game.busy
+            if (rights.banHero || rights.banAccount || rights.banDevice) SmallAction(Icons.Outlined.Block, ui("moderation.ban"), onDossier, tint = LifeRed, enabled = free)
+            if (rights.mute) SmallAction(Icons.Outlined.VolumeOff, ui("moderation.mute"), onDossier, tint = Caution, enabled = free)
+            onMail?.let { SmallAction(Icons.Outlined.MarkEmailUnread, ui("player.write_admin"), it, tint = Rune, enabled = free) }
+            if (rights.delete) SmallAction(Icons.Outlined.DeleteOutline, ui("moderation.delete"), onDossier, tint = LifeRed, enabled = free)
+            SmallAction(Icons.Outlined.FolderOpen, ui("moderation.dossier"), onDossier, tint = Gold, enabled = free)
         }
     }
 }

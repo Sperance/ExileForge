@@ -1,5 +1,11 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.Icons
+import com.sperance.exileforge.ui.components.RunMenuItem
+import com.sperance.exileforge.ui.components.RunMenu
+import com.sperance.exileforge.presentation.expedition.RiftDelivery
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -103,7 +109,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     val game by model.game.collectAsStateWithLifecycle()
     val state by model.riftState.collectAsStateWithLifecycle()
     val arena = state.arena
-    if (arena != null) return RiftFight(game, model, arena)
+    if (arena != null) return RiftFight(game, model, arena, state.delivery)
     val index = game.index ?: return
     val rules = index.campaign.trials?.rift ?: return
     Box(Modifier.fillMaxSize().background(RiftColors.Ground)) {
@@ -244,7 +250,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
 }
 
 /** Что открыто поверх карты забега: дары, проклятия или меню забега. */
-private enum class RunSheet { BOONS, CURSES, MENU }
+private enum class RunSheet { BOONS, CURSES }
 
 /** Забег: карта на весь экран, HUD сверху, предложение узла всплывает снизу. */
 @Composable private fun RiftRunView(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, idle: Boolean) {
@@ -254,7 +260,7 @@ private enum class RunSheet { BOONS, CURSES, MENU }
     val offer = run.offer.takeIf { run.stage == RiftStage.OFFER }
     Box(Modifier.fillMaxSize()) {
         RiftAscent(rules, engine, run, idle, top = 120.dp, bottom = if (offer != null) 360.dp else 48.dp) { looking = it }
-        RiftHud(rules, engine, run, Modifier.align(Alignment.TopCenter)) { sheet = it }
+        RiftHud(model, rules, board, engine, run, idle, Modifier.align(Alignment.TopCenter)) { sheet = it }
         androidx.compose.animation.AnimatedVisibility(
             visible = offer != null,
             enter = androidx.compose.animation.slideInVertically { it },
@@ -288,14 +294,12 @@ private enum class RunSheet { BOONS, CURSES, MENU }
             }
         }
 
-        RunSheet.MENU -> RunMenu(model, rules, board, idle, onDismiss = { sheet = null })
-
         null -> Unit
     }
 }
 
 /** HUD забега: счёт, Эхо и жизнь; чипы даров и проклятий открывают шторки, обзор - сколько рядов видно; ☰ - меню забега. */
-@Composable private fun RiftHud(rules: RiftRules, engine: RiftEngine, run: RiftRun, modifier: Modifier, onSheet: (RunSheet) -> Unit) {
+@Composable private fun RiftHud(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine, run: RiftRun, idle: Boolean, modifier: Modifier, onSheet: (RunSheet) -> Unit) {
     Column(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(RiftColors.Ground.copy(alpha = .96f), Color.Transparent)))
             .statusBarsPadding().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 18.dp),
@@ -311,7 +315,7 @@ private enum class RunSheet { BOONS, CURSES, MENU }
             RiftChip(ui("rift.curses_n", run.curses.size), RiftColors.Warn) { onSheet(RunSheet.CURSES) }
             RiftChip(ui("rift.sight", engine.sight(run)), RiftColors.Muted)
             Spacer(Modifier.weight(1f))
-            RiftChip("☰", RiftColors.Muted) { onSheet(RunSheet.MENU) }
+            RiftMenu(model, rules, board, idle)
         }
     }
 }
@@ -338,12 +342,19 @@ private enum class RunSheet { BOONS, CURSES, MENU }
     }
 }
 
-/** Меню забега: мутаторы недели, выход из забега. */
-@Composable private fun RunMenu(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, idle: Boolean, onDismiss: () -> Unit) {
+/**
+ * Меню забега Разлома (4.6.6 - общее [RunMenu]): настройки, жук; свой блок - конец недели и мутаторы; свои пункты - завершить
+ * забег (с вопросом) и закрыть Разлом.
+ */
+@Composable private fun RiftMenu(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, idle: Boolean) {
     var ending by remember { mutableStateOf(false) }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("rift.title"), color = RiftColors.Rift, style = MaterialTheme.typography.titleMedium)
+    RunMenu(
+        items = listOf(
+            RunMenuItem(Icons.Outlined.Flag, ui("rift.end"), danger = true, enabled = idle) { ending = true },
+            RunMenuItem(Icons.Outlined.Close, ui("rift.close")) { model.closeRift() },
+        ),
+        hold = {},
+        extra = {
             val left = ((board.endsAt - System.currentTimeMillis()) / 1000.0).coerceAtLeast(0.0)
             Text(ui("rift.ends", clock(left)), color = RiftColors.Muted, style = MaterialTheme.typography.labelMedium)
             Text(ui("rift.mutators"), color = RiftColors.Muted, style = MaterialTheme.typography.labelMedium)
@@ -354,14 +365,12 @@ private enum class RunSheet { BOONS, CURSES, MENU }
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            ForgeOutlinedButton(onClick = { ending = true }, enabled = idle, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.end"), color = RiftColors.Warn) }
-            ForgeTextButton(onClick = model::closeRift, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.close"), color = RiftColors.Muted) }
-        }
-    }
+        },
+        trigger = { onClick -> RiftChip("☰", RiftColors.Muted, onClick) },
+    )
     if (ending) {
         ConfirmSheet(ui("rift.end"), ui("rift.end"), onDismiss = { ending = false }, note = ui("rift.end_confirm"), danger = true) {
             ending = false
-            onDismiss()
             model.riftAct(RiftAct.End)
         }
     }
@@ -602,7 +611,7 @@ private const val SPARKS = 14
 }
 
 /** Бой узла: арена, как у испытаний, и плашка с волной и условием Чемпиона. */
-@Composable private fun RiftFight(game: GameUi, model: ExpeditionViewModel, arena: RiftArena) {
+@Composable private fun RiftFight(game: GameUi, model: ExpeditionViewModel, arena: RiftArena, delivery: RiftDelivery?) {
     val shell: ShellViewModel = koinViewModel()
     val hud by arena.hud.collectAsState()
     LaunchedEffect(arena) {
@@ -643,14 +652,43 @@ private const val SPARKS = 14
             fight.foes.firstOrNull { it.index == boss.index }?.let { foe ->
                 BossDossier(
                     game, foe.monster, hud.level, foe.maxLife.toDouble(), boss.phase, boss.marks, loc("rift.node.${hud.kind.name}.name"),
-                    fight.heroBody, arena.combat, plan = null, record = { model.bossRecord(foe.monster.code.value) },
+                    fight.heroBody, arena.combat, record = { model.bossRecord(foe.monster.code.value) },
                 ) {
                     seen = true
                     model.riftCommand(RunCommand.Begin)
                 }
             }
         }
-        if (hud.phase != TrialPhase.FIGHT) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator(color = RiftColors.Rift) }
+        if (hud.phase != TrialPhase.FIGHT) DeliveryPlate(hud.phase == TrialPhase.DONE, delivery, onLeave = model::leaveRiftRefused)
+    }
+}
+
+/**
+ * Итог кончившегося боя в пути (4.6.6): «Победа · отправка итога» со спиннером, без связи - номер повтора, отказ сервера -
+ * его слова и «К карте». Раньше здесь был голый спиннер, и потерянный итог держал его вечно.
+ */
+@Composable private fun DeliveryPlate(won: Boolean, delivery: RiftDelivery?, onLeave: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Box(Modifier.fillMaxSize().background(RiftColors.Ground.copy(alpha = .7f)), contentAlignment = Alignment.Center) {
+        Column(
+            Modifier.padding(24.dp).background(RiftColors.Panel, shape).border(1.dp, RiftColors.LineHi, shape).padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(ui(if (won) "rift.delivery.won" else "rift.delivery.lost"), color = if (won) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.titleMedium)
+            when (delivery) {
+                is RiftDelivery.Refused -> {
+                    Text(ui("rift.delivery.refused", delivery.reason), color = RiftColors.Warn, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+                    ForgeOutlinedButton(onClick = onLeave) { Text(ui("rift.delivery.leave"), color = RiftColors.Text) }
+                }
+
+                else -> {
+                    androidx.compose.material3.CircularProgressIndicator(color = RiftColors.Rift)
+                    val attempt = (delivery as? RiftDelivery.Sending)?.attempt ?: 1
+                    Text(if (attempt > 1) ui("rift.delivery.retry", attempt) else ui("rift.delivery.sending"), color = RiftColors.Muted, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
     }
 }
 

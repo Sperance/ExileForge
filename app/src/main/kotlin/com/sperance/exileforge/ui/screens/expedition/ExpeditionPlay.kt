@@ -1,24 +1,23 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import androidx.compose.foundation.layout.heightIn
+import com.sperance.exileforge.ui.components.raritySpine
+import androidx.compose.ui.platform.LocalConfiguration
+import com.sperance.exileforge.ui.components.RunMenuItem
+import com.sperance.exileforge.ui.components.RunMenu
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,29 +25,20 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
-import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.mapTitle
-import com.sperance.exileforge.core.display.modNumber
-import com.sperance.exileforge.core.display.statPercent
-import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
@@ -59,19 +49,11 @@ import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
-import com.sperance.exileforge.ui.screens.expedition.arena.key
-import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
-import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.screens.expedition.scene.rememberRunClock
-import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.hypot
 import kotlin.math.roundToInt
 
 /**
@@ -237,12 +219,15 @@ import kotlin.math.roundToInt
             // The way out (2.56.1): a portal in a bronze ring, first thing in the corner, and it asks before it goes.
             // The gear right under it, on the same line (2.73.0), and the hero's figures under the gear (2.75.0).
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                onLeave?.let { RoundButton(ForgeGlyphs.Portal, ui("expedition.leave"), onClick = it) }
+                // Меню захода (4.6.6) первым в углу: выход, настройки и жук - в нём, а не отдельными кнопками
+                RunMenu(
+                    items = listOfNotNull(onLeave?.let { RunMenuItem(ForgeGlyphs.Portal, ui("expedition.leave"), danger = true, onClick = it) }),
+                    hold = { HoldsRun(run) },
+                )
                 RoundButton(ForgeGlyphs.Helm, ui("expedition.gear"), onClick = onGear)
                 RoundButton(ForgeGlyphs.Tome, ui("expedition.stats_hero"), onClick = onStats)
                 // Задания по ходу захода (3.95.0) - свитком, как доска заданий в городе (3.95.3): флаг читался как «сдаться»
                 RoundButton(ForgeGlyphs.Scroll, ui("run.quests"), onClick = onQuests)
-                BugAction()
             }
             Column(Modifier.weight(1f).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val zone = VaalZones.isZone(run.zone)
@@ -355,14 +340,13 @@ internal const val PENDING_GRACE = 10_000L
     val expedition by vm.state.collectAsStateWithLifecycle()
     var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        RunPanel(Modifier, GoldBright) {
+        RunPanel(Modifier, GoldBright, footer = { ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) } }) {
             Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             RewardLines(game, reward, { looked = it }, awaiting, arriving = expedition.pending > 0)
             // Куда ушла добыча (3.88.8): вещи и стопки сундука уже лежат у героя, подбирать нечего.
             if (!awaiting && (reward.equipment.isNotEmpty() || reward.items.isNotEmpty())) {
                 Text(ui("expedition.chest_stored"), color = Vital, style = MaterialTheme.typography.bodySmall)
             }
-            ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) }
         }
     }
     looked?.let { item ->
@@ -450,10 +434,24 @@ internal const val FOUNTAIN_TAP = .9
     }
 }
 
-@Composable internal fun RunPanel(modifier: Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 14.dp, bottomEnd = 14.dp)
-    Row(modifier.navigationBarsPadding().padding(12.dp).fillMaxWidth().height(IntrinsicSize.Min).depthPanel(shape).border(1.dp, accent.copy(alpha = .5f), shape)) {
-        RaritySpine(accent, 4.dp)
-        Column(Modifier.weight(1f).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+@Composable internal fun RunPanel(
+    modifier: Modifier,
+    accent: Color = Gold,
+    footer: (@Composable ColumnScope.() -> Unit)? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(14.dp)
+    // Панель не выше доли экрана (4.6.6): длинное тело (сундук с горой добычи) прокручивается, а [footer] - кнопки - всегда на виду
+    val cap = LocalConfiguration.current.screenHeightDp.dp * PANEL_SHARE
+    Column(
+        modifier.navigationBarsPadding().padding(12.dp).fillMaxWidth().heightIn(max = cap).depthPanel(shape).border(1.dp, accent.copy(alpha = .5f), shape)
+            .raritySpine(accent).padding(start = 20.dp, end = 16.dp, top = 16.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp), content = content)
+        footer?.invoke(this)
     }
 }
+
+/** Доля высоты экрана, выше которой панель забега не растёт. */
+private const val PANEL_SHARE = .6f

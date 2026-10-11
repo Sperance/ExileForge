@@ -42,7 +42,7 @@ class HeroViewModel(
     fun claimOverflow(itemId: String? = null) = hero.claimOverflow(itemId)
     fun sellOverflow(itemId: String) = hero.sellOverflow(itemId)
     fun incubatePet(egg: String, slot: Int? = null) = hero.incubatePet(egg, slot)
-    fun collectPet(slot: Int) = hero.collectPet(slot)
+    fun collectPet(slot: Int, onHatched: (String) -> Unit = {}) = hero.collectPet(slot, onHatched)
     fun activatePet(petId: String) = hero.activatePet(petId)
     fun sellPet(petId: String) = hero.sellPet(petId)
     fun breedPets(first: String, second: String) = hero.breedPets(first, second)

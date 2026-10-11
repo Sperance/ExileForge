@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.guild
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -58,7 +59,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (me != null && GuildPolicy.can(me.role, GuildAction.RECRUIT)) {
             item {
-                InviteField(game, vm)
+                InviteField(game, vm, guild)
                 Spacer(Modifier.height(8.dp))
             }
         }
@@ -111,16 +112,48 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     }
 }
 
-@Composable private fun InviteField(game: GameUi, vm: GuildViewModel) {
-    var name by remember { mutableStateOf("") }
+/**
+ * Приглашение (4.6.6): номер героя из шести цифр или имя; «Найти» - одно чтение превью, в нём имя, класс, уровень и номер, и
+ * лишь потом «Пригласить». Над полем - код вступления гильдии с копированием и «Новый код» (только у ролей с приёмом).
+ */
+@Composable private fun InviteField(game: GameUi, vm: GuildViewModel, guild: GuildView) {
+    val guilds by vm.guilds.collectAsStateWithLifecycle()
+    var target by remember { mutableStateOf("") }
+    val recruit = guilds.recruit
     ForgePanel {
         Engraved(ui("guild.invite_title"))
+        guild.code?.let { code ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ShortCodeChip(ui("guild.code"), code, Modifier.weight(1f, fill = false))
+                ForgeTextButton(onClick = vm::renewCode, enabled = !game.busy) { Text(ui("guild.code_renew"), color = Muted) }
+            }
+            MutedText(ui("guild.code_hint"))
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(name, { name = it.take(game.inputs.heroName) }, label = { Text(ui("guild.hero_name")) }, singleLine = true, modifier = Modifier.weight(1f))
-            ForgeButton(enabled = !game.busy && name.isNotBlank(), onClick = {
-                vm.invite(name)
-                name = ""
-            }) { Text(ui("guild.invite")) }
+            OutlinedTextField(
+                target,
+                {
+                    target = it.take(game.inputs.heroName)
+                    if (recruit != null) vm.clearRecruit()
+                },
+                label = { Text(ui("guild.hero_target")) },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            ForgeOutlinedButton(enabled = !game.busy && target.isNotBlank(), onClick = { vm.lookup(target) }) { Text(ui("guild.find")) }
+        }
+        recruit?.let { found ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.weight(1f)) {
+                    Text(found.name, color = GoldBright, style = MaterialTheme.typography.titleSmall)
+                    MutedText(ui("guild.recruit_line", classTitle(found.heroClass), found.level, found.number))
+                    found.guild?.let { Text(ui("guild.recruit_taken", it), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+                }
+                ForgeButton(enabled = !game.busy && found.guild == null, onClick = {
+                    vm.invite(found.number.ifBlank { found.name })
+                    target = ""
+                }) { Text(ui("guild.invite")) }
+            }
         }
     }
 }

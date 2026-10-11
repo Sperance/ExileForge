@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.campaign.PhaseFoes
-import com.sperance.exileforge.core.campaign.combat.FightKinds
 import com.sperance.exileforge.core.campaign.combat.Foe
 
 /**
@@ -37,12 +36,3 @@ internal fun ExpeditionRun.challengeView(): ChallengeView? {
     return ChallengeView(origin, boss.level, boss.body.maxLife, boss.phase, boss.phases.map { it.step.at }, vaal)
 }
 
-/**
- * Снимок вызова для прогона (3.92.0; 4.2.0 - снимок): герой, каков он сейчас, - листом, снаряжением, запасами и питомцем - против
- * стража вызова. Снимать в потоке похода; прогон [OddsPlan.run] - вне главного потока.
- */
-fun ExpeditionRun.oddsPlan(): OddsPlan? {
-    val agent = challenge ?: return null
-    val foes = challengeFoes(agent)
-    return OddsPlan(hero, foes, rules, index.rules.fight, pools, stance, kit, build, build.gear.percent, allies.of(hero, pet(), kit.fate.effects.spirit), PhaseFoes(index, rules), wonLast, FightKinds.expedition(foes))
-}

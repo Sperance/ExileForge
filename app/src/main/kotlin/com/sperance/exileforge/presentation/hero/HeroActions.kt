@@ -66,7 +66,12 @@ class HeroActions(
 
     // Зверинец (3.5.0): снимок с каждым ответом несёт питомцев и сумку.
     fun incubatePet(egg: String, slot: Int? = null) = heroCommand { id -> api.hero.incubatePet(id, egg, slot) }
-    fun collectPet(slot: Int) = heroCommand { id -> api.hero.collectPet(id, slot) }
+
+    /** Вылупившийся питомец из места [slot]; [onHatched] получает его id - экран открывает карточку, видно, кто вылупился. */
+    fun collectPet(slot: Int, onHatched: (String) -> Unit = {}) = heroCommand { id ->
+        val before = heroes.state.value.hero?.pets?.pets?.map { it.id }?.toSet().orEmpty()
+        api.hero.collectPet(id, slot).pets.firstOrNull { it.id !in before }?.let { onHatched(it.id) }
+    }
 
     /** Сфера ремесла на питомце (сервер 1.65.0), с предзнаменованием, если оно положено; фраза итога (4.4.1) - строка кузницы, как у вещи. */
     fun petOrb(petId: String, orb: String, omen: String? = null, onApplied: () -> Unit = {}) = forgeCommand { id ->
@@ -159,7 +164,11 @@ class HeroActions(
     fun dismissChest() = heroes.chest(null)
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = heroCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) }
     fun flaskCondition(index: Int, condition: String?) = heroCommand { id -> api.hero.flaskCondition(id, index, condition) }
-    fun exchangeBooks(books: List<String>, code: String) = heroCommand { id -> api.hero.exchangeBooks(id, books, code) }
+    /** Обмен книг (4.6.6): полученная книга сразу читается сервером - умение изучено или выросло. */
+    fun exchangeBooks(books: List<String>, code: String) = heroCommand { id ->
+        api.hero.exchangeBooks(id, books, code)
+        notices.toast(ui("skills.exchanged", com.sperance.exileforge.core.display.SkillText.title(code)))
+    }
 
     /** Руна в гнездо умения или гнездо пустеет (4.4.0): вынутая и заменённая руна разрушаются. */
     fun socketRune(code: String, socket: Int, rune: String?) = heroCommand { id -> api.hero.socketRune(id, code, socket, rune) }

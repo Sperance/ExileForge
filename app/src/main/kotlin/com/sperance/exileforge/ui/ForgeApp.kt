@@ -4,19 +4,10 @@ import android.view.HapticFeedbackConstants
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.CloudOff
-import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Mail
-import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,18 +15,13 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,13 +29,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
-import com.sperance.exileforge.core.display.workTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.app.StallWatchdog
 import com.sperance.exileforge.presentation.features.UpdateViewModel
-import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
@@ -58,7 +42,6 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.ui.components.BugSheet
-import com.sperance.exileforge.ui.components.CollapsibleHeader
 import com.sperance.exileforge.ui.components.HeaderCollapse
 import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalHeaderCollapse
@@ -132,7 +115,7 @@ import org.koin.compose.viewmodel.koinViewModel
         LocalSettings provides settings,
         LocalDensity provides Density(base.density, base.fontScale * settings.textSize.scale),
     ) {
-        ForgeScreens()
+        com.sperance.exileforge.ui.components.DecorClockHost { ForgeScreens() }
         // Updates (3.72.0): over everything; a run or a trial under way is finished first.
         // 3.86.0: the start window holds only until the server answers.
         // 3.87.0: the window reads the model without the lifecycle's gate - a frozen collection held it forever.
@@ -160,7 +143,8 @@ import org.koin.compose.viewmodel.koinViewModel
     // The dictionary arrives after the first frame, so its size joins the key: when the server's
     // names land, every screen that printed a bare code is drawn again.
     // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
-    var bugOpen by remember { mutableStateOf(false) }
+    // Системные листы (4.6.6): отчёт об ошибке и настройки - и из оболочки, и из меню забега
+    val sheets = remember { com.sperance.exileforge.ui.components.SystemSheets() }
     val drafts = koinInject<DraftStore>()
     // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
     var suggestionsOpen by remember { mutableStateOf(false) }
@@ -172,7 +156,11 @@ import org.koin.compose.viewmodel.koinViewModel
     // 3.81.0: the dictionary's language joins it too — the Russian and English dictionaries hold the same number of strings,
     // so a switch whose dictionary landed after the first redraw left the server's names in the old language.
     key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
-        CompositionLocalProvider(LocalBugReport provides { bugOpen = true }, LocalMailOpen provides { mailOpen = true }) {
+        CompositionLocalProvider(
+            LocalBugReport provides { sheets.bug = true },
+            LocalMailOpen provides { mailOpen = true },
+            com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
+        ) {
             // Судьбоносные строки вещей (4.6.2) читают дар и надетое героя отсюда - и в листах карточек
             com.sperance.exileforge.ui.components.FateSightHost(game) {
                 // Листы-справки (3.92.0): умение монстра, проклятие, свойство, фаза - откуда бы их ни открыли
@@ -199,7 +187,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
                                     rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
 
-                                    else -> Shell(game, route, navigator) { bugOpen = true }
+                                    else -> Shell(game, route, navigator) { sheets.bug = true }
                                 }
                             }
                         }
@@ -208,13 +196,15 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
     }
-    if (bugOpen) {
+    // Настройки поверх забега (4.6.6): из оболочки они - экран стека, из меню забега - этот лист, забег под ним держится
+    if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
+    if (sheets.bug) {
         BugSheet(
             game,
             route,
             expedition,
             drafts,
-            onDismiss = { bugOpen = false },
+            onDismiss = { sheets.bug = false },
             onSuggestions = { suggestionsOpen = true },
             onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
         )
@@ -224,6 +214,8 @@ import org.koin.compose.viewmodel.koinViewModel
     if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
     // Новое письмо (4.6.3): из карточки игрока, «Ответить» и рассылки гильдии - лист поверх всего, и поверх ящика
     if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
+    // Продолжение сюжета (4.6.6): шаг выполнен - сюжетный экран, когда забег уже не на экране
+    if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
     // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
     if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }

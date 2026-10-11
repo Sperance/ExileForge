@@ -1,5 +1,13 @@
 package com.sperance.exileforge.ui.screens.quests
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.ColorMatrix
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -88,7 +96,8 @@ internal fun RewardChips(reward: QuestReward) {
 @Composable internal fun QuestRow(quest: Quest, actions: @Composable RowScope.() -> Unit = {}) {
     val color = rarityColor(quest.rarity.name)
     val shape = RoundedCornerShape(8.dp)
-    Row(Modifier.fillMaxWidth().clip(shape).depthPanel(shape).raritySpine(if (quest.claimed) Muted else color)) {
+    // Сданное задание (4.6.6) - серым целиком: оно уже ничего не ждёт
+    Row(Modifier.fillMaxWidth().greyed(quest.claimed).clip(shape).depthPanel(shape).raritySpine(if (quest.claimed) Muted else color)) {
         Spacer(Modifier.width(4.dp))
         Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -114,3 +123,19 @@ internal fun RewardChips(reward: QuestReward) {
         }
     }
 }
+
+/** Серая «отработанная» строка (4.6.6): без цвета и вполсилы. */
+private fun Modifier.greyed(on: Boolean): Modifier = if (!on) {
+    this
+} else {
+    graphicsLayer { alpha = GREYED_ALPHA }.drawWithContent {
+        val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) }
+        drawIntoCanvas { canvas ->
+            canvas.saveLayer(Rect(Offset.Zero, size), paint)
+            drawContent()
+            canvas.restore()
+        }
+    }
+}
+
+private const val GREYED_ALPHA = .55f

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -102,7 +103,12 @@ internal abstract class MapStyle {
      * контуру [outline]; край - только снаружи.
      */
     open fun chasm(frame: SceneFrame, cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, palette: Palette): Unit = with(frame) {
-        pool(cells, shade, outline, { tone(palette.floor, .8f * it) }, tone(palette.void, .9f), Color.Black.copy(alpha = .5f)) { cell ->
+        // Глубина (4.6.6): дальняя стенка провала - тёмный камень, сама тьма сдвинута к зрителю, по краю - светлая кромка; яма
+        // читается и на тёмном полу
+        val face = tone(palette.floor, .42f)
+        pool(cells, shade, outline, { tone(palette.floor, .9f * it) }, face, CHASM_LIP, depth = {
+            pen.scope.translate(0f, unit * CHASM_DEPTH) { drawPath(outline, tone(palette.void, .95f)) }
+        }) { cell ->
             val (cx, cy, u) = Triple(cell.spot.cx, cell.spot.cy, unit)
             pen.color = tone(palette.accent, .35f * cell.light, alpha = .35f + .1f * sin(time * 2f + cell.spot.x + cell.spot.y))
             pen.diamond(cx, cy - u * .1f, u * .3f, u * .12f)
@@ -131,13 +137,23 @@ internal abstract class MapStyle {
      * внутри контура - кромка [edge] вдоль берега, [inside] каждой клетки и тень света клеток [shade] (клетки глади и суши рядом,
      * куда заходит скруглённый угол).
      */
-    protected fun SceneFrame.pool(cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, rim: (Float) -> Color, fill: Color, edge: Color, inside: (PoolCell) -> Unit) {
+    protected fun SceneFrame.pool(
+        cells: List<PoolCell>,
+        shade: List<PoolCell>,
+        outline: Path,
+        rim: (Float) -> Color,
+        fill: Color,
+        edge: Color,
+        depth: (() -> Unit)? = null,
+        inside: (PoolCell) -> Unit,
+    ) {
         cells.forEach { cell ->
             pen.color = rim(cell.light)
             pen.diamond(cell.spot.cx, cell.spot.cy, unit, unit / 2)
         }
         pen.scope.drawPath(outline, fill)
         pen.scope.clipPath(outline) {
+            depth?.invoke()
             drawPath(outline, edge, style = Stroke(unit * .16f, join = StrokeJoin.Round))
             cells.forEach(inside)
             shade.forEach { cell ->
@@ -161,6 +177,12 @@ internal abstract class MapStyle {
 
 /** Тень грани, что смотрит в `+x`, против освещённой, что смотрит в `+y`. */
 private const val FACE_SHADE = .36f
+
+/** Глубина пропасти (4.6.6): на сколько клетки тьма сдвинута к зрителю - видна дальняя стенка. */
+private const val CHASM_DEPTH = .24f
+
+/** Светлая кромка края пропасти (4.6.6). */
+private val CHASM_LIP = Color(0xFFA89878).copy(alpha = .6f)
 
 /** Мягкая тень у подножия: дальний край и ближний. */
 private const val SHADOW_FAR = .18f

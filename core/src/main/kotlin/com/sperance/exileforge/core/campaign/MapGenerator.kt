@@ -94,7 +94,7 @@ object MapGenerator {
 
     fun liquidOf(biome: String): Liquid? = liquids[biome]
 
-    fun generate(seed: Long, biome: String, monsters: Int, size: Int = 48): ExpeditionMap {
+    fun generate(seed: Long, biome: String, monsters: Int, size: Int = 48, minChasm: Int = 1): ExpeditionMap {
         val random = Random(seed)
         val grid = Array(size * size) { Tile.WALL }
         when (styleOf(biome)) {
@@ -138,18 +138,19 @@ object MapGenerator {
         }
         val keep = setOf(start, exit) + spawns
         val liquid = liquidOf(biome)
-        chasms(grid, size, random, chasmOf(biome), keep, share = if (biome in wet) WET_CHASM_SHARE else CHASM_SHARE)
+        chasms(grid, size, random, chasmOf(biome), keep, share = if (biome in wet) WET_CHASM_SHARE else CHASM_SHARE, minimum = minChasm)
         // Вода (3.95.0) - после ям и стай: их места она не сдвигает
         liquid?.let { waters(grid, size, random, keep, share = if (biome in wet) WET_WATER_SHARE else WATER_SHARE) }
         return ExpeditionMap(size, size, grid, decor, start, exit, spawns, liquid)
     }
 
     /**
-     * Chasms (3.91.0): shapes of the biome are tried until about [CHASM_SHARE] of the ground is gone. A shape is cut only on
+     * Chasms (3.91.0): shapes of the biome are tried until about [CHASM_SHARE] of the ground is gone; a lone shape smaller than
+     * [minimum] cells is not cut (4.6.6). A shape is cut only on
      * open ground two steps or more from [keep] and only if every remaining piece of ground is still reachable from the
      * first kept cell, so a map never splits; a shape that would split it is put back.
      */
-    private fun chasms(grid: Array<Tile>, size: Int, random: Random, shape: ChasmShape, keep: Set<Cell>, share: Double) {
+    private fun chasms(grid: Array<Tile>, size: Int, random: Random, shape: ChasmShape, keep: Set<Cell>, share: Double, minimum: Int) {
         val target = (grid.count { it == Tile.FLOOR } * share).toInt()
         val from = keep.first()
         var cut = 0
@@ -161,6 +162,8 @@ object MapGenerator {
                 ChasmShape.CRACK -> crack(seed, random.nextInt(4, 10), random)
             }.filter { it.x in 1 until size - 1 && it.y in 1 until size - 1 && grid[it.y * size + it.x] == Tile.FLOOR }
             if (cells.isEmpty() || cells.any { cell -> keep.any { abs(it.x - cell.x) + abs(it.y - cell.y) < 2 } }) return@repeat
+            // Меньше [minimum] клеток - не пропасть, а пятно (4.6.6): режется, только если прирастает к уже вырезанной
+            if (cells.size < minimum && cells.none { cell -> STEPS.any { (dx, dy) -> grid.getOrNull((cell.y + dy) * size + cell.x + dx) == Tile.CHASM } }) return@repeat
             cells.forEach { grid[it.y * size + it.x] = Tile.CHASM }
             val reach = distances(grid, size, from)
             if (grid.indices.any { grid[it] == Tile.FLOOR && reach[it] < 0 }) {
@@ -250,6 +253,9 @@ object MapGenerator {
     private const val RIVER_CHANCE = 0.5
     private const val RIVER_BEND = 0.35
     private const val CHASM_TRIES = 60
+
+    /** Четыре соседа клетки: пропасть прирастает к пропасти по стороне. */
+    private val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
     private const val CRACK_SWERVE = 0.3
 
     /** Walkers dig from the middle until about two fifths of the map is open, then the edges are smoothed. */

@@ -44,6 +44,8 @@ data class Guilds(
     val logEnd: Boolean = false,
     /** Хранилище гильдии (3.79.0), читается при входе в раздел. */
     val stash: GuildStashView? = null,
+    /** Превью приглашения (4.6.6): кого позовёт введённый номер или имя; null - не искали или поле сменилось. */
+    val recruit: com.sperance.exileforge.core.model.guild.GuildRecruit? = null,
 )
 
 /** Единственный источник правды о гильдии (3.80.13). */

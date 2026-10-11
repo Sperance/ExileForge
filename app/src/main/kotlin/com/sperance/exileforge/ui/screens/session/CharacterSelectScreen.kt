@@ -153,6 +153,11 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
 
 /** The creation form on its own page: there is nothing to choose between while it is open. */
 @Composable private fun ColumnScope.CreatingColumn(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
+    // Пролог (4.6.6) перед каждым созданием героя: начало истории, пропустить можно
+    com.sperance.exileforge.ui.components.PrologueGate(always = true) { CreatingList(game, vm, onBack, onSignOut) }
+}
+
+@Composable private fun ColumnScope.CreatingList(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // The beetle on the creation form too (3.75.0): it is the one page before the game without a way to report.
         item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) { BugAction() } }

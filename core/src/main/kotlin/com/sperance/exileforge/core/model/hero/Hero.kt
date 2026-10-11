@@ -55,6 +55,8 @@ import kotlinx.serialization.Serializable
     val trophies: Map<String, Int> = emptyMap(),
     /** Выигранных в заходах боёв (4.6.1, Предначертание «Щедрость судьбы»): каждый `every`-й приносит сферу; копится навсегда. */
     val fateFights: Long = 0,
+    /** Номер героя (4.6.6, сервер 4.6.6): шесть цифр - по ним зовут в гильдию; пусто - сервер старше. */
+    val number: String = "",
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */

@@ -37,7 +37,7 @@ import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.quests.QuestActions
-import com.sperance.exileforge.presentation.state.GameSettings
+import com.sperance.exileforge.presentation.state.speedPresses
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Orb
@@ -153,7 +153,7 @@ class ExpeditionActions(
     private fun expedition(transform: (Expedition) -> Expedition) = repository.update(transform)
 
     /** Сколько нажатий кнопки скорости боя дают скорость из настроек (3.77.0): 1 → 2 → 4. */
-    private val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(prefs.settings.value.fightSpeed).coerceAtLeast(0)
+    private val speedSteps: Int get() = speedPresses(index, prefs.settings.value.fightSpeed)
 
     /** Прогресс кампании, как его считают правила по герою и миру. */
     private fun progress(): CampaignProgress? = index?.let { i -> hero?.let { h -> CampaignProgress(h.campaign.cleared.filter { it in i.zones }, i.world.unlocked(h.campaign.cleared)) } }

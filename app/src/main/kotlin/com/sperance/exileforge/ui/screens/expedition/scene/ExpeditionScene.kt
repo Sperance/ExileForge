@@ -1,5 +1,10 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
+import com.sperance.exileforge.ui.icons.spriteVector
+import com.sperance.exileforge.core.display.itemIcon
+import com.sperance.exileforge.core.campaign.run.NodeSpot
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.runtime.key
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.FloatState
@@ -9,27 +14,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.translate
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.ExpeditionMap
-import com.sperance.exileforge.core.campaign.Tile
-import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
-import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.components.LocalMotion
-import com.sperance.exileforge.ui.icons.drawToken
-import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.floor
-import kotlin.math.hypot
-import kotlin.math.max
-import kotlin.math.sin
 
 /**
  * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking — its ground,
@@ -45,6 +33,10 @@ import kotlin.math.sin
 @Composable fun ExpeditionScene(run: ExpeditionRun, clock: FloatState, classCode: String?, modifier: Modifier = Modifier) {
     val painter = remember { ScenePainter() }
     painter.motion = LocalMotion.current
+    // Значок материала над узлами ремесла (4.6.6, макет «Растения», вариант C): спрайт предмета из сумки сервера, по узлу
+    painter.materials = run.world.features.filterIsInstance<NodeSpot>().map { it.node.job.output }.distinct().mapNotNull { code ->
+        key(code) { itemIcon(code)?.let(::spriteVector)?.let { code to MaterialMark(rememberVectorPainter(it), materialTier(run.index, code)) } }
+    }.toMap()
     Canvas(modifier) { painter.draw(this, run, clock.floatValue, classCode) }
 }
 

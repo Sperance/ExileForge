@@ -1,14 +1,10 @@
 package com.sperance.exileforge.ui.screens.expedition
 
+import com.sperance.exileforge.ui.components.motionClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -207,7 +203,7 @@ private val Feature.glyph: ImageVector get() = when (this) {
 /** The rays behind the number: a slow golden wheel, still when the animations are off. */
 @Composable private fun Rays(motion: Boolean, modifier: Modifier) {
     val turn = if (motion) {
-        rememberInfiniteTransition(label = "rays").animateFloat(0f, 360f, infiniteRepeatable(tween(RAYS_MS, easing = LinearEasing)), label = "turn").value
+        motionClock(RAYS_MS) * 360f
     } else {
         0f
     }

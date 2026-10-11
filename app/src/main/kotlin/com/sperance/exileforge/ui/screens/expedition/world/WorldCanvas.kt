@@ -1,16 +1,11 @@
 package com.sperance.exileforge.ui.screens.expedition.world
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
+import com.sperance.exileforge.ui.components.motionPhase
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
@@ -27,6 +22,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.layer.drawLayer
@@ -55,7 +51,6 @@ import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
-import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -79,14 +74,16 @@ fun WorldCanvas(
     selected: String?,
     stash: Map<String, Int>,
     modifier: Modifier = Modifier,
+    /** Зона текущего шага сюжета (4.6.6): вокруг жетона вращается руническое кольцо; null - сюжета на карте нет. */
+    story: String? = null,
     onTap: (String?) -> Unit,
 ) {
     val measurer = rememberTextMeasurer()
-    val motion = rememberInfiniteTransition(label = "world")
-    // With the animations off in the settings (3.77.0) the tokens and the roads stand still.
-    val moving = LocalMotion.current
-    val pulse by if (moving) motion.animateFloat(0f, 1f, infiniteRepeatable(tween(PULSE_MS, easing = LinearEasing)), label = "pulse") else remember { mutableFloatStateOf(.5f) }
-    val march by if (moving) motion.animateFloat(0f, -DASH_PERIOD, infiniteRepeatable(tween(MARCH_MS, easing = LinearEasing)), label = "march") else remember { mutableFloatStateOf(0f) }
+    // With the animations off in the settings (3.77.0) the tokens and the roads stand still. 4.6.6: общие часы декора (30 к/с)
+    // вместо своего бесконечного перехода - карта мира больше не держит экран в 60 кадрах ради пульса жетонов
+    val pulse by motionPhase(PULSE_MS, still = .5f)
+    val marchPhase by motionPhase(MARCH_MS)
+    val spin by motionPhase(STORY_SPIN_MS)
     val height = camera.world.height.toFloat()
     val roads = remember(world) { world.roads.map { it.state to road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code.value + it.to.zone.code.value) } }
     val density = LocalDensity.current
@@ -120,7 +117,7 @@ fun WorldCanvas(
                 drawLayer(artLayer)
             }
             fog(world, camera.world.width.toFloat(), height)
-            val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f), march)
+            val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f), -DASH_PERIOD * marchPhase)
             val dots = PathEffect.dashPathEffect(floatArrayOf(1f, 7f))
             roads.forEach { (state, path) ->
                 when (state) {
@@ -138,6 +135,7 @@ fun WorldCanvas(
                 }
             }
             world.tokens.forEach { token(it, height, pulse, it.zone.code.value == selected, stash[it.zone.code.value] ?: 0) }
+            story?.let { code -> world.tokens.firstOrNull { it.zone.code.value == code }?.let { storyRing(it, height, spin) } }
         }
         words.draw(this, camera, stash)
     }
@@ -246,6 +244,29 @@ private fun DrawScope.token(token: WorldToken, height: Float, pulse: Float, sele
     }
     if (selected) drawCircle(GoldBright, r + 7, c, style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(5f, 4f))))
 }
+
+/**
+ * Руническое кольцо зоны сюжета (4.6.6, макет «Сюжетные зоны», вариант B): засечки по кругу вокруг жетона медленно вращаются
+ * (доля круга [spin]); без анимаций стоят.
+ */
+private fun DrawScope.storyRing(token: WorldToken, height: Float, spin: Float) {
+    val c = Offset(token.zone.x.toFloat(), height - token.zone.y)
+    val r = radius(token) + STORY_RING_GAP
+    drawCircle(GoldBright.copy(alpha = .25f), r, c, style = Stroke(1f))
+    rotate(spin * 360f, c) {
+        repeat(STORY_RUNES) { i ->
+            val a = (i * 2 * Math.PI / STORY_RUNES).toFloat()
+            val dir = Offset(kotlin.math.cos(a), kotlin.math.sin(a))
+            val long = i % 3 == 0
+            drawLine(GoldBright, c + dir * (r - if (long) 5f else 3f), c + dir * (r + if (long) 5f else 3f), strokeWidth = if (long) 2f else 1.2f, cap = StrokeCap.Round)
+        }
+    }
+}
+
+/** Засечек в кольце сюжета, отступ кольца от жетона и полный оборот, мс. */
+private const val STORY_RUNES = 24
+private const val STORY_RING_GAP = 12f
+private const val STORY_SPIN_MS = 14_000
 
 private fun radius(token: WorldToken): Float = if (token.zone.finale) FINALE_RADIUS else TOKEN_RADIUS
 

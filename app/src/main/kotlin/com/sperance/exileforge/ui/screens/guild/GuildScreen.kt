@@ -104,6 +104,8 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
                     }
                 }
             }
+            // Вступление по коду (4.6.6): шесть цифр от главы или офицера - сразу в гильдию, мимо её режима
+            item { JoinByCode(game, vm, enabled = waiting == null) }
             item {
                 ForgePanel {
                     Engraved(ui("guild.found_title"))
@@ -134,6 +136,28 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
         }
     }
 }
+
+@Composable private fun JoinByCode(game: GameUi, vm: GuildViewModel, enabled: Boolean) {
+    var code by remember { mutableStateOf("") }
+    ForgePanel {
+        Engraved(ui("guild.join_code_title"))
+        MutedText(ui("guild.join_code_note"))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                code,
+                { code = it.filter(Char::isDigit).take(CODE_LENGTH) },
+                label = { Text(ui("guild.code")) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword),
+                modifier = Modifier.weight(1f),
+            )
+            ForgeButton(enabled = enabled && !game.busy && code.length == CODE_LENGTH, onClick = { vm.joinByCode(code) }) { Text(ui("guild.join")) }
+        }
+    }
+}
+
+/** Цифр в коде вступления - как в номере героя сервера. */
+private const val CODE_LENGTH = 6
 
 @Composable private fun SearchField(game: GameUi, vm: GuildViewModel) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()

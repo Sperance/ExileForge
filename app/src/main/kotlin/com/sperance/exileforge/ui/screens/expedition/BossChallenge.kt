@@ -1,7 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -9,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -19,17 +16,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
-import com.sperance.exileforge.core.campaign.run.BossOdds
 import com.sperance.exileforge.core.campaign.run.ChallengeView
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
-import com.sperance.exileforge.core.campaign.run.LossCause
-import com.sperance.exileforge.core.campaign.run.OddsPlan
 import com.sperance.exileforge.core.campaign.run.RunCommand
-import com.sperance.exileforge.core.campaign.run.oddsPlan
 import com.sperance.exileforge.core.campaign.traitViews
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.mapTitle
@@ -46,19 +38,9 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-/** Насколько опасен бой по доле побед прогона (3.92.0): ключ словаря и цвет. */
-private fun verdict(share: Double): Pair<String, Color> = when {
-    share >= 0.8 -> "challenge.easy" to Vital
-    share >= 0.5 -> "challenge.even" to Color(0xFFE8C25A)
-    share >= 0.2 -> "challenge.hard" to Ember
-    else -> "challenge.deadly" to LifeRed
-}
-
-/** Экран-вызов перед стражем карты (3.92.0): досье стража, шанс прогоном боёв вашим героем, «В бой» - бой. */
+/** Экран-вызов перед стражем карты (3.92.0): досье стража и «В бой» - бой (4.6.6: «Весы» прогона убраны). */
 @Composable internal fun BossChallenge(game: GameUi, model: ExpeditionViewModel, run: ExpeditionRun, view: ChallengeView, onCommand: (RunCommand) -> Unit) {
     BossDossier(
         game,
@@ -70,14 +52,12 @@ private fun verdict(share: Double): Pair<String, Color> = when {
         ui(if (view.vaal) "challenge.vaal_lair" else "challenge.lair", mapTitle(run.zone.code)),
         run.hero,
         run.rules,
-        plan = remember(view.boss) { run.oddsPlan() },
         record = { model.bossRecord(view.boss.code.value) },
     ) { onCommand(RunCommand.Accept) }
 }
 
 /**
- * Досье босса перед боем (3.92.0, макет B): портрет, уровень и здоровье, «Весы» прогона боёв по снимку [plan] (тяжёлый -
- * считается вне главного потока), доля героев сервера [record], победивших его, умения, свойства и фазы - всё открывает свой лист;
+ * Досье босса перед боем (3.92.0, макет B): портрет, уровень и здоровье, доля героев сервера [record], победивших его, умения, свойства и фазы - всё открывает свой лист;
  * «Снаряжение», «Разведка» и «В бой». Отойти нельзя: подошёл к логову - бой.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -92,14 +72,12 @@ internal fun BossDossier(
     caption: String,
     hero: Combatant?,
     rules: CombatRules,
-    plan: OddsPlan?,
     record: suspend () -> BossRecord?,
     onFight: () -> Unit,
 ) {
     val index = game.index ?: return
     val name = monsterTitle(boss.code)
     val body = remember(boss, level) { Combatant(boss.stats, level, rules) }
-    val chance by produceState<BossOdds?>(null, plan) { value = plan?.let { withContext(Dispatchers.Default) { it.run() } } }
     val server by produceState<BossRecord?>(null, boss.code) { value = record() }
     val traits = remember(boss, index) { traitViews(boss, index) }
     val lore = LocalLore.current
@@ -119,7 +97,6 @@ internal fun BossDossier(
             Text(name, color = rarityTint(boss.rarity), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             MutedText(ui("challenge.subtitle", level, number(maxLife)))
         }
-        Scales(chance, weighing = plan != null)
         val known = server
         val share = known?.share
         Text(
@@ -160,68 +137,6 @@ internal fun BossDossier(
     if (gear) GearSheet(game) { gear = false }
     if (scout) ScoutSheet(name, body) { scout = false }
 }
-
-/**
- * «Весы» прогона (4.2.0): крупно доля побед и вердикт, полоса побед против поражений и три плитки - средняя длина боя, остаток
- * здоровья героя в победах и самая частая причина поражения. Пока прогон идёт - «Прогоняем бои…».
- */
-@Composable private fun Scales(odds: BossOdds?, weighing: Boolean) {
-    if (odds == null) {
-        if (weighing) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CircularProgressIndicator(color = Gold, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                MutedText(ui("challenge.weighing"))
-            }
-        }
-        return
-    }
-    val (key, tint) = verdict(odds.share)
-    val shape = RoundedCornerShape(12.dp)
-    Column(
-        Modifier.fillMaxWidth().background(Panel, shape).border(1.dp, tint.copy(alpha = .35f), shape).padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(ui("challenge.percent", (odds.share * 100).roundToInt()), color = tint, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text(ui("challenge.odds_line", ui(key)), color = Parchment, style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(bottom = 4.dp))
-        }
-        ScalesBar(odds.share.toFloat())
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ScalesTile(ui("challenge.tile_length"), ui("challenge.tile_seconds", odds.seconds.roundToInt()), Modifier.weight(1f))
-            ScalesTile(ui("challenge.tile_life"), odds.lifeLeft?.let { ui("challenge.percent", (it * 100).roundToInt()) } ?: ui("challenge.tile_none"), Modifier.weight(1f))
-            ScalesTile(ui("challenge.tile_cause"), odds.cause?.let { causeLabel(it) } ?: ui("challenge.cause_none"), Modifier.weight(1f))
-        }
-    }
-}
-
-/** Полоса «Весов»: доля побед [wins] зелёным против поражений красным; с анимациями доля наполняется. */
-@Composable private fun ScalesBar(wins: Float) {
-    val motion = LocalMotion.current
-    val fill = remember { Animatable(if (motion) 0f else wins) }
-    LaunchedEffect(wins, motion) { if (motion) fill.animateTo(wins, tween(SCALES_FILL_MS)) else fill.snapTo(wins) }
-    val shape = RoundedCornerShape(5.dp)
-    Row(Modifier.fillMaxWidth().height(10.dp).clip(shape).background(LifeRed)) {
-        if (fill.value > 0f) Box(Modifier.fillMaxHeight().fillMaxWidth(fill.value.coerceIn(0f, 1f)).background(Vital))
-    }
-}
-
-/** Плитка «Весов»: подпись мелко и число крупно. */
-@Composable private fun ScalesTile(label: String, value: String, modifier: Modifier) {
-    val shape = RoundedCornerShape(8.dp)
-    Column(modifier.background(PanelRaised, shape).padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(value, color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 2)
-    }
-}
-
-/** Причина поражения словами. */
-private fun causeLabel(cause: LossCause): String = when (cause) {
-    LossCause.Enrage -> ui("challenge.cause_enrage")
-    LossCause.Timeout -> ui("challenge.cause_timeout")
-    is LossCause.Damage -> ui("challenge.cause_damage.${cause.type.name}")
-}
-
-private const val SCALES_FILL_MS = 600
 
 /** Разведка стража (3.92.0): здоровье, щит, урон по типам, броня, уклонение и сопротивления его листом. */
 @Composable private fun ScoutSheet(name: String, body: Combatant, onDismiss: () -> Unit) {

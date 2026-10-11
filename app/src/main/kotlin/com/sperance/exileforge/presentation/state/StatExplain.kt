@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.state
 import com.sperance.exileforge.core.campaign.PassiveSource
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.factorChange
 import com.sperance.exileforge.core.display.multiplierText
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.number
@@ -69,7 +70,7 @@ class StatExplainer(private val game: GameUi) {
         if (breakdown.base != 0.0) {
             cards += ShareCard(
                 ShareKind.BASE,
-                listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), fmt(stat, breakdown.base, Op.ADD, breakdown.percent, sign = false))),
+                baseRows(breakdown),
                 fmt(stat, breakdown.base, Op.ADD, breakdown.percent, sign = false),
             )
         }
@@ -77,11 +78,11 @@ class StatExplainer(private val game: GameUi) {
             cards += ShareCard(kind, merged(shares).map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent), cardTitle(kind, shares.first().source))
         }
         // Сдвиги поверх свода (4.6.4): «больше» умений - к их карточке, шаги дара - «Перестройка», чтение боя - своя карточка.
-        // Множитель (4.6.5) - сдвиг читается своим множителем «×0.60», карточка - их произведением.
+        // Множитель (4.6.5) - сдвиг читается своим сдвигом доли «−40%», карточка - их произведением.
         val factors = shiftFactors(breakdown)
         breakdown.shifts.groupBy(::shiftKind).toSortedMap().forEach { (kind, shifts) ->
-            val rows = shifts.map { shift -> shiftRow(stat, shift, holders, breakdown.percent).let { row -> factors[shift]?.let { row.copy(value = "×${factor(it)}") } ?: row } }
-            val sum = if (factors.isEmpty()) signed(stat, shifts.sumOf { it.delta }, breakdown.percent) else "×${factor(shifts.fold(1.0) { acc, it -> acc * (factors[it] ?: 1.0) })}"
+            val rows = shifts.map { shift -> shiftRow(stat, shift, holders, breakdown.percent).let { row -> factors[shift]?.let { row.copy(value = factorChange(it)) } ?: row } }
+            val sum = if (factors.isEmpty()) signed(stat, shifts.sumOf { it.delta }, breakdown.percent) else factorChange(shifts.fold(1.0) { acc, it -> acc * (factors[it] ?: 1.0) })
             val at = cards.indexOfFirst { it.kind == kind }
             if (at >= 0) cards[at] = cards[at].let { it.copy(rows = it.rows + rows, summary = "${it.summary} · $sum") } else cards += ShareCard(kind, rows, sum, cardTitle(kind, shifts.first().source))
         }
@@ -256,11 +257,29 @@ class StatExplainer(private val game: GameUi) {
         return weights
     }
 
+    /**
+     * Строки базы [b]: класс героя на первом уровне и прирост за уровни после него - «Класс «Мародёр» +20», «Уровень 24 +23»
+     * (`HeroClass.baseOn`). Без героя или если база не сходится с классом - одной строкой.
+     */
+    private fun baseRows(b: StatBreakdown): List<ShareRow> {
+        val stat = b.stat
+        val whole = listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), fmt(stat, b.base, Op.ADD, b.percent, sign = false)))
+        val owner = hero ?: return whole
+        val heroClass = index?.heroClass(owner.heroClass) ?: return whole
+        val start = heroClass.base[stat] ?: 0.0
+        val grown = (heroClass.perLevel[stat] ?: 0.0) * (owner.level - 1).coerceAtLeast(0)
+        if (grown == 0.0 || abs(start + grown - b.base) >= 0.05) return whole
+        return listOfNotNull(
+            ShareRow(ui("stat.src.class", classTitle(owner.heroClass)), fmt(stat, start, Op.ADD, b.percent)).takeIf { start != 0.0 },
+            ShareRow(ui("stat.src.level", owner.level), fmt(stat, grown, Op.ADD, b.percent)),
+        )
+    }
+
     /** Характеристика читается множителем (4.6.5, `StatDef.multiplier`). */
     private fun multiplier(stat: String): Boolean = index?.stats?.get(stat)?.multiplier == true
 
     /**
-     * Множитель каждого сдвига множителя [b] (4.6.5): сдвиги ложатся по порядку, `(100 + после) / (100 + до)` - «Невесомость ×0.60»,
+     * Множитель каждого сдвига множителя [b] (4.6.5): сдвиги ложатся по порядку, `(100 + после) / (100 + до)` - «Невесомость −40%»,
      * а не «−40%». Не множитель - пусто.
      */
     private fun shiftFactors(b: StatBreakdown): Map<Shift, Double> {
@@ -272,8 +291,8 @@ class StatExplainer(private val game: GameUi) {
     /** «135 × 1.30 × 1.10 = 193 − 13 = 180»: the flat sum, the multipliers that are there, the set value, the shifts. */
     private fun formula(b: StatBreakdown): String {
         val stat = b.stat
-        // Множитель (4.6.5): «×1.00 × 0.60 = ×0.60» - свод и множители сдвигов произведением
-        if (multiplier(stat)) return (listOf(multiplierText(b.formed)) + shiftFactors(b).values.map(::factor)).joinToString(" × ") + " = ${multiplierText(b.total)}"
+        // Множитель (4.6.5): «100% · −40% = 60%» - доля свода и сдвиги долей, итог - их произведение
+        if (multiplier(stat)) return (listOf(multiplierText(b.formed)) + shiftFactors(b).values.map(::factorChange)).joinToString(" · ") + " = ${multiplierText(b.total)}"
         val parts = mutableListOf(fmt(stat, b.flatSum, Op.ADD, b.percent, sign = false))
         if (!b.percent && b.increasedSum != 0.0) parts += "× ${factor(1 + b.increasedSum / 100)}"
         if (b.moreFactor != 1.0) parts += "× ${factor(b.moreFactor)}"
@@ -292,7 +311,7 @@ class StatExplainer(private val game: GameUi) {
 
     /** A figure with its operation: «+20», «+10%», «×1.10», «= 1»; a percent stat carries its sign on the flat too. */
     fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
-        // Итог множителя (4.6.5) - «×0.60»; доли свода остаются прибавками процентов, как их складывает лист
+        // Итог множителя (4.6.5) - доля «60%»; доли свода остаются прибавками процентов, как их складывает лист
         if (!sign && op == Op.ADD && multiplier(stat)) return multiplierText(value)
         val unit = if (percent || statPercent(stat, index)) "%" else ""
         val size = if (op == Op.INCREASED) shareNumber(stat, abs(value)) else statNumber(stat, abs(value))

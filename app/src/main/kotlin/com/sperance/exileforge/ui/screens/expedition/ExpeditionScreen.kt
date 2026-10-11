@@ -111,7 +111,9 @@ private const val CARD_TOP = .48f
         if (!settled) {
             Box(Modifier.fillMaxSize().background(CHART_BARE))
         } else {
-            WorldCanvas(world, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize()) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
+            // Зона текущего шага сюжета (4.6.6) - руническим кольцом; шаг берётся из доски заданий и контента, без запросов
+            val story = quests.board?.let { board -> game.index?.quests?.story?.getOrNull(board.chapter)?.steps?.getOrNull(board.step)?.zone?.value?.takeIf { it != com.sperance.exileforge.rules.content.MapCode.NONE.value } }
+            WorldCanvas(world, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
         // Голова карты (4.2.0): шапка, под ней справа - кнопка сюжета (4.6.5, вместо карточки над картой) и масштаб
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {

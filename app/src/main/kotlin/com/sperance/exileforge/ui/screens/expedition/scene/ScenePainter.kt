@@ -1,14 +1,7 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
-import androidx.compose.foundation.Canvas
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -16,8 +9,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.core.campaign.Tile
@@ -53,6 +44,9 @@ internal class ScenePainter {
 
     /** Анимации-декор включены (`LocalMotion`): без них декор стоит в покое ([decor]). */
     internal var motion = true
+
+    /** Значки материалов узлов ремесла по коду материала (4.6.6), их готовит сцена. */
+    internal var materials: Map<String, MaterialMark> = emptyMap()
 
     /** Часы декора: при выключенных анимациях стоят на нуле. */
     internal val decor: Float get() = if (motion) time else 0f
@@ -313,11 +307,11 @@ internal class ScenePainter {
     internal fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
 }
 
-/** Прозрачность скалы в центре «окна» (4.2.0). */
-private const val WINDOW_ALPHA = .2f
+/** Прозрачность скалы в центре «окна» (4.2.0; 4.6.6 - почти насквозь). */
+private const val WINDOW_ALPHA = .08f
 
-/** Радиус «окна» в клетках (4.2.0). */
-private const val WINDOW_CELLS = 3f
+/** Радиус «окна» в клетках (4.2.0; 4.6.6 - шире: стены, закрывающие героя и ямы). */
+private const val WINDOW_CELLS = 5f
 
 /** Шаг клетки на экране в полуширинах клетки: сдвиг на клетку по x - полуширина вбок и четверть ширины вниз. */
 private const val CELL_STEP = 1.118f

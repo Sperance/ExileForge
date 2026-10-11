@@ -1,19 +1,17 @@
 package com.sperance.exileforge.ui.screens.skills
 
+import androidx.compose.foundation.layout.Column
+import com.sperance.exileforge.core.display.SkillGrowthView
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,23 +23,16 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.BeltFlask
-import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
-import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
@@ -50,19 +41,14 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
-import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.SkillDefinition
-import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillRules
 import com.sperance.exileforge.rules.content.Slot
-import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
-import org.koin.compose.viewmodel.koinViewModel
 
 /** Пояс флаконов и обмен книг (3.80.19). */
 /** The belt as three flasks side by side, each filled to its charges, the chosen one lit; an empty place is a dashed outline. */
@@ -176,7 +162,16 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun Exchange(game: GameUi, vm: GrimoireViewModel, index: ContentIndex, hero: HeroView, pages: List<SkillDefinition>, onDismiss: () -> Unit) {
+internal fun Exchange(
+    game: GameUi,
+    vm: GrimoireViewModel,
+    index: ContentIndex,
+    hero: HeroView,
+    pages: List<SkillDefinition>,
+    stats: Map<String, Double>,
+    onExchanged: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val rule = index.skills.rules.exchange
     val owned = books(index).mapNotNull { book -> (game.bagAmount(book.code.value) ?: 0L).takeIf { it > 0 }?.let { book.code.value.removePrefix(SkillRules.BOOK_PREFIX) to it } }
     var chosen by remember { mutableStateOf(listOf<String>()) }
@@ -205,16 +200,21 @@ internal fun Exchange(game: GameUi, vm: GrimoireViewModel, index: ContentIndex, 
                 }
             }
             Caption(ui("skills.exchange_take"))
+            // Книга обмена сразу читается (4.6.6): цель, чью книгу не прочесть, погашена со своей причиной
             pages.filter { it.unlock <= hero.level }.forEach { skill ->
+                val refusal = remember(skill, hero.skills, stats) { bookRefusal(index, skill, SkillGrowthView.of(index, skill, hero.skills, hero.level, stats), hero.level, stats) }
                 val on = target == skill.code
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (on) PanelRaised else Color.Transparent)
-                        .clickable { target = skill.code }.padding(8.dp),
+                        .clickable(enabled = refusal == null) { target = skill.code }.padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    RadioButton(selected = on, onClick = { target = skill.code }, colors = RadioButtonDefaults.colors(selectedColor = Gold))
-                    Text(SkillText.title(skill.code), color = if (on) GoldBright else Parchment)
+                    RadioButton(selected = on, enabled = refusal == null, onClick = { target = skill.code }, colors = RadioButtonDefaults.colors(selectedColor = Gold))
+                    Column(Modifier.weight(1f)) {
+                        Text(SkillText.title(skill.code), color = if (refusal != null) Muted else if (on) GoldBright else Parchment)
+                        Text(refusal ?: ui(if (hero.skills.level(skill.code) > 0) "skills.exchange_reads" else "skills.exchange_learns"), color = if (refusal != null) LifeRed else Muted, style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
             val ready = chosen.size == rule.books && target != null && money >= price && !game.busy
@@ -222,7 +222,10 @@ internal fun Exchange(game: GameUi, vm: GrimoireViewModel, index: ContentIndex, 
             ForgeButton(
                 enabled = ready,
                 onClick = {
-                    target?.let { vm.exchangeBooks(chosen, it) }
+                    target?.let {
+                        vm.exchangeBooks(chosen, it)
+                        onExchanged(it)
+                    }
                     onDismiss()
                 },
                 modifier = Modifier.fillMaxWidth(),

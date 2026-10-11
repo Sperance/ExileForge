@@ -97,7 +97,7 @@ fun statPercent(stat: String, index: ContentIndex? = null): Boolean = PERCENT_MA
 
 /**
  * A stat's figure as a sheet shows it, the percent sign at the number rather than in the name: «Шанс крита 5%». Множитель
- * (4.6.5, `StatDef.multiplier`) читается «×0.60» - «на 40% меньше урона», а не «−40%».
+ * (4.6.5, `StatDef.multiplier`) читается долей «60%» - «урон 60% от полного», а не «−40%».
  */
 fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = if (index?.stats?.get(stat)?.multiplier == true) {
     multiplierText(value)
@@ -105,8 +105,21 @@ fun statValue(stat: String, value: Double, index: ContentIndex? = null): String 
     statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
 }
 
-/** Процент «больше/меньше» [percent] множителем: −40 → «×0.60». */
-fun multiplierText(percent: Double): String = "×" + String.format(java.util.Locale.ROOT, "%.2f", 1 + percent / 100)
+/** Процент «больше/меньше» [percent] долей от полного: −40 → «60%». */
+fun multiplierText(percent: Double): String = shareText(100 + percent) + "%"
+
+/** Сдвиг множителя [factor] процентом со знаком: 0.60 → «−40%», 1.10 → «+10%». */
+fun factorChange(factor: Double): String {
+    val change = (factor - 1) * 100
+    val mark = if (change < 0) ModifierText.MINUS else "+"
+    return mark + shareText(kotlin.math.abs(change)) + "%"
+}
+
+/** Доля в процентах: целое без дробной части, иначе одна цифра после точки. */
+private fun shareText(value: Double): String {
+    val rounded = Math.round(value * 10) / 10.0
+    return if (rounded % 1.0 == 0.0) rounded.toLong().toString() else String.format(java.util.Locale.ROOT, "%.1f", rounded)
+}
 
 /** The rules' modifier text over the server's dictionary as it stands now. */
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)

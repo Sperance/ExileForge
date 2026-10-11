@@ -19,7 +19,7 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroSync
-import com.sperance.exileforge.presentation.state.GameSettings
+import com.sperance.exileforge.presentation.state.speedPresses
 import com.sperance.exileforge.rules.content.TrialEvent
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -68,7 +68,7 @@ class TrialActions(
         scope.launch { for (signal in sends) flush() }
     }
 
-    private val speedSteps: Int get() = GameSettings.SPEEDS.indexOf(prefs.settings.value.fightSpeed).coerceAtLeast(0)
+    private val speedSteps: Int get() = speedPresses(world.state.value.content, prefs.settings.value.fightSpeed)
 
     /** «Раш»: ключ раша тратится на раш [region] ступени [tier] (3.96.0, с 0). */
     fun rush(region: String, tier: Int = 0) = enter { api.trials.rush(it, region, tier) }

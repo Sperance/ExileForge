@@ -86,11 +86,16 @@ import kotlinx.serialization.Serializable
     val tree: Map<String, Int> = emptyMap(),
     val treePoints: Int = 0,
     val respecAt: Long = 0,
+    /** Код вступления (4.6.6): шесть цифр - кто их знает, вступает сразу; приходит только ролям с правом приёма. */
+    val code: String? = null,
 ) {
     val leader: GuildMember? get() = members.firstOrNull { it.role == GuildRole.LEADER }
     val officers: Int get() = members.count { it.role == GuildRole.OFFICER }
     fun member(heroId: String): GuildMember? = members.firstOrNull { it.heroId == heroId }
 }
+
+/** Превью приглашения (4.6.6, `guild/lookup`): кого позовёт номер или имя; [guild] - его нынешняя гильдия. */
+@Serializable data class GuildRecruit(val heroId: String, val name: String, val heroClass: String = "", val level: Int = 1, val number: String = "", val guild: String? = null)
 
 /** `guild/mine`: the guild or none, the hero in it, the invitations waiting, and when a leaver may join again (epoch millis). */
 @Serializable data class GuildMine(

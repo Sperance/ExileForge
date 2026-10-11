@@ -10,7 +10,6 @@ import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
-import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.random.Random
@@ -161,8 +160,38 @@ class ExpeditionWorld(
             crystals.mapTo(this) { it.cell }
             cracks.mapTo(this) { it.cell }
             features.forEach { spot -> addAll(spot.landmarks) }
+            // Пропасти (4.6.6): середина каждой - ориентир, скала перед ней прозрачна
+            addAll(chasmMarks)
         }
         return landmarks.filter { explored(it.x, it.y) && !SceneSight.inView(it.x, it.y) { x, y -> !map.clear(x, y) } }
+    }
+
+    /** Тела в скале (4.6.6): круг против клеток со скруглёнными углами, как их рисует сцена. */
+    internal val body = WallBody(map, rules.cornerRadius)
+
+    /** Середины пропастей карты (4.6.6): по клетке на связную пропасть - ближайшая к её центру; считаются раз на карту. */
+    private val chasmMarks: List<Cell> by lazy {
+        val seen = HashSet<Cell>()
+        buildList {
+            for (y in 0 until map.height) {
+                for (x in 0 until map.width) {
+                    val start = Cell(x, y)
+                    if (map.tile(x, y) != com.sperance.exileforge.core.campaign.Tile.CHASM || !seen.add(start)) continue
+                    val part = mutableListOf(start)
+                    var i = 0
+                    while (i < part.size) {
+                        val c = part[i++]
+                        STEPS.forEach { (dx, dy) ->
+                            val n = Cell(c.x + dx, c.y + dy)
+                            if (map.tile(n.x, n.y) == com.sperance.exileforge.core.campaign.Tile.CHASM && seen.add(n)) part += n
+                        }
+                    }
+                    val mx = part.sumOf { it.x }.toDouble() / part.size
+                    val my = part.sumOf { it.y }.toDouble() / part.size
+                    add(part.minBy { hypot(it.x - mx, it.y - my) })
+                }
+            }
+        }
     }
 
     /** Where the guardian stands: the floor nearest the exit, a step or two from it. */
@@ -404,7 +433,7 @@ class ExpeditionWorld(
             boss: RolledMonster?,
             hasPortal: Boolean,
         ): ExpeditionWorld {
-            val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size)
+            val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size, rules.minChasm)
             return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
         }
 

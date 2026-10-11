@@ -9,7 +9,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.platform.withInfiniteAnimationFrameNanos
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -45,8 +45,9 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
         if (!moving) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             var last = 0L
+            // Бесконечный кадр (не `withFrameNanos`): политика бесконечных анимаций (тесты UI) останавливает часы, как прежние переходы
             while (true) {
-                withFrameNanos { now ->
+                withInfiniteAnimationFrameNanos { now ->
                     if (last == 0L) last = now
                     if (now - last >= STEP_NS) {
                         clock.seconds.floatValue += ((now - last) / 1e9f).coerceAtMost(MAX_STEP_S)

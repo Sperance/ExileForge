@@ -40,6 +40,36 @@ tasks.register<JavaExec>("simulateBosses") {
     outputs.upToDateWhen { false }
 }
 
+// Нагрузочный прогон аудита (отчёт, не тест): виртуальные игроки на настоящем клиенте против ЛОКАЛЬНОГО сервера,
+// вне test и ворот CI. Запуск: ./gradlew :core:loadRun -Purl=http://localhost:8081/ -Pplayers=50 -Pseconds=120 -Pprofile=mixed
+val load: SourceSet by sourceSets.creating {
+    compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
+    runtimeClasspath += output + compileClasspath + sourceSets.main.get().runtimeClasspath
+}
+kotlin.target.compilations.getByName("load").associateWith(kotlin.target.compilations.getByName("main"))
+
+tasks.register<JavaExec>("loadRun") {
+    group = "reporting"
+    description = "Load profile against a local server: build/reports/load-<profile>-<players>.md"
+    classpath = load.runtimeClasspath
+    mainClass.set("com.sperance.exileforge.core.load.LoadRunKt")
+    systemProperty("content", rootProject.layout.projectDirectory.dir("backend/src/main/resources/content").asFile.path)
+    listOf("url", "players", "seconds", "profile", "ramp", "speedup", "fightSpeed").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
+    val tag = "${providers.gradleProperty("profile").getOrElse("mixed")}-${providers.gradleProperty("players").getOrElse("20")}"
+    args(layout.buildDirectory.file("reports/load-$tag.md").get().asFile.path)
+    outputs.upToDateWhen { false }
+}
+
+// Пробы эксплойтов аудита против ЛОКАЛЬНОГО сервера (отчёт, не тест): ./gradlew :core:probeRun -Padmin=<пароль> -Pdb=<база>
+tasks.register<JavaExec>("probeRun") {
+    group = "reporting"
+    classpath = load.runtimeClasspath
+    mainClass.set("com.sperance.exileforge.core.load.ExploitProbesKt")
+    systemProperty("content", rootProject.layout.projectDirectory.dir("backend/src/main/resources/content").asFile.path)
+    listOf("url", "admin", "db").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
+    outputs.upToDateWhen { false }
+}
+
 // A failing test in CI is read from the log, not from a report nobody can open: print the stack.
 tasks.withType<Test>().configureEach {
     testLogging {

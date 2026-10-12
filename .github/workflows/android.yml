@@ -1,8 +1,64 @@
 name: Android checks
-on: [push, pull_request, workflow_dispatch]
+on:
+  push:
+    # Правки только документации не собираются; RELEASE_NOTES.md нужен релизу - его правка запускает прогон
+    paths:
+      - '**'
+      - '!**.md'
+      - 'RELEASE_NOTES.md'
+  pull_request:
+  workflow_dispatch:
+
+# Каждый job проверок в своей группе: новый пуш отменяет устаревший прогон, а начатую публикацию (job `release`) - нет.
 jobs:
-  build:
+  # Что затронуто и будет ли релиз: от этого зависят тяжёлые job ниже.
+  changes:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-changes
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      core: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.core == 'true' }}
+      release: ${{ steps.release.outputs.pending }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        if: ${{ github.event_name != 'workflow_dispatch' }}
+        with:
+          # core и закреплённый сервер: от них зависят тесты core и клиент-серверный контракт
+          filters: |
+            core:
+              - 'core/**'
+              - 'backend'
+              - 'scripts/client_server_test.py'
+              - 'gradle/**'
+              - '*.gradle.kts'
+              - 'gradle.properties'
+              - '.github/workflows/android.yml'
+      # Релиз будет, если это пуш и у versionName ещё нет релиза: только тогда собираются R8-сборки и идёт эмулятор.
+      - id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          version=$(sed -n 's/.*versionName = "\(.*\)".*/\1/p' app/build.gradle.kts | head -1)
+          if [ "$GITHUB_EVENT_NAME" = push ] && ! gh release view "v$version" >/dev/null 2>&1; then pending=true; else pending=false; fi
+          echo "pending=$pending" >> "$GITHUB_OUTPUT"
+          echo "v$version: release pending=$pending"
+
+  core:
+    needs: changes
+    if: ${{ needs.changes.outputs.core == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-core
+      cancel-in-progress: true
     permissions:
       contents: read
     steps:
@@ -18,21 +74,122 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          # Рабочая ветка не default: без этого кэш Gradle только читается, и каждый прогон собирает с нуля
+          cache-read-only: false
+          # Неиспользуемые файлы кэша удаляются перед сохранением: кэш не копится до лимита GitHub
+          cache-cleanup: on-success
+      - run: bash gradlew :core:ktlintCheck :core:test
+
+  app:
+    needs: changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-app
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
           # The obsolete 'tools' package is gone from the SDK repository; sdkmanager fails on it.
           packages: 'platform-tools'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          # Рабочая ветка не default: без этого кэш Gradle только читается, и каждый прогон собирает с нуля
           cache-read-only: false
-      - run: chmod +x gradlew
-      - run: ./gradlew :core:ktlintCheck :app:ktlintCheck :core:test :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
-      # Сжатая R8 сборка с инструментальным APK: что R8 унёс лишнего, ловит смоук-тест ниже (4.3.1: единственная проверка R8).
-      - run: ./gradlew :app:assembleMinifiedTest :app:assembleMinifiedTestAndroidTest -PminifiedTests
-      # Подписанный релиз собирается один раз, здесь, и уходит в job `release` артефактом (4.3.1): там больше не пересобирают.
+          cache-cleanup: on-success
+      - run: bash gradlew :app:ktlintCheck :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: exile-forge-debug
+          path: app/build/outputs/apk/debug/*.apk
+      # Инструментальный APK - только эмулятору перед релизом
+      - if: ${{ needs.changes.outputs.release == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-apks-debug
+          path: app/build/outputs/apk/androidTest/debug/*.apk
+          if-no-files-found: error
+          retention-days: 1
+
+  # Сжатая R8 сборка с инструментальным APK: что R8 унёс лишнего, ловит смоук-тест на эмуляторе (4.3.1: единственная проверка R8).
+  minified:
+    needs: changes
+    if: ${{ needs.changes.outputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-minified
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+          cache-cleanup: on-success
+      - run: bash gradlew :app:assembleMinifiedTest :app:assembleMinifiedTestAndroidTest -PminifiedTests
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-apks-minified
+          path: |
+            app/build/outputs/apk/minifiedTest/*.apk
+            app/build/outputs/apk/androidTest/minifiedTest/*.apk
+          if-no-files-found: error
+          retention-days: 1
+
+  # Подписанный релиз собирается один раз, здесь, и уходит в job `release` артефактом (4.3.1): там больше не пересобирают.
+  release-apk:
+    needs: changes
+    if: ${{ needs.changes.outputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-release-apk
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.BACKEND_TOKEN || github.token }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+          cache-cleanup: on-success
       - name: Build signed release APK
-        if: github.event_name == 'push'
         env:
           RELEASE_KEYSTORE: ${{ secrets.RELEASE_KEYSTORE }}
           RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
@@ -43,15 +200,14 @@ jobs:
           if [ -z "$RELEASE_KEYSTORE" ]; then echo "::error::RELEASE_KEYSTORE secret is missing"; exit 1; fi
           echo "$RELEASE_KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
           export RELEASE_KEYSTORE_PATH="$RUNNER_TEMP/release.jks"
-          ./gradlew :app:assembleRelease
+          bash gradlew :app:assembleRelease
           apk=app/build/outputs/apk/release/app-release.apk
           signer=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
           "$signer" verify --print-certs "$apk" | tee signer.txt
           expected=$(keytool -list -v -keystore "$RUNNER_TEMP/release.jks" -storepass "$RELEASE_KEYSTORE_PASSWORD" -alias "$RELEASE_KEY_ALIAS" | sed -n 's/.*SHA256: *//p' | tr -d ':' | tr 'A-F' 'a-f')
           grep -qi "SHA-256 digest: $expected" signer.txt || { echo "::error::APK is not signed with the release key"; exit 1; }
           rm -f "$RUNNER_TEMP/release.jks"
-      - if: github.event_name == 'push'
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: exile-forge-release
           path: |
@@ -59,18 +215,62 @@ jobs:
             app/build/outputs/mapping/release/mapping.txt
           if-no-files-found: error
           retention-days: 7
-      - uses: actions/upload-artifact@v4
+
+  # UI-тесты и смоук R8 - только перед релизом: собранные APK приходят артефактами, Gradle здесь не нужен.
+  emulator:
+    needs: [ changes, app, minified ]
+    if: ${{ needs.changes.outputs.release == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-emulator
+      cancel-in-progress: true
+    permissions:
+      contents: read
+    env:
+      API_LEVEL: 35
+    steps:
+      - uses: actions/download-artifact@v4
         with:
           name: exile-forge-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: app/build/outputs/apk/debug
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-apks-debug
+          path: app/build/outputs/apk/androidTest/debug
+      - uses: actions/download-artifact@v4
+        with:
+          name: ui-apks-minified
+          path: app/build/outputs/apk
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
+      # Снимок загруженного эмулятора в кэше: прогон стартует из него, а не с холодной загрузки
+      - uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-${{ env.API_LEVEL }}-x86_64-pixel_2
+      - name: Create AVD snapshot
+        if: ${{ steps.avd-cache.outputs.cache-hit != 'true' }}
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: ${{ env.API_LEVEL }}
+          arch: x86_64
+          profile: pixel_2
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "AVD snapshot generated"
       - name: Run UI checks on Android
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 35
+          api-level: ${{ env.API_LEVEL }}
           arch: x86_64
           profile: pixel_2
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
             adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -97,9 +297,16 @@ jobs:
         run: python3 -c "import base64,pathlib; print('HERO_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/hero.jpg').read_bytes()).decode()); print('HERO_IMAGE_END')"
       - name: Narrow screen preview in verification log
         run: python3 -c "import base64,pathlib; print('NARROW_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/narrow.jpg').read_bytes()).decode()); print('NARROW_IMAGE_END')"
+
   client-server:
+    needs: changes
+    # Контракт зависит от core и закреплённого сервера; перед релизом - всегда
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.release == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-client-server
+      cancel-in-progress: true
     permissions:
       contents: read
     steps:
@@ -107,9 +314,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: true
-          # Вся история сабмодуля: версию закреплённого сервера Gradle считает по коммитам backend/ (3.88.2)
           fetch-depth: 0
-          # Сервер - приватный репозиторий (3.88.4): токен с Contents: read на ExileForge и ktor-bestgame; без секрета - токен прогона
           token: ${{ secrets.BACKEND_TOKEN || github.token }}
       - uses: actions/setup-java@v4
         with:
@@ -117,8 +322,8 @@ jobs:
           java-version: '21'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          # Рабочая ветка не default: без этого кэш Gradle только читается, и каждый прогон собирает с нуля
           cache-read-only: false
+          cache-cleanup: on-success
       - run: bash gradlew installDist
         working-directory: backend
       - uses: actions/setup-java@v4
@@ -127,7 +332,6 @@ jobs:
           java-version: '17'
       - uses: android-actions/setup-android@v3
         with:
-          # The obsolete 'tools' package is gone from the SDK repository; sdkmanager fails on it.
           packages: 'platform-tools'
       - name: Start isolated MongoDB
         # The backend pins mongodb://localhost:27017 in code, and its transactions need a replica set.
@@ -156,11 +360,13 @@ jobs:
             core/build/reports/tests
             core/build/test-results
             build/client-server.log
-  # After both checks pass on a push, a versionName with no release yet is built, signed and published (3.68.2):
-  # tag v<versionName> on this commit, the release APK attached, the notes from RELEASE_NOTES.md (3.69.0).
+
+  # After all checks pass on a push, a versionName with no release yet is published (3.68.2): tag v<versionName> on this
+  # commit, the release APK from `release-apk` attached, the notes from RELEASE_NOTES.md (3.69.0).
+  # Пропущенные по фильтру проверки (core без изменений) релиз не держат; упавшие или отменённые - держат.
   release:
-    needs: [build, client-server]
-    if: github.event_name == 'push'
+    needs: [ changes, core, app, minified, release-apk, emulator, client-server ]
+    if: ${{ !cancelled() && needs.changes.outputs.release == 'true' && !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -172,7 +378,7 @@ jobs:
       # token — which works only when Settings → Actions → General → Workflow permissions is «Read and write».
       GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
     steps:
-      # Публикации нужны только заметки, версии и ревизии из исходников: без истории, сборка - артефакт job `build`.
+      # Публикации нужны только заметки, версии и ревизии из исходников: без истории, сборка - артефакт job `release-apk`.
       - uses: actions/checkout@v4
         with:
           submodules: true
@@ -214,6 +420,15 @@ jobs:
           ' > update.json
           cat update.json
           gh release create "$tag" "$apk" update.json --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file RELEASE_NOTES.md --latest
+      # Сервер с новым API ждёт этот релиз (1.81.5): опубликовали - запускаем его деплой, он выкатит проверенный образ
+      # головы рабочей ветки сервера. SERVER_DEPLOY_TOKEN - токен с Actions: write на ktor-bestgame.
+      - if: steps.version.outputs.exists == 'false'
+        name: Trigger the server deploy
+        env:
+          GH_TOKEN: ${{ secrets.SERVER_DEPLOY_TOKEN }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "::warning::SERVER_DEPLOY_TOKEN is missing: run the server deploy by hand if its API waited for this release"; exit 0; fi
+          gh workflow run deploy.yml -R Sperance/ktor-bestgame --ref claude/tender-pasteur-a36kj2
       # Карта R8 (3.84.2): стеки из журнала запуска расшифровываются ею. Не в релизе для игроков - артефактом прогона.
       - if: steps.version.outputs.exists == 'false'
         uses: actions/upload-artifact@v4

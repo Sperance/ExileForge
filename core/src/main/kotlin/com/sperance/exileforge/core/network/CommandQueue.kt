@@ -131,9 +131,10 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         /**
          * The commands that never wait here: the session's own, and the run's journal, which keeps its own retry. Выбор
          * Предначертания (4.6.0) - тоже: он навсегда, экран выбора ждёт ответа сам, а не очереди. Письмо герою (4.6.3): окно
-         * письма ждёт ответа - отказ (немота, пределы, полный ящик) виден сразу, а не письмом, ушедшим вслепую потом.
+         * письма ждёт ответа - отказ (немота, пределы, полный ящик) виден сразу, а не письмом, ушедшим вслепую потом. Испытания
+         * (4.8.x): журнал и шаг Разлома повторяются сами под своим ключом - очередь слала бы их копию вторым, чужим ключом.
          */
-        private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/", "api/v1/fate/", "api/v1/mail/letter")
+        private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/", "api/v1/hero/trials/", "api/v1/fate/", "api/v1/mail/letter")
 
         /**
          * Commands whose outcome is rolled (3.55.0): an orb, an Atlas seal (4.6.4), an essence, an unveiling or a chosen line, a bench craft, a

@@ -10,14 +10,18 @@ import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.SanctionRequest
+import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.rules.roll.ItemBuckets
+import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -95,7 +99,21 @@ class ServerIntegrationTest {
             // The run: a seed from the server, the same zone here, the journal paid on replay — every reward rolled by the server alone.
             // Открытые зоны клиент считает сам по правилам (3.94.1): у нового героя пройденных нет.
             val zoneCode = index.world.unlocked(emptyList()).first()
-            val start = api.campaign.start(heroId, zoneCode)
+            // Ваал-зона живёт только в своём заходе (сервер 4.8.x): новый заход без выхода прежде оставлял её открытой,
+            // и каждое новое семя ставило в неё свежие стаи. Портал - насильной механикой администратора.
+            if (index.zone(zoneCode)!!.corrupted.value.isNotBlank()) {
+                val vaal = api.campaign.start(heroId, zoneCode, forced = setOf(MapMechanic.VAAL))
+                assertEquals(1, assertNotNull(api.campaign.events(heroId, vaal.id, listOf(RunEvent.VaalOpen(0)))).applied)
+                assertEquals(zoneCode, HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).campaign.vaalZone?.mapCode)
+            }
+            // Новое семя - не чаще `run.newSeedSeconds`: ждём его (CP_021)
+            var entered = runCatching { api.campaign.start(heroId, zoneCode) }
+            while ((entered.exceptionOrNull() as? ApiFailure)?.code == "CP_021") {
+                delay(2_000)
+                entered = runCatching { api.campaign.start(heroId, zoneCode) }
+            }
+            val start = entered.getOrThrow()
+            assertEquals(null, start.context.vaal, "the Vaal zone of a replaced run stayed open")
             assertEquals(start.id, api.campaign.start(heroId, zoneCode).id, "entering the zone again did not go on with its run")
             val run = Run(index, index.zone(zoneCode)!!, start.seed, start.context)
             assertEquals(run.count, start.count, "the client and the server count the zone differently")
@@ -119,6 +137,23 @@ class ServerIntegrationTest {
             assertTrue(api.auction.search(heroId, AuctionFilter(), listOf("")).items.any { it.id == lot.id })
             assertEquals(LotStatus.CANCELLED, api.auction.cancel(heroId, lot.id).lot?.status)
             assertEquals(held, chaos())
+
+            // Лот героя под баном не продаётся и по прямому id; вещь без места в тайнике и переполнении - отказ CH_020, а не
+            // продажа купленного торговцу (сервер 4.8.x). Продавец - отдельный игрок по устройству.
+            val trader = GameApi(url)
+            val traderHero = trader.hero.create(trader.loginByDevice(null, "contract-trader").id.also { trader.fated() }, "Trader", "", heroClass).id
+            val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
+            listOf(heroId, traderHero).forEach { api.hero.grant(it, "level", "level" to auctionLevel.toString()) }
+            api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 2)
+            suspend fun listed() = assertNotNull(trader.auction.sellEquipment(traderHero, api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE).id, Orb.CHAOS_ORB.name, 1).lot).id
+            val open = listed()
+            val banned = listed()
+            val ban = api.moderation.ban(SanctionRequest(SanctionTarget.HERO, heroId = traderHero, hours = 1, comment = "contract"))
+            assertEquals("AU_004", assertFailsWith<ApiFailure> { api.auction.buy(heroId, banned) }.code)
+            api.moderation.lift(ban.id)
+            val stash = index.rules.stash
+            repeat((stash.baseSlots + stash.overflowSlots) / TESTER_BATCH + 1) { api.hero.grant(heroId, "rares", "count" to TESTER_BATCH.toString()) }
+            assertEquals("CH_020", assertFailsWith<ApiFailure> { api.auction.buy(heroId, open) }.code)
 
             // A code is a treasure once.
             val code = api.promo.create(RedemptionCode(code = "CONTRACT-${System.currentTimeMillis()}", treasure = listOf(RedemptionReward.Gold(100))))
@@ -144,6 +179,9 @@ class ServerIntegrationTest {
         }
     }
 }
+
+/** Сколько вещей выдаёт тестировщику один запрос `grant/rares` (`TESTER_MAX_BATCH` сервера по умолчанию). */
+private const val TESTER_BATCH = 50
 
 /** Предначертание аккаунта выбрано (4.6.0): невыбранное - первый из трёх предложенных, выбранное остаётся. */
 private suspend fun GameApi.fated() {

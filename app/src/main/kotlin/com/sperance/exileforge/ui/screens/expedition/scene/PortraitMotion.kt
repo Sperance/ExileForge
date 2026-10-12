@@ -1,16 +1,12 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
-import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.components.decorSeconds
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -103,15 +99,9 @@ internal fun DrawScope.portraitSparks(t: Float, count: Int, color: Color) {
     }
 }
 
-/** Часы живого портрета (3.96.1): секунды для [LivingPortraits] у живого монстра при включённых анимациях, иначе - покой. */
+/**
+ * Часы живого портрета (3.96.1): секунды для [LivingPortraits] у живого монстра при включённых анимациях, иначе - покой. С 4.8.x -
+ * общие часы декора ([decorSeconds]), а не свой цикл кадров.
+ */
 @Composable
-internal fun portraitClock(code: String): Float {
-    val moving = LocalMotion.current && LivingPortraits.animated(code)
-    val time = remember(code) { mutableFloatStateOf(0f) }
-    LaunchedEffect(code, moving) {
-        if (!moving) return@LaunchedEffect
-        val start = withFrameNanos { it }
-        while (true) withFrameNanos { now -> time.floatValue = (now - start) / 1e9f }
-    }
-    return time.floatValue
-}
+internal fun portraitClock(code: String): Float = if (LivingPortraits.animated(code)) decorSeconds() else 0f

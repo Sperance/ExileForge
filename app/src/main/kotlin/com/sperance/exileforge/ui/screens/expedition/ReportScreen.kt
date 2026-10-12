@@ -42,13 +42,13 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.presentLoot
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.components.decorSeconds
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.expedition.arena.FightLog
 import com.sperance.exileforge.ui.screens.expedition.arena.LogShelves
 import com.sperance.exileforge.ui.screens.expedition.arena.outcomeColour
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
-import com.sperance.exileforge.ui.screens.expedition.arena.rememberClock
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -128,7 +128,8 @@ import java.util.Locale
 @Composable private fun FieldHead(report: FightReport, won: Boolean) {
     val expedition: ExpeditionViewModel = koinViewModel()
     val monster = report.monster
-    val time by rememberClock()
+    // Дыхание портрета - декор (4.8.x): общие часы декора, при выключенных анимациях - покой
+    val time = decorSeconds()
     val glow = if (won) Color(0xFF3B2A17) else Color(0xFF3B1717)
     Box(
         Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(8.dp)).background(Brush.radialGradient(listOf(glow, Ink))),

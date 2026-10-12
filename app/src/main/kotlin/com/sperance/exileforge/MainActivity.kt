@@ -33,7 +33,9 @@ class MainActivity : ComponentActivity() {
     /** Громкость↑ и Громкость↓ вместе (4.8.0): снимок окна, пока лист отчёта ещё не открыт, затем сам лист. */
     private val chord = VolumeChord { lifecycleScope.launch { shell.requestBug(ScreenCapture.capture(window)) } }
 
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean = chord.onKey(event) || super.dispatchKeyEvent(event)
+    override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = chord.onKey(event) || super.onKeyDown(keyCode, event)
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent): Boolean = chord.onKey(event) || super.onKeyUp(keyCode, event)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

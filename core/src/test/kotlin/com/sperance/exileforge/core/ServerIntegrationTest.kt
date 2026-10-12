@@ -132,8 +132,6 @@ class ServerIntegrationTest {
             // The auction takes the item out of the hero and gives it back on cancel: the run's loot may hold the starter's
             // orbs too, so the count is compared with itself before the lot, not with a fixed figure.
             suspend fun bag(code: String) = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).bag[code] ?: 0L
-            // Выданное (сервер 4.9.0) другим героям не уходит: выданную сферу на аукцион не выставить, свою - можно
-            assertEquals("GR_001", assertFailsWith<ApiFailure> { api.auction.sellItem(heroId, Orb.CHAOS_ORB.name, bag(Orb.CHAOS_ORB.name), Orb.CHAOS_ORB.name, 1) }.code)
             val starterOrb = Orb.ORB_OF_TRANSMUTATION.name
             val held = bag(starterOrb)
             val lot = assertNotNull(api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1).lot)
@@ -149,7 +147,7 @@ class ServerIntegrationTest {
             val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
             listOf(heroId, traderHero).forEach { api.hero.grant(it, "level", "level" to auctionLevel.toString()) }
             api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 2)
-            // Выданное не выставляется (сервер 4.9.0): продавец ставит свою стартовую вещь и свою стартовую сферу
+            // Выданная вещь не выставляется (сервер 4.9.0): продавец ставит свою стартовую вещь; стопки выдачей не помечаются
             assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE).id, Orb.CHAOS_ORB.name, 1) }.code)
             val starter = HeroParts(traderHero).merge(assertNotNull(trader.hero.view(traderHero, HeroParts(traderHero)))).items.first { !it.granted }
             if (starter.equipped) trader.hero.unequip(traderHero, starter.id)

@@ -194,11 +194,8 @@ internal fun compactCount(amount: Long): String = when {
     val seal = game.index?.seal(code) != null
     // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.
     val chest = game.index?.item(ItemCode(code))?.category == Item.CHEST
-    // Выданное (4.9.0): эти штуки другим героям не уходят - аукцион берёт только свои
-    val granted = game.grantedAmount(code)
     StackPanel(onDismiss) {
         StackFace(game, code, stack.amount)
-        if (granted > 0) MutedText(ui("bag.granted", granted))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (forgeable) {
                 ForgeButton(enabled = !game.busy, onClick = { onForge(code) }, modifier = Modifier.weight(1f)) {
@@ -225,7 +222,7 @@ internal fun compactCount(amount: Long): String = when {
                     Text(ui("chest.open"))
                 }
             }
-            ForgeOutlinedButton(enabled = !game.busy && game.freeAmount(code) > 0, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
+            ForgeOutlinedButton(enabled = !game.busy, onClick = { onAuction(code) }, modifier = Modifier.weight(1f)) {
                 Text(ui("hero.action_auction"))
             }
         }

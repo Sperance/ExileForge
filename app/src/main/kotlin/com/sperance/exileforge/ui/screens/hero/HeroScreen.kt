@@ -164,8 +164,7 @@ fun HeroScreen() {
     }
     game.holding.chest?.let { opening -> ChestOpenedSheet(game, opening, model::dismissChest) }
     listStack?.let { code ->
-        // На аукцион - только свои штуки (4.9.0): выданные другим героям не уходят
-        ListingSheet(game, itemTitle(code), owned = game.freeAmount(code), onDismiss = { listStack = null }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount ->
+        ListingSheet(game, itemTitle(code), owned = game.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount ->
             listStack = null
             model.sellItem(code, amount, orb, price)
         }

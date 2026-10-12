@@ -235,12 +235,10 @@ private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onT
                 }) { Text(ui("pets.to_forge")) }
                 // Работающего питомца не продать (CH_039): сначала отдых.
                 if (!active) {
-                    // Выданный питомец (4.9.0) другим героям не уходит: аукцион погашен, причина - под кнопками
-                    ForgeOutlinedButton(onClick = { listing = true }, enabled = !game.busy && !pet.granted) { Text(ui("hero.action_auction")) }
+                    ForgeOutlinedButton(onClick = { listing = true }, enabled = !game.busy) { Text(ui("hero.action_auction")) }
                     ForgeTextButton(onClick = { selling = true }, enabled = !game.busy) { Text(ui("pets.sell"), color = LifeRed) }
                 }
             }
-            if (pet.granted) Text(ui("pets.granted_hint"), color = Muted, style = MaterialTheme.typography.bodySmall)
         }
     }
     if (hiring) {

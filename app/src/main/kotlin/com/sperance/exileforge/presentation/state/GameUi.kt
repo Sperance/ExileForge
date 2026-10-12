@@ -91,12 +91,6 @@ data class GameUi(
     /** How many of one stacking item the hero holds, or null while the hero has not been read. */
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
 
-    /** Сколько штук стопки [code] выдано (4.9.0): их нельзя выставить на аукцион и положить на склад гильдии. */
-    fun grantedAmount(code: String): Long = hero?.let { (it.info.granted[code] ?: 0L).coerceIn(0L, it.bag[code] ?: 0L) } ?: 0L
-
-    /** Сколько штук стопки [code] своих, не выданных (4.9.0): только они уходят другим героям. */
-    fun freeAmount(code: String): Long = (bagAmount(code) ?: 0L) - grantedAmount(code)
-
     /** Чего герою не хватает на [cost] (3.89.0); null, пока герой не прочитан. */
     fun shortfall(cost: Cost): Shortfall? = hero?.let { h -> cost.shortfall({ h.bag[it] ?: 0L }, h.money) }
     val orbs: List<Item> get() = HeroLens.orbs(index)

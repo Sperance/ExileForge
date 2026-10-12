@@ -277,9 +277,9 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
 @Composable
 private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
     val hero = game.hero ?: return
-    // Выданное (4.9.0) другим героям не уходит: на склад - только свои вещи и свои штуки стопок
+    // Выданная вещь (4.9.0) другим героям не уходит: на склад - только свои вещи
     val loose = hero.items.filter { !it.equipped && !it.socketed && !it.locked && !it.granted }
-    val stacks = hero.bag.keys.filter { game.freeAmount(it) > 0 }.sortedBy { itemTitle(it) }
+    val stacks = hero.bag.filterValues { it > 0 }.keys.sortedBy { itemTitle(it) }
     var stack by remember { mutableStateOf<String?>(null) }
     var amount by remember { mutableStateOf("1") }
     val inspect = rememberInspect()
@@ -294,13 +294,13 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
                         OutlinedTextField(
                             amount,
                             { amount = it.filter(Char::isDigit).take(12) },
-                            label = { Text(ui("sell.amount_owned", game.freeAmount(code))) },
+                            label = { Text(ui("sell.amount_owned", hero.bag[code] ?: 0L)) },
                             singleLine = true,
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth(),
                         )
                         val count = amount.toLongOrNull() ?: 0L
-                        HoldButton(put, Gold, enabled = !game.busy && count in 1..game.freeAmount(code)) { onPut(null, code, count) }
+                        HoldButton(put, Gold, enabled = !game.busy && count in 1..(hero.bag[code] ?: 0L)) { onPut(null, code, count) }
                     }
                 }
             }

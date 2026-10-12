@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ItemTemplate
@@ -11,14 +12,14 @@ import com.sperance.exileforge.rules.roll.QualityKind
 
 /**
  * Сфера качества над вещью (4.3.0) словами игрока: что поднимет вид качества, который даёт знамение [omen] (катализатор или
- * никакого - база), и сколько накопленного качества другого вида сбросится. Решают правила ([QualityKind]); null - вид не
- * ложится, тогда причину говорит отказ правил.
+ * никакого - база), и сколько накопленного качества другого вида сбросится. Решают правила ([QualityKind]).
+ * Вид не ложится (4.8.0: бижутерия без базы без катализатора) - [refusal]: отказ правил словами сервера (`CR_038`/`CR_039`).
  */
-class QualityForecast(val raises: String, val lost: Int) {
+class QualityForecast(val raises: String, val lost: Int, val refusal: String? = null) {
     companion object {
-        fun of(index: ContentIndex, item: ItemInstance, template: ItemTemplate, omen: Omen?): QualityForecast? {
+        fun of(index: ContentIndex, item: ItemInstance, template: ItemTemplate, omen: Omen?): QualityForecast {
             val kind = QualityKind.of(omen)
-            val gain = kind.gain(item, template, index) ?: return null
+            val gain = kind.gain(item, template, index) ?: return QualityForecast("", 0, refusalText(kind.refusal(template)))
             return QualityForecast(raises(index, gain), QualityKind.lost(item, kind))
         }
 

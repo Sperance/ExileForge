@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.rules.text.ModifierText
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -192,6 +193,13 @@ object SkillText {
             Op.SET -> ui("skill.stat_set", statTitle(stat), size)
         }
     }
+
+    /**
+     * Строка, что фляга кладёт на героя на время глотка (4.8.0): [statLine] и хвост словаря сервера [ModifierText.DRAUGHT]
+     * («во время действия») - тот же, что печатает строку фляги на карточке.
+     */
+    fun draughtLine(stat: String, operation: Op, value: Double): String = listOf(statLine(stat, operation, value), locOr(ModifierText.DRAUGHT, ""))
+        .filter(String::isNotBlank).joinToString(" ")
 
     /** A skill's price in mana at [level], as the book prints it. */
     fun cost(mana: Scale?, level: Int): String? = mana?.let { number(it.at(level)) }

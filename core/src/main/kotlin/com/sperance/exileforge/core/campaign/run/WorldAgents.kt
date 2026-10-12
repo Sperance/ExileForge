@@ -10,8 +10,11 @@ import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.random.Random
 
-/** What a monster is doing on the map, between fights. */
-enum class AgentMode { IDLE, ASLEEP, LURKING, CHASING, HUNTING, RETURNING }
+/**
+ * What a monster is doing on the map, between fights; [pursues] - it is after the hero (4.8.0): a fight anywhere on the map
+ * draws it in, however far ([gathered]).
+ */
+enum class AgentMode(val pursues: Boolean = false) { IDLE, ASLEEP, LURKING, CHASING(pursues = true), HUNTING(pursues = true), RETURNING }
 
 /**
  * A monster walking the map: where it lives, where it is going, and whether it is still there.
@@ -27,8 +30,11 @@ class MonsterAgent(
     val homeY: Double,
     /** The guardian of a crystal of essences: which one of the map's, by its place; null for everyone else. */
     val crystal: Int? = null,
-    /** Обычная стая карты (4.4.1): её бой собирает соседние такие же; босс, стражи и стаи объектов карты бьются одни. */
-    val ordinary: Boolean = false,
+    /**
+     * Стая вступает в общую свалку (4.4.1; 4.8.0 - и призванные стаи объектов карты): её бой собирает соседние такие же, и
+     * она идёт в чужой. Босс, страж кристалла и Бездна - false: у их боя своя механика, они бьются одни.
+     */
+    val joinsBrawl: Boolean = true,
 ) {
     val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
     val rule: BehaviourRule get() = monster.behaviour

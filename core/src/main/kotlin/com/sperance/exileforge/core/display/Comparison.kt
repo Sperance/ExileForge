@@ -57,7 +57,14 @@ class Comparison(lines: List<ComparisonLine>) {
                     statTitle(it.stat),
                     statValue(it.stat, it.before, index),
                     statValue(it.stat, it.after, index),
-                    if (multiplier) factorChange((100 + it.after) / (100 + it.before)) else signed(it.change) { size -> statValue(it.stat, size, index) },
+                    when {
+                        multiplier -> factorChange((100 + it.after) / (100 + it.before))
+
+                        // Флаг (4.8.0) не прибавляется: разница - его новая отметка
+                        statFlag(it.stat, index) -> statValue(it.stat, it.after, index)
+
+                        else -> signed(it.change) { size -> statValue(it.stat, size, index) }
+                    },
                     it.change > 0,
                     StatPriority.rank(it.stat),
                     share(it.before, it.after),

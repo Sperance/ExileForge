@@ -50,33 +50,17 @@ fun GameUi.chronicleDone(): Pair<Int, Int>? {
  *
  * A page of the «Развитие» tab since 3.69.0, opened from its tile; it was a card and a sheet on the Hero tab.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ChronicleScreen(game: GameUi, vm: HeroViewModel) {
     val hero = game.hero ?: return
     val achievements = game.index?.achievements ?: return
     val values = hero.chronicle
-    val titles = achievements.titles(values)
     // The statistics (3.51.0) are read apart, when the page opens: hundreds of figures ride with no hero snapshot.
     val stats by produceState<Map<String, Long>?>(null, hero.id) { value = vm.heroStats(hero.id) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            hero.info.title.takeIf { it.isNotBlank() }?.let(::titleName) ?: ui("chronicle.no_title"),
-            color = if (hero.info.title.isNotBlank()) GoldBright else Muted,
-            style = MaterialTheme.typography.titleMedium,
-        )
+        CurrentTitle(hero.info.title)
         game.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
-        Engraved(ui("chronicle.titles"))
-        if (titles.isEmpty()) {
-            MutedText(ui("chronicle.no_titles"))
-        } else {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                FilterChip(selected = hero.info.title.isBlank(), enabled = !game.busy, onClick = { vm.setTitle("") }, label = { Text(ui("chronicle.no_title")) })
-                titles.forEach { code ->
-                    FilterChip(selected = hero.info.title == code, enabled = !game.busy, onClick = { vm.setTitle(code) }, label = { Text(titleName(code)) })
-                }
-            }
-        }
+        TitleGallery(achievements.achievements, values, hero.info.title, enabled = !game.busy, onPick = vm::setTitle)
         // Only what the hero has begun: an untouched achievement or counter is noise, not a record.
         val begun = achievements.achievements.filter { (values[it.counter] ?: 0L) > 0L }
         Engraved(ui("chronicle.achievements"))

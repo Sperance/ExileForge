@@ -75,6 +75,8 @@ fun ItemRow(
     verdict: GearVerdict? = null,
     /** Удержание строки (3.91.0): пометка к продаже в заходе или карточка там, где нажатие отмечает. */
     onLongClick: (() -> Unit)? = null,
+    /** Свёртка строк вещи (4.8.0): все сразу или под чипом «Свойства · N». */
+    lines: LineFold = LineFold.OPEN,
     onClick: () -> Unit,
 ) {
     val look = relicLook(item.rarity)
@@ -149,12 +151,9 @@ fun ItemRow(
                     QualityBadge(item, compact = true)
                 }
                 if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                if (item.lines.isNotEmpty()) {
-                    // Каждая строка вещи (2.72.0, со значком тира с 3.88.6): тайник читают сверху вниз, не открывая карточек.
-                    Column(Modifier.padding(start = 2.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        item.lines.forEach { RelicModLine(it, null, big = false) }
-                    }
-                }
+                // Каждая строка вещи (2.72.0, со значком тира с 3.88.6): тайник читают сверху вниз, не открывая карточек;
+                // витрина аукциона сворачивает свойства легенд (4.8.0, [lines]).
+                if (item.lines.isNotEmpty()) FoldedLines(item.lines, lines, look)
             }
             footer?.invoke(this)
         }

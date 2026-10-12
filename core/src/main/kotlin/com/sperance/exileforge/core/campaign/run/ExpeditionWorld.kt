@@ -59,7 +59,7 @@ class ExpeditionWorld(
     internal val random = Random(seed)
 
     /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
-    val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(packs.size, listOf(monster), cell.x + 0.5, cell.y + 0.5) } }
+    val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(packs.size, listOf(monster), cell.x + 0.5, cell.y + 0.5, joinsBrawl = false) } }
 
     /**
      * The Vaal portal (since 2.65.0), if this run rolled one — away from the everyday spawns and the
@@ -79,7 +79,7 @@ class ExpeditionWorld(
     /** Монстры карты: жетоны, босс и стаи подкрепления алтаря (3.90.0), что встают посреди захода ([summon]). */
     private val roster: MutableList<MonsterAgent> = (
         packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
-            MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5, ordinary = true).also { agent ->
+            MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
                 if (agent.monster.behaviour.type == Behaviours.PATROL) agent.patrol = patrolEnd(cell, agent.monster.behaviour.wanderRadius)
             }
         } + listOfNotNull(boss)

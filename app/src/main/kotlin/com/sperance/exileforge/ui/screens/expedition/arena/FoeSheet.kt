@@ -31,6 +31,7 @@ import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.SlotView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.mightText
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseText
@@ -75,6 +76,7 @@ private enum class FoeTab(val key: String) { STATS("fight.tab_stats"), SKILLS("f
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(name, color = rarityTint(foe.monster.rarity), fontFamily = FontFamily.Serif, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 MutedText(listOf(ui(foe.monster.rarity.key()), ui("fight.level", level)).joinToString(" · "), style = MaterialTheme.typography.labelMedium)
+                FoeSheetMight(foe)
             }
             ScrollableTabRow(selectedTabIndex = tabs.indexOf(tab).coerceAtLeast(0), containerColor = PanelRaised, contentColor = Gold, edgePadding = 12.dp) {
                 tabs.forEach { t -> Tab(selected = t == tab, onClick = { tab = t }, text = { Text(ui(t.key)) }) }
@@ -91,6 +93,18 @@ private enum class FoeTab(val key: String) { STATS("fight.tab_stats"), SKILLS("f
                 }
             }
         }
+    }
+}
+
+/** Мощь врага в его листе (4.8.0): печать, число и как он стоит против героя словами - «сильнее на 27%». Не прогноз боя. */
+@Composable private fun FoeSheetMight(foe: FoeView) {
+    val might = LocalFightMight.current ?: return
+    val reading = might.of(foe.monster)
+    val tint = might.standing(reading).tint()
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        MightSeal(reading, size = 16.dp)
+        Text(ui("might.of", mightText(reading.value)), color = tint, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+        if (might.hero != null) Text(might.standingText(reading), color = tint, style = MaterialTheme.typography.labelSmall)
     }
 }
 

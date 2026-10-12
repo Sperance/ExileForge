@@ -146,6 +146,8 @@ import org.koin.compose.viewmodel.koinViewModel
     // Системные листы (4.7.0): отчёт об ошибке и настройки - и из оболочки, и из меню забега
     val sheets = remember { com.sperance.exileforge.ui.components.SystemSheets() }
     val drafts = koinInject<DraftStore>()
+    // Снимок к отчёту (4.8.0): снят до листа - аккордом громкости в Activity или здесь, когда лист открыли жук и меню забега
+    val bugShot = com.sperance.exileforge.ui.components.rememberBugShot(sheets, shell.bugRequests)
     // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
     var suggestionsOpen by remember { mutableStateOf(false) }
     var mailOpen by remember { mutableStateOf(false) }
@@ -198,7 +200,7 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     // Настройки поверх забега (4.7.0): из оболочки они - экран стека, из меню забега - этот лист, забег под ним держится
     if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
-    if (sheets.bug) {
+    if (sheets.bug && bugShot.ready) {
         BugSheet(
             game,
             route,
@@ -206,7 +208,8 @@ import org.koin.compose.viewmodel.koinViewModel
             drafts,
             onDismiss = { sheets.bug = false },
             onSuggestions = { suggestionsOpen = true },
-            onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
+            shot = bugShot.shot,
+            onSend = { report, shot -> shell.reportBug(report, shot) { drafts.clear(report.kind) } },
         )
     }
     if (suggestionsOpen) SuggestionsSheet { suggestionsOpen = false }

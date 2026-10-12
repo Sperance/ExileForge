@@ -76,7 +76,9 @@ import com.sperance.exileforge.ui.theme.*
     val view = lot.equipment?.let { game.view(it) }
     // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet says why instead of its facts.
     if (view != null) {
-        ItemTradeRow(view, enabled = !game.busy, unmet = lotUnmet(game, lot), extra = seller, mark = mark, onClick = onClick, price = price)
+        // Свойства легенд свёрнуты (4.8.0), пока игрок не велел раскрывать их в фильтрах.
+        val lines = LineFold.legend(view, LocalSettings.current.legendsOpen)
+        ItemTradeRow(view, enabled = !game.busy, unmet = lotUnmet(game, lot), extra = seller, mark = mark, lines = lines, onClick = onClick, price = price)
     } else {
         TradeRow(
             lot.title,

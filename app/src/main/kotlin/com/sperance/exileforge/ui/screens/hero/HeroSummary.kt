@@ -18,7 +18,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.display.Glyph
-import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.number
@@ -29,16 +28,14 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.figures
 import com.sperance.exileforge.presentation.state.manaReserve
+import com.sperance.exileforge.presentation.state.might
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
-import com.sperance.exileforge.rules.content.StatGroup
 import com.sperance.exileforge.rules.content.StatSection
-import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Shift
-import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.MightPanel
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
-import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
@@ -49,7 +46,7 @@ import com.sperance.exileforge.ui.theme.*
  *
  * The first of the Hero tab's three sections. Nothing here is a command — it is the sheet a player
  * reads before deciding what to wear, whole and in place rather than behind another tap. Раздел строки (4.6.5) - `section`
- * характеристики в контенте, «Прочего» нет; силы уникальных - блок «Силы снаряжения» (макет «Силы снаряжения», вариант B).
+ * характеристики в контенте, «Прочего» нет.
  *
  * 4.6.4 (макет «Сводка характеристик», вариант A): цифры - лист боя ([com.sperance.exileforge.core.campaign.CombatSheet]) с аурами и
  * Предначертанием. Дар и его текст - лента над сводкой, своей карточки дара в сводке нет (4.6.5).
@@ -57,46 +54,9 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun HeroSummary(game: GameUi) {
     val hero = game.hero ?: return
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Мощь (4.8.0, макет A+B): печать над сводкой - из того же листа боя без карты, что и цифры
+        hero.might?.let { MightPanel(it) }
         StatSheet(game, hero.figures)
-        GearPowers(game)
-    }
-}
-
-/** Сила надетой вещи (4.6.5): строка `POWER_*` фразой сервера и вещь, что её несёт. */
-private data class GearPower(val text: String, val item: ItemInstance, val title: String)
-
-/**
- * «Силы снаряжения» (4.6.5, макет «Силы снаряжения», вариант B): силы надетых уникальных и мифических вещей фразами, вещь - мелко
- * справа; нажатие открывает карточку вещи. Числа сил, что меняют характеристики, уже в строках сводки и их разборе.
- */
-@Composable private fun GearPowers(game: GameUi) {
-    val hero = game.hero ?: return
-    val index = game.index ?: return
-    val powers = remember(hero.items, index, game.lang) {
-        hero.items.filter { it.equipped }.mapNotNull { ItemView.of(it, index) }.flatMap { view ->
-            view.lines.filter { line -> line.stats.any { index.stats[it]?.group == StatGroup.POWER } }.map { GearPower(it.text, view.item, view.title) }
-        }
-    }
-    if (powers.isEmpty()) return
-    val inspect = rememberInspect()
-    val shape = RoundedCornerShape(10.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(Panel)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("✦", color = rarityColor("UNIQUE"), fontSize = 15.sp)
-            Text(ui("hero.gear_powers"), color = rarityColor("UNIQUE"), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-        }
-        powers.forEach { power ->
-            HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            Row(
-                Modifier.fillMaxWidth().clickable { inspect(Inspect.Copy(power.item)) }.padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Text("✦", color = rarityColor("UNIQUE"), fontSize = 12.sp)
-                Text(power.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                Text(power.title, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 120.dp))
-            }
-        }
     }
 }
 

@@ -43,6 +43,7 @@ import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.CompactSearchField
 import com.sperance.exileforge.ui.components.FateMark
 import com.sperance.exileforge.ui.components.GuildRoleMark
+import com.sperance.exileforge.ui.components.MightLine
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.Presence
 import com.sperance.exileforge.ui.components.PresenceDot
@@ -243,8 +244,10 @@ internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.co
                     }
                 }
                 val seen = seenTail(member, isMe)
-                if (seen != null || member.fate != null) {
+                if (seen != null || member.fate != null || member.might > 0) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        // Мощь (4.8.0): «⚜ 12.5k» - одно число для сравнения, не прогноз боя
+                        MightLine(member.might)
                         seen?.let { Text(it, color = Presence.of(member.online, member.lastSeenAt).color, fontSize = 11.sp, maxLines = 1) }
                         member.fate?.let { FateMark(it, Modifier.weight(1f, fill = false)) }
                     }

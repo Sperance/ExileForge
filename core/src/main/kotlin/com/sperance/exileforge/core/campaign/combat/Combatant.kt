@@ -35,7 +35,10 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val chaosImmune = stat(CoreStat.CHAOS_IMMUNE.code) > 0
 
     /** Mana back a second (server 0.69.0): the rule's share of the maximum, faster by the sheet's regeneration. */
-    fun manaRegen(rule: ManaRule): Double = maxMana * rule.regen / 100 * max(0.0, 1 + stat(CoreStat.MANA_REGEN.code) / 100)
+    fun manaRegen(rule: ManaRule): Double = if (manaSealed) 0.0 else maxMana * rule.regen / 100 * max(0.0, 1 + stat(CoreStat.MANA_REGEN.code) / 100)
+
+    /** Флаг листа «мана не восстанавливается» (4.8.0, сервер - угроза высокого тира карты): реген обнуляется при любых прибавках. */
+    val manaSealed: Boolean get() = stat(CoreStat.NO_MANA_REGEN.code) > 0
 
     /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
     val damageMore = max(0.0, 1 + stat(CoreStat.DAMAGE.code) / 100)

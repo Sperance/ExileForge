@@ -119,13 +119,13 @@ class GuildActions(
     }
 
     /**
-     * Золото или сфера в казну: ответ несёт гильдию, строку героя и остаток золота, так что перечитывается один герой.
+     * Золото в казну: ответ несёт гильдию, строку героя и остаток золота, так что перечитывается один герой.
      * [onDone] - только после принятого вклада (экран чистит поле суммы); занятый раннер говорит об этом игроку.
      */
-    fun contribute(item: String, amount: Long, onDone: () -> Unit) {
+    fun contribute(amount: Long, onDone: () -> Unit) {
         val started = commands.task(writing = true, touches = setOf(Reads.GUILD, Reads.HERO)) {
             val id = hero()
-            val given = api.guild.contribute(id, item, amount)
+            val given = api.guild.contribute(id, amount)
             if (!heroes.onScreen(id)) return@task
             guild { it.copy(mine = it.mine?.copy(guild = given.guild, me = given.me)) }
             heroes.money(given.money)

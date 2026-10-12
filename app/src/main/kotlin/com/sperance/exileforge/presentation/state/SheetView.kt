@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdicts
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.character.StatDelta
+import com.sperance.exileforge.core.character.WearOutcome
 import com.sperance.exileforge.core.character.WearPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.NeedKind
@@ -20,6 +21,7 @@ import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 
 /**
@@ -32,10 +34,13 @@ internal object HeroLens {
     /** What the merchant pays for [item], by the rules' price; null until the content has arrived. */
     fun sellPrice(index: ContentIndex?, hero: HeroView?, item: ItemInstance): Long? = view(index, item)?.sellPrice(hero?.stats.orEmpty())
 
-    /** What putting [item] on would change on the sheet - на место [place] (3.90.3) или туда, что выберут правила. */
-    fun wearDelta(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): List<StatDelta> {
-        index ?: return emptyList()
-        hero ?: return emptyList()
+    /**
+     * What putting [item] on would change on the sheet - на место [place] (3.90.3) или туда, что выберут правила; с 4.8.0 - и Мощь
+     * героя с вещью.
+     */
+    fun wearing(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): WearOutcome {
+        index ?: return WearOutcome.NONE
+        hero ?: return WearOutcome.NONE
         return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.pets.active, place, hero.info.laws, hero.info.fate, hero.skills)
     }
 
@@ -109,7 +114,7 @@ internal object HeroLens {
 
 fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, hero, item)
-fun GameUi.wearDelta(item: ItemInstance, place: Slot? = null): List<StatDelta> = HeroLens.wearDelta(index, hero, item, place)
+fun GameUi.wearing(item: ItemInstance, place: Slot? = null): WearOutcome = HeroLens.wearing(index, hero, item, place)
 fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)
@@ -128,6 +133,9 @@ fun GameUi.manaReserve(): ManaReserve? = HeroLens.manaReserve(hero)
  * разбор и сравнения вещи и узла дерева читают одни и те же цифры.
  */
 val HeroView.figures: StatFigures get() = combat?.figures ?: StatFigures(stats)
+
+/** Мощь героя (4.8.0) - из того же листа боя без карты, что сводка; null - листа боя ещё нет. */
+val HeroView.might: MightReading? get() = combat?.might
 
 /** The hero's mana [pool] and the [percent] of it the passive auras hold, as the fight reserves it. */
 data class ManaReserve(val pool: Double, val percent: Double) {

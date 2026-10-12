@@ -147,7 +147,7 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
             color = Muted,
             style = MaterialTheme.typography.labelMedium,
         )
-        if (draught.lines.isNotEmpty()) SkillLines(draught.lines.map { SkillText.statLine(it.stat, it.op, it.value) })
+        if (draught.lines.isNotEmpty()) SkillLines(draught.lines.map { SkillText.draughtLine(it.stat, it.op, it.value) })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("skills.drunk_when"), color = Muted, style = MaterialTheme.typography.labelMedium)
             AssistChip(onClick = onCondition, label = { Text(conditionTitle(flask.condition)) })

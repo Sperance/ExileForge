@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SheetExplainer
@@ -95,6 +96,15 @@ class SheetModel(
     override fun hashCode(): Int = plain.hashCode()
 }
 
+/**
+ * Что даст надеть вещь (4.8.0): сдвинутые цифры сводки [delta] и Мощь героя с вещью [might] (null - листа боя нет).
+ */
+data class WearOutcome(val delta: List<StatDelta>, val might: MightReading?) {
+    companion object {
+        val NONE = WearOutcome(emptyList(), null)
+    }
+}
+
 /** The hero sheet as the client added it up: the numbers, which worn items count and why the rest do not, and what it was made of. */
 class HeroSheet(val stats: Map<String, Double>, val active: List<String>, val inactive: Map<String, List<String>>, val model: SheetModel?) {
     companion object {
@@ -133,6 +143,7 @@ object Sheets {
      * two-handed weapon frees both hands, a bow pairs with a quiver. Only the characteristics that move are returned.
      * [place] (3.90.3) - место из нескольких (второе кольцо, третья фляга), куда вещь надевают; null - решают правила.
      * 4.6.4: цифры сводки - лист боя ([figures]) с умениями героя [skills]; [before] - цифры сводки героя сейчас.
+     * 4.8.0: вместе со сдвигами - Мощь героя с вещью ([WearOutcome.might]) из того же листа боя, без второго подсчёта.
      */
     fun wearing(
         index: ContentIndex,
@@ -147,9 +158,11 @@ object Sheets {
         laws: List<String> = emptyList(),
         fate: String? = null,
         skills: HeroSkills = HeroSkills(),
-    ): List<StatDelta> {
-        val after = worn(index, item, items, place) ?: return emptyList()
-        return changes(index, before, figures(index, calculate(index, level, heroClass, tree, after, pets, laws, fate), level, heroClass, skills, fate, after))
+    ): WearOutcome {
+        val after = worn(index, item, items, place) ?: return WearOutcome.NONE
+        val sheet = calculate(index, level, heroClass, tree, after, pets, laws, fate)
+        val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped })
+        return WearOutcome(changes(index, before, combat?.values ?: sheet.stats), combat?.might)
     }
 
     /**

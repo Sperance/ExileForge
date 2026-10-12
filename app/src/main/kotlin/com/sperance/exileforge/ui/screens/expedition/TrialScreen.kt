@@ -28,6 +28,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
+import com.sperance.exileforge.ui.screens.expedition.arena.FightLogSheet
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -51,38 +52,41 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Leave) else model.closeTrial() }
-    Box(Modifier.fillMaxSize().background(Ink)) {
-        hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz)
-        }
-        if (hud.phase == TrialPhase.FIGHT) {
-            TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
-        } else {
-            TrialEnding(game, model, hud)
-        }
-        // Строка угрозы десятка башни (3.96.0): выбор до первого боя десятка
-        hud.choice?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { options -> TowerChoice(hud.step, options) { model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.PickLine(it)) } }
-        // Досье босса (3.92.0) перед его боем, как у стража карты: «В бой» начинает бой; без босса - кнопка «В бой» под героем
-        val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
-        val boss = fight?.boss
-        val stage = hud.step to fight?.round
-        var seen by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
-        if (fight != null && boss != null && seen != stage) {
-            fight.foes.firstOrNull { it.index == boss.index }?.let { foe ->
-                BossDossier(
-                    game,
-                    foe.monster,
-                    hud.level,
-                    foe.maxLife.toDouble(),
-                    boss.phase,
-                    boss.marks,
-                    ui(if (hud.kind == TrialKind.RUSH) "trials.boss_of" else "trials.floor", hud.step, hud.steps),
-                    fight.heroBody,
-                    arena.rules,
-                    record = { model.bossRecord(foe.monster.code.value) },
-                ) {
-                    seen = stage
-                    model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Begin)
+    // «Журнал боя» меню забега (4.8.0) - последний бой испытания
+    CompositionLocalProvider(LocalFightReport provides hud.report) {
+        Box(Modifier.fillMaxSize().background(Ink)) {
+            hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
+                ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz)
+            }
+            if (hud.phase == TrialPhase.FIGHT) {
+                TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))
+            } else {
+                TrialEnding(game, model, hud)
+            }
+            // Строка угрозы десятка башни (3.96.0): выбор до первого боя десятка
+            hud.choice?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { options -> TowerChoice(hud.step, options) { model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.PickLine(it)) } }
+            // Досье босса (3.92.0) перед его боем, как у стража карты: «В бой» начинает бой; без босса - кнопка «В бой» под героем
+            val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
+            val boss = fight?.boss
+            val stage = hud.step to fight?.round
+            var seen by remember { mutableStateOf<Pair<Int, Int?>?>(null) }
+            if (fight != null && boss != null && seen != stage) {
+                fight.foes.firstOrNull { it.index == boss.index }?.let { foe ->
+                    BossDossier(
+                        game,
+                        foe.monster,
+                        hud.level,
+                        foe.maxLife.toDouble(),
+                        boss.phase,
+                        boss.marks,
+                        ui(if (hud.kind == TrialKind.RUSH) "trials.boss_of" else "trials.floor", hud.step, hud.steps),
+                        fight.heroBody,
+                        arena.rules,
+                        record = { model.bossRecord(foe.monster.code.value) },
+                    ) {
+                        seen = stage
+                        model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Begin)
+                    }
                 }
             }
         }
@@ -138,6 +142,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable private fun TrialEnding(game: GameUi, model: ExpeditionViewModel, hud: TrialHud) {
     val expedition: ExpeditionViewModel = koinViewModel()
     var looked by remember(hud.gained) { mutableStateOf<ItemView?>(null) }
+    var journal by remember { mutableStateOf(false) }
     val fallen = hud.phase == TrialPhase.DEAD
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
@@ -155,9 +160,12 @@ import org.koin.compose.viewmodel.koinViewModel
             RunFigures(hud.summary)
             RewardLines(game, hud.gained, { looked = it }, awaiting = hud.awaiting > 0)
         }
+        // Журнал последнего боя (4.8.0): боя, что кончил испытание
+        hud.report?.let { ForgeOutlinedButton(onClick = { journal = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("run.menu.log")) } }
         ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
+    hud.report?.takeIf { journal }?.let { FightLogSheet(it) { journal = false } }
 }
 
 /** Seconds as a clock: `m:ss`, from an hour on `h:mm:ss`. */

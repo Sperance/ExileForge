@@ -4,11 +4,13 @@ import com.sperance.exileforge.core.campaign.PassiveSource
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.factorChange
+import com.sperance.exileforge.core.display.flagMark
 import com.sperance.exileforge.core.display.multiplierText
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.shareNumber
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.statFlag
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
@@ -313,6 +315,8 @@ class StatExplainer(private val game: GameUi) {
     fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
         // Итог множителя (4.6.5) - доля «60%»; доли свода остаются прибавками процентов, как их складывает лист
         if (!sign && op == Op.ADD && multiplier(stat)) return multiplierText(value)
+        // Флаг (4.8.0, `StatDef.unit`) - отметка без числа: и итог, и строка источника
+        if (op != Op.MORE && statFlag(stat, index)) return flagMark(value)
         val unit = if (percent || statPercent(stat, index)) "%" else ""
         val size = if (op == Op.INCREASED) shareNumber(stat, abs(value)) else statNumber(stat, abs(value))
         val mark = if (!sign && value >= 0) {

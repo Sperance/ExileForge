@@ -2,6 +2,7 @@ package com.sperance.exileforge.presentation.expedition
 
 import com.sperance.exileforge.core.campaign.RiftArena
 import com.sperance.exileforge.core.campaign.RiftStyles
+import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
@@ -38,7 +39,8 @@ import java.util.UUID
 
 /**
  * Разлом на экране (3.96.0): доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
- * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер (4.7.0).
+ * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер (4.7.0); [lastFight] - журнал последнего
+ * боя узла (4.8.0, «Журнал боя»).
  */
 data class RiftState(
     val open: Boolean = false,
@@ -46,6 +48,7 @@ data class RiftState(
     val arena: RiftArena? = null,
     val result: RiftResult? = null,
     val delivery: RiftDelivery? = null,
+    val lastFight: FightReport? = null,
 )
 
 /** Итог боя Разлома в пути (4.7.0): уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
@@ -119,6 +122,8 @@ class RiftActions(
         val run = mutable.value.board?.progress?.run ?: return
         val heroId = heroes.heroId
         val key = UUID.randomUUID().toString()
+        // Журнал боя (4.8.0): арена уже сложила его, итог уходит
+        mutable.update { it.copy(lastFight = it.arena?.report ?: it.lastFight) }
         sending?.cancel()
         sending = scope.launch {
             var attempt = 1

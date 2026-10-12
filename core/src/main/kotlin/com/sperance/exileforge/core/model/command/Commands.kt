@@ -102,6 +102,8 @@ data class ApiCapabilities(val routes: Set<String>) {
     val clientVersion: String = "",
     /** Последние неудачные запросы (4.3.1), не больше `rules.feedback.failures`: только у отчёта об ошибке. */
     val failures: List<RequestFailure> = emptyList(),
+    /** Снимок экрана (4.8.0): JPEG в base64 в пределах `rules.feedback.shotSide|shotBytes`; только у вида, что его берёт ([FeedbackKind.shots]). */
+    val screenshot: String? = null,
 )
 
 /**

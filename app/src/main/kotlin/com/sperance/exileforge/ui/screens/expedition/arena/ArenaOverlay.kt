@@ -81,86 +81,90 @@ private const val HERO_CARD = -1
     // Лист врага (3.93.0): открывается касанием на паузе и до боя
     var inspect by remember { mutableStateOf<Int?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
-    Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-        fight.boss?.let { BossBackdrop(biome, it, time) }
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            // Бой с боссом (3.92.0, макет B): своя раскладка - полоса с фазами, каст, крупный портрет, свита по бокам
-            val boss = fight.boss
-            if (boss != null) {
-                BossBand(fight, boss, time, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
-            } else {
-                PackHeader(fight, level)
-                if (fight.field.isNotEmpty()) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                        // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
-                        fight.field.forEach { foe ->
-                            key(foe.index) {
-                                FoeCard(
-                                    foe,
-                                    fight,
-                                    time,
-                                    chosen == foe.index && fight.scouting,
-                                    track(foe.index).weight(1f).widthIn(max = 180.dp),
-                                    large,
-                                    traits[foe.index].orEmpty(),
-                                    narrow = fight.field.size >= 3,
-                                ) {
-                                    onCommand(RunCommand.Focus(foe.index))
+    // Мощь боя (4.8.0): герой - по телу боя под эффектами карты, враги - по своему листу; печать на карточках врагов
+    val might = rememberFightMight(game.index, fight.heroBody, level)
+    CompositionLocalProvider(LocalFightMight provides might) {
+        Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
+            fight.boss?.let { BossBackdrop(biome, it, time) }
+            Column(
+                Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Бой с боссом (3.92.0, макет B): своя раскладка - полоса с фазами, каст, крупный портрет, свита по бокам
+                val boss = fight.boss
+                if (boss != null) {
+                    BossBand(fight, boss, time, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
+                } else {
+                    PackHeader(fight, level)
+                    if (fight.field.isNotEmpty()) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                            // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
+                            fight.field.forEach { foe ->
+                                key(foe.index) {
+                                    FoeCard(
+                                        foe,
+                                        fight,
+                                        time,
+                                        chosen == foe.index && fight.scouting,
+                                        track(foe.index).weight(1f).widthIn(max = 180.dp),
+                                        large,
+                                        traits[foe.index].orEmpty(),
+                                        narrow = fight.field.size >= 3,
+                                    ) {
+                                        onCommand(RunCommand.Focus(foe.index))
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
-                val shown = fight.field.firstOrNull { it.index == chosen }
-                if (fight.scouting && shown != null) {
-                    ScoutPanel(
-                        shown,
-                        fight,
-                        shown.monster.level.takeIf { it > 0 } ?: level,
-                        rules,
-                        stance,
-                        game.index,
-                        traits[shown.index].orEmpty(),
-                    )
-                } else {
-                    FightFeed(game, fight, names, onCommand, onLogFilter)
+                Box(Modifier.weight(1f).fillMaxWidth()) {
+                    val shown = fight.field.firstOrNull { it.index == chosen }
+                    if (fight.scouting && shown != null) {
+                        ScoutPanel(
+                            shown,
+                            fight,
+                            shown.monster.level.takeIf { it > 0 } ?: level,
+                            rules,
+                            stance,
+                            game.index,
+                            traits[shown.index].orEmpty(),
+                        )
+                    } else {
+                        FightFeed(game, fight, names, onCommand, onLogFilter)
+                    }
                 }
+                HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large, onCommand)
+                // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
+                if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, onCommand) { info = it }
+                Controls(fight, hud, onCommand)
             }
-            HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large, onCommand)
-            // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
-            if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, onCommand) { info = it }
-            Controls(fight, hud, onCommand)
-        }
-        StrikeLine(fight.lunge, bounds, origin)
-        // «Жилы энергии» (4.4.0): сцена применения умения героя поверх боя, всегда - бой анимируется и без декора
-        SkillFx(fight.heroCast, bounds[HERO_CARD], bounds::get, origin)
-        fight.boss?.let { BossCinema(fight, it) }
-        inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
-            FoeSheet(
-                foe,
-                fight,
-                foe.monster.level.takeIf { it > 0 } ?: level,
-                rules,
-                game.index,
-                traits[foe.index].orEmpty(),
-                fight.boss,
-                remember(foe.index, fight.boss?.index) { shares(fight.boss?.index == foe.index) },
-            ) { inspect = null }
-        }
-        info?.let { view -> FightSkillSheet(game, view, onCommand) { info = null } }
-        // A win says so in the rewards window itself (2.73.0); only a loss or a retreat is announced here.
-        fight.outcome?.takeIf { it != Outcome.WIN }?.let {
-            Text(
-                ui("expedition.outcome_${it.name.lowercase()}"),
-                color = outcomeColour(it),
-                style = MaterialTheme.typography.headlineMedium,
-                modifier = Modifier.align(Alignment.Center).background(Ink.copy(alpha = .8f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 6.dp),
-            )
+            StrikeLine(fight.lunge, bounds, origin)
+            // «Жилы энергии» (4.4.0): сцена применения умения героя поверх боя, всегда - бой анимируется и без декора
+            SkillFx(fight.heroCast, bounds[HERO_CARD], bounds::get, origin)
+            fight.boss?.let { BossCinema(fight, it) }
+            inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
+                FoeSheet(
+                    foe,
+                    fight,
+                    foe.monster.level.takeIf { it > 0 } ?: level,
+                    rules,
+                    game.index,
+                    traits[foe.index].orEmpty(),
+                    fight.boss,
+                    remember(foe.index, fight.boss?.index) { shares(fight.boss?.index == foe.index) },
+                ) { inspect = null }
+            }
+            info?.let { view -> FightSkillSheet(game, view, onCommand) { info = null } }
+            // A win says so in the rewards window itself (2.73.0); only a loss or a retreat is announced here.
+            fight.outcome?.takeIf { it != Outcome.WIN }?.let {
+                Text(
+                    ui("expedition.outcome_${it.name.lowercase()}"),
+                    color = outcomeColour(it),
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.align(Alignment.Center).background(Ink.copy(alpha = .8f), RoundedCornerShape(8.dp)).padding(horizontal = 16.dp, vertical = 6.dp),
+                )
+            }
         }
     }
 }

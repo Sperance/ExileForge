@@ -394,9 +394,11 @@ private fun Battle.finished(): Boolean {
     if (outcome != null) return true
     // A power may answer the hero's fall (2.79.0) and stand them back up.
     if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
+    // Подкрепления (4.8.0) встают, едва на поле освободилось место; раунд (4.4.1) - едва пал последний
+    if (heroFighter.alive) muster()
     when {
         !heroFighter.alive -> end(Outcome.LOSS)
-        foeFighters.none { it.alive } && !nextRound() -> end(Outcome.WIN)
+        foeFighters.none { it.alive } -> end(Outcome.WIN)
         else -> return false
     }
     return true

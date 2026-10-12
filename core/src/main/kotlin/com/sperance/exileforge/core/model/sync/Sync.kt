@@ -57,8 +57,11 @@ import kotlinx.serialization.json.JsonElement
  * 72 - башня по этажам (`tower.firstLevel|maxLevel|leaders`), разделы сводки `StatDef.section|partOf`, без `STOCK_INVENTORY_SIZE`.
  * 73 - номер героя (`HeroView.number`, `PlayerCard.number`), код гильдии (`GuildView.code`, `guild/code`, `guild/join-code`,
  *      `guild/lookup`), обмен книг сразу учит умение, взятие из хранилища гильдии платное, `fight.speeds|minWaveSeconds` (4.7.0).
+ * 74 - Мощь (`GuildMember.might`, `PlayerCard.might`, `rules.might`), отчёт об ошибке сразу `SENT` и снимок экрана
+ *      (`BugReportRequest.screenshot`, `feedback.shotSide|shotBytes|shotsPerHour`), враги узла Разлома одним списком
+ *      (`RiftFight.foes`), вклад в гильдию только золотом (`guild/contribute` без `item`, без `GuildView.treasuryOrbs`) (4.8.0).
  */
-const val API_REVISION = 73
+const val API_REVISION = 74
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

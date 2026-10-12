@@ -318,6 +318,8 @@ data class RunHud(
     val levelUp: LevelUp? = null,
     val slain: RolledMonster? = null,
     val report: FightReport? = null,
+    /** Журнал последнего боя захода (4.8.0) - пункт «Журнал боя» меню забега; null - боя ещё не было. */
+    val lastFight: FightReport? = null,
     /** What the death cost, by the rules' price until the server's answer replaces it. */
     val fall: Double? = null,
     /** Уровень героя, с которого гибель стоит опыта (4.4.1), пока герой ниже него; null - цена уже действует. */

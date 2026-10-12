@@ -158,7 +158,7 @@ private const val ONE_ROW = 6
         empty,
         Gold,
         onSelect,
-        note = if (chosen in waiting && smithy.omen.isBlank()) ui("forge.needs_omen") else qualityNote(chosen, quality),
+        note = qualityNote(chosen, quality) ?: ui("forge.needs_omen").takeIf { chosen in waiting && smithy.omen.isBlank() },
         marked = { it in waiting },
     ) { code ->
         BagIcon(code, Modifier.fillMaxSize(), kind = ItemVisualKind.CURRENCY)
@@ -183,9 +183,12 @@ private const val ONE_ROW = 6
     }
 }
 
-/** Подсказка сферы качества (4.3.0): что она поднимет на этой вещи с выбранным знамением и что сбросит. */
+/**
+ * Подсказка сферы качества (4.3.0): что она поднимет на этой вещи с выбранным знамением и что сбросит; не ляжет (4.8.0) -
+ * отказ правил с причиной.
+ */
 private fun qualityNote(orb: String, quality: QualityForecast?): String? = quality?.takeIf { orb == Orb.QUALITY_ORB.name }?.let { forecast ->
-    listOfNotNull(forecast.raises, ui("forge.quality_reset", forecast.lost).takeIf { forecast.lost > 0 }).joinToString("\n")
+    forecast.refusal ?: listOfNotNull(forecast.raises, ui("forge.quality_reset", forecast.lost).takeIf { forecast.lost > 0 }).joinToString("\n")
 }
 
 /**

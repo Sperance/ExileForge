@@ -51,6 +51,8 @@ import kotlinx.serialization.Serializable
     val title: String = "",
     /** Предначертание аккаунта героя (4.6.3); null - не выбрано. */
     val fate: FateCard? = null,
+    /** Мощь героя (4.8.0, сервер по `Might` правил); 0 - ещё не посчитана. Не прогноз боя. */
+    val might: Double = 0.0,
 )
 
 /** A hero asking to join an APPLY guild; only the leader and the officers are shown them. */
@@ -78,7 +80,6 @@ import kotlinx.serialization.Serializable
     val minLevel: Int = 1,
     val announcement: String = "",
     val treasuryGold: Long = 0,
-    val treasuryOrbs: Map<String, Long> = emptyMap(),
     val members: List<GuildMember> = emptyList(),
     val applications: List<GuildApplicant> = emptyList(),
     val weekly: Map<String, Long> = emptyMap(),

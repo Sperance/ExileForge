@@ -65,36 +65,45 @@ import com.sperance.exileforge.ui.theme.*
 
 /** Строка сравнения: имя, «было → стало» и плашка разницы цвета сдвига. */
 @Composable private fun ComparisonRow(line: ComparisonLine, muted: Color, faint: Color) {
-    val body = MaterialTheme.typography.bodySmall
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(line.title, color = Parchment, style = body, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        Text(
-            buildAnnotatedString {
-                append(line.before)
-                withStyle(SpanStyle(color = faint)) { append(" → ") }
-                withStyle(SpanStyle(color = Parchment, fontWeight = FontWeight.Bold)) { append(line.after) }
-            },
-            color = muted,
-            style = body,
-            maxLines = 1,
-            softWrap = false,
-        )
-        val tint = when (line.better) {
-            true -> Vital
-            false -> LifeRed
-            null -> muted
-        }
-        Text(
-            line.diff,
-            color = tint,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 11.5.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            softWrap = false,
-            modifier = Modifier.widthIn(min = 54.dp).background(tint.copy(alpha = .15f), PillShape).padding(horizontal = 6.dp, vertical = 1.dp),
-        )
+        Text(line.title, color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        ComparisonFigures(line.before, line.after, muted, faint)
+        DiffPill(line.diff, line.better, muted)
     }
+}
+
+/** «было → **стало**» строки сравнения (4.8.0 - общее со строкой Мощи вещи). */
+@Composable internal fun ComparisonFigures(before: String, after: String, muted: Color, faint: Color) {
+    Text(
+        buildAnnotatedString {
+            append(before)
+            withStyle(SpanStyle(color = faint)) { append(" → ") }
+            withStyle(SpanStyle(color = Parchment, fontWeight = FontWeight.Bold)) { append(after) }
+        },
+        color = muted,
+        style = MaterialTheme.typography.bodySmall,
+        maxLines = 1,
+        softWrap = false,
+    )
+}
+
+/** Плашка разницы цвета сдвига [better]: рост `Vital`, потеря `LifeRed`, без сдвига - [muted]. */
+@Composable internal fun DiffPill(diff: String, better: Boolean?, muted: Color) {
+    val tint = when (better) {
+        true -> Vital
+        false -> LifeRed
+        null -> muted
+    }
+    Text(
+        diff,
+        color = tint,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 11.5.sp,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.widthIn(min = 54.dp).background(tint.copy(alpha = .15f), PillShape).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /**

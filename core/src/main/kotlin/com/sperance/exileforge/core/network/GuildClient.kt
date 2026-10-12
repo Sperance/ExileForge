@@ -121,11 +121,10 @@ class GuildClient internal constructor(private val http: Transport) {
         ),
     )
 
-    /** Gold or an orb into the treasury; [item] is `GOLD` or the orb's item code. */
-    suspend fun contribute(heroId: String, item: String, amount: Long): GuildContribution {
-        require(item.isNotBlank()) { ui("api.choose_item") }
+    /** Золото в казну (4.8.0: вклад только золотом). */
+    suspend fun contribute(heroId: String, amount: Long): GuildContribution {
         require(amount > 0) { ui("api.amount_positive") }
-        return http.post("$GUILD/contribute", heroQuery(heroId, "item" to item, "amount" to amount.toString()))
+        return http.post("$GUILD/contribute", heroQuery(heroId, "amount" to amount.toString()))
     }
 
     suspend fun log(heroId: String, page: Int): List<GuildLogEntry> {

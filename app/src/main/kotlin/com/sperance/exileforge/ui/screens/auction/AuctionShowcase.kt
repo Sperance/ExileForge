@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.equipmentIcon
@@ -38,6 +39,7 @@ import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.market.MarketViewModel
+import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
@@ -52,6 +54,7 @@ import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
+import org.koin.compose.viewmodel.koinViewModel
 
 /** Витрина аукциона (3.80.24): список лотов, строка поиска и фильтры. */
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
@@ -248,6 +251,8 @@ internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2
 internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
     var draft by remember { mutableStateOf(market.filter) }
     var mine by remember { mutableStateOf(market.showOwnLots) }
+    val settings = koinViewModel<SettingsViewModel>()
+    val legendsOpen = settings.settings.collectAsStateWithLifecycle().value.legendsOpen
     val any = ui("filter.any")
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
     val levels = listOfNotNull(draft.minItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_from", it) }, draft.maxItemLevel.takeIf { it.isNotBlank() }?.let { ui("auction.chip_ilvl_to", it) })
@@ -312,8 +317,12 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
         onQuery = { draft = draft.copy(title = it.take(game.inputs.search)) },
         queryHint = ui("auction.name"),
         groups = groups,
-        // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices.
-        switches = listOf(FilterSwitch(ui("auction.show_mine"), mine) { mine = it }),
+        // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices. Раскрытие свойств легенд (4.8.0) -
+        // настройка устройства, не фильтр сервера: действует сразу и «Сбросить» её не трогает.
+        switches = listOf(
+            FilterSwitch(ui("auction.show_mine"), mine) { mine = it },
+            FilterSwitch(ui("auction.legends_open"), legendsOpen) { open -> settings.change { copy(legendsOpen = open) } },
+        ),
         show = ui("filter.show_all"),
         resettable = draft != draft.cleared() || mine,
         onReset = {

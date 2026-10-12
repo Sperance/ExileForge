@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.Animation
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Menu
@@ -26,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,9 +39,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.state.DamageNumbers
+import com.sperance.exileforge.ui.screens.expedition.arena.FightLogSheet
 import com.sperance.exileforge.ui.screens.server.ChoiceRow
 import com.sperance.exileforge.ui.screens.server.SwitchRow
 import com.sperance.exileforge.ui.theme.Bronze
@@ -63,6 +67,12 @@ class SystemSheets {
 
 val LocalSystemSheets = staticCompositionLocalOf<SystemSheets?> { null }
 
+/**
+ * Журнал последнего боя забега (4.8.0): режим (поход, Разлом, башня, раш) кладёт свой отчёт, а [RunMenu] - где бы оно ни
+ * стояло, на карте или посреди боя - сам добавляет пункт «Журнал боя»; null - боя ещё не было, пункта нет.
+ */
+val LocalFightReport = compositionLocalOf<FightReport?> { null }
+
 /** Пункт меню забега, свой у каждого режима: выйти из захода, мутаторы Разлома, закрыть Разлом. */
 data class RunMenuItem(
     val icon: ImageVector,
@@ -75,7 +85,7 @@ data class RunMenuItem(
 
 /**
  * Меню забега (4.7.0, макет «Меню забега», вариант B) - одно на поход, Разлом и испытания: быстрые настройки боя, «Все
- * настройки» поверх забега, «Сообщить об ошибке» и пункты режима [items]; [extra] - свой блок режима над ними (мутаторы).
+ * настройки» поверх забега, «Сообщить об ошибке», «Журнал боя» последнего боя ([LocalFightReport], 4.8.0) и пункты режима [items]; [extra] - свой блок режима над ними (мутаторы).
  * Пока меню или открытый из него системный лист на экране, [hold] держит забег.
  */
 @Composable fun RunMenu(
@@ -86,9 +96,12 @@ data class RunMenuItem(
     trigger: @Composable (onClick: () -> Unit) -> Unit = { RunMenuButton(modifier, it) },
 ) {
     var open by remember { mutableStateOf(false) }
+    var journal by remember { mutableStateOf(false) }
     val sheets = LocalSystemSheets.current
+    val report = LocalFightReport.current
     trigger { open = true }
-    if (open || sheets?.open == true) hold()
+    if (open || journal || sheets?.open == true) hold()
+    report?.takeIf { journal }?.let { FightLogSheet(it) { journal = false } }
     if (!open) return
     ForgeSheet(onDismissRequest = { open = false }) {
         Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -104,6 +117,7 @@ data class RunMenuItem(
                 MenuRow(RunMenuItem(Icons.Outlined.Settings, ui("run.menu.settings"), ui("run.menu.settings_note"), onClick = closing { it.settings = true }))
                 MenuRow(RunMenuItem(Icons.Outlined.BugReport, ui("bug.open"), ui("run.menu.bug_note"), onClick = closing { it.bug = true }))
             }
+            report?.let { MenuRow(RunMenuItem(Icons.AutoMirrored.Outlined.ReceiptLong, ui("run.menu.log"), ui("run.menu.log_note"), onClick = closing { journal = true })) }
             items.forEach { item -> MenuRow(item.copy(onClick = closing(item.onClick))) }
         }
     }

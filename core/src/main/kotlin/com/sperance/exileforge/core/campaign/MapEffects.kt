@@ -149,6 +149,8 @@ object MapEffects {
         fun scale(stat: String, share: Double) {
             sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100)
         }
+        // Дары Атласа - прибавки к листу до «меньше» карты (4.8.0): штраф карты урезает и их, а не только родной реген маны
+        AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
         effects[MapStats.HERO_RECOVERY]?.let { add(CoreStat.RECOVERY_RATE.code, -it) }
         effects[MapStats.HERO_MAX_RESIST]?.let { v ->
             add(CoreStat.RESIST_MAX_ALL.code, -v)
@@ -163,6 +165,8 @@ object MapEffects {
         effects[MapStats.HERO_LEECH]?.let { add(CoreStat.LEECH_ALL.code, it) }
         effects[MapStat.HERO_DEGEN.code]?.let { add(CoreStat.LIFE_DEGEN_PERCENT.code, it) }
         effects[MapStats.HERO_MANA_REGEN]?.let { v -> sheet[CoreStat.MANA_REGEN.code] = (100 + (sheet[CoreStat.MANA_REGEN.code] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
+        // Угроза высокого тира (4.8.0): флаг листа - реген маны обнуляет общий расчёт боя и прогулки
+        effects[MapStat.HERO_NO_MANA_REGEN.code]?.let { add(CoreStat.NO_MANA_REGEN.code, it) }
         effects[MapStats.SKILL_COST]?.let { add(CoreStat.SKILL_COST.code, -it) }
         effects[MapStats.FLASK_CHARGES]?.let { add(CoreStat.FLASK_CHARGES_GAINED.code, -it) }
         // 3.35.0 (server 1.34.0): the map's curses and prohibitions.
@@ -170,7 +174,6 @@ object MapEffects {
         effects[MapStat.HERO_VULNERABILITY.code]?.let { add(CoreStat.PHYSICAL_TAKEN.code, it) }
         effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add(CoreStat.FLASK_EFFECT.code, -it) }
         effects[MapStat.HERO_BUFF_DURATION.code]?.let { add(BuffKind.DURATION, -it) }
-        AtlasEffects.hero.forEach { (atlas, stat) -> effects[atlas]?.let { add(stat, it) } }
         // The alchemist's potion of the run (3.79.0, server 1.74.0): resistances added, damage and life «more».
         effects[BrewStat.RESIST]?.let { add(CoreStat.RESIST_ALL.code, it) }
         effects[BrewStat.DAMAGE]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }

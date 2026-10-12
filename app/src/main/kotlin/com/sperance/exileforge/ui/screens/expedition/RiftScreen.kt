@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.expedition.RiftDelivery
+import com.sperance.exileforge.presentation.expedition.RiftState
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.level
@@ -60,6 +61,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.RunMenu
 import com.sperance.exileforge.ui.components.RunMenuItem
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
+import com.sperance.exileforge.ui.screens.expedition.arena.FightLogSheet
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -108,6 +110,11 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     val model = koinViewModel<ExpeditionViewModel>()
     val game by model.game.collectAsStateWithLifecycle()
     val state by model.riftState.collectAsStateWithLifecycle()
+    // «Журнал боя» (4.8.0): меню забега, плашка итога боя и итог забега - последний бой узла
+    CompositionLocalProvider(LocalFightReport provides state.lastFight) { RiftBody(game, model, state) }
+}
+
+@Composable private fun RiftBody(game: GameUi, model: ExpeditionViewModel, state: RiftState) {
     val arena = state.arena
     if (arena != null) return RiftFight(game, model, arena, state.delivery)
     val index = game.index ?: return
@@ -676,6 +683,7 @@ private const val SPARKS = 14
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(ui(if (won) "rift.delivery.won" else "rift.delivery.lost"), color = if (won) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.titleMedium)
+            FightLogButton()
             when (delivery) {
                 is RiftDelivery.Refused -> {
                     Text(ui("rift.delivery.refused", delivery.reason), color = RiftColors.Warn, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
@@ -713,7 +721,16 @@ private const val SPARKS = 14
             Text(ui("rift.result_score", result.score), color = RiftColors.Hot, style = MaterialTheme.typography.titleMedium)
             if (result.place > 0) Text(ui("rift.result_place", result.place), color = RiftColors.Text, style = MaterialTheme.typography.bodyMedium)
             RewardLines(game, result.reward)
+            FightLogButton()
             ForgeButton(onClick = model::dismissRiftResult, modifier = Modifier.fillMaxWidth()) { Text(ui("rift.back_board")) }
         }
     }
+}
+
+/** «Журнал боя» (4.8.0) в итоге боя или забега: последний бой узла листом; без боя кнопки нет. */
+@Composable private fun FightLogButton() {
+    val report = LocalFightReport.current ?: return
+    var open by remember { mutableStateOf(false) }
+    ForgeOutlinedButton(onClick = { open = true }) { Text(ui("run.menu.log"), color = RiftColors.Text) }
+    if (open) FightLogSheet(report) { open = false }
 }

@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.FoeTotem
 import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
+import com.sperance.exileforge.core.campaign.combat.Muster
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.RiftBoonLines
 import com.sperance.exileforge.core.campaign.combat.RiftCombat
@@ -16,9 +17,11 @@ import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.surrender
 import com.sperance.exileforge.core.campaign.combat.withShades
 import com.sperance.exileforge.core.campaign.run.FightHud
+import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.campaign.run.RunPhase
+import com.sperance.exileforge.core.campaign.run.report
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
@@ -57,7 +60,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Бой узла Разлома, как его рисует экран (3.96.0): карточки арены, волна из скольких, уровень врагов, секунды боя, вскрытое
+ * Бой узла Разлома, как его рисует экран (3.96.0): карточки арены, смена поля из скольких (4.8.0), уровень врагов, секунды боя, вскрытое
  * условие Чемпиона и выполнено ли оно пока; [phase] - идёт, пал, окончен победой.
  */
 data class RiftFightHud(
@@ -74,7 +77,8 @@ data class RiftFightHud(
 )
 
 /**
- * Бой узла Разлома (3.96.0, сервер 1.83.0): волны узла [fight] одна за другой, каждая - этап боя с переносом; герой - со
+ * Бой узла Разлома (3.96.0, сервер 1.83.0): все враги узла [fight] - один бой (4.8.0), на поле не больше `fight.maxFoes`,
+ * павших сменяет подкрепление ([Muster.Reinforcements], очередь [RiftFight.queue]); герой - со
  * своим снаряжением, дарами и проклятиями забега [run] и мутаторами недели, здоровье и заряды фляг - из забега. Стражи - со
  * своими механиками ([RiftCombat]). Конец боя - [RiftAct.Fight] в [onEnd]: его шлёт на сервер владелец арены.
  */
@@ -114,10 +118,18 @@ class RiftArena(
     private var pools = startPools()
 
     private var phase = TrialPhase.FIGHT
-    private val waves: List<List<RolledMonster>> = fight.waves.mapIndexed { w, wave -> wave.mapIndexedNotNull { i, foe -> rolled(foe, arenaRun.streams.of("riftFoe", w * 64 + i)) } }.filter { it.isNotEmpty() }
-    private var wave = 0
+
+    /** Все враги узла по порядку очереди сервера (4.8.0): каждый на своём потоке по месту в составе. */
+    private val monsters: List<RolledMonster> = fight.foes.mapIndexedNotNull { i, foe -> rolled(foe, arenaRun.streams.of("riftFoe", i)) }
     private var battle: Battle? = null
-    private var monsters: List<RolledMonster> = emptyList()
+
+    /** Смена поля боя (с 1) и их число: пока бой идёт - из него, после - последние. */
+    private var round = 1
+    private var rounds = 1
+
+    /** Журнал последнего боя узла (4.8.0): все вступившие враги; null - бой ещё не кончился. */
+    var report: FightReport? = null
+        private set
     private var started = false
     private var paused = false
 
@@ -239,12 +251,11 @@ class RiftArena(
         )
     }
 
-    /** Следующая волна встаёт; первая ждёт «В бой», следующие - сразу. */
+    /** Бой узла встаёт и ждёт «В бой»: один бой, враги сверх `fight.maxFoes` вступают подкреплением (4.8.0). */
     private fun stand() {
-        monsters = waves.getOrNull(wave) ?: return
+        if (monsters.isEmpty()) return
         val phases = PhaseFoes(index, combat)
-        val stream = wave.toLong()
-        val dice = Dice(Streams.mix(arenaRun.seed, RETINUE_STREAM, stream))
+        val dice = Dice(Streams.mix(arenaRun.seed, RETINUE_STREAM, 0))
         var foes: List<Foe> = phases.withRetinue(monsters.map { phases.foe(it, fight.level) }, dice)
         val devourer = rules.guardians.devourer.takeIf { fight.guardian == 1 }
         if (devourer != null) {
@@ -254,15 +265,14 @@ class RiftArena(
             }
         }
         battle = Battle(
-            hero, foes, combat, index.rules.fight, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, stream)), gear.stance,
+            hero, foes, combat, index.rules.fight, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, 0)), gear.stance,
             kit = kit, model = build, pools = pools, percent = gear.percent, ally = allies.of(hero, pet, kit.fate.effects.spirit.takeIf { pets }),
             fateRun = fateRun,
             rift = riftCombat().takeIf { fight.guardian != null || it.ambush > 0 },
-            // Волна после выигранной (4.2.0): силы FIGHT_CLEAR
-            cleared = wave > 0,
             kind = FightKind.RIFT,
+            muster = Muster.Reinforcements,
         )
-        started = wave > 0
+        started = false
         paused = false
     }
 
@@ -280,9 +290,8 @@ class RiftArena(
         switches += fight.trial.focusChanges
         lowest = minOf(lowest, fight.trial.lowestLife)
         pools = fight.pools()
-        if (outcome != Outcome.WIN) return end(won = false)
-        wave++
-        if (wave >= waves.size) end(won = true) else stand()
+        report = fight.report(monsters)
+        end(won = outcome == Outcome.WIN)
     }
 
     /** Условие Чемпиона выполнено по ходу боя. */
@@ -313,16 +322,18 @@ class RiftArena(
             heroReserved = (hero.maxMana - manaCap).roundToInt(),
         )
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
-        // Номер волны не выходит за их число: после последней счёт уже не растёт (4.7.0, «3 из 2»)
-        val round = wave.coerceAtMost(waves.size - 1).coerceAtLeast(0) + 1
+        if (fight != null) {
+            round = fight.round + 1
+            rounds = fight.rounds
+        }
         val fightHud = if (fight != null && leader != null) {
-            fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, round = round, rounds = waves.size)
+            fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, round = round, rounds = rounds)
         } else {
             null
         }
         // Условие Чемпиона вскрывается, когда бой начался
-        val trial = node.trial?.takeIf { started || wave > 0 || phase != TrialPhase.FIGHT }
-        return RiftFightHud(phase, runHud, fightHud, node.kind, round, waves.size, this.fight.level, elapsed, trial, trial != null && met())
+        val trial = node.trial?.takeIf { started || phase != TrialPhase.FIGHT }
+        return RiftFightHud(phase, runHud, fightHud, node.kind, round, rounds, this.fight.level, elapsed, trial, trial != null && met())
     }
 
     private companion object {

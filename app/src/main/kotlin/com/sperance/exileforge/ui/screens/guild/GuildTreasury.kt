@@ -10,10 +10,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sperance.exileforge.core.display.GUILD_GOLD
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
-import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
@@ -23,39 +21,21 @@ import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Giving to the guild: gold or an orb of the bag, counted at the orb's price. The whole of it goes to the treasury, to the
- * guild's experience and to the hero's own contribution, which is their rank; a day holds a limit by the hero's level and
- * the guild's tree, the server telling what is left of it today.
- * Under it, the treasury, the hero's way to the next rank and the week's givers.
+ * Вклад в гильдию (4.8.0) - только золото: целиком идёт в казну, в опыт гильдии и в личный вклад героя, то есть в его ранг;
+ * у дня свой предел по уровню героя и дереву гильдии, остаток на сегодня говорит сервер.
+ * Ниже - казна, путь героя к следующему рангу и вкладчики недели.
  */
 @Composable internal fun ContributeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
-    val orbs = game.orbs.filter { (game.bagAmount(it.code.value) ?: 0L) > 0 }
-    // The crafts' materials (3.79.0, server 1.74.0): they grow the guild at their price, the treasury does not keep them.
-    val materials = game.index?.items?.values.orEmpty().filter { it.category in DONATED_STOCK && it.price > 0 && (game.bagAmount(it.code.value) ?: 0L) > 0 }.sortedBy { it.price }
-    var item by remember { mutableStateOf(GUILD_GOLD) }
     var amount by remember { mutableStateOf("") }
     val count = amount.toLongOrNull() ?: 0L
-    val have = if (item == GUILD_GOLD) game.hero?.money else game.bagAmount(item)
-    val price = if (item == GUILD_GOLD) 1L else (orbs + materials).firstOrNull { it.code.value == item }?.price ?: 0L
+    val have = game.hero?.money
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         item {
             ForgePanel {
                 Engraved(ui("guild.give"))
-                Spinner(
-                    ui("guild.give_what"),
-                    item,
-                    mapOf(GUILD_GOLD to ui("guild.gold")) + (orbs + materials).associate { it.code.value to itemTitle(it.code.value) },
-                    !game.busy,
-                    glyph = Glyph.CURRENCY,
-                    optionArt = orbArt(game.orbs),
-                ) {
-                    item = it
-                    amount = ""
-                }
                 OutlinedTextField(
                     amount,
                     { amount = it.filter(Char::isDigit).take(12) },
@@ -65,19 +45,18 @@ import com.sperance.exileforge.ui.theme.*
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = { have?.let { Text(ui("guild.give_have", number(it.toDouble()))) } },
                 )
-                if (item != GUILD_GOLD && count > 0) PropertyRow(ui("guild.give_worth"), number((count * price).toDouble()), Glyph.CURRENCY)
                 // Суточный лимит и остаток считает сервер по одной формуле `GuildRules.dailyLimit` (с бонусом древа)
                 val left = me?.dayLeft
                 me?.let {
                     PropertyRow(ui("guild.daily_limit"), number(it.dayLimit.toDouble()), Glyph.LEVEL)
                     MutedText(ui("guild.daily_left", number(it.dayLeft.toDouble())))
                 }
-                // «Макс.»: сколько штук влезает в сегодняшний остаток и в то, что есть у героя
-                val most = listOfNotNull(left?.let { l -> if (price > 0) l / price else 0L }, have).minOrNull()
+                // «Макс.»: сколько золота влезает в сегодняшний остаток и в кошелёк героя
+                val most = listOfNotNull(left, have).minOrNull()
                 if (most != null && most > 0) {
                     ForgeTextButton(enabled = !game.busy, onClick = { amount = most.toString() }) { Text(ui("guild.give_max", number(most.toDouble()))) }
                 }
-                val over = left != null && count * price > left
+                val over = left != null && count > left
                 val short = have != null && count > have
                 if (short) Text(ui("guild.give_short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 if (over) Text(ui("guild.give_over_limit", number((left ?: 0L).toDouble())), color = LifeRed, style = MaterialTheme.typography.bodySmall)
@@ -86,11 +65,11 @@ import com.sperance.exileforge.ui.theme.*
                     ui("guild.give_do"),
                     Gold,
                     Modifier.fillMaxWidth(),
-                    enabled = !game.busy && count > 0 && price > 0 && !short && !over,
+                    enabled = !game.busy && count > 0 && !short && !over,
                     rearm = true,
                     icon = ForgeGlyphs.Coins,
                 ) {
-                    vm.contribute(item, count) { amount = "" }
+                    vm.contribute(count) { amount = "" }
                 }
             }
         }
@@ -99,7 +78,6 @@ import com.sperance.exileforge.ui.theme.*
             ForgePanel {
                 Engraved(ui("guild.treasury"))
                 PropertyRow(ui("guild.gold"), number(guild.treasuryGold.toDouble()), Glyph.CURRENCY)
-                guild.treasuryOrbs.filterValues { it > 0 }.forEach { (code, n) -> PropertyRow(itemTitle(code), number(n.toDouble()), Glyph.CURRENCY) }
             }
         }
         item { WeekPanel(guild, me) }
@@ -152,6 +130,3 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
 }
-
-/** The bag's stocks a guild takes besides gold and orbs (3.79.0): the crafts' materials. */
-private val DONATED_STOCK = setOf("MATERIAL", "STONE_STOCK", "WOOD_STOCK")

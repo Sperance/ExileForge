@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.character.FlaskVerdict
+import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.character.WearPlace
 import com.sperance.exileforge.core.display.Comparison
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -22,12 +23,14 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.might
 import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.presentation.state.wearDelta
 import com.sperance.exileforge.presentation.state.wearPlaces
+import com.sperance.exileforge.presentation.state.wearing
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.GearVerdictSummary
+import com.sperance.exileforge.ui.components.MightComparison
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.components.RelicLook
@@ -77,7 +80,10 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
     val place = choice.target
     // Фляга листа героя не меняет (4.2.0): вместо пустого итога героя - строки её листа против фляги в выбранном гнезде.
     val flask = game.index?.template(item.template)?.slot?.isFlask == true
-    val delta = remember(item, game.hero, game.index, place) { if (flask) null else Comparison.of(game.wearDelta(item, place), game.index) }
+    val outcome = remember(item, game.hero, game.index, place) { if (flask) null else game.wearing(item, place) }
+    val delta = remember(outcome) { outcome?.let { Comparison.of(it.delta, game.index) } }
+    // Мощь «было → стало» (4.8.0): Мощь героя сейчас и с вещью - из того же листа боя, что сдвиги
+    val might = game.hero?.might?.let { before -> outcome?.might?.let { MightShift(before.value, it.value) } }
     if (unmet.isEmpty()) {
         // Итог в двух числах (3.89.0) над построчным «Если надеть».
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -89,6 +95,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
             verdict?.let { GearVerdictSummary(it) }
             if (delta != null) {
                 StatComparison(ui("relic.totals"), delta, look = look)
+                might?.let { MightComparison(it, look) }
             } else if (verdict is FlaskVerdict) {
                 StatComparison(ui("relic.flask_totals"), remember(verdict) { Comparison.of(verdict) }, look = look)
             }

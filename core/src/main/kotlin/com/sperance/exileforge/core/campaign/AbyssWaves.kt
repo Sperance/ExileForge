@@ -46,11 +46,22 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
         return fights(rule, floor, run.levelOf(zone) + floor.level, run.streams.of("abyssWave", place * 64 + depth), effects, extraRareMods)
     }
 
-    /**
-     * The fights of [floor] at [level] on [dice]: a depth's wave, or a floor of the tower (3.49.0) with [extra] — the floor's
-     * growth — on every monster, its leader included; [leaderPower] - the tower leader's own strength (4.6.5).
-     */
+    /** The fights of [floor]: its [foes] cut by `fight.maxFoes` (4.2.0) - a depth's wave on a map. */
     fun fights(
+        rule: AbyssRule,
+        floor: AbyssWave,
+        level: Int,
+        dice: Dice,
+        effects: Map<String, Double>,
+        extraRareMods: Int,
+    ): List<List<RolledMonster>> = index.rules.fight.fights(foes(rule, floor, level, dice, effects, extraRareMods))
+
+    /**
+     * The monsters of [floor] at [level] on [dice] in order, the leader last: a depth's wave, or a floor of the tower (3.49.0;
+     * 4.8.0 - one fight with reinforcements) with [extra] — the floor's growth — on every monster, its leader included;
+     * [leaderPower] - the tower leader's own strength (4.6.5).
+     */
+    fun foes(
         rule: AbyssRule,
         floor: AbyssWave,
         level: Int,
@@ -59,7 +70,7 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
         extraRareMods: Int,
         extra: List<MonsterEffect> = emptyList(),
         leaderPower: LeaderPower? = null,
-    ): List<List<RolledMonster>> {
+    ): List<RolledMonster> {
         if (rule.monsters.isEmpty()) return emptyList()
         val swarm = 1 + (effects[MapStats.ABYSS_SWARM] ?: 0.0) / 100
         val count = (dice.between(floor.count) * swarm).roundToInt().coerceAtLeast(1)
@@ -82,7 +93,7 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
             val view = leaderPower?.let { monsters.guardian(code, level, rule.modifiers, it.rolls, rule.tierReach, it.power) } ?: monsters.guardian(code, level, rule.modifiers, rule.rolls, rule.tierReach)
             spawns.skilled(spawns.buffed(spawns.sworn(monsters.boss(view, dice, leaderBuffs(effects))), buffs), dice)
         }
-        return index.rules.fight.fights(foes + listOfNotNull(leader))
+        return foes + listOfNotNull(leader)
     }
 
     /** What the map's lines and the atlas do to every monster of the Abyss: more life, more damage, both. */

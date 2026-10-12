@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.StatUnit
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
@@ -92,17 +93,36 @@ private fun rawStatTitle(stat: String, lang: Lang): String = uiOr(lang, "enum.st
 /** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure (3.2.0). */
 private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")
 
-/** Whether a stat reads in percent: its name carries the mark, or the registry counts it so. */
-fun statPercent(stat: String, index: ContentIndex? = null): Boolean = PERCENT_MARK.containsMatchIn(rawStatTitle(stat, uiLanguage)) || index?.stats?.isPercent(stat) == true
+/** Единица отображения характеристики (4.8.0, `StatDef.unit`); без контента или вне реестра - null. */
+fun statUnit(stat: String, index: ContentIndex?): StatUnit? = index?.stats?.get(stat)?.unit
+
+/**
+ * Читается ли характеристика в процентах (4.8.0): решает её единица ([StatUnit]). Метка «%» в имени словаря - только для
+ * строк вне реестра, у которых единицы нет.
+ */
+fun statPercent(stat: String, index: ContentIndex? = null): Boolean = when (statUnit(stat, index)) {
+    StatUnit.PERCENT -> true
+    StatUnit.FLAG, StatUnit.NUMBER -> false
+    null -> PERCENT_MARK.containsMatchIn(rawStatTitle(stat, uiLanguage))
+}
+
+/** Характеристика-флаг (4.8.0, [StatUnit.FLAG]): игрок видит отметку, а не число. */
+fun statFlag(stat: String, index: ContentIndex?): Boolean = statUnit(stat, index) == StatUnit.FLAG
+
+/** Отметка флага (4.8.0): действует - ✓, нет - тире. */
+fun flagMark(value: Double): String = if (value > 0) FLAG_ON else FLAG_OFF
+
+private const val FLAG_ON = "✓"
+private const val FLAG_OFF = "—"
 
 /**
  * A stat's figure as a sheet shows it, the percent sign at the number rather than in the name: «Шанс крита 5%». Множитель
- * (4.6.5, `StatDef.multiplier`) читается долей «60%» - «урон 60% от полного», а не «−40%».
+ * (4.6.5, `StatDef.multiplier`) читается долей «60%» - «урон 60% от полного», а не «−40%». Флаг (4.8.0) - отметкой без числа.
  */
-fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = if (index?.stats?.get(stat)?.multiplier == true) {
-    multiplierText(value)
-} else {
-    statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
+fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = when {
+    index?.stats?.get(stat)?.multiplier == true -> multiplierText(value)
+    statFlag(stat, index) -> flagMark(value)
+    else -> statNumber(stat, value) + if (statPercent(stat, index)) "%" else ""
 }
 
 /** Процент «больше/меньше» [percent] долей от полного: −40 → «60%». */

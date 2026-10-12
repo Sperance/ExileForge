@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.ItemRow
+import com.sperance.exileforge.ui.components.LineFold
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
@@ -93,6 +94,7 @@ import com.sperance.exileforge.ui.theme.*
     unmet: List<String>,
     extra: List<String> = emptyList(),
     mark: String? = null,
+    lines: LineFold = LineFold.OPEN,
     onClick: () -> Unit,
     price: @Composable RowScope.() -> Unit,
 ) {
@@ -101,6 +103,7 @@ import com.sperance.exileforge.ui.theme.*
         enabled = enabled,
         unwearable = unmet,
         tag = price,
+        lines = lines,
         footer = if (extra.isEmpty() && mark == null) {
             null
         } else {

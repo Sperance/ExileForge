@@ -171,7 +171,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
     }
 }
 
-/** Корешок свитка: уровень серифом, знак класса, имя класса. */
+/** Корешок свитка: уровень серифом, знак класса, имя класса, Мощь (4.8.0). */
 @Composable private fun Spine(game: GameUi, card: PlayerCard, modifier: Modifier) {
     val shape = RoundedCornerShape(14.dp)
     Column(
@@ -183,6 +183,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
         Text(card.level.toString(), style = relicName(22).copy(color = GoldBright))
         ClassPortrait(card.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(44.dp), round = true)
         Text(classTitle(card.heroClass), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
+        // Мощь (4.8.0): «⚜ 12.5k» под классом - сервер считает её из листа при выдаче карточки
+        MightLine(card.might)
     }
 }
 

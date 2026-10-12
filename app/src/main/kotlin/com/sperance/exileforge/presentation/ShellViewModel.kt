@@ -14,6 +14,8 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.data.settings.PreferencesRepository
+import com.sperance.exileforge.platform.ScreenCapture
+import com.sperance.exileforge.platform.ScreenShot
 import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.ConnectionActions
 import com.sperance.exileforge.presentation.app.ServerReach
@@ -32,7 +34,9 @@ import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_TREE
+import com.sperance.exileforge.rules.content.FeedbackRules
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -83,11 +87,25 @@ class ShellViewModel(
 
     fun warmUp() = warming.start()
 
-    /** Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. */
-    fun reportBug(report: BugReportRequest, onSent: suspend () -> Unit = {}) = commands.task {
-        connection.api.reportBug(report, game.value.index?.rules?.feedback?.failures ?: 0)
+    /**
+     * Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. Снимок [shot] (4.8.0) сжимается
+     * в пределы правил `feedback` и едет в отчёте, если вид отчёта его берёт; не вписался - отчёт уходит без него.
+     */
+    fun reportBug(report: BugReportRequest, shot: ScreenShot? = null, onSent: suspend () -> Unit = {}) = commands.task {
+        val rules = game.value.index?.rules?.feedback ?: FeedbackRules()
+        val screenshot = shot?.takeIf { report.kind.shots }?.let { ScreenCapture.encode(it, rules) }
+        connection.api.reportBug(report.copy(screenshot = screenshot), rules.failures)
         onSent()
         notices.toast(ui("bug.sent"))
+    }
+
+    /** Аккорд громкости (4.8.0): лист отчёта со снимком, снятым до него; null - снимок не вышел, лист всё равно открывается. */
+    private val bugShots = MutableSharedFlow<ScreenShot?>(extraBufferCapacity = 1)
+    val bugRequests: SharedFlow<ScreenShot?> = bugShots
+
+    /** Открыть лист отчёта со снимком [shot] (4.8.0): его откроет хозяин системных листов. */
+    fun requestBug(shot: ScreenShot?) {
+        bugShots.tryEmit(shot)
     }
 
     /** Срез «игра» для экранов этой модели (3.80.33). */

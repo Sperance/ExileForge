@@ -201,7 +201,11 @@ fun ItemCard(
         // Английское торговое имя (2.51.0): по нему ищут на аукционе.
         if (detailed) item.trade?.let { Text(it, color = look.faint, style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic) }
         if (serial > 0) SerialSeal(serial, look)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+            itemVerticalAlignment = Alignment.CenterVertically,
+        ) {
             RelicChip { Text(ui("row.level", item.level), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold) }
             QualityBadge(item)
             (price ?: item.template.price?.toLong())?.let { RelicChip { GoldPrice(it) } }
@@ -255,10 +259,13 @@ fun ItemCard(
     opened?.let { ModifierInfoSheet(it) { opened = null } }
 }
 
+/** Высота плашек шапки карточки: уровень, жетон качества, цена (4.8.0). */
+internal val RelicChipHeight = 24.dp
+
 /** Плашка шапки карточки: тихий фон-пилюля под уровнем, качеством и ценой. */
 @Composable private fun RelicChip(content: @Composable RowScope.() -> Unit) {
     Row(
-        Modifier.height(24.dp).background(Color.White.copy(alpha = .05f), RoundedCornerShape(12.dp)).padding(horizontal = 9.dp),
+        Modifier.height(RelicChipHeight).background(Color.White.copy(alpha = .05f), RoundedCornerShape(12.dp)).padding(horizontal = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         content = content,

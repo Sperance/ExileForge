@@ -7,14 +7,16 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
+import com.sperance.exileforge.core.campaign.combat.Muster
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.surrender
 import com.sperance.exileforge.core.campaign.run.FightHud
-import com.sperance.exileforge.core.campaign.run.PackHit
+import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.campaign.run.RunPhase
+import com.sperance.exileforge.core.campaign.run.report
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapCode
@@ -69,11 +71,13 @@ data class TrialHud(
     val choice: List<TowerMod>? = null,
     /** Ступень раша (3.96.0), с 0. */
     val tier: Int = 0,
+    /** Журнал последнего боя (4.8.0): босса раша или этажа башни; null - боя ещё не было. */
+    val report: FightReport? = null,
 )
 
 /**
  * One trial (3.49.0, server 1.47.0) — an arena with no map: the boss rush of a cleared region, its bosses one after
- * another at the hero's level, or the endless tower, its floor a wave of its own cut into fights, a level higher each floor. The screen calls
+ * another at the hero's level, or the endless tower, its floor one fight with reinforcements (4.8.0), a level higher each floor. The screen calls
  * [update] once a frame and sends [RunCommand]s, the arena's own; nothing here talks to the server: a boss down, a floor
  * cleared and the end are events for [onEvent], and the server's answers come back as [settle].
  *
@@ -129,10 +133,6 @@ class TrialArena(
     private var step = if (trial.kind == TrialKind.RUSH) trial.killed else trial.floor
     private var floor: TowerFloor? = null
 
-    /** The fights of the floor still to come, the one under way first; a rush's boss is a fight of one. */
-    private var fights: List<List<RolledMonster>> = emptyList()
-    private var round = 0
-    private var rounds = 0
     private var level = trial.heroLevel
     private var battle: Battle? = null
     private var monsters: List<RolledMonster> = emptyList()
@@ -146,9 +146,9 @@ class TrialArena(
     private var fought = 0L
     private var cleared = 0
 
-    /** Бои шага (босса раша или этажа башни) до сих пор: шаг - одно событие боя с общим журналом и временем. */
-    private var stepHits: List<PackHit> = emptyList()
-    private var stepTime = 0.0
+    /** Журнал последнего боя (4.8.0): босса раша или этажа башни со всеми вступившими врагами; null - боя ещё не было. */
+    var report: FightReport? = null
+        private set
     private val stats = RunStats()
     private var kills = 0
 
@@ -235,45 +235,38 @@ class TrialArena(
         }
     }
 
-    /** The next fight stands up, laid open: the rush's next boss, or the floor's next wave — a new floor first when the last is done. */
+    /**
+     * The next fight stands up, laid open: the rush's next boss, or the next floor - one fight (4.8.0), its foes beyond
+     * `fight.maxFoes` stepping in as reinforcements.
+     */
     private fun stand() {
-        if (fights.isEmpty()) {
-            when (trial.kind) {
-                TrialKind.RUSH -> {
-                    val zone = plan?.zones?.getOrNull(step) ?: return finish(fallen = false)
-                    level = trial.heroLevel
-                    // Ступень раша (3.96.0): боссы сильнее и с лишними строками
-                    fights = listOfNotNull(spawns.boss(zone.copy(level = level), growth(tier.power), emptyList(), tier.mods)?.let(::listOf))
-                    if (fights.isEmpty()) return finish(fallen = false)
-                }
-
-                TrialKind.TOWER -> {
-                    val abyss = index.campaign.abyss ?: return finish(fallen = false)
-                    // Новый десяток (3.96.0): сначала герой выбирает его строку угрозы
-                    if (!trials.tower.ready(step, picks)) {
-                        choice = trials.tower.options(picks.size + 1)
-                        battle = null
-                        return
-                    }
-                    val next = trials.tower.floor(abyss, step, picks)
-                    if (next.mods != floor?.mods) {
-                        floor = next
-                        rebuild()
-                    }
-                    floor = next
-                    level = next.level
-                    fights = waves.fights(abyss, next.wave, next.level, run.streams.of("towerFloor", next.floor), effects(), run.context.extraRareMods, growth(next.power), next.leader)
-                    if (fights.isEmpty()) return finish(fallen = false)
-                }
+        monsters = when (trial.kind) {
+            TrialKind.RUSH -> {
+                val zone = plan?.zones?.getOrNull(step) ?: return finish(fallen = false)
+                level = trial.heroLevel
+                // Ступень раша (3.96.0): боссы сильнее и с лишними строками
+                listOfNotNull(spawns.boss(zone.copy(level = level), growth(tier.power), emptyList(), tier.mods))
             }
-            rounds = fights.size
-            round = 0
-            stepHits = emptyList()
-            stepTime = 0.0
+
+            TrialKind.TOWER -> {
+                val abyss = index.campaign.abyss ?: return finish(fallen = false)
+                // Новый десяток (3.96.0): сначала герой выбирает его строку угрозы
+                if (!trials.tower.ready(step, picks)) {
+                    choice = trials.tower.options(picks.size + 1)
+                    battle = null
+                    return
+                }
+                val next = trials.tower.floor(abyss, step, picks)
+                if (next.mods != floor?.mods) {
+                    floor = next
+                    rebuild()
+                }
+                floor = next
+                level = next.level
+                waves.foes(abyss, next.wave, next.level, run.streams.of("towerFloor", next.floor), effects(), run.context.extraRareMods, growth(next.power), next.leader)
+            }
         }
-        monsters = fights.first()
-        fights = fights.drop(1)
-        round++
+        if (monsters.isEmpty()) return finish(fallen = false)
         reported = 0
         battle = battle(monsters)
         started = false
@@ -289,7 +282,7 @@ class TrialArena(
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
             percent = gear.percent, ally = allies.of(hero, pet, kit.fate.effects.spirit), cleared = wonLast, kind = trial.kind.fight,
-            fateRun = fateRun,
+            fateRun = fateRun, muster = Muster.Reinforcements,
         )
     }
 
@@ -319,27 +312,23 @@ class TrialArena(
         val outcome = fight.outcome ?: return
         if (fight.time < fight.duration + index.campaign.expedition.aftermath) return
         pools = fight.pools()
-        val retinue = fight.foes.withIndex().drop(monsters.size).mapNotNull { (i, foe) -> foe.origin?.let { PackHit(it, fight.events.filter { e -> e.foe == i }, fight.duration, stepTime) } }
-        val pack = stepHits + monsters.mapIndexed { i, monster -> PackHit(monster, fight.events.filter { it.foe == i }, fight.duration, stepTime) } + retinue
-        stepHits = pack
-        stepTime += fight.duration
+        val last = fight.report(monsters) ?: return
+        report = last
         fightSeconds += fight.duration
         wonLast = outcome == Outcome.WIN
-        if (outcome != Outcome.WIN) {
-            stats.add(pack, stepTime)
-            record { TrialEvent.Fight(it, FightFigures.of(pack, stepTime, trial.kind == TrialKind.RUSH, won = false)) }
+        stats.add(last.pack, last.duration)
+        record { TrialEvent.Fight(it, FightFigures.of(last.pack, last.duration, trial.kind == TrialKind.RUSH, won = wonLast)) }
+        if (!wonLast) {
             battle = null
             finish(fallen = true)
             return
         }
-        if (fights.isEmpty()) won(pack)
+        won()
         if (phase == TrialPhase.FIGHT) stand()
     }
 
     /** A boss or a whole floor won: its event, the rush's breath between bosses, and the next one — or the end of the rush. */
-    private fun won(pack: List<PackHit>) {
-        stats.add(pack, stepTime)
-        record { TrialEvent.Fight(it, FightFigures.of(pack, stepTime, trial.kind == TrialKind.RUSH, won = true)) }
+    private fun won() {
         cleared++
         when (trial.kind) {
             TrialKind.RUSH -> {
@@ -389,7 +378,7 @@ class TrialArena(
         val fightHud = if (fight != null && leader != null) {
             fight.hud(
                 monsters, leader, speed, started, paused, hero.taunt, level,
-                round = if (trial.kind == TrialKind.RUSH) step + 1 else round, rounds = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else rounds,
+                round = if (trial.kind == TrialKind.RUSH) step + 1 else fight.round + 1, rounds = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else fight.rounds,
             )
         } else {
             null
@@ -402,6 +391,7 @@ class TrialArena(
             summary = stats.summary(kills),
             choice = choice,
             tier = trial.tier,
+            report = report,
         )
     }
 

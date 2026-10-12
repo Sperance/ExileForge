@@ -184,6 +184,8 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                     modifier = Modifier.padding(start = 6.dp).border(1.dp, Color(0xFF5A4632), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
                 )
             }
+            // Мощь босса (4.8.0): печать мелко и число цвета его стойки против героя
+            FoeMightMark(foe.monster, Modifier.padding(start = 6.dp))
         }
         LifeBar(foe, boss, time)
         // Строка 2 под полосой: фаза и ярость табулярными цифрами - ширина не прыгает, пока тикают секунды

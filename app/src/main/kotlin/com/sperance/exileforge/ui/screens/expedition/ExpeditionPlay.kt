@@ -108,90 +108,93 @@ import kotlin.math.roundToInt
     var questsOpen by remember { mutableStateOf(false) }
     // Часы захода идут и без сцены (3.95.1): лента автопробега карты не рисует
     val clock = rememberRunClock(run)
-    Box(Modifier.fillMaxSize().background(Ink)) {
-        // Автопроход - лента боёв (3.94.0): карты на экране нет, между боями - только счёт пути.
-        val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
-        if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
-        RunQuestWatch(quests, hud.questTally, shell::announce)
-        BlightWatch(hud.blight, shell::announce)
-        if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazards)
-        when (hud.phase) {
-            RunPhase.MAP -> if (ribbon != null) {
-                AutoRibbon(run, hud, ribbon) { model.runCommand(RunCommand.FinishAuto) }
-            } else {
-                // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
-                if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
-                MapBar(
-                    game,
-                    run,
-                    hud,
-                    onLeave = if (zone) null else ({ leaving = true }),
-                    onGear = { gear = true },
-                    onStats = { sheet = true },
-                    onDrink = { model.runCommand(RunCommand.Drink(it)) },
-                    onRetry = model::flushRun,
-                    onQuests = { questsOpen = true },
-                )
-                if (questsOpen) {
-                    HoldsRun(run)
-                    RunQuestsSheet(quests, hud.questTally) { questsOpen = false }
+    // «Журнал боя» меню забега (4.8.0) - последний бой захода, и на карте, и посреди следующего боя
+    CompositionLocalProvider(LocalFightReport provides hud.lastFight) {
+        Box(Modifier.fillMaxSize().background(Ink)) {
+            // Автопроход - лента боёв (3.94.0): карты на экране нет, между боями - только счёт пути.
+            val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
+            if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
+            RunQuestWatch(quests, hud.questTally, shell::announce)
+            BlightWatch(hud.blight, shell::announce)
+            if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazards)
+            when (hud.phase) {
+                RunPhase.MAP -> if (ribbon != null) {
+                    AutoRibbon(run, hud, ribbon) { model.runCommand(RunCommand.FinishAuto) }
+                } else {
+                    // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
+                    if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
+                    MapBar(
+                        game,
+                        run,
+                        hud,
+                        onLeave = if (zone) null else ({ leaving = true }),
+                        onGear = { gear = true },
+                        onStats = { sheet = true },
+                        onDrink = { model.runCommand(RunCommand.Drink(it)) },
+                        onRetry = model::flushRun,
+                        onQuests = { questsOpen = true },
+                    )
+                    if (questsOpen) {
+                        HoldsRun(run)
+                        RunQuestsSheet(quests, hud.questTally) { questsOpen = false }
+                    }
+                    if (gear) {
+                        HoldsRun(run)
+                        GearSheet(game) { gear = false }
+                    }
+                    if (sheet) {
+                        HoldsRun(run)
+                        StatsSheet(game, run.mapEffects) { sheet = false }
+                    }
+                    hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
+                    hud.chest?.let { ChestLoot(game, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
+                    // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
+                    hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
+                    if (leaving) {
+                        ConfirmSheet(
+                            title = ui("expedition.leave_q"),
+                            confirm = ui("expedition.leave"),
+                            danger = true,
+                            subtitle = mapTitle(hud.mapCode),
+                            ledger = listOf(LedgerLine(ui("expedition.leave_left"), GuardianLine.of(hud).text, Tone.SPEND)),
+                            note = ui("expedition.leave_note"),
+                            onDismiss = { leaving = false },
+                        ) { model.runCommand(RunCommand.Leave) }
+                    }
                 }
-                if (gear) {
-                    HoldsRun(run)
-                    GearSheet(game) { gear = false }
+
+                RunPhase.FIGHT -> hud.fight?.let {
+                    ArenaOverlay(
+                        game, hud, it, it.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance,
+                        onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
+                        biome = run.zone.biome,
+                        shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
+                    )
                 }
-                if (sheet) {
-                    HoldsRun(run)
-                    StatsSheet(game, run.mapEffects) { sheet = false }
-                }
-                hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
-                hud.chest?.let { ChestLoot(game, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
-                // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
-                hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
-                if (leaving) {
-                    ConfirmSheet(
-                        title = ui("expedition.leave_q"),
-                        confirm = ui("expedition.leave"),
-                        danger = true,
-                        subtitle = mapTitle(hud.mapCode),
-                        ledger = listOf(LedgerLine(ui("expedition.leave_left"), GuardianLine.of(hud).text, Tone.SPEND)),
-                        note = ui("expedition.leave_note"),
-                        onDismiss = { leaving = false },
-                    ) { model.runCommand(RunCommand.Leave) }
-                }
+
+                // The fight is over: its report — the log, what it came to, and the loot of a victory.
+                RunPhase.LOOT -> hud.report?.let { ReportScreen(game, model, hud, it) { model.runCommand(RunCommand.Continue) } }
+
+                // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
+                RunPhase.DEAD -> hud.report?.let { ReportScreen(game, model, hud, it) { model.runCommand(RunCommand.Continue) } }
+                    ?: MapSummary(game, model, hud, onDone = close)
+
+                RunPhase.CLEARED -> MapSummary(game, model, hud, onDone = close)
+
+                RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.value.isNotBlank() }, onEnter = model::enterVaal) { model.runCommand(RunCommand.StepBack) }
+
+                RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(game, it, onCommand = model::runCommand) }
+
+                RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(game, hud, it, onCommand = model::runCommand) }
+
+                RunPhase.LEFT -> MapSummary(game, model, hud, onDone = close)
+
+                // Экран-вызов перед стражем (3.92.0)
+                RunPhase.CHALLENGE -> hud.challenge?.let { BossChallenge(game, model, run, it, model::runCommand) }
             }
-
-            RunPhase.FIGHT -> hud.fight?.let {
-                ArenaOverlay(
-                    game, hud, it, it.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance,
-                    onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
-                    biome = run.zone.biome,
-                    shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
-                )
-            }
-
-            // The fight is over: its report — the log, what it came to, and the loot of a victory.
-            RunPhase.LOOT -> hud.report?.let { ReportScreen(game, model, hud, it) { model.runCommand(RunCommand.Continue) } }
-
-            // A fall: the fight's report first, then the map's summary (its «Вернуться» leaves the map).
-            RunPhase.DEAD -> hud.report?.let { ReportScreen(game, model, hud, it) { model.runCommand(RunCommand.Continue) } }
-                ?: MapSummary(game, model, hud, onDone = close)
-
-            RunPhase.CLEARED -> MapSummary(game, model, hud, onDone = close)
-
-            RunPhase.GATE -> VaalGate(game, hud, run.zone.corrupted.takeIf { it.value.isNotBlank() }, onEnter = model::enterVaal) { model.runCommand(RunCommand.StepBack) }
-
-            RunPhase.CRYSTAL -> hud.crystal?.let { CrystalSheet(game, it, onCommand = model::runCommand) }
-
-            RunPhase.ABYSS -> hud.abyss?.let { AbyssSheet(game, hud, it, onCommand = model::runCommand) }
-
-            RunPhase.LEFT -> MapSummary(game, model, hud, onDone = close)
-
-            // Экран-вызов перед стражем (3.92.0)
-            RunPhase.CHALLENGE -> hud.challenge?.let { BossChallenge(game, model, run, it, model::runCommand) }
+            // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
+            ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
         }
-        // A refusal of the gear (2.40.0) has to be read here too: the run has no bar and no banner.
-        ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
     }
 }
 

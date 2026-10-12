@@ -13,13 +13,15 @@ import kotlin.random.Random
 // ==================== Monsters ====================
 
 /**
- * Стаи боя с [agent] (4.4.1, решение владельца; прежде - 3.26.0): она и каждая живая обычная стая не дальше
- * `expedition.gatherRadius` от неё, ближние первыми. Босс, стражи и стаи объектов карты не собирают и не собираются.
+ * Стаи боя с [agent] (4.4.1, решение владельца; прежде - 3.26.0): она и каждая живая стая свалки ([MonsterAgent.joinsBrawl],
+ * 4.8.0 - и призванные) не дальше `expedition.gatherRadius` от неё или уже идущая за героем ([AgentMode.pursues]), ближние
+ * первыми. Кто в свалку не вступает, бьётся один.
  */
 internal fun ExpeditionWorld.gathered(agent: MonsterAgent): List<MonsterAgent> {
-    if (!agent.ordinary) return listOf(agent)
+    if (!agent.joinsBrawl) return listOf(agent)
     fun distance(other: MonsterAgent) = hypot(other.x - agent.x, other.y - agent.y)
-    return listOf(agent) + agents.filter { it !== agent && it.ordinary && it.alive && it.standing.isNotEmpty() && distance(it) <= rules.gatherRadius }.sortedBy(::distance)
+    fun drawn(other: MonsterAgent) = other.mode.pursues || distance(other) <= rules.gatherRadius
+    return listOf(agent) + agents.filter { it !== agent && it.joinsBrawl && it.alive && it.standing.isNotEmpty() && drawn(it) }.sortedBy(::distance)
 }
 
 internal fun ExpeditionWorld.think(agent: MonsterAgent, toHero: Double, dt: Double) {

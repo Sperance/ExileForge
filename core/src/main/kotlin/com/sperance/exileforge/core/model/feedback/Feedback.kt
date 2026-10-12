@@ -5,8 +5,16 @@ import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion; жалоба на письмо героя (4.6.3) - [COMPLAINT]. */
-@Serializable enum class FeedbackKind { BUG, SUGGESTION, APPEAL, COMPLAINT }
+/**
+ * What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion; жалоба на письмо героя (4.6.3) - [COMPLAINT].
+ * [shots] (4.8.0) - к отчёту можно приложить снимок экрана: только к ошибке, она сразу уходит в Asana (как `FeedbackKind.shots` сервера).
+ */
+@Serializable enum class FeedbackKind(val shots: Boolean = false) {
+    BUG(shots = true),
+    SUGGESTION,
+    APPEAL,
+    COMPLAINT,
+}
 
 /**
  * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.3.0: первый

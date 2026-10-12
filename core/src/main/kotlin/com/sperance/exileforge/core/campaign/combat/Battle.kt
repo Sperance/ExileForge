@@ -77,6 +77,8 @@ class Battle(
     val kind: FightKind = FightKinds.expedition(foes),
     /** Счёт Предначертания на заход (4.6.0): бои захода делят его; без захода - свой. */
     val fateRun: FateRun = FateRun(),
+    /** Как враги выходят на поле (4.8.0): раундами собранных стай или подкреплением по очереди. */
+    muster: Muster = Muster.Rounds,
 ) {
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
@@ -193,49 +195,47 @@ class Battle(
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
     }
 
-    /**
-     * Раунды боя (4.4.1): стаи, что бой собрал вокруг вступившей, выходят на поле по очереди ([Foe.round]) - следующий раунд
-     * встаёт, едва пал последний враг на поле ([nextRound]). [round] - идущий, с 0, из [rounds]; у боя одной стаи раунд один.
-     */
-    val rounds: Int = (foes.maxOfOrNull { it.round } ?: 0) + 1
-    var round = 0
-        private set
+    /** Выход врагов на поле (4.4.1 - раунды, 4.8.0 - подкрепления, [Muster]). */
+    private val mustered: Muster.Field = muster.field(foes, fight)
 
-    /** Когда начался идущий раунд: ярость каждого раунда считается от его начала. */
+    /** Смены поля боя: раунды собранных стай или смены подкреплений; [round] - идущая, с 0, из [rounds]. */
+    val rounds: Int get() = mustered.rounds
+    val round: Int get() = mustered.round
+
+    /** Когда началась идущая смена поля: ярость каждой смены считается от её начала. */
     private var roundAt = 0.0
 
-    /** Секунды идущего раунда - часы ярости. */
+    /** Секунды идущей смены поля - часы ярости. */
     internal val rageClock: Double get() = time - roundAt
 
-    /** Враги раунда [round], что встают на поле сами (не свита), сильнейший первым. */
-    private fun roundFoes(round: Int): List<Int> = foes.indices.filter { !foes[it].summoned && foes[it].round == round }.sortedByDescending { foes[it].rarity }
+    /**
+     * Кто на поле, по местам (4.2.0): первые сразу, сильнейший первым; свита босса встаёт по зову фаз на следующее место
+     * ([enterField]). Павший держит своё место до конца раунда или до подкрепления, что встаёт на него.
+     */
+    private val places: MutableList<Int> = mustered.opening().toMutableList()
+
+    /** Враг [index] ещё ждёт своего выхода (4.4.1): не на поле, цел и не свита. */
+    fun waits(index: Int): Boolean = mustered.waits(index)
 
     /**
-     * Кто на поле, по местам (4.2.0): весь раунд сразу, сильнейший первым; свита босса встаёт по зову фаз на следующее место
-     * ([enterField]). Павший держит своё место до конца раунда.
+     * Враги выходят на поле, если пора (4.4.1 - следующий раунд, 4.8.0 - подкрепление): новые подходят к герою, новый раунд
+     * уводит павших с поля, новая смена начинает ярость заново. Герой остаётся каким был. False - никто не вышел.
      */
-    private val places: MutableList<Int> = roundFoes(0).toMutableList()
-
-    /** Враг [index] ещё ждёт своего раунда (4.4.1): не на поле, цел и не свита. */
-    fun waits(index: Int): Boolean = !foes[index].summoned && foes[index].round > round
-
-    /**
-     * Следующий раунд встаёт на поле (4.4.1): павшие уходят с него, новые подходят к герою, ярость начинается заново. Герой
-     * остаётся каким был - здоровье, мана, фляги, откаты, эффекты и заряды. False - раундов больше нет.
-     */
-    internal fun nextRound(): Boolean {
-        if (round + 1 >= rounds) return false
-        round++
-        roundAt = time
-        enrage = 0
-        places.clear()
-        roundFoes(round).forEach { index ->
-            places += index
-            foeFighters[index].enter(places.lastIndex, time)
+    internal fun muster(): Boolean {
+        val join = mustered.join(foeFighters.count { it.alive }) ?: return false
+        if (join.rage) {
+            roundAt = time
+            enrage = 0
+        }
+        if (join.fresh) places.clear()
+        join.entering.forEach { index ->
+            val fallen = places.indexOfFirst { !foeFighters[it].alive && !foes[it].summoned }
+            val place = if (fallen >= 0) fallen.also { places[it] = index } else places.size.also { places += index }
+            foeFighters[index].enter(place, time)
         }
         // Ауры вставших ложатся на героя
         remake(heroFighter)
-        return true
+        return join.entering.isNotEmpty()
     }
 
     /** Место врага [index] на поле; -1 - свита, что ещё не звана. */

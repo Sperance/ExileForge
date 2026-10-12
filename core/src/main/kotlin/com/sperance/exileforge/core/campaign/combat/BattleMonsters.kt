@@ -16,7 +16,8 @@ import kotlin.math.min
 /**
  * Ярость (3.95.0 - стража; 4.3.0 - любого боя): каждые `every` секунд правила вида боя [Battle.rageRule] урон всех живых врагов -
  * стража, стаи, свиты, позже вставших - больше ещё на `damage` процентов; ступени складываются до `limit`. Вставший позже
- * догоняет ступень, что уже идёт; раунд боя (4.4.1) начинает её заново. Без бросков: бой остаётся тем же на тех же костях.
+ * догоняет ступень, что уже идёт; раунд боя (4.4.1) и смена подкреплений (4.8.0) начинают её заново, а ступень, что уже
+ * лежит на враге, не снимают. Без бросков: бой остаётся тем же на тех же костях.
  */
 internal fun Battle.rage() {
     val stacks = rageRule.stacks(rageClock)
@@ -27,7 +28,7 @@ internal fun Battle.rage() {
     if (enrage <= 0) return
     val lines = listOf(StatLine(CoreStat.DAMAGE.code, Op.MORE, rageRule.damage * enrage))
     foeFighters.forEach { foe ->
-        if (!foe.alive || raged[foe.index] == enrage) return@forEach
+        if (!foe.alive || (raged[foe.index] ?: 0) >= enrage) return@forEach
         raged[foe.index] = enrage
         buff(foe, RAGE, lines, FOREVER)
     }

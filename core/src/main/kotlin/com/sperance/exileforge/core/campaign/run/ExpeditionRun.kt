@@ -280,6 +280,9 @@ class ExpeditionRun(
     internal var slain: RolledMonster? = null
     internal var report: FightReport? = null
 
+    /** Журнал последнего боя захода (4.8.0), любого - и автопробега, и Бездны: его открывает «Журнал боя» меню забега. */
+    internal var lastFight: FightReport? = null
+
     /** Прошлый бой захода выигран (4.2.0): следующий бой открывается силами `FIGHT_CLEAR`. */
     internal var wonLast = false
 

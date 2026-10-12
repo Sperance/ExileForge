@@ -30,6 +30,10 @@ data class GameSettings(
     val prologueSeen: Boolean = false,
     /** Продолжения шагов сюжета, что уже показаны (4.7.0): `герой:шаг`; повтор - из «Всего сюжета». */
     val storySeen: Set<String> = emptySet(),
+    /** Таблица титулов «Хроники» свёрнута заголовком (4.8.0, макет «Титулы», вариант A). */
+    val titlesFolded: Boolean = false,
+    /** Свойства уникальных и мифических лотов аукциона раскрыты сразу (4.8.0, макет «Аукцион», A+C); на сервер не уходит. */
+    val legendsOpen: Boolean = false,
 ) {
     companion object {
         val PAUSES = listOf(0, 30, 50)

@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.DamageNumbers
+import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
@@ -51,12 +52,23 @@ import kotlin.math.sin
                 ui("fight.stage", fight.round, fight.rounds).takeIf { fight.rounds > 1 },
                 ui("expedition.pack_left", fight.standing, fight.foes.size).takeIf { fight.foes.size > 1 },
             ).joinToString(" · ")
-            Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
+                // Мощь вожака стаи (4.8.0): «⚜ 15.9k» цвета его стойки против героя
+                FoeMightMark(leader)
+            }
             // Ярость боя (4.3.0): ступень и отсчёт - и у стаи, не только у стража
             fight.rage?.let { RageMark(it) }
         }
         BugAction(Modifier.align(Alignment.TopEnd))
     }
+}
+
+/** Мощь врага [monster] мелко (4.8.0): печать и число цвета его стойки против героя; вне оверлея боя - ничего. Не прогноз боя. */
+@Composable internal fun FoeMightMark(monster: RolledMonster, modifier: Modifier = Modifier) {
+    val might = LocalFightMight.current ?: return
+    val reading = might.of(monster)
+    FoeMight(reading, might.standing(reading), modifier)
 }
 
 /** A swing and a skill's blow carry a card toward the other side (2.78.0); a tick, a reflection, a draught do not. */
@@ -169,6 +181,7 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                 // Variant A (3.81.0): three narrow tiles — the portrait over a one-line name that shrinks to fit; the whole name is in its window.
                 portrait(FOE_AVATAR_NARROW)
                 FittedName(monsterTitle(foe.monster.code), ring)
+                FoeMightMark(foe.monster)
                 seals()
             } else {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -185,6 +198,7 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                         )
                         // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
                         if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
+                        FoeMightMark(foe.monster)
                         seals()
                     }
                 }

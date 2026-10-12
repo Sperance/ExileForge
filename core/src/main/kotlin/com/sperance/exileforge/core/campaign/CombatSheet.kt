@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.RegenPool
 import com.sperance.exileforge.core.character.HeroSheet
+import com.sperance.exileforge.core.character.Mights
 import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -12,6 +13,7 @@ import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Grant
+import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatBreakdown
@@ -111,6 +113,9 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         }
         out
     }
+
+    /** Мощь героя (4.8.0) по телу боя без карты: печать листа героя и «было» сравнения вещи. */
+    val might: MightReading by lazy { Mights.of(index, body) }
 
     /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
     val values: Map<String, Double> by lazy { read(body) }

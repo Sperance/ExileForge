@@ -2,11 +2,14 @@ package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -29,13 +32,16 @@ import com.sperance.exileforge.ui.theme.*
             tint = GoldBright,
         )
     }, modifier) {
-        Text(
-            ui("item.quality_badge", quality),
-            color = GoldBright,
-            fontWeight = FontWeight.Bold,
-            style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
-            modifier = Modifier.background(Gold.copy(alpha = .12f), shape).border(1.dp, Gold.copy(alpha = .5f), shape)
-                .padding(horizontal = if (compact) 5.dp else 8.dp, vertical = if (compact) 0.dp else 2.dp),
-        )
+        val frame = Modifier.background(Gold.copy(alpha = .12f), shape).border(1.dp, Gold.copy(alpha = .5f), shape)
+        // На карточке жетон - в высоту плашек уровня и цены (RelicChip), чтобы шапка читалась одной линией (4.8.0).
+        val size = if (compact) frame.padding(horizontal = 5.dp) else frame.height(RelicChipHeight).padding(horizontal = 9.dp)
+        Row(size, verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                ui("item.quality_badge", quality),
+                color = GoldBright,
+                fontWeight = FontWeight.Bold,
+                style = if (compact) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+            )
+        }
     }
 }

@@ -146,7 +146,7 @@ internal fun ExpeditionRun.release() {
     val guardian = spawns.crystalGuardian(zone, spot.crystal, spot.id, MapEffects.buffs(baseEffects), extra) ?: return
     crystal = null
     crystalOutcome = null
-    engage(MonsterAgent(-1 - spot.id, listOf(guardian), spot.cell.x + 0.5, spot.cell.y + 0.5, crystal = spot.id))
+    engage(MonsterAgent(-1 - spot.id, listOf(guardian), spot.cell.x + 0.5, spot.cell.y + 0.5, crystal = spot.id, joinsBrawl = false))
 }
 
 /** A foe of the fight fell: the event by what it was; its reward comes with the server's answer. */
@@ -208,6 +208,7 @@ internal fun ExpeditionRun.play(dt: Double) {
     // The fight's figures (3.51.0): only the hero's statistics, before a fall closes the journal.
     record { n -> RunEvent.Fight(n, FightFigures.of(pack, duration, boss = agent === world.boss, won = outcome == Outcome.WIN)) }
     val leader = fightLeader()
+    lastFight = FightReport(leader, outcome, pack, duration)
     wonLast = outcome == Outcome.WIN
     val down = descent?.takeIf { abyssFight }
     when (outcome) {

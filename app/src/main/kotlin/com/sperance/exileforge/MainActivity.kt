@@ -1,14 +1,19 @@
 package com.sperance.exileforge
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.lifecycleScope
+import com.sperance.exileforge.platform.ScreenCapture
+import com.sperance.exileforge.platform.VolumeChord
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.app.NetworkWatch
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.ForgeApp
 import com.sperance.exileforge.ui.theme.ForgeTheme
+import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf
 
@@ -24,6 +29,11 @@ class MainActivity : ComponentActivity() {
 
     /** Сеть устройства (3.95.2): вернувшаяся будит связь сразу. */
     private val network by lazy { NetworkWatch(applicationContext, shell::networkBack) }
+
+    /** Громкость↑ и Громкость↓ вместе (4.8.0): снимок окна, пока лист отчёта ещё не открыт, затем сам лист. */
+    private val chord = VolumeChord { lifecycleScope.launch { shell.requestBug(ScreenCapture.capture(window)) } }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean = chord.onKey(event) || super.dispatchKeyEvent(event)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

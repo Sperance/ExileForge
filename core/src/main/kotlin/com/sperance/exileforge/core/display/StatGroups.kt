@@ -12,7 +12,7 @@ fun StatSection.title(lang: Lang = uiLanguage): String = ui(lang, "enum.stat_gro
 /**
  * Сводка, разложенная по разделам (4.6.5): раздел строки - `section` характеристики в контенте ([StatRegistry.section]), разделы
  * по своему порядку, пустые пропущены, внутри - порядок реестра. Без раздела строки нет: часть строки (`partOf`) читается в ней,
- * силы уникальных - блоком «Силы снаряжения», счётчики надетого (`NONE`) не показываются.
+ * счётчики надетого (`NONE`) не показываются.
  */
 fun groupedStats(stats: Map<String, Double>, registry: StatRegistry): List<Pair<StatSection, List<Pair<String, Double>>>> = stats.entries
     .filter { registry[it.key]?.partOf == null }

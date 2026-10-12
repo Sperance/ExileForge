@@ -88,7 +88,7 @@ internal fun ExpeditionRun.wave(current: Descent, depth: Int) {
 internal fun ExpeditionRun.nextFight(current: Descent) {
     val group = current.fights.firstOrNull() ?: return
     current.fights = current.fights.drop(1)
-    engage(MonsterAgent(ExpeditionRun.ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5), current.level, abyssal = true)
+    engage(MonsterAgent(ExpeditionRun.ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5, joinsBrawl = false), current.level, abyssal = true)
 }
 
 /** The descent is over: the hoard of the depths cleared — whole, or what a fall leaves of it. */

@@ -278,6 +278,9 @@ jobs:
             adb shell am instrument -w com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee ui-results.txt
             python3 -c "import pathlib,re; text=pathlib.Path('ui-results.txt').read_text(); assert re.search(r'OK \(\d+ tests?\)', text), text"
             adb pull /sdcard/Android/data/com.sperance.exileforge/files/design design-preview
+            # Debug и minifiedTest собраны на разных раннерах - разные debug-ключи: поверх не встают, ставим начисто
+            adb uninstall com.sperance.exileforge.test
+            adb uninstall com.sperance.exileforge
             adb install -r app/build/outputs/apk/minifiedTest/app-minifiedTest.apk
             adb install -r app/build/outputs/apk/androidTest/minifiedTest/app-minifiedTest-androidTest.apk
             adb shell am instrument -w -e class com.sperance.exileforge.ui.ReleaseSmokeTest com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee release-smoke.txt

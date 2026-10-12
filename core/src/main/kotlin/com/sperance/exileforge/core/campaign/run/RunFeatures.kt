@@ -111,9 +111,12 @@ internal fun ExpeditionRun.choose(choice: Int) {
     if (spot.spent || spot is AltarSpot) offer = null
 }
 
-/** «Собрать» на листе узла: сбор идёт [MapFeature.Node.seconds], забег стоит. Инструмент проверяет лист и сервер. */
+/**
+ * «Собрать» на листе узла: сбор идёт [MapFeature.Node.seconds], забег стоит. Инструмент проверяет лист и сервер; узел под стражами
+ * сокровищ (4.9.0) ждёт их гибели.
+ */
 internal fun ExpeditionRun.startGather() {
-    val spot = (offer as? NodeSpot)?.takeIf { phase == RunPhase.MAP && !it.spent } ?: return
+    val spot = (offer as? NodeSpot)?.takeIf { phase == RunPhase.MAP && !it.spent && !world.guarded(it.id) } ?: return
     channel = Channel(spot)
 }
 

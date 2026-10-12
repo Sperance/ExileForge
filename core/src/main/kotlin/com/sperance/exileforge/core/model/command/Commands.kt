@@ -60,13 +60,13 @@ data class ApiCapabilities(val routes: Set<String>) {
             "POST" to "/api/v1/hero/skilltree/refundBranch",
             "POST" to "/api/v1/hero/atlas/allocate", "POST" to "/api/v1/hero/skills/learn",
             "POST" to "/api/v1/hero/skills/rune",
-            "GET" to "/api/v1/hero/crafts", "POST" to "/api/v1/hero/crafts/start",
+            "POST" to "/api/v1/hero/crafts/settle", "POST" to "/api/v1/hero/crafts/start",
             "POST" to "/api/v1/hero/merchant/buy", "POST" to "/api/v1/hero/merchant/buyOrb",
             "POST" to "/api/v1/hero/campaign/start", "POST" to "/api/v1/hero/campaign/events",
             "POST" to "/api/v1/hero/campaign/abandon",
             "POST" to "/api/v1/hero/trials/rush", "POST" to "/api/v1/hero/trials/tower", "POST" to "/api/v1/hero/trials/key", "GET" to "/api/v1/hero/stats", "GET" to "/api/v1/hero/uniques", "POST" to "/api/v1/hero/trials/events",
             "GET" to "/api/v1/auctionlot/search", "GET" to "/api/v1/auctionlot/mine", "GET" to "/portraits/all.json", "POST" to "/api/v1/auctionlot/sell/equipment", "POST" to "/api/v1/auctionlot/buy",
-            "GET" to "/api/v1/guild/mine", "GET" to "/api/v1/guild/search", "POST" to "/api/v1/guild/create", "POST" to "/api/v1/guild/join",
+            "POST" to "/api/v1/guild/visit", "GET" to "/api/v1/guild/search", "POST" to "/api/v1/guild/create", "POST" to "/api/v1/guild/join",
             "POST" to "/api/v1/guild/apply", "POST" to "/api/v1/guild/applications/accept", "POST" to "/api/v1/guild/applications/decline",
             "POST" to "/api/v1/guild/invite", "POST" to "/api/v1/guild/invites/accept", "POST" to "/api/v1/guild/invites/decline",
             "POST" to "/api/v1/guild/leave", "POST" to "/api/v1/guild/kick", "POST" to "/api/v1/guild/promote", "POST" to "/api/v1/guild/demote",
@@ -104,6 +104,11 @@ data class ApiCapabilities(val routes: Set<String>) {
     val failures: List<RequestFailure> = emptyList(),
     /** Снимок экрана (4.8.0): JPEG в base64 в пределах `rules.feedback.shotSide|shotBytes`; только у вида, что его берёт ([FeedbackKind.shots]). */
     val screenshot: String? = null,
+    /**
+     * Ключ отчёта (4.9.0): один на отчёт, с ним отчёт повторяется из очереди на диске ([com.sperance.exileforge.core.feedback.BugOutbox]),
+     * пока сервер не ответит; второй раз сервер его не запишет. Пусто - без защиты от повтора.
+     */
+    val key: String = "",
 )
 
 /**

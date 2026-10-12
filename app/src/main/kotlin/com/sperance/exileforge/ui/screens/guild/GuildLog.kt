@@ -2,7 +2,6 @@ package com.sperance.exileforge.ui.screens.guild
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -21,9 +20,12 @@ import com.sperance.exileforge.ui.theme.*
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId) { vm.loadLog() }
     val log = guilds.log
+    // Ключи по содержимому (4.9.0): свежие строки сверху не сдвигают ключи прежних
+    val keys = remember(log) { contentKeys(log) { "${it.at}|${it.kind}|${it.heroName}|${it.value}" } }
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (log.isEmpty() && Reads.GUILD_LOG !in game.loading) item { InfoCard(ui("guild.log_empty"), ui("guild.log_empty_hint")) }
-        items(log) { entry ->
+        items(log.size, key = { keys[it] }) { i ->
+            val entry = log[i]
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MutedText(clockText(entry.at), modifier = Modifier.width(78.dp))
                 Text(GuildText.log(entry), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))

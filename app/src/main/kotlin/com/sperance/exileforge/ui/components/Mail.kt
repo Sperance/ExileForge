@@ -115,8 +115,14 @@ internal fun senderLine(mail: Mail): String {
 /** Сколько целых дней письму осталось; меньше суток - 0. */
 private fun daysLeft(mail: Mail, now: Long = System.currentTimeMillis()): Long = (mail.expiresAt - now).coerceAtLeast(0) / DAY_MS
 
-/** «сгорит через N дн.» или «сгорит сегодня». */
-internal fun burnText(mail: Mail): String = daysLeft(mail).let { if (it <= 0) ui("mail.burns_today") else ui("mail.burns_in", it) }
+/**
+ * «сгорит через N дн.» или «сгорит сегодня»; письмо с невзятым вложением (4.9.0, сервер SEC-9) не сгорает - «хранится, пока не
+ * заберёшь».
+ */
+internal fun burnText(mail: Mail): String = when {
+    mail.claimable -> ui("mail.kept")
+    else -> daysLeft(mail).let { if (it <= 0) ui("mail.burns_today") else ui("mail.burns_in", it) }
+}
 
 /**
  * Знак отправителя слева у письма: портрет класса героя, герб гильдии рассылки или руна игры. Один знак на список, письмо и

@@ -8,12 +8,12 @@ import com.sperance.exileforge.rules.sheet.MightReading
 
 /**
  * Мощь на клиенте (4.8.0): одна точка над функцией правил [Might] - клиент её не дублирует и не «подправляет». Герой меряется
- * своим телом боя: на листе героя - лист боя без карты (`CombatSheet.might`), в бою - лист под эффектами карты (`FightHud.heroBody`).
- * Не прогноз боя.
+ * своим телом боя: на листе героя - боевой лист без карты (`CombatSheet.might`, [Might.hero] - та же функция, что у сервера), в бою -
+ * лист под эффектами карты (`FightHud.heroBody`) с уроном умений и питомца из боевого листа. Не прогноз боя.
  */
 object Mights {
-    /** Мощь тела боя [body]: героя (лист с аурами и Предначертанием) или любого бойца с его уровнем. */
-    fun of(index: ContentIndex, body: Combatant): MightReading = Might.of(index, body.stats, body.level)
+    /** Мощь героя в бою: тело [body] под эффектами карты и урон в секунду сверх листа [added] (умения и питомец, `CombatSheet.addedDps`). */
+    fun hero(index: ContentIndex, body: Combatant, added: Double): MightReading = Might.hero(index, body.stats, body.level, added)
 
     /** Мощь монстра [monster] по его листу; уровень 0 у монстра - уровень зоны [level]. */
     fun of(index: ContentIndex, monster: RolledMonster, level: Int): MightReading = Might.of(index, monster.stats, monster.level.takeIf { it > 0 } ?: level)

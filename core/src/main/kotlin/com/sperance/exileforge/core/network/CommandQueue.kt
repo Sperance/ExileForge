@@ -150,7 +150,16 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
         /** Команды администратора (3.88.0) не ждут сети: уходят сразу или падают видимой ошибкой - блок героя не ложится вслепую. */
         private const val ADMIN = "api/v1/admin/"
 
-        fun queues(path: String): Boolean = !path.startsWith(ADMIN) && OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
+        /** Отчёт об ошибке (4.9.0) повторяется из своей очереди на диске под своим ключом - очередь команд его не держит. */
+        const val BUG_REPORT = "api/v1/bugreport"
+
+        /**
+         * Команды-чтения (4.9.0, сервер SEC-13): досчёт ремёсел, выдача заданий, заход в гильдию и токен апелляции - их ответ ждёт
+         * экран, а не очередь; без сети они падают, как чтение.
+         */
+        private val READS = listOf("api/v1/hero/crafts/settle", "api/v1/hero/quests/refresh", "api/v1/guild/quests/refresh", "api/v1/guild/visit", "api/v1/notice/token")
+
+        fun queues(path: String): Boolean = path != BUG_REPORT && path !in READS && !path.startsWith(ADMIN) && OWN_RETRY.none { path.startsWith(it) } && ROLLED.none { path.startsWith(it) && !path.startsWith("api/v1/hero/crafts/stop") }
 
         /**
          * Whether an answer means "not yet" rather than "no": a duplicate still running (409), a throttle or

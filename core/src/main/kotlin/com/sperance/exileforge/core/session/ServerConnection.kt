@@ -53,8 +53,8 @@ object Reads {
     const val DELETION = "deletion"
 }
 
-/** Что сообщить сразу: вид выбирает цвет, [at] отличает два одинаковых текста. */
-enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS }
+/** Что сообщить сразу: вид выбирает цвет, [at] отличает два одинаковых текста; [FAILED] (4.9.0) - не вышло то, что шло само, без команды. */
+enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS, FAILED }
 
 data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
 

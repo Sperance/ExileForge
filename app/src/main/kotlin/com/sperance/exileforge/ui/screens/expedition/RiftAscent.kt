@@ -1,9 +1,9 @@
 package com.sperance.exileforge.ui.screens.expedition
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,12 +16,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.center
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -42,7 +44,7 @@ import com.sperance.exileforge.rules.rift.RiftEngine
 import com.sperance.exileforge.rules.rift.RiftNode
 import com.sperance.exileforge.rules.rift.RiftRun
 import com.sperance.exileforge.rules.rift.RiftStage
-import com.sperance.exileforge.ui.components.motionClock
+import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import kotlinx.coroutines.flow.first
@@ -74,9 +76,10 @@ import kotlin.math.sin
     val seen = remember(run, plan) { plan.nodes.filter { engine.seen(run, it) }.map { it.id }.toSet() }
     val sight = engine.sight(run)
     val reach = here?.let(engine::depth) ?: -1
-    val flow = motionClock(FLOW_MS, "rift-flow")
-    val breath = motionClock(BREATH_MS, "rift-breath")
-    val drift = motionClock(DRIFT_MS, "rift-drift")
+    // Фазы декора читаются в рисовании (4.9.0): лента перерисовывается шагом часов, а не перекомпонуется.
+    val flow = motionPhase(FLOW_MS)
+    val breath = motionPhase(BREATH_MS)
+    val drift = motionPhase(DRIFT_MS)
     val scroll = rememberScrollState()
     BoxWithConstraints(modifier.fillMaxSize()) {
         val width = maxWidth
@@ -93,27 +96,40 @@ import kotlin.math.sin
         }
         Box(Modifier.fillMaxWidth().verticalScroll(scroll)) {
             Box(Modifier.width(width).height(height)) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val px = { d: Dp -> d.toPx() }
-                    drawRect(Brush.verticalGradient(listOf(RiftColors.Ground, RiftColors.Ground2, RiftColors.Ground)))
-                    here?.let { drawCircle(Brush.radialGradient(listOf(RiftColors.Rift.copy(alpha = .16f), Color.Transparent), Offset(px(x(it)), px(y(it))), px(ROW * 3)), px(ROW * 3), Offset(px(x(it)), px(y(it)))) }
-                    plan.nodes.forEach { node ->
-                        node.links.mapNotNull(plan::node).forEach { next ->
-                            if (node.id !in seen || next.id !in seen) return@forEach
-                            vein(
-                                Offset(px(x(node)), px(y(node))),
-                                Offset(px(x(next)), px(y(next))),
-                                bend = if (node.lane % 2 == 0) -8.dp.toPx() else 8.dp.toPx(),
-                                walked = node.id in walked && next.id in walked,
-                                open = node == here && next.id in reachable,
-                                flow = flow,
-                            )
+                // Жилы и фон собираются раз на раскладку (4.9.0); кадр декора только рисует их с новой фазой
+                Spacer(
+                    Modifier.fillMaxSize().drawWithCache {
+                        val px = { d: Dp -> d.toPx() }
+                        val ground = Brush.verticalGradient(listOf(RiftColors.Ground, RiftColors.Ground2, RiftColors.Ground))
+                        val glow = here?.let { Offset(px(x(it)), px(y(it))) }
+                        val halo = glow?.let { Brush.radialGradient(listOf(RiftColors.Rift.copy(alpha = .16f), Color.Transparent), it, px(ROW * 3)) }
+                        val veins = buildList {
+                            plan.nodes.forEach { node ->
+                                node.links.mapNotNull(plan::node).forEach { next ->
+                                    if (node.id !in seen || next.id !in seen) return@forEach
+                                    add(
+                                        Vein.of(
+                                            Offset(px(x(node)), px(y(node))),
+                                            Offset(px(x(next)), px(y(next))),
+                                            bend = if (node.lane % 2 == 0) -8.dp.toPx() else 8.dp.toPx(),
+                                            walked = node.id in walked && next.id in walked,
+                                            open = node == here && next.id in reachable,
+                                        ),
+                                    )
+                                }
+                            }
                         }
-                    }
-                    // Туман: всё выше последнего видимого ряда
-                    val fogEdge = px(top + ROW * (depths - 1 - (reach + sight)))
-                    if (fogEdge > 0f) fog(fogEdge, drift)
-                }
+                        // Туман: всё выше последнего видимого ряда
+                        val fogEdge = px(top + ROW * (depths - 1 - (reach + sight)))
+                        onDrawBehind {
+                            drawRect(ground)
+                            if (glow != null && halo != null) drawCircle(halo, px(ROW * 3), glow)
+                            val phase = flow.value
+                            veins.forEach { vein(it, phase) }
+                            if (fogEdge > 0f) fog(fogEdge, drift.value)
+                        }
+                    },
+                )
                 plan.nodes.forEach { node ->
                     val visible = node.id in seen
                     val guardian = node.kind == RiftNodeKind.GUARDIAN
@@ -135,19 +151,31 @@ import kotlin.math.sin
     }
 }
 
-/** Жила между узлами: пройденная горит и течёт, доступная течёт мягче, прочие - тусклая нить. */
-private fun DrawScope.vein(from: Offset, to: Offset, bend: Float, walked: Boolean, open: Boolean, flow: Float) {
-    val mid = Offset((from.x + to.x) / 2 + bend, (from.y + to.y) / 2)
-    val path = Path().apply {
-        moveTo(from.x, from.y)
-        quadraticTo(mid.x, mid.y, to.x, to.y)
+/** Жила между узлами, собранная раз на раскладку (4.9.0): изгиб [path] и пройдена ли она ([walked]) или доступна ([open]). */
+private class Vein(val path: Path, val walked: Boolean, val open: Boolean) {
+    companion object {
+        fun of(from: Offset, to: Offset, bend: Float, walked: Boolean, open: Boolean): Vein {
+            val mid = Offset((from.x + to.x) / 2 + bend, (from.y + to.y) / 2)
+            val path = Path().apply {
+                moveTo(from.x, from.y)
+                quadraticTo(mid.x, mid.y, to.x, to.y)
+            }
+            return Vein(path, walked, open)
+        }
     }
+}
+
+/** Жила между узлами: пройденная горит и течёт, доступная течёт мягче, прочие - тусклая нить. */
+private fun DrawScope.vein(vein: Vein, flow: Float) {
+    val path = vein.path
+    val walked = vein.walked
+    val open = vein.open
     val color = when {
         walked -> RiftColors.Rift
         open -> RiftColors.Soft
-        else -> RiftColors.LineHi.copy(alpha = .6f)
+        else -> VeinDim
     }
-    if (walked) drawPath(path, RiftColors.Rift.copy(alpha = .25f), style = Stroke(9.dp.toPx(), cap = StrokeCap.Round))
+    if (walked) drawPath(path, VeinGlow, style = Stroke(9.dp.toPx(), cap = StrokeCap.Round))
     val stroke = when {
         walked -> 3.5.dp
         open -> 2.dp
@@ -159,6 +187,9 @@ private fun DrawScope.vein(from: Offset, to: Offset, bend: Float, walked: Boolea
         drawPath(path, if (walked) RiftColors.Hot else RiftColors.Rift, style = Stroke(1.6.dp.toPx(), pathEffect = dash, cap = StrokeCap.Round))
     }
 }
+
+private val VeinDim = RiftColors.LineHi.copy(alpha = .6f)
+private val VeinGlow = RiftColors.Rift.copy(alpha = .25f)
 
 /** Туман над краем [edge]: почти чёрная толща, в ней дрейфуют зелёные клубы, нижняя кромка тает. */
 private fun DrawScope.fog(edge: Float, drift: Float) {
@@ -182,7 +213,7 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
     walked: Boolean,
     hero: Boolean,
     silhouette: Boolean,
-    breath: Float,
+    breath: State<Float>,
     name: String?,
     modifier: Modifier,
     onClick: () -> Unit,
@@ -190,24 +221,44 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
     val guardian = node.kind == RiftNodeKind.GUARDIAN
     val radius = if (guardian) 24.dp else 16.dp
     val tint = if (silhouette) RiftColors.Warn else node.kind.color()
-    val pulse = (1 - cos(breath * 2 * PI).toFloat()) / 2
-    Box(modifier.size(NODE_BOX).alpha(if (silhouette) .45f + .2f * pulse else 1f).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val r = radius.toPx()
-            if (open) drawCircle(RiftColors.Rift.copy(alpha = .9f * (1 - breath)), r * (.8f + 1.1f * breath), style = Stroke(2.dp.toPx()))
-            val hex = hexagon(center, r)
-            if (!silhouette) {
-                drawPath(hex, if (walked) RiftColors.Deep else RiftColors.Panel)
-                drawPath(hex, if (open) RiftColors.Rift else tint.copy(alpha = if (walked && !hero) .55f else .9f), style = Stroke((if (open) 2.2 else 1.3).dp.toPx()))
-            }
-            if (hero) drawCircle(RiftColors.Hot, 4.5.dp.toPx(), Offset(center.x, center.y - r - 8.dp.toPx()), alpha = .6f + .4f * pulse)
-        }
+
+    // Дыхание читается в рисовании и в слое (4.9.0): узел перерисовывается без перекомпоновки
+    fun pulse() = (1 - cos(breath.value * 2 * PI).toFloat()) / 2
+    Box(
+        modifier.size(NODE_BOX).then(
+            // Как `alpha()`: силуэт - слоем с обрезкой по рамке, прочие без слоя
+            if (silhouette) {
+                Modifier.graphicsLayer {
+                    alpha = .45f + .2f * pulse()
+                    clip = true
+                }
+            } else {
+                Modifier
+            },
+        ).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Spacer(
+            Modifier.fillMaxSize().drawWithCache {
+                val r = radius.toPx()
+                val hex = hexagon(size.center, r)
+                onDrawBehind {
+                    val phase = breath.value
+                    if (open) drawCircle(RiftColors.Rift.copy(alpha = .9f * (1 - phase)), r * (.8f + 1.1f * phase), style = Stroke(2.dp.toPx()))
+                    if (!silhouette) {
+                        drawPath(hex, if (walked) RiftColors.Deep else RiftColors.Panel)
+                        drawPath(hex, if (open) RiftColors.Rift else tint.copy(alpha = if (walked && !hero) .55f else .9f), style = Stroke((if (open) 2.2 else 1.3).dp.toPx()))
+                    }
+                    if (hero) drawCircle(RiftColors.Hot, 4.5.dp.toPx(), Offset(center.x, center.y - r - 8.dp.toPx()), alpha = .6f + .4f * pulse())
+                }
+            },
+        )
         Icon(
             node.kind.glyph(),
             null,
             tint = tint,
             modifier = Modifier.size(radius * 1.15f).graphicsLayer {
-                val grow = if (open) 1f + .08f * pulse else 1f
+                val grow = if (open) 1f + .08f * pulse() else 1f
                 scaleX = grow
                 scaleY = grow
             },

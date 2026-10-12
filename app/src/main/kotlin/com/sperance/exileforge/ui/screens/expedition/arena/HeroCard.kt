@@ -107,7 +107,7 @@ import kotlin.math.sin
             // The hero's own buildups (3.78.0): the foes stun and freeze by the same bars.
             fight.heroBuildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
             SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
-            StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges)
+            StateTiles(fight.heroAilments, fight.heroHeld, fight.heroEffects, fight.heroCharges, fight.heroFate)
             val target = fight.target?.let(names::get)
             if (target != null && fight.outcome == null) {
                 Text(

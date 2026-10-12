@@ -49,7 +49,8 @@ import kotlin.math.sin
     var framed by remember { mutableStateOf(false) }
     // The clock (3.56.0; 4.7.0 - общие часы декора, 30 к/с): мерцание стоит без анимаций и вне экрана; only the layers that
     // breathe are drawn on its tick — the glows, threads and rings are drawn again on a pan, a zoom or a take.
-    val clock = com.sperance.exileforge.ui.components.decorSeconds()
+    // С 4.9.0 часы - состоянием, читаются только в слоях, что дышат: небо не перекомпонуется на каждый их шаг.
+    val clock = com.sperance.exileforge.ui.components.decorTime()
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
     // No fog (3.54.0): the whole sky is drawn and tappable; what cannot be taken yet is only dim.
     val shown = nodes
@@ -91,7 +92,7 @@ import kotlin.math.sin
             },
     ) {
         // The far stars breathe on their own layer, behind everything.
-        Canvas(Modifier.matchParentSize()) { stars(clock) }
+        Canvas(Modifier.matchParentSize()) { stars(clock.value) }
         // The still sky: the glows, the threads, the rings and the cores of what is taken or dim — no clock is read here,
         // so this layer is drawn again only when the view, the taken set or the choice moves.
         Canvas(Modifier.matchParentSize()) {
@@ -111,7 +112,8 @@ import kotlin.math.sin
         // The breathing layer: the twinkle of what a point could take and the keystones' orbiting motes.
         Canvas(Modifier.matchParentSize()) {
             val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
-            shown.forEach { starLive(it, place(it), it.code in taken, it.code in reachable, clock) }
+            val now = clock.value
+            shown.forEach { starLive(it, place(it), it.code in taken, it.code in reachable, now) }
         }
     }
 }

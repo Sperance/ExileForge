@@ -57,6 +57,8 @@ import kotlinx.serialization.Serializable
     val fateFights: Long = 0,
     /** Номер героя (4.7.0, сервер 4.7.0): шесть цифр - по ним зовут в гильдию; пусто - сервер старше. */
     val number: String = "",
+    /** Выданное в сумке (4.9.0, сервер `HeroView.granted`): код стопки - сколько её штук выдано; эти штуки другим героям не уходят. */
+    val granted: Map<String, Long> = emptyMap(),
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */

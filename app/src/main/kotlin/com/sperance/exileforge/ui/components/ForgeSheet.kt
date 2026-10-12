@@ -81,6 +81,8 @@ fun ForgeSheet(
         dragHandle = dragHandle,
         contentWindowInsets = { WindowInsets(0.dp) },
     ) {
+        // Аккорд громкости (4.9.0) - и поверх листа: у листа своё окно
+        ChordOverDialog()
         Column(
             Modifier
                 .fillMaxWidth()

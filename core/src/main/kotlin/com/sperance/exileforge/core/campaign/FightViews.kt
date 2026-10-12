@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SlotHolder
 import com.sperance.exileforge.core.campaign.combat.chargeViews
 import com.sperance.exileforge.core.campaign.combat.effects
+import com.sperance.exileforge.core.campaign.combat.fateGlows
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.run.AilmentView
@@ -31,6 +32,7 @@ import com.sperance.exileforge.rules.content.PetRole
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.roll.RolledMonster
+import com.sperance.exileforge.rules.sheet.PetFighter
 import kotlin.math.roundToInt
 
 /**
@@ -54,35 +56,17 @@ internal class PetAllies(private val index: ContentIndex, private val rules: Com
         val summoned = spirit.takeIf { pet == null }
         val key = Made(pet, summoned, if (summoned != null) hero.level else 0, PetBoons.of(hero.stats))
         made?.takeIf { it.first == key }?.let { return it.second }
-        val ally = when {
-            pet != null -> make(pet, key.boons)
-            summoned != null -> summon(summoned, hero.level, key.boons)
-            else -> null
-        }
+        // Боец питомца или духа - правилом (4.9.0, [PetFighter]): тот же, что бьёт в Мощи героя
+        val ally = PetFighter.of(index, pet, summoned, hero.level, hero.stats)?.let(::ally)
         made = key to ally
         return ally
     }
 
-    private fun make(own: Pet, boons: Map<String, Double>): Ally? {
-        val kind = menagerie.species(own.species) ?: return null
-        val levels = (boons[PetBoons.LEVEL] ?: 0.0).toInt()
-        val p = if (levels != 0) own.copy(level = (own.level + levels).coerceAtLeast(1)) else own
-        return ally(p.species, p.role ?: kind.role, p.level, menagerie.sheet(p), boons)
-    }
-
-    /** Дух [code] уровня героя [level] - с прибавкой уровней питомцу, как у обычного питомца. */
-    private fun summon(code: String, level: Int, boons: Map<String, Double>): Ally? {
-        val kind = menagerie.species(code) ?: return null
-        val grown = (level + (boons[PetBoons.LEVEL] ?: 0.0).toInt()).coerceAtLeast(1)
-        val sheet = menagerie.spirit(code, grown) ?: return null
-        return ally(code, kind.role, grown, sheet, boons)
-    }
-
-    private fun ally(species: String, role: PetRole?, level: Int, sheet: Map<String, Double>, boons: Map<String, Double>): Ally = Ally(
-        species,
-        Combatant(PetBoons.apply(sheet, boons), level, rules),
-        role == PetRole.TANK,
-        if (role == PetRole.SUPPORT) menagerie.supportHeal(level) else 0.0,
+    private fun ally(fighter: PetFighter): Ally = Ally(
+        fighter.species,
+        Combatant(fighter.stats, fighter.level, rules),
+        fighter.role == PetRole.TANK,
+        if (fighter.role == PetRole.SUPPORT) menagerie.supportHeal(fighter.level) else 0.0,
         index.pets.drawFire,
     )
 }
@@ -104,17 +88,7 @@ internal fun Battle.hud(
 ): FightHud {
     val battle = this
     val h = heroFighter
-    val hits = events.withIndex()
-        .filter { (_, event) ->
-            event.time <= time && time - event.time < ExpeditionRun.HIT_LIFETIME &&
-                (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK)
-        }
-        .map { (index, event) ->
-            FloatingHit(
-                index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
-                event.type, event.inflicted, event.stunned, event.foe, event.pet != null,
-            )
-        }
+    val hits = recentHits()
     fun ailments(f: Battle.Fighter) = f.ailments.groupBy { it.ailment }.map { (ailment, active) ->
         val until = active.maxOf { it.until }
         AilmentView(
@@ -152,12 +126,12 @@ internal fun Battle.hud(
         outcome = outcome,
         heroSwing = swing(h), heroAilments = ailments(h), heroHeld = h.held, heroBuildup = buildup(h),
         lunge = lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe, event.pet != null) },
-        events = events.toList().asReversed(),
+        events = newestFirst(),
         started = started, paused = paused,
         target = target()?.index, focus = focus,
         heroTaunt = heroTaunt,
         heroMana = h.mana.roundToInt(), heroMaxMana = manaCap().roundToInt(), heroReserved = manaReserved().roundToInt(),
-        skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(),
+        skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(), heroFate = fateGlows(),
         heroBarrier = h.barrier.roundToInt(),
         level = level,
         round = round, rounds = rounds,
@@ -166,6 +140,29 @@ internal fun Battle.hud(
         rage = RageView(enrage, rageRule.damage * enrage, rageRule.next(rageClock)).takeIf { outcome == null },
         heroCast = heroCast(),
     )
+}
+
+/**
+ * Удары последней секунды ([ExpeditionRun.HIT_LIFETIME]) - числа над карточками (4.9.0: с конца журнала, он идёт по времени,
+ * а не фильтром всего боя на каждый кадр), по порядку журнала.
+ */
+private fun Battle.recentHits(): List<FloatingHit> {
+    val log = events
+    var from = log.size
+    while (from > 0 && time - log[from - 1].time < ExpeditionRun.HIT_LIFETIME) from--
+    if (from == log.size) return emptyList()
+    val hits = ArrayList<FloatingHit>(log.size - from)
+    for (index in from until log.size) {
+        val event = log[index]
+        if (event.time > time) continue
+        if (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) {
+            hits += FloatingHit(
+                index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
+                event.type, event.inflicted, event.stunned, event.foe, event.pet != null,
+            )
+        }
+    }
+    return hits
 }
 
 /** Сцена применения умения (4.4.0) длится столько выпадов удара ([CombatRules.lunge]): 0,5-0,9 с макета «Жилы энергии». */
@@ -177,7 +174,17 @@ private const val CAST_LUNGES = 4
  */
 private fun Battle.heroCast(): HeroCastView? {
     val window = CAST_LUNGES * rules.lunge
-    val last = log.indexOfLast { it.actor == Side.HERO && it.action == Action.SKILL && it.skill != null && it.pet == null && time - it.time < window }
+    // С конца журнала, пока строки моложе сцены (4.9.0): журнал идёт по времени, весь бой обходить незачем
+    var last = log.size - 1
+    while (last >= 0) {
+        val it = log[last]
+        if (time - it.time >= window) {
+            last = -1
+            break
+        }
+        if (it.actor == Side.HERO && it.action == Action.SKILL && it.skill != null && it.pet == null) break
+        last--
+    }
     if (last < 0 || log[last].time > time) return null
     val event = log[last]
     val used = (kit.actives.filterNotNull() + kit.passives).firstOrNull { it.skill.code == event.skill } ?: return null

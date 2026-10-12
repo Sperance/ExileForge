@@ -103,6 +103,8 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     )
                 }
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
+                // Выданная вещь (4.9.0): другим героям не уходит, торговец берёт её даром - почему аукцион погас
+                if (instance.granted) item { Text(ui("item.granted_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
                 temperOffer(game, instance)?.let { (ore, need) ->
                     item {
                         // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
@@ -201,7 +203,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                             model.lockItem(instance.id, !locked)
                         }
                         // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
-                        MenuLine(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked) {
+                        MenuLine(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked && !instance.granted) {
                             more = false
                             open = if (loose) ItemAction.AUCTION else ItemAction.WORN
                         }
@@ -234,7 +236,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                 LedgerLine(ui("confirm.give"), name, Tone.SPEND),
                 LedgerLine(ui("confirm.gain"), price?.let { ui("merchant.gold_amount", it) } ?: ui("confirm.gold_by_server"), Tone.GAIN),
                 // Осколки сфер за неё (3.95.3): что продажа даст кроме золота
-                game.shardsFor(listOf(view.rarity))?.let { LedgerLine(ui("confirm.gain"), it, Tone.GAIN) },
+                game.shardsFor(listOfNotNull(view.rarity.takeUnless { instance.granted }))?.let { LedgerLine(ui("confirm.gain"), it, Tone.GAIN) },
             ),
             note = ui("hero.sell_confirm"),
             confirm = ui("hero.sell_do"),
@@ -249,7 +251,10 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             containerColor = PanelRaised,
             shape = DialogShape,
             tonalElevation = 0.dp,
-            title = { Text(ui("hero.worn_title"), color = Gold) },
+            title = {
+                ChordOverDialog()
+                Text(ui("hero.worn_title"), color = Gold)
+            },
             text = { Text(ui("hero.worn_note"), color = Parchment) },
             confirmButton = {
                 ForgeTextButton(enabled = can, onClick = {

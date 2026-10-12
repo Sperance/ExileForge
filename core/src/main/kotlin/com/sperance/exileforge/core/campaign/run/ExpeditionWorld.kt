@@ -4,12 +4,14 @@ import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.core.campaign.SceneSight
+import com.sperance.exileforge.core.campaign.Shoreline
 import com.sperance.exileforge.rules.content.BehaviourRule
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.Crystal
 import com.sperance.exileforge.rules.roll.RolledMonster
+import com.sperance.exileforge.rules.run.Run
 import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.random.Random
@@ -104,6 +106,9 @@ class ExpeditionWorld(
     /** Жетон [token] стоит на карте и пал - весь его пак (4.0.0). */
     fun fell(token: Int): Boolean = roster.firstOrNull { it.id == token }?.let { it.standing.isEmpty() } == true
 
+    /** Стражи сокровищ объекта [feature] (4.9.0, жетон `Run.GUARD + объект`) ещё стоят: сундук комнаты и сбор узла ждут их гибели. */
+    fun guarded(feature: Int): Boolean = roster.any { it.id == Run.GUARD + feature && it.standing.isNotEmpty() }
+
     /** Павшие члены паков карты ключами `жетон × [slots] + член` (4.0.0): что объект видит, решая о выборе. */
     fun killed(slots: Int): Set<Int> = roster.flatMapTo(HashSet()) { agent -> agent.fallen.map { agent.id * slots + it } }
 
@@ -166,8 +171,12 @@ class ExpeditionWorld(
         return landmarks.filter { explored(it.x, it.y) && !SceneSight.inView(it.x, it.y) { x, y -> !map.clear(x, y) } }
     }
 
-    /** Тела в скале (4.7.0): круг против клеток со скруглёнными углами, как их рисует сцена. */
-    internal val body = WallBody(map, rules.cornerRadius)
+    /** Береговые контуры пропастей и вод (4.9.0): одни для сцены и тел; пересобираются только с правкой карты. */
+    val shoreline: Shoreline get() = Shoreline.of(map, rules.shore, shore).also { shore = it }
+    private var shore: Shoreline? = null
+
+    /** Тела в скале (4.7.0): круг против клеток со скруглёнными углами и (4.9.0) против контура глади, как их рисует сцена. */
+    internal val body = WallBody(map, rules.cornerRadius) { shoreline }
 
     /** Середины пропастей карты (4.7.0): по клетке на связную пропасть - ближайшая к её центру; считаются раз на карту. */
     private val chasmMarks: List<Cell> by lazy {
@@ -433,7 +442,7 @@ class ExpeditionWorld(
             boss: RolledMonster?,
             hasPortal: Boolean,
         ): ExpeditionWorld {
-            val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size, rules.minChasm)
+            val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size, rules.minChasm, rules.minPool)
             return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
         }
 

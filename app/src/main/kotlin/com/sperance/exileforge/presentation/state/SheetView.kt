@@ -78,37 +78,41 @@ internal object HeroLens {
     fun manaReserve(hero: HeroView?): ManaReserve? = hero?.combat?.let { ManaReserve(it.body.maxMana, it.reserved) }
 
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
-    fun orbs(index: ContentIndex?): List<Item> = index?.itemsByCategory?.get(Item.CURRENCY).orEmpty().sortedBy { it.price }
+    fun orbs(index: ContentIndex?): List<Item> = index?.let(orbsMemo::of).orEmpty()
+    private val orbsMemo = LastOf { i: ContentIndex -> i.itemsByCategory[Item.CURRENCY].orEmpty().sortedBy { it.price } }
 
     /** The auction's money (server 1.84.36: every orb, `AuctionRules.trades`): what a lot is priced, bought and filtered in, cheapest first. */
-    fun currencies(index: ContentIndex?): List<Item> = index?.let { i -> orbs(i).filter(i.rules.auction::trades) }.orEmpty()
+    fun currencies(index: ContentIndex?): List<Item> = index?.let(currenciesMemo::of).orEmpty()
+    private val currenciesMemo = LastOf { i: ContentIndex -> orbs(i).filter(i.rules.auction::trades) }
 
     /** The bench lines the hero has found; the rest of the bench stays hidden. */
-    fun bench(index: ContentIndex?, hero: HeroView?): List<BenchRecipe> = index?.let { i -> hero?.let { h -> i.bench.filter { it.code in h.info.recipes } } }.orEmpty()
+    fun bench(index: ContentIndex?, hero: HeroView?): List<BenchRecipe> = benchMemo.of(index, hero).orEmpty()
+    private val benchMemo = LastPair { i, h -> i.bench.filter { it.code in h.info.recipes } }
 
     /** Which zones the hero has passed and which are open: derived from the hero, no request. */
-    fun progress(index: ContentIndex?, hero: HeroView?): CampaignProgress? = index?.let { i -> hero?.let { h -> CampaignProgress(h.campaign.cleared.filter { it in i.zones }, i.world.unlocked(h.campaign.cleared)) } }
+    fun progress(index: ContentIndex?, hero: HeroView?): CampaignProgress? = progressMemo.of(index, hero)
+    private val progressMemo = LastPair { i, h -> CampaignProgress(h.campaign.cleared.filter { it in i.zones }, i.world.unlocked(h.campaign.cleared)) }
 
     /** The hero's atlas as the rules count it: points earned and free. */
-    fun atlasState(index: ContentIndex?, hero: HeroView?): AtlasState? = index?.let { i ->
-        hero?.let { h ->
-            AtlasState(
-                listOf(i.atlasGraph.start) + h.info.atlas,
-                h.info.earned,
-                AtlasPoints.total(i.atlas.points, h.info.earned, i.atlas.cap),
-                AtlasPoints.available(i.atlas.points, h.info.earned, h.info.atlas, i.atlas.cap),
-            )
-        }
+    fun atlasState(index: ContentIndex?, hero: HeroView?): AtlasState? = atlasMemo.of(index, hero)
+    private val atlasMemo = LastPair { i, h ->
+        AtlasState(
+            listOf(i.atlasGraph.start) + h.info.atlas,
+            h.info.earned,
+            AtlasPoints.total(i.atlas.points, h.info.earned, i.atlas.cap),
+            AtlasPoints.available(i.atlas.points, h.info.earned, h.info.atlas, i.atlas.cap),
+        )
     }
 
     /** The hero's tree as the rules count it: the point balance and what the taken nodes give. */
-    fun treeState(index: ContentIndex?, hero: HeroView?): TreeState? = index?.let { i ->
-        hero?.let { h ->
-            val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
-            val spent = i.tree.spent(h.tree)
-            val calculator = SheetCalculator(i)
-            TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))
-        }
+    fun treeState(index: ContentIndex?, hero: HeroView?): TreeState? = treeMemo.of(index, hero)
+
+    /** Дерево раскрывается раз на героя и контент (4.9.0): нижняя навигация спрашивает его на каждый срез игры. */
+    private val treeMemo = LastPair { i, h ->
+        val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
+        val spent = i.tree.spent(h.tree)
+        val calculator = SheetCalculator(i)
+        TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))
     }
 }
 
@@ -141,4 +145,29 @@ val HeroView.might: MightReading? get() = combat?.might
 data class ManaReserve(val pool: Double, val percent: Double) {
     val held: Double get() = pool * percent / 100
     val free: Double get() = pool - held
+}
+
+/**
+ * Последний ответ по контенту (4.9.0): тот же [ContentIndex] (по ссылке) - тот же ответ; срез игры пересоздаётся часто, а
+ * контент и герой в нём - те же объекты, пока не пришли новые.
+ */
+private class LastOf<R>(private val compute: (ContentIndex) -> R) {
+    @Volatile private var last: Pair<ContentIndex, R>? = null
+
+    fun of(index: ContentIndex): R {
+        last?.takeIf { it.first === index }?.let { return it.second }
+        return compute(index).also { last = index to it }
+    }
+}
+
+/** Последний ответ по паре «контент + герой» (4.9.0), по ссылкам; без контента или героя - null. */
+private class LastPair<R : Any>(private val compute: (ContentIndex, HeroView) -> R) {
+    @Volatile private var last: Triple<ContentIndex, HeroView, R>? = null
+
+    fun of(index: ContentIndex?, hero: HeroView?): R? {
+        index ?: return null
+        hero ?: return null
+        last?.takeIf { it.first === index && it.second === hero }?.let { return it.third }
+        return compute(index, hero).also { last = Triple(index, hero, it) }
+    }
 }

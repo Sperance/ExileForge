@@ -38,7 +38,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.ui.components.motionClock
+import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.GoldBright
@@ -107,10 +107,11 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
 /** Медальон: знак режима в круге его цвета, вокруг - пунктирная орбита, оборот за 18 с. */
 @Composable private fun Medallion(mode: TrialMode) {
     val accent = mode.accent
-    val turn = motionClock(ORBIT_MS, "trial-orbit") * 360f
+    // Фаза читается в рисовании (4.9.0): орбита идёт без перекомпоновки
+    val orbit = motionPhase(ORBIT_MS)
     Box(Modifier.size(MEDALLION.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            rotate(turn) {
+            rotate(orbit.value * 360f) {
                 drawCircle(accent.copy(alpha = .5f), radius = size.minDimension / 2 - 1f, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 6f))))
             }
         }
@@ -125,11 +126,13 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
 
 /** Блик плиты: светлая косая полоса раз в 5 с, со сдвигом [phase] круга. */
 @Composable private fun Modifier.sweep(phase: Float): Modifier {
-    val t = (motionClock(SWEEP_MS, "trial-sweep") + phase) % 1f
-    val pass = ((t - .7f) / .3f).coerceIn(0f, 1f)
-    if (pass <= 0f || pass >= 1f) return this
+    // Фаза читается в рисовании (4.9.0): блик бежит без перекомпоновки плиты
+    val clock = motionPhase(SWEEP_MS)
     return drawWithContent {
         drawContent()
+        val t = (clock.value + phase) % 1f
+        val pass = ((t - .7f) / .3f).coerceIn(0f, 1f)
+        if (pass <= 0f || pass >= 1f) return@drawWithContent
         val x = -size.width * .6f + size.width * 1.9f * pass
         drawRect(Brush.linearGradient(listOf(Color.Transparent, Color.White.copy(alpha = .07f), Color.Transparent), Offset(x, 0f), Offset(x + size.width * .4f, size.height)))
     }

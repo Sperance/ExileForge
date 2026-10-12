@@ -81,12 +81,7 @@ import kotlinx.serialization.Serializable
     val reward: RewardView = RewardView(),
     val crystal: CrystalOutcome? = null,
     val rank: Long? = null,
-    /** Добыча начатого боя (server 1.80.0), только у ENGAGE: не выдана и в итог не входит - её выдаст убийство каждого члена. */
-    val pending: List<PendingDrop>? = null,
 )
-
-/** Что даст убийство члена [m] начатого боя (у босса - 0): добыча, выкаченная на ENGAGE (server 1.80.0). */
-@Serializable data class PendingDrop(val m: Int, val reward: RewardView)
 
 /** A crystal after an event: its [index] in the zone's window, as the event named it, and the [crystal] it became. */
 @Serializable data class CrystalOutcome(val index: Int = 0, val crystal: Crystal)

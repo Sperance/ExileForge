@@ -320,8 +320,10 @@ private val SPARKS = List(26) { i ->
  */
 @Composable private fun Modifier.relicSky(look: RelicLook): Modifier {
     val legend = look.legend ?: return this
-    val time = motionClock(SKY_MS, "relic-sky")
+    // Фаза читается в рисовании (4.9.0): небо перерисовывается шагом часов декора без перекомпоновки карточки.
+    val sky = motionPhase(SKY_MS)
     return drawBehind {
+        val time = sky.value
         SPARKS.forEach { (x, y, r, phase) ->
             if (legend == RelicLook.Legend.STARS) {
                 val glow = .25f + .75f * ((sin(((time * 6 + phase) * 2 * PI)).toFloat() + 1) / 2)
@@ -337,34 +339,42 @@ private val SPARKS = List(26) { i ->
     }
 }
 
-/** Завитки по углам рамки легенды: двойная дуга и капля золота. */
+/** Внешняя дуга завитка в единицах угла (40 на сторону): строится раз, кадр её только масштабирует. */
+private val CornerOuter = Path().apply {
+    moveTo(0f, 38f)
+    lineTo(0f, 14f)
+    quadraticTo(0f, 0f, 14f, 0f)
+    lineTo(38f, 0f)
+}
+
+/** Внутренняя дуга завитка в тех же единицах. */
+private val CornerInner = Path().apply {
+    moveTo(5f, 38f)
+    lineTo(5f, 18f)
+    quadraticTo(5f, 5f, 18f, 5f)
+    lineTo(38f, 5f)
+}
+
+/** Завитки по углам рамки легенды: двойная дуга и капля золота; без аллокаций в кадре (4.9.0). */
 fun DrawScope.relicCorners(gold: Color) {
-    val s = 38.dp.toPx()
+    val k = 38.dp.toPx() / 40f
     val inset = 8.dp.toPx()
-    listOf(0f to Offset(inset, inset), 90f to Offset(size.width - inset, inset), 180f to Offset(size.width - inset, size.height - inset), 270f to Offset(inset, size.height - inset))
-        .forEach { (angle, at) ->
-            withTransform({
-                translate(at.x, at.y)
-                rotate(angle, Offset.Zero)
-            }) {
-                val k = s / 40f
-                val outer = Path().apply {
-                    moveTo(0f, 38 * k)
-                    lineTo(0f, 14 * k)
-                    quadraticTo(0f, 0f, 14 * k, 0f)
-                    lineTo(38 * k, 0f)
-                }
-                val inner = Path().apply {
-                    moveTo(5 * k, 38 * k)
-                    lineTo(5 * k, 18 * k)
-                    quadraticTo(5 * k, 5 * k, 18 * k, 5 * k)
-                    lineTo(38 * k, 5 * k)
-                }
-                drawPath(outer, gold.copy(alpha = .85f), style = Stroke(1.2.dp.toPx()))
-                drawPath(inner, gold.copy(alpha = .35f), style = Stroke(.8.dp.toPx()))
-                drawCircle(gold, 2.dp.toPx(), Offset(10 * k, 10 * k))
-            }
+    val outer = Stroke(1.2.dp.toPx() / k)
+    val inner = Stroke(.8.dp.toPx() / k)
+    val drop = 2.dp.toPx() / k
+    for (corner in 0 until 4) {
+        val x = if (corner == 1 || corner == 2) size.width - inset else inset
+        val y = if (corner >= 2) size.height - inset else inset
+        withTransform({
+            translate(x, y)
+            rotate(corner * 90f, Offset.Zero)
+            scale(k, k, Offset.Zero)
+        }) {
+            drawPath(CornerOuter, gold.copy(alpha = .85f), style = outer)
+            drawPath(CornerInner, gold.copy(alpha = .35f), style = inner)
+            drawCircle(gold, drop, Offset(10f, 10f))
         }
+    }
 }
 
 /**
@@ -372,10 +382,13 @@ fun DrawScope.relicCorners(gold: Color) {
  * спутниками и дышащее свечение; в центре - круглое гнездо с иконкой. Размер блока [size].
  */
 @Composable fun Astrolabe(look: RelicLook, size: Dp = 200.dp, socket: Dp = 108.dp, content: @Composable BoxScope.() -> Unit) {
-    val turn = motionClock(RING_MS, "relic-ring")
-    val breath = motionClock(BREATH_MS, "relic-breath")
+    // Фазы читаются в рисовании (4.9.0): кольцо и свечение перерисовываются без перекомпоновки.
+    val ring = motionPhase(RING_MS)
+    val breathing = motionPhase(BREATH_MS)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
+            val turn = ring.value
+            val breath = breathing.value
             val c = center
             val unit = this.size.minDimension / 200f
             val pulse = .55f + .45f * ((sin(breath * 2 * PI).toFloat() + 1) / 2)

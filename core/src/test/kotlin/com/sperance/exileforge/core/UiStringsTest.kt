@@ -225,6 +225,11 @@ class UiStringsTest {
             com.sperance.exileforge.rules.content.QuestCondition.entries.forEach { add("quest.condition.${it.name}") }
             // Ловушки карты (3.90.0): полоса карты называет удар по коду ловушки контента.
             TestContent.index.campaign.features?.traps?.kinds?.forEach { add("trap.${it.code}") }
+            // Предначертание в бою (4.9.0): срабатывания рычагов в журнале, полка журнала и значки действующих рычагов
+            com.sperance.exileforge.core.campaign.combat.FateBeat.entries.forEach { add("expedition.fate_beat.${it.name}") }
+            com.sperance.exileforge.core.campaign.LogKind.entries.forEach { add("fight.log_shelf.${it.name}") }
+            listOf("MISSING_LIFE_DAMAGE", "AVENGE_CRIT", "HIT_CAP", "ALTERNATE_SKILL", "MANA_OVERFLOW", "STORE_TAKEN", "FULL_LIFE_GUARD", "OVERHEAL_BARRIER", "WIN_STREAK")
+                .forEach { add("fight.fate_state.$it") }
         }
 
         val known = UiStrings.keys(Lang.RU)

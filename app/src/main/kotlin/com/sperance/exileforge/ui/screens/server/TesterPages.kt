@@ -20,7 +20,9 @@ import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.presentation.session.SessionViewModel
+import com.sperance.exileforge.rules.content.MAP_TEMPLATE
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -51,7 +53,8 @@ import org.koin.compose.viewmodel.koinViewModel
         Engraved(ui("tester.items"))
         var item by remember { mutableStateOf("") }
         Spinner(ui("tester.item"), item, index.items.keys.associate { it.value to itemTitle(it.value) }, enabled) { item = it }
-        NumberGrant(ui("tester.amount"), "10", account.inputs.number, enabled && item.isNotBlank()) { heroModel.grantItem(item, it.toLong()) }
+        // Стопка за раз - не больше `moderation.grantStack` (4.9.0): больше сервер не выдаст
+        NumberGrant(ui("tester.amount_cap", index.rules.moderation.grantStack), "10", account.inputs.number, enabled && item.isNotBlank()) { heroModel.grantItem(item, it.toLong()) }
         var unique by remember { mutableStateOf("") }
         val uniques = index.templates.values.filter { it.rarity >= Rarity.UNIQUE }.associate { it.code to equipmentTitle(it.code) }
         Spinner(ui("tester.unique"), unique, uniques, enabled) { unique = it }
@@ -62,9 +65,11 @@ import org.koin.compose.viewmodel.koinViewModel
         Engraved(ui("tester.maps"))
         var zone by remember { mutableStateOf("") }
         var rarity by remember { mutableStateOf(Rarity.RARE) }
+        // Редкости выдачи - по шаблону карты (4.9.0, `ItemFactory.grantable`): прочие сервер не выдаёт
+        val rarities = remember(index) { index.template(MAP_TEMPLATE)?.let { ItemFactory(index).grantable(it) }.orEmpty() }
         Spinner(ui("tester.zone"), zone, index.zones.values.sortedBy { it.level }.associate { it.code.value to "${mapTitle(it.code)} · ${it.level}" }, enabled) { zone = it }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { r ->
+            rarities.forEach { r ->
                 FilterChip(selected = rarity == r, onClick = { rarity = r }, label = { Text(ui("enum.rarity.${r.name}")) })
             }
         }

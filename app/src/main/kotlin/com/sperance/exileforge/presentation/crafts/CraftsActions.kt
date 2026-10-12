@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.ContentLoader
+import com.sperance.exileforge.presentation.app.Foreground
 import com.sperance.exileforge.rules.roll.WorkGains
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -34,6 +35,7 @@ class CraftsActions(
     private val content: ContentLoader,
     private val buzzes: Buzzes,
     private val scope: CoroutineScope,
+    private val foreground: Foreground,
 ) {
     private val api: GameApi get() = connection.api
     private val crafts: Crafts get() = repository.state.value
@@ -82,6 +84,8 @@ class CraftsActions(
         cycle = scope.launch {
             // Сервер считает цикл по своим часам: пересчёт - чуть позже границы, чтобы он её уже прошёл.
             delay((boundary - held.offset - System.currentTimeMillis()).coerceAtLeast(0L) + SETTLE_GRACE)
+            // В фоне пересчёт не спрашивается (4.9.0): граница, пройденная в фоне, пересчитывается по возврату.
+            foreground.awaitFront()
             cycle = null
             load(silent = true)
             armCycle()

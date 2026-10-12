@@ -266,6 +266,49 @@ private fun DrawScope.cornerFlourish(tint: Color) {
         }
 }
 
+/** Заливка полосы здоровья босса: относительно своей полосы, одна на все кадры. */
+private val LifeFill = Brush.verticalGradient(listOf(LifeTop, LifeMid, LifeLow))
+
+/** Погасший кристалл порога. */
+private val GemPassed = Brush.linearGradient(listOf(Color(0xFF3A2A16), Color(0xFF2A1E10)))
+private val GemHalo = FrameGoldBright.copy(alpha = .35f)
+private val GemEdge = Color(0xFF7A5A1E)
+
+/**
+ * Кристаллы порогов фаз [marks] (проценты здоровья) на полосе (4.9.0): ромбы и кисти горящих собираются раз на размер полосы,
+ * кадр только рисует их.
+ */
+private class PhaseGems(private val marks: List<Double>) {
+    private var size = Size.Unspecified
+    var radius = 0f
+        private set
+    var paths: List<Path> = emptyList()
+        private set
+    var centres: List<Offset> = emptyList()
+        private set
+    var lit: List<Brush> = emptyList()
+        private set
+
+    fun fit(bar: Size) {
+        if (bar == size) return
+        size = bar
+        val h = bar.height
+        val r = h * .36f
+        radius = r
+        centres = marks.map { Offset(bar.width * (it / 100).toFloat(), h / 2) }
+        paths = centres.map { c ->
+            Path().apply {
+                moveTo(c.x, c.y - r)
+                lineTo(c.x + r, c.y)
+                lineTo(c.x, c.y + r)
+                lineTo(c.x - r, c.y)
+                close()
+            }
+        }
+        lit = centres.map { c -> Brush.linearGradient(listOf(Color(0xFFFFF3C4), Color(0xFFE8B04A)), Offset(c.x - r, c.y - r), Offset(c.x + r, c.y + r)) }
+    }
+}
+
 /**
  * Полоса здоровья босса: шлейф урона догоняет её с запозданием, глянец и бегущий блик, кристаллы порогов фаз (сработавшие
  * гаснут), щит - штриховкой поверх, барьер - золотым свечением и числом, здоровье числом на тёмной плашке.
@@ -276,6 +319,8 @@ private fun DrawScope.cornerFlourish(tint: Color) {
     val shield = if (foe.maxShield > 0) (foe.shield / foe.maxShield.toFloat()).coerceIn(0f, 1f) else 0f
     val motion = LocalSettings.current.animations
     val shape = RoundedCornerShape(8.dp)
+    // Кристаллы порогов - раз на пороги и размер полосы, не на кадр (4.9.0)
+    val gems = remember(boss.marks) { PhaseGems(boss.marks) }
     Box(
         Modifier.fillMaxWidth().height(18.dp)
             .drawBehind { if (foe.barrier > 0) drawRoundRect(FrameGoldBright.copy(alpha = .35f + .2f * sin(time * 3f)), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()), style = Stroke(4.dp.toPx()), topLeft = Offset(-2.dp.toPx(), -2.dp.toPx()), size = Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx())) }
@@ -285,7 +330,7 @@ private fun DrawScope.cornerFlourish(tint: Color) {
             val w = size.width
             val h = size.height
             drawRect(LifeTrail.copy(alpha = .75f), size = Size(w * trail.coerceAtLeast(share), h))
-            drawRect(Brush.verticalGradient(listOf(LifeTop, LifeMid, LifeLow)), size = Size(w * share, h))
+            drawRect(LifeFill, size = Size(w * share, h))
             drawRect(Color.White.copy(alpha = .22f), size = Size(w * share, h * .38f))
             if (motion && share > 0) {
                 val x = ((time * .35f) % 1.6f - .3f) * w
@@ -301,20 +346,14 @@ private fun DrawScope.cornerFlourish(tint: Color) {
                     }
                 }
             }
-            boss.marks.forEachIndexed { i, at ->
+            gems.fit(size)
+            val edge = Stroke(1.dp.toPx())
+            for (i in boss.marks.indices) {
                 val passed = boss.passed.getOrElse(i) { false }
-                val x = w * (at / 100).toFloat()
-                val r = h * .36f
-                val gem = Path().apply {
-                    moveTo(x, h / 2 - r)
-                    lineTo(x + r, h / 2)
-                    lineTo(x, h / 2 + r)
-                    lineTo(x - r, h / 2)
-                    close()
-                }
-                if (!passed) drawCircle(FrameGoldBright.copy(alpha = .35f), r * 1.7f, Offset(x, h / 2))
-                drawPath(gem, if (passed) Brush.linearGradient(listOf(Color(0xFF3A2A16), Color(0xFF2A1E10))) else Brush.linearGradient(listOf(Color(0xFFFFF3C4), Color(0xFFE8B04A)), Offset(x - r, h / 2 - r), Offset(x + r, h / 2 + r)))
-                drawPath(gem, Color(0xFF7A5A1E), style = Stroke(1.dp.toPx()))
+                val gem = gems.paths[i]
+                if (!passed) drawCircle(GemHalo, gems.radius * 1.7f, gems.centres[i])
+                drawPath(gem, if (passed) GemPassed else gems.lit[i])
+                drawPath(gem, GemEdge, style = edge)
             }
         }
         val text = buildString {
@@ -698,7 +737,10 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
 /** Титул новой фазы поверх портрета: «Фаза II» и её имя, нарастает и гаснет. */
 @Composable private fun PhaseTitle(fight: FightHud, boss: BossHud) {
     val now = fight.events.firstOrNull()?.time ?: return
-    val event = fight.events.firstOrNull { it.foe == boss.index && it.actor == Side.MONSTER && (it.trace as? NoteTrace)?.kind == NoteKind.PHASE } ?: return
+    // Поиск по журналу - по новой строке, не каждый кадр (4.9.0): журнал снимка тот же, пока не вырос
+    val event = remember(fight.events, boss.index) {
+        fight.events.firstOrNull { it.foe == boss.index && it.actor == Side.MONSTER && (it.trace as? NoteTrace)?.kind == NoteKind.PHASE }
+    } ?: return
     val age = now - event.time
     if (age > PHASE_TITLE_SECONDS) return
     val k = (age / PHASE_TITLE_SECONDS).toFloat()

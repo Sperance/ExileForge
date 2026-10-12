@@ -138,7 +138,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
                 pick,
                 enabled = !game.busy,
                 Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 10.dp),
-                shards = { lots -> game.shardsFor(lots.map { it.piece.rarity }) },
+                shards = { lots -> game.shardsFor(lots.filterNot { it.piece.item.granted }.map { it.piece.rarity }) },
                 onCancel = leave,
             ) { model.sellMany(it) }
         }

@@ -42,7 +42,8 @@ import kotlin.math.roundToInt
 @Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier, onOpen: ((CombatEvent) -> Unit)? = null) {
     val shifts = remember(events) { lifeShifts(events.asReversed()).asReversed() }
     LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        itemsIndexed(events) { i, event -> EventRow(event, event.time, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
+        // Ключ - место строки от начала боя (4.9.0): новая строка сверху не сдвигает ключи прочих, их строки не перекомпонуются
+        itemsIndexed(events, key = { i, _ -> events.size - i }) { i, event -> EventRow(event, event.time, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
     }
 }
 
@@ -247,6 +248,7 @@ private fun petLine(event: CombatEvent, monster: String, pet: String, damage: In
 }
 
 internal fun noteLine(event: CombatEvent, monster: String): String {
+    (event.trace as? FateTrace)?.let { return fateLine(it) }
     val note = event.trace as? NoteTrace ?: return ""
     return when (note.kind) {
         NoteKind.BUFF -> ui("expedition.log_note_buff", ui("fight.buff.${note.ref}"), fineNumber(note.value))
@@ -271,13 +273,28 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())
         NoteKind.REGEN -> ui("expedition.log_note_regen", note.value.roundToInt())
-        NoteKind.FATE -> ui("expedition.log_note_fate", locOr("fate.${note.ref}.name", note.ref))
     }
+}
+
+/**
+ * Срабатывание Предначертания (4.9.0): «✦ дар: что сделал рычаг» словами `expedition.fate_beat.<срабатывание>` - числа по порядку,
+ * предмет (недуг, умение) последним; свёртка частого - «ещё ×N» и итог.
+ */
+internal fun fateLine(trace: FateTrace): String {
+    val subject = when (trace.beat.ref) {
+        FateRef.NONE -> null
+        FateRef.AILMENT -> Ailment.entries.firstOrNull { it.name == trace.ref }?.let { ui(it.key()) }
+        FateRef.SKILL -> SkillText.title(trace.ref)
+    }
+    val text = ui("expedition.fate_beat.${trace.beat.name}", *(trace.args.map(::fineNumber) + listOfNotNull(subject)).toTypedArray())
+    val fate = locOr("fate.${trace.fate}.name", trace.fate)
+    return if (trace.repeats > 0) ui("expedition.log_fate_fold", fate, trace.repeats, text) else ui("expedition.log_fate", fate, text)
 }
 
 private fun logColour(event: CombatEvent): Color = when {
     event.pet != null -> Vital
     (event.trace as? NoteTrace)?.kind?.recovery == true -> Vital
+    event.trace is FateTrace -> FateInk.GoldLight
     event.action == Action.NOTE -> Rune
     event.action == Action.FLASK -> Vital
     event.action == Action.SKILL && event.damage <= 0 && event.landed -> if (event.actor == Side.HERO) Gold else Color(0xFFE9A0A0)

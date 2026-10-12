@@ -17,7 +17,9 @@ import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.platform.ScreenCapture
 import com.sperance.exileforge.platform.ScreenShot
 import com.sperance.exileforge.presentation.app.AppStartup
+import com.sperance.exileforge.presentation.app.BugDelivery
 import com.sperance.exileforge.presentation.app.ConnectionActions
+import com.sperance.exileforge.presentation.app.Foreground
 import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.SessionActions
 import com.sperance.exileforge.presentation.app.Warmup
@@ -54,6 +56,7 @@ class ShellViewModel(
     private val buzzer: Buzzes,
     private val prefs: PreferencesRepository,
     private val connection: ServerConnection,
+    private val bugs: BugDelivery,
     private val sessions: SessionRepository,
     private val modes: AppModes,
     private val session: SessionActions,
@@ -64,6 +67,7 @@ class ShellViewModel(
     rift: com.sperance.exileforge.presentation.expedition.RiftActions,
     /** Связь с сервером на старте (3.86.0): окно запуска уходит по её ответу. */
     val reach: ServerReach,
+    private val foreground: Foreground,
 ) : ViewModel() {
     init {
         reach.start()
@@ -88,16 +92,16 @@ class ShellViewModel(
     fun warmUp() = warming.start()
 
     /**
-     * Отчёт жука (3.48.0): уходит сразу, со входом или без; [onSent] - когда сервер его принял. Снимок [shot] (4.8.0) сжимается
-     * в пределы правил `feedback` и едет в отчёте, если вид отчёта его берёт; не вписался - отчёт уходит без него.
+     * Отчёт жука (3.48.0): со входом или без. Снимок [shot] (4.8.0) сжимается в пределы правил `feedback` и едет в отчёте,
+     * если вид отчёта его берёт; не вписался - отчёт уходит без него. С 4.9.0 собранный отчёт сразу ложится в очередь на диске
+     * ([BugDelivery]) и уходит оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать.
      */
-    fun reportBug(report: BugReportRequest, shot: ScreenShot? = null, onSent: suspend () -> Unit = {}) = commands.task {
+    fun reportBug(report: BugReportRequest, shot: ScreenShot? = null, onQueued: suspend () -> Unit = {}) = bugs.file({
         val rules = game.value.index?.rules?.feedback ?: FeedbackRules()
         val screenshot = shot?.takeIf { report.kind.shots }?.let { ScreenCapture.encode(it, rules) }
-        connection.api.reportBug(report.copy(screenshot = screenshot), rules.failures)
-        onSent()
-        notices.toast(ui("bug.sent"))
-    }
+        val built = report.copy(screenshot = screenshot)
+        connection.current.value?.bugReport(built, rules.failures) ?: built
+    }, onQueued)
 
     /** Аккорд громкости (4.8.0): лист отчёта со снимком, снятым до него; null - снимок не вышел, лист всё равно открывается. */
     private val bugShots = MutableSharedFlow<ScreenShot?>(extraBufferCapacity = 1)
@@ -156,7 +160,10 @@ class ShellViewModel(
     fun retryLink() = link.wake(now = true)
 
     /** Сеть устройства вернулась (3.95.2). */
-    fun networkBack() = link.networkBack()
+    fun networkBack() {
+        link.networkBack()
+        bugs.kick()
+    }
 
     /** Строка в тосты с экранов (3.76.0: место, открытое уровнем). */
     fun announce(text: String) = notices.toast(text)
@@ -172,14 +179,20 @@ class ShellViewModel(
 
     // ---- жизненный цикл активности (3.80.42: из удалённой общей модели) ----
 
-    /** Возврат на передний план: связь восстанавливается без нажатия. */
-    fun reconnect() = session.reconnect()
+    /** Возврат на передний план: фоновые циклы идут дальше, связь восстанавливается без нажатия. */
+    fun reconnect() {
+        foreground.back()
+        session.reconnect()
+    }
 
     /** Касание красного облака связи (4.4.x): переподключение сразу. */
     fun reconnectLink() = session.reconnectLink()
 
-    /** Уход с переднего плана: момент запомнен, чтобы долгое отсутствие обновило экран на возврате. */
-    fun away() = session.away()
+    /** Уход с переднего плана: фоновые циклы встают на паузу, момент запомнен - долгое отсутствие обновит экран на возврате. */
+    fun away() {
+        foreground.away()
+        session.away()
+    }
 
     /** Журнал похода уходит сразу: процесс, убитый в фоне, не унесёт его с собой. */
     fun flushRun() = expedition.flushRun()

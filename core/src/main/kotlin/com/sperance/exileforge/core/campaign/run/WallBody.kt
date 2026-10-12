@@ -1,19 +1,23 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.campaign.ExpeditionMap
+import com.sperance.exileforge.core.campaign.Shoreline
+import com.sperance.exileforge.core.campaign.Tile
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
 
 /**
- * Тела в скале карты (4.7.0): герой и монстр - круг, непроходимая клетка (скала, пропасть, вода) - квадрат, чьи выпуклые углы
- * скруглены на [corner] клетки, как их рисует сцена; без этого герой цеплялся за невидимый угол. Центр тела всегда стоит на
- * проходимой клетке - сетка путей, света и стай не меняется.
+ * Тела в скале карты (4.7.0): герой и монстр - круг, клетка скалы - квадрат, чьи выпуклые углы скруглены на [corner] клетки, как
+ * их рисует сцена; без этого герой цеплялся за невидимый угол. Пропасть и вода (4.9.0) - их нарисованный контур [shoreline]
+ * (тот же, что заливает сцена): тело подходит к самой кромке глади, а не к краю клетки. Центр тела всегда стоит на проходимой
+ * клетке - сетка путей, света и стай не меняется.
  */
-internal class WallBody(private val map: ExpeditionMap, private val corner: Double) {
+internal class WallBody(private val map: ExpeditionMap, private val corner: Double, private val shoreline: () -> Shoreline) {
     /** Помещается ли круг радиуса [radius] с центром в ([x], [y]). */
     fun free(x: Double, y: Double, radius: Double): Boolean {
         if (!map.walkable(floor(x).toInt(), floor(y).toInt())) return false
+        if (shoreline().inside(x, y)) return false
         return nearest(x, y, radius)?.let { it.distance >= radius } ?: true
     }
 
@@ -34,15 +38,15 @@ internal class WallBody(private val map: ExpeditionMap, private val corner: Doub
         return nx to ny
     }
 
-    /** Ближайшая к точке преграда в пределах [reach]: расстояние до неё и нормаль от неё к точке. */
+    /** Ближайшая к точке преграда в пределах [reach]: скала клетками, гладь - контуром; расстояние до неё и нормаль от неё к точке. */
     private fun nearest(x: Double, y: Double, reach: Double): Hit? {
         val span = ceil(reach).toInt() + 1
         val cx = floor(x).toInt()
         val cy = floor(y).toInt()
-        var best: Hit? = null
+        var best: Hit? = shoreline().nearest(x, y, reach)?.let { Hit(it.distance, it.nx, it.ny) }
         for (j in cy - span..cy + span) {
             for (i in cx - span..cx + span) {
-                if (map.walkable(i, j)) continue
+                if (map.tile(i, j) != Tile.WALL) continue
                 val hit = distance(x, y, i, j)
                 if (best == null || hit.distance < best.distance) best = hit
             }

@@ -120,11 +120,14 @@ class ExpeditionActions(
     private val flushes = Channel<Unit>(Channel.CONFLATED)
     private var saveJob: Job? = null
 
-    /** Следующая отправка сама по себе: тихий отрезок после последнего события или повтор после неудачной. */
+    /** Следующая отправка сама по себе: повтор после неудачной. */
     private var sendJob: Job? = null
 
-    /** Отправка события с добычей через [PROMPT_AFTER] после первого из залпа; поздние присоединяются, ничто не откладывает. */
-    private var promptJob: Job? = null
+    /**
+     * Пачка боя (4.9.0): отправка через `run.journalSeconds` правил после первого неотправленного события; поздние присоединяются,
+     * ничто её не откладывает.
+     */
+    private var batchJob: Job? = null
 
     /** Отправок подряд не дошло: каждая ждёт вдвое дольше прошлой. */
     private var failures = 0
@@ -294,9 +297,10 @@ class ExpeditionActions(
     private fun vaalOrbsFree(): Long = (hero?.bag?.get(Orb.VAAL_ORB.name) ?: 0L) - (runJournal?.pending?.count { it.kind == RunEventKind.CRYSTAL_VAAL } ?: 0)
 
     /**
-     * Ещё одно событие: журнал записан, контрольная точка или полная пачка отправляют его. Убийство или сундук боя
-     * вручную уходят сразу: добыча в пути, пока бой ещё идёт. Автопоход ждёт тихого отрезка. Сбоящая связь держит
-     * паузу повтора (4.0.0: и для контрольных точек и полных пачек - без связи событие не шлёт запрос само).
+     * Ещё одно событие: журнал записан, контрольная точка или полная пачка отправляют его сразу. Прочие события боя (4.9.0, NET-9) -
+     * убийства, сундуки, начала боёв - копятся и уходят одной пачкой через `run.journalSeconds` правил; итог выигранного боя вручную
+     * отправляет её сразу - его добычу ждёт экран итогов. Сбоящая связь держит паузу повтора (4.0.0: и для контрольных точек и полных
+     * пачек - без связи событие не шлёт запрос само).
      */
     private fun recorded(event: RunEvent) {
         val j = runJournal ?: return
@@ -304,17 +308,18 @@ class ExpeditionActions(
         persist()
         when {
             failures > 0 -> Unit
-            event.kind in CHECKPOINTS || j.pending.size >= BATCH -> flushes.trySend(Unit)
-            event.kind in LOOT && mutableRun.value?.hud?.value?.auto == null -> sendSoon()
-            else -> sendIn(QUIET_AFTER)
+            event.kind in CHECKPOINTS || j.pending.size >= RunJournal.MAX_BATCH -> flushes.trySend(Unit)
+            event is RunEvent.Fight && event.fight.won && mutableRun.value?.hud?.value?.auto == null -> flushes.trySend(Unit)
+            else -> sendBatch()
         }
     }
 
-    /** Отправка через [PROMPT_AFTER], если никакая не назначена раньше: враги одного удара уходят одной пачкой. */
-    private fun sendSoon() {
-        if (promptJob?.isActive == true) return
-        promptJob = scope.launch {
-            delay(PROMPT_AFTER)
+    /** Пачка боя уходит через `run.journalSeconds` правил после первого события, если её отправка ещё не назначена. */
+    private fun sendBatch() {
+        if (batchJob?.isActive == true) return
+        val seconds = index?.rules?.run?.journalSeconds ?: return
+        batchJob = scope.launch {
+            delay(seconds * 1_000L)
             flushes.trySend(Unit)
         }
     }
@@ -429,8 +434,6 @@ class ExpeditionActions(
             report.lost.takeIf { fell },
             crystals,
             report.rewards.mapNotNull { r -> r.rank?.let { r.n to it } }.toMap(),
-            // Добыча начатых боёв (3.88.0): только показывается, выдаст её убийство - в «Новый лут» она не идёт.
-            report.rewards.mapNotNull { r -> r.pending?.let { drops -> r.n to drops.associate { it.m to it.reward.toReward() } } }.toMap(),
         )
         runs().forEach { it.send(answer) }
         campaign()
@@ -630,29 +633,17 @@ class ExpeditionActions(
         /** Отказ сервера «новое семя только спустя время» (CP_021). */
         const val SEED_TOO_SOON = "CP_021"
 
-        /** События, что отправляют журнал сразу: всё, что не простое убийство и не сундук. */
+        /** События, что отправляют журнал сразу: всё, что не убийство, не сундук и не начало или итог боя. */
         val CHECKPOINTS = setOf(
             RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL, RunEventKind.CRYSTAL_VAAL, RunEventKind.VAAL_OPEN, RunEventKind.VAAL_LEAVE,
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE,
-            // Начало боя (3.88.0): его добыча нужна до первого убийства.
-            RunEventKind.ENGAGE,
             // Объект карты (3.90.0): золото торговца, сделка алтаря и добыча комнаты - ответ нужен сразу.
             RunEventKind.FEATURE,
         )
-        const val BATCH = 6
         const val FLUSH_EVERY = 20_000L
 
         /** С этого кода ответ - сбой самого сервера, а не отказ правила. */
         const val SERVER_ERROR = 500
-
-        /** Пачка убийства уходит через столько после последнего события, если ничто не отправит её раньше. */
-        const val QUIET_AFTER = 3_000L
-
-        /** События с добычей, отправляемые в миг, когда случились в бою вручную. */
-        val LOOT = setOf(RunEventKind.KILL, RunEventKind.CHEST)
-
-        /** Сколько событие с добычей ждёт остаток своего залпа: убийства одного кадра - один запрос. */
-        const val PROMPT_AFTER = 120L
 
         /** Первый повтор после неудачной отправки и сколько раз пауза удваивается до часовой. */
         const val RETRY_FIRST = 2_000L

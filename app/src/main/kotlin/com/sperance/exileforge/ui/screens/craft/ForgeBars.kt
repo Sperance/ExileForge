@@ -96,7 +96,10 @@ import com.sperance.exileforge.ui.theme.*
             containerColor = PanelRaised,
             shape = DialogShape,
             tonalElevation = 0.dp,
-            title = { Text(ui("forge.quality_reset_title"), color = Gold) },
+            title = {
+                ChordOverDialog()
+                Text(ui("forge.quality_reset_title"), color = Gold)
+            },
             text = { Text(ui("forge.quality_reset_note", lost), color = Parchment) },
             confirmButton = {
                 ForgeTextButton(enabled = enabled, onClick = {

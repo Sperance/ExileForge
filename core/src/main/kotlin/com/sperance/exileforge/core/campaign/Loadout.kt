@@ -16,16 +16,13 @@ import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
-import com.sperance.exileforge.rules.content.SkillDefinition
-import com.sperance.exileforge.rules.content.SkillStat
-import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.rules.sheet.FlaskSheet
+import com.sperance.exileforge.rules.sheet.HeroKit
 import com.sperance.exileforge.rules.sheet.SheetExplainer
 import com.sperance.exileforge.rules.sheet.Shift
-import kotlin.math.max
 
 /**
  * Фляга на поясе (4.2.0): её лист из правил ([FlaskSheet] - ёмкость, расход, длительность, лечение, эффект с качеством, аффиксами
@@ -58,39 +55,10 @@ val FlaskSheet.skillsFree: Boolean get() = own("FLASK_SKILLS_FREE") > 0
 val FlaskSheet.hexes: Boolean get() = own("FLASK_HITS_CURSE") > 0
 
 /**
- * A skill as the fight uses it: what it is, the level it was learned to and when its slot fires. С 4.4.0 [skill] - умение
- * героя в бою ([com.sperance.exileforge.rules.content.SkillForge]: тир и руны поверх контента), [tier] - его тир в бою.
+ * Умение в бою (4.9.0: одно с правилами, [com.sperance.exileforge.rules.sheet.KitSkill]) - что оно, изученный уровень и когда
+ * срабатывает его слот; уровень в бою - по телу героя ([Combatant] читает лист как [com.sperance.exileforge.rules.sheet.StatReader]).
  */
-data class KitSkill(
-    val skill: SkillDefinition,
-    val learned: Int,
-    /** The rules' ceiling for a skill level boosted by gear, the atlas and the map (`skills.rules.boostedMaxLevel`). */
-    val ceiling: Int,
-    val condition: SlotCondition = skill.condition,
-    val tier: Int = HeroSkills.FIRST_TIER,
-    /** Все открытые гнёзда рун умения заняты (4.6.2, `SkillGrowth.full`): его читает Рунный круг Предначертания. */
-    val filled: Boolean = false,
-) {
-    /**
-     * The level it acts at on [hero]: the learned one and what gear, the atlas and the map add — every
-     * skill's, its type's, and a passive's — never past the rules' ceiling (3.19.0).
-     */
-    fun level(hero: Combatant): Int {
-        val type = when (skill.type) {
-            SkillType.ATTACK -> hero[CoreStat.ATTACK_LEVEL.code]
-            SkillType.SPELL -> hero[CoreStat.SPELL_LEVEL.code]
-            SkillType.WARCRY -> hero[CoreStat.WARCRY_LEVEL.code]
-            SkillType.CURSE -> hero[CoreStat.CURSE_LEVEL.code]
-            SkillType.AURA -> hero[CoreStat.AURA_LEVEL.code] + hero[CoreStat.PASSIVE_LEVEL.code]
-            SkillType.BONUS, SkillType.TRIGGER -> hero[CoreStat.PASSIVE_LEVEL.code]
-            SkillType.HEAL, SkillType.GUARD -> 0.0
-        }
-        return (learned + hero[CoreStat.SKILL_LEVEL.code] + type).toInt().coerceIn(1, ceiling)
-    }
-}
-
-/** A skill's stat lines at [level], each [scale]d — an aura's, a warcry's or a curse's effect. */
-fun List<SkillStat>.lines(level: Int, scale: Double = 1.0): List<StatLine> = map { StatLine(it.stat, it.op, it.value.at(level) * scale) }
+typealias KitSkill = com.sperance.exileforge.rules.sheet.KitSkill
 
 /**
  * What the hero brings to a fight beyond the sheet (2.78.0): the three active slots in the order they
@@ -110,34 +78,26 @@ data class Loadout(
     /** Предначертание аккаунта (4.6.0): рычаги боя ([FateKit]). */
     val fate: FateKit = FateKit.NONE,
 ) {
+    /** Умения героя правилами (4.9.0): резерв аур и строки пассивных считает [HeroKit], тот же, что у Мощи сервера. */
+    val heroKit: HeroKit by lazy { HeroKit(actives, passives, curses) }
+
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
-    fun reserved(hero: Combatant): Double = (passives.filter { it.skill.type == SkillType.AURA }.sumOf { it.skill.reserve } / efficiency(hero)).coerceIn(0.0, 100.0)
+    fun reserved(hero: Combatant): Double = heroKit.reserved(hero)
 
     /** Сколько процентов максимума маны держит пассивное умение [passive] (4.6.4): аура - свою долю на эффективности резерва листа. */
-    fun reserve(passive: KitSkill, hero: Combatant): Double = if (passive.skill.type == SkillType.AURA) passive.skill.reserve / efficiency(hero) else 0.0
-
-    private fun efficiency(hero: Combatant): Double = max(0.1, 1 + hero[CoreStat.RESERVATION.code] / 100)
+    fun reserve(passive: KitSkill, hero: Combatant): Double = heroKit.reserve(passive, hero)
 
     /**
      * What the passives lay on the sheet all the time: an aura's lines stronger by the aura effect, a bonus's
      * and a trigger's standing lines as they are. [hero] is the sheet without them.
      */
-    fun passiveLines(hero: Combatant): List<StatLine> = passives.filterNot { it.skill.lowLife }.flatMap { lines(it, hero) }
+    fun passiveLines(hero: Combatant): List<StatLine> = heroKit.passiveLines(hero)
 
     /** Each passive with the lines it lays on [hero], the low-life bonuses among them: a figure's window names them one by one. */
-    fun passiveSources(hero: Combatant): List<Pair<KitSkill, List<StatLine>>> = passives.map { it to lines(it, hero) }
+    fun passiveSources(hero: Combatant): List<Pair<KitSkill, List<StatLine>>> = heroKit.passiveSources(hero)
 
     /** What the low-life bonuses lay on while the hero's life is under half. */
-    fun lowLifeLines(hero: Combatant): List<StatLine> = passives.filter { it.skill.lowLife }.flatMap { lines(it, hero) }
-
-    private fun lines(passive: KitSkill, hero: Combatant): List<StatLine> {
-        val level = passive.level(hero)
-        return if (passive.skill.type == SkillType.AURA) {
-            passive.skill.stats.lines(level, 1 + hero[CoreStat.AURA_EFFECT.code] / 100)
-        } else {
-            passive.skill.stats.lines(level)
-        }
-    }
+    fun lowLifeLines(hero: Combatant): List<StatLine> = heroKit.lowLifeLines(hero)
 
     companion object {
         /**
@@ -155,21 +115,12 @@ data class Loadout(
             charges: ChargeRules = ChargeRules(),
             fate: FateKit = FateKit.NONE,
         ): Loadout {
-            val book = index.skills
-            fun forged(skill: SkillDefinition, condition: SlotCondition? = null) = KitSkill(
-                index.skillForge.effective(skill, skills, stats),
-                skills.level(skill.code).coerceAtLeast(1),
-                book.rules.boostedMaxLevel,
-                condition ?: skill.condition,
-                index.skillGrowth.tier(skill, skills, stats),
-                index.skillGrowth.full(skill, skills, stats),
-            )
-            fun kit(code: String?, condition: SlotCondition? = null) = code?.let(book.byCode::get)?.let { forged(it, condition) }
+            val kit = HeroKit.of(index, skills, heroClass, stats)
             return Loadout(
-                actives = skills.active.map { slot -> slot?.let { kit(it.skill, it.condition) } },
-                passives = skills.passive.mapNotNull { kit(it) },
+                actives = kit.actives,
+                passives = kit.passives,
                 flasks = flasks,
-                curses = book.ofClass(heroClass).filter { it.type == SkillType.CURSE }.map { forged(it) },
+                curses = kit.curses,
                 powers = powers,
                 charges = charges,
                 fate = fate,

@@ -150,6 +150,12 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
     // Объекты карты (3.90.0): не исчерпанные и видимые; у комнаты - вход и рычаг
     world.features.filter { !it.spent && it.shown(world) }.forEach { spot -> featureMark(spot.kind)?.let { mark(spot.focus.x + .5, spot.focus.y + .5, it.tint) } }
     world.features.filterIsInstance<RoomSpot>().mapNotNull { spot -> spot.lever?.takeIf { !spot.opened && world.explored(it.x, it.y) } }.forEach { mark(it.x + .5, it.y + .5, RoomMark.tint) }
+    // Рычаг где-то здесь (4.9.0): найденная запертая дверь - размытое пятно вокруг неувиденного рычага, кольцами от края к середине
+    world.features.forEach { spot ->
+        val hint = (spot as? RoomSpot)?.takeIf { it.hinted(world) }?.hint ?: return@forEach
+        val radius = world.rules.lever.hint.toFloat() * cell
+        for (k in 1..HINT_RINGS) mark(hint.first, hint.second, RoomMark.tint.copy(alpha = HINT_ALPHA), radius * k / HINT_RINGS)
+    }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
     if (monsters) {
         world.agents.filter { it.alive && world.shows(it) }.forEach { agent ->
@@ -172,6 +178,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
     val world = run.world
     val map = world.map
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        ChordOverDialog()
         Column(
             Modifier.fillMaxSize().background(Ink.copy(alpha = .96f)).statusBarsPadding().navigationBarsPadding().padding(12.dp)
                 .verticalScroll(rememberScrollState()),
@@ -236,6 +243,7 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
     if (world.portal?.let { world.explored(it.x, it.y) } == true) add(PortalTint to ui("map.legend_portal"))
     world.features.filter { !it.spent && it.shown(world) }.mapNotNull { featureMark(it.kind) }.distinct().forEach { add(it.tint to ui(it.legend)) }
     if (world.features.any { it is RoomSpot && it.lever?.let { lever -> world.explored(lever.x, lever.y) } == true && !it.opened }) add(RoomMark.tint to ui("map.legend_lever"))
+    if (world.features.any { it is RoomSpot && it.hinted(world) }) add(RoomMark.tint.copy(alpha = HINT_ALPHA * HINT_RINGS) to ui("map.legend_lever_hint"))
     // Скверна (4.0.0): сундук зачищенной точки и проснувшаяся Матерь
     world.features.filterIsInstance<BlightSpot>().filter { it.shown(world) }.forEach { spot ->
         val point = spot.active ?: return@forEach
@@ -255,6 +263,10 @@ internal fun effectText(stat: String, value: Double): String = SkillText.statLin
 internal data class FeatureMark(val tint: Color, val legend: String)
 
 private val RoomMark = FeatureMark(Color(0xFFE8E0C8), "map.legend_room")
+
+/** Пятно «рычаг где-то здесь» (4.9.0): столько колец, каждое такой прозрачности - к середине гуще, край размыт. */
+private const val HINT_RINGS = 4
+private const val HINT_ALPHA = .09f
 
 /** Отметка объекта карты; ловушек на миникарте нет (3.91.0) - их видно только на самой карте. */
 internal fun featureMark(kind: FeatureKind): FeatureMark? = when (kind) {

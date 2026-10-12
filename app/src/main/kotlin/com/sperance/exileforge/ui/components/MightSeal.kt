@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -20,17 +18,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
@@ -51,8 +45,9 @@ import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.ui.theme.*
 
 /*
- * Мощь (4.8.0, макет A+B): печать - кольцо долей «натиск / стойкость» (Ember / Rune) с ⚜ внутри; на листе героя крупно с числом
- * Cinzel, у врага - мелко с числом цвета его стойки против героя; в списках - строка «⚜ 12.5k». Не прогноз боя.
+ * Мощь (4.8.0, макет A+B; 4.9.0 - компактно, макет A): печать - кольцо долей «натиск / стойкость» (Ember / Rune) с ⚜ внутри; на листе
+ * героя - печать 32dp с числом Cinzel в строке с номером героя, у врага - мелко с числом цвета его стойки против героя; в списках -
+ * строка «⚜ 12.5k». Не прогноз боя.
  */
 
 /** Цвет числа Мощи врага по его стойке против героя: серый - слабее вдвое, золото - сопоставим, красный - сильнее. */
@@ -88,47 +83,30 @@ fun MightStanding.tint(): Color = when (this) {
 }
 
 /**
- * Мощь героя на его листе (4.8.0, макет A): крупная печать, подпись «МОЩЬ», число Cinzel и доли «⚔ натиск 18.2k/с · ⛨ стойкость
- * 8.6k». Касание - короткий разбор: что такое натиск и стойкость; шансов боя здесь нет.
+ * Мощь героя на его листе (4.9.0, макет A «Строка с номером героя»): печать 32dp и справа подпись «МОЩЬ» над числом 20sp - в строке
+ * с номером героя, отдельной панели нет. Касание - короткий разбор: натиск и стойкость, «не прогноз боя». [reading] null - Мощь ещё
+ * не посчитана: «…» вместо числа.
  */
-@Composable fun MightPanel(reading: MightReading, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(12.dp)
+@Composable fun MightMark(reading: MightReading?, modifier: Modifier = Modifier) {
     Tipped(
         {
             Tip(
                 ui("might.title"),
                 ui("might.tip"),
                 Caution,
-                listOf(ui("might.offense_fact") to compactNumber(reading.offense), ui("might.defense_fact") to compactNumber(reading.defense)),
+                reading?.let { listOf(ui("might.offense_fact") to compactNumber(it.offense), ui("might.defense_fact") to compactNumber(it.defense)) }.orEmpty(),
             )
         },
-        modifier.fillMaxWidth(),
+        modifier,
     ) {
-        Row(
-            Modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(PanelRaised, Panel))).padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            MightSeal(reading, glow = true)
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(ui("might.title").uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp)
-                Text(mightText(reading.value), color = GoldBright, style = relicName(32))
-                MightShares(reading, MaterialTheme.typography.labelSmall.fontSize)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            reading?.let { MightSeal(it, size = MARK_SEAL, glow = true) } ?: Box(Modifier.size(MARK_SEAL))
+            Column {
+                Text(ui("might.title").uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 2.sp, lineHeight = 10.sp)
+                Text(reading?.let { mightText(it.value) } ?: PENDING, color = GoldBright, style = relicName(MARK_NUMBER), lineHeight = MARK_NUMBER.sp)
             }
         }
     }
-}
-
-/** Доли Мощи строкой: «⚔ натиск 18.2k/с · ⛨ стойкость 8.6k» цветами своих дуг. */
-@Composable private fun MightShares(reading: MightReading, size: TextUnit) {
-    Text(
-        buildAnnotatedString {
-            withStyle(SpanStyle(color = Ember)) { append(ui("might.offense_line", compactNumber(reading.offense))) }
-            withStyle(SpanStyle(color = Muted)) { append(" · ") }
-            withStyle(SpanStyle(color = Rune)) { append(ui("might.defense_line", compactNumber(reading.defense))) }
-        },
-        fontSize = size,
-    )
 }
 
 /** Мощь врага мелко (4.8.0): печать и короткое число цвета его стойки против героя ([FightMight]); без Мощи героя - золото. */
@@ -139,10 +117,9 @@ fun MightStanding.tint(): Color = when (this) {
     }
 }
 
-/** Мощь строкой списка «⚜ 12.5k» (4.8.0): карточка игрока, состав гильдии; пусто - Мощь ещё не посчитана сервером. */
+/** Мощь строкой списка «⚜ 12.5k» (4.8.0): карточка игрока, состав гильдии; ноль - сервер ещё не посчитал её (4.9.0): «⚜ …». */
 @Composable fun MightLine(value: Double, modifier: Modifier = Modifier, tint: Color = Caution, fontSize: TextUnit = 11.sp) {
-    if (value <= 0) return
-    Text(mightLine(value), color = tint, fontSize = fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = modifier)
+    Text(if (value > 0) mightLine(value) else ui("might.short", PENDING), color = tint, fontSize = fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = modifier)
 }
 
 /** Мощь героя «было → стало» с вещью (4.8.0) - строкой сравнения, как у [StatComparison], с плашкой разницы. */
@@ -189,15 +166,25 @@ class FightMight internal constructor(
 /** Мощь боя на оверлее; null - контента ещё нет или экран не бой. */
 val LocalFightMight = compositionLocalOf<FightMight?> { null }
 
-/** Мощь боя на уровне врагов [level]: враги - один раз на монстра, герой - заново, когда меняется его тело боя [hero]. */
-@Composable fun rememberFightMight(index: ContentIndex?, hero: Combatant?, level: Int): FightMight? {
+/**
+ * Мощь боя на уровне врагов [level]: враги - один раз на монстра, герой - заново, когда меняется его тело боя [hero]; [added] (4.9.0) -
+ * урон умений и боевого питомца из боевого листа героя (`CombatSheet.addedDps`).
+ */
+@Composable fun rememberFightMight(index: ContentIndex?, hero: Combatant?, level: Int, added: Double): FightMight? {
     index ?: return null
     val base = remember(index, level) { FightMight(index, level, null) }
-    val reading = remember(index, hero?.stats, hero?.level) { hero?.let { Mights.of(index, it) } }
+    val reading = remember(index, hero?.stats, hero?.level, added) { hero?.let { Mights.hero(index, it, added) } }
     return remember(base, reading) { base.with(reading) }
 }
 
 private const val MIGHT_GLYPH = "⚜"
+
+/** Мощь, которую сервер ещё не посчитал: многоточие вместо нуля. */
+private const val PENDING = "…"
+
+/** Печать и кегль числа Мощи в строке с номером героя (макет A). */
+private val MARK_SEAL = 32.dp
+private const val MARK_NUMBER = 20
 
 /** Толщина кольца печати долей её размера. */
 private const val RING_SHARE = .076f

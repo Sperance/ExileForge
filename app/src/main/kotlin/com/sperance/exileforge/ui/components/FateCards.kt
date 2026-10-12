@@ -56,10 +56,15 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -126,8 +131,10 @@ private val SPARKS = List(26) { i ->
 
 /** Угли поднимаются со дна (6-9 с на подъём); при выключенных анимациях стоят, где застал их кадр. */
 @Composable fun EmberField(modifier: Modifier = Modifier) {
-    val time = motionClock(EMBER_MS, "fate-embers")
+    // Фазы декора читаются в рисовании (4.9.0): перерисовка шагом часов без перекомпоновки.
+    val phase = motionPhase(EMBER_MS)
     Canvas(modifier) {
+        val time = phase.value
         SPARKS.forEach { spark ->
             val life = (time / spark.pace + spark.phase) % 1f
             val alpha = if (life < .1f) life / .1f else 1f - (life - .1f) / .9f
@@ -140,9 +147,9 @@ private val SPARKS = List(26) { i ->
 
 /** Алтарь: тёплый овал жара дышит (3 с); без анимаций - ровный. */
 @Composable fun AltarGlow(modifier: Modifier = Modifier) {
-    val time = motionClock(ALTAR_MS, "fate-altar")
-    val breath = (1 - cos(time * 2 * PI).toFloat()) / 2
+    val phase = motionPhase(ALTAR_MS)
     Canvas(modifier) {
+        val breath = (1 - cos(phase.value * 2 * PI).toFloat()) / 2
         val scale = 1f + .08f * breath
         val alpha = .55f - .25f * breath
         drawOval(
@@ -155,10 +162,10 @@ private val SPARKS = List(26) { i ->
 
 /** Печать дара: круг уголь-золото со знаком Предначертания и медленно вращающимся пунктирным кольцом (14 с). */
 @Composable fun FateSigil(size: Dp = 54.dp) {
-    val turn = motionClock(SIGIL_MS, "fate-sigil")
+    val turn = motionPhase(SIGIL_MS)
     Box(
         Modifier.size(size + 12.dp).drawBehind {
-            rotate(turn * 360f) {
+            rotate(turn.value * 360f) {
                 drawCircle(
                     FateInk.Gold.copy(alpha = .45f),
                     this.size.minDimension / 2 - 1.dp.toPx(),
@@ -354,9 +361,11 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
  * Лента Предначертания (4.6.3, утверждена владельцем по макету «Лента и свиток», вариант A): угольная лента во всю ширину -
  * печать [FateSigil], имя дара [card] Cinzel заглавными и подпись [caption] (что это за дар или что он копит). Касание
  * разворачивает под лентой свиток: узор, описание серифом курсивом и «Изменить нельзя никогда». Одна на карточку игрока, шапку
- * выбора героя, лист героя и досье модерации; без `LocalMotion` свиток раскрывается сразу, кольцо печати стоит.
+ * выбора героя, лист героя и досье модерации; без `LocalMotion` свиток раскрывается сразу, кольцо печати стоит. На листе героя
+ * (4.9.0, макет «Свиток + значок», вариант A) свиток несёт блок «Сейчас действует» - [now]: что дар делает с числами на силе и
+ * строках дара.
  */
-@Composable fun FateRibbon(card: FateCard, caption: String, modifier: Modifier = Modifier) {
+@Composable fun FateRibbon(card: FateCard, caption: String, modifier: Modifier = Modifier, now: List<String> = emptyList()) {
     var open by rememberSaveable(card.code) { mutableStateOf(false) }
     val motion = LocalMotion.current
     val shape = RoundedCornerShape(12.dp)
@@ -381,7 +390,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
             }
             Text(if (open) "▴" else "▾", color = FateInk.Gold, style = MaterialTheme.typography.labelMedium)
         }
-        if (open) FateUnrolled(card)
+        if (open) FateUnrolled(card, now)
     }
 }
 
@@ -390,8 +399,8 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
     Text("$SIGIL ${card.title}", modifier, color = FateInk.GoldLight, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
-/** Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом и предупреждение, что дар навсегда. */
-@Composable private fun FateUnrolled(card: FateCard) {
+/** Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом, «Сейчас действует» [now] (4.9.0) и предупреждение, что дар навсегда. */
+@Composable private fun FateUnrolled(card: FateCard, now: List<String>) {
     Box(Modifier.fillMaxWidth().height(1.dp).background(FateInk.Rim))
     Column(
         Modifier.fillMaxWidth().background(Brush.verticalGradient(FateInk.Parchment.drop(1))).padding(horizontal = 14.dp, vertical = 12.dp),
@@ -410,9 +419,43 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
                 textAlign = TextAlign.Center,
             )
         }
+        if (now.isNotEmpty()) FateNow(now)
         Text(ui("fate.ribbon.never"), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
     }
 }
+
+/**
+ * «Сейчас действует» (4.9.0): заголовок гравировкой с чертой и строки дара [lines] с числами - числа золотом, как на макете.
+ */
+@Composable private fun FateNow(lines: List<String>) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(ui("fate.ribbon.now").uppercase(), color = FateInk.Gold, style = relicName(11), letterSpacing = 2.sp)
+            Box(Modifier.weight(1f).height(1.dp).background(Brush.horizontalGradient(listOf(FateInk.Rim, Color.Transparent))))
+        }
+        lines.forEach { line ->
+            Text(
+                goldNumbers(ui("fate.ribbon.now_line", line)),
+                color = FateInk.Vellum,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
+
+/** Числа строки дара - золотом и полужирно: на них смотрит игрок. */
+private fun goldNumbers(text: String): AnnotatedString = buildAnnotatedString {
+    var at = 0
+    NUMBER.findAll(text).forEach { match ->
+        append(text.substring(at, match.range.first))
+        withStyle(SpanStyle(color = FateInk.GoldLight, fontWeight = FontWeight.SemiBold)) { append(match.value) }
+        at = match.range.last + 1
+    }
+    append(text.substring(at))
+}
+
+/** Число строки дара со знаком и процентом: «−29%», «+1,18%», «×1.3». */
+private val NUMBER = Regex("""[+\-−×]?\d+(?:[.,]\d+)?%?""")
 
 /** Периоды декора, мс: подъём углей, дыхание алтаря, оборот кольца печати. */
 private const val EMBER_MS = 9_000

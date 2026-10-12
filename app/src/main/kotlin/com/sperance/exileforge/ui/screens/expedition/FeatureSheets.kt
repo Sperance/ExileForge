@@ -28,6 +28,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.run.AfflictionView
+import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
@@ -52,9 +53,11 @@ import com.sperance.exileforge.ui.screens.auction.OfferSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
+import com.sperance.exileforge.ui.screens.expedition.scene.CrackText
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.ceil
+import kotlin.math.roundToInt
 
 /**
  * Лист объекта карты (3.90.0, сервер 1.81.3), по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
@@ -64,7 +67,7 @@ import kotlin.math.ceil
     when (val feature = view.feature) {
         is MapFeature.Altar -> AltarSheet(game, feature) { onCommand(RunCommand.Choose(it)) }
         is MapFeature.Merchant -> MerchantSheet(game, feature, view.taken, onCommand)
-        is MapFeature.Node -> NodeSheet(game, feature, view.gathering, onCommand)
+        is MapFeature.Node -> NodeSheet(game, feature, view.gathering, view.guarded, onCommand)
         is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
     }
 }
@@ -151,34 +154,53 @@ import kotlin.math.ceil
 }
 
 /**
- * Узел ремесла: что даёт и сколько собирать. Без инструмента профессии сбор не начать - лист говорит, какой нужен; идущий
- * сбор показывает свою долю.
+ * Узел ремесла: что даёт и сколько собирать. Без инструмента профессии сбор не начать - лист говорит, какой нужен; под стражами
+ * сокровищ ([guarded], 4.9.0) - тоже, пока они стоят; идущий сбор показывает свою долю.
  */
-@Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, gathering: Float?, onCommand: (RunCommand) -> Unit) {
+@Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, gathering: Float?, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
     val tooled = game.hero?.equipped?.containsKey(node.tool) == true
     ForgeSheet(onDismissRequest = { onCommand(RunCommand.StepOff) }) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feature.node.title", itemTitle(node.job.output)), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             MutedText(ui("feature.node.yield", number(node.seconds), node.amount.first(), node.amount.last()))
             if (!tooled) Text(ui("feature.node.tool", professionTitle(node.profession)), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+            if (guarded) Text(ui("feature.guarded"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
             if (gathering != null) {
                 Text(ui("feature.node.gathering"), color = Rune, style = MaterialTheme.typography.bodyMedium)
                 LinearProgressIndicator(progress = { gathering }, modifier = Modifier.fillMaxWidth(), color = Gold)
             } else {
-                ForgeButton(enabled = tooled, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.node.gather")) }
+                ForgeButton(enabled = tooled && !guarded, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.node.gather")) }
                 ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.leave")) }
             }
         }
     }
 }
 
-/** Простой у трещины тайной комнаты на полосе карты; удар ловушки с 3.94.1 всплывает над героем ([HazardFloat]). */
-@Composable internal fun OpeningLine(opening: Float?) {
-    opening?.let {
-        Text(ui("feature.secret.opening"), color = Rune, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Start)
-        LinearProgressIndicator(progress = { it }, modifier = Modifier.fillMaxWidth().height(3.dp), color = Rune)
+/**
+ * Над героем у входа в комнату (4.9.0, макет «Ломание трещины», вариант B «Кольцо над героем»): кольцо простоя рисует сцена
+ * вокруг жетона, здесь - строка над ним: «Трещина поддаётся · N%», при нуле - «стой рядом»; у запертой двери - «Заперто. Найди
+ * рычаг поблизости». Стоит над кольцом, выше чисел урона.
+ */
+@Composable internal fun EntranceFloat(cue: EntranceCue?) {
+    cue ?: return
+    val (text, tint) = when (cue) {
+        is EntranceCue.Crack -> if (cue.progress > 0f) ui("feature.secret.yielding", (cue.progress * 100).roundToInt()) to CrackText else ui("feature.secret.stand") to Parchment
+        EntranceCue.Locked -> ui("feature.vault.locked") to Parchment
+    }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        Text(
+            text,
+            color = tint,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelLarge,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.align(Alignment.TopCenter).offset(y = maxHeight * .55f - SCENE_UNIT * ENTRANCE_LIFT),
+        )
     }
 }
+
+/** Как высоко над ногами героя строка входа, в полутайлах сцены: над кольцом жетона. */
+private const val ENTRANCE_LIFT = 2.3f
 
 /**
  * Урон карты над героем (3.94.1; 4.2.0 - одной строкой): удар ловушки - «−12 Хаос · Яд: 3% здоровья/с, 6 с» цветом её урона,

@@ -81,8 +81,8 @@ private const val HERO_CARD = -1
     // Лист врага (3.93.0): открывается касанием на паузе и до боя
     var inspect by remember { mutableStateOf<Int?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
-    // Мощь боя (4.8.0): герой - по телу боя под эффектами карты, враги - по своему листу; печать на карточках врагов
-    val might = rememberFightMight(game.index, fight.heroBody, level)
+    // Мощь боя (4.8.0): герой - по телу боя под эффектами карты (4.9.0: с уроном умений и питомца из листа боя), враги - по своему листу
+    val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.addedDps ?: 0.0)
     CompositionLocalProvider(LocalFightMight provides might) {
         Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
             fight.boss?.let { BossBackdrop(biome, it, time) }

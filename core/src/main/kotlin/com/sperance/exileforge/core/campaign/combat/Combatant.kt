@@ -7,6 +7,7 @@ import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ManaRule
+import com.sperance.exileforge.rules.sheet.StatReader
 import kotlin.math.max
 
 /**
@@ -18,12 +19,12 @@ import kotlin.math.max
  * every attack has. Mana came back in 2.78.0 (server 0.69.0) with the class skills and the monsters'
  * spells: it is what a skill is paid with, and it comes back by the rule's share a second.
  */
-data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules) {
+data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules) : StatReader {
     private fun stat(name: String) = stats[name] ?: 0.0
     private fun percent(name: String, cap: Double = 100.0) = stat(name).coerceIn(0.0, cap) / 100
 
     /** A stat of the sheet as it stands, zero when it has none. */
-    operator fun get(name: String): Double = stat(name)
+    override operator fun get(name: String): Double = stat(name)
 
     val maxLife = max(1.0, stat(CoreStat.HEALTH.code))
 

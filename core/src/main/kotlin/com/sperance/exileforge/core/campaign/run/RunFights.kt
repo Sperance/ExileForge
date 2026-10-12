@@ -42,7 +42,6 @@ import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.roll.VaalZone
-import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,9 +78,9 @@ internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(
 }
 
 /**
- * Бой начат (3.88.0, server 1.80.0): каждому паку - событие ENGAGE, сервер катит добычу его членов сразу и отвечает ею, так
- * что убитый член показывает свою добычу, не дожидаясь ответа на убийство. Страж кристалла и Бездна - не паки жетонов, босс
- * Ваал-зоны - порча, а не убийство босса: им ENGAGE нет.
+ * Бой начат (3.88.0, server 1.80.0): каждому паку - событие ENGAGE. С 4.9.0 сервер добычи по нему не катит и не показывает - она
+ * приходит ответом на убийство; ENGAGE лишь отмечает бой начатым, и выход посреди него - поражение. Страж кристалла и Бездна -
+ * не паки жетонов, босс Ваал-зоны - порча, а не убийство босса: им ENGAGE нет.
  */
 internal fun ExpeditionRun.announce(pack: MonsterAgent) {
     val key = when {
@@ -91,22 +90,6 @@ internal fun ExpeditionRun.announce(pack: MonsterAgent) {
     }
     if (key in engaged.values) return
     record { RunEvent.Engage(it, i = key.pack, vaal = key.vaal, boss = key.boss) }?.let { engaged[it.n] = key }
-}
-
-/** Убийство [n] члена [member] боя [key]: добыча, если сервер её уже ответил на ENGAGE, видна сразу. */
-internal fun ExpeditionRun.killed(n: Int, key: FightKey, member: Int) {
-    killsOf[n] = key to member
-    preview(n)
-}
-
-/** Показывает добычу убийства [n] из ответа на ENGAGE, один раз; ответ на само убийство её уже не добавит. */
-internal fun ExpeditionRun.preview(n: Int) {
-    if (n in earned || n in previewed) return
-    val (key, member) = killsOf[n] ?: return
-    val loot = pendingLoot[key]?.get(member) ?: return
-    previewed += n
-    if (n in fightEvents) reward = (reward ?: Reward.NONE) + loot
-    if (n in autoEvents) autoReward = (autoReward ?: Reward.NONE) + loot
 }
 
 /**
@@ -162,8 +145,8 @@ internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
     }
     rewarding(event, fought = true)
     when (event) {
-        is RunEvent.Boss -> killed(event.n, FightKey.BOSS, 0).also { fateRun.bossSlain() }
-        is RunEvent.Kill -> killed(event.n, FightKey(event.i, event.vaal, boss = false), event.m).also { fateRun.slain(event.i * Run.PACK_SLOTS + event.m, event.vaal) }
+        is RunEvent.Boss -> fateRun.bossSlain()
+        is RunEvent.Kill -> fateRun.slain(event.i * Run.PACK_SLOTS + event.m, event.vaal)
         else -> return
     }
     tallyWins()

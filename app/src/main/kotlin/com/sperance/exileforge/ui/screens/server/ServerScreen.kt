@@ -306,7 +306,10 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         shape = DialogShape,
         tonalElevation = 0.dp,
         titleContentColor = Gold,
-        title = { Text(ui("account.promo")) },
+        title = {
+            ChordOverDialog()
+            Text(ui("account.promo"))
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 MutedText(ui("account.promo_target", account.heroName))

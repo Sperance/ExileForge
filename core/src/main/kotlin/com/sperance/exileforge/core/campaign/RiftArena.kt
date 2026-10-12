@@ -291,6 +291,8 @@ class RiftArena(
         lowest = minOf(lowest, fight.trial.lowestLife)
         pools = fight.pools()
         report = fight.report(monsters)
+        // Разгон (4.9.0): выигранный узел - в счёт забега
+        if (outcome == Outcome.WIN) fateRun.victory()
         end(won = outcome == Outcome.WIN)
     }
 

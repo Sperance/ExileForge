@@ -3,11 +3,11 @@ package com.sperance.exileforge.core.campaign.combat
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
-import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.sheet.lines
 import kotlin.math.max
 import kotlin.math.min
 

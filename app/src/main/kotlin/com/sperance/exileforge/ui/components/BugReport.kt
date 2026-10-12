@@ -26,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -43,9 +44,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindowProvider
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
@@ -53,6 +56,7 @@ import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.ScreenCapture
 import com.sperance.exileforge.platform.ScreenShot
+import com.sperance.exileforge.platform.VolumeChord
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.GameUi
@@ -71,6 +75,23 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
 /** The beetle in a screen's header; nothing where no report can be opened. */
 @Composable fun BugAction(modifier: Modifier = Modifier, tint: Color = Muted) {
     LocalBugReport.current?.let { BugButton(modifier, tint, it) }
+}
+
+/** Аккорд громкости приложения (4.9.0): его держит Activity; окна диалогов цепляются к нему сами ([ChordOverDialog]). */
+val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
+
+/**
+ * Аккорд громкости поверх окна диалога (4.9.0): композиция внутри `ForgeSheet`, `Dialog` или `AlertDialog` оборачивает callback
+ * своего окна ([VolumeChord.attach]) - Громкость↑+↓ открывает отчёт и поверх диалога. Вне окна диалога ничего не делает.
+ */
+@Composable fun ChordOverDialog() {
+    val chord = LocalVolumeChord.current ?: return
+    val view = LocalView.current
+    DisposableEffect(chord, view) {
+        val window = generateSequence(view.parent) { it.parent }.filterIsInstance<DialogWindowProvider>().firstOrNull()?.window
+        val detach = window?.let(chord::attach) ?: {}
+        onDispose { detach() }
+    }
 }
 
 /**
@@ -192,7 +213,7 @@ fun BugSheet(
             )
             if (shot != null && kind.shots) ShotChoice(shot, attach) { attach = it }
             ForgeButton(
-                enabled = text.isNotBlank() && !game.busy && (kind == FeedbackKind.BUG || game.session.signedIn),
+                enabled = text.isNotBlank() && (kind == FeedbackKind.BUG || game.session.signedIn),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     onSend(BugReportRequest(text.trim().take(limit), screen, emptyMap(), kind), shot?.takeIf { attach && kind.shots })

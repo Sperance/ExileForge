@@ -36,6 +36,7 @@ class ServerReach(
     private val lazyLink: Lazy<ConnectionActions>,
     private val scope: CoroutineScope,
     private val trace: StartupTrace,
+    private val foreground: Foreground,
 ) {
     private val mutable = MutableStateFlow(ReachState())
     val state: StateFlow<ReachState> = mutable.asStateFlow()
@@ -75,6 +76,8 @@ class ServerReach(
                 failed = true
                 mutable.value = ReachState(Reach.UNREACHABLE, retryAt = System.currentTimeMillis() + RETRY_MS)
                 withTimeoutOrNull(RETRY_MS) { nudge.receive() }
+                // В фоне манифест не спрашивается (4.9.0): повтор - по возврату в игру.
+                foreground.awaitFront()
                 mutable.update { it.copy(reach = Reach.CONNECTING) }
             }
         }

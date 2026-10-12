@@ -94,7 +94,8 @@ class ServerIntegrationTest {
             val rerolled = assertNotNull(api.hero.applyOrb(heroId, rare.id, Orb.CHAOS_ORB.name).item)
             assertEquals(rare.id, rerolled.id)
             assertTrue(rerolled.rolls.count { index.modifier(it.code)?.affix == true } >= floor)
-            assertTrue(api.hero.sell(heroId, api.hero.unequip(heroId, rare.id).id).gold > 0)
+            // Выданная вещь (сервер 4.9.0) у торговца ничего не стоит
+            assertEquals(0L, api.hero.sell(heroId, api.hero.unequip(heroId, rare.id).id).gold, "a granted item sold for gold")
 
             // The run: a seed from the server, the same zone here, the journal paid on replay — every reward rolled by the server alone.
             // Открытые зоны клиент считает сам по правилам (3.94.1): у нового героя пройденных нет.
@@ -128,15 +129,18 @@ class ServerIntegrationTest {
             // The run is closed: a journal sent again is refused with CP_018, which the client reads as "settled, drop it".
             assertEquals("CP_018", assertFailsWith<ApiFailure> { api.campaign.events(heroId, start.id, events) }.code)
 
-            // The auction takes the item out of the hero and gives it back on cancel: the starter set and the run's loot
-            // hold chaos orbs too, so the count is compared with itself before the lot, not with a fixed figure.
-            suspend fun chaos() = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).bag[Orb.CHAOS_ORB.name] ?: 0L
-            val held = chaos()
-            val lot = assertNotNull(api.auction.sellItem(heroId, Orb.CHAOS_ORB.name, 1, Orb.CHAOS_ORB.name, 1).lot)
+            // The auction takes the item out of the hero and gives it back on cancel: the run's loot may hold the starter's
+            // orbs too, so the count is compared with itself before the lot, not with a fixed figure.
+            suspend fun bag(code: String) = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).bag[code] ?: 0L
+            // Выданное (сервер 4.9.0) другим героям не уходит: выданную сферу на аукцион не выставить, свою - можно
+            assertEquals("GR_001", assertFailsWith<ApiFailure> { api.auction.sellItem(heroId, Orb.CHAOS_ORB.name, bag(Orb.CHAOS_ORB.name), Orb.CHAOS_ORB.name, 1) }.code)
+            val starterOrb = Orb.ORB_OF_TRANSMUTATION.name
+            val held = bag(starterOrb)
+            val lot = assertNotNull(api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1).lot)
             assertEquals(LotStatus.ACTIVE, lot.status)
             assertTrue(api.auction.search(heroId, AuctionFilter(), listOf("")).items.any { it.id == lot.id })
             assertEquals(LotStatus.CANCELLED, api.auction.cancel(heroId, lot.id).lot?.status)
-            assertEquals(held, chaos())
+            assertEquals(held, bag(starterOrb))
 
             // Лот героя под баном не продаётся и по прямому id; вещь без места в тайнике и переполнении - отказ CH_020, а не
             // продажа купленного торговцу (сервер 4.8.x). Продавец - отдельный игрок по устройству.
@@ -145,9 +149,12 @@ class ServerIntegrationTest {
             val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
             listOf(heroId, traderHero).forEach { api.hero.grant(it, "level", "level" to auctionLevel.toString()) }
             api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 2)
-            suspend fun listed() = assertNotNull(trader.auction.sellEquipment(traderHero, api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE).id, Orb.CHAOS_ORB.name, 1).lot).id
-            val open = listed()
-            val banned = listed()
+            // Выданное не выставляется (сервер 4.9.0): продавец ставит свою стартовую вещь и свою стартовую сферу
+            assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE).id, Orb.CHAOS_ORB.name, 1) }.code)
+            val starter = HeroParts(traderHero).merge(assertNotNull(trader.hero.view(traderHero, HeroParts(traderHero)))).items.first { !it.granted }
+            if (starter.equipped) trader.hero.unequip(traderHero, starter.id)
+            val open = assertNotNull(trader.auction.sellEquipment(traderHero, starter.id, Orb.CHAOS_ORB.name, 1).lot).id
+            val banned = assertNotNull(trader.auction.sellItem(traderHero, Orb.ORB_OF_TRANSMUTATION.name, 1, Orb.CHAOS_ORB.name, 1).lot).id
             val ban = api.moderation.ban(SanctionRequest(SanctionTarget.HERO, heroId = traderHero, hours = 1, comment = "contract"))
             assertEquals("AU_004", assertFailsWith<ApiFailure> { api.auction.buy(heroId, banned) }.code)
             api.moderation.lift(ban.id)
@@ -155,12 +162,13 @@ class ServerIntegrationTest {
             repeat((stash.baseSlots + stash.overflowSlots) / TESTER_BATCH + 1) { api.hero.grant(heroId, "rares", "count" to TESTER_BATCH.toString()) }
             assertEquals("CH_020", assertFailsWith<ApiFailure> { api.auction.buy(heroId, open) }.code)
 
-            // A code is a treasure once.
-            val code = api.promo.create(RedemptionCode(code = "CONTRACT-${System.currentTimeMillis()}", treasure = listOf(RedemptionReward.Gold(100))))
-            val before = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).hero.money
-            assertEquals("system.success", api.hero.redeem(heroId, code.code))
-            assertEquals(before + 100, HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).hero.money)
-            assertFailsWith<ApiFailure> { api.hero.redeem(heroId, code.code) }
+            // A code is a treasure once - на аккаунт и на устройство (сервер 4.9.0): гасит игрок по устройству.
+            val code = api.promo.create(RedemptionCode(code = "CONTRACT-${System.currentTimeMillis()}", treasure = listOf(RedemptionReward.Gold(100)), limit = 1))
+            suspend fun traderMoney() = HeroParts(traderHero).merge(assertNotNull(trader.hero.view(traderHero, HeroParts(traderHero)))).hero.money
+            val before = traderMoney()
+            assertEquals("system.success", trader.hero.redeem(traderHero, code.code))
+            assertEquals(before + 100, traderMoney())
+            assertFailsWith<ApiFailure> { trader.hero.redeem(traderHero, code.code) }
             api.promo.delete(code.id)
 
             // A player is refused what is not theirs and what only an administrator may do.

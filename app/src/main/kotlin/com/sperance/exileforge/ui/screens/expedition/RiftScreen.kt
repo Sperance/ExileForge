@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -207,11 +208,16 @@ internal fun RiftNodeKind.color(): Color = when (this) {
  * (6 с). Декор стоит при выключенном `LocalMotion`.
  */
 @Composable private fun RiftPortal(modifier: Modifier) {
-    val spin = motionClock(40_000, "rift-gate-spin")
-    val counter = motionClock(18_000, "rift-gate-counter")
-    val breath = (1 - kotlin.math.cos(motionClock(5_500, "rift-gate-breath") * 2 * Math.PI).toFloat()) / 2
-    val rise = motionClock(6_000, "rift-gate-sparks")
+    // Фазы читаются в рисовании (4.9.0): портал перерисовывается шагом часов декора без перекомпоновки экрана.
+    val spinning = motionPhase(40_000)
+    val countering = motionPhase(18_000)
+    val breathing = motionPhase(5_500)
+    val rising = motionPhase(6_000)
     Canvas(modifier) {
+        val spin = spinning.value
+        val counter = countering.value
+        val breath = (1 - kotlin.math.cos(breathing.value * 2 * Math.PI).toFloat()) / 2
+        val rise = rising.value
         val r = size.minDimension / 2
         drawCircle(Brush.radialGradient(listOf(RiftColors.Rift.copy(alpha = .4f), Color.Transparent), center, r), r)
         rotate(spin * 360f) {
@@ -243,14 +249,23 @@ internal fun RiftNodeKind.color(): Color = when (this) {
 
 /** Страж недели силуэтом: знак в кольце тревоги дышит (5,5 с), под ним имя заглавными. */
 @Composable private fun GuardianSeal(name: String, act: Int) {
-    val breath = (1 - kotlin.math.cos((motionClock(5_500, "rift-seal") + act * .15f) * 2 * Math.PI).toFloat()) / 2
+    // Дыхание - прозрачностью слоя знака в рисовании (4.9.0): то же, что прозрачность оттенка, без перекомпоновки.
+    val phase = motionPhase(5_500)
     Column(Modifier.width(100.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
             Modifier.size(52.dp).glow(RiftColors.Warn.copy(alpha = .25f), radius = 8.dp, shape = CircleShape)
                 .background(Brush.radialGradient(listOf(Color(0xFF2A0D08), RiftColors.Ground)), CircleShape).border(1.dp, RiftColors.Warn.copy(alpha = .55f), CircleShape),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(RiftNodeKind.GUARDIAN.glyph(), null, tint = RiftColors.Warn.copy(alpha = .6f + .4f * breath), modifier = Modifier.size(28.dp))
+            Icon(
+                RiftNodeKind.GUARDIAN.glyph(),
+                null,
+                tint = RiftColors.Warn,
+                modifier = Modifier.size(28.dp).graphicsLayer {
+                    val breath = (1 - kotlin.math.cos((phase.value + act * .15f) * 2 * Math.PI).toFloat()) / 2
+                    alpha = .6f + .4f * breath
+                },
+            )
         }
         Text(name.uppercase(), color = RiftColors.Muted, style = relicName(9), textAlign = TextAlign.Center, maxLines = 2)
     }

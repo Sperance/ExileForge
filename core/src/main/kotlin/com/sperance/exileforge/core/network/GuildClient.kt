@@ -33,7 +33,8 @@ enum class MemberCommand(val path: String, val action: GuildAction) {
  * both bring the hero's snapshot along, as every command on the hero does.
  */
 class GuildClient internal constructor(private val http: Transport) {
-    suspend fun mine(heroId: String): GuildMine = http.get("$GUILD/mine", heroQuery(heroId))
+    /** Гильдия героя с заходом (4.9.0, сервер `POST guild/visit`): отметка захода и обслуживание гильдии - командой, не чтением. */
+    suspend fun mine(heroId: String): GuildMine = http.post("$GUILD/visit", heroQuery(heroId))
 
     /** The guilds by name or tag; a blank [faction] lists every faction's, a code only that faction's (3.28.0, server 1.26.0). */
     suspend fun search(heroId: String, text: String, page: Int, faction: String = ""): GuildPage {

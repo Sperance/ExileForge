@@ -42,7 +42,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.LocalMotion
-import com.sperance.exileforge.ui.components.motionClock
+import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
@@ -202,12 +202,10 @@ private val Feature.glyph: ImageVector get() = when (this) {
 
 /** The rays behind the number: a slow golden wheel, still when the animations are off. */
 @Composable private fun Rays(motion: Boolean, modifier: Modifier) {
-    val turn = if (motion) {
-        motionClock(RAYS_MS) * 360f
-    } else {
-        0f
-    }
+    // Фаза читается в рисовании (4.9.0): колесо крутится без перекомпоновки
+    val phase = if (motion) motionPhase(RAYS_MS) else null
     Canvas(modifier) {
+        val turn = phase?.let { it.value * 360f } ?: 0f
         val c = Offset(size.width / 2, size.height * .3f)
         val r = size.maxDimension
         drawCircle(Brush.radialGradient(listOf(Gold.copy(alpha = .28f), Color.Transparent), c, size.minDimension * .6f), size.minDimension * .6f, c)

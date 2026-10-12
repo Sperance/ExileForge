@@ -53,6 +53,9 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     /** Доля простоя, что открывает объект (трещина тайной комнаты), 0..1; у прочих - ноль. */
     open val progress: Double get() = 0.0
 
+    /** Что сказать над героем, стоящим у объекта (4.9.0: трещина поддаётся, дверь заперта); null - нечего. */
+    open fun cue(world: ExpeditionWorld): EntranceCue? = null
+
     /** Клетки, где объект можно увидеть: хоть одна исследована - объект на карте ([shown]). */
     protected open val sites: List<Cell> get() = listOf(cell)
 
@@ -96,8 +99,8 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
      */
     internal open fun resume(run: ExpeditionRun, killed: Collection<Int>) = Unit
 
-    /** Что объект видит, решая о выборе (4.0.0): свои выборы и павшие жетоны карты [world]. */
-    fun state(world: ExpeditionWorld): FeatureState = FeatureState(taken.toList(), world.killed(Run.PACK_SLOTS))
+    /** Что объект видит, решая о выборе (4.0.0): свои выборы, павшие жетоны карты [world] и (4.9.0) стоят ли его стражи сокровищ. */
+    fun state(world: ExpeditionWorld): FeatureState = FeatureState(taken.toList(), world.killed(Run.PACK_SLOTS), world.guarded(id))
 
     internal fun near(world: ExpeditionWorld, at: Cell, reach: Double) = hypot(at.x + 0.5 - world.heroX, at.y + 0.5 - world.heroY) < reach
 }
@@ -179,9 +182,10 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
 
 /**
  * Комната за стеной (3.90.0): тайная - трещина [entrance], у которой стоят [seconds] секунд; запертая - дверь [entrance], что
- * открывает рычаг [lever] в другом конце карты. Открытая - сундук сокровищницы [chest] внутри.
+ * открывает рычаг [lever] неподалёку (4.9.0: в `expedition.lever` шагах от двери). Открытая - сундук сокровищницы [chest] внутри.
+ * [hint] - середина размытой метки «рычаг где-то здесь» миникарты (4.9.0), в клетках карты; у тайной - null.
  */
-class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, val lever: Cell?, private val seconds: Double) : FeatureSpot(feature, entrance) {
+class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, val lever: Cell?, private val seconds: Double, val hint: Pair<Double, Double>? = null) : FeatureSpot(feature, entrance) {
     /** Сундук открытой комнаты - за её каменным краем: край над ним рисуется полупрозрачным (3.95.3). */
     override val landmarks: List<Cell> get() = if (opened) listOf(chest) else emptyList()
 
@@ -195,7 +199,8 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
     override val sites: List<Cell> get() = listOf(entrance)
 
     override fun touch(world: ExpeditionWorld, dt: Double): FeatureAction? {
-        if (opened) return if (!looted && near(world, chest, world.rules.chestReach)) FeatureAction.Trigger(this, MapFeature.LOOT) else null
+        // Сундук под стражами сокровищ (4.9.0) - только когда они пали, как его примет сервер
+        if (opened) return if (!looted && !world.guarded(id) && near(world, chest, world.rules.chestReach)) FeatureAction.Trigger(this, MapFeature.LOOT) else null
         lever?.let { return if (near(world, it, world.rules.chestReach)) FeatureAction.Trigger(this, MapFeature.OPEN) else null }
         // Трещина открывается простоем рядом: шаг прочь начинает отсчёт заново.
         if (!near(world, entrance, ADJACENT) || world.moving) {
@@ -210,6 +215,16 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
         super.undo(choice)
         progress = 0.0
     }
+
+    /** Герой у входа (4.9.0): у двери - «заперто, найди рычаг», у трещины - её простой (0 - подошёл, ещё не стоит). */
+    override fun cue(world: ExpeditionWorld): EntranceCue? = when {
+        opened || !near(world, entrance, ADJACENT) -> null
+        lever != null -> EntranceCue.Locked
+        else -> EntranceCue.Crack(progress.toFloat())
+    }
+
+    /** Размытая метка рычага видна (4.9.0): дверь найдена, заперта, а сам рычаг ещё не увиден. */
+    fun hinted(world: ExpeditionWorld): Boolean = !opened && lever?.let { !world.explored(it.x, it.y) } == true && shown(world)
 
     override fun resolve(run: ExpeditionRun, choice: Int) {
         val event = run.recordFeature(this, choice)
@@ -247,9 +262,16 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
         val spot = when (feature) {
             is MapFeature.Trap -> claim(anywhere, TRAP_SPACING)?.let { TrapSpot(feature, it, traps?.reach ?: 0.0, traps?.rearm ?: 0.0) }
 
-            is MapFeature.Room -> RoomCarver.carve(map, reach.keys, feature.room.size, placing)?.let { (entrance, chest) ->
-                val lever = if (feature.kind == FeatureKind.VAULT) claim(roomy, rules.chestSpacing) ?: return@let null else null
-                RoomSpot(feature, entrance, chest, lever, feature.seconds)
+            is MapFeature.Room -> {
+                // Рычаг запертой (4.9.0) - рядом с дверью, в `expedition.lever` шагах от клетки перед ней; нет такого места у
+                // этой двери - следующая: комната вырезается, только когда место рычага уже есть, пустых карманов в скале нет
+                val vault = feature.kind == FeatureKind.VAULT
+                RoomCarver.plans(map, reach.keys, feature.room.size, placing).firstNotNullOfOrNull { plan ->
+                    val lever = if (vault) leverFor(plan.front, roomy, taken, ::apart) ?: return@firstNotNullOfOrNull null else null
+                    lever?.let { taken += it }
+                    RoomCarver.cut(map, plan)
+                    RoomSpot(feature, plan.entrance, plan.chest, lever, feature.seconds, lever?.let { leverHint(it, placing) })
+                }
             }
 
             is MapFeature.Altar -> claim(roomy, rules.chestSpacing)?.let { AltarSpot(feature, it) }
@@ -266,6 +288,25 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
     }
 }
 
+/**
+ * Место рычага двери с клеткой [front] перед ней (4.9.0): первая из [pool], что не занята ([taken]), стоит поодаль от прочих
+ * объектов ([apart]) и лежит в `expedition.lever` шагах по полу от двери; null - такого места нет.
+ */
+private fun ExpeditionWorld.leverFor(front: Cell, pool: List<Cell>, taken: Set<Cell>, apart: (Cell, Double) -> Boolean): Cell? {
+    val steps = distances(front, rules.lever.max)
+    return pool.firstOrNull { cell -> cell !in taken && (steps[cell] ?: -1) >= rules.lever.min && apart(cell, rules.chestSpacing) }
+}
+
+/**
+ * Середина размытой метки рычага [lever] на миникарте (4.9.0): сдвинута от него по семени не дальше половины `lever.hint`, так
+ * что рычаг всегда внутри пятна, но не в его центре.
+ */
+private fun ExpeditionWorld.leverHint(lever: Cell, random: Random): Pair<Double, Double> {
+    val angle = random.nextDouble() * 2 * Math.PI
+    val shift = random.nextDouble() * rules.lever.hint / 2
+    return lever.x + .5 + kotlin.math.cos(angle) * shift to lever.y + .5 + kotlin.math.sin(angle) * shift
+}
+
 /** Стена или дверь комнаты стала полом: комната связана с картой, свет считается заново. */
 fun ExpeditionWorld.openRoom(spot: RoomSpot) {
     map.carve(spot.entrance, Tile.FLOOR)
@@ -280,24 +321,30 @@ private const val TRAP_SPACING = 3.0
  * Комната в скале (3.90.0): вход - стена рядом с достижимым полом, за ней квадрат [size]×[size] пола; всё вокруг квадрата,
  * кроме входа, - скала, так что до открытия комната отрезана от карты, а после - связана с ней одной клеткой.
  */
-private object RoomCarver {
+internal object RoomCarver {
     private val SIDES = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
 
-    /** Вход и клетка сундука; null - места нет нигде. */
-    fun carve(map: ExpeditionMap, reachable: Set<Cell>, size: Int, random: Random): Pair<Cell, Cell>? {
+    /**
+     * Где комната может встать (4.9.0: план отдельно от выреза - вырезается только принятый, [cut]): по очереди семени,
+     * лениво. План - вход, клетка перед ним, сундук и пол комнаты.
+     */
+    fun plans(map: ExpeditionMap, reachable: Set<Cell>, size: Int, random: Random): Sequence<Plan> {
         val doors = reachable.flatMap { floor -> SIDES.map { side -> floor to side } }
             .filter { (floor, side) -> map.tile(floor.x + side.first, floor.y + side.second) == Tile.WALL }
             .shuffled(random)
-        for ((floor, side) in doors) {
+        return doors.asSequence().mapNotNull { (floor, side) ->
             val entrance = Cell(floor.x + side.first, floor.y + side.second)
-            val room = rect(entrance, side, size, 1..size, 0)
             val margin = rect(entrance, side, size, 0..size + 1, 1)
-            if (margin.any { it.x !in 1 until map.width - 1 || it.y !in 1 until map.height - 1 || map.tile(it.x, it.y) != Tile.WALL }) continue
-            room.forEach { map.carve(it, Tile.FLOOR) }
-            return entrance to rect(entrance, side, 1, (size + 1) / 2..(size + 1) / 2, 0).single()
+            if (margin.any { it.x !in 1 until map.width - 1 || it.y !in 1 until map.height - 1 || map.tile(it.x, it.y) != Tile.WALL }) return@mapNotNull null
+            Plan(entrance, floor, rect(entrance, side, 1, (size + 1) / 2..(size + 1) / 2, 0).single(), rect(entrance, side, size, 1..size, 0))
         }
-        return null
     }
+
+    /** Пол комнаты плана [plan] вырезается в скале; вход остаётся стеной до открытия. */
+    fun cut(map: ExpeditionMap, plan: Plan) = plan.room.forEach { map.carve(it, Tile.FLOOR) }
+
+    /** Место комнаты: вход [entrance], клетка пола перед ним [front], сундук [chest], пол комнаты [room]. */
+    class Plan(val entrance: Cell, val front: Cell, val chest: Cell, val room: List<Cell>)
 
     /** Клетки за входом [entrance] по направлению [side]: шаги [depth] вглубь, поперёк - ширина [width] с полями [pad]. */
     private fun rect(entrance: Cell, side: Pair<Int, Int>, width: Int, depth: IntRange, pad: Int): List<Cell> {

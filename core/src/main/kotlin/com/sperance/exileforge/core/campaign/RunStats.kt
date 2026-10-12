@@ -24,7 +24,11 @@ class RunStats {
     private var petTaken = 0.0
     private var seconds = 0.0
 
+    /** Последняя сводка ([summary]): та же, пока цифры и убийства не сдвинулись - снимок экрана не копирует их на кадр (4.9.0). */
+    private var shown: RunSummary? = null
+
     fun add(pack: List<PackHit>, duration: Double) {
+        shown = null
         seconds += duration
         pack.flatMap { it.events }.filter { it.damage > 0 && !it.onSelf }.forEach { event ->
             if (event.atPet) {
@@ -39,6 +43,7 @@ class RunStats {
 
     /** Another run's figures summed into these: a Vaal zone's, back on the map it was entered from. */
     fun add(other: RunSummary) {
+        shown = null
         seconds += other.seconds
         other.dealt.forEach { (type, amount) -> dealt.merge(type, amount, Double::plus) }
         other.bySkill.forEach { (skill, amount) -> bySkill.merge(skill, amount, Double::plus) }
@@ -46,7 +51,7 @@ class RunStats {
         petTaken += other.petTaken
     }
 
-    fun summary(kills: Int): RunSummary = RunSummary(dealt.toMap(), bySkill.toMap(), taken.toMap(), seconds, kills, petTaken)
+    fun summary(kills: Int): RunSummary = shown?.takeIf { it.kills == kills } ?: RunSummary(dealt.toMap(), bySkill.toMap(), taken.toMap(), seconds, kills, petTaken).also { shown = it }
 
     companion object {
         /** A plain swing, an ailment's tick and a reflection have no skill of their own: they are named by what they are. */

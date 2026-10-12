@@ -44,6 +44,7 @@ class ConnectionActions(
     private val notices: Notices,
     private val lazySession: Lazy<SessionActions>,
     private val lazyCharacters: Lazy<CharacterActions>,
+    private val foreground: Foreground,
 ) : AppService(repositories, actions, commands, connection, store, scope),
     com.sperance.exileforge.core.session.ConnectionEvents {
     private val characterActions: CharacterActions get() = lazyCharacters.value
@@ -126,6 +127,8 @@ class ConnectionActions(
                     // Толчок (возврат в игру, сеть вернулась, «Повторить») - новый повод: пауза повтора снова с первой ступени
                     if (offline && !first && withTimeoutOrNull(BACKOFF_S[step.coerceAtMost(BACKOFF_S.lastIndex)] * 1_000L) { nudge.receive() } != null) step = 0
                     first = false
+                    // Проба офлайна в фоне ждёт возврата в игру (4.9.0); отправка очереди при живой связи - нет.
+                    if (offline) foreground.awaitFront()
                     val probe = probe()
                     verifying = false
                     if (probe != null) {

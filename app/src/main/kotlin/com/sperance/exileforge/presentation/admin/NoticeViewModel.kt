@@ -33,11 +33,15 @@ class NoticeViewModel(
         commands.read(Reads.NOTICE, restart = true) { mutable.value = connection.api.moderation.notice(id) }
     }
 
-    /** Апелляция на санкцию [id]: одна на санкцию, ответ - санкция с отметкой. */
+    /**
+     * Апелляция на санкцию [id]: одна на санкцию, ответ - санкция с отметкой. С 4.9.0 - с токеном наказанного: из отказа входа, если
+     * экран открыт им, иначе (герой под санкцией в списке героев) клиент берёт токен своей санкции у сервера.
+     */
     fun appeal(id: String, text: String) {
+        val token = sessions.state.value.takeIf { it.notice == id }?.noticeToken
         val started = commands.task(writing = true) {
             require(text.isNotBlank()) { ui("notice.appeal_empty") }
-            mutable.value = connection.api.moderation.appeal(id, text)
+            mutable.value = connection.api.moderation.appeal(id, text, token)
             notices.toast(ui("notice.appeal_sent"))
         }
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
@@ -46,6 +50,6 @@ class NoticeViewModel(
     /** Экран санкции закрыт: игрок идёт ко входу - другим аккаунтом или гостем. */
     fun dismiss() {
         mutable.value = null
-        sessions.update { it.copy(notice = null) }
+        sessions.update { it.copy(notice = null, noticeToken = "") }
     }
 }

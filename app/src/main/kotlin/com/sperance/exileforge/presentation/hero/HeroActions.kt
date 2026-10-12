@@ -109,7 +109,9 @@ class HeroActions(
         val index = world.state.value.content ?: error(ui("runtime.request_failed"))
         val rarity = Rarity.of(rarityCode)
         val slot = Slot.of(slotCode)
-        val candidates = index.templates.values.filter { (slot == null || it.slot == slot) && (rarity == null || rarity.fixed == it.unique) }
+        // Редкость - только та, что выдача даёт шаблону (4.9.0, CT-4): уникальный и мифический - своя, база - обычная, волшебная, редкая
+        val factory = com.sperance.exileforge.rules.roll.ItemFactory(index)
+        val candidates = index.templates.values.filter { (slot == null || it.slot == slot) && (rarity == null || rarity in factory.grantable(it)) }
         check(candidates.isNotEmpty()) { ui("hero.no_template") }
         api.hero.grantEquipment(id, Dice.system().pick(candidates).code, rarity)
     }

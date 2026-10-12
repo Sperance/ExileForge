@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.campaign.PowerMoment
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.hexes
-import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.campaign.usesAll
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CoreStat
@@ -24,6 +23,7 @@ import com.sperance.exileforge.rules.content.SkillHit
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.sheet.lines
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.pow
@@ -98,7 +98,7 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     val chance = hero.body[CoreStat.FREE_SKILL_CHANCE.code]
     val free = skillsFree() || chance > 0 && random.nextDouble() * 100 < chance
     // Переполнение (4.6.1): цена - сперва из перелива маны; Обет крови (4.6.2) - здоровьем
-    if (!free) payFor(cost)
+    if (!free) payFor(cost, skill.code)
     // Резонанс (4.6.1): применение слышат до самого удара - и до перезарядки, что он укорачивает (4.6.2)
     fateCast(skill.code)
     hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery(skill.spell)

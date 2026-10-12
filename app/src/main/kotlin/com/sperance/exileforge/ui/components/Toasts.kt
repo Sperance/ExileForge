@@ -60,6 +60,7 @@ private const val TOAST_MS = 4_000L
 /** Значок в кружке тоста (3.88.3): ✓ - сделано, i - сообщение; отказ - «!». */
 private fun NoticeKind.mark(): String = when (this) {
     NoticeKind.ATLAS -> "i"
+    NoticeKind.FAILED -> "!"
     else -> "✓"
 }
 
@@ -68,6 +69,7 @@ private fun NoticeKind.tint(): Color = when (this) {
     NoticeKind.LOOT -> rarityColor("RARE")
     NoticeKind.CRAFT -> Rune
     NoticeKind.ATLAS -> GoldBright
+    NoticeKind.FAILED -> LifeRed
 }
 
 /** Тост «Мягкого» стиля (3.88.3): капсула по центру, значок в кружке цвета тоста; касание убирает его. */

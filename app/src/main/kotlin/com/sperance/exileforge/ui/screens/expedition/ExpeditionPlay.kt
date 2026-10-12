@@ -69,7 +69,10 @@ import kotlin.math.roundToInt
     val shell: ShellViewModel = koinViewModel()
     val expedition: ExpeditionViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
-    val hud by run.hud.collectAsState()
+    // Снимок захода живьём - для арены; тело экрана видит его без полей кадра боя ([screenOnly], 4.9.0): бой меняет снимок
+    // каждый кадр, а перекомпонуется от этого только арена ([RunFight]), не весь экран похода со сценой и панелями.
+    val live = run.hud.collectAsState()
+    val hud by remember(live) { derivedStateOf { live.value.screenOnly() } }
     // The first run explains the fight before the first pack is met (3.14.0).
     var gear by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(false) }
@@ -117,6 +120,8 @@ import kotlin.math.roundToInt
             RunQuestWatch(quests, hud.questTally, shell::announce)
             BlightWatch(hud.blight, shell::announce)
             if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazards)
+            // Вход в комнату (4.9.0): трещина поддаётся или дверь заперта - строкой над героем, кольцо рисует сцена
+            if (hud.phase == RunPhase.MAP && ribbon == null) EntranceFloat(hud.entrance)
             when (hud.phase) {
                 RunPhase.MAP -> if (ribbon != null) {
                     AutoRibbon(run, hud, ribbon) { model.runCommand(RunCommand.FinishAuto) }
@@ -163,9 +168,9 @@ import kotlin.math.roundToInt
                     }
                 }
 
-                RunPhase.FIGHT -> hud.fight?.let {
+                RunPhase.FIGHT -> RunFight(live) { frame, fight ->
                     ArenaOverlay(
-                        game, hud, it, it.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance,
+                        game, frame, fight, fight.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance,
                         onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
                         biome = run.zone.biome,
                         shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
@@ -196,6 +201,25 @@ import kotlin.math.roundToInt
             ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
         }
     }
+}
+
+/**
+ * Снимок захода для тела экрана похода (4.9.0): в бою - без того, что бой меняет каждый кадр (сам бой, пулы и пояс героя,
+ * опасности), - их читает только арена ([RunFight]); вне боя - как есть. Тело экрана в бою этих полей не показывает.
+ */
+private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
+    this
+} else {
+    copy(
+        fight = null, heroLife = 0, heroShield = 0, heroMaxShield = 0, heroMana = 0, heroMaxMana = 0, heroReserved = 0,
+        flasks = emptyList(), hazards = emptyList(),
+    )
+}
+
+/** Арена захода по живому снимку [live] (4.9.0): кадр боя перекомпонует только её. */
+@Composable private fun RunFight(live: State<RunHud>, content: @Composable (RunHud, FightHud) -> Unit) {
+    val hud = live.value
+    hud.fight?.let { content(hud, it) }
 }
 
 // ==================== Walking ====================
@@ -250,8 +274,6 @@ import kotlin.math.roundToInt
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
                 AfflictionChips(hud.afflictions)
-                // Простой у трещины (3.90.0); удар ловушки - над героем
-                OpeningLine(hud.opening)
                 // Очаг Скверны (4.0.0): точка, монстры вокруг неё, сундук
                 BlightLine(hud.blight)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)

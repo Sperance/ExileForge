@@ -13,6 +13,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.FateKit
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.session.Reads
@@ -25,6 +26,8 @@ import com.sperance.exileforge.presentation.state.HeroPage
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.state.TAB_SKILLS
+import com.sperance.exileforge.presentation.state.fateNow
+import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.FateLever
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
@@ -93,9 +96,23 @@ fun HeroScreen() {
 
                     else -> {
                         // Предначертание аккаунта (4.6.3, «Лента и свиток») над листом: в подписи - что дар копит, касание - описание
-                        heroFate(game)?.let { fate -> item(key = "fate") { FateRibbon(fate, fateProgress(game) ?: ui("fate.ribbon.caption"), Modifier.fillMaxWidth()) } }
-                        // Свой номер героя (4.7.0): его диктуют главе, чтобы позвал в гильдию; касание копирует
-                        game.hero?.info?.number?.takeIf { it.isNotBlank() }?.let { number -> item(key = "number") { ShortCodeChip(ui("hero.number_own"), number) } }
+                        // 4.9.0: в свитке - «Сейчас действует» с числами на силе и строках дара, в подписи - сила
+                        heroFate(game)?.let { fate ->
+                            item(key = "fate") {
+                                val effects = remember(game.hero, game.index) { heroFateEffects(game) }
+                                val now = remember(effects, game.lang) { effects?.let { e -> game.index?.let { fateNow(it, e) } }.orEmpty() }
+                                val caption = fateProgress(game, effects) ?: ui("fate.ribbon.caption")
+                                FateRibbon(
+                                    fate,
+                                    effects?.power?.takeIf { it > 0 }?.let { ui("fate.ribbon.power", caption, number(it)) } ?: caption,
+                                    Modifier.fillMaxWidth(),
+                                    now = now,
+                                )
+                            }
+                        }
+                        // Свой номер героя (4.7.0): его диктуют главе, чтобы позвал в гильдию; касание копирует. Мощь (4.9.0, макет A) -
+                        // справа в той же строке: печать и число, отдельной панели нет
+                        game.hero?.let { hero -> item(key = "number") { NumberAndMight(hero) } }
                         item { HeroSummary(game) }
                     }
                 }
@@ -147,7 +164,8 @@ fun HeroScreen() {
     }
     game.holding.chest?.let { opening -> ChestOpenedSheet(game, opening, model::dismissChest) }
     listStack?.let { code ->
-        ListingSheet(game, itemTitle(code), owned = game.bagAmount(code) ?: 0L, onDismiss = { listStack = null }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount ->
+        // На аукцион - только свои штуки (4.9.0): выданные другим героям не уходят
+        ListingSheet(game, itemTitle(code), owned = game.freeAmount(code), onDismiss = { listStack = null }, hint = { model.priceHint(code, null, 0) }) { orb, price, amount ->
             listStack = null
             model.sellItem(code, amount, orb, price)
         }
@@ -159,14 +177,19 @@ fun HeroScreen() {
 /** Предначертание аккаунта героя карточкой (4.6.0); не выбрано или нет в контенте - null. */
 private fun heroFate(game: GameUi): FateCard? = game.index?.fates?.of(game.hero?.info?.fate)?.let(FateCard::of)
 
+/** Дар героя на его силе и с действующими строками надетого (4.9.0) - тем же резолвером правил, что бой; нет дара - null. */
+private fun heroFateEffects(game: GameUi): FateEffects? {
+    val hero = game.hero ?: return null
+    val index = game.index ?: return null
+    return FateKit.of(index, hero.info.fate, hero.stats, hero.equipped.values).effects.takeIf { it.fate != null }
+}
+
 /**
  * Боёв до сферы Щедрости судьбы (4.6.1, `FateLever.FIGHT_BOUNTY`, счёт сервера `fateFights`) - с судьбоносными строками надетого
  * (4.6.3: строка «раньше» сокращает счёт); у дара без рычага - null.
  */
-private fun fateProgress(game: GameUi): String? {
-    val hero = game.hero ?: return null
-    val index = game.index ?: return null
-    val info = hero.info
-    val every = FateKit.of(index, info.fate, hero.stats, hero.equipped.values).effects.of(FateLever.FIGHT_BOUNTY)?.every?.takeIf { it > 0 } ?: return null
+private fun fateProgress(game: GameUi, effects: FateEffects?): String? {
+    val info = game.hero?.info ?: return null
+    val every = effects?.of(FateLever.FIGHT_BOUNTY)?.every?.takeIf { it > 0 } ?: return null
     return ui("fate.bounty_next", every - (info.fateFights % every).toInt())
 }

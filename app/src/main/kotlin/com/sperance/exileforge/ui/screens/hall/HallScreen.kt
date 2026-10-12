@@ -16,6 +16,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.classTitle
+import com.sperance.exileforge.core.display.mightLine
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.regionTitle
@@ -108,14 +109,16 @@ private val HallBoard.tab: StoneTab
         HallBoard.RUSH -> StoneTab(ui("hall.board.RUSH"), ForgeGlyphs.Skull, ModeHue.Bosses)
         HallBoard.GUILD -> StoneTab(ui("hall.board.GUILD"), ForgeGlyphs.Banner, ModeHue.Guilds)
         HallBoard.PROFESSION -> StoneTab(ui("hall.board.PROFESSION"), ForgeGlyphs.Anvil, ModeHue.Professions)
+        HallBoard.MIGHT -> StoneTab(ui("hall.board.MIGHT"), ForgeGlyphs.Swords, ModeHue.Might)
     }
 
-/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии. */
+/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии, Мощь героя (4.9.0, строкой «⚜ 12.5k»). */
 private fun HallBoard.measure(value: Long): String = when (this) {
     HallBoard.RIFT -> ui("hall.value.RIFT", number(value.toDouble()))
     HallBoard.TOWER -> ui("hall.value.TOWER", value)
     HallBoard.RUSH -> clock(value.toDouble())
     HallBoard.GUILD, HallBoard.PROFESSION -> ui("hall.value.experience", number(value.toDouble()))
+    HallBoard.MIGHT -> mightLine(value.toDouble())
 }
 
 /** Герой строки [entry] для карточки игрока (4.5.1); в таблице гильдий строки - гильдии, героя нет. */

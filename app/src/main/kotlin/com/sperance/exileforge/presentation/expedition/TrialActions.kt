@@ -127,9 +127,10 @@ class TrialActions(
         mutableArena.value?.send(command)
     }
 
+    /** Событие арены: итоги боя (4.9.0, NET-9) - только статистика, они ждут следующего события и уходят с ним одной пачкой. */
     private fun recorded(event: TrialEvent) {
         synchronized(pending) { pending += event }
-        sends.trySend(Unit)
+        if (event !is TrialEvent.Fight) sends.trySend(Unit)
     }
 
     /** Отправляет пачку в пути снова или ожидающие события под новым ключом; ответ ложится на арену. */

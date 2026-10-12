@@ -8,16 +8,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
@@ -78,16 +75,15 @@ private data class TitleTile(val code: String, val achievement: Achievement, val
 /**
  * «Галерея медалей» (4.8.0, макет «Титулы», вариант A): заголовок «Титулы · X / N ▾» сворачивает таблицу (помнит устройство,
  * [com.sperance.exileforge.presentation.state.GameSettings.titlesFolded]); сетка в два столбца - «Без титула» первой плиткой,
- * затем полученные: медаль, имя, за что; выбранный - в рамке `Gold`. Закрытые - тусклые, за «Показать закрытые (N) ▸».
+ * затем полученные: медаль, имя, за что; выбранный - в рамке `Gold`. Закрытых титулов галерея не показывает (4.9.0).
  */
 @Composable internal fun TitleGallery(achievements: List<Achievement>, values: Map<String, Long>, current: String, enabled: Boolean, onPick: (String) -> Unit) {
     val settings = koinViewModel<SettingsViewModel>()
     val folded = settings.settings.collectAsStateWithLifecycle().value.titlesFolded
-    var closedShown by rememberSaveable { mutableStateOf(false) }
     val tiles = remember(achievements, values) {
         achievements.filter { it.title.isNotBlank() }.map { TitleTile(it.title, it, it.complete(values[it.counter] ?: 0L)) }.distinctBy { it.code }
     }
-    val (earned, closed) = tiles.partition { it.earned }
+    val earned = tiles.filter { it.earned }
     Row(
         Modifier.fillMaxWidth().clickable { settings.change { copy(titlesFolded = !titlesFolded) } }.padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -99,22 +95,11 @@ private data class TitleTile(val code: String, val achievement: Achievement, val
     if (folded) return
     TileGrid(listOf<TitleTile?>(null) + earned) { tile ->
         if (tile == null) {
-            MedalTile(Icons.Outlined.Block, ui("chronicle.no_title"), null, selected = current.isBlank(), open = true, enabled = enabled) { onPick("") }
+            MedalTile(Icons.Outlined.Block, ui("chronicle.no_title"), null, selected = current.isBlank(), enabled = enabled) { onPick("") }
         } else {
-            MedalTile(medalOf(tile.achievement.counter), titleName(tile.code), tile.reason, selected = current == tile.code, open = true, enabled = enabled) { onPick(tile.code) }
+            MedalTile(medalOf(tile.achievement.counter), titleName(tile.code), tile.reason, selected = current == tile.code, enabled = enabled) { onPick(tile.code) }
         }
     }
-    if (closed.isEmpty()) return
-    if (closedShown) {
-        TileGrid(closed) { tile -> MedalTile(Icons.Outlined.Lock, titleName(tile.code), tile.reason, selected = false, open = false, enabled = false) {} }
-    }
-    Text(
-        ui(if (closedShown) "chronicle.hide_closed" else "chronicle.show_closed", closed.size) + if (closedShown) " ▴" else " ▸",
-        color = Muted,
-        style = MaterialTheme.typography.labelMedium,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable { closedShown = !closedShown }.padding(vertical = 6.dp),
-    )
 }
 
 /** Сетка в два столбца без ленивого списка: страница «Хроники» и так прокручивается целиком. */
@@ -129,12 +114,12 @@ private data class TitleTile(val code: String, val achievement: Achievement, val
     }
 }
 
-/** Плитка титула: медаль в кольце, имя Cinzel и за что; закрытая - тусклая, выбранная - в рамке `Gold`. */
-@Composable private fun MedalTile(medal: ImageVector, name: String, reason: String?, selected: Boolean, open: Boolean, enabled: Boolean, onClick: () -> Unit) {
+/** Плитка титула: медаль в кольце, имя Cinzel и за что; выбранная - в рамке `Gold`. */
+@Composable private fun MedalTile(medal: ImageVector, name: String, reason: String?, selected: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
-    val ring = if (open) Brass else Muted
+    val ring = Brass
     Row(
-        Modifier.fillMaxSize().alpha(if (open) 1f else .45f).clip(shape).background(PanelRaised)
+        Modifier.fillMaxSize().clip(shape).background(PanelRaised)
             .border(if (selected) 1.5.dp else 1.dp, if (selected) Gold else Bronze, shape)
             .clickable(enabled = enabled && !selected, onClick = onClick).padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,

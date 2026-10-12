@@ -201,6 +201,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
 /** A window nothing outside closes: no back, no tap beside it. */
 @Composable private fun Locked(content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false)) {
+        ChordOverDialog()
         Column(
             Modifier.fillMaxWidth().padding(20.dp).background(PanelRaised, DialogShape).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

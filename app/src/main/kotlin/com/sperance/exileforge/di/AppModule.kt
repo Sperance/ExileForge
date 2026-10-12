@@ -34,8 +34,10 @@ import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.admin.NoticeViewModel
 import com.sperance.exileforge.presentation.app.AppStartup
+import com.sperance.exileforge.presentation.app.BugDelivery
 import com.sperance.exileforge.presentation.app.CharacterActions
 import com.sperance.exileforge.presentation.app.ConnectionActions
+import com.sperance.exileforge.presentation.app.Foreground
 import com.sperance.exileforge.presentation.app.RedemptionActions
 import com.sperance.exileforge.presentation.app.ServerReach
 import com.sperance.exileforge.presentation.app.SessionActions
@@ -103,11 +105,13 @@ val appModule = module {
     single { ServerStore(androidContext()) }
     single { GuideStore(androidContext()) }
     single { DraftStore(androidContext(), get(named(APP_SCOPE))) }
+    single { BugDelivery(androidContext(), get(), get(), get(named(APP_SCOPE))) }
     single { PreferencesRepository(get(), get(named(APP_SCOPE))) }
     single { SessionRepository(DEFAULT_SERVER) }
     single { WorldRepository() }
     single { ServerConnection() }
-    single { ServerReach(get(), lazy { get<ConnectionActions>() }, get(named(APP_SCOPE)), get()) }
+    single { Foreground() }
+    single { ServerReach(get(), lazy { get<ConnectionActions>() }, get(named(APP_SCOPE)), get(), get()) }
     // Один HTTP-клиент на процесс (3.80.45): пул соединений, потоки и TLS-сессии общие у всех серверов и обновлений.
     single<OkHttpClient> { ForgeHttp.client }
     singleOf(::Navigator)
@@ -132,7 +136,7 @@ val appModule = module {
     single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { RiftActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { CraftsRepository() }
-    single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { CraftsActions(get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { ContentLoader() }
     single { StartupTrace() }
     single { StallWatchdog(androidContext(), get(), get()) }
@@ -149,7 +153,7 @@ val appModule = module {
     // Сессия, связь и герои зовут друг друга, поэтому ссылаются лениво.
     single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }, get(), get()) }
     single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }, get()) }
-    single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }) }
+    single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }, get()) }
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }

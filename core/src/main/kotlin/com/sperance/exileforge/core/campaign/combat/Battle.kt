@@ -271,8 +271,11 @@ class Battle(
     /** Питомцы на стороне героя: боевой. */
     internal val pets: List<Fighter> = listOfNotNull(allyFighter)
 
-    /** Все бойцы боя: герой, питомцы, враги - в этом порядке. */
-    internal val everyone: List<Fighter> get() = listOf(heroFighter) + pets + foeFighters
+    /** Все бойцы боя: герой, питомцы, враги - в этом порядке; состав за бой не меняется - список один (4.9.0). */
+    internal val everyone: List<Fighter> = listOf(heroFighter) + pets + foeFighters
+
+    /** Очередь хода шага ([everyone] по `nextAttack`): один буфер на бой, без новой копии и сортировки на каждый шаг (4.9.0). */
+    internal val turnOrder = ArrayList<Fighter>(everyone.size)
 
     /** Отклики Предначертания героя в бою (4.6.0; 4.6.2 - и судьбоносных строк) и их состояние в этом бою. */
     internal val fated: List<FateReaction> = FateReaction.of(kit)
@@ -327,6 +330,12 @@ class Battle(
     private var carry = 0.0
     internal val log = mutableListOf<CombatEvent>()
     val events: List<CombatEvent> get() = log
+
+    /** Последнее окно журнала новыми сверху ([newestFirst]): то же, пока журнал не вырос. */
+    private var newest: NewestFirst? = null
+
+    /** Журнал новыми сверху (4.9.0): окно без копии, одно и то же, пока не пришла новая строка. */
+    fun newestFirst(): List<CombatEvent> = newest?.takeIf { it.size == log.size } ?: NewestFirst(log, log.size).also { newest = it }
     internal val fallenOrder = mutableListOf<Int>()
 
     /** The foes that fell, in the order they fell: each is a kill to report the moment it happens. */
@@ -494,10 +503,18 @@ class Battle(
     }
 
     /** The blow whose lunge is on screen right now, and how far into it the scene is (0..1). */
-    fun lunge(): Pair<CombatEvent, Double>? = log.lastOrNull {
-        it.action != Action.TICK && it.action != Action.REFLECT && it.action != Action.FLASK && !it.onSelf &&
-            time - it.time in -rules.lunge..rules.lunge
-    }?.let { it to ((time - it.time + rules.lunge) / (2 * rules.lunge)).coerceIn(0.0, 1.0) }
+    fun lunge(): Pair<CombatEvent, Double>? {
+        // Журнал идёт по времени: с конца - только строки последнего выпада, а не весь бой (4.9.0)
+        var i = log.size - 1
+        while (i >= 0) {
+            val event = log[i--]
+            if (time - event.time > rules.lunge) return null
+            if (event.action != Action.TICK && event.action != Action.REFLECT && event.action != Action.FLASK && !event.onSelf && time - event.time >= -rules.lunge) {
+                return event to ((time - event.time + rules.lunge) / (2 * rules.lunge)).coerceIn(0.0, 1.0)
+            }
+        }
+        return null
+    }
 
     /** How far [fighter] is into its next swing, 0 just after one and 1 as the next lands. */
     fun swing(fighter: Fighter): Float = when {

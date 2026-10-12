@@ -42,7 +42,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.presentLoot
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
-import com.sperance.exileforge.ui.components.decorSeconds
+import com.sperance.exileforge.ui.components.decorTime
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.expedition.arena.FightLog
@@ -129,7 +129,7 @@ import java.util.Locale
     val expedition: ExpeditionViewModel = koinViewModel()
     val monster = report.monster
     // Дыхание портрета - декор (4.8.x): общие часы декора, при выключенных анимациях - покой
-    val time = decorSeconds()
+    val time = decorTime()
     val glow = if (won) Color(0xFF3B2A17) else Color(0xFF3B1717)
     Box(
         Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(8.dp)).background(Brush.radialGradient(listOf(glow, Ink))),
@@ -141,7 +141,7 @@ import java.util.Locale
                 contentAlignment = Alignment.TopCenter,
             ) {
                 Canvas(Modifier.requiredSize(68.dp, 91.dp).offset(y = 12.dp)) {
-                    Portraits.monster(this, monster.code.value, monster.form, rarityTint(monster.rarity), time)
+                    Portraits.monster(this, monster.code.value, monster.form, rarityTint(monster.rarity), time.value)
                     if (won) drawRect(Ink.copy(alpha = .35f))
                 }
             }

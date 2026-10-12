@@ -109,7 +109,8 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
     }
     val phase = phaseNumber(boss)
     val vignette by animateFloatAsState(((phase - 1).coerceIn(0, 2)) * .18f, tween(1200), label = "vignette")
-    val phaseAt = fight.events.firstOrNull { it.foe == boss.index && (it.trace as? NoteTrace)?.kind == NoteKind.PHASE }?.time
+    // Поиск по журналу - по новой строке, не каждый кадр (4.9.0): журнал снимка тот же, пока не вырос
+    val phaseAt = remember(fight.events, boss.index) { fight.events.firstOrNull { it.foe == boss.index && (it.trace as? NoteTrace)?.kind == NoteKind.PHASE }?.time }
     val flash = remember { Animatable(0f) }
     LaunchedEffect(phaseAt) {
         if (phaseAt != null && !simple) {

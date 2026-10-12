@@ -76,17 +76,23 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         crystalsLeft = world.standingCrystals.size,
         abyss = abyssView(), cracksLeft = world.standingCracks.size,
         bossDown = bossDown, guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
-        auto = autopilot?.let { AutoHud(it.wave, it.waves, it.chests, it.finishing, linkDown) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits), questTally = questTally.toMap(),
+        auto = autopilot?.let { AutoHud(it.wave, it.waves, it.chests, it.finishing, linkDown) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits), questTally = questTallyShown,
         pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
         summary = figures, recap = recap,
-        tally = MapTally(end, seconds, kills, bosses, deaths, granted, figures, awaiting),
-        feature = offer?.let { spot -> FeatureView(spot.feature, spot.taken.toList(), channel?.let { (it.elapsed / it.spot.node.seconds).toFloat().coerceIn(0f, 1f) }) },
+        tally = MapTally(end, shownSeconds(), kills, bosses, deaths, granted, figures, awaiting),
+        feature = offer?.let { spot -> FeatureView(spot.feature, spot.taken.toList(), channel?.let { (it.elapsed / it.spot.node.seconds).toFloat().coerceIn(0f, 1f) }, world.guarded(spot.id)) },
         hazards = hazards.map { it.view }, afflictions = afflictions(),
-        opening = world.features.maxOfOrNull { it.progress }?.takeIf { it > 0 }?.toFloat(),
+        entrance = world.features.firstNotNullOfOrNull { it.cue(world) },
         challenge = challengeView(),
         blight = world.features.firstNotNullOfOrNull { it as? BlightSpot }?.view(world),
     )
 }
+
+/**
+ * Секунды захода для снимка (4.9.0): пока заход идёт - целыми, иначе снимок менялся бы каждый кадр и экран похода
+ * перекомпоновывался бы без нужды; их показывают только итоги, а там часы уже стоят и секунды точные.
+ */
+private fun ExpeditionRun.shownSeconds(): Double = if (phase == RunPhase.DEAD || phase == RunPhase.CLEARED || phase == RunPhase.LEFT) seconds else kotlin.math.floor(seconds)
 
 internal fun ExpeditionRun.abyssView(): AbyssView? {
     val spot = rift ?: return null
@@ -124,7 +130,7 @@ internal fun ExpeditionRun.adopt(zone: ZoneShare) {
 }
 
 /** Event [n] is not answered yet. */
-internal fun ExpeditionRun.awaits(n: Int): Boolean = n >= answered && n !in previewed
+internal fun ExpeditionRun.awaits(n: Int): Boolean = n >= answered
 
 internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
     flask?.let {

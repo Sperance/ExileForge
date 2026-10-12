@@ -7,7 +7,6 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.EquipSlots
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
-import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -15,14 +14,15 @@ import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import com.sperance.exileforge.rules.sheet.SheetExplainer
+import com.sperance.exileforge.rules.sheet.SheetFold
 import com.sperance.exileforge.rules.sheet.SheetResult
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.WornCount
 import kotlin.math.abs
 
-/** A line laid on a sheet for a while — a buff, a curse, a flask, a passive skill — shaped as a modifier's effect. */
-data class StatLine(val stat: String, val op: Op, val value: Double)
+/** Строка на листе на время - благо, проклятие, фляга, пассивное умение (4.9.0: одна с правилами, [com.sperance.exileforge.rules.sheet.StatLine]). */
+typealias StatLine = com.sperance.exileforge.rules.sheet.StatLine
 
 /** What wearing an item changes: the characteristic, what it is now and what it would be. */
 data class StatDelta(val stat: String, val before: Double, val after: Double) {
@@ -42,13 +42,14 @@ class SheetModel(
     val fate: FateEffects = FateEffects.NONE,
 ) {
     private val calculator = SheetCalculator(index)
-    val plain: Map<String, Double> by lazy { shaped(calculator.compute(base, ops)) }
+
+    /** Свод листа правил (4.9.0): лист со строками боя складывает он - тот же, что у Мощи сервера ([com.sperance.exileforge.rules.sheet.HeroBody]). */
+    val fold: SheetFold = SheetFold(base, ops, index, fate)
+
+    val plain: Map<String, Double> get() = fold.plain
 
     /** Операции листа с их источниками (4.6.4): чьи строки легли на какую характеристику. */
     val operations: List<StatOperation> get() = ops
-
-    /** Лист после преобразований дара (4.6.1, «Равновесие»; 4.6.2 - и судьбоносных строк) одним резолвером правил: без них - тот же. */
-    private fun shaped(stats: Map<String, Double>): Map<String, Double> = fate.reshape(SheetResult(stats, emptyList(), emptyList(), base, ops), index).stats
 
     /** The sheet taken apart by source, for a figure's own window; преобразования дара - его последним шагом (4.6.4). */
     val explainer: SheetExplainer by lazy { explainer(emptyList()) }
@@ -63,15 +64,9 @@ class SheetModel(
     fun reshapes(lines: List<StatLine>): Map<String, List<Shift>> = fate.shifts(calculator.compute(base, ops + lines.filter(::folds).map { StatOperation(it.stat, it.op, it.value) }), index)
 
     /** Строка боя ложится сводом листа; «больше» процент-стата [with] берёт на весь его множитель, поверх свода. */
-    fun folds(line: StatLine): Boolean = !(line.op == Op.MORE && index.stats.isPercent(line.stat))
+    fun folds(line: StatLine): Boolean = fold.folds(line)
 
-    fun with(lines: List<StatLine>): Map<String, Double> {
-        if (lines.isEmpty()) return plain
-        val (folding, scaling) = lines.partition(::folds)
-        val stats = calculator.compute(base, ops + folding.map { StatOperation(it.stat, it.op, it.value) }).toMutableMap()
-        scaling.forEach { line -> stats[line.stat] = (100 + (stats[line.stat] ?: 0.0)) * (1 + line.value / 100) - 100 }
-        return shaped(stats)
-    }
+    fun with(lines: List<StatLine>): Map<String, Double> = fold.with(lines)
 
     /** The sheet's conditional lines (3.35.0, server 1.34.0): kept out of the sheet, laid on by a fight while they hold. */
     private val conditional: List<StatOperation> = ops.filter { it.condition != null }
@@ -89,8 +84,7 @@ class SheetModel(
      * The increases of [stat] summed, [lines] among them: what a spell of that element is multiplied by. The damage in
      * general (server 1.57.0) is an increase of every type of damage, as the sheet adds it up.
      */
-    fun increased(stat: String, lines: List<StatLine> = emptyList()): Double = (ops.filter { it.condition == null } + lines.map { StatOperation(it.stat, it.op, it.value) }).flatMap(calculator::spread)
-        .filter { it.stat == stat && it.op == Op.INCREASED }.sumOf { op -> op.resolve(op.perStat?.let { plain[it] } ?: 0.0) }
+    fun increased(stat: String, lines: List<StatLine> = emptyList()): Double = fold.increased(stat, lines)
 
     override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain
     override fun hashCode(): Int = plain.hashCode()
@@ -161,7 +155,7 @@ object Sheets {
     ): WearOutcome {
         val after = worn(index, item, items, place) ?: return WearOutcome.NONE
         val sheet = calculate(index, level, heroClass, tree, after, pets, laws, fate)
-        val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped })
+        val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped }, pets)
         return WearOutcome(changes(index, before, combat?.values ?: sheet.stats), combat?.might)
     }
 
@@ -181,13 +175,13 @@ object Sheets {
         laws: List<String> = emptyList(),
         fate: String? = null,
         skills: HeroSkills = HeroSkills(),
-    ): List<StatDelta> = changes(index, before, figures(index, calculate(index, level, heroClass, tree + node, items, pets, laws, fate), level, heroClass, skills, fate, items))
+    ): List<StatDelta> = changes(index, before, figures(index, calculate(index, level, heroClass, tree + node, items, pets, laws, fate), level, heroClass, skills, fate, items, pets))
 
     /**
      * Цифры сводки героя с листом [sheet] (4.6.4): лист боя ([CombatSheet]) с умениями [skills] и Предначертанием [fate] надетого
      * из [items] - одно правило сводки, сравнения вещи и узла дерева; без модели листа - сам лист.
      */
-    fun figures(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, items: List<ItemInstance>): Map<String, Double> = CombatSheet.of(index, sheet, level, heroClass, skills, fate, items.filter { it.equipped })?.values ?: sheet.stats
+    fun figures(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, items: List<ItemInstance>, pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): Map<String, Double> = CombatSheet.of(index, sheet, level, heroClass, skills, fate, items.filter { it.equipped }, pets)?.values ?: sheet.stats
 
     /**
      * Сдвинутые характеристики листа [next] против [before] в порядке подсчёта. Счётчики надетого (пустые места,

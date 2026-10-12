@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
@@ -12,7 +13,6 @@ import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.FateField
 import com.sperance.exileforge.rules.content.FateKnob
 import com.sperance.exileforge.rules.content.FateLever
-import com.sperance.exileforge.rules.content.FateScope
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.text.LocaleKey
@@ -87,11 +87,12 @@ fun boonFigure(index: ContentIndex, boon: FateBoon): String? = FIGURE.find(loc(i
 
 /**
  * Текст рычага дара [effect] словами сервера (4.6.4, `fate.lever.<рычаг>`): каждое поле рычага - `{value}`, `{step}`, `{cap}`… (имя
- * [FateField] строчными) - его число на силе дара и со строками, `{ailments}` - недуги, `{pet}` - дух.
+ * [FateField] строчными) - его число на силе дара и со строками, `{ailments}` - недуги, `{pet}` - дух, `{orbs}` (4.9.0) - сферы.
  */
 fun leverText(effect: FateEffect): String = FateField.entries.fold(loc(LocaleKey.fateLever(effect.lever.name))) { text, field -> text.replace("{${field.name.lowercase()}}", number(field.of(effect))) }
     .replace(AILMENTS, effect.ailments.joinToString(", ") { ui("enum.ailment.$it") })
     .replace(PET, locOr("pet.${effect.pet}", effect.pet))
+    .replace(ORBS, effect.orbs.joinToString(", ") { ui("enum.orb.${it.name}") })
 
 /** Действующая судьбоносная строка дара [fate] с правилом [knob]; null - такой строки нет. */
 private fun knobBoon(index: ContentIndex, fate: FateEffects, knob: FateKnob): FateBoon? = fate.boons.firstOrNull { (index.fates.boons.def(it.fate, it.boon, it.tier) as? FateBoonDef.Knob)?.knob == knob }
@@ -103,17 +104,19 @@ fun reshapeText(index: ContentIndex, fate: FateEffects, ref: String): String {
 }
 
 /**
- * Предначертание в бою (4.6.4): рычаги и правила строк дара [fate], что действуют только в бою и забеге ([FateScope.FIGHT]), - их
- * текстом с числами дара на его силе; строки листа и преобразования уже в цифрах сводки.
+ * Что дар героя делает сейчас (4.9.0, «Сейчас действует» в свитке ленты): каждый рычаг дара [fate] - текстом с числами на его силе и
+ * с подстройками строк, правила действующих судьбоносных строк - их текстом, строки листа дара на силе - словами модификаторов.
  */
-fun fateBattle(index: ContentIndex, fate: FateEffects): List<String> = fate.effects.filter { it.lever.scope == FateScope.FIGHT }.map(::leverText) +
-    FateKnob.entries.filter { it.scope == FateScope.FIGHT }.mapNotNull { knobBoon(index, fate, it) }.map { boonText(index, it) }
+fun fateNow(index: ContentIndex, fate: FateEffects): List<String> = fate.effects.map(::leverText) +
+    FateKnob.entries.mapNotNull { knobBoon(index, fate, it) }.map { boonText(index, it) } +
+    fate.lines.map { lineText(index, it.line) }
 
 /** Имя дара [code] словами сервера. */
 fun fateTitle(code: String): String = loc(LocaleKey.fateName(code))
 
 private const val AILMENTS = "{ailments}"
 private const val PET = "{pet}"
+private const val ORBS = "{orbs}"
 private const val VALUE = "{v}"
 private const val PARAM = "{p}"
 private const val CAP = "{c}"

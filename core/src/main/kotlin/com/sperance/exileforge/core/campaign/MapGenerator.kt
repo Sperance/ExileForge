@@ -94,7 +94,7 @@ object MapGenerator {
 
     fun liquidOf(biome: String): Liquid? = liquids[biome]
 
-    fun generate(seed: Long, biome: String, monsters: Int, size: Int = 48, minChasm: Int = 1): ExpeditionMap {
+    fun generate(seed: Long, biome: String, monsters: Int, size: Int = 48, minChasm: Int = 1, minPool: Int = 1): ExpeditionMap {
         val random = Random(seed)
         val grid = Array(size * size) { Tile.WALL }
         when (styleOf(biome)) {
@@ -141,6 +141,7 @@ object MapGenerator {
         chasms(grid, size, random, chasmOf(biome), keep, share = if (biome in wet) WET_CHASM_SHARE else CHASM_SHARE, minimum = minChasm)
         // Вода (3.95.0) - после ям и стай: их места она не сдвигает
         liquid?.let { waters(grid, size, random, keep, share = if (biome in wet) WET_WATER_SHARE else WATER_SHARE) }
+        fillPuddles(grid, size, start, minPool)
         return ExpeditionMap(size, size, grid, decor, start, exit, spawns, liquid)
     }
 
@@ -203,6 +204,41 @@ object MapGenerator {
         }
     }
 
+    /**
+     * Последний проход (4.9.0): пятно пропасти или воды (связное по сторонам и диагоналям) меньше [minimum] клеток засыпается -
+     * одиночных луж и дыр нет. Засыпанное становится полом там, куда дойдёт герой от [start], иначе скалой: ничто не стоит там,
+     * куда не дойти.
+     */
+    private fun fillPuddles(grid: Array<Tile>, size: Int, start: Cell, minimum: Int) {
+        if (minimum <= 1) return
+        val seen = BooleanArray(grid.size)
+        val filled = mutableListOf<Int>()
+        for (first in grid.indices) {
+            val tile = grid[first]
+            if (seen[first] || (tile != Tile.CHASM && tile != Tile.WATER)) continue
+            val spot = mutableListOf(first)
+            seen[first] = true
+            var k = 0
+            while (k < spot.size) {
+                val at = spot[k++]
+                for ((dx, dy) in AROUND) {
+                    val x = at % size + dx
+                    val y = at / size + dy
+                    if (x !in 0 until size || y !in 0 until size) continue
+                    val next = y * size + x
+                    if (seen[next] || grid[next] != tile) continue
+                    seen[next] = true
+                    spot += next
+                }
+            }
+            if (spot.size < minimum) filled += spot
+        }
+        if (filled.isEmpty()) return
+        filled.forEach { grid[it] = Tile.FLOOR }
+        val reach = distances(grid, size, start)
+        filled.forEach { if (reach[it] < 0) grid[it] = Tile.WALL }
+    }
+
     /** Река: полоса шириной в клетку-две, что держит курс и петляет; [length] - шагов. */
     private fun river(seed: Cell, length: Int, random: Random): List<Cell> {
         val horizontal = random.nextBoolean()
@@ -253,6 +289,9 @@ object MapGenerator {
     private const val RIVER_CHANCE = 0.5
     private const val RIVER_BEND = 0.35
     private const val CHASM_TRIES = 60
+
+    /** Восемь соседей клетки: пятно глади связно и по диагонали - так его рисует контур. */
+    private val AROUND = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, -1 to -1, 1 to -1, -1 to 1)
 
     /** Четыре соседа клетки: пропасть прирастает к пропасти по стороне. */
     private val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)

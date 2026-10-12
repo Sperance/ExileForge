@@ -6,7 +6,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import com.sperance.exileforge.core.campaign.ExpeditionMap
@@ -14,6 +16,7 @@ import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.BlightSpot
+import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.sealed
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -57,6 +60,15 @@ internal class ScenePainter {
     /** Контуры стен карты: раз на карту, её правку, стиль и масштаб. */
     private var walls: WallRelief? = null
 
+    /** Пещера боя: её контуры и неподвижные кисти живут со сценой, а не собираются на кадр (4.9.0). */
+    private val stage = FightStage()
+
+    /** Очередь стоящего (скала, жетоны, ориентиры) по глубине: одна на сцену, без нового списка на кадр (4.9.0). */
+    private val standing = ArrayList<Pair<Double, () -> Unit>>()
+
+    /** Нить кольца простоя у трещины (4.9.0): пересоздаётся лишь со сменой масштаба, не на кадр. */
+    private var ringStroke: Stroke? = null
+
     fun draw(scope: DrawScope, run: ExpeditionRun, time: Float, classCode: String?) {
         this.time = time
         sealed = run.sealed
@@ -65,7 +77,7 @@ internal class ScenePainter {
         unit = with(scope) { SCENE_UNIT.toPx() }
         val palette = Palettes.of(run.zone.biome)
         scope.drawRect(palette.void)
-        if (run.fight != null) scope.fightBackdrop(palette, time) else map(scope, run, palette)
+        if (run.fight != null) stage.draw(scope, palette, time) else map(scope, run, palette)
     }
 
     // ==================== The map ====================
@@ -78,7 +90,7 @@ internal class ScenePainter {
         val map = world.map
         val biome = run.zone.biome
         val style = MapStyles.of(biome)
-        val shape = MapRelief.of(map, relief).also { relief = it }
+        val shape = MapRelief.of(map, world.shoreline, relief).also { relief = it }
         val rock = WallRelief.of(map, shape, style, MapGenerator.styleOf(biome), palette, unit, walls).also { walls = it }
         // Узор земли, скалы и воды - декор (4.2.0): без `LocalMotion` стоит
         val frame = SceneFrame(pen, unit, decor)
@@ -109,10 +121,15 @@ internal class ScenePainter {
         fun visible(x: Int, y: Int) = world.explored(x, y) && abs((x - y) - (world.heroX - world.heroY)) < across
 
         // Глубокую скалу герой не видит, но край массива каймы заходит в неё: он виден вместе с соседней клеткой
-        fun shown(x: Int, y: Int) = visible(x, y) || rock.deep(x, y) && (-1..1).any { dy -> (-1..1).any { dx -> visible(x + dx, y + dy) } }
+        fun shown(x: Int, y: Int) = visible(x, y) || rock.deep(x, y) && nearby { dx, dy -> visible(x + dx, y + dy) }
 
         // Свет скалы: глубокая клетка светится, как самый светлый сосед, - крышка массива не темнеет пятном
-        fun rockGlow(x: Int, y: Int) = if (rock.deep(x, y)) (-1..1).maxOf { dy -> (-1..1).maxOf { dx -> glow(x + dx, y + dy) } } else glow(x, y)
+        fun rockGlow(x: Int, y: Int): Float {
+            if (!rock.deep(x, y)) return glow(x, y)
+            var best = Float.NEGATIVE_INFINITY
+            for (dy in -1..1) for (dx in -1..1) best = max(best, glow(x + dx, y + dy))
+            return best
+        }
         scope.translate(width / 2 - cameraX, height * .55f + cameraY) {
             // The ground first, all of it: nothing stands below the floor.
             for (y in ys) for (x in xs) if (map.walkable(x, y) && visible(x, y)) style.floor(frame, spot(map, x, y), palette, glow(x, y))
@@ -124,14 +141,14 @@ internal class ScenePainter {
                 for (y in ys) {
                     for (x in xs) {
                         if (!visible(x, y)) continue
-                        val hit = map.tile(x, y) == tile || near && (-1..1).any { dy -> (-1..1).any { dx -> map.tile(x + dx, y + dy) == tile } }
+                        val hit = map.tile(x, y) == tile || near && nearby { dx, dy -> map.tile(x + dx, y + dy) == tile }
                         if (hit) add(PoolCell(spot(map, x, y), glow(x, y)))
                     }
                 }
             }
             fun hide(tile: Tile) {
                 pen.color = palette.void
-                for (y in ys) for (x in xs) if (!world.explored(x, y) && (-1..1).any { dy -> (-1..1).any { dx -> map.tile(x + dx, y + dy) == tile } }) diamond(isoX(x + .5, y + .5), isoY(x + .5, y + .5), unit, unit / 2)
+                for (y in ys) for (x in xs) if (!world.explored(x, y) && nearby { dx, dy -> map.tile(x + dx, y + dy) == tile }) diamond(isoX(x + .5, y + .5), isoY(x + .5, y + .5), unit, unit / 2)
             }
             listOfNotNull(Tile.CHASM, Tile.WATER.takeIf { map.liquid != null }).forEach { tile ->
                 val pool = cells(tile, near = false)
@@ -164,7 +181,7 @@ internal class ScenePainter {
 
             // Then everything that stands, back to front: rock, monsters and the hero by x + y.
             val heroDepth = world.heroX + world.heroY
-            val standing = mutableListOf<Pair<Double, () -> Unit>>()
+            standing.clear()
             // Rock between the hero and the player is see-through, or a corridor would hide them. С 4.2.0 - круглое «окно» вокруг
             // героя, монстров, что гонятся за ним, и закрытых скалой ориентиров (3.95.3): скала перед ними прозрачна к центру
             val windows = buildList {
@@ -245,16 +262,32 @@ internal class ScenePainter {
                     }
                 }
             }
+            // Простой у трещины (4.9.0, макет «Ломание трещины», вариант B): кольцо вокруг жетона героя, пока трещина поддаётся
+            val crack = world.features.firstNotNullOfOrNull { it.cue(world) as? EntranceCue.Crack }?.progress?.takeIf { it > 0f }
             standing += heroDepth to {
                 val bob = if (world.moving) abs(sin(time * 9f)) * unit * .14f else 0f
-                token(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY), unit * .85f, Palettes.hero, bob) {
+                token(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY), unit * HERO_TOKEN, Palettes.hero, bob) {
                     Portraits.hero(this, classCode, time)
                 }
+                crack?.let { crackRing(Offset(isoX(world.heroX, world.heroY), -isoY(world.heroX, world.heroY) - unit * HERO_TOKEN * TOKEN_MID - bob), it) }
             }
-            standing.sortedBy { it.first }.forEach { it.second() }
+            // По глубине, устойчиво и на месте (4.9.0): очередь одна на сцену, без копии на кадр
+            standing.sortBy { it.first }
+            for (i in standing.indices) standing[i].second()
+            standing.clear()
         }
         // The air over everything (2.64.0): fog, sparks or fireflies, by the biome's style - на часах декора (4.2.0).
         style.atmosphere(scope, palette, decor)
+    }
+
+    /** Кольцо простоя [progress] (0..1) вокруг жетона героя с серединой [centre] в мере холста: дорожка и дуга от верха по часовой. */
+    private fun crackRing(centre: Offset, progress: Float) {
+        val stroke = ringStroke?.takeIf { it.width == unit * RING_WIDTH } ?: Stroke(unit * RING_WIDTH, cap = StrokeCap.Round).also { ringStroke = it }
+        val radius = unit * HERO_TOKEN * RING_SPAN
+        val corner = Offset(centre.x - radius, centre.y - radius)
+        val size = Size(radius * 2, radius * 2)
+        pen.scope.drawArc(CrackTrack, 0f, 360f, false, corner, size, style = stroke)
+        pen.scope.drawArc(CrackHue, -90f, 360f * progress.coerceIn(0f, 1f), false, corner, size, style = stroke)
     }
 
     /** A cell as the style reads it: where its centre falls and how much rock borders it. */
@@ -290,7 +323,7 @@ internal class ScenePainter {
     internal fun token(x: Float, y: Float, radius: Float, ring: Color, bob: Float, decor: TokenDecor? = null, draw: DrawScope.() -> Unit) {
         val scope = pen.scope
         val feet = -y
-        val centre = Offset(x, feet - radius * 1.1f - bob)
+        val centre = Offset(x, feet - radius * TOKEN_MID - bob)
         val clock = this.decor
         scope.drawOval(Color.Black.copy(alpha = .45f), Offset(x - radius * .8f, feet - radius * .22f), Size(radius * 1.6f, radius * .44f))
         decor?.run { scope.under(centre, radius, clock) }
@@ -322,3 +355,21 @@ private const val TOKEN_MID = 1.1f
 
 /** Монстры, что гонятся за героем: вокруг них в скале тоже «окно» (4.2.0). */
 private val ENGAGED = setOf(AgentMode.CHASING, AgentMode.HUNTING)
+
+/** Жетон героя: радиус в полуширинах клетки. */
+private const val HERO_TOKEN = .85f
+
+/** Кольцо простоя у трещины (4.9.0): радиус в радиусах жетона и толщина нити в полуширинах клетки. */
+private const val RING_SPAN = 1.35f
+private const val RING_WIDTH = .2f
+
+/** Цвета трещины (4.9.0, макет «Ломание трещины»): дорожка кольца, дуга простоя и подпись над героем. */
+private val CrackTrack = Color(0xFF1F2C35)
+private val CrackHue = Color(0xFFA26BFF)
+internal val CrackText = Color(0xFFCDB6FF)
+
+/** Есть ли среди клетки и восьми её соседей ([dx], [dy] в -1..1) такая, что [test] (4.9.0: без диапазонов на клетку кадра). */
+private inline fun nearby(test: (dx: Int, dy: Int) -> Boolean): Boolean {
+    for (dy in -1..1) for (dx in -1..1) if (test(dx, dy)) return true
+    return false
+}

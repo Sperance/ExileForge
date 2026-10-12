@@ -21,4 +21,7 @@ object ModeHue {
 
     /** Профессии - золото. */
     val Professions = Color(0xFFF2D27A)
+
+    /** Мощь (4.9.0) - золото печати ⚜. */
+    val Might = Caution
 }

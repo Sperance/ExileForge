@@ -213,14 +213,8 @@ class ExpeditionRun(
     internal val mine = HashSet<Int>()
     internal var granted = Reward.NONE
 
-    /**
-     * Добыча начатых боёв (3.88.0, server 1.80.0): бой - по номеру его ENGAGE, добыча боя по членам, когда сервер её ответил,
-     * убийство - по своему номеру, и убийства, чья добыча уже показана до ответа на них самих.
-     */
+    /** Начатые бои (3.88.0, server 1.80.0): бой - по номеру его ENGAGE; одно ENGAGE на бой. */
     internal val engaged = HashMap<Int, FightKey>()
-    internal val pendingLoot = HashMap<FightKey, Map<Int, Reward>>()
-    internal val killsOf = HashMap<Int, Pair<FightKey, Int>>()
-    internal val previewed = HashSet<Int>()
 
     /** The events of the fight on the report, and what they brought so far; null before the fight's first kill. */
     internal val fightEvents = mutableListOf<Int>()
@@ -241,6 +235,9 @@ class ExpeditionRun(
      * для листа «Задания» на карте. Сам заход уже сосчитан входом.
      */
     internal val questTally = hashMapOf(com.sperance.exileforge.rules.content.Counter.RUNS to 1L)
+
+    /** Копия [questTally] для снимка экрана (4.9.0): одна и та же, пока счёт не сдвинулся, - не новая карта на кадр. */
+    internal var questTallyShown: Map<String, Long> = questTally.toMap()
 
     /** What an autorun has gathered, fight by fight: its report at the end. */
     internal val autoEvents = HashSet<Int>()
@@ -378,7 +375,10 @@ class ExpeditionRun(
     internal fun record(event: (n: Int) -> RunEvent): RunEvent? = journal.record(event)?.also(onRecorded)?.also(::counted)
 
     private fun counted(event: RunEvent) {
-        fun add(counter: String) = questTally.merge(counter, 1L, Long::plus)
+        fun add(counter: String) {
+            questTally.merge(counter, 1L, Long::plus)
+            questTallyShown = questTally.toMap()
+        }
         when (event) {
             is RunEvent.Kill -> {
                 add(com.sperance.exileforge.rules.content.Counter.KILLS)

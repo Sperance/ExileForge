@@ -79,9 +79,10 @@ private const val BREATH_MS = 2600
  */
 @Composable fun NeonSkillIcon(skill: SkillDefinition, tier: Int, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false) {
     val hue = NeonHue.of(skill).color.let { if (dim) lerp(it, NeonTile, .55f) else it }
-    val breath = if (tier >= 3) .5f + .5f * sin(motionClock(BREATH_MS, "neon-breath") * 2 * PI).toFloat() else 0f
+    // Фаза дыхания читается в рисовании (4.9.0): плитка перерисовывается шагом часов декора без перекомпоновки.
+    val phase = if (tier >= 3) motionPhase(BREATH_MS) else null
     Box(
-        modifier.size(size).drawBehind { neonTile(hue, tier, breath) },
+        modifier.size(size).drawBehind { neonTile(hue, tier, phase?.let { .5f + .5f * sin(it.value * 2 * PI).toFloat() } ?: 0f) },
         contentAlignment = Alignment.Center,
     ) {
         val glyph = size * .58f

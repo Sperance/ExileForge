@@ -2,12 +2,12 @@ package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
-import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BossTotem
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.TotemKind
+import com.sperance.exileforge.rules.sheet.lines
 
 /** Тотем правил в бою (3.93.0): сам тотем и его проклятие, уже найденное среди умений монстров. */
 data class FoeTotem(val totem: BossTotem, val curse: MonsterSkill? = null)

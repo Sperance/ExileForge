@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.EffectTrace
 import com.sperance.exileforge.core.campaign.FactorKey
 import com.sperance.exileforge.core.campaign.FactorTrace
+import com.sperance.exileforge.core.campaign.FateTrace
 import com.sperance.exileforge.core.campaign.FighterShot
 import com.sperance.exileforge.core.campaign.HitTrace
 import com.sperance.exileforge.core.campaign.NoteTrace
@@ -84,6 +85,7 @@ internal fun CombatDetailSheet(game: GameUi, event: CombatEvent, monster: String
                     is TickTrace -> tickItems(trace, explainer, game)
                     is EffectTrace -> effectItems(trace, explainer, game)
                     is NoteTrace -> noteItems(trace, explainer, game)
+                    is FateTrace -> item { States(listOf(trace.actor), explainer) }
                 }
             }
         }

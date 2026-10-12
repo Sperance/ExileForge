@@ -4,10 +4,13 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.view.PixelCopy
 import android.view.Window
+import android.view.WindowManager
 import com.sperance.exileforge.rules.content.FeedbackRules
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -31,6 +34,9 @@ object ScreenCapture {
     /** Ступени качества JPEG, от лучшего; снимок, что не вписался и в последнюю, не прикладывается. */
     private val QUALITIES = 90 downTo 30 step 10
 
+    /** Полная непрозрачность канала цвета. */
+    private const val OPAQUE = 255
+
     /** Кадр окна [window]; null - окно ещё не нарисовано или копия не удалась. */
     suspend fun capture(window: Window): ScreenShot? {
         val view = window.decorView
@@ -43,6 +49,25 @@ object ScreenCapture {
                 }, Handler(Looper.getMainLooper()))
             }.onFailure { done.resume(null) }
         }
+    }
+
+    /**
+     * Кадр окна Activity [base] с окном диалога [top] поверх (4.9.0): диалог ложится на своё место экрана, под ним - затемнение,
+     * если окно его просит (`FLAG_DIM_BEHIND`: его рисует система, ни в одном кадре его нет). [top] null - только [base].
+     */
+    suspend fun capture(base: Window, top: Window?): ScreenShot? {
+        val under = capture(base) ?: return top?.let { capture(it) }
+        val over = top?.let { capture(it) } ?: return under
+        val canvas = Canvas(under.bitmap)
+        val attributes = top.attributes
+        if (attributes.flags and WindowManager.LayoutParams.FLAG_DIM_BEHIND != 0) {
+            canvas.drawColor(Color.argb((attributes.dimAmount.coerceIn(0f, 1f) * OPAQUE).roundToInt(), 0, 0, 0))
+        }
+        val at = IntArray(2).also(top.decorView::getLocationOnScreen)
+        val origin = IntArray(2).also(base.decorView::getLocationOnScreen)
+        canvas.drawBitmap(over.bitmap, (at[0] - origin[0]).toFloat(), (at[1] - origin[1]).toFloat(), null)
+        over.bitmap.recycle()
+        return under
     }
 
     /** Кадр окна Activity, к которой ведёт [context]; null - Activity нет. */

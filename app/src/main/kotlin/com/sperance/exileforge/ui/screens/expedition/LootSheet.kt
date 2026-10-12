@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -55,7 +56,9 @@ internal fun LootSheet(
     LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            ItemCard(item, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item, rememberWearChoice(game, item.item)), unmet = game.unmetNeeds(item.code))
+            // Копия героя по id (4.9.0): выданная сервером несёт номер экземпляра, которого у превью добычи ещё нет
+            val shown = remember(item, game.hero) { game.hero?.item(item.id)?.takeIf { it.serial != item.item.serial }?.let { ItemView(it, item.template, item.index) } ?: item }
+            ItemCard(shown, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item, rememberWearChoice(game, item.item)), unmet = game.unmetNeeds(item.code))
             when (stand) {
                 LootPresence.WORN -> MutedText(ui("expedition.loot_worn"))
 

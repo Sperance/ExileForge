@@ -10,6 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
+import com.sperance.exileforge.ui.components.ChordOverDialog
 import com.sperance.exileforge.ui.components.DialogShape
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
@@ -33,7 +34,10 @@ import org.koin.compose.viewmodel.koinViewModel
         titleContentColor = Gold,
         shape = DialogShape,
         tonalElevation = 0.dp,
-        title = { Text(ui("expedition.unfinished_title").uppercase(), style = MaterialTheme.typography.titleMedium) },
+        title = {
+            ChordOverDialog()
+            Text(ui("expedition.unfinished_title").uppercase(), style = MaterialTheme.typography.titleMedium)
+        },
         text = { Text(ui("expedition.unfinished_text", mapTitle(offer.zone)), color = Parchment) },
         confirmButton = { ForgeButton(model::continueUnfinished, enabled = !activity.busy) { Text(ui("expedition.unfinished_continue")) } },
         dismissButton = { ForgeTextButton(model::abandonUnfinished, enabled = !activity.busy) { Text(ui("expedition.unfinished_leave")) } },

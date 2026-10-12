@@ -66,8 +66,10 @@ internal fun Battle.step(dt: Double) {
     foeFighters.forEach { if (it.alive && !it.held) monsterCast(it) }
     if (finished()) return
     // Whoever is due first acts first; several may be due in one slice.
-    everyone.sortedBy { it.nextAttack }.forEach { me ->
-        if (!me.alive || me.held || me.nextAttack > time) return@forEach
+    val order = dueOrder()
+    for (k in order.indices) {
+        val me = order[k]
+        if (!me.alive || me.held || me.nextAttack > time) continue
         val target = if (me.side == Side.HERO) target() else foeTarget()
         if (target != null) strike(me, target, swingOf(me))
         me.nextAttack = time + me.attackInterval * me.slow() * cadence(me)
@@ -75,6 +77,27 @@ internal fun Battle.step(dt: Double) {
     }
     watch()
     // Без предела времени (2.74.0) и без отступления (3.88.8): бой идёт, пока не падёт одна из сторон.
+}
+
+/**
+ * Очередь хода шага (4.9.0): [Battle.everyone], устойчиво упорядоченные по `nextAttack` - тот же порядок, что `sortedBy`,
+ * в буфере боя вставками, без новых списков на шаг. Порядок равных - исходный (герой, питомцы, враги): буфер каждый шаг
+ * заполняется заново, а не досортировывается от прошлого шага.
+ */
+private fun Battle.dueOrder(): List<Fighter> {
+    val order = turnOrder
+    order.clear()
+    for (i in everyone.indices) order.add(everyone[i])
+    for (i in 1 until order.size) {
+        val fighter = order[i]
+        var j = i - 1
+        while (j >= 0 && order[j].nextAttack.compareTo(fighter.nextAttack) > 0) {
+            order[j + 1] = order[j]
+            j--
+        }
+        order[j + 1] = fighter
+    }
+    return order
 }
 
 private fun Battle.regenerate(me: Fighter, dt: Double) {
@@ -315,10 +338,13 @@ private fun Battle.burn(me: Fighter, dt: Double) {
         val dealt = (if (active.magnitude > 0) max(rate, rules.minDot / TICK) else rate) * span
         // Разлом (3.96.0): печати Стража и «Одна стихия» Владыки
         val rift = sealed(me) * lawTaken(me, if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.second)
-        val slice = if (rift == 1.0) dealt else dealt * rift
-        if (slice <= 0 || !me.alive || me.invulnerable) return@forEach
+        val unruled = if (rift == 1.0) dealt else dealt * rift
+        if (unruled <= 0 || !me.alive || me.invulnerable) return@forEach
         val chaos = active.ailment == Ailment.POISONED || active.chaos
         if (chaos && me.body.chaosImmune) return@forEach
+        // Каменная кожа (4.9.0): секунда недугов по герою - под потолком удара
+        val slice = fateDot(me, foeFighters.getOrNull(active.foe)?.takeIf { active.source == Side.MONSTER }, unruled)
+        if (slice <= 0) return@forEach
         wound(me, slice, chaos)
         me.ticking.merge(active.ailment, slice, Double::plus)
         if (slice > heaviestSlice) {

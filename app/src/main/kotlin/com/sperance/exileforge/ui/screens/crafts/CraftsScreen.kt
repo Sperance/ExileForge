@@ -32,6 +32,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
@@ -138,7 +139,7 @@ fun CraftsScreen() {
                 listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.forEachIndexed { index, (title, group) ->
                     if (index > 0) item { FlowMark() }
                     item { SectionRule(ui(title)) }
-                    items(group.chunked(TILES)) { row ->
+                    items(group.chunked(TILES), key = { it.first().code }) { row ->
                         Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
                             repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
@@ -313,18 +314,26 @@ internal fun MadeChips(made: List<ItemInstance>) {
 }
 
 /**
- * A cycle's bar, filled smoothly (2.47.0): it reads the device's clock every frame, set by the
- * server's through [offset], and only the bar is redrawn — the screen around it is not recomposed.
+ * A cycle's bar, filled smoothly (2.47.0): it reads the device's clock, set by the server's through [offset], and only
+ * the bar is redrawn — the screen around it is not recomposed. С 4.9.0 часы полосы тикают не каждый кадр, а с шагом
+ * в один пиксель её ширины ([cycleStepMs]): на глаз так же плавно, а экран ремёсел не держит полный FPS.
  * Under it (3.24.0) the time the cycle has run of its whole, and what the work brings in an hour on average.
  * С 3.90.0 полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
  * всплывает, что принёс пересчёт на границе цикла ([last]).
  */
 @Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6, hourly: String? = null) {
-    val now by produceState(System.currentTimeMillis()) { while (true) withFrameMillis { value = System.currentTimeMillis() } }
+    var widthPx by remember { mutableIntStateOf(0) }
+    val step = cycleStepMs(work.cycleMillis, widthPx)
+    val now by produceState(System.currentTimeMillis(), step) {
+        while (true) {
+            value = System.currentTimeMillis()
+            delay(step)
+        }
+    }
     Box(Modifier.fillMaxWidth()) {
         LinearProgressIndicator(
             progress = { if (work.cycleMillis > 0) work.phase(now + offset).toFloat() / work.cycleMillis else 0f },
-            modifier = Modifier.fillMaxWidth().height(height.dp),
+            modifier = Modifier.fillMaxWidth().height(height.dp).onSizeChanged { widthPx = it.width },
             color = Gold,
             trackColor = PanelRaised,
         )
@@ -382,3 +391,12 @@ internal fun MadeChips(made: List<ItemInstance>) {
 
 /** Сколько всплывашка сбора держится над полосой цикла. */
 private const val HARVEST_SHOWN = 2_500L
+
+/** Шаг часов полосы цикла: время одного пикселя её ширины, в пределах [CYCLE_STEP_MIN]..[CYCLE_STEP_MAX] мс. */
+internal fun cycleStepMs(cycleMillis: Long, widthPx: Int): Long = if (cycleMillis <= 0 || widthPx <= 0) CYCLE_STEP_MAX else (cycleMillis / widthPx).coerceIn(CYCLE_STEP_MIN, CYCLE_STEP_MAX)
+
+/** Чаще кадра полоса не тикает. */
+private const val CYCLE_STEP_MIN = 16L
+
+/** Реже - заметно на глаз, даже если пиксель ещё не набежал. */
+private const val CYCLE_STEP_MAX = 250L

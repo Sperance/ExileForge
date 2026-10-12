@@ -207,7 +207,10 @@ sealed interface ModerationFate {
 
 @Serializable data class DeletionRequest(val target: SanctionTarget, val id: String, val category: SanctionCategory, val comment: String)
 
-@Serializable private data class AppealBody(val text: String)
+@Serializable private data class AppealBody(val text: String, val token: String)
+
+/** Токен апелляции своей санкции (4.9.0, сервер `POST notice/token`). */
+@Serializable private data class AppealToken(val token: String)
 
 /**
  * Модерация (3.88.5, server 1.80.8): список, досье, бан и его снятие, удаление в корзину и восстановление, журнал - модераторам
@@ -240,7 +243,14 @@ class ModerationClient internal constructor(private val http: Transport) {
 
     suspend fun notice(id: String): SanctionView = decode(http.request("GET", NOTICE, mapOf("id" to id)))
 
-    suspend fun appeal(id: String, text: String): SanctionView = decode(http.request("POST", "$NOTICE/appeal", mapOf("id" to id), body = WireJson.encodeToJsonElement(AppealBody(text.trim()))))
+    /**
+     * Апелляция на санкцию [id] (4.9.0) - с секретным токеном наказанного: [token] из отказа входа, а без него (герой под санкцией
+     * в списке героев - вход есть) токен своей санкции берётся у сервера первым.
+     */
+    suspend fun appeal(id: String, text: String, token: String? = null): SanctionView {
+        val secret = token?.takeIf { it.isNotBlank() } ?: http.post<AppealToken>("$NOTICE/token", mapOf("id" to id)).token
+        return decode(http.request("POST", "$NOTICE/appeal", mapOf("id" to id), body = WireJson.encodeToJsonElement(AppealBody(text.trim(), secret))))
+    }
 
     private fun decode(json: kotlinx.serialization.json.JsonElement): SanctionView = WireJson.decodeFromJsonElement(SanctionView.serializer(), json)
 }

@@ -33,11 +33,11 @@ import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * A crack of the Abyss (2.82.0): before the descent — how deep it leads, the first wave and the hoard at
- * its bottom; between depths — the hoard as it stands, the wave below and its leader, and the choice: take
- * the hoard and leave, or go deeper, where a fall burns it all but the atlas's share; after — what the
- * hoard brought, rolled by the server and shown as its answer arrives (server 1.30.0). Between depths the hero's
- * life, shield and mana are laid out, and the belt is at hand: what is left of them is what the next wave meets.
+ * Расщелина Бездны (2.82.0; 4.9.0 - «копилка» стала «наградой Расщелины»): до спуска - глубина, первая волна и награда, если
+ * забрать её на дне; между ступенями - награда, если забрать сейчас, волна ниже с вожаком и награда на следующей ступени, и
+ * выбор: забрать и уйти или спуститься глубже. Под выбором - строка «растёт с каждой ступенью, уйдёшь - заберёшь, погибнешь -
+ * потеряешь всё». После - что принесла награда: её бросает сервер, показ - по его ответу (server 1.30.0). Между ступенями
+ * видны жизнь, щит и мана героя и пояс фляг: что от них осталось, то и встретит следующую волну.
  */
 @Composable internal fun AbyssSheet(game: GameUi, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
@@ -98,7 +98,7 @@ import com.sperance.exileforge.ui.theme.*
             }
             if (hoard == null) {
                 Text(
-                    ui("abyss.burns"),
+                    ui("abyss.grows"),
                     color = LifeRed.copy(alpha = .85f),
                     style = MaterialTheme.typography.bodySmall,
                 )

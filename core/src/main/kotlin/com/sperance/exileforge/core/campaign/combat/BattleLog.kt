@@ -10,9 +10,9 @@ import com.sperance.exileforge.core.campaign.RollKey
 import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.Trace
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
-import com.sperance.exileforge.core.campaign.lines
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.sheet.lines
 
 // ==================== The log's traces (3.37.0) ====================
 

@@ -32,7 +32,9 @@ import com.sperance.exileforge.ui.theme.*
     Column(Modifier.fillMaxSize().background(Panel.copy(alpha = .75f), shape).border(1.dp, Bronze.copy(alpha = .4f), shape).padding(horizontal = 10.dp, vertical = 6.dp)) {
         LogShelves(game.logFilter, onLogFilter)
         if (fight.events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
-        FightLog(fight.events.filter { LogKind.of(it) in game.logFilter }, names) { event ->
+        // Отбор полок - по новой строке журнала или смене полок, не каждый кадр (4.9.0): журнал снимка тот же, пока не вырос
+        val shown = remember(fight.events, game.logFilter) { fight.events.filter { LogKind.of(it) in game.logFilter } }
+        FightLog(shown, names) { event ->
             if (fight.started && !fight.paused && fight.outcome == null) {
                 onCommand(RunCommand.Pause)
                 held = true

@@ -96,10 +96,12 @@ val LocalFateSight = compositionLocalOf<FateSight?> { null }
 
 /** Сургуч печати: жар пульсирует ([SEAL_MS]), без анимаций - ровное свечение. */
 @Composable private fun WaxSeal() {
-    val time = motionClock(SEAL_MS, "fate-seal")
-    val beat = if (LocalMotion.current) (1 - kotlin.math.cos(time * 2 * Math.PI).toFloat()) / 2 else .5f
+    // Фаза читается в рисовании (4.9.0): жар пульсирует без перекомпоновки.
+    val time = motionPhase(SEAL_MS)
+    val moving = LocalMotion.current
     Box(
         Modifier.size(26.dp).drawBehind {
+            val beat = if (moving) (1 - kotlin.math.cos(time.value * 2 * Math.PI).toFloat()) / 2 else .5f
             val radius = size.minDimension / 2
             drawCircle(FateInk.Cinder.copy(alpha = .25f + .4f * beat), radius * (1.2f + .25f * beat))
             drawCircle(Brush.radialGradient(FateInk.Wax, Offset(size.width * .35f, size.height * .35f), radius * 1.5f), radius)

@@ -17,6 +17,7 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.EffectView
+import com.sperance.exileforge.core.campaign.combat.FateGlow
 import com.sperance.exileforge.core.campaign.combat.FlaskView
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.HeroPools
@@ -244,6 +245,8 @@ data class FightHud(
     val heroEffects: List<EffectView> = emptyList(),
     /** The hero's frenzy, power and endurance charges (3.33.0), a counter per kind held. */
     val heroCharges: List<ChargeView> = emptyList(),
+    /** Действующие рычаги Предначертания героя (4.9.0): значок ✦ среди его состояний. */
+    val heroFate: List<FateGlow> = emptyList(),
     val heroBarrier: Int = 0,
     /** The level the foes stand at: a depth of the Abyss stands deeper than its zone. */
     val level: Int = 0,
@@ -374,8 +377,8 @@ data class RunHud(
     val hazards: List<HazardView> = emptyList(),
     /** Эффекты ловушек на герое (3.95.3): горение, яд - для чипа под полосой жизни. */
     val afflictions: List<AfflictionView> = emptyList(),
-    /** Доля простоя у трещины тайной комнаты (3.90.0); null - герой не стоит у неё. */
-    val opening: Float? = null,
+    /** Герой у входа в комнату (4.9.0): трещина и её простой или запертая дверь; null - он не у входа. */
+    val entrance: EntranceCue? = null,
     /** Экран-вызов перед стражем (3.92.0); null - его нет. */
     val challenge: ChallengeView? = null,
     /** Очаг Скверны карты (4.0.0); null - очага нет. */
@@ -413,10 +416,10 @@ data class AbyssView(
 }
 
 /**
- * Объект карты, чей лист открыт (3.90.0, сервер 1.81.3): объект правил - что в нём, - выборы, уже сделанные на нём, и доля
- * идущего сбора узла (null - сбор не идёт).
+ * Объект карты, чей лист открыт (3.90.0, сервер 1.81.3): объект правил - что в нём, - выборы, уже сделанные на нём, доля
+ * идущего сбора узла (null - сбор не идёт) и (4.9.0) стоят ли его стражи сокровищ.
  */
-data class FeatureView(val feature: MapFeature, val taken: List<Int>, val gathering: Float? = null)
+data class FeatureView(val feature: MapFeature, val taken: List<Int>, val gathering: Float? = null, val guarded: Boolean = false)
 
 /** A fountain as its offer reads: which one, and the share of life and mana it gives back. */
 data class FountainView(val id: Int, val heal: Double)
@@ -435,4 +438,16 @@ data class CrystalView(
 /** A rise from level [from] to [to] (3.81.0): one screen even for several levels at once. */
 data class LevelUp(val from: Int, val to: Int) {
     val levels: Int get() = to - from
+}
+
+/**
+ * Что над героем у входа в комнату (4.9.0, макет «Ломание трещины», вариант B): у трещины - кольцо простоя вокруг жетона и
+ * «Трещина поддаётся · N%», при нуле - «стой рядом»; у запертой двери - «Заперто. Найди рычаг поблизости».
+ */
+sealed interface EntranceCue {
+    /** Трещина тайной комнаты: доля простоя [progress], 0..1. */
+    data class Crack(val progress: Float) : EntranceCue
+
+    /** Запертая дверь: рычаг ещё не дёрнут. */
+    data object Locked : EntranceCue
 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,7 +46,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Сюжетный экран (4.7.0, макет «Пролог и продолжение», вариант A «Пепел и свиток»): палитра Предначертания, жар снизу и угли,
  * заголовок Cinzel, абзацы [paragraphs] печатаются по буквам один за другим. Касание дописывает абзац, касание по дописанному -
  * следующий, после последнего - [onDone]. «Пропустить» видно, если [skippable], и не раньше [skipAfterMs]. Без анимаций
- * (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета.
+ * (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета. [overlay] (4.9.0) - слой поверх сцены
+ * (тосты: сцена накрывает оболочку с её тостами).
  */
 @Composable fun StoryScene(
     kicker: String,
@@ -54,10 +56,12 @@ import org.koin.compose.viewmodel.koinViewModel
     skippable: Boolean,
     onDone: () -> Unit,
     skipAfterMs: Long = 0,
+    overlay: @Composable BoxScope.() -> Unit = {},
 ) {
     val moving = LocalMotion.current
     var shown by remember(paragraphs) { mutableIntStateOf(1) }
-    var typed by remember(paragraphs) { mutableIntStateOf(if (moving) 0 else Int.MAX_VALUE) }
+    // Сколько букв текущего абзаца напечатано; «готово» - длина абзаца. Сбрасывается синхронно в advance(), иначе новый абзац мигнёт целиком.
+    var typed by remember(paragraphs) { mutableIntStateOf(if (moving) 0 else paragraphs.firstOrNull().orEmpty().length) }
     var skipReady by remember { mutableStateOf(skipAfterMs <= 0) }
     val current = paragraphs.getOrNull(shown - 1).orEmpty()
     LaunchedEffect(skipAfterMs) {
@@ -66,21 +70,23 @@ import org.koin.compose.viewmodel.koinViewModel
             skipReady = true
         }
     }
-    LaunchedEffect(shown, moving) {
-        if (!moving) return@LaunchedEffect
-        typed = 0
+    LaunchedEffect(paragraphs, shown, moving) {
+        if (!moving) {
+            typed = current.length
+            return@LaunchedEffect
+        }
         while (typed < current.length) {
             delay(TYPE_MS)
-            typed++
+            typed = (typed + 1).coerceAtMost(current.length)
         }
     }
     fun advance() {
         when {
-            typed < current.length -> typed = Int.MAX_VALUE
+            typed < current.length -> typed = current.length
 
             shown < paragraphs.size -> {
+                typed = if (moving) 0 else paragraphs[shown].length
                 shown++
-                if (!moving) typed = Int.MAX_VALUE
             }
 
             else -> onDone()
@@ -100,7 +106,7 @@ import org.koin.compose.viewmodel.koinViewModel
             Text(kicker.uppercase(), color = FateInk.Rim, style = relicName(13), letterSpacing = 3.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Text(title, style = relicName(26).copy(color = FateInk.Gold), textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp))
             paragraphs.take(shown).forEachIndexed { i, text ->
-                val visible = if (i == shown - 1) text.take(typed.coerceAtMost(text.length)) else text
+                val visible = if (i == shown - 1) text.take(typed.coerceIn(0, text.length)) else text
                 Text(visible, color = FateInk.Vellum, fontFamily = FontFamily.Serif, fontStyle = FontStyle.Italic, fontSize = 18.sp, lineHeight = 27.sp)
             }
         }
@@ -121,6 +127,7 @@ import org.koin.compose.viewmodel.koinViewModel
             textAlign = TextAlign.Center,
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp).fillMaxWidth(),
         )
+        overlay()
     }
 }
 

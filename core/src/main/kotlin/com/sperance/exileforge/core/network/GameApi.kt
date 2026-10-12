@@ -145,15 +145,25 @@ class GameApi(
     var identity: ClientIdentity? = null
 
     /**
-     * Files a bug report (server 1.46.0): open before the sign-in too, signed when there is a session. Подписан
-     * [identity] (3.88.0): устройство, версия клиента и активный герой.
+     * Отчёт [report], собранный к отправке (4.9.0): у ошибки - хвост [failures] неудачных запросов (4.3.1: по нему видно, какой
+     * ответ сервера встретил игрок), подпись [identity] (3.88.0: устройство, версия клиента и активный герой). Собирается в
+     * момент отчёта: из очереди на диске он уходит таким, каким был тогда.
      */
-    suspend fun reportBug(report: BugReportRequest, failures: Int = 0) {
-        // Отчёт об ошибке несёт хвост неудачных запросов (4.3.1): по нему видно, какой ответ сервера встретил игрок.
+    fun bugReport(report: BugReportRequest, failures: Int = 0): BugReportRequest {
         val traced = if (report.kind == FeedbackKind.BUG && failures > 0) report.copy(failures = journal.failures(failures)) else report
-        val stamped = identity?.stamp(traced) ?: traced
-        http.request("POST", "api/v1/bugreport", body = WireJson.encodeToJsonElement(stamped), authenticated = http.token != null)
+        return identity?.stamp(traced) ?: traced
     }
+
+    /**
+     * Отправка собранного отчёта (server 1.46.0): открыта и до входа, подписана сессией, если она есть. Повтор с тем же
+     * [BugReportRequest.key] сервер второй раз не записывает (4.9.0).
+     */
+    suspend fun sendBug(report: BugReportRequest) {
+        http.request("POST", CommandQueue.BUG_REPORT, body = WireJson.encodeToJsonElement(report), authenticated = http.token != null)
+    }
+
+    /** Отчёт, собранный и отправленный сразу, без очереди (служебные отчёты приложения: зависание, сбой запуска). */
+    suspend fun reportBug(report: BugReportRequest, failures: Int = 0) = sendBug(bugReport(report, failures))
 
     /** The secret a device registration just brought, or null: read once and kept by the app. */
     var deviceSecret: String? = null
@@ -300,9 +310,10 @@ class GameApi(
 
     /**
      * Доступ закрыт санкцией (`AUTH_006`, 3.88.5, server 1.80.8): бан аккаунта или устройства, удаление аккаунта. Id санкции -
-     * для экрана санкции; пустой - аккаунт удалён и уже стирается.
+     * для экрана санкции; пустой - аккаунт удалён и уже стирается. Токен апелляции (4.9.0, сервер SEC-7) - секрет наказанного: с ним
+     * экран санкции подаёт апелляцию; пусто - апеллировать не на что.
      */
-    var onSanctioned: (sanctionId: String) -> Unit
+    var onSanctioned: (sanctionId: String, appealToken: String) -> Unit
         get() = http.onSanctioned
         set(value) {
             http.onSanctioned = value

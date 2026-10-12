@@ -23,7 +23,7 @@ import com.sperance.exileforge.ui.icons.spriteVector
  * The campaign's scene, drawn by Compose itself: the map in pseudo-isometry while walking — its ground,
  * rock and air in the biome's [MapStyle] since 2.64.0 — with
  * the hero and the monsters as round tokens of their portraits (since 2.31.0), and while fighting
- * the cave of the owner's mockup VI behind the fight's cards (2.57.0, [fightBackdrop]). Everything is a shape — rule 17, no picture is ever loaded
+ * the cave of the owner's mockup VI behind the fight's cards (2.57.0, [FightStage]). Everything is a shape — rule 17, no picture is ever loaded
  * — and nothing here is text: names, bars and numbers are the overlay's, in the app's dictionary.
  *
  * The run's clock is [rememberRunClock]: the scene only reads it, so the world is stepped once a frame and drawn by the

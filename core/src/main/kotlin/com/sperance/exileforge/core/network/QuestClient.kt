@@ -11,7 +11,8 @@ import com.sperance.exileforge.rules.content.QuestClaimAll
  * a repeat would be refused at best and paid twice at worst.
  */
 class QuestClient internal constructor(private val http: Transport) {
-    suspend fun board(heroId: String): QuestBoard = http.get("$HERO_QUESTS", heroQuery(heroId))
+    /** Доска с выдачей суток, недели и пустых мест (4.9.0, сервер `POST hero/quests/refresh`): чтение доски сервер больше не пишет. */
+    suspend fun board(heroId: String): QuestBoard = http.post("$HERO_QUESTS/refresh", heroQuery(heroId))
 
     suspend fun claim(heroId: String, questId: String): QuestBoard = onQuest("claim", heroId, questId)
 
@@ -39,7 +40,8 @@ class QuestClient internal constructor(private val http: Transport) {
      */
     suspend fun law(heroId: String, code: String): QuestBoard = http.post("$HERO_QUESTS/law", heroQuery(heroId, "code" to code))
 
-    suspend fun guild(heroId: String): GuildQuests = http.get("$GUILD_QUESTS", heroQuery(heroId))
+    /** Задания гильдии с выдачей суток (4.9.0, сервер `POST guild/quests/refresh`). */
+    suspend fun guild(heroId: String): GuildQuests = http.post("$GUILD_QUESTS/refresh", heroQuery(heroId))
 
     /** The guild's reward: a personal quest by [questId], or a share of a common goal by its [goal] key. */
     suspend fun claimGuild(heroId: String, questId: String? = null, goal: String? = null): GuildQuests {

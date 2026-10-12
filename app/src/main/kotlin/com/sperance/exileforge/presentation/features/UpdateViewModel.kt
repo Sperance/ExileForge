@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.features
 
 import android.app.Application
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.BuildConfig
@@ -59,7 +60,7 @@ data class UpdateState(
  * by hand and every hour. A failed check is quietly tried again a minute later and never holds the start.
  *
  * С 3.90.3 сами проверки идут одной очередью ([pending]): на холодном старте - только когда ресурсы игры ([resources])
- * дочитаны, а не бок о бок с ними. Каждое возвращение в игру и каждая ошибка сервера (426 - сразу, прочие ошибки и обрыв
+ * дочитаны, а не бок о бок с ними. Возвращение в игру (не чаще [RESUME_GAP_MS]) и каждая ошибка сервера (426 - сразу, прочие ошибки и обрыв
  * без ответа - не чаще [FAILED_GAP_MS]) проверяют сборку тут же, и во время похода или испытания ([playing]): найденная
  * сборка закрывает игру по их концу (окно обновления это знает), а сверка ресурсов ([resourcesDue]) ждёт их конца - она
  * перечитывает мир под идущим боем. Провод сервера каждая проверка спрашивает заново ([ServerReach.freshWire]).
@@ -98,6 +99,9 @@ class UpdateViewModel(
 
     /** Холодный старт позади: возвращения в игру с этих пор сверяют ресурсы. */
     @Volatile private var warm = false
+
+    /** Когда GitHub в последний раз ответил на проверку ([SystemClock.elapsedRealtime]); 0 - ещё не отвечал. */
+    @Volatile private var answeredAt = 0L
 
     /** Сверка ресурсов просрочена: идёт, как только нет похода и испытания. */
     private val resourcesDue = MutableStateFlow(false)
@@ -174,11 +178,14 @@ class UpdateViewModel(
     private fun ask(request: Request) = pending.update { maxOf(it ?: request, request) }
 
     /**
-     * Игрок вернулся в игру (3.90.3): проверка сборки - каждый раз, без порога и сразу, в походе тоже; сверка ресурсов - по
-     * концу похода и испытания. До конца холодного старта возвращение ничего не добавляет: его проверка и так впереди.
+     * Игрок вернулся в игру (3.90.3): проверка сборки - сразу, в походе тоже; сверка ресурсов - по концу похода и испытания.
+     * До конца холодного старта возвращение ничего не добавляет: его проверка и так впереди. С 4.9.0 - не чаще
+     * [RESUME_GAP_MS] после последнего ответа GitHub: короткие отлучки из игры запросов не добавляют.
      */
     fun resumed() {
-        if (BuildConfig.UPDATES && warm) ask(Request.RECHECK)
+        if (!BuildConfig.UPDATES || !warm) return
+        val answered = answeredAt
+        if (answered == 0L || SystemClock.elapsedRealtime() - answered >= RESUME_GAP_MS) ask(Request.RECHECK)
     }
 
     /**
@@ -220,6 +227,7 @@ class UpdateViewModel(
                     update = next,
                 )
             }
+            answeredAt = SystemClock.elapsedRealtime()
             true
         } catch (e: CancellationException) {
             throw e
@@ -270,6 +278,9 @@ class UpdateViewModel(
 
         /** Не чаще одной проверки обновления на ошибки ответов сервера (4.3.1) и обрывы без ответа. */
         const val FAILED_GAP_MS = 5 * 60_000L
+
+        /** Возвращение в игру проверяет сборку, только если GitHub отвечал не позже этого (4.9.0). */
+        const val RESUME_GAP_MS = 10 * 60_000L
 
         /** Дольше этого первая проверка не ждёт ресурсов старта: без связи они не придут, а сборку искать надо. */
         const val RESOURCES_WAIT_MS = 30_000L

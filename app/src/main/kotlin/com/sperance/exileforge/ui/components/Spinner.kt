@@ -83,7 +83,10 @@ val DialogShape = RoundedCornerShape(22.dp)
         titleContentColor = Gold,
         shape = DialogShape,
         tonalElevation = 0.dp,
-        title = { Text(title.uppercase(), style = MaterialTheme.typography.titleMedium) },
+        title = {
+            ChordOverDialog()
+            Text(title.uppercase(), style = MaterialTheme.typography.titleMedium)
+        },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = body) },
         confirmButton = { ForgeTextButton(onClick = onDismiss) { Text(ui("common.close")) } },
     )

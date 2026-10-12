@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.figures
 import com.sperance.exileforge.presentation.state.manaReserve
@@ -33,7 +34,8 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
-import com.sperance.exileforge.ui.components.MightPanel
+import com.sperance.exileforge.ui.components.MightMark
+import com.sperance.exileforge.ui.components.ShortCodeChip
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.Tipped
 import com.sperance.exileforge.ui.icons.GlyphIcon
@@ -53,10 +55,18 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun HeroSummary(game: GameUi) {
     val hero = game.hero ?: return
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Мощь (4.8.0, макет A+B): печать над сводкой - из того же листа боя без карты, что и цифры
-        hero.might?.let { MightPanel(it) }
-        StatSheet(game, hero.figures)
+    StatSheet(game, hero.figures)
+}
+
+/**
+ * Строка над сводкой (4.9.0, макет A «Строка с номером героя»): слева свой номер героя (4.7.0, касание копирует; сервер старше - нет),
+ * справа Мощь - печать 32dp и число из того же листа боя без карты, что и цифры сводки; ещё не сложен - «…».
+ */
+@Composable fun NumberAndMight(hero: HeroView) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        ShortCodeChip(ui("hero.number_own"), hero.info.number)
+        Spacer(Modifier.weight(1f))
+        MightMark(hero.might)
     }
 }
 

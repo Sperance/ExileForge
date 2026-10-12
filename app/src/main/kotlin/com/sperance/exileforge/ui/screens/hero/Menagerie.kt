@@ -54,17 +54,14 @@ fun petName(species: String): String = locOr("pet.$species", species)
     }
 }
 
-/** Who is shown in the menagerie (3.81.0, mockup A): rarities (none - all), the role and whether at work. */
-private enum class PetRoleFilter(val key: String) { ALL("pets.filter_all"), COMBAT("pets.filter_combat"), HELPER("pets.filter_helper") }
-private enum class PetStatusFilter(val key: String) { ALL("pets.filter_all"), WORKING("pets.filter_working"), RESTING("pets.filter_resting") }
-
 /**
  * The menagerie (3.5.0, server 1.5.0; mockup A «Компактный список», 3.81.0): the incubator and the breeding folded into a row each
  * over the list, the filters by rarity, role and status, and a compact row per pet — its icon, name in its rarity's colour, what it
  * is, its level and every line it rolled, always in sight. A tap unfolds the row's actions: to work or back, to the forge (the pets'
- * orbs are spent there since 3.81.0), or let go for gold.
+ * orbs are spent there since 3.81.0), or let go for gold. Над списком (4.9.0, макет «Зверинец», вариант A «Как состав гильдии») -
+ * плотный поиск по имени и виду с кнопкой порядка «⇅» ([PetSearch]) и одна лента чипов со счётчиками ([PetFilterRow]): роль и
+ * дело, редкости, стихии. Всё - на клиенте, без запросов.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
     val hero = game.hero ?: return
@@ -73,9 +70,9 @@ fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
     val menagerie = remember(index) { Menagerie(index) }
     var incubator by rememberSaveable { mutableStateOf(false) }
     var breeding by rememberSaveable { mutableStateOf(false) }
-    var rarities by remember { mutableStateOf(emptySet<Rarity>()) }
-    var role by rememberSaveable { mutableStateOf(PetRoleFilter.ALL) }
-    var status by rememberSaveable { mutableStateOf(PetStatusFilter.ALL) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var order by remember { mutableStateOf<PetOrder?>(null) }
+    var chosen by remember { mutableStateOf<PetFilter>(PetFilter.Trait.ALL) }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Engraved(ui("pets.title", pets.pets.size))
@@ -87,38 +84,15 @@ fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
             InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
             return@Column
         }
-        val present = pets.pets.map { it.rarity }.distinct().sortedBy { it.ordinal }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            present.forEach { r ->
-                FilterChip(
-                    selected = r in rarities,
-                    onClick = { rarities = if (r in rarities) rarities - r else rarities + r },
-                    label = { Text(ui("enum.rarity.${r.name}"), color = rarityColor(r.name)) },
-                )
-            }
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            PetRoleFilter.entries.forEach { f -> FilterChip(selected = role == f, onClick = { role = f }, label = { Text(ui(f.key)) }) }
-            Spacer(Modifier.width(6.dp))
-            PetStatusFilter.entries.drop(1).forEach { f ->
-                FilterChip(selected = status == f, onClick = { status = if (status == f) PetStatusFilter.ALL else f }, label = { Text(ui(f.key)) })
-            }
-        }
-        val shown = pets.pets.filter { pet ->
-            val kind = menagerie.species(pet.species)?.kind
-            val active = pets.isActive(pet.id)
-            (rarities.isEmpty() || pet.rarity in rarities) &&
-                when (role) {
-                    PetRoleFilter.ALL -> true
-                    PetRoleFilter.COMBAT -> kind == PetKind.COMBAT
-                    PetRoleFilter.HELPER -> kind == PetKind.HELPER
-                } &&
-                when (status) {
-                    PetStatusFilter.ALL -> true
-                    PetStatusFilter.WORKING -> active
-                    PetStatusFilter.RESTING -> !active
-                }
-        }.sortedWith(compareBy({ !pets.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level }))
+        val facts = remember(menagerie, pets) { PetFacts({ menagerie.species(it.species) }, { pets.isActive(it.id) }) }
+        val filters = remember(pets.pets, facts) { PetFilter.of(pets.pets, facts) }
+        // Чип, чьих питомцев не осталось (отпущен последний огненный), снимается сам
+        val filter = chosen.takeIf { it in filters } ?: PetFilter.Trait.ALL
+        PetSearch(query, game.inputs.heroName, order, { query = it }, { order = it })
+        val found = pets.pets.filter { facts.named(it, query) }
+        PetFilterRow(filters, found, facts, filter) { chosen = it }
+        val kept = found.filter { filter.keeps(it, facts) }
+        val shown = order?.apply(kept) ?: PetOrder.standard(kept, pets)
         if (shown.isEmpty()) MutedText(ui("pets.filter_none"))
         shown.forEach { pet -> PetRow(game, vm, pet, open == pet.id) { open = if (open == pet.id) null else pet.id } }
     }
@@ -261,10 +235,12 @@ private fun PetRow(game: GameUi, vm: HeroViewModel, pet: Pet, open: Boolean, onT
                 }) { Text(ui("pets.to_forge")) }
                 // Работающего питомца не продать (CH_039): сначала отдых.
                 if (!active) {
-                    ForgeOutlinedButton(onClick = { listing = true }, enabled = !game.busy) { Text(ui("hero.action_auction")) }
+                    // Выданный питомец (4.9.0) другим героям не уходит: аукцион погашен, причина - под кнопками
+                    ForgeOutlinedButton(onClick = { listing = true }, enabled = !game.busy && !pet.granted) { Text(ui("hero.action_auction")) }
                     ForgeTextButton(onClick = { selling = true }, enabled = !game.busy) { Text(ui("pets.sell"), color = LifeRed) }
                 }
             }
+            if (pet.granted) Text(ui("pets.granted_hint"), color = Muted, style = MaterialTheme.typography.bodySmall)
         }
     }
     if (hiring) {

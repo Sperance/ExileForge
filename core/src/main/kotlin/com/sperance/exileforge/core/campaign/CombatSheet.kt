@@ -3,17 +3,20 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.RegenPool
 import com.sperance.exileforge.core.character.HeroSheet
-import com.sperance.exileforge.core.character.Mights
 import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Grant
+import com.sperance.exileforge.rules.sheet.HeroBody
+import com.sperance.exileforge.rules.sheet.Might
 import com.sperance.exileforge.rules.sheet.MightReading
+import com.sperance.exileforge.rules.sheet.PetFighter
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatBreakdown
@@ -68,14 +71,18 @@ data class StatFigures(
 
 /**
  * Лист героя, как его читает бой (4.6.4): лист правил с пассивными умениями (ауры - на силе `STOCK_AURA_EFFECT`, с резервом маны) и
- * преобразованиями Предначертания - тем же [HeroBuild], что строит тело героя в заходе, без карты. Одна точка для сводки, разбора
+ * преобразованиями Предначертания - боевым листом правил ([HeroBody], 4.9.0: тот же свод, что у тела героя в заходе без карты и у Мощи сервера). Одна точка для сводки, разбора
  * характеристики и сравнений вещи и узла дерева: их цифры не расходятся с боем и между собой.
  */
-class CombatSheet(private val index: ContentIndex, private val model: SheetModel, sheet: Map<String, Double>, level: Int, val kit: Loadout) {
-    private val build = HeroBuild(HeroGear(sheet, level, model, kit = kit, percent = index.stats.percent), emptyMap(), index.campaign.combat)
+class CombatSheet(private val index: ContentIndex, private val model: SheetModel, level: Int, val kit: Loadout, pet: Pet? = null) {
+    /** Боевой лист героя правилами (4.9.0): свод листа с пассивными умениями - тот же, из которого сервер считает Мощь. */
+    private val hero = HeroBody(index, model.fold, level, kit.heroKit, pet)
+
+    /** Тело героя без пассивных умений: с него читаются их уровни и сила аур. */
+    private val bare: Combatant by lazy { Combatant(hero.bare, level, index.campaign.combat) }
 
     /** Тело героя между боями: лист с пассивными умениями. */
-    val body: Combatant get() = build.body
+    val body: Combatant by lazy { Combatant(hero.stats, level, index.campaign.combat) }
 
     /** Характеристики боя. */
     val stats: Map<String, Double> get() = body.stats
@@ -88,7 +95,6 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /** Пассивные умения героя с их уровнем, резервом и строками - уровень и сила аур читаются с листа без них, как в бою. */
     val passives: List<PassiveSource> by lazy {
-        val bare = build.bare
         kit.passiveSources(bare).map { (skill, lines) -> PassiveSource(skill.skill.code, skill.level(bare), kit.reserve(skill, bare), lines, skill.skill.lowLife) }
     }
 
@@ -114,8 +120,14 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         out
     }
 
-    /** Мощь героя (4.8.0) по телу боя без карты: печать листа героя и «было» сравнения вещи. */
-    val might: MightReading by lazy { Mights.of(index, body) }
+    /**
+     * Мощь героя (4.8.0) по телу боя без карты: печать листа героя и «было» сравнения вещи. С 4.9.0 - [Might.hero] правил: натиск с
+     * умениями и боевым питомцем, одна функция с сервером.
+     */
+    val might: MightReading by lazy { Might.hero(index, hero) }
+
+    /** Урон в секунду сверх листа - умения и боевой питомец (4.9.0): с ним бой меряет Мощь героя под эффектами карты. */
+    val addedDps: Double get() = hero.addedDps
 
     /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
     val values: Map<String, Double> by lazy { read(body) }
@@ -145,7 +157,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     /** Прямые цели строк пассивных умений и всё, что от них сдвинулось. */
     private val skilled: Set<String> by lazy {
         val direct = steady.flatMap { it.lines }.flatMap { StatSpread.targets(it.stat, it.op) }
-        direct.toSet() + moved(read(build.bare), read(body)).keys
+        direct.toSet() + moved(read(bare), read(body)).keys
     }
 
     /** Прямые цели строк дара и шаги его преобразований листа. */
@@ -190,12 +202,13 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
         /**
          * Лист боя героя: его лист [sheet] (без модели - null), уровень [level], класс [heroClass], умения [skills] и Предначертание
-         * [fate] с надетым [equipped] (судьбоносные строки) - те же рычаги, что берёт заход (`ExpeditionActions.gear`), без фляг.
+         * [fate] с надетым [equipped] (судьбоносные строки) - те же рычаги, что берёт заход (`ExpeditionActions.gear`), без фляг;
+         * [pets] (4.9.0) - активные питомцы: боевой бьёт в Мощи героя.
          */
-        fun of(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, equipped: Collection<ItemInstance>): CombatSheet? {
+        fun of(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, equipped: Collection<ItemInstance>, pets: List<Pet> = emptyList()): CombatSheet? {
             val model = sheet.model ?: return null
             val kit = Loadout.of(skills, index, heroClass, emptyList(), sheet.stats, index.powers, index.rules.charges, FateKit.of(index, fate, sheet.stats, equipped))
-            return CombatSheet(index, model, sheet.stats, level, kit)
+            return CombatSheet(index, model, level, kit, PetFighter.combat(index, pets))
         }
     }
 }

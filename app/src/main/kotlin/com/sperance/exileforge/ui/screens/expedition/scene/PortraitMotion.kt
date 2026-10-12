@@ -1,12 +1,13 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.withTransform
-import com.sperance.exileforge.ui.components.decorSeconds
+import com.sperance.exileforge.ui.components.decorTime
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -101,7 +102,12 @@ internal fun DrawScope.portraitSparks(t: Float, count: Int, color: Color) {
 
 /**
  * Часы живого портрета (3.96.1): секунды для [LivingPortraits] у живого монстра при включённых анимациях, иначе - покой. С 4.8.x -
- * общие часы декора ([decorSeconds]), а не свой цикл кадров.
+ * общие часы декора, а не свой цикл кадров; с 4.9.0 - состоянием ([decorTime]): читать в рисовании, без перекомпоновки экрана.
  */
 @Composable
-internal fun portraitClock(code: String): Float = if (LivingPortraits.animated(code)) decorSeconds() else 0f
+internal fun portraitClock(code: String): State<Float> = if (LivingPortraits.animated(code)) decorTime() else StillPortrait
+
+/** Покой портрета: часы, что всегда показывают 0. */
+private object StillPortrait : State<Float> {
+    override val value: Float get() = 0f
+}

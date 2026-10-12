@@ -36,6 +36,7 @@ import com.sperance.exileforge.presentation.state.manaReserve
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.contentKeys
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
@@ -76,6 +77,8 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
     val view = remember(current, combat, shifts, game.lang) {
         StatExplainer(game).explain(combat.explain(current).shifted(shifts[current].orEmpty()), combat.grants(current), combat::holders, combat.lowLife(current))
     }
+    // Ключи карточек (4.9.0): по виду и заголовку - переход по цифрам не перекомпонует совпавшие карточки
+    val cardKeys = remember(view) { contentKeys(view.cards) { "${it.kind}|${it.title}" } }
     val accent = game.index?.stats?.section(current)?.accent() ?: Muted
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -92,7 +95,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
             game.index?.campaign?.combat?.let { StatLimits.of(current, combat.stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
             if (current == MANA_STAT) game.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
-            items(view.cards.size) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
+            items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
             if (view.cards.isEmpty()) item { Text(ui("stat.empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
             if (view.cards.isNotEmpty()) item { Formula(view.formula) }
             if (view.grants.isNotEmpty()) item { Grants(current, view.grants, game) { trail = trail + it } }

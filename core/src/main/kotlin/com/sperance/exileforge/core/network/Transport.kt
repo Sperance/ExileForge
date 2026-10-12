@@ -67,8 +67,8 @@ class Transport(
     /** A session taken from the device but not yet confirmed by the server: every command that may wait, waits. */
     internal var holding = false
 
-    /** Доступ закрыт санкцией (`AUTH_006`, 3.88.5): id санкции из отказа. */
-    internal var onSanctioned: (String) -> Unit = {}
+    /** Доступ закрыт санкцией (`AUTH_006`, 3.88.5): id санкции из отказа и токен апелляции (4.9.0, пусто - нет). */
+    internal var onSanctioned: (String, String) -> Unit = { _, _ -> }
 
     /** Сервер отказал герою запроса как заблокированному (`CH_034`, 3.88.0): id героя из запроса и сам отказ. */
     internal var onHeroBlocked: (String, ApiFailure) -> Unit = { _, _ -> }
@@ -255,7 +255,7 @@ class Transport(
                 )
                 alarm(failure)
                 if (failure.code == HERO_BLOCKED) (query["heroId"] ?: query["id"])?.let { hero -> runCatching { onHeroBlocked(hero, failure) } }
-                if (failure.code == SANCTIONED) runCatching { onSanctioned(failure.args.firstOrNull().orEmpty()) }
+                if (failure.code == SANCTIONED) runCatching { onSanctioned(failure.args.firstOrNull().orEmpty(), failure.args.getOrNull(1).orEmpty()) }
                 throw failure
             }
             success = true

@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.EffectKind
+import com.sperance.exileforge.core.campaign.combat.FateBeat
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.character.StatLine
@@ -114,6 +115,21 @@ data class EffectTrace(
 /** Something that happened without a blow: a buff or a charge gained, a power, a condition, what a kill brought. */
 data class NoteTrace(val kind: NoteKind, val ref: String, val value: Double, val actor: FighterShot, val origin: TraceOrigin) : Trace
 
+/**
+ * Срабатывание Предначертания героя (4.9.0): рычаг или правило строки дара [fate] сделал [beat] с числами [args] (порядок - KDoc
+ * [FateBeat]) и предметом [ref] (недуг, умение - по [FateBeat.ref]).
+ * [repeats] больше нуля - свёртка частого срабатывания за бой: сколько раз ещё оно было после первого, [args] - их итог.
+ */
+data class FateTrace(
+    val fate: String,
+    val beat: FateBeat,
+    val args: List<Double>,
+    val ref: String,
+    val repeats: Int,
+    val actor: FighterShot,
+    val origin: TraceOrigin,
+) : Trace
+
 enum class NoteKind {
     BUFF,
     CHARGE,
@@ -153,9 +169,6 @@ enum class NoteKind {
     RECOVER_RECOUP,
     RECOVER_WASTE,
     REGEN,
-
-    /** Предначертание героя сработало (4.6.0): ref - код дара, value - число рычага, если оно есть. */
-    FATE,
     ;
 
     val recovery: Boolean get() = this in RECOVERY
@@ -207,12 +220,16 @@ enum class LogKind {
     /** Recovery (3.79.0): draughts, life on kill, recoup, spilled healing and regeneration. */
     RECOVERY,
 
+    /** Предначертание героя (4.9.0): срабатывания рычагов и строк дара ([FateTrace]). */
+    FATE,
+
     ;
 
     companion object {
-        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, PET, RECOVERY)
+        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, PET, RECOVERY, FATE)
         fun of(event: CombatEvent): LogKind = when {
             event.pet != null -> PET
+            event.trace is FateTrace -> FATE
             event.action == Action.TICK -> AILMENTS
             event.action == Action.FLASK -> RECOVERY
             (event.trace as? NoteTrace)?.kind?.let { it.recovery || it == NoteKind.KILL } == true -> RECOVERY

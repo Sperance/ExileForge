@@ -16,7 +16,9 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
+import com.sperance.exileforge.rules.content.GuildQuests
 import com.sperance.exileforge.rules.content.QuestBoard
+import com.sperance.exileforge.rules.content.QuestClaimAll
 import com.sperance.exileforge.rules.content.QuestClaimed
 import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.text.LocaleKey
@@ -77,39 +79,33 @@ class QuestActions(
 
     /**
      * После похода (3.24.0, сервер 1.22.0): всё, что поход закончил, сдаётся разом - личные квесты и доля героя в
-     * гильдейских. Сданное (4.10.0) уходит в [shown] - строки итогов карты; не взявшие его итоги (уже закрыты) - тост, как прежде.
-     * Молча при ошибке: пропущенный вызов ничего не теряет, квесты ждут на доске, а концу похода не место для отказа.
+     * гильдейских. С 4.11.x сдаёт сам сервер в ответе журнала, что закрыл заход ([turnIns], доски гильдии - [guild]); не сдал -
+     * сдача отдельным запросом, как прежде. Сданное (4.10.0) уходит в [shown] - строки итогов карты; не взявшие его итоги (уже
+     * закрыты) - тост. Молча при ошибке: пропущенный вызов ничего не теряет, квесты ждут на доске, а концу похода не место для отказа.
      */
-    fun claimAll(heroId: String, shown: (List<QuestTurnIn>) -> Boolean) {
+    fun turnIn(heroId: String, turnIns: QuestClaimAll?, guild: GuildQuests?, shown: (List<QuestTurnIn>) -> Boolean) {
         scope.launch {
             // Заголовки - шаблоны над целью; цели берутся с досок, какими они стояли до сдачи.
             val targets = repository.state.value.targets()
-            val result = try {
-                api.quests.claimAll(heroId)
-            } catch (e: CancellationException) {
-                throw e
-            } catch (_: Exception) {
-                return@launch
-            }
+            val result = turnIns ?: quietly { api.quests.claimAll(heroId) } ?: return@launch
             if (!heroes.onScreen(heroId)) return@launch
             quests { it.copy(board = result.board) }
             heroes.money(result.money)
+            val boards = guild ?: if (result.claimed.any { it.questId !in targets && it.kind in GUILD_KINDS }) quietly { api.quests.guild(heroId) } else null
+            boards?.let { g -> quests { it.copy(guild = g) } }
             if (result.claimed.isEmpty()) return@launch
-            val guild = if (result.claimed.any { it.questId !in targets && it.kind in GUILD_KINDS }) {
-                try {
-                    api.quests.guild(heroId)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    null
-                }
-            } else {
-                null
-            }
-            guild?.let { g -> quests { it.copy(guild = g) } }
-            val named = targets + Quests(guild = guild).targets()
+            val named = targets + Quests(guild = boards).targets()
             if (!shown(result.claimed.map { QuestTurnIn(title(it, named), it.rewards) })) notices.toast(claimedLine(result.claimed, named))
         }
+    }
+
+    /** Чтение конца похода: ошибка - null, отмена идёт дальше. */
+    private suspend fun <T> quietly(read: suspend () -> T): T? = try {
+        read()
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        null
     }
 
     /** Заголовок сданного задания с его целью из [targets]; цели нет - «…». */

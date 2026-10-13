@@ -109,6 +109,10 @@ import kotlinx.serialization.Serializable
     val rewards: List<EventReward> = emptyList(),
     /** The run the report is about (server 1.68.0). */
     val runId: String = "",
+    /** Задания, сданные сервером при конце захода (4.11.x): ответ, что закрыл заход; null - заход открыт или сдача не прошла. */
+    val turnIns: com.sperance.exileforge.rules.content.QuestClaimAll? = null,
+    /** Задания гильдии после той сдачи (4.11.x); null - вне гильдии или заход открыт. */
+    val guildQuests: com.sperance.exileforge.rules.content.GuildQuests? = null,
 )
 
 /** Where items that came to the hero went: into the stash, into its overflow, or to the merchant for [gold]. */

@@ -393,7 +393,7 @@ class ExpeditionActions(
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
             report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
-            if (!report.open && j.settled) done(j) else store.saveJournal(j.heroId, j.encode())
+            if (!report.open && j.settled) done(j, report) else store.saveJournal(j.heroId, j.encode())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
             // Журнал длиннее одной пачки идёт дальше сразу, часть за частью.
             if (report.open && !j.settled) flushes.trySend(Unit)
@@ -474,14 +474,15 @@ class ExpeditionActions(
         runs().forEach { it.send(RunCommand.Campaign(state)) }
     }
 
-    private suspend fun done(j: RunJournal) {
+    /** Поход закрыт и журнал сведён; [report] - ответ, что закрыл заход: с ним сервер сдал задания (4.11.x). */
+    private suspend fun done(j: RunJournal, report: RunReport? = null) {
         // Чего сервер не ответил, того не ответит: никто больше не ждёт.
         if (runJournal === j) runs().forEach { it.send(RunCommand.Settled(Int.MAX_VALUE)) }
         if (runJournal === j) runJournal = null
         store.clearJournal(j.heroId)
-        // Поход считается целиком (3.24.0): всё, что он закончил, сдаётся разом. Сданное (4.10.0) - блоком в итогах карты, пока они
-        // на экране; закрытые итоги - тостом.
-        quests.claimAll(j.heroId) { turnedIn ->
+        // Поход считается целиком (3.24.0): всё, что он закончил, сдаётся разом - сервером в закрывшем ответе (4.11.x), иначе
+        // отдельным запросом. Сданное (4.10.0) - блоком в итогах карты, пока они на экране; закрытые итоги - тостом.
+        quests.turnIn(j.heroId, report?.turnIns, report?.guildQuests) { turnedIn ->
             val shown = mutableRun.value?.journal?.runId == j.runId
             if (shown) expedition { it.copy(turnedIn = it.turnedIn + turnedIn) }
             shown

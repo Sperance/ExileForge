@@ -21,6 +21,7 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.partFigure
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
@@ -168,15 +169,15 @@ private val StatSection.glyph: Glyph get() = when (this) {
 }
 
 /**
- * Из чего строка с частями (4.6.5): своя характеристика и каждая часть (`partOf`) листа боя [stats]; доля другого вида
- * (процент к числу) - «от максимума». Без частей - null.
+ * Из чего строка с частями (4.6.5): своя характеристика и каждая часть (`partOf`) листа боя [stats], словами [partFigure] - доля
+ * максимума или «увеличение» (4.11.x). Без частей - null.
  */
 private fun partsText(key: String, stats: Map<String, Double>, index: ContentIndex): String? {
     val registry = index.stats
     val parts = registry.parts(key).mapNotNull { part -> stats[part]?.takeIf { it != 0.0 }?.let { part to it } }
     if (parts.isEmpty()) return null
     val own = stats[key] ?: 0.0
-    val texts = parts.map { (part, value) -> if (registry.isPercent(part) && !registry.isPercent(key)) ui("hero.part_share", statValue(part, value, index)) else statValue(part, value, index) }
+    val texts = parts.map { (part, value) -> partFigure(key, part, statValue(part, value, index), index) }
     return (listOfNotNull(statValue(key, own, index).takeIf { own != 0.0 }) + texts).joinToString(" + ")
 }
 

@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.LifeFlow
 import com.sperance.exileforge.core.campaign.combat.RegenPool
 import com.sperance.exileforge.rules.content.ExpeditionRules
+import com.sperance.exileforge.rules.content.ManaRule
 import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.sheet.Recovery
 
@@ -28,15 +29,20 @@ internal value class RoadLife(val net: Double) {
         /** Ниже этого здоровья деген на карте не опускает. */
         const val FLOOR = 1.0
 
-        /** Скорость здоровья героя [body] на карте по темпу похода [pace]; [curb] - срез недугов, [resting] - отдых идёт. */
-        fun of(body: Combatant, pace: ExpeditionRules, curb: Double = 0.0, resting: Boolean = true): RoadLife = RoadLife(flow(body, pace, curb, resting).net)
+        /**
+         * Скорость здоровья героя [body] на карте по темпу похода [pace] и правилу маны [mana]; [curb] и [manaCurb] - срез недугов
+         * здоровья и маны, [resting] - отдых идёт.
+         */
+        fun of(body: Combatant, pace: ExpeditionRules, mana: ManaRule, curb: Double = 0.0, manaCurb: Double = 0.0, resting: Boolean = true): RoadLife =
+            RoadLife(flow(body, pace, mana, curb, manaCurb, resting).net)
 
         /**
-         * Из чего скорость: регенерация листа под долей восстановления и срезом недугов [curb] плюс отдых `offCombatRegen`, пока
-         * [resting], против дегена листа.
+         * Из чего скорость: регенерация листа и доля регенерации маны ([Recovery.lifeFromMana], 4.11.x) под долей восстановления и
+         * срезом недугов [curb] ([manaCurb] - маны) плюс отдых `offCombatRegen`, пока [resting], против дегена листа.
          */
-        fun flow(body: Combatant, pace: ExpeditionRules, curb: Double = 0.0, resting: Boolean = true): LifeFlow = LifeFlow(
-            regen = body.regen(RegenPool.LIFE) * body.recoveryRate * Recovery.share(body, RecoveryPool.LIFE, curb) + if (resting) body.maxLife * pace.offCombatRegen / 100 else 0.0,
+        fun flow(body: Combatant, pace: ExpeditionRules, mana: ManaRule, curb: Double = 0.0, manaCurb: Double = 0.0, resting: Boolean = true): LifeFlow = LifeFlow(
+            regen = (body.regen(RegenPool.LIFE) * Recovery.share(body, RecoveryPool.LIFE, curb) + Recovery.lifeFromMana(body, mana, manaCurb, curb)) * body.recoveryRate +
+                if (resting) body.maxLife * pace.offCombatRegen / 100 else 0.0,
             degen = body.maxLife * body.lifeDegenShare,
             degenShare = body.lifeDegenShare * 100,
         )

@@ -51,6 +51,7 @@ import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.nodeTypeTitle
+import com.sperance.exileforge.core.display.partFigure
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.statNumber
@@ -349,7 +350,7 @@ internal fun contributionText(total: StatTotal, index: ContentIndex?): String = 
 
 /**
  * Одна часть строки. Операция решает вид числа: «+120» и «+40%» к одной характеристике - разные утверждения; MORE - множитель
- * «×1.25»; SET заменяет базу и знака не несёт. Процентная доля числовой строки - «от максимума», как в сводке героя; условная
+ * «×1.25»; SET заменяет базу и знака не несёт. Доля строки - словами [partFigure], как в сводке героя; условная
  * часть - со словами условия из словаря модификаторов.
  */
 private fun partText(row: String, part: StatPart, index: ContentIndex?): String {
@@ -361,7 +362,7 @@ private fun partText(row: String, part: StatPart, index: ContentIndex?): String 
         Op.MORE -> "×" + factor(1 + part.value / 100)
         Op.SET -> statValue(stat, part.value, index)
     }
-    val shared = if (stat != row && statPercent(stat, index) && !statPercent(row, index)) ui("hero.part_share", figure) else figure
+    val shared = partFigure(row, stat, figure, index)
     return part.condition?.let { "$shared ${locOr(LocaleKey.condition(it), it.name)}" } ?: shared
 }
 

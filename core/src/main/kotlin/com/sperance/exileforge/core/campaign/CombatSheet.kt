@@ -50,6 +50,13 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
     SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, true) {
         override fun adds(body: Combatant): Double = RegenPool.SHIELD.fromShare(body)
     },
+    /**
+     * Регенерация маны (4.11.x): строка сводки - маны в секунду, как её читает бой ([Recovery.manaRegen]): к плоской - доля максимума
+     * по правилу боя, её «увеличение» `STOCK_MANA_REGEN` и доля восстановления.
+     */
+    MANA_REGEN(CoreStat.MANA_REGEN_FLAT.code, CoreStat.MANA_REGEN.code, true) {
+        override fun adds(body: Combatant): Double = Recovery.manaRegen(body, body.rules.mana) - body[CoreStat.MANA_REGEN_FLAT.code]
+    },
     LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true) {
         override fun adds(body: Combatant): Double = body.maxLife * body.lifeOnKillShare
     },

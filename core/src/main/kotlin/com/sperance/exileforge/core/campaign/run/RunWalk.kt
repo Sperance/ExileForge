@@ -4,7 +4,6 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
-import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Buildup
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
@@ -28,7 +27,6 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -40,6 +38,7 @@ import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
+import com.sperance.exileforge.rules.sheet.Recovery
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -166,11 +165,12 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 
 /**
  * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена; под ранящим
- * недугом - без основы), мана (4.11.0 - под долей восстановления листа; недуги на герое режут и её), энергощит и идущие флаконы.
+ * недугом - без основы), мана ([Recovery.manaRegen], 4.11.0 - под долей восстановления листа; недуги на герое режут и её), энергощит
+ * и идущие флаконы.
  */
 internal fun ExpeditionRun.recover(dt: Double) {
-    life = RoadLife.of(hero, pace, curb(RecoveryPool.LIFE), resting = !carry.hurting).after(life, hero.maxLife, dt)
-    mana = (mana + hero.manaRegen(rules.mana, curb(RecoveryPool.MANA)) * dt).coerceAtMost(manaCap())
+    life = RoadLife.of(hero, pace, rules.mana, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), resting = !carry.hurting).after(life, hero.maxLife, dt)
+    mana = (mana + Recovery.manaRegen(hero, rules.mana, curb(RecoveryPool.MANA)) * dt).coerceAtMost(manaCap())
     shield = EnergyShield.recovered(hero, rules, shield, seconds - hitAt, dt)
     if (flaskLeft.any { it > 0 }) {
         val before = flaskLeft.map { it > 0 }

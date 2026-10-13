@@ -6,10 +6,7 @@ import com.sperance.exileforge.rules.content.Ceiling
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.CoreStat
-import com.sperance.exileforge.rules.content.ManaRule
-import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.sheet.DamageTaken
-import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.sheet.StatReader
 import kotlin.math.max
 
@@ -37,12 +34,6 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** Immune to chaos (3.17.0, server 1.15.0): its hits and poison do nothing. */
     val chaosImmune = stat(CoreStat.CHAOS_IMMUNE.code) > 0
-
-    /**
-     * Mana back a second (server 0.69.0): the rule's share of the maximum, faster by the sheet's regeneration. Доля восстановления
-     * маны (4.11.0) - [Recovery.share]: «меньше регенерации» и запрет листа, недуги боя режут её на [curb] процентов (вне боя - 0).
-     */
-    fun manaRegen(rule: ManaRule, curb: Double = 0.0): Double = maxMana * rule.regen / 100 * max(0.0, 1 + stat(CoreStat.MANA_REGEN.code) / 100) * Recovery.share(this, RecoveryPool.MANA, curb)
 
     /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
     val damageMore = max(0.0, 1 + stat(CoreStat.DAMAGE.code) / 100)

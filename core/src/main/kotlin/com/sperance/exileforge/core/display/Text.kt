@@ -106,6 +106,18 @@ fun statPercent(stat: String, index: ContentIndex? = null): Boolean = when (stat
     null -> PERCENT_MARK.containsMatchIn(rawStatTitle(stat, uiLanguage))
 }
 
+/**
+ * Часть [part] строки сводки [row] (`partOf`) словами (4.11.x), её число - [figure]: «увеличение» (вид `PERCENT` реестра, как
+ * `STOCK_MANA_REGEN` у плоской регенерации маны) - «увеличение …», процентная доля числовой строки (`STOCK_LIFE_REGEN_PERCENT`) -
+ * «… от максимума»; своя характеристика строки и прочее - число как есть.
+ */
+fun partFigure(row: String, part: String, figure: String, index: ContentIndex?): String = when {
+    part == row || statPercent(row, index) -> figure
+    index?.stats?.isPercent(part) == true -> ui("hero.part_increased", figure)
+    statPercent(part, index) -> ui("hero.part_share", figure)
+    else -> figure
+}
+
 /** Характеристика-флаг (4.8.0, [StatUnit.FLAG]): игрок видит отметку, а не число. */
 fun statFlag(stat: String, index: ContentIndex?): Boolean = statUnit(stat, index) == StatUnit.FLAG
 

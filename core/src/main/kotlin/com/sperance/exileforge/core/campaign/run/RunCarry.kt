@@ -57,7 +57,7 @@ internal fun ExpeditionRun.curb(pool: RecoveryPool): Double = law.curb(hero, car
  * Итог здоровья на карте в секунду: регенерация листа (под долей восстановления и недугами) и отдых вне боя - только без ранящего
  * недуга ([RoadLife]), деген листа и урон недугов. Плитка на полосе жизни и лист эффектов карты.
  */
-internal fun ExpeditionRun.roadFlow(): LifeFlow = RoadLife.flow(hero, pace, curb(RecoveryPool.LIFE), resting = !carry.hurting)
+internal fun ExpeditionRun.roadFlow(): LifeFlow = RoadLife.flow(hero, pace, rules.mana, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), resting = !carry.hurting)
     .copy(ailments = carry.ailments.filter { it.ailment.hurts }.sumOf { law.perSecond(hero, carry.ailments, it) })
 
 /** Недуги на герое вне боя - плитками полки, как в бою: по недугу - доля времени, стаки, секунды (до десятой) и сила. */

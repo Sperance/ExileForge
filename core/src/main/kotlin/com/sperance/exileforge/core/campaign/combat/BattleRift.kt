@@ -34,14 +34,13 @@ private fun Battle.riftBoss(): Fighter? = guardian?.let(foeFighters::get)
 private fun Battle.isGuardian(target: Fighter): Boolean = target.side == Side.MONSTER && target.index == guardian
 
 /**
- * Начало боя (3.96.0): Засада откладывает первые удары героя и питомца, Поглотитель встаёт сильнее на сытое им Эхо. Бросков
+ * Начало боя (3.96.0): Засада откладывает первые удары героя, Поглотитель встаёт сильнее на сытое им Эхо. Бросков
  * здесь нет: идолы встают на первом срезе.
  */
 internal fun Battle.riftOpen(fight: RiftFight) {
     val ambush = fight.rules.ambush
     if (ambush > 0) {
         heroFighter.nextAttack += ambush
-        pets.forEach { it.nextAttack += ambush }
     }
     val boss = riftBoss() ?: return
     if (fight.devoured > 0) {
@@ -51,7 +50,7 @@ internal fun Battle.riftOpen(fight: RiftFight) {
     fight.lastLife = boss.life
 }
 
-/** Герой и питомец уже в бою: Засада прошла. */
+/** Герой уже в бою: Засада прошла. */
 internal fun Battle.joined(): Boolean = time >= (rift?.ambush ?: 0.0)
 
 /** Срез Разлома: печати, замки и идолы Стража, кражи Поглотителя, Законы Владыки. Зовётся в шаге после ярости стража. */
@@ -105,7 +104,7 @@ internal fun Battle.sealed(target: Fighter): Double {
 }
 
 /**
- * Попадание стороны героя по [target] - удар героя, удар питомца, тик недуга героя: каждые [WardenRule.hits] снимают печать,
+ * Попадание стороны героя по [target] - удар героя, тик недуга героя: каждые [WardenRule.hits] снимают печать,
  * крит - сразу.
  */
 internal fun Battle.sealStruck(target: Fighter, crit: Boolean) {

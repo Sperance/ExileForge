@@ -9,7 +9,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.AtlasSeals
@@ -23,11 +22,11 @@ private val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
 private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
 
 /**
- * Над чем работает кузница (4.4.x) - зеркало правил [OrbTarget]: вещь или питомец. Наковальня, лоток сфер и полоса с удерживаемой
- * кнопкой одни на обе цели; что у цели своё (разделы, свои сферы, прогноз качества), говорит она сама.
+ * Над чем работает кузница (4.4.x) - зеркало правил [OrbTarget]: вещь. Наковальня, лоток сфер и полоса с удерживаемой кнопкой
+ * не знают вида цели; что у цели своё (разделы, свои сферы, прогноз качества), говорит она сама.
  */
 sealed interface ForgeTarget {
-    /** Id копии вещи или питомца. */
+    /** Id копии вещи. */
     val id: String
 
     /** Та же цель для правил: что примет сфера, решает [OrbApplier] над ней. */
@@ -109,7 +108,6 @@ sealed interface ForgeTarget {
         override val noOrbsKey: String get() = "pets.no_orbs"
         override val changeKey: String get() = "forge.change_pet"
         override val socketKey: String get() = "forge.target_pet"
-    }
 }
 
 /** Цель кузницы героя: выбранный питомец [pet], пока он есть, иначе вещь под кузницей; null - выбирать не из чего. */
@@ -125,7 +123,6 @@ data class OrbChoice(val code: String, val needsOmen: Boolean)
  */
 fun ForgeTarget.orbChoices(index: ContentIndex, shelf: List<String>, omens: List<Omen>, held: (String) -> Long): List<OrbChoice> {
     val applier = OrbApplier(index)
-    val target = orbTarget
     return shelf.mapNotNull { code -> Orb.of(code)?.takeIf { it != Orb.ORB_OF_REGRET && held(code) > 0 } }.mapNotNull { orb ->
         when {
             applier.accepts(orb, target) -> OrbChoice(orb.name, needsOmen = false)

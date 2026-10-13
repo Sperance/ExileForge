@@ -85,7 +85,6 @@ fun HeroScreen() {
                 when (page) {
                     HeroPage.WORN -> {
                         item { rememberEquipment(game)?.let { EquipmentLedger(it) { place, worn -> if (worn != null) detailId = worn else pickPlace = place } } }
-                        item { PetSlots(game, model::activatePet) }
                     }
 
                     HeroPage.BAG -> {

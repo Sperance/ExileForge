@@ -10,7 +10,6 @@ import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.presentation.state.TAB_CRAFTS
 import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
 import com.sperance.exileforge.presentation.state.TAB_HERO
-import com.sperance.exileforge.presentation.state.TAB_PETS
 import com.sperance.exileforge.presentation.state.TAB_PROGRESS
 import com.sperance.exileforge.presentation.state.TAB_REDEMPTION
 import com.sperance.exileforge.presentation.state.TAB_SETTINGS
@@ -75,11 +74,6 @@ sealed interface Route : NavKey {
     @Serializable data object Forge : Route {
         override val root: Route get() = Progress
         override val tab get() = TAB_CRAFT
-    }
-
-    @Serializable data object Pets : Route {
-        override val root: Route get() = Progress
-        override val tab get() = TAB_PETS
     }
 
     /** Испытания (4.0.0): страница «Похода», прежде «Развития». */
@@ -180,7 +174,7 @@ sealed interface Route : NavKey {
     }
 
     companion object {
-        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Pets, Trials, City, Account, Settings(), Admin, Redemption)
+        private val GAME: List<Route> = listOf(Hero, Tree, Grimoire, Expedition, Crafts, Progress, Forge, Trials, City, Account, Settings(), Admin, Redemption)
 
         /** Экран по прежнему номеру вкладки; неизвестный номер - герой. */
         fun ofTab(tab: Int): Route = GAME.firstOrNull { it.tab == tab } ?: Hero

@@ -34,10 +34,6 @@ internal fun Battle.step(dt: Double) {
         burn(it, dt)
     }
     lifeFlowLine()
-    // A support pet mends the hero while it stands (3.5.0).
-    allyFighter?.takeIf { it.alive && heroFighter.alive && ally!!.heal > 0 && joined() }?.let {
-        mended(lifeBack(heroFighter, heroFighter.body.maxLife * ally!!.heal / 100 * dt))
-    }
     expire()
     fateTicks(dt)
     if (finished()) return
@@ -71,7 +67,7 @@ internal fun Battle.step(dt: Double) {
     for (k in order.indices) {
         val me = order[k]
         if (!me.alive || me.held || me.nextAttack > time) continue
-        val target = if (me.side == Side.HERO) target() else foeTarget()
+        val target = if (me.side == Side.HERO) target() else heroFighter
         if (target != null) strike(me, target, swingOf(me))
         me.nextAttack = time + me.attackInterval * me.slow() * cadence(me)
         if (finished()) return
@@ -82,7 +78,7 @@ internal fun Battle.step(dt: Double) {
 
 /**
  * Очередь хода шага (4.9.0): [Battle.everyone], устойчиво упорядоченные по `nextAttack` - тот же порядок, что `sortedBy`,
- * в буфере боя вставками, без новых списков на шаг. Порядок равных - исходный (герой, питомцы, враги): буфер каждый шаг
+ * в буфере боя вставками, без новых списков на шаг. Порядок равных - исходный (герой, враги): буфер каждый шаг
  * заполняется заново, а не досортировывается от прошлого шага.
  */
 private fun Battle.dueOrder(): List<Fighter> {
@@ -195,7 +191,6 @@ internal fun Battle.watch() {
             }
         }
     }
-    petWatch()
     traitsStand()
     foeFighters.forEach { foe -> if (foe.alive) phase(foe) }
     if (slotHolders.isNotEmpty()) totemTick()
@@ -206,14 +201,6 @@ internal fun Battle.watch() {
             remake(foe)
         }
     }
-}
-
-/** The pet fell since the last look (3.33.0): the powers answering its death hear of it once. */
-internal fun Battle.petWatch(killer: Fighter? = null) {
-    val pet = allyFighter ?: return
-    if (pet.alive || !petStood) return
-    petStood = false
-    powers.fire(PowerEvent.PET_DEATH, PowerMoment(killer))
 }
 
 /** [fighter]'s body made again from its sheet with what lies on it — and the hero's under the auras of the foes still standing. */
@@ -276,7 +263,6 @@ internal fun Battle.heroConditions(): Set<Condition> {
         if (heroCharges.count(ChargeKind.POWER) > 0) add(Condition.POWER_CHARGE)
         if (heroCharges.count(ChargeKind.ENDURANCE) > 0) add(Condition.ENDURANCE_CHARGE)
         if (hero.effects.any { it.kind == EffectKind.FLASK && it.until > time }) add(Condition.FLASK_ACTIVE)
-        if (allyFighter?.alive == true) add(Condition.PET_ALIVE)
     }
 }
 
@@ -405,7 +391,6 @@ private fun Battle.burn(me: Fighter, dt: Double) {
                         (own.maxOfOrNull { it.until } ?: time) - time, own.maxOfOrNull { it.duration } ?: 0.0, own.size, shot(me), factors, origin,
                         (if (source == Side.HERO) heroFighter else foeFighters.getOrNull(active?.foe ?: -1))?.let { shot(it) },
                     ),
-                    pet = isPet(me),
                 )
                 if (source == Side.HERO) sealStruck(me, crit = false)
             }

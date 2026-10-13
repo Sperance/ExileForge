@@ -90,7 +90,7 @@ private const val HERO_CARD = -1
     val mods = remember(mapEffects, origins, game.hero, game.index) {
         if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
     }
-    // Мощь боя (4.8.0): герой - по телу боя под эффектами карты (4.9.0: с уроном умений и питомца из листа боя), враги - по своему листу
+    // Мощь боя (4.8.0): герой - по телу боя под эффектами карты (4.9.0: с уроном умений из листа боя), враги - по своему листу
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
     CompositionLocalProvider(LocalFightMight provides might) {
         Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {

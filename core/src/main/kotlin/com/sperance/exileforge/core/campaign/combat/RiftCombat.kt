@@ -27,7 +27,7 @@ data class RiftCombat(
     val lord: LordRule? = null,
     /** Закон, отменённый контрактом Владыки. */
     val forbidden: RiftLaw? = null,
-    /** Засада: столько секунд герой и питомец вступают в бой позже. */
+    /** Засада: столько секунд герой вступает в бой позже. */
     val ambush: Double = 0.0,
     /** Идол Стража - тотем правил [WardenRule.idols], найденный среди тотемов кампании; null - Страж без идолов. */
     val idol: FoeTotem? = null,

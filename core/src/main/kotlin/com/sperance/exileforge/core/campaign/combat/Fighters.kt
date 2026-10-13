@@ -32,12 +32,6 @@ data class ActiveAilment(
  * for its mana — a boss's own, a caster's spell of its element, one a mad essence borrowed.
  */
 
-/**
- * A combat pet in a fight (3.5.0): [code] its species, [body] its sheet, a [tank] holds every blow on itself,
- * [heal] mends the hero so many percent of their life a second, [drawFire] the share of blows it draws otherwise.
- */
-class Ally(val code: String, val body: Combatant, val tank: Boolean, val heal: Double, val drawFire: Double)
-
 /** The traits of this roll (3.73.0), as the content names them. */
 fun com.sperance.exileforge.rules.roll.RolledMonster.traitsIn(index: com.sperance.exileforge.rules.content.ContentIndex): List<MonsterTrait> = traits.mapNotNull(index.campaign.traits.byCode::get)
 

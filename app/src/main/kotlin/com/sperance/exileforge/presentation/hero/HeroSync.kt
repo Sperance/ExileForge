@@ -142,10 +142,10 @@ class HeroSync(
         draw = scope.launch {
             val view = withContext(Dispatchers.Default) {
                 val info = merged.hero
-                val sheet = Sheets.calculate(index, info.level, info.heroClass, merged.tree, merged.items, merged.pets.active, info.laws, info.fate)
+                val sheet = Sheets.calculate(index, info.level, info.heroClass, merged.tree, merged.items, info.laws, info.fate)
                 // Лист боя сводки (4.6.4) складывается здесь же, вне главного потока: цифры и отметки - сразу
-                val combat = CombatSheet.of(index, sheet, info.level, info.heroClass, info.skills, info.fate, merged.items.filter { it.equipped }, merged.pets.active)?.also { it.figures }
-                HeroView(info, merged.items, merged.overflow, merged.bag, merged.tree, merged.campaign, merged.crafts, merged.merchant, sheet, merged.pets, combat)
+                val combat = CombatSheet.of(index, sheet, info.level, info.heroClass, info.skills, info.fate, merged.items.filter { it.equipped })?.also { it.figures }
+                HeroView(info, merged.items, merged.overflow, merged.bag, merged.tree, merged.campaign, merged.crafts, merged.merchant, sheet, combat = combat)
             }
             if (ticket != drawing || parts !== merged) return@launch
             heroes.set(view, System.currentTimeMillis())

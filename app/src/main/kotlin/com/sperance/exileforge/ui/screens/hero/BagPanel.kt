@@ -63,7 +63,6 @@ enum class BagCategory(val key: String) {
     /** Руны умений (4.4.0): вставляются в гнёзда гримуара. */
     RUNES("bag.section_runes"),
     MATERIALS("bag.section_materials"),
-    PETS("bag.section_pets"),
     OTHER("bag.section_other"),
 }
 
@@ -81,7 +80,6 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
         Item.BOOK -> BagCategory.BOOKS
         Item.RUNE -> BagCategory.RUNES
         Item.MATERIAL -> BagCategory.MATERIALS
-        Item.PET -> BagCategory.PETS
         Item.CHEST -> BagCategory.CHESTS
         else -> BagCategory.OTHER
     }

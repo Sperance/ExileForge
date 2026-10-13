@@ -107,8 +107,6 @@ data class HeroView(
     val crafts: WorkState = WorkState(),
     val merchant: MerchantStock = MerchantStock(),
     val sheet: HeroSheet = HeroSheet.EMPTY,
-    /** The menagerie (3.5.0, server 1.5.0). */
-    val pets: PetState = PetState(),
     /** Лист боя (4.6.4): цифры сводки, разбор и сравнения - с пассивными умениями и Предначертанием; null - листа ещё нет. */
     val combat: CombatSheet? = null,
 ) {
@@ -155,60 +153,9 @@ data class HeroView(
     val chronicle: Map<String, Long> get() = Counter.values(info.counters, Counter.derived(level, campaign.cleared.size, info.atlas.size, tree.size))
 }
 
-/** The menagerie as the server keeps it: the pets, the combat one and the helper at work by id, the ceiling and the incubator (server 1.67.0). */
-@kotlinx.serialization.Serializable data class PetState(
-    val pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
-    val combat: String = "",
-    val helper: String = "",
-    val cap: Int = 0,
-    val incubator: IncubatorState = IncubatorState(),
-) {
-    val active: List<com.sperance.exileforge.rules.content.Pet> get() = pets.filter { it.id == combat || it.id == helper }
-    fun pet(id: String) = pets.firstOrNull { it.id == id }
-    fun isActive(id: String) = id == combat || id == helper
-}
-
 /**
- * Итог сферы на питомце (4.4.1, сервер `PetOrbResponse`): строка [messageKey] с аргументами-ключами [messageArgs] - как у сферы на
- * вещи ([CurrencyApplyResponse]), - и зверинец [pets] после сферы.
- */
-@Serializable data class PetOrbResponse(
-    val messageKey: String = "",
-    val messageArgs: List<String> = emptyList(),
-    val pets: PetState = PetState(),
-) {
-    val message: String get() = loc(messageKey, messageArgs)
-}
-
-/**
- * The incubator (server 1.67.0): [slots] places open by the hero's sheet, [max] at most, the places shown in [entries]
- * (open ones and any busy one past them) and the server's clock [now] when it was read, so a countdown runs on its time.
- */
-@kotlinx.serialization.Serializable data class IncubatorState(
-    val slots: Int = 0,
-    val max: Int = 0,
-    val entries: List<IncubatorSlot> = emptyList(),
-    val now: Long = 0,
-) {
-    /**
-     * How far the server's clock runs ahead of the local one, as last measured on a fresh answer ([ServerClock]). The part is
-     * kept and decoded again long after it came (its clock is not a change of it), so its own [now] says nothing of the moment.
-     */
-    val clockOffset: Long get() = ServerClock.offset
-    fun slot(index: Int): IncubatorSlot? = entries.firstOrNull { it.slot == index }
-
-    /** The server's clock now, as the local one reads it: the part is resent only on real changes, so ripeness is counted here. */
-    val serverNow: Long get() = System.currentTimeMillis() + clockOffset
-    val ready: Int get() = serverNow.let { at -> entries.count { it.busy && it.ripe(at) } }
-    val incubating: Int get() = serverNow.let { at -> entries.count { it.busy && !it.ripe(at) } }
-
-    /** The first open place with no egg, or null when every one is taken. */
-    val free: IncubatorSlot? get() = entries.firstOrNull { it.open && !it.busy }
-}
-
-/**
- * The server's clock against the local one (3.81.0): measured when a fresh pets part arrives with the server's [IncubatorState.now],
- * not when a kept one is decoded again — a re-read after the network came back used to restart the eggs' countdowns.
+ * The server's clock against the local one (3.81.0): measured when a fresh snapshot arrives with the server's
+ * [com.sperance.exileforge.core.model.sync.HeroSnapshot.now] (4.11.x), not when a kept one is read again.
  */
 object ServerClock {
     @Volatile var offset: Long = 0L
@@ -218,27 +165,6 @@ object ServerClock {
     fun heard(serverNow: Long) {
         if (serverNow > 0) offset = serverNow - System.currentTimeMillis()
     }
-}
-
-/** A place of the incubator: empty when [egg] is blank; otherwise the egg's settled [rarity] and [level] and its term, epoch ms. */
-@kotlinx.serialization.Serializable data class IncubatorSlot(
-    val slot: Int,
-    val open: Boolean = true,
-    val egg: String = "",
-    val rarity: com.sperance.exileforge.rules.content.Rarity? = null,
-    val level: Int = 0,
-    val startedAt: Long = 0,
-    val readyAt: Long = 0,
-    val remainingSeconds: Long = 0,
-    val ready: Boolean = false,
-) {
-    val busy: Boolean get() = egg.isNotBlank()
-
-    /** Hatched by server time [at]: the flag the server sent, or the term passed since. */
-    fun ripe(at: Long): Boolean = ready || (busy && readyAt in 1..at)
-
-    /** Ripeness 0..1 at server time [now]. */
-    fun progress(now: Long): Float = if (!busy || readyAt <= startedAt) 1f else ((now - startedAt).toFloat() / (readyAt - startedAt)).coerceIn(0f, 1f)
 }
 
 /** A hero of the account's list (`GET /hero/byUser`, the raw document): enough for the menu, the rest comes with the view. */

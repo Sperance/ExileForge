@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.campaign.combat.Action
-import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.HitKind
@@ -15,7 +14,6 @@ import com.sperance.exileforge.core.campaign.combat.passiveViews
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.combat.strikes
 import com.sperance.exileforge.core.campaign.run.AilmentView
-import com.sperance.exileforge.core.campaign.run.AllyView
 import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.BuildupView
 import com.sperance.exileforge.core.campaign.run.CastView
@@ -29,49 +27,9 @@ import com.sperance.exileforge.core.campaign.run.RageView
 import com.sperance.exileforge.core.campaign.run.SlotView
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.Pet
-import com.sperance.exileforge.rules.content.PetRole
 import com.sperance.exileforge.rules.content.RiftLaw
-import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.roll.RolledMonster
-import com.sperance.exileforge.rules.sheet.PetFighter
 import kotlin.math.roundToInt
-
-/**
- * The combat pet as a fighter: its sheet at its level, what its role does; a new one each fight stands up whole. Since 3.33.0
- * (server 1.32.0) the hero's sheet reaches it — its levels, damage, life, speed, armour and resistances — made again only
- * when those change. Shared by the map's runs and the trials (3.49.0). Без питомца (4.6.3, Предначертание `PET_FIRST`) в бой
- * встаёт дух дара уровня героя - лист обычного питомца этого уровня без строк; настоящий питомец его заменяет.
- */
-internal class PetAllies(private val index: ContentIndex, private val rules: CombatRules) {
-    /** Из чего собран последний боец: питомец, или дух и уровень героя, и что героя до них доходит. */
-    private data class Made(val pet: Pet?, val spirit: String?, val level: Int, val boons: Map<String, Double>)
-
-    private var made: Pair<Made, Ally?>? = null
-    private val menagerie by lazy { Menagerie(index) }
-
-    /**
-     * [pet] as a fighter under the [hero]'s sheet; since 3.70.0 the pet is the caller's, so one put to work mid-run joins the next
-     * fight. Без питомца - дух Предначертания [spirit] (вид `pets.json`, null - нет) уровня героя.
-     */
-    fun of(hero: Combatant, pet: Pet?, spirit: String?): Ally? {
-        val summoned = spirit.takeIf { pet == null }
-        val key = Made(pet, summoned, if (summoned != null) hero.level else 0, PetBoons.of(hero.stats))
-        made?.takeIf { it.first == key }?.let { return it.second }
-        // Боец питомца или духа - правилом (4.9.0, [PetFighter]): тот же, что бьёт в Мощи героя
-        val ally = PetFighter.of(index, pet, summoned, hero.level, hero.stats)?.let(::ally)
-        made = key to ally
-        return ally
-    }
-
-    private fun ally(fighter: PetFighter): Ally = Ally(
-        fighter.species,
-        Combatant(fighter.stats, fighter.level, rules),
-        fighter.role == PetRole.TANK,
-        if (fighter.role == PetRole.SUPPORT) menagerie.supportHeal(fighter.level) else 0.0,
-        index.pets.drawFire,
-    )
-}
 
 /**
  * The fight as the overlay prints it: the [monsters] of the fight as cards in the battle's order, the hero's pools and states,
@@ -122,13 +80,12 @@ internal fun Battle.hud(
         )
     }
     return FightHud(
-        ally = allyFighter?.let { f -> AllyView(ally!!.code, shownLife(f.life, f.alive, f.body.maxLife), shownMax(f.body.maxLife), f.alive) },
         leader = leader, foes = foes,
         heroLife = shownLife(h.life, h.alive, h.body.maxLife), heroShield = h.shield.roundToInt(),
         hits = hits, speed = speed,
         outcome = outcome,
         heroSwing = swing(h), heroAilments = ailments(h), heroHeld = h.held, heroBuildup = buildup(h),
-        lunge = lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe, event.pet != null) },
+        lunge = lunge()?.let { (event, progress) -> LungeView(event.actor, event.action, event.kind, event.landed, progress.toFloat(), event.foe) },
         events = newestFirst(),
         started = started, paused = paused,
         target = target()?.index, focus = focus,
@@ -145,7 +102,6 @@ internal fun Battle.hud(
         strikes = strikes(STRIKE_LUNGES * rules.lunge),
         heroFlow = lifeFlow,
         heroPassives = passiveViews(),
-        foesAimHero = foesAimHero(),
         time = time,
         beat = rules.lunge,
     )
@@ -153,15 +109,6 @@ internal fun Battle.hud(
 
 /** Сцена удара на экране (4.9.3) длится столько выпадов ([CombatRules.lunge]): выпад, вспышка или полёт снаряда, тряска цели. */
 internal const val STRIKE_LUNGES = 3
-
-/**
- * Замах врага скорее всего по герою (4.9.3): цель врага тянется костью в миг удара ([Battle.foeTarget]), экран её не знает -
- * без стоящего питомца, или с питомцем, что не танк и берёт меньше половины ударов, бьют героя.
- */
-private fun Battle.foesAimHero(): Boolean {
-    val pet = ally?.takeIf { allyFighter?.alive == true } ?: return true
-    return !pet.tank && pet.drawFire < .5
-}
 
 /**
  * Удары последней секунды ([ExpeditionRun.HIT_LIFETIME]) - числа над карточками (4.9.0: с конца журнала, он идёт по времени,
@@ -179,7 +126,7 @@ private fun Battle.recentHits(): List<FloatingHit> {
         if (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) {
             hits += FloatingHit(
                 index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
-                event.type, event.inflicted, event.stunned, event.foe, event.pet != null,
+                event.type, event.inflicted, event.stunned, event.foe,
             )
         }
     }
@@ -203,7 +150,7 @@ private fun Battle.heroCast(): HeroCastView? {
             last = -1
             break
         }
-        if (it.actor == Side.HERO && it.action == Action.SKILL && it.skill != null && it.pet == null) break
+        if (it.actor == Side.HERO && it.action == Action.SKILL && it.skill != null) break
         last--
     }
     if (last < 0 || log[last].time > time) return null

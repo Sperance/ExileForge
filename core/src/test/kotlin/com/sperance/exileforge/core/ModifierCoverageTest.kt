@@ -10,7 +10,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Every line a modifier, a unique or a pet can roll (3.81.0) is both told and counted: its stat is registered, has a template
+ * Every line a modifier or a unique can roll (3.81.0) is both told and counted: its stat is registered, has a template
  * for its operation in every server dictionary, and is one the engine reads — by name in the registries, as a power, or as one
  * of the families the fight builds its codes for at run time.
  */

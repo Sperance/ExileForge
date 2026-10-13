@@ -120,7 +120,7 @@ private data object Burst : TraitReaction {
                 if (battle.burden(fallen, hero, ailment, amount)) battle.note(fallen, NoteKind.TRAIT, at.code, amount)
             } else {
                 val type = DamageType.element(at.trigger.element) ?: DamageType.PHYSICAL
-                battle.strike(fallen, battle.foeTarget(), Blow(mapOf(type to amount), Action.SKILL, spell = true, skill = at.code, spread = false, primary = false))
+                battle.strike(fallen, battle.heroFighter, Blow(mapOf(type to amount), Action.SKILL, spell = true, skill = at.code, spread = false, primary = false))
             }
         }
         fallen.life = 0.0
@@ -177,7 +177,7 @@ private data object Stack : TraitReaction {
 
 // ==================== Моменты боя ====================
 
-/** Отклики свойств [fighter]; у героя и питомца - ни одного. */
+/** Отклики свойств [fighter]; у героя - ни одного. */
 private fun Battle.traitsOf(fighter: Fighter): List<TraitAt> = if (fighter.side == Side.MONSTER) traitsAt[fighter.index] else emptyList()
 
 /**

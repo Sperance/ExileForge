@@ -144,8 +144,8 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     // Замах и удары (4.9.3): последние 30% замаха - рамка наливается кровью, выпад - каждым своим ударом, тряска - каждым по нему.
     // Всё это - в рисовании кадра ([FightFrame]): карточка не перекомпонуется на каждом шаге боя
     fun swing() = if (live) frame.foeSwing(foe) else 0f
-    fun acting() = strikeReach(fight, frame.now(fight), Side.MONSTER, foe.index, pet = null, swing = swing(), held = foe.held)
-    fun flash() = if (foe.alive) strikeFlash(fight, frame.now(fight), Side.MONSTER, foe.index, pet = null) else 0f
+    fun acting() = strikeReach(fight, frame.now(fight), Side.MONSTER, foe.index, swing = swing(), held = foe.held)
+    fun flash() = if (foe.alive) strikeFlash(fight, frame.now(fight), Side.MONSTER, foe.index) else 0f
     val focused = fight.focus == foe.index
     val shape = RoundedCornerShape(8.dp)
     var effectsOpen by remember { mutableStateOf(false) }
@@ -285,7 +285,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         // Плашка намерения (4.9.3): замах врага вот-вот ляжет на героя - проступает в рисовании по доле замаха
-        if (live && fight.foesAimHero && !foe.held) {
+        if (live && !foe.held) {
             Text(
                 ui("fight.at_you"),
                 color = Color(0xFFFF8A83),
@@ -394,9 +394,6 @@ private fun hitText(hit: FloatingHit): String = when {
 
 private fun hitColour(hit: FloatingHit): Color = when {
     hit.amount == 0 && hit.healed > 0 -> Vital
-
-    // The pet's blows rise green on the foe (3.79.0).
-    hit.pet && hit.target == Side.MONSTER && hit.amount > 0 -> Vital
 
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
 

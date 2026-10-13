@@ -70,32 +70,14 @@ internal fun Battle.record(
     skill: String? = null,
     onSelf: Boolean = false,
     trace: Trace? = null,
-    pet: Boolean = false,
     spell: Boolean = false,
 ) {
     val m = foeFighters.getOrNull(foe)
     log += CombatEvent(
         time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
-        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet }, echo = echoing && actor == Side.HERO, spell = spell,
+        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, echo = echoing && actor == Side.HERO, spell = spell,
     )
         .also { it.trace = trace ?: skillTrace(actor, action, foe, skill, onSelf, healed) }
-}
-
-/** [fighter] is the combat pet. */
-internal fun Battle.isPet(fighter: Fighter): Boolean = fighter.side == Side.HERO && fighter !== heroFighter
-
-internal fun Battle.mended(amount: Double) {
-    petMend += amount
-    val pet = allyFighter ?: return
-    if (time - petMendFrom < rules.petMendEvery) return
-    if (petMend >= 1) {
-        record(
-            Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, petMend, false, emptyList(), null, target()?.index ?: 0, onSelf = true,
-            trace = EffectTrace(EffectKind.BUFF, ally!!.code, emptyList(), time - petMendFrom, petMend, 1.0, shot(pet), origin), pet = true,
-        )
-    }
-    petMend = 0.0
-    petMendFrom = time
 }
 
 /**

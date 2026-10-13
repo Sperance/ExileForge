@@ -45,7 +45,7 @@ internal fun Battle.phase(foe: Fighter) {
             val total = foe.body.damage.values.sum() * step.burst / 100
             val damage = if (element != null) mapOf(element to total) else foe.body.damage.mapValues { it.value * step.burst / 100 }
             // Взрыв фазы - вторичный урон (4.7.0): от него не уклониться
-            strike(foe, foeTarget(), Blow(damage, Action.SKILL, spell = false, skill = phaseSource(code, i), spread = false, secondary = true))
+            strike(foe, heroFighter, Blow(damage, Action.SKILL, spell = false, skill = phaseSource(code, i), spread = false, secondary = true))
         }
     }
 }

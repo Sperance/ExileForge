@@ -117,15 +117,12 @@ object Sheets {
         heroClass: String,
         tree: List<TakenNode>,
         items: List<ItemInstance>,
-        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         laws: List<String> = emptyList(),
         /** Предначертание аккаунта (4.6.0): его строки листа и преобразования листа (4.6.1), как у сервера. */
         fate: String? = null,
     ): HeroSheet {
-        // A helper pet's lines lie on the hero beside the tree's (3.5.0), as the server adds them.
         // Законы тронов героя - строки листа тем же правилом, что у сервера.
-        val helpers = com.sperance.exileforge.rules.roll.Menagerie(index).helperSourced(pets)
-        val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, helpers, items.filter { it.equipped }, laws, fate)
+        val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, items.filter { it.equipped }, laws, fate)
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate, result.stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, items.filter { it.equipped }))))
     }
 
@@ -147,15 +144,14 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         before: Map<String, Double>,
-        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         place: Slot? = null,
         laws: List<String> = emptyList(),
         fate: String? = null,
         skills: HeroSkills = HeroSkills(),
     ): WearOutcome {
         val after = worn(index, item, items, place) ?: return WearOutcome.NONE
-        val sheet = calculate(index, level, heroClass, tree, after, pets, laws, fate)
-        val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped }, pets)
+        val sheet = calculate(index, level, heroClass, tree, after, laws, fate)
+        val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped })
         return WearOutcome(changes(index, before, combat?.values ?: sheet.stats), combat?.might)
     }
 
@@ -171,17 +167,16 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         before: Map<String, Double>,
-        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         laws: List<String> = emptyList(),
         fate: String? = null,
         skills: HeroSkills = HeroSkills(),
-    ): List<StatDelta> = changes(index, before, figures(index, calculate(index, level, heroClass, tree + node, items, pets, laws, fate), level, heroClass, skills, fate, items, pets))
+    ): List<StatDelta> = changes(index, before, figures(index, calculate(index, level, heroClass, tree + node, items, laws, fate), level, heroClass, skills, fate, items))
 
     /**
      * Цифры сводки героя с листом [sheet] (4.6.4): лист боя ([CombatSheet]) с умениями [skills] и Предначертанием [fate] надетого
      * из [items] - одно правило сводки, сравнения вещи и узла дерева; без модели листа - сам лист.
      */
-    fun figures(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, items: List<ItemInstance>, pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList()): Map<String, Double> = CombatSheet.of(index, sheet, level, heroClass, skills, fate, items.filter { it.equipped }, pets)?.values ?: sheet.stats
+    fun figures(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, items: List<ItemInstance>): Map<String, Double> = CombatSheet.of(index, sheet, level, heroClass, skills, fate, items.filter { it.equipped })?.values ?: sheet.stats
 
     /**
      * Сдвинутые характеристики листа [next] против [before] в порядке подсчёта. Счётчики надетого (пустые места,
@@ -203,11 +198,10 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         before: Map<String, Double>,
-        pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
         place: Slot? = null,
         laws: List<String> = emptyList(),
         fate: String? = null,
-    ): SheetVerdict? = worn(index, item, items, place)?.let { SheetVerdict.of(index, level, before, calculate(index, level, heroClass, tree, it, pets, laws, fate).stats) }
+    ): SheetVerdict? = worn(index, item, items, place)?.let { SheetVerdict.of(index, level, before, calculate(index, level, heroClass, tree, it, laws, fate).stats) }
 
     /**
      * The hero's items with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),

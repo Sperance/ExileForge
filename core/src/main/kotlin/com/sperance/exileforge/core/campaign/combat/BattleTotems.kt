@@ -117,7 +117,7 @@ private fun Battle.totemBurst(boss: Fighter, standing: StandingTotem) {
     val totem = standing.totem.totem
     val element = DamageType.element(totem.element) ?: return
     val total = boss.body.damage.values.sum() * totem.burst / 100
-    strike(boss, foeTarget(), Blow(mapOf(element to total), Action.SKILL, spell = true, skill = totem.code, spread = false))
+    strike(boss, heroFighter, Blow(mapOf(element to total), Action.SKILL, spell = true, skill = totem.code, spread = false))
 }
 
 /** Тотем рассыпался: слот свободен, его строки сняты со всех, силы героя слышат об этом. */

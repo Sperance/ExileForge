@@ -38,7 +38,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.screens.expedition.Caption
-import com.sperance.exileforge.ui.screens.hero.petName
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -109,7 +108,7 @@ internal data class LifeShift(val before: Int, val after: Int)
 
 /**
  * «ХП было → стало» для каждой строки [events] в порядке времени (3.88.8): «было» - здоровье цели после её прошлой строки
- * в этом бою, у первой - после удара плюс урон. Строки без урона и лечения, заметки и удары по питомцу - без него.
+ * в этом бою, у первой - после удара плюс урон. Строки без урона и лечения и заметки - без него.
  */
 internal fun lifeShifts(events: List<CombatEvent>): List<LifeShift?> {
     val last = HashMap<Pair<Side, Int>, Double>()
@@ -117,7 +116,7 @@ internal fun lifeShifts(events: List<CombatEvent>): List<LifeShift?> {
         val target = event.target
         val key = target to if (target == Side.HERO) HERO_KEY else event.foe
         val after = if (target == Side.HERO) event.heroLife else event.monsterLife
-        val shift = if (event.action == Action.NOTE || event.pet != null || (event.damage <= 0 && event.healed <= 0)) {
+        val shift = if (event.action == Action.NOTE || (event.damage <= 0 && event.healed <= 0)) {
             null
         } else {
             val before = last[key] ?: (after + event.damage - event.healed)
@@ -222,7 +221,7 @@ private const val HERO_KEY = -1
 private fun logLine(event: CombatEvent, monster: String): String {
     val damage = event.damage.roundToInt()
     val hero = event.actor == Side.HERO
-    val line = event.pet?.let { petLine(event, monster, petName(it), damage) } ?: when (event.action) {
+    val line = when (event.action) {
         // Thorns and reflect (2.75.0): the one who was struck gives a blow back.
         Action.REFLECT -> if (hero) ui("expedition.log_reflect_you", monster, damage) else ui("expedition.log_reflect_they", monster, damage)
 
@@ -278,24 +277,6 @@ private fun logLine(event: CombatEvent, monster: String): String {
     return if (marks.isEmpty()) line else "$line · ${marks.joinToString(" · ")}"
 }
 
-/**
- * A line of the combat pet (3.70.0), named: its blow at [monster], the blow it took from one, the healing it gave the hero;
- * null for anything the hero's own sentences say well enough.
- */
-private fun petLine(event: CombatEvent, monster: String, pet: String, damage: Int): String? {
-    val (doer, done) = if (event.actor == Side.HERO) pet to monster else monster to pet
-    return when {
-        event.actor == Side.HERO && event.onSelf -> event.healed.takeIf { it >= 1 }?.let { ui("expedition.log_pet_heal", pet, it.roundToInt()) }
-        event.action == Action.TICK -> ui("expedition.log_tick_they", pet, damage, event.ailment?.let { ui(it.key()) }.orEmpty())
-        event.action == Action.REFLECT -> ui("expedition.log_returns", doer, done, damage)
-        event.action != Action.ATTACK && event.action != Action.SKILL -> null
-        event.kind == HitKind.EVADED -> ui("expedition.log_evades", done, doer)
-        event.kind == HitKind.BLOCKED -> ui("expedition.log_blocks", done, doer)
-        event.damage > 0 -> ui(if (event.kind == HitKind.CRIT) "expedition.log_strikes_crit" else "expedition.log_strikes", doer, done, damage)
-        else -> null
-    }
-}
-
 internal fun noteLine(event: CombatEvent, monster: String): String {
     (event.trace as? FateTrace)?.let { return fateLine(it) }
     val note = event.trace as? NoteTrace ?: return ""
@@ -345,7 +326,6 @@ internal fun fateLine(trace: FateTrace): String {
 
 /** Цвет строки журнала; итог здоровья (4.9.3) - убыль красным, прибыль зелёным. */
 private fun logColour(event: CombatEvent): Color = when {
-    event.pet != null -> Vital
     (event.trace as? NoteTrace)?.kind == NoteKind.LIFE_FLOW -> flowTint((event.trace as NoteTrace).value)
     (event.trace as? NoteTrace)?.kind?.recovery == true -> Vital
     event.trace is FateTrace -> FateInk.GoldLight

@@ -232,7 +232,7 @@ val LocalFightMight = compositionLocalOf<FightMight?> { null }
 
 /**
  * Мощь боя на уровне врагов [level]: враги - один раз на монстра, герой - заново, когда меняется его тело боя [hero]; [extras] (4.9.x) -
- * что сверх листа из боевого листа героя: урон умений и питомца, резерв маны, фляги (`CombatSheet.mightExtras`).
+ * что сверх листа из боевого листа героя: урон умений, резерв маны, фляги (`CombatSheet.mightExtras`).
  */
 @Composable fun rememberFightMight(index: ContentIndex?, hero: Combatant?, level: Int, extras: MightExtras): FightMight? {
     index ?: return null

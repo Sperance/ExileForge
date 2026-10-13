@@ -46,7 +46,6 @@ internal fun ShareKind.color(): Color = when (this) {
     ShareKind.CLASS -> GoldBright
     ShareKind.NODE -> Rune
     ShareKind.ITEM -> Color(0xFFFFFF77)
-    ShareKind.PET -> Elder
     ShareKind.LAW -> GoldBright
     ShareKind.SKILL -> Rune
     ShareKind.FATE -> Caution

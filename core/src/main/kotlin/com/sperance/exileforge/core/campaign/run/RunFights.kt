@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.campaign.PhaseFoes
 import com.sperance.exileforge.core.campaign.RunStats
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
-import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Buildup
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
@@ -34,7 +33,6 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.FateLever
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -60,7 +58,6 @@ import kotlin.random.Random
  * герой переходит из раунда в раунд как есть, гибель в любом - гибель в бою. Каждой стае - своё ENGAGE.
  */
 internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(zone), abyssal: Boolean = false) {
-    fightPet = pet()
     fightAgent = agent
     fightAgents = if (abyssal) listOf(agent) else world.gathered(agent)
     abyssFight = abyssal
@@ -110,7 +107,7 @@ internal fun ExpeditionRun.battle(): Battle {
         // Свита фаз босса (3.92.0) - в конце стаи, на своём потоке: бой без фаз катится как прежде
         phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
         rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit.copy(fate = FateKit.of(run.fate)), model = build, pools = pools,
-        percent = build.gear.percent, ally = ally(), cleared = wonLast, fateRun = fateRun,
+        percent = build.gear.percent, cleared = wonLast, fateRun = fateRun,
     )
 }
 

@@ -112,9 +112,6 @@ internal class FateFight {
     var full = false
     var reflected = false
 
-    /** Ослабленные питомцем враги: номер - до когда ([FateKnob.PET_WEAKEN]). */
-    val weakened = mutableMapOf<Int, Double>()
-
     /** Счёт Разгона, за который в этом бою дана неуязвимость ([FateKnob.STREAK_WARD]); ноль - не дана. */
     var warded = 0
 
@@ -143,7 +140,7 @@ internal class FateFight {
  * видов откликов не проверяет. Семантика - KDoc [FateLever] и [FateKnob].
  */
 internal sealed interface FateReaction {
-    /** Бой открылся: первый ход питомца, что несёт заход из прошлого боя. */
+    /** Бой открылся: что несёт заход из прошлого боя. */
     fun opens(battle: Battle) = Unit
 
     /** Прошло [dt] секунд боя, герой стоит. */
@@ -157,9 +154,6 @@ internal sealed interface FateReaction {
 
     /** Во сколько раз удар героя [blow] по [target] тяжелее сейчас. */
     fun heavier(battle: Battle, blow: Blow, target: Fighter): Double = 1.0
-
-    /** Во сколько раз удар врага [me] легче сейчас. */
-    fun weaker(battle: Battle, me: Fighter): Double = 1.0
 
     /** Сколько урона сверх своего несёт удар героя (до защит цели); тратится, лишь когда удар попал ([landed]). */
     fun extra(battle: Battle): Double = 0.0
@@ -194,9 +188,6 @@ internal sealed interface FateReaction {
     /** Какую долю урона удара героя [blow] он ещё похищает общим вампиризмом героя (4.6.3), сверх своего. */
     fun leech(battle: Battle, blow: Blow): Double = 0.0
 
-    /** Удар питомца попал в [target]. */
-    fun petLanded(battle: Battle, target: Fighter) = Unit
-
     /** По герою попал [attacker]: [kind] - как, [amount] - сколько удар снял (барьер, щит и здоровье вместе). */
     fun struck(battle: Battle, attacker: Fighter, kind: HitKind, amount: Double) = Unit
 
@@ -207,9 +198,6 @@ internal sealed interface FateReaction {
      * Что из [amount] урона недугов по герою за шаг доходит до барьера и щита (4.9.0): [source] - кто наложил недуг; null - не враг.
      */
     fun dotCapped(battle: Battle, source: Fighter?, amount: Double): Double = amount
-
-    /** Что из [amount] одного удара по питомцу доходит до него. */
-    fun petCapped(battle: Battle, amount: Double): Double = amount
 
     /** Во сколько раз сильнее попавший удар героя копит оглушение. */
     fun stunning(battle: Battle): Double = 1.0
@@ -270,7 +258,7 @@ internal sealed interface FateReaction {
 
             FateLever.EXECUTE -> Execute(effect, fate)
 
-            FateLever.PET_FIRST -> PetFirst(effect, fate)
+            FateLever.KILL_STACKS -> KillStacks(effect, fate)
 
             FateLever.FREEZE_TO_SLOW -> FreezeToSlow(effect, fate)
 
@@ -311,7 +299,7 @@ internal sealed interface FateReaction {
             // Читает отклик рычага своего дара
             FateKnob.LOW_LIFE_SPEED, FateKnob.AVENGE_CRIT_MULTI, FateKnob.CRIT_WARD, FateKnob.AVENGE_ON_BLOCK, FateKnob.SPREAD_POWER,
             FateKnob.SPREAD_MARK_DAMAGE, FateKnob.AILMENTED_DAMAGE, FateKnob.BURST_BLEED, FateKnob.BURST_HEAL, FateKnob.EXECUTE_HEAL,
-            FateKnob.PET_WEAKEN, FateKnob.PET_GUARD, FateKnob.FROZEN_DAMAGE, FateKnob.CAPPED_GUARD, FateKnob.RESONANT_COOLDOWN,
+            FateKnob.FROZEN_DAMAGE, FateKnob.CAPPED_GUARD, FateKnob.RESONANT_COOLDOWN,
             FateKnob.RESONANT_CHAIN, FateKnob.OVERFLOW_REGEN, FateKnob.OVERFLOW_SHIELD, FateKnob.STREAK_WARD, FateKnob.STORE_KEEP,
             FateKnob.STORE_STUN, FateKnob.FULL_LIFE_MARGIN, FateKnob.FULL_LIFE_REFLECT, FateKnob.BARRIER_CARRY, FateKnob.LUCKY_DAMAGE,
             FateKnob.LUCKY_AILMENT_DEFENCE, FateKnob.BLOOD_SKILL_LEECH, FateKnob.PHANTOM_AILMENTS, FateKnob.PHANTOM_SAME_TARGET,
@@ -515,30 +503,34 @@ private class Execute(effect: FateEffect, fate: FateEffects) : LeverReaction(eff
 }
 
 /**
- * Боевой питомец бьёт первым: его первая атака - с начала боя. Его попавший удар ослабляет врага ([FateKnob.PET_WEAKEN]), урон по
- * нему меньше ([FateKnob.PET_GUARD]).
+ * Кровь вожака (4.11.x): убийство даёт стопку на `duration` с, до `charges` стопок; новое убийство добавляет стопку и освежает
+ * срок. За стопку скорость атаки и сотворения больше на `value`%, вампиризм здоровья - на `leech`% (общий вампиризм героя, под
+ * его потолком). Стопки - бафф героя [FATE_STACKS] со счётом в [TimedEffect.counter]: так они уходят на карту и в следующий бой
+ * захода остатком срока ([HeroCarry]), как заряды.
  */
-private class PetFirst(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
-    private val weaken = fate.of(FateKnob.PET_WEAKEN)
+private class KillStacks(effect: FateEffect, fate: FateEffects) : LeverReaction(effect, fate) {
+    private fun held(battle: Battle): TimedEffect? = battle.heroFighter.effects.firstOrNull { it.source == FATE_STACKS && it.until > battle.time }
 
-    override fun opens(battle: Battle) {
-        battle.pets.forEach { it.nextAttack = 0.0 }
-        if (battle.pets.isNotEmpty()) battle.fateBeat(FateBeat.PET_FIRST)
+    private fun stacks(battle: Battle): Int = held(battle)?.counter?.toInt() ?: 0
+
+    private fun lines(count: Int): List<StatLine> = listOf(
+        StatLine(CoreStat.ATTACK_SPEED.code, Op.INCREASED, value * count),
+        StatLine(CoreStat.CAST_SPEED.code, Op.INCREASED, value * count),
+    )
+
+    override fun fell(battle: Battle, fallen: Fighter, ailing: List<ActiveAilment>) {
+        if (!battle.heroFighter.alive) return
+        val count = min(effect.charges, stacks(battle) + 1)
+        battle.buff(battle.heroFighter, FATE_STACKS, lines(count), effect.duration, count.toDouble())
+        battle.fateBeat(FateBeat.KILL_STACKS, count.toDouble(), value * count, effect.leech * count)
     }
 
-    override fun petLanded(battle: Battle, target: Fighter) {
-        val knob = weaken ?: return
-        if (target.side != Side.MONSTER || !target.alive) return
-        battle.fateFight.weakened[target.index] = battle.time + knob.param
-        battle.fateBeat(FateBeat.PET_WEAKEN, knob.value, knob.param)
-    }
+    override fun leech(battle: Battle, blow: Blow): Double = stacks(battle) * effect.leech / 100
 
-    override fun weaker(battle: Battle, me: Fighter): Double {
-        val knob = weaken ?: return 1.0
-        return if ((battle.fateFight.weakened[me.index] ?: NEVER) > battle.time) max(0.0, 1 - knob.value / 100) else 1.0
+    override fun glow(battle: Battle, fate: String): FateGlow? = held(battle)?.let {
+        val count = it.counter.toInt()
+        glowing(fate, value * count, count, ((it.until - battle.time) / it.duration).toFloat().coerceIn(0f, 1f))
     }
-
-    override fun petCapped(battle: Battle, amount: Double): Double = amount * max(0.0, 1 - fate.add(FateKnob.PET_GUARD) / 100)
 }
 
 /** Заморозка на героя - замедление на тот же срок; по замороженному врагу урон героя больше ([FateKnob.FROZEN_DAMAGE]). */
@@ -960,6 +952,12 @@ private class FullSocketsDamage(knob: FateKnobValue, private val filled: Set<Str
 /** Источник строк и эффектов Предначертания на герое. */
 const val FATE_SOURCE = "FATE"
 
+/** Источник стопок Крови вожака ([FateLever.KILL_STACKS], 4.11.x): бафф героя, что уходит на карту и в следующий бой. */
+const val FATE_STACKS = "FATE_STACKS"
+
+/** Эффект на герое от Предначертания: благо рычага или стопки Крови вожака - лист эффектов зовёт его даром. */
+fun fateSourced(source: String): Boolean = source == FATE_SOURCE || source == FATE_STACKS
+
 // ==================== Моменты боя ====================
 
 /** Бой открылся: рычаги начала боя. */
@@ -976,11 +974,10 @@ internal fun Battle.fateEnds() {
     fateFolds()
 }
 
-/** Во сколько раз удар [me] по [target] тяжелее по Предначертанию: удар героя - рычагам героя, удар врага - легче ([FateReaction.weaker]). */
+/** Во сколько раз удар [me] по [target] тяжелее по Предначертанию: удар героя - рычагам героя. */
 internal fun Battle.fateHeavier(me: Fighter, target: Fighter, blow: Blow): Double = when {
     fated.isEmpty() -> 1.0
     me === heroFighter -> fated.fold(1.0) { k, it -> k * it.heavier(this, blow, target) }
-    me.side == Side.MONSTER -> fated.fold(1.0) { k, it -> k * it.weaker(this, me) }
     else -> 1.0
 }
 
@@ -1021,7 +1018,7 @@ internal fun Battle.fateBlocked(target: Fighter) {
 
 /**
  * Удар [me] попал в [target], отдав [taken] ([raw] - до защит цели): удар героя - рычагам героя (счёт попаданий боя - до них), удар
- * питомца и удар по герою - своим.
+ * по герою - своим.
  */
 internal fun Battle.fateLanded(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, kind: HitKind, blow: Blow, raw: Map<DamageType, Double>) {
     if (fated.isEmpty()) return
@@ -1029,17 +1026,15 @@ internal fun Battle.fateLanded(me: Fighter, target: Fighter, taken: Map<DamageTy
         fateFight.hits++
         fated.forEach { it.landed(this, target, taken, kind, blow, raw) }
     }
-    if (isPet(me)) fated.forEach { it.petLanded(this, target) }
     if (target === heroFighter) taken.values.sum().let { amount -> fated.forEach { it.struck(this, me, kind, amount) } }
 }
 
-/** Удар [me] по [target] с потолком Предначертания: у героя и питомца - что рычаги пропустят, урон по типам - в той же доле. */
+/** Удар [me] по [target] с потолком Предначертания: у героя - что рычаги пропустят, урон по типам - в той же доле. */
 internal fun Battle.fateCapped(me: Fighter, target: Fighter, taken: Map<DamageType, Double>): Map<DamageType, Double> {
     if (fated.isEmpty()) return taken
     val total = taken.values.sum()
     val capped = when {
         target === heroFighter -> fated.fold(total) { amount, it -> it.capped(this, me, amount) }
-        isPet(target) -> fated.fold(total) { amount, it -> it.petCapped(this, amount) }
         else -> return taken
     }
     if (capped >= total || total <= 0) return taken

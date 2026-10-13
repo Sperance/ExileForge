@@ -42,8 +42,7 @@ internal const val UNCRAFT = "-"
  * target as it stands. Under it the section's tray: a compact grid of only what the bag holds and the target takes, or the bench's
  * lines. What is laid sits in a bar over the navigation with a button that is held, because an orb is spent the moment it is used.
  *
- * С 4.4.x цель - [ForgeTarget] (вещь или питомец, зеркало правил [OrbTarget]): наковальня, лоток и полоса одни на обе, питомец
- * выбирается тем же выбором цели. Every rule is the server's; what a target takes is the rules' own [OrbApplier.accepts].
+ * С 4.4.x цель - [ForgeTarget] (зеркало правил [OrbTarget]). Every rule is the server's; what a target takes is the rules' own [OrbApplier.accepts].
  */
 @Composable fun CraftScreen() {
     val vm = koinViewModel<SmithyViewModel>()
@@ -53,9 +52,9 @@ internal const val UNCRAFT = "-"
     LaunchedEffect(game.heroId, game.sessionEpoch) { vm.ensure() }
     val hero = game.hero
     val index = game.index
-    val target = remember(hero, index, smithy.pet, game.holding.selectedEquipment) { game.forgeTarget(smithy.pet) }
+    val target = remember(hero, index, game.holding.selectedEquipment) { game.forgeTarget() }
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
-    var picking by remember { mutableStateOf<PickerSection?>(null) }
+    var picking by remember { mutableStateOf(false) }
     // Один фильтр выбора вещи на полку у наковальни и шторку (4.2.0).
     val pickFilter = rememberItemFilter(ItemShelf.FORGE)
     var benchLine by remember(target?.id) { mutableStateOf("") }
@@ -99,13 +98,13 @@ internal const val UNCRAFT = "-"
             }
             if (sections.size > 1) PillTabs(sections.map { ui(it.title) }, sections.indexOf(section), { vm.section(sections[it]) }, segmented = true)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TargetRail(pickFilter, pets = hero.pets.pets.isNotEmpty(), petOn = target is ForgeTarget.Beast) { picking = it }
+                TargetRail(pickFilter) { picking = true }
                 Anvil(
                     game,
                     target,
                     toolSocket(game, smithy, section, index, benchLine, if (section == ForgeSection.SEALS) sealChosen else chosen, essenceRefusals),
                     omenSocket(game, smithy, section, vm::selectOmen),
-                    onPick = { picking = if (target is ForgeTarget.Beast) PickerSection.PETS else PickerSection.ITEMS },
+                    onPick = { picking = true },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -139,7 +138,7 @@ internal const val UNCRAFT = "-"
     picking?.let { opened ->
         TargetPicker(game, pickFilter, opened, target?.id, onDismiss = { picking = null }) {
             vm.select(it)
-            picking = null
+            picking = false
         }
     }
 }
@@ -153,10 +152,7 @@ private fun essenceRefusals(index: ContentIndex, hero: HeroView, gear: ForgeTarg
     }
 }
 
-/**
- * Строки на выбор, что ждут решения над целью: скрытая строка вещи ([REVEALS] - аффикс или судьбоносная, 4.6.2) и знамение выбора
- * у вещи, знамение выбора у питомца.
- */
+/** Строки на выбор, что ждут решения над вещью: скрытая строка ([REVEALS] - аффикс или судьбоносная, 4.6.2) и знамение выбора. */
 @Composable private fun LineChoices(game: GameUi, target: ForgeTarget, enabled: Boolean, vm: SmithyViewModel) {
     when (target) {
         is ForgeTarget.Gear -> {
@@ -164,8 +160,6 @@ private fun essenceRefusals(index: ContentIndex, hero: HeroView, gear: ForgeTarg
             REVEALS.firstOrNull { it.pending(item) }?.Choice(game, item, enabled, vm::unveil)
             LineChoice(game, item, item.offer, "forge.choice_title", "forge.choice_hint", enabled, vm::choose)
         }
-
-        is ForgeTarget.Beast -> PetChoices(game, target.pet, enabled, vm::choosePetLine)
     }
 }
 

@@ -194,7 +194,6 @@ private val Feature.glyph: ImageVector get() = when (this) {
     Feature.QUESTS -> ForgeGlyphs.Scroll
     Feature.AUCTION -> ForgeGlyphs.Scales
     Feature.TRIALS -> ForgeGlyphs.Skull
-    Feature.PETS -> ForgeGlyphs.Exile
     Feature.GUILD -> ForgeGlyphs.Banner
     Feature.RIFT -> ForgeGlyphs.Skull
     Feature.MAIL -> Icons.Outlined.Mail

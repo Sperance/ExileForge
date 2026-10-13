@@ -106,7 +106,7 @@ private const val CAPSULE_GROW = 2.4f
                 TAB_PROGRESS -> game.treeState?.available ?: 0
                 else -> 0
             }
-            // Выбрана вкладка корня экрана (4.0.1): кузня, зверинец, дерево и гримуар - «Развития», испытания и атлас - «Похода».
+            // Выбрана вкладка корня экрана (4.0.1): кузня, дерево и гримуар - «Развития», испытания и атлас - «Похода».
             BarCapsule(
                 BarTab.of(index),
                 selected = route.root?.tab == index,

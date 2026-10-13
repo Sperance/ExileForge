@@ -132,11 +132,6 @@ class MarketActions(
         listed(api.auction.sellItem(heroes.heroId, code, amount, priceOrb, price))
     }
 
-    /** Выставляет питомца (3.91.0). */
-    fun sellPet(petId: String, priceOrb: String, price: Long) = trade(writing = true) {
-        listed(api.auction.sellPet(heroes.heroId, petId, priceOrb, price))
-    }
-
     /** Ещё неделя своему лоту в его последний день (3.79.0). */
     fun extend(lotId: String) = trade(writing = true) {
         mine(api.auction.extend(heroes.heroId, lotId), "toast.extended")

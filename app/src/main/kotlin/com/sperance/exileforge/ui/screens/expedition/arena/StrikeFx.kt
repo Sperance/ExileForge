@@ -50,11 +50,11 @@ internal val HeroHurt = Color(0xFFFF5A52)
 /** Свечение замаха [swing] (0..1): последние 30% - рамка карты наливается цветом. */
 internal fun swingGlow(swing: Float, held: Boolean): Float = if (held) 0f else ((swing - GLOW_FROM) / (1 - GLOW_FROM)).coerceIn(0f, 1f)
 
-/** Удар [strike] - карты [actor] (у врага - [foe]); [pet] null - любой: по питомцу бьёт тот же враг. */
-private fun StrikeView.by(actor: Side, foe: Int?, pet: Boolean?): Boolean = this.actor == actor && (foe == null || this.foe == foe) && (pet == null || this.pet == pet)
+/** Удар [strike] - карты [actor] (у врага - [foe]). */
+private fun StrikeView.by(actor: Side, foe: Int?): Boolean = this.actor == actor && (foe == null || this.foe == foe)
 
 /** Удар [strike] - по карте [target] (у врага - [foe]). */
-private fun StrikeView.at(target: Side, foe: Int?, pet: Boolean?): Boolean = this.target == target && (foe == null || this.foe == foe) && (pet == null || this.pet == pet)
+private fun StrikeView.at(target: Side, foe: Int?): Boolean = this.target == target && (foe == null || this.foe == foe)
 
 /** Сколько прошло от попадания (0..1 окна вспышки) при доле сцены [p]; null - снаряд ещё летит или вспышка прошла. */
 private fun StrikeView.impact(p: Float): Float? {
@@ -66,25 +66,25 @@ private fun StrikeView.impact(p: Float): Float? {
  * Насколько карта вынесена к цели (0..1): разгон в конце замаха [swing], в миг удара - вся, назад за выпад. Чары карту не
  * выносят - летит снаряд.
  */
-internal fun strikeReach(fight: FightHud, now: Double, actor: Side, foe: Int?, pet: Boolean?, swing: Float = 0f, held: Boolean = false): Float {
+internal fun strikeReach(fight: FightHud, now: Double, actor: Side, foe: Int?, swing: Float = 0f, held: Boolean = false): Float {
     var reach = if (held) 0f else ((swing - WINDUP_FROM) / (1 - WINDUP_FROM)).coerceIn(0f, 1f) * .7f
     val strikes = fight.strikes
     for (i in strikes.indices) {
         val strike = strikes[i]
         val p = strike.progressAt(fight, now)
-        if (strike.spell || p >= LUNGE || !strike.by(actor, foe, pet)) continue
+        if (strike.spell || p >= LUNGE || !strike.by(actor, foe)) continue
         reach = max(reach, cos(p / LUNGE * PI / 2).toFloat())
     }
     return reach
 }
 
 /** Вспышка карты от попадания (0..1, крит - ярче): белым по портрету, тряска пока она есть. */
-internal fun strikeFlash(fight: FightHud, now: Double, target: Side, foe: Int?, pet: Boolean?): Float {
+internal fun strikeFlash(fight: FightHud, now: Double, target: Side, foe: Int?): Float {
     var flash = 0f
     val strikes = fight.strikes
     for (i in strikes.indices) {
         val strike = strikes[i]
-        if (!strike.landed || !strike.at(target, foe, pet)) continue
+        if (!strike.landed || !strike.at(target, foe)) continue
         val t = strike.impact(strike.progressAt(fight, now)) ?: continue
         flash = max(flash, (1 - t) * (if (strike.kind == HitKind.CRIT) 1f else .6f))
     }
@@ -103,7 +103,7 @@ internal fun DrawScope.swingAura(outline: Outline, tint: Color, glow: Float) {
 /** Цвет удара: по герою - кровь, по врагу - стихия; промах - пепел. */
 private fun strikeTint(strike: StrikeView): Color = when {
     !strike.landed -> Muted
-    strike.target == Side.HERO && !strike.pet -> HeroHurt
+    strike.target == Side.HERO -> HeroHurt
     else -> damageTint(strike.type)
 }
 
@@ -186,13 +186,13 @@ private fun DrawScope.bolt(strike: StrikeView, p: Float, from: Offset, to: Offse
  */
 @Composable internal fun HitVignette(fight: FightHud, frame: FightFrame) {
     val strikes = fight.strikes
-    if (strikes.none { it.landed && it.damage > 0 && it.at(Side.HERO, null, false) }) return
+    if (strikes.none { it.landed && it.damage > 0 && it.at(Side.HERO, null) }) return
     Canvas(Modifier.fillMaxSize()) {
         val now = frame.now(fight)
         var strength = 0f
         for (i in strikes.indices) {
             val strike = strikes[i]
-            if (!strike.landed || strike.damage <= 0 || !strike.at(Side.HERO, null, false)) continue
+            if (!strike.landed || strike.damage <= 0 || !strike.at(Side.HERO, null)) continue
             val t = strike.impact(strike.progressAt(fight, now)) ?: continue
             strength = max(strength, 1 - t)
         }

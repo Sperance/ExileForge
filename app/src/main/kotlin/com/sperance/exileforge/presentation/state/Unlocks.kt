@@ -16,7 +16,6 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
     QUESTS("quest.title", building = Building.QUESTS),
     AUCTION("nav.auction", building = Building.AUCTION),
     TRIALS("trials.title", tab = TAB_TRIALS),
-    PETS("progress.pets", tab = TAB_PETS),
     GUILD("guild.title", building = Building.GUILD),
 
     /** Разлом недели (4.6.4): своего входа нет - он внутри «Испытаний»; кнопка входа на доске испытаний и у Врат. */

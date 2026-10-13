@@ -108,7 +108,7 @@ class TrialActions(
             pending.clear()
             batch = null
         }
-        mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.pets.pet(hero.pets.combat), hero.campaign.trials.towerPicks, onEvent = ::recorded)
+        mutableArena.value = TrialArena(index, started.run, started.context, gear, hero.campaign.trials.towerPicks, onEvent = ::recorded)
             .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     }
 

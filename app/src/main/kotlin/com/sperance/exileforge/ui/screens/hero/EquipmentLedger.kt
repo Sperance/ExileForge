@@ -81,7 +81,7 @@ private val GEAR_GROUPS: List<Pair<String, List<String>>> = listOf(
     "weapons" to listOf(BodyPlace.MAIN_HAND, BodyPlace.OFF_HAND),
     "armour" to listOf(Slot.HELMET, Slot.BODY, Slot.GLOVES, Slot.BOOTS).map { it.name },
     "jewellery" to listOf(Slot.AMULET, Slot.RING, Slot.RING_2, Slot.BELT).map { it.name },
-    "other" to listOf(Slot.WINGS, Slot.COLLAR).map { it.name },
+    "other" to listOf(Slot.WINGS).map { it.name },
     "flasks" to Slot.FLASKS.map { it.name },
 )
 

@@ -48,7 +48,6 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.noteLine
-import com.sperance.exileforge.ui.screens.hero.petName
 import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -97,15 +96,12 @@ internal fun CombatDetailSheet(game: GameUi, event: CombatEvent, monster: String
         Action.NOTE -> noteLine(event, monster)
 
         else -> {
-            // The combat pet's line (3.70.0) names it: its blow, its healing, or the blow it took.
-            val pet = event.pet?.let(::petName)
             listOfNotNull(
-                if (event.actor == Side.HERO) pet ?: ui("trace.you") else monster,
+                if (event.actor == Side.HERO) ui("trace.you") else monster,
                 event.skill?.let { if (event.action == Action.FLASK) equipmentTitle(it) else SkillText.title(it) },
                 when {
-                    event.target == Side.HERO && event.actor != Side.HERO -> pet?.let { "→ $it" } ?: ui("trace.at_you")
+                    event.target == Side.HERO && event.actor != Side.HERO -> ui("trace.at_you")
                     event.actor == Side.HERO && !event.onSelf -> "→ $monster"
-                    pet != null && event.onSelf -> ui("trace.pet_heals")
                     else -> null
                 },
             ).joinToString(" ")

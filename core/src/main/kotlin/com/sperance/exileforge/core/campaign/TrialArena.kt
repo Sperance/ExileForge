@@ -21,7 +21,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Op
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RushPlan
 import com.sperance.exileforge.rules.content.TowerFloor
 import com.sperance.exileforge.rules.content.TowerMod
@@ -89,7 +88,6 @@ class TrialArena(
     val trial: TrialRun,
     context: RunContext,
     gear: HeroGear,
-    private val pet: Pet?,
     /** Строки башни, выбранные героем по десяткам (3.96.0). */
     picks: List<Int>,
     private val onEvent: (TrialEvent) -> Unit,
@@ -107,7 +105,6 @@ class TrialArena(
     private val tier = trials.rush.tier(trial.tier)
     private val picks = picks.toMutableList()
     private var choice: List<TowerMod>? = null
-    private val allies = PetAllies(index, rules)
 
     /** Счёт Предначертания испытания (4.6.0): перелив маны живёт до конца испытания. */
     private val fateRun = com.sperance.exileforge.core.campaign.combat.FateRun()
@@ -305,7 +302,7 @@ class TrialArena(
             // Фазы и свита боссов (3.92.0): свита - на своём потоке
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
-            percent = gear.percent, ally = allies.of(hero, pet, kit.fate.effects.spirit), cleared = wonLast, kind = trial.kind.fight,
+            percent = gear.percent, cleared = wonLast, kind = trial.kind.fight,
             fateRun = fateRun, muster = Muster.Reinforcements,
         )
     }

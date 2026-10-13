@@ -67,8 +67,11 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
     }
 }
 
-/** What lies on [fighter], for its tiles; с 4.9.3 и глотки флаконов - плиткой бутыли на полке с таймером. */
-fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) }.map {
+/**
+ * What lies on [fighter], for its tiles; с 4.9.3 и глотки флаконов - плиткой бутыли на полке с таймером. Стопки Крови вожака
+ * ([FATE_STACKS], 4.11.x) - значок ✦ дара ([fateGlows]), не плитка эффекта.
+ */
+fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) && it.source != FATE_STACKS }.map {
     EffectView(
         it.source,
         it.kind,
@@ -100,7 +103,7 @@ fun Battle.strikes(window: Double): List<StrikeView> {
         if (event.action == Action.SKILL && event.trace !is HitTrace) continue
         strikes += StrikeView(
             i, event.actor, event.foe, event.kind, event.spell, event.type, event.damage.roundToInt(),
-            ((time - event.time) / window).toFloat().coerceIn(0f, 1f), event.pet != null,
+            ((time - event.time) / window).toFloat().coerceIn(0f, 1f),
         )
     }
     return strikes
@@ -108,7 +111,7 @@ fun Battle.strikes(window: Double): List<StrikeView> {
 
 /**
  * Удар на экране (4.9.3): строка журнала [serial], кто бил ([actor]; у врага - [foe]), чем кончилось ([kind]), чары ли ([spell]),
- * ведущая стихия [type] и урон [damage]; [progress] - доля сцены удара, [pet] - удар питомца или по нему.
+ * ведущая стихия [type] и урон [damage]; [progress] - доля сцены удара.
  */
 data class StrikeView(
     val serial: Int,
@@ -119,7 +122,6 @@ data class StrikeView(
     val type: DamageType?,
     val damage: Int,
     val progress: Float,
-    val pet: Boolean,
 ) {
     val landed: Boolean get() = kind == HitKind.HIT || kind == HitKind.CRIT
 

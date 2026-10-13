@@ -5,7 +5,6 @@ import com.sperance.exileforge.core.display.shardsPerOrb
 import com.sperance.exileforge.core.display.shardsText
 import com.sperance.exileforge.core.display.withShards
 import com.sperance.exileforge.core.hero.HeroRepository
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.Buzz
@@ -23,7 +22,7 @@ import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.roll.Dice
 
 /**
- * Команды героя (3.80.15): сундук, кузница, гримуар, древо, зверинец, выдачи тестеру. Каждая отвечает героем, как
+ * Команды героя (3.80.15): сундук, кузница, гримуар, древо, выдачи тестеру. Каждая отвечает героем, как
  * его теперь держит сервер, так что из ответа ничего не латается - кроме ответа без снимка, который `HeroSync`
  * отмечает холодным чтением. Общие для всех экранов героя.
  */
@@ -42,7 +41,7 @@ class HeroActions(
     /** Предмет под кузницей: тот, на который укажет следующая сфера. */
     fun selectEquipment(itemId: String) = heroes.selectEquipment(itemId)
 
-    /** Фраза наковальни уходит вместе с целью, о которой она (4.4.x): выбран питомец или другая вещь. */
+    /** Фраза наковальни уходит вместе с целью, о которой она (4.4.x): выбрана другая вещь. */
     fun clearForgeLine() = heroes.forgeLine("")
 
     fun equip(itemId: String, slot: Slot? = null) {
@@ -63,32 +62,6 @@ class HeroActions(
     /** Из переполнения в сундук: [itemId], или сколько влезет. */
     fun claimOverflow(itemId: String? = null) = heroCommand { id -> api.hero.claimOverflow(id, itemId) }
     fun sellOverflow(itemId: String) = heroCommand { id -> shardsText(api.hero.sellOverflow(id, itemId).shards, perOrb)?.let(notices::toast) }
-
-    // Зверинец (3.5.0): снимок с каждым ответом несёт питомцев и сумку.
-    fun incubatePet(egg: String, slot: Int? = null) = heroCommand { id -> api.hero.incubatePet(id, egg, slot) }
-
-    /** Вылупившийся питомец из места [slot]; [onHatched] получает его id - экран открывает карточку, видно, кто вылупился. */
-    fun collectPet(slot: Int, onHatched: (String) -> Unit = {}) = heroCommand { id ->
-        val before = heroes.state.value.hero?.pets?.pets?.map { it.id }?.toSet().orEmpty()
-        api.hero.collectPet(id, slot).pets.firstOrNull { it.id !in before }?.let { onHatched(it.id) }
-    }
-
-    /** Сфера ремесла на питомце (сервер 1.65.0), с предзнаменованием, если оно положено; фраза итога (4.4.1) - строка кузницы, как у вещи. */
-    fun petOrb(petId: String, orb: String, omen: String? = null, onApplied: () -> Unit = {}) = forgeCommand { id ->
-        heroes.forgeLine(api.hero.petOrb(id, petId, orb, omen).message)
-        onApplied()
-    }
-    fun choosePetLine(petId: String, choice: Int) = heroCommand { id -> api.hero.choosePetLine(id, petId, choice) }
-    fun activatePet(petId: String) = heroCommand { id -> api.hero.activatePet(id, petId) }
-    fun sellPet(petId: String) = heroCommand { id -> api.hero.sellPet(id, petId) }
-
-    /** Разведение (3.79.0): рождённое названо - гибрид по виду, иначе яйцо, ушедшее в сумку. */
-    fun breedPets(first: String, second: String) = heroCommand { id ->
-        val before = heroes.state.value.hero?.pets?.pets?.map { it.id }?.toSet().orEmpty()
-        val after = api.hero.breedPets(id, first, second)
-        val born = after.pets.firstOrNull { it.id !in before }
-        notices.toast(born?.let { ui("pets.bred_hybrid", locOr("pet.${it.species}", it.species)) } ?: ui("pets.bred_egg"), NoticeKind.LOOT)
-    }
 
     /** Окно тестера (3.73.0): одна выдача `/hero/grant/` герою в игре. */
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = heroCommand { id ->

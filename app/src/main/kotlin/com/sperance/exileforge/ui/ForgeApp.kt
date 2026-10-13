@@ -240,9 +240,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Expedition>(metadata = TabMemory.ROOT) { ExpeditionScreen() }
                 entry<Route.Crafts>(metadata = TabMemory.ROOT) { CraftsScreen() }
                 entry<Route.Progress>(metadata = TabMemory.ROOT) { ProgressScreen() }
-                // The forge, the menagerie and the trials open from the hub of «Развитие», «back» leading to it.
+                // The forge and the trials open from the hub of «Развитие», «back» leading to it.
                 entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE) }
-                entry<Route.Pets> { ProgressPlaceScreen(ProgressPlace.PETS) }
                 entry<Route.Trials> { com.sperance.exileforge.ui.screens.expedition.TrialsPage() }
                 // The atlas (2.68.0) is a sky of its own, above the tabs.
                 entry<Route.Atlas> { AtlasScreen() }

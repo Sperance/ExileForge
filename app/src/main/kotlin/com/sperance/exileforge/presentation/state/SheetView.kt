@@ -41,7 +41,7 @@ internal object HeroLens {
     fun wearing(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): WearOutcome {
         index ?: return WearOutcome.NONE
         hero ?: return WearOutcome.NONE
-        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.pets.active, place, hero.info.laws, hero.info.fate, hero.skills)
+        return Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, place, hero.info.laws, hero.info.fate, hero.skills)
     }
 
     /**
@@ -52,7 +52,7 @@ internal object HeroLens {
         index ?: return emptyList()
         hero ?: return emptyList()
         if (hero.tree.any { it.code == code }) return emptyList()
-        return Sheets.allocating(index, TakenNode(code, choice), hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.pets.active, hero.info.laws, hero.info.fate, hero.skills)
+        return Sheets.allocating(index, TakenNode(code, choice), hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.info.laws, hero.info.fate, hero.skills)
     }
 
     /** Память вердиктов (3.89.0): одна на приложение, сбрасывается сама с новым героем или контентом. */

@@ -218,9 +218,6 @@ enum class LogKind {
     AILMENTS,
     EVENTS,
 
-    /** The combat pet's lines (3.70.0): its blows and healing, and the blows it took. */
-    PET,
-
     /** Recovery (3.79.0): draughts, life on kill, recoup, spilled healing and regeneration. */
     RECOVERY,
 
@@ -230,9 +227,8 @@ enum class LogKind {
     ;
 
     companion object {
-        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, PET, RECOVERY, FATE)
+        val DEFAULT: Set<LogKind> = setOf(HITS, AILMENTS, RECOVERY, FATE)
         fun of(event: CombatEvent): LogKind = when {
-            event.pet != null -> PET
             event.trace is FateTrace -> FATE
             event.action == Action.TICK -> AILMENTS
             event.action == Action.FLASK -> RECOVERY

@@ -10,7 +10,6 @@ import com.sperance.exileforge.core.model.command.ApiCapabilities
 import com.sperance.exileforge.core.model.command.RouteInfo
 import com.sperance.exileforge.core.model.crafts.WorkState
 import com.sperance.exileforge.core.model.hero.HeroInfo
-import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.trade.MerchantStock
 import com.sperance.exileforge.rules.content.RULES_VERSION
@@ -71,6 +70,9 @@ import kotlinx.serialization.json.JsonElement
  *      (`RunContext.guild`, `RunContext.potion`) (4.10.x).
  * 79 - недуги Изранение и Иссушение (`AilmentRule.type` необязателен, `ceiling`, `curbs`), строки «меньше регенерации»/«без
  *      регенерации здоровья», `MAP_MONSTER_WITHER` (4.11.0).
+ * 80 - без питомцев: сняты маршруты `hero/pets` и `auction/sell/pet`, часть снимка `pets` (часы сервера - `HeroSnapshot.now`), лот и
+ *      вложение письма с питомцем, место `COLLAR`; рычаг дара `KILL_STACKS`, испытание Разлома `NO_RECOVERY`, плоская регенерация
+ *      маны, Сфера гравёра (`hero/orb?line`), сдача заданий в закрывающем заход `campaign/events` (`RunReport.turnIns`) (4.11.x).
  */
 const val API_REVISION = 80
 
@@ -108,7 +110,7 @@ const val API_REVISION = 80
 @Serializable data class HeroPart(val version: String, val data: JsonElement)
 
 /** The hero as the server answers it: only the parts whose fingerprints the client did not hold. */
-@Serializable data class HeroSnapshot(val version: String, val parts: Map<String, HeroPart> = emptyMap(), val unread: Int = 0)
+@Serializable data class HeroSnapshot(val version: String, val parts: Map<String, HeroPart> = emptyMap(), val unread: Int = 0, val now: Long = 0)
 
 /**
  * The parts of one hero the client holds. Their fingerprints travel back in `X-Hero-Parts` with every
@@ -124,8 +126,8 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
 
     /** [fresh] - the snapshot is the server's answer just now, not the copy kept on the device. */
     fun merge(snapshot: HeroSnapshot, fresh: Boolean = true): HeroParts {
-        // A fresh pets part brings the server's clock: the one moment its offset can be measured.
-        if (fresh) snapshot.parts[PETS]?.let { part -> runCatching { WireJson.decodeFromJsonElement(PetState.serializer(), part.data) }.getOrNull()?.incubator?.now?.let(ServerClock::heard) }
+        // A fresh answer brings the server's clock (4.11.x, [HeroSnapshot.now]): the one moment its offset can be measured.
+        if (fresh) ServerClock.heard(snapshot.now)
         return HeroParts(heroId, snapshot.version, parts + snapshot.parts)
     }
 
@@ -143,7 +145,6 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val campaign: CampaignState get() = decode(CAMPAIGN, CampaignState.serializer())
     val crafts: WorkState get() = decode(CRAFTS, WorkState.serializer())
     val merchant: MerchantStock get() = decode(MERCHANT, MerchantStock.serializer())
-    val pets: PetState get() = decode(PETS, PetState.serializer())
 
     private fun <T> decode(name: String, serializer: KSerializer<T>): T = WireJson.decodeFromJsonElement(serializer, parts.getValue(name).data)
 
@@ -156,7 +157,6 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
         const val CAMPAIGN = "campaign"
         const val CRAFTS = "crafts"
         const val MERCHANT = "merchant"
-        const val PETS = "pets"
-        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, PETS, ItemBuckets.ORDER) + ItemBuckets.names
+        val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, ItemBuckets.ORDER) + ItemBuckets.names
     }
 }

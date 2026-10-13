@@ -42,7 +42,7 @@ sealed interface Inspect {
     /** Шаблон [template] витриной: месту известен только шаблон (вложение письма, сделанное ремеслом). */
     data class Showcase(val template: String, override val action: InspectAction? = null) : Inspect
 
-    /** Стопка сумки [code]: сферы, эссенции, катализаторы, материалы, книги, скарабеи, сундуки, яйца. */
+    /** Стопка сумки [code]: сферы, эссенции, катализаторы, материалы, книги, скарабеи, сундуки. */
     data class Stack(val code: String, override val action: InspectAction? = null) : Inspect
 }
 

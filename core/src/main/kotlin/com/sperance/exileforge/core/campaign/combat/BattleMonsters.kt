@@ -76,8 +76,7 @@ private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
             damage.merge(element, total * convert, Double::plus)
         }
         val leading = damage.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
-        // A single-target hit picks its target as a swing does (3.71.0): a tanking pet takes it; a hit on several lands on the hero
-        val target = if (hit.targets <= 1) foeTarget() else hero
+        val target = hero
         strike(
             me,
             target,

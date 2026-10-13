@@ -237,7 +237,7 @@ class UiStringsTest {
             // Предначертание в бою (4.9.0): срабатывания рычагов в журнале, полка журнала и значки действующих рычагов
             com.sperance.exileforge.core.campaign.combat.FateBeat.entries.forEach { add("expedition.fate_beat.${it.name}") }
             com.sperance.exileforge.core.campaign.LogKind.entries.forEach { add("fight.log_shelf.${it.name}") }
-            listOf("MISSING_LIFE_DAMAGE", "AVENGE_CRIT", "HIT_CAP", "ALTERNATE_SKILL", "MANA_OVERFLOW", "STORE_TAKEN", "FULL_LIFE_GUARD", "OVERHEAL_BARRIER", "WIN_STREAK")
+            listOf("MISSING_LIFE_DAMAGE", "AVENGE_CRIT", "HIT_CAP", "ALTERNATE_SKILL", "MANA_OVERFLOW", "STORE_TAKEN", "FULL_LIFE_GUARD", "OVERHEAL_BARRIER", "WIN_STREAK", "KILL_STACKS")
                 .forEach { add("fight.fate_state.$it") }
         }
 

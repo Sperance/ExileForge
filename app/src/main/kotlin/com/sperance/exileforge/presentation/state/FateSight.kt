@@ -3,7 +3,6 @@ package com.sperance.exileforge.presentation.state
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.FateBoon
@@ -87,11 +86,10 @@ fun boonFigure(index: ContentIndex, boon: FateBoon): String? = FIGURE.find(loc(i
 
 /**
  * Текст рычага дара [effect] словами сервера (4.6.4, `fate.lever.<рычаг>`): каждое поле рычага - `{value}`, `{step}`, `{cap}`… (имя
- * [FateField] строчными) - его число на силе дара и со строками, `{ailments}` - недуги, `{pet}` - дух, `{orbs}` (4.9.0) - сферы.
+ * [FateField] строчными) - его число на силе дара и со строками, `{ailments}` - недуги, `{orbs}` (4.9.0) - сферы.
  */
 fun leverText(effect: FateEffect): String = FateField.entries.fold(loc(LocaleKey.fateLever(effect.lever.name))) { text, field -> text.replace("{${field.name.lowercase()}}", number(field.of(effect))) }
     .replace(AILMENTS, effect.ailments.joinToString(", ") { ui("enum.ailment.$it") })
-    .replace(PET, locOr("pet.${effect.pet}", effect.pet))
     .replace(ORBS, effect.orbs.joinToString(", ") { ui("enum.orb.${it.name}") })
 
 /** Действующая судьбоносная строка дара [fate] с правилом [knob]; null - такой строки нет. */
@@ -115,7 +113,6 @@ fun fateNow(index: ContentIndex, fate: FateEffects): List<String> = fate.effects
 fun fateTitle(code: String): String = loc(LocaleKey.fateName(code))
 
 private const val AILMENTS = "{ailments}"
-private const val PET = "{pet}"
 private const val ORBS = "{orbs}"
 private const val VALUE = "{v}"
 private const val PARAM = "{p}"

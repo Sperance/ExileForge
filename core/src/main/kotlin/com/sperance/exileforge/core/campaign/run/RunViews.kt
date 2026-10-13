@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
-import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Buildup
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
@@ -38,7 +37,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterCode
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.Zone
@@ -77,8 +75,6 @@ data class FloatingHit(
     val inflicted: List<Ailment>,
     val stunned: Boolean,
     val foe: Int = 0,
-    /** The combat pet's line (3.70.0): it struck, healed, or was struck — its card pulses with it. */
-    val pet: Boolean = false,
 )
 
 /** The blow on screen right now, for the cards to act out. */
@@ -89,8 +85,6 @@ data class LungeView(
     val landed: Boolean,
     val progress: Float,
     val foe: Int = 0,
-    /** The combat pet's blow, or a blow at it (3.70.0): its card acts it out, not the hero's. */
-    val pet: Boolean = false,
 )
 
 /** One ailment on a fighter as its tile shows it: the share of time [left], the [stacks], the [seconds] it still holds and its [strength]. */
@@ -214,9 +208,6 @@ data class CastView(val code: String, val left: Double, val total: Double) {
  */
 data class BuildupView(val leading: Buildup?, val share: Float, val bars: List<Float>, val stunned: Boolean, val frozen: Boolean, val electrocuted: Boolean)
 
-/** The pet in a fight as its bar shows it (3.5.0). */
-data class AllyView(val species: String, val life: Int, val maxLife: Int, val alive: Boolean)
-
 data class FightHud(
     val leader: RolledMonster,
     val foes: List<FoeView>,
@@ -236,8 +227,6 @@ data class FightHud(
     val paused: Boolean = false,
     val target: Int? = null,
     val focus: Int? = null,
-    /** The pet beside the hero (3.5.0). */
-    val ally: AllyView? = null,
     val heroTaunt: Boolean = false,
     /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
     val heroMana: Int = 0,
@@ -270,8 +259,6 @@ data class FightHud(
     val heroFlow: LifeFlow = LifeFlow.NONE,
     /** Пассивные умения героя на весь бой (4.9.3): ауры и бонусы на полке «на весь бой». */
     val heroPassives: List<EffectView> = emptyList(),
-    /** Замах врага скорее всего по герою (4.9.3): питомца, что принимает удары на себя, нет - плашка «→ по вам». */
-    val foesAimHero: Boolean = true,
     /** Секунды боя, когда снят этот снимок: кадр двигает от них сцены ударов ([com.sperance.exileforge.core.campaign.FightPulse]). */
     val time: Double = 0.0,
     /** Выпад удара правил ([CombatRules.lunge]), секунды: мера сцен ударов, применения и выпада. */
@@ -300,12 +287,9 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
     val events: List<CombatEvent> get() = pack.flatMap { it.events }
     val packSize: Int get() = pack.size
     private fun mine() = events.filter { it.actor == Side.HERO }
-    private fun theirs() = events.filter { it.actor == Side.MONSTER && !it.atPet }
+    private fun theirs() = events.filter { it.actor == Side.MONSTER }
     val dealt: Int get() = mine().sumOf { it.damage }.roundToInt()
     val taken: Int get() = theirs().sumOf { it.damage }.roundToInt()
-
-    /** What the combat pet took (3.70.0), apart from the hero's [taken]. */
-    val petTaken: Int get() = events.filter { it.atPet }.sumOf { it.damage }.roundToInt()
     val crits: Int get() = mine().count { it.kind == HitKind.CRIT }
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()

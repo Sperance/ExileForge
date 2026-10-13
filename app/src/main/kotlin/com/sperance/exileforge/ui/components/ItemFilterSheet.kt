@@ -18,7 +18,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.rarityTitle
-import com.sperance.exileforge.core.hero.PetFilter
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.data.settings.PreferencesRepository
@@ -26,7 +25,6 @@ import com.sperance.exileforge.presentation.state.FilterFacet
 import com.sperance.exileforge.presentation.state.ItemFilter
 import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.presentation.state.ItemType
-import com.sperance.exileforge.presentation.state.PetShelf
 import com.sperance.exileforge.presentation.state.QualityFilter
 import com.sperance.exileforge.presentation.state.SlotGroup
 import com.sperance.exileforge.rules.content.Rarity
@@ -35,7 +33,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Фильтр одного списка на экране (4.2.0 - предметов, с 4.x - и питомцев): [filter] - текущий, [update] меняет его и запоминает выбор
+ * Фильтр одного списка на экране (4.2.0, предметов): [filter] - текущий, [update] меняет его и запоминает выбор
  * на устройстве для своего списка [shelf] (поиск не запоминается).
  */
 @Stable
@@ -52,21 +50,11 @@ class FilterState<S, F> internal constructor(val shelf: S, initial: F, private v
 /** Фильтр списка предметов. */
 typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 
-/** Фильтр списка питомцев (4.x). */
-typealias PetFilterState = FilterState<PetShelf, PetFilter>
-
 /** Фильтр списка [shelf]: запомненный выбор этого списка, а без него - обычный списка. */
 @Composable fun rememberItemFilter(shelf: ItemShelf): ItemFilterState {
     val prefs = koinInject<PreferencesRepository>()
     val scope = rememberCoroutineScope()
     return remember(shelf) { FilterState(shelf, prefs.itemFilters.value[shelf]) { next: ItemFilter -> scope.launch { prefs.saveItemFilter(shelf, next) } } }
-}
-
-/** Фильтр списка питомцев [shelf] (4.x): запомненный выбор этого списка, а без него - обычный списка. */
-@Composable fun rememberPetFilter(shelf: PetShelf): PetFilterState {
-    val prefs = koinInject<PreferencesRepository>()
-    val scope = rememberCoroutineScope()
-    return remember(shelf) { FilterState(shelf, prefs.petFilters.value[shelf]) { next: PetFilter -> scope.launch { prefs.savePetFilter(shelf, next) } } }
 }
 
 /**
@@ -102,7 +90,7 @@ typealias PetFilterState = FilterState<PetShelf, PetFilter>
 }
 
 /**
- * Строка над любым списком с фильтром (4.x, общая для предметов и питомцев): [summary] - порядок и поиск словами, [shown] - сколько
+ * Строка над любым списком с фильтром (4.x): [summary] - порядок и поиск словами, [shown] - сколько
  * видно, справа значок фильтра с числом [tweaks]; любое нажатие - [onOpen].
  */
 @Composable fun FilterBar(summary: String, shown: Int, tweaks: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {

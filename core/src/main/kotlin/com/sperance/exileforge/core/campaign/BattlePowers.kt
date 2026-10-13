@@ -17,11 +17,9 @@ import com.sperance.exileforge.core.campaign.combat.echoCast
 import com.sperance.exileforge.core.campaign.combat.enemies
 import com.sperance.exileforge.core.campaign.combat.flaskCharges
 import com.sperance.exileforge.core.campaign.combat.gainCharges
-import com.sperance.exileforge.core.campaign.combat.healPet
 import com.sperance.exileforge.core.campaign.combat.hex
 import com.sperance.exileforge.core.campaign.combat.lay
 import com.sperance.exileforge.core.campaign.combat.note
-import com.sperance.exileforge.core.campaign.combat.petLife
 import com.sperance.exileforge.core.campaign.combat.place
 import com.sperance.exileforge.core.campaign.combat.powerShown
 import com.sperance.exileforge.core.campaign.combat.restore
@@ -287,7 +285,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         }
     }
 
-    /** Whom an effect reaches: the foe of the moment, every foe, one at random, the others, or none — the hero or the pet, each act's own. */
+    /** Whom an effect reaches: the foe of the moment, every foe, one at random, the others, or none — the hero, each act's own. */
     private fun targets(to: PowerTarget, moment: PowerMoment): List<Battle.Fighter> {
         val alive = battle.foeFighters.filter { it.alive }
         val focus = moment.target?.takeIf { it.side == Side.MONSTER && it.alive } ?: battle.target()
@@ -296,7 +294,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerTarget.ALL -> alive
             PowerTarget.RANDOM -> if (alive.isEmpty()) emptyList() else listOf(alive[battle.random.nextInt(alive.size)])
             PowerTarget.OTHERS -> alive - setOfNotNull(moment.target)
-            PowerTarget.SELF, PowerTarget.PET -> emptyList()
+            PowerTarget.SELF -> emptyList()
         }
     }
 
@@ -310,9 +308,8 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 // Movement speed matters only on the map (server 1.32.0): a fight's buff leaves it out.
                 val lines = effect.lines.filter { it.stat != MOVEMENT_SPEED }
                 if (lines.isEmpty()) return 0.0
-                val fighter = if (effect.to == PowerTarget.PET) battle.allyFighter?.takeIf { it.alive } ?: return 0.0 else hero
-                val stacks = stacksOf(fighter, power.stat, EffectKind.BUFF, effect.stacks)
-                battle.lay(fighter, TimedEffect(EffectKind.BUFF, power.stat, lines.map { line(power, it, stacks) }, battle.time + duration, duration))
+                val stacks = stacksOf(hero, power.stat, EffectKind.BUFF, effect.stacks)
+                battle.lay(hero, TimedEffect(EffectKind.BUFF, power.stat, lines.map { line(power, it, stacks) }, battle.time + duration, duration))
             }
 
             PowerAct.HEX -> targets(effect.to, moment).forEach { foe ->
@@ -320,29 +317,22 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 battle.lay(foe, TimedEffect(EffectKind.CURSE, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration))
             }
 
-            PowerAct.HEAL -> return if (effect.to == PowerTarget.PET) {
-                battle.healPet(amount)
-                0.0
-            } else {
-                when (effect.of) {
-                    PowerBase.MANA -> {
-                        hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100)
-                        0.0
-                    }
-
-                    PowerBase.SHIELD -> {
-                        hero.shield = min(body.maxShield, hero.shield + body.maxShield * amount / 100)
-                        0.0
-                    }
-
-                    PowerBase.DEALT -> battle.restore(moment.damage * amount / 100 * body.recoveryRate)
-
-                    PowerBase.TAKEN -> battle.restore(lastTaken * amount / 100 * body.recoveryRate)
-
-                    PowerBase.PET_LIFE -> battle.restore(battle.petLife() * amount / 100)
-
-                    else -> battle.restore(body.maxLife * amount / 100)
+            PowerAct.HEAL -> return when (effect.of) {
+                PowerBase.MANA -> {
+                    hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100)
+                    0.0
                 }
+
+                PowerBase.SHIELD -> {
+                    hero.shield = min(body.maxShield, hero.shield + body.maxShield * amount / 100)
+                    0.0
+                }
+
+                PowerBase.DEALT -> battle.restore(moment.damage * amount / 100 * body.recoveryRate)
+
+                PowerBase.TAKEN -> battle.restore(lastTaken * amount / 100 * body.recoveryRate)
+
+                else -> battle.restore(body.maxLife * amount / 100)
             }
 
             PowerAct.HURT -> when (effect.of) {
@@ -474,8 +464,6 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
             PowerBase.INTELLECT -> body[CoreStat.INTELLECT.code]
 
-            PowerBase.PET_LIFE -> battle.petLife()
-
             PowerBase.WEAPON -> 0.0
         }
         return mapOf((type ?: DamageType.PHYSICAL) to base * share)
@@ -497,6 +485,6 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         val MOVEMENT_SPEED: String = CoreStat.MOVEMENT_SPEED.code
 
         /** Events too frequent to log a line each. */
-        val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT, PowerEvent.PET_HIT)
+        val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT)
     }
 }

@@ -37,12 +37,6 @@ class AuctionClient internal constructor(private val http: Transport) {
         return sell("item", heroId, priceOrb, price, mapOf("code" to code, "amount" to amount.toString()))
     }
 
-    /** Выставляет питомца (сервер 1.81.0): он уходит из зверинца в лот; работающего сервер не примет. */
-    suspend fun sellPet(heroId: String, petId: String, priceOrb: String, price: Long): AuctionMine {
-        requireItemId(petId)
-        return sell("pet", heroId, priceOrb, price, mapOf("petId" to petId))
-    }
-
     /** Выставление отвечает своим аукционом с новым лотом и снимком героя (3.94.1). */
     private suspend fun sell(what: String, heroId: String, priceOrb: String, price: Long, extra: Map<String, String>): AuctionMine {
         require(priceOrb.isNotBlank()) { ui("api.choose_orb") }

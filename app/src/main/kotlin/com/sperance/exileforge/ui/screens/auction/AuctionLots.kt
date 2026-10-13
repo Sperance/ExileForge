@@ -176,7 +176,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
 
 /**
  * Табличка итога истории (4.3.0): «Получено» или «Потрачено», свёрнутая, в заголовке - сколько строк. Строка - значок, название и
- * количество (стопки и валюта сложены); нажатие на стопку, сферу, вещь или питомца - [onOpen]. Пустой таблички нет.
+ * количество (стопки и валюта сложены); нажатие на стопку, сферу или вещь - [onOpen]. Пустой таблички нет.
  */
 @Composable private fun DealTable(game: GameUi, title: String, entries: List<DealEntry>, onOpen: (DealEntry) -> Unit) {
     if (entries.isEmpty()) return

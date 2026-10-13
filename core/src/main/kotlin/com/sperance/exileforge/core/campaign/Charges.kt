@@ -83,6 +83,3 @@ internal class HeroCharges(private val rules: ChargeRules) {
         ChargeView(kind, count, rules.max(kind, sheet), max(0.0, (until[kind] ?: now) - now))
     }
 }
-
-/** Лист героя на его боевом питомце (4.9.0: одно правило с Мощью сервера, [com.sperance.exileforge.rules.sheet.PetBoons]). */
-typealias PetBoons = com.sperance.exileforge.rules.sheet.PetBoons

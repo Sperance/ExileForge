@@ -27,9 +27,8 @@ internal fun Battle.blightTaken(attacker: Fighter, target: Fighter): Double = if
 internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val body = blow.body ?: me.body
     val foe = if (me.side == Side.MONSTER) me.index else target.index
-    val petLine = isPet(me) || isPet(target)
     if (target.invulnerable) {
-        record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, pet = petLine, spell = blow.spell)
+        record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, spell = blow.spell)
         return false
     }
     val sure = me === heroFighter && nextCrit
@@ -59,7 +58,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
         record(
             me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill,
-            trace = HitTrace(striker, struck, emptyList(), emptyList(), null, origin), pet = petLine, spell = blow.spell,
+            trace = HitTrace(striker, struck, emptyList(), emptyList(), null, origin), spell = blow.spell,
         )
         if (kind == HitKind.BLOCKED) blocked(target)
         if (kind == HitKind.EVADED) traitsEvaded(target)
@@ -292,7 +291,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
     val landing = Landing(0.0, absorbed, 0.0, 0.0, shielded - absorbed + chaos, 0.0, 0.0, 0.0, false)
     record(
         me.side, Action.REFLECT, HitKind.HIT, total, mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe,
-        trace = HitTrace(striker, struck, factors, types.map { it.first }, landing, origin), pet = isPet(me) || isPet(attacker),
+        trace = HitTrace(striker, struck, factors, types.map { it.first }, landing, origin),
     )
     if (!attacker.alive) fell(attacker, killer = me)
 }

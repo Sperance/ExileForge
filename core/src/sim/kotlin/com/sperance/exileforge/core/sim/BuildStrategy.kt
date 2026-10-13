@@ -84,7 +84,7 @@ class SimKit(val index: ContentIndex) {
     private val orders = ConcurrentHashMap<String, List<TakenNode>>()
 
     /** Лист класса на уровне с деревом [tree] и вещами [items]. */
-    fun stats(heroClass: HeroClass, level: Int, tree: List<TakenNode>, items: List<ItemInstance>): Map<String, Double> = calculator.hero(level, heroClass, tree, emptyList(), items).stats
+    fun stats(heroClass: HeroClass, level: Int, tree: List<TakenNode>, items: List<ItemInstance>): Map<String, Double> = calculator.hero(level, heroClass, tree, items).stats
 
     /**
      * Цена листа глазами игрока: живучесть - здоровье и щит, делённые на долю урона, что проходит сквозь сопротивления после
@@ -174,7 +174,7 @@ class SimKit(val index: ContentIndex) {
         val graph = index.tree
         var left = points
         return order.takeWhile { taken ->
-            val cost = graph.node(taken.code)?.let { graph.cost(it, heroClass.startNode) } ?: 0
+            val cost = graph.node(taken.code)?.let { graph.cost(it) } ?: 0
             (cost <= left).also { if (it) left -= cost }
         }
     }
@@ -191,10 +191,10 @@ class SimKit(val index: ContentIndex) {
                 .filter { it.type != SkillNodeType.JEWEL_SOCKET && TreeAllocation.refusal(graph, it, taken.keys, start, left) == null }
                 .flatMap { node -> (if (node.options.isEmpty()) listOf(null) else node.options.indices.toList()).map { node to it } }
             val pick = options.maxWithOrNull(
-                compareBy<Pair<TreeNode, Int?>>({ (node, choice) -> (value(taken.values + TakenNode(node.code, choice)) - base) / graph.cost(node, start).coerceAtLeast(1) }, { it.first.code }),
+                compareBy<Pair<TreeNode, Int?>>({ (node, choice) -> (value(taken.values + TakenNode(node.code, choice)) - base) / graph.cost(node).coerceAtLeast(1) }, { it.first.code }),
             ) ?: break
             taken[pick.first.code] = TakenNode(pick.first.code, pick.second)
-            left -= graph.cost(pick.first, start)
+            left -= graph.cost(pick.first)
             base = value(taken.values)
         }
         return taken.values.toList()

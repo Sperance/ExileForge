@@ -33,11 +33,6 @@ data class CombatEvent(
     val onSelf: Boolean = false,
     /** The hero's mana after it (2.78.0). */
     val heroMana: Double = 0.0,
-    /**
-     * The combat pet on the hero's side of this line (3.70.0), by species: it struck, healed or gave a blow back when the
-     * [actor] is the hero's side, it was struck when the actor is a monster. The figures count as they always did.
-     */
-    val pet: String? = null,
     /** Строка эха применения (4.4.0): умение повторилось само - руной эха или силой `RECAST`; бой рисует его бледнее. */
     val echo: Boolean = false,
     /** Удар - чары (4.9.3, [Blow.spell]): бой рисует его снарядом цвета стихии, а не выпадом карты. */
@@ -50,8 +45,6 @@ data class CombatEvent(
     /** Who the number floats off. */
     val target: Side get() = if (onSelf) actor else actor.other
 
-    /** A monster's line at the combat pet (3.70.0): a blow, a tick or a blow back it took — the pet's, never the hero's damage taken. */
-    val atPet: Boolean get() = pet != null && actor == Side.MONSTER
     val landed: Boolean get() = kind == HitKind.HIT || kind == HitKind.CRIT
 }
 

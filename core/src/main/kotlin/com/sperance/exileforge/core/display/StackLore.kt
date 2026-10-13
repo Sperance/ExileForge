@@ -7,9 +7,7 @@ import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.Job
 import com.sperance.exileforge.rules.content.JobRecipes
 import com.sperance.exileforge.rules.content.MonsterCode
-import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.TrialRules
-import com.sperance.exileforge.rules.roll.Menagerie
 import com.sperance.exileforge.rules.table.Ref
 import com.sperance.exileforge.rules.table.TableKind
 import java.util.WeakHashMap
@@ -54,11 +52,11 @@ private fun essenceShare(index: ContentIndex, essence: Essence): Double {
 }
 
 /** Where a stack comes from, by kind; the order is the order a card lists them in. */
-enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAAL, EGGS, TRIALS, KEY, MAPS, ABYSS, RUSH, MERCHANT, SALE, FIND }
+enum class SourceKind { WORK, MONSTERS, BOSSES, CHESTS, CORRUPTED, CRYSTALS, VAAL, TRIALS, KEY, MAPS, ABYSS, RUSH, MERCHANT, SALE, FIND }
 
 /**
  * One way to come by a stack: its [kind], the zone [levels] it is found in, the best [chance] in percent where the
- * content gives one, and for a work or an egg what names it — [ref] the profession or the biomes, [detail] the work.
+ * content gives one, and for a work what names it — [ref] the profession, [detail] the work.
  */
 data class ItemSource(val kind: SourceKind, val levels: IntRange? = null, val chance: Double? = null, val ref: String = "", val detail: String = "", val level: Int = 0)
 
@@ -77,7 +75,6 @@ private val sourceCache = WeakHashMap<ContentIndex, Map<String, List<ItemSource>
 fun ItemSource.title(): String = when (kind) {
     SourceKind.WORK -> ui("source.WORK", professionTitle(ref), jobTitle(detail), level)
     SourceKind.FIND -> ui("source.FIND", professionTitle(ref), jobTitle(detail))
-    SourceKind.EGGS -> ui("source.EGGS", ref.split(',').joinToString(", ") { ui("expedition.biome.$it") })
     SourceKind.KEY -> ui("source.KEY", level, itemTitle(ref))
     SourceKind.SALE -> ui("source.SALE", ref.split(',').joinToString(", ") { ui("stash.rarity_many.$it").lowercase() }, level)
     else -> levels?.let { ui("source.$kind", if (it.first == it.last) "${it.first}" else "${it.first}–${it.last}") } ?: ui("source.$kind")
@@ -113,7 +110,7 @@ fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized
 
 private val useCache = WeakHashMap<ContentIndex, Map<String, List<ItemUse>>>()
 
-/** The reverse of the content: every table, monster, zone, work, egg and shelf, read once into stack → sources. */
+/** The reverse of the content: every table, monster, zone, work and shelf, read once into stack → sources. */
 private class SourceIndex(private val index: ContentIndex) {
     private val found = HashMap<String, MutableList<ItemSource>>()
 
@@ -125,7 +122,6 @@ private class SourceIndex(private val index: ContentIndex) {
         chests()
         crystals()
         works()
-        eggs()
         trials()
         // Печати Атласа (4.6.4): любая награда захода по карте-предмету
         stacks(index.campaign.maps.seals.table).keys.forEach { add(it, ItemSource(SourceKind.MAPS)) }
@@ -204,16 +200,6 @@ private class SourceIndex(private val index: ContentIndex) {
         }
     }
 
-    /** A biome's egg falls from its rare monsters and bosses: magic, or rare with the rules' share (server 1.82.0). */
-    private fun eggs() {
-        val pets = index.pets
-        val drop = maxOf(pets.eggChance.rare, pets.eggChance.boss) * 100
-        val rare = Menagerie(index).rareEggChance(0.0)
-        pets.eggs.forEach { (biome, codes) ->
-            codes.forEach { (rarity, egg) -> add(egg, ItemSource(SourceKind.EGGS, chance = drop * if (rarity == Rarity.RARE) rare else 1 - rare, ref = biome)) }
-        }
-    }
-
     /** The crest and the seal fall from any reward of a run; the rush's key is put together from crests. */
     private fun trials() {
         val trials = index.campaign.trials ?: return
@@ -261,7 +247,7 @@ private class SourceIndex(private val index: ContentIndex) {
         maxOf(a, b)
     }
 
-    /** One line per kind for the zone-wide sources — their levels joined, their best chance — and one per work, egg and shelf. */
+    /** One line per kind for the zone-wide sources — their levels joined, their best chance — and one per work and shelf. */
     private fun merge(sources: List<ItemSource>): List<ItemSource> = sources.groupBy { if (it.levels != null) it.kind.name else "${it.kind}:${it.ref}:${it.detail}" }.values
         .map { same ->
             same.reduce { a, b ->

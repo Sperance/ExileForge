@@ -9,8 +9,6 @@ import com.sperance.exileforge.core.model.hero.CurrencyApplyResponse
 import com.sperance.exileforge.core.model.hero.DeletionConfirm
 import com.sperance.exileforge.core.model.hero.DeletionPreview
 import com.sperance.exileforge.core.model.hero.HeroSummary
-import com.sperance.exileforge.core.model.hero.PetOrbResponse
-import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.model.hero.SellBatch
 import com.sperance.exileforge.core.model.hero.SellOutcome
@@ -220,9 +218,6 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     // ---- orbs, essences, the bench ----
-
-    /** Spends one orb of the bag on one item; [orb] is the orb's item code. */
-    /** An orb on an item, with an [omen] (3.36.0) spent along with it when given. */
 
     /** Tempers a weapon or armour with the smith's ore (server 1.74.0): quality and item level up, once per item. Never retried. */
     suspend fun temper(heroId: String, itemId: String): CurrencyApplyResponse {

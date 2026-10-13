@@ -24,7 +24,7 @@ import kotlin.math.min
  * (Предначертание, 4.6.3).
  */
 internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant, raw: Map<DamageType, Double>) {
-    // Предначертание (4.6.0, «Каменная кожа»): удар по герою и питомцу - что пропустят рычаги, до барьера и щита
+    // Предначертание (4.6.0, «Каменная кожа»): удар по герою - что пропустят рычаги, до барьера и щита
     val taken = fateCapped(me, target, struck)
     val dealt = taken.values.sum()
     var rest = dealt
@@ -95,7 +95,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     pendingHit = null
     record(
         me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill, trace = trace,
-        pet = isPet(me) || isPet(target), spell = blow.spell,
+        spell = blow.spell,
     )
     if (me.side == Side.HERO) sealStruck(target, kind == HitKind.CRIT)
     if (me === heroFighter) {
@@ -110,9 +110,6 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         // Momentum (3.32.0) grows its standing lines with every hit: the body for the next blow is made again now.
         if (powers.dealt(PowerMoment(target, taken, blow.spell), kind == HitKind.CRIT, stunned, inflicted, blow.primary) && powers.restand()) remake(heroFighter)
     }
-    // The pet's blow (3.33.0, server 1.32.0): the powers answering it hear of its damage and its foe.
-    if (me === allyFighter) powers.fire(PowerEvent.PET_HIT, PowerMoment(target, taken, blow.spell))
-    if (target === allyFighter) petWatch(me)
     if (target === heroFighter) {
         flaskCharge("FLASK_CHARGE_WHEN_HIT")
         trigger(SkillEvent.HIT_TAKEN, me)
@@ -352,7 +349,6 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     trigger(SkillEvent.KILL)
     if (spell) trigger(SkillEvent.SPELL_KILL)
     powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing))
-    if (killer != null && killer === allyFighter) powers.fire(PowerEvent.PET_KILL, PowerMoment(fighter, spell = spell, ailments = ailing))
     lastWords(fighter)
     fateFell(fighter, ailing)
 }

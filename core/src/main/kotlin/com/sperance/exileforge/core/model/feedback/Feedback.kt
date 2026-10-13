@@ -102,10 +102,8 @@ import kotlinx.serialization.Serializable
     val equipment: List<MailEquipment> = emptyList(),
     /** Items as they are (server 1.74.0): an expired lot's goods come back by mail with their rolls. */
     val instances: List<com.sperance.exileforge.rules.roll.ItemInstance> = emptyList(),
-    /** Питомцы как есть (3.91.0, сервер 1.81.10): питомец истёкшего лота; забрать - только в зверинец с местом. */
-    val pets: List<com.sperance.exileforge.rules.content.Pet> = emptyList(),
 ) {
-    val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty() && instances.isEmpty() && pets.isEmpty()
+    val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty() && instances.isEmpty()
 }
 
 /**

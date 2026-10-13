@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
+import com.sperance.exileforge.core.campaign.combat.fateSourced
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.effectText
@@ -168,7 +169,7 @@ internal fun Shelved.row(): ShelfRow = when (this) {
 /** Имя эффекта: бафф правил - по виду, бафф дара - даром, глоток - флаконом, прочее - умением. */
 internal fun effectTitle(view: EffectView): String = when {
     view.buff != null -> ui("fight.buff.${view.buff!!.name}")
-    view.source == FATE_SOURCE -> ui("fight.fate_buff")
+    fateSourced(view.source) -> ui("fight.fate_buff")
     view.flask != null -> equipmentTitle(view.source)
     else -> SkillText.title(view.source)
 }

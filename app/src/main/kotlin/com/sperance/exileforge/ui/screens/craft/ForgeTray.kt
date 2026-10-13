@@ -137,7 +137,7 @@ private const val ONE_ROW = 6
 }
 
 /**
- * The orbs of the tray (4.4.x): только [choices] - сферы сумки, что лягут на цель (вещь или питомца) сами или со знамением сумки,
+ * The orbs of the tray (4.4.x): только [choices] - сферы сумки, что лягут на вещь сами или со знамением сумки,
  * в порядке полки; сферы, что не лягут, спрятаны. Сфера, что ждёт знамения, помечена знаком, а выбранная говорит, что его нужно.
  */
 @Composable internal fun OrbTray(
@@ -218,7 +218,7 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
 
 /**
  * The omens the bag holds for the chosen orb (3.36.0). Описание знамени раскрывается нажатием ([ExpandableText], 4.2.0): one may be laid on the next use, the one that goes on the [target] -
- * an item or, since server 1.65.0, a pet. Chosen again, it is taken off. Each is the orb's pair on the anvil (mockup B).
+ * an item. Chosen again, it is taken off. Each is the orb's pair on the anvil (mockup B).
  */
 @Composable fun OmenLedger(game: GameUi, orbCode: String, chosenOmen: String, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
     val index = game.index ?: return

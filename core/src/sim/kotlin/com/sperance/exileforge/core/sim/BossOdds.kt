@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.sim
 import com.sperance.exileforge.core.campaign.HeroModel
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.PhaseFoes
-import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
@@ -59,7 +58,7 @@ data class BossOdds(val wins: Int, val fights: Int, val seconds: Double, val lif
 }
 
 /**
- * Неизменяемый снимок боя со стражем для прогона (4.2.0): герой, враги, запасы и питомец на миг снимка. Снимок делают там, где
+ * Неизменяемый снимок боя со стражем для прогона (4.2.0): герой, враги и запасы на миг снимка. Снимок делают там, где
  * живёт арена или поход, а [run] - тяжёлый, его зовут вне главного потока: он не читает живого состояния.
  */
 class OddsPlan internal constructor(
@@ -72,7 +71,6 @@ class OddsPlan internal constructor(
     private val kit: Loadout,
     private val model: HeroModel,
     private val percent: Set<String>,
-    private val ally: Ally?,
     private val phases: PhaseFoes,
     /** Прошлый бой выигран: силы `FIGHT_CLEAR` открывают и бои прогона. */
     private val cleared: Boolean,
@@ -88,7 +86,7 @@ class OddsPlan internal constructor(
         repeat(fights) { i ->
             val battle = Battle(
                 hero, phases.withRetinue(foes, Dice(SEED + i)), rules, fight, pools.life, Random(SEED + i), stance,
-                kit = kit, model = model, pools = pools, percent = percent, ally = ally, cleared = cleared, kind = kind,
+                kit = kit, model = model, pools = pools, percent = percent, cleared = cleared, kind = kind,
             )
             while (battle.outcome == null && battle.time < cap) battle.advance(1.0)
             seconds += battle.time
@@ -115,4 +113,4 @@ class OddsPlan internal constructor(
 }
 
 /** Тип урона, что добил героя: последний удар или тик врага по нему; null - не от врага. */
-private fun Battle.killingType(): DamageType? = events.lastOrNull { it.actor == Side.MONSTER && it.damage > 0 && !it.atPet }?.let { it.type ?: it.ailment?.let { ailment -> ruleOf[ailment]?.second } }
+private fun Battle.killingType(): DamageType? = events.lastOrNull { it.actor == Side.MONSTER && it.damage > 0 }?.let { it.type ?: it.ailment?.let { ailment -> ruleOf[ailment]?.second } }

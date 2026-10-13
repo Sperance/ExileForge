@@ -11,7 +11,7 @@ sealed interface DealEntry {
     /** Золото сборов покупателя: сгорает, суммируется в одну строку. */
     data class Gold(val amount: Long) : DealEntry
 
-    /** Вещь или питомец сделки [lot] - каждый своей строкой, карточка открывается из неё. */
+    /** Вещь сделки [lot] - каждый своей строкой, карточка открывается из неё. */
     data class Goods(val lot: AuctionLot) : DealEntry
 }
 
@@ -34,7 +34,7 @@ class DealLedger(val received: List<DealEntry>, val spent: List<DealEntry>) {
 
         private fun goods(lot: AuctionLot): DealEntry? = when (val goods = lot.goods) {
             is LotGoods.Stack -> DealEntry.Stack(goods.code, goods.amount)
-            is LotGoods.Equipment, is LotGoods.Beast -> DealEntry.Goods(lot)
+            is LotGoods.Equipment -> DealEntry.Goods(lot)
             null -> null
         }
 

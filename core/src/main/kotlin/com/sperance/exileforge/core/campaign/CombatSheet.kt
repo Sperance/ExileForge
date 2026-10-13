@@ -9,7 +9,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
@@ -20,7 +19,6 @@ import com.sperance.exileforge.rules.sheet.Might
 import com.sperance.exileforge.rules.sheet.MightDefense
 import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.rules.sheet.MightReading
-import com.sperance.exileforge.rules.sheet.PetFighter
 import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
@@ -79,9 +77,9 @@ data class StatFigures(
  * преобразованиями Предначертания - боевым листом правил ([HeroBody], 4.9.0: тот же свод, что у тела героя в заходе без карты и у Мощи сервера). Одна точка для сводки, разбора
  * характеристики и сравнений вещи и узла дерева: их цифры не расходятся с боем и между собой.
  */
-class CombatSheet(private val index: ContentIndex, private val model: SheetModel, level: Int, val kit: Loadout, pet: Pet? = null) {
+class CombatSheet(private val index: ContentIndex, private val model: SheetModel, level: Int, val kit: Loadout) {
     /** Боевой лист героя правилами (4.9.0): свод листа с пассивными умениями - тот же, из которого сервер считает Мощь. */
-    private val hero = HeroBody(index, model.fold, level, kit.heroKit, pet, kit.flasks.mapNotNull { it?.sheet })
+    private val hero = HeroBody(index, model.fold, level, kit.heroKit, kit.flasks.mapNotNull { it?.sheet })
 
     /** Тело героя без пассивных умений: с него читаются их уровни и сила аур. */
     private val bare: Combatant by lazy { Combatant(hero.bare, level, index.campaign.combat) }
@@ -127,11 +125,11 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /**
      * Мощь героя (4.8.0) по телу боя без карты: печать листа героя и «было» сравнения вещи. С 4.9.0 - [Might.hero] правил: натиск с
-     * умениями и боевым питомцем, одна функция с сервером.
+     * умениями, одна функция с сервером.
      */
     val might: MightReading by lazy { Might.hero(index, hero) }
 
-    /** Что Мощь берёт сверх листа (4.9.x): урон умений и питомца, резерв маны аурами, фляги - с ним бой меряет Мощь героя под эффектами карты. */
+    /** Что Мощь берёт сверх листа (4.9.x): урон умений, резерв маны аурами, фляги - с ним бой меряет Мощь героя под эффектами карты. */
     val mightExtras: MightExtras get() = hero.extras
 
     /** Разбор стойкости Мощи героя (4.9.x) для листа героя: запас, мана перед здоровьем, уклонение, получаемый урон, пополнение. */
@@ -266,13 +264,12 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
         /**
          * Лист боя героя: его лист [sheet] (без модели - null), уровень [level], класс [heroClass], умения [skills] и Предначертание
-         * [fate] с надетым [equipped] (судьбоносные строки) - те же рычаги, что берёт заход (`ExpeditionActions.gear`), без фляг;
-         * [pets] (4.9.0) - активные питомцы: боевой бьёт в Мощи героя.
+         * [fate] с надетым [equipped] (судьбоносные строки) - те же рычаги, что берёт заход (`ExpeditionActions.gear`), без фляг.
          */
-        fun of(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, equipped: Collection<ItemInstance>, pets: List<Pet> = emptyList()): CombatSheet? {
+        fun of(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, equipped: Collection<ItemInstance>): CombatSheet? {
             val model = sheet.model ?: return null
             val kit = Loadout.of(skills, index, heroClass, emptyList(), sheet.stats, index.powers, index.rules.charges, FateKit.of(index, fate, sheet.stats, equipped))
-            return CombatSheet(index, model, level, kit, PetFighter.combat(index, pets))
+            return CombatSheet(index, model, level, kit)
         }
     }
 }

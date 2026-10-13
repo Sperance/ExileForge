@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
-import com.sperance.exileforge.core.campaign.PetAllies
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.RunStats
 import com.sperance.exileforge.core.campaign.Spawns
@@ -21,7 +20,6 @@ import com.sperance.exileforge.core.campaign.ZoneShare
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.AilmentLaw
-import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Buildup
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
@@ -51,7 +49,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.MapStat
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -109,8 +106,6 @@ class ExpeditionRun(
     internal val onFallen: () -> Unit,
     /** The autorun that drives this run instead of the stick (3.2.0); null walks by hand. */
     internal var autopilot: AutoPilot? = null,
-    /** The combat pet at work (3.5.0), read again as each fight begins (3.70.0): one put to work mid-run joins the next. */
-    internal val pet: () -> Pet? = { null },
     /**
      * Счёт Предначертания захода (4.6.0): бои захода и его Ваал-зоны делят его - перелив маны, выигранные бои Разгона
      * ([tallyWins]).
@@ -329,13 +324,6 @@ class ExpeditionRun(
     internal val vaaled = HashMap<Int, Crystal>()
     internal var fallEvent: Int? = null
 
-    /** The pet as a fighter (3.5.0), made again only when the hero's sheet that reaches it changes. */
-    internal val allies = PetAllies(index, rules)
-
-    /** The pet of the fight under way, taken as it began: a change mid-fight waits for the next. */
-    internal var fightPet: Pet? = null
-    internal fun ally(): Ally? = allies.of(hero, fightPet, kit.fate.effects.spirit)
-
     internal var slain: RolledMonster? = null
     internal var report: FightReport? = null
 
@@ -547,8 +535,6 @@ class ExpeditionRun(
             inherited: Map<String, Double> = emptyMap(),
             /** An autorun instead of the stick (3.2.0). */
             auto: AutoPlan? = null,
-            /** The combat pet at work (3.5.0): it fights every fight at the hero's side, read again as each begins (3.70.0). */
-            pet: () -> Pet? = { null },
             /**
              * Счёт Предначертания захода (4.6.1): Ваал-зона берёт счёт карты, из которой вошли; по умолчанию - павшие [killed] этой
              * зоны.
@@ -589,7 +575,7 @@ class ExpeditionRun(
             val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, if (vaal) run.seed xor VAAL_SALT else run.seed) }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet, fateRun,
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, fateRun,
             ).also {
                 // Принесённое из основной карты (зона Ваал): баффы, проклятия и заряды - на листе героя сразу
                 if (!it.carry.bare) it.rebody()

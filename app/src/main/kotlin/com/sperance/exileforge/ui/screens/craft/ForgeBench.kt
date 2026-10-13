@@ -162,7 +162,7 @@ internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.
     }
 }
 
-/** The frame of a choice of lines — an item's or a pet's: the title, how it works, and the options under them. */
+/** The frame of a choice of lines of an item: the title, how it works, and the options under them. */
 @Composable fun ChoiceFrame(title: String, hint: String, options: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.fillMaxWidth().border(1.dp, Rune, MaterialTheme.shapes.small).padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(ui(title), color = Rune, style = MaterialTheme.typography.titleMedium)

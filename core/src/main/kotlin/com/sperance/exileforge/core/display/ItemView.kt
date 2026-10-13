@@ -352,7 +352,7 @@ fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
         Slot.GLOVES -> ItemVisualKind.GLOVES
         Slot.BOOTS -> ItemVisualKind.BOOTS
         Slot.RING, Slot.RING_2 -> ItemVisualKind.RING
-        Slot.AMULET, Slot.COLLAR -> ItemVisualKind.AMULET
+        Slot.AMULET -> ItemVisualKind.AMULET
         Slot.BELT -> ItemVisualKind.BELT
         Slot.SHIELD -> ItemVisualKind.SHIELD
         Slot.WINGS -> ItemVisualKind.WINGS

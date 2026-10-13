@@ -35,7 +35,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.roundToInt
 import kotlin.math.sin
 
-/** A foe's or a pet's life bar: the shield laid over its top edge and the life written across it. */
+/** A foe's life bar: the shield laid over its top edge and the life written across it. */
 @Composable internal fun LifeBar(life: Int, maxLife: Int, shield: Int, maxShield: Int, modifier: Modifier) {
     Box(modifier) {
         VitalBar(life, maxLife, LifeRed, Modifier.fillMaxSize(), text = "$life", size = 8.sp)

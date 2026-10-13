@@ -28,7 +28,6 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
@@ -75,13 +74,12 @@ private fun systemLine(mail: Mail, part: String): String {
     }
 }
 
-/** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает (4.3.2); у золота и питомца её нет. */
+/** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает (4.3.2); у золота её нет. */
 fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
     if (mail.attachment.gold > 0) add(ui("mail.gold", mail.attachment.gold) to null)
     mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount" to Inspect.Stack(code)) }
     mail.attachment.instances.forEach { add(equipmentTitle(it.template) + " · " + ui("enum.rarity.${it.rarity.name}") to Inspect.Copy(it)) }
     mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template)) }
-    mail.attachment.pets.forEach { add(locOr("pet.${it.species}", it.species) + " · " + ui("enum.rarity.${it.rarity.name}") to null) }
 }
 
 /** Вкладка ящика (4.6.3): какие письма она держит. Новая вкладка - запись перечисления, не ветка экрана. */

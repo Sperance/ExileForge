@@ -37,7 +37,7 @@ import kotlin.math.ln
  * умения в бою (входят в итог), [FATE] - строки Предначертания, [RESHAPE] - его преобразования листа, [FIGHT] - что бой читает вместе
  * с цифрой, [LOW_LIFE] - бонусы низкого здоровья (в итог не входят).
  */
-enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, PET, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE }
+enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE }
 
 /** One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. */
 data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null)
@@ -60,7 +60,7 @@ data class StatExplanation(
 
 /**
  * Takes a [StatBreakdown] apart into what the window prints: sources named from the hero — a class,
- * a node, a worn item by name and slot, a pet — a conversion under the stat it takes from.
+ * a node, a worn item by name and slot — a conversion under the stat it takes from.
  */
 class StatExplainer(private val game: GameUi) {
     private val hero = game.hero
@@ -115,7 +115,6 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.CLASS -> ShareKind.CLASS
             SourceKind.NODE -> ShareKind.NODE
             SourceKind.ITEM -> ShareKind.ITEM
-            SourceKind.PET -> ShareKind.PET
             SourceKind.LAW -> ShareKind.LAW
             SourceKind.SKILL -> ShareKind.SKILL
             SourceKind.FATE -> ShareKind.FATE
@@ -195,8 +194,6 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.NODE -> nodeTitle(source.ref)
 
             SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> game.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
-
-            SourceKind.PET -> hero?.pets?.pet(source.ref)?.let { locOr("pet.${it.species}", it.species) } ?: ui("stat.kind.PET")
 
             SourceKind.LAW -> loc(LocaleKey.lawName(source.ref))
 

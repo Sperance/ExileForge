@@ -287,7 +287,7 @@ private val FATE_GRID_HEIGHT = 228.dp
                 RoleMark(row.role)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                MutedText(listOf(classTitle(row.heroClass), ui("pets.level", row.level), row.login).filter { it.isNotBlank() }.joinToString(" · "), Modifier.weight(1f, fill = false))
+                MutedText(listOf(classTitle(row.heroClass), ui("common.level_short", row.level), row.login).filter { it.isNotBlank() }.joinToString(" · "), Modifier.weight(1f, fill = false))
                 // Предначертание аккаунта (4.6.3): печать и имя дара рядом с классом
                 row.fate?.let { FateMark(FateCard(it)) }
             }

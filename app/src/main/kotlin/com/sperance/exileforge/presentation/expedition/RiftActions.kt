@@ -204,7 +204,7 @@ class RiftActions(
         val fight = board.fight ?: return null
         val engine = RiftEngine(rules, index.campaign, board.plan, index.rules.fight)
         val fate = fateRun?.takeIf { it.first == run.id }?.second ?: com.sperance.exileforge.core.campaign.combat.FateRun().also { fateRun = run.id to it }
-        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, hero.pets.pet(hero.pets.combat), fate) { end -> deliver(end) }
+        return RiftArena(index, rules, engine, run, fight, RunContext(hero.heroClass, hero.level), gear, fate) { end -> deliver(end) }
             .also { a -> repeat(speedSteps) { a.send(RunCommand.Speed) } }
     }
 

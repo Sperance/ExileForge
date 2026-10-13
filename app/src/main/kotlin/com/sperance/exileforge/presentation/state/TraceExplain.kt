@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.campaign.LineSource
 import com.sperance.exileforge.core.campaign.MonsterBreakdown
 import com.sperance.exileforge.core.campaign.MonsterShareKind
 import com.sperance.exileforge.core.campaign.TraceOrigin
-import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -40,7 +39,7 @@ class TraceExplainer(private val game: GameUi) {
         val percent = index?.stats?.isPercent(stat) == true
         val rows = mutableListOf<TraceRow>()
         when {
-            shot.side == Side.HERO && shot.index != Battle.ALLY -> hero(stat, origin, rows)
+            shot.side == Side.HERO -> hero(stat, origin, rows)
             shot.side == Side.MONSTER -> monster(shot.index, stat, origin, percent, rows)
         }
         shot.lines.filter { it.line.stat == stat }.forEach { rows += TraceRow(lineTitle(it), sheet.fmt(stat, it.line.value, it.line.op, percent), ui("trace.src.fight")) }

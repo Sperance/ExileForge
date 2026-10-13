@@ -30,7 +30,6 @@ import com.sperance.exileforge.rules.content.FightKind
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRule
 import com.sperance.exileforge.rules.content.RiftRules
@@ -90,7 +89,6 @@ class RiftArena(
     private val fight: RiftFight,
     context: RunContext,
     private val gear: HeroGear,
-    pet: Pet?,
     /** Счёт Предначертания забега (4.6.0): перелив маны живёт на весь забег, арены забега делят его. */
     private val fateRun: com.sperance.exileforge.core.campaign.combat.FateRun = com.sperance.exileforge.core.campaign.combat.FateRun(),
     private val onEnd: (RiftAct.Fight) -> Unit,
@@ -101,13 +99,10 @@ class RiftArena(
     private val arenaRun = Run(index, zone, Streams.mix(engine.plan.seed, run.id.hashCode().toLong(), node.id.toLong()), context)
     private val spawns = Spawns(index, arenaRun)
     private val roller = MonsterRoller(index)
-    private val touch: RiftTouch = engine.touch(run)
+    /** Воздействия забега и, у чемпиона, его испытания (4.11.x, [com.sperance.exileforge.rules.content.RiftChampion.touch]: «Без восстановления» запрещает регенерацию). */
+    private val touch: RiftTouch = RiftTouch.sum(listOfNotNull(engine.touch(run), node.trial?.let { rules.champion.touch[it] }))
     private val altar = run.hero.altar
 
-    /** Испытание чемпиона «В одиночку» и «Оскудение» - питомец не встаёт, и дух Предначертания (4.6.3) - тоже. */
-    private val pets: Boolean = node.trial != RiftTrial.NO_PET && (touch.rules[RiftRule.BARREN] ?: 0.0) <= 0
-    private val pet: Pet? = pet.takeIf { pets }
-    private val allies = PetAllies(index, combat)
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
     private val effects: Map<String, Double> = MapEffects.sum(AtlasEffects.map(emptyMap(), context.atlas), touch.effects + altarEffects())
@@ -275,7 +270,7 @@ class RiftArena(
         }
         battle = Battle(
             hero, foes, combat, index.rules.fight, pools.life, Random(Streams.mix(arenaRun.seed, FIGHT_STREAM, 0)), gear.stance,
-            kit = kit, model = build, pools = pools, percent = gear.percent, ally = allies.of(hero, pet, kit.fate.effects.spirit.takeIf { pets }),
+            kit = kit, model = build, pools = pools, percent = gear.percent,
             fateRun = fateRun,
             rift = riftCombat().takeIf { fight.guardian != null || it.ambush > 0 },
             kind = FightKind.RIFT,
@@ -311,7 +306,7 @@ class RiftArena(
         RiftTrial.NO_FLASKS -> drunk == 0
         RiftTrial.FAST -> elapsed <= rules.champion.seconds
         RiftTrial.HALF_LIFE -> lowest >= rules.champion.life / 100
-        RiftTrial.NO_PET -> true
+        RiftTrial.NO_RECOVERY -> true
         RiftTrial.ONE_FOCUS -> switches == 0
     }
 

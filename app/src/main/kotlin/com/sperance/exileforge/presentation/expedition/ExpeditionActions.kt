@@ -41,7 +41,6 @@ import com.sperance.exileforge.presentation.state.speedPresses
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.run.MapMechanic
@@ -288,7 +287,6 @@ class ExpeditionActions(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features, auto = autoPlan,
-            pet = ::combatPet,
             // Счёт Предначертания захода (4.6.1): павшие карты и её Ваал-зоны - как их считает сервер
             fateRun = FateRun(started.killed, started.vaalKilled),
         ).also { r ->
@@ -299,9 +297,6 @@ class ExpeditionActions(
         vaalKilled = started.vaalKilled
         persist()
     }
-
-    /** Боевой питомец героя сейчас (3.70.0): поход читает его в начале каждого боя. */
-    private fun combatPet(): Pet? = hero?.let { it.pets.pet(it.pets.combat) }
 
     /** Сферы Ваал под рукой за вычетом тех, что журнал потратил, а сервер ещё не сосчитал. */
     private fun vaalOrbsFree(): Long = (hero?.bag?.get(Orb.VAAL_ORB.name) ?: 0L) - (runJournal?.pending?.count { it.kind == RunEventKind.CRYSTAL_VAAL } ?: 0)
@@ -561,7 +556,7 @@ class ExpeditionActions(
             i, outer.run.zone, outer.run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts, auto = autoPlan.takeIf { outer.hud.value.auto != null },
-            pet = ::combatPet, fateRun = outer.fateRun,
+            fateRun = outer.fateRun,
         ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         parent = outer
         mutableRun.value = inner

@@ -68,7 +68,7 @@ class CombatGoldenTest {
             appendLine("outcome=${log.outcome} life=${log.heroLife.f()} duration=${log.duration.f()} events=${log.events.size}")
             log.events.forEach { e ->
                 appendLine(
-                    listOf(e.time.f(), e.actor, e.action, e.kind, e.damage.f(), e.type, e.healed.f(), e.stunned, e.inflicted.joinToString("+"), e.ailment, e.heroLife.f(), e.heroShield.f(), e.monsterLife.f(), e.monsterShield.f(), e.foe, e.skill, e.onSelf, e.heroMana.f(), e.pet).joinToString(" "),
+                    listOf(e.time.f(), e.actor, e.action, e.kind, e.damage.f(), e.type, e.healed.f(), e.stunned, e.inflicted.joinToString("+"), e.ailment, e.heroLife.f(), e.heroShield.f(), e.monsterLife.f(), e.monsterShield.f(), e.foe, e.skill, e.onSelf, e.heroMana.f()).joinToString(" "),
                 )
             }
         }

@@ -68,8 +68,6 @@ class Battle(
     pools: HeroPools? = null,
     /** The stats that are a percent already: the lines laid on a monster fold by them. */
     private val percent: Set<String> = emptySet(),
-    /** The combat pet at the hero's side (3.5.0); it stands up whole after the fight. */
-    val ally: Ally? = null,
     /** Бой Разлома недели (3.96.0): механики стража и правила забега; null - обычный бой, ни одного лишнего броска. */
     val rift: RiftCombat? = null,
     /** Прошлый бой героя выигран (4.2.0): силы [com.sperance.exileforge.rules.content.PowerEvent.FIGHT_CLEAR] ложатся в начале этого. */
@@ -288,14 +286,8 @@ class Battle(
         .also { all -> places.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
 
-    /** The pet fighting beside the hero (3.5.0): it strikes the hero's target and draws blows meant for the hero. */
-    val allyFighter: Fighter? = ally?.let { Fighter(Side.HERO, it.body, it.body.maxLife, ALLY) }
-
-    /** Питомцы на стороне героя: боевой. */
-    internal val pets: List<Fighter> = listOfNotNull(allyFighter)
-
-    /** Все бойцы боя: герой, питомцы, враги - в этом порядке; состав за бой не меняется - список один (4.9.0). */
-    internal val everyone: List<Fighter> = listOf(heroFighter) + pets + foeFighters
+    /** Все бойцы боя: герой, затем враги; состав за бой не меняется - список один (4.9.0). */
+    internal val everyone: List<Fighter> = listOf(heroFighter) + foeFighters
 
     /** Очередь хода шага ([everyone] по `nextAttack`): один буфер на бой, без новой копии и сортировки на каждый шаг (4.9.0). */
     internal val turnOrder = ArrayList<Fighter>(everyone.size)
@@ -303,12 +295,6 @@ class Battle(
     /** Отклики Предначертания героя в бою (4.6.0; 4.6.2 - и судьбоносных строк) и их состояние в этом бою. */
     internal val fated: List<FateReaction> = FateReaction.of(kit)
     internal val fateFight = FateFight()
-
-    /** Whom a monster's blow is for: a standing tank pet takes them all, any other pet its share, the hero the rest. */
-    internal fun foeTarget(): Fighter {
-        val pet = allyFighter?.takeIf { it.alive } ?: return heroFighter
-        return if (ally!!.tank || random.nextDouble() < ally.drawFire) pet else heroFighter
-    }
 
     /** The auras of the foes still standing, summed per stat (server 0.66.0). */
     internal fun auras(): Map<String, Double> {
@@ -331,8 +317,8 @@ class Battle(
     private val suppressing: Set<Ailment> = fight.suppression.ailments.mapNotNull { code: String -> Ailment.of(code) }.toSet()
 
     /**
-     * Восстановление врага героя [amount] здоровья за этот миг (4.2.0): урезано подавлением, пока на нём недуг героя или питомца
-     * из [suppressing], затем - потолком в секунду. Герою и питомцу - как есть.
+     * Восстановление врага героя [amount] здоровья за этот миг (4.2.0): урезано подавлением, пока на нём недуг героя
+     * из [suppressing], затем - потолком в секунду. Герою - как есть.
      */
     internal fun recovery(me: Fighter, amount: Double): Double {
         if (me.side != Side.MONSTER || amount <= 0) return amount
@@ -412,9 +398,6 @@ class Battle(
 
     /** The flasks a hero drinks all at once as the fight opens (3.33.0) are behind them. */
     internal var autoDrunk = false
-
-    /** The pet stood at the last look (3.33.0): its fall is a power's event once. */
-    internal var petStood = true
 
     /** When the hero last killed, blocked and struck critically (3.35.0): what «recently» of a conditional line reads. */
     internal var killedAt = NEVER
@@ -634,14 +617,6 @@ class Battle(
         foes.indices.firstOrNull { foes[it].guards }
     }
 
-    /**
-     * What a support pet mended since its last line (3.70.0): its healing runs every slice, so the log gathers it into a
-     * line a [CombatRules.petMendEvery]. The line is the hero's own, on themselves — the figures leave it out, as they always did.
-     */
-    internal var petMend = 0.0
-
-    internal var petMendFrom = 0.0
-
     /** След боя для Испытания чемпиона (3.96.0): флаконы, низшая доля здоровья, смены цели. */
     val trial = RiftTrace()
 
@@ -649,7 +624,7 @@ class Battle(
     internal val riftFight: RiftFight? = rift?.let { RiftFight(it, kit.actives.size, kit.flasks.size) }
 
     init {
-        // Предначертание (4.6.0): первый ход питомца и что несёт заход - до засады Разлома, она сдвигает их ходы
+        // Предначертание (4.6.0): что несёт заход - до засады Разлома, она сдвигает их ходы
         fateOpens()
         riftFight?.let { riftOpen(it) }
     }
@@ -662,11 +637,6 @@ class Battle(
         const val TICK = 1.0
 
         /** The least a tick of damage over time deals — a bleeding, a poison, a burning, the ground's degeneration — once it deals any. */
-
-        /** The pet's place in the fight: neither the hero's -1 nor a monster's. */
-        const val ALLY = -2
-
-        /** How often, in seconds, a support pet's healing is written as a line of the log (3.70.0). */
 
         /** How long a foe that stepped onto the field closes in before its first swing, and how much later each further place. */
 

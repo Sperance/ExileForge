@@ -29,14 +29,6 @@ internal fun Battle.gainCharges(kind: ChargeKind, amount: Int) {
 /** Every charge of [kind] taken (3.33.0); how many there were. */
 internal fun Battle.consumeCharges(kind: ChargeKind): Int = heroCharges.consume(kind).also { if (it > 0) remake(heroFighter) }
 
-/** The pet's maximum life (3.33.0), zero without one. */
-internal fun Battle.petLife(): Double = allyFighter?.body?.maxLife ?: 0.0
-
-/** [share] percent of the pet's life back while it stands (3.33.0). */
-internal fun Battle.healPet(share: Double) {
-    val pet = allyFighter?.takeIf { it.alive } ?: return
-    pet.life = min(pet.body.maxLife, pet.life + pet.body.maxLife * share / 100)
-}
 
 /**
  * [ailment] on the hero by their own power for [duration] seconds (3.33.0, server 1.32.0): a damage over time burns

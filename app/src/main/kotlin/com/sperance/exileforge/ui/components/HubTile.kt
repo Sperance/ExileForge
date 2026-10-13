@@ -17,7 +17,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -38,7 +43,8 @@ const val LOCKED_TILE_ALPHA = .45f
 /**
  * Плитка хаба («Развитие», «Город» - 4.4.x): название, значок на квадрате цвета [accent], строка того, что внутри ([note]), и
  * строка того, что ждёт ([news], цветом [accent]); [badge] - сколько ждёт действия, [lockedUntil] - уровень открытия, пока герой
- * ниже него (плитка тусклая, с замком, вместо строк - «откроется с N»).
+ * ниже него (плитка тусклая, с замком, вместо строк - «откроется с N»). Без [onOpen] (4.11.x, макет «Развитие» C) - заглушка
+ * будущего места: пунктирная рамка, тускло, не нажимается.
  */
 @Immutable data class HubTile(
     val title: String,
@@ -48,7 +54,7 @@ const val LOCKED_TILE_ALPHA = .45f
     val news: String?,
     val badge: Int = 0,
     val lockedUntil: Int? = null,
-    val onOpen: () -> Unit,
+    val onOpen: (() -> Unit)?,
 )
 
 /** Хаб плитками по две в ряд; нечётная последняя - во всю ширину. */
@@ -67,10 +73,15 @@ const val LOCKED_TILE_ALPHA = .45f
     val shape = RoundedCornerShape(14.dp)
     val locked = tile.lockedUntil
     val hot = tile.badge > 0 && locked == null
+    val open = tile.onOpen
+    val framed = modifier.heightIn(min = HUB_TILE_MIN_HEIGHT).alpha(if (locked != null || open == null) LOCKED_TILE_ALPHA else 1f).clip(shape)
     Box(
-        modifier.heightIn(min = HUB_TILE_MIN_HEIGHT).alpha(if (locked != null) LOCKED_TILE_ALPHA else 1f).clip(shape).depthPanel(shape)
-            .border(1.dp, if (hot) tile.accent.copy(alpha = .55f) else PanelRaised, shape)
-            .clickable(role = Role.Button, onClick = tile.onOpen).padding(12.dp),
+        if (open == null) {
+            framed.dashedBorder(Bronze, shape).padding(12.dp)
+        } else {
+            framed.depthPanel(shape).border(1.dp, if (hot) tile.accent.copy(alpha = .55f) else PanelRaised, shape)
+                .clickable(role = Role.Button, onClick = open).padding(12.dp)
+        },
     ) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Box(Modifier.size(40.dp).background(tile.accent.copy(alpha = .14f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) {
@@ -94,4 +105,11 @@ const val LOCKED_TILE_ALPHA = .45f
             }
         }
     }
+}
+
+/** Пунктирная рамка заглушки (4.11.x): контур [shape] штрихами цвета [color]. */
+private fun Modifier.dashedBorder(color: Color, shape: Shape): Modifier = drawBehind {
+    val stroke = 1.dp.toPx()
+    val dash = 6.dp.toPx()
+    drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash))))
 }

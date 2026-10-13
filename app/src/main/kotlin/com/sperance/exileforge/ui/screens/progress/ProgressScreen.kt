@@ -3,6 +3,8 @@ package com.sperance.exileforge.ui.screens.progress
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.QuestionMark
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -86,6 +88,8 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 0,
                 game.lockOf(Feature.GRIMOIRE),
             ) { shell.tab(TAB_SKILLS) },
+            // Место, что ещё впереди (4.11.x): держит сетку 2×2, не открывается
+            HubTile(ui("progress.soon"), Icons.Outlined.QuestionMark, Muted, ui("progress.soon_ascendancy"), null, onOpen = null),
         )
     }
     val scroll = rememberScrollState()

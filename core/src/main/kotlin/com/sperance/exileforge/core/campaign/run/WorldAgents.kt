@@ -11,10 +11,10 @@ import kotlin.math.hypot
 import kotlin.random.Random
 
 /**
- * What a monster is doing on the map, between fights; [pursues] - it is after the hero (4.8.0): a fight anywhere on the map
- * draws it in, however far ([gathered]).
+ * What a monster is doing on the map, between fights; [sees] - видит героя сейчас: бой рядом втягивает её в пределах её
+ * взгляда ([gathered]); потерявшая героя ([HUNTING]) идёт к месту, где видела, и в чужой бой не вступает дальше `gatherRadius`.
  */
-enum class AgentMode(val pursues: Boolean = false) { IDLE, ASLEEP, LURKING, CHASING(pursues = true), HUNTING(pursues = true), RETURNING }
+enum class AgentMode(val sees: Boolean = false) { IDLE, ASLEEP, LURKING, CHASING(sees = true), HUNTING, RETURNING }
 
 /**
  * A monster walking the map: where it lives, where it is going, and whether it is still there.
@@ -46,6 +46,9 @@ class MonsterAgent(
     val standing: List<Int> get() = pack.indices.filterNot { it in fallen }
     var x = homeX
     var y = homeY
+
+    /** Клетка, где стоит жетон. */
+    internal val cell: Cell get() = Cell(floor(x).toInt(), floor(y).toInt())
     var targetX = homeX
     var targetY = homeY
     var idle = 0.0

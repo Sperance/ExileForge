@@ -14,14 +14,18 @@ import kotlin.random.Random
 
 /**
  * Стаи боя с [agent] (4.4.1, решение владельца; прежде - 3.26.0): она и каждая живая стая свалки ([MonsterAgent.joinsBrawl],
- * 4.8.0 - и призванные) не дальше `expedition.gatherRadius` от неё или уже идущая за героем ([AgentMode.pursues]), ближние
- * первыми. Кто в свалку не вступает, бьётся один.
+ * 4.8.0 - и призванные), ближние первыми. Расстояние - путь ногами от клетки [agent] ([distances]), не прямая: стая
+ * вступает в пути `expedition.gatherRadius` или когда видит героя сейчас ([AgentMode.sees]) и путь к бою не длиннее её взгляда
+ * (`sight` её формы). Потерявшая героя ([AgentMode.HUNTING]) и дальняя стоят на карте в своём режиме. Кто в свалку не
+ * вступает, бьётся один.
  */
 internal fun ExpeditionWorld.gathered(agent: MonsterAgent): List<MonsterAgent> {
     if (!agent.joinsBrawl) return listOf(agent)
-    fun distance(other: MonsterAgent) = hypot(other.x - agent.x, other.y - agent.y)
-    fun drawn(other: MonsterAgent) = other.mode.pursues || distance(other) <= rules.gatherRadius
-    return listOf(agent) + agents.filter { it !== agent && it.joinsBrawl && it.alive && it.standing.isNotEmpty() && drawn(it) }.sortedBy(::distance)
+    val near = agents.filter { it !== agent && it.joinsBrawl && it.alive && it.standing.isNotEmpty() }
+    if (near.isEmpty()) return listOf(agent)
+    fun reach(other: MonsterAgent) = if (other.mode.sees) maxOf(rules.gatherRadius, other.rule.sight) else rules.gatherRadius
+    val steps = distances(agent.cell, floor(near.maxOf(::reach)).toInt())
+    return listOf(agent) + near.mapNotNull { other -> steps[other.cell]?.takeIf { it <= reach(other) }?.let { other to it } }.sortedBy { it.second }.map { it.first }
 }
 
 internal fun ExpeditionWorld.think(agent: MonsterAgent, toHero: Double, dt: Double) {

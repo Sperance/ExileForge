@@ -1,6 +1,9 @@
 package com.sperance.exileforge.presentation.app
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
+import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
@@ -12,28 +15,44 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 
 /**
  * Сторож главного потока (3.82.0). Фоновый поток раз в секунду ставит в очередь главного потока отметку; не выполнилась
  * за [STALL_MS] - поток завис: его стек, шаги запуска ([StartupTrace]) и версия пишутся в файл. Завис намертво - отчёт
  * всё равно на диске, и следующий запуск сам отправляет его баг-репортом ([pending]/[sent]). Одно зависание - один отчёт.
  * Отправленный отчёт остаётся последним ([diagnostics]): игрок копирует его из окна запуска вместе со стеками всех потоков.
+ * Свёрнутое приложение сторож не будит: он ходит с запуска до первой паузы окна, дальше - только пока окно на экране ([awake]).
  */
 class StallWatchdog(context: Context, private val trace: StartupTrace, private val commands: CommandRunner) {
     private val file = File(context.filesDir, FILE)
     private val last = File(context.filesDir, LAST_FILE)
     private val main = Handler(Looper.getMainLooper())
+    private val app = context.applicationContext as? Application
 
     @Volatile private var started = false
+
+    /** Окно на экране (или запуск ещё идёт): только тогда сторож шлёт отметки. */
+    @Volatile private var awake = true
+    private val gate = ReentrantLock()
+    private val woken = gate.newCondition()
 
     fun start() {
         if (started) return
         started = true
+        app?.registerActivityLifecycleCallbacks(Presence())
         Thread(::watch, "stall-watchdog").apply { isDaemon = true }.start()
+    }
+
+    private fun wake(on: Boolean) = gate.withLock {
+        awake = on
+        if (on) woken.signalAll()
     }
 
     private fun watch() {
         while (true) {
+            gate.withLock { while (!awake) woken.await() }
             val posted = SystemClock.uptimeMillis()
             val answered = AtomicBoolean(false)
             main.post { answered.set(true) }
@@ -45,7 +64,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
                 val now = SystemClock.uptimeMillis()
                 // Сторож проспал больше пары тиков - процесс стоял целиком (заморозка свёрнутого приложения, 3.84.0):
                 // главный поток не виноват, отсчёт идёт заново, иначе разморозка пишет «зависание» на всю паузу.
-                if (now - tick > PAUSE_MS) since = now
+                if (now - tick > PAUSE_MS || !awake) since = now
                 tick = now
                 val stalled = now - since
                 if (!reported && stalled >= STALL_MS) {
@@ -55,6 +74,17 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
             }
             Thread.sleep(TICK_MS)
         }
+    }
+
+    /** Окна приложения: пауза любого усыпляет сторожа, возврат - будит. */
+    private inner class Presence : Application.ActivityLifecycleCallbacks {
+        override fun onActivityResumed(activity: Activity) = wake(true)
+        override fun onActivityPaused(activity: Activity) = wake(false)
+        override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
+        override fun onActivityStarted(activity: Activity) = Unit
+        override fun onActivityStopped(activity: Activity) = Unit
+        override fun onActivitySaveInstanceState(activity: Activity, state: Bundle) = Unit
+        override fun onActivityDestroyed(activity: Activity) = Unit
     }
 
     private fun write(stalled: Long) {

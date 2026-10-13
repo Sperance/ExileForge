@@ -209,7 +209,6 @@ private val RAIL_GAP = 8.dp
     }
 }
 
-
 /** Подложка и рамка карточки героя вне выпада. */
 private val HeroGround = Panel.copy(alpha = .94f)
 private val HeroRim = Gold.copy(alpha = .6f)

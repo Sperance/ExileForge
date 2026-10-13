@@ -394,12 +394,8 @@ private fun hitText(hit: FloatingHit): String = when {
 
 private fun hitColour(hit: FloatingHit): Color = when {
     hit.amount == 0 && hit.healed > 0 -> Vital
-
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
-
     hit.onHero -> HeroHurt
-
     hit.kind == HitKind.CRIT -> Color(0xFFFFD34A)
-
     else -> damageTint(hit.type)
 }

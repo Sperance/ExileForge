@@ -128,7 +128,6 @@ internal const val MINUTES_A_DAY = 1_440L
 @Composable internal fun LotIcon(game: GameUi, lot: AuctionLot, modifier: Modifier) {
     val sprite = when (lot.kind) {
         LotKind.EQUIPMENT -> equipmentIcon(lot.itemCode)
-
         LotKind.ITEM -> itemIcon(lot.itemCode)
     }
     if (!SpriteIcon(sprite, lotColor(lot), modifier, halo = lot.kind == LotKind.EQUIPMENT)) ItemEmblem(lotVisualKind(game, lot), lotColor(lot), modifier)

@@ -20,9 +20,9 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.SkillEvent
-import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
 import kotlin.math.max
 import kotlin.math.min
+import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
 
 // ==================== One slice of time ====================
 

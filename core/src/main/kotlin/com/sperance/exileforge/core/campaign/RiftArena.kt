@@ -99,6 +99,7 @@ class RiftArena(
     private val arenaRun = Run(index, zone, Streams.mix(engine.plan.seed, run.id.hashCode().toLong(), node.id.toLong()), context)
     private val spawns = Spawns(index, arenaRun)
     private val roller = MonsterRoller(index)
+
     /** Воздействия забега и, у чемпиона, его испытания (4.11.x, [com.sperance.exileforge.rules.content.RiftChampion.touch]: «Без восстановления» запрещает регенерацию). */
     private val touch: RiftTouch = RiftTouch.sum(listOfNotNull(engine.touch(run), node.trial?.let { rules.champion.touch[it] }))
     private val altar = run.hero.altar

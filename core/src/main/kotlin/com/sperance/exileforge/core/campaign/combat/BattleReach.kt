@@ -29,7 +29,6 @@ internal fun Battle.gainCharges(kind: ChargeKind, amount: Int) {
 /** Every charge of [kind] taken (3.33.0); how many there were. */
 internal fun Battle.consumeCharges(kind: ChargeKind): Int = heroCharges.consume(kind).also { if (it > 0) remake(heroFighter) }
 
-
 /**
  * [ailment] on the hero by their own power for [duration] seconds (3.33.0, server 1.32.0): a damage over time burns
  * [CombatRules.selfBurn] of their life a second, the rest are the rule's magnitude.

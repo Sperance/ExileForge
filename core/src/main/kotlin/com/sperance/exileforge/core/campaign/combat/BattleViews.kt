@@ -102,7 +102,13 @@ fun Battle.strikes(window: Double): List<StrikeView> {
         // Умение без удара (проклятие, помеха) - не выпад: удар умения несёт разбор удара
         if (event.action == Action.SKILL && event.trace !is HitTrace) continue
         strikes += StrikeView(
-            i, event.actor, event.foe, event.kind, event.spell, event.type, event.damage.roundToInt(),
+            i,
+            event.actor,
+            event.foe,
+            event.kind,
+            event.spell,
+            event.type,
+            event.damage.roundToInt(),
             ((time - event.time) / window).toFloat().coerceIn(0f, 1f),
         )
     }

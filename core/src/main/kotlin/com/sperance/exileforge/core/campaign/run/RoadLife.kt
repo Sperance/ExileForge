@@ -33,8 +33,7 @@ internal value class RoadLife(val net: Double) {
          * Скорость здоровья героя [body] на карте по темпу похода [pace] и правилу маны [mana]; [curb] и [manaCurb] - срез недугов
          * здоровья и маны, [resting] - отдых идёт.
          */
-        fun of(body: Combatant, pace: ExpeditionRules, mana: ManaRule, curb: Double = 0.0, manaCurb: Double = 0.0, resting: Boolean = true): RoadLife =
-            RoadLife(flow(body, pace, mana, curb, manaCurb, resting).net)
+        fun of(body: Combatant, pace: ExpeditionRules, mana: ManaRule, curb: Double = 0.0, manaCurb: Double = 0.0, resting: Boolean = true): RoadLife = RoadLife(flow(body, pace, mana, curb, manaCurb, resting).net)
 
         /**
          * Из чего скорость: регенерация листа и доля регенерации маны ([Recovery.lifeFromMana], 4.11.x) под долей восстановления и

@@ -159,8 +159,8 @@ import kotlinx.serialization.Serializable
  */
 @Serializable data class LetterRequest(val kind: MailKind = MailKind.PLAYER, val to: String = "", val replyTo: String = "", val subject: String, val body: String)
 
-/** Немота глазами немого (4.6.3): номер санкции, причина (имя `SanctionCategory`), слово модератора и срок (null - бессрочно). */
-@Serializable data class MailMute(val number: Long, val category: String, val comment: String = "", val until: String? = null)
+/** Немота глазами немого (4.6.3): категория, причина для игрока (4.12.x, сервер SEC-02 - без номера и заметки модератора) и срок. */
+@Serializable data class MailMute(val category: String, val reason: String = "", val until: String? = null)
 
 /** Рассылка гильдии главе или офицеру (4.6.3): кому уйдёт и сколько рассылок гильдии за сутки. */
 @Serializable data class GuildMailQuota(val tag: String, val name: String, val emblem: String = "", val color: String = "", val members: Int = 0, val sent: Int = 0, val perDay: Int = 0)

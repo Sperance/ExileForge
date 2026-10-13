@@ -63,7 +63,9 @@ data class GameUi(
     val refusal: Phrase? get() = activity.refusal
     fun refreshing(read: String): Boolean = busy || read in loading
     val isAdmin: Boolean get() = session.isAdmin
-    val isTester: Boolean get() = session.isTester
+
+    /** Герой в игре - тестировщик (4.12.x, сервер ROLE-01). */
+    val isTester: Boolean get() = session.tester(holding)
     val adminTools: Boolean get() = BuildConfig.DEBUG && isAdmin && mode == AppMode.ADMIN
     val sessionEpoch: Int get() = session.sessionEpoch
     val index: ContentIndex? get() = world.content

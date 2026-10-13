@@ -3,7 +3,7 @@ package com.sperance.exileforge.presentation.admin
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.network.SanctionView
+import com.sperance.exileforge.core.network.SanctionNotice
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
@@ -24,8 +24,8 @@ class NoticeViewModel(
     private val sessions: SessionRepository,
     private val notices: Notices,
 ) : ViewModel() {
-    private val mutable = MutableStateFlow<SanctionView?>(null)
-    val sanction: StateFlow<SanctionView?> = mutable.asStateFlow()
+    private val mutable = MutableStateFlow<SanctionNotice?>(null)
+    val sanction: StateFlow<SanctionNotice?> = mutable.asStateFlow()
     val activity = commands.state
 
     fun load(id: String) {

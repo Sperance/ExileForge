@@ -57,6 +57,8 @@ import kotlinx.serialization.Serializable
     val fateFights: Long = 0,
     /** Номер героя (4.7.0, сервер 4.7.0): шесть цифр - по ним зовут в гильдию; пусто - сервер старше. */
     val number: String = "",
+    /** Тестировщик (4.12.x, сервер ROLE-01): окно тестирования и замки прогресса - по герою, а не по аккаунту. */
+    val tester: Boolean = false,
 )
 
 /** The stash's places as the server counts them after a command: used, held, the ceiling, the next pack's price (0 at the ceiling), the overflow. */
@@ -182,6 +184,8 @@ object ServerClock {
     val deleted: Boolean = false,
     /** Когда герой создан (4.2.0): время сервера в UTC, как документ его хранит; пусто - сервер не прислал. */
     val createdAt: String = "",
+    /** Тестировщик (4.12.x, сервер ROLE-01): окно тестирования - по герою. */
+    val tester: Boolean = false,
 ) {
     /** [createdAt] в мс эпохи; null - не прочитать. */
     val createdAtMs: Long? get() = runCatching { java.time.LocalDateTime.parse(createdAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull()

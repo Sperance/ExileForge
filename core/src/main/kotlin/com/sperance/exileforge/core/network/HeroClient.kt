@@ -285,4 +285,4 @@ class HeroClient internal constructor(private val http: Transport) {
 
 /** Герои аккаунта (3.94.1, server 1.81.15) и санкции по id героя: бан или удаление. */
 @kotlinx.serialization.Serializable
-data class HeroRoster(val heroes: List<HeroSummary> = emptyList(), val sanctions: Map<String, SanctionView> = emptyMap())
+data class HeroRoster(val heroes: List<HeroSummary> = emptyList(), val sanctions: Map<String, SanctionNotice> = emptyMap())

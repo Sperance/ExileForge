@@ -119,11 +119,16 @@ class Transport(
      * Файл с отпечатком (3.94.1): [etag] уходит в `If-None-Match`, на 304 ответ - с пустым телом и тем же статусом; отпечаток
      * нового тела - в [HttpPayload.etag].
      */
-    internal suspend fun fetchTagged(path: String, etag: String?): HttpPayload = fetchPayload(path, etag = etag)
 
-    private suspend fun fetchPayload(path: String, json: Boolean = true, authenticated: Boolean = false, validate: Boolean = json, etag: String? = null): HttpPayload {
+    /**
+     * Открытый файл с ETag; сессия, если она есть, идёт с ним (4.12.x, сервер SEC-09): манифест маршрутов показывает вошедшему его
+     * маршруты, а без входа - только открытые.
+     */
+    internal suspend fun fetchTagged(path: String, etag: String?): HttpPayload = fetchPayload(path, etag = etag, signed = true)
+
+    private suspend fun fetchPayload(path: String, json: Boolean = true, authenticated: Boolean = false, validate: Boolean = json, etag: String? = null, signed: Boolean = false): HttpPayload {
         val url = base.newBuilder().addPathSegments(path).build()
-        val credential = token.takeIf { authenticated }
+        val credential = token.takeIf { authenticated || signed }
         if (authenticated) require(credential != null) { ui("api.sign_in_tab") }
         val start = System.nanoTime()
         var status: Int? = null

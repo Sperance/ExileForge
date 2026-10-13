@@ -250,7 +250,8 @@ class GameApi(
     /** Последний ответ сервера на манифест (3.94.1): текст, его ETag и когда спрошен - один запрос на волну старта. */
     private var served: Served? = null
 
-    private class Served(val text: String, val etag: String?, val at: Long) {
+    /** [token] (4.12.x) - сессия, с которой спрошен ответ: маршруты манифеста у вошедшего свои, чужой ответ не годится. */
+    private class Served(val text: String, val etag: String?, val at: Long, val token: String?) {
         val manifest: StaticManifest by lazy { WireJson.decodeFromString(StaticManifest.serializer(), text) }
     }
 
@@ -260,10 +261,11 @@ class GameApi(
      */
     private suspend fun ask(maxAgeMs: Long = SHARED_MS): Served {
         val now = System.currentTimeMillis()
-        served?.takeIf { now - it.at <= maxAgeMs }?.let { return it }
-        val known = served
+        val signed = http.token
+        served?.takeIf { now - it.at <= maxAgeMs && it.token == signed }?.let { return it }
+        val known = served?.takeIf { it.token == signed }
         val answer = http.fetchTagged(MANIFEST, known?.etag)
-        return (if (answer.status == 304 && known != null) Served(known.text, known.etag, now) else Served(answer.body, answer.etag, now)).also { served = it }
+        return (if (answer.status == 304 && known != null) Served(known.text, known.etag, now, signed) else Served(answer.body, answer.etag, now, signed)).also { served = it }
     }
 
     /** Where the last manifest this server served is kept on the device (3.1.0); none keeps nothing. */
@@ -302,6 +304,14 @@ class GameApi(
             if (it.revision > API_REVISION || it.rules > RULES_VERSION) onNewerServer()
             it.requireWorkbench()
         }
+    }
+
+    /**
+     * Маршруты, что зовёт клиент, у вошедшего (4.12.x, сервер SEC-09: без входа манифест несёт только открытые): после входа
+     * свежий манифест с сессией обязан их назвать, иначе сервер устарел.
+     */
+    suspend fun requireRoutes() {
+        served(0L).capabilities.requireWorkbench()
     }
 
     /** The server speaks a newer wire than this build (3.74.0): the app looks for the build that speaks it at once. */

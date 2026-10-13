@@ -17,11 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.SanctionKind
-import com.sperance.exileforge.core.network.SanctionView
+import com.sperance.exileforge.core.network.SanctionNotice
 import com.sperance.exileforge.presentation.admin.NoticeViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
-import com.sperance.exileforge.ui.screens.server.RolePill
 import com.sperance.exileforge.ui.screens.server.categoryTitle
 import com.sperance.exileforge.ui.screens.server.epochOf
 import com.sperance.exileforge.ui.theme.*
@@ -29,9 +28,9 @@ import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Экран санкции (3.88.5, вариант B): кольцо с остатком срока, что закрыто и до когда, кто, когда и за что - логином и ролью, -
- * комментарий модератора, номер санкции; «Обжаловать» один раз и «Сменить аккаунт». [sanctionId] пустой - аккаунт удалён и
- * уже стирается: подробностей нет, остаётся только выйти.
+ * Экран санкции (3.88.5, вариант B): кольцо с остатком срока, что закрыто и до когда, когда и за что - категорией и причиной для
+ * игрока (4.12.x, сервер SEC-02: без номера санкции, заметки и того, кто наказал); «Обжаловать» один раз и «Сменить аккаунт».
+ * [sanctionId] пустой - аккаунт удалён и уже стирается: подробностей нет, остаётся только выйти.
  */
 @Composable fun SanctionScreen(sanctionId: String) {
     val vm = koinViewModel<NoticeViewModel>()
@@ -56,21 +55,15 @@ import org.koin.compose.viewmodel.koinViewModel
         current?.let { notice ->
             MutedText(untilLine(notice))
             ForgePanel(Modifier.fillMaxWidth(), accent = Rune) {
-                Text(ui("notice.details", notice.number), color = Rune, style = MaterialTheme.typography.labelLarge)
-                Detail(ui("notice.by")) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(notice.byLogin, color = Parchment, style = MaterialTheme.typography.bodySmall)
-                        RolePill(notice.byRole)
-                    }
-                }
+                Text(ui("notice.details"), color = Rune, style = MaterialTheme.typography.labelLarge)
                 Detail(ui("notice.when")) { Value(listedAt(notice.at).orEmpty()) }
-                Detail(ui("notice.what")) { Value(ui("moderation.target.${notice.target.name}") + " · " + notice.label) }
+                Detail(ui("notice.what")) { Value(ui("moderation.target.${notice.target.name}")) }
                 Detail(ui("notice.reason")) { Value(categoryTitle(notice.category)) }
             }
-            if (notice.comment.isNotBlank()) {
+            if (notice.reason.isNotBlank()) {
                 ForgePanel(Modifier.fillMaxWidth(), accent = Rune) {
                     Text(ui("notice.comment"), color = Rune, style = MaterialTheme.typography.labelLarge)
-                    Text("«${notice.comment}»", color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                    Text("«${notice.reason}»", color = Parchment, style = MaterialTheme.typography.bodyMedium)
                 }
             }
             if (notice.appealed) {
@@ -82,7 +75,7 @@ import org.koin.compose.viewmodel.koinViewModel
         ForgeOutlinedButton(onClick = vm::dismiss, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.switch")) }
     }
     sanction?.takeIf { appealing }?.let { notice ->
-        AppealDialog(notice, onDismiss = { appealing = false }) { text ->
+        AppealDialog(onDismiss = { appealing = false }) { text ->
             appealing = false
             vm.appeal(notice.id, text)
         }
@@ -90,7 +83,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /** Кольцо срока: доля оставшегося времени и сам остаток; бессрочный бан - полное кольцо со знаком «∞». */
-@Composable private fun TermRing(sanction: SanctionView?) {
+@Composable private fun TermRing(sanction: SanctionNotice?) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(sanction?.id) {
         while (true) {
@@ -134,16 +127,16 @@ import org.koin.compose.viewmodel.koinViewModel
  * Апелляция (3.88.5): одна на санкцию, текст до `rules.inputs.appeal`. Уходит без входа - по id санкции, - и попадает
  * модераторам в отчёты.
  */
-@Composable internal fun AppealDialog(sanction: SanctionView, onDismiss: () -> Unit, onSend: (String) -> Unit) {
+@Composable internal fun AppealDialog(onDismiss: () -> Unit, onSend: (String) -> Unit) {
     var text by remember { mutableStateOf("") }
-    ForgeDialog(ui("notice.appeal_title", sanction.number), onDismiss) {
+    ForgeDialog(ui("notice.appeal_title"), onDismiss) {
         MutedText(ui("notice.appeal_note"))
         OutlinedTextField(text, { text = it.take(APPEAL) }, minLines = 3, supportingText = { LengthCounter(text, APPEAL) }, modifier = Modifier.fillMaxWidth())
         ForgeButton(enabled = text.isNotBlank(), onClick = { onSend(text) }, modifier = Modifier.fillMaxWidth()) { Text(ui("notice.appeal_send")) }
     }
 }
 
-private fun untilLine(sanction: SanctionView): String {
+private fun untilLine(sanction: SanctionNotice): String {
     val until = sanction.until
     return when {
         sanction.kind == SanctionKind.DELETION -> ui("notice.purge_at", listedAt(until.orEmpty()).orEmpty())

@@ -19,7 +19,7 @@ private const val SERVERS = "api/v1/gameserver"
 class AdminClient internal constructor(private val http: Transport) {
 
     /** Новый аккаунт [login] с ролью [role] - тестировщик или модератор (3.88.8, сервер 1.80.11); пароль - в ответе один раз. */
-    suspend fun createTester(login: String, role: AccountRole = AccountRole.TESTER): TesterAccount {
+    suspend fun createTester(login: String, role: AccountRole = AccountRole.USER): TesterAccount {
         require(login.isNotBlank()) { com.sperance.exileforge.core.i18n.ui("api.credentials") }
         return http.post(TESTERS, mapOf("login" to login.trim(), "role" to role.name))
     }

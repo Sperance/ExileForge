@@ -149,7 +149,6 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
                     "${session.title} · ${ui(
                         when {
                             session.isAdmin -> "account.administrator"
-                            session.isTester -> "account.tester"
                             else -> "account.player"
                         },
                     )}",

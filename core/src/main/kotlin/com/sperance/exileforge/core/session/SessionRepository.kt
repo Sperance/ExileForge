@@ -1,10 +1,11 @@
 package com.sperance.exileforge.core.session
 
+import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.fate.FateView
 import com.sperance.exileforge.core.model.hero.HeroSummary
-import com.sperance.exileforge.core.network.SanctionView
+import com.sperance.exileforge.core.network.SanctionNotice
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -22,7 +23,7 @@ data class Session(
     val characters: List<HeroSummary> = emptyList(),
     val charactersRead: Boolean = false,
     /** Действующие санкции героев аккаунта по id героя (3.88.5): бан или удаление - карточка героя говорит, кто, за что и до когда. */
-    val sanctions: Map<String, SanctionView> = emptyMap(),
+    val sanctions: Map<String, SanctionNotice> = emptyMap(),
     /** Доступ закрыт санкцией (3.88.5): её id для экрана санкции; пустая строка - аккаунт удалён и стирается. */
     val notice: String? = null,
     /** Токен апелляции санкции [notice] из отказа входа (4.9.0): секрет наказанного, с ним экран санкции подаёт апелляцию. */
@@ -37,10 +38,12 @@ data class Session(
     /** Окно модерации и отчёты (3.88.5): модератор и администратор. */
     val isModerator: Boolean get() = isAdmin || (signedIn && profile?.role == "MODERATOR")
 
-    /** Окно тестирования: тестировщик и администратор. */
-
-    /** Окно тестирования: тестировщику и выше - модератору (3.88.8, сервер 1.80.11) и администратору. */
-    val isTester: Boolean get() = isModerator || (signedIn && profile?.role == "TESTER")
+    /**
+     * Тестировщик ли герой [holding] (4.12.x, сервер ROLE-01): отметка героя, не роль аккаунта - окно тестирования, выдачи и замки
+     * прогресса только у героя-тестировщика; живой снимок героя главнее строки списка героев.
+     */
+    fun tester(holding: HeroHolding): Boolean = holding.hero?.takeIf { it.id == holding.heroId }?.info?.tester
+        ?: (characters.firstOrNull { it.id == holding.heroId }?.tester == true)
 
     /** Герои, что держат место аккаунта (4.5.1): удалённый самим игроком место освободил сразу, удалённый модерацией - нет. */
     val slotHolders: Int get() = characters.count { sanctions[it.id]?.voluntary != true }

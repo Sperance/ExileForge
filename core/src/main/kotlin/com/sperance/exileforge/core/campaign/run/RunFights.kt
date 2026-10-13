@@ -124,7 +124,7 @@ internal fun ExpeditionRun.release() {
     val spot = crystal ?: return
     // Строки карты без сделок алтаря (3.90.0): сделки ложатся в самом бою ([pactFoe])
     val extra = MapEffects.guardianBuffs(spot.crystal.stronger, index.essences.crystals.stronger, baseEffects)
-    val guardian = spawns.crystalGuardian(zone, spot.crystal, spot.id, MapEffects.buffs(baseEffects), extra) ?: return
+    val guardian = spawns.crystalGuardian(spot.crystal, spot.id, MapEffects.buffs(baseEffects), extra) ?: return
     crystal = null
     crystalOutcome = null
     engage(MonsterAgent(-1 - spot.id, listOf(guardian), spot.cell.x + 0.5, spot.cell.y + 0.5, crystal = spot.id, joinsBrawl = false))

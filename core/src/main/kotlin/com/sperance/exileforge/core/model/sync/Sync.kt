@@ -73,13 +73,19 @@ import kotlinx.serialization.json.JsonElement
  * 80 - без питомцев: сняты маршруты `hero/pets` и `auction/sell/pet`, часть снимка `pets` (часы сервера - `HeroSnapshot.now`), лот и
  *      вложение письма с питомцем, место `COLLAR`; рычаг дара `KILL_STACKS`, испытание Разлома `NO_RECOVERY`, плоская регенерация
  *      маны, Сфера гравёра (`hero/orb?line`), сдача заданий в закрывающем заход `campaign/events` (`RunReport.turnIns`) (4.11.x).
+ * 81 - безопасность и данные (4.12.x): тестировщик - отметка героя (`HeroInfo.tester`, `DossierHero.tester`, `admin/moderation/tester`),
+ *      роли аккаунта `TESTER` нет; экран санкции - `SanctionNotice` с причиной для игрока, немота без номера и заметки, причина в
+ *      бане и удалении; `US_021`, `AUTH_007`; `BRY_002` - 409; маршруты манифеста - по сессии.
  */
-const val API_REVISION = 80
+const val API_REVISION = 81
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())
 
-/** `static/index.json`: everything the client checks at start — the routes it decides features by and every fingerprint it keeps. */
+/**
+ * `static/index.json`: everything the client checks at start — the routes it decides features by and every fingerprint it keeps.
+ * Маршруты (4.12.x, сервер SEC-09) - только те, что вызывающий может звать: без входа - открытые.
+ */
 @Serializable data class StaticManifest(
     val version: String = "",
     val revision: Int = 0,
@@ -98,11 +104,13 @@ const val API_REVISION = 80
     /** The server speaks this client's wire and rules; another one may be mid-deploy. */
     val matchesClient: Boolean get() = revision == API_REVISION && rules == RULES_VERSION
 
-    /** A server of another revision speaks another wire: the client refuses it rather than misreading it. */
+    /**
+     * A server of another revision speaks another wire: the client refuses it rather than misreading it. Маршруты - после входа
+     * (4.12.x, сервер SEC-09): без сессии манифест несёт только открытые ([com.sperance.exileforge.core.network.GameApi.requireRoutes]).
+     */
     fun requireWorkbench() {
         require(revision == API_REVISION) { ui("cmd.stale_revision", revision, API_REVISION) }
         require(rules == RULES_VERSION) { ui("cmd.stale_rules", rules, RULES_VERSION) }
-        capabilities.requireWorkbench()
     }
 }
 

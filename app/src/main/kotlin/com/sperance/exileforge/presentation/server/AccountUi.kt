@@ -28,7 +28,9 @@ data class AccountUi(
 ) {
     val busy: Boolean get() = activity.held
     val isAdmin: Boolean get() = session.isAdmin
-    val isTester: Boolean get() = session.isTester
+
+    /** Выбранный герой - тестировщик (4.12.x, сервер ROLE-01): окно тестирования - ему. */
+    val isTester: Boolean get() = session.tester(hero)
 
     /** Модерация и отчёты (3.88.5): модератор и администратор. */
     val isModerator: Boolean get() = session.isModerator

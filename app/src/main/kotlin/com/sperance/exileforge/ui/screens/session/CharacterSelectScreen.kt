@@ -29,7 +29,7 @@ import com.sperance.exileforge.rules.text.NameCharset
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.screens.server.sanctionLine
+import com.sperance.exileforge.ui.screens.server.noticeLine
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -186,8 +186,9 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(character.name, color = nameColor(sanction != null, voluntary), style = MaterialTheme.typography.titleMedium)
-                    // Роль аккаунта (3.88.7): значок у администратора, модератора и тестировщика.
+                    // Роль аккаунта (3.88.7): значок у администратора и модератора; тестировщик (4.12.x) - отметка героя
                     RoleMark(accountRole(game.session.profile?.role))
+                    TesterMark(character.tester)
                 }
                 PropertyRow(ui("common.class"), heroClass?.let(::classTitle) ?: ui("chars.unknown"), Glyph.CHARACTER)
                 PropertyRow(ui("common.level"), character.level.toString(), Glyph.LEVEL)
@@ -197,8 +198,8 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
             voluntary -> sanction?.daysLeft()?.let { Text(ui("chars.marked_in", it), color = Muted, style = MaterialTheme.typography.bodySmall) }
 
             sanction != null -> {
-                Text(sanctionLine(sanction), color = if (deleted) Muted else LifeRed, style = MaterialTheme.typography.bodySmall)
-                if (sanction.comment.isNotBlank()) MutedText("«${sanction.comment}»")
+                Text(noticeLine(sanction), color = if (deleted) Muted else LifeRed, style = MaterialTheme.typography.bodySmall)
+                if (sanction.reason.isNotBlank()) MutedText("«${sanction.reason}»")
             }
         }
         when {
@@ -216,7 +217,7 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
     }
     if (appealing && sanction != null) {
         val notices = koinViewModel<com.sperance.exileforge.presentation.admin.NoticeViewModel>()
-        AppealDialog(sanction, onDismiss = { appealing = false }) { text ->
+        AppealDialog(onDismiss = { appealing = false }) { text ->
             appealing = false
             notices.appeal(sanction.id, text)
         }

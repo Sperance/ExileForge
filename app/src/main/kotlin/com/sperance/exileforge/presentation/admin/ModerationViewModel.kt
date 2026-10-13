@@ -174,6 +174,18 @@ class ModerationViewModel(
     }
 
     /** Переносит героя [heroId] на сервер [server] (3.91.0); тост называет, вышел ли он из гильдии и сколько лотов вернулось. */
+
+    /** Отметка тестировщика героя [heroId] (4.12.x, сервер ROLE-01): только администратор, в досье героя. */
+    fun setTester(heroId: String, tester: Boolean) {
+        val started = commands.task(writing = true) {
+            staff()
+            val now = api.setTester(heroId, tester)
+            notices.toast(ui(if (now) "moderation.tester_on" else "moderation.tester_off"))
+            reloadDossier()
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
+
     fun moveHero(heroId: String, server: String) {
         val started = commands.task(writing = true) {
             staff()

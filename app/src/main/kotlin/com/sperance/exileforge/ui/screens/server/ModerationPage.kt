@@ -53,6 +53,7 @@ import com.sperance.exileforge.core.network.ModerationRow
 import com.sperance.exileforge.core.network.ModerationSort
 import com.sperance.exileforge.core.network.SanctionCategory
 import com.sperance.exileforge.core.network.SanctionKind
+import com.sperance.exileforge.core.network.SanctionNotice
 import com.sperance.exileforge.core.network.SanctionRequest
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
@@ -372,7 +373,10 @@ private val FATE_GRID_HEIGHT = 228.dp
             }
         }
     }
-    if (account.isAdmin && hero != null) ServerSection(account, vm, hero)
+    if (account.isAdmin && hero != null) {
+        ServerSection(account, vm, hero)
+        TesterSection(account, vm, hero)
+    }
     FateSection(dossier.account)
     dossier.sanctions.firstOrNull { it.active }?.let { active ->
         Text(
@@ -468,6 +472,24 @@ private val FATE_GRID_HEIGHT = 228.dp
 }
 
 /**
+ * Тестировщик (4.12.x, сервер ROLE-01): отметка героя, не роль аккаунта - администратор ставит и снимает её здесь. Герою-тестировщику
+ * открыты окно тестирования и замки прогресса, закрыты аукцион и склад гильдии.
+ */
+@Composable private fun TesterSection(account: AccountUi, vm: ModerationViewModel, hero: DossierHero) {
+    Section(ui("moderation.tester_title")) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            MutedText(ui("moderation.tester_note"), Modifier.weight(1f))
+            Switch(
+                checked = hero.tester,
+                enabled = !account.busy,
+                onCheckedChange = { vm.setTester(hero.heroId, it) },
+                colors = SwitchDefaults.colors(checkedTrackColor = Elder),
+            )
+        }
+    }
+}
+
+/**
  * Сервер героя (3.91.0): администратор видит, где он, и переносит на другой - с подтверждением, ведь перенос уводит из гильдии
  * и снимает лоты; «+» заводит новый сервер.
  */
@@ -557,6 +579,9 @@ private const val SERVER_NAME = 32
                 listOfNotNull(sanction.byLogin, listedAt(sanction.at), termText(sanction), sanction.liftedAt?.let { ui("moderation.lifted_by", sanction.liftedBy) }, if (sanction.appealed) ui("moderation.appealed") else null)
                     .joinToString(" · "),
             )
+            // Причина для игрока (4.12.x) и служебная заметка - модерация видит обе
+            if (sanction.reason.isNotBlank()) MutedText(ui("moderation.reason_shown", sanction.reason))
+            if (sanction.comment.isNotBlank()) MutedText("«${sanction.comment}»")
         }
         if (sanction.active) {
             ForgeTextButton(enabled = !busy, onClick = onLift) { Text(ui(if (sanction.kind == SanctionKind.DELETION) "moderation.restore" else "moderation.lift"), color = Gold) }
@@ -570,7 +595,7 @@ private const val SERVER_NAME = 32
 
 /**
  * Шторка санкции на срок - бана или (4.6.3) немоты [kind]: цель (герой, аккаунт; у бана - и устройство), срок - готовый из
- * контента или свой, категория и комментарий для игрока.
+ * контента или свой, категория, причина для игрока (4.12.x - её видит наказанный) и служебная заметка модерации.
  */
 @Composable private fun BanSheet(account: AccountUi, dossier: Dossier, device: DeviceView?, kind: SanctionKind, onDismiss: () -> Unit, onBan: (SanctionRequest) -> Unit) {
     val presets = (account.index?.rules?.moderation ?: ModerationRules()).let { if (kind == SanctionKind.MUTE) it.muteHours else it.banHours }
@@ -589,6 +614,7 @@ private const val SERVER_NAME = 32
     var custom by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(SanctionCategory.OTHER) }
     var comment by remember { mutableStateOf("") }
+    var reason by remember { mutableStateOf("") }
     val limit = account.index?.rules?.inputs?.sanctionComment ?: COMMENT
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -624,21 +650,26 @@ private const val SERVER_NAME = 32
             )
             Label(ui("moderation.category"))
             Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
+            OutlinedTextField(reason, { reason = it.take(limit) }, label = { Text(ui("moderation.reason_for_player")) }, minLines = 2, supportingText = { LengthCounter(reason, limit) }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(comment, { comment = it.take(limit) }, label = { Text(ui("moderation.comment")) }, minLines = 2, supportingText = { LengthCounter(comment, limit) }, modifier = Modifier.fillMaxWidth())
             val term = custom.toIntOrNull() ?: hours
             ForgeButton(
                 enabled = !account.busy && (custom.isBlank() || (custom.toIntOrNull() ?: 0) > 0),
-                onClick = { onBan(SanctionRequest(target, kind, dossier.hero?.heroId.orEmpty(), dossier.account.userId, device?.hardware.orEmpty(), term, category, comment)) },
+                onClick = { onBan(SanctionRequest(target, kind, dossier.hero?.heroId.orEmpty(), dossier.account.userId, device?.hardware.orEmpty(), term, category, comment, reason)) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(ui(if (kind == SanctionKind.MUTE) "moderation.mute_for" else "moderation.ban_for", ui("moderation.target.$target"), term?.let(::hoursText) ?: ui("moderation.forever"))) }
         }
     }
 }
 
-/** Шторка удаления (только администратор): герой или аккаунт целиком, причина обязательна, удаление - удержанием кнопки. */
+/**
+ * Шторка удаления (только администратор): герой или аккаунт целиком, служебная заметка обязательна, причина для игрока (4.12.x) - нет;
+ * удаление - удержанием кнопки.
+ */
 @Composable private fun DeleteSheet(account: AccountUi, dossier: Dossier, target: SanctionTarget, onTarget: (SanctionTarget) -> Unit, onDismiss: () -> Unit, onDelete: (DeletionRequest) -> Unit) {
     var category by remember { mutableStateOf(SanctionCategory.OTHER) }
     var comment by remember { mutableStateOf("") }
+    var reason by remember { mutableStateOf("") }
     val days = account.index?.rules?.moderation?.trashDays ?: TRASH_DAYS
     val limit = account.index?.rules?.inputs?.sanctionComment ?: COMMENT
     val hero = dossier.hero?.takeIf { !it.deleted }
@@ -651,13 +682,14 @@ private const val SERVER_NAME = 32
             }
             MutedText(ui(if (target == SanctionTarget.HERO) "moderation.delete_hero_note" else "moderation.delete_account_note", days))
             Chips { SanctionCategory.imposed.forEach { Chip(categoryTitle(it), category == it) { category = it } } }
+            OutlinedTextField(reason, { reason = it.take(limit) }, label = { Text(ui("moderation.reason_for_player")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(comment, { comment = it.take(limit) }, label = { Text(ui("moderation.delete_reason")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
             HoldButton(
                 ui("moderation.hold_delete"),
                 LifeRed,
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !account.busy && comment.isNotBlank(),
-            ) { onDelete(DeletionRequest(target, if (target == SanctionTarget.HERO) hero?.heroId.orEmpty() else dossier.account.userId, category, comment)) }
+            ) { onDelete(DeletionRequest(target, if (target == SanctionTarget.HERO) hero?.heroId.orEmpty() else dossier.account.userId, category, comment, reason)) }
         }
     }
 }
@@ -717,7 +749,6 @@ private fun Chips(content: @Composable FlowRowScope.() -> Unit) = FlowRow(horizo
     val color = when (role) {
         AccountRole.ADMIN -> LifeRed
         AccountRole.MODERATOR -> Rune
-        AccountRole.TESTER -> Elder
         AccountRole.USER -> Muted
     }
     Text(
@@ -753,14 +784,23 @@ internal fun seenText(at: Long, now: Long = System.currentTimeMillis()): String 
 internal fun categoryTitle(category: SanctionCategory): String = ui("moderation.category.${category.name}")
 
 /** Срок санкции словами: «до 11.10 18:02», «навсегда» или «очистка через N дн.». */
-internal fun termText(sanction: SanctionView): String? {
-    val until = sanction.until
-    return when {
-        sanction.kind == SanctionKind.DELETION -> sanction.daysLeft()?.let { ui("moderation.purge_in", it) }
-        until == null -> ui("moderation.forever")
-        else -> listedAt(until)?.let { ui("moderation.until", it) }
-    }
+internal fun termText(sanction: SanctionView): String? = termText(sanction.kind, sanction.until, sanction.daysLeft())
+
+/** Срок санкции глазами наказанного (4.12.x) - теми же словами. */
+internal fun termText(notice: SanctionNotice): String? = termText(notice.kind, notice.until, notice.daysLeft())
+
+private fun termText(kind: SanctionKind, until: String?, daysLeft: Long?): String? = when {
+    kind == SanctionKind.DELETION -> daysLeft?.let { ui("moderation.purge_in", it) }
+    until == null -> ui("moderation.forever")
+    else -> listedAt(until)?.let { ui("moderation.until", it) }
 }
+
+/** Санкция своего героя одной фразой (4.12.x): что, на сколько и за что - без номера и того, кто наказал. */
+internal fun noticeLine(notice: SanctionNotice): String = listOfNotNull(
+    ui("moderation.kind.${notice.kind.name}") + " · " + ui("moderation.target.${notice.target.name}"),
+    termText(notice),
+    categoryTitle(notice.category),
+).joinToString(" · ")
 
 private fun hoursText(hours: Int): String = when {
     hours % HOURS_IN_DAY == 0 -> ui("moderation.days", hours / HOURS_IN_DAY)
@@ -788,19 +828,19 @@ private const val HARDWARE = 6
 /** Журнал отдаёт страницу без счёта: полная страница - возможно, есть следующая. */
 private const val PAGE_GUESS = 30
 
-/** Роли, что администратор создаёт формой «+». */
-private val CREATABLE = listOf(AccountRole.TESTER, AccountRole.MODERATOR)
+/** Роли, что администратор создаёт формой «+»; тестировщик (4.12.x) - отметка героя в досье, не роль аккаунта. */
+private val CREATABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
 
 /** Роли, что администратор выдаёт в досье. */
-private val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.TESTER, AccountRole.MODERATOR)
+private val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
 
 /**
- * Новый аккаунт (3.88.7, роль с 3.88.8): логин и роль - тестировщик или модератор, - и сервер создаёт аккаунт с паролем,
+ * Новый аккаунт (3.88.7, роль с 3.88.8): логин и роль - игрок или модератор, - и сервер создаёт аккаунт с паролем,
  * который показывается один раз, с кнопками скопировать логин и пароль.
  */
 @Composable private fun AccountSheet(account: AccountUi, created: TesterAccount?, onCreate: (String, AccountRole) -> Unit, onDismiss: () -> Unit) {
     var login by remember { mutableStateOf("") }
-    var role by remember { mutableStateOf(AccountRole.TESTER) }
+    var role by remember { mutableStateOf(AccountRole.USER) }
     val clipboard = LocalClipboardManager.current
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

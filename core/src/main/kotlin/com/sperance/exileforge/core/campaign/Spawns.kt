@@ -53,16 +53,12 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
 
     /**
      * A crystal's guardian: the zone's monster standing up rare — its rule's lines drawn as any rare's — with
-     * the line of every kind of essence it guards, and [extra], what a Vaal orb and the atlas add to it.
+     * the line of every kind of essence it guards, and [extra], what a Vaal orb and the atlas add to it. Сам страж - функция правил
+     * [Run.crystalGuardian] (4.12.x, сервер RUN-06: по ней же сервер мерит темп боя), здесь - законы, баффы карты и навыки.
      */
-    fun crystalGuardian(zone: Zone, crystal: Crystal, place: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? {
-        val monster = index.monster(crystal.guardian) ?: zone.monsters.firstOrNull()?.let(index::monster) ?: return null
-        val dice = run.streams.of("crystalGuardian", place)
-        val rule = campaign.rarity(MonsterRarity.RARE)
-        val picked = monsters.draw(run.pool, run.levelOf(zone), rule, dice.between(rule.modifiers), dice)
-        val essences = crystal.essences.mapNotNull { index.essence(it)?.kind?.monster }.distinct().mapNotNull(index::modifier)
-            .map { monsters.rolled(monsters.raise(it, 1, run.levelOf(zone)), 1.0, dice) }
-        return skilled(buffed(sworn(monsters.build(monster, run.levelOf(zone), rule, picked + essences, dice, extra)), buffs), dice)
+    fun crystalGuardian(crystal: Crystal, place: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? {
+        val dice = run.crystalDice(place)
+        return run.crystalGuardian(crystal, dice, extra)?.let { skilled(buffed(sworn(it), buffs), dice) }
     }
 
     /**

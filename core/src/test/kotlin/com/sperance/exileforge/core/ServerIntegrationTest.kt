@@ -60,9 +60,13 @@ class ServerIntegrationTest {
         serverLocale = api.files.localeBundle(assertNotNull(locales.language("ru")))
         assertTrue(serverLocale.contains("system.success"))
 
+        // Маршруты манифеста - по сессии (сервер SEC-09): без входа - только открытые, у администратора - и модерация
+        assertTrue(manifest.routes.none { it.path.startsWith("/api/v1/admin/") }, "an anonymous manifest named the admin routes")
         val admin = api.login("admin", requireNotNull(System.getenv("EF_ADMIN_PASSWORD")))
         assertEquals("ADMIN", admin.role)
         assertEquals(admin.id, assertNotNull(api.currentUser()).id)
+        api.requireRoutes()
+        assertTrue(api.manifest(fresh = true).routes.any { it.path.startsWith("/api/v1/admin/moderation") }, "the administrator's manifest lacks moderation")
 
         // One hero, one document: every POST that names the hero brings the parts that changed.
         var delivered: HeroSnapshot? = null
@@ -73,6 +77,9 @@ class ServerIntegrationTest {
         val created = api.hero.create(admin.id, "Contract", "", heroClass)
         val heroId = created.id
         try {
+            // Тестировщик - отметка героя (сервер ROLE-01): роль администратора выдач не открывает, отметку ставит администратор
+            assertEquals("AUTH_007", assertFailsWith<ApiFailure> { api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 1) }.code)
+            assertTrue(api.moderation.setTester(heroId, true))
             val parts = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId))))
             assertTrue(parts.complete, "the first view did not bring every part")
             assertEquals(heroClass, parts.hero.heroClass)
@@ -133,6 +140,11 @@ class ServerIntegrationTest {
             // orbs too, so the count is compared with itself before the lot, not with a fixed figure.
             suspend fun bag(code: String) = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).bag[code] ?: 0L
             val starterOrb = Orb.ORB_OF_TRANSMUTATION.name
+            val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
+            api.hero.grant(heroId, "level", "level" to auctionLevel.toString())
+            // Герою-тестировщику аукцион закрыт (сервер SEC-03): отказ как выданной вещи; без отметки он торгует как игрок
+            assertEquals("GR_001", assertFailsWith<ApiFailure> { api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1) }.code)
+            assertEquals(false, api.moderation.setTester(heroId, false))
             val held = bag(starterOrb)
             val lot = assertNotNull(api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1).lot)
             assertEquals(LotStatus.ACTIVE, lot.status)
@@ -144,11 +156,16 @@ class ServerIntegrationTest {
             // продажа купленного торговцу (сервер 4.8.x). Продавец - отдельный игрок по устройству.
             val trader = GameApi(url)
             val traderHero = trader.hero.create(trader.loginByDevice(null, "contract-trader").id.also { trader.fated() }, "Trader", "", heroClass).id
-            val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
-            listOf(heroId, traderHero).forEach { api.hero.grant(it, "level", "level" to auctionLevel.toString()) }
+            // Выдачи - на время отметки тестировщика: торгуют герои уже без неё
+            api.moderation.setTester(traderHero, true)
+            api.hero.grant(traderHero, "level", "level" to auctionLevel.toString())
+            val grantedRing = api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE)
+            api.moderation.setTester(traderHero, false)
+            api.moderation.setTester(heroId, true)
             api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 2)
+            api.moderation.setTester(heroId, false)
             // Выданная вещь не выставляется (сервер 4.9.0): продавец ставит свою стартовую вещь; стопки выдачей не помечаются
-            assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE).id, Orb.CHAOS_ORB.name, 1) }.code)
+            assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, grantedRing.id, Orb.CHAOS_ORB.name, 1) }.code)
             val starter = HeroParts(traderHero).merge(assertNotNull(trader.hero.view(traderHero, HeroParts(traderHero)))).items.first { !it.granted }
             if (starter.equipped) trader.hero.unequip(traderHero, starter.id)
             val open = assertNotNull(trader.auction.sellEquipment(traderHero, starter.id, Orb.CHAOS_ORB.name, 1).lot).id
@@ -157,7 +174,9 @@ class ServerIntegrationTest {
             assertEquals("AU_004", assertFailsWith<ApiFailure> { api.auction.buy(heroId, banned) }.code)
             api.moderation.lift(ban.id)
             val stash = index.rules.stash
+            api.moderation.setTester(heroId, true)
             repeat((stash.baseSlots + stash.overflowSlots) / TESTER_BATCH + 1) { api.hero.grant(heroId, "rares", "count" to TESTER_BATCH.toString()) }
+            api.moderation.setTester(heroId, false)
             assertEquals("CH_020", assertFailsWith<ApiFailure> { api.auction.buy(heroId, open) }.code)
 
             // A code is a treasure once - на аккаунт и на устройство (сервер 4.9.0): гасит игрок по устройству.

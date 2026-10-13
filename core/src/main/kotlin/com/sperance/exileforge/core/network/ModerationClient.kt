@@ -38,15 +38,19 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
     }
 }
 
-/** Роли аккаунта, как их называет сервер. */
-@Serializable enum class AccountRole { USER, MODERATOR, ADMIN, TESTER }
+/** Роли аккаунта, как их называет сервер. Тестировщик (4.12.x, сервер ROLE-01) - не роль аккаунта, а отметка героя ([DossierHero.tester]). */
+@Serializable enum class AccountRole { USER, MODERATOR, ADMIN }
 
-/** Новая роль аккаунта [user]: игрок, тестировщик или модератор (3.88.7). */
+/** Новая роль аккаунта [user]: игрок или модератор (3.88.7). */
 @Serializable data class RoleRequest(val user: String, val role: AccountRole)
 
+/** Отметка тестировщика героя [hero] (4.12.x, сервер ROLE-01): ставит и снимает администратор в досье героя. */
+@Serializable data class TesterRequest(val hero: String, val tester: Boolean)
+
 /**
- * Санкция, как её показывают игроку и модератору: [until] - конец бана или очистки корзины (null - бессрочно), [liftedAt] -
- * снята досрочно, [purgedAt] - удалённое стёрто, [appealed] - апелляция уже подана.
+ * Санкция, как её видит модерация: [until] - конец бана или очистки корзины (null - бессрочно), [liftedAt] - снята досрочно,
+ * [purgedAt] - удалённое стёрто, [appealed] - апелляция уже подана; [comment] - служебная заметка, [reason] (4.12.x) - причина для
+ * игрока. Игрок видит [SanctionNotice].
  */
 @Serializable data class SanctionView(
     val id: String,
@@ -64,6 +68,7 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
     val liftedBy: String = "",
     val purgedAt: String? = null,
     val appealed: Boolean = false,
+    val reason: String = "",
 ) {
     val active: Boolean get() = liftedAt == null && purgedAt == null
 
@@ -71,10 +76,36 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
     val voluntary: Boolean get() = kind == SanctionKind.DELETION && category.voluntary
 
     /** Сколько полных или начатых дней до [until] (конец бана или очистка корзины); null - бессрочно или не прочитать. */
-    fun daysLeft(now: Long = System.currentTimeMillis()): Long? = until
-        ?.let { runCatching { java.time.LocalDateTime.parse(it).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull() }
-        ?.let { ((it - now).coerceAtLeast(0) + DAY_MS - 1) / DAY_MS }
+    fun daysLeft(now: Long = System.currentTimeMillis()): Long? = daysUntil(until, now)
 }
+
+/**
+ * Санкция глазами наказанного (4.12.x, сервер `SanctionNotice`, SEC-02): экран санкции, апелляция, свои герои под санкцией. Вид, срок,
+ * категория и [reason] - причина для игрока; заметка модератора, кто наказал и номер санкции - только модерации.
+ */
+@Serializable data class SanctionNotice(
+    val id: String,
+    val kind: SanctionKind,
+    val target: SanctionTarget,
+    val category: SanctionCategory,
+    val reason: String = "",
+    val at: String,
+    val until: String? = null,
+    val liftedAt: String? = null,
+    val purgedAt: String? = null,
+    val appealed: Boolean = false,
+) {
+    /** Самоудаление (4.5.1): герой в корзине по воле владельца - он сам вернёт или сотрёт его. */
+    val voluntary: Boolean get() = kind == SanctionKind.DELETION && category.voluntary
+
+    /** Сколько полных или начатых дней до [until] (конец бана или очистка корзины); null - бессрочно или не прочитать. */
+    fun daysLeft(now: Long = System.currentTimeMillis()): Long? = daysUntil(until, now)
+}
+
+/** Полных или начатых дней от [now] до метки сервера [until] (UTC); null - бессрочно или не прочитать. */
+private fun daysUntil(until: String?, now: Long): Long? = until
+    ?.let { runCatching { java.time.LocalDateTime.parse(it).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull() }
+    ?.let { ((it - now).coerceAtLeast(0) + DAY_MS - 1) / DAY_MS }
 
 private const val DAY_MS = 86_400_000L
 
@@ -155,6 +186,8 @@ sealed interface ModerationFate {
     val deleted: Boolean = false,
     /** Игровой сервер героя (3.91.0, сервер 1.81.10) - код. */
     val server: String = "MAIN",
+    /** Герой - тестировщик (4.12.x, сервер ROLE-01): переключатель администратора в досье. */
+    val tester: Boolean = false,
 )
 
 @Serializable data class DossierEconomy(val gearValue: Long = 0, val uniques: Int = 0, val mythics: Int = 0, val tradesPerDay: Int = 0)
@@ -203,9 +236,11 @@ sealed interface ModerationFate {
     val hours: Int? = null,
     val category: SanctionCategory = SanctionCategory.OTHER,
     val comment: String = "",
+    /** Причина для игрока (4.12.x, сервер SEC-02): её видит наказанный; [comment] - служебная заметка модерации. */
+    val reason: String = "",
 )
 
-@Serializable data class DeletionRequest(val target: SanctionTarget, val id: String, val category: SanctionCategory, val comment: String)
+@Serializable data class DeletionRequest(val target: SanctionTarget, val id: String, val category: SanctionCategory, val comment: String, val reason: String = "")
 
 @Serializable private data class AppealBody(val text: String, val token: String)
 
@@ -237,20 +272,23 @@ class ModerationClient internal constructor(private val http: Transport) {
     /** Новая роль аккаунта (3.88.7, сервер 1.80.9): только администратор, ответ - роль, что теперь у аккаунта. */
     suspend fun setRole(userId: String, role: AccountRole): AccountRole = http.post("$MODERATION/role", body = WireJson.encodeToJsonElement(RoleRequest(userId, role)))
 
+    /** Отметка тестировщика героя [heroId] (4.12.x, сервер ROLE-01): только администратор, ответ - отметка, что теперь у героя. */
+    suspend fun setTester(heroId: String, tester: Boolean): Boolean = http.post("$MODERATION/tester", body = WireJson.encodeToJsonElement(TesterRequest(heroId, tester)))
+
     suspend fun delete(request: DeletionRequest): SanctionView = http.post("$MODERATION/delete", body = WireJson.encodeToJsonElement(request))
 
     suspend fun log(page: Int, actor: String = ""): List<ModerationEntryView> = http.get("$MODERATION/log", mapOf("page" to page.toString(), "actor" to actor))
 
-    suspend fun notice(id: String): SanctionView = decode(http.request("GET", NOTICE, mapOf("id" to id)))
+    suspend fun notice(id: String): SanctionNotice = decode(http.request("GET", NOTICE, mapOf("id" to id)))
 
     /**
      * Апелляция на санкцию [id] (4.9.0) - с секретным токеном наказанного: [token] из отказа входа, а без него (герой под санкцией
      * в списке героев - вход есть) токен своей санкции берётся у сервера первым.
      */
-    suspend fun appeal(id: String, text: String, token: String? = null): SanctionView {
+    suspend fun appeal(id: String, text: String, token: String? = null): SanctionNotice {
         val secret = token?.takeIf { it.isNotBlank() } ?: http.post<AppealToken>("$NOTICE/token", mapOf("id" to id)).token
         return decode(http.request("POST", "$NOTICE/appeal", mapOf("id" to id), body = WireJson.encodeToJsonElement(AppealBody(text.trim(), secret))))
     }
 
-    private fun decode(json: kotlinx.serialization.json.JsonElement): SanctionView = WireJson.decodeFromJsonElement(SanctionView.serializer(), json)
+    private fun decode(json: kotlinx.serialization.json.JsonElement): SanctionNotice = WireJson.decodeFromJsonElement(SanctionNotice.serializer(), json)
 }

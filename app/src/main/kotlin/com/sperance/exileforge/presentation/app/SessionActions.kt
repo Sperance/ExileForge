@@ -337,6 +337,8 @@ class SessionActions(
     /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */
     private suspend fun signedIn(profile: UserProfile, byDevice: Boolean) {
         run {
+            // Маршруты клиента - у вошедшего (4.12.x, сервер SEC-09): без входа манифест их не называет
+            api.requireRoutes()
             sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
             modes.set(AppMode.PLAYER)

@@ -446,12 +446,12 @@ fun LetterHost(game: GameUi) {
 /** Ответ на рассылку гильдии пишут и до уровня права писать (как сервер): уровень ему не помеха. */
 private fun effectiveGate(quota: MailQuota, draft: LetterDraft): MailGate = if (quota.gate == MailGate.LEVEL && draft.early) MailGate.OPEN else quota.gate
 
-/** Немота: писать нельзя до срока (или навсегда), причина и слово модератора. */
+/** Немота: писать нельзя до срока (или навсегда), категория и причина для игрока (4.12.x). */
 @Composable private fun MuteNote(mute: MailMute) {
     val term = mute.until?.let { listedAt(it) }?.let { ui("mail.mute.until", it) } ?: ui("mail.mute.forever")
-    val reason = listOf(ui("moderation.category.${mute.category}"), mute.comment).filter { it.isNotBlank() }.joinToString(" · ")
+    val reason = listOf(ui("moderation.category.${mute.category}"), mute.reason).filter { it.isNotBlank() }.joinToString(" · ")
     Text(
-        ui("mail.mute.note", term, reason, mute.number),
+        ui("mail.mute.note", term, reason),
         color = LifeRed.copy(alpha = .85f),
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.fillMaxWidth().background(LifeRed.copy(alpha = .08f), RoundedCornerShape(10.dp)).border(1.dp, LifeRed.copy(alpha = .33f), RoundedCornerShape(10.dp)).padding(10.dp),

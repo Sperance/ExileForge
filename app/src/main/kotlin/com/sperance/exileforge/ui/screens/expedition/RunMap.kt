@@ -170,7 +170,7 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
 /**
  * The whole map (2.72.0), over everything: all the explored ground fitted to the screen, the
  * monsters in the hero's light, a legend of what each mark is, what the map still holds, and what
- * the map item and the atlas lay on it.
+ * the map item, the atlas, the guild tree and the potion lay on it - each share in its own section once.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -210,20 +210,19 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 legendOf(world).forEach { (tint, text) -> Legend(tint, text) }
             }
-            if (run.mapEffects.isNotEmpty()) {
-                Engraved(ui("map.modifiers"))
-                // Read as an item's modifiers read, a sentence under its glyph, only without a tier: the lines are the map's and the atlas's summed.
-                run.mapEffects.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), tint = ModBlue) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
+            // Каждая доля - в своём разделе один раз (4.x): свои строки карты, атлас, древо гильдии, зелье ([ExpeditionRun.windowLines]).
+            // Читаются как строки вещи - фраза под значком, без тира.
+            val sections = remember(run, run.mapEffects) { run.windowLines }
+            MapSection.entries.forEach { section ->
+                val lines = sections[section].orEmpty()
+                if (lines.isEmpty()) {
+                    section.empty?.let { MutedText(ui(it)) }
+                    return@forEach
                 }
-            } else {
-                MutedText(ui("map.no_modifiers"))
-            }
-            // The atlas's bonuses on this run (3.81.0), every one of them — the fight's and the rolls' alike.
-            if (run.atlas.isNotEmpty()) {
-                Engraved(ui("map.atlas"))
-                run.atlas.forEach { (stat, value) ->
-                    Tipped({ Tip(statTitle(stat), tint = Rune) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
+                val tint = if (section == MapSection.MAP) ModBlue else Rune
+                Engraved(ui(section.title))
+                lines.forEach { (stat, value) ->
+                    Tipped({ Tip(statTitle(stat), tint = tint) }) { ModifierLine(effectText(stat, value), Glyph.ofStat(stat)) }
                 }
             }
         }

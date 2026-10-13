@@ -198,6 +198,11 @@ class UiStringsTest {
             // Что даёт строка сводки (4.6.5): у каждой характеристики с разделом - фраза в шапке её разбора
             TestContent.index.stats.stats.filter { it.section != null && it.section != StatSection.NONE }.forEach { add("stat.desc.${it.code}") }
             TargetRule.entries.forEach { add("fight.rule.${it.name}") }
+            // Разделы окна карты: заголовок и строка пустого раздела
+            com.sperance.exileforge.core.campaign.run.MapSection.entries.forEach { section ->
+                add(section.title)
+                section.empty?.let(::add)
+            }
             Outcome.entries.forEach { add("expedition.outcome_${it.name.lowercase()}") }
             AtlasNodeKind.entries.forEach { add("atlas.kind.${it.name}") }
             AtlasBranch.entries.forEach { add("atlas.branch.${it.name}") }

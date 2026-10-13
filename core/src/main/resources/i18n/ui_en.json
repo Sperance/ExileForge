@@ -941,6 +941,8 @@
   "map.legend_sealed": "Exit sealed",
   "map.legend_portal": "Vaal portal",
   "map.atlas": "Atlas bonuses",
+  "map.guild": "Guild tree",
+  "map.potion": "Potion",
   "map.modifiers": "Map properties",
   "map.no_modifiers": "This map has no properties",
   "fight.effect.BURNING": "Burning: fire scorches every second until it passes; it goes past armour.",

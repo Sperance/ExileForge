@@ -63,6 +63,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
@@ -230,6 +231,20 @@ class ExpeditionRun(
     /** Every bonus of the hero's atlas on this run (3.81.0), for the map's window: the ones the fight wears and the ones the rolls do. */
     var atlas: Map<String, Double> = emptyMap()
         internal set
+
+    /**
+     * Строки окна карты по разделам ([MapSection]), каждая доля один раз: свои строки карты (предмет, зона Ваал, штраф акта, сделки
+     * алтарей) - [mapEffects] без того, что в них положил атлас захода ([AtlasEffects.extras]); [atlas] - по долям [origins].
+     */
+    val windowLines: Map<MapSection, Map<String, Double>>
+        get() {
+            val laid = AtlasEffects.extras(run.context.atlas)
+            val own = (mapEffects.keys + laid.keys).associateWith { (mapEffects[it] ?: 0.0) - (laid[it] ?: 0.0) }.filterValues { abs(it) > MapSection.EPSILON }
+            val shares = atlas.flatMap { (code, value) -> origins.parts(code, value).map { (source, share) -> Triple(MapSection.of(source.kind), code, share) } }
+                .groupBy({ it.first }) { it.second to it.third }
+                .mapValues { (_, lines) -> lines.groupBy({ it.first }, { it.second }).mapValues { (_, parts) -> parts.sum() } }
+            return mapOf(MapSection.MAP to own) + shares
+        }
 
     /**
      * Босс основной карты убит в этом заходе (4.10.0): шаг героя по карте × `bossSlainSpeed` ([ExpeditionWorld.heroSpeed]). Не у зоны

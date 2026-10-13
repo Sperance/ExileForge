@@ -82,12 +82,15 @@ object AtlasEffects {
 
     /** [effects] of the entered map with the atlas's pack and rare monsters added, as one more map item's worth. */
     fun map(effects: Map<String, Double>, atlas: Map<String, Double>): Map<String, Double> {
-        val extra = (
-            mapOf(MapStat.PACK_SIZE.code to (atlas[PACK_SIZE] ?: 0.0), MapStat.RARE_MONSTERS.code to (atlas[RARE_MONSTERS] ?: 0.0)) +
-                (hero.keys + GUARDIAN_POWER + ABYSS_POWER + com.sperance.exileforge.rules.content.BrewStat.ALL).associateWith { atlas[it] ?: 0.0 }
-            ).filterValues { it != 0.0 }
+        val extra = extras(atlas)
         return (effects.keys + extra.keys).associateWith { (effects[it] ?: 0.0) + (extra[it] ?: 0.0) }
     }
+
+    /** Что атлас захода [atlas] (с долями гильдии и зелья) кладёт в строки карты ([map]); нулевые не входят. */
+    fun extras(atlas: Map<String, Double>): Map<String, Double> = (
+        mapOf(MapStat.PACK_SIZE.code to (atlas[PACK_SIZE] ?: 0.0), MapStat.RARE_MONSTERS.code to (atlas[RARE_MONSTERS] ?: 0.0)) +
+            (hero.keys + GUARDIAN_POWER + ABYSS_POWER + com.sperance.exileforge.rules.content.BrewStat.ALL).associateWith { atlas[it] ?: 0.0 }
+        ).filterValues { it != 0.0 }
 
     fun portalChance(index: ContentIndex, atlas: Map<String, Double>): Double = (index.campaign.corruption.chance * (1 + (atlas[VAAL_CHANCE] ?: 0.0) / 100)).coerceIn(0.0, 1.0)
 

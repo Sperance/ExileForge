@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign.run
 
+import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssDepth
 import com.sperance.exileforge.core.campaign.ChargeView
@@ -464,4 +465,28 @@ sealed interface EntranceCue {
 
     /** Запертая дверь: рычаг ещё не дёрнут. */
     data object Locked : EntranceCue
+}
+
+/**
+ * Раздел окна карты ([ExpeditionRun.windowLines]): свои строки карты, атлас, древо гильдии, зелье; [title] - ключ заголовка,
+ * [empty] - ключ строки пустого раздела (null - пустой не показывается).
+ */
+enum class MapSection(val title: String, val empty: String? = null) {
+    MAP("map.modifiers", "map.no_modifiers"),
+    ATLAS("map.atlas"),
+    GUILD("map.guild"),
+    POTION("map.potion"),
+    ;
+
+    companion object {
+        /** Раздел доли с источником [kind]: гильдия и зелье - свои, остаток атласа - атлас. */
+        fun of(kind: SourceKind): MapSection = when (kind) {
+            SourceKind.GUILD -> GUILD
+            SourceKind.POTION -> POTION
+            else -> ATLAS
+        }
+
+        /** Остаток строки карты меньше этого - след вычитания, не строка. */
+        const val EPSILON = 1e-9
+    }
 }

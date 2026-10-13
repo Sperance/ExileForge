@@ -67,8 +67,9 @@ class BugDelivery(context: Context, private val connection: ServerConnection, pr
         while (true) {
             val next = disk.withLock { withContext(Dispatchers.IO) { outbox.pending() } }.firstOrNull() ?: return
             val delivered = try {
-                connection.api.sendBug(next)
-                notices.toast(ui("bug.sent"))
+                val filed = connection.api.sendBug(next)
+                // Снимок сверх часового предела (4.10.0): отчёт записан без него - игрок знает, почему
+                notices.toast(ui(if (filed.shotDropped) "bug.sent_no_shot" else "bug.sent"))
                 true
             } catch (e: CancellationException) {
                 throw e

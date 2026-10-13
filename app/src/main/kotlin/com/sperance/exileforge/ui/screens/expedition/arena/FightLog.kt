@@ -1,18 +1,23 @@
 package com.sperance.exileforge.ui.screens.expedition.arena
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -35,15 +40,59 @@ import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.screens.hero.petName
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** The blows so far, newest first: when, who, what came of it - and the target's life before and after (3.88.8). */
+/**
+ * The blows so far, newest first: when, who, what came of it - and the target's life before and after (3.88.8).
+ * Живой журнал (4.9.3): пока игрок наверху, новая строка держит список на ней; отлистал вниз - список стоит, а кнопка
+ * «↑ новое (N)» считает пришедшие строки; касание кнопки или возврат наверх снова держат список на новой.
+ */
 @Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier, onOpen: ((CombatEvent) -> Unit)? = null) {
     val shifts = remember(events) { lifeShifts(events.asReversed()).asReversed() }
-    LazyColumn(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-        // Ключ - место строки от начала боя (4.9.0): новая строка сверху не сдвигает ключи прочих, их строки не перекомпонуются
-        itemsIndexed(events, key = { i, _ -> events.size - i }) { i, event -> EventRow(event, event.time, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
+    val state = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var follow by remember { mutableStateOf(true) }
+    var seen by remember { mutableIntStateOf(events.size) }
+    fun atTop() = state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0
+    // Игрок листает пальцем - следование снято; отпустил наверху или список докатился до верха - снова следим
+    LaunchedEffect(state) {
+        launch {
+            state.interactionSource.interactions.collect { interaction ->
+                when (interaction) {
+                    is DragInteraction.Start -> follow = false
+                    is DragInteraction.Stop, is DragInteraction.Cancel -> if (atTop()) follow = true
+                }
+            }
+        }
+        snapshotFlow { atTop() }.collect { top -> if (top) follow = true }
+    }
+    // Новая строка сверху: список держит прежнюю по ключу, следуя - возвращаемся к новой
+    LaunchedEffect(events.size, follow) {
+        if (follow) {
+            seen = events.size
+            if (!atTop()) state.scrollToItem(0)
+        }
+    }
+    Box(modifier.fillMaxWidth()) {
+        LazyColumn(Modifier.fillMaxWidth(), state = state, verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            // Ключ - место строки от начала боя (4.9.0): новая строка сверху не сдвигает ключи прочих, их строки не перекомпонуются
+            itemsIndexed(events, key = { i, _ -> events.size - i }) { i, event -> EventRow(event, event.time, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
+        }
+        val fresh = events.size - seen
+        if (!follow && fresh > 0) {
+            Text(
+                ui("fight.log_new", fresh),
+                color = Ink,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 2.dp).clip(RoundedCornerShape(12.dp)).background(Gold).clickable {
+                    follow = true
+                    scope.launch { state.scrollToItem(0) }
+                }.padding(horizontal = 10.dp, vertical = 3.dp),
+            )
+        }
     }
 }
 
@@ -272,9 +321,12 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.RECOVER_FLASK -> ui("expedition.log_note_recover_flask", equipmentTitle(note.ref), note.value.roundToInt())
         NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())
-        NoteKind.REGEN -> ui("expedition.log_note_regen", note.value.roundToInt())
+        NoteKind.LIFE_FLOW -> note.flow?.let(::lifeFlowLine).orEmpty()
     }
 }
+
+/** Итог здоровья за секунду (4.9.3): «Здоровье −12/с · реген +8 · деген 2%». */
+private fun lifeFlowLine(flow: LifeFlow): String = ui("expedition.log_note_life_flow", ui("fight.flow.rate", flowNumber(flow.net)), flowParts(flow))
 
 /**
  * Срабатывание Предначертания (4.9.0): «✦ дар: что сделал рычаг» словами `expedition.fate_beat.<срабатывание>` - числа по порядку,
@@ -291,8 +343,10 @@ internal fun fateLine(trace: FateTrace): String {
     return if (trace.repeats > 0) ui("expedition.log_fate_fold", fate, trace.repeats, text) else ui("expedition.log_fate", fate, text)
 }
 
+/** Цвет строки журнала; итог здоровья (4.9.3) - убыль красным, прибыль зелёным. */
 private fun logColour(event: CombatEvent): Color = when {
     event.pet != null -> Vital
+    (event.trace as? NoteTrace)?.kind == NoteKind.LIFE_FLOW -> flowTint((event.trace as NoteTrace).value)
     (event.trace as? NoteTrace)?.kind?.recovery == true -> Vital
     event.trace is FateTrace -> FateInk.GoldLight
     event.action == Action.NOTE -> Rune

@@ -14,10 +14,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -109,24 +114,29 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
     narrow: Boolean = false,
     onTap: () -> Unit,
 ) {
-    val lunge = fight.lunge
     val ring = rarityTint(foe.monster.rarity)
-    val acting = reach(lunge, Side.MONSTER, foe.index)
-    val hit = struck(lunge, Side.HERO, foe.index)
+    val live = foe.alive && fight.outcome == null
+    // Замах и удары (4.9.3): последние 30% замаха - рамка наливается кровью, выпад - каждым своим ударом, тряска - каждым по нему
+    val glow = if (live) swingGlow(foe.swing, foe.held) else 0f
+    val acting = strikeReach(fight.strikes, Side.MONSTER, foe.index, pet = null, swing = if (live) foe.swing else 0f, held = foe.held)
+    val flash = if (foe.alive) strikeFlash(fight.strikes, Side.MONSTER, foe.index, pet = null) else 0f
+    val hit = flash > 0f
     val focused = fight.focus == foe.index
     val shape = RoundedCornerShape(8.dp)
+    var effectsOpen by remember { mutableStateOf(false) }
     val border = when {
         acting > 0f -> LifeRed
         hit -> LifeRed.copy(alpha = .8f)
         focused || open -> GoldBright
-        else -> ring.copy(alpha = .55f)
+        else -> lerp(ring.copy(alpha = .55f), LifeRed, glow)
     }
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
-    // Variant C (3.80.0): a round portrait beside the name; a blow, a stun, the frost play over the whole card.
+    // Плашка намерения (4.9.3): замах врага вот-вот ляжет на героя
+    val aim = if (live && fight.foesAimHero) ((foe.swing - AIM_FROM) / AIM_FADE).coerceIn(0f, 1f) * (if (foe.held) 0f else 1f) else 0f
     Box(
         modifier.graphicsLayer {
             translationY = acting * 10.dp.toPx()
-            translationX = if (hit && foe.alive) sin(time * 60f) * 2.dp.toPx() else 0f
+            translationX = shake(flash, time).dp.toPx()
             // A stun gone off (3.78.0) tilts the card while it holds.
             rotationZ = if (foe.alive && foe.buildup?.stunned == true) -3f else 0f
             alpha = when {
@@ -134,123 +144,139 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                 !foe.reachable && fight.started -> .7f
                 else -> 1f
             }
-        }
-            .background(if (acting > 0f) Blood.copy(alpha = .35f) else Panel.copy(alpha = .9f), shape)
-            .then(if (foe.taunt && foe.alive && acting == 0f && !hit && !focused && !open) Modifier.tauntAura(shape, time) else Modifier)
-            .border(if (focused || acting > 0f) 2.dp else 1.dp, border, shape)
-            .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
+        },
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(if (narrow) 5.dp else 6.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
-            horizontalAlignment = if (narrow) Alignment.CenterHorizontally else Alignment.Start,
+        Box(
+            Modifier.swingAura(shape, LifeRed, glow)
+                .background(if (acting > 0f) Blood.copy(alpha = .35f) else Panel.copy(alpha = .9f), shape)
+                .then(if (foe.taunt && foe.alive && acting == 0f && !hit && !focused && !open) Modifier.tauntAura(shape, time) else Modifier)
+                .border(if (focused || acting > 0f || glow > 0f) 2.dp else 1.dp, border, shape)
+                .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
         ) {
-            val portrait: @Composable (Dp) -> Unit = { size ->
-                Box(Modifier.size(size).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
-                    Canvas(Modifier.fillMaxSize()) {
-                        Portraits.monster(
-                            this,
-                            foe.monster.code.value,
-                            foe.monster.form,
-                            ring,
-                            time,
-                            wash?.let(::ailmentTint),
-                            wash?.let(::washAmount) ?: 0f,
-                            flash(lunge, Side.MONSTER, foe.index),
-                        )
-                    }
-                }
-            }
-            val seals: @Composable () -> Unit = {
-                // Its traits (3.73.0) as seals; a tap on the card opens what they do.
-                if (traits.isNotEmpty() && foe.alive) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        // Печать свойства (3.92.0) открывает его лист
-                        val lore = LocalLore.current
-                        traits.forEach { trait ->
-                            SkillGlyph(
-                                trait.icon,
-                                Modifier.size(14.dp).then(if (lore != null) Modifier.clickable { lore(Lore.Trait(trait, monsterTitle(foe.monster.code))) } else Modifier),
-                                Color(0xFFE8B06A),
+            Column(
+                Modifier.fillMaxWidth().padding(if (narrow) 5.dp else 6.dp),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+                horizontalAlignment = if (narrow) Alignment.CenterHorizontally else Alignment.Start,
+            ) {
+                val portrait: @Composable (Dp) -> Unit = { size ->
+                    Box(Modifier.size(size).clip(CircleShape).background(Color(0xFF0B0E13)).border(2.dp, ring.copy(alpha = .8f), CircleShape)) {
+                        Canvas(Modifier.fillMaxSize()) {
+                            Portraits.monster(
+                                this,
+                                foe.monster.code.value,
+                                foe.monster.form,
+                                ring,
+                                time,
+                                wash?.let(::ailmentTint),
+                                wash?.let(::washAmount) ?: 0f,
+                                flash,
                             )
                         }
                     }
                 }
-            }
-            if (narrow) {
-                // Variant A (3.81.0): three narrow tiles — the portrait over a one-line name that shrinks to fit; the whole name is in its window.
-                portrait(FOE_AVATAR_NARROW)
-                FittedName(monsterTitle(foe.monster.code), ring)
-                FoeMightMark(foe.monster)
-                seals()
-            } else {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    portrait(FOE_AVATAR)
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                        Text(
-                            monsterTitle(foe.monster.code),
-                            color = ring,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            lineHeight = 12.sp,
-                        )
-                        // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
-                        if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
-                        FoeMightMark(foe.monster)
-                        seals()
+                val seals: @Composable () -> Unit = {
+                    // Its traits (3.73.0) as seals; a tap on the card opens what they do.
+                    if (traits.isNotEmpty() && foe.alive) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            // Печать свойства (3.92.0) открывает его лист
+                            val lore = LocalLore.current
+                            traits.forEach { trait ->
+                                SkillGlyph(
+                                    trait.icon,
+                                    Modifier.size(14.dp).then(if (lore != null) Modifier.clickable { lore(Lore.Trait(trait, monsterTitle(foe.monster.code))) } else Modifier),
+                                    Color(0xFFE8B06A),
+                                )
+                            }
+                        }
                     }
                 }
-            }
-            LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
-            // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
-            if (foe.maxMana > 0) {
-                Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
-                    Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
+                if (narrow) {
+                    // Variant A (3.81.0): three narrow tiles — the portrait over a one-line name that shrinks to fit; the whole name is in its window.
+                    portrait(FOE_AVATAR_NARROW)
+                    FittedName(monsterTitle(foe.monster.code), ring)
+                    FoeMightMark(foe.monster)
+                    seals()
+                } else {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        portrait(FOE_AVATAR)
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                            Text(
+                                monsterTitle(foe.monster.code),
+                                color = ring,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                lineHeight = 12.sp,
+                            )
+                            // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
+                            if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
+                            FoeMightMark(foe.monster)
+                            seals()
+                        }
+                    }
+                }
+                LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
+                // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
+                if (foe.maxMana > 0) {
+                    Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
+                        Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
+                    }
+                }
+                if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
+                SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
+                // What is on it (4.9.3): одна компактная полка - что не влезло, то «+N», касание открывает лист эффектов врага.
+                val tile = if (large) 16.dp else 14.dp
+                if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
+                    val shelf = timedShelf(foe.held, foe.ailments, foe.effects) + foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }
+                    EffectShelf(shelf, tile, { effectsOpen = true }, Modifier.fillMaxWidth().height(tile), gap = 2.dp)
                 }
             }
-            if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
-            SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
-            // What is on it: small tiles while it runs, larger while paused; a tap on one opens its window.
-            val tile = if (large) 16.dp else 12.dp
-            if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
-                Row(Modifier.height(tile), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    if (foe.held && foe.ailments.none { it.ailment == Ailment.FROZEN }) {
-                        StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), tile) { stunTip() }
-                    }
-                    foe.ailments.take(5).forEach { view ->
-                        StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view), tile) { ailmentTip(view) }
-                    }
-                    foe.effects.take(3).forEach { EffectTile(it, tile) }
-                }
+            // A narrow tile keeps the level in its corner.
+            if (narrow && foe.monster.level > 0) {
+                Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp))
             }
+            if (fight.target == foe.index && foe.alive && fight.outcome == null) {
+                Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(if (narrow) Alignment.BottomEnd else Alignment.TopEnd).padding(4.dp))
+            }
+            if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
+            if (!foe.alive) {
+                Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
+            } // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
+            else if (focused && !foe.reachable) {
+                Text(
+                    ui("fight.out_of_reach_short"),
+                    color = Muted,
+                    fontSize = 9.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp),
+                )
+            }
+            if (foe.alive) foe.buildup?.let { BuildupMark(it, time) }
+            CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
-        // A narrow tile keeps the level in its corner.
-        if (narrow && foe.monster.level > 0) {
-            Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp))
-        }
-        if (fight.target == foe.index && foe.alive && fight.outcome == null) {
-            Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(if (narrow) Alignment.BottomEnd else Alignment.TopEnd).padding(4.dp))
-        }
-        if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
-        if (!foe.alive) {
-            Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
-        } // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
-        else if (focused && !foe.reachable) {
+        if (aim > 0f) {
             Text(
-                ui("fight.out_of_reach_short"),
-                color = Muted,
+                ui("fight.at_you"),
+                color = Color(0xFFFF8A83),
                 fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp),
+                modifier = Modifier.align(Alignment.BottomCenter).offset(y = 14.dp).graphicsLayer { alpha = aim }
+                    .background(Color(0xFF3A1414), RoundedCornerShape(10.dp)).border(1.dp, LifeRed, RoundedCornerShape(10.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
             )
         }
-        if (foe.alive) foe.buildup?.let { BuildupMark(it, time) }
-        CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
+    }
+    if (effectsOpen) {
+        val timed = timedShelf(foe.held, foe.ailments, foe.effects)
+        EffectsSheet(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), timed, foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }, null) { effectsOpen = false }
     }
 }
+
+/** С какой доли замаха врага проступает плашка «→ по вам» и за какую долю она набирает силу. */
+private const val AIM_FROM = .55f
+private const val AIM_FADE = .2f
 
 /** The round portrait of a foe's card (3.80.0, variant C). */
 private val FOE_AVATAR = 52.dp
@@ -285,7 +311,7 @@ private val FOE_AVATAR_NARROW = 46.dp
     shown.takeLast(3).forEach { hit ->
         val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat().coerceIn(0f, 1f)
         Text(
-            hitText(hit),
+            hitLabel(hit, 1 - rise),
             color = hitColour(hit).copy(alpha = 1 - rise),
             textAlign = TextAlign.Center,
             fontSize = when {
@@ -297,6 +323,19 @@ private val FOE_AVATAR_NARROW = 46.dp
             fontStyle = if (hit.action == Action.TICK) FontStyle.Italic else FontStyle.Normal,
             modifier = Modifier.align(Alignment.Center).offset(x = (((hit.id % 3) - 1) * 14).dp, y = (-36 * rise).dp),
         )
+    }
+}
+
+/** Удар по герою (4.9.3): число всегда кровью и с «−», за ним - значок стихии её цветом; по врагу - цветом стихии, как было. */
+private val FloatingHit.onHero: Boolean get() = target == Side.HERO && amount > 0 && !(kind == HitKind.EVADED || kind == HitKind.BLOCKED)
+
+private fun hitLabel(hit: FloatingHit, alpha: Float): AnnotatedString {
+    if (!hit.onHero) return AnnotatedString(hitText(hit))
+    val glyph = hit.type?.let(::damageGlyph)
+    return buildAnnotatedString {
+        append("−")
+        append(hitText(hit))
+        if (glyph != null) withStyle(SpanStyle(color = damageTint(hit.type).copy(alpha = alpha), fontSize = 11.sp, fontWeight = FontWeight.Bold)) { append(" $glyph") }
     }
 }
 
@@ -321,7 +360,9 @@ private fun hitColour(hit: FloatingHit): Color = when {
 
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
 
+    hit.onHero -> HeroHurt
+
     hit.kind == HitKind.CRIT -> Color(0xFFFFD34A)
 
-    else -> damageTint(hit.type, onHero = hit.target == Side.HERO)
+    else -> damageTint(hit.type)
 }

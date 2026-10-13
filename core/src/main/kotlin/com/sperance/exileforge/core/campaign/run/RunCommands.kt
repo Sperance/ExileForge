@@ -30,6 +30,7 @@ internal fun ExpeditionRun.settle(answer: RunCommand.Settled) {
     if (fallEvent != null) answer.lost?.let { fall = it }
     answer.crystals.forEach { (n, changed) -> if (n in vaalings) vaaled[n] = changed }
     answer.ranks.forEach { (n, place) -> if (n in fightEvents) rank = place }
+    showDrops()
     resolve()
 }
 
@@ -130,8 +131,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
             else -> Unit
         }
-
-        RunCommand.DismissChest -> chestEvent = null
 
         RunCommand.LevelSeen -> levelShown = levelNow()
 
@@ -249,6 +248,8 @@ internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     rebody()
     life = (life + draught.life).coerceAtMost(hero.maxLife)
     mana = (mana + draught.mana).coerceAtMost(manaCap())
+    // Щит глотка (4.9.x): доля лечения в энергощит и глоток щита - и на карте, как в бою
+    shield = (shield + draught.shield).coerceAtMost(hero.maxShield)
 }
 
 /** Уход с карты (3.88.9): вне боя - всегда; бой идёт до конца, а карта - нет. С карты - концом `LEFT`, с итога - просто закрыть его. */

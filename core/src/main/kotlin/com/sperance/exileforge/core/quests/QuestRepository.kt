@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.quests
 
 import com.sperance.exileforge.rules.content.GuildQuests
 import com.sperance.exileforge.rules.content.QuestBoard
+import com.sperance.exileforge.rules.content.QuestReward
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -23,6 +24,9 @@ data class Quests(val board: QuestBoard? = null, val guild: GuildQuests? = null)
         }
     }
 }
+
+/** Задание, сданное разом после карты (4.10.0): его заголовок с целью и награда - строкой в итогах карты. */
+data class QuestTurnIn(val title: String, val rewards: QuestReward)
 
 /** Единственный источник правды о квестах (3.80.10). */
 class QuestRepository {

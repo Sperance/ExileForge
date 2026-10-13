@@ -352,9 +352,12 @@ class Battle(
     internal val triggerReady = mutableMapOf<String, Double>()
     internal val recoveries = mutableListOf<Recovery>()
 
-    /** The hero's regeneration since the last recovery line: summed into one line a second (3.79.0). */
-    internal var regenLogged = 0.0
-    internal var regenLoggedAt = 0.0
+    /** Регенерация, деген и отложенный урон героя с прошлой строки итога (4.9.3): одна строка журнала в секунду. */
+    internal val lifeMeter = LifeMeter()
+
+    /** Итог здоровья героя за последнюю секунду (4.9.3): плитка «−12/с» у портрета и её разбор. */
+    var lifeFlow: LifeFlow = LifeFlow.NONE
+        internal set
 
     /** The next blow of the hero is a critical strike (a cloak of shadows). */
     internal var nextCrit = false
@@ -387,8 +390,8 @@ class Battle(
     internal var blockedAt = NEVER
     internal var critAt = NEVER
 
-    /** Whether the sheet has conditional lines at all, and the hero's conditions at the last look (3.35.0). */
-    internal val conditioned = model.conditional(Condition.entries.toSet()).isNotEmpty()
+    /** Whether the sheet or a flask of the belt (4.9.x) has conditional lines at all, and the hero's conditions at the last look (3.35.0). */
+    internal val conditioned = model.conditional(Condition.entries.toSet()).isNotEmpty() || kit.flasks.any { flask -> flask?.sheet?.lines?.any { it.condition != null } == true }
     internal var conditions: Set<Condition> = emptySet()
 
     init {
@@ -397,7 +400,7 @@ class Battle(
             val flask = kit.flasks.getOrNull(i) ?: return@forEachIndexed
             if (left <= 0) return@forEachIndexed
             val draught = flask.sheet.draught(heroFighter.body, heroFighter.life, 0.0)
-            heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.sheet.code, draught.lines, left, draught.duration, slot = i)
+            heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.sheet.code, draught.lines, left, draught.duration, slot = i, conditional = draught.conditional)
             // Its recovery comes along with it (2.81.0): before, the draught's buff ran on but its healing stopped.
             pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly) }
             flaskOpened[i] = true
@@ -434,6 +437,16 @@ class Battle(
     /** The drawings of every skill in this fight, by code: the hero's and the foes'. */
     internal val icons: Map<String, String> = (kit.actives.filterNotNull() + kit.passives + kit.curses).associate { it.skill.code to it.skill.icon } +
         foes.flatMap { it.skills + it.phases.mapNotNull(FoePhase::skill) }.associate { it.code to it.icon }
+
+    /**
+     * Пассивные умения героя (4.9.3) - ауры, бонусы - плитками полки «на весь бой»: что кладут по листу начала боя. Только
+     * показ: лист боя их строки уже несёт.
+     */
+    internal val passiveViews: List<EffectView> by lazy {
+        kit.passiveSources(heroFighter.body).map { (skill, lines) ->
+            EffectView(skill.skill.code, EffectKind.BUFF, 1f, FOREVER, skill.skill.icon, lines = lines, passive = true)
+        }
+    }
 
     internal fun draughtOf(slot: Int): TimedEffect? = heroFighter.effects.firstOrNull { it.kind == EffectKind.FLASK && it.slot == slot && it.until > time }
     internal fun skillsFree(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.sheet?.skillsFree == true && draughtOf(i) != null }

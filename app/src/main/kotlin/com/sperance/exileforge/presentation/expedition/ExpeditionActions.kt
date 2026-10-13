@@ -259,11 +259,11 @@ class ExpeditionActions(
             }
             if (heroes.state.value.readAt == 0L) heroSync.readHero()
             heroSync.drawn()
-            begin(id, started, toBoss)
+            begin(id, started, toBoss, launch?.potion)
         }
     }
 
-    private fun begin(id: String, started: RunStart, toBoss: Boolean = false) {
+    private fun begin(id: String, started: RunStart, toBoss: Boolean = false, potion: String? = null) {
         val i = index ?: return
         val h = hero?.takeIf { it.id == id } ?: return
         val zone = i.zone(started.zone) ?: return
@@ -273,7 +273,14 @@ class ExpeditionActions(
         // Заход, начатый автопробегом, и продолжается им (3.95.1): признак едет в его контексте с сервера.
         if (started.context.auto) autoPlan = AutoPlan
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied).also { runJournal = it }
-        expedition { it.copy(runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = emptySet()) }
+        // Доска заданий на входе (4.10.0): лист «Задания» карты считает от неё - перечитанная доска уже несёт события захода
+        val board = quests.board().takeIf { it.board != null }
+        expedition {
+            it.copy(
+                runLoot = emptyList(), launch = null, pending = 0, rejected = 0, unfinished = null, saleMarks = emptySet(),
+                quests = board, turnedIn = emptyList(), atlasPoints = emptyList(), potion = potion,
+            )
+        }
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
@@ -298,7 +305,7 @@ class ExpeditionActions(
 
     /**
      * Ещё одно событие: журнал записан, контрольная точка или полная пачка отправляют его сразу. Прочие события боя (4.9.0, NET-9) -
-     * убийства, сундуки, начала боёв - копятся и уходят одной пачкой через `run.journalSeconds` правил; итог выигранного боя вручную
+     * убийства и начала боёв - копятся и уходят одной пачкой через `run.journalSeconds` правил; итог выигранного боя вручную
      * отправляет её сразу - его добычу ждёт экран итогов. Сбоящая связь держит паузу повтора (4.0.0: и для контрольных точек и полных
      * пачек - без связи событие не шлёт запрос само).
      */
@@ -438,7 +445,21 @@ class ExpeditionActions(
         runs().forEach { it.send(answer) }
         campaign()
         loot(j.heroId, report.rewards.flatMap { it.reward.equipment })
+        atlasEarned(j.heroId, report.rewards.flatMap { it.atlas })
     }
+
+    /**
+     * Новые очки Атласа из ответа (4.10.0): тост на каждое и строки в итогах карты или испытания; [heroId] - чей ответ, чужой
+     * экран их не получает.
+     */
+    fun atlasEarned(heroId: String, keys: List<String>) {
+        if (keys.isEmpty() || !heroes.onScreen(heroId)) return
+        heroSync.pointsEarned(keys)
+        expedition { it.copy(atlasPoints = (it.atlasPoints + keys).distinct()) }
+    }
+
+    /** Заход или испытание начат (4.10.0): очки Атласа прошлого больше не его. */
+    fun atlasReset() = expedition { it.copy(atlasPoints = emptyList()) }
 
     /** Походы, которых касается ответ журнала: на экране и карта, из которой вошли в зону Ваал. */
     private fun runs(): List<ExpeditionRun> = listOfNotNull(mutableRun.value, parent)
@@ -454,8 +475,13 @@ class ExpeditionActions(
         if (runJournal === j) runs().forEach { it.send(RunCommand.Settled(Int.MAX_VALUE)) }
         if (runJournal === j) runJournal = null
         store.clearJournal(j.heroId)
-        // Поход считается целиком (3.24.0): всё, что он закончил, сдаётся разом.
-        quests.claimAll(j.heroId)
+        // Поход считается целиком (3.24.0): всё, что он закончил, сдаётся разом. Сданное (4.10.0) - блоком в итогах карты, пока они
+        // на экране; закрытые итоги - тостом.
+        quests.claimAll(j.heroId) { turnedIn ->
+            val shown = mutableRun.value?.journal?.runId == j.runId
+            if (shown) expedition { it.copy(turnedIn = it.turnedIn + turnedIn) }
+            shown
+        }
     }
 
     /** Пометка вещи добычи к продаже посреди захода (3.91.0): в итогах карты помеченное уже отмечено; повтор снимает. */
@@ -633,8 +659,12 @@ class ExpeditionActions(
         /** Отказ сервера «новое семя только спустя время» (CP_021). */
         const val SEED_TOO_SOON = "CP_021"
 
-        /** События, что отправляют журнал сразу: всё, что не убийство, не сундук и не начало или итог боя. */
+        /**
+         * События, что отправляют журнал сразу: всё, что не убийство и не начало или итог боя. Сундук (4.10.0) - тоже: его крышка
+         * открыта, добыча вылетает, как придёт ответ.
+         */
         val CHECKPOINTS = setOf(
+            RunEventKind.CHEST,
             RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL, RunEventKind.CRYSTAL_VAAL, RunEventKind.VAAL_OPEN, RunEventKind.VAAL_LEAVE,
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE,
             // Объект карты (3.90.0): золото торговца, сделка алтаря и добыча комнаты - ответ нужен сразу.

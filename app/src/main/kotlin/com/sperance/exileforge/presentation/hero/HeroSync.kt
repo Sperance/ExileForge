@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.hero
 import com.sperance.exileforge.core.campaign.CombatSheet
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.display.atlasPointToast
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
@@ -48,6 +49,17 @@ class HeroSync(
 ) {
     private val api: GameApi get() = connection.api
 
+    /** Очки Атласа, о которых уже сказал ответ события (4.10.0): чтение героя о них молчит. */
+    private val announcedPoints = HashSet<String>()
+
+    /**
+     * Новые очки Атласа из награды события похода или испытания (4.10.0, ключи [com.sperance.exileforge.rules.content.AtlasPoints.key]):
+     * тост на каждое - за что оно, - раз; следующее чтение героя их не повторяет.
+     */
+    fun pointsEarned(keys: Collection<String>) {
+        keys.filter { announcedPoints.add(it) }.forEach { notices.toast(atlasPointToast(it), NoticeKind.ATLAS) }
+    }
+
     private var parts: HeroParts? = null
     private var copyJob: Job? = null
 
@@ -59,6 +71,7 @@ class HeroSync(
 
     fun forget() {
         parts = null
+        announcedPoints.clear()
         copyJob?.cancel()
     }
 
@@ -137,7 +150,8 @@ class HeroSync(
             if (ticket != drawing || parts !== merged) return@launch
             heroes.set(view, System.currentTimeMillis())
             // Новое очко атласа (3.47.0) объявляется вслух: древо легко забыть за кнопкой карты мира.
-            earnedBefore?.let { before -> (view.info.earned.size - before.size).takeIf { it > 0 }?.let { notices.toast(ui("atlas.point_earned", it), NoticeKind.ATLAS) } }
+            // Очки, названные ответом события (4.10.0), не повторяются
+            earnedBefore?.let { before -> (view.info.earned - before.toSet() - announcedPoints).size.takeIf { it > 0 }?.let { notices.toast(ui("atlas.point_earned", it), NoticeKind.ATLAS) } }
         }
     }
 

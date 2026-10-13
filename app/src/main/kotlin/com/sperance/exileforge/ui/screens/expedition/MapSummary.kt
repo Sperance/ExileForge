@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.campaign.LootBreakdown
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.run.RunHud
@@ -108,7 +109,12 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         if (hud.vaal && !back) ids += vm.outerLoot()
         game.sellLots(hero?.items.orEmpty().filter { it.id in ids }.mapNotNull { game.view(it) })
     }
-    val marks = vm.state.collectAsStateWithLifecycle().value.saleMarks
+    val state by vm.state.collectAsStateWithLifecycle()
+    val marks = state.saleMarks
+    // Разбор золота и опыта (4.10.0): прибавки контекста захода со сделками алтарей и зельем входа - как их берёт сервер
+    val potion = remember(state.potion, game.index) { state.potion?.let { game.index?.rules?.brews?.potion(it) }.orEmpty() }
+    val gold = remember(run, run?.pacts, potion, tally.gold) { run?.let { LootBreakdown.gold(it.run, it.pacts, potion, tally.gold.toDouble()) } }
+    val experience = remember(run, run?.pacts, potion, tally.experience, hud.vaal) { run?.let { LootBreakdown.experience(it.run, it.pacts, potion, tally.experience, hud.vaal) } }
     val pick = rememberSellPick(lots, initial = marks)
     val offered = lots.isNotEmpty() && !back
     // Режим продажи (4.0.0): включает удержание вещи, как в тайнике. Страница всегда открывается в обычном режиме (4.0.1):
@@ -133,7 +139,10 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         SummaryBanner(head, mapTitle(hud.mapCode))
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             MutedText(head.hint, style = MaterialTheme.typography.bodySmall)
-            Tallies(tally)
+            Tallies(tally, gold, experience)
+            // Сданное после карты и новые очки Атласа (4.10.0, макет «Итоги карты», вариант A)
+            TurnedInBlock(state.turnedIn)
+            AtlasBlock(state.atlasPoints)
             if (tally.end == MapEnd.FELL) {
                 val lost = hud.fall?.takeIf { it > 0 }
                 if (lost != null) {
@@ -200,8 +209,11 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     }
 }
 
-/** The map's figures, three to a row: the slaughter, the time and the damage, then what it paid. */
-@Composable private fun Tallies(tally: MapTally) {
+/**
+ * The map's figures, three to a row: the slaughter, the time and the damage, then what it paid - золото и опыт строками с разбором
+ * ([gold], [experience], 4.10.0); без захода на экране - плитками.
+ */
+@Composable private fun Tallies(tally: MapTally, gold: LootBreakdown?, experience: LootBreakdown?) {
     Caption(ui("summary.figures"))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Tile(ForgeGlyphs.Swords, tally.kills.toString(), ui("summary.kills"))
@@ -212,6 +224,12 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         Tile(ForgeGlyphs.Portal, clock(tally.seconds), ui("summary.time"))
         Tile(ForgeGlyphs.Target, number(tally.figures.totalDealt), ui("summary.dealt"))
         Tile(ForgeGlyphs.Helm, number(tally.figures.totalTaken), ui("summary.taken"))
+    }
+    if (gold != null && experience != null) {
+        Caption(ui("summary.reward_hint", ui("expedition.report_reward")))
+        RewardRow(ForgeGlyphs.Coins, ui("summary.gold"), GoldBright, gold)
+        RewardRow(ForgeGlyphs.Tome, ui("summary.experience"), Rune, experience)
+        return
     }
     Caption(ui("expedition.report_reward"))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

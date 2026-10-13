@@ -33,6 +33,7 @@ internal fun Battle.step(dt: Double) {
         degenerate(it, dt)
         burn(it, dt)
     }
+    lifeFlowLine()
     // A support pet mends the hero while it stands (3.5.0).
     allyFighter?.takeIf { it.alive && heroFighter.alive && ally!!.heal > 0 && joined() }?.let {
         mended(lifeBack(heroFighter, heroFighter.body.maxLife * ally!!.heal / 100 * dt))
@@ -105,7 +106,7 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     // The bars melt once no blow has filled them for the rule's delay (3.78.0).
     rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
     val regenerated = lifeBack(me, recovery(me, me.body.regen(RegenPool.LIFE) * me.body.recoveryRate * dt))
-    if (me === heroFighter) regenLogged += regenerated
+    if (me === heroFighter) lifeMeter.regen(regenerated)
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
     // Регенерация не переливается (4.6.3, Переполнение): перелив копит только избыток восстановления
     if (!manaless(me)) manaBack(me, me.body.manaRegen(rules.mana) * dt, spill = false)
@@ -119,12 +120,18 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
             manaBack(me, draught.mana * slice)
             if (draught.stopsAtFull && me.life >= me.body.maxLife) stopDraught(draught)
         }
-        if (time - regenLoggedAt >= 1.0) {
-            if (regenLogged >= 1) note(me, NoteKind.REGEN, "", regenLogged)
-            regenLogged = 0.0
-            regenLoggedAt = time
-        }
     }
+}
+
+/**
+ * Итог здоровья героя раз в секунду (4.9.3): одна строка «регенерация минус деген и отложенный урон» вместо прежней строки
+ * регенерации и молчащего дегена; секунда, где ничего не текло, строки не пишет. Итог секунды виден экрану ([Battle.lifeFlow]).
+ */
+private fun Battle.lifeFlowLine() {
+    val hero = heroFighter
+    val flow = lifeMeter.due(time, hero.body.lifeDegenShare) ?: return
+    lifeFlow = flow
+    if (flow.flowing) note(hero, NoteKind.LIFE_FLOW, "", flow.net, flow)
 }
 
 /** A pure life draught ends at full life (3.79.0): its buff goes with it, so the belt may drink it again when life falls. */
@@ -228,7 +235,7 @@ internal fun Battle.heroBody(extra: List<StatLine>): Combatant = model.body(hero
 
 /** What lies on the hero now: low life's lines, the standing powers', the charges', the conditions' and the effects'. */
 private fun Battle.heroLines(): List<StatLine> = (if (heroFighter.low) model.lowLife else emptyList()) +
-    powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.effects.flatMap { it.lines }
+    powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.effects.flatMap { it.holding(conditions) }
 
 /**
  * The increases of [type] a hero's blow is grown by now, in percent (server 1.57.0): the sheet's own, the damage in
@@ -307,7 +314,7 @@ internal fun Battle.eased(target: Fighter, blow: Blow): Double {
     val rule = rules.defence
     val chance = if (blow.spell) target.body.suppression else target.body.deflection
     if (chance <= 0 || draw(if (blow.spell) RollKey.SUPPRESS else RollKey.DEFLECT, chance) >= chance) return 1.0
-    return 1 - (if (blow.spell) rule.suppressed else rule.deflected) / 100
+    return rule.eased(blow.spell)
 }
 
 /** Degeneration eats life (3.4.0): a share of the maximum a second, past the shield, and it can kill. */
@@ -315,12 +322,19 @@ private fun Battle.degenerate(me: Fighter, dt: Double) {
     if (!me.alive || me.invulnerable) return
     // The shield wastes away (3.33.0), and the delayed share of the hero's hits comes due.
     if (me.body.shieldDegenShare > 0) me.shield = max(0.0, me.shield - me.body.maxShield * me.body.shieldDegenShare * dt)
-    if (me === heroFighter && delayed.isNotEmpty()) {
+    val hero = me === heroFighter
+    if (hero && delayed.isNotEmpty()) {
+        val before = me.life
         delayed.forEach { me.life = max(0.0, me.life - it.rate * min(dt, it.until - (time - dt)).coerceAtLeast(0.0)) }
         delayed.removeAll { it.until <= time }
+        lifeMeter.delayed(before - me.life)
     }
     val share = me.body.lifeDegenShare
-    if (share > 0) me.life = max(0.0, me.life - max(me.body.maxLife * share, rules.minDot / TICK) * dt)
+    if (share > 0) {
+        val before = me.life
+        me.life = max(0.0, me.life - max(me.body.maxLife * share, rules.minDot / TICK) * dt)
+        if (hero) lifeMeter.degen(before - me.life)
+    }
     if (!me.alive) fell(me)
 }
 

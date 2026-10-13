@@ -112,6 +112,12 @@ data class ApiCapabilities(val routes: Set<String>) {
 )
 
 /**
+ * Ответ на приём отчёта (4.10.0): [id] записанного отчёта; [shotDropped] - снимок был, но сверх часового предела снимков
+ * (`feedback.shotsPerHour`), и отчёт записан без него.
+ */
+@Serializable data class FiledReport(val id: String, val shotDropped: Boolean = false)
+
+/**
  * Кто шлёт отчёт (3.88.0): версия сборки и отпечаток устройства от приложения, активный герой - если он есть. Каждый
  * отчёт ([com.sperance.exileforge.core.network.GameApi.reportBug]) подписывается им, кто бы его ни собрал.
  */

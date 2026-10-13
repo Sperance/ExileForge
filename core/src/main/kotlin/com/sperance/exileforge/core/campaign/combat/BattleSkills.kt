@@ -443,7 +443,7 @@ internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
         keep -> charges[slot]
         else -> (charges[slot] - flask.perUse(hero.body::get)).coerceAtLeast(0.0)
     }
-    lay(hero, TimedEffect(EffectKind.FLASK, flask.code, draught.lines, time + draught.duration, draught.duration, slot = slot))
+    lay(hero, TimedEffect(EffectKind.FLASK, flask.code, draught.lines, time + draught.duration, draught.duration, slot = slot, conditional = draught.conditional))
     // An immunity drunk lifts what it guards against at once.
     hero.ailments.removeAll { hero.body.immune(it.ailment) }
     manaBack(hero, draught.mana)

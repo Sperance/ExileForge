@@ -23,42 +23,44 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
-import com.sperance.exileforge.core.campaign.combat.FATE_SOURCE
 import com.sperance.exileforge.core.campaign.run.*
-import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.skills.FlaskBottle
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Every state on the hero as a tile of its colour whose dark fill rises as it wears off; a stun is a gold star. Действующие рычаги
- * Предначертания (4.9.0) - золотой ✦ дара [fates].
+ * Every state on a fighter as a tile of its colour whose dark fill rises as it wears off; a stun is a gold star. Действующие рычаги
+ * Предначертания (4.9.0) - золотой ✦ дара [fates]. С 4.9.3 - полка эффектов ([EffectShelf]): что не влезло - «+N», касание
+ * открывает лист всех эффектов [title].
  */
 @Composable internal fun StateTiles(
+    title: String,
     ailments: List<AilmentView>,
     held: Boolean,
     effects: List<EffectView> = emptyList(),
     charges: List<ChargeView> = emptyList(),
     fates: List<FateGlow> = emptyList(),
 ) {
-    val stunned = held && ailments.none { it.ailment == Ailment.FROZEN }
-    Row(Modifier.height(30.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (!stunned && ailments.isEmpty() && effects.isEmpty() && charges.isEmpty() && fates.isEmpty()) MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
-        if (stunned) StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned")) { stunTip() }
-        ailments.forEach { view -> StateTile(view.ailment, ailmentTint(view.ailment), view.left, view.stacks, ailmentLabel(view)) { ailmentTip(view) } }
-        fates.forEach { FateTile(it) }
-        charges.forEach { ChargeTile(it) }
-        effects.take(4).forEach { EffectTile(it) }
+    var open by remember { mutableStateOf(false) }
+    val timed = timedShelf(held, ailments, effects, charges)
+    val lasting = effects.filter { it.lasting }.map { Shelved.Effect(it) } + fates.map { Shelved.Fate(it) }
+    val all = timed + lasting
+    if (all.isEmpty()) {
+        MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
+    } else {
+        EffectShelf(all, 30.dp, { open = true }, Modifier.fillMaxWidth())
     }
+    if (open) EffectsSheet(title, timed, lasting, null) { open = false }
 }
 
 /**
  * Действующий рычаг дара (4.9.0, макет «Свиток + значок»): ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,
  * в углу - стаки; подсказка - имя дара и что он делает сейчас (`fight.fate_state.<рычаг>`).
  */
-@Composable private fun FateTile(view: FateGlow, side: Dp = 30.dp) {
+@Composable internal fun FateTile(view: FateGlow, side: Dp = 30.dp) {
     val shape = RoundedCornerShape(4.dp)
     val title = locOr("fate.${view.fate}.name", view.fate)
     Tipped(
@@ -84,7 +86,7 @@ import com.sperance.exileforge.ui.theme.*
 private const val FATE_GLYPH = "✦"
 
 /** A kind of the hero's charges (3.33.0): the drawing of its maximum and the count held. */
-@Composable private fun ChargeTile(view: ChargeView, side: Dp = 30.dp) {
+@Composable internal fun ChargeTile(view: ChargeView, side: Dp = 30.dp) {
     val shape = RoundedCornerShape(4.dp)
     val title = ui("fight.charge.${view.kind.name}")
     Tipped(
@@ -112,12 +114,12 @@ private val EffectKind.tipKey: String get() = when (this) {
 
 /** A buff or a curse (2.78.0) as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off. */
 @Composable internal fun EffectTile(view: EffectView, side: Dp = 30.dp) {
-    val tint = if (view.kind.harmful) LifeRed else Gold
+    val tint = effectTint(view)
     val shape = RoundedCornerShape(4.dp)
-    // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill.
+    // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill; глоток (4.9.3) - бутылью флакона.
     val buff = view.buff
     // Бафф Предначертания (4.6.0) - не умение: называется даром
-    val title = buff?.let { ui("fight.buff.${it.name}") } ?: if (view.source == FATE_SOURCE) ui("fight.fate_buff") else SkillText.title(view.source)
+    val title = effectTitle(view)
     // Проклятие (3.92.0) открывает лист: что меняет, сколько ещё, чем снять; бафф - прежнюю подсказку
     val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
     Tipped(
@@ -129,7 +131,10 @@ private val EffectKind.tipKey: String get() = when (this) {
         Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Curse(view.source, null, view.seconds)) } else Modifier).size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
             .semantics { contentDescription = title },
     ) {
-        if (buff != null) {
+        val flask = view.flask
+        if (flask != null) {
+            FlaskBottle(flask, 1f, true, Modifier.fillMaxSize().padding(horizontal = side / 4, vertical = side / 8))
+        } else if (buff != null) {
             com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
         } else {
             SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)

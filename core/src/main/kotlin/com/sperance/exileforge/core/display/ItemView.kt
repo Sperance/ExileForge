@@ -23,6 +23,7 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.Roll
+import com.sperance.exileforge.rules.sheet.FlaskSheet
 import com.sperance.exileforge.rules.sheet.SellPrice
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 import kotlin.math.round
@@ -216,11 +217,14 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
             // The copy's own base (server 1.67.0): its base quality and item level scale the template's lines before anything else.
             val baseTotals = calc.compute(emptyMap(), calc.expand(index.rules.loot.baseVariance.base(template, calc.baseScale(template, item))))
             val totals = calc.itemBase(template, item)
+            // Фляга (4.9.x): лечение, длительность, заряды и эффект - по её листу, с её строками и качеством, без бонусов героя
+            val flask = if (template.slot.isFlask) FlaskSheet.of(item, template, index) else null
             template.base.mapNotNull { line ->
                 val def = index.modifier(line.code) ?: return@mapNotNull null
                 val values = line.values.mapIndexed { i, own ->
                     val stat = def.effectOf(i)?.stat.orEmpty()
-                    PropertyValue(stat, baseTotals[stat] ?: own, totals[stat] ?: own)
+                    val base = baseTotals[stat] ?: own
+                    PropertyValue(stat, base, flask?.shown(stat, base) ?: totals[stat] ?: own)
                 }
                 BaseProperty(line.code.value, text.template(def).orEmpty(), values)
             }.filter { it.values.isNotEmpty() }
@@ -255,8 +259,8 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         )
     }
 
-    /** What the merchant pays now, by the rules' price: base, rarity, a share per line, and `STOCK_GOLD`. */
-    fun sellPrice(stats: Map<String, Double>): Long = SellPrice.of(index, template, item, stats)
+    /** What the merchant pays, by the rules' price: base, rarity and a share per line; the hero's sheet does not change it. */
+    fun sellPrice(): Long = SellPrice.of(index, template, item)
 
     /** The item's lines summed by stat — a map's effects — as the server sums them on entry. */
     fun effects(): Map<String, Double> {

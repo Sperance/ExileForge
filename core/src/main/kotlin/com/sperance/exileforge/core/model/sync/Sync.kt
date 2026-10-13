@@ -65,8 +65,10 @@ import kotlinx.serialization.json.JsonElement
  *      `guild/visit`, `guild/quests/refresh`), выданное (`granted`, `GR_001`), лимит промокодов, доска `MIGHT`, ключ отчёта.
  * 76 - вклад дерева строками сводки: `TreeState.totals` - `StatTotal(stat, parts)` с частями `StatPart(stat, op, value, condition)`
  *      вместо `StatContribution`; «за каждые N» - от листа героя, условные строки - частями с условием (4.9.2).
+ * 77 - новые ключи Атласа в награде события (`EventReward.atlas`, `TrialReward.atlas`), ответ отчёта об ошибке
+ *      `FiledReport(id, shotDropped)` (4.10.0).
  */
-const val API_REVISION = 76
+const val API_REVISION = 77
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

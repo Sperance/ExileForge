@@ -72,9 +72,13 @@ class MonsterAgent(
     internal var repath = 0.0
 }
 
-/** A chest on the map (since 2.33.0): where it stands and whether the hero has opened it. */
+/**
+ * A chest on the map (since 2.33.0): where it stands and whether the hero has opened it; [event] (4.10.0) - его событие журнала в
+ * этом заходе: пока сервер его не ответил, сундук приоткрыт и ждёт.
+ */
 class Chest(val id: Int, val cell: Cell) {
     var opened = false
+    internal var event: Int? = null
 }
 
 /** A fountain on the map (since 2.48.0): where it stands, how much life it gives back, and whether it was drunk dry. */

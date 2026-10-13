@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.campaign.ChargeView
+import com.sperance.exileforge.core.campaign.HitTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.rules.content.BuffKind
 import kotlin.math.ceil
@@ -53,8 +54,8 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
     }
 }
 
-/** What lies on [fighter], for its tiles. */
-fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { it.kind != EffectKind.FLASK && !riftSourced(it.source) }.map {
+/** What lies on [fighter], for its tiles; с 4.9.3 и глотки флаконов - плиткой бутыли на полке с таймером. */
+fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) }.map {
     EffectView(
         it.source,
         it.kind,
@@ -62,5 +63,53 @@ fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter 
         (it.until - time).coerceAtLeast(0.0),
         icons[it.source].orEmpty(),
         BuffKind.of(it.source),
+        it.lines,
+        flask = if (it.kind == EffectKind.FLASK) kit.flasks.getOrNull(it.slot)?.sheet?.kind else null,
     )
+}
+
+/** Пассивные умения героя на весь бой (4.9.3): одни и те же плитки, пока идёт бой. */
+fun Battle.passiveViews(): List<EffectView> = passiveViews
+
+/**
+ * Удары на экране (4.9.3): каждая строка удара журнала моложе [window] секунд боя - все разом, а не последняя ([Battle.lunge]);
+ * [StrikeView.progress] - доля пройденной сцены. С конца журнала, он идёт по времени: обход - только строки окна.
+ */
+fun Battle.strikes(window: Double): List<StrikeView> {
+    var from = log.size
+    while (from > 0 && time - log[from - 1].time < window) from--
+    if (from == log.size) return emptyList()
+    val strikes = ArrayList<StrikeView>(log.size - from)
+    for (i in from until log.size) {
+        val event = log[i]
+        if (event.time > time || (event.action != Action.ATTACK && event.action != Action.SKILL) || event.onSelf) continue
+        // Умение без удара (проклятие, помеха) - не выпад: удар умения несёт разбор удара
+        if (event.action == Action.SKILL && event.trace !is HitTrace) continue
+        strikes += StrikeView(
+            i, event.actor, event.foe, event.kind, event.spell, event.type, event.damage.roundToInt(),
+            ((time - event.time) / window).toFloat().coerceIn(0f, 1f), event.pet != null,
+        )
+    }
+    return strikes
+}
+
+/**
+ * Удар на экране (4.9.3): строка журнала [serial], кто бил ([actor]; у врага - [foe]), чем кончилось ([kind]), чары ли ([spell]),
+ * ведущая стихия [type] и урон [damage]; [progress] - доля сцены удара, [pet] - удар питомца или по нему.
+ */
+data class StrikeView(
+    val serial: Int,
+    val actor: Side,
+    val foe: Int,
+    val kind: HitKind,
+    val spell: Boolean,
+    val type: DamageType?,
+    val damage: Int,
+    val progress: Float,
+    val pet: Boolean,
+) {
+    val landed: Boolean get() = kind == HitKind.HIT || kind == HitKind.CRIT
+
+    /** Кого бьёт удар. */
+    val target: Side get() = actor.other
 }

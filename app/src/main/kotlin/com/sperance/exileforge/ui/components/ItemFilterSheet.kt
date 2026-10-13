@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.rarityTitle
+import com.sperance.exileforge.core.hero.PetFilter
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.data.settings.PreferencesRepository
@@ -25,6 +26,7 @@ import com.sperance.exileforge.presentation.state.FilterFacet
 import com.sperance.exileforge.presentation.state.ItemFilter
 import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.presentation.state.ItemType
+import com.sperance.exileforge.presentation.state.PetShelf
 import com.sperance.exileforge.presentation.state.QualityFilter
 import com.sperance.exileforge.presentation.state.SlotGroup
 import com.sperance.exileforge.rules.content.Rarity
@@ -33,25 +35,38 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Фильтр одного списка предметов на экране (4.2.0): [filter] - текущий, [update] меняет его и запоминает выбор на устройстве
- * для своего списка [shelf] (поиск не запоминается).
+ * Фильтр одного списка на экране (4.2.0 - предметов, с 4.x - и питомцев): [filter] - текущий, [update] меняет его и запоминает выбор
+ * на устройстве для своего списка [shelf] (поиск не запоминается).
  */
 @Stable
-class ItemFilterState internal constructor(val shelf: ItemShelf, initial: ItemFilter, private val save: (ItemFilter) -> Unit) {
+class FilterState<S, F> internal constructor(val shelf: S, initial: F, private val save: (F) -> Unit) {
     var filter by mutableStateOf(initial)
         private set
 
-    fun update(next: ItemFilter) {
+    fun update(next: F) {
         filter = next
         save(next)
     }
 }
 
+/** Фильтр списка предметов. */
+typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
+
+/** Фильтр списка питомцев (4.x). */
+typealias PetFilterState = FilterState<PetShelf, PetFilter>
+
 /** Фильтр списка [shelf]: запомненный выбор этого списка, а без него - обычный списка. */
 @Composable fun rememberItemFilter(shelf: ItemShelf): ItemFilterState {
     val prefs = koinInject<PreferencesRepository>()
     val scope = rememberCoroutineScope()
-    return remember(shelf) { ItemFilterState(shelf, prefs.itemFilters.value[shelf]) { next -> scope.launch { prefs.saveItemFilter(shelf, next) } } }
+    return remember(shelf) { FilterState(shelf, prefs.itemFilters.value[shelf]) { next: ItemFilter -> scope.launch { prefs.saveItemFilter(shelf, next) } } }
+}
+
+/** Фильтр списка питомцев [shelf] (4.x): запомненный выбор этого списка, а без него - обычный списка. */
+@Composable fun rememberPetFilter(shelf: PetShelf): PetFilterState {
+    val prefs = koinInject<PreferencesRepository>()
+    val scope = rememberCoroutineScope()
+    return remember(shelf) { FilterState(shelf, prefs.petFilters.value[shelf]) { next: PetFilter -> scope.launch { prefs.savePetFilter(shelf, next) } } }
 }
 
 /**
@@ -74,12 +89,26 @@ class ItemFilterState internal constructor(val shelf: ItemShelf, initial: ItemFi
  */
 @Composable fun ItemFilterBar(state: ItemFilterState, shown: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     val filter = state.filter
+    FilterBar(
+        listOfNotNull(
+            if (FilterFacet.SORT in state.shelf.facets) ui("filter.sort.${filter.sort.name}") + " ▾" else ui("filter.title"),
+            filter.query.takeIf { it.isNotBlank() }?.let { "«$it»" },
+        ).joinToString(" · "),
+        shown,
+        filter.tweaks(state.shelf),
+        onOpen,
+        modifier,
+    )
+}
+
+/**
+ * Строка над любым списком с фильтром (4.x, общая для предметов и питомцев): [summary] - порядок и поиск словами, [shown] - сколько
+ * видно, справа значок фильтра с числом [tweaks]; любое нажатие - [onOpen].
+ */
+@Composable fun FilterBar(summary: String, shown: Int, tweaks: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
-            listOfNotNull(
-                if (FilterFacet.SORT in state.shelf.facets) ui("filter.sort.${filter.sort.name}") + " ▾" else ui("filter.title"),
-                filter.query.takeIf { it.isNotBlank() }?.let { "«$it»" },
-            ).joinToString(" · "),
+            summary,
             color = GoldBright,
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
@@ -89,7 +118,7 @@ class ItemFilterState internal constructor(val shelf: ItemShelf, initial: ItemFi
                 .padding(horizontal = 6.dp, vertical = 8.dp),
         )
         Text(shown.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
-        ItemFilterButton(filter.tweaks(state.shelf), onOpen)
+        ItemFilterButton(tweaks, onOpen)
     }
 }
 

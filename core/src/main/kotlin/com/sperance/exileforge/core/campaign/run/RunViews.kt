@@ -23,10 +23,12 @@ import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.HitKind
+import com.sperance.exileforge.core.campaign.combat.LifeFlow
 import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.RiftGuard
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SkillView
+import com.sperance.exileforge.core.campaign.combat.StrikeView
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
@@ -261,6 +263,14 @@ data class FightHud(
     val rage: RageView? = null,
     /** Последнее применение умения героя (4.4.0), пока его сцена на экране; null - сцены нет. */
     val heroCast: HeroCastView? = null,
+    /** Все удары на экране (4.9.3): одновременные - каждый своей сценой, не только последний ([lunge]). */
+    val strikes: List<StrikeView> = emptyList(),
+    /** Итог здоровья героя за последнюю секунду (4.9.3): плитка «−12/с» и её разбор. */
+    val heroFlow: LifeFlow = LifeFlow.NONE,
+    /** Пассивные умения героя на весь бой (4.9.3): ауры и бонусы на полке «на весь бой». */
+    val heroPassives: List<EffectView> = emptyList(),
+    /** Замах врага скорее всего по герою (4.9.3): питомца, что принимает удары на себя, нет - плашка «→ по вам». */
+    val foesAimHero: Boolean = true,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
 
@@ -336,8 +346,8 @@ data class RunHud(
     val recap: List<DeathHit> = emptyList(),
     val awaiting: Int = 0,
     val chestsLeft: Int = 0,
-    val chest: Reward? = null,
-    val chestAwaiting: Boolean = false,
+    /** Добыча сундуков и объектов захода по порядку (4.10.0): ответ на каждый - в сумку, ждущие - с «…». */
+    val drops: List<MapDrop> = emptyList(),
     val fountainsLeft: Int = 0,
     /** The fountain offered (3.70.0): the map waits for the player's word — drink, or step away and leave it standing. */
     val fountain: FountainView? = null,
@@ -358,6 +368,8 @@ data class RunHud(
     val bossDown: Boolean = false,
     /** Секунды до возвращения отдыхающего стража (3.95.2); null - он не отдыхает: стоит или повержен в этом заходе. */
     val guardianRest: Int? = null,
+    /** Босс карты убит в этом заходе (4.10.0): герой идёт быстрее - след и значок над ним. */
+    val swift: Boolean = false,
     /** The autorun under way, and what it has gathered (3.2.0). */
     val auto: AutoHud? = null,
     val autoReward: Reward? = null,

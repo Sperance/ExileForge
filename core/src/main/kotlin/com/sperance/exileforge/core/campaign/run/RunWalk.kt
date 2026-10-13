@@ -50,7 +50,6 @@ import kotlin.random.Random
 // ==================== The map between fights ====================
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
-    wound(dt)
     // Горение и яд ловушек (3.90.0) - на дороге, и они убивают
     burn(dt)
     if (phase != RunPhase.MAP) return
@@ -66,7 +65,11 @@ internal fun ExpeditionRun.walk(dt: Double) {
 
         WorldEvent.Exit -> exit()
 
-        is WorldEvent.Opened -> chestEvent = rewarding(record { RunEvent.Chest(it, event.chest.id) })?.n
+        // Крышка открыта сразу (4.10.0), герой идёт дальше: добыча вылетит, когда придёт ответ сервера
+        is WorldEvent.Opened -> rewarding(record { RunEvent.Chest(it, event.chest.id) })?.let { opened ->
+            event.chest.event = opened.n
+            dropped(opened.n)
+        }
 
         is WorldEvent.AtFountain -> fountain = event.fountain
 
@@ -157,8 +160,12 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
     }
 }
 
-/** Mana back on the road and the draughts still running, over [dt] seconds off the fight. */
+/**
+ * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена), мана,
+ * энергощит и идущие флаконы.
+ */
 internal fun ExpeditionRun.recover(dt: Double) {
+    life = RoadLife.of(hero, pace).after(life, hero.maxLife, dt)
     mana = (mana + hero.manaRegen(rules.mana) * dt).coerceAtMost(manaCap())
     shield = EnergyShield.recovered(hero, rules, shield, seconds - hitAt, dt)
     if (flaskLeft.any { it > 0 }) {

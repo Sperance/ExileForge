@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.EffectKind
 import com.sperance.exileforge.core.campaign.combat.FateBeat
 import com.sperance.exileforge.core.campaign.combat.Foe
+import com.sperance.exileforge.core.campaign.combat.LifeFlow
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.Condition
@@ -112,8 +113,11 @@ data class EffectTrace(
     val origin: TraceOrigin,
 ) : Trace
 
-/** Something that happened without a blow: a buff or a charge gained, a power, a condition, what a kill brought. */
-data class NoteTrace(val kind: NoteKind, val ref: String, val value: Double, val actor: FighterShot, val origin: TraceOrigin) : Trace
+/**
+ * Something that happened without a blow: a buff or a charge gained, a power, a condition, what a kill brought. [flow] - разбор
+ * итога здоровья за секунду у [NoteKind.LIFE_FLOW] (4.9.3), у прочих null.
+ */
+data class NoteTrace(val kind: NoteKind, val ref: String, val value: Double, val actor: FighterShot, val origin: TraceOrigin, val flow: LifeFlow? = null) : Trace
 
 /**
  * Срабатывание Предначертания героя (4.9.0): рычаг или правило строки дара [fate] сделал [beat] с числами [args] (порядок - KDoc
@@ -164,16 +168,21 @@ enum class NoteKind {
     LAW,
     LAW_REWOUND,
 
-    /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar, regeneration a second. */
+    /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar. */
     RECOVER_FLASK,
     RECOVER_RECOUP,
     RECOVER_WASTE,
-    REGEN,
+
+    /**
+     * Итог здоровья героя за секунду (4.9.3, вместо строки регенерации): value - здоровья в секунду со знаком,
+     * разбор - [NoteTrace.flow]. Недуги пишутся своими строками.
+     */
+    LIFE_FLOW,
     ;
 
     val recovery: Boolean get() = this in RECOVERY
     private companion object {
-        val RECOVERY = setOf(RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, REGEN)
+        val RECOVERY = setOf(RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, LIFE_FLOW)
     }
 }
 

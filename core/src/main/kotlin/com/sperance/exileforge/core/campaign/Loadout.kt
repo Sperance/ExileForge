@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.ConditionalLine
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
@@ -277,6 +278,7 @@ interface HeroModel : BodyModel {
 /**
  * What one draught gives (2.78.0): life, mana and shield at once, life and mana a second while it
  * runs, the lines it lays on for [duration] seconds, and the seconds nothing touches the hero.
+ * [conditional] (4.9.x) - строки фляги с условием: держатся во время глотка, лишь пока держится их условие.
  */
 data class Draught(
     val life: Double,
@@ -287,9 +289,10 @@ data class Draught(
     val lines: List<StatLine>,
     val duration: Double,
     val invulnerable: Double,
+    val conditional: List<ConditionalLine> = emptyList(),
 ) {
     /** Gives nothing but life (3.79.0): such a draught stops at full life and is not drunk on a full bar. */
-    val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && lines.isEmpty() && invulnerable <= 0
+    val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && lines.isEmpty() && conditional.isEmpty() && invulnerable <= 0
 }
 
 /**
@@ -303,15 +306,19 @@ fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught 
     val recover = recovery(hero::get) * if (low) 1 + own("FLASK_LOW_LIFE_RECOVERY") / 100 else 1.0
     val lifeAmount = own(FlaskStat.LIFE.code) * recover
     val manaAmount = own(FlaskStat.MANA.code) * recover
+    val scale = effect(hero::get)
+    // Условие строки (4.9.x) остаётся при ней: условная строка фляги не ложится на героя без условия
+    val (steady, conditioned) = lines.partition { it.condition == null }
     return Draught(
         life = lifeAmount * instant,
         mana = manaAmount * instant + lifeAmount * own("FLASK_LIFE_TO_MANA") / 100 + manaCap * own("FLASK_SIP_MANA") / 100,
         shield = lifeAmount * own("FLASK_LIFE_TO_SHIELD") / 100 + hero.maxShield * own("FLASK_SIP_SHIELD") / 100,
         lifeRate = lifeAmount * (1 - instant) / duration,
         manaRate = manaAmount * (1 - instant) / duration,
-        lines = effect(hero::get).let { scale -> lines.map { StatLine(it.stat, it.op, it.value * scale) } },
+        lines = steady.map { StatLine(it.stat, it.op, it.value * scale) },
         duration = duration,
         invulnerable = own("FLASK_INVULNERABLE"),
+        conditional = conditioned.map { ConditionalLine(requireNotNull(it.condition), StatLine(it.stat, it.op, it.value * scale)) },
     )
 }
 

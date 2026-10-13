@@ -64,5 +64,8 @@ const val TAB_SETTINGS = 17
 // Порядок нижних кнопок (3.95.3): Герой, Развитие, Поход, Город, Ремёсла
 val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CITY, TAB_CRAFTS)
 
+/** Все кнопки нижней панели слева направо: вкладки игрока и вкладка администратора последней - по ним считается сторона перехода. */
+val BAR_TABS = PLAYER_TABS + TAB_ADMIN
+
 /** Screens only an administrator may open, whichever button leads to them. */
 val ADMIN_TABS = setOf(TAB_ADMIN, TAB_REDEMPTION)

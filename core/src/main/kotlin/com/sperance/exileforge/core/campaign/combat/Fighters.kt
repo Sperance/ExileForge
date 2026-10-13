@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
+import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.MonsterTrait
@@ -90,7 +91,18 @@ data class TimedEffect(
     val duration: Double,
     val counter: Double = 0.0,
     val slot: Int = -1,
-)
+    /** Условные строки (4.9.x): держатся, пока держится их условие, - как условные строки листа. */
+    val conditional: List<ConditionalLine> = emptyList(),
+) {
+    /** Строки на бойце при условиях героя [active]: постоянные и условные, чьё условие держится. */
+    fun holding(active: Set<Condition>): List<StatLine> = if (conditional.isEmpty()) lines else lines + conditional.filter { !it.condition.target && it.condition in active }.map { it.line }
+
+    /** Увеличение урона против цели в состояниях [states] - условные строки цели ([Condition.target]), как `against` листа. */
+    fun against(states: Set<Condition>): Double = conditional.filter { it.condition.target && it.condition in states }.sumOf { it.line.value }
+}
+
+/** Строка [line], что действует, пока держится условие [condition] (4.9.x): условная строка фляги во время глотка. */
+data class ConditionalLine(val condition: Condition, val line: StatLine)
 
 /**
  * What the hero carries from fight to fight (2.78.0): life, mana, each flask's charges and how long
@@ -143,8 +155,25 @@ data class FlaskView(
     val usable: Boolean get() = charges >= perUse && active <= 0f && locked <= 0.0
 }
 
-/** A buff or a curse on a fighter as its tile shows it (2.78.0): what, of which kind, and how much of it is left. */
-data class EffectView(val source: String, val kind: EffectKind, val left: Float, val seconds: Double, val icon: String = "", val buff: BuffKind? = null)
+/**
+ * A buff or a curse on a fighter as its tile shows it (2.78.0): what, of which kind, and how much of it is left. С 4.9.3 -
+ * строки, что эффект кладёт ([lines], для листа эффектов), и [passive] - пассивное умение героя (аура, бонус) на весь бой.
+ */
+data class EffectView(
+    val source: String,
+    val kind: EffectKind,
+    val left: Float,
+    val seconds: Double,
+    val icon: String = "",
+    val buff: BuffKind? = null,
+    val lines: List<StatLine> = emptyList(),
+    val passive: Boolean = false,
+    /** Глоток флакона (4.9.3): вид флакона - плитка рисует его бутыль; null - не флакон. */
+    val flask: FlaskKind? = null,
+) {
+    /** Лежит весь бой (4.9.3): носимый с начала бафф ([Battle.wear]) или пассивное умение - полка «на весь бой», не таймер. */
+    val lasting: Boolean get() = passive || seconds >= Battle.FOREVER / 2
+}
 
 /**
  * Whom the hero strikes when the player has not said (2.70.0), by class — the owner's table: a

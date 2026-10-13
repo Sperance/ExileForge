@@ -94,7 +94,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     pendingHit = null
     record(
         me.side, blow.action, kind, dealt, taken.maxByOrNull { it.value }?.key, healed, stunned, inflicted, null, foe, blow.skill, trace = trace,
-        pet = isPet(me) || isPet(target),
+        pet = isPet(me) || isPet(target), spell = blow.spell,
     )
     if (me.side == Side.HERO) sealStruck(target, kind == HitKind.CRIT)
     if (me === heroFighter) {

@@ -65,7 +65,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         fall = fall, fallFrom = rules.death.fromLevel.takeIf { levelNow() < it },
         gold = granted.gold, experience = granted.experience, kills = kills, awaiting = awaiting,
         chestsLeft = world.chests.count { !it.opened },
-        chest = chestEvent?.let { earned[it] ?: Reward.NONE }, chestAwaiting = chestEvent?.let(::awaits) == true,
+        drops = dropsShown,
         fountainsLeft = world.fountains.count { !it.used },
         fountain = fountain?.let { FountainView(it.id, it.heal) },
         gate = gate, vaal = vaal,
@@ -75,7 +75,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalOutcome, vaaling(it)) },
         crystalsLeft = world.standingCrystals.size,
         abyss = abyssView(), cracksLeft = world.standingCracks.size,
-        bossDown = bossDown, guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
+        bossDown = bossDown, swift = swift, guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
         auto = autopilot?.let { AutoHud(it.wave, it.waves, it.chests, it.finishing, linkDown) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits), questTally = questTallyShown,
         pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
         summary = figures, recap = recap,
@@ -131,6 +131,9 @@ internal fun ExpeditionRun.adopt(zone: ZoneShare) {
 
 /** Event [n] is not answered yet. */
 internal fun ExpeditionRun.awaits(n: Int): Boolean = n >= answered
+
+/** Сундук [chest] открыт в этом заходе, а ответа на него ещё нет (4.10.0): он приоткрыт и ждёт. */
+fun ExpeditionRun.waiting(chest: Chest): Boolean = chest.event?.let(::awaits) == true
 
 internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
     flask?.let {

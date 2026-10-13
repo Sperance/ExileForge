@@ -446,8 +446,11 @@ class ExpeditionWorld(
             return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
         }
 
-        /** The hero's pace, sped up by movement speed from the sheet. */
-        fun heroSpeed(rules: ExpeditionRules, stats: Map<String, Double>): Double = rules.heroSpeed * (1 + (stats[CoreStat.MOVEMENT_SPEED.code] ?: 0.0) / 100).coerceIn(0.5, 2.5)
+        /**
+         * The hero's pace, sped up by movement speed from the sheet; [bossSlain] (4.10.0) - босс основной карты убит в этом заходе:
+         * шаг ещё × `bossSlainSpeed`, поверх предела скорости листа.
+         */
+        fun heroSpeed(rules: ExpeditionRules, stats: Map<String, Double>, bossSlain: Boolean = false): Double = rules.heroSpeed * (1 + (stats[CoreStat.MOVEMENT_SPEED.code] ?: 0.0) / 100).coerceIn(0.5, 2.5) * (if (bossSlain) rules.bossSlainSpeed else 1.0)
 
         /** How far the hero sees: the sheet's light radius — the base, if the server sent none — times the biome's light. */
         fun lightRadius(rules: ExpeditionRules, stats: Map<String, Double>, biomeLight: Double): Double = ((stats[CoreStat.LIGHT_RADIUS.code]?.takeIf { it > 0 } ?: rules.defaultLight) * biomeLight).coerceIn(rules.minLight, rules.maxLight)

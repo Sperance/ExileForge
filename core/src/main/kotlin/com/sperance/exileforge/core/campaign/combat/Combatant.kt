@@ -7,6 +7,7 @@ import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ManaRule
+import com.sperance.exileforge.rules.sheet.DamageTaken
 import com.sperance.exileforge.rules.sheet.StatReader
 import kotlin.math.max
 
@@ -180,11 +181,11 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     fun damageTaken(type: DamageType): Double {
         if (type == DamageType.CHAOS && chaosImmune) return 0.0
         val own = when (type) {
-            DamageType.PHYSICAL -> stat(CoreStat.PHYSICAL_TAKEN.code)
-            DamageType.CHAOS -> stat(CoreStat.CHAOS_TAKEN.code)
-            else -> stat(CoreStat.ELEMENTAL_TAKEN.code)
+            DamageType.PHYSICAL -> CoreStat.PHYSICAL_TAKEN
+            DamageType.CHAOS -> CoreStat.CHAOS_TAKEN
+            else -> CoreStat.ELEMENTAL_TAKEN
         }
-        return ((1 + stat(CoreStat.DAMAGE_TAKEN.code) / 100) * (1 + own / 100)).coerceAtLeast(0.1)
+        return DamageTaken.of(this, own)
     }
 
     /** How much harder this fighter hits a target under [ailments]: any ailment counts once, each named one on top. */
@@ -354,12 +355,12 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val buffDuration = max(0.1, 1 + stat(BuffKind.DURATION) / 100)
 
     /** Damage taken from hits, not over time: Fortify's work. */
-    val hitTaken = max(0.1, 1 + stat(CoreStat.HIT_TAKEN.code) / 100)
+    val hitTaken = DamageTaken.hits(this)
 
     /** Доля удара осквернённого монстра, что снимает Скверна (4.0.0): «% меньше урона от монстров Скверны», не больше 100%. */
     val blightReduction = percent(CoreStat.BLIGHT_REDUCTION.code)
-    val suppression = percent(CoreStat.SPELL_SUPPRESSION.code, rules.defence.suppressionCap)
-    val deflection = percent(CoreStat.DEFLECTION.code, rules.defence.deflectionCap)
+    val suppression = rules.defence.chance(spell = true, stat(CoreStat.SPELL_SUPPRESSION.code))
+    val deflection = rules.defence.chance(spell = false, stat(CoreStat.DEFLECTION.code))
 
     /**
      * Шанс блока чар (4.6.2, как в PoE - отдельно от блока): свой блок чар под своим потолком `ceilings.spellBlock`; у монстра

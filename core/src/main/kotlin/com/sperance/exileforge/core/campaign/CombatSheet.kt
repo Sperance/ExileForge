@@ -15,6 +15,8 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Grant
 import com.sperance.exileforge.rules.sheet.HeroBody
 import com.sperance.exileforge.rules.sheet.Might
+import com.sperance.exileforge.rules.sheet.MightDefense
+import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.PetFighter
 import com.sperance.exileforge.rules.sheet.Shift
@@ -76,7 +78,7 @@ data class StatFigures(
  */
 class CombatSheet(private val index: ContentIndex, private val model: SheetModel, level: Int, val kit: Loadout, pet: Pet? = null) {
     /** Боевой лист героя правилами (4.9.0): свод листа с пассивными умениями - тот же, из которого сервер считает Мощь. */
-    private val hero = HeroBody(index, model.fold, level, kit.heroKit, pet)
+    private val hero = HeroBody(index, model.fold, level, kit.heroKit, pet, kit.flasks.mapNotNull { it?.sheet })
 
     /** Тело героя без пассивных умений: с него читаются их уровни и сила аур. */
     private val bare: Combatant by lazy { Combatant(hero.bare, level, index.campaign.combat) }
@@ -126,8 +128,11 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
      */
     val might: MightReading by lazy { Might.hero(index, hero) }
 
-    /** Урон в секунду сверх листа - умения и боевой питомец (4.9.0): с ним бой меряет Мощь героя под эффектами карты. */
-    val addedDps: Double get() = hero.addedDps
+    /** Что Мощь берёт сверх листа (4.9.x): урон умений и питомца, резерв маны аурами, фляги - с ним бой меряет Мощь героя под эффектами карты. */
+    val mightExtras: MightExtras get() = hero.extras
+
+    /** Разбор стойкости Мощи героя (4.9.x) для листа героя: запас, мана перед здоровьем, уклонение, получаемый урон, пополнение. */
+    val mightDefense: MightDefense by lazy { Might.defense(index, hero) }
 
     /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
     val values: Map<String, Double> by lazy { read(body) }

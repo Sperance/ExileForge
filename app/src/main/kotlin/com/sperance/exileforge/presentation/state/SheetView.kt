@@ -32,7 +32,7 @@ internal object HeroLens {
     fun view(index: ContentIndex?, item: ItemInstance): ItemView? = index?.let { ItemView.of(item, it) }
 
     /** What the merchant pays for [item], by the rules' price; null until the content has arrived. */
-    fun sellPrice(index: ContentIndex?, hero: HeroView?, item: ItemInstance): Long? = view(index, item)?.sellPrice(hero?.stats.orEmpty())
+    fun sellPrice(index: ContentIndex?, item: ItemInstance): Long? = view(index, item)?.sellPrice()
 
     /**
      * What putting [item] on would change on the sheet - на место [place] (3.90.3) или туда, что выберут правила; с 4.8.0 - и Мощь
@@ -118,7 +118,7 @@ internal object HeroLens {
 }
 
 fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
-fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, hero, item)
+fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, item)
 fun GameUi.wearing(item: ItemInstance, place: Slot? = null): WearOutcome = HeroLens.wearing(index, hero, item, place)
 fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)
 fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = HeroLens.verdict(index, hero, item, place)

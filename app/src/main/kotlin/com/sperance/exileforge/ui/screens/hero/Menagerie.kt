@@ -23,6 +23,7 @@ import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.PetShelf
 import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
@@ -58,9 +59,9 @@ fun petName(species: String): String = locOr("pet.$species", species)
  * The menagerie (3.5.0, server 1.5.0; mockup A «Компактный список», 3.81.0): the incubator and the breeding folded into a row each
  * over the list, the filters by rarity, role and status, and a compact row per pet — its icon, name in its rarity's colour, what it
  * is, its level and every line it rolled, always in sight. A tap unfolds the row's actions: to work or back, to the forge (the pets'
- * orbs are spent there since 3.81.0), or let go for gold. Над списком (4.9.0, макет «Зверинец», вариант A «Как состав гильдии») -
- * плотный поиск по имени и виду с кнопкой порядка «⇅» ([PetSearch]) и одна лента чипов со счётчиками ([PetFilterRow]): роль и
- * дело, редкости, стихии. Всё - на клиенте, без запросов.
+ * orbs are spent there since 3.81.0), or let go for gold. Над списком (4.x) - строка фильтра ([PetFilterBar]) и шторка-аккордеон,
+ * как у предметов ([PetFilterSheet]): поиск, род, дело, редкости, стихии и порядок разом, выбор запоминается ([PetShelf.MENAGERIE]).
+ * Всё - на клиенте, без запросов.
  */
 @Composable
 fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
@@ -68,11 +69,11 @@ fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
     val index = game.index ?: return
     val pets = hero.pets
     val menagerie = remember(index) { Menagerie(index) }
+    val facts = remember(menagerie, pets) { petFacts(menagerie, pets) }
     var incubator by rememberSaveable { mutableStateOf(false) }
     var breeding by rememberSaveable { mutableStateOf(false) }
-    var query by rememberSaveable { mutableStateOf("") }
-    var order by remember { mutableStateOf<PetOrder?>(null) }
-    var chosen by remember { mutableStateOf<PetFilter>(PetFilter.Trait.ALL) }
+    val filter = rememberPetFilter(PetShelf.MENAGERIE)
+    var filtering by remember { mutableStateOf(false) }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Engraved(ui("pets.title", pets.pets.size))
@@ -84,18 +85,12 @@ fun MenagerieSection(game: GameUi, vm: HeroViewModel) {
             InfoCard(ui("pets.empty"), ui("pets.empty_hint"))
             return@Column
         }
-        val facts = remember(menagerie, pets) { PetFacts({ menagerie.species(it.species) }, { pets.isActive(it.id) }) }
-        val filters = remember(pets.pets, facts) { PetFilter.of(pets.pets, facts) }
-        // Чип, чьих питомцев не осталось (отпущен последний огненный), снимается сам
-        val filter = chosen.takeIf { it in filters } ?: PetFilter.Trait.ALL
-        PetSearch(query, game.inputs.heroName, order, { query = it }, { order = it })
-        val found = pets.pets.filter { facts.named(it, query) }
-        PetFilterRow(filters, found, facts, filter) { chosen = it }
-        val kept = found.filter { filter.keeps(it, facts) }
-        val shown = order?.apply(kept) ?: PetOrder.standard(kept, pets)
+        val shown = remember(filter.filter, pets, facts) { filter.filter.apply(pets.pets, facts) }
+        PetFilterBar(filter, shown.size, onOpen = { filtering = true })
         if (shown.isEmpty()) MutedText(ui("pets.filter_none"))
         shown.forEach { pet -> PetRow(game, vm, pet, open == pet.id) { open = if (open == pet.id) null else pet.id } }
     }
+    if (filtering) PetFilterSheet(filter, pets.pets, facts) { filtering = false }
 }
 
 /** A folded part of the menagerie: one row with its title and a chevron; a tap opens what is under it. */

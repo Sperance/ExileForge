@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.quests.QuestRepository
+import com.sperance.exileforge.core.quests.QuestTurnIn
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
@@ -41,6 +42,9 @@ class QuestActions(
 
     private fun quests(transform: (Quests) -> Quests) = repository.update(transform)
 
+    /** Доски героя, как они прочитаны сейчас (4.10.0): снимок на входе в заход. */
+    fun board(): Quests = repository.state.value
+
     /** Доска героя; [fresh] (3.94.1) - экран открылся: ответ моложе полуминуты не перечитывается. */
     fun load(fresh: Boolean = false) = commands.read(Reads.QUESTS, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
@@ -73,10 +77,10 @@ class QuestActions(
 
     /**
      * После похода (3.24.0, сервер 1.22.0): всё, что поход закончил, сдаётся разом - личные квесты и доля героя в
-     * гильдейских, - и тост говорит, что из этого вышло. Молча при ошибке: пропущенный вызов ничего не теряет,
-     * квесты ждут на доске, а концу похода не место для отказа.
+     * гильдейских. Сданное (4.10.0) уходит в [shown] - строки итогов карты; не взявшие его итоги (уже закрыты) - тост, как прежде.
+     * Молча при ошибке: пропущенный вызов ничего не теряет, квесты ждут на доске, а концу похода не место для отказа.
      */
-    fun claimAll(heroId: String) {
+    fun claimAll(heroId: String, shown: (List<QuestTurnIn>) -> Boolean) {
         scope.launch {
             // Заголовки - шаблоны над целью; цели берутся с досок, какими они стояли до сдачи.
             val targets = repository.state.value.targets()
@@ -103,9 +107,13 @@ class QuestActions(
                 null
             }
             guild?.let { g -> quests { it.copy(guild = g) } }
-            notices.toast(claimedLine(result.claimed, targets + Quests(guild = guild).targets()))
+            val named = targets + Quests(guild = guild).targets()
+            if (!shown(result.claimed.map { QuestTurnIn(title(it, named), it.rewards) })) notices.toast(claimedLine(result.claimed, named))
         }
     }
+
+    /** Заголовок сданного задания с его целью из [targets]; цели нет - «…». */
+    private fun title(claimed: QuestClaimed, targets: Map<String, Long>): String = loc(claimed.title, listOf(targets[claimed.questId]?.let { t -> number(t.toDouble()) } ?: "…"))
 
     private fun hero(): String = heroes.heroId.also { check(it.isNotBlank()) { ui("auction.choose_character") } }
 
@@ -123,7 +131,7 @@ class QuestActions(
 
     /** Что сдано, одной строкой: первые заголовки, сколько ещё, и награды суммой. */
     private fun claimedLine(claimed: List<QuestClaimed>, targets: Map<String, Long>): String {
-        val titles = claimed.map { loc(it.title, listOf(targets[it.questId]?.let { t -> number(t.toDouble()) } ?: "…")) }
+        val titles = claimed.map { title(it, targets) }
         val named = titles.take(SHOWN).joinToString(", ") + if (titles.size > SHOWN) " " + ui("quest.toast.more", titles.size - SHOWN) else ""
         val rewards = claimed.map { it.rewards }
         val orbs = rewards.flatMap { it.orbs.entries }.groupBy({ it.key }, { it.value }).mapValues { it.value.sum() }

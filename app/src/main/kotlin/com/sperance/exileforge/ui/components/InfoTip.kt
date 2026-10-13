@@ -56,6 +56,23 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
 
 /** The window itself, anchored to whatever holds it. */
 @Composable fun TipCallout(tip: Tip, onClose: () -> Unit) {
+    TipCallout(tip.tint, onClose) {
+        Text(tip.title, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+        if (tip.body.isNotBlank()) Text(tip.body, color = Parchment, style = MaterialTheme.typography.bodySmall)
+        tip.facts.forEach { (label, value) ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                Text(value, color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+/**
+ * Окно-справка со своим содержимым [body] (4.x): то же окно, что у [Tip], - растёт из того, к чему привязано, клювом к нему, в рамке
+ * цвета [tint]; касание где угодно закрывает. Для разборов, которым мало строк «подпись - число» (Мощь героя).
+ */
+@Composable fun TipCallout(tint: Color, onClose: () -> Unit, body: @Composable ColumnScope.() -> Unit) {
     val density = LocalDensity.current
     val margin = with(density) { 8.dp.roundToPx() }
     val gap = with(density) { 2.dp.roundToPx() }
@@ -97,22 +114,13 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
                         close()
                     }
                     drawPath(beak, Panel)
-                    drawLine(tip.tint.copy(alpha = .8f), Offset(x - a, baseY), Offset(x, tipY), 1.dp.toPx())
-                    drawLine(tip.tint.copy(alpha = .8f), Offset(x, tipY), Offset(x + a, baseY), 1.dp.toPx())
+                    drawLine(tint.copy(alpha = .8f), Offset(x - a, baseY), Offset(x, tipY), 1.dp.toPx())
+                    drawLine(tint.copy(alpha = .8f), Offset(x, tipY), Offset(x + a, baseY), 1.dp.toPx())
                 }
-                .widthIn(max = 280.dp).background(Panel, shape).border(1.dp, tip.tint.copy(alpha = .8f), shape)
+                .widthIn(max = 280.dp).background(Panel, shape).border(1.dp, tint.copy(alpha = .8f), shape)
                 .clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 10.dp),
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(tip.title, color = tip.tint, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                if (tip.body.isNotBlank()) Text(tip.body, color = Parchment, style = MaterialTheme.typography.bodySmall)
-                tip.facts.forEach { (label, value) ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text(label, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                        Text(value, color = GoldBright, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelMedium)
-                    }
-                }
-            }
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp), content = body)
         }
     }
 }

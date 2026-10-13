@@ -30,7 +30,7 @@ internal fun Battle.shot(fighter: Fighter, blow: Blow? = null): FighterShot {
                 EffectKind.CURSE, EffectKind.HINDER -> LineKind.CURSE
                 EffectKind.FLASK -> LineKind.FLASK
             }
-            effect.lines.forEach { add(LineSource(kind, effect.source, it)) }
+            (if (fighter === heroFighter) effect.holding(conditions) else effect.lines).forEach { add(LineSource(kind, effect.source, it)) }
         }
         if (fighter === heroFighter) {
             heroCharges.lines().forEach { add(LineSource(LineKind.CHARGE, "", it)) }
@@ -52,11 +52,11 @@ internal fun Battle.shot(fighter: Fighter, blow: Blow? = null): FighterShot {
     )
 }
 
-/** A note in the log (3.37.0): something that happened to [fighter] without a blow. */
-internal fun Battle.note(fighter: Fighter, kind: NoteKind, ref: String, value: Double = 0.0) {
+/** A note in the log (3.37.0): something that happened to [fighter] without a blow; [flow] - разбор итога здоровья (4.9.3). */
+internal fun Battle.note(fighter: Fighter, kind: NoteKind, ref: String, value: Double = 0.0, flow: LifeFlow? = null) {
     record(
         fighter.side, Action.NOTE, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, if (fighter.side == Side.MONSTER) fighter.index else target()?.index ?: 0,
-        ref, onSelf = true, trace = NoteTrace(kind, ref, value, shot(fighter), origin),
+        ref, onSelf = true, trace = NoteTrace(kind, ref, value, shot(fighter), origin, flow),
     )
 }
 
@@ -75,11 +75,12 @@ internal fun Battle.record(
     onSelf: Boolean = false,
     trace: Trace? = null,
     pet: Boolean = false,
+    spell: Boolean = false,
 ) {
     val m = foeFighters.getOrNull(foe)
     log += CombatEvent(
         time, actor, action, kind, damage, type, healed, stunned, inflicted, ailment, heroFighter.life, heroFighter.shield,
-        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet }, echo = echoing && actor == Side.HERO,
+        m?.life ?: 0.0, m?.shield ?: 0.0, foe, skill, onSelf, heroFighter.mana, ally?.code?.takeIf { pet }, echo = echoing && actor == Side.HERO, spell = spell,
     )
         .also { it.trace = trace ?: skillTrace(actor, action, foe, skill, onSelf, healed) }
 }

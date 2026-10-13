@@ -163,7 +163,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
                 ForgePanel(accent = GoldBright) {
                     Engraved(ui("crafts.now", workTitle(game, work)))
                     CycleBar(work, offset, crafts.last, height = 10, hourly = hourlyLine(crafts, work))
-                    SessionTally(crafts.totals)
+                    SessionTally(game, crafts.totals)
                 }
             }
         }

@@ -1,5 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.quests.QuestTurnIn
+import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.run.MapMechanic
@@ -23,7 +25,9 @@ data class UnfinishedRun(val runId: String, val zone: MapCode)
  * Поход на экране (3.80.20): карточка зоны перед входом, добыча похода для листа снаряжения, окно атласа и счётчики
  * журнала - события, которых сервер ещё не взял, и отвергнутые, для значка. [saleMarks] (3.91.0) - id вещей добычи, помеченных
  * к продаже посреди захода: в итогах карты они уже отмечены. [forced] (4.0.1) - механики, что тестировщик ставит на новые заходы
- * насильно: выбор держится между зонами.
+ * насильно: выбор держится между зонами. Заход на экране (4.10.0): [quests] - доска заданий, снятая на входе (лист «Задания»
+ * карты считает от неё и счёта захода - перечитанная доска уже несёт его события), [turnedIn] - задания, сданные после карты,
+ * [atlasPoints] - ключи очков Атласа, что принесли ответы захода или испытания, [potion] - зелье, выпитое на входе.
  */
 data class Expedition(
     val launch: MapLaunch? = null,
@@ -34,6 +38,10 @@ data class Expedition(
     val unfinished: UnfinishedRun? = null,
     val saleMarks: Set<String> = emptySet(),
     val forced: Set<MapMechanic> = emptySet(),
+    val quests: Quests? = null,
+    val turnedIn: List<QuestTurnIn> = emptyList(),
+    val atlasPoints: List<String> = emptyList(),
+    val potion: String? = null,
 )
 
 /** Единственный источник правды о походе на экране (3.80.20); сам бег похода - у `ExpeditionActions`. */

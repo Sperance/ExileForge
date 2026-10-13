@@ -211,7 +211,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
         if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, time)
         if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
         foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
-        if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(foe.ailments, foe.held, foe.effects)
+        if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(ui("fight.shelf.foe", name), foe.ailments, foe.held, foe.effects)
         boss.cast?.let { cast ->
             Row(
                 Modifier.fillMaxWidth().then(if (lore != null) Modifier.clickable { lore(Lore.Skill(cast.code, name, null, fight.heroBody)) } else Modifier),

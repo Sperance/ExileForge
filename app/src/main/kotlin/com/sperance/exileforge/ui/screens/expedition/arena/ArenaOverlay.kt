@@ -1,6 +1,5 @@
 package com.sperance.exileforge.ui.screens.expedition.arena
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -22,12 +20,12 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.figures
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
-import kotlin.math.PI
-import kotlin.math.sin
 
 /** The key a card's bounds are kept under: the hero's, and each foe's by its place in the pack. */
 private const val HERO_CARD = -1
@@ -56,6 +54,8 @@ private const val HERO_CARD = -1
     biome: String = "",
     /** Источники строк карты на монстрах (3.93.0): лист врага раскладывает по ним его модификаторы. */
     shares: (Boolean) -> List<BuffShare> = { emptyList() },
+    /** Строки карты захода (4.9.3): что из них меняет героя - на рельсе «на весь бой» его карточки. */
+    mapEffects: Map<String, Double> = emptyMap(),
 ) {
     val time by rememberClock()
     // The settings' pause and buzz (3.77.0): each once as the hero's life falls through its line, the buzz again at a fall.
@@ -81,11 +81,17 @@ private const val HERO_CARD = -1
     // Лист врага (3.93.0): открывается касанием на паузе и до боя
     var inspect by remember { mutableStateOf<Int?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
+    // Строки карты на герое (4.9.3) - раз на заход и героя, не каждый кадр
+    val mods = remember(mapEffects, game.hero, game.index) {
+        if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects) }.orEmpty()
+    }
     // Мощь боя (4.8.0): герой - по телу боя под эффектами карты (4.9.0: с уроном умений и питомца из листа боя), враги - по своему листу
-    val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.addedDps ?: 0.0)
+    val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
     CompositionLocalProvider(LocalFightMight provides might) {
         Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
             fight.boss?.let { BossBackdrop(biome, it, time) }
+            // Стороны арены (4.9.3, макет «Стороны»): верх - врагов, низ - героя
+            Spacer(Modifier.fillMaxSize().sideTint())
             Column(
                 Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -134,12 +140,14 @@ private const val HERO_CARD = -1
                         FightFeed(game, fight, names, onCommand, onLogFilter)
                     }
                 }
-                HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large, onCommand)
+                HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large, mods, onCommand)
                 // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
                 if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, onCommand) { info = it }
                 Controls(fight, hud, onCommand)
             }
-            StrikeLine(fight.lunge, bounds, origin)
+            // Кто кого бьёт (4.9.3): каждый удар на экране - выпад или снаряд, разрез на цели; попадание по герою - виньетка
+            StrikeFx(fight.strikes, { foe -> bounds[foe ?: HERO_CARD] }, origin)
+            HitVignette(fight.strikes)
             // «Жилы энергии» (4.4.0): сцена применения умения героя поверх боя, всегда - бой анимируется и без декора
             SkillFx(fight.heroCast, bounds[HERO_CARD], bounds::get, origin)
             fight.boss?.let { BossCinema(fight, it) }
@@ -166,21 +174,6 @@ private const val HERO_CARD = -1
                 )
             }
         }
-    }
-}
-
-/** The line from whoever swings to whom they strike, fading in and out over the lunge: gold from the hero, blood from a foe. */
-@Composable private fun StrikeLine(lunge: LungeView?, bounds: Map<Int, Rect>, origin: Offset) {
-    if (lunge == null || !lunge.action.strikes) return
-    val from = bounds[if (lunge.actor == Side.HERO) HERO_CARD else lunge.foe] ?: return
-    val to = bounds[if (lunge.actor == Side.HERO) lunge.foe else HERO_CARD] ?: return
-    val tint = if (lunge.actor == Side.HERO) GoldBright else LifeRed
-    val strength = sin(lunge.progress * PI).toFloat()
-    Canvas(Modifier.fillMaxSize()) {
-        val a = from.center - origin
-        val b = to.center - origin
-        drawLine(tint.copy(alpha = .25f * strength), a, b, 8.dp.toPx(), StrokeCap.Round)
-        drawLine(tint.copy(alpha = .9f * strength), a, a + (b - a) * lunge.progress, 2.5.dp.toPx(), StrokeCap.Round)
     }
 }
 

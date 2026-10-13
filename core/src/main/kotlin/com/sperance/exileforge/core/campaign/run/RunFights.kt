@@ -145,8 +145,13 @@ internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
     }
     rewarding(event, fought = true)
     when (event) {
-        is RunEvent.Boss -> fateRun.bossSlain()
+        is RunEvent.Boss -> {
+            fateRun.bossSlain()
+            bossSlain()
+        }
+
         is RunEvent.Kill -> fateRun.slain(event.i * Run.PACK_SLOTS + event.m, event.vaal)
+
         else -> return
     }
     tallyWins()

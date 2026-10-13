@@ -12,6 +12,7 @@ import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.ItemFilter
 import com.sperance.exileforge.presentation.state.ItemShelf
+import com.sperance.exileforge.presentation.state.PetShelf
 import com.sperance.exileforge.presentation.state.isWorn
 import com.sperance.exileforge.presentation.state.itemShelf
 import com.sperance.exileforge.presentation.state.railGroups
@@ -28,8 +29,12 @@ import com.sperance.exileforge.ui.components.ItemFilterState
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.PillTabs
 import com.sperance.exileforge.ui.components.rememberInspect
+import com.sperance.exileforge.ui.components.rememberPetFilter
 import com.sperance.exileforge.ui.screens.hero.PetCard
 import com.sperance.exileforge.ui.screens.hero.PetCardSheet
+import com.sperance.exileforge.ui.screens.hero.PetFilterBar
+import com.sperance.exileforge.ui.screens.hero.PetFilterSheet
+import com.sperance.exileforge.ui.screens.hero.petFacts
 import com.sperance.exileforge.ui.theme.*
 
 /** Раздел выбора цели кузницы (4.4.x): вещи тайника и снаряжения или питомцы. */
@@ -86,14 +91,24 @@ internal fun TargetPicker(game: GameUi, filterState: ItemFilterState, opened: Pi
     }
 }
 
-/** Питомцы под кузницу - карточками Зверинца: нажатие выбирает, долгое нажатие открывает карточку в шторке. */
+/**
+ * Питомцы под кузницу - карточками Зверинца, под тем же фильтром-аккордеоном, что у зверинца (4.x, свой запомненный выбор -
+ * [PetShelf.FORGE]): нажатие выбирает, долгое нажатие открывает карточку в шторке.
+ */
 @Composable private fun PetTargets(game: GameUi, pets: List<Pet>, current: String?, onPick: (ForgeTarget) -> Unit) {
     val index = game.index ?: return
+    val state = game.hero?.pets ?: return
     val menagerie = remember(index) { Menagerie(index) }
+    val facts = remember(menagerie, state) { petFacts(menagerie, state) }
+    val filter = rememberPetFilter(PetShelf.FORGE)
+    var filtering by remember { mutableStateOf(false) }
     var carded by remember { mutableStateOf<Pet?>(null) }
+    val shown = remember(filter.filter, pets, facts) { filter.filter.apply(pets, facts) }
     LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { Engraved(ui(PickerSection.PETS.title)) }
-        items(pets, key = { it.id }) { pet ->
+        item { PetFilterBar(filter, shown.size, onOpen = { filtering = true }) }
+        if (shown.isEmpty()) item { Text(ui("pets.filter_none"), color = Muted) }
+        items(shown, key = { it.id }) { pet ->
             val kind = menagerie.species(pet.species) ?: return@items
             PetCard(
                 game,
@@ -101,12 +116,13 @@ internal fun TargetPicker(game: GameUi, filterState: ItemFilterState, opened: Pi
                 menagerie,
                 kind,
                 pet,
-                game.hero?.pets?.isActive(pet.id) == true,
+                state.isActive(pet.id),
                 selected = pet.id == current,
                 onClick = { onPick(ForgeTarget.Beast(pet)) },
                 onLongClick = { carded = pet },
             )
         }
     }
+    if (filtering) PetFilterSheet(filter, pets, facts) { filtering = false }
     carded?.let { pet -> PetCardSheet(game, pet) { carded = null } }
 }

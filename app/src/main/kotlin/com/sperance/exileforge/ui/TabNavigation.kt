@@ -1,0 +1,120 @@
+package com.sperance.exileforge.ui
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.SaveableStateHolder
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.IntOffset
+import androidx.navigation3.runtime.NavEntryDecorator
+import com.sperance.exileforge.presentation.nav.Route
+import com.sperance.exileforge.presentation.nav.barSlot
+import kotlin.math.roundToInt
+
+/** Длительность смены вкладки нижней панели (4.x, макет «Нижнее меню», вариант C): и экран, и шапка, и капсула кнопки. */
+const val TAB_SHIFT_MS = 220
+
+/** Кривая смены вкладки: быстрый старт и мягкая посадка. */
+val TabShiftEasing: Easing = CubicBezierEasing(.2f, 0f, 0f, 1f)
+
+/** Доля ширины, на которую уезжает экран при смене вкладки. */
+private const val SHIFT_SHARE = .3f
+
+/** Насколько уменьшен уходящий и входящий экран в начале и в конце сдвига. */
+private const val SHIFT_SCALE = .98f
+
+private fun <T> shiftSpec(): FiniteAnimationSpec<T> = tween(TAB_SHIFT_MS, easing = TabShiftEasing)
+
+/**
+ * Переход смены вкладки: при [step] ≠ 0 новое входит со стороны порядка вкладок (вкладка правее - справа), прежнее уходит
+ * в другую сторону, оба на ~30% ширины, с затуханием и лёгким масштабом; при 0 (экран поверх, «назад») - только затухание.
+ * Переходы экранов анимируются всегда, без `LocalMotion`.
+ */
+fun tabShift(step: Int): ContentTransform {
+    if (step == 0) return fadeIn(shiftSpec()) togetherWith fadeOut(shiftSpec())
+    val slide = shiftSpec<IntOffset>()
+    val enter = slideInHorizontally(slide) { (it * SHIFT_SHARE * step).roundToInt() } + fadeIn(shiftSpec()) + scaleIn(shiftSpec(), SHIFT_SCALE)
+    val exit = slideOutHorizontally(slide) { (-it * SHIFT_SHARE * step).roundToInt() } + fadeOut(shiftSpec()) + scaleOut(shiftSpec(), SHIFT_SCALE)
+    return enter togetherWith exit
+}
+
+/**
+ * Часть оболочки над экраном (шапка, полосы разделов), что сдвигается вместе с экраном при смене вкладки: [look] - её облик для
+ * маршрута; новый облик въезжает той же кривой, что и экран, со стороны порядка вкладок, тот же облик не двигается.
+ */
+@Composable fun <K> TabShifted(route: Route, look: (Route) -> K, modifier: Modifier = Modifier, content: @Composable (Route) -> Unit) {
+    AnimatedContent(
+        targetState = route,
+        modifier = modifier,
+        contentKey = look,
+        transitionSpec = {
+            val from = initialState.barSlot
+            val to = targetState.barSlot
+            val step = if (from == null || to == null) 0 else to.compareTo(from)
+            tabShift(step) using SizeTransform(clip = true) { _, _ -> shiftSpec() }
+        },
+        label = "tabChrome",
+    ) { content(it) }
+}
+
+/**
+ * Память вкладок (4.x): сохранённое состояние экранов стека (прокрутка, раскрытое, введённое) по ключам содержимого. Экран,
+ * снятый со стека, своё состояние теряет; корень вкладки нижней панели (запись с [ROOT] в метаданных) - бережёт до возвращения,
+ * так что вкладка открывается там, где её оставили. Сменился герой - память корней забывается ([forget]).
+ */
+class TabMemory(private val holder: SaveableStateHolder) {
+    /** Ключи содержимого корней вкладок, встреченных на экране. */
+    private val roots = HashSet<Any>()
+
+    /** Корни, снятые со стека, чьё состояние ждёт возвращения. */
+    private val parked = HashSet<Any>()
+
+    /** Украшение записей `NavDisplay`: каждая запись - в своём сохраняемом состоянии. */
+    val decorator: NavEntryDecorator<Route> = NavEntryDecorator(
+        onPop = { key -> if (key in roots) parked += key else holder.removeState(key) },
+    ) { entry ->
+        DisposableEffect(entry.contentKey) {
+            if (entry.metadata[ROOT_KEY] == true) roots += entry.contentKey
+            parked -= entry.contentKey
+            onDispose { }
+        }
+        holder.SaveableStateProvider(entry.contentKey) { entry.Content() }
+    }
+
+    /** Забыть отложенные корни: их прокрутка принадлежала прежнему герою. */
+    fun forget() {
+        parked.forEach(holder::removeState)
+        parked.clear()
+    }
+
+    companion object {
+        private const val ROOT_KEY = "tabRoot"
+
+        /** Метаданные записи корня вкладки: её состояние переживает уход с вкладки. */
+        val ROOT: Map<String, Any> = mapOf(ROOT_KEY to true)
+    }
+}
+
+/** Память вкладок на композицию оболочки; [owner] - чья это память (герой): сменился - отложенное забывается. */
+@Composable fun rememberTabMemory(owner: Any?): TabMemory {
+    val holder = rememberSaveableStateHolder()
+    val memory = remember(holder) { TabMemory(holder) }
+    LaunchedEffect(memory, owner) { memory.forget() }
+    return memory
+}

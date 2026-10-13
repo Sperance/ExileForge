@@ -29,7 +29,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val foe = if (me.side == Side.MONSTER) me.index else target.index
     val petLine = isPet(me) || isPet(target)
     if (target.invulnerable) {
-        record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, pet = petLine)
+        record(me.side, blow.action, HitKind.BLOCKED, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill, pet = petLine, spell = blow.spell)
         return false
     }
     val sure = me === heroFighter && nextCrit
@@ -60,7 +60,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
         record(
             me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill,
-            trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin), pet = petLine,
+            trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin), pet = petLine, spell = blow.spell,
         )
         if (kind == HitKind.BLOCKED) blocked(target)
         if (kind == HitKind.EVADED) traitsEvaded(target)
@@ -76,7 +76,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
     val doubled = if (body.doubleDamage > 0 && draw(RollKey.DOUBLE, body.doubleDamage) < body.doubleDamage) 2.0 else 1.0
     // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
-    val facing = if (me === heroFighter) max(0.0, model.against(states(target))) else 0.0
+    val facing = if (me === heroFighter) states(target).let { states -> max(0.0, model.against(states) + me.effects.sumOf { it.against(states) }) } else 0.0
     val versus = versus(blow, facing)
     val eased = eased(target, blow) * target.body.hitTaken * blightTaken(me, target)
     // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and

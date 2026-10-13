@@ -103,6 +103,7 @@ class TrialActions(
         val gear = expedition.gear() ?: return
         owner = id
         runId = started.run.id
+        expedition.atlasReset()
         synchronized(pending) {
             pending.clear()
             batch = null
@@ -156,6 +157,8 @@ class TrialActions(
                 return
             }
             mutableArena.value?.settle(report.applied, report.rewards.associate { it.n to it.reward.toReward() })
+            // Рубеж башни и первая зачистка раша (4.10.0): новое очко Атласа - тостом и строкой итогов
+            expedition.atlasEarned(owner, report.rewards.flatMap { it.atlas })
             if (report.rejected.isNotEmpty()) notices.toast(ui("expedition.rejected", report.rejected.size))
             report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
             if (heroes.state.value.readAt == 0L && heroes.onScreen(owner)) heroSync.readHero()

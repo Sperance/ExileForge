@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.model.command.ApiCapabilities
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.command.ClientIdentity
 import com.sperance.exileforge.core.model.command.DeviceCredentials
+import com.sperance.exileforge.core.model.command.FiledReport
 import com.sperance.exileforge.core.model.command.LoginCredentials
 import com.sperance.exileforge.core.model.command.PasswordChange
 import com.sperance.exileforge.core.model.command.SignedIn
@@ -156,11 +157,9 @@ class GameApi(
 
     /**
      * Отправка собранного отчёта (server 1.46.0): открыта и до входа, подписана сессией, если она есть. Повтор с тем же
-     * [BugReportRequest.key] сервер второй раз не записывает (4.9.0).
+     * [BugReportRequest.key] сервер второй раз не записывает (4.9.0). Ответ (4.10.0) - записанный отчёт и сброшен ли снимок.
      */
-    suspend fun sendBug(report: BugReportRequest) {
-        http.request("POST", CommandQueue.BUG_REPORT, body = WireJson.encodeToJsonElement(report), authenticated = http.token != null)
-    }
+    suspend fun sendBug(report: BugReportRequest): FiledReport = WireJson.decodeFromJsonElement(FiledReport.serializer(), http.request("POST", CommandQueue.BUG_REPORT, body = WireJson.encodeToJsonElement(report), authenticated = http.token != null))
 
     /** Отчёт, собранный и отправленный сразу, без очереди (служебные отчёты приложения: зависание, сбой запуска). */
     suspend fun reportBug(report: BugReportRequest, failures: Int = 0) = sendBug(bugReport(report, failures))

@@ -121,8 +121,11 @@ internal fun ScenePainter.drawCrack(x: Double, y: Double, opened: Boolean, seed:
     }
 }
 
-/** A chest: an iron-bound box on the ground, its lid shut and gleaming, or thrown back on an empty one. */
-internal fun ScenePainter.drawChest(x: Double, y: Double, opened: Boolean, light: Float) {
+/**
+ * A chest: an iron-bound box on the ground, its lid shut and gleaming, or thrown back on an empty one. [waiting] (4.10.0, макет
+ * «Сундук на карте», вариант B) - открыт, а ответа сервера нет: крышка приоткрыта, внутри тлеет, над ним «…».
+ */
+internal fun ScenePainter.drawChest(x: Double, y: Double, opened: Boolean, light: Float, waiting: Boolean = false) {
     val cx = isoX(x, y)
     val cy = isoY(x, y)
     val w = unit * .45f
@@ -143,8 +146,21 @@ internal fun ScenePainter.drawChest(x: Double, y: Double, opened: Boolean, light
     if (opened) {
         pen.color = tone(Color(0xFF1A120B), light)
         diamond(cx, cy + h, w, d)
+        if (waiting) {
+            pen.color = Palettes.torch.copy(alpha = .35f * light)
+            diamond(cx, cy + h, w * .75f, d * .75f)
+        }
+        val lift = if (waiting) CHEST_LID_AJAR else CHEST_LID_OPEN
         pen.color = tone(wood, .95f * light)
-        pen.quad(cx - w, cy + h, cx, cy + h + d, cx, cy + h + d + h * .8f, cx - w, cy + h + h * .8f)
+        pen.quad(cx - w, cy + h, cx, cy + h + d, cx, cy + h + d + h * lift, cx - w, cy + h + h * lift)
+        if (waiting) {
+            // «…» ожидания: мигают на часах декора, без `LocalMotion` стоят
+            for (i in 0 until 3) {
+                val beat = if (motion) .35f + .65f * (.5f + .5f * sin(time * 5f - i * 1.2f)) else 1f
+                pen.color = Color(0xFFD5E0E6).copy(alpha = beat * light.coerceAtLeast(.6f))
+                pen.circle(cx + (i - 1) * unit * .16f, cy + h * 2.6f, unit * .05f)
+            }
+        }
     } else {
         pen.color = tone(wood, 1.05f * light)
         diamond(cx, cy + h, w, d)
@@ -192,3 +208,7 @@ internal fun ScenePainter.portal(x: Double, y: Double, sealed: Boolean) {
         pen.circle(cx, cy + unit * 1.1f, unit * .1f)
     }
 }
+
+/** Крышка сундука, поднятая на долю высоты ящика: откинута у открытого, приоткрыта у ждущего ответа (4.10.0). */
+private const val CHEST_LID_OPEN = .8f
+private const val CHEST_LID_AJAR = .4f

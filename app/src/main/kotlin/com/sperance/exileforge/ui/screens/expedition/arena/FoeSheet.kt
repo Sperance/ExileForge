@@ -155,7 +155,7 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
     }
     if (foe.effects.isNotEmpty() || foe.ailments.isNotEmpty() || foe.held) {
         Head(ui("fight.sheet_now"))
-        StateTiles(foe.ailments, foe.held, foe.effects)
+        StateTiles(ui("fight.shelf.foe", monsterTitle(foe.monster.code)), foe.ailments, foe.held, foe.effects)
     }
 }
 

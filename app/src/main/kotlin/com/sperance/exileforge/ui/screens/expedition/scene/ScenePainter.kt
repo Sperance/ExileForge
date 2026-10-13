@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.run.BlightSpot
 import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.sealed
+import com.sperance.exileforge.core.campaign.run.waiting
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.icons.drawToken
 import kotlin.math.abs
@@ -209,7 +210,8 @@ internal class ScenePainter {
                 standing += (fountain.cell.x + fountain.cell.y + 1.0) to { drawFountain(fountain.cell.x + .5, fountain.cell.y + .5, fountain.used, glow(fountain.cell.x, fountain.cell.y)) }
             }
             world.chests.filter { world.shows(it) }.forEach { chest ->
-                standing += (chest.cell.x + chest.cell.y + 1.0) to { drawChest(chest.cell.x + .5, chest.cell.y + .5, chest.opened, glow(chest.cell.x, chest.cell.y)) }
+                // Открытый сундук без ответа сервера (4.10.0) приоткрыт и ждёт
+                standing += (chest.cell.x + chest.cell.y + 1.0) to { drawChest(chest.cell.x + .5, chest.cell.y + .5, chest.opened, glow(chest.cell.x, chest.cell.y), run.waiting(chest)) }
             }
             // A crystal of essences stands once seen (2.78.0): humming until its guardian is slain, dull after.
             world.crystals.filter { world.explored(it.cell.x, it.cell.y) }.forEach { spot ->
@@ -266,6 +268,8 @@ internal class ScenePainter {
             val crack = world.features.firstNotNullOfOrNull { it.cue(world) as? EntranceCue.Crack }?.progress?.takeIf { it > 0f }
             standing += heroDepth to {
                 val bob = if (world.moving) abs(sin(time * 9f)) * unit * .14f else 0f
+                // След скорости (4.10.0): босс карты пал - за идущим героем тянутся штрихи; декор, без `LocalMotion` его нет
+                if (run.swift && world.moving && motion) swiftTrail(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY) + unit * HERO_TOKEN * TOKEN_MID + bob, world.facingX, world.facingY)
                 token(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY), unit * HERO_TOKEN, Palettes.hero, bob) {
                     Portraits.hero(this, classCode, time)
                 }
@@ -278,6 +282,27 @@ internal class ScenePainter {
         }
         // The air over everything (2.64.0): fog, sparks or fireflies, by the biome's style - на часах декора (4.2.0).
         style.atmosphere(scope, palette, decor)
+    }
+
+    /**
+     * След скорости за героем с серединой жетона ([x], [y] в мере пера), идущим по [facingX], [facingY] клеток: три штриха назад,
+     * мерцают на часах декора.
+     */
+    private fun swiftTrail(x: Float, y: Float, facingX: Double, facingY: Double) {
+        // Направление назад на экране: изометрия клетки, как у [isoX] и [isoY]
+        val backX = -(facingX - facingY).toFloat()
+        val backY = (facingX + facingY).toFloat() / 2
+        val length = hypot(backX, backY).takeIf { it > 0f } ?: return
+        val dx = backX / length * unit
+        val dy = backY / length * unit
+        for (i in 0 until SWIFT_STREAKS) {
+            val side = (i - (SWIFT_STREAKS - 1) / 2f) * unit * .22f
+            val flicker = .5f + .5f * sin(decor * 14f + i * 2.1f)
+            pen.color = SwiftHue.copy(alpha = .22f + .3f * flicker)
+            val sx = x - dy / unit * side + dx * .5f
+            val sy = y + dx / unit * side + dy * .5f
+            pen.line(sx, sy, sx + dx * (1.1f + .4f * flicker), sy + dy * (1.1f + .4f * flicker), unit * .05f)
+        }
     }
 
     /** Кольцо простоя [progress] (0..1) вокруг жетона героя с серединой [centre] в мере холста: дорожка и дуга от верха по часовой. */
@@ -367,6 +392,10 @@ private const val RING_WIDTH = .2f
 private val CrackTrack = Color(0xFF1F2C35)
 private val CrackHue = Color(0xFFA26BFF)
 internal val CrackText = Color(0xFFCDB6FF)
+
+/** След скорости после босса (4.10.0): сколько штрихов и их цвет - руна, как значок «быстрее» над картой. */
+private const val SWIFT_STREAKS = 3
+internal val SwiftHue = Color(0xFF8FD3FF)
 
 /** Есть ли среди клетки и восьми её соседей ([dx], [dy] в -1..1) такая, что [test] (4.9.0: без диапазонов на клетку кадра). */
 private inline fun nearby(test: (dx: Int, dy: Int) -> Boolean): Boolean {

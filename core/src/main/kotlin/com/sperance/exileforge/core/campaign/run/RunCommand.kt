@@ -74,7 +74,6 @@ sealed interface RunCommand {
     /** A window over the map stops the world while it is open: `true` takes a hold, `false` gives one back. */
     data class Hold(val on: Boolean) : RunCommand
     data class Focus(val index: Int) : RunCommand
-    data object DismissChest : RunCommand
 
     /** The level-up screen read (3.81.0): the levels it told of are not told again. */
     data object LevelSeen : RunCommand

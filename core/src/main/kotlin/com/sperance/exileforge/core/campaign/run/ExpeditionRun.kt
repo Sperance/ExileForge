@@ -74,7 +74,7 @@ import kotlin.random.Random
  * [journal]. Its reward is the server's alone (1.30.0): it comes back with the answer as [RunCommand.Settled],
  * and until then the screens say it is on its way — as do the Vaal zone behind a portal and a crystal's Vaal
  * orb, read from the campaign the answer brings ([RunCommand.Campaign]). The hero's life carries from fight to
- * fight and does not return while walking; mana comes back on the road, flasks fill with kills.
+ * fight; на карте она восстанавливается по [RoadLife] (4.10.0), mana comes back on the road, flasks fill with kills.
  */
 class ExpeditionRun(
     val index: ContentIndex,
@@ -224,6 +224,20 @@ class ExpeditionRun(
     var atlas: Map<String, Double> = emptyMap()
         internal set
 
+    /**
+     * Босс основной карты убит в этом заходе (4.10.0): шаг героя по карте × `bossSlainSpeed` ([ExpeditionWorld.heroSpeed]). Не у зоны
+     * Ваал - её страж не босс карты; Бездна по карте не ходит.
+     */
+    var swift = false
+        private set
+
+    /** Босс карты пал в этом заходе: герой ускоряется до конца захода. */
+    internal fun bossSlain() {
+        if (vaal || swift) return
+        swift = true
+        rebody()
+    }
+
     /** The fight's guardian fell to this hero for the first time (3.81.0): their place among all who beat it. */
     internal var rank: Long? = null
 
@@ -243,8 +257,21 @@ class ExpeditionRun(
     internal val autoEvents = HashSet<Int>()
     internal var autoReward: Reward? = null
 
-    /** The chest on screen, by its event. */
-    internal var chestEvent: Int? = null
+    /** Добыча, что вылетает на карте (4.10.0): события сундуков и объектов захода по порядку. */
+    internal val drops = mutableListOf<Int>()
+
+    /** Копия [drops] с их добычей для снимка: меняется только с новым сундуком или ответом, не на кадр. */
+    internal var dropsShown: List<MapDrop> = emptyList()
+
+    /** Сундук или объект с добычей открыт событием [n]: его добыча придёт с ответом сервера. */
+    internal fun dropped(n: Int) {
+        drops += n
+        showDrops()
+    }
+
+    internal fun showDrops() {
+        dropsShown = drops.map { n -> MapDrop(n, earned[n] ?: Reward.NONE.takeIf { n < answered }) }
+    }
 
     /** The hero's campaign as the last answer brought it. */
     internal var campaign: CampaignState? = null
@@ -266,14 +293,6 @@ class ExpeditionRun(
     internal var fightPet: Pet? = null
     internal fun ally(): Ally? = allies.of(hero, fightPet, kit.fate.effects.spirit)
 
-    /**
-     * The hero's degeneration on the road (3.4.0): the fight burns it in its own beat, the walk did not.
-     * Off a fight it wounds to the last point: only a fight ends a run.
-     */
-    internal fun wound(dt: Double) {
-        val share = hero.lifeDegenShare
-        if (share > 0 && life > 1) life = (life - hero.maxLife * share * dt).coerceAtLeast(1.0)
-    }
     internal var slain: RolledMonster? = null
     internal var report: FightReport? = null
 
@@ -329,7 +348,7 @@ class ExpeditionRun(
         hero = if (lines.isEmpty()) build.body else build.body(lines)
         mana = mana.coerceIn(0.0, manaCap())
         shield = shield.coerceIn(0.0, hero.maxShield)
-        world.regear(ExpeditionWorld.heroSpeed(pace, hero.stats), ExpeditionWorld.lightRadius(pace, hero.stats, zone.light))
+        world.regear(ExpeditionWorld.heroSpeed(pace, hero.stats, swift), ExpeditionWorld.lightRadius(pace, hero.stats, zone.light))
     }
 
     var fight: Battle? = null

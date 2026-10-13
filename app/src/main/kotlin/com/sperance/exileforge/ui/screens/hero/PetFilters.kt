@@ -1,202 +1,116 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.SwapVert
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.rarityTitle
+import com.sperance.exileforge.core.hero.PetDuty
+import com.sperance.exileforge.core.hero.PetFacts
+import com.sperance.exileforge.core.hero.PetFilter
+import com.sperance.exileforge.core.hero.PetSort
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.PetState
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.PetKind
-import com.sperance.exileforge.rules.content.PetSpecies
-import com.sperance.exileforge.rules.content.Rarity
-import com.sperance.exileforge.ui.components.CompactSearchField
-import com.sperance.exileforge.ui.theme.Bronze
-import com.sperance.exileforge.ui.theme.Gold
-import com.sperance.exileforge.ui.theme.GoldBright
-import com.sperance.exileforge.ui.theme.Muted
-import com.sperance.exileforge.ui.theme.Panel
-import com.sperance.exileforge.ui.theme.PanelRaised
-import com.sperance.exileforge.ui.theme.Parchment
-import com.sperance.exileforge.ui.theme.rarityColor
+import com.sperance.exileforge.rules.roll.Menagerie
+import com.sperance.exileforge.ui.components.AccordionGroup
+import com.sperance.exileforge.ui.components.ChoiceChips
+import com.sperance.exileforge.ui.components.DefaultInputs
+import com.sperance.exileforge.ui.components.FilterAccordionSheet
+import com.sperance.exileforge.ui.components.FilterBar
+import com.sperance.exileforge.ui.components.PetFilterState
+import com.sperance.exileforge.ui.components.RarityTiles
+
+/*
+ * Отбор питомцев (4.x): тот же фильтр-аккордеон, что у предметов, - строка над списком ([PetFilterBar]) и шторка
+ * ([PetFilterSheet]) с поиском, родом, делом, редкостью, стихией и порядком; граней сразу сколько угодно. Логика отбора - одна,
+ * `PetFilter` ядра; выбор запоминается на список ([com.sperance.exileforge.presentation.state.PetShelf]).
+ */
+
+/** Что отбор знает о питомцах героя [pets]: вид - из зверинца [menagerie], дело - из состояния, имя - словарём. */
+internal fun petFacts(menagerie: Menagerie, pets: PetState): PetFacts = PetFacts({ menagerie.species(it.species) }, { pets.isActive(it.id) }, { petName(it.species) })
+
+/** Подпись рода в отборе. */
+private val PetKind.label: String get() = ui(if (this == PetKind.COMBAT) "pets.filter_combat" else "pets.filter_helper")
+
+/** Подпись дела в отборе. */
+private val PetDuty.label: String get() = when (this) {
+    PetDuty.ANY -> ui("filter.any")
+    PetDuty.WORKING -> ui("pets.filter_working")
+    PetDuty.RESTING -> ui("pets.filter_resting")
+}
+
+/** Имя стихии удара. */
+private fun elementTitle(element: String): String = locOr("pet.element.$element", element)
+
+/** Порядок словами: обычный или выбранный со стрелкой направления. */
+private fun PetFilter.sortLabel(): String = sort?.let { ui(it.title) + if (descending) " ↓" else " ↑" } ?: ui("pets.sort_default")
+
+private val PetSort.title: String get() = when (this) {
+    PetSort.LEVEL -> "pets.sort_level"
+    PetSort.RARITY -> "pets.sort_rarity"
+    PetSort.NEWEST -> "pets.sort_new"
+}
+
+/** Строка над списком питомцев: порядок и поиск словами, сколько видно и значок фильтра; нажатие открывает шторку. */
+@Composable internal fun PetFilterBar(state: PetFilterState, shown: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+    val filter = state.filter
+    FilterBar(
+        listOfNotNull(filter.sortLabel() + " ▾", filter.query.takeIf { it.isNotBlank() }?.let { "«$it»" }).joinToString(" · "),
+        shown,
+        filter.tweaks(state.shelf.defaults),
+        onOpen,
+        modifier,
+    )
+}
 
 /**
- * Что знает отбор зверинца о питомце (4.9.0): его вид ([species], null - вид контенту неизвестен) и стоит ли он в деле ([active]).
+ * Шторка фильтра питомцев (4.x, «Аккордеон»): поиск по имени и роду, род и стихия - любые сразу, дело - одно, редкость плитками,
+ * порядок (повторное нажатие - обратное направление). Варианты - те, что есть у питомцев [pets], и уже выбранные (их можно снять).
+ * Правки идут в черновик; «Показать N» применяет его, «Сбросить» - к обычному списка.
  */
-internal class PetFacts(val species: (Pet) -> PetSpecies?, val active: (Pet) -> Boolean) {
-    /** Стихии удара питомца: у гибрида - обе. */
-    fun elements(pet: Pet): List<String> = species(pet)?.let { listOfNotNull(it.element, it.element2) }.orEmpty()
-
-    /** Имя вида питомца и его род - то, по чему ищет поле поиска. */
-    fun named(pet: Pet, query: String): Boolean {
-        val words = query.trim()
-        if (words.isEmpty()) return true
-        val kind = species(pet)?.kind
-        return petName(pet.species).contains(words, ignoreCase = true) || kind?.let { locOr("pet.kind.$it", it.name).contains(words, ignoreCase = true) } == true
-    }
-}
-
-/**
- * Чип отбора зверинца (4.9.0, макет «Зверинец», вариант A «Как состав гильдии»): подпись, её цвет и кто проходит. Отбор по
- * признаку - запись [Trait]; редкость и стихия - по тем, что есть у питомцев ([of]). Новый отбор - запись, экран его не знает.
- */
-internal sealed interface PetFilter {
-    val label: String
-    val tint: Color? get() = null
-
-    fun keeps(pet: Pet, facts: PetFacts): Boolean
-
-    /** Отбор по роли и делу. */
-    enum class Trait(private val key: String, private val test: (Pet, PetFacts) -> Boolean) : PetFilter {
-        ALL("pets.filter_all", { _, _ -> true }),
-        COMBAT("pets.filter_combat", { pet, facts -> facts.species(pet)?.kind == PetKind.COMBAT }),
-        HELPER("pets.filter_helper", { pet, facts -> facts.species(pet)?.kind == PetKind.HELPER }),
-        WORKING("pets.filter_working", { pet, facts -> facts.active(pet) }),
-        RESTING("pets.filter_resting", { pet, facts -> !facts.active(pet) }),
-        ;
-
-        override val label: String get() = ui(key)
-
-        override fun keeps(pet: Pet, facts: PetFacts) = test(pet, facts)
-    }
-
-    /** Питомцы редкости [rarity]. */
-    data class OfRarity(val rarity: Rarity) : PetFilter {
-        override val label: String get() = ui("enum.rarity.${rarity.name}")
-        override val tint: Color get() = rarityColor(rarity.name)
-
-        override fun keeps(pet: Pet, facts: PetFacts) = pet.rarity == rarity
-    }
-
-    /** Питомцы со стихией удара [element]. */
-    data class OfElement(val element: String) : PetFilter {
-        override val label: String get() = locOr("pet.element.$element", element)
-
-        override fun keeps(pet: Pet, facts: PetFacts) = element in facts.elements(pet)
-    }
-
-    companion object {
-        /** Лента чипов: признаки, затем редкости и стихии, что есть у питомцев [pets]. */
-        fun of(pets: List<Pet>, facts: PetFacts): List<PetFilter> = Trait.entries +
-            pets.map { it.rarity }.distinct().sortedBy { it.ordinal }.map(::OfRarity) +
-            pets.flatMap(facts::elements).distinct().sorted().map(::OfElement)
-    }
-}
-
-/** Порядок зверинца (4.9.0): по чему и в какую сторону; равные - по имени вида. */
-internal enum class PetSort(val title: String, val value: (Pet, Int) -> Long) {
-    LEVEL("pets.sort_level", { pet, _ -> pet.level.toLong() }),
-    RARITY("pets.sort_rarity", { pet, _ -> pet.rarity.ordinal.toLong() }),
-
-    /** Новые: позже вылупленный стоит в списке героя дальше. */
-    NEWEST("pets.sort_new", { _, place -> place.toLong() }),
-}
-
-/** Выбранный порядок: [sort] и направление. */
-internal data class PetOrder(val sort: PetSort, val descending: Boolean = true) {
-    fun apply(pets: List<Pet>): List<Pet> {
-        val place = pets.withIndex().associate { (i, pet) -> pet.id to i }
-        val by = compareBy<Pet> { sort.value(it, place.getValue(it.id)) }.let { if (descending) it.reversed() else it }
-        return pets.sortedWith(by.thenBy { petName(it.species).lowercase() })
-    }
-
-    companion object {
-        /** Без выбора: в деле первыми, затем редкость и уровень по убыванию. */
-        fun standard(pets: List<Pet>, state: PetState): List<Pet> = pets.sortedWith(compareBy({ !state.isActive(it.id) }, { -it.rarity.ordinal }, { -it.level }))
-    }
-}
-
-/** Повторный выбор того же порядка - обратный, новый - по убыванию. */
-internal fun PetOrder?.next(sort: PetSort): PetOrder = if (this?.sort == sort) copy(descending = !descending) else PetOrder(sort)
-
-/** Плотный поиск по имени и виду и справа кнопка порядка «⇅» (4.9.0): как у состава гильдии. */
-@Composable internal fun PetSearch(query: String, limit: Int, order: PetOrder?, onQuery: (String) -> Unit, onOrder: (PetOrder?) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        CompactSearchField(query, { onQuery(it.take(limit)) }, ui("pets.search"), Modifier.weight(1f))
-        PetSortButton(order, onOrder)
-    }
-}
-
-/** Кнопка «⇅»: меню порядков и порядок по умолчанию; выбранный порядок подсвечивает кнопку. */
-@Composable private fun PetSortButton(order: PetOrder?, onOrder: (PetOrder?) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(10.dp)
-    Box {
-        Box(
-            Modifier.size(40.dp).clip(shape).background(Panel).border(1.dp, if (order != null) Gold.copy(alpha = .6f) else Bronze, shape)
-                .clickable(onClickLabel = ui("pets.sort")) { open = true },
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.SwapVert, ui("pets.sort"), tint = if (order != null) GoldBright else Muted, modifier = Modifier.size(20.dp))
-        }
-        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
-            DropdownMenuItem(
-                text = { Text(ui("pets.sort_default"), color = if (order == null) GoldBright else Parchment) },
-                onClick = {
-                    open = false
-                    onOrder(null)
-                },
-            )
-            PetSort.entries.forEach { sort ->
-                val mark = when {
-                    order?.sort != sort -> ""
-                    order.descending -> " ↓"
-                    else -> " ↑"
-                }
-                DropdownMenuItem(
-                    text = { Text(ui(sort.title) + mark, color = if (order?.sort == sort) GoldBright else Parchment) },
-                    onClick = {
-                        open = false
-                        onOrder(order.next(sort))
-                    },
-                )
-            }
-        }
-    }
-}
-
-/** Одна лента плотных чипов со счётчиками (4.9.0): у каждого - сколько питомцев [pets] под ним; выбранный - в нити `Gold`. */
-@Composable internal fun PetFilterRow(filters: List<PetFilter>, pets: List<Pet>, facts: PetFacts, chosen: PetFilter, onChoose: (PetFilter) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(filters, key = { it.toString() }) { filter ->
-            val on = filter == chosen
-            val shape = RoundedCornerShape(8.dp)
-            Text(
-                ui("pets.filter_count", filter.label, pets.count { filter.keeps(it, facts) }),
-                color = filter.tint ?: if (on) GoldBright else Muted,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                modifier = Modifier.height(28.dp).clip(shape).background(if (on) PanelRaised else Color.Transparent)
-                    .border(1.dp, if (on) Gold.copy(alpha = .5f) else Bronze, shape).clickable { onChoose(filter) }
-                    .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 10.dp),
-            )
-        }
-    }
+@Composable internal fun PetFilterSheet(state: PetFilterState, pets: List<Pet>, facts: PetFacts, onDismiss: () -> Unit) {
+    var draft by remember { mutableStateOf(state.filter) }
+    val any = ui("filter.any")
+    val kinds = remember(pets) { pets.mapNotNull { facts.species(it)?.kind }.distinct().sortedBy { it.ordinal } }
+    val rarities = remember(pets) { pets.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
+    val elements = remember(pets) { pets.flatMap(facts::elements).distinct() }
+    val groups = listOfNotNull(
+        AccordionGroup("kind", ui("pets.filter.kind"), draft.kinds.takeIf { it.isNotEmpty() }?.joinToString(", ") { it.label } ?: any) {
+            ChoiceChips((kinds + draft.kinds).distinct(), { it in draft.kinds }, { it.label }) { draft = draft.toggle(it) }
+        }.takeIf { kinds.size > 1 || draft.kinds.isNotEmpty() },
+        AccordionGroup("duty", ui("pets.filter.duty"), draft.duty.label) {
+            ChoiceChips(PetDuty.entries, { it == draft.duty }, { it.label }) { draft = draft.copy(duty = it) }
+        },
+        AccordionGroup("rarity", ui("filter.rarity"), draft.rarities.takeIf { it.isNotEmpty() }?.sortedByDescending { it.ordinal }?.joinToString(", ") { rarityTitle(it) } ?: any) {
+            RarityTiles((rarities + draft.rarities).distinct(), { it in draft.rarities }) { draft = draft.toggle(it) }
+        },
+        AccordionGroup("element", ui("pets.filter.element"), draft.elements.takeIf { it.isNotEmpty() }?.sorted()?.joinToString(", ", transform = ::elementTitle) ?: any) {
+            ChoiceChips((elements + draft.elements).distinct().sorted(), { it in draft.elements }, ::elementTitle) { draft = draft.toggleElement(it) }
+        }.takeIf { elements.isNotEmpty() || draft.elements.isNotEmpty() },
+        AccordionGroup("sort", ui("filter.sort"), draft.sortLabel()) {
+            ChoiceChips(listOf<PetSort?>(null) + PetSort.entries, { it == draft.sort }, { sort -> sort?.let { ui(it.title) } ?: ui("pets.sort_default") }) { draft = draft.ordered(it) }
+        },
+    )
+    val shown = remember(draft, pets) { draft.apply(pets, facts).size }
+    val defaults = state.shelf.defaults
+    FilterAccordionSheet(
+        query = draft.query,
+        onQuery = { draft = draft.copy(query = it.take(DefaultInputs.search)) },
+        queryHint = ui("pets.search"),
+        groups = groups,
+        switches = emptyList(),
+        show = ui("filter.show", shown),
+        resettable = draft != defaults,
+        onReset = { draft = defaults },
+        onShow = {
+            state.update(draft)
+            onDismiss()
+        },
+        onDismiss = onDismiss,
+    )
 }

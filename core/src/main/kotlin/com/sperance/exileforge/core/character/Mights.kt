@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.sheet.Might
+import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.rules.sheet.MightReading
 
 /**
@@ -12,8 +13,8 @@ import com.sperance.exileforge.rules.sheet.MightReading
  * лист под эффектами карты (`FightHud.heroBody`) с уроном умений и питомца из боевого листа. Не прогноз боя.
  */
 object Mights {
-    /** Мощь героя в бою: тело [body] под эффектами карты и урон в секунду сверх листа [added] (умения и питомец, `CombatSheet.addedDps`). */
-    fun hero(index: ContentIndex, body: Combatant, added: Double): MightReading = Might.hero(index, body.stats, body.level, added)
+    /** Мощь героя в бою: тело [body] под эффектами карты и что сверх листа [extras] (умения, питомец, резерв маны, фляги - `CombatSheet.mightExtras`). */
+    fun hero(index: ContentIndex, body: Combatant, extras: MightExtras): MightReading = Might.hero(index, body.stats, body.level, extras)
 
     /** Мощь монстра [monster] по его листу; уровень 0 у монстра - уровень зоны [level]. */
     fun of(index: ContentIndex, monster: RolledMonster, level: Int): MightReading = Might.of(index, monster.stats, monster.level.takeIf { it > 0 } ?: level)

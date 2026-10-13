@@ -81,6 +81,8 @@ import kotlinx.serialization.Serializable
     val reward: RewardView = RewardView(),
     val crystal: CrystalOutcome? = null,
     val rank: Long? = null,
+    /** Ключи очков Атласа `<вид>:<карта>`, впервые заработанные событием (4.10.0): о новом очке - без чтения героя. */
+    val atlas: List<String> = emptyList(),
 )
 
 /** A crystal after an event: its [index] in the zone's window, as the event named it, and the [crystal] it became. */
@@ -118,8 +120,8 @@ import kotlinx.serialization.Serializable
 /** Ответ на действие в Разломе (сервер 1.83.0): доска после него, итог конца забега и что из сундука не влезло. */
 @Serializable data class RiftReport(val board: com.sperance.exileforge.rules.rift.RiftBoard, val result: com.sperance.exileforge.rules.rift.RiftResult? = null, val received: Received = Received())
 
-/** What one accepted event of a trial brought. */
-@Serializable data class TrialReward(val n: Int, val kind: TrialEventKind, val reward: RewardView = RewardView())
+/** What one accepted event of a trial brought; [atlas] (4.10.0) - ключи очков Атласа, впервые заработанные событием: рубеж башни, первая зачистка раша. */
+@Serializable data class TrialReward(val n: Int, val kind: TrialEventKind, val reward: RewardView = RewardView(), val atlas: List<String> = emptyList())
 
 /** The server's answer to a trial's events: how far applied, what refused, what each brought, the hero's trials and where the hero stands. */
 @Serializable data class TrialReport(

@@ -99,9 +99,9 @@ internal fun ExpeditionRun.recordFeature(spot: FeatureSpot, choice: Int): RunEve
     return record { RunEvent.Feature(it, spot.id, choice) }?.also { featureEvents[it.n] = spot to choice }
 }
 
-/** Событие с добычей объекта (сундук комнаты, сбор узла): её покажет та же панель, что у сундука, когда придёт ответ. */
+/** Событие с добычей объекта (сундук комнаты, сбор узла): её добыча вылетит в сумку, как у сундука, когда придёт ответ. */
 internal fun ExpeditionRun.showLoot(event: RunEvent?) {
-    rewarding(event)?.let { chestEvent = it.n }
+    rewarding(event)?.let { dropped(it.n) }
 }
 
 /** Игрок выбрал на листе объекта [choice]: пару алтаря или вещь торговца. Исчерпанный объект закрывает лист. */

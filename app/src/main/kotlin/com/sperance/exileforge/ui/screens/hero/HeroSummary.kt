@@ -60,13 +60,14 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Строка над сводкой (4.9.0, макет A «Строка с номером героя»): слева свой номер героя (4.7.0, касание копирует; сервер старше - нет),
- * справа Мощь - печать 32dp и число из того же листа боя без карты, что и цифры сводки; ещё не сложен - «…».
+ * справа Мощь - чип «⚜ 12.5k» (4.x, вариант A) из того же листа боя без карты, что и цифры сводки, с разбором стойкости; ещё не
+ * сложен - «…».
  */
 @Composable fun NumberAndMight(hero: HeroView) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         ShortCodeChip(ui("hero.number_own"), hero.info.number)
         Spacer(Modifier.weight(1f))
-        MightMark(hero.might)
+        MightMark(hero.might, hero.combat?.mightDefense)
     }
 }
 

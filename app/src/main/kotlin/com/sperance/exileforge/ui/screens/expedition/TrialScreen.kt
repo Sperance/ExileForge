@@ -159,6 +159,8 @@ import org.koin.compose.viewmodel.koinViewModel
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             RunFigures(hud.summary)
             RewardLines(game, hud.gained, { looked = it }, awaiting = hud.awaiting > 0)
+            // Рубеж башни, первая зачистка раша (4.10.0): новые очки Атласа
+            AtlasBlock(model.state.collectAsStateWithLifecycle().value.atlasPoints)
         }
         // Журнал последнего боя (4.8.0): боя, что кончил испытание
         hud.report?.let { ForgeOutlinedButton(onClick = { journal = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("run.menu.log")) } }

@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.presentation.state.ItemFilters
+import com.sperance.exileforge.presentation.state.PetFilters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -63,6 +64,15 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     }
     suspend fun saveItemFilters(value: ItemFilters) {
         context.settings.edit { it[itemFiltersKey] = WireJson.encodeToString(ItemFilters.serializer(), value) }
+    }
+
+    /** Фильтры списков питомцев (4.x) одним документом, как предметов; нечитаемый - обычные фильтры. */
+    private val petFiltersKey = stringPreferencesKey("pet_filters")
+    val petFilters = context.settings.data.map { prefs ->
+        prefs[petFiltersKey]?.let { runCatching { WireJson.decodeFromString(PetFilters.serializer(), it) }.getOrNull() } ?: PetFilters()
+    }
+    suspend fun savePetFilters(value: PetFilters) {
+        context.settings.edit { it[petFiltersKey] = WireJson.encodeToString(PetFilters.serializer(), value) }
     }
 
     /** The player's settings (3.77.0) as one document; an unreadable one falls back to the defaults. */

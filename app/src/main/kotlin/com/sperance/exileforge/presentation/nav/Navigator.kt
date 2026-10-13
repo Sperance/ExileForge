@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.presentation.state.BAR_TABS
 import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.level
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,6 +30,13 @@ class Navigator(
 
     /** Экран сверху стека. */
     val current: StateFlow<Route> = mutable
+
+    /**
+     * Шаг по нижней панели последней смены стека: +1 - вкладка правее прежней, -1 - левее, 0 - смена не вкладки (экран поверх,
+     * «назад», фаза). По нему переход экранов выбирает сторону сдвига.
+     */
+    var tabStep: Int = 0
+        private set
 
     /** Смена фазы: стек из одного экрана. */
     fun reset(route: Route) = replace(listOf(route))
@@ -55,6 +63,7 @@ class Navigator(
     /** Экран поверх открытого, если он уже не сверху. */
     fun open(route: Route) {
         if (stack.lastOrNull() == route) return
+        tabStep = 0
         stack += route
         mutable.value = route
     }
@@ -62,14 +71,26 @@ class Navigator(
     /** Назад: верх снимается, последний экран остаётся. */
     fun back() {
         if (stack.size <= 1) return
+        tabStep = 0
         stack.removeAt(stack.lastIndex)
         mutable.value = stack.last()
     }
 
     private fun replace(routes: List<Route>) {
         if (stack.toList() == routes) return
+        tabStep = barStep(stack.lastOrNull(), routes.last())
         stack.clear()
         stack += routes
         mutable.value = routes.last()
     }
+
+    /** Сторона перехода между вкладками [from] и [to] по порядку нижней панели; экран без панели, не вкладка или та же вкладка - 0. */
+    private fun barStep(from: Route?, to: Route): Int {
+        val old = from?.barSlot ?: return 0
+        val new = to.barSlot ?: return 0
+        return new.compareTo(old)
+    }
 }
+
+/** Место экрана в нижней панели слева направо ([BAR_TABS]): по его корню; экран без панели или не вкладка панели - null. */
+val Route.barSlot: Int? get() = takeIf { it.bars }?.root?.let { BAR_TABS.indexOf(it.tab) }?.takeIf { it >= 0 }

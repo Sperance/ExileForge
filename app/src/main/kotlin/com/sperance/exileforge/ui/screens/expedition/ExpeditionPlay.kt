@@ -36,6 +36,7 @@ import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.mapTitle
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
@@ -106,9 +107,12 @@ import kotlin.math.roundToInt
         }
     }
 
-    // Задания захода (3.95.0): доска героя и счёт этого захода
+    // Задания захода (3.95.0): доска героя, снятая на входе (4.10.0), и счёт этого захода
     val quests by koinViewModel<QuestViewModel>().quests.collectAsStateWithLifecycle()
+    val board = rememberRunBoard(run, model.state.collectAsStateWithLifecycle().value.quests, quests)
     var questsOpen by remember { mutableStateOf(false) }
+    // Добыча сундука, открытая с плашки сумки (4.10.0); null - закрыта
+    var opened by remember(run) { mutableStateOf<MapDrop?>(null) }
     // Часы захода идут и без сцены (3.95.1): лента автопробега карты не рисует
     val clock = rememberRunClock(run)
     // «Журнал боя» меню забега (4.8.0) - последний бой захода, и на карте, и посреди следующего боя
@@ -117,7 +121,6 @@ import kotlin.math.roundToInt
             // Автопроход - лента боёв (3.94.0): карты на экране нет, между боями - только счёт пути.
             val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
             if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
-            RunQuestWatch(quests, hud.questTally, shell::announce)
             BlightWatch(hud.blight, shell::announce)
             if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazards)
             // Вход в комнату (4.9.0): трещина поддаётся или дверь заперта - строкой над героем, кольцо рисует сцена
@@ -141,7 +144,7 @@ import kotlin.math.roundToInt
                     )
                     if (questsOpen) {
                         HoldsRun(run)
-                        RunQuestsSheet(quests, hud.questTally) { questsOpen = false }
+                        RunQuestsSheet(board, hud.questTally) { questsOpen = false }
                     }
                     if (gear) {
                         HoldsRun(run)
@@ -152,7 +155,9 @@ import kotlin.math.roundToInt
                         StatsSheet(game, run.mapEffects) { sheet = false }
                     }
                     hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
-                    hud.chest?.let { ChestLoot(game, model, run, it, hud.chestAwaiting) { model.runCommand(RunCommand.DismissChest) } }
+                    // Сундук не останавливает героя (4.10.0): добыча летит в сумку, её лист - по нажатию на плашку
+                    if (hud.auto == null) MapBag(game, hud.drops, hud.tally.loot.pieces()) { opened = it }
+                    opened?.reward?.let { ChestLoot(game, model, run, it, awaiting = false) { opened = null } }
                     // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
                     hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
                     if (leaving) {
@@ -174,6 +179,7 @@ import kotlin.math.roundToInt
                         onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
                         biome = run.zone.biome,
                         shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
+                        mapEffects = run.mapEffects,
                     )
                 }
 
@@ -225,8 +231,8 @@ private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
 // ==================== Walking ====================
 
 /**
- * Life and shield, the map's name and whether its warden still lives, and the way out. Nothing
- * comes back on its own between fights (2.29.0) but a fountain. What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
+ * Life and shield, the map's name and whether its warden still lives, and the way out. Между боями здоровье восстанавливается само
+ * (4.10.0, `offCombatRegen`). What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
  * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian is not bought back (3.2.0) — it returns in its time.
  */
 @Composable internal fun MapBar(
@@ -266,6 +272,8 @@ private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
                 )
                 val guardian = GuardianLine.of(hud, zone)
                 Text(guardian.text, color = guardian.color, style = MaterialTheme.typography.labelMedium)
+                // Босс карты пал (4.10.0): шаг быстрее - значок под стражем, след за героем рисует сцена
+                if (hud.swift) SwiftBadge(run.index.campaign.expedition.bossSlainSpeed)
                 // Печать стража (3.93.0): сколько редких пало из нужных
                 run.seal?.takeIf { !it.open }?.let { seal ->
                     Text(ui("expedition.seal_progress", seal.killed, seal.need), color = Color(0xFFC9A0FF), style = MaterialTheme.typography.labelSmall)
@@ -403,7 +411,7 @@ internal const val FOUNTAIN_TAP = .9
 
 /**
  * Лента боёв автопрохода (3.94.0) - между боями вместо карты: зона, волна из скольких полосой, открытые сундуки и павшие,
- * жизнь героя (между боями она не восполняется) и «Завершить» (3.95.2) - уход с собранным, после вопроса.
+ * жизнь героя (между боями она восстанавливается, 4.10.0) и «Завершить» (3.95.2) - уход с собранным, после вопроса.
  */
 @Composable internal fun AutoRibbon(run: ExpeditionRun, hud: RunHud, auto: AutoHud, onFinish: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Panel, Ink))).systemBarsPadding().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -480,3 +488,15 @@ internal const val FOUNTAIN_TAP = .9
 
 /** Доля высоты экрана, выше которой панель забега не растёт. */
 private const val PANEL_SHARE = .6f
+
+/** Значок «быстрее» под стражем (4.10.0): босс карты пал - шаг героя × [factor] до конца захода. */
+@Composable private fun SwiftBadge(factor: Double) {
+    Text(
+        ui("run.swift", number(factor)),
+        color = Rune,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.SemiBold,
+        modifier = Modifier.background(Rune.copy(alpha = .12f), RoundedCornerShape(50)).border(1.dp, Rune.copy(alpha = .4f), RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 2.dp),
+    )
+}

@@ -259,7 +259,20 @@ internal fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExpla
 // ==================== A note ====================
 
 internal fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer, game: GameUi) {
-    if (trace.value != 0.0) item { Section(ui("trace.section.note")) { Line(ui("trace.note.value.${trace.kind.name}"), fineNumber(trace.value)) } }
+    val flow = trace.flow
+    if (flow != null) {
+        // Итог здоровья (4.9.3): из чего сложилась секунда
+        item {
+            Section(ui("trace.section.note")) {
+                Line(ui("trace.note.value.${trace.kind.name}"), fineNumber(flow.net))
+                if (flow.regen > 0) Line(ui("trace.flow.regen"), fineNumber(flow.regen))
+                if (flow.degen > 0) Line(ui("trace.flow.degen", fineNumber(flow.degenShare)), fineNumber(flow.degen))
+                if (flow.delayed > 0) Line(ui("trace.flow.delayed"), fineNumber(flow.delayed))
+            }
+        }
+    } else if (trace.value != 0.0) {
+        item { Section(ui("trace.section.note")) { Line(ui("trace.note.value.${trace.kind.name}"), fineNumber(trace.value)) } }
+    }
     item { States(listOf(trace.actor), explainer) }
 }
 

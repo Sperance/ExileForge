@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathBuilder
+import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
@@ -26,6 +27,16 @@ private fun glyph(name: String, vararg strokes: PathBuilder.() -> Unit): ImageVe
             strokeLineJoin = StrokeJoin.Round,
             pathBuilder = stroke,
         )
+    }
+}.build()
+
+/**
+ * Заливка глифа (4.x): те же фигуры без обводки, закрашенные на [alpha] - под обводкой глифа даёт «залитую» иконку
+ * (капсула выбранной вкладки нижней панели).
+ */
+fun ImageVector.solid(alpha: Float = .2f): ImageVector = ImageVector.Builder("$name.solid", defaultWidth, defaultHeight, viewportWidth, viewportHeight).apply {
+    root.filterIsInstance<VectorPath>().forEach { path ->
+        addPath(path.pathData, path.pathFillType, fill = SolidColor(Color.White), fillAlpha = alpha)
     }
 }.build()
 

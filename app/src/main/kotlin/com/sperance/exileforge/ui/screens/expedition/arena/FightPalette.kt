@@ -29,6 +29,15 @@ internal fun damageTint(type: DamageType?, onHero: Boolean = false): Color = whe
     else -> if (onHero) LifeRed else Parchment
 }
 
+/** Значок стихии у числа удара по герою (4.9.3): текстом, не эмодзи; у физики - без значка. */
+internal fun damageGlyph(type: DamageType): String? = when (type) {
+    DamageType.FIRE -> "✹"
+    DamageType.COLD -> "❄\uFE0E"
+    DamageType.LIGHTNING -> "ϟ"
+    DamageType.CHAOS -> "☣\uFE0E"
+    else -> null
+}
+
 /** Each ailment's colour: the damage that brings it, or the state it leaves. */
 internal fun ailmentTint(ailment: Ailment): Color = when (ailment) {
     Ailment.BURNING -> Ember

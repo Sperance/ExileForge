@@ -11,7 +11,9 @@ import com.sperance.exileforge.core.campaign.combat.chargeViews
 import com.sperance.exileforge.core.campaign.combat.effects
 import com.sperance.exileforge.core.campaign.combat.fateGlows
 import com.sperance.exileforge.core.campaign.combat.flaskViews
+import com.sperance.exileforge.core.campaign.combat.passiveViews
 import com.sperance.exileforge.core.campaign.combat.skillViews
+import com.sperance.exileforge.core.campaign.combat.strikes
 import com.sperance.exileforge.core.campaign.run.AilmentView
 import com.sperance.exileforge.core.campaign.run.AllyView
 import com.sperance.exileforge.core.campaign.run.BossHud
@@ -139,7 +141,23 @@ internal fun Battle.hud(
         boss = bossHud(),
         rage = RageView(enrage, rageRule.damage * enrage, rageRule.next(rageClock)).takeIf { outcome == null },
         heroCast = heroCast(),
+        strikes = strikes(STRIKE_LUNGES * rules.lunge),
+        heroFlow = lifeFlow,
+        heroPassives = passiveViews(),
+        foesAimHero = foesAimHero(),
     )
+}
+
+/** Сцена удара на экране (4.9.3) длится столько выпадов ([CombatRules.lunge]): выпад, вспышка или полёт снаряда, тряска цели. */
+private const val STRIKE_LUNGES = 3
+
+/**
+ * Замах врага скорее всего по герою (4.9.3): цель врага тянется костью в миг удара ([Battle.foeTarget]), экран её не знает -
+ * без стоящего питомца, или с питомцем, что не танк и берёт меньше половины ударов, бьют героя.
+ */
+private fun Battle.foesAimHero(): Boolean {
+    val pet = ally?.takeIf { allyFighter?.alive == true } ?: return true
+    return !pet.tank && pet.drawFire < .5
 }
 
 /**

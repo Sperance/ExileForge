@@ -208,6 +208,21 @@ object MapEffects {
 
     private const val MOVED = 0.05
 
+    /**
+     * Строки карты, что меняют героя (4.9.3), для полки «на весь бой»: каждая строка карты (не дар Атласа) со сдвигами листа
+     * героя, что она дала по [heroShifts]; [index] метит вред. Порядок - карты.
+     */
+    fun heroMods(index: ContentIndex, stats: Map<String, Double>, effects: Map<String, Double>): List<HeroMapMod> {
+        val moved = LinkedHashMap<String, MutableList<Pair<String, Double>>>()
+        heroShifts(stats, effects).forEach { (stat, shifts) ->
+            shifts.filter { it.source.kind == SourceKind.MAP }.forEach { moved.getOrPut(it.source.ref) { mutableListOf() } += stat to it.delta }
+        }
+        return moved.map { (code, shifts) -> HeroMapMod(code, effects[code] ?: 0.0, shifts, MapStats.kindOf(index, code) == MapLineKind.HARM) }
+    }
+
     /** Two maps of effects summed per stat: a Vaal zone's lines over the map's. */
     fun sum(a: Map<String, Double>, b: Map<String, Double>): Map<String, Double> = (a.keys + b.keys).associateWith { (a[it] ?: 0.0) + (b[it] ?: 0.0) }
 }
+
+/** Строка карты на герое (4.9.3): эффект [code] силой [value], что он сдвинул в листе героя ([shifts]: стат - сдвиг) и вред ли он ([harm]). */
+data class HeroMapMod(val code: String, val value: Double, val shifts: List<Pair<String, Double>>, val harm: Boolean)

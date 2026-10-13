@@ -40,6 +40,8 @@ data class CombatEvent(
     val pet: String? = null,
     /** Строка эха применения (4.4.0): умение повторилось само - руной эха или силой `RECAST`; бой рисует его бледнее. */
     val echo: Boolean = false,
+    /** Удар - чары (4.9.3, [Blow.spell]): бой рисует его снарядом цвета стихии, а не выпадом карты. */
+    val spell: Boolean = false,
 ) {
     /** How this line came about (3.37.0), for its card; outside the event's identity, so two fights of one seed still compare equal. */
     var trace: Trace? = null

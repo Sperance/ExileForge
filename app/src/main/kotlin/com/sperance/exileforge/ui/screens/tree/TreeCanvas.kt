@@ -180,8 +180,7 @@ private fun onScreen(node: TreeNode, at: Offset, scale: Float, width: Float, hei
 }
 
 /** Нить от [from] до [to] хоть краем на холсте: её рамка пересекает его. */
-private fun crosses(from: Offset, to: Offset, width: Float, height: Float): Boolean =
-    max(from.x, to.x) >= 0f && min(from.x, to.x) <= width && max(from.y, to.y) >= 0f && min(from.y, to.y) <= height
+private fun crosses(from: Offset, to: Offset, width: Float, height: Float): Boolean = max(from.x, to.x) >= 0f && min(from.x, to.x) <= width && max(from.y, to.y) >= 0f && min(from.y, to.y) <= height
 
 /** Ореол узла - столько его радиусов. */
 private const val GLOW_REACH = 2.6f

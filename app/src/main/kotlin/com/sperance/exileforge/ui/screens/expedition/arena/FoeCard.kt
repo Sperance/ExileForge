@@ -107,8 +107,7 @@ internal fun struck(lunge: LungeView?, progress: Float?, target: Side, foe: Int?
 }
 
 /** How white a portrait flashes as a landed blow reaches it. */
-internal fun flash(lunge: LungeView?, progress: Float?, target: Side, foe: Int?): Float =
-    if (lunge != null && progress != null && lunge.landed && struck(lunge, progress, target, foe)) (1 - progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f) else 0f
+internal fun flash(lunge: LungeView?, progress: Float?, target: Side, foe: Int?): Float = if (lunge != null && progress != null && lunge.landed && struck(lunge, progress, target, foe)) (1 - progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f) else 0f
 
 /** Вспышка портрета [foe] от выпада снимка [fight] в кадре [frame]: читать в рисовании. */
 internal fun lungeFlash(fight: FightHud, frame: FightFrame, target: Side, foe: Int?): Float = flash(fight.lunge, lungeAt(fight, frame.now(fight)), target, foe)
@@ -141,6 +140,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
 ) {
     val ring = rarityTint(foe.monster.rarity)
     val live = foe.alive && fight.outcome == null
+
     // Замах и удары (4.9.3): последние 30% замаха - рамка наливается кровью, выпад - каждым своим ударом, тряска - каждым по нему.
     // Всё это - в рисовании кадра ([FightFrame]): карточка не перекомпонуется на каждом шаге боя
     fun swing() = if (live) frame.foeSwing(foe) else 0f

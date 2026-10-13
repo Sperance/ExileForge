@@ -244,7 +244,13 @@ internal class LiveStar(val node: AtlasNode, val twinkles: Boolean, val rim: Col
         fun of(nodes: List<AtlasNode>, taken: Set<String>, reachable: Set<String>): List<LiveStar> = nodes.mapNotNull { node ->
             val took = node.code in taken
             val twinkles = node.code in reachable && !took
-            val rim = if (node.kind != AtlasNodeKind.KEYSTONE) null else if (took) node.branch.hue() else Sky.faint.copy(alpha = .5f)
+            val rim = if (node.kind != AtlasNodeKind.KEYSTONE) {
+                null
+            } else if (took) {
+                node.branch.hue()
+            } else {
+                Sky.faint.copy(alpha = .5f)
+            }
             if (twinkles || rim != null) LiveStar(node, twinkles, rim, node.code.hashCode() % 7) else null
         }
     }

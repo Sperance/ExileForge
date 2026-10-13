@@ -74,6 +74,7 @@ import kotlin.math.sin
     var petOpen by remember { mutableStateOf(false) }
     var effectsOpen by remember { mutableStateOf(false) }
     val live = fight.outcome == null
+
     // Замах и удары (4.9.3): последние 30% замаха - рамка наливается золотом, выпад - каждым своим ударом, тряска - каждым по нему.
     // Всё это - в рисовании кадра ([FightFrame]): карточка не перекомпонуется на каждом шаге боя
     fun swing() = if (live) frame.heroSwing(fight) else 0f

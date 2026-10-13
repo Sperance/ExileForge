@@ -49,6 +49,7 @@ internal class RuneDark : MapStyle() {
         if (noise(spot.x, spot.y, 5) >= .1f) return
         val a = (.35f + .35f * sin(time * 2f + noise(spot.x, spot.y, 6) * 6f)) * max(.3f, light)
         val shape = (noise(spot.x, spot.y, 7) * 3).toInt()
+
         // Руна дважды: широкое свечение, затем тонкий знак
         fun rune(glow: Float, stroke: Float) {
             pen.color = palette.accent.copy(alpha = a * glow)

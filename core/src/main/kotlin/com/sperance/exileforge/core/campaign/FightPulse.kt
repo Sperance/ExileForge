@@ -57,19 +57,16 @@ fun LungeView.progressAt(hud: FightHud, now: Double): Float = if (hud.beat > 0) 
 fun StrikeView.progressAt(hud: FightHud, now: Double): Float = if (hud.beat > 0) progress + (hud.ahead(now) / (STRIKE_LUNGES * hud.beat)).toFloat() else progress
 
 /** Доля сцены применения умения к кадру [now], не больше единицы. */
-fun HeroCastView.progressAt(hud: FightHud, now: Double): Float =
-    (if (hud.beat > 0) progress + (hud.ahead(now) / (CAST_LUNGES * hud.beat)).toFloat() else progress).coerceAtMost(1f)
+fun HeroCastView.progressAt(hud: FightHud, now: Double): Float = (if (hud.beat > 0) progress + (hud.ahead(now) / (CAST_LUNGES * hud.beat)).toFloat() else progress).coerceAtMost(1f)
 
 /** Возраст числа урона к кадру [now], секунды. */
 fun FloatingHit.ageAt(hud: FightHud, now: Double): Double = age + hud.ahead(now)
 
 /** Доля времени недуга, что осталась к кадру [now]. */
-fun AilmentView.leftAt(hud: FightHud, now: Double): Float =
-    if (seconds > 0) (left * (1 - hud.ahead(now) / seconds)).toFloat().coerceIn(0f, 1f) else left
+fun AilmentView.leftAt(hud: FightHud, now: Double): Float = if (seconds > 0) (left * (1 - hud.ahead(now) / seconds)).toFloat().coerceIn(0f, 1f) else left
 
 /** Готовность умения к кадру [now]: перезарядка идёт и между снимками. */
-fun SkillView.readyAt(hud: FightHud, now: Double): Float =
-    if (ready < 1f && seconds > 0) (ready + hud.ahead(now) * (1 - ready) / seconds).toFloat().coerceIn(0f, 1f) else ready
+fun SkillView.readyAt(hud: FightHud, now: Double): Float = if (ready < 1f && seconds > 0) (ready + hud.ahead(now) * (1 - ready) / seconds).toFloat().coerceIn(0f, 1f) else ready
 
 /** Предел сдвига кадра от снимка, секунды боя. */
 private const val AHEAD_CAP = .5

@@ -1,13 +1,21 @@
 package com.sperance.exileforge.ui.screens.craft
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ItemView
@@ -18,6 +26,7 @@ import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.presentation.forge.EngraveLine
 import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
@@ -60,6 +69,7 @@ import com.sperance.exileforge.ui.theme.*
     enabled: Boolean,
     lost: Int,
     chanceUniques: List<String>,
+    onPickLine: () -> Unit,
     onApply: (String) -> Unit,
 ) {
     // Качество другого вида (4.3.0): сфера качества сбросит его - сначала подтверждение с тем, сколько пропадёт.
@@ -85,6 +95,11 @@ import com.sperance.exileforge.ui.theme.*
         // Сфера удачи (4.3.0): какие уникалки может дать эта вещь - список правил ([OrbApplier.chanceUniques]).
         if (code == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
             Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
+        }
+        // Сфера гравёра (4.11.x) ложится на одну строку: её выбирают в листе ([EngraveSheet]), там и тратится сфера
+        if (code == Orb.ENGRAVERS_ORB.name) {
+            ForgeButton(onPickLine, Modifier.fillMaxWidth(), enabled = enabled && !target.corrupted) { Text(ui("forge.engrave_pick")) }
+            return@ForgeBar
         }
         HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !target.corrupted && !waiting, rearm = true) {
             if (resets) confirming = true else onApply(code)
@@ -190,5 +205,45 @@ internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> 
             Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(stock.first, color = if (stock.second) LifeRed else Muted, style = MaterialTheme.typography.labelMedium)
         }
+    }
+}
+
+/**
+ * Лист Сферы гравёра (4.11.x, макет «Сфера гравёра», вариант B «Лист выбора строки»): «Какую строку гравировать?» - каждая строка
+ * вещи [target] с вилкой своего тира; строка, что правила не примут, тусклая, с причиной ([ForgeTarget.engraving]). Выбранная - в
+ * золотой рамке; удержание «Гравировать · 1 сфера» тратит сферу на неё ([onEngrave] - номер строки в `item.rolls`).
+ */
+@Composable internal fun EngraveSheet(game: GameUi, target: ForgeTarget, enabled: Boolean, onDismiss: () -> Unit, onEngrave: (Int) -> Unit) {
+    val index = game.index ?: return
+    val lines = remember(target, index) { target.engraving(index) }
+    var chosen by remember(target.id) { mutableStateOf<Int?>(null) }
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text(ui("forge.engrave_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            lines.forEach { line -> EngraveRow(line, line.line == chosen) { chosen = line.line } }
+            HoldButton(ui("forge.engrave_do"), Gold, Modifier.padding(top = 6.dp), enabled = enabled && chosen != null, rearm = true) {
+                chosen?.let(onEngrave)
+            }
+        }
+    }
+}
+
+/** Строка листа гравёра: текст и справа вилка тира; недоступная - тусклая, справа причина отказа. */
+@Composable private fun EngraveRow(line: EngraveLine, selected: Boolean, onPick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    val open = line.refusal == null
+    Row(
+        Modifier.fillMaxWidth().alpha(if (open) 1f else .5f).clip(shape).background(if (selected) Gold.copy(alpha = .10f) else Panel, shape)
+            .border(1.dp, if (selected) Gold else PanelRaised, shape)
+            .then(if (open) Modifier.clickable(role = Role.RadioButton, onClick = onPick) else Modifier)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(line.text, color = if (open) ModBlue else Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        (line.refusal ?: line.range)?.let { Text(it, color = if (open) Parchment else LifeRed, style = MaterialTheme.typography.labelSmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.widthIn(max = 140.dp)) }
     }
 }

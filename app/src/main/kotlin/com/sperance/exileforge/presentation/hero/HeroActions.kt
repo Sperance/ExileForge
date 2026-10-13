@@ -95,9 +95,12 @@ class HeroActions(
         api.hero.grantItem(id, code, amount)
     }
 
-    /** Одна сфера на один предмет: применима ли и что перебрасывает - дело правил; фраза возвращается. [omen] тратится с ней. */
-    fun applyOrb(itemId: String, orb: String, omen: String, onApplied: () -> Unit = {}) = forgeCommand { id ->
-        val outcome = api.hero.applyOrb(id, itemId, orb, omen)
+    /**
+     * Одна сфера на один предмет: применима ли и что перебрасывает - дело правил; фраза возвращается. [omen] тратится с ней;
+     * [line] (4.11.x) - строка, что гравирует Сфера гравёра.
+     */
+    fun applyOrb(itemId: String, orb: String, omen: String, onApplied: () -> Unit = {}, line: Int? = null) = forgeCommand { id ->
+        val outcome = api.hero.applyOrb(id, itemId, orb, omen, line)
         heroes.forgeLine(outcome.message)
         // Бережливый кузнец (4.6.0, Предначертание): сфера осталась в сумке
         if (outcome.kept) notices.toast(ui("fate.orb_kept", itemTitle(orb)), NoticeKind.CRAFT)

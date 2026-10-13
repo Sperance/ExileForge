@@ -24,6 +24,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Omen
+import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
@@ -58,6 +59,8 @@ internal const val UNCRAFT = "-"
     // Один фильтр выбора вещи на полку у наковальни и шторку (4.2.0).
     val pickFilter = rememberItemFilter(ItemShelf.FORGE)
     var benchLine by remember(target?.id) { mutableStateOf("") }
+    // Лист Сферы гравёра (4.11.x): открыт выбором сферы в лотке и кнопкой её полосы
+    var engraving by remember(target?.id) { mutableStateOf(false) }
     // The omens in the bag: an orb that goes on the target only with one of them (a catalyst's Orb of Quality on a ring) is offered too.
     val omens: List<Omen> = remember(index, hero?.bag) { if (hero == null || index == null) emptyList() else heldOmens(index, hero) }
     // Лоток - только сферы, что лягут на цель (4.4.x): не лягут ни сами, ни со знамением сумки - их нет.
@@ -112,7 +115,10 @@ internal const val UNCRAFT = "-"
                 ForgeSection.ORBS -> target?.let {
                     LineChoices(game, it, enabled, vm)
                     OmenLedger(game, smithy.orb, smithy.omen, it.orbTarget, omens, vm::selectOmen)
-                    OrbTray(game, smithy, choices, ui(it.noOrbsKey), quality, vm::selectOrb)
+                    OrbTray(game, smithy, choices, ui(it.noOrbsKey), quality) { code ->
+                        vm.selectOrb(code)
+                        engraving = code == Orb.ENGRAVERS_ORB.name
+                    }
                 }
 
                 ForgeSection.SEALS -> gear?.let {
@@ -128,15 +134,21 @@ internal const val UNCRAFT = "-"
         }
         if (hero != null && target != null) {
             when (section) {
-                ForgeSection.ORBS -> OrbBar(game, smithy, target, chosen, enabled, quality?.lost ?: 0, chanceUniques) { vm.applyOrb(target, it) }
+                ForgeSection.ORBS -> OrbBar(game, smithy, target, chosen, enabled, quality?.lost ?: 0, chanceUniques, { engraving = true }) { vm.applyOrb(target, it) }
                 ForgeSection.SEALS -> gear?.let { SealBar(game, smithy, it, sealChosen, enabled) { code -> vm.applySeal(it.id, code) } }
                 ForgeSection.BENCH -> gear?.let { BenchBar(game, vm, it.view, benchLine, enabled) }
                 ForgeSection.ESSENCES -> gear?.let { EssenceBar(game, smithy.essence, it.view.item, enabled, { code -> code !in essenceRefusals }, vm::applyEssence) }
             }
         }
     }
-    picking?.let { opened ->
-        TargetPicker(game, pickFilter, opened, target?.id, onDismiss = { picking = null }) {
+    if (engraving && target != null && smithy.orb == Orb.ENGRAVERS_ORB.name) {
+        EngraveSheet(game, target, enabled, onDismiss = { engraving = false }) { line ->
+            vm.applyOrb(target, Orb.ENGRAVERS_ORB.name, line)
+            engraving = false
+        }
+    }
+    if (picking) {
+        TargetPicker(game, pickFilter, target?.id, onDismiss = { picking = false }) {
             vm.select(it)
             picking = false
         }

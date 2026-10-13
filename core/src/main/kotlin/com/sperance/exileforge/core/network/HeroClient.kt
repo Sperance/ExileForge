@@ -181,28 +181,6 @@ class HeroClient internal constructor(private val http: Transport) {
     /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))
 
-    // ---- the menagerie (server 1.5.0); none retried: a repeat would spend a second egg or orb ----
-
-    /** Lays [egg] into the incubator (server 1.67.0): place [slot], or the first free one; its rarity and level are rolled now. */
-    suspend fun incubatePet(heroId: String, egg: String, slot: Int? = null): PetState = http.post("$HERO/pets/incubate", heroQuery(heroId, "egg" to egg, "slot" to slot?.toString()))
-
-    /** Takes the ripe egg of place [slot] out of the incubator: the pet hatches, its species and lines rolled now. */
-    suspend fun collectPet(heroId: String, slot: Int): PetState = http.post("$HERO/pets/collect", heroQuery(heroId, "slot" to slot.toString()))
-
-    /**
-     * Any crafting orb on a pet (server 1.65.0), with an [omen] spent along with it when given; the pets' own growth orb too.
-     * Ответ (4.4.1) - строка итога, как у сферы на вещи, и зверинец.
-     */
-    suspend fun petOrb(heroId: String, petId: String, orb: String, omen: String? = null): PetOrbResponse = http.post("$HERO/pets/orb", heroQuery(heroId, "petId" to petId.also(::requireItemId), "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
-
-    /** The Omen of Choice's line kept on a pet (server 1.65.0): [choice] of the ones it offers. */
-    suspend fun choosePetLine(heroId: String, petId: String, choice: Int): PetState = http.post("$HERO/pets/choose", heroQuery(heroId, "petId" to petId.also(::requireItemId), "choice" to choice.toString()))
-    suspend fun activatePet(heroId: String, petId: String): PetState = http.post("$HERO/pets/activate", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
-
-    /** Breeds two combat pets with the Orb of Breeding (server 1.74.0): a hybrid joins, or an egg of a parent goes to the bag. Never retried. */
-    suspend fun breedPets(heroId: String, first: String, second: String): PetState = http.post("$HERO/pets/breed", heroQuery(heroId, "first" to first.also(::requireItemId), "second" to second.also(::requireItemId)))
-    suspend fun sellPet(heroId: String, petId: String): PetState = http.post("$HERO/pets/sell", heroQuery(heroId, "petId" to petId.also(::requireItemId)))
-
     // ---- the stash's places and its overflow (server 1.1.0) ----
 
     /** One more pack of stash places, for the rules' gold; never retried — a repeat would buy twice. */
@@ -225,10 +203,14 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/temper", heroQuery(heroId, "itemId" to itemId))
     }
 
-    suspend fun applyOrb(heroId: String, itemId: String, orb: String, omen: String? = null): CurrencyApplyResponse {
+    /**
+     * Spends one orb of the bag on one item; [orb] is the orb's item code, with an [omen] (3.36.0) spent along with it when given.
+     * [line] (4.11.x) - номер строки в `item.rolls`, что гравирует Сфера гравёра; прочим сферам - null.
+     */
+    suspend fun applyOrb(heroId: String, itemId: String, orb: String, omen: String? = null, line: Int? = null): CurrencyApplyResponse {
         requireItemId(itemId)
         require(orb.isNotBlank()) { ui("api.choose_orb") }
-        return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }))
+        return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }, "line" to line?.toString()))
     }
 
     /** Печать Атласа [seal] на карту [itemId] (сервер 4.6.4) со знамением [omen], если печать его берёт; ответ - как у сферы. */

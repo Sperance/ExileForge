@@ -2,6 +2,7 @@ package com.sperance.exileforge.presentation.forge
 
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.QualityForecast
+import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.presentation.state.ForgeSection
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
@@ -59,6 +60,12 @@ sealed interface ForgeTarget {
     /** Уникалки, что может дать сфера удачи, - тот же список правил, что тянет сервер. */
     fun chanceUniques(index: ContentIndex): List<String> = emptyList()
 
+    /** Пойдёт ли сфера [orb] на цель (со знамением [omen]): сфера одной строки - если хоть одну строку правила примут. */
+    fun accepts(applier: OrbApplier, orb: Orb, omen: Omen? = null): Boolean = applier.accepts(orb, orbTarget, omen)
+
+    /** Строки цели для Сферы гравёра (4.11.x), каждая со своим отказом правил; у цели без строк - пусто. */
+    fun engraving(index: ContentIndex): List<EngraveLine> = emptyList()
+
     /** Вещь под кузницей: сферы, печати Атласа (только карта), верстак (не у карты, с волшебной редкости) и эссенции (только снаряжение). */
     data class Gear(val view: ItemView) : ForgeTarget {
         override val id: String get() = view.id
@@ -97,22 +104,28 @@ sealed interface ForgeTarget {
         override fun quality(index: ContentIndex, omen: Omen?): QualityForecast? = QualityForecast.of(index, view.item, view.template, omen)
 
         override fun chanceUniques(index: ContentIndex): List<String> = OrbApplier(index).chanceUniques(view.item, view.template).map { it.value.code }
-    }
 
-    /** Питомец под кузницей (3.81.0): только сферы ремесла, как у вещи; своих сфер у питомца с 4.6.4 нет - уровень не растёт. */
-    data class Beast(val pet: Pet) : ForgeTarget {
-        override val id: String get() = pet.id
-        override val orbTarget: OrbTarget get() = OrbTarget.Beast(pet)
-        override val corrupted: Boolean get() = pet.corrupted
-        override val sections: List<ForgeSection> get() = listOf(ForgeSection.ORBS)
-        override val noOrbsKey: String get() = "pets.no_orbs"
-        override val changeKey: String get() = "forge.change_pet"
-        override val socketKey: String get() = "forge.target_pet"
+        override fun accepts(applier: OrbApplier, orb: Orb, omen: Omen?): Boolean = if (orb == Orb.ENGRAVERS_ORB) {
+            view.item.rolls.indices.any { applier.accepts(orb, OrbTarget.Gear(view.item, view.template, it), omen) }
+        } else {
+            super.accepts(applier, orb, omen)
+        }
+
+        override fun engraving(index: ContentIndex): List<EngraveLine> {
+            val applier = OrbApplier(index)
+            return view.lines.mapIndexed { i, line -> EngraveLine(i, line.text, line.range, applier.engraveRefusal(view.item, view.template, i)?.let { refusalText(it) }) }
+        }
+    }
 }
 
-/** Цель кузницы героя: выбранный питомец [pet], пока он есть, иначе вещь под кузницей; null - выбирать не из чего. */
-fun GameUi.forgeTarget(pet: String): ForgeTarget? = hero?.pets?.pets?.firstOrNull { it.id == pet }?.let(ForgeTarget::Beast)
-    ?: hero?.item(holding.selectedEquipment)?.let { view(it) }?.let(ForgeTarget::Gear)
+/** Цель кузницы героя: вещь под кузницей; null - выбирать не из чего. */
+fun GameUi.forgeTarget(): ForgeTarget? = hero?.item(holding.selectedEquipment)?.let { view(it) }?.let(ForgeTarget::Gear)
+
+/**
+ * Строка вещи под Сферой гравёра (4.11.x, макет «Сфера гравёра» B): номер [line] в `item.rolls`, её текст [text], вилка тира
+ * [range] (печатается только здесь - карточка вещи вилок не пишет) и отказ правил словами игрока [refusal]; null - гравировать можно.
+ */
+data class EngraveLine(val line: Int, val text: String, val range: String?, val refusal: String?)
 
 /** Сфера или печать лотка кузницы: код стопки и ждёт ли она знамения - сама цель её не примет, со знамением из сумки примет. */
 data class OrbChoice(val code: String, val needsOmen: Boolean)
@@ -125,8 +138,8 @@ fun ForgeTarget.orbChoices(index: ContentIndex, shelf: List<String>, omens: List
     val applier = OrbApplier(index)
     return shelf.mapNotNull { code -> Orb.of(code)?.takeIf { it != Orb.ORB_OF_REGRET && held(code) > 0 } }.mapNotNull { orb ->
         when {
-            applier.accepts(orb, target) -> OrbChoice(orb.name, needsOmen = false)
-            omens.any { it.fits(orb) && applier.accepts(orb, target, it) } -> OrbChoice(orb.name, needsOmen = true)
+            accepts(applier, orb) -> OrbChoice(orb.name, needsOmen = false)
+            omens.any { it.fits(orb) && accepts(applier, orb, it) } -> OrbChoice(orb.name, needsOmen = true)
             else -> null
         }
     }

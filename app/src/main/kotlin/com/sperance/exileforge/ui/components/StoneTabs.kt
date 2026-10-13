@@ -67,7 +67,16 @@ import com.sperance.exileforge.ui.theme.Muted
         modifier.clip(shape)
             .then(if (on) Modifier.background(Brush.verticalGradient(listOf(StoneTop, StoneBottom))).border(1.dp, Gold.copy(alpha = .35f), shape) else Modifier)
             .selectable(selected = on, role = Role.Tab) { if (!on) onSelect() }
-            .then(if (tab.alert) Modifier.drawWithContent { drawContent(); alertMark() } else Modifier)
+            .then(
+                if (tab.alert) {
+                    Modifier.drawWithContent {
+                        drawContent()
+                        alertMark()
+                    }
+                } else {
+                    Modifier
+                },
+            )
             .padding(horizontal = 10.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp),

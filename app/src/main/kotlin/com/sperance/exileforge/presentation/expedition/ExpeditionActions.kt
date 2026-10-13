@@ -415,7 +415,9 @@ class ExpeditionActions(
                     shut = j.runId
                     done(j)
                 }
+
                 transient && failures > 0 -> Unit
+
                 else -> commands.report(e, writing = true)
             }
             // Отказ - последнее слово сервера под ключом пачки: следующая отправка - новый запрос, не повтор.

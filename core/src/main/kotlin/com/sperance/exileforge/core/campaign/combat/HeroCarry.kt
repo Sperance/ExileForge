@@ -89,12 +89,10 @@ class AilmentLaw(private val rules: CombatRules) {
     private val ruleOf: Map<Ailment, AilmentRule> = rules.ailments.mapNotNull { rule -> Ailment.of(rule.ailment)?.let { it to rule } }.toMap()
 
     /** Сила недуга [ailment] среди [ailments] на [body]; нет - 0. */
-    fun held(body: Combatant, ailments: List<CarriedAilment>, ailment: Ailment): Double =
-        ailments.filter { it.ailment == ailment }.maxOfOrNull { it.magnitude }?.let { heldStrength(ailment, it, body, ruleOf[ailment]) } ?: 0.0
+    fun held(body: Combatant, ailments: List<CarriedAilment>, ailment: Ailment): Double = ailments.filter { it.ailment == ailment }.maxOfOrNull { it.magnitude }?.let { heldStrength(ailment, it, body, ruleOf[ailment]) } ?: 0.0
 
     /** Урон в секунду недуга [active] на [body] под шоком из [ailments]. */
-    fun perSecond(body: Combatant, ailments: List<CarriedAilment>, active: CarriedAilment): Double =
-        dotRate(active.ailment, active.magnitude, body, 1 + held(body, ailments, Ailment.SHOCKED) / 100, rules.minDot)
+    fun perSecond(body: Combatant, ailments: List<CarriedAilment>, active: CarriedAilment): Double = dotRate(active.ailment, active.magnitude, body, 1 + held(body, ailments, Ailment.SHOCKED) / 100, rules.minDot)
 
     /** Сколько процентов запаса [pool] режут [ailments] на [body]. */
     fun curb(body: Combatant, ailments: List<CarriedAilment>, pool: RecoveryPool): Double {

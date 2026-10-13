@@ -145,9 +145,9 @@ import kotlin.math.roundToInt
         maxLines = 1,
     )
 }
+
 /** Убыль здоровья в секунду на литой красной полосе: светлый розовый, чтобы читалась. */
 private val FlowLoss = Color(0xFFFFB3AD)
-
 
 private val VitalsWell = Color(0xCC0A0D12)
 private val LifeRim = Color(0xFF3A1A18)

@@ -128,49 +128,53 @@ import kotlin.math.roundToInt
             when (hud.phase) {
                 RunPhase.MAP -> if (ribbon != null) {
                     AutoRibbon(run, hud, ribbon) { model.runCommand(RunCommand.FinishAuto) }
-                } else MapDockHost { dock ->
-                    // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
-                    if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
-                    MapBar(
-                        game,
-                        run,
-                        hud,
-                        onLeave = if (zone) null else ({ leaving = true }),
-                        onGear = { gear = true },
-                        onStats = { sheet = true },
-                        onDrink = { model.runCommand(RunCommand.Drink(it)) },
-                        onRetry = model::flushRun,
-                        onQuests = { questsOpen = true },
-                    )
-                    if (questsOpen) {
-                        HoldsRun(run)
-                        RunQuestsSheet(board, hud.questTally) { questsOpen = false }
-                    }
-                    if (gear) {
-                        HoldsRun(run)
-                        GearSheet(game) { gear = false }
-                    }
-                    if (sheet) {
-                        HoldsRun(run)
-                        StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
-                    }
-                    hud.fountain?.let { DockPanel { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } } }
-                    // Сундук не останавливает героя (4.10.0): добыча летит в сумку, её лист - по нажатию на плашку
-                    // «Сумка захода» (4.10.x, вариант A): касание плашки - вся добыча захода, новое сверху; нижняя панель её прячет
-                    if (hud.auto == null && !dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
-                    if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
-                    // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
-                    hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
-                    if (leaving) DockPanel {
-                        ConfirmSheet(
-                            title = ui("expedition.leave_q"),
-                            confirm = ui("expedition.leave"),
-                            danger = true,
-                            subtitle = mapTitle(hud.mapCode),
-                            ledger = listOf(LedgerLine(ui("expedition.leave_left"), GuardianLine.of(hud).text, Tone.SPEND)),
-                            note = ui("expedition.leave_note"),
-                            onDismiss = { leaving = false },
-                        ) { model.runCommand(RunCommand.Leave) }
+                } else {
+                    MapDockHost { dock ->
+                        // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
+                        if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
+                        MapBar(
+                            game,
+                            run,
+                            hud,
+                            onLeave = if (zone) null else ({ leaving = true }),
+                            onGear = { gear = true },
+                            onStats = { sheet = true },
+                            onDrink = { model.runCommand(RunCommand.Drink(it)) },
+                            onRetry = model::flushRun,
+                            onQuests = { questsOpen = true },
+                        )
+                        if (questsOpen) {
+                            HoldsRun(run)
+                            RunQuestsSheet(board, hud.questTally) { questsOpen = false }
+                        }
+                        if (gear) {
+                            HoldsRun(run)
+                            GearSheet(game) { gear = false }
+                        }
+                        if (sheet) {
+                            HoldsRun(run)
+                            StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
+                        }
+                        hud.fountain?.let { DockPanel { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } } }
+                        // Сундук не останавливает героя (4.10.0): добыча летит в сумку, её лист - по нажатию на плашку
+                        // «Сумка захода» (4.10.x, вариант A): касание плашки - вся добыча захода, новое сверху; нижняя панель её прячет
+                        if (hud.auto == null && !dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
+                        if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
+                        // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
+                        hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
+                        if (leaving) {
+                            DockPanel {
+                                ConfirmSheet(
+                                    title = ui("expedition.leave_q"),
+                                    confirm = ui("expedition.leave"),
+                                    danger = true,
+                                    subtitle = mapTitle(hud.mapCode),
+                                    ledger = listOf(LedgerLine(ui("expedition.leave_left"), GuardianLine.of(hud).text, Tone.SPEND)),
+                                    note = ui("expedition.leave_note"),
+                                    onDismiss = { leaving = false },
+                                ) { model.runCommand(RunCommand.Leave) }
+                            }
+                        }
                     }
                 }
 

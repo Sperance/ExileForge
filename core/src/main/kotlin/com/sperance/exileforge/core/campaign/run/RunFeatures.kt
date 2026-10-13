@@ -4,9 +4,9 @@ import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.CarriedAilment
-import com.sperance.exileforge.core.campaign.combat.HeroCarry
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.EnergyShield
+import com.sperance.exileforge.core.campaign.combat.HeroCarry
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FeatureStat
 import com.sperance.exileforge.rules.content.MapStat

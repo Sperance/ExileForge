@@ -83,6 +83,7 @@ import kotlin.math.sin
     val phase = motionPhase(PULSE_MS * 2, still = .5f)
     val breathing: State<Float> = remember(phase) { derivedStateOf { PULSE_LOW + (1f - PULSE_LOW) * (1f - kotlin.math.abs(phase.value * 2 - 1f)) } }
     val pulse by breathing
+    fun breathes(node: TreeNode) = node.code in reachable && node.code !in taken
     Box(modifier.fillMaxWidth()) {
         // Both detectors are keyed on the graph alone and read the view as it is now. Keyed on the zoom and
         // the pan, the tap detector restarted on every frame of a drag and took the second finger's touch
@@ -116,6 +117,7 @@ import kotlin.math.sin
                     )
                 },
         ) {
+            // Неподвижный слой: колесо, нити и медальоны без дыхания - рисуется заново лишь со сдвигом, масштабом или выбором
             val width = size.width
             val height = size.height
             wheel(nodes, bounds, width, height, view.scale, view.pan)
@@ -124,6 +126,8 @@ import kotlin.math.sin
                 val from = place(node, bounds, width, height, view.scale, view.pan)
                 node.connections.forEach { code ->
                     val other = byCode[code] ?: return@forEach
+                    val to = place(other, bounds, width, height, view.scale, view.pan)
+                    if (!crosses(from, to, width, height)) return@forEach
                     val both = node.code in taken && code in taken
                     val open = (node.code in taken && code in reachable) || (code in taken && node.code in reachable)
                     drawLine(
@@ -133,30 +137,54 @@ import kotlin.math.sin
                             else -> FAR_LINE
                         },
                         from,
-                        place(other, bounds, width, height, view.scale, view.pan),
+                        to,
                         (if (both) 3f else 2f) * view.scale.coerceIn(.6f, 1.6f),
                     )
                 }
             }
+            // Узлы на шаг от взятого - в дышащем слое, здесь их нет
             nodes.forEach { node ->
-                medallion(
-                    node,
-                    place(node, bounds, width, height, view.scale, view.pan),
-                    view.scale,
-                    node.code in taken,
-                    node.code in reachable,
-                    node.code == selected,
-                    pulse,
-                )
+                if (breathes(node)) return@forEach
+                val at = place(node, bounds, width, height, view.scale, view.pan)
+                if (!onScreen(node, at, view.scale, width, height)) return@forEach
+                medallion(node, at, view.scale, node.code in taken, false, node.code == selected, 0f)
             }
             // Узлы фильтра носят зелёное кольцо поверх медальона, не вместо него.
             nodes.forEach { node ->
-                if (node.code !in highlight) return@forEach
+                if (node.code !in highlight || breathes(node)) return@forEach
                 drawCircle(Vital, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, view.scale, view.pan), style = Stroke(2.5f))
+            }
+        }
+        // Дышащий слой - только узлы на шаг от взятого и только на экране: свечение, медальон поверх него и кольцо фильтра;
+        // шаг часов декора перерисовывает его один
+        val breathers = remember(nodes, taken, reachable) { nodes.filter(::breathes) }
+        Canvas(Modifier.fillMaxSize().clipToBounds()) {
+            if (breathers.isEmpty()) return@Canvas
+            val width = size.width
+            val height = size.height
+            val now = pulse
+            breathers.forEach { node ->
+                val at = place(node, bounds, width, height, view.scale, view.pan)
+                if (!onScreen(node, at, view.scale, width, height)) return@forEach
+                medallion(node, at, view.scale, false, true, node.code == selected, now)
+                if (node.code in highlight) drawCircle(Vital, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, at, style = Stroke(2.5f))
             }
         }
     }
 }
+
+/** Узел с ореолом ([GLOW_REACH] радиусов) и кольцами хоть краем на холсте. */
+private fun onScreen(node: TreeNode, at: Offset, scale: Float, width: Float, height: Float): Boolean {
+    val reach = radius(node) * scale.coerceIn(.5f, 2.2f) * GLOW_REACH + 8f
+    return at.x > -reach && at.y > -reach && at.x < width + reach && at.y < height + reach
+}
+
+/** Нить от [from] до [to] хоть краем на холсте: её рамка пересекает его. */
+private fun crosses(from: Offset, to: Offset, width: Float, height: Float): Boolean =
+    max(from.x, to.x) >= 0f && min(from.x, to.x) <= width && max(from.y, to.y) >= 0f && min(from.y, to.y) <= height
+
+/** Ореол узла - столько его радиусов. */
+private const val GLOW_REACH = 2.6f
 
 internal fun nodeColour(node: TreeNode, selected: Boolean): Color = when {
     node.type == SkillNodeType.KEYSTONE -> LifeRed
@@ -283,7 +311,7 @@ internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, t
         next -> NEXT_GLOW * pulse
         else -> 0f
     }
-    if (glow > 0f) drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = glow), Color.Transparent), centre, r * 2.6f), r * 2.6f, centre)
+    if (glow > 0f) drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = glow), Color.Transparent), centre, r * GLOW_REACH), r * GLOW_REACH, centre)
     val fill = if (taken) tint else NEON_STONE
     val edge = when {
         taken -> NEON_RIM

@@ -56,6 +56,8 @@ import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.statValue
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ruleRefusal
@@ -75,11 +77,14 @@ import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.content.TreeAllocation
 import com.sperance.exileforge.rules.content.TreeNode
 import com.sperance.exileforge.rules.sheet.SheetCalculator
-import com.sperance.exileforge.rules.sheet.StatContribution
+import com.sperance.exileforge.rules.sheet.StatPart
+import com.sperance.exileforge.rules.sheet.StatTotal
+import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
+import com.sperance.exileforge.ui.screens.expedition.factor
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -337,23 +342,30 @@ import kotlin.math.sin
 internal fun nodes(n: Int) = plural("tree.node", n)
 
 /**
- * One line of what the tree gives: a number, and whether it is a flat one or a percentage.
- *
- * The operation is the whole point. "+120" and "+40%" to the same characteristic are different
- * statements, and a line that dropped the distinction would be a third, untrue one.
+ * Строка вклада дерева (4.9.2): одна на характеристику, части через « · » в порядке правил ([StatTotal]) - своя характеристика,
+ * затем её доли (`partOf`); без условия раньше условных, внутри - ADD · INCREASED · MORE · SET.
  */
-internal fun contributionText(total: StatContribution): String {
-    val number = statNumber(total.stat, total.value)
-    val signed = signedNumber(total.value) { statNumber(total.stat, it) }
-    return when (total.op) {
-        Op.INCREASED, Op.MORE -> "$signed%"
+internal fun contributionText(total: StatTotal, index: ContentIndex?): String = total.parts.joinToString(PART_GLUE) { partText(total.stat, it, index) }
 
-        // SET replaces the base outright, so it is not an addition and carries no sign.
-        Op.SET -> number
-
-        Op.ADD -> signed + if (statPercent(total.stat)) "%" else ""
+/**
+ * Одна часть строки. Операция решает вид числа: «+120» и «+40%» к одной характеристике - разные утверждения; MORE - множитель
+ * «×1.25»; SET заменяет базу и знака не несёт. Процентная доля числовой строки - «от максимума», как в сводке героя; условная
+ * часть - со словами условия из словаря модификаторов.
+ */
+private fun partText(row: String, part: StatPart, index: ContentIndex?): String {
+    val stat = part.stat
+    val signed = signedNumber(part.value) { statNumber(stat, it) }
+    val figure = when (part.op) {
+        Op.ADD -> signed + if (statPercent(stat, index)) "%" else ""
+        Op.INCREASED -> "$signed%"
+        Op.MORE -> "×" + factor(1 + part.value / 100)
+        Op.SET -> statValue(stat, part.value, index)
     }
+    val shared = if (stat != row && statPercent(stat, index) && !statPercent(row, index)) ui("hero.part_share", figure) else figure
+    return part.condition?.let { "$shared ${locOr(LocaleKey.condition(it), it.name)}" } ?: shared
 }
+
+private const val PART_GLUE = " · "
 
 /** A mastery's or an attribute node's option: a framed card, gold when it is the one. */
 @Composable internal fun OptionCard(on: Boolean, enabled: Boolean, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
@@ -374,7 +386,7 @@ internal fun contributionText(total: StatContribution): String {
         if (tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
         // The rules sum this: two INCREASED add up while two MORE multiply, so adding the snapshots here would lie exactly
         // where a player is choosing. It is the tree's contribution, not the character's total.
-        tree.totals.forEach { total -> PropertyRow(statTitle(total.stat, game.lang), contributionText(total), stat = total.stat) }
+        tree.totals.forEach { total -> PropertyRow(statTitle(total.stat, game.lang), contributionText(total, game.index), stat = total.stat) }
     }
 }
 

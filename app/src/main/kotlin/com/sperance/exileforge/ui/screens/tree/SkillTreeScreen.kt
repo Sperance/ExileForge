@@ -70,7 +70,6 @@ import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.content.TreeAllocation
 import com.sperance.exileforge.rules.content.TreeNode
 import com.sperance.exileforge.rules.sheet.SheetCalculator
-import com.sperance.exileforge.rules.sheet.StatContribution
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

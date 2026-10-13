@@ -112,7 +112,8 @@ internal object HeroLens {
         val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
         val spent = i.tree.spent(h.tree)
         val calculator = SheetCalculator(i)
-        TreeState(total, spent, total - spent, h.tree, calculator.contributions(calculator.expand(i.tree.lines(h.tree))))
+        // Вклад «за каждые N» (4.9.2) - от листа героя, как у сервера
+        TreeState(total, spent, total - spent, h.tree, calculator.totals(calculator.expand(i.tree.lines(h.tree))) { h.stats[it] ?: 0.0 })
     }
 }
 

@@ -63,8 +63,10 @@ import kotlinx.serialization.json.JsonElement
  * 75 - пакет 4.9.0: ENGAGE без добычи и LEAVE посреди боя - поражение, журнал пачками (`run.journalSeconds`), апелляция с
  *      токеном (`notice/token`, `AUTH_006` с токеном), GET без записей (`hero/crafts/settle`, `hero/quests/refresh`,
  *      `guild/visit`, `guild/quests/refresh`), выданное (`granted`, `GR_001`), лимит промокодов, доска `MIGHT`, ключ отчёта.
+ * 76 - вклад дерева строками сводки: `TreeState.totals` - `StatTotal(stat, parts)` с частями `StatPart(stat, op, value, condition)`
+ *      вместо `StatContribution`; «за каждые N» - от листа героя, условные строки - частями с условием (4.9.2).
  */
-const val API_REVISION = 75
+const val API_REVISION = 76
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

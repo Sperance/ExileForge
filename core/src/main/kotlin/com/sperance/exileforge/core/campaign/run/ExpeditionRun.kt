@@ -4,8 +4,10 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssWaves
 import com.sperance.exileforge.core.campaign.DeathHit
 import com.sperance.exileforge.core.campaign.EffectOrigins
+import com.sperance.exileforge.core.campaign.FightPulse
 import com.sperance.exileforge.core.campaign.HeroBuild
 import com.sperance.exileforge.core.campaign.HeroGear
+import com.sperance.exileforge.core.campaign.HudCadence
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
@@ -401,12 +403,20 @@ class ExpeditionRun(
     internal val state = MutableStateFlow(snapshot())
     val hud: StateFlow<RunHud> = state.asStateFlow()
 
+    /** Пульс боя на кадр: часы и замахи; снимок ([hud]) выходит реже ([cadence]). */
+    val pulse = FightPulse()
+    private val cadence = HudCadence()
+
     fun send(command: RunCommand) {
         commands.add(command)
     }
 
     fun update(dt: Double) {
-        while (true) handle(commands.poll() ?: break)
+        var commanded = false
+        while (true) {
+            handle(commands.poll() ?: break)
+            commanded = true
+        }
         if (phase == RunPhase.MAP) guardianBack?.takeIf { clock() >= it + GUARDIAN_GRACE_MS }?.let { guardianReturns() }
         if (phase != RunPhase.DEAD && phase != RunPhase.CLEARED && phase != RunPhase.LEFT) seconds += dt
         hazards.forEach { it.left -= dt }
@@ -424,8 +434,15 @@ class ExpeditionRun(
                 else -> Unit
             }
         }
-        state.value = snapshot()
+        pulse.capture(fight)
+        if (cadence.due(dt, commanded, leaps(), fight)) state.value = snapshot()
     }
+
+    /** Что меняется скачком вне боя: снимок с этим выходит сразу, а не со следующим тактом ([HudCadence]). */
+    private fun leaps(): Long = HudCadence.key(
+        phase.ordinal.toLong(), if (world.sealed) 1 else 0, if (bossDown) 1 else 0, guardianBack ?: -1, (fountain?.id ?: -1).toLong(), (offer?.id ?: -1).toLong(),
+        kills.toLong(), mine.size.toLong(), world.alive.toLong(), (crystal?.id ?: -1).toLong(), if (channel == null) 0 else 1,
+    )
 
     /** Отдых стража кончился (3.95.2): он снова на посту. */
     private fun guardianReturns() {

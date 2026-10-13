@@ -146,11 +146,13 @@ internal fun Battle.hud(
         heroFlow = lifeFlow,
         heroPassives = passiveViews(),
         foesAimHero = foesAimHero(),
+        time = time,
+        beat = rules.lunge,
     )
 }
 
 /** Сцена удара на экране (4.9.3) длится столько выпадов ([CombatRules.lunge]): выпад, вспышка или полёт снаряда, тряска цели. */
-private const val STRIKE_LUNGES = 3
+internal const val STRIKE_LUNGES = 3
 
 /**
  * Замах врага скорее всего по герою (4.9.3): цель врага тянется костью в миг удара ([Battle.foeTarget]), экран её не знает -
@@ -185,7 +187,7 @@ private fun Battle.recentHits(): List<FloatingHit> {
 }
 
 /** Сцена применения умения (4.4.0) длится столько выпадов удара ([CombatRules.lunge]): 0,5-0,9 с макета «Жилы энергии». */
-private const val CAST_LUNGES = 4
+internal const val CAST_LUNGES = 4
 
 /**
  * Последнее применение умения героя (4.4.0), пока его сцена идёт ([CAST_LUNGES] выпадов): умение из набора героя, все строки

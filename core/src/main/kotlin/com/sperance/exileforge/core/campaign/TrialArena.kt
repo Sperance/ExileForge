@@ -182,14 +182,23 @@ class TrialArena(
         stand()
     }
 
+    /** Пульс боя на кадр: часы и замахи; снимок ([hud]) выходит реже ([cadence]). */
+    val pulse = FightPulse()
+    private val cadence = HudCadence()
+
     fun send(command: RunCommand) {
         commands.add(command)
     }
 
     fun update(dt: Double) {
-        while (true) apply(commands.poll() ?: break)
+        var commanded = false
+        while (true) {
+            apply(commands.poll() ?: break)
+            commanded = true
+        }
         if (phase == TrialPhase.FIGHT) play(dt)
-        state.value = snapshot()
+        pulse.capture(battle)
+        if (cadence.due(dt, commanded, phase.ordinal.toLong(), battle)) state.value = snapshot()
     }
 
     /** The server answered the journal up to [applied]: what each event brought, by its number. */

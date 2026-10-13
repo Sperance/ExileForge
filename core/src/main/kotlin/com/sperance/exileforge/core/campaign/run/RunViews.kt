@@ -272,6 +272,10 @@ data class FightHud(
     val heroPassives: List<EffectView> = emptyList(),
     /** Замах врага скорее всего по герою (4.9.3): питомца, что принимает удары на себя, нет - плашка «→ по вам». */
     val foesAimHero: Boolean = true,
+    /** Секунды боя, когда снят этот снимок: кадр двигает от них сцены ударов ([com.sperance.exileforge.core.campaign.FightPulse]). */
+    val time: Double = 0.0,
+    /** Выпад удара правил ([CombatRules.lunge]), секунды: мера сцен ударов, применения и выпада. */
+    val beat: Double = 0.0,
 ) {
     val scouting: Boolean get() = outcome == null && (!started || paused)
 

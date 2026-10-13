@@ -65,9 +65,9 @@ import kotlin.math.roundToInt
  */
 @Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, onCommand: (RunCommand) -> Unit) {
     when (val feature = view.feature) {
-        is MapFeature.Altar -> AltarSheet(game, feature) { onCommand(RunCommand.Choose(it)) }
-        is MapFeature.Merchant -> MerchantSheet(game, feature, view.taken, onCommand)
-        is MapFeature.Node -> NodeSheet(game, feature, view.gathering, view.guarded, onCommand)
+        is MapFeature.Altar -> DockPanel { AltarSheet(game, feature) { onCommand(RunCommand.Choose(it)) } }
+        is MapFeature.Merchant -> DockPanel { MerchantSheet(game, feature, view.taken, onCommand) }
+        is MapFeature.Node -> DockPanel { NodeSheet(game, feature, view.gathering, view.guarded, onCommand) }
         is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
     }
 }

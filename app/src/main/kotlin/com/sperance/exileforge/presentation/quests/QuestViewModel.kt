@@ -50,6 +50,11 @@ class QuestViewModel(
     /** Экран открылся (3.94.1): ответ моложе полуминуты не перечитывается. */
     fun open() = actions.load(fresh = true)
     fun openGuild() = actions.loadGuild(fresh = true)
+
+    /** Доска для карты мира (4.10.x): читается, только если её ещё нет, - шаг сюжета двигают сдача и итоги захода, они её перечитывают. */
+    fun glance() {
+        if (quests.value.board == null) actions.load()
+    }
     fun claim(questId: String) = actions.claim(questId)
     fun take(offerId: String) = actions.take(offerId)
     fun reset(offerId: String) = actions.reset(offerId)

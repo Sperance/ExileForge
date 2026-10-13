@@ -35,10 +35,13 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.effectText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.guildLineTitle
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
@@ -90,13 +93,32 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
     fight.heroFate.forEach { add(Shelved.Fate(it)) }
 }
 
-@Composable internal fun ShelfTile(item: Shelved, side: Dp) = when (item) {
-    Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), side) { stunTip() }
-    is Shelved.Sick -> StateTile(item.view.ailment, ailmentTint(item.view.ailment), item.view.left, item.view.stacks, ailmentLabel(item.view), side) { ailmentTip(item.view) }
-    is Shelved.Effect -> EffectTile(item.view, side)
-    is Shelved.Charge -> ChargeTile(item.view, side)
-    is Shelved.Fate -> FateTile(item.view, side)
-    is Shelved.Mod -> MapModTile(item.mod, side)
+@Composable internal fun ShelfTile(item: Shelved, side: Dp) {
+    // Подсказка плитки (4.10.x, макет «Эффекты в бою», вариант A «Выноска у плитки»): касание - её подробная выноска, читается при открытии
+    val tip = { item.tip() }
+    when (item) {
+        Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), side, tip)
+        is Shelved.Sick -> StateTile(item.view.ailment, ailmentTint(item.view.ailment), item.view.left, item.view.stacks, ailmentLabel(item.view), side, tip)
+        is Shelved.Effect -> EffectTile(item.view, side, tip)
+        is Shelved.Charge -> ChargeTile(item.view, side, tip)
+        is Shelved.Fate -> FateTile(item.view, side, tip)
+        is Shelved.Mod -> MapModTile(item.mod, side, tip)
+    }
+}
+
+/**
+ * Подробная выноска плитки (4.10.x): имя, что делает - те же строки, что в листе эффектов ([row]), откуда, сколько осталось и
+ * стаки; у недуга - ещё его сила.
+ */
+internal fun Shelved.tip(): Tip {
+    val row = row()
+    val own = (this as? Shelved.Sick)?.let { ailmentTip(it.view) }
+    return Tip(
+        row.title,
+        (own?.body?.let(::listOf) ?: row.lines).joinToString("\n"),
+        row.tint,
+        listOf(ui("fight.fact_source") to row.source) + (own?.facts ?: listOfNotNull(row.seconds?.takeIf { it > 0 }?.let { ui("fight.fact_left") to ui("fight.fact_seconds", fineNumber(it)) })),
+    )
 }
 
 /** Что сказать о плитке в листе эффектов: те же слова, что её подсказка, и строки, что она кладёт. */
@@ -135,9 +157,9 @@ internal fun Shelved.row(): ShelfRow = when (this) {
     )
 
     is Shelved.Mod -> ShelfRow(
-        statTitle(mod.code),
+        modTitle(mod),
         modTint(mod),
-        ui("fight.src.map"),
+        ui(modSource(mod)),
         mod.shifts.map { (stat, delta) -> effectText(stat, Op.ADD, delta) },
         null,
     )
@@ -160,13 +182,27 @@ internal fun effectTint(view: EffectView): Color = when {
 
 private fun modTint(mod: HeroMapMod): Color = if (mod.harm) Color(0xFFC0504A) else Gold
 
+/** Имя плитки строки на герое (4.10.x): строка карты - своим кодом, доля гильдии и зелья - своим источником. */
+private fun modTitle(mod: HeroMapMod): String = when (mod.source.kind) {
+    SourceKind.GUILD -> guildLineTitle(mod.source.ref)
+    SourceKind.POTION -> itemTitle(mod.source.ref)
+    else -> statTitle(mod.source.ref)
+}
+
+/** Откуда плитка строки на герое: карта, древо гильдии или зелье. */
+private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
+    SourceKind.GUILD -> "fight.src.guild"
+    SourceKind.POTION -> "fight.src.potion"
+    else -> "fight.src.map"
+}
+
 /** Строка карты на герое: пунктирная плитка - значок первого сдвинутого стата, цвет вреда или блага. */
-@Composable private fun MapModTile(mod: HeroMapMod, side: Dp) {
+@Composable private fun MapModTile(mod: HeroMapMod, side: Dp, tip: () -> Tip) {
     val tint = modTint(mod)
     val shape = RoundedCornerShape(4.dp)
-    val title = statTitle(mod.code)
+    val title = modTitle(mod)
     Tipped(
-        { Tip(title, mod.shifts.joinToString("\n") { (stat, delta) -> effectText(stat, Op.ADD, delta) }, tint) },
+        tip,
         Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .1f)).dashedBorder(tint, shape)
             .semantics { contentDescription = title },
     ) {
@@ -174,11 +210,11 @@ private fun modTint(mod: HeroMapMod): Color = if (mod.harm) Color(0xFFC0504A) el
     }
 }
 
-/** Плитка переполнения «+N»: сколько ещё эффектов не влезло. */
-@Composable private fun MoreTile(count: Int, side: Dp) {
+/** Плитка переполнения «+N»: сколько ещё эффектов не влезло; касание - лист эффектов [onOpen]. */
+@Composable private fun MoreTile(count: Int, side: Dp, onOpen: () -> Unit) {
     val shape = RoundedCornerShape(4.dp)
     Box(
-        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Muted.copy(alpha = .08f)).border(1.dp, Muted, shape),
+        Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Muted.copy(alpha = .08f)).border(1.dp, Muted, shape).clickable(onClick = onOpen),
         contentAlignment = Alignment.Center,
     ) {
         Text(ui("fight.shelf.more", count), color = Parchment, fontSize = (side.value * .36f).coerceIn(7f, 11f).sp, fontWeight = FontWeight.Bold, maxLines = 1)
@@ -187,11 +223,10 @@ private fun modTint(mod: HeroMapMod): Color = if (mod.harm) Color(0xFFC0504A) el
 
 /**
  * Полка эффектов (4.9.3): плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
- * «+N» последней. Касание любой полки открывает лист эффектов ([onOpen]): подсказки плиток на полке не открываются.
+ * «+N» последней. Касание плитки - её подробная выноска ([tip], 4.10.x), касание «+N» - лист эффектов ([onOpen]).
  * Подкомпоновка по месту - число «+N» зависит от размера полки; интринсиков у полки нет, её размер задаёт родитель.
  */
 @Composable internal fun EffectShelf(items: List<Shelved>, side: Dp, onOpen: () -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
-    val tap = remember { MutableInteractionSource() }
     SubcomposeLayout(modifier) { constraints ->
         val sidePx = side.roundToPx()
         val gapPx = gap.roundToPx()
@@ -201,21 +236,17 @@ private fun modTint(mod: HeroMapMod): Color = if (mod.harm) Color(0xFFC0504A) el
         val shown = if (over) fit - 1 else items.size
         val tile = Constraints.fixed(sidePx, sidePx)
         val tiles = (0 until shown).map { i -> subcompose(i) { ShelfTile(items[i], side) }.first().measure(tile) } +
-            (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side) }.first().measure(tile)) else emptyList())
+            (if (over) listOf(subcompose(MORE) { MoreTile(items.size - shown, side, onOpen) }.first().measure(tile)) else emptyList())
         val length = if (tiles.isEmpty()) 0 else tiles.size * sidePx + (tiles.size - 1) * gapPx
         val width = (if (vertical) sidePx else length).coerceIn(constraints.minWidth, constraints.maxWidth)
         val height = (if (vertical) length else sidePx).coerceIn(constraints.minHeight, constraints.maxHeight)
-        // Касание поверх плиток: полка - одна цель, лист эффектов
-        val cover = subcompose(COVER) { Box(Modifier.fillMaxSize().clickable(tap, null, onClick = onOpen)) }.first().measure(Constraints.fixed(width, height))
         layout(width, height) {
             tiles.forEachIndexed { i, placeable -> if (vertical) placeable.place(0, i * (sidePx + gapPx)) else placeable.place(i * (sidePx + gapPx), 0) }
-            cover.place(0, 0)
         }
     }
 }
 
 private const val MORE = "more"
-private const val COVER = "cover"
 
 /** Итог здоровья в секунду числом со знаком: «−12», «+8», «±0». */
 internal fun flowNumber(net: Double): String {

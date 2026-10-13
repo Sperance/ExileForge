@@ -264,8 +264,11 @@ object ServerClock {
 /** The hero's statistics (server 1.49.0): key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
 @kotlinx.serialization.Serializable data class HeroStatsView(val values: Map<String, Long> = emptyMap())
 
-/** A unique template's find (3.90.2, server 1.81.7): the first one, in epoch milliseconds, and how many copies came in all. */
-@kotlinx.serialization.Serializable data class UniqueFind(val at: Long, val count: Long)
+/**
+ * A unique template's find (3.90.2, server 1.81.7): the first one, in epoch milliseconds, and how many copies came in all.
+ * [lowest] (4.10.x) - наименьший номер копии в мире героя, 0 - номера не было (копия продана при получении).
+ */
+@kotlinx.serialization.Serializable data class UniqueFind(val at: Long, val count: Long, val lowest: Long = 0)
 
 /** The hero's unique finds as `GET hero/uniques` answers them (server 1.81.7): template code — its find. */
 @kotlinx.serialization.Serializable data class UniquesView(val finds: Map<String, UniqueFind> = emptyMap())

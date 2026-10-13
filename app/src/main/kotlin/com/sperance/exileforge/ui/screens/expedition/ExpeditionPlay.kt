@@ -112,7 +112,7 @@ import kotlin.math.roundToInt
     val board = rememberRunBoard(run, model.state.collectAsStateWithLifecycle().value.quests, quests)
     var questsOpen by remember { mutableStateOf(false) }
     // Добыча сундука, открытая с плашки сумки (4.10.0); null - закрыта
-    var opened by remember(run) { mutableStateOf<MapDrop?>(null) }
+    var bagOpen by remember(run) { mutableStateOf(false) }
     // Часы захода идут и без сцены (3.95.1): лента автопробега карты не рисует
     val clock = rememberRunClock(run)
     // «Журнал боя» меню забега (4.8.0) - последний бой захода, и на карте, и посреди следующего боя
@@ -152,12 +152,13 @@ import kotlin.math.roundToInt
                     }
                     if (sheet) {
                         HoldsRun(run)
-                        StatsSheet(game, run.mapEffects) { sheet = false }
+                        StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
                     }
                     hud.fountain?.let { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } }
                     // Сундук не останавливает героя (4.10.0): добыча летит в сумку, её лист - по нажатию на плашку
-                    if (hud.auto == null) MapBag(game, hud.drops, hud.tally.loot.pieces()) { opened = it }
-                    opened?.reward?.let { ChestLoot(game, model, run, it, awaiting = false) { opened = null } }
+                    // «Сумка захода» (4.10.x, вариант A): касание плашки - вся добыча захода, новое сверху
+                    if (hud.auto == null) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
+                    if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
                     // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
                     hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
                     if (leaving) {
@@ -180,6 +181,7 @@ import kotlin.math.roundToInt
                         biome = run.zone.biome,
                         shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
                         mapEffects = run.mapEffects,
+                        origins = run.origins,
                     )
                 }
 
@@ -360,31 +362,6 @@ internal const val PENDING_GRACE = 10_000L
 @Composable internal fun RoundButton(icon: ImageVector, label: String, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(44.dp).background(Color(0xE60A0D12), CircleShape).border(1.5.dp, Bronze, CircleShape)) {
         Icon(icon, label, tint = GoldBright, modifier = Modifier.size(24.dp))
-    }
-}
-
-/**
- * What a chest brought (since 2.33.0), at the foot of the map while the hero walks on: the server's roll,
- * shown as its answer arrives (server 1.30.0), and a button that puts it away. A piece opens its
- * comparison with what is worn (3.24.0); the map holds still while it is open. Строка вещи несёт стрелки урона и
- * защиты (3.89.0); надеть её можно только в убежище.
- */
-@Composable internal fun ChestLoot(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionRun, reward: Reward, awaiting: Boolean, onClose: () -> Unit) {
-    val expedition by vm.state.collectAsStateWithLifecycle()
-    var looked by remember(reward) { mutableStateOf<ItemView?>(null) }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        RunPanel(Modifier, GoldBright, footer = { ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) } }) {
-            Text(ui("expedition.chest"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            RewardLines(game, reward, { looked = it }, awaiting, arriving = expedition.pending > 0)
-            // Куда ушла добыча (3.88.8): вещи и стопки сундука уже лежат у героя, подбирать нечего.
-            if (!awaiting && (reward.equipment.isNotEmpty() || reward.items.isNotEmpty())) {
-                Text(ui("expedition.chest_stored"), color = Vital, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
-    looked?.let { item ->
-        HoldsRun(run)
-        LootSheet(game, vm, item, onDismiss = { looked = null })
     }
 }
 

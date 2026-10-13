@@ -215,3 +215,6 @@ fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
 private val CAMEL_GAP = Regex("([a-z])([A-Z])")
 private val UNIQUE_JEWEL = Regex("^unique jewel: one (\\S+) per hero")
 private val NEED = Regex("need\\s+(-?\\d+)")
+
+/** Доля древа гильдии (4.10.x): «Древо гильдии: Обереги» - узлы [nodes] (коды через запятую, `EffectOrigins`) своими именами. */
+fun guildLineTitle(nodes: String): String = ui("stat.src.guild", nodes.split(",").joinToString(", ") { loc("guild.node.$it.name") })

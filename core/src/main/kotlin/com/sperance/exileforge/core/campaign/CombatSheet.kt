@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.StatSpread
+import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Grant
 import com.sperance.exileforge.rules.sheet.HeroBody
@@ -156,7 +157,17 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
             val add = reading.adds(fighter)
             if (reading.stat in fighter.stats || (reading.creates && add != 0.0)) values[reading.stat] = (fighter.stats[reading.stat] ?: 0.0) + add
         }
+        // Прибавки к добыче (4.10.x): характеристика листа и силы уникалок против всех монстров - тот же `Powers.loot`, что катит сервер
+        LOOT.forEach { kind ->
+            val stat = kind.stock!!.code
+            index.powers.loot(fighter.stats, kind).takeIf { it != 0.0 || stat in fighter.stats }?.let { values[stat] = it }
+        }
         return values
+    }
+
+    /** Силы уникалок в прибавке добычи [stat] (4.10.x): каждая сила против всех монстров - своим сдвигом, как её считает [read]. */
+    private fun lootPowers(stat: String): List<Shift> = LOOT.filter { it.stock?.code == stat }.flatMap { kind ->
+        index.powers.worldParts(stats, kind).filter { it.on(null) }.map { Shift(StatSource(SourceKind.POWER, it.stat), it.value) }
     }
 
     /** Прямые цели строк пассивных умений и всё, что от них сдвинулось. */
@@ -177,10 +188,33 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     /**
      * Из чего сложилась цифра сводки [stat]: лист по источникам с пассивными умениями и шагами Предначертания, «больше» процент-стата
      * от умений и что бой читает вместе с ней ([FightReading], источник [SourceKind.FIGHT]) - итог равен [figures].
+     *
+     * 4.10.x: [layer] - сдвиги листа эффектами карты, атласа, гильдии и зелья по характеристике (`MapEffects.heroShifts`): свои
+     * сдвиги цифры ложатся как есть, а сдвиги того, что бой читает вместе с ней (общее сопротивление стихиям, доля регенерации,
+     * максимум здоровья), - на её чтение: каждый источник своим сдвигом, так итог равен цифре [figures] листа под картой.
      */
-    fun explain(stat: String): StatBreakdown {
-        val fight = FightReading.entries.filter { it.stat == stat }.map { Shift(StatSource(SourceKind.FIGHT, it.from), it.adds(body), it.from) }.filter { it.delta != 0.0 }
-        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + fight)
+    fun explain(stat: String, layer: Map<String, List<Shift>> = emptyMap()): StatBreakdown {
+        val readings = FightReading.entries.filter { it.stat == stat }
+        val fight = readings.map { Shift(StatSource(SourceKind.FIGHT, it.from), it.adds(body), it.from) }.filter { it.delta != 0.0 }
+        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + fight + lootPowers(stat) + layer[stat].orEmpty() + readings.flatMap { read(it, layer) })
+    }
+
+    /**
+     * Что сдвиги [layer] сделали с чтением [reading]: каждый источник положен на лист один, а что они делают только вместе -
+     * последнему, как в `MapEffects.heroShifts`; сумма равна чтению листа под всеми сдвигами без своего.
+     */
+    private fun read(reading: FightReading, layer: Map<String, List<Shift>>): List<Shift> {
+        if (layer.isEmpty()) return emptyList()
+        val own = reading.adds(body)
+        fun under(moves: List<Pair<String, Double>>): Double = reading.adds(Combatant(moves.fold(stats) { sheet, (key, delta) -> sheet + (key to (sheet[key] ?: 0.0) + delta) }, body.level, body.rules)) - own
+        val bySource = LinkedHashMap<StatSource, MutableList<Pair<String, Double>>>()
+        layer.forEach { (key, shifts) -> if (key != reading.stat) shifts.forEach { bySource.getOrPut(it.source) { mutableListOf() } += key to it.delta } }
+        val parts = bySource.mapNotNull { (source, moves) -> under(moves).takeIf { abs(it) >= MOVED }?.let { Shift(source, it, reading.from) } }.toMutableList()
+        val rest = under(bySource.values.flatten()) - parts.sumOf { it.delta }
+        if (abs(rest) < MOVED) return parts
+        if (parts.isEmpty()) return listOf(Shift(bySource.keys.last(), rest, reading.from))
+        parts[parts.lastIndex] = parts.last().let { it.copy(delta = it.delta + rest) }
+        return parts
     }
 
     fun grants(stat: String): List<Grant> = explainer.grants(stat)
@@ -201,6 +235,9 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     companion object {
         /** Сдвиг меньше этого - не сдвиг: десятые листа. */
         private const val MOVED = 0.05
+
+        /** Виды небоевых сил с характеристикой листа: их прибавка к добыче в сводке - вместе с силами. */
+        private val LOOT = WorldKind.entries.filter { it.stock != null }
 
         private fun moved(before: Map<String, Double>, after: Map<String, Double>): Map<String, Double> = (before.keys + after.keys)
             .associateWith { (after[it] ?: 0.0) - (before[it] ?: 0.0) }.filterValues { abs(it) >= MOVED }

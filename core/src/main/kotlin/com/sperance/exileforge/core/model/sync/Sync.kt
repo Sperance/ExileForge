@@ -67,8 +67,10 @@ import kotlinx.serialization.json.JsonElement
  *      вместо `StatContribution`; «за каждые N» - от листа героя, условные строки - частями с условием (4.9.2).
  * 77 - новые ключи Атласа в награде события (`EventReward.atlas`, `TrialReward.atlas`), ответ отчёта об ошибке
  *      `FiledReport(id, shotDropped)` (4.10.0).
+ * 78 - доска `UNIQUES`, наименьший номер находки (`UniqueSeen.lowest`), доли гильдии и зелья в контексте захода
+ *      (`RunContext.guild`, `RunContext.potion`) (4.10.x).
  */
-const val API_REVISION = 77
+const val API_REVISION = 78
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

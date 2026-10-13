@@ -5,6 +5,8 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.factorChange
 import com.sperance.exileforge.core.display.flagMark
+import com.sperance.exileforge.core.display.guildLineTitle
+import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.multiplierText
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.number
@@ -207,6 +209,11 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.SKILL -> skillTitle(source.ref)
 
             SourceKind.RESHAPE -> hero?.combat?.fate?.let { fate -> index?.let { reshapeText(it, fate, source.ref) } } ?: source.ref
+
+            // Доли захода (4.10.x): узлы древа гильдии с этой строкой и выпитое зелье
+            SourceKind.GUILD -> guildLineTitle(source.ref)
+
+            SourceKind.POTION -> ui("stat.src.potion", itemTitle(source.ref))
         }
     }
 
@@ -217,6 +224,7 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.ATLAS -> ui("stat.src.atlas")
             else -> null
         }
+        if (source.kind == SourceKind.GUILD || source.kind == SourceKind.POTION) return sourceTitle(source)
         if (source.kind != SourceKind.POWER) return listOfNotNull(prefix, statTitle(source.ref)).joinToString(": ")
         val items = holders(source.ref).filter { it.kind == SourceKind.ITEM }.map(::sourceTitle)
         return if (items.isEmpty()) statTitle(source.ref) else "${items.joinToString(", ")} — ${statTitle(source.ref)}"

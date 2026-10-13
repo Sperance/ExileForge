@@ -26,6 +26,7 @@ import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.CampaignFile
 import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.rules.content.WorldPoint
+import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
@@ -62,8 +63,9 @@ private const val CARD_TOP = .48f
     val quests by questModel.quests.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         vm.loadCampaign()
-        // Сюжет (4.2.0) - над картой с первого уровня: доска заданий читается и без раздела «Задания»
-        if (game.heroId.isNotBlank()) questModel.open()
+        // Сюжет (4.2.0) - над картой с первого уровня: доска заданий читается и без раздела «Задания». 4.10.x - только если её
+        // ещё нет: шаг сюжета двигают сдача заданий и итоги захода, а они доску перечитывают сами
+        if (game.heroId.isNotBlank()) questModel.glance()
     }
     // Вкладка нажата снова (3.95.0): лист зоны закрывается, видна карта мира
     OnReselect(TAB_EXPEDITION) { vm.closeZone() }
@@ -75,10 +77,12 @@ private const val CARD_TOP = .48f
     }
     val campaign = index.campaign
     val world = remember(index, progress.cleared, progress.unlocked) { LastWorld.of(campaign, index.world, progress) }
-    // The tab answers the tap at once (3.77.0): its first frame is the bare chart, the map is laid out on the next.
+    // The tab answers the tap at once (3.77.0): its first frame is the bare chart. 4.10.x: карта собирается, когда смена вкладки
+    // доехала ([TAB_SHIFT_MS]) - не посреди анимации, где кадр делят два экрана
     var settled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
+        delay(TAB_SHIFT_MS.toLong())
         settled = true
     }
     val art by produceState(WorldArt.cached(campaign), campaign) { value = WorldArt.of(campaign) }

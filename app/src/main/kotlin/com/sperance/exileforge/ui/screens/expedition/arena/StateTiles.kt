@@ -60,11 +60,11 @@ import com.sperance.exileforge.ui.theme.*
  * Действующий рычаг дара (4.9.0, макет «Свиток + значок»): ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,
  * в углу - стаки; подсказка - имя дара и что он делает сейчас (`fight.fate_state.<рычаг>`).
  */
-@Composable internal fun FateTile(view: FateGlow, side: Dp = 30.dp) {
+@Composable internal fun FateTile(view: FateGlow, side: Dp = 30.dp, tip: () -> Tip) {
     val shape = RoundedCornerShape(4.dp)
     val title = locOr("fate.${view.fate}.name", view.fate)
     Tipped(
-        { Tip(title, ui("fight.fate_state.${view.lever.name}", fineNumber(view.value), view.count), FateInk.Gold) },
+        tip,
         Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(FateInk.Gold.copy(alpha = .16f)).border(1.dp, FateInk.Gold, shape)
             .semantics { contentDescription = title },
     ) {
@@ -86,11 +86,11 @@ import com.sperance.exileforge.ui.theme.*
 private const val FATE_GLYPH = "✦"
 
 /** A kind of the hero's charges (3.33.0): the drawing of its maximum and the count held. */
-@Composable internal fun ChargeTile(view: ChargeView, side: Dp = 30.dp) {
+@Composable internal fun ChargeTile(view: ChargeView, side: Dp = 30.dp, tip: () -> Tip) {
     val shape = RoundedCornerShape(4.dp)
     val title = ui("fight.charge.${view.kind.name}")
     Tipped(
-        { Tip(title, ui("fight.charge_tip", view.count, view.max, fineNumber(view.seconds))) },
+        tip,
         Modifier.size(side).clip(shape).background(Color(0xFF0B0E13)).background(Gold.copy(alpha = .16f)).border(1.dp, Gold, shape)
             .semantics { contentDescription = "$title ${view.count}" },
     ) {
@@ -105,29 +105,18 @@ private const val FATE_GLYPH = "✦"
     }
 }
 
-/** Подсказка плитки эффекта по его виду (4.4.1: помеха свойства монстра - своя). */
-private val EffectKind.tipKey: String get() = when (this) {
-    EffectKind.BUFF, EffectKind.FLASK -> "fight.effect_buff"
-    EffectKind.CURSE -> "fight.effect_curse"
-    EffectKind.HINDER -> "fight.effect_hinder"
-}
-
 /** A buff or a curse (2.78.0) as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off. */
-@Composable internal fun EffectTile(view: EffectView, side: Dp = 30.dp) {
+@Composable internal fun EffectTile(view: EffectView, side: Dp = 30.dp, tip: () -> Tip) {
     val tint = effectTint(view)
     val shape = RoundedCornerShape(4.dp)
     // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill; глоток (4.9.3) - бутылью флакона.
     val buff = view.buff
     // Бафф Предначертания (4.6.0) - не умение: называется даром
     val title = effectTitle(view)
-    // Проклятие (3.92.0) открывает лист: что меняет, сколько ещё, чем снять; бафф - прежнюю подсказку
+    // Проклятие (3.92.0) открывает лист: что меняет, сколько ещё, чем снять; бафф - подсказку [tip]
     val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
     Tipped(
-        if (lore != null) {
-            null
-        } else {
-            { Tip(title, ui(view.kind.tipKey, fineNumber(view.seconds))) }
-        },
+        tip.takeIf { lore == null },
         Modifier.then(if (lore != null) Modifier.clickable { lore(Lore.Curse(view.source, null, view.seconds)) } else Modifier).size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, tint, shape)
             .semantics { contentDescription = title },
     ) {

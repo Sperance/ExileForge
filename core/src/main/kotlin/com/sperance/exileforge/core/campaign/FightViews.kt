@@ -114,16 +114,16 @@ internal fun Battle.hud(
     }
     val foes = foeFighters.map { f ->
         FoeView(
-            f.index, monsters.getOrNull(f.index) ?: checkNotNull(foes[f.index].origin), shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
+            f.index, monsters.getOrNull(f.index) ?: checkNotNull(foes[f.index].origin), shownLife(f.life, f.alive, f.body.maxLife), shownMax(f.body.maxLife), f.shield.roundToInt(), f.body.maxShield.roundToInt(),
             swing(f), ailments(f), f.held, f.alive, reachable(f.index), f.body.taunt, effects(f),
             f.mana.roundToInt(), f.body.maxMana.roundToInt(), place = place(f.index), buildup = buildup(f),
             barrier = f.barrier.takeIf { f.barrierUntil > time }?.roundToInt() ?: 0, waiting = waits(f.index),
         )
     }
     return FightHud(
-        ally = allyFighter?.let { f -> AllyView(ally!!.code, shownLife(f.life, f.alive), f.body.maxLife.roundToInt(), f.alive) },
+        ally = allyFighter?.let { f -> AllyView(ally!!.code, shownLife(f.life, f.alive, f.body.maxLife), shownMax(f.body.maxLife), f.alive) },
         leader = leader, foes = foes,
-        heroLife = shownLife(h.life, h.alive), heroShield = h.shield.roundToInt(),
+        heroLife = shownLife(h.life, h.alive, h.body.maxLife), heroShield = h.shield.roundToInt(),
         hits = hits, speed = speed,
         outcome = outcome,
         heroSwing = swing(h), heroAilments = ailments(h), heroHeld = h.held, heroBuildup = buildup(h),
@@ -264,6 +264,10 @@ private fun Battle.riftHud(hud: BossHud): BossHud {
 
 /**
  * Здоровье на экране (3.88.8): у живого - вверх до целого и не меньше 1, у павшего - 0. «0» у живого противника читалось
- * как смерть, хотя у него оставалась доля единицы.
+ * как смерть, хотя у него оставалась доля единицы. 4.10.x: не выше показанного максимума [max] ([shownMax]) - полный запас
+ * с дробным максимумом читался «776 / 775»; журнал боя максимума не знает и его не ставит.
  */
-fun shownLife(life: Double, alive: Boolean): Int = if (alive) kotlin.math.ceil(life).toInt().coerceAtLeast(1) else 0
+fun shownLife(life: Double, alive: Boolean, max: Double = Double.POSITIVE_INFINITY): Int = if (alive) kotlin.math.ceil(life).toInt().coerceAtMost(shownMax(max)).coerceAtLeast(1) else 0
+
+/** Максимум запаса на экране (4.10.x): одно округление для всех полос, с ним сверяется [shownLife]. */
+fun shownMax(max: Double): Int = max.roundToInt()

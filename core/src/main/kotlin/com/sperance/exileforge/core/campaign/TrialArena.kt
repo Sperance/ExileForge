@@ -114,7 +114,8 @@ class TrialArena(
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
     private val gear = gear
-    private var build = HeroBuild(gear, atlas, rules)
+    private val origins = EffectOrigins.of(context, index)
+    private var build = HeroBuild(gear, atlas, rules, origins = origins)
     private val hero: Combatant get() = build.body
     private val kit: Loadout get() = gear.kit
     val stance: HeroStance get() = gear.stance
@@ -306,7 +307,7 @@ class TrialArena(
     /** The hero made again on the floor's lines; life keeps its share. */
     private fun rebuild() {
         val before = hero.maxLife
-        build = HeroBuild(gear, effects(), rules)
+        build = HeroBuild(gear, effects(), rules, origins = origins)
         pools = pools.copy(life = if (before > 0) pools.life / before * hero.maxLife else hero.maxLife, mana = pools.mana.coerceAtMost(manaCap()))
     }
 
@@ -385,9 +386,9 @@ class TrialArena(
 
     private fun snapshot(): TrialHud {
         val fight = battle
-        val life = (fight?.heroLife ?: pools.life).roundToInt()
+        val life = (fight?.heroLife ?: pools.life).let { shownLife(it, it > 0, hero.maxLife) }
         val runHud = RunHud(
-            RunPhase.FIGHT, MapCode.NONE, life, hero.maxLife.roundToInt(), (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
+            RunPhase.FIGHT, MapCode.NONE, life, shownMax(hero.maxLife), (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
             alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = manaCap().roundToInt(),
             heroReserved = (hero.maxMana - manaCap()).roundToInt(), kills = kills,
         )

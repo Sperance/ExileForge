@@ -56,6 +56,7 @@ private const val HERO_CARD = -1
     shares: (Boolean) -> List<BuffShare> = { emptyList() },
     /** Строки карты захода (4.9.3): что из них меняет героя - на рельсе «на весь бой» его карточки. */
     mapEffects: Map<String, Double> = emptyMap(),
+    origins: EffectOrigins = EffectOrigins.NONE,
 ) {
     val time by rememberClock()
     // The settings' pause and buzz (3.77.0): each once as the hero's life falls through its line, the buzz again at a fall.
@@ -82,8 +83,8 @@ private const val HERO_CARD = -1
     var inspect by remember { mutableStateOf<Int?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
     // Строки карты на герое (4.9.3) - раз на заход и героя, не каждый кадр
-    val mods = remember(mapEffects, game.hero, game.index) {
-        if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects) }.orEmpty()
+    val mods = remember(mapEffects, origins, game.hero, game.index) {
+        if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
     }
     // Мощь боя (4.8.0): герой - по телу боя под эффектами карты (4.9.0: с уроном умений и питомца из листа боя), враги - по своему листу
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)

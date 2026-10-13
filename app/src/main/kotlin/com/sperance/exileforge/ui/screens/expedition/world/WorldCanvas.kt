@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -89,9 +91,9 @@ fun WorldCanvas(
     val density = LocalDensity.current
     val words = remember(world, measurer, density) { Words.of(world, measurer, density) }
     // The parchment is recorded once into its own layer (3.77.0) and replayed under the camera: hundreds of sketches and
-    // grains are no longer laid out again on every frame of the tokens' pulse.
-    val artLayer = rememberGraphicsLayer()
-    val recorded = remember { arrayOfNulls<WorldArt>(1) }
+    // grains are no longer laid out again on every frame of the tokens' pulse. 4.10.x: слой живёт с оболочкой игры
+    // ([LocalWorldArtLayer]), а не с вкладкой - вход в «Поход» не пишет пергамент заново
+    val artLayer = LocalWorldArtLayer.current ?: rememberWorldArtLayer()
     val tap by rememberUpdatedState(onTap)
     val description = ui("expedition.world_map")
     Canvas(
@@ -110,11 +112,7 @@ fun WorldCanvas(
             if (art == null) {
                 drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
             } else {
-                if (recorded[0] !== art) {
-                    artLayer.record(IntSize(camera.world.width, camera.world.height)) { art.draw(this) }
-                    recorded[0] = art
-                }
-                drawLayer(artLayer)
+                drawLayer(with(artLayer) { of(art, IntSize(camera.world.width, camera.world.height)) })
             }
             fog(world, camera.world.width.toFloat(), height)
             val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f), -DASH_PERIOD * marchPhase)
@@ -411,3 +409,29 @@ private const val PUFFS = 26
 private const val PULSE_MS = 2400
 private const val MARCH_MS = 1200
 private const val DASH_PERIOD = 13f
+
+/**
+ * Слой пергамента карты мира (4.10.x): записывается один раз на рисунок [WorldArt] и переживает уход с вкладки - его держит оболочка
+ * игры ([LocalWorldArtLayer]). Запись - при первом рисовании, дальше только воспроизведение.
+ */
+class WorldArtLayer internal constructor(private val layer: GraphicsLayer) {
+    private var recorded: WorldArt? = null
+
+    /** Слой с рисунком [art] размера [size]: другой рисунок пишется заново, тот же - как есть. */
+    fun DrawScope.of(art: WorldArt, size: IntSize): GraphicsLayer {
+        if (recorded !== art) {
+            layer.record(size) { art.draw(this) }
+            recorded = art
+        }
+        return layer
+    }
+}
+
+/** Слой пергамента оболочки игры; null - карта рисуется вне неё (превью) и держит свой. */
+val LocalWorldArtLayer = staticCompositionLocalOf<WorldArtLayer?> { null }
+
+/** Слой пергамента, что живёт, пока жив вызвавший. */
+@Composable fun rememberWorldArtLayer(): WorldArtLayer {
+    val layer = rememberGraphicsLayer()
+    return remember(layer) { WorldArtLayer(layer) }
+}

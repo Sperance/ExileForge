@@ -173,7 +173,7 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
         levelLine(crafts, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
         // Книга учёта (4.x, вариант C): итог сервера с начала работы, сделанные вещи - чипами (за сессию, по одной на вещь)
-        WorkLedger(game, ui("crafts.totals_title"), WorkSums.of(work.totals), crafts.totals.equipment, startedAt = work.startedAt, offset = offset)
+        WorkLedger(game, ui("crafts.totals_title"), WorkSums.of(work.totals), crafts.totals.equipment, startedAt = work.startedAt, offset = offset, makes = crafts.state?.running?.kind?.makesItems == true)
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }

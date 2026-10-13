@@ -111,7 +111,7 @@ class RiftArena(
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
     private val effects: Map<String, Double> = MapEffects.sum(AtlasEffects.map(emptyMap(), context.atlas), touch.effects + altarEffects())
-    private val build = HeroBuild(gear, effects, combat, heroLines())
+    private val build = HeroBuild(gear, effects, combat, heroLines(), EffectOrigins.of(context, index))
     private val hero: Combatant get() = build.body
     private val kit: Loadout get() = gear.kit
     val stance: HeroStance get() = gear.stance
@@ -318,7 +318,7 @@ class RiftArena(
         val fight = battle
         val manaCap = hero.maxMana * (1 - kit.reserved(hero) / 100)
         val runHud = RunHud(
-            RunPhase.FIGHT, MapCode.NONE, (fight?.heroLife ?: pools.life).roundToInt(), hero.maxLife.roundToInt(),
+            RunPhase.FIGHT, MapCode.NONE, (fight?.heroLife ?: pools.life).let { shownLife(it, it > 0, hero.maxLife) }, shownMax(hero.maxLife),
             (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
             alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = manaCap.roundToInt(),
             heroReserved = (hero.maxMana - manaCap).roundToInt(),

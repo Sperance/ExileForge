@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign.run
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssWaves
 import com.sperance.exileforge.core.campaign.DeathHit
+import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.HeroBuild
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
@@ -124,6 +125,9 @@ class ExpeditionRun(
     /** Часы сервера (3.95.2): по ним отдых стража сверяется с тем, что примет сервер. */
     internal var clock: () -> Long = { System.currentTimeMillis() + ServerClock.offset }
 
+    /** Сейчас по часам захода (4.10.x): от них считается «N мин назад» порций «Сумки захода» ([BagEntry.at]). */
+    fun now(): Long = clock()
+
     /** Сделки алтарей захода (3.90.0, сервер 1.81.3), сложенные по характеристике: герой и бои несут их до конца карты. */
     var pacts: Map<String, Double> = emptyMap()
         internal set
@@ -131,6 +135,9 @@ class ExpeditionRun(
     /** The map's summed effects with the altars' bargains (3.90.0): the hero's sheet and the map's window read these. */
     var mapEffects: Map<String, Double> = baseEffects
         internal set
+
+    /** Источники долей [mapEffects] (4.10.x): древо гильдии и зелье захода - свои подписи в листе, разборе и полке боя. */
+    val origins: EffectOrigins = EffectOrigins.of(run.context, index)
     internal val spawns get() = Spawns(index, run)
     var build: HeroBuild = build
         internal set
@@ -271,7 +278,14 @@ class ExpeditionRun(
 
     internal fun showDrops() {
         dropsShown = drops.map { n -> MapDrop(n, earned[n] ?: Reward.NONE.takeIf { n < answered }) }
+        bagShown = bag.map { (n, tag) -> BagEntry(n, tag.first, tag.second, earned[n] ?: Reward.NONE.takeIf { n < answered }) }.filter { it.shown }.asReversed()
     }
+
+    /** Все события захода с добычей (4.10.x): источник и когда записано - для «Сумки захода»; ответы - [earned]. */
+    internal val bag = LinkedHashMap<Int, Pair<LootFrom, Long>>()
+
+    /** Порции [bag] с ответами, новые сверху: меняется только с ответом сервера, не на кадр. */
+    internal var bagShown: List<BagEntry> = emptyList()
 
     /** The hero's campaign as the last answer brought it. */
     internal var campaign: CampaignState? = null
@@ -330,7 +344,7 @@ class ExpeditionRun(
     internal fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
 
     internal fun regear(gear: HeroGear) {
-        val next = HeroBuild(gear, mapEffects, rules)
+        val next = HeroBuild(gear, mapEffects, rules, origins = origins)
         val before = hero
         build = next
         rebody()
@@ -421,6 +435,7 @@ class ExpeditionRun(
     /** A rewarding event recorded: what it brings comes with the server's answer, into the run's count, the autorun's and, [fought], the fight's report. */
     internal fun rewarding(event: RunEvent?, fought: Boolean = false): RunEvent? = event?.also {
         mine += it.n
+        bag[it.n] = LootFrom.of(it, run) to clock()
         if (autopilot != null) {
             autoEvents += it.n
             autoReward = autoReward ?: Reward.NONE
@@ -501,7 +516,7 @@ class ExpeditionRun(
             val acted = if (penalty > 0) MapEffects.sum(base, mapOf(MapStats.HERO_RESIST to penalty)) else base
             val effects = if (vaal) MapEffects.sum(acted, context.vaal?.effects.orEmpty()) else acted
             val rules = index.campaign.combat
-            val build = HeroBuild(gear, effects, rules)
+            val build = HeroBuild(gear, effects, rules, origins = EffectOrigins.of(context, index))
             val stats = build.body.stats
             val spawns = Spawns(index, run)
             val buffs = MapEffects.buffs(effects)

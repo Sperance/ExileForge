@@ -61,8 +61,8 @@ const val TAB_TRIALS = 15
 /** «Настройки» (3.77.0): from the banner's menu, «back» leading to the tab it was opened over. */
 const val TAB_SETTINGS = 17
 
-// Порядок нижних кнопок (3.95.3): Герой, Развитие, Поход, Город, Ремёсла
-val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CITY, TAB_CRAFTS)
+// Порядок нижних кнопок (3.95.3; 4.10.x - Ремёсла перед Городом): Герой, Развитие, Поход, Ремёсла, Город
+val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CRAFTS, TAB_CITY)
 
 /** Все кнопки нижней панели слева направо: вкладки игрока и вкладка администратора последней - по ним считается сторона перехода. */
 val BAR_TABS = PLAYER_TABS + TAB_ADMIN

@@ -69,10 +69,11 @@ import kotlin.math.sin
  * Сумка на карте (4.10.0, макет «Сундук на карте», вариант B «Веер в счётчик»): плашка внизу справа - «Сумка» и сколько добычи
  * легло за карту; ответ сервера на сундук выпускает веер фишек редкостей от героя в плашку, и у неё на миг встают «+N» и лучшая
  * вещь. Ждущие ответа сундуки - «ждёт N сундук». Веер и пульс - декор: без `LocalMotion` их нет, «+N» и строка встают сразу.
- * Нажатие открывает добычу последнего сундука ([onOpen]). [gathered] - штук добычи за всю карту.
+ * Нажатие открывает «Сумку захода» ([onOpen], 4.10.x) - всю добычу захода; плашка встаёт с первой добычей ([looted]) или
+ * первым сундуком. [gathered] - штук добычи за всю карту.
  */
-@Composable internal fun MapBag(game: GameUi, drops: List<MapDrop>, gathered: Long, onOpen: (MapDrop) -> Unit) {
-    if (drops.isEmpty()) return
+@Composable internal fun MapBag(game: GameUi, drops: List<MapDrop>, looted: Boolean, gathered: Long, onOpen: () -> Unit) {
+    if (drops.isEmpty() && !looted) return
     val moving = LocalMotion.current
     // Добыча, что уже легла до этого экрана, не вылетает снова: веер - только для ответов, пришедших при нём
     val told = remember { drops.filterNot { it.waiting }.mapTo(HashSet()) { it.n } }
@@ -119,7 +120,7 @@ import kotlin.math.sin
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             news?.let { drop -> News(game, drop) }
-            Tray(drops, gathered, pulse.value, onBag = { bag = it }) { drops.lastOrNull { !it.waiting }?.let(onOpen) }
+            Tray(drops, gathered, pulse.value, onBag = { bag = it }, onClick = onOpen)
         }
     }
 }

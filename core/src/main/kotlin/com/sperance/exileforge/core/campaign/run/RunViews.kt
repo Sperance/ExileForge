@@ -348,6 +348,8 @@ data class RunHud(
     val chestsLeft: Int = 0,
     /** Добыча сундуков и объектов захода по порядку (4.10.0): ответ на каждый - в сумку, ждущие - с «…». */
     val drops: List<MapDrop> = emptyList(),
+    /** Вся добыча захода по событиям, новая сверху (4.10.x, «Сумка захода»): бои, сундуки, объекты, Ваал-зона. */
+    val bag: List<BagEntry> = emptyList(),
     val fountainsLeft: Int = 0,
     /** The fountain offered (3.70.0): the map waits for the player's word — drink, or step away and leave it standing. */
     val fountain: FountainView? = null,

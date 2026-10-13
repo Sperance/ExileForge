@@ -134,6 +134,8 @@ private sealed interface AlbumPick {
                     ForgeSheet(onDismissRequest = { opened = null }) {
                         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(ui("history.first_find", stampText(found.find.at), found.find.count), color = Muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                            // Наименьший номер копии в мире героя (4.10.x): печать, как на карточке; номера не было - печати нет
+                            found.find.lowest.takeIf { it > 0 }?.let { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SerialSeal(it, relicLook(found.template.rarity)) } }
                             view?.let { ItemCard(it, enabled = false, detailed = true, action = false) }
                         }
                     }
@@ -161,7 +163,7 @@ private sealed interface AlbumPick {
     }
 }
 
-/** Одна находка: иконка шаблона, имя в цвете редкости, место и сколько всего, справа дата первой находки. */
+/** Одна находка: иконка шаблона, имя в цвете редкости, место, сколько всего и наименьший номер (4.10.x), справа дата первой находки. */
 @Composable private fun FoundRow(found: FoundUnique, onClick: () -> Unit) {
     val template = found.template
     val tint = rarityColor(template.rarity.name)
@@ -174,7 +176,10 @@ private sealed interface AlbumPick {
         TemplateIcon(template)
         Column(Modifier.weight(1f)) {
             Text(equipmentTitle(template.code), color = tint, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-            MutedText(listOfNotNull(slotTitle(template.slot), ui("history.times", found.find.count).takeIf { found.find.count > 1 }).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
+            MutedText(
+                listOfNotNull(slotTitle(template.slot), ui("history.times", found.find.count).takeIf { found.find.count > 1 }, ui("history.serial", found.find.lowest).takeIf { found.find.lowest > 0 }).joinToString(" · "),
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
         Text(stampText(found.find.at).replaceFirst(' ', '\n'), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End)
     }

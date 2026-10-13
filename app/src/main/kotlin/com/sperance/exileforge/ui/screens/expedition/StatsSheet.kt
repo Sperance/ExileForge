@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.i18n.ui
@@ -24,13 +25,13 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>, onDismiss: () -> Unit) {
+fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE, onDismiss: () -> Unit) {
     // Лист боя героя (4.6.4): карта ложится на него, как в заходе (`HeroBuild`)
     val combat = game.hero?.combat
     val mine = game.hero?.figures ?: StatFigures(emptyMap())
     val own = mine.stats
     val onMap = remember(combat, mapEffects) { MapEffects.hero(own, mapEffects).let { combat?.figures(it) ?: StatFigures(it) } }
-    val shifts = remember(combat, mapEffects) { MapEffects.heroShifts(own, mapEffects) }
+    val shifts = remember(combat, mapEffects, origins) { MapEffects.heroShifts(own, mapEffects, origins) }
     val changed = remember(mine, onMap) { onMap.values.count { (key, value) -> (mine.values[key] ?: 0.0) != value } }
     var mapTab by remember { mutableStateOf(false) }
     ForgeSheet(onDismissRequest = onDismiss) {

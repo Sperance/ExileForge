@@ -202,6 +202,7 @@ class UiStringsTest {
             AtlasNodeKind.entries.forEach { add("atlas.kind.${it.name}") }
             AtlasBranch.entries.forEach { add("atlas.branch.${it.name}") }
             AtlasPoints.KINDS.forEach { add("expedition.key_$it") }
+            com.sperance.exileforge.core.campaign.run.LootKind.entries.forEach { add("expedition.bag.from.${it.name}") }
             // Очко Атласа из ответа события (4.10.0) и доли разбора золота и опыта итогов карты
             AtlasPoints.ALL.forEach { add("atlas.earned.$it") }
             com.sperance.exileforge.core.campaign.BoostSource.entries.forEach { add("summary.source.${it.name}") }

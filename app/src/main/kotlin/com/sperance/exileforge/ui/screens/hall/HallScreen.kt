@@ -110,15 +110,17 @@ private val HallBoard.tab: StoneTab
         HallBoard.GUILD -> StoneTab(ui("hall.board.GUILD"), ForgeGlyphs.Banner, ModeHue.Guilds)
         HallBoard.PROFESSION -> StoneTab(ui("hall.board.PROFESSION"), ForgeGlyphs.Anvil, ModeHue.Professions)
         HallBoard.MIGHT -> StoneTab(ui("hall.board.MIGHT"), ForgeGlyphs.Swords, ModeHue.Might)
+        HallBoard.UNIQUES -> StoneTab(ui("hall.board.UNIQUES"), ForgeGlyphs.Gem, ModeHue.Uniques)
     }
 
-/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии, Мощь героя (4.9.0, строкой «⚜ 12.5k»). */
+/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии, Мощь героя (4.9.0, строкой «⚜ 12.5k»), находки (4.10.x). */
 private fun HallBoard.measure(value: Long): String = when (this) {
     HallBoard.RIFT -> ui("hall.value.RIFT", number(value.toDouble()))
     HallBoard.TOWER -> ui("hall.value.TOWER", value)
     HallBoard.RUSH -> clock(value.toDouble())
     HallBoard.GUILD, HallBoard.PROFESSION -> ui("hall.value.experience", number(value.toDouble()))
     HallBoard.MIGHT -> mightLine(value.toDouble())
+    HallBoard.UNIQUES -> ui("hall.value.UNIQUES", value)
 }
 
 /** Герой строки [entry] для карточки игрока (4.5.1); в таблице гильдий строки - гильдии, героя нет. */

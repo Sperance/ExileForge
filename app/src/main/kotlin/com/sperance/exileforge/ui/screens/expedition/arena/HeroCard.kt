@@ -21,9 +21,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
@@ -103,7 +108,7 @@ import kotlin.math.sin
                     Modifier.fillMaxSize().drawBehind {
                         val x = size.width - 1.dp.toPx() / 2
                         drawLine(Bronze, Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
-                    }.clickable(remember { MutableInteractionSource() }, null, onClick = openEffects).padding(end = RAIL_PAD),
+                    }.padding(end = RAIL_PAD),
                     verticalArrangement = Arrangement.spacedBy(3.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
@@ -155,18 +160,34 @@ import kotlin.math.sin
                 fight.ally?.let { PetBadge(game, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) { petOpen = true } }
             }
         }
-        // Временная полка (4.9.3) - под рельсом и портретом, во всю ширину карточки
-        Box(Modifier.fillMaxWidth().height(30.dp).padding(start = RAIL + RAIL_GAP), contentAlignment = Alignment.CenterStart) {
+        // Временная полка (4.9.3) - под портретом, во всю ширину карточки; под рельсом - «все эффекты» (4.10.x, макет «Эффекты в бою», вариант A)
+        Row(Modifier.fillMaxWidth().height(30.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(RAIL_GAP)) {
+            AllEffects(timed.size + lasting.size, Modifier.width(RAIL).fillMaxHeight(), openEffects)
             if (timed.isEmpty()) {
                 MutedText(ui("fight.no_states"), style = MaterialTheme.typography.labelSmall)
             } else {
-                EffectShelf(timed, 30.dp, openEffects, Modifier.fillMaxWidth())
+                EffectShelf(timed, 30.dp, openEffects, Modifier.weight(1f))
             }
         }
     }
     // A tap on the pet's badge (3.81.0): what it is, its life and blow, and every line it rolled; the fight holds while it is read.
     if (petOpen) fight.ally?.let { FightPetSheet(game, it, onCommand) { petOpen = false } }
     if (effectsOpen) EffectsSheet(ui("fight.shelf.hero"), timed, lasting, fight.heroFlow) { effectsOpen = false }
+}
+
+/** Мини-кнопка «все эффекты» (4.10.x): «≡» и сколько эффектов на герое; касание - лист всех эффектов, бой идёт. */
+@Composable private fun AllEffects(count: Int, modifier: Modifier, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    val label = ui("fight.shelf.all", count)
+    Column(
+        modifier.clip(shape).background(Vital.copy(alpha = .08f), shape).border(1.dp, Vital.copy(alpha = .45f), shape).clickable(role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = label },
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text("≡", color = Vital, fontSize = 11.sp, lineHeight = 11.sp, fontWeight = FontWeight.Bold)
+        Text(count.toString(), color = Vital, fontSize = 9.sp, lineHeight = 9.sp)
+    }
 }
 
 /** Ширина рельса «на весь бой» у портрета героя, отступ плиток от его черты и зазор до портрета. */

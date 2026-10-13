@@ -186,16 +186,17 @@ object MapEffects {
     /**
      * What each of the map's and the atlas's effects moved on the hero's sheet, by stat: every effect
      * laid alone, and whatever they do only together left on the stat's last shift, so the shifts add up to [hero].
+     * 4.10.x: строка делится по источникам [origins] - доля древа гильдии и выпитого зелья кладётся своим сдвигом.
      */
-    fun heroShifts(stats: Map<String, Double>, effects: Map<String, Double>): Map<String, List<Shift>> {
+    fun heroShifts(stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): Map<String, List<Shift>> {
         if (effects.isEmpty()) return emptyMap()
-        val atlas = AtlasEffects.hero.keys
         val shifts = LinkedHashMap<String, MutableList<Shift>>()
         effects.forEach { (code, value) ->
-            val source = StatSource(if (code in atlas || code.startsWith("ATLAS_")) SourceKind.ATLAS else SourceKind.MAP, code)
-            hero(stats, mapOf(code to value)).forEach { (stat, moved) ->
-                val delta = moved - (stats[stat] ?: 0.0)
-                if (abs(delta) >= MOVED) shifts.getOrPut(stat) { mutableListOf() } += Shift(source, delta)
+            origins.parts(code, value).forEach { (source, share) ->
+                hero(stats, mapOf(code to share)).forEach { (stat, moved) ->
+                    val delta = moved - (stats[stat] ?: 0.0)
+                    if (abs(delta) >= MOVED) shifts.getOrPut(stat) { mutableListOf() } += Shift(source, delta)
+                }
             }
         }
         hero(stats, effects).forEach { (stat, joint) ->
@@ -210,19 +211,26 @@ object MapEffects {
 
     /**
      * Строки карты, что меняют героя (4.9.3), для полки «на весь бой»: каждая строка карты (не дар Атласа) со сдвигами листа
-     * героя, что она дала по [heroShifts]; [index] метит вред. Порядок - карты.
+     * героя, что она дала по [heroShifts]; [index] метит вред. Порядок - карты. 4.10.x: доли древа гильдии и зелья ([origins]) -
+     * свои плитки со своим источником, а не строка карты.
      */
-    fun heroMods(index: ContentIndex, stats: Map<String, Double>, effects: Map<String, Double>): List<HeroMapMod> {
-        val moved = LinkedHashMap<String, MutableList<Pair<String, Double>>>()
-        heroShifts(stats, effects).forEach { (stat, shifts) ->
-            shifts.filter { it.source.kind == SourceKind.MAP }.forEach { moved.getOrPut(it.source.ref) { mutableListOf() } += stat to it.delta }
+    fun heroMods(index: ContentIndex, stats: Map<String, Double>, effects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE): List<HeroMapMod> {
+        val moved = LinkedHashMap<StatSource, MutableList<Pair<String, Double>>>()
+        heroShifts(stats, effects, origins).forEach { (stat, shifts) ->
+            shifts.filter { it.source.kind in SHELVED }.forEach { moved.getOrPut(it.source) { mutableListOf() } += stat to it.delta }
         }
-        return moved.map { (code, shifts) -> HeroMapMod(code, effects[code] ?: 0.0, shifts, MapStats.kindOf(index, code) == MapLineKind.HARM) }
+        return moved.map { (source, shifts) -> HeroMapMod(source, shifts, source.kind == SourceKind.MAP && MapStats.kindOf(index, source.ref) == MapLineKind.HARM) }
     }
+
+    /** Источники сдвигов, что встают плиткой на полку героя: строки карты, древо гильдии и зелье (дары Атласа - нет). */
+    private val SHELVED = setOf(SourceKind.MAP, SourceKind.GUILD, SourceKind.POTION)
 
     /** Two maps of effects summed per stat: a Vaal zone's lines over the map's. */
     fun sum(a: Map<String, Double>, b: Map<String, Double>): Map<String, Double> = (a.keys + b.keys).associateWith { (a[it] ?: 0.0) + (b[it] ?: 0.0) }
 }
 
-/** Строка карты на герое (4.9.3): эффект [code] силой [value], что он сдвинул в листе героя ([shifts]: стат - сдвиг) и вред ли он ([harm]). */
-data class HeroMapMod(val code: String, val value: Double, val shifts: List<Pair<String, Double>>, val harm: Boolean)
+/**
+ * Строка карты на герое (4.9.3): её источник [source] (4.10.x: строка карты, древо гильдии или зелье - код в `ref`), что она сдвинула
+ * в листе героя ([shifts]: стат - сдвиг) и вред ли она ([harm]).
+ */
+data class HeroMapMod(val source: StatSource, val shifts: List<Pair<String, Double>>, val harm: Boolean)

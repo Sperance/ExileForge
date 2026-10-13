@@ -147,6 +147,8 @@ import org.koin.compose.viewmodel.koinViewModel
             LocalBugReport provides { sheets.bug = true },
             LocalMailOpen provides { mailOpen = true },
             com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
+            // Пергамент карты мира (4.10.x): слой живёт с оболочкой, вход в «Поход» его только воспроизводит
+            com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
         ) {
             // Судьбоносные строки вещей (4.6.2) читают дар и надетое героя отсюда - и в листах карточек
             com.sperance.exileforge.ui.components.FateSightHost(game) {

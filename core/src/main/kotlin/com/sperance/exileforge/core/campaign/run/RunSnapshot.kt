@@ -26,6 +26,7 @@ import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.campaign.hud
 import com.sperance.exileforge.core.campaign.shownLife
+import com.sperance.exileforge.core.campaign.shownMax
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -56,7 +57,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
     val awaiting = mine.count(::awaits)
     return RunHud(
         phase = phase, mapCode = zone.code,
-        heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0), heroMaxLife = hero.maxLife.roundToInt(),
+        heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0, hero.maxLife), heroMaxLife = shownMax(hero.maxLife),
         heroShield = (battle?.heroFighter?.shield ?: shield).roundToInt(), heroMaxShield = (battle?.heroFighter?.body?.maxShield ?: hero.maxShield).roundToInt(),
         alive = world.alive, total = world.total, sealed = world.sealed,
         fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),
@@ -66,6 +67,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         gold = granted.gold, experience = granted.experience, kills = kills, awaiting = awaiting,
         chestsLeft = world.chests.count { !it.opened },
         drops = dropsShown,
+        bag = bagShown,
         fountainsLeft = world.fountains.count { !it.used },
         fountain = fountain?.let { FountainView(it.id, it.heal) },
         gate = gate, vaal = vaal,
@@ -117,6 +119,7 @@ internal fun ExpeditionRun.abyssView(): AbyssView? {
 internal fun ExpeditionRun.adopt(zone: ZoneShare) {
     zone.events.forEach { (n, gained) ->
         if (!mine.add(n) || n in earned) return@forEach
+        bag[n] = LootFrom(LootKind.VAAL) to clock()
         gained?.let {
             earned[n] = it
             granted += it

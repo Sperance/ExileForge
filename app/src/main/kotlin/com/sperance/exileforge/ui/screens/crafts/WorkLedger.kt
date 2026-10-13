@@ -103,11 +103,11 @@ internal class WorkSums(
 
 /**
  * Книга учёта: итоги [sums] с иконками, под чертой [title] строки стопок и чипы сделанного [made]. [startedAt] > 0 - есть время в
- * работе: оно идёт по часам сервера (сдвиг [offset]); ноль - итог сессии, без времени.
+ * работе: оно идёт по часам сервера (сдвиг [offset]); ноль - итог сессии, без времени. [makes] - работа делает вещи: есть итог «сделано».
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<ItemInstance>, startedAt: Long = 0, offset: Long = 0) {
+internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<ItemInstance>, startedAt: Long = 0, offset: Long = 0, makes: Boolean = sums.made > 0) {
     val inspect = rememberInspect()
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = 2, verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -134,7 +134,8 @@ internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<
             LedgerFigure(Icons.Outlined.StarOutline, ui("crafts.totals_experience"), cell) {
                 Text("+" + number(sums.experience) + (if (sums.levels > 0) " ▲${sums.levels}" else ""), color = Vital)
             }
-            LedgerFigure(ForgeGlyphs.Anvil, ui("crafts.totals_made"), cell) { Text(sums.made.toString(), color = Parchment) }
+            // «Сделано» - только у работ, что делают вещи (4.10.x, [JobKind.makesItems]): у добычи и стопок оно всегда ноль
+            if (makes) LedgerFigure(ForgeGlyphs.Anvil, ui("crafts.totals_made"), cell) { Text(sums.made.toString(), color = Parchment) }
         }
         SectionRule(title)
         if (sums.isEmpty) {

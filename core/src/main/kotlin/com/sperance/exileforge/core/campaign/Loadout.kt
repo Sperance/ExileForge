@@ -213,6 +213,8 @@ class HeroBuild(
     private val rules: CombatRules,
     /** Строки поверх листа на весь заход (3.96.0): дары и проклятия Разлома. */
     private val extra: List<StatLine> = emptyList(),
+    /** Источники долей [mapEffects] (4.10.x): древо гильдии и зелье подписывают свои сдвиги листа. */
+    private val origins: EffectOrigins = EffectOrigins.NONE,
 ) : HeroModel {
     private fun sheet(lines: List<StatLine>): Map<String, Double> = (extra + lines).let { all -> gear.model?.with(all) ?: StatLines.fold(gear.stats, all, gear.percent) }
 
@@ -235,7 +237,7 @@ class HeroBuild(
     override fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = gear.model?.conditionalSourced(active).orEmpty()
     override val explainer: SheetExplainer? get() = gear.model?.explainer
     override val passiveLines: List<StatLine> get() = passives
-    override fun shifts(): Map<String, List<Shift>> = MapEffects.heroShifts(sheet(passives), mapEffects)
+    override fun shifts(): Map<String, List<Shift>> = MapEffects.heroShifts(sheet(passives), mapEffects, origins)
     override fun against(states: Set<Condition>): Double = gear.model?.against(states) ?: 0.0
 }
 

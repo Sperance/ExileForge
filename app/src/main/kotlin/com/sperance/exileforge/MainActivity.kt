@@ -7,6 +7,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.lifecycle.lifecycleScope
+import com.sperance.exileforge.platform.FrameRateCap
 import com.sperance.exileforge.platform.ScreenCapture
 import com.sperance.exileforge.platform.VolumeChord
 import com.sperance.exileforge.presentation.ShellViewModel
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        FrameRateCap.apply(this)
         setContent { CompositionLocalProvider(LocalVolumeChord provides chord) { ForgeTheme { ForgeApp(updates) } } }
     }
 

@@ -21,8 +21,11 @@ import kotlinx.coroutines.flow.update
  */
 data class HallPick(val board: HallBoard, val scope: String = "")
 
-/** Доска славы на экране: выбранная таблица [pick] и её ответ [table] (null - ещё читается или не прочитана). */
-data class HallUi(val pick: HallPick? = null, val table: HallTable? = null)
+/**
+ * Доска славы на экране: выбранная таблица [pick] и её ответ [table] (null - ещё читается или не прочитана); [hero] - чья это
+ * таблица: у другого героя (и его игрового мира) она другая.
+ */
+data class HallUi(val pick: HallPick? = null, val table: HallTable? = null, val hero: String = "")
 
 /**
  * Доска славы Города (4.2.0, сервер 1.84.0): одна таблица за раз, читается заново при каждом выборе. Ответ, пришедший к
@@ -42,14 +45,15 @@ class HallViewModel(
 
     /** Открыть таблицу [pick]: прежняя таблица того же выбора остаётся на экране до ответа. */
     fun pick(pick: HallPick) {
-        mutable.update { state -> HallUi(pick, state.table.takeIf { state.pick == pick }) }
+        mutable.update { state -> HallUi(pick, state.table.takeIf { state.pick == pick }, state.hero) }
         load()
     }
 
-    /** Перечитать открытую таблицу. */
+    /** Перечитать открытую таблицу; сменился герой - таблица прежнего сброшена сразу, не ждёт ответа. */
     fun load() {
         val pick = mutable.value.pick ?: return
         val heroId = heroes.heroId.takeIf { it.isNotBlank() } ?: return
+        mutable.update { if (it.hero == heroId) it else it.copy(table = null, hero = heroId) }
         commands.read(Reads.HALL, restart = true) {
             val table = connection.api.hall.table(heroId, pick.board, pick.scope)
             mutable.update { if (it.pick == pick && heroes.onScreen(heroId)) it.copy(table = table) else it }

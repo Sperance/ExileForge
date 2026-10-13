@@ -17,6 +17,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.sperance.exileforge.presentation.state.GameSettings
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
 /** Whether the screens move (3.77.0, «Анимации» in the settings): the pulses, glows and marching roads stand still when off. */
@@ -26,7 +27,7 @@ val LocalMotion = staticCompositionLocalOf { true }
 val LocalSettings = staticCompositionLocalOf { GameSettings() }
 
 /**
- * Общие часы декора (4.7.0): секунды одним циклом на всё приложение, шагом [STEP_NS] (30 раз в секунду) - декор не держит
+ * Общие часы декора (4.7.0): секунды одним циклом на всё приложение, шагом около 30 раз в секунду (между шагами спят [SLEEP_MS]) - декор не держит
  * экран в 60 кадрах и не заводит свой бесконечный переход на каждый пульс. Стоят, когда анимации выключены (`LocalMotion`) и
  * когда приложение не на экране. Бой и сцена забега идут своими часами - их анимация не декор. С 4.9.0 стоят и без
  * читателей ([readers]): экран без декора не будит кадры; вернувшийся читатель продолжает с прежней секунды.
@@ -68,12 +69,11 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
                 // Бесконечный кадр (не `withFrameNanos`): политика бесконечных анимаций (тесты UI) останавливает часы, как прежние переходы
                 while (clock.readers.intValue > 0) {
                     withInfiniteAnimationFrameNanos { now ->
-                        if (last == 0L) last = now
-                        if (now - last >= STEP_NS) {
-                            clock.seconds.floatValue += ((now - last) / 1e9f).coerceAtMost(MAX_STEP_S)
-                            last = now
-                        }
+                        if (last != 0L) clock.seconds.floatValue += ((now - last) / 1e9f).coerceAtMost(MAX_STEP_S)
+                        last = now
                     }
+                    // Между шагами часы спят, а не просыпаются каждый vsync: следующий кадр после паузы - через шаг
+                    delay(SLEEP_MS)
                 }
             }
         }
@@ -103,8 +103,8 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
     return remember(clock, moving) { derivedStateOf { if (!moving || clock == null) 0f else clock.now } }
 }
 
-/** Шаг часов декора: 30 раз в секунду. */
-private const val STEP_NS = 33_333_333L
+/** Сон часов декора между шагами: с ожиданием следующего кадра шаг - около 30 раз в секунду. */
+private const val SLEEP_MS = 24L
 
 /** Шаг после паузы (приложение вернулось на экран) не прыгает дальше этого. */
 private const val MAX_STEP_S = .1f

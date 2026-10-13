@@ -165,7 +165,6 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                                 this,
                                 foe.monster.code.value,
                                 foe.monster.form,
-                                ring,
                                 time,
                                 wash?.let(::ailmentTint),
                                 wash?.let(::washAmount) ?: 0f,

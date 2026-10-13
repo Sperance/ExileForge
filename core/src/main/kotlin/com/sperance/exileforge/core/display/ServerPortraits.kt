@@ -168,8 +168,8 @@ class PortraitBundle(val portraits: Map<String, Portrait> = emptyMap()) {
 /** The set the app is drawing from, global as `serverIcons` is. */
 @Volatile var serverPortraits: PortraitBundle = PortraitBundle()
 
-/** A class's portrait, or null for the client's own bust. */
+/** A class's portrait; null - портретов ещё нет, жетон пуст. */
 fun classPortrait(code: String?): Portrait? = code?.takeIf(String::isNotBlank)?.let { serverPortraits[PortraitKey.characterClass(it)] }
 
-/** A monster's own portrait first, then its form's, then null for the client's own drawing. */
+/** A monster's own portrait first, then its form's; null - жетон пуст. */
 fun monsterPortrait(code: String, form: String): Portrait? = serverPortraits[PortraitKey.monster(code)] ?: serverPortraits[PortraitKey.form(form)]

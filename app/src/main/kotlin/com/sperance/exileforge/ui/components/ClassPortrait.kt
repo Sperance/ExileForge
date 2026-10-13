@@ -14,7 +14,7 @@ import com.sperance.exileforge.ui.theme.Gold
 
 /**
  * A class's portrait outside a fight (since 2.31.0): three by four, or [round] as the token the map
- * draws. The server's drawing when it has one, the client's own bust otherwise. [portraits] is how
+ * draws. The server's drawing; пока его нет - пустой жетон. [portraits] is how
  * many the server has sent so far — read here so the picture is redrawn the moment they arrive.
  */
 @Composable fun ClassPortrait(classCode: String?, portraits: Int, modifier: Modifier = Modifier, round: Boolean = false, ring: Color = Gold) {

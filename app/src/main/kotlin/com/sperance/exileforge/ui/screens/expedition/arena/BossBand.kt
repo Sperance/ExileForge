@@ -564,13 +564,12 @@ private fun DrawScope.archFrame(glow: Color?) {
 }
 
 @Composable private fun MinionNiche(foe: FoeView, fight: FightHud, time: Float, focused: Boolean, modifier: Modifier, onTap: () -> Unit) {
-    val ring = rarityTint(foe.monster.rarity)
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     Box(modifier.fillMaxSize().clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)) {
         Box(Modifier.fillMaxWidth().padding(bottom = 16.dp).fillMaxHeight()) {
             Canvas(Modifier.fillMaxSize()) { archFrame(null) }
             Canvas(Modifier.fillMaxSize().padding(3.dp).clip(ArchShape)) {
-                Portraits.monster(this, foe.monster.code.value, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index))
+                Portraits.monster(this, foe.monster.code.value, foe.monster.form, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index))
             }
             if (focused) Box(Modifier.matchParentSize().border(2.dp, FrameGoldBright, ArchShape))
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
@@ -665,7 +664,6 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
  */
 @Composable private fun PortraitStage(foe: FoeView, boss: BossHud, fight: FightHud, time: Float, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val settings = LocalSettings.current
-    val ring = rarityTint(foe.monster.rarity)
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     val aura = phaseAura(phaseNumber(boss))
     val focused = fight.focus == foe.index
@@ -691,7 +689,7 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
         ) {
             Canvas(Modifier.fillMaxSize()) {
                 // Матерь Скверны рвёт пуповины по фазам - портрет показывает порванные
-                Portraits.monster(this, foe.monster.code.value, foe.monster.form, ring, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
+                Portraits.monster(this, foe.monster.code.value, foe.monster.form, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
             }
             CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }

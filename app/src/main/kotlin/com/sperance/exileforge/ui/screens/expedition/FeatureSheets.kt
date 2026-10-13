@@ -64,11 +64,11 @@ import kotlin.math.roundToInt
  * Лист объекта карты (3.90.0, сервер 1.81.3), по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
  * открывают - они срабатывают сами (очаг Скверны - касанием точки и сундука).
  */
-@Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, onCommand: (RunCommand) -> Unit) {
+@Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, gathering: () -> Float? = { view.gathering }, onCommand: (RunCommand) -> Unit) {
     when (val feature = view.feature) {
         is MapFeature.Altar -> DockPanel { AltarSheet(game, feature) { onCommand(RunCommand.Choose(it)) } }
         is MapFeature.Merchant -> DockPanel { MerchantSheet(game, feature, view.taken, onCommand) }
-        is MapFeature.Node -> DockPanel { NodeSheet(game, feature, view.gathering, view.guarded, onCommand) }
+        is MapFeature.Node -> DockPanel { NodeSheet(game, feature, view.gathering != null, gathering, view.guarded, onCommand) }
         is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
     }
 }
@@ -158,7 +158,7 @@ import kotlin.math.roundToInt
  * Узел ремесла: что даёт и сколько собирать. Без инструмента профессии сбор не начать - лист говорит, какой нужен; под стражами
  * сокровищ ([guarded], 4.9.0) - тоже, пока они стоят; идущий сбор показывает свою долю.
  */
-@Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, gathering: Float?, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
+@Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, busy: Boolean, gathering: () -> Float?, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
     val tooled = game.hero?.equipped?.containsKey(node.tool) == true
     ForgeSheet(onDismissRequest = { onCommand(RunCommand.StepOff) }) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -166,9 +166,10 @@ import kotlin.math.roundToInt
             MutedText(ui("feature.node.yield", number(node.seconds), node.amount.first(), node.amount.last()))
             if (!tooled) Text(ui("feature.node.tool", professionTitle(node.profession)), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
             if (guarded) Text(ui("feature.guarded"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-            if (gathering != null) {
+            if (busy) {
                 Text(ui("feature.node.gathering"), color = Rune, style = MaterialTheme.typography.bodyMedium)
-                LinearProgressIndicator(progress = { gathering }, modifier = Modifier.fillMaxWidth(), color = Gold)
+                // Доля сбора читается в рисовании полосы: лист не перекомпонуется на каждом её шаге
+                LinearProgressIndicator(progress = { gathering() ?: 0f }, modifier = Modifier.fillMaxWidth(), color = Gold)
             } else {
                 ForgeButton(enabled = tooled && !guarded, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.node.gather")) }
                 ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.leave")) }

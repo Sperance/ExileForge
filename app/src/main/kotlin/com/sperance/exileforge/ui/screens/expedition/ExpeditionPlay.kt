@@ -71,7 +71,8 @@ import kotlin.math.roundToInt
     val expedition: ExpeditionViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
     // Снимок захода живьём - для арены; тело экрана видит его без полей кадра боя ([screenOnly], 4.9.0): бой меняет снимок
-    // каждый кадр, а перекомпонуется от этого только арена ([RunFight]), не весь экран похода со сценой и панелями.
+    // каждый кадр, а перекомпонуется от этого только арена ([RunFight]), не весь экран похода со сценой и панелями. На карте
+    // то же: тикающее (здоровье, пояс, несомое, урон ловушек, вход в комнату, сбор) читают свои листовые элементы из [live].
     val live = run.hud.collectAsState()
     val hud by remember(live) { derivedStateOf { live.value.screenOnly() } }
     // The first run explains the fight before the first pack is met (3.14.0).
@@ -122,12 +123,12 @@ import kotlin.math.roundToInt
             val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
             if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
             BlightWatch(hud.blight, shell::announce)
-            if (hud.phase == RunPhase.MAP && ribbon == null) HazardFloat(hud.hazards)
+            if (hud.phase == RunPhase.MAP && ribbon == null) LiveHazards(live)
             // Вход в комнату (4.9.0): трещина поддаётся или дверь заперта - строкой над героем, кольцо рисует сцена
-            if (hud.phase == RunPhase.MAP && ribbon == null) EntranceFloat(hud.entrance)
+            if (hud.phase == RunPhase.MAP && ribbon == null) LiveEntrance(live)
             when (hud.phase) {
                 RunPhase.MAP -> if (ribbon != null) {
-                    AutoRibbon(run, hud, ribbon) { model.runCommand(RunCommand.FinishAuto) }
+                    AutoRibbon(run, hud, ribbon, live) { model.runCommand(RunCommand.FinishAuto) }
                 } else {
                     MapDockHost { dock ->
                         // An autorun walks by itself (3.2.0): no stick under the thumb while it runs
@@ -136,6 +137,7 @@ import kotlin.math.roundToInt
                             game,
                             run,
                             hud,
+                            live,
                             onLeave = if (zone) null else ({ leaving = true }),
                             onGear = { gear = true },
                             onStats = { sheet = true },
@@ -161,7 +163,7 @@ import kotlin.math.roundToInt
                         if (hud.auto == null && !dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
                         if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
                         // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
-                        hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
+                        hud.feature?.let { FeatureSheet(game, it, { live.value.feature?.gathering }, onCommand = model::runCommand) }
                         if (leaving) {
                             DockPanel {
                                 ConfirmSheet(
@@ -217,15 +219,50 @@ import kotlin.math.roundToInt
 
 /**
  * Снимок захода для тела экрана похода (4.9.0): в бою - без того, что бой меняет каждый кадр (сам бой, пулы и пояс героя,
- * опасности), - их читает только арена ([RunFight]); вне боя - как есть. Тело экрана в бою этих полей не показывает.
+ * опасности), - их читает только арена ([RunFight]). На карте - без тикающего: здоровья, щита и маны, долей пояса, несомого,
+ * урона ловушек, входа в комнату и доли сбора; их читают свои листовые элементы из живого снимка ([MapVitals], [RoadEffects],
+ * [LiveFlasks], [LiveHazards], [LiveEntrance]), и экран не перекомпонуется на каждом их шаге. Прочие фазы - как есть.
  */
-private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
-    this
-} else {
-    copy(
+private fun RunHud.screenOnly(): RunHud = when (phase) {
+    RunPhase.FIGHT -> copy(
         fight = null, heroLife = 0, heroShield = 0, heroMaxShield = 0, heroMana = 0, heroMaxMana = 0, heroReserved = 0,
         flasks = emptyList(), hazards = emptyList(), heroAilments = emptyList(), heroEffects = emptyList(), heroCharges = emptyList(), lifeFlow = null,
     )
+
+    RunPhase.MAP -> copy(
+        heroLife = 0, heroShield = 0, heroMana = 0, heroReserved = 0,
+        flasks = flasks.map { it?.copy(charges = 0, active = 0f) }, hazards = emptyList(), heroAilments = emptyList(), heroEffects = emptyList(),
+        heroCharges = emptyList(), lifeFlow = null, entrance = null, feature = feature?.let { it.copy(gathering = it.gathering?.let { 0f }) },
+    )
+
+    else -> this
+}
+
+/** Полосы героя на карте из живого снимка: тикают сами, не трогая панель. */
+@Composable private fun MapVitals(live: State<RunHud>, modifier: Modifier) {
+    val now by remember(live) { derivedStateOf { live.value.let { VitalsView(it.heroLife, it.heroMaxLife, it.heroShield, it.heroMaxShield, it.heroMana, it.heroMaxMana, it.heroReserved, it.lifeFlow) } } }
+    Vitals(now.life, now.maxLife, now.shield, now.maxShield, modifier, now.mana, now.maxMana, now.reserved, flow = now.flow)
+}
+
+/** Полосы героя одним значением: перекомпоновка - лишь когда сменилось число. */
+private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, val maxShield: Int, val mana: Int, val maxMana: Int, val reserved: Int, val flow: LifeFlow?)
+
+/** Пояс на карте из живого снимка. */
+@Composable private fun LiveFlasks(live: State<RunHud>, onDrink: (Int) -> Unit) {
+    val flasks by remember(live) { derivedStateOf { live.value.flasks } }
+    MapFlasks(flasks, onDrink)
+}
+
+/** Урон карты над героем из живого снимка. */
+@Composable private fun LiveHazards(live: State<RunHud>) {
+    val hazards by remember(live) { derivedStateOf { live.value.hazards } }
+    HazardFloat(hazards)
+}
+
+/** Строка входа в комнату из живого снимка. */
+@Composable private fun LiveEntrance(live: State<RunHud>) {
+    val cue by remember(live) { derivedStateOf { live.value.entrance } }
+    EntranceFloat(cue)
 }
 
 /** Арена захода по живому снимку [live] (4.9.0): кадр боя перекомпонует только её. */
@@ -245,6 +282,7 @@ private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
     game: GameUi,
     run: ExpeditionRun,
     hud: RunHud,
+    live: State<RunHud>,
     onLeave: (() -> Unit)?,
     onGear: () -> Unit,
     onStats: () -> Unit,
@@ -286,12 +324,12 @@ private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
                 }
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
-                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved, flow = hud.lifeFlow)
+                MapVitals(live, Modifier.fillMaxWidth())
                 // Несомое из боя и от ловушек (макет «Эффекты героя на карте», вариант C) - плитками полки, как в бою
-                RoadEffects(hud)
+                RoadEffects(live)
                 // Очаг Скверны (4.0.0): точка, монстры вокруг неё, сундук
                 BlightLine(hud.blight)
-                if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)
+                if (hud.flasks.any { it != null }) LiveFlasks(live, onDrink)
             }
             // The minimap (2.51.0), opened as the map is explored; round and around the hero since 2.56.1,
             // with its own zoom and the whole map behind a tap since 2.72.0.
@@ -395,7 +433,7 @@ internal const val FOUNTAIN_TAP = .9
  * Лента боёв автопрохода (3.94.0) - между боями вместо карты: зона, волна из скольких полосой, открытые сундуки и павшие,
  * жизнь героя (между боями она восстанавливается, 4.10.0) и «Завершить» (3.95.2) - уход с собранным, после вопроса.
  */
-@Composable internal fun AutoRibbon(run: ExpeditionRun, hud: RunHud, auto: AutoHud, onFinish: () -> Unit) {
+@Composable internal fun AutoRibbon(run: ExpeditionRun, hud: RunHud, auto: AutoHud, live: State<RunHud>, onFinish: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Panel, Ink))).systemBarsPadding().padding(24.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(ui("auto.title"), color = Muted, style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp)
@@ -410,7 +448,8 @@ internal const val FOUNTAIN_TAP = .9
             Text(ui("auto.tally", auto.chests, hud.kills), color = Muted, style = MaterialTheme.typography.bodyMedium)
             // Нет связи (4.0.0): автопробег стоит и сам пойдёт дальше, когда сервер ответит
             if (auto.offline) Text(ui("auto.offline"), color = LifeRed, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-            Text(ui("auto.life", hud.heroLife, hud.heroMaxLife), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+            val life by remember(live) { derivedStateOf { live.value.heroLife } }
+            Text(ui("auto.life", life, hud.heroMaxLife), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
             AutoFinish(hud, auto, hold = run, onFinish = onFinish) { enabled, label, onClick ->
                 ForgeTextButton(onClick = onClick, enabled = enabled) { Text(label, color = LifeRed) }
             }

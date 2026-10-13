@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -14,6 +16,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.ChargeView
+import com.sperance.exileforge.core.campaign.combat.EffectView
+import com.sperance.exileforge.core.campaign.combat.LifeFlow
+import com.sperance.exileforge.core.campaign.run.AilmentView
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.screens.expedition.arena.AllEffects
@@ -26,8 +32,10 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
  * плитками той же полки, что в бою ([EffectShelf]: стаки и секунды, касание плитки - её выноска). Слева «≡ N» - лист всех
  * эффектов ([EffectsSheet]) с итогом здоровья в секунду; его же открывает «+N». Ничего не несёт - полки нет.
  */
-@Composable internal fun RoadEffects(hud: RunHud) {
-    val timed = remember(hud.heroAilments, hud.heroEffects, hud.heroCharges) { timedShelf(false, hud.heroAilments, hud.heroEffects, hud.heroCharges) }
+@Composable internal fun RoadEffects(live: State<RunHud>) {
+    // Из живого снимка (тело экрана его без несомого не видит): полка перекомпонуется сама, когда несомое сменилось
+    val hud by remember(live) { derivedStateOf { live.value.let { RoadView(it.heroAilments, it.heroEffects, it.heroCharges, it.lifeFlow) } } }
+    val timed = remember(hud) { timedShelf(false, hud.ailments, hud.effects, hud.charges) }
     var open by remember { mutableStateOf(false) }
     if (timed.isNotEmpty()) {
         Row(Modifier.fillMaxWidth().height(TILE), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -35,8 +43,11 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
             EffectShelf(timed, TILE, { open = true }, Modifier.weight(1f))
         }
     }
-    if (open) EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.lifeFlow) { open = false }
+    if (open) EffectsSheet(ui("fight.shelf.hero"), timed, emptyList(), hud.flow) { open = false }
 }
+
+/** Несомое героя одним значением. */
+private data class RoadView(val ailments: List<AilmentView>, val effects: List<EffectView>, val charges: List<ChargeView>, val flow: LifeFlow?)
 
 /** Сторона плитки полки на карте. */
 private val TILE = 26.dp

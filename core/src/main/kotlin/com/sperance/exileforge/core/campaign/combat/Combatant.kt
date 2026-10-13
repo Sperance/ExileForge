@@ -7,7 +7,9 @@ import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.ManaRule
+import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.sheet.DamageTaken
+import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.sheet.StatReader
 import kotlin.math.max
 
@@ -36,11 +38,11 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** Immune to chaos (3.17.0, server 1.15.0): its hits and poison do nothing. */
     val chaosImmune = stat(CoreStat.CHAOS_IMMUNE.code) > 0
 
-    /** Mana back a second (server 0.69.0): the rule's share of the maximum, faster by the sheet's regeneration. */
-    fun manaRegen(rule: ManaRule): Double = if (manaSealed) 0.0 else maxMana * rule.regen / 100 * max(0.0, 1 + stat(CoreStat.MANA_REGEN.code) / 100)
-
-    /** Флаг листа «мана не восстанавливается» (4.8.0, сервер - угроза высокого тира карты): реген обнуляется при любых прибавках. */
-    val manaSealed: Boolean get() = stat(CoreStat.NO_MANA_REGEN.code) > 0
+    /**
+     * Mana back a second (server 0.69.0): the rule's share of the maximum, faster by the sheet's regeneration. Доля восстановления
+     * маны (4.11.0) - [Recovery.share]: «меньше регенерации» и запрет листа, недуги боя режут её на [curb] процентов (вне боя - 0).
+     */
+    fun manaRegen(rule: ManaRule, curb: Double = 0.0): Double = maxMana * rule.regen / 100 * max(0.0, 1 + stat(CoreStat.MANA_REGEN.code) / 100) * Recovery.share(this, RecoveryPool.MANA, curb)
 
     /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
     val damageMore = max(0.0, 1 + stat(CoreStat.DAMAGE.code) / 100)
@@ -99,11 +101,9 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** Extra critical multiplier this fighter takes; below zero (server 1.32.0) a critical strike hurts it no more than a hit. */
     val critTaken = stat(CoreStat.CRITICAL_TAKEN.code) / 100
-    fun ailmentTaken(ailment: Ailment): Double = when (ailment) {
-        Ailment.BLEEDING -> max(0.0, 1 + stat(CoreStat.BLEED_TAKEN.code) / 100)
-        Ailment.SHOCKED -> max(0.0, 1 + stat(CoreStat.SHOCK_TAKEN.code) / 100)
-        else -> 1.0
-    }
+
+    /** Насколько сильнее недуг [ailment] на этом бойце (`STOCK_<слово>_TAKEN`; 4.11.0 - по слову недуга, ниже нуля - слабее). */
+    fun ailmentTaken(ailment: Ailment): Double = max(0.0, 1 + stat("STOCK_${ailment.word}_TAKEN") / 100)
     val damage: Map<DamageType, Double> = DamageType.entries.associateWith { max(0.0, stat(it.attack)) }
         .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
     val attackSpeed = stat(CoreStat.ATTACK_SPEED.code).takeIf { it > 0 }?.coerceIn(rules.attackSpeedMin, rules.attackSpeedMax) ?: rules.unarmed.speed
@@ -343,8 +343,9 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** Increased damage for each charge of [kind] it holds. */
     fun perCharge(kind: ChargeKind): Double = stat("STOCK_DAMAGE_PER_${kind.name}")
-    val shockEffect = max(0.0, 1 + stat(CoreStat.SHOCK_EFFECT.code) / 100)
-    val chillEffect = max(0.0, 1 + stat(CoreStat.CHILL_EFFECT.code) / 100)
+
+    /** Насколько сильнее недуг без урона [ailment], что этот боец накладывает (`STOCK_<слово>_EFFECT`: шок, холод, изранение…). */
+    fun ailmentEffect(ailment: Ailment): Double = max(0.0, 1 + stat("STOCK_${ailment.word}_EFFECT") / 100)
 
     /** How much faster its damaging ailments run their damage, as a share. */
     val fasterAilments = max(0.0, stat(CoreStat.FASTER_AILMENTS.code)) / 100

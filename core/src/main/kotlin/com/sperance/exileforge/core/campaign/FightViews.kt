@@ -98,7 +98,8 @@ internal fun Battle.hud(
             ((until - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f),
             active.size,
             (until - battle.time).coerceAtLeast(0.0),
-            if (ailment.hurts) active.sumOf { it.magnitude } else active.maxOf { it.magnitude },
+            // Недуг без урона - сила, как её читает бой ([Battle.Fighter.held], 4.11.0: приём цели и потолок правила)
+            if (ailment.hurts) active.sumOf { it.magnitude } else f.held(ailment),
         )
     }
     fun buildup(f: Battle.Fighter) = rules.buildup?.let {

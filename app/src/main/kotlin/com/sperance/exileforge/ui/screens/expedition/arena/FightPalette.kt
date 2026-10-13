@@ -46,6 +46,8 @@ internal fun ailmentTint(ailment: Ailment): Color = when (ailment) {
     Ailment.SHOCKED -> Color(0xFFFFD34A)
     Ailment.POISONED -> Vital
     Ailment.BLEEDING -> LifeRed
+    Ailment.WOUNDED -> Color(0xFF8A3324)
+    Ailment.PARCHED -> Color(0xFFC9A05A)
 }
 
 internal fun Ailment.key() = "enum.ailment.$name"
@@ -60,13 +62,19 @@ internal fun ailmentTip(view: AilmentView) = Tip(
     ui("fight.effect.${view.ailment.name}"),
     ailmentTint(view.ailment),
     listOfNotNull(
-        view.strength.takeIf { it > 0 && view.ailment != Ailment.FROZEN }?.let {
-            ui("fight.fact_strength") to (if (view.ailment.hurts) ui("fight.fact_dps", fineNumber(it)) else ui("fight.fact_percent", fineNumber(it)))
-        },
+        view.strength.takeIf { it > 0 && view.ailment != Ailment.FROZEN }?.let { ui("fight.fact_strength") to strengthFact(view.ailment, it) },
         (ui("fight.fact_left") to ui("fight.fact_seconds", fineNumber(view.seconds))).takeIf { view.seconds > 0 },
         (ui("fight.fact_stacks") to view.stacks.toString()).takeIf { view.stacks > 1 },
     ),
 )
+
+/** Как окно недуга [ailment] пишет его силу [value] (4.11.0): урон в секунду, доля или срезанное восстановление запаса. */
+private fun strengthFact(ailment: Ailment, value: Double): String = when (ailment) {
+    Ailment.BURNING, Ailment.POISONED, Ailment.BLEEDING -> ui("fight.fact_dps", fineNumber(value))
+    Ailment.CHILLED, Ailment.FROZEN, Ailment.SHOCKED -> ui("fight.fact_percent", fineNumber(value))
+    Ailment.WOUNDED -> ui("fight.fact_curb_life", fineNumber(value))
+    Ailment.PARCHED -> ui("fight.fact_curb_mana", fineNumber(value))
+}
 
 internal fun stunTip() = Tip(ui("expedition.stunned"), ui("fight.effect.STUN"), GoldBright)
 
@@ -75,7 +83,8 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
     Ailment.FROZEN -> .55f
     Ailment.BURNING -> .35f
     Ailment.CHILLED, Ailment.POISONED, Ailment.SHOCKED -> .3f
-    Ailment.BLEEDING -> .25f
+    Ailment.BLEEDING, Ailment.WOUNDED -> .25f
+    Ailment.PARCHED -> .2f
 }
 
 /** A clock in seconds for the portraits' idle motion, ticking once a frame while the frame is on screen. */

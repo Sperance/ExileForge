@@ -161,8 +161,8 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 }
 
 /**
- * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена), мана,
- * энергощит и идущие флаконы.
+ * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена), мана
+ * (4.11.0 - под долей восстановления листа, без недугов), энергощит и идущие флаконы.
  */
 internal fun ExpeditionRun.recover(dt: Double) {
     life = RoadLife.of(hero, pace).after(life, hero.maxLife, dt)

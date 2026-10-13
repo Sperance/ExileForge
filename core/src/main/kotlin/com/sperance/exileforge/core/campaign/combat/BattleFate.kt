@@ -467,9 +467,11 @@ private class EveryNthAilment(effect: FateEffect, fate: FateEffects) : LeverReac
         val ailments = effect.ailments.mapNotNull { Ailment.of(it) }
         if (ailments.isEmpty()) return
         val ailment = ailments[battle.random.nextInt(ailments.size)]
-        val type = battle.ruleOf[ailment]?.second ?: return
+        val (_, type) = battle.ruleOf[ailment] ?: return
         val share = taken.values.sum() * value / 100
-        if (share > 0 && battle.afflict(battle.heroFighter, target, ailment, mapOf(type to share), weight = weight) != null) {
+        // Недуг без вида урона (4.11.0) несёт доля всего удара, по его видам
+        val dealt = type?.let { mapOf(it to share) } ?: taken.mapValues { it.value * value / 100 }
+        if (share > 0 && battle.afflict(battle.heroFighter, target, ailment, dealt, weight = weight) != null) {
             battle.fateBeat(FateBeat.AILMENT, effect.every.toDouble(), share, ref = ailment.name)
         }
     }

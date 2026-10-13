@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.content.BuildupRule
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.PowerEvent
+import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.SkillEvent
 import kotlin.math.max
 import kotlin.math.min
@@ -59,15 +60,16 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     // Монстр (4.2.0): подавление героя и потолок восстановления, общий с регенерацией.
     // Обет крови (4.6.3): похищение умений за здоровье - тем же вампиризмом, под его потолком
     val leeched = physical * body.leechPhysical + dealt * (body.leechAll + fateLeech(me, blow)) + (if (kind == HitKind.CRIT) dealt * body.critLeech else 0.0)
-    val leech = recovery(me, me.leechRoom(leeched * body.recoveryRate, time, rules.caps.leechPerSecond))
+    // Доля восстановления здоровья (4.11.0, лист и изранение) - до потолка вампиризма, как у Мощи
+    val leech = recovery(me, me.leechRoom(leeched * body.recoveryRate * me.share(RecoveryPool.LIFE), time, rules.caps.leechPerSecond))
     val onHit = (if (blow.weapon) body.lifeOnHit else 0.0) * body.recoveryRate
     // Life leech into the shield (server 1.32.0): what it restores is not life.
     if (body.leechToShield) me.shield = min(me.body.maxShield, me.shield + leech)
     val healed = if (body.leechToShield) onHit else leech + onHit
     lifeBack(me, healed, overheal = true)
     bloodPrice(me)
-    // Mana (server 0.69.0): leeched and gained on hit; a burning blow takes the struck one's.
-    if (me.body.maxMana > 0) manaBack(me, dealt * body.leechMana + if (blow.weapon) body.manaOnHit else 0.0)
+    // Mana (server 0.69.0): leeched and gained on hit; a burning blow takes the struck one's. Доля восстановления маны (4.11.0) режет оба.
+    if (me.body.maxMana > 0) manaBack(me, (dealt * body.leechMana + if (blow.weapon) body.manaOnHit else 0.0) * me.share(RecoveryPool.MANA))
     if (body.manaBurn > 0) target.mana = max(0.0, target.mana - target.body.maxMana * body.manaBurn)
 
     var stunned = false
@@ -218,7 +220,7 @@ internal fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType,
         val (ailment, type) = what
         // The freeze is a bar since 3.78.0: no chance to roll for it while the rule's bars are on.
         if (ailment == Ailment.FROZEN && rules.buildup != null) return@mapNotNull null
-        val amount = taken[type] ?: 0.0
+        val amount = if (type == null) taken.values.sum() else taken[type] ?: 0.0
         val base = if (me.side == Side.HERO) rule.heroChance ?: rule.chance else rule.chance
         val chance = (base + me.body.inflictChance(ailment)).coerceAtMost(100.0) / 100
         if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || checkDraw(me, RollKey.AILMENT, chance, ailment) >= chance) return@mapNotNull null
@@ -241,7 +243,8 @@ internal class AilmentWeight(private val step: Double, private val cap: Double) 
 /**
  * [ailment] on [target] by [me], from a blow that dealt [taken]: a damage over time is a share of the
  * damage of its own type — of the whole blow when it had none — the rest are the rule's magnitude, или ([weight], 4.6.3) - сила
- * правила от удара.
+ * правила от удара. Сила недуга без урона растёт силой недуга нападающего ([Combatant.ailmentEffect]); приём недуга на цели и
+ * потолок правила (4.11.0, изранение и иссушение) ложатся при чтении силы ([Fighter.held]).
  */
 internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, taken: Map<DamageType, Double>, spell: Boolean = false, weight: AilmentWeight? = null): Ailment? {
     val (rule, type) = ruleOf[ailment] ?: return null
@@ -249,18 +252,14 @@ internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, take
     val avoid = target.body.avoid(ailment)
     // Удача рода (4.6.2): избежание недугов героем - лучший из двух бросков
     if (avoid > 0 && checkDraw(target, RollKey.AVOID, avoid, ailment) < avoid) return null
-    val amount = (taken[type] ?: 0.0).takeIf { it > 0 } ?: taken.values.sum()
+    val amount = type?.let { taken[it] }?.takeIf { it > 0 } ?: taken.values.sum()
     // 3.35.0: a faster damaging ailment deals the same in less time; the striker's shock and chill are stronger by their effect.
     val faster = if (ailment.hurts) 1 + me.body.fasterAilments else 1.0
     val duration = rule.duration * target.body.ailmentDuration(ailment) * me.body.ailmentDurationOnFoes(ailment) / faster
     val magnitude = if (ailment.hurts) {
         amount * rule.magnitude / 100 / rule.duration * me.body.ailmentDamage(ailment) * faster
     } else {
-        rule.magnitude * (weight?.of(amount, target.body.maxLife) ?: 1.0) * when (ailment) {
-            Ailment.SHOCKED -> me.body.shockEffect
-            Ailment.CHILLED -> me.body.chillEffect
-            else -> 1.0
-        }
+        rule.magnitude * (weight?.of(amount, target.body.maxLife) ?: 1.0) * me.body.ailmentEffect(ailment)
     }
     place(
         target,

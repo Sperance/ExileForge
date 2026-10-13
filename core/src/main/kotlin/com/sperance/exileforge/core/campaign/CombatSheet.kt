@@ -10,6 +10,7 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Pet
+import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -20,6 +21,7 @@ import com.sperance.exileforge.rules.sheet.MightDefense
 import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.PetFighter
+import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatBreakdown
@@ -162,7 +164,23 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
             val stat = kind.stock!!.code
             index.powers.loot(fighter.stats, kind).takeIf { it != 0.0 || stat in fighter.stats }?.let { values[stat] = it }
         }
+        // Регенерация здоровья (4.11.0) - как её читает бой: «меньше регенерации», запрет и порог листа (`Recovery.share` правил)
+        values[LIFE_REGEN]?.let { values[LIFE_REGEN] = it * lifeShare(fighter.stats) }
         return values
+    }
+
+    /** Доля регенерации здоровья листа [stats] без недугов (4.11.0): одна функция правил с боем. */
+    private fun lifeShare(stats: Map<String, Double>): Double = Recovery.share({ stats[it] ?: 0.0 }, RecoveryPool.LIFE)
+
+    /**
+     * Сдвиг регенерации здоровья долей [lifeShare] (4.11.0) поверх разбора с итогом [total]: под картой ([layer]) - доля листа под
+     * её сдвигами; null - доля полная.
+     */
+    private fun lifeCurb(stat: String, total: Double, layer: Map<String, List<Shift>>): Shift? {
+        if (stat != LIFE_REGEN) return null
+        val moved = layer.mapValues { (_, shifts) -> shifts.sumOf { it.delta } }
+        val share = lifeShare(stats + moved.mapValues { (key, delta) -> (stats[key] ?: 0.0) + delta })
+        return Shift(StatSource(SourceKind.FIGHT, CoreStat.LIFE_REGEN_LESS.code), total * (share - 1)).takeIf { abs(it.delta) >= MOVED }
     }
 
     /** Силы уникалок в прибавке добычи [stat] (4.10.x): каждая сила против всех монстров - своим сдвигом, как её считает [read]. */
@@ -196,7 +214,8 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     fun explain(stat: String, layer: Map<String, List<Shift>> = emptyMap()): StatBreakdown {
         val readings = FightReading.entries.filter { it.stat == stat }
         val fight = readings.map { Shift(StatSource(SourceKind.FIGHT, it.from), it.adds(body), it.from) }.filter { it.delta != 0.0 }
-        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + fight + lootPowers(stat) + layer[stat].orEmpty() + readings.flatMap { read(it, layer) })
+        val raw = explainer.explain(stat).shifted(scaled[stat].orEmpty() + fight + lootPowers(stat) + layer[stat].orEmpty() + readings.flatMap { read(it, layer) })
+        return lifeCurb(stat, raw.total, layer)?.let { raw.shifted(listOf(it)) } ?: raw
     }
 
     /**
@@ -235,6 +254,9 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     companion object {
         /** Сдвиг меньше этого - не сдвиг: десятые листа. */
         private const val MOVED = 0.05
+
+        /** Плоская регенерация здоровья: её цифра сводки - с долей [Recovery.share]. */
+        private val LIFE_REGEN = RegenPool.LIFE.flatStat
 
         /** Виды небоевых сил с характеристикой листа: их прибавка к добыче в сводке - вместе с силами. */
         private val LOOT = WorldKind.entries.filter { it.stock != null }

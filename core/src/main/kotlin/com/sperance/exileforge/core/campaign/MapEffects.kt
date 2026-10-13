@@ -112,7 +112,9 @@ object MapEffects {
         effects[MapStats.MONSTER_PENETRATION]?.let { add(MonsterEffect(CoreStat.PENETRATE_ELEMENTAL.code, Op.ADD, it)) }
         effects[MapStats.MONSTER_REFLECT]?.let { add(MonsterEffect(CoreStat.REFLECT.code, Op.ADD, it)) }
         effects[MapStats.MONSTER_CRITICAL]?.let { add(MonsterEffect(CoreStat.CRITICAL_CHANCE.code, Op.ADD, it)) }
-        effects[MapStats.MONSTER_AILMENTS]?.let { v -> Ailment.entries.filter { it != Ailment.CHILLED }.forEach { add(MonsterEffect("STOCK_${it.word}_CHANCE", Op.ADD, v)) } }
+        effects[MapStats.MONSTER_AILMENTS]?.let { v -> Ailment.entries.filter { it.general }.forEach { add(MonsterEffect("STOCK_${it.word}_CHANCE", Op.ADD, v)) } }
+        // Изранение и иссушение (4.11.0) - своя строка карты, не общая «шанс наложить состояние»
+        effects[MapStat.MONSTER_WITHER.code]?.let { v -> listOf(CoreStat.WOUND_CHANCE.code, CoreStat.PARCH_CHANCE.code).forEach { add(MonsterEffect(it, Op.ADD, v)) } }
         effects[MapStats.MONSTER_ARMOUR]?.let { v -> listOf(CoreStat.ARMOR.code, CoreStat.EVASION.code).forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
         effects[MapStats.MONSTER_LEECH]?.let { add(MonsterEffect(CoreStat.LEECH_ALL.code, Op.ADD, it)) }
         effects[MapStats.MONSTER_STUN]?.let { add(MonsterEffect(CoreStat.AVOID_STUN.code, Op.ADD, it)) }

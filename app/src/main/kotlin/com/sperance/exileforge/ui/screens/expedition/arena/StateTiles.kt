@@ -153,7 +153,10 @@ private const val FATE_GLYPH = "✦"
     }
 }
 
-/** An ailment's mark drawn from shapes: a flame, a snowflake, a crystal, a bolt, a drop, two drops; a star for a stun. */
+/**
+ * An ailment's mark drawn from shapes: a flame, a snowflake, a crystal, a bolt, a drop, two drops; a star for a stun. Изранение
+ * (4.11.0) - рваная рана со стежками, иссушение - капля в трещинах.
+ */
 private fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
     val u = size.minDimension / 16f
     fun path(vararg points: Pair<Float, Float>) = Path().apply {
@@ -182,6 +185,18 @@ private fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
         Ailment.BLEEDING -> {
             drawPath(path(6f to 2f, 9f to 8f, 8f to 11f, 6f to 12f, 4f to 11f, 3f to 8f), tint)
             drawPath(path(12f to 7f, 14f to 11f, 13f to 13f, 12f to 14f, 11f to 13f, 10f to 11f), tint)
+        }
+
+        Ailment.WOUNDED -> {
+            drawPath(path(2f to 14f, 6f to 7f, 14f to 2f, 10f to 9f), tint)
+            listOf(5f to 10f, 8f to 8f, 11f to 5.5f).forEach { (x, y) -> drawLine(tint, Offset((x - 2f) * u, (y - 2f) * u), Offset((x + 2f) * u, (y + 2f) * u), 1.1f * u) }
+        }
+
+        Ailment.PARCHED -> {
+            drawPath(path(8f to 2f, 12f to 9f, 11f to 13f, 8f to 14f, 5f to 13f, 4f to 9f), tint)
+            val crack = Color(0xFF0B0E13)
+            listOf(8f to 6f, 7f to 9f, 9f to 11f, 8f to 14f).zipWithNext { (x1, y1), (x2, y2) -> drawLine(crack, Offset(x1 * u, y1 * u), Offset(x2 * u, y2 * u), u) }
+            drawLine(crack, Offset(7 * u, 9 * u), Offset(5 * u, 11 * u), u)
         }
 
         null -> drawPath(path(8f to 1f, 9.8f to 5.2f, 14.3f to 5.6f, 10.9f to 8.6f, 11.9f to 13f, 8f to 10.7f, 4.1f to 13f, 5.1f to 8.6f, 1.7f to 5.6f, 6.2f to 5.2f), tint)

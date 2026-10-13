@@ -17,9 +17,11 @@ import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.EnrageRule
 import com.sperance.exileforge.rules.content.FightKind
 import com.sperance.exileforge.rules.content.FightRules
+import com.sperance.exileforge.rules.content.RecoveryPool
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
+import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
 
 /**
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
@@ -191,7 +193,30 @@ class Battle(
         fun slow() = 1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100
 
         /** Shock makes every hit heavier; a curse can make it heavier still (2.78.0). */
-        fun weakness() = 1 + (ailments.filter { it.ailment == Ailment.SHOCKED }.maxOfOrNull { it.magnitude } ?: 0.0) * body.ailmentTaken(Ailment.SHOCKED) / 100
+        fun weakness() = 1 + held(Ailment.SHOCKED) / 100
+
+        /**
+         * Сила недуга [ailment] на бойце (4.11.0): сильнейший экземпляр, усиленный приёмом недуга на нём (`STOCK_<слово>_TAKEN`),
+         * под потолком правила (`ceiling`); нет недуга - 0. Её читают шок, восстановление и плитка недуга.
+         */
+        fun held(ailment: Ailment): Double {
+            val strongest = ailments.filter { it.ailment == ailment }.maxOfOrNull { it.magnitude } ?: return 0.0
+            val taken = strongest * body.ailmentTaken(ailment)
+            return ruleOf[ailment]?.first?.capped(taken) ?: taken
+        }
+
+        /**
+         * Доля восстановления запаса [pool] бойца в этот миг (4.11.0) - одна функция правил [RecoveryShare.share]: лист («меньше
+         * регенерации», запрет, дно) и недуги, что режут этот запас по `curbs` своего правила.
+         */
+        fun share(pool: RecoveryPool): Double = RecoveryShare.share(body, pool, curb(pool))
+
+        /** Сколько процентов запаса [pool] режут недуги на бойце (4.11.0, [RecoveryShare.curb]) - по их силе [held]. */
+        fun curb(pool: RecoveryPool): Double {
+            if (ailments.isEmpty()) return 0.0
+            val active = ailments.mapTo(HashSet()) { it.ailment }.associate { it.name to held(it) }
+            return RecoveryShare.curb(ailmentRules.keys, pool, active)
+        }
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
     }
 
@@ -293,8 +318,16 @@ class Battle(
         foeFighters.filter { it.alive }.forEach { foe -> foe.body.auras.forEach { (stat, value) -> sum.merge(stat, value, Double::plus) } }
         return sum
     }
-    internal val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType>> = rules.ailments
-        .mapNotNull { rule -> Ailment.of(rule.ailment)?.let { a -> DamageType.of(rule.type)?.let { t -> rule to (a to t) } } }.toMap()
+
+    /**
+     * Правила недугов, что знает клиент, с видом урона, что их несёт; без вида (4.11.0, изранение и иссушение) - null: недуг несёт
+     * любой урон удара. Вид, которого клиент не знает, выкидывает правило.
+     */
+    internal val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType?>> = rules.ailments.mapNotNull { rule ->
+        val ailment = Ailment.of(rule.ailment) ?: return@mapNotNull null
+        val type = rule.type?.let { DamageType.of(it) ?: return@mapNotNull null }
+        rule to (ailment to type)
+    }.toMap()
 
     /** Недуги, что подавляют восстановление цели (4.2.0): поджог, яд, кровотечение по правилу. */
     private val suppressing: Set<Ailment> = fight.suppression.ailments.mapNotNull { code: String -> Ailment.of(code) }.toSet()
@@ -310,7 +343,7 @@ class Battle(
         return me.recoveryRoom(suppressed, time)
     }
 
-    internal val ruleOf: Map<Ailment, Pair<AilmentRule, DamageType>> = ailmentRules.entries.associate { (rule, what) -> what.first to (rule to what.second) }
+    internal val ruleOf: Map<Ailment, Pair<AilmentRule, DamageType?>> = ailmentRules.entries.associate { (rule, what) -> what.first to (rule to what.second) }
 
     var time = 0.0
         internal set

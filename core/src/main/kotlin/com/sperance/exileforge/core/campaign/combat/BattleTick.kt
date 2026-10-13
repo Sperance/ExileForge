@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
+import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.SkillEvent
 import kotlin.math.max
 import kotlin.math.min
@@ -105,11 +106,12 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     if (!me.alive) return
     // The bars melt once no blow has filled them for the rule's delay (3.78.0).
     rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
-    val regenerated = lifeBack(me, recovery(me, me.body.regen(RegenPool.LIFE) * me.body.recoveryRate * dt))
+    // Доля восстановления (4.11.0, [Fighter.share]): «меньше регенерации», запрет листа и изранение; иссушение - мане
+    val regenerated = lifeBack(me, recovery(me, me.body.regen(RegenPool.LIFE) * me.body.recoveryRate * me.share(RecoveryPool.LIFE) * dt))
     if (me === heroFighter) lifeMeter.regen(regenerated)
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
     // Регенерация не переливается (4.6.3, Переполнение): перелив копит только избыток восстановления
-    if (!manaless(me)) manaBack(me, me.body.manaRegen(rules.mana) * dt, spill = false)
+    if (!manaless(me)) manaBack(me, me.body.manaRegen(rules.mana, me.curb(RecoveryPool.MANA)) * dt, spill = false)
     if (me === heroFighter) {
         recoveries.forEach { draught ->
             val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)

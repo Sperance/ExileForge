@@ -69,8 +69,10 @@ import kotlinx.serialization.json.JsonElement
  *      `FiledReport(id, shotDropped)` (4.10.0).
  * 78 - доска `UNIQUES`, наименьший номер находки (`UniqueSeen.lowest`), доли гильдии и зелья в контексте захода
  *      (`RunContext.guild`, `RunContext.potion`) (4.10.x).
+ * 79 - недуги Изранение и Иссушение (`AilmentRule.type` необязателен, `ceiling`, `curbs`), строки «меньше регенерации»/«без
+ *      регенерации здоровья», `MAP_MONSTER_WITHER` (4.11.0).
  */
-const val API_REVISION = 78
+const val API_REVISION = 79
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

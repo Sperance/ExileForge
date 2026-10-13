@@ -69,12 +69,6 @@ internal fun regrow(value: Double, increase: Double, extra: Double): Double {
 }
 
 /**
- * The six ailments the server rules (its `EnumStatBool` without the prefix). Which damage brings which is the rule's, not ours.
- * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
- * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
- */
-
-/**
  * The buildups of server 1.73.0 (3.78.0, as in PoE2): a blow fills a bar on the struck one and a full bar sets it off.
  * [gain] is the striker's line that fills it faster — the old «chance to freeze» fills the freeze — and [avoid] the struck
  * one's that fills it slower.
@@ -85,13 +79,26 @@ enum class Buildup(val gain: String, val avoid: String?) {
     ELECTROCUTE(CoreStat.ELECTROCUTE_BUILDUP.code, null),
 }
 
-enum class Ailment(val word: String, val damage: String? = null) {
+/**
+ * The six ailments the server rules (its `EnumStatBool` without the prefix). Which damage brings which is the rule's, not ours.
+ * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
+ * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
+ * [general] - шанс недуга поднимает общая строка карты «шанс наложить состояние» (`MAP_MONSTER_AILMENTS`); у холода своего шанса
+ * нет, изранение и иссушение (4.11.0) поднимает своя строка карты.
+ */
+enum class Ailment(val word: String, val damage: String? = null, val general: Boolean = true) {
     BURNING("IGNITE", CoreStat.BURNING_DAMAGE.code),
-    CHILLED("CHILL"),
+    CHILLED("CHILL", general = false),
     FROZEN("FREEZE"),
     SHOCKED("SHOCK"),
     POISONED("POISON", CoreStat.POISON_DAMAGE.code),
     BLEEDING("BLEED", CoreStat.BLEED_DAMAGE.code),
+
+    /** Изранение (4.11.0): режет регенерацию и вампиризм здоровья на свою силу - что именно режет, решает правило (`curbs`). */
+    WOUNDED("WOUND", general = false),
+
+    /** Иссушение (4.11.0): режет регенерацию, вампиризм и ману при ударе - запас маны правила (`curbs`). */
+    PARCHED("PARCH", general = false),
     ;
 
     /** Deals damage over time, as opposed to slowing, weakening or stopping. */
@@ -102,7 +109,7 @@ enum class Ailment(val word: String, val damage: String? = null) {
     companion object {
         fun of(name: String) = entries.firstOrNull { it.name == name }
 
-        /** An ailment as a skill names it (server 0.69.0): `IGNITE`, `CHILL`, `FREEZE`, `SHOCK`, `POISON`, `BLEED`. */
+        /** An ailment as a skill names it (server 0.69.0): `IGNITE`, `CHILL`, `FREEZE`, `SHOCK`, `POISON`, `BLEED`, `WOUND`, `PARCH`. */
         fun byWord(word: String) = entries.firstOrNull { it.word == word }
 
         /** The ailment a damage brings by nature: fire burns, cold chills, lightning shocks, chaos poisons, a blade bleeds. */

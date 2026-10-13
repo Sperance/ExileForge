@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
-import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
@@ -123,13 +122,13 @@ import com.sperance.exileforge.ui.theme.*
 /** The picked map's lines in the order it rolled them; a composite line is a harm if any of its stats is one. */
 internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.lines.map { line ->
     val effects = line.definition?.effects.orEmpty()
-    val kinds = effects.map { MapStats.kindOf(index, it.stat) }
+    val kinds = effects.map { MapLineKind.of(index, it.stat) }
     val kind = when {
         MapLineKind.HARM in kinds -> MapLineKind.HARM
         MapLineKind.REWARD in kinds -> MapLineKind.REWARD
         else -> MapLineKind.CONTENT
     }
-    val risk = line.definition?.bind(line.values).orEmpty().sumOf { (effect, value) -> MapStats.riskOf(index, effect.stat, value) }
+    val risk = line.definition?.bind(line.values).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value) }
     MapLine(line.text, kind, risk)
 }
 

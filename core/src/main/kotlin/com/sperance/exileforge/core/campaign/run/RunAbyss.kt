@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
-import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.Ally
@@ -27,6 +26,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
+import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -68,7 +68,7 @@ internal fun ExpeditionRun.descend() {
         val place = world.standingCracks.indexOf(spot)
         record { RunEvent.AbyssOpen(it, place) } ?: return
         spot.opened = true
-        val depth = AbyssRifts(index).depth(rule, spot.depth, mapEffects[MapStats.ABYSS_DEPTH] ?: 0.0)
+        val depth = AbyssRifts(index).depth(rule, spot.depth, mapEffects[MapStat.ABYSS_DEPTH.code] ?: 0.0)
         Descent(spot, depth).also {
             descent = it
             wave(it, 1)

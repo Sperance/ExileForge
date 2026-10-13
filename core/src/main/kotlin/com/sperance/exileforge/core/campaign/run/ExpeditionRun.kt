@@ -9,7 +9,6 @@ import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.MapEnd
-import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.PetAllies
 import com.sperance.exileforge.core.campaign.RunJournal
@@ -49,6 +48,7 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.ExpeditionRules
+import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Pet
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -543,7 +543,7 @@ class ExpeditionRun(
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
             // The act's resistance penalty (3.18.0, server 1.16.0) rides with the map's own "less resistances".
             val penalty = index.campaign.resistPenalty(location.code, onMap = context.active != null)
-            val acted = if (penalty > 0) MapEffects.sum(base, mapOf(MapStats.HERO_RESIST to penalty)) else base
+            val acted = if (penalty > 0) MapEffects.sum(base, mapOf(MapStat.HERO_RESIST.code to penalty)) else base
             val effects = if (vaal) MapEffects.sum(acted, context.vaal?.effects.orEmpty()) else acted
             val rules = index.campaign.combat
             val build = HeroBuild(gear, effects, rules, origins = EffectOrigins.of(context, index))

@@ -33,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
-import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken

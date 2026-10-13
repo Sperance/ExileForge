@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.sim
 
 import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.MapEffects
-import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.rules.content.ActiveSlot
@@ -10,6 +9,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.ItemTemplate
+import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
@@ -91,7 +91,7 @@ class SimKit(val index: ContentIndex) {
      * штрафа акта [penalty] (стихии - полностью, хаос - вполовину), - умноженная на урон ([CombatProfile]).
      */
     fun worth(stats: Map<String, Double>, level: Int, penalty: Double): Double {
-        val body = Combatant(MapEffects.hero(stats, if (penalty > 0) mapOf(MapStats.HERO_RESIST to penalty) else emptyMap()), level, rules)
+        val body = Combatant(MapEffects.hero(stats, if (penalty > 0) mapOf(MapStat.HERO_RESIST.code to penalty) else emptyMap()), level, rules)
         val taken = DamageType.entries.sumOf { type -> TAKEN_WEIGHT[type]!! * (1 - body.resist(type)) } / TAKEN_WEIGHT.values.sum()
         return (body.maxLife + body.maxShield) / taken.coerceAtLeast(0.05) * CombatProfile.of(index, stats).best
     }

@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.sim
 import com.sperance.exileforge.core.campaign.HeroBuild
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
-import com.sperance.exileforge.core.campaign.MapStats
 import com.sperance.exileforge.core.campaign.PhaseFoes
 import com.sperance.exileforge.core.campaign.Spawns
 import com.sperance.exileforge.core.campaign.combat.Combatant
@@ -16,6 +15,7 @@ import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader
 import com.sperance.exileforge.rules.content.HeroClass
+import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
@@ -68,7 +68,7 @@ class BossSim(private val index: ContentIndex, private val fights: Int, private 
             listOf(phases.foe(boss, run.levelOf(zone)))
         }
         val penalty = index.campaign.resistPenalty(zone.code, onMap = false)
-        val effects = if (penalty > 0) mapOf(MapStats.HERO_RESIST to penalty) else emptyMap()
+        val effects = if (penalty > 0) mapOf(MapStat.HERO_RESIST.code to penalty) else emptyMap()
         return classes.flatMap { heroClass ->
             strategies.map { strategy ->
                 val build = strategy.build(kit, heroClass, zone.level, penalty)

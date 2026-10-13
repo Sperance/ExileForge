@@ -173,7 +173,8 @@ fun BugSheet(
     // The words of each and the kind last open come back from the device (3.75.0) and are kept as they are typed.
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
     val texts = remember { mutableStateMapOf<FeedbackKind, String>() }
-    var attach by remember { mutableStateOf(true) }
+    // Снимок экрана к отчёту прикладывает только сам игрок: по умолчанию отметка снята
+    var attach by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         val draft = drafts.read()
         if (texts.isEmpty()) kind = draft.kind

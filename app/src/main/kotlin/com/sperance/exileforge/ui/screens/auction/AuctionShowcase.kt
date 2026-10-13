@@ -59,7 +59,7 @@ import org.koin.compose.viewmodel.koinViewModel
 /** Витрина аукциона (3.80.24): список лотов, строка поиска и фильтры. */
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
 @Composable internal fun ColumnScope.ShowcaseTab(game: GameUi, market: Market, vm: MarketViewModel) {
-    ShowcaseList(game, market, header = { ShowcaseHeader(game, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase)
+    ShowcaseList(game, market, header = { ShowcaseHeader(game, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase, onRetry = vm::loadShowcase)
 }
 
 /**
@@ -78,13 +78,24 @@ import org.koin.compose.viewmodel.koinViewModel
     header: @Composable () -> Unit = {},
     onBuy: (String) -> Unit,
     onMore: () -> Unit,
+    onRetry: () -> Unit = {},
 ) {
     var openLot by remember { mutableStateOf<String?>(null) }
     var confirmBuy by remember { mutableStateOf<String?>(null) }
     // Поиск и фильтры над списком (3.88.7): уходят при прокрутке вниз, возвращаются при прокрутке вверх.
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { header() } }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        if (market.showcase.items.isEmpty()) {
+        // Не загрузилась - отказ и «Повторить», а не «ничего не найдено»: пустой витрины никто не видел
+        if (market.showcase.items.isEmpty() && market.showcaseFailed) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    InfoCard(ui("auction.showcase_failed"), ui("auction.showcase_failed_hint"), failure = true)
+                    ForgeOutlinedButton(enabled = Reads.AUCTION !in game.loading, onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
+                        Text(ui("auction.showcase_retry"))
+                    }
+                }
+            }
+        } else if (market.showcase.items.isEmpty()) {
             item {
                 InfoCard(
                     ui("tree.nothing_found"),

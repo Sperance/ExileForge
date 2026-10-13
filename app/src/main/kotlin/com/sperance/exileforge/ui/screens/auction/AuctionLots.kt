@@ -61,7 +61,7 @@ import com.sperance.exileforge.ui.screens.hero.StackIcon
 import com.sperance.exileforge.ui.theme.*
 
 /** Свои лоты и история сделок (3.80.24). */
-/** The hero's own lots that are still on sale; withdrawn and sold lots leave this list. */
+/** The hero's own lots that are still on sale, and those whose time ran out and are on their way back by mail; withdrawn and sold lots leave this list. */
 @Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
@@ -91,7 +91,8 @@ import com.sperance.exileforge.ui.theme.*
             game,
             lot,
             action = ui("auction.withdraw"),
-            enabled = !game.busy,
+            // Срок вышел - лот уже возвращается почтой: снимать нечего
+            enabled = !game.busy && lot.onSale,
             note = lotExpiry(lot),
             onDismiss = { openLot = null },
             extra = if (extendable) {

@@ -69,6 +69,9 @@ import kotlinx.serialization.Serializable
     val amount: Long get() = goods?.amount ?: 1
     val onSale: Boolean get() = status == LotStatus.ACTIVE && (expiresAt == 0L || System.currentTimeMillis() < expiresAt)
 
+    /** Срок вышел, а сервер лот ещё не закрыл: товар вернётся продавцу почтой, купить и снять его уже нельзя. */
+    val returning: Boolean get() = status == LotStatus.ACTIVE && expiresAt > 0 && System.currentTimeMillis() >= expiresAt
+
     /** Milliseconds the lot still stands, or null when it names no end. */
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }
 

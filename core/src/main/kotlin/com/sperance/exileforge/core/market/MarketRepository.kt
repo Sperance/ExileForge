@@ -22,9 +22,11 @@ data class Market(
     /** Почему аукцион закрыт для героя, словами сервера; null - открыт. */
     val locked: String? = null,
     val slots: AuctionSlots? = null,
+    /** Витрина не загрузилась: показан отказ с «Повторить», а не пустая витрина. */
+    val showcaseFailed: Boolean = false,
 ) {
-    /** Свои лоты, что ещё продаются. */
-    val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale }
+    /** Свои лоты, что ещё продаются, и те, чей срок вышел и что ещё возвращаются почтой ([AuctionLot.returning]). */
+    val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale || it.returning }
 }
 
 /** Единственный источник правды о рынке (3.80.11). */

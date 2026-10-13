@@ -55,10 +55,17 @@ class MarketActions(
         loadShowcase()
     }
 
-    /** Витрина с первой страницы под фильтром, как он стоит. */
+    /** Витрина с первой страницы под фильтром, как он стоит; не загрузилась - отметка отказа ([Market.showcaseFailed]). */
     fun loadShowcase() = trade(restart = true) {
-        val showcase = api.auction.search(heroes.heroId, showcaseFilter(), listOf(""))
-        market { it.copy(showcase = showcase) }
+        val showcase = try {
+            api.auction.search(heroes.heroId, showcaseFilter(), listOf(""))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if ((e as? ApiFailure)?.code != LEVEL_GATE) market { it.copy(showcaseFailed = true) }
+            throw e
+        }
+        market { it.copy(showcase = showcase, showcaseFailed = false) }
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui.screens.expedition.world
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.runtime.Composable
@@ -87,7 +88,10 @@ fun WorldCanvas(
     val marchPhase by motionPhase(MARCH_MS)
     val spin by motionPhase(STORY_SPIN_MS)
     val height = camera.world.height.toFloat()
-    val roads = remember(world) { world.roads.map { it.state to road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code.value + it.to.zone.code.value) } }
+    val roads = remember(world) { world.roads.map { Road(it.state, road(it.from.zone.x, height - it.from.zone.y, it.to.zone.x, height - it.to.zone.y, it.from.zone.code.value + it.to.zone.code.value)) } }
+    val ahead = remember(roads) { roads.filter { it.state == RoadState.AHEAD } }
+    val open = remember(world) { world.tokens.filter { it.state == TokenState.OPEN } }
+    val fog = remember(world, camera.world.width, height) { Fog.of(world, camera.world.width.toFloat(), height) }
     val density = LocalDensity.current
     val words = remember(world, measurer, density) { Words.of(world, measurer, density) }
     // The parchment is recorded once into its own layer (3.77.0) and replayed under the camera: hundreds of sketches and
@@ -96,7 +100,9 @@ fun WorldCanvas(
     val artLayer = LocalWorldArtLayer.current ?: rememberWorldArtLayer()
     val tap by rememberUpdatedState(onTap)
     val description = ui("expedition.world_map")
-    Canvas(
+    // Слоями: неподвижное (пергамент, туман, дороги, жетоны, слова) рисуется заново лишь со сдвигом, масштабом или выбором;
+    // часы декора будят только дышащее - бегущие дороги впереди, пульс открытых жетонов и кольцо сюжета, и только на экране
+    Box(
         modifier
             .clipToBounds()
             .semantics { contentDescription = description }
@@ -104,39 +110,124 @@ fun WorldCanvas(
             .pointerInput(camera) { detectTransformGestures { centroid, pan, zoom, _ -> camera.transform(centroid, pan, zoom) } }
             .pointerInput(camera, world) { detectTapGestures { point -> tap(hit(world, camera, point)) } },
     ) {
-        withTransform({
-            translate(camera.offset.x, camera.offset.y)
-            scale(camera.unit, camera.unit, Offset.Zero)
-        }) {
-            // Until the art is built (3.75.0), the bare parchment: the roads and the tokens are there at once.
-            if (art == null) {
-                drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
-            } else {
-                drawLayer(with(artLayer) { of(art, IntSize(camera.world.width, camera.world.height)) })
-            }
-            fog(world, camera.world.width.toFloat(), height)
-            val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f), -DASH_PERIOD * marchPhase)
-            val dots = PathEffect.dashPathEffect(floatArrayOf(1f, 7f))
-            roads.forEach { (state, path) ->
-                when (state) {
-                    RoadState.WALKED -> {
-                        drawPath(path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
-                        drawPath(path, ROAD_GOLD, style = Stroke(2.4f, cap = StrokeCap.Round))
-                    }
+        Canvas(Modifier.matchParentSize()) {
+            onWorld(camera) {
+                // Until the art is built (3.75.0), the bare parchment: the roads and the tokens are there at once.
+                if (art == null) {
+                    drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
+                } else {
+                    drawLayer(with(artLayer) { of(art, IntSize(camera.world.width, camera.world.height)) })
+                }
+                fog.draw(this)
+                val dots = PathEffect.dashPathEffect(floatArrayOf(1f, 7f))
+                roads.forEach { road ->
+                    when (road.state) {
+                        RoadState.WALKED -> {
+                            drawPath(road.path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
+                            drawPath(road.path, ROAD_GOLD, style = Stroke(2.4f, cap = StrokeCap.Round))
+                        }
 
-                    RoadState.AHEAD -> {
-                        drawPath(path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
-                        drawPath(path, GoldBright, style = Stroke(2.2f, cap = StrokeCap.Round, pathEffect = dash))
-                    }
+                        RoadState.AHEAD -> drawPath(road.path, ROAD_INK, style = Stroke(7f, cap = StrokeCap.Round))
 
-                    RoadState.UNTRODDEN -> drawPath(path, Muted.copy(alpha = .85f), style = Stroke(1.8f, cap = StrokeCap.Round, pathEffect = dots))
+                        RoadState.UNTRODDEN -> drawPath(road.path, Muted.copy(alpha = .85f), style = Stroke(1.8f, cap = StrokeCap.Round, pathEffect = dots))
+                    }
                 }
             }
-            world.tokens.forEach { token(it, height, pulse, it.zone.code.value == selected, stash[it.zone.code.value] ?: 0) }
-            story?.let { code -> world.tokens.firstOrNull { it.zone.code.value == code }?.let { storyRing(it, height, spin) } }
         }
-        words.draw(this, camera, stash)
+        Canvas(Modifier.matchParentSize()) {
+            if (ahead.isEmpty() && open.isEmpty()) return@Canvas
+            val view = camera.view(size)
+            onWorld(camera) {
+                val dash = PathEffect.dashPathEffect(floatArrayOf(7f, 6f), -DASH_PERIOD * marchPhase)
+                val march = Stroke(2.2f, cap = StrokeCap.Round, pathEffect = dash)
+                ahead.forEach { road -> if (road.bounds.overlaps(view)) drawPath(road.path, GoldBright, style = march) }
+                val beat = pulse
+                open.forEach { token -> if (token.seen(view, height)) openPulse(token, height, beat) }
+            }
+        }
+        Canvas(Modifier.matchParentSize()) {
+            val view = camera.view(size)
+            onWorld(camera) {
+                world.tokens.forEach { if (it.seen(view, height)) token(it, height, it.zone.code.value == selected, stash[it.zone.code.value] ?: 0) }
+            }
+        }
+        if (story != null) {
+            val token = remember(world, story) { world.tokens.firstOrNull { it.zone.code.value == story } }
+            if (token != null) Canvas(Modifier.matchParentSize()) { onWorld(camera) { storyRing(token, height, spin) } }
+        }
+        Canvas(Modifier.matchParentSize()) { words.draw(this, camera, stash) }
     }
+}
+
+/** Рисунок в мере мира: перенос камеры и её масштаб. */
+private inline fun DrawScope.onWorld(camera: WorldCamera, block: DrawScope.() -> Unit) = withTransform({
+    translate(camera.offset.x, camera.offset.y)
+    scale(camera.unit, camera.unit, Offset.Zero)
+}, block)
+
+/** Что видно на холсте [size] в мере мира (y сверху, как рисует холст), с запасом на ореолы и подписи. */
+private fun WorldCamera.view(size: Size): Rect {
+    val unit = unit
+    val margin = VIEW_MARGIN
+    return Rect(-offset.x / unit - margin, -offset.y / unit - margin, (size.width - offset.x) / unit + margin, (size.height - offset.y) / unit + margin)
+}
+
+/** Жетон хоть краем в [view]. */
+private fun WorldToken.seen(view: Rect, height: Float): Boolean = view.contains(Offset(zone.x.toFloat(), height - zone.y))
+
+/** Дорога: её состояние, путь в мере мира и рамка пути. */
+private class Road(val state: RoadState, val path: Path) {
+    val bounds: Rect = path.getBounds()
+}
+
+/**
+ * Туман над тем, куда герой ещё не дошёл: чистый под фронтиром, густой на несколько рядов выше. Кисти - раз на карту: полоса
+ * и одно пятно единичного радиуса, растянутое на каждый клуб.
+ */
+private class Fog(private val width: Float, private val clearTo: Float, private val band: Brush?, private val puffs: FloatArray) {
+    fun draw(scope: DrawScope) = with(scope) {
+        band ?: return@with
+        drawRect(band, size = Size(width, clearTo))
+        for (i in 0 until puffs.size / 3) {
+            val x = puffs[i * 3]
+            val y = puffs[i * 3 + 1]
+            val r = puffs[i * 3 + 2]
+            withTransform({
+                translate(x, y)
+                scale(r, r, Offset.Zero)
+            }) { drawCircle(PUFF, 1f, Offset.Zero) }
+        }
+    }
+
+    companion object {
+        private val PUFF = Brush.radialGradient(listOf(FOG.copy(alpha = .85f), FOG.copy(alpha = 0f)), Offset.Zero, 1f)
+
+        fun of(world: WorldMap, width: Float, height: Float): Fog {
+            val clearTo = height - (world.fogLine + FOG_CLEAR)
+            if (clearTo <= 0f) return Fog(width, clearTo, null, FloatArray(0))
+            val thickFrom = (height - (world.fogLine + FOG_THICK)).coerceAtLeast(0f)
+            val band = Brush.verticalGradient(0f to FOG, (thickFrom / clearTo) to FOG.copy(alpha = .93f), 1f to FOG.copy(alpha = 0f), startY = 0f, endY = clearTo)
+            val seed = world.fogLine
+            val puffs = FloatArray(PUFFS * 3)
+            repeat(PUFFS) { i ->
+                puffs[i * 3] = (Math.floorMod(seed * 31 + i * 977, width.toInt().coerceAtLeast(1))).toFloat()
+                puffs[i * 3 + 1] = thickFrom + (Math.floorMod(seed * 17 + i * 613, 1000) / 1000f) * (clearTo - thickFrom)
+                puffs[i * 3 + 2] = 50f + Math.floorMod(i * 389 + seed, 90)
+            }
+            return Fog(width, clearTo, band, puffs)
+        }
+    }
+}
+
+/** Ореол и пульс открытого жетона: под его медальоном, на часах декора. */
+private fun DrawScope.openPulse(token: WorldToken, height: Float, pulse: Float) {
+    val c = Offset(token.zone.x.toFloat(), height - token.zone.y)
+    val r = radius(token)
+    withTransform({
+        translate(c.x, c.y)
+        scale(r * 2f, r * 2f, Offset.Zero)
+    }) { drawCircle(OPEN_GLOW, 1f, Offset.Zero) }
+    drawCircle(GoldBright.copy(alpha = (1 - pulse) * .7f), r + 5 + pulse * 10, c, style = PULSE_RING)
 }
 
 /** The token under a tap, generous enough for a finger at any zoom. */
@@ -158,36 +249,14 @@ private fun road(x1: Int, y1: Float, x2: Int, y2: Float, key: String): Path {
     }
 }
 
-/** The fog over what the hero has not reached: clear under the frontier, thick a few rows above it. */
-private fun DrawScope.fog(world: WorldMap, width: Float, height: Float) {
-    val clearTo = height - (world.fogLine + FOG_CLEAR)
-    if (clearTo <= 0f) return
-    val thickFrom = (height - (world.fogLine + FOG_THICK)).coerceAtLeast(0f)
-    drawRect(
-        Brush.verticalGradient(0f to FOG, (thickFrom / clearTo) to FOG.copy(alpha = .93f), 1f to FOG.copy(alpha = 0f), startY = 0f, endY = clearTo),
-        size = androidx.compose.ui.geometry.Size(width, clearTo),
-    )
-    val seed = world.fogLine
-    repeat(PUFFS) { i ->
-        val x = (Math.floorMod(seed * 31 + i * 977, width.toInt().coerceAtLeast(1))).toFloat()
-        val y = thickFrom + (Math.floorMod(seed * 17 + i * 613, 1000) / 1000f) * (clearTo - thickFrom)
-        val r = 50f + Math.floorMod(i * 389 + seed, 90)
-        drawCircle(Brush.radialGradient(listOf(FOG.copy(alpha = .85f), FOG.copy(alpha = 0f)), Offset(x, y), r), r, Offset(x, y))
-    }
-}
-
 /** One token: its medallion by state, the finale's crown, its tick or lock, the stash's maps for it, and the pick's ring. */
-private fun DrawScope.token(token: WorldToken, height: Float, pulse: Float, selected: Boolean, maps: Int) {
+private fun DrawScope.token(token: WorldToken, height: Float, selected: Boolean, maps: Int) {
     val c = Offset(token.zone.x.toFloat(), height - token.zone.y)
     val r = radius(token)
     val (light, mid, dark, ring) = when (token.state) {
         TokenState.PASSED -> listOf(Color(0xFF8D7447), Color(0xFF54432A), Color(0xFF2B2216), Color(0xFFB89A62))
         TokenState.OPEN -> listOf(Color(0xFFC9A868), Color(0xFF7B6038), Color(0xFF3B2D19), GoldBright)
         TokenState.LOCKED -> listOf(Color(0xFF41444A), Color(0xFF202227), Color(0xFF141518), Color(0xFF5A5F66))
-    }
-    if (token.state == TokenState.OPEN) {
-        drawCircle(Brush.radialGradient(listOf(GoldBright.copy(alpha = .45f), GoldBright.copy(alpha = 0f)), c, r * 2f), r * 2f, c)
-        drawCircle(GoldBright.copy(alpha = (1 - pulse) * .7f), r + 5 + pulse * 10, c, style = Stroke(1.5f))
     }
     drawCircle(Color.Black.copy(alpha = .55f), r + 2, c + Offset(0f, 3f))
     drawCircle(Brush.radialGradient(listOf(light, mid, dark), c + Offset(-r * .28f, -r * .4f), r * 1.3f), r, c)
@@ -409,6 +478,12 @@ private const val PUFFS = 26
 private const val PULSE_MS = 2400
 private const val MARCH_MS = 1200
 private const val DASH_PERIOD = 13f
+
+/** Запас видимого в мере мира: ореолы, кольца и подписи шире жетона. */
+private const val VIEW_MARGIN = 140f
+
+private val OPEN_GLOW = Brush.radialGradient(listOf(GoldBright.copy(alpha = .45f), GoldBright.copy(alpha = 0f)), Offset.Zero, 1f)
+private val PULSE_RING = Stroke(1.5f)
 
 /**
  * Слой пергамента карты мира (4.10.x): записывается один раз на рисунок [WorldArt] и переживает уход с вкладки - его держит оболочка

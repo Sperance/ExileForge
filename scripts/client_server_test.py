@@ -44,11 +44,17 @@ with (root / 'build/client-server.log').open('w') as log:
             if process.poll() is not None:
                 raise RuntimeError('Backend exited; inspect client-server.log')
             try:
-                # The route list rides the public manifest (the /system/routes map is gone since backend 1.76.0);
-                # Ktor prints the selector, so the method arrives as "(GET)".
-                with urllib.request.urlopen('http://localhost:8080/static/index.json', timeout=10) as response:
-                    manifest = json.load(response)
-                routes = {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in manifest['routes']}
+                # The route list rides the manifest (the /system/routes map is gone since backend 1.76.0); Ktor prints the selector,
+                # so the method arrives as "(GET)". Сервер 4.12.x (SEC-09): без входа - только открытые маршруты, со входом - доступные.
+                def routes_of(token=None):
+                    call = urllib.request.Request('http://localhost:8080/static/index.json', headers={'Authorization': 'Bearer ' + token} if token else {})
+                    with urllib.request.urlopen(call, timeout=10) as response:
+                        manifest = json.load(response)
+                    return {''.join(c for c in route['method'] if c.isalpha()) + ' ' + route['path'] for route in manifest['routes']}
+                anonymous = routes_of()
+                assert 'POST /api/v1/user/login' in anonymous and not any('/admin/' in r or r == 'GET /api/v1/hero/view' for r in anonymous), sorted(anonymous)
+                routes = routes_of(request('/api/v1/user/login', body={'login': player_login, 'password': player_password})['token'])
+                assert not any('/admin/' in r for r in routes), sorted(routes)
                 for route in ('GET /static/index.json', 'GET /content/{file}', 'POST /api/v1/user/login', 'GET /api/v1/hero/view',
                               'POST /api/v1/hero/orb', 'POST /api/v1/hero/campaign/start', 'POST /api/v1/hero/campaign/events',
                               'POST /api/v1/hero/skilltree/allocate', 'POST /api/v1/auctionlot/buy', 'POST /api/v1/redemptioncodes/redeem'):

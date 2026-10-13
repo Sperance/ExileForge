@@ -14,7 +14,6 @@
 - [Карты](Maps.md)
 - [Атлас](Atlas/README.md)
 - [Испытания](Trials.md)
-- [Питомцы](Pets.md)
 - [Ремёсла](Professions.md)
 - [Задания](Quests.md)
 - [Гильдии](Guilds.md)

@@ -18,7 +18,6 @@
 | [Пояса](Equipment/Equipment-BELT.md) | Equipment-BELT |
 | [Нагрудники](Equipment/Equipment-BODY.md) | Equipment-BODY |
 | [Сапоги](Equipment/Equipment-BOOTS.md) | Equipment-BOOTS |
-| [Ошейники](Equipment/Equipment-COLLAR.md) | Equipment-COLLAR |
 | [Фляги](Equipment/Equipment-FLASK.md) | Equipment-FLASK |
 | [Перчатки](Equipment/Equipment-GLOVES.md) | Equipment-GLOVES |
 | [Шлемы](Equipment/Equipment-HELMET.md) | Equipment-HELMET |
@@ -49,7 +48,6 @@
 | [Предметы · ESSENCE](Items/Items-ESSENCE.md) | Items-ESSENCE |
 | [Предметы · MATERIAL](Items/Items-MATERIAL.md) | Items-MATERIAL |
 | [Предметы · OMEN](Items/Items-OMEN.md) | Items-OMEN |
-| [Предметы · PET](Items/Items-PET.md) | Items-PET |
 | [Предметы · STONE_STOCK](Items/Items-STONE_STOCK.md) | Items-STONE_STOCK |
 | [Предметы · WOOD_STOCK](Items/Items-WOOD_STOCK.md) | Items-WOOD_STOCK |
 | [Добыча: шансы, веса и источники](Loot.md) | Loot |
@@ -75,13 +73,10 @@
 | [Параметры · classes](reference/Parameters-classes.md) | Parameters-classes |
 | [Параметры · essences](reference/Parameters-essences.md) | Parameters-essences |
 | [Параметры · guilds](reference/Parameters-guilds.md) | Parameters-guilds |
-| [Параметры · pets](reference/Parameters-pets.md) | Parameters-pets |
 | [Параметры · professions](reference/Parameters-professions.md) | Parameters-professions |
 | [Параметры · quests](reference/Parameters-quests.md) | Parameters-quests |
 | [Параметры · rules](reference/Parameters-rules.md) | Parameters-rules |
 | [Параметры · skills](reference/Parameters-skills.md) | Parameters-skills |
-| [Виды питомцев](reference/Pet-catalog.md) | Pet-catalog |
-| [Питомцы, инкубатор и разведение](Pets.md) | Pets |
 | [Особые силы уникальных предметов](reference/Powers/README.md) | Powers |
 | [Особые силы · A](reference/Powers/Powers-A.md) | Powers-A |
 | [Особые силы · B](reference/Powers/Powers-B.md) | Powers-B |

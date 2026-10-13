@@ -913,11 +913,6 @@
 | [Compound Spiked Shield](../../Equipment/Equipment-SHIELD.md#compound_spiked_shield) | 100 | — | — | 0 |
 | [Gleaming Spiked Shield](../../Equipment/Equipment-SHIELD.md#gleaming_spiked_shield) | 100 | — | — | 0 |
 | [Soldier Belt](../../Equipment/Equipment-BELT.md#soldier_belt) | 100 | — | — | 0 |
-| [Leather Collar](../../Equipment/Equipment-COLLAR.md#leather_collar) | 60 | — | — | 0 |
-| [Studded Collar](../../Equipment/Equipment-COLLAR.md#studded_collar) | 60 | — | — | 0 |
-| [Brass Collar](../../Equipment/Equipment-COLLAR.md#brass_collar) | 60 | — | — | 0 |
-| [Runed Collar](../../Equipment/Equipment-COLLAR.md#runed_collar) | 60 | — | — | 0 |
-| [Alpha's Collar](../../Equipment/Equipment-COLLAR.md#alpha_collar) | 60 | — | — | 0 |
 | [Ascendant Hauberk](../../Equipment/Equipment-BODY.md#ascendant_hauberk) | 100 | — | — | 0 |
 | [Skyforged Lamellar](../../Equipment/Equipment-BODY.md#skyforged_lamellar) | 100 | — | — | 0 |
 | [Godsteel Plate](../../Equipment/Equipment-BODY.md#godsteel_plate) | 100 | — | — | 0 |
@@ -3031,13 +3026,6 @@
 | [Annealed Band](../../Equipment/Equipment-RING.md#annealed_band) | 100 | — | — | 0 |
 | [Brass Forge Dome](../../Equipment/Equipment-BODY.md#brass_forge_dome) | 100 | — | — | 0 |
 | [Whetstone Heart](../../Equipment/Equipment-AMULET.md#whetstone_heart) | 100 | — | — | 0 |
-| [Collar of the First Hound](../../Equipment/Equipment-COLLAR.md#collar_of_the_first_hound) | 100 | — | — | 0 |
-| [Packleader's Band](../../Equipment/Equipment-COLLAR.md#packleaders_band) | 100 | — | — | 0 |
-| [Ironjaw Collar](../../Equipment/Equipment-COLLAR.md#ironjaw_collar) | 100 | — | — | 0 |
-| [Beastsoul Choker](../../Equipment/Equipment-COLLAR.md#beastsoul_choker) | 100 | — | — | 0 |
-| [Wildmother's Garland](../../Equipment/Equipment-COLLAR.md#wildmothers_garland) | 100 | — | — | 0 |
-| [The Nest](../../Equipment/Equipment-COLLAR.md#the_nest) | 100 | — | — | 0 |
-| [Warm Scales](../../Equipment/Equipment-COLLAR.md#warm_scales) | 100 | — | — | 0 |
 
 
 ## abyss <a href="#abyss" id="abyss"></a>

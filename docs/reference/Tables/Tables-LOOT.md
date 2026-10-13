@@ -229,7 +229,6 @@
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.05 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0004 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00053 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.05 | 1; 1 | 0 |
 
 
 ## loot-CHEST_3 <a href="#loot-chest_3" id="loot-chest_3"></a>
@@ -256,7 +255,6 @@
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.05 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0004 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00053 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.05 | 1; 1 | 0 |
 
 
 ## loot-CHEST_4 <a href="#loot-chest_4" id="loot-chest_4"></a>
@@ -285,7 +283,6 @@
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.05 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0004 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00053 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.05 | 1; 1 | 0 |
 
 
 ## loot-CHEST_5 <a href="#loot-chest_5" id="loot-chest_5"></a>
@@ -312,7 +309,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.5 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.02 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.05 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.05 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00553 | 1; 1 | 0 |
 
 
@@ -340,7 +336,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.55 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.02 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.05 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.05 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01053 | 1; 1 | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.005 | 1; 1 | 0 |
 
@@ -369,7 +364,6 @@
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0008 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.1 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.015 | 1; 1 | 0 |
 
 
@@ -398,7 +392,6 @@
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0008 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.1 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.02 | 1; 1 | 0 |
 
 
@@ -427,7 +420,6 @@
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0008 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.1 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.025 | 1; 1 | 0 |
 | [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
@@ -469,7 +461,6 @@
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0008 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.1 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.03 | 1; 1 | 0 |
 | [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
@@ -510,7 +501,6 @@
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.04 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.1 | 1; 1 | 0 |
 | [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.005 | 1; 1 | 0 |
 | [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.005 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.034999999999999996 | 1; 1 | 0 |
@@ -553,7 +543,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.36 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.04 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.1 | 1; 1 | 0 |
 | [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01105 | 1; 1 | 0 |
@@ -774,7 +763,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.605 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.022 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.055 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.055 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01158 | 1; 1 | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.0055 | 1; 1 | 0 |
 
@@ -803,7 +791,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.396 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.044 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.11 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.11 | 1; 1 | 0 |
 | [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.011 | 1; 1 | 0 |
 | [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.011 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01216 | 1; 1 | 0 |
@@ -909,7 +896,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.66 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.024 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.06 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.06 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01263 | 1; 1 | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.006 | 1; 1 | 0 |
 
@@ -938,7 +924,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.432 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.048 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.12 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.12 | 1; 1 | 0 |
 | [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.012 | 1; 1 | 0 |
 | [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.012 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01326 | 1; 1 | 0 |
@@ -1044,7 +1029,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.715 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.026 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.065 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.065 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01368 | 1; 1 | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.0065 | 1; 1 | 0 |
 
@@ -1073,7 +1057,6 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.468 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.052 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.13 | 1; 1 | 0 |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 0.13 | 1; 1 | 0 |
 | [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.013 | 1; 1 | 0 |
 | [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.013 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01437 | 1; 1 | 0 |
@@ -2648,13 +2631,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T2 <a href="#loot-lchest_beast_t2" id="loot-lchest_beast_t2"></a>
@@ -2670,13 +2646,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T3 <a href="#loot-lchest_beast_t3" id="loot-lchest_beast_t3"></a>
@@ -2692,13 +2661,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T4 <a href="#loot-lchest_beast_t4" id="loot-lchest_beast_t4"></a>
@@ -2714,13 +2676,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T5 <a href="#loot-lchest_beast_t5" id="loot-lchest_beast_t5"></a>
@@ -2736,13 +2691,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T6 <a href="#loot-lchest_beast_t6" id="loot-lchest_beast_t6"></a>
@@ -2758,13 +2706,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T7 <a href="#loot-lchest_beast_t7" id="loot-lchest_beast_t7"></a>
@@ -2780,13 +2721,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T8 <a href="#loot-lchest_beast_t8" id="loot-lchest_beast_t8"></a>
@@ -2802,13 +2736,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T9 <a href="#loot-lchest_beast_t9" id="loot-lchest_beast_t9"></a>
@@ -2824,13 +2751,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_BEAST_T10 <a href="#loot-lchest_beast_t10" id="loot-lchest_beast_t10"></a>
@@ -2846,13 +2766,6 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Orb of Growth](../../Items/Items-PET.md#pet_orb_growth) | 100 | 1 | 2; 5 | 0 |
-| [Jungle Egg](../../Items/Items-PET.md#pet_egg_jungle) | 100 | 0.15 | 1; 1 | 0 |
-| [Crypt Egg](../../Items/Items-PET.md#pet_egg_crypt) | 100 | 0.1 | 1; 1 | 0 |
-| [Desert Egg](../../Items/Items-PET.md#pet_egg_desert) | 100 | 0.1 | 1; 1 | 0 |
-| [Frost Egg](../../Items/Items-PET.md#pet_egg_frost) | 100 | 0.1 | 1; 1 | 0 |
-| [Volcano Egg](../../Items/Items-PET.md#pet_egg_volcano) | 100 | 0.04 | 1; 1 | 0 |
-| [Abyss Egg](../../Items/Items-PET.md#pet_egg_abyss) | 100 | 0.01 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_VAAL_T3 <a href="#loot-lchest_vaal_t3" id="loot-lchest_vaal_t3"></a>

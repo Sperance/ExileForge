@@ -406,7 +406,7 @@
 | nothing | 0 |
 | Результат · `output` | [Birch Log](Items/Items-MATERIAL.md#birch_log) |
 | Опыт · `experience` | 4 |
-| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Jungle Egg](Items/Items-PET.md#pet_egg_jungle); Шанс (единица по правилам подсистемы): 2 |
+| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance); Шанс (единица по правилам подсистемы): 2 |
 | chain | `wood` |
 
 
@@ -438,7 +438,7 @@
 | nothing | 0 |
 | Результат · `output` | [Oak Log](Items/Items-MATERIAL.md#oak_log) |
 | Опыт · `experience` | 9 |
-| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Abyss Egg](Items/Items-PET.md#pet_egg_abyss); Шанс (единица по правилам подсистемы): 2 |
+| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance); Шанс (единица по правилам подсистемы): 2 |
 | chain | `wood` |
 
 
@@ -454,7 +454,7 @@
 | nothing | 0 |
 | Результат · `output` | [Yew Log](Items/Items-MATERIAL.md#yew_log) |
 | Опыт · `experience` | 16 |
-| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Crypt Egg](Items/Items-PET.md#pet_egg_crypt); Шанс (единица по правилам подсистемы): 2 |
+| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance); Шанс (единица по правилам подсистемы): 2 |
 | chain | `wood` |
 
 
@@ -470,7 +470,7 @@
 | nothing | 0 |
 | Результат · `output` | [Ironwood Log](Items/Items-MATERIAL.md#ironwood_log) |
 | Опыт · `experience` | 26 |
-| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Ash Egg](Items/Items-PET.md#pet_egg_ash); Шанс (единица по правилам подсистемы): 2 |
+| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance); Шанс (единица по правилам подсистемы): 2 |
 | chain | `wood` |
 
 
@@ -486,7 +486,7 @@
 | nothing | 0 |
 | Результат · `output` | [Ghost Ash Log](Items/Items-MATERIAL.md#ghost_ash_log) |
 | Опыт · `experience` | 40 |
-| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Temple Egg](Items/Items-PET.md#pet_egg_temple); Шанс (единица по правилам подсистемы): 2 |
+| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance); Шанс (единица по правилам подсистемы): 2 |
 | chain | `wood` |
 
 
@@ -503,7 +503,7 @@
 | Результат · `output` | [Elderheart Log](Items/Items-MATERIAL.md#elderheart_log) |
 | Опыт · `experience` | 40 |
 | chain | `wood` |
-| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Desert Egg](Items/Items-PET.md#pet_egg_desert); Шанс (единица по правилам подсистемы): 2 |
+| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance); Шанс (единица по правилам подсистемы): 2 |
 
 
 ## WORLDTREE_GROVE <a href="#worldtree_grove" id="worldtree_grove"></a>
@@ -519,7 +519,7 @@
 | Результат · `output` | [Worldtree Log](Items/Items-MATERIAL.md#worldtree_log) |
 | Опыт · `experience` | 55 |
 | chain | `wood` |
-| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Volcano Egg](Items/Items-PET.md#pet_egg_volcano); Шанс (единица по правилам подсистемы): 2 |
+| Дополнительная добыча · `extra` | item: [Bark](Items/Items-MATERIAL.md#bark); Шанс (единица по правилам подсистемы): 8; item: [Orb of Quality](Items/Items-CURRENCY.md#quality_orb); Шанс (единица по правилам подсистемы): 3; item: [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance); Шанс (единица по правилам подсистемы): 2 |
 
 
 ## SMITHING <a href="#smithing" id="smithing"></a>
@@ -1942,7 +1942,7 @@
 | Уровень · `level` | 25 |
 | Длительность, с · `seconds` | 900 |
 | nothing | 25 |
-| Результат · `output` | [Orb of Breeding](Items/Items-PET.md#pet_orb_breeding) |
+| Результат · `output` | [Orb of Chance](Items/Items-CURRENCY.md#orb_of_chance) |
 | Опыт · `experience` | 40 |
 | Дополнительная добыча · `extra` | — |
 | Вид · `kind` | `ITEM` |

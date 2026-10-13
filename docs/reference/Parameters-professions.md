@@ -224,7 +224,7 @@
 | `professions[2].jobs[0].extra[0].chance` | 8 |
 | `professions[2].jobs[0].extra[1].item` | [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `professions[2].jobs[0].extra[1].chance` | 3 |
-| `professions[2].jobs[0].extra[2].item` | [Jungle Egg](../Items/Items-PET.md#pet_egg_jungle) |
+| `professions[2].jobs[0].extra[2].item` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[2].jobs[0].extra[2].chance` | 2 |
 | `professions[2].jobs[0].chain` | `wood` |
 | `professions[2].jobs[1].code` | `WOODCUTTING_REFINE` |
@@ -245,7 +245,7 @@
 | `professions[2].jobs[2].extra[0].chance` | 8 |
 | `professions[2].jobs[2].extra[1].item` | [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `professions[2].jobs[2].extra[1].chance` | 3 |
-| `professions[2].jobs[2].extra[2].item` | [Abyss Egg](../Items/Items-PET.md#pet_egg_abyss) |
+| `professions[2].jobs[2].extra[2].item` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[2].jobs[2].extra[2].chance` | 2 |
 | `professions[2].jobs[2].chain` | `wood` |
 | `professions[2].jobs[3].code` | `YEW_GROVE` |
@@ -258,7 +258,7 @@
 | `professions[2].jobs[3].extra[0].chance` | 8 |
 | `professions[2].jobs[3].extra[1].item` | [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `professions[2].jobs[3].extra[1].chance` | 3 |
-| `professions[2].jobs[3].extra[2].item` | [Crypt Egg](../Items/Items-PET.md#pet_egg_crypt) |
+| `professions[2].jobs[3].extra[2].item` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[2].jobs[3].extra[2].chance` | 2 |
 | `professions[2].jobs[3].chain` | `wood` |
 | `professions[2].jobs[4].code` | `IRONWOOD_GROVE` |
@@ -271,7 +271,7 @@
 | `professions[2].jobs[4].extra[0].chance` | 8 |
 | `professions[2].jobs[4].extra[1].item` | [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `professions[2].jobs[4].extra[1].chance` | 3 |
-| `professions[2].jobs[4].extra[2].item` | [Ash Egg](../Items/Items-PET.md#pet_egg_ash) |
+| `professions[2].jobs[4].extra[2].item` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[2].jobs[4].extra[2].chance` | 2 |
 | `professions[2].jobs[4].chain` | `wood` |
 | `professions[2].jobs[5].code` | `GHOST_ASH_GROVE` |
@@ -284,7 +284,7 @@
 | `professions[2].jobs[5].extra[0].chance` | 8 |
 | `professions[2].jobs[5].extra[1].item` | [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `professions[2].jobs[5].extra[1].chance` | 3 |
-| `professions[2].jobs[5].extra[2].item` | [Temple Egg](../Items/Items-PET.md#pet_egg_temple) |
+| `professions[2].jobs[5].extra[2].item` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[2].jobs[5].extra[2].chance` | 2 |
 | `professions[2].jobs[5].chain` | `wood` |
 | `professions[2].jobs[6].code` | `ELDERHEART_GROVE` |
@@ -298,7 +298,7 @@
 | `professions[2].jobs[6].extra[0].chance` | 8 |
 | `professions[2].jobs[6].extra[1].item` | [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `professions[2].jobs[6].extra[1].chance` | 3 |
-| `professions[2].jobs[6].extra[2].item` | [Desert Egg](../Items/Items-PET.md#pet_egg_desert) |
+| `professions[2].jobs[6].extra[2].item` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[2].jobs[6].extra[2].chance` | 2 |
 | `professions[2].jobs[7].code` | `WORLDTREE_GROVE` |
 | `professions[2].jobs[7].level` | 50 |
@@ -311,7 +311,7 @@
 | `professions[2].jobs[7].extra[0].chance` | 8 |
 | `professions[2].jobs[7].extra[1].item` | [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `professions[2].jobs[7].extra[1].chance` | 3 |
-| `professions[2].jobs[7].extra[2].item` | [Volcano Egg](../Items/Items-PET.md#pet_egg_volcano) |
+| `professions[2].jobs[7].extra[2].item` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[2].jobs[7].extra[2].chance` | 2 |
 | `professions[3].code` | `SMITHING` |
 | `professions[3].tool` | `TOOL_SMITHING` |
@@ -1331,7 +1331,7 @@
 | `professions[4].jobs[74].level` | 25 |
 | `professions[4].jobs[74].seconds` | 900 |
 | `professions[4].jobs[74].nothing` | 25 |
-| `professions[4].jobs[74].output` | [Orb of Breeding](../Items/Items-PET.md#pet_orb_breeding) |
+| `professions[4].jobs[74].output` | [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance) |
 | `professions[4].jobs[74].experience` | 40 |
 | `professions[4].jobs[74].extra` | — |
 | `professions[4].jobs[74].kind` | `ITEM` |

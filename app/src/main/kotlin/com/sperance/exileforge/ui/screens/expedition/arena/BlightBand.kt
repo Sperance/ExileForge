@@ -47,7 +47,7 @@ import kotlin.math.sin
  * «Сердце Скверны» под полосой жизни Матери: пуповины ромбами - живые дышат жаром, порванные гаснут; разрыв - кольцо-вспышка
  * над ромбом и строка «Пуповина рвётся!». Всех пуповин [BossHud.cords] - по одной на порог фазы и последняя на смерть.
  */
-@Composable internal fun CordStrip(boss: BossHud, alive: Boolean, time: Float) {
+@Composable internal fun CordStrip(boss: BossHud, alive: Boolean, frame: FightFrame) {
     val motion = LocalMotion.current
     val whole = if (alive) boss.cords - boss.torn else 0
     var seen by remember { mutableIntStateOf(whole) }
@@ -90,15 +90,14 @@ import kotlin.math.sin
         Spacer(Modifier.weight(1f))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             repeat(boss.cords) { i ->
-                val pulse = if (motion) .7f + .3f * sin(time * 2 * PI.toFloat() / HEART_SECONDS + i) else 1f
-                Box { CordPip(i < whole, pulse, if (i == torn) burst.value else 1f) }
+                Box { CordPip(i < whole, { if (motion) .7f + .3f * sin(frame.time * 2 * PI.toFloat() / HEART_SECONDS + i) else 1f }, if (i == torn) burst.value else 1f) }
             }
         }
     }
 }
 
-/** Ромб пуповины: [lit] - цела, [pulse] - дыхание жара; [burst] < 1 - только что порвалась: кольцо расходится и гаснет. */
-@Composable private fun CordPip(lit: Boolean, pulse: Float, burst: Float) {
+/** Ромб пуповины: [lit] - цела, [pulse] - дыхание жара (читается в рисовании); [burst] < 1 - только что порвалась: кольцо расходится и гаснет. */
+@Composable private fun CordPip(lit: Boolean, pulse: () -> Float, burst: Float) {
     val glow by animateFloatAsState(if (lit) 1f else 0f, tween(if (lit) 0 else BURST_MS, easing = FastOutSlowInEasing), label = "cord")
     Canvas(Modifier.size(13.dp)) {
         val c = center
@@ -110,7 +109,7 @@ import kotlin.math.sin
             lineTo(c.x - r * .72f, c.y)
             close()
         }
-        if (glow > 0f) drawCircle(BlightTint.vein.copy(alpha = .45f * glow * pulse), r * 1.15f, c)
+        if (glow > 0f) drawCircle(BlightTint.vein.copy(alpha = .45f * glow * pulse()), r * 1.15f, c)
         drawPath(gem, Brush.linearGradient(listOf(BlightTint.hot.copy(alpha = glow), BlightTint.vein.copy(alpha = .25f + .75f * glow), BlightTint.void), Offset(c.x - r, c.y - r), Offset(c.x + r, c.y + r)))
         drawPath(gem, if (glow > .5f) BlightTint.bile else BlightTint.flesh, style = Stroke(1.dp.toPx()))
         if (burst < 1f) drawCircle(BlightTint.hot.copy(alpha = 1f - burst), r * (1f + 1.6f * burst), c, style = Stroke(1.5.dp.toPx()))

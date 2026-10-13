@@ -9,7 +9,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.StrikeView
+import com.sperance.exileforge.core.campaign.progressAt
+import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.abs
@@ -54,9 +56,9 @@ private fun StrikeView.by(actor: Side, foe: Int?, pet: Boolean?): Boolean = this
 /** Удар [strike] - по карте [target] (у врага - [foe]). */
 private fun StrikeView.at(target: Side, foe: Int?, pet: Boolean?): Boolean = this.target == target && (foe == null || this.foe == foe) && (pet == null || this.pet == pet)
 
-/** Сколько прошло от попадания (0..1 окна вспышки); null - снаряд ещё летит или вспышка прошла. */
-private fun StrikeView.impact(): Float? {
-    val since = if (spell) progress - FLIGHT else progress
+/** Сколько прошло от попадания (0..1 окна вспышки) при доле сцены [p]; null - снаряд ещё летит или вспышка прошла. */
+private fun StrikeView.impact(p: Float): Float? {
+    val since = if (spell) p - FLIGHT else p
     return if (since < 0f || since >= IMPACT) null else since / IMPACT
 }
 
@@ -64,23 +66,26 @@ private fun StrikeView.impact(): Float? {
  * Насколько карта вынесена к цели (0..1): разгон в конце замаха [swing], в миг удара - вся, назад за выпад. Чары карту не
  * выносят - летит снаряд.
  */
-internal fun strikeReach(strikes: List<StrikeView>, actor: Side, foe: Int?, pet: Boolean?, swing: Float = 0f, held: Boolean = false): Float {
+internal fun strikeReach(fight: FightHud, now: Double, actor: Side, foe: Int?, pet: Boolean?, swing: Float = 0f, held: Boolean = false): Float {
     var reach = if (held) 0f else ((swing - WINDUP_FROM) / (1 - WINDUP_FROM)).coerceIn(0f, 1f) * .7f
+    val strikes = fight.strikes
     for (i in strikes.indices) {
         val strike = strikes[i]
-        if (strike.spell || strike.progress >= LUNGE || !strike.by(actor, foe, pet)) continue
-        reach = max(reach, cos(strike.progress / LUNGE * PI / 2).toFloat())
+        val p = strike.progressAt(fight, now)
+        if (strike.spell || p >= LUNGE || !strike.by(actor, foe, pet)) continue
+        reach = max(reach, cos(p / LUNGE * PI / 2).toFloat())
     }
     return reach
 }
 
 /** Вспышка карты от попадания (0..1, крит - ярче): белым по портрету, тряска пока она есть. */
-internal fun strikeFlash(strikes: List<StrikeView>, target: Side, foe: Int?, pet: Boolean?): Float {
+internal fun strikeFlash(fight: FightHud, now: Double, target: Side, foe: Int?, pet: Boolean?): Float {
     var flash = 0f
+    val strikes = fight.strikes
     for (i in strikes.indices) {
         val strike = strikes[i]
         if (!strike.landed || !strike.at(target, foe, pet)) continue
-        val t = strike.impact() ?: continue
+        val t = strike.impact(strike.progressAt(fight, now)) ?: continue
         flash = max(flash, (1 - t) * (if (strike.kind == HitKind.CRIT) 1f else .6f))
     }
     return flash
@@ -89,14 +94,10 @@ internal fun strikeFlash(strikes: List<StrikeView>, target: Side, foe: Int?, pet
 /** Тряска карты, по которой попали: затухает вместе со вспышкой. */
 internal fun shake(flash: Float, time: Float): Float = if (flash > 0f) sin(time * 60f) * 2.5f * flash else 0f
 
-/** Рамка карты наливается [tint] в замахе: мягкое свечение вокруг силой [glow]. */
-internal fun Modifier.swingAura(shape: Shape, tint: Color, glow: Float): Modifier = if (glow <= 0f) {
-    this
-} else {
-    drawBehind {
-        val outline = shape.createOutline(size, layoutDirection, this)
-        for (step in 3 downTo 1) drawOutline(outline, tint.copy(alpha = .45f * glow / step), style = Stroke((step * 2.5f).dp.toPx()))
-    }
+/** Рамка карты наливается [tint] в замахе: мягкое свечение вокруг контура [outline] силой [glow]. */
+internal fun DrawScope.swingAura(outline: Outline, tint: Color, glow: Float) {
+    if (glow <= 0f) return
+    for (step in 3 downTo 1) drawOutline(outline, tint.copy(alpha = .45f * glow / step), style = Stroke((step * 2.5f).dp.toPx()))
 }
 
 /** Цвет удара: по герою - кровь, по врагу - стихия; промах - пепел. */
@@ -110,9 +111,11 @@ private fun strikeTint(strike: StrikeView): Color = when {
  * Удары поверх боя (4.9.3): атака - вспышка-разрез на цели, чары - снаряд цвета стихии от бьющего к цели и вспышка; все
  * одновременные удары, каждый своим местом на цели. [card] - рамка карты стороны (герой - `null`, враг - его номер).
  */
-@Composable internal fun StrikeFx(strikes: List<StrikeView>, card: (Int?) -> Rect?, origin: Offset) {
+@Composable internal fun StrikeFx(fight: FightHud, frame: FightFrame, card: (Int?) -> Rect?, origin: Offset) {
+    val strikes = fight.strikes
     if (strikes.isEmpty()) return
     Canvas(Modifier.fillMaxSize()) {
+        val now = frame.now(fight)
         for (i in strikes.indices) {
             val strike = strikes[i]
             val from = card(if (strike.actor == Side.HERO) null else strike.foe) ?: continue
@@ -128,7 +131,8 @@ private fun strikeTint(strike: StrikeView): Color = when {
             }
             val shift = Offset((place - (together - 1) / 2f) * 18.dp.toPx(), 0f)
             val tint = strikeTint(strike)
-            if (strike.spell) bolt(strike, from.center - origin, to.center - origin + shift, tint) else slash(strike, to.center - origin + shift, to.height, tint)
+            val p = strike.progressAt(fight, now)
+            if (strike.spell) bolt(strike, p, from.center - origin, to.center - origin + shift, tint) else slash(strike, p, to.center - origin + shift, to.height, tint)
         }
     }
 }
@@ -137,8 +141,8 @@ private fun strikeTint(strike: StrikeView): Color = when {
 private const val SAME_MOMENT = .05f
 
 /** Разрез на цели: две косые полосы, вторая короче и бледнее, растут за первую треть вспышки и гаснут. */
-private fun DrawScope.slash(strike: StrikeView, at: Offset, height: Float, tint: Color) {
-    val t = strike.impact() ?: return
+private fun DrawScope.slash(strike: StrikeView, p: Float, at: Offset, height: Float, tint: Color) {
+    val t = strike.impact(p) ?: return
     val grow = (t / .35f).coerceAtMost(1f)
     val fade = (1 - t) * (if (strike.landed) 1f else .5f)
     val half = height * .3f
@@ -157,8 +161,7 @@ private val SLASH_X = sin(35 * PI / 180).toFloat()
 private val SLASH_Y = cos(35 * PI / 180).toFloat()
 
 /** Снаряд чар: шар с хвостом летит [FLIGHT] сцены от [from] к [to], на цели - расходящаяся вспышка. */
-private fun DrawScope.bolt(strike: StrikeView, from: Offset, to: Offset, tint: Color) {
-    val p = strike.progress
+private fun DrawScope.bolt(strike: StrikeView, p: Float, from: Offset, to: Offset, tint: Color) {
     if (p < FLIGHT) {
         val k = p / FLIGHT
         val eased = k * k * (3 - 2 * k)
@@ -171,7 +174,7 @@ private fun DrawScope.bolt(strike: StrikeView, from: Offset, to: Offset, tint: C
         drawCircle(tint.copy(alpha = .45f), 3.dp.toPx(), tail)
         return
     }
-    val t = strike.impact() ?: return
+    val t = strike.impact(p) ?: return
     val radius = (8 + 26 * t) * density
     drawCircle(tint.copy(alpha = .35f * (1 - t)), radius, to)
     drawCircle(tint.copy(alpha = .8f * (1 - t)), radius, to, style = Stroke(2.dp.toPx()))
@@ -181,16 +184,19 @@ private fun DrawScope.bolt(strike: StrikeView, from: Offset, to: Offset, tint: C
  * Красная виньетка по краю экрана (4.9.3), пока попадание по герою свежо: угроза читается боковым зрением. Отклик боя -
  * всегда, но мягко.
  */
-@Composable internal fun HitVignette(strikes: List<StrikeView>) {
-    var strength = 0f
-    for (i in strikes.indices) {
-        val strike = strikes[i]
-        if (!strike.landed || strike.damage <= 0 || !strike.at(Side.HERO, null, false)) continue
-        val t = strike.impact() ?: continue
-        strength = max(strength, 1 - t)
-    }
-    if (strength <= 0f) return
+@Composable internal fun HitVignette(fight: FightHud, frame: FightFrame) {
+    val strikes = fight.strikes
+    if (strikes.none { it.landed && it.damage > 0 && it.at(Side.HERO, null, false) }) return
     Canvas(Modifier.fillMaxSize()) {
+        val now = frame.now(fight)
+        var strength = 0f
+        for (i in strikes.indices) {
+            val strike = strikes[i]
+            if (!strike.landed || strike.damage <= 0 || !strike.at(Side.HERO, null, false)) continue
+            val t = strike.impact(strike.progressAt(fight, now)) ?: continue
+            strength = max(strength, 1 - t)
+        }
+        if (strength <= 0f) return@Canvas
         val glow = Brush.radialGradient(
             0f to Color.Transparent,
             .62f to Color.Transparent,

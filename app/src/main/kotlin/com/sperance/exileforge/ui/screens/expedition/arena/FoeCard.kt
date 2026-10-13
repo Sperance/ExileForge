@@ -12,7 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.AnnotatedString
@@ -37,6 +44,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
+import kotlin.math.ceil
 import kotlin.math.sin
 
 /** The pack's leader by name and what the pack is: its rarity, the map's level, the fight of a chain, how many are left standing. */
@@ -79,22 +87,39 @@ import kotlin.math.sin
 /** A swing and a skill's blow carry a card toward the other side (2.78.0); a tick, a reflection, a draught do not. */
 internal val Action.strikes: Boolean get() = this == Action.ATTACK || this == Action.SKILL
 
-/** How far a card is carried toward the other side by its own swing: out and back over the lunge. */
-internal fun reach(lunge: LungeView?, actor: Side, foe: Int?): Float {
-    lunge ?: return 0f
+/**
+ * Выпад снимка [fight] к часам кадра [now] ([FightFrame.now]): доля 0..1; за её концом выпада уже нет, как в бою - null.
+ */
+internal fun lungeAt(fight: FightHud, now: Double): Float? = fight.lunge?.progressAt(fight, now)?.takeIf { it < 1f }
+
+/** How far a card is carried toward the other side by its own swing: out and back over the lunge ([progress] - его доля). */
+internal fun reach(lunge: LungeView?, progress: Float?, actor: Side, foe: Int?): Float {
+    if (lunge == null || progress == null) return 0f
     if (lunge.actor != actor || !lunge.action.strikes || (foe != null && lunge.foe != foe)) return 0f
-    return sin(lunge.progress * PI).toFloat()
+    return sin(progress * PI).toFloat()
 }
 
 /** Whether this card is the one being struck right now, past the lunge's midpoint. */
-internal fun struck(lunge: LungeView?, target: Side, foe: Int?): Boolean {
-    lunge ?: return false
-    if (lunge.actor == target || !lunge.action.strikes || lunge.progress < .5f) return false
+internal fun struck(lunge: LungeView?, progress: Float?, target: Side, foe: Int?): Boolean {
+    if (lunge == null || progress == null) return false
+    if (lunge.actor == target || !lunge.action.strikes || progress < .5f) return false
     return foe == null || lunge.foe == foe
 }
 
 /** How white a portrait flashes as a landed blow reaches it. */
-internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lunge != null && lunge.landed && struck(lunge, target, foe)) (1 - lunge.progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f) else 0f
+internal fun flash(lunge: LungeView?, progress: Float?, target: Side, foe: Int?): Float =
+    if (lunge != null && progress != null && lunge.landed && struck(lunge, progress, target, foe)) (1 - progress) * 2f * (if (lunge.kind == HitKind.CRIT) 1f else .6f) else 0f
+
+/** Вспышка портрета [foe] от выпада снимка [fight] в кадре [frame]: читать в рисовании. */
+internal fun lungeFlash(fight: FightHud, frame: FightFrame, target: Side, foe: Int?): Float = flash(fight.lunge, lungeAt(fight, frame.now(fight)), target, foe)
+
+/** Край карточки, как у `Modifier.border` скруглённой формы: нить [width] внутри границ, углы [radius]. */
+internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
+    val stroke = ceil(width.toPx()).coerceAtMost(ceil(size.minDimension / 2))
+    val half = stroke / 2
+    val corner = (radius.toPx() - half).coerceAtLeast(0f)
+    drawRoundRect(color, Offset(half, half), Size(size.width - stroke, size.height - stroke), CornerRadius(corner), style = Stroke(stroke))
+}
 
 /**
  * One foe's card: its portrait in its rarity's frame, its name, life and shield, its swing and what
@@ -105,7 +130,7 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
 @Composable internal fun FoeCard(
     foe: FoeView,
     fight: FightHud,
-    time: Float,
+    frame: FightFrame,
     open: Boolean,
     modifier: Modifier,
     large: Boolean,
@@ -116,27 +141,19 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
 ) {
     val ring = rarityTint(foe.monster.rarity)
     val live = foe.alive && fight.outcome == null
-    // Замах и удары (4.9.3): последние 30% замаха - рамка наливается кровью, выпад - каждым своим ударом, тряска - каждым по нему
-    val glow = if (live) swingGlow(foe.swing, foe.held) else 0f
-    val acting = strikeReach(fight.strikes, Side.MONSTER, foe.index, pet = null, swing = if (live) foe.swing else 0f, held = foe.held)
-    val flash = if (foe.alive) strikeFlash(fight.strikes, Side.MONSTER, foe.index, pet = null) else 0f
-    val hit = flash > 0f
+    // Замах и удары (4.9.3): последние 30% замаха - рамка наливается кровью, выпад - каждым своим ударом, тряска - каждым по нему.
+    // Всё это - в рисовании кадра ([FightFrame]): карточка не перекомпонуется на каждом шаге боя
+    fun swing() = if (live) frame.foeSwing(foe) else 0f
+    fun acting() = strikeReach(fight, frame.now(fight), Side.MONSTER, foe.index, pet = null, swing = swing(), held = foe.held)
+    fun flash() = if (foe.alive) strikeFlash(fight, frame.now(fight), Side.MONSTER, foe.index, pet = null) else 0f
     val focused = fight.focus == foe.index
     val shape = RoundedCornerShape(8.dp)
     var effectsOpen by remember { mutableStateOf(false) }
-    val border = when {
-        acting > 0f -> LifeRed
-        hit -> LifeRed.copy(alpha = .8f)
-        focused || open -> GoldBright
-        else -> lerp(ring.copy(alpha = .55f), LifeRed, glow)
-    }
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
-    // Плашка намерения (4.9.3): замах врага вот-вот ляжет на героя
-    val aim = if (live && fight.foesAimHero) ((foe.swing - AIM_FROM) / AIM_FADE).coerceIn(0f, 1f) * (if (foe.held) 0f else 1f) else 0f
     Box(
         modifier.graphicsLayer {
-            translationY = acting * 10.dp.toPx()
-            translationX = shake(flash, time).dp.toPx()
+            translationY = acting() * 10.dp.toPx()
+            translationX = shake(flash(), frame.time).dp.toPx()
             // A stun gone off (3.78.0) tilts the card while it holds.
             rotationZ = if (foe.alive && foe.buildup?.stunned == true) -3f else 0f
             alpha = when {
@@ -147,11 +164,23 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
         },
     ) {
         Box(
-            Modifier.swingAura(shape, LifeRed, glow)
-                .background(if (acting > 0f) Blood.copy(alpha = .35f) else Panel.copy(alpha = .9f), shape)
-                .then(if (foe.taunt && foe.alive && acting == 0f && !hit && !focused && !open) Modifier.tauntAura(shape, time) else Modifier)
-                .border(if (focused || acting > 0f || glow > 0f) 2.dp else 1.dp, border, shape)
-                .clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
+            Modifier.drawWithContent {
+                val acting = acting()
+                val hit = flash() > 0f
+                val glow = if (live) swingGlow(swing(), foe.held) else 0f
+                val outline = shape.createOutline(size, layoutDirection, this)
+                swingAura(outline, LifeRed, glow)
+                drawOutline(outline, if (acting > 0f) FoeActing else FoeGround)
+                if (foe.taunt && foe.alive && acting == 0f && !hit && !focused && !open) tauntAura(outline, frame.time)
+                drawContent()
+                val border = when {
+                    acting > 0f -> LifeRed
+                    hit -> LifeRed.copy(alpha = .8f)
+                    focused || open -> GoldBright
+                    else -> lerp(ring.copy(alpha = .55f), LifeRed, glow)
+                }
+                roundEdge(8.dp, if (focused || acting > 0f || glow > 0f) 2.dp else 1.dp, border)
+            }.clip(shape).clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
         ) {
             Column(
                 Modifier.fillMaxWidth().padding(if (narrow) 5.dp else 6.dp),
@@ -165,10 +194,10 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                                 this,
                                 foe.monster.code.value,
                                 foe.monster.form,
-                                time,
+                                frame.time,
                                 wash?.let(::ailmentTint),
                                 wash?.let(::washAmount) ?: 0f,
-                                flash,
+                                flash(),
                             )
                         }
                     }
@@ -223,7 +252,7 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                     }
                 }
                 if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
-                SwingBar(foe.swing, foe.held, Modifier.fillMaxWidth(), if (acting > 0f) LifeRed else LifeRed.copy(alpha = .7f))
+                SwingBar({ swing() }, foe.held, Modifier.fillMaxWidth()) { if (acting() > 0f) LifeRed else SwingRed }
                 // What is on it (4.9.3): одна компактная полка - что не влезло, то «+N», касание открывает лист эффектов врага.
                 val tile = if (large) 16.dp else 14.dp
                 if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
@@ -238,7 +267,7 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
             if (fight.target == foe.index && foe.alive && fight.outcome == null) {
                 Text(if (focused) "◉" else "◎", color = GoldBright, fontSize = 14.sp, modifier = Modifier.align(if (narrow) Alignment.BottomEnd else Alignment.TopEnd).padding(4.dp))
             }
-            if (foe.taunt && foe.alive) TauntSeal(time, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
+            if (foe.taunt && foe.alive) TauntSeal(frame, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(false) }
             if (!foe.alive) {
                 Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
             } // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
@@ -252,17 +281,18 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
                     modifier = Modifier.align(Alignment.BottomCenter).background(Ink.copy(alpha = .8f)).padding(horizontal = 4.dp),
                 )
             }
-            if (foe.alive) foe.buildup?.let { BuildupMark(it, time) }
-            CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
+            if (foe.alive) foe.buildup?.let { BuildupMark(it, frame) }
+            CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
-        if (aim > 0f) {
+        // Плашка намерения (4.9.3): замах врага вот-вот ляжет на героя - проступает в рисовании по доле замаха
+        if (live && fight.foesAimHero && !foe.held) {
             Text(
                 ui("fight.at_you"),
                 color = Color(0xFFFF8A83),
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                modifier = Modifier.align(Alignment.BottomCenter).offset(y = 14.dp).graphicsLayer { alpha = aim }
+                modifier = Modifier.align(Alignment.BottomCenter).offset(y = 14.dp).graphicsLayer { alpha = ((swing() - AIM_FROM) / AIM_FADE).coerceIn(0f, 1f) }
                     .background(Color(0xFF3A1414), RoundedCornerShape(10.dp)).border(1.dp, LifeRed, RoundedCornerShape(10.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
             )
         }
@@ -276,6 +306,11 @@ internal fun flash(lunge: LungeView?, target: Side, foe: Int?): Float = if (lung
 /** С какой доли замаха врага проступает плашка «→ по вам» и за какую долю она набирает силу. */
 private const val AIM_FROM = .55f
 private const val AIM_FADE = .2f
+
+/** Подложка карточки врага: в выпаде - кровью, иначе панелью. */
+private val FoeActing = Blood.copy(alpha = .35f)
+private val FoeGround = Panel.copy(alpha = .9f)
+private val SwingRed = LifeRed.copy(alpha = .7f)
 
 /** The round portrait of a foe's card (3.80.0, variant C). */
 private val FOE_AVATAR = 52.dp
@@ -299,8 +334,11 @@ private val FOE_AVATAR_NARROW = 46.dp
     )
 }
 
-/** The numbers rising off a card: the blows that reached it in the last second. */
-@Composable internal fun BoxScope.CardHits(hits: List<FloatingHit>) {
+/**
+ * The numbers rising off a card: the blows that reached it in the last second. Подъём и угасание - в рисовании кадра [frame]:
+ * возраст числа идёт и между снимками боя.
+ */
+@Composable internal fun BoxScope.CardHits(fight: FightHud, frame: FightFrame, hits: List<FloatingHit>) {
     // The settings (3.77.0) choose which numbers rise: all, the critical strikes alone, or none.
     val shown = when (LocalSettings.current.damageNumbers) {
         DamageNumbers.ALL -> hits
@@ -308,10 +346,9 @@ private val FOE_AVATAR_NARROW = 46.dp
         DamageNumbers.OFF -> return
     }
     shown.takeLast(3).forEach { hit ->
-        val rise = (hit.age / ExpeditionRun.HIT_LIFETIME).toFloat().coerceIn(0f, 1f)
         Text(
-            hitLabel(hit, 1 - rise),
-            color = hitColour(hit).copy(alpha = 1 - rise),
+            hitLabel(hit),
+            color = hitColour(hit),
             textAlign = TextAlign.Center,
             fontSize = when {
                 hit.kind == HitKind.CRIT -> 20.sp
@@ -320,7 +357,11 @@ private val FOE_AVATAR_NARROW = 46.dp
             },
             fontWeight = if (hit.action == Action.TICK) FontWeight.Normal else FontWeight.Black,
             fontStyle = if (hit.action == Action.TICK) FontStyle.Italic else FontStyle.Normal,
-            modifier = Modifier.align(Alignment.Center).offset(x = (((hit.id % 3) - 1) * 14).dp, y = (-36 * rise).dp),
+            modifier = Modifier.align(Alignment.Center).offset(x = (((hit.id % 3) - 1) * 14).dp).graphicsLayer {
+                val rise = (hit.ageAt(fight, frame.now(fight)) / ExpeditionRun.HIT_LIFETIME).toFloat().coerceIn(0f, 1f)
+                translationY = (-36 * rise).dp.toPx()
+                alpha = 1 - rise
+            },
         )
     }
 }
@@ -328,13 +369,13 @@ private val FOE_AVATAR_NARROW = 46.dp
 /** Удар по герою (4.9.3): число всегда кровью и с «−», за ним - значок стихии её цветом; по врагу - цветом стихии, как было. */
 private val FloatingHit.onHero: Boolean get() = target == Side.HERO && amount > 0 && !(kind == HitKind.EVADED || kind == HitKind.BLOCKED)
 
-private fun hitLabel(hit: FloatingHit, alpha: Float): AnnotatedString {
+private fun hitLabel(hit: FloatingHit): AnnotatedString {
     if (!hit.onHero) return AnnotatedString(hitText(hit))
     val glyph = hit.type?.let(::damageGlyph)
     return buildAnnotatedString {
         append("−")
         append(hitText(hit))
-        if (glyph != null) withStyle(SpanStyle(color = damageTint(hit.type).copy(alpha = alpha), fontSize = 11.sp, fontWeight = FontWeight.Bold)) { append(" $glyph") }
+        if (glyph != null) withStyle(SpanStyle(color = damageTint(hit.type), fontSize = 11.sp, fontWeight = FontWeight.Bold)) { append(" $glyph") }
     }
 }
 

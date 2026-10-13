@@ -52,7 +52,7 @@ import com.sperance.exileforge.ui.theme.*
  * слот - пунктирный квадрат того же размера. A tap uses a skill or drinks a flask at once, whatever its condition; a long press
  * on a skill, or its «i», opens its page (3.24.0).
  */
-@Composable internal fun ActionBar(game: GameUi, fight: FightHud, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
+@Composable internal fun ActionBar(game: GameUi, fight: FightHud, frame: FightFrame, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
     val live = fight.started && fight.outcome == null
     val index = game.index
     val skills = game.hero?.skills ?: HeroSkills()
@@ -72,7 +72,7 @@ import com.sperance.exileforge.ui.theme.*
             } else {
                 val skill = index?.skills?.byCode?.get(view.code)
                 val tier = remember(skill, skills, stats) { skill?.let { index?.skillGrowth?.tier(it, skills, stats) } ?: HeroSkills.FIRST_TIER }
-                SkillButton(view, skill, tier, live, onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
+                SkillButton(view, skill, tier, live, { view.readyAt(fight, frame.now(fight)) }, onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
             }
         }
     }
@@ -100,7 +100,7 @@ private val SkillShape = RoundedCornerShape(SKILL_SIDE / 4)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, live: Boolean, onInfo: () -> Unit, onTap: () -> Unit) {
+private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, live: Boolean, readyNow: () -> Float, onInfo: () -> Unit, onTap: () -> Unit) {
     val ready = view.ready >= 1f && view.locked <= 0.0
     Box(
         Modifier.size(SKILL_SIDE)
@@ -117,11 +117,13 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
         // Откат - тёмный сектор того, что ещё восстанавливается, по часовой от верха, и секунды
         if (!ready && view.locked <= 0.0) {
             Canvas(Modifier.matchParentSize().clip(SkillShape)) {
+                // Откат идёт и между снимками боя: доля - к часам кадра
+                val share = readyNow()
                 val reach = size.maxDimension * 1.5f
                 drawArc(
                     Color.Black.copy(alpha = .62f),
-                    -90f + 360f * view.ready,
-                    360f * (1 - view.ready),
+                    -90f + 360f * share,
+                    360f * (1 - share),
                     useCenter = true,
                     topLeft = Offset(center.x - reach / 2, center.y - reach / 2),
                     size = Size(reach, reach),

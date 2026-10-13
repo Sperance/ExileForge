@@ -70,13 +70,13 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
  * Фон боя с боссом «Кино» (3.93.0): небо биома зоны, медленные частицы его погоды и свечение фазы снизу; к третьей фазе
  * свет уходит в её цвет. Без анимаций частицы стоят.
  */
-@Composable internal fun BossBackdrop(biome: String, boss: BossHud, time: Float) {
+@Composable internal fun BossBackdrop(biome: String, boss: BossHud, frame: FightFrame) {
     val sky = SKIES[biome] ?: DEFAULT_SKY
     val phase = phaseNumber(boss)
     val tint by animateFloatAsState((phase - 1).coerceIn(0, 2) / 2f, tween(1600), label = "phaseTint")
     val motion = LocalSettings.current.animations
-    val t = if (motion) time else 0f
     Canvas(Modifier.fillMaxSize()) {
+        val t = if (motion) frame.time else 0f
         drawRect(Brush.verticalGradient(listOf(sky.top, sky.bottom)))
         drawRect(Brush.radialGradient(listOf(phaseAura(phase).copy(alpha = .10f + .12f * tint), Color.Transparent), Offset(size.width / 2, size.height * .32f), size.width * .9f))
         repeat(34) { k ->

@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -134,7 +135,7 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 @Composable internal fun BossBand(
     fight: FightHud,
     boss: BossHud,
-    time: Float,
+    frame: FightFrame,
     chosen: Int?,
     large: Boolean,
     traits: Map<Int, List<TraitView>>,
@@ -145,17 +146,17 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
     val foe = fight.foes.firstOrNull { it.index == boss.index } ?: return
     val name = monsterTitle(foe.monster.code)
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        BossFrame(foe, name, boss, fight, time)
+        BossFrame(foe, name, boss, fight, frame)
         if (boss.slots.isEmpty()) {
             // Бой без слотов (страж без фаз и тотемов): прочие враги поля - узкими карточками по бокам, как прежде
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, time, chosen, large, traits, track, onFocus) }
-                PortraitStage(foe, boss, fight, time, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tap(fight, foe.index, onFocus, onInspect) }
-                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, time, chosen, large, traits, track, onFocus) }
+                others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
+                PortraitStage(foe, boss, fight, frame, chosen == foe.index, track(foe.index).weight(1f).height(196.dp)) { tap(fight, foe.index, onFocus, onInspect) }
+                others.filterIndexed { i, _ -> i % 2 == 1 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
             }
         } else {
-            NicheArena(foe, boss, fight, time, chosen, track, name) { tap(fight, it, onFocus, onInspect) }
+            NicheArena(foe, boss, fight, frame, chosen, track, name) { tap(fight, it, onFocus, onInspect) }
         }
     }
 }
@@ -165,7 +166,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
 
 // ============================================================ Рамка: имя, полосы, каст
 
-@Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, time: Float) {
+@Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame) {
     val lore = LocalLore.current
     val shape = RoundedCornerShape(10.dp)
     Column(
@@ -187,7 +188,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
             // Мощь босса (4.8.0): печать мелко и число цвета его стойки против героя
             FoeMightMark(foe.monster, Modifier.padding(start = 6.dp))
         }
-        LifeBar(foe, boss, time)
+        LifeBar(foe, boss, frame)
         // Строка 2 под полосой: фаза и ярость табулярными цифрами - ширина не прыгает, пока тикают секунды
         if (boss.marks.isNotEmpty() || foe.alive) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -206,9 +207,9 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                 if (foe.alive && rage != null) RageMark(rage)
             }
         }
-        if (boss.rift != null && foe.alive) RiftStrip(boss, time)
+        if (boss.rift != null && foe.alive) RiftStrip(boss, frame)
         // Сердце Скверны (4.0.0): пуповины Матери гаснут по фазам
-        if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, time)
+        if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, frame)
         if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
         foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
         if (foe.alive && (foe.ailments.isNotEmpty() || foe.effects.isNotEmpty() || foe.held)) StateTiles(ui("fight.shelf.foe", name), foe.ailments, foe.held, foe.effects)
@@ -220,8 +221,12 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
             ) {
                 val near = cast.left < TELEGRAPH_SECONDS
                 Box(
+                    // Нить каста мерцает в рисовании кадра: близкий каст не перекомпонует рамку
                     Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFF2A1840))
-                        .border(1.dp, if (near) CastTint.copy(alpha = .6f + .4f * sin(time * 9f)) else CastTint.copy(alpha = .5f), RoundedCornerShape(5.dp)),
+                        .drawWithContent {
+                            drawContent()
+                            roundEdge(5.dp, 1.dp, if (near) CastTint.copy(alpha = .6f + .4f * sin(frame.time * 9f)) else CastTint.copy(alpha = .5f))
+                        },
                     contentAlignment = Alignment.Center,
                 ) { Text("✦", color = Color(0xFFD4B6FF), fontSize = 11.sp) }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -313,7 +318,7 @@ private class PhaseGems(private val marks: List<Double>) {
  * Полоса здоровья босса: шлейф урона догоняет её с запозданием, глянец и бегущий блик, кристаллы порогов фаз (сработавшие
  * гаснут), щит - штриховкой поверх, барьер - золотым свечением и числом, здоровье числом на тёмной плашке.
  */
-@Composable private fun LifeBar(foe: FoeView, boss: BossHud, time: Float) {
+@Composable private fun LifeBar(foe: FoeView, boss: BossHud, frame: FightFrame) {
     val share = if (foe.maxLife > 0) (foe.life / foe.maxLife.toFloat()).coerceIn(0f, 1f) else 0f
     val trail by animateFloatAsState(share, tween(700, delayMillis = 260, easing = FastOutSlowInEasing), label = "trail")
     val shield = if (foe.maxShield > 0) (foe.shield / foe.maxShield.toFloat()).coerceIn(0f, 1f) else 0f
@@ -323,7 +328,7 @@ private class PhaseGems(private val marks: List<Double>) {
     val gems = remember(boss.marks) { PhaseGems(boss.marks) }
     Box(
         Modifier.fillMaxWidth().height(18.dp)
-            .drawBehind { if (foe.barrier > 0) drawRoundRect(FrameGoldBright.copy(alpha = .35f + .2f * sin(time * 3f)), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()), style = Stroke(4.dp.toPx()), topLeft = Offset(-2.dp.toPx(), -2.dp.toPx()), size = Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx())) }
+            .drawBehind { if (foe.barrier > 0) drawRoundRect(FrameGoldBright.copy(alpha = .35f + .2f * sin(frame.time * 3f)), cornerRadius = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx()), style = Stroke(4.dp.toPx()), topLeft = Offset(-2.dp.toPx(), -2.dp.toPx()), size = Size(size.width + 4.dp.toPx(), size.height + 4.dp.toPx())) }
             .clip(shape).background(LifeTrack).border(1.dp, Color(0xFF6A4A1A), shape),
     ) {
         Canvas(Modifier.fillMaxSize()) {
@@ -333,7 +338,7 @@ private class PhaseGems(private val marks: List<Double>) {
             drawRect(LifeFill, size = Size(w * share, h))
             drawRect(Color.White.copy(alpha = .22f), size = Size(w * share, h * .38f))
             if (motion && share > 0) {
-                val x = ((time * .35f) % 1.6f - .3f) * w
+                val x = ((frame.time * .35f) % 1.6f - .3f) * w
                 clipRect(right = w * share) { drawRect(Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = .28f), Color.Transparent), x, x + w * .18f), size = size) }
             }
             if (shield > 0) {
@@ -406,26 +411,27 @@ private fun roman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").ge
  * Портрет босса между двумя колоннами ниш: слева слоты первой половины, справа - второй. Нити тянутся от тотемов: к боссу -
  * у силы и знамени, вниз к герою - у проклятия и стихии.
  */
-@Composable private fun NicheArena(foe: FoeView, boss: BossHud, fight: FightHud, time: Float, chosen: Int?, track: (Int) -> Modifier, name: String, onTap: (Int) -> Unit) {
+@Composable private fun NicheArena(foe: FoeView, boss: BossHud, fight: FightHud, frame: FightFrame, chosen: Int?, track: (Int) -> Modifier, name: String, onTap: (Int) -> Unit) {
     val half = (boss.slots.size + 1) / 2
     val centres = remember { mutableStateMapOf<Int, Offset>() }
     var portrait by remember { mutableStateOf(androidx.compose.ui.geometry.Rect.Zero) }
     var origin by remember { mutableStateOf(Offset.Zero) }
     Box(Modifier.fillMaxWidth().height(242.dp).onGloballyPositioned { origin = it.positionInRoot() }) {
         Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            NicheColumn(0 until half, boss, fight, time, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
+            NicheColumn(0 until half, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
             PortraitStage(
                 foe,
                 boss,
                 fight,
-                time,
+                frame,
                 chosen == foe.index,
                 track(foe.index).weight(1f).fillMaxHeight().padding(vertical = 10.dp).onGloballyPositioned { portrait = it.boundsInRoot().translate(-origin) },
             ) { onTap(foe.index) }
-            NicheColumn(half until boss.slots.size, boss, fight, time, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
+            NicheColumn(half until boss.slots.size, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
         }
         // Нити тотемов поверх: от ниши к боссу или вниз, к герою; бегущий пунктир их цвета
         Canvas(Modifier.fillMaxSize()) {
+            val time = frame.time
             boss.slots.forEachIndexed { i, slot ->
                 val totem = slot as? SlotView.Totem ?: return@forEachIndexed
                 val from = centres[i] ?: return@forEachIndexed
@@ -451,7 +457,7 @@ private fun roman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").ge
     range: IntRange,
     boss: BossHud,
     fight: FightHud,
-    time: Float,
+    frame: FightFrame,
     chosen: Int?,
     track: (Int) -> Modifier,
     name: String,
@@ -461,7 +467,7 @@ private fun roman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").ge
     Column(Modifier.width(76.dp).fillMaxHeight(), verticalArrangement = Arrangement.SpaceEvenly) {
         range.forEach { i ->
             Box(Modifier.fillMaxWidth().height(74.dp).onGloballyPositioned { place(i, it.boundsInRoot().center) }) {
-                NicheSlot(boss.slots.getOrNull(i), fight, time, chosen, track, name, onTap)
+                NicheSlot(boss.slots.getOrNull(i), fight, frame, chosen, track, name, onTap)
             }
         }
     }
@@ -478,7 +484,7 @@ private fun slotKey(slot: SlotView?): String = when (slot) {
  * Ниша слота: пустая - тёмная арка с руной; приспешник встаёт из фиолетового портала и при смерти рассыпается вниз прахом;
  * тотем встаёт из портала своего цвета, его срок стекает по табличке, и он гаснет вспышкой.
  */
-@Composable private fun NicheSlot(slot: SlotView?, fight: FightHud, time: Float, chosen: Int?, track: (Int) -> Modifier, name: String, onTap: (Int) -> Unit) {
+@Composable private fun NicheSlot(slot: SlotView?, fight: FightHud, frame: FightFrame, chosen: Int?, track: (Int) -> Modifier, name: String, onTap: (Int) -> Unit) {
     // Последний вид каждого жильца: уходящий рисуется таким, каким был
     val seen = remember { mutableMapOf<String, Pair<SlotView, FoeView?>>() }
     val key = slotKey(slot)
@@ -499,12 +505,12 @@ private fun slotKey(slot: SlotView?): String = when (slot) {
 
                 is SlotView.Minion -> {
                     val live = fight.foes.firstOrNull { it.index == view.index } ?: minion
-                    if (live != null) MinionNiche(live, fight, time, chosen == live.index, track(live.index)) { onTap(live.index) }
+                    if (live != null) MinionNiche(live, fight, frame, chosen == live.index, track(live.index)) { onTap(live.index) }
                 }
 
                 is SlotView.Totem -> {
                     val now = (slot as? SlotView.Totem)?.takeIf { it.serial == view.serial } ?: view
-                    TotemNiche(now, time) { lore?.invoke(Lore.Totem(now.code, name, now.left)) }
+                    TotemNiche(now, frame) { lore?.invoke(Lore.Totem(now.code, name, now.left)) }
                 }
             }
             if (view != null) PortalBurst(if (view is SlotView.Totem) totemTint(view) else PortalTint)
@@ -563,28 +569,28 @@ private fun DrawScope.archFrame(glow: Color?) {
     }
 }
 
-@Composable private fun MinionNiche(foe: FoeView, fight: FightHud, time: Float, focused: Boolean, modifier: Modifier, onTap: () -> Unit) {
+@Composable private fun MinionNiche(foe: FoeView, fight: FightHud, frame: FightFrame, focused: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     Box(modifier.fillMaxSize().clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap)) {
         Box(Modifier.fillMaxWidth().padding(bottom = 16.dp).fillMaxHeight()) {
             Canvas(Modifier.fillMaxSize()) { archFrame(null) }
             Canvas(Modifier.fillMaxSize().padding(3.dp).clip(ArchShape)) {
-                Portraits.monster(this, foe.monster.code.value, foe.monster.form, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index))
+                Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index))
             }
             if (focused) Box(Modifier.matchParentSize().border(2.dp, FrameGoldBright, ArchShape))
-            CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
+            CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
         Plaque(monsterTitle(foe.monster.code), Parchment, if (foe.maxLife > 0) foe.life / foe.maxLife.toFloat() else 0f, LifeMid)
     }
 }
 
-@Composable private fun TotemNiche(totem: SlotView.Totem, time: Float, onTap: () -> Unit) {
+@Composable private fun TotemNiche(totem: SlotView.Totem, frame: FightFrame, onTap: () -> Unit) {
     val tint = totemTint(totem)
     Box(Modifier.fillMaxSize().clickable(onClick = onTap)) {
         Box(Modifier.fillMaxWidth().padding(bottom = 16.dp).fillMaxHeight()) {
             Canvas(Modifier.fillMaxSize()) { archFrame(tint) }
             Canvas(Modifier.fillMaxSize().padding(3.dp).clip(ArchShape).background(Brush.radialGradient(listOf(tint.copy(alpha = .3f), Color(0xFF0A0807))))) {
-                totemFigure(tint, time, totem.kind)
+                totemFigure(tint, frame.time, totem.kind)
             }
         }
         Plaque("${totemTitle(totem.code)} · ${totem.left.roundToInt()} ${ui("boss.seconds_short")}", tint, totem.share, tint)
@@ -662,23 +668,28 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
  * упрощённых эффектах); перед готовым умением вокруг пульсирует фиолетовый круг, новая фаза - титулом поверх, павший босс
  * растворяется искрами.
  */
-@Composable private fun PortraitStage(foe: FoeView, boss: BossHud, fight: FightHud, time: Float, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
+@Composable private fun PortraitStage(foe: FoeView, boss: BossHud, fight: FightHud, frame: FightFrame, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val settings = LocalSettings.current
     val wash = foe.ailments.map { it.ailment }.maxByOrNull(::washAmount)
     val aura = phaseAura(phaseNumber(boss))
     val focused = fight.focus == foe.index
     val gone by animateFloatAsState(if (foe.alive) 0f else 1f, tween(1400, easing = LinearEasing), label = "dissolve")
-    val crit = fight.lunge?.takeIf { it.actor == Side.HERO && it.landed && it.foe == foe.index && it.kind == HitKind.CRIT }?.progress ?: 1f
-    val nudge = if (settings.simpleEffects || crit >= 1f) 0f else sin(crit * PI.toFloat() * 6) * (1 - crit) * 2.5f
+    // Толчок крита - к часам кадра, в рисовании
+    val critical = fight.lunge?.takeIf { it.actor == Side.HERO && it.landed && it.foe == foe.index && it.kind == HitKind.CRIT }
+    fun nudge(): Float {
+        if (settings.simpleEffects || critical == null) return 0f
+        val crit = lungeAt(fight, frame.now(fight)) ?: return 0f
+        return sin(crit * PI.toFloat() * 6) * (1 - crit) * 2.5f
+    }
     val shape = RoundedCornerShape(12.dp)
     Box(modifier, contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val breath = .55f + .2f * sin(time * 2f)
+            val breath = .55f + .2f * sin(frame.time * 2f)
             drawOval(Brush.radialGradient(listOf(aura.copy(alpha = .45f * breath * (1 - gone)), Color.Transparent), center, size.maxDimension * .62f), Offset(-size.width * .15f, -size.height * .08f), Size(size.width * 1.3f, size.height * 1.16f))
         }
         Box(
             Modifier.fillMaxSize().padding(horizontal = 4.dp).graphicsLayer {
-                translationX = nudge.dp.toPx()
+                translationX = nudge().dp.toPx()
                 alpha = 1 - gone
                 scaleX = 1 + gone * .06f
                 scaleY = 1 + gone * .06f
@@ -689,11 +700,11 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
         ) {
             Canvas(Modifier.fillMaxSize()) {
                 // Матерь Скверны рвёт пуповины по фазам - портрет показывает порванные
-                Portraits.monster(this, foe.monster.code.value, foe.monster.form, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash(fight.lunge, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
+                Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
             }
-            CardHits(fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
+            CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
-        boss.cast?.takeIf { foe.alive && it.left < TELEGRAPH_SECONDS }?.let { cast -> Telegraph((1 - cast.left / TELEGRAPH_SECONDS).toFloat(), time) }
+        boss.cast?.takeIf { foe.alive && it.left < TELEGRAPH_SECONDS }?.let { cast -> Telegraph((1 - cast.left / TELEGRAPH_SECONDS).toFloat(), frame) }
         if (gone > 0f && gone < 1f) Sparks(gone, FrameGoldBright)
         PhaseTitle(fight, boss)
     }
@@ -707,8 +718,9 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
 }
 
 /** Круг-предупреждение: сжимается к портрету и пульсирует, пока умение не готово. */
-@Composable private fun Telegraph(progress: Float, time: Float) {
+@Composable private fun Telegraph(progress: Float, frame: FightFrame) {
     Canvas(Modifier.fillMaxSize()) {
+        val time = frame.time
         val r = size.minDimension * (.78f - .22f * progress)
         val pulse = .5f + .5f * sin(time * 12f)
         drawCircle(CastTint.copy(alpha = .18f + .2f * progress), r, center, style = Stroke(10.dp.toPx()))
@@ -764,7 +776,7 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
 @Composable private fun Retinue(
     foes: List<FoeView>,
     fight: FightHud,
-    time: Float,
+    frame: FightFrame,
     chosen: Int?,
     large: Boolean,
     traits: Map<Int, List<TraitView>>,
@@ -774,7 +786,7 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
     Column(Modifier.width(72.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         foes.forEach { foe ->
             key(foe.index) {
-                FoeCard(foe, fight, time, chosen == foe.index && fight.scouting, track(foe.index).fillMaxWidth(), large, traits[foe.index].orEmpty(), narrow = true) { onFocus(foe.index) }
+                FoeCard(foe, fight, frame, chosen == foe.index && fight.scouting, track(foe.index).fillMaxWidth(), large, traits[foe.index].orEmpty(), narrow = true) { onFocus(foe.index) }
             }
         }
     }
@@ -811,7 +823,7 @@ private const val ALARM_SECONDS = .5f
 private const val CHIP_MS = 500
 
 /** Полоса механики стража Разлома под здоровьем: печати Стража, Законы Владыки или украденное Поглотителем. */
-@Composable private fun RiftStrip(boss: BossHud, time: Float) {
+@Composable private fun RiftStrip(boss: BossHud, frame: FightFrame) {
     val shape = RoundedCornerShape(6.dp)
     Column(
         Modifier.fillMaxWidth().clip(shape).background(Brush.verticalGradient(listOf(RiftPanel, RiftPanelDeep))).border(1.dp, RiftLine, shape)
@@ -819,9 +831,9 @@ private const val CHIP_MS = 500
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         when (boss.rift) {
-            RiftGuard.WARDEN -> Seals(boss, time)
+            RiftGuard.WARDEN -> Seals(boss, frame)
             RiftGuard.DEVOURER -> Stolen(boss)
-            RiftGuard.LORD -> Laws(boss, time)
+            RiftGuard.LORD -> Laws(boss, frame)
             null -> Unit
         }
     }
@@ -833,12 +845,12 @@ private const val CHIP_MS = 500
 }
 
 /** Печати брони: ромб на печать - горит, пока стоит, гаснет с расколом и разгорается вновь; ниже - попадания до следующей. */
-@Composable private fun Seals(boss: BossHud, time: Float) {
+@Composable private fun Seals(boss: BossHud, frame: FightFrame) {
     val motion = LocalMotion.current
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         RiftCaption(ui("boss.rift_seals", boss.seals, boss.sealsMax).uppercase(), Modifier.weight(1f, fill = false))
         Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            repeat(boss.sealsMax) { i -> SealPip(i < boss.seals, if (motion) .75f + .25f * sin(time * 2 * PI.toFloat() / SEAL_PULSE_SECONDS + i) else 1f) }
+            repeat(boss.sealsMax) { i -> SealPip(i < boss.seals) { if (motion) .75f + .25f * sin(frame.time * 2 * PI.toFloat() / SEAL_PULSE_SECONDS + i) else 1f } }
         }
     }
     if (boss.sealEvery > 0 && boss.seals > 0) {
@@ -848,8 +860,8 @@ private const val CHIP_MS = 500
     }
 }
 
-/** Ромб печати: [lit] - стоит; [pulse] - дыхание свечения. Раскол - быстрая вспышка, возврат - медленное разгорание. */
-@Composable private fun SealPip(lit: Boolean, pulse: Float) {
+/** Ромб печати: [lit] - стоит; [pulse] - дыхание свечения, читается в рисовании. Раскол - быстрая вспышка, возврат - медленное разгорание. */
+@Composable private fun SealPip(lit: Boolean, pulse: () -> Float) {
     val glow by animateFloatAsState(if (lit) 1f else 0f, tween(if (lit) SEAL_GROW_MS else SEAL_BREAK_MS, easing = FastOutSlowInEasing), label = "seal")
     Canvas(Modifier.size(12.dp)) {
         val c = center
@@ -861,7 +873,7 @@ private const val CHIP_MS = 500
             lineTo(c.x - r * .72f, c.y)
             close()
         }
-        if (glow > 0f) drawCircle(RiftGreen.copy(alpha = .45f * glow * pulse), r * 1.1f, c)
+        if (glow > 0f) drawCircle(RiftGreen.copy(alpha = .45f * glow * pulse()), r * 1.1f, c)
         drawPath(gem, Brush.linearGradient(listOf(RiftHot.copy(alpha = glow), RiftGreen.copy(alpha = .25f + .75f * glow), RiftDeep), Offset(c.x - r, c.y - r), Offset(c.x + r, c.y + r)))
         drawPath(gem, if (glow > .5f) RiftSoft else RiftLineBright, style = Stroke(1.dp.toPx()))
         // Снятая печать - трещина поперёк ромба
@@ -876,13 +888,18 @@ private fun lawName(law: RiftLaw, element: String?): String {
 }
 
 /** Законы Владыки: скрижаль с Законами в силе; в знамение - тревога, отсчёт и имя следующего. */
-@Composable private fun Laws(boss: BossHud, time: Float) {
+@Composable private fun Laws(boss: BossHud, frame: FightFrame) {
     val motion = LocalMotion.current
     val omen = boss.lawNext.isNotEmpty()
-    val flash = when {
-        !omen -> 0f
-        motion -> if ((time / ALARM_SECONDS).toInt() % 2 == 0) 1f else .35f
-        else -> 1f
+    // Мигание тревоги - ступенями по часам кадра: полоса перекомпонуется лишь со сменой ступени, не каждый кадр
+    val flash by remember(frame, omen, motion) {
+        derivedStateOf {
+            when {
+                !omen -> 0f
+                motion -> if ((frame.time / ALARM_SECONDS).toInt() % 2 == 0) 1f else .35f
+                else -> 1f
+            }
+        }
     }
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         RiftCaption(ui("boss.rift_law").uppercase(), tint = RiftMuted)

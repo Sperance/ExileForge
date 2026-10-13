@@ -188,6 +188,7 @@ import kotlin.math.roundToInt
                         shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },
                         mapEffects = run.mapEffects,
                         origins = run.origins,
+                        pulse = run.pulse,
                     )
                 }
 

@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.progressAt
+import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.HeroCastView
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.ui.components.NeonHue
@@ -86,26 +88,29 @@ private const val DASHES = 18
  * - больше искр и вспышка по краям, эхо - бледнее. Всё считается из прогресса сцены и номера строки лога детерминированным
  * шумом: ни частиц в куче, ни выделений на кадр. Бой анимируется всегда - `LocalMotion` сцену не гасит.
  */
-@Composable internal fun SkillFx(cast: HeroCastView?, hero: Rect?, foe: (Int) -> Rect?, origin: Offset) {
+@Composable internal fun SkillFx(fight: FightHud, frame: FightFrame, hero: Rect?, foe: (Int) -> Rect?, origin: Offset) {
+    val cast = fight.heroCast
     if (cast == null || hero == null) return
     val hue = cast.element?.let { element -> NeonHue.entries.firstOrNull { it.name == element } } ?: NeonHue.of(cast.type)
     val style = VeinStyle.of(hue)
     val density = LocalDensity.current
     val strokes = remember(density) { with(density) { FxStrokes(Stroke(2.dp.toPx(), cap = StrokeCap.Round), Stroke(3.dp.toPx()), Stroke(6.dp.toPx())) } }
     Canvas(Modifier.fillMaxSize()) {
+        // Доля сцены - к часам кадра: снимок боя выходит реже кадра
+        val p = cast.progressAt(fight, frame.now(fight))
         val alpha = if (cast.echo) ECHO_ALPHA else 1f
         val from = hero.center - origin
         if (cast.self || cast.type in SELF_TYPES || cast.foes.isEmpty()) {
-            orbits(cast, hue.color, from, alpha, strokes)
+            orbits(cast, p, hue.color, from, alpha, strokes)
             return@Canvas
         }
         cast.foes.forEachIndexed { n, index ->
             val to = (foe(index) ?: return@forEachIndexed).center - origin
             val start = Offset(from.x, from.y - 12.dp.toPx())
-            veins(cast, style, hue.color, start, to, alpha, n)
-            impact(cast, style, hue.color, to, alpha, n, strokes)
+            veins(cast, p, style, hue.color, start, to, alpha, n)
+            impact(cast, p, style, hue.color, to, alpha, n, strokes)
         }
-        if (cast.tier >= 3 && cast.progress > TRAVEL) edgeFlash(hue.color, (1 - (cast.progress - TRAVEL) / (1 - TRAVEL)) * .5f * alpha, strokes)
+        if (cast.tier >= 3 && p > TRAVEL) edgeFlash(hue.color, (1 - (p - TRAVEL) / (1 - TRAVEL)) * .5f * alpha, strokes)
     }
 }
 
@@ -113,8 +118,7 @@ private const val DASHES = 18
 private class FxStrokes(val thin: Stroke, val wave: Stroke, val edge: Stroke)
 
 /** Жилы к цели [to]: голова бежит, хвост гаснет следом; у каждой - свой излом и ответвления. */
-private fun DrawScope.veins(cast: HeroCastView, style: VeinStyle, color: Color, from: Offset, to: Offset, alpha: Float, target: Int) {
-    val p = cast.progress
+private fun DrawScope.veins(cast: HeroCastView, p: Float, style: VeinStyle, color: Color, from: Offset, to: Offset, alpha: Float, target: Int) {
     val head = ease(min(1f, p / TRAVEL * 1.6f))
     val tail = max(0f, (p - TRAVEL * .7f) / (1 - TRAVEL * .7f))
     if (head <= tail) return
@@ -172,8 +176,8 @@ private fun DrawScope.branch(color: Color, at: Offset, from: Offset, to: Offset,
 }
 
 /** Удар у цели: ударная волна, белое кольцо у тира II+, мягкое пятно цвета и искры по тяге стихии. */
-private fun DrawScope.impact(cast: HeroCastView, style: VeinStyle, color: Color, at: Offset, alpha: Float, target: Int, strokes: FxStrokes) {
-    val local = (cast.progress - TRAVEL * .8f) / (1 - TRAVEL * .8f)
+private fun DrawScope.impact(cast: HeroCastView, p: Float, style: VeinStyle, color: Color, at: Offset, alpha: Float, target: Int, strokes: FxStrokes) {
+    val local = (p - TRAVEL * .8f) / (1 - TRAVEL * .8f)
     if (local <= 0f) return
     val e = ease(local)
     val fade = (1 - local) * alpha
@@ -200,8 +204,7 @@ private fun DrawScope.impact(cast: HeroCastView, style: VeinStyle, color: Color,
 private const val SCENE_SECONDS = .6f
 
 /** Умение на себя: две-три встречные пунктирные орбиты вокруг героя, искры поднимаются. */
-private fun DrawScope.orbits(cast: HeroCastView, color: Color, at: Offset, alpha: Float, strokes: FxStrokes) {
-    val p = cast.progress
+private fun DrawScope.orbits(cast: HeroCastView, p: Float, color: Color, at: Offset, alpha: Float, strokes: FxStrokes) {
     val strength = sin(p * PI.toFloat()) * alpha
     val rings = if (cast.tier >= 3) 3 else 2
     val sweep = 360f / DASHES * .5f

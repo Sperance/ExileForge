@@ -16,8 +16,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.layout.Layout
@@ -60,7 +62,7 @@ import kotlin.math.sin
     game: GameUi,
     hud: RunHud,
     fight: FightHud,
-    time: Float,
+    frame: FightFrame,
     names: Map<Int, String>,
     stance: HeroStance,
     modifier: Modifier,
@@ -72,11 +74,11 @@ import kotlin.math.sin
     var petOpen by remember { mutableStateOf(false) }
     var effectsOpen by remember { mutableStateOf(false) }
     val live = fight.outcome == null
-    // Замах и удары (4.9.3): последние 30% замаха - рамка наливается золотом, выпад - каждым своим ударом, тряска - каждым по нему
-    val glow = if (live) swingGlow(fight.heroSwing, fight.heroHeld) else 0f
-    val acting = strikeReach(fight.strikes, Side.HERO, null, pet = false, swing = if (live) fight.heroSwing else 0f, held = fight.heroHeld)
-    val flash = strikeFlash(fight.strikes, Side.HERO, null, pet = false)
-    val hit = flash > 0f
+    // Замах и удары (4.9.3): последние 30% замаха - рамка наливается золотом, выпад - каждым своим ударом, тряска - каждым по нему.
+    // Всё это - в рисовании кадра ([FightFrame]): карточка не перекомпонуется на каждом шаге боя
+    fun swing() = if (live) frame.heroSwing(fight) else 0f
+    fun acting() = strikeReach(fight, frame.now(fight), Side.HERO, null, pet = false, swing = swing(), held = fight.heroHeld)
+    fun flash() = strikeFlash(fight, frame.now(fight), Side.HERO, null, pet = false)
     val shape = RoundedCornerShape(10.dp)
     val wash = fight.heroAilments.map { it.ailment }.maxByOrNull(::washAmount)
     val timed = timedShelf(fight.heroHeld, fight.heroAilments, fight.heroEffects, fight.heroCharges)
@@ -84,21 +86,25 @@ import kotlin.math.sin
     val openEffects = { effectsOpen = true }
     Column(
         modifier.fillMaxWidth().graphicsLayer {
-            translationY = -acting * 10.dp.toPx()
-            translationX = shake(flash, time).dp.toPx()
+            translationY = -acting() * 10.dp.toPx()
+            translationX = shake(flash(), frame.time).dp.toPx()
         }
-            .swingAura(shape, Gold, glow)
-            .background(if (acting > 0f) PanelRaised else Panel.copy(alpha = .94f), shape)
-            .then(if (fight.heroTaunt && acting == 0f && !hit) Modifier.tauntAura(shape, time) else Modifier)
-            .border(
-                if (acting > 0f || hit || glow > 0f) 2.dp else 1.dp,
-                when {
+            .drawWithContent {
+                val acting = acting()
+                val hit = flash() > 0f
+                val glow = if (live) swingGlow(swing(), fight.heroHeld) else 0f
+                val outline = shape.createOutline(size, layoutDirection, this)
+                swingAura(outline, Gold, glow)
+                drawOutline(outline, if (acting > 0f) PanelRaised else HeroGround)
+                if (fight.heroTaunt && acting == 0f && !hit) tauntAura(outline, frame.time)
+                drawContent()
+                val border = when {
                     hit -> LifeRed
                     acting > 0f -> GoldBright
-                    else -> lerp(Gold.copy(alpha = .6f), GoldBright, glow)
-                },
-                shape,
-            )
+                    else -> lerp(HeroRim, GoldBright, glow)
+                }
+                roundEdge(10.dp, if (acting > 0f || hit || glow > 0f) 2.dp else 1.dp, border)
+            }
             .padding(start = 6.dp, top = 8.dp, end = 8.dp, bottom = 8.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -120,9 +126,9 @@ import kotlin.math.sin
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(64.dp).aspectRatio(.75f).clip(RoundedCornerShape(6.dp)).background(Color(0xFF0B0E13))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        Portraits.hero(this, game.heroClass?.code, time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash)
+                        Portraits.hero(this, game.heroClass?.code, frame.time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash())
                     }
-                    CardHits(fight.hits.filter { it.target == Side.HERO && (!it.pet || it.mend) })
+                    CardHits(fight, frame, fight.hits.filter { it.target == Side.HERO && (!it.pet || it.mend) })
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -135,7 +141,7 @@ import kotlin.math.sin
                             modifier = Modifier.weight(1f),
                         )
                         // The hero's own mark (2.72.0): the taunt's seal, opening its window on a tap.
-                        if (fight.heroTaunt) TauntSeal(time, Modifier.size(22.dp)) { tauntTip(true) }
+                        if (fight.heroTaunt) TauntSeal(frame, Modifier.size(22.dp)) { tauntTip(true) }
                     }
                     // The pools as bars of their own (3.24.0): the shield over life, mana under it, each with its figures and share.
                     if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
@@ -144,7 +150,7 @@ import kotlin.math.sin
                     if (fight.heroMaxMana + fight.heroReserved.coerceAtLeast(0) > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
                     // The hero's own buildups (3.78.0): the foes stun and freeze by the same bars.
                     fight.heroBuildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
-                    SwingBar(fight.heroSwing, fight.heroHeld, Modifier.fillMaxWidth())
+                    SwingBar({ swing() }, fight.heroHeld, Modifier.fillMaxWidth())
                     val target = fight.target?.let(names::get)
                     if (target != null && live) {
                         Text(
@@ -157,7 +163,7 @@ import kotlin.math.sin
                     }
                 }
                 // The combat pet (3.79.0, variant B): a round badge on the hero's card, its life a ring around it.
-                fight.ally?.let { PetBadge(game, it, fight.lunge?.takeIf { lunge -> lunge.pet }, fight.hits.filter { hit -> hit.pet }, time) { petOpen = true } }
+                fight.ally?.let { PetBadge(game, it, fight, frame, fight.hits.filter { hit -> hit.pet }) { petOpen = true } }
             }
         }
         // Временная полка (4.9.3) - под портретом, во всю ширину карточки; под рельсом - «все эффекты» (4.10.x, макет «Эффекты в бою», вариант A)
@@ -261,26 +267,30 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
  * The ring flashes gold as it strikes, red as it is struck, green as it mends the hero; the blows it takes float over it.
  * Its own blows rise green on the foes' cards and its lines are green in the log. Down, it greys.
  */
-@Composable private fun PetBadge(game: GameUi, ally: AllyView, lunge: LungeView?, hits: List<FloatingHit>, time: Float, onTap: () -> Unit) {
-    val acting = reach(lunge, Side.HERO, null)
-    val hit = struck(lunge, Side.HERO, null)
-    val mending = hits.any { it.mend && it.age < PET_PULSE }
-    val ring = when {
-        !ally.alive -> Muted
-        acting > 0f -> GoldBright
-        hit -> LifeRed
-        else -> Vital
-    }
+@Composable private fun PetBadge(game: GameUi, ally: AllyView, fight: FightHud, frame: FightFrame, hits: List<FloatingHit>, onTap: () -> Unit) {
+    // Выпад питомца и удар по нему - к часам кадра, в рисовании: значок не перекомпонуется на каждом шаге боя
+    val lunge = fight.lunge?.takeIf { it.pet }
+    fun progress() = lungeAt(fight, frame.now(fight))
     val share = if (ally.maxLife > 0) (ally.life.toFloat() / ally.maxLife).coerceIn(0f, 1f) else 0f
     Box(
         Modifier.size(48.dp).graphicsLayer {
-            translationY = -acting * 4.dp.toPx()
-            translationX = if (hit) sin(time * 60f) * 2.dp.toPx() else 0f
+            val p = progress()
+            translationY = -reach(lunge, p, Side.HERO, null) * 4.dp.toPx()
+            translationX = if (struck(lunge, p, Side.HERO, null)) sin(frame.time * 60f) * 2.dp.toPx() else 0f
             alpha = if (ally.alive) 1f else .55f
         }.clip(CircleShape).clickable(onClick = onTap),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize()) {
+            val p = progress()
+            val now = frame.now(fight)
+            val mending = hits.any { it.mend && it.ageAt(fight, now) < PET_PULSE }
+            val ring = when {
+                !ally.alive -> Muted
+                reach(lunge, p, Side.HERO, null) > 0f -> GoldBright
+                struck(lunge, p, Side.HERO, null) -> LifeRed
+                else -> Vital
+            }
             val stroke = 4.dp.toPx()
             val inset = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
             val at = androidx.compose.ui.geometry.Offset(stroke / 2, stroke / 2)
@@ -289,9 +299,13 @@ private val FloatingHit.mend: Boolean get() = pet && target == Side.HERO && amou
             drawArc(if (mending) Vital else ring, -90f, 360f * share, false, at, inset, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
         }
         PetIcon(game, ally.species, 30)
-        CardHits(hits.filter { it.target == Side.HERO && !it.mend })
+        CardHits(fight, frame, hits.filter { it.target == Side.HERO && !it.mend })
     }
 }
 
 /** How long, in seconds, the pet's card glows after it mends the hero. */
 private const val PET_PULSE = .5
+
+/** Подложка и рамка карточки героя вне выпада. */
+private val HeroGround = Panel.copy(alpha = .94f)
+private val HeroRim = Gold.copy(alpha = .6f)

@@ -649,7 +649,7 @@ private const val SPARKS = 14
     BackHandler { model.riftCommand(RunCommand.Pause) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(game, hud.run, fight, hud.level, arena.combat, arena.stance, onCommand = model::riftCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz)
+            ArenaOverlay(game, hud.run, fight, hud.level, arena.combat, arena.stance, onCommand = model::riftCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
         }
         val shape = RoundedCornerShape(10.dp)
         Column(

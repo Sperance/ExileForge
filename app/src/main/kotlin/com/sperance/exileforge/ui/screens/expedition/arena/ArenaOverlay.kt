@@ -57,8 +57,12 @@ private const val HERO_CARD = -1
     /** Строки карты захода (4.9.3): что из них меняет героя - на рельсе «на весь бой» его карточки. */
     mapEffects: Map<String, Double> = emptyMap(),
     origins: EffectOrigins = EffectOrigins.NONE,
+    /** Пульс боя хозяина (4.11.x): часы и замахи кадра; снимок [fight] выходит реже кадра. */
+    pulse: FightPulse? = null,
 ) {
-    val time by rememberClock()
+    // Часы арены читаются только в рисовании ([FightFrame]): композиция идёт со снимком боя, не с кадром
+    val clock = rememberClock()
+    val frame = remember(clock, pulse) { FightFrame(clock, pulse) }
     // The settings' pause and buzz (3.77.0): each once as the hero's life falls through its line, the buzz again at a fall.
     val settings = LocalSettings.current
     val share = if (hud.heroMaxLife > 0) fight.heroLife / hud.heroMaxLife.toFloat() else 1f
@@ -90,7 +94,7 @@ private const val HERO_CARD = -1
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
     CompositionLocalProvider(LocalFightMight provides might) {
         Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-            fight.boss?.let { BossBackdrop(biome, it, time) }
+            fight.boss?.let { BossBackdrop(biome, it, frame) }
             // Стороны арены (4.9.3, макет «Стороны»): верх - врагов, низ - героя
             Spacer(Modifier.fillMaxSize().sideTint())
             Column(
@@ -100,7 +104,7 @@ private const val HERO_CARD = -1
                 // Бой с боссом (3.92.0, макет B): своя раскладка - полоса с фазами, каст, крупный портрет, свита по бокам
                 val boss = fight.boss
                 if (boss != null) {
-                    BossBand(fight, boss, time, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
+                    BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
                 } else {
                     PackHeader(fight, level)
                     if (fight.field.isNotEmpty()) {
@@ -111,7 +115,7 @@ private const val HERO_CARD = -1
                                     FoeCard(
                                         foe,
                                         fight,
-                                        time,
+                                        frame,
                                         chosen == foe.index && fight.scouting,
                                         track(foe.index).weight(1f).widthIn(max = 180.dp),
                                         large,
@@ -141,16 +145,16 @@ private const val HERO_CARD = -1
                         FightFeed(game, fight, names, onCommand, onLogFilter)
                     }
                 }
-                HeroCard(game, hud, fight, time, names, stance, track(HERO_CARD), large, mods, onCommand)
+                HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD), large, mods, onCommand)
                 // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
-                if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, onCommand) { info = it }
+                if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand) { info = it }
                 Controls(fight, hud, onCommand)
             }
             // Кто кого бьёт (4.9.3): каждый удар на экране - выпад или снаряд, разрез на цели; попадание по герою - виньетка
-            StrikeFx(fight.strikes, { foe -> bounds[foe ?: HERO_CARD] }, origin)
-            HitVignette(fight.strikes)
+            StrikeFx(fight, frame, { foe -> bounds[foe ?: HERO_CARD] }, origin)
+            HitVignette(fight, frame)
             // «Жилы энергии» (4.4.0): сцена применения умения героя поверх боя, всегда - бой анимируется и без декора
-            SkillFx(fight.heroCast, bounds[HERO_CARD], bounds::get, origin)
+            SkillFx(fight, frame, bounds[HERO_CARD], bounds::get, origin)
             fight.boss?.let { BossCinema(fight, it) }
             inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
                 FoeSheet(

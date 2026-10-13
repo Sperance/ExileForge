@@ -11,7 +11,10 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -89,12 +92,22 @@ import kotlin.math.sin
 /** A pool's figures on its bar: now and most, and the share as a whole percent. */
 private fun vitalFigures(value: Int, max: Int): String = "$value / $max · ${if (max > 0) (value * 100f / max).roundToInt() else 0}%"
 
-/** The swing: full the instant the next blow lands; dimmed while nothing can land. */
-@Composable internal fun SwingBar(swing: Float, held: Boolean, modifier: Modifier, tint: Color = Gold) {
-    Box(modifier.height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
-        Box(Modifier.fillMaxWidth(swing.coerceIn(0f, 1f)).fillMaxHeight().background(if (held) Muted else tint, RoundedCornerShape(2.dp)))
-    }
+/**
+ * The swing: full the instant the next blow lands; dimmed while nothing can land. Доля замаха [swing] и цвет [tint] читаются в
+ * рисовании: полоса идёт каждый кадр, не трогая карточку.
+ */
+@Composable internal fun SwingBar(swing: () -> Float, held: Boolean, modifier: Modifier, tint: () -> Color = { Gold }) {
+    Spacer(
+        modifier.height(3.dp).drawBehind {
+            val corner = CornerRadius(2.dp.toPx())
+            drawRoundRect(SwingTrack, cornerRadius = corner)
+            val width = size.width * swing().coerceIn(0f, 1f)
+            if (width > 0f) drawRoundRect(if (held) Muted else tint(), size = Size(width, size.height), cornerRadius = corner)
+        },
+    )
 }
+
+private val SwingTrack = Color(0x14FFFFFF)
 
 /** The colour and glyph of a buildup (3.78.0, variant A «Тонкая полоса со значком»): stun gold, freeze ice, electrocute violet. */
 internal fun buildupTint(kind: Buildup): Color = when (kind) {
@@ -121,7 +134,7 @@ internal fun buildupGlyph(kind: Buildup): String = when (kind) {
 }
 
 /** A buildup gone off, on the portrait: stars over a stunned one, a crust of ice over a frozen one, sparks over an electrocuted one, and the word. */
-@Composable internal fun BoxScope.BuildupMark(view: BuildupView, time: Float) {
+@Composable internal fun BoxScope.BuildupMark(view: BuildupView, frame: FightFrame) {
     val (kind, word) = when {
         view.frozen -> Buildup.FREEZE to "fight.buildup.frozen"
         view.electrocuted -> Buildup.ELECTROCUTE to "fight.buildup.electrocuted"
@@ -135,7 +148,7 @@ internal fun buildupGlyph(kind: Buildup): String = when (kind) {
                 .border(2.dp, tint.copy(alpha = .8f), RoundedCornerShape(4.dp)),
         )
 
-        Buildup.ELECTROCUTE -> Canvas(Modifier.matchParentSize().graphicsLayer { alpha = if (sin(time * 40f) > 0) 1f else .25f }) {
+        Buildup.ELECTROCUTE -> Canvas(Modifier.matchParentSize().graphicsLayer { alpha = if (sin(frame.time * 40f) > 0) 1f else .25f }) {
             val w = size.width
             val h = size.height
             val bolt = Path().apply {
@@ -152,7 +165,7 @@ internal fun buildupGlyph(kind: Buildup): String = when (kind) {
             color = tint,
             fontSize = 11.sp,
             modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp)
-                .graphicsLayer { translationY = sin(time * 6f) * 2.dp.toPx() },
+                .graphicsLayer { translationY = sin(frame.time * 6f) * 2.dp.toPx() },
         )
     }
     Text(

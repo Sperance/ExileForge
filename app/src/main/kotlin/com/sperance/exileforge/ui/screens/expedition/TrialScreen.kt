@@ -56,7 +56,7 @@ import org.koin.compose.viewmodel.koinViewModel
     CompositionLocalProvider(LocalFightReport provides hud.report) {
         Box(Modifier.fillMaxSize().background(Ink)) {
             hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-                ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz)
+                ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
             }
             if (hud.phase == TrialPhase.FIGHT) {
                 TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))

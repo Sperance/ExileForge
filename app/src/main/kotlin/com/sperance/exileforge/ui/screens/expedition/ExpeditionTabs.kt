@@ -1,11 +1,14 @@
 package com.sperance.exileforge.ui.screens.expedition
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.nav.Route
+import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.StoneTab
 import com.sperance.exileforge.ui.components.StoneTabs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -14,11 +17,14 @@ import com.sperance.exileforge.ui.theme.ModeHue
 import com.sperance.exileforge.ui.theme.Rune
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Страницы «Похода» (4.0.0): карта мира, испытания и Атлас - под одной вкладкой, каждая своим экраном стека; [hue] - цвет значка. */
-enum class ExpeditionPage(val route: Route, private val title: String, val icon: ImageVector, val hue: Color) {
+/**
+ * Страницы «Похода» (4.0.0): карта мира, испытания и Атлас - под одной вкладкой, каждая своим экраном стека; [hue] - цвет значка,
+ * [alerts] - на странице есть что сделать (метка вкладки [StoneTab.alert]): у Атласа - свободные очки.
+ */
+enum class ExpeditionPage(val route: Route, private val title: String, val icon: ImageVector, val hue: Color, val alerts: (GameUi) -> Boolean = { false }) {
     MAP(Route.Expedition, "expedition.page_map", ForgeGlyphs.Portal, Gold),
     TRIALS(Route.Trials, "trials.title", ForgeGlyphs.Skull, ModeHue.Bosses),
-    ATLAS(Route.Atlas, "atlas.title", ForgeGlyphs.Atlas, Rune),
+    ATLAS(Route.Atlas, "atlas.title", ForgeGlyphs.Atlas, Rune, alerts = { (it.atlasState?.available ?: 0) > 0 }),
     ;
 
     val label: String get() = ui(title)
@@ -37,6 +43,7 @@ enum class ExpeditionPage(val route: Route, private val title: String, val icon:
 @Composable fun ExpeditionChrome(route: Route) {
     val page = ExpeditionPage.of(route) ?: return
     val vm = koinViewModel<ExpeditionViewModel>()
+    val game by vm.game.collectAsStateWithLifecycle()
     val pages = ExpeditionPage.entries
-    StoneTabs(pages.map { StoneTab(it.label, it.icon, it.hue) }, pages.indexOf(page), { vm.openPage(pages[it].route) }, scrollable = false)
+    StoneTabs(pages.map { StoneTab(it.label, it.icon, it.hue, it.alerts(game)) }, pages.indexOf(page), { vm.openPage(pages[it].route) }, scrollable = false)
 }

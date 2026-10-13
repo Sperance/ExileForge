@@ -301,13 +301,16 @@ class SessionActions(
                 withContext(Dispatchers.IO) { http.connectionPool.evictAll() }
                 val session = sessions.state.value
                 val link = links.state.value
+                val reread = session.signedIn && navigator.current.value.phase != AppPhase.AUTH &&
+                    (commands.state.value.failure is FailureState.Offline || link.offline || stale)
                 // Связь проверяется при каждом возврате (3.95.2), а не первым запросом экрана: живая по старой памяти, она
-                // могла умереть в фоне - проба коротка и не ждёт паузы повтора
-                if (session.signedIn) connectionActions.wake(now = true, verify = true)
+                // могла умереть в фоне - проба коротка и не ждёт паузы повтора. Следом идёт перечитывание экрана (4.x) - оно
+                // само проверяет связь: отдельной пробы нет, возврат - один запрос
+                if (session.signedIn) connectionActions.wake(now = true, verify = !reread)
                 when {
                     !session.signedIn -> if (session.resumable) retryResume()
 
-                    commands.state.value.failure is FailureState.Offline || link.offline || stale -> {
+                    reread -> {
                         commands.clearOffline()
                         // Чтение, повисшее на сокете, умершем в фоне, заменяется новым (3.95.2): иначе новое ждало бы его таймаута
                         when (navigator.current.value.phase) {

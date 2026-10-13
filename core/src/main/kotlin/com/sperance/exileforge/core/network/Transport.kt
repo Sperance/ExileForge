@@ -74,15 +74,22 @@ class Transport(
     internal var onHeroBlocked: (String, ApiFailure) -> Unit = { _, _ -> }
 
     /**
-     * Сервер ответил ошибкой (4.3.1): любой не-2xx статус или битое тело - и у команд, и у файлов. Приложение проверяет
-     * обновление: [ServerAlarm.OUTDATED] - сервер прямо назвал сборку устаревшей (426 `CL_001`), проверка сразу; прочее -
-     * [ServerAlarm.FAILED], проверка в очередь с порогом. Обрыв сети без ответа - [ServerAlarm.UNREACHED], с тем же порогом:
-     * сервер мог лечь на деплой, после которого эта сборка ему уже не годится.
+     * Сервер ответил сбоем (4.3.1; NET-3 4.x - не всякой ошибкой): 5xx, 426 или битое тело - и у команд, и у файлов. Приложение
+     * проверяет обновление: [ServerAlarm.OUTDATED] - сервер прямо назвал сборку устаревшей (426 `CL_001`), проверка сразу; 5xx и
+     * битое тело - [ServerAlarm.FAILED], проверка в очередь с порогом. Отказ правила (прочие 4xx с конвертом игры) - слово сервера,
+     * не сбой: обновления не ищет. Обрыв сети без ответа - [ServerAlarm.UNREACHED], с тем же порогом: сервер мог лечь на деплой,
+     * после которого эта сборка ему уже не годится.
      */
     internal var onServerError: (ServerAlarm) -> Unit = {}
 
-    /** Ответ-ошибка сервера - сигнал [onServerError]; сбой самого сигнала запрос не роняет. */
-    private fun alarm(failure: ApiFailure) = alarm(if (failure.code == OUTDATED_CLIENT) ServerAlarm.OUTDATED else ServerAlarm.FAILED)
+    /** Ответ-ошибка сервера - сигнал [onServerError], если это сбой, а не отказ правила; сбой самого сигнала запрос не роняет. */
+    private fun alarm(failure: ApiFailure) {
+        val status = failure.status ?: 0
+        when {
+            failure.code == OUTDATED_CLIENT || status == OUTDATED_STATUS -> alarm(ServerAlarm.OUTDATED)
+            failure.malformed || status >= SERVER_FAILURE -> alarm(ServerAlarm.FAILED)
+        }
+    }
 
     private fun alarm(kind: ServerAlarm) {
         runCatching { onServerError(kind) }
@@ -332,6 +339,12 @@ const val SANCTIONED = "AUTH_006"
 
 /** Сборка устарела для сервера (4.3.1, server 1.84): 426 на любой маршрут API. */
 const val OUTDATED_CLIENT = "CL_001"
+
+/** Статус «сборка устарела» (426): по нему обновление ищется сразу. */
+private const val OUTDATED_STATUS = 426
+
+/** С этого статуса ответ - сбой сервера, а не отказ правила. */
+private const val SERVER_FAILURE = 500
 
 /** Заголовок ревизии API сборки (4.3.1): по нему сервер отвечает [OUTDATED_CLIENT]. */
 internal const val API_REVISION_HEADER = "X-Api-Revision"

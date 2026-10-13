@@ -58,6 +58,8 @@ import kotlin.math.sin
     // The threads once (3.56.0): both ends of every link, not a graph lookup per link per frame.
     val strands = remember(nodes, graph) { nodes.flatMap { node -> node.parents.mapNotNull { parent -> graph.node(parent)?.let { Strand(it, node) } } } }
     val brushes = remember(nodes) { SkyBrushes() }
+    // Что дышит - раз на взятие (не перебор всего неба на каждый шаг часов): мерцают открытые, вращаются ключевые
+    val live = remember(nodes, taken, reachable) { LiveStar.of(nodes, taken, reachable) }
     // The tap reads the zoom and the pan as they are when the finger lands (3.56.0): the gesture is not restarted on every frame of a drag.
     Box(
         modifier.clipToBounds()
@@ -113,7 +115,11 @@ import kotlin.math.sin
         Canvas(Modifier.matchParentSize()) {
             val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
             val now = clock.value
-            shown.forEach { starLive(it, place(it), it.code in taken, it.code in reachable, now) }
+            val reach = 2 * margin
+            live.forEach { star ->
+                val at = place(star.node)
+                if (at.x > -reach && at.y > -reach && at.x < size.width + reach && at.y < size.height + reach) starLive(star, at, now)
+            }
         }
     }
 }
@@ -221,14 +227,25 @@ internal fun DrawScope.starStill(node: AtlasNode, at: Offset, taken: Boolean, op
 }
 
 /** The breathing part of one node: a twinkling core while a point could take it, six orbiting motes on a keystone. */
-internal fun DrawScope.starLive(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, clock: Float) {
-    val r = starRadius(node)
-    if (open && !taken) drawCircle(Color.White.copy(alpha = .45f + .35f * sin(clock * 4f + node.code.hashCode() % 7)), r * .55f, at)
-    if (node.kind == AtlasNodeKind.KEYSTONE) {
-        val rim = if (taken) node.branch.hue() else Sky.faint.copy(alpha = .5f)
-        repeat(6) { k ->
-            val a = k * PI / 3 + clock * .3f
-            drawCircle(rim, 1.6.dp.toPx(), Offset(at.x + (cos(a) * r * 1.5f).toFloat(), at.y + (sin(a) * r * 1.5f).toFloat()))
+internal fun DrawScope.starLive(star: LiveStar, at: Offset, clock: Float) {
+    val r = starRadius(star.node)
+    if (star.twinkles) drawCircle(Color.White.copy(alpha = .45f + .35f * sin(clock * 4f + star.seed)), r * .55f, at)
+    val rim = star.rim ?: return
+    val mote = 1.6.dp.toPx()
+    repeat(6) { k ->
+        val a = k * PI / 3 + clock * .3f
+        drawCircle(rim, mote, Offset(at.x + (cos(a) * r * 1.5f).toFloat(), at.y + (sin(a) * r * 1.5f).toFloat()))
+    }
+}
+
+/** Звезда, что дышит: мерцает ли (открыта, не взята), обод мотыльков ключевой (null - не ключевая) и сдвиг фазы. */
+internal class LiveStar(val node: AtlasNode, val twinkles: Boolean, val rim: Color?, val seed: Int) {
+    companion object {
+        fun of(nodes: List<AtlasNode>, taken: Set<String>, reachable: Set<String>): List<LiveStar> = nodes.mapNotNull { node ->
+            val took = node.code in taken
+            val twinkles = node.code in reachable && !took
+            val rim = if (node.kind != AtlasNodeKind.KEYSTONE) null else if (took) node.branch.hue() else Sky.faint.copy(alpha = .5f)
+            if (twinkles || rim != null) LiveStar(node, twinkles, rim, node.code.hashCode() % 7) else null
         }
     }
 }

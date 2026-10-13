@@ -88,7 +88,7 @@ fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobT
  */
 fun statTitle(stat: String, lang: Lang = uiLanguage): String = rawStatTitle(stat, lang).replace(PERCENT_MARK, "")
 
-private fun rawStatTitle(stat: String, lang: Lang): String = uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", locOr("enum.EnumStatBattle.$stat", locOr("enum.EnumStatProfession.$stat", displayName(stat.substringAfter('_'), lang)))))
+private fun rawStatTitle(stat: String, lang: Lang): String = uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", displayName(stat.substringAfter('_'), lang)))
 
 /** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure (3.2.0). */
 private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")

@@ -991,10 +991,10 @@ internal fun Battle.fateExtra(me: Fighter): Double = if (me !== heroFighter || f
  * Кость проверки шанса [key] бойца [owner] (4.6.1, Удача рода): у героя удачная проверка - лучший из двух бросков; кость удачи
  * тянется раньше самой проверки и лишь при рычаге. Успех проверки - бросок меньше шанса.
  */
-internal fun Battle.checkDraw(owner: Fighter, key: RollKey, chance: Double, ailment: Ailment? = null): Double {
+internal fun Battle.checkDraw(owner: Fighter, key: RollKey): Double {
     val lucky = owner === heroFighter && fated.isNotEmpty() && fated.any { it.lucky(this, key) }
-    val first = draw(key, chance, ailment)
-    return if (lucky) min(first, draw(key, chance, ailment)) else first
+    val first = draw()
+    return if (lucky) min(first, draw()) else first
 }
 
 /** Разброс урона удара [me] удачен (4.6.2): берётся больший из двух бросков; только удар героя. */

@@ -24,7 +24,6 @@ import com.sperance.exileforge.core.campaign.FactorTrace
 import com.sperance.exileforge.core.campaign.FighterShot
 import com.sperance.exileforge.core.campaign.HitTrace
 import com.sperance.exileforge.core.campaign.NoteTrace
-import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.TickTrace
 import com.sperance.exileforge.core.campaign.Trace
 import com.sperance.exileforge.core.campaign.TraceOrigin
@@ -90,19 +89,6 @@ internal fun Chain(factors: List<FactorTrace>, attacker: FighterShot, target: Fi
 }
 
 internal fun sideLabel(shot: FighterShot, attacker: FighterShot): String = if (shot === attacker) ui("trace.side.attacker") else ui("trace.side.target")
-
-// ==================== The dice ====================
-
-@Composable internal fun Rolls(rolls: List<RollTrace>) = Section(ui("trace.section.rolls")) {
-    rolls.forEach { roll ->
-        val title = ui("trace.roll.${roll.key.name}") + (roll.ailment?.let { " · ${ui(it.key())}" } ?: "")
-        Line(
-            title,
-            ui("trace.roll.value", pct(roll.chance), String.format(Locale.ROOT, "%.2f", roll.rolled)) + if (roll.success) " ✓" else " ✗",
-            if (roll.success) Vital else Muted,
-        )
-    }
-}
 
 // ==================== The sides ====================
 

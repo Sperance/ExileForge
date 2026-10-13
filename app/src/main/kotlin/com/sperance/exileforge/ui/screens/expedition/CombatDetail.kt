@@ -25,7 +25,6 @@ import com.sperance.exileforge.core.campaign.FateTrace
 import com.sperance.exileforge.core.campaign.FighterShot
 import com.sperance.exileforge.core.campaign.HitTrace
 import com.sperance.exileforge.core.campaign.NoteTrace
-import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.TickTrace
 import com.sperance.exileforge.core.campaign.Trace
 import com.sperance.exileforge.core.campaign.TraceOrigin
@@ -201,7 +200,6 @@ internal fun cuts(type: TypeTrace): List<String> = listOfNotNull(
 
 internal fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, game: GameUi) {
     if (trace.factors.isNotEmpty()) item { Chain(trace.factors, trace.attacker, trace.target, trace.origin, explainer, game) }
-    if (trace.rolls.isNotEmpty()) item { Rolls(trace.rolls) }
     if (trace.types.isNotEmpty()) {
         item {
             Section(ui("trace.section.types")) {

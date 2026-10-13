@@ -5,7 +5,6 @@ import com.sperance.exileforge.core.campaign.FactorTrace
 import com.sperance.exileforge.core.campaign.LOW_LIFE
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.PowerMoment
-import com.sperance.exileforge.core.campaign.RollKey
 import com.sperance.exileforge.core.campaign.StatLines
 import com.sperance.exileforge.core.campaign.TickTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
@@ -315,7 +314,7 @@ internal fun Battle.wear(fighter: Fighter) = BuffKind.entries.filter { fighter.b
 internal fun Battle.eased(target: Fighter, blow: Blow): Double {
     val rule = rules.defence
     val chance = if (blow.spell) target.body.suppression else target.body.deflection
-    if (chance <= 0 || draw(if (blow.spell) RollKey.SUPPRESS else RollKey.DEFLECT, chance) >= chance) return 1.0
+    if (chance <= 0 || draw() >= chance) return 1.0
     return rule.eased(blow.spell)
 }
 

@@ -6,8 +6,6 @@ import com.sperance.exileforge.core.campaign.LineKind
 import com.sperance.exileforge.core.campaign.LineSource
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.NoteTrace
-import com.sperance.exileforge.core.campaign.RollKey
-import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.Trace
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.character.StatLine
@@ -16,10 +14,8 @@ import com.sperance.exileforge.rules.sheet.lines
 
 // ==================== The log's traces (3.37.0) ====================
 
-/** One number off the fight's dice, written on the tape: the same draw as before, only remembered. */
-internal fun Battle.draw(key: RollKey, chance: Double, ailment: Ailment? = null): Double = random.nextDouble().also { tape?.add(RollTrace(key, chance, it, ailment)) }
-
-internal fun Battle.takeTape(): List<RollTrace> = tape.orEmpty().toList().also { tape = null }
+/** One number off the fight's dice. */
+internal fun Battle.draw(): Double = random.nextDouble()
 
 /** [fighter] as it stands now: its sheet — the blow's own for the striker — what the fight laid on it, ailments and pools. */
 internal fun Battle.shot(fighter: Fighter, blow: Blow? = null): FighterShot {

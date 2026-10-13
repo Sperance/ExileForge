@@ -18,18 +18,14 @@ import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 
 /**
- * How a line of the fight's log came about (3.37.0): the dice it drew, the formula step by step, what each side stood on
+ * How a line of the fight's log came about (3.37.0): the formula step by step, what each side stood on
  * at that moment and where the damage went. Every number is the fight's own, taken as it was computed — the card that
  * explains a line reads it, nothing is worked out again.
  */
 sealed interface Trace
 
-/** A roll of the fight's dice: its [chance] of coming true and the number [rolled]; it came true under the chance. */
-data class RollTrace(val key: RollKey, val chance: Double, val rolled: Double, val ailment: Ailment? = null) {
-    val success: Boolean get() = rolled < chance
-}
-
-enum class RollKey { EVADE, BLOCK, CRIT, CRIT_LUCKY, SUPPRESS, DEFLECT, DOUBLE, AILMENT, AVOID, STUN, AVOID_STUN, BUFF }
+/** Бросок костей боя, что удача рода Предначертания может взять лучшим из двух (`FateReaction.lucky`). */
+enum class RollKey { EVADE, BLOCK, CRIT, AILMENT, AVOID }
 
 /**
  * One step of a hit's formula: its multiplier [value] (the first step is the base damage itself) and the stats of the
@@ -81,7 +77,6 @@ data class Landing(
 data class HitTrace(
     val attacker: FighterShot,
     val target: FighterShot,
-    val rolls: List<RollTrace>,
     val factors: List<FactorTrace>,
     val types: List<TypeTrace>,
     val landing: Landing?,

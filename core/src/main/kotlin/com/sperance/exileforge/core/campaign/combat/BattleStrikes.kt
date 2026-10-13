@@ -36,8 +36,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Предначертание (4.6.0): месть - крит наверняка; заряд «из-под плаща» при этом цел. Её множитель крита (4.6.2) - до траты заряда
     val fatedSure = !sure && fateSure(me)
     val keener = fateKeener(me)
-    // 3.37.0: every draw of this blow goes on its tape, and the shots are taken before anything changes.
-    tape = mutableListOf()
+    // 3.37.0: the shots are taken before anything changes.
     val striker = shot(me, blow)
     val struck = shot(target)
     val evade = evasion(me, target)
@@ -46,9 +45,9 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         target.frozen() -> if (sure || fatedSure || crit(me, body, blow.spell)) HitKind.CRIT else HitKind.HIT
 
         // Удача рода (4.6.1): уклонение и блок героя, крит героя - лучший из двух бросков
-        blow.evadable && checkDraw(target, RollKey.EVADE, evade) < evade -> HitKind.EVADED
+        blow.evadable && checkDraw(target, RollKey.EVADE) < evade -> HitKind.EVADED
 
-        checkDraw(target, RollKey.BLOCK, blockChance) < blockChance -> HitKind.BLOCKED
+        checkDraw(target, RollKey.BLOCK) < blockChance -> HitKind.BLOCKED
 
         sure || fatedSure || crit(me, body, blow.spell) -> HitKind.CRIT
 
@@ -60,7 +59,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
         record(
             me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill,
-            trace = HitTrace(striker, struck, takeTape(), emptyList(), emptyList(), null, origin), pet = petLine, spell = blow.spell,
+            trace = HitTrace(striker, struck, emptyList(), emptyList(), null, origin), pet = petLine, spell = blow.spell,
         )
         if (kind == HitKind.BLOCKED) blocked(target)
         if (kind == HitKind.EVADED) traitsEvaded(target)
@@ -74,7 +73,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Server 1.32.0: a critical strike no heavier than a hit on one who takes none, and the non-critical ones more or less.
     val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier(blow.spell) * keener + target.body.critTaken) else body.nonCritMore
     // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
-    val doubled = if (body.doubleDamage > 0 && draw(RollKey.DOUBLE, body.doubleDamage) < body.doubleDamage) 2.0 else 1.0
+    val doubled = if (body.doubleDamage > 0 && draw() < body.doubleDamage) 2.0 else 1.0
     // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
     val facing = if (me === heroFighter) states(target).let { states -> max(0.0, model.against(states) + me.effects.sumOf { it.against(states) }) } else 0.0
     val versus = versus(blow, facing)
@@ -176,7 +175,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         if (law != 1.0) add(FactorTrace(FactorKey.LAW, law))
         add(FactorTrace(FactorKey.TOTAL, taken.values.sum()))
     }
-    pendingHit = HitTrace(striker, struck, emptyList(), factors, types, null, origin)
+    pendingHit = HitTrace(striker, struck, factors, types, null, origin)
     land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw })
     if (me.alive && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
     return true
@@ -185,7 +184,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
 /** A critical roll of [body]'s chance — a spell's own (server 1.56.0); a lucky one (server 1.32.0) gets a second. */
 private fun Battle.crit(me: Fighter, body: Combatant, spell: Boolean = false): Boolean {
     val chance = body.critChance(spell)
-    return checkDraw(me, RollKey.CRIT, chance) < chance || body.luckyCrit && draw(RollKey.CRIT_LUCKY, chance) < chance
+    return checkDraw(me, RollKey.CRIT) < chance || body.luckyCrit && draw() < chance
 }
 
 /** The share of an elemental hit of [raw] the armour turns aside where some of it applies to elements (3.35.0). */
@@ -293,7 +292,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
     val landing = Landing(0.0, absorbed, 0.0, 0.0, shielded - absorbed + chaos, 0.0, 0.0, 0.0, false)
     record(
         me.side, Action.REFLECT, HitKind.HIT, total, mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe,
-        trace = HitTrace(striker, struck, emptyList(), factors, types.map { it.first }, landing, origin), pet = isPet(me) || isPet(attacker),
+        trace = HitTrace(striker, struck, factors, types.map { it.first }, landing, origin), pet = isPet(me) || isPet(attacker),
     )
     if (!attacker.alive) fell(attacker, killer = me)
 }

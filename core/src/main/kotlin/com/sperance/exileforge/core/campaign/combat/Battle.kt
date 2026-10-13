@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.campaign.HitTrace
 import com.sperance.exileforge.core.campaign.KitSkill
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.PowerRunner
-import com.sperance.exileforge.core.campaign.RollTrace
 import com.sperance.exileforge.core.campaign.TraceOrigin
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.campaign.skillsFree
@@ -570,9 +569,6 @@ class Battle(
 
     /** The log as a test or a report reads it, once the fight is over. */
     fun log(): CombatLog = CombatLog(log.toList(), checkNotNull(outcome) { "the fight is not over" }, heroLife, duration)
-
-    /** The draws of the action being worked out; null outside one, so a draw elsewhere is not written anywhere. */
-    internal var tape: MutableList<RollTrace>? = null
 
     /** A hit worked out up to its landing: [land] finishes it with the rolls and where the damage went. */
     internal var pendingHit: HitTrace? = null

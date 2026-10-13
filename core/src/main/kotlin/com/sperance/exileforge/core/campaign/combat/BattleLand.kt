@@ -79,7 +79,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     } // Only a fighter with a chance to avoid draws for it, so a sheet without one plays the same seed as before.
     else if (target.alive && !target.body.immuneStun && (
             dealt >= target.body.maxLife * rules.stun.share / 100 + target.body.stunThreshold &&
-                !(target.body.avoidStun > 0 && draw(RollKey.AVOID_STUN, target.body.avoidStun) < target.body.avoidStun) || blow.stun > 0 && draw(RollKey.STUN, blow.stun / 100) * 100 < blow.stun
+                !(target.body.avoidStun > 0 && draw() < target.body.avoidStun) || blow.stun > 0 && draw() * 100 < blow.stun
             )
     ) {
         stun(target, rules.stun.duration)
@@ -87,7 +87,6 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     }
     val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments, blow.spell) else emptyList()
     val trace = pendingHit?.copy(
-        rolls = takeTape(),
         landing = Landing(
             soakedBarrier, absorbed, manaPaid, bound - toLifeNow - manaPaid,
             toLifeNow, if (body.leechToShield) 0.0 else leech, onHit, recouped, culled,
@@ -223,11 +222,11 @@ internal fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType,
         val amount = if (type == null) taken.values.sum() else taken[type] ?: 0.0
         val base = if (me.side == Side.HERO) rule.heroChance ?: rule.chance else rule.chance
         val chance = (base + me.body.inflictChance(ailment)).coerceAtMost(100.0) / 100
-        if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || checkDraw(me, RollKey.AILMENT, chance, ailment) >= chance) return@mapNotNull null
+        if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || checkDraw(me, RollKey.AILMENT) >= chance) return@mapNotNull null
         afflict(me, target, ailment, taken, spell)
     }
     val forced = extra.filter { it.first !in rolled && it.second > 0 }.mapNotNull { (ailment, chance) ->
-        if (checkDraw(me, RollKey.AILMENT, chance / 100, ailment) * 100 < chance) afflict(me, target, ailment, taken, spell) else null
+        if (checkDraw(me, RollKey.AILMENT) * 100 < chance) afflict(me, target, ailment, taken, spell) else null
     }
     return rolled + forced
 }
@@ -251,7 +250,7 @@ internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, take
     if (target.body.immune(ailment)) return null
     val avoid = target.body.avoid(ailment)
     // Удача рода (4.6.2): избежание недугов героем - лучший из двух бросков
-    if (avoid > 0 && checkDraw(target, RollKey.AVOID, avoid, ailment) < avoid) return null
+    if (avoid > 0 && checkDraw(target, RollKey.AVOID) < avoid) return null
     val amount = type?.let { taken[it] }?.takeIf { it > 0 } ?: taken.values.sum()
     // 3.35.0: a faster damaging ailment deals the same in less time; the striker's shock and chill are stronger by their effect.
     val faster = if (ailment.hurts) 1 + me.body.fasterAilments else 1.0
@@ -287,7 +286,7 @@ internal fun Battle.burden(me: Fighter, target: Fighter, ailment: Ailment, amoun
     val (rule, _) = ruleOf[ailment] ?: return false
     if (target.body.immune(ailment)) return false
     val avoid = target.body.avoid(ailment)
-    if (avoid > 0 && checkDraw(target, RollKey.AVOID, avoid, ailment) < avoid) return false
+    if (avoid > 0 && checkDraw(target, RollKey.AVOID) < avoid) return false
     val duration = rule.duration * target.body.ailmentDuration(ailment)
     val magnitude = if (ailment.hurts) amount / rule.duration else rule.magnitude
     place(target, ActiveAilment(ailment, time + duration, magnitude, duration, me.side, me.index.coerceAtLeast(0), spell = true), rule.stacks)

@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.presentation.app.Foreground
@@ -42,7 +43,8 @@ class CraftsActions(
 
     private fun crafts(transform: (Crafts) -> Crafts) = repository.update(transform)
 
-    fun load(silent: Boolean = false) = commands.read(Reads.CRAFTS, silent = silent) {
+    /** Досчёт ремёсел; [fresh] - экран открылся и примет ответ моложе срока свежести (`freshness`) без нового запроса. */
+    fun load(silent: Boolean = false, fresh: Boolean = false) = commands.read(Reads.CRAFTS, silent = silent, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = heroes.heroId
         if (id.isBlank()) return@read
         content.ensure()

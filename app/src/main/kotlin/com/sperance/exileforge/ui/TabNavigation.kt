@@ -6,6 +6,7 @@ import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -56,7 +57,8 @@ fun tabShift(step: Int): ContentTransform {
 
 /**
  * Часть оболочки над экраном (шапка, полосы разделов), что сдвигается вместе с экраном при смене вкладки: [look] - её облик для
- * маршрута; новый облик въезжает той же кривой, что и экран, со стороны порядка вкладок, тот же облик не двигается.
+ * маршрута; новый облик въезжает той же кривой, что и экран, со стороны порядка вкладок, тот же облик не двигается. Высота
+ * шапки меняется сразу, без анимации: экран под ней не перемеряется посреди смены.
  */
 @Composable fun <K> TabShifted(route: Route, look: (Route) -> K, modifier: Modifier = Modifier, content: @Composable (Route) -> Unit) {
     AnimatedContent(
@@ -67,7 +69,8 @@ fun tabShift(step: Int): ContentTransform {
             val from = initialState.barSlot
             val to = targetState.barSlot
             val step = if (from == null || to == null) 0 else to.compareTo(from)
-            tabShift(step) using SizeTransform(clip = true) { _, _ -> shiftSpec() }
+            // Размер шапки встаёт сразу (4.x): анимированная высота перемеряла бы экран под ней каждый кадр смены вкладки
+            tabShift(step) using SizeTransform(clip = true) { _, _ -> snap() }
         },
         label = "tabChrome",
     ) { content(it) }

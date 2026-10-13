@@ -156,12 +156,13 @@ class RiftActions(
         refresh()
     }
 
-    /** Ответ на шаг: тосты переполнения, итог забега, новая доска. */
+    /** Ответ на шаг: тосты переполнения, итог забега, новая доска; герой перечитывается, только если ответ его не принёс. */
     private suspend fun land(report: RiftReport) {
         report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
         report.result?.let { result -> mutable.update { it.copy(result = result) } }
         show(report.board)
-        if (report.result != null) heroSync.readHero()
+        // Итог забега, как и всякий ответ со снимком, уже освежил героя; перечитывается лишь заведомо устаревший
+        if (report.result != null && heroes.state.value.readAt == 0L) heroSync.readHero()
     }
 
     /** Итог прочитан. */

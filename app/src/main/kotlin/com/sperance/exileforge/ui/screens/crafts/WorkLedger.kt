@@ -86,6 +86,10 @@ internal class WorkSums(
 
     val isEmpty: Boolean get() = gathered.isEmpty() && spent.isEmpty()
 
+    /** Строки стопок по убыванию, раз на итог. */
+    val gatheredSorted: List<Pair<String, Long>> = gathered.entries.sortedByDescending { it.value }.map { it.key to it.value }
+    val spentSorted: List<Pair<String, Long>> = spent.entries.sortedByDescending { it.value }.map { it.key to it.value }
+
     companion object {
         fun of(tally: WorkTally) = WorkSums(tally.cycles, tally.nothing, tally.experience, tally.levels, tally.made, tally.items, tally.spent)
 
@@ -112,15 +116,7 @@ internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = 2, verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val cell = Modifier.weight(1f)
-            if (startedAt > 0) {
-                val now by produceState(System.currentTimeMillis()) {
-                    while (true) {
-                        value = System.currentTimeMillis()
-                        delay(CLOCK_TICK_MS)
-                    }
-                }
-                LedgerFigure(Icons.Outlined.Schedule, ui("crafts.totals_time"), cell) { Text(duration(now + offset - startedAt), color = Parchment) }
-            }
+            if (startedAt > 0) LedgerFigure(Icons.Outlined.Schedule, ui("crafts.totals_time"), cell) { WorkTime(startedAt, offset) }
             LedgerFigure(Icons.Outlined.Autorenew, ui("crafts.totals_cycles"), cell) {
                 val empty = MaterialTheme.typography.labelSmall.toSpanStyle().copy(color = LifeRed)
                 Text(
@@ -142,11 +138,11 @@ internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<
             Text(ui("crafts.totals_empty"), color = Muted, style = MaterialTheme.typography.labelSmall)
         } else {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                sums.gathered.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
+                sums.gatheredSorted.forEach { (code, amount) ->
                     LedgerRow(game, code, amount, sums.scale, gathered = true) { inspect(Inspect.Stack(code)) }
                 }
                 if (sums.gathered.isNotEmpty() && sums.spent.isNotEmpty()) HorizontalDivider(Modifier.padding(vertical = 2.dp), color = Bronze)
-                sums.spent.entries.sortedByDescending { it.value }.forEach { (code, amount) ->
+                sums.spentSorted.forEach { (code, amount) ->
                     LedgerRow(game, code, amount, sums.scale, gathered = false) { inspect(Inspect.Stack(code)) }
                 }
             }
@@ -158,6 +154,17 @@ internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<
             }
         }
     }
+}
+
+/** Время в работе живьём: свои часы - перерисовывается только это число, не книга учёта вокруг. */
+@Composable private fun WorkTime(startedAt: Long, offset: Long) {
+    val now by produceState(System.currentTimeMillis()) {
+        while (true) {
+            value = System.currentTimeMillis()
+            delay(CLOCK_TICK_MS)
+        }
+    }
+    Text(duration(now + offset - startedAt), color = Parchment)
 }
 
 /** Итог с иконкой: значок в плашке 28dp, под числом [figure] - подпись [caption]. */

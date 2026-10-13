@@ -25,6 +25,7 @@ import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
+import com.sperance.exileforge.ui.TAB_SHIFT_MS
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -101,8 +102,13 @@ fun CraftsScreen() {
     val activity by vm.activity.collectAsStateWithLifecycle()
     val openCode by vm.profession.collectAsStateWithLifecycle()
     // A screen already holding the crafts asks again in silence; герой приходит в том же ответе (3.94.1), а будильник цикла
-    // стоит, пока экран открыт.
-    LaunchedEffect(game.heroId, game.sessionEpoch) { vm.load(silent = held.state != null) }
+    // стоит, пока экран открыт. 4.x: досчёт - когда смена вкладки доехала ([TAB_SHIFT_MS]), не посреди её анимации, и только
+    // если прошлый ответ старше срока свежести (`freshness`)
+    LaunchedEffect(game.heroId, game.sessionEpoch) {
+        withFrameNanos { }
+        delay(TAB_SHIFT_MS.toLong())
+        vm.load(silent = held.state != null, fresh = true)
+    }
     DisposableEffect(Unit) {
         vm.watch(true)
         onDispose { vm.watch(false) }
@@ -110,6 +116,11 @@ fun CraftsScreen() {
     val crafts = held.state
     val offset = held.offset
     val list = rememberLazyListState()
+    // Разделы плиток считаются раз на ответ, а не на каждую перекомпоновку экрана
+    val sections = remember(crafts?.professions) {
+        val (crafting, gathering) = crafts?.professions.orEmpty().partition { it.crafting }
+        listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.map { (title, group) -> title to group.chunked(TILES) }
+    }
     // Вкладка нажата снова (3.95.0): окно профессии закрывается, плитки - наверх
     OnReselect(TAB_CRAFTS) {
         vm.openProfession("")
@@ -130,11 +141,10 @@ fun CraftsScreen() {
                 }
                 item { WorkPlaque(game, vm, held, offset) }
                 // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).
-                val (crafting, gathering) = crafts.professions.partition { it.crafting }
-                listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.forEachIndexed { index, (title, group) ->
+                sections.forEachIndexed { index, (title, rows) ->
                     if (index > 0) item { FlowMark() }
                     item { SectionRule(ui(title)) }
-                    items(group.chunked(TILES), key = { it.first().code }) { row ->
+                    items(rows, key = { it.first().code }) { row ->
                         Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
                             repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
@@ -171,9 +181,10 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         // Вещь в работе (4.6.2, Осквернение): её нет среди вещей героя, пока работа идёт; касание открывает карточку
         game.heldWork?.let { held -> game.view(held)?.let { HeldItem(it) } }
         CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
-        levelLine(crafts, work, offset)?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelMedium) }
+        LevelLine(crafts, work, offset)
         // Книга учёта (4.x, вариант C): итог сервера с начала работы, сделанные вещи - чипами (за сессию, по одной на вещь)
-        WorkLedger(game, ui("crafts.totals_title"), WorkSums.of(work.totals), crafts.totals.equipment, startedAt = work.startedAt, offset = offset, makes = crafts.state?.running?.kind?.makesItems == true)
+        val sums = remember(work.totals) { WorkSums.of(work.totals) }
+        WorkLedger(game, ui("crafts.totals_title"), sums, crafts.totals.equipment, startedAt = work.startedAt, offset = offset, makes = crafts.state?.running?.kind?.makesItems == true)
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
@@ -194,7 +205,8 @@ internal fun SessionTally(game: GameUi, totals: WorkGains) {
         MutedText(ui("crafts.session_empty"), style = MaterialTheme.typography.labelMedium)
         return
     }
-    WorkLedger(game, ui("crafts.session_title"), WorkSums.of(totals), totals.equipment)
+    val sums = remember(totals) { WorkSums.of(totals) }
+    WorkLedger(game, ui("crafts.session_title"), sums, totals.equipment)
     if (totals.starved) Text(ui("crafts.starved"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
 }
 

@@ -117,6 +117,9 @@ class ExpeditionActions(
 
     /** Журнал похода, что идёт. */
     private var runJournal: RunJournal? = null
+
+    /** Заход, который сервер уже закрыл по ответу журнала (выход или гибель, `RunReport.open` = false): бросать его нечего. */
+    private var shut: String? = null
     private val flushes = Channel<Unit>(Channel.CONFLATED)
     private var saveJob: Job? = null
 
@@ -388,6 +391,7 @@ class ExpeditionActions(
                 return
             }
             settle(j, pending, report)
+            if (!report.open) shut = j.runId
             j.confirm(report.applied, report.rejected)
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
             // Отклонённое начало боя (бой, который сервер не начал) - не потеря игрока: о нём не говорят.
@@ -407,7 +411,10 @@ class ExpeditionActions(
             // связи, не на каждую попытку. Журнал на диске - пачка дойдёт, когда сервер встанет.
             val transient = CommandQueue.transient(e.status) || (e.status ?: 0) >= SERVER_ERROR
             when {
-                e.code in RUN_CLOSED -> done(j)
+                e.code in RUN_CLOSED -> {
+                    shut = j.runId
+                    done(j)
+                }
                 transient && failures > 0 -> Unit
                 else -> commands.report(e, writing = true)
             }
@@ -628,14 +635,17 @@ class ExpeditionActions(
         }
     }
 
-    /** Закрывает заход [runId] на сервере: недошедший журнал отправляется (его добыча - героя), затем заход брошен, как выходом. */
+    /**
+     * Закрывает заход [runId] на сервере: недошедший журнал отправляется (его добыча - героя), затем заход брошен, как выходом;
+     * если последний ответ журнала уже закрыл заход ([shut]), лишнего запроса нет.
+     */
     private suspend fun finish(heroId: String, runId: String) {
         runJournal?.takeIf { it.runId == runId }?.let { j ->
             flush()
             if (runJournal === j) runJournal = null
             store.clearJournal(heroId)
         }
-        api.campaign.abandon(heroId, runId)
+        if (shut != runId) api.campaign.abandon(heroId, runId)
     }
 
     private fun loot(heroId: String, equipment: List<ItemInstance>) {

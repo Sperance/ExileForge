@@ -175,22 +175,31 @@ fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
  * cycle brings past its «nothing» chance, the cycles that leaves, less what the running cycle has done.
  * Опыт удачного цикла с 4.2.0 - [com.sperance.exileforge.core.model.crafts.JobView.experience] по кривой сервера, не поле работы.
  */
-@Composable internal fun levelLine(crafts: Crafts, work: WorkView, offset: Long): String? {
-    val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession } ?: return null
-    val next = profession.next ?: return ui("crafts.level_top")
-    val job = profession.job(work.job, work.choice) ?: return null
+@Composable internal fun LevelLine(crafts: Crafts, work: WorkView, offset: Long) {
+    val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession } ?: return
+    val next = profession.next ?: return LevelText(ui("crafts.level_top"))
+    val job = profession.job(work.job, work.choice) ?: return
     val perCycle = job.experience * (1 + profession.bonus.experience.coerceAtLeast(0.0) / 100) * (1 - job.nothing / 100)
-    if (perCycle <= 0 || work.cycleMillis <= 0) return null
+    if (perCycle <= 0 || work.cycleMillis <= 0) return
+    val cycles = ceil((next - profession.experience).coerceAtLeast(0.0) / perCycle).toLong()
+    LevelEta(profession.level + 1, cycles * work.cycleMillis, work, offset)
+}
+
+/**
+ * Сколько до уровня [level] живьём: свои часы раз в секунду - перерисовывается только эта строка, не плашка работы вокруг
+ * (4.x: часы в листовом элементе, вкладка ремёсел не теряет кадров).
+ */
+@Composable private fun LevelEta(level: Int, total: Long, work: WorkView, offset: Long) {
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
             delay(1000)
             value = System.currentTimeMillis()
         }
     }
-    val cycles = ceil((next - profession.experience).coerceAtLeast(0.0) / perCycle).toLong()
-    val running = work.phase(now + offset)
-    return ui("crafts.level_eta", profession.level + 1, eta((cycles * work.cycleMillis - running).coerceAtLeast(0L)))
+    LevelText(ui("crafts.level_eta", level, eta((total - work.phase(now + offset)).coerceAtLeast(0L))))
 }
+
+@Composable private fun LevelText(text: String) = Text(text, color = Vital, style = MaterialTheme.typography.labelMedium)
 
 internal fun eta(millis: Long): String {
     val seconds = (millis + 999) / 1000

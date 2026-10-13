@@ -38,7 +38,7 @@ class CraftsViewModel(
         mutableProfession.value = code
     }
 
-    fun load(silent: Boolean = false) = actions.load(silent)
+    fun load(silent: Boolean = false, fresh: Boolean = false) = actions.load(silent, fresh)
     fun watch(on: Boolean) = actions.watch(on)
     fun start(job: String, choice: String = "", additives: List<String> = emptyList()) = actions.start(job, choice, additives)
     fun stop() = actions.stop()

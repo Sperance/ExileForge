@@ -1,5 +1,8 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeJoin
@@ -7,6 +10,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import com.sperance.exileforge.core.campaign.Liquid
 import kotlin.math.sin
@@ -16,7 +20,7 @@ import com.sperance.exileforge.core.campaign.MapStyle as Layout
 internal class TileSpot(val x: Int, val y: Int, val cx: Float, val cy: Float, val walls: Int)
 
 /** What every stroke of a frame shares: the pen, half a tile's width, and the scene's clock (декора: стоит без `LocalMotion`). */
-internal class SceneFrame(val pen: Pen, val unit: Float, val time: Float)
+internal class SceneFrame(val pen: Pen, var unit: Float, var time: Float)
 
 /** Клетка воды или пропасти, как её видит слой глади (4.2.0): место и свет. */
 internal class PoolCell(val spot: TileSpot, val light: Float)
@@ -166,6 +170,27 @@ internal abstract class MapStyle {
     /** Drawn over the finished map, in screen space: fog, embers, fireflies; [time] - часы декора, без `LocalMotion` стоят. */
     open fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {}
 
+    /**
+     * Мягкое пятно кистью [brush] единичного круга (`unitGlow`) в ([x], [y]) радиуса [r]: кисть одна на стиль, кадр её только
+     * растягивает переносом.
+     */
+    protected fun DrawScope.blot(brush: Brush, x: Float, y: Float, r: Float) = withTransform({
+        translate(x, y)
+        scale(r, r, Offset.Zero)
+    }) { drawCircle(brush, 1f, Offset.Zero) }
+
+    /**
+     * Полоса кисти [brush] единичной высоты (`unitFade`) от [startY] до [endY] во всю ширину экрана: до и после - крайние цвета,
+     * как у вертикального градиента.
+     */
+    protected fun DrawScope.band(brush: Brush, startY: Float, endY: Float) {
+        val span = (endY - startY).takeIf { it != 0f } ?: return
+        withTransform({
+            translate(0f, startY)
+            scale(1f, span, Offset.Zero)
+        }) { drawRect(brush, Offset(0f, -startY / span), Size(size.width, size.height / span)) }
+    }
+
     /** A stable value in `[0, 1)` per cell and [salt]: the same tile always gets the same crack. */
     protected fun noise(x: Int, y: Int, salt: Int = 0): Float = cellNoise(x, y, salt)
 
@@ -173,6 +198,26 @@ internal abstract class MapStyle {
 
     /** A value spread over the screen by [index] - particles that need no state of their own. */
     protected fun spread(index: Int, salt: Int) = noise(index, salt, 97)
+}
+
+/** Кисть пятна: [inner] в центре круга радиуса 1, [outer] к краю - для [MapStyle.blot]. */
+internal fun unitGlow(inner: Color, outer: Color = Color.Transparent): Brush = Brush.radialGradient(listOf(inner, outer), Offset.Zero, 1f)
+
+/** Кисть полосы: [top] сверху, [bottom] снизу на единичной высоте - для [MapStyle.band]. */
+internal fun unitFade(top: Color, bottom: Color): Brush = Brush.verticalGradient(listOf(top, bottom), startY = 0f, endY = 1f)
+
+/** Кисть, что зависит от палитры биома: собирается заново лишь со сменой палитры. */
+internal class PaletteBrush(private val make: (Palette) -> Brush) {
+    private var palette: Palette? = null
+    private var brush: Brush? = null
+
+    operator fun invoke(of: Palette): Brush {
+        if (of !== palette) {
+            palette = of
+            brush = make(of)
+        }
+        return brush!!
+    }
 }
 
 /** Тень грани, что смотрит в `+x`, против освещённой, что смотрит в `+y`. */

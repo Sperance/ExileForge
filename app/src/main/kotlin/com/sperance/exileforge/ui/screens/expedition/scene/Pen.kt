@@ -5,7 +5,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
+import com.sperance.exileforge.ui.icons.Strokes
 
 /**
  * A pen over a [DrawScope] that measures up rather than down.
@@ -46,11 +46,29 @@ internal class Pen {
     }
 
     /** An ellipse's outline only: a rune's ring, a portal's rim. */
-    fun ring(x: Float, y: Float, width: Float, height: Float, stroke: Float) = scope.drawOval(color, Offset(x, -(y + height)), Size(width, height), style = Stroke(stroke))
+    fun ring(x: Float, y: Float, width: Float, height: Float, stroke: Float) = scope.drawOval(color, Offset(x, -(y + height)), Size(width, height), style = Strokes.of(stroke))
 
     /** A broken line through [points] (x, y pairs): a crack, a root, a blade of grass. */
-    fun polyline(vararg points: Float, width: Float) {
+    fun polyline(points: FloatArray, width: Float) {
         for (i in 0 until points.size / 2 - 1) line(points[i * 2], points[i * 2 + 1], points[i * 2 + 2], points[i * 2 + 3], width)
+    }
+
+    /** Ломаная из трёх точек: без массива на кадр. */
+    fun polyline(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, width: Float) {
+        line(x1, y1, x2, y2, width)
+        line(x2, y2, x3, y3, width)
+    }
+
+    /** Ломаная из четырёх точек. */
+    fun polyline(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, x4: Float, y4: Float, width: Float) {
+        polyline(x1, y1, x2, y2, x3, y3, width)
+        line(x3, y3, x4, y4, width)
+    }
+
+    /** Ломаная из пяти точек. */
+    fun polyline(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, x4: Float, y4: Float, x5: Float, y5: Float, width: Float) {
+        polyline(x1, y1, x2, y2, x3, y3, x4, y4, width)
+        line(x4, y4, x5, y5, width)
     }
 
     /** A pie slice, [start] and [degrees] counter-clockwise as the pen measures them. */

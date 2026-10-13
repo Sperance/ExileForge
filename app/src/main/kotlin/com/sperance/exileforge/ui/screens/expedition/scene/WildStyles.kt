@@ -1,9 +1,10 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.lerp
 import kotlin.math.max
 import kotlin.math.sin
@@ -14,7 +15,9 @@ internal class Overgrown : MapStyle() {
     private val grass = Color(0xFF6F9E4C)
 
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.9f + noise(spot.x, spot.y) * .3f) * light)
         pen.diamond(cx, cy, u, u / 2)
         if (spot.walls > 0) {
@@ -52,7 +55,8 @@ internal class Overgrown : MapStyle() {
     }
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
+        val w = scope.size.width
+        val h = scope.size.height
         val fly = Color(0xFFD2FF8C)
         val dot = w / 220f
         repeat(18) { i ->
@@ -72,9 +76,13 @@ internal class BloodAltar : MapStyle() {
     private val vein = Color(0xFFFF3C28)
     private val blood = Color(0xFF5A0406)
     private val weep = Color(0xFFAA0C0C)
+    private val haze = unitGlow(Color.Transparent, Color(0xFF500000).copy(alpha = .55f))
+    private val mist = unitGlow(Color(0xFFC81414).copy(alpha = .09f))
 
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.85f + noise(spot.x, spot.y) * .35f) * light)
         pen.diamond(cx, cy, u, u / 2)
         pen.color = Color.Black.copy(alpha = .5f)
@@ -84,15 +92,15 @@ internal class BloodAltar : MapStyle() {
             val a = (.4f + .4f * sin(time * 2.2f - (spot.x + spot.y) * .6f)) * max(.4f, light)
             val bend = (noise(spot.x, spot.y, 5) - .5f) * u * .3f
             val across = noise(spot.x, spot.y, 4) < .5f
-            val line = if (across) {
-                floatArrayOf(cx - u / 2, cy + u / 4, cx + bend, cy, cx + u / 2, cy - u / 4)
-            } else {
-                floatArrayOf(cx - u / 2, cy - u / 4, cx, cy + bend * .6f, cx + u / 2, cy + u / 4)
-            }
+            // Жила поперёк или вдоль клетки: три точки, без массива на клетку
+            val y1 = if (across) cy + u / 4 else cy - u / 4
+            val x2 = if (across) cx + bend else cx
+            val y2 = if (across) cy else cy + bend * .6f
+            val y3 = if (across) cy - u / 4 else cy + u / 4
             pen.color = vein.copy(alpha = a * .3f)
-            pen.polyline(*line, width = u * .12f)
+            pen.polyline(cx - u / 2, y1, x2, y2, cx + u / 2, y3, width = u * .12f)
             pen.color = vein.copy(alpha = a)
-            pen.polyline(*line, width = u * .035f)
+            pen.polyline(cx - u / 2, y1, x2, y2, cx + u / 2, y3, width = u * .035f)
         }
         if (spot.walls == 0 && noise(spot.x, spot.y, 6) < .07f) {
             val w = u * .5f
@@ -109,22 +117,31 @@ internal class BloodAltar : MapStyle() {
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, .7f * light), vein, ((.35f + .25f * sin(time * 2.2f - (x + y) * .6f)) * light).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
-        val centre = Offset(w / 2, h * .55f)
-        scope.drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0xFF500000).copy(alpha = .55f)), centre, max(w, h) * .75f))
+        val w = scope.size.width
+        val h = scope.size.height
+        // Красная мгла к краям: круг единичного радиуса, растянутый на экран
+        val reach = max(w, h) * .75f
+        scope.withTransform({
+            translate(w / 2, h * .55f)
+            scale(reach, reach, Offset.Zero)
+        }) { drawRect(haze, Offset(-w / 2 / reach, -h * .55f / reach), Size(w / reach, h / reach)) }
         repeat(5) { i ->
             val x = (spread(i, 3) * w * 1.6f + time * w * (.015f + i * .005f)) % (w * 1.6f) - w * .3f
             val y = h * (.2f + spread(i, 4) * .7f)
             val r = w * .3f
-            scope.drawCircle(Brush.radialGradient(listOf(Color(0xFFC81414).copy(alpha = .09f), Color.Transparent), Offset(x, y), r), r, Offset(x, y))
+            scope.blot(mist, x, y, r)
         }
     }
 }
 
 /** VI · Dunes (2.77.0): sand rippled by the wind, sandstone laid in bands, grains blowing across the screen. */
 internal class Dunes : MapStyle() {
+    private val glare = PaletteBrush { unitFade(it.accent.copy(alpha = .06f), Color.Transparent) }
+
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.95f + noise(spot.x, spot.y) * .25f) * light)
         pen.diamond(cx, cy, u, u / 2)
         // The wind's hand: two or three soft ripples across the tile.
@@ -142,8 +159,9 @@ internal class Dunes : MapStyle() {
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), tone(palette.accent, light), .4f)
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
-        scope.drawRect(Brush.verticalGradient(listOf(palette.accent.copy(alpha = .06f), Color.Transparent), startY = 0f, endY = h * .6f))
+        val w = scope.size.width
+        val h = scope.size.height
+        scope.band(glare(palette), 0f, h * .6f)
         val grain = w / 260f
         repeat(60) { i ->
             val drift = (time * (.08f + spread(i, 21) * .08f) + spread(i, 22)) % 1f

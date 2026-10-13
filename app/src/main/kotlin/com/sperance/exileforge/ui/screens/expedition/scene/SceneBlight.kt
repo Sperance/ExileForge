@@ -31,33 +31,55 @@ internal object BlightTint {
 }
 
 /**
- * Очаг Скверны по частям, каждая своей глубиной: шлейф следа между раскрытыми точками и лужи лежат на земле (под всем, что
- * стоит), сундук зачищенной точки стоит своей клеткой. Живая лужа - у активной точки, у пройденных - остывшее пятно.
+ * Очаг Скверны в очереди стоящего: по открытой точке - след к следующей и лужа (вровень с землёй), сундук взятой или ждущей
+ * точки и сундук Матери. Часть - номер точки и её слой ([drawBlight]).
  */
-internal fun ScenePainter.blightParts(spot: BlightSpot, world: ExpeditionWorld, glow: (Int, Int) -> Float): List<Pair<Double, () -> Unit>> = buildList {
+internal fun ScenePainter.standBlight(queue: Standing, spot: BlightSpot, world: ExpeditionWorld) {
     val shown = spot.revealed
     val active = spot.active
     for (point in 0 until shown) {
         val cell = spot.at(point)
         if (!world.explored(cell.x, cell.y)) continue
-        if (point + 1 < shown) add(GROUND to { drawBlightTrail(cell, spot.at(point + 1), point, glow(cell.x, cell.y)) })
-        val live = point == active
-        add(GROUND + .1 to { drawBlightPool(cell, live, point, glow(cell.x, cell.y)) })
+        if (point + 1 < shown) queue.add(GROUND, Standing.FEATURE, spot, point * BLIGHT_LAYERS + BLIGHT_TRAIL)
+        queue.add(GROUND + .1, Standing.FEATURE, spot, point * BLIGHT_LAYERS + BLIGHT_POOL)
         // Сундук: взятый стоит открытым, ждущий - на зачищенной активной точке; на клетке Матери стоит её сундук
         val looted = point in spot.taken && !(point == spot.blight.points - 1 && spot.raised(spot.blight.motherChoice))
-        val waiting = live && spot.cleared(world, point)
-        if (looted || waiting) add(cell.x + cell.y + 1.0 to { drawBlightChest(cell, spot.blight.quality(point) ?: Rarity.COMMON, looted, glow(cell.x, cell.y)) })
+        val waiting = point == active && spot.cleared(world, point)
+        if (looted || waiting) queue.add(cell.x + cell.y + 1.0, Standing.FEATURE, spot, point * BLIGHT_LAYERS + BLIGHT_CHEST)
     }
     // Сундук Матери - на последней точке, после её смерти
     val mother = spot.blight.motherChoice
     if (spot.blight.mother && spot.raised(mother)) {
         val cell = spot.at(mother)
         val looted = mother in spot.taken
-        if (world.explored(cell.x, cell.y) && (looted || spot.cleared(world, mother))) {
-            add(cell.x + cell.y + 1.1 to { drawBlightChest(cell, spot.blight.quality(mother) ?: Rarity.RARE, looted, glow(cell.x, cell.y)) })
-        }
+        if (world.explored(cell.x, cell.y) && (looted || spot.cleared(world, mother))) queue.add(cell.x + cell.y + 1.1, Standing.FEATURE, spot, mother * BLIGHT_LAYERS + BLIGHT_MOTHER)
     }
 }
+
+/** Слой [part] очага, что поставил [standBlight]. */
+internal fun ScenePainter.drawBlight(spot: BlightSpot, part: Int, world: ExpeditionWorld) {
+    val point = part / BLIGHT_LAYERS
+    val cell = spot.at(point)
+    when (part % BLIGHT_LAYERS) {
+        BLIGHT_TRAIL -> drawBlightTrail(cell, spot.at(point + 1), point, glow(cell.x, cell.y))
+
+        BLIGHT_POOL -> drawBlightPool(cell, point == spot.active, point, glow(cell.x, cell.y))
+
+        BLIGHT_CHEST -> {
+            val looted = point in spot.taken && !(point == spot.blight.points - 1 && spot.raised(spot.blight.motherChoice))
+            drawBlightChest(cell, spot.blight.quality(point) ?: Rarity.COMMON, looted, glow(cell.x, cell.y))
+        }
+
+        else -> drawBlightChest(cell, spot.blight.quality(point) ?: Rarity.RARE, point in spot.taken, glow(cell.x, cell.y))
+    }
+}
+
+/** Слои точки очага в очереди стоящего: след, лужа, сундук точки, сундук Матери. */
+private const val BLIGHT_LAYERS = 4
+private const val BLIGHT_TRAIL = 0
+private const val BLIGHT_POOL = 1
+private const val BLIGHT_CHEST = 2
+private const val BLIGHT_MOTHER = 3
 
 /**
  * Живая лужа очага: рваный текучий край (несколько бегущих волн по контуру), от центра к краю пульсируют жилы, ядро бьётся.
@@ -152,9 +174,9 @@ internal fun ScenePainter.drawBlightChest(cell: Cell, quality: Rarity, opened: B
     pen.color = frame.copy(alpha = (if (opened) .45f else .95f) * light)
     val top = cy + h
     pen.polyline(cx - w, top, cx, top + d, cx + w, top, cx, top - d, cx - w, top, width = unit * .045f)
-    pen.polyline(cx - w, cy, cx - w, cy + h, width = unit * .04f)
-    pen.polyline(cx + w, cy, cx + w, cy + h, width = unit * .04f)
-    pen.polyline(cx, cy - d, cx, cy - d + h, width = unit * .04f)
+    pen.line(cx - w, cy, cx - w, cy + h, unit * .04f)
+    pen.line(cx + w, cy, cx + w, cy + h, unit * .04f)
+    pen.line(cx, cy - d, cx, cy - d + h, unit * .04f)
     if (!opened) {
         pen.color = BlightTint.bile.copy(alpha = .85f * light)
         pen.circle(cx, cy + h * .55f, unit * .05f)

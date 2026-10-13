@@ -26,31 +26,58 @@ import kotlin.math.sin
 
 /**
  * Объект карты в стиле сцены: каждый вид - свой знак. Глубина сортировки - его клетка; комната рисует трещину или дверь на
- * стене, рычаг и сундук внутри - каждый своей клеткой ([featureParts]).
+ * стене, рычаг и сундук внутри - каждый своей клеткой: в очередь стоящего ложится часть ([part]), рисует её [drawFeature].
  */
-internal fun ScenePainter.featureParts(spot: FeatureSpot, world: ExpeditionWorld, glow: (Int, Int) -> Float, explored: (Int, Int) -> Boolean): List<Pair<Double, () -> Unit>> = when (spot) {
-    is AltarSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawAltar(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+internal fun ScenePainter.standFeature(queue: Standing, spot: FeatureSpot, world: ExpeditionWorld) {
+    when (spot) {
+        is AltarSpot, is MerchantSpot, is NodeSpot -> queue.add(depth(spot.cell.x, spot.cell.y), Standing.FEATURE, spot)
 
-    is MerchantSpot -> listOf(depth(spot.cell.x, spot.cell.y) to { drawMerchant(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y)) })
+        is TrapSpot -> queue.add(depth(spot.cell.x, spot.cell.y) - .4, Standing.FEATURE, spot)
 
-    is NodeSpot -> listOf(
-        depth(spot.cell.x, spot.cell.y) to {
+        is RoomSpot -> {
+            val (ex, ey) = spot.entrance
+            if (!spot.opened) queue.add(depth(ex, ey) + .1, Standing.FEATURE, spot, ROOM_ENTRANCE)
+            spot.lever?.takeIf { world.explored(it.x, it.y) }?.let { queue.add(depth(it.x, it.y), Standing.FEATURE, spot, ROOM_LEVER) }
+            spot.chest.takeIf { spot.opened && world.explored(it.x, it.y) }?.let { queue.add(depth(it.x, it.y), Standing.FEATURE, spot, ROOM_CHEST) }
+        }
+
+        is BlightSpot -> standBlight(queue, spot, world)
+    }
+}
+
+/** Часть [part] объекта [spot], что поставил в очередь [standFeature]. */
+internal fun ScenePainter.drawFeature(spot: FeatureSpot, part: Int, world: ExpeditionWorld) {
+    when (spot) {
+        is AltarSpot -> drawAltar(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y))
+
+        is MerchantSpot -> drawMerchant(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y))
+
+        is NodeSpot -> {
             drawNode(spot.cell.x + .5, spot.cell.y + .5, spot.node.profession, spot.spent, glow(spot.cell.x, spot.cell.y))
             if (!spot.spent) materials[spot.node.job.output]?.let { drawMaterial(spot.cell.x + .5, spot.cell.y + .5, it, glow(spot.cell.x, spot.cell.y)) }
-        },
-    )
+        }
 
-    is TrapSpot -> listOf(depth(spot.cell.x, spot.cell.y) - .4 to { drawTrap(spot, glow(spot.cell.x, spot.cell.y)) })
+        is TrapSpot -> drawTrap(spot, glow(spot.cell.x, spot.cell.y))
 
-    is RoomSpot -> buildList {
-        val (ex, ey) = spot.entrance
-        if (!spot.opened) add(depth(ex, ey) + .1 to { drawEntrance(ex + .5, ey + .5, spot.kind == FeatureKind.VAULT, spot.progress.toFloat(), glow(ex, ey)) })
-        spot.lever?.takeIf { explored(it.x, it.y) }?.let { lever -> add(depth(lever.x, lever.y) to { drawLever(lever.x + .5, lever.y + .5, spot.opened, glow(lever.x, lever.y)) }) }
-        spot.chest.takeIf { spot.opened && explored(it.x, it.y) }?.let { chest -> add(depth(chest.x, chest.y) to { drawChest(chest.x + .5, chest.y + .5, spot.looted, glow(chest.x, chest.y)) }) }
+        is RoomSpot -> when (part) {
+            ROOM_ENTRANCE -> {
+                val (ex, ey) = spot.entrance
+                drawEntrance(ex + .5, ey + .5, spot.kind == FeatureKind.VAULT, spot.progress.toFloat(), glow(ex, ey))
+            }
+
+            ROOM_LEVER -> spot.lever?.let { drawLever(it.x + .5, it.y + .5, spot.opened, glow(it.x, it.y)) }
+
+            else -> spot.chest.let { drawChest(it.x + .5, it.y + .5, spot.looted, glow(it.x, it.y)) }
+        }
+
+        is BlightSpot -> drawBlight(spot, part, world)
     }
-
-    is BlightSpot -> blightParts(spot, world, glow)
 }
+
+/** Части комнаты в очереди стоящего. */
+private const val ROOM_ENTRANCE = 0
+private const val ROOM_LEVER = 1
+private const val ROOM_CHEST = 2
 
 private fun depth(x: Int, y: Int) = x + y + 1.0
 

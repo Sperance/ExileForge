@@ -1,7 +1,6 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.lerp
@@ -13,7 +12,9 @@ internal class WetStone : MapStyle() {
     private val wet = Color(0xFFBED2E1)
 
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.95f + noise(spot.x, spot.y) * .3f) * light)
         pen.diamond(cx, cy, u, u / 2)
         pen.color = Color.Black.copy(alpha = .3f)
@@ -38,18 +39,22 @@ internal class WetStone : MapStyle() {
 /** II · Rune dark: near-black ground where runes breathe, obsidian obelisks with glowing seams, crawling fog. */
 internal class RuneDark : MapStyle() {
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.7f + noise(spot.x, spot.y) * .3f) * light)
         pen.diamond(cx, cy, u, u / 2)
         pen.color = palette.accent.copy(alpha = .08f * light)
         pen.polyline(cx - u, cy, cx, cy + u / 2, cx + u, cy, width = u * .02f)
         if (noise(spot.x, spot.y, 5) >= .1f) return
         val a = (.35f + .35f * sin(time * 2f + noise(spot.x, spot.y, 6) * 6f)) * max(.3f, light)
-        for ((glow, stroke) in listOf(.3f to .12f, 1f to .04f)) {
+        val shape = (noise(spot.x, spot.y, 7) * 3).toInt()
+        // Руна дважды: широкое свечение, затем тонкий знак
+        fun rune(glow: Float, stroke: Float) {
             pen.color = palette.accent.copy(alpha = a * glow)
             pen.ring(cx - u * .42f, cy - u * .21f, u * .84f, u * .42f, u * stroke)
             val w = u * stroke
-            when ((noise(spot.x, spot.y, 7) * 3).toInt()) {
+            when (shape) {
                 0 -> {
                     pen.line(cx, cy - u * .15f, cx, cy + u * .15f, w)
                     pen.line(cx - u * .2f, cy - u * .05f, cx + u * .2f, cy + u * .05f, w)
@@ -63,7 +68,11 @@ internal class RuneDark : MapStyle() {
                 }
             }
         }
+        rune(.3f, .12f)
+        rune(1f, .04f)
     }
+
+    private val fog = unitGlow(Color(0xFF78A0B4).copy(alpha = .1f))
 
     override fun wallHeight(rise: Float) = 1.7f + rise * .9f
 
@@ -71,12 +80,13 @@ internal class RuneDark : MapStyle() {
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, .7f * light), palette.accent, ((.3f + .3f * sin(time * 1.6f + x + y)) * max(.3f, light)).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
+        val w = scope.size.width
+        val h = scope.size.height
         repeat(6) { i ->
             val x = (spread(i, 3) * w * 1.6f + time * w * (.02f + i * .008f)) % (w * 1.6f) - w * .3f
             val y = h * (.25f + spread(i, 4) * .6f)
             val r = w * (.25f + spread(i, 5) * .2f)
-            scope.drawCircle(Brush.radialGradient(listOf(Color(0xFF78A0B4).copy(alpha = .1f), Color.Transparent), Offset(x, y), r), r, Offset(x, y))
+            scope.blot(fog, x, y, r)
         }
     }
 }
@@ -85,27 +95,22 @@ internal class RuneDark : MapStyle() {
 internal class Ashen : MapStyle() {
     private val lava = Color(0xFFFF6A20)
     private val core = Color(0xFFFF8A3C)
+    private val heat = unitFade(Color.Transparent, lava.copy(alpha = .1f))
 
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.85f + noise(spot.x, spot.y) * .35f) * light)
         pen.diamond(cx, cy, u, u / 2)
         if (noise(spot.x, spot.y, 10) >= .35f) return
         val a = (.45f + .35f * sin(time * 1.3f + noise(spot.x, spot.y, 11) * 9f)) * max(.35f, light)
-        val crack = floatArrayOf(
-            cx - u * .6f,
-            cy + (noise(spot.x, spot.y, 12) - .5f) * u * .15f,
-            cx - u * .1f,
-            cy + u * .06f,
-            cx + u * .15f,
-            cy - u * .05f,
-            cx + u * .6f,
-            cy + (noise(spot.x, spot.y, 13) - .3f) * u * .15f,
-        )
+        val y1 = cy + (noise(spot.x, spot.y, 12) - .5f) * u * .15f
+        val y4 = cy + (noise(spot.x, spot.y, 13) - .3f) * u * .15f
         pen.color = lava.copy(alpha = a * .3f)
-        pen.polyline(*crack, width = u * .12f)
+        pen.polyline(cx - u * .6f, y1, cx - u * .1f, cy + u * .06f, cx + u * .15f, cy - u * .05f, cx + u * .6f, y4, width = u * .12f)
         pen.color = core.copy(alpha = a)
-        pen.polyline(*crack, width = u * .035f)
+        pen.polyline(cx - u * .6f, y1, cx - u * .1f, cy + u * .06f, cx + u * .15f, cy - u * .05f, cx + u * .6f, y4, width = u * .035f)
     }
 
     override fun wallHeight(rise: Float) = 1.2f + rise * .6f
@@ -114,8 +119,9 @@ internal class Ashen : MapStyle() {
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, .8f * light), core, ((.35f + .3f * sin(time * 2f + x * 3)) * light).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
-        scope.drawRect(Brush.verticalGradient(listOf(Color.Transparent, lava.copy(alpha = .1f)), startY = h * .5f, endY = h))
+        val w = scope.size.width
+        val h = scope.size.height
+        scope.band(heat, h * .5f, h)
         val spark = w / 180f
         repeat(40) { i ->
             val life = (time * .25f + spread(i, 6)) % 1f

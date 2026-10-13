@@ -14,7 +14,6 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.inset
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -160,15 +159,28 @@ private object PortraitRasters {
  * its face circle (`Portrait.TOKEN_*`) lands on [centre] with [radius], and everything outside it
  * is clipped. [draw] paints the box: the server's portrait.
  */
-fun DrawScope.drawToken(centre: Offset, radius: Float, ring: Color, draw: DrawScope.() -> Unit) {
+inline fun DrawScope.drawToken(centre: Offset, radius: Float, ring: Color, draw: DrawScope.() -> Unit) {
     val width = radius / Portrait.TOKEN_R
     val left = centre.x - width * Portrait.TOKEN_X
     val top = centre.y - width * Portrait.TOKEN_Y
-    val circle = Path().apply { addOval(androidx.compose.ui.geometry.Rect(centre, radius)) }
-    clipPath(circle) {
-        drawCircle(Color(0xFF0B0E13), radius, centre)
+    // Круг единичного радиуса, растянутый переносом: ни пути, ни прямоугольника на кадр
+    withTransform({
+        translate(centre.x, centre.y)
+        scale(radius, radius, Offset.Zero)
+        clipPath(TokenCircle)
+        scale(1 / radius, 1 / radius, Offset.Zero)
+        translate(-centre.x, -centre.y)
+    }) {
+        drawCircle(TokenGround, radius, centre)
         inset(left, top, size.width - left - width, size.height - top - width * 4f / 3f) { draw() }
     }
-    drawCircle(ring, radius, centre, style = Stroke(radius * .12f))
-    drawCircle(Color.Black.copy(alpha = .5f), radius * 1.06f, centre, style = Stroke(radius * .04f))
+    drawCircle(ring, radius, centre, style = Strokes.of(radius * .12f))
+    drawCircle(TokenShade, radius * 1.06f, centre, style = Strokes.of(radius * .04f))
 }
+
+/** Круг жетона: радиус 1 вокруг начала. */
+@PublishedApi internal val TokenCircle = Path().apply { addOval(androidx.compose.ui.geometry.Rect(Offset.Zero, 1f)) }
+
+@PublishedApi internal val TokenGround = Color(0xFF0B0E13)
+
+@PublishedApi internal val TokenShade = Color.Black.copy(alpha = .5f)

@@ -1,9 +1,9 @@
 package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import kotlin.math.max
 import kotlin.math.sin
@@ -11,8 +11,12 @@ import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
 /** VI · Sky glass (3.43.0): ground fused to glass with the sky in it, pillars of crystal, a pale glow of sky overhead (без дождя с 4.2.0). */
 internal class SkyGlass : MapStyle() {
+    private val sky = PaletteBrush { unitFade(it.accent.copy(alpha = .08f), Color.Transparent) }
+
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.85f + noise(spot.x, spot.y) * .3f) * light)
         pen.diamond(cx, cy, u, u / 2)
         // The sky caught in the glass: one pale streak across the tile, drifting with the clouds.
@@ -34,15 +38,20 @@ internal class SkyGlass : MapStyle() {
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), palette.accent, (.45f + (if (cellNoise(x, y, 52) < .2f) .4f * sin(time * 7f + y) else 0f)).coerceIn(0f, 1f))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
-        scope.drawRect(Brush.verticalGradient(listOf(palette.accent.copy(alpha = .08f), Color.Transparent), startY = 0f, endY = h * .5f))
+        val w = scope.size.width
+        val h = scope.size.height
+        scope.band(sky(palette), 0f, h * .5f)
     }
 }
 
 /** VII · Drowned (3.43.0): mosaic under water with light rippling over it, columns grown over with coral, bubbles rising. */
 internal class Drowned : MapStyle() {
+    private val deep = PaletteBrush { unitFade(Color.Transparent, it.accent.copy(alpha = .07f)) }
+
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.85f + noise(spot.x, spot.y) * .25f) * light)
         pen.diamond(cx, cy, u, u / 2)
         // The empire's mosaic: a smaller tile set in every other one.
@@ -64,14 +73,15 @@ internal class Drowned : MapStyle() {
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = lerp(tone(tones.rim, light), tone(palette.decor, 1.1f * light), .5f)
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
-        scope.drawRect(Brush.verticalGradient(listOf(Color.Transparent, palette.accent.copy(alpha = .07f)), startY = h * .3f, endY = h))
+        val w = scope.size.width
+        val h = scope.size.height
+        scope.band(deep(palette), h * .3f, h)
         repeat(40) { i ->
             val rise = (time * (.05f + spread(i, 70) * .06f) + spread(i, 71)) % 1f
             val x = spread(i, 72) * w + sin(time * 2f + i) * w * .01f
             val y = h * (1.1f - rise * 1.2f)
             val r = w / 300f * (1f + spread(i, 73) * 2f)
-            scope.drawCircle(palette.accent.copy(alpha = .3f), r, Offset(x, y), style = androidx.compose.ui.graphics.drawscope.Stroke(1f))
+            scope.drawCircle(palette.accent.copy(alpha = .3f), r, Offset(x, y), style = Bubble)
         }
     }
 }
@@ -81,7 +91,9 @@ internal class Divine : MapStyle() {
     private val gold = Color(0xFFE8C860)
 
     override fun floor(frame: SceneFrame, spot: TileSpot, palette: Palette, light: Float): Unit = with(frame) {
-        val (cx, cy, u) = Triple(spot.cx, spot.cy, unit)
+        val cx = spot.cx
+        val cy = spot.cy
+        val u = unit
         pen.color = tone(palette.floor, (.9f + noise(spot.x, spot.y) * .2f) * light)
         pen.diamond(cx, cy, u, u / 2)
         // Veins of the marble.
@@ -107,7 +119,8 @@ internal class Divine : MapStyle() {
     override fun rim(tones: WallTones, palette: Palette, x: Int, y: Int, time: Float, light: Float) = gold.copy(alpha = .9f * max(.4f, light))
 
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
-        val (w, h) = scope.size.width to scope.size.height
+        val w = scope.size.width
+        val h = scope.size.height
         repeat(50) { i ->
             val x = (spread(i, 80) * w + time * w * (.005f + spread(i, 81) * .01f)) % w
             val y = (spread(i, 82) * h + sin(time * .7f + i) * h * .02f)
@@ -116,3 +129,6 @@ internal class Divine : MapStyle() {
         }
     }
 }
+
+/** Нить пузырька. */
+private val Bubble = Stroke(1f)

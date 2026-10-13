@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.campaign.combat.CarriedCharge
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.ChargeRules
@@ -57,6 +58,19 @@ internal class HeroCharges(private val rules: ChargeRules) {
             until.remove(it)
         }
         return true
+    }
+
+    /** Заряды, что уходят из боя на карту ([com.sperance.exileforge.core.campaign.combat.HeroCarry]): по виду - сколько и сколько ещё секунд. */
+    fun carried(now: Double): List<CarriedCharge> = ChargeKind.REAL.mapNotNull { kind ->
+        val count = counts[kind]?.takeIf { it > 0 } ?: return@mapNotNull null
+        CarriedCharge(kind, count, max(0.0, (until[kind] ?: now) - now)).takeIf { it.left > 0 }
+    }
+
+    /** Заряды [charge], принесённые с карты, - к началу боя (время боя 0). */
+    fun carryIn(charge: CarriedCharge) {
+        if (charge.count <= 0 || charge.left <= 0) return
+        counts[charge.kind] = charge.count
+        until[charge.kind] = charge.left
     }
 
     /** What the charges lay on the hero: each kind's lines times its count. */

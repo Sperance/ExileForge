@@ -1,8 +1,14 @@
 package com.sperance.exileforge.core
 
+import com.sperance.exileforge.core.campaign.combat.Ailment
+import com.sperance.exileforge.core.campaign.combat.AilmentLaw
+import com.sperance.exileforge.core.campaign.combat.CarriedAilment
+import com.sperance.exileforge.core.campaign.combat.CarriedCharge
+import com.sperance.exileforge.core.campaign.combat.HeroCarry
 import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import com.sperance.exileforge.core.campaign.run.RoadLife
 import com.sperance.exileforge.core.quests.live
+import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.ExpeditionRules
@@ -12,7 +18,7 @@ import com.sperance.exileforge.rules.content.Rarity
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** Карта между боями (4.10.0): здоровье по чистой скорости, шаг после босса, счёт заданий от снимка доски. */
+/** Карта между боями (4.10.0): здоровье по чистой скорости, несомое из боя тает, шаг после босса, счёт заданий от снимка доски. */
 class RoadLifeTest {
     @Test
     fun regeneration_fills_up_to_the_maximum() {
@@ -25,6 +31,19 @@ class RoadLifeTest {
         assertEquals(40.0, RoadLife(-10.0).after(50.0, 100.0, 1.0))
         assertEquals(1.0, RoadLife(-10.0).after(5.0, 100.0, 1.0))
         assertEquals(1.0, RoadLife(-10.0).after(1.0, 100.0, 1.0))
+    }
+
+    @Test
+    fun what_the_hero_carries_melts_on_the_road_and_burnings_do_not_stack() {
+        val law = AilmentLaw(TestContent.index.campaign.combat)
+        val weak = CarriedAilment(Ailment.BURNING, left = 2.0, magnitude = 5.0, duration = 4.0)
+        val strong = CarriedAilment(Ailment.BURNING, left = 1.0, magnitude = 9.0, duration = 4.0)
+        assertEquals(listOf(strong), law.laid(listOf(weak), strong))
+        val carry = HeroCarry(ailments = listOf(weak), charges = listOf(CarriedCharge(ChargeKind.FRENZY, 2, 0.5)))
+        val later = carry.after(1.0)
+        assertEquals(1.0, later.ailments.single().left, 1e-9)
+        assertEquals(emptyList(), later.charges)
+        assertEquals(true, later.hurting)
     }
 
     @Test

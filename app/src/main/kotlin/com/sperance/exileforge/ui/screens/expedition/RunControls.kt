@@ -58,6 +58,7 @@ import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
+import com.sperance.exileforge.ui.screens.expedition.arena.flowNumber
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
@@ -85,6 +86,8 @@ import kotlin.math.roundToInt
     mana: Int = 0,
     maxMana: Int = 0,
     reserved: Int = 0,
+    /** Итог здоровья в секунду на карте (макет «Эффекты героя на карте», вариант C): «· −14/с» на полосе жизни; null - не писать. */
+    flow: LifeFlow? = null,
 ) {
     val shape = RoundedCornerShape(5.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
@@ -104,6 +107,10 @@ import kotlin.math.roundToInt
                 buildAnnotatedString {
                     append(ui("expedition.vitals_figure", number(life.toDouble()), number(maxLife.toDouble())))
                     if (maxShield > 0) withStyle(SpanStyle(color = ShieldBright, fontWeight = FontWeight.SemiBold)) { append("  ◈ " + number(shield.toDouble())) }
+                    // Чистый итог в секунду - светлым на литой полосе: убыль розовым, прибыль зелёным
+                    flow?.takeIf { abs(it.net) >= .5 }?.let { f ->
+                        withStyle(SpanStyle(color = if (f.net < 0) FlowLoss else Vital, fontWeight = FontWeight.SemiBold)) { append(" · " + ui("fight.flow.rate", flowNumber(f.net))) }
+                    }
                 },
                 11.sp,
             )
@@ -138,6 +145,9 @@ import kotlin.math.roundToInt
         maxLines = 1,
     )
 }
+/** Убыль здоровья в секунду на литой красной полосе: светлый розовый, чтобы читалась. */
+private val FlowLoss = Color(0xFFFFB3AD)
+
 
 private val VitalsWell = Color(0xCC0A0D12)
 private val LifeRim = Color(0xFF3A1A18)

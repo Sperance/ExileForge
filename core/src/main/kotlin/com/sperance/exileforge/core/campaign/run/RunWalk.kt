@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.model.campaign.CampaignState
+import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
@@ -50,8 +51,8 @@ import kotlin.random.Random
 // ==================== The map between fights ====================
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
-    // Горение и яд ловушек (3.90.0) - на дороге, и они убивают
-    burn(dt)
+    // Недуги - из боя и ловушек (3.90.0) - тикают на дороге, и они убивают
+    ailing(dt)
     if (phase != RunPhase.MAP) return
     val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
     when (val event = world.step(dt, x, y)) {
@@ -118,6 +119,9 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
     // Нет связи (4.0.0): шаг не берётся, пока сервер не ответит - события не копятся без подтверждения
     if (waitingLink) return
     recover(dt)
+    // Недуги тикают и в автопробеге: тот же путь, что вручную
+    ailing(dt)
+    if (phase != RunPhase.MAP) return
     pilot.rest -= dt * speed
     if (pilot.rest > 0) return
     pilot.rest = pace.autoBeat
@@ -161,12 +165,12 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 }
 
 /**
- * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена), мана
- * (4.11.0 - под долей восстановления листа, без недугов), энергощит и идущие флаконы.
+ * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена; под ранящим
+ * недугом - без основы), мана (4.11.0 - под долей восстановления листа; недуги на герое режут и её), энергощит и идущие флаконы.
  */
 internal fun ExpeditionRun.recover(dt: Double) {
-    life = RoadLife.of(hero, pace).after(life, hero.maxLife, dt)
-    mana = (mana + hero.manaRegen(rules.mana) * dt).coerceAtMost(manaCap())
+    life = RoadLife.of(hero, pace, curb(RecoveryPool.LIFE), resting = !carry.hurting).after(life, hero.maxLife, dt)
+    mana = (mana + hero.manaRegen(rules.mana, curb(RecoveryPool.MANA)) * dt).coerceAtMost(manaCap())
     shield = EnergyShield.recovered(hero, rules, shield, seconds - hitAt, dt)
     if (flaskLeft.any { it > 0 }) {
         val before = flaskLeft.map { it > 0 }

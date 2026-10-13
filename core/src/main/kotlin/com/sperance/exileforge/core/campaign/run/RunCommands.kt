@@ -153,6 +153,10 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
             life = command.life.coerceIn(0.0, hero.maxLife)
             command.pools?.let {
                 mana = it.mana.coerceIn(0.0, manaCap())
+                // Несомое зоны Ваал - на основную карту
+                shield = it.carry.shield ?: shield
+                carry = it.carry.copy(shield = null)
+                ticks.clear()
                 charges = it.charges.ifEmpty { charges }
                 flaskLeft = it.flaskLeft.ifEmpty { flaskLeft }
                 rates = it.rates.ifEmpty { rates }

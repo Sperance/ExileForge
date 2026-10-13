@@ -348,9 +348,8 @@ private fun Battle.burn(me: Fighter, dt: Double) {
     var heaviestSlice = 0.0
     me.ailments.filter { it.ailment.hurts }.forEach { active ->
         val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
-        val rate = active.magnitude * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(active.ailment)
-        // Whatever deals damage at all deals at least [CombatRules.minDot] a tick, however it is taken.
-        val dealt = (if (active.magnitude > 0) max(rate, rules.minDot / TICK) else rate) * span
+        // Whatever deals damage at all deals at least [CombatRules.minDot] a tick, however it is taken ([dotRate] - одна формула с картой).
+        val dealt = dotRate(active.ailment, active.magnitude, me.body, me.weakness(), rules.minDot) * span
         // Разлом (3.96.0): печати Стража и «Одна стихия» Владыки
         val rift = sealed(me) * lawTaken(me, if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.second)
         val unruled = if (rift == 1.0) dealt else dealt * rift

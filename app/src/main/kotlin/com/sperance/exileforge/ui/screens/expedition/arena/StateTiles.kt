@@ -157,7 +157,7 @@ private const val FATE_GLYPH = "✦"
  * An ailment's mark drawn from shapes: a flame, a snowflake, a crystal, a bolt, a drop, two drops; a star for a stun. Изранение
  * (4.11.0) - рваная рана со стежками, иссушение - капля в трещинах.
  */
-private fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
+internal fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
     val u = size.minDimension / 16f
     fun path(vararg points: Pair<Float, Float>) = Path().apply {
         points.forEachIndexed { i, (x, y) -> if (i == 0) moveTo(x * u, y * u) else lineTo(x * u, y * u) }

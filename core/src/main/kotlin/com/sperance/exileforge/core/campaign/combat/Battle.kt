@@ -200,8 +200,7 @@ class Battle(
          */
         fun held(ailment: Ailment): Double {
             val strongest = ailments.filter { it.ailment == ailment }.maxOfOrNull { it.magnitude } ?: return 0.0
-            val taken = strongest * body.ailmentTaken(ailment)
-            return ruleOf[ailment]?.first?.capped(taken) ?: taken
+            return heldStrength(ailment, strongest, body, ruleOf[ailment]?.first)
         }
 
         /**
@@ -437,12 +436,29 @@ class Battle(
             pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly) }
             flaskOpened[i] = true
         }
+        // Принесённое с карты: недуги, баффы и проклятия, заряды - остатком своего времени ([HeroCarry])
+        val carried = pools?.carry?.takeIf { !it.bare }?.also(::carryIn) != null
         // Buffs worn from the start (3.35.0): a monster's modifier or the map's.
         everyone.forEach(::wear)
         if (conditioned) conditions = heroConditions()
-        if (heroFighter.effects.isNotEmpty() || conditions.isNotEmpty()) remake(heroFighter)
+        if (heroFighter.effects.isNotEmpty() || conditions.isNotEmpty() || carried) remake(heroFighter)
         heroFighter.mana = (pools?.mana ?: Double.MAX_VALUE).coerceIn(0.0, manaCap())
+        // Щит не полнится к бою: каким его оставили бой и карта, таким он и входит
+        pools?.carry?.shield?.let { heroFighter.shield = it.coerceIn(0.0, heroFighter.body.maxShield) }
         shieldUp = heroFighter.shield > 0
+    }
+
+    /**
+     * Несомое [carry] ложится на героя к началу боя: недуги - от врагов, с первым тиком через секунду; эффекты и заряды -
+     * остатком своего времени.
+     */
+    private fun carryIn(carry: HeroCarry) {
+        carry.ailments.forEach { a ->
+            heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, chaos = a.chaos)
+            if (a.ailment.hurts) heroFighter.tickedAt.putIfAbsent(a.ailment, 0.0)
+        }
+        carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional) }
+        carry.charges.forEach { heroCharges.carryIn(it) }
     }
 
     fun foe(index: Int) = foeFighters[index]

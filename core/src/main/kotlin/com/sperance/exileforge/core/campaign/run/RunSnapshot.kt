@@ -53,11 +53,14 @@ import kotlin.random.Random
 // ==================== What the screen reads ====================
 internal fun ExpeditionRun.snapshot(): RunHud {
     val battle = fight
+    val flow = if (battle == null && phase == RunPhase.MAP) roadFlow() else null
     val figures = stats.summary(kills)
     val awaiting = mine.count(::awaits)
     return RunHud(
         phase = phase, mapCode = zone.code,
-        heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0, hero.maxLife), heroMaxLife = shownMax(hero.maxLife),
+        // Здоровье, что тает на карте (недуги, деген), - вниз: число не обещает того, чего уже нет
+        heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0, hero.maxLife, falling = battle == null && flow?.let { it.net < 0 } == true),
+        heroMaxLife = shownMax(hero.maxLife),
         heroShield = (battle?.heroFighter?.shield ?: shield).roundToInt(), heroMaxShield = (battle?.heroFighter?.body?.maxShield ?: hero.maxShield).roundToInt(),
         alive = world.alive, total = world.total, sealed = world.sealed,
         fight = battle?.takeIf { fightAgent != null }?.let(::fightHud),
@@ -83,7 +86,11 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         summary = figures, recap = recap,
         tally = MapTally(end, shownSeconds(), kills, bosses, deaths, granted, figures, awaiting),
         feature = offer?.let { spot -> FeatureView(spot.feature, spot.taken.toList(), channel?.let { (it.elapsed / it.spot.node.seconds).toFloat().coerceIn(0f, 1f) }, world.guarded(spot.id)) },
-        hazards = hazards.map { it.view }, afflictions = afflictions(),
+        hazards = hazards.map { it.view },
+        heroAilments = if (battle == null) carriedAilments() else emptyList(),
+        heroEffects = if (battle == null) carriedEffects() else emptyList(),
+        heroCharges = if (battle == null) carriedCharges() else emptyList(),
+        lifeFlow = flow,
         entrance = world.features.firstNotNullOfOrNull { it.cue(world) },
         challenge = challengeView(),
         blight = world.features.firstNotNullOfOrNull { it as? BlightSpot }?.view(world),

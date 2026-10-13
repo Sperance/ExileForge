@@ -26,6 +26,7 @@ import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.combat.flaskViews
+import com.sperance.exileforge.core.campaign.combat.carry
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
 import com.sperance.exileforge.core.model.campaign.CampaignState
@@ -182,7 +183,11 @@ internal fun ExpeditionRun.play(dt: Double) {
     if (battle.time < battle.duration + pace.aftermath) return
     val out = battle.pools()
     life = out.life
-    shield = hero.maxShield
+    // Щит, недуги, баффы, проклятия и заряды уходят на карту остатком ([HeroCarry]); перезарядка щита - от последнего удара боя
+    val carried = battle.carry()
+    shield = carried.shield ?: hero.maxShield
+    carry = carried.copy(shield = null)
+    hitAt = seconds - (battle.time - battle.heroFighter.lastHit).coerceAtLeast(0.0)
     mana = out.mana
     charges = out.charges
     flaskLeft = out.flaskLeft

@@ -266,9 +266,11 @@ private fun Battle.riftHud(hud: BossHud): BossHud {
 /**
  * Здоровье на экране (3.88.8): у живого - вверх до целого и не меньше 1, у павшего - 0. «0» у живого противника читалось
  * как смерть, хотя у него оставалась доля единицы. 4.10.x: не выше показанного максимума [max] ([shownMax]) - полный запас
- * с дробным максимумом читался «776 / 775»; журнал боя максимума не знает и его не ставит.
+ * с дробным максимумом читался «776 / 775»; журнал боя максимума не знает и его не ставит. [falling] - здоровье тает (на карте
+ * под недугом или дегеном): вниз до целого, число не обещает того, чего уже нет.
  */
-fun shownLife(life: Double, alive: Boolean, max: Double = Double.POSITIVE_INFINITY): Int = if (alive) kotlin.math.ceil(life).toInt().coerceAtMost(shownMax(max)).coerceAtLeast(1) else 0
+fun shownLife(life: Double, alive: Boolean, max: Double = Double.POSITIVE_INFINITY, falling: Boolean = false): Int =
+    if (alive) (if (falling) kotlin.math.floor(life) else kotlin.math.ceil(life)).toInt().coerceAtMost(shownMax(max)).coerceAtLeast(1) else 0
 
 /** Максимум запаса на экране (4.10.x): одно округление для всех полос, с ним сверяется [shownLife]. */
 fun shownMax(max: Double): Int = max.roundToInt()

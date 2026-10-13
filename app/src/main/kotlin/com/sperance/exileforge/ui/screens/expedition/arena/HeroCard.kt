@@ -176,7 +176,7 @@ import kotlin.math.sin
 }
 
 /** Мини-кнопка «все эффекты» (4.10.x): «≡» и сколько эффектов на герое; касание - лист всех эффектов, бой идёт. */
-@Composable private fun AllEffects(count: Int, modifier: Modifier, onClick: () -> Unit) {
+@Composable internal fun AllEffects(count: Int, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val label = ui("fight.shelf.all", count)
     Column(

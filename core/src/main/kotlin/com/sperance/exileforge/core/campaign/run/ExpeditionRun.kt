@@ -19,6 +19,8 @@ import com.sperance.exileforge.core.campaign.VaalZones
 import com.sperance.exileforge.core.campaign.ZoneShare
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
+import com.sperance.exileforge.core.campaign.combat.AilmentLaw
+import com.sperance.exileforge.core.campaign.combat.HeroCarry
 import com.sperance.exileforge.core.campaign.combat.Ally
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Buildup
@@ -158,10 +160,23 @@ class ExpeditionRun(
     val heroLife: Double get() = life
 
     /**
-     * Энергощит на карте (3.95.2): ловушки и их горение бьют сначала в него, как удары в бою, - яд и хаос мимо; он
-     * перезаряжается по тем же правилам. Бой его не наследует: каждый начинается с полного щита - и полным его оставляет.
+     * Энергощит на карте (3.95.2): ловушки и недуги бьют сначала в него, как удары в бою, - яд и хаос мимо; он перезаряжается по
+     * тем же правилам. Бой его наследует в обе стороны ([HeroCarry.shield]): каким бой его оставил, таким он и на карте, и в
+     * следующем бою.
      */
-    internal var shield = hero.maxShield
+    internal var shield = startPools?.carry?.shield?.coerceIn(0.0, hero.maxShield) ?: hero.maxShield
+
+    /**
+     * Что герой несёт между боями ([HeroCarry]): недуги (и ловушек карты), временные баффы и проклятия, заряды - тают на карте по
+     * часам дороги ([ailing]), входят в следующий бой и в зону Ваал; щит - отдельно, [shield].
+     */
+    internal var carry: HeroCarry = startPools?.carry?.copy(shield = null) ?: HeroCarry.NONE
+
+    /** Законы недугов вне боя - те же, что в бою ([AilmentLaw]). */
+    internal val law = AilmentLaw(rules)
+
+    /** Урон недугов вне боя, что копится до тика на экране, по недугу. */
+    internal val ticks = HashMap<Ailment, AilmentTick>()
 
     /** Секунда захода, когда карта ранила героя в последний раз: с неё отсчитывается задержка перезарядки щита. */
     internal var hitAt = Double.NEGATIVE_INFINITY
@@ -173,7 +188,7 @@ class ExpeditionRun(
     internal var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.sheet?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
     internal var flaskLeft: List<Double> = kit.flasks.indices.map { startPools?.flaskLeft?.getOrNull(it) ?: 0.0 }
     internal var rates: List<DraughtRate> = kit.flasks.indices.map { startPools?.rates?.getOrNull(it) ?: DraughtRate() }
-    val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft, rates)
+    val pools: HeroPools get() = HeroPools(life, mana, charges, flaskLeft, rates, carry.copy(shield = shield))
     internal var gate: VaalZone? = null
     internal var crystal: CrystalSpot? = null
 
@@ -185,9 +200,6 @@ class ExpeditionRun(
 
     /** Сбор узла ремесла (3.90.0): какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
     internal var channel: Channel? = null
-
-    /** Горение и яд ловушек на герое (3.90.0): тикают на карте, могут убить. */
-    internal val burns = mutableListOf<Burn>()
 
     /** Числа урона карты на экране (3.90.0; с 3.95.3 - удары и тики эффектов, каждое своё) и номер следующего. */
     internal val hazards = mutableListOf<ShownHazard>()
@@ -370,10 +382,13 @@ class ExpeditionRun(
         rebody()
     }
 
-    /** The hero between fights made again: the sheet with the draughts still running, and the pace and sight they give. */
+    /**
+     * The hero between fights made again: the sheet with the draughts still running, what the hero carries from the fight (баффы,
+     * проклятия и заряды [carry]), and the pace and sight they give.
+     */
     internal fun rebody() {
         val lines = kit.flasks.withIndex().filter { (i, flask) -> flask != null && (flaskLeft.getOrNull(i) ?: 0.0) > 0 }
-            .flatMap { (_, flask) -> flask!!.sheet.draught(build.body, life, 0.0).lines }
+            .flatMap { (_, flask) -> flask!!.sheet.draught(build.body, life, 0.0).lines } + carry.lines(kit.charges)
         hero = if (lines.isEmpty()) build.body else build.body(lines)
         mana = mana.coerceIn(0.0, manaCap())
         shield = shield.coerceIn(0.0, hero.maxShield)
@@ -559,6 +574,8 @@ class ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, pet, fateRun,
             ).also {
+                // Принесённое из основной карты (зона Ваал): баффы, проклятия и заряды - на листе героя сразу
+                if (!it.carry.bare) it.rebody()
                 it.tallyWins()
                 it.atlas = context.atlas.filterValues { value -> value != 0.0 }
                 // Сделки алтарей - до павших: стаи подкрепления встают, и уже убитые из них остаются лежать

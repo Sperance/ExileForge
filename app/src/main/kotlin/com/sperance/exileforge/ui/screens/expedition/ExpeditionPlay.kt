@@ -220,7 +220,7 @@ private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
 } else {
     copy(
         fight = null, heroLife = 0, heroShield = 0, heroMaxShield = 0, heroMana = 0, heroMaxMana = 0, heroReserved = 0,
-        flasks = emptyList(), hazards = emptyList(),
+        flasks = emptyList(), hazards = emptyList(), heroAilments = emptyList(), heroEffects = emptyList(), heroCharges = emptyList(), lifeFlow = null,
     )
 }
 
@@ -282,8 +282,9 @@ private fun RunHud.screenOnly(): RunHud = if (phase != RunPhase.FIGHT) {
                 }
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
-                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
-                AfflictionChips(hud.afflictions)
+                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved, flow = hud.lifeFlow)
+                // Несомое из боя и от ловушек (макет «Эффекты героя на карте», вариант C) - плитками полки, как в бою
+                RoadEffects(hud)
                 // Очаг Скверны (4.0.0): точка, монстры вокруг неё, сундук
                 BlightLine(hud.blight)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks, onDrink)

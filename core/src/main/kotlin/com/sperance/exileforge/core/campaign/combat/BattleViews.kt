@@ -21,6 +21,19 @@ fun Battle.pools(): HeroPools = HeroPools(
     kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana) } ?: DraughtRate() },
 )
 
+/**
+ * Что герой уносит из боя на карту ([HeroCarry]): недуги, временные баффы и проклятия (не глотки и не носимое весь бой), щит и
+ * заряды - остатком своего времени.
+ */
+fun Battle.carry(): HeroCarry = HeroCarry(
+    heroFighter.ailments.filter { it.until > time }.map { CarriedAilment(it.ailment, it.until - time, it.magnitude, it.duration, it.chaos) },
+    heroFighter.effects.filter { it.kind != EffectKind.FLASK && it.until > time && it.until - time < Battle.FOREVER / 2 && !riftSourced(it.source) }.map {
+        CarriedEffect(it.kind, it.source, it.lines, it.until - time, it.duration, icons[it.source].orEmpty(), it.counter, it.conditional)
+    },
+    heroFighter.shield,
+    heroCharges.carried(time),
+)
+
 /** The active slots as their buttons draw them; null where a slot is empty. */
 fun Battle.skillViews(): List<SkillView?> = kit.actives.mapIndexed { slot, kitSkill ->
     kitSkill?.let {

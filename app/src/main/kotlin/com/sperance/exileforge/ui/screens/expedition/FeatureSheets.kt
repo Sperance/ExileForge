@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,7 +28,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.campaign.run.AfflictionView
 import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
@@ -53,6 +53,7 @@ import com.sperance.exileforge.ui.screens.auction.OfferSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
+import com.sperance.exileforge.ui.screens.expedition.arena.stateGlyph
 import com.sperance.exileforge.ui.screens.expedition.scene.CrackText
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.theme.*
@@ -227,8 +228,14 @@ private const val ENTRANCE_LIFT = 2.3f
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         val tint = damageTint(hazard.type, onHero = true)
-        if (hazard.tick) {
-            Text(ui("trap.float", hazard.total), color = tint, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, style = MaterialTheme.typography.labelMedium)
+        val ticked = hazard.of
+        if (ticked != null) {
+            // Тик недуга (макет «Эффекты героя на карте», вариант C): «−34» и знак недуга его цветом
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(ui("trap.float", hazard.total), color = tint, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, style = MaterialTheme.typography.labelMedium)
+                val glyph = ailmentTint(ticked)
+                Canvas(Modifier.size(12.dp)) { stateGlyph(ticked, glyph) }
+            }
         } else {
             Text(hazardLine(hazard), color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall, textAlign = TextAlign.Center)
         }
@@ -240,23 +247,6 @@ private fun hazardLine(hazard: HazardView): String {
     val type = ui(hazard.type.key())
     val ailment = hazard.ailment ?: return ui("trap.hit", hazard.total, type)
     return ui("trap.hit_ailment", hazard.total, type, ui(ailment.ailment.key()), number(ailment.lifeShare), number(ailment.seconds))
-}
-
-/** Эффекты ловушек на герое (3.95.3) под полосой жизни: «Горение −32/с · 3 с». */
-@Composable internal fun AfflictionChips(afflictions: List<AfflictionView>, modifier: Modifier = Modifier) {
-    if (afflictions.isEmpty()) return
-    Row(modifier, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        afflictions.forEach { affliction ->
-            val tint = ailmentTint(affliction.ailment)
-            Text(
-                ui("trap.affliction", ui(affliction.ailment.key()), affliction.perSecond, ceil(affliction.left).toInt()),
-                color = tint,
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.background(Ink.copy(alpha = .8f), RoundedCornerShape(8.dp)).border(1.dp, tint.copy(alpha = .5f), RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 2.dp),
-            )
-        }
-    }
 }
 
 private const val HAZARD_TICK_MS = 1100

@@ -106,7 +106,8 @@ data class ConditionalLine(val condition: Condition, val line: StatLine)
 
 /**
  * What the hero carries from fight to fight (2.78.0): life, mana, each flask's charges and how long
- * its draught still runs, in seconds.
+ * its draught still runs, in seconds. [carry] - недуги, баффы и проклятия, щит и заряды между боем и картой ([HeroCarry]);
+ * бой отдаёт его отдельно ([Battle.carry]): испытания и Разлом его не несут.
  */
 data class HeroPools(
     val life: Double,
@@ -114,6 +115,7 @@ data class HeroPools(
     val charges: List<Double> = emptyList(),
     val flaskLeft: List<Double> = emptyList(),
     val rates: List<DraughtRate> = emptyList(),
+    val carry: HeroCarry = HeroCarry.NONE,
 )
 
 /**

@@ -2,11 +2,12 @@ package com.sperance.exileforge.core.campaign.combat
 
 /**
  * Итог здоровья героя за секунду боя (4.9.3): регенерация [regen] против дегена [degen] (его доля максимума - [degenShare]
- * в процентах) и отложенного урона [delayed], всё - здоровья в секунду. Недуги сюда не входят: их урон пишется своими строками.
+ * в процентах) и отложенного урона [delayed], всё - здоровья в секунду. В бою недуги сюда не входят: их урон пишется своими
+ * строками. На карте ([ailments]) - входят: урон недугов в секунду, что несёт герой.
  */
-data class LifeFlow(val regen: Double = 0.0, val degen: Double = 0.0, val delayed: Double = 0.0, val degenShare: Double = 0.0) {
+data class LifeFlow(val regen: Double = 0.0, val degen: Double = 0.0, val delayed: Double = 0.0, val degenShare: Double = 0.0, val ailments: Double = 0.0) {
     /** Сколько здоровья в секунду прибывает (плюс) или уходит (минус). */
-    val net: Double get() = regen - degen - delayed
+    val net: Double get() = regen - degen - delayed - ailments
 
     /** Течёт хоть что-то: заметная регенерация, деген или отложенный урон - секунда стоит строки журнала. */
     val flowing: Boolean get() = regen >= 1 || degen > 0 || delayed > 0

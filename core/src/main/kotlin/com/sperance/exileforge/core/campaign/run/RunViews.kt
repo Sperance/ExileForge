@@ -390,8 +390,15 @@ data class RunHud(
     /** Последний удар ловушки (3.90.0), пока он висит на полосе карты. */
     /** Числа урона карты над героем (3.95.3): удары ловушек и тики их эффектов. */
     val hazards: List<HazardView> = emptyList(),
-    /** Эффекты ловушек на герое (3.95.3): горение, яд - для чипа под полосой жизни. */
-    val afflictions: List<AfflictionView> = emptyList(),
+    /**
+     * Что герой несёт вне боя ([com.sperance.exileforge.core.campaign.combat.HeroCarry]): недуги (из боя и от ловушек), баффы и
+     * проклятия, заряды - плитками полки под полосами героя, как в бою (макет «Эффекты героя на карте», вариант C).
+     */
+    val heroAilments: List<AilmentView> = emptyList(),
+    val heroEffects: List<EffectView> = emptyList(),
+    val heroCharges: List<ChargeView> = emptyList(),
+    /** Итог здоровья на карте в секунду: регенерация и отдых против дегена и недугов; null - в бою и не на карте. */
+    val lifeFlow: LifeFlow? = null,
     /** Герой у входа в комнату (4.9.0): трещина и её простой или запертая дверь; null - он не у входа. */
     val entrance: EntranceCue? = null,
     /** Экран-вызов перед стражем (3.92.0); null - его нет. */

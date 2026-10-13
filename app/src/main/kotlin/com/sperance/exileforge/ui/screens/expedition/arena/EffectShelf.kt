@@ -265,11 +265,12 @@ internal fun flowTint(net: Double): Color = when {
     else -> Muted
 }
 
-/** Из чего сложился итог: «реген +8 · деген 2% · отложенный урон −14»; без источников - пусто. */
+/** Из чего сложился итог: «реген +8 · деген 2% · отложенный урон −14 · недуги −34» (недуги - на карте); без источников - пусто. */
 internal fun flowParts(flow: LifeFlow): String = listOfNotNull(
     ui("fight.flow.regen", flow.regen.roundToInt()).takeIf { flow.regen >= 1 },
     ui("fight.flow.degen", fineNumber(flow.degenShare)).takeIf { flow.degen > 0 },
     ui("fight.flow.delayed", flow.delayed.roundToInt()).takeIf { flow.delayed > 0 },
+    ui("fight.flow.ailments", flow.ailments.roundToInt()).takeIf { flow.ailments >= .5 },
 ).joinToString(" · ")
 
 /** Плитка итога здоровья (4.9.3): «−12/с» красным, «+8/с» зелёным, сверху рельса героя; [stacked] - «/с» строкой ниже. */

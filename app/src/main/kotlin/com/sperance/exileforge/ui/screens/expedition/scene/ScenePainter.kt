@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.MapGenerator
 import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AgentMode
+import com.sperance.exileforge.core.campaign.run.AilmentView
 import com.sperance.exileforge.core.campaign.run.BlightSpot
 import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
@@ -22,6 +23,7 @@ import com.sperance.exileforge.core.campaign.run.sealed
 import com.sperance.exileforge.core.campaign.run.waiting
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.ui.icons.drawToken
+import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
@@ -69,6 +71,9 @@ internal class ScenePainter {
 
     /** Нить кольца простоя у трещины (4.9.0): пересоздаётся лишь со сменой масштаба, не на кадр. */
     private var ringStroke: Stroke? = null
+
+    /** Кисть ореола недугов: одна, пока мера сцены та же. */
+    private var haloStroke: Stroke? = null
 
     fun draw(scope: DrawScope, run: ExpeditionRun, time: Float, classCode: String?) {
         this.time = time
@@ -270,6 +275,8 @@ internal class ScenePainter {
                 val bob = if (world.moving) abs(sin(time * 9f)) * unit * .14f else 0f
                 // След скорости (4.10.0): босс карты пал - за идущим героем тянутся штрихи; декор, без `LocalMotion` его нет
                 if (run.swift && world.moving && motion) swiftTrail(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY) + unit * HERO_TOKEN * TOKEN_MID + bob, world.facingX, world.facingY)
+                // Ореол ранящих недугов (макет «Эффекты героя на карте», вариант C): яд, горение, кровотечение - кольцо их цвета; декор
+                ailmentHalo(Offset(isoX(world.heroX, world.heroY), -isoY(world.heroX, world.heroY) - unit * HERO_TOKEN * TOKEN_MID - bob), run.hud.value.heroAilments)
                 token(isoX(world.heroX, world.heroY), isoY(world.heroX, world.heroY), unit * HERO_TOKEN, Palettes.hero, bob) {
                     Portraits.hero(this, classCode, time)
                 }
@@ -302,6 +309,24 @@ internal class ScenePainter {
             val sx = x - dy / unit * side + dx * .5f
             val sy = y + dx / unit * side + dy * .5f
             pen.line(sx, sy, sx + dx * (1.1f + .4f * flicker), sy + dy * (1.1f + .4f * flicker), unit * .05f)
+        }
+    }
+
+    /**
+     * Ореол ранящих недугов [ailments] вокруг жетона героя с серединой [centre] в мере холста: по кольцу на недуг, его цветом
+     * ([ailmentTint]), мягкое свечение снаружи. Декор: дышит на часах декора, без `LocalMotion` стоит в покое.
+     */
+    private fun ailmentHalo(centre: Offset, ailments: List<AilmentView>) {
+        var ring = 0
+        for (view in ailments) {
+            if (!view.ailment.hurts) continue
+            val tint = ailmentTint(view.ailment)
+            val breath = if (motion) .5f + .5f * sin(decor * HALO_BREATH + ring) else .5f
+            val radius = unit * HERO_TOKEN * (HALO_SPAN + ring * HALO_STEP)
+            pen.scope.drawCircle(tint.copy(alpha = .14f + .1f * breath), radius * 1.18f, centre)
+            val stroke = haloStroke?.takeIf { it.width == unit * HALO_WIDTH } ?: Stroke(unit * HALO_WIDTH).also { haloStroke = it }
+            pen.scope.drawCircle(tint.copy(alpha = .45f + .3f * breath), radius, centre, style = stroke)
+            ring++
         }
     }
 
@@ -387,6 +412,12 @@ private const val HERO_TOKEN = .85f
 /** Кольцо простоя у трещины (4.9.0): радиус в радиусах жетона и толщина нити в полуширинах клетки. */
 private const val RING_SPAN = 1.35f
 private const val RING_WIDTH = .2f
+
+/** Ореол недугов героя: первое кольцо в долях жетона, шаг следующих, толщина в мере сцены и темп дыхания. */
+private const val HALO_SPAN = .78f
+private const val HALO_STEP = .14f
+private const val HALO_WIDTH = .09f
+private const val HALO_BREATH = 3.2f
 
 /** Цвета трещины (4.9.0, макет «Ломание трещины»): дорожка кольца, дуга простоя и подпись над героем. */
 private val CrackTrack = Color(0xFF1F2C35)

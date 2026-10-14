@@ -98,8 +98,8 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
     if (board.contracts.isEmpty()) item { MutedText(ui("quest.contracts_none")) }
     items(board.contracts, key = { it.id }) { quest ->
         QuestRow(quest) {
-            if (!quest.done) ForgeTextButton({ vm.abandon(quest.id) }, enabled = !busy) { Text(ui("quest.abandon"), color = LifeRed) }
             ClaimButton(vm, busy, quest)
+            if (!quest.done) ForgeTextButton({ vm.abandon(quest.id) }, enabled = !busy) { Text(ui("quest.abandon"), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
         }
     }
     item {
@@ -113,8 +113,8 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
     // Невзятый листок не истекает (4.2.0): срок у него появится со взятия; ненужный сбрасывается, место заполнится само
     items(board.offers, key = { it.id }) { offer ->
         QuestRow(offer) {
-            ForgeTextButton({ vm.reset(offer.id) }, enabled = !busy) { Text(ui("quest.reset"), color = Muted) }
             ForgeButton({ vm.take(offer.id) }, enabled = !busy && !full) { Text(ui("quest.take")) }
+            ForgeTextButton({ vm.reset(offer.id) }, enabled = !busy) { Text(ui("quest.reset"), color = Muted, style = MaterialTheme.typography.labelSmall) }
         }
     }
     if (full && board.offers.isNotEmpty()) item { MutedText(ui("quest.take_full", board.activeLimit)) }

@@ -2915,6 +2915,8 @@
   "story.laws.title": "Законы тронов",
   "quest.reward_xp": "{0} опыта",
   "quest.reward_orb": "{0} ×{1}",
+  "quest.reward_xp_short": "{0} оп.",
+  "quest.reward_orb_short": "×{0}",
   "quest.reward_guild_xp": "+{0} опыта гильдии",
   "quest.rarity.COMMON": "Обычное",
   "quest.rarity.MAGIC": "Волшебное",

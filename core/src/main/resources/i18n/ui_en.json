@@ -2915,6 +2915,8 @@
   "story.laws.title": "Throne laws",
   "quest.reward_xp": "{0} experience",
   "quest.reward_orb": "{0} ×{1}",
+  "quest.reward_xp_short": "{0} XP",
+  "quest.reward_orb_short": "×{0}",
   "quest.reward_guild_xp": "+{0} guild experience",
   "quest.rarity.COMMON": "Normal",
   "quest.rarity.MAGIC": "Magic",

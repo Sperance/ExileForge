@@ -4,23 +4,38 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Place
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.ItemVisualKind
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
@@ -34,6 +49,8 @@ import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.components.rememberInspect
+import com.sperance.exileforge.ui.icons.BagIcon
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.theme.*
 
@@ -90,39 +107,100 @@ internal fun RewardChips(reward: QuestReward) {
 }
 
 /**
- * One quest as a row of the ledger. [actions] is what the screen offers for it — claim, replace, take, abandon;
- * a claimed quest is drawn dimmed, with a stamp instead.
+ * Задание двухстрочной карточкой (0.14.0, ASANA-N02, макет «Задания и контракты», вариант B, ~58dp): строка 1 - точка редкости,
+ * имя и «7 / 10»; строка 2 - награды мелкими фишками (сфера открывает карточку), срок, условия значками ModBlue и место;
+ * прогресс - кромкой 3dp по низу; [actions] - справа на обе строки (сдать, взять и сбросить, отказаться). Сданное - серым с ✓.
+ * Описание шага сюжета - по касанию.
  */
-@Composable internal fun QuestRow(quest: Quest, actions: @Composable RowScope.() -> Unit = {}) {
-    val color = rarityColor(quest.rarity.name)
+@Composable internal fun QuestRow(quest: Quest, actions: @Composable ColumnScope.() -> Unit = {}) {
+    val color = if (quest.claimed) Muted else rarityColor(quest.rarity.name)
     val shape = RoundedCornerShape(8.dp)
-    // Сданное задание (4.7.0) - серым целиком: оно уже ничего не ждёт
-    Row(Modifier.fillMaxWidth().greyed(quest.claimed).clip(shape).depthPanel(shape).raritySpine(if (quest.claimed) Muted else color)) {
-        Spacer(Modifier.width(4.dp))
-        Column(Modifier.weight(1f).padding(10.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(questTitle(quest), color = if (quest.claimed) Muted else GoldBright, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                RarityPill(quest.rarity)
+    val story = quest.kind == QuestKind.STORY
+    var told by remember(quest.id) { mutableStateOf(false) }
+    val share = if (quest.target <= 0) 1f else (quest.progress.toFloat() / quest.target).coerceIn(0f, 1f)
+    Row(
+        Modifier.fillMaxWidth().greyed(quest.claimed).clip(shape).depthPanel(shape).raritySpine(color, 3.dp)
+            .border(1.dp, if (quest.done && !quest.claimed) Vital.copy(alpha = .55f) else Bronze, shape)
+            .drawBehind {
+                // Прогресс - кромкой по низу карточки
+                val edge = QUEST_EDGE.toPx()
+                drawRect(Bronze, Offset(0f, size.height - edge), Size(size.width, edge))
+                drawRect(color, Offset(0f, size.height - edge), Size(size.width * share, edge))
             }
-            if (quest.kind == QuestKind.STORY) MutedText(loc("quest.story.${quest.goal}.description"))
-            placeTitle(quest.place)?.takeIf { quest.kind != QuestKind.STORY }?.let { MutedText(ui("quest.place", it)) }
-            quest.conditions.forEach { Text("◆ " + ui("quest.condition.${it.name}"), color = ModBlue, style = MaterialTheme.typography.bodySmall) }
-            QuestBar(quest.progress, quest.target, color)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val left = if (quest.expiresAt > 0 && !quest.claimed) " · " + ui("quest.expires", untilText(quest.expiresAt)) else ""
-                MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())) + left, Modifier.weight(1f))
-                if (quest.claimed) Text(ui("quest.claimed"), color = Vital, style = MaterialTheme.typography.labelMedium)
+            .then(if (story) Modifier.clickable { told = !told } else Modifier)
+            .padding(start = 12.dp, end = 10.dp, top = 8.dp, bottom = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.size(8.dp).clip(CircleShape).background(color))
+                Text(
+                    questTitle(quest),
+                    color = if (quest.claimed) Muted else GoldBright,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
-            RewardChips(quest.reward)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth(),
-                content = actions,
-            )
+            QuestFacts(quest)
+            if (story && told) MutedText(loc("quest.story.${quest.goal}.description"), style = MaterialTheme.typography.bodySmall)
+        }
+        Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (quest.claimed) Icon(Icons.Outlined.Check, ui("quest.claimed"), tint = Vital, modifier = Modifier.size(18.dp)) else actions()
         }
     }
 }
+
+/** Строка 2 карточки задания: награды, срок, условия и место - мелко, с переносом. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun QuestFacts(quest: Quest) {
+    val inspect = rememberInspect()
+    val reward = quest.reward
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+        Fact(ForgeGlyphs.Coins, compactNumber(reward.gold.toDouble()), GoldBright)
+        if (reward.experience > 0) Text(ui("quest.reward_xp_short", compactNumber(reward.experience)), color = Vital, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        reward.orbs.forEach { (code, amount) ->
+            Row(Modifier.clickable { inspect(Inspect.Stack(code)) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                BagIcon(code, Modifier.size(14.dp), kind = ItemVisualKind.CURRENCY)
+                Text(ui("quest.reward_orb_short", amount), color = Parchment, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            }
+        }
+        if (reward.guildExperience > 0) Text(ui("quest.reward_guild_xp", number(reward.guildExperience.toDouble())), color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        if (quest.expiresAt > 0 && !quest.claimed) {
+            val soon = quest.expiresAt - System.currentTimeMillis() < SOON_MS
+            Fact(Icons.Outlined.Schedule, untilText(quest.expiresAt), if (soon) Caution else Muted)
+        }
+        quest.conditions.forEach { condition -> Badge(ui("quest.condition.${condition.name}"), ModBlue) }
+        placeTitle(quest.place)?.takeIf { quest.kind != QuestKind.STORY }?.let { Fact(Icons.Outlined.Place, it, Muted) }
+    }
+}
+
+@Composable private fun Fact(icon: ImageVector, text: String, tint: Color) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(12.dp))
+        Text(text, color = tint, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+    }
+}
+
+@Composable private fun Badge(text: String, tint: Color) {
+    Text(
+        text,
+        color = tint,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        modifier = Modifier.border(1.dp, tint.copy(alpha = .35f), RoundedCornerShape(5.dp)).padding(horizontal = 4.dp),
+    )
+}
+
+/** Кромка прогресса по низу карточки задания. */
+private val QUEST_EDGE = 3.dp
+
+/** Срок задания короче часа - тревожным цветом. */
+private const val SOON_MS = 3_600_000L
 
 /** Серая «отработанная» строка (4.7.0): без цвета и вполсилы. */
 private fun Modifier.greyed(on: Boolean): Modifier = if (!on) {

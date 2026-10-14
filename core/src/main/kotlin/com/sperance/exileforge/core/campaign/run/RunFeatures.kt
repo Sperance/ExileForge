@@ -85,9 +85,13 @@ private val ExpeditionRun.traps get() = index.campaign.features?.traps
 /** Шаг героя сделал что-то с объектом карты: лист к выбору или сработавший объект. */
 internal fun ExpeditionRun.feature(action: FeatureAction) {
     when (action) {
-        is FeatureAction.Offer -> offer = action.spot
+        // Автопроход обходит алтари (0.14.0, ALTAR-01): сделку выбирает только игрок
+        is FeatureAction.Offer -> if (autopilot == null || action.spot !is AltarSpot) offer = action.spot
+
         is FeatureAction.Trigger -> action.spot.resolve(this, action.choice)
+
         is FeatureAction.Spring -> spring(action.spot.feature as MapFeature.Trap)
+
         is FeatureAction.Rouse -> action.spot.rouse(this, action.group)
     }
 }
@@ -130,10 +134,9 @@ internal fun ExpeditionRun.gather(channel: Channel, dt: Double) {
     channel.spot.resolve(this, MapFeature.TRIGGER)
 }
 
-/** Лист объекта закрыт без выбора; алтарь так не закрывается - сделку надо заключить. */
+/** Лист объекта закрыт без выбора; мимо алтаря (0.14.0, ALTAR-01) тоже можно пройти - он ждёт нетронутым. */
 internal fun ExpeditionRun.leaveOffer(): Boolean {
-    val spot = offer ?: return false
-    if (spot is AltarSpot && !spot.spent) return true
+    offer ?: return false
     offer = null
     channel = null
     return true
@@ -148,7 +151,7 @@ internal fun ExpeditionRun.refuseFeature(n: Int) {
 
 /**
  * Строки объектов карты (сделки алтарей, редкость за ловушки, скорость за комнаты, сила за узлы) пересчитаны по журналу
- * объектов мира: герой несёт их до конца карты. Строки боя монстров ложатся при
+ * объектов мира: герой несёт их до конца карты, стаи подкрепления встают у своих алтарей. Строки боя монстров ложатся при
  * каждом бое ([pactFoe]).
  */
 internal fun ExpeditionRun.rebargain() {
@@ -156,12 +159,29 @@ internal fun ExpeditionRun.rebargain() {
     bargain(run.features.bonuses(world.features.flatMap { spot -> spot.taken.map { FeatureUse(spot.id, it) } }))
 }
 
-/** Сделки [pacts] на этом забеге: лист героя и окно карты. */
+/** Сделки [pacts] на этом забеге: лист героя, окно карты и стаи подкрепления. */
 internal fun ExpeditionRun.bargain(pacts: Map<String, Double>) {
     if (pacts == this.pacts) return
     this.pacts = pacts
     mapEffects = MapEffects.sum(baseEffects, pacts)
     regear(build.gear)
+    if (!vaal) reinforce()
+}
+
+/**
+ * Стаи подкрепления (возвращены в 0.14.0, ALTAR-01): по жетону `Run.REINFORCEMENT + k` на каждую стаю сделок каждого заключённого
+ * алтаря, рядом с ним, по порядку алтарей. Встающий жетон встаёт один раз.
+ */
+private fun ExpeditionRun.reinforce() {
+    val buffs = MapEffects.buffs(baseEffects)
+    var token = 0
+    world.features.filterIsInstance<AltarSpot>().filter { it.spent }.sortedBy { it.id }.forEach { altar ->
+        val own = run.features.bonuses(altar.taken.map { FeatureUse(altar.id, it) })[MapStat.REINFORCEMENTS.code]?.toInt() ?: 0
+        repeat(own) {
+            world.summon(Run.REINFORCEMENT + token, spawns.summoned(Run.REINFORCEMENT + token, buffs), altar.cell)
+            token++
+        }
+    }
 }
 
 /** Стражи сокровищ (строка карты «Стражи сокровищ»): редкая стая у каждой комнаты и узла, жетон `Run.GUARD + номер объекта`. */
@@ -170,14 +190,20 @@ internal fun ExpeditionRun.guard() {
     world.features.filter { it.id in run.guards }.forEach { spot -> world.summon(Run.GUARD + spot.id, spawns.summoned(Run.GUARD + spot.id, buffs), spot.cell) }
 }
 
-/** Член боя со сделками алтаря: строки карты сделок - поверх его статов, босс - ещё и «сила босса». Без сделок - как стоит. */
+/**
+ * Член боя со сделками алтаря: строки карты сделок - поверх его статов, босс - ещё и «сила босса», волшебный и редкий - лишние
+ * строки на своём потоке (`MAP_MONSTER_MODS`, 0.14.0). Без сделок - как стоит.
+ */
 internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
     // Ловушки ранят монстров (3.90.0, сила уникалки): на карте с ловушками стая встаёт в бой с меньшим здоровьем
     val strike = run.context.feature(FeatureStat.TRAP_STRIKE).takeIf { it > 0 && world.features.any { spot -> spot is TrapSpot } }
     if (pacts.isEmpty() && strike == null) return member.monster
     val buffs = MapEffects.buffs(pacts) + (if (member.agent === world.boss) MapEffects.bossBuffs(pacts) else emptyList()) +
         listOfNotNull(strike?.let { MonsterEffect(CoreStat.HEALTH.code, Op.MORE, -it.coerceAtMost(traps?.maxStrike ?: 0.0)) })
-    return spawns.buffed(member.monster, buffs)
+    val extra = (pacts[MapStat.MONSTER_MODS.code] ?: 0.0).toInt()
+    if (extra <= 0) return spawns.buffed(member.monster, buffs)
+    val dice = run.streams.of("pactMods", member.agent.id * Run.PACK_SLOTS + member.index)
+    return spawns.buffed(MonsterRoller(index).empowered(member.monster, run.pool, run.levelOf(zone), extra, dice), buffs)
 }
 
 /**

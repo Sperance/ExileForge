@@ -73,7 +73,7 @@ import kotlin.math.roundToInt
  */
 @Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, gathering: () -> Float? = { view.gathering }, onCommand: (RunCommand) -> Unit) {
     when (val feature = view.feature) {
-        is MapFeature.Altar -> DockPanel { AltarSheet(game, feature) { onCommand(RunCommand.Choose(it)) } }
+        is MapFeature.Altar -> DockPanel { AltarSheet(game, feature, onLeave = { onCommand(RunCommand.StepOff) }) { onCommand(RunCommand.Choose(it)) } }
         is MapFeature.Merchant -> DockPanel { MerchantSheet(game, feature, view.taken, onCommand) }
         is MapFeature.Node -> DockPanel { NodeSheet(game, feature, view.gathering != null, gathering, view.guarded, onCommand) }
         is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
@@ -81,10 +81,11 @@ import kotlin.math.roundToInt
 }
 
 /**
- * Алтарь сделки: пары «дар + проклятие» строками модификаторов, как их пишет словарь сервера, и выбор одной. Отказаться
- * нельзя, поэтому это не шторка, которую смахивают, а панель над картой, как у кристалла.
+ * Алтарь (0.14.0, ALTAR-01, в духе Eldritch): готовые варианты - у каждого цель (герой, монстры карты, босс карты) и связанная пара
+ * «минус цели - награда» строками модификаторов, как их пишет словарь сервера; выбрать один или пройти мимо ([onLeave]). Панель над
+ * картой, как у кристалла.
  */
-@Composable private fun AltarSheet(game: GameUi, altar: MapFeature.Altar, onPick: (Int) -> Unit) {
+@Composable private fun AltarSheet(game: GameUi, altar: MapFeature.Altar, onLeave: () -> Unit, onPick: (Int) -> Unit) {
     val index = game.index ?: return
     fun text(line: Line) = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: line.code.value
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
@@ -101,9 +102,8 @@ import kotlin.math.roundToInt
                     Modifier.fillMaxWidth().border(1.dp, Bronze.copy(alpha = .6f), RoundedCornerShape(10.dp)).padding(12.dp),
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(ui("feature.altar.boon"), color = Vital, style = MaterialTheme.typography.labelMedium)
-                    Text(text(pact.boon), color = Parchment, style = MaterialTheme.typography.bodyMedium)
-                    // Проклятие сделки (3.92.0) открывает свой лист: что меняет и что действует до конца карты
+                    Text(ui("feature.altar.target.${pact.target.name}"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
+                    // Минус сделки (3.92.0) открывает свой лист: что меняет и что действует до конца карты
                     val lore = LocalLore.current
                     Column(
                         Modifier.fillMaxWidth().then(
@@ -113,9 +113,12 @@ import kotlin.math.roundToInt
                         Text(ui("feature.altar.curse") + " ›", color = LifeRed, style = MaterialTheme.typography.labelMedium)
                         Text(text(pact.curse), color = Parchment, style = MaterialTheme.typography.bodyMedium)
                     }
+                    Text(ui("feature.altar.boon"), color = Vital, style = MaterialTheme.typography.labelMedium)
+                    Text(text(pact.boon), color = Parchment, style = MaterialTheme.typography.bodyMedium)
                     ForgeButton(onClick = { onPick(i) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.altar.pick")) }
                 }
             }
+            ForgeButton(onClick = onLeave, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.altar.leave")) }
         }
     }
 }

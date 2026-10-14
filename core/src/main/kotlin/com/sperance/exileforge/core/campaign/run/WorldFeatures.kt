@@ -122,7 +122,10 @@ sealed class OfferSpot(feature: MapFeature, cell: Cell) : FeatureSpot(feature, c
     }
 }
 
-/** Алтарь сделки (3.90.0): выбранная пара ложится на героя и бои сразу; отказаться нельзя - лист не закрывается без выбора. */
+/**
+ * Алтарь (3.90.0; 0.14.0, ALTAR-01): выбранный вариант ложится на героя и бои сразу; мимо можно пройти - алтарь ждёт нетронутым,
+ * автопроход его обходит.
+ */
 class AltarSpot(feature: MapFeature.Altar, cell: Cell) : OfferSpot(feature, cell) {
     val altar: MapFeature.Altar get() = feature as MapFeature.Altar
 }

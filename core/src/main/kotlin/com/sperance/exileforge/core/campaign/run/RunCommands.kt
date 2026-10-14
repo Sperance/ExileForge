@@ -195,7 +195,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         RunCommand.StepOff -> when {
             fountain != null -> fountain = null
 
-            // Лист объекта карты (3.90.0): алтарь без сделки не отпускает
+            // Лист объекта карты (3.90.0): закрыт без выбора, мимо алтаря тоже можно пройти (0.14.0, ALTAR-01)
             leaveOffer() -> Unit
 
             phase == RunPhase.CRYSTAL -> closeCrystal()

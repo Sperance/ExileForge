@@ -35,8 +35,8 @@ data class PassiveSource(val skill: String, val level: Int, val reserve: Double,
 
 /**
  * Что бой читает вместе с характеристикой (4.6.4, как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] - общее
- * сопротивление стихиям к каждой стихии, долю максимума к плоской регенерации и к здоровью за убийство, проклятие в ответ
- * второй строкой (4.6.5). [creates] - строка сводки появляется и без своей характеристики (общее сопротивление даёт строки
+ * сопротивление стихиям к каждой стихии, долю максимума к плоской регенерации (4.12.x - итог боя `Recovery.lifeRegen`) и к здоровью
+ * за убийство. [creates] - строка сводки появляется и без своей характеристики (общее сопротивление даёт строки
  * стихий, доля максимума - строку регенерации); иначе прибавка ложится лишь на уже бывшую строку. Часть строки сводки из
  * контента (`StatDef.partOf`) читается здесь же - так строка и её разбор сходятся с боем.
  */
@@ -44,8 +44,13 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
     FIRE(CoreStat.RESIST_FIRE.code, CoreStat.RESIST_ALL.code, true),
     COLD(CoreStat.RESIST_COLD.code, CoreStat.RESIST_ALL.code, true),
     LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.RESIST_ALL.code, true),
+
+    /**
+     * Регенерация здоровья (4.12.x): строка сводки - здоровья в секунду, как его читает бой ([Recovery.lifeRegen]: плоская и доля
+     * максимума на общий множитель и долю восстановления); отрицательная - потеря в секунду ([Recovery.lifeLoss]).
+     */
     LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, true) {
-        override fun adds(body: Combatant): Double = RegenPool.LIFE.fromShare(body)
+        override fun adds(body: Combatant): Double = Recovery.lifeRegen(body, body.rules.regen) - Recovery.lifeLoss(body) - body[CoreStat.HEALTH_REGEN.code]
     },
     SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, true) {
         override fun adds(body: Combatant): Double = RegenPool.SHIELD.fromShare(body)
@@ -61,7 +66,6 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
     LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true) {
         override fun adds(body: Combatant): Double = body.maxLife * body.lifeOnKillShare
     },
-    CURSE_WHEN_HIT(CoreStat.CURSE_ON_HIT.code, CoreStat.CURSE_WHEN_HIT.code, true),
     ;
 
     /** Что бой прибавляет к цифре [stat] тела [body]: по умолчанию - саму характеристику [from]. */

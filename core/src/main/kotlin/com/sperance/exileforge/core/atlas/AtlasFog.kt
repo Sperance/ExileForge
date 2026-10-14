@@ -70,7 +70,6 @@ object AtlasEffects {
     /** The atlas's gifts to the hero on a map, each to the sheet's stat it adds to. */
     val hero = mapOf(
         AtlasStat.MANA_REGEN.code to CoreStat.MANA_REGEN.code,
-        AtlasStat.SKILL_LEVEL.code to CoreStat.SKILL_LEVEL.code,
         AtlasStat.FLASK_CHARGES.code to CoreStat.FLASK_CHARGES_GAINED.code,
         AtlasStat.FLASK_DURATION.code to CoreStat.FLASK_DURATION.code,
         AtlasStat.SUPPRESSION.code to CoreStat.RECOVERY_SUPPRESSION.code,
@@ -78,7 +77,7 @@ object AtlasEffects {
     )
 
     /** Stats counted in units rather than percent. */
-    val flat = setOf(FOUNTAINS, AtlasStat.CHESTS.code, AtlasStat.VAAL_MIN_MODS.code, MONSTER_MODS, AtlasStat.CRYSTALS.code, AtlasStat.SKILL_LEVEL.code, FLASK_RARE, AtlasStat.ABYSS_DEPTH.code)
+    val flat = setOf(FOUNTAINS, AtlasStat.CHESTS.code, AtlasStat.VAAL_MIN_MODS.code, MONSTER_MODS, AtlasStat.CRYSTALS.code, FLASK_RARE, AtlasStat.ABYSS_DEPTH.code)
 
     /** [effects] of the entered map with the atlas's pack and rare monsters added, as one more map item's worth. */
     fun map(effects: Map<String, Double>, atlas: Map<String, Double>): Map<String, Double> {

@@ -19,7 +19,16 @@ import kotlin.math.max
  * every attack has. Mana came back in 2.78.0 (server 0.69.0) with the class skills and the monsters'
  * spells: it is what a skill is paid with, and it comes back by the rule's share a second.
  */
-data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: CombatRules) : StatReader {
+data class Combatant(
+    val stats: Map<String, Double>,
+    val level: Int,
+    val rules: CombatRules,
+    /**
+     * Темп действий под замедлением аур врагов (4.12.x, CAST-02), доля 0..1: замах и перезарядка всех умений идут медленнее одним
+     * множителем вместе с холодом (`Battle.Fighter.slow`); 1 - не замедлен.
+     */
+    val pace: Double = 1.0,
+) : StatReader {
     private fun stat(name: String) = stats[name] ?: 0.0
     private fun percent(name: String, cap: Double = 100.0) = stat(name).coerceIn(0.0, cap) / 100
 
@@ -47,8 +56,8 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
         return (1 + (stat(CoreStat.COOLDOWN_RECOVERY.code) + cast) / 100).coerceIn(rules.floors.recovery, rules.caps.recoveryMax)
     }
 
-    /** What is left of a skill's price in mana. */
-    val skillCost = max(0.0, 1 - stat(CoreStat.SKILL_COST.code) / 100)
+    /** What is left of a skill's price in mana: the reduction under the rules' cap (4.12.x, STAT-ATK-08). */
+    val skillCost = rules.caps.skillPrice(stat(CoreStat.SKILL_COST.code))
     val skillHealing = max(0.0, 1 + stat(CoreStat.SKILL_HEALING.code) / 100)
 
     /** Immune to [ailment] (a flask's suffix, server 0.69.0); an immunity to freezing keeps the cold's chill off too. */
@@ -90,8 +99,11 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** How much more damage over time, a critical strike, a bleeding and a shock do to this fighter — a curse's work. */
     val dotTaken = max(0.0, 1 + stat(CoreStat.DOT_TAKEN.code) / 100)
 
-    /** Extra critical multiplier this fighter takes; below zero (server 1.32.0) a critical strike hurts it no more than a hit. */
-    val critTaken = stat(CoreStat.CRITICAL_TAKEN.code) / 100
+    /**
+     * Доля дополнительного урона критов, что доходит до бойца (4.12.x, STAT-ATK-05): сверх обычного удара крит бьёт на долю
+     * `1 + v/100` своего прибавка; снижение - не больше потолка правил `caps.criticalTaken`.
+     */
+    val critTaken = max(0.0, 1 + stat(CoreStat.CRITICAL_TAKEN.code).coerceAtLeast(-rules.caps.criticalTaken) / 100)
 
     /** Насколько сильнее недуг [ailment] на этом бойце (`STOCK_<слово>_TAKEN`; 4.11.0 - по слову недуга, ниже нуля - слабее). */
     fun ailmentTaken(ailment: Ailment): Double = max(0.0, 1 + stat("STOCK_${ailment.word}_TAKEN") / 100)
@@ -130,7 +142,11 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
      * The share of a physical blow of [raw] that armour and then the flat reduction take, together under the physical
      * ceiling (3.71.0): the ceiling is the whole of physical mitigation, not each half's, so the two never stack past it.
      */
-    fun physicalMitigation(raw: Double, factor: Double): Double = (1 - (1 - (armour / (armour + factor * raw)).coerceAtMost(armourCap)) * (1 - physicalReduction)).coerceAtMost(armourCap)
+    fun physicalMitigation(raw: Double, factor: Double): Double {
+        // Пустой удар (4.12.x, COMBAT-02): броне нечего снимать - не 0/0
+        val byArmour = if (raw > 0) (armour / (armour + factor * raw)).coerceAtMost(armourCap) else 0.0
+        return (1 - (1 - byArmour) * (1 - physicalReduction)).coerceAtMost(armourCap)
+    }
 
     /**
      * Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements.
@@ -227,9 +243,10 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
             sheet[CoreStat.RESIST_CHAOS.code] = (stats[CoreStat.RESIST_CHAOS.code] ?: 0.0) - v
         }
         auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet[CoreStat.DAMAGE_TAKEN.code] = (stats[CoreStat.DAMAGE_TAKEN.code] ?: 0.0) + v }
-        auras["AURA_SLOW"]?.let { v -> sheet[CoreStat.ATTACK_SPEED.code] = attackSpeed * max(rules.floors.slow, 1 - v / 100) }
         auras["AURA_RECOVERY"]?.let { v -> sheet[CoreStat.RECOVERY_RATE.code] = (stats[CoreStat.RECOVERY_RATE.code] ?: 0.0) - v }
-        return Combatant(sheet, level, rules)
+        // Замедление (4.12.x, CAST-02) - темп всех действий, а не только скорость атаки: его читает `Battle.Fighter.slow`
+        val slowed = auras["AURA_SLOW"]?.let { v -> max(rules.floors.slow, 1 - v / 100) } ?: 1.0
+        return Combatant(sheet, level, rules, pace * slowed)
     }
     val lifeRegen = max(0.0, stat(CoreStat.HEALTH_REGEN.code))
     val shieldRegen = max(0.0, stat(CoreStat.ENERGY_REGEN.code))
@@ -314,8 +331,11 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     // ==================== Server 1.34.0 (3.35.0): accuracy, buffs, defences of PoE ====================
 
-    /** Its accuracy against an evasive target: the rule's base by level and dexterity, and the sheet's own. */
-    fun accuracy(rule: AccuracyRule): Double = max(0.0, rule.base + rule.perLevel * level + rule.perDexterity * stat(CoreStat.AGILITY.code) + stat(CoreStat.ACCURACY.code))
+    /**
+     * Its accuracy against an evasive target. С 4.12.x (STAT-ATK-03) база правила по уровню и ловкость - в листе героя и характеристиках
+     * монстра, и «увеличение» меткости растит их; боец без меткости в листе - по правилу, как прежде.
+     */
+    fun accuracy(rule: AccuracyRule): Double = max(0.0, stats[CoreStat.ACCURACY.code] ?: (rule.at(level) + rule.perDexterity * stat(CoreStat.AGILITY.code)))
 
     /** The shares of its physical damage it deals again as other types, by type. */
     val extraAs: Map<DamageType, Double> = DamageType.entries.filter { it != DamageType.PHYSICAL }
@@ -327,10 +347,10 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     /** Its critical chance and multiplier for a blow: a spell's are its own (server 1.56.0), an attack's the rest. */
     fun critChance(spell: Boolean): Double = if (spell) spellCritChance else critChance
     fun critMultiplier(spell: Boolean): Double = if (spell) spellCritMultiplier else critMultiplier
-    val doubleDamage = percent(CoreStat.DOUBLE_DAMAGE.code)
+    val doubleDamage = percent(CoreStat.DOUBLE_DAMAGE.code, rules.caps.doubleDamage)
 
-    /** A foe it hits left under this share of its life dies. */
-    val culling = percent(CoreStat.CULLING.code)
+    /** A foe it hits left under this share of its life dies - a boss too, under the rules' cap (4.12.x, STAT-ATK-08). */
+    val culling = percent(CoreStat.CULLING.code, rules.caps.culling)
 
     /** Increased damage for each charge of [kind] it holds. */
     fun perCharge(kind: ChargeKind): Double = stat("STOCK_DAMAGE_PER_${kind.name}")
@@ -370,7 +390,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val shieldOnKill = max(0.0, stat(CoreStat.SHIELD_ON_KILL.code))
 
     /** The share of damage taken that comes back as life over the rule's seconds. */
-    val recoup = percent(CoreStat.LIFE_RECOUP.code)
+    val recoup = percent(CoreStat.LIFE_RECOUP.code, rules.caps.recoup)
 
     /** The share of its armour that meets elemental hits too. */
     val armourElemental = percent(CoreStat.ARMOUR_ELEMENTAL.code)

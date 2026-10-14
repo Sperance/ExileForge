@@ -18,12 +18,14 @@ import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.rules.sheet.FlaskSheet
 import com.sperance.exileforge.rules.sheet.HeroKit
 import com.sperance.exileforge.rules.sheet.SheetExplainer
 import com.sperance.exileforge.rules.sheet.Shift
+import com.sperance.exileforge.rules.sheet.StatFold
 
 /**
  * Фляга на поясе (4.2.0): её лист из правил ([FlaskSheet] - ёмкость, расход, длительность, лечение, эффект с качеством, аффиксами
@@ -166,24 +168,11 @@ fun interface BodyModel {
 /** Lines over a finished stat table (2.78.0), for a fighter with no sheet behind it. */
 object StatLines {
     /**
-     * `(value + ΣADD) × (1 + ΣINCREASED/100) × Π(1 + MORE/100)`, `SET` last — a monster modifier's formula;
-     * a [percent] stat takes an increase as an addition and MORE on its whole multiplier, as on the sheet.
+     * Строки поверх готовых характеристик - свод правил [StatFold] (4.12.x, R1): как у монстра и листа героя, процент-стат [percent]
+     * складывает увеличение прибавкой и берёт «больше» на весь множитель, общие характеристики раскладываются, увеличение урона
+     * вообще ложится на каждый удар монстра ([GuardianFloor.STRIKES]). Своей формулы клиент не держит.
      */
-    fun fold(stats: Map<String, Double>, lines: List<StatLine>, percent: Set<String>): Map<String, Double> {
-        if (lines.isEmpty()) return stats
-        val result = stats.toMutableMap()
-        lines.groupBy { it.stat }.forEach { (stat, own) ->
-            val added = (stats[stat] ?: 0.0) + own.filter { it.op == Op.ADD }.sumOf { it.value }
-            val increase = own.filter { it.op == Op.INCREASED }.sumOf { it.value }
-            val more = own.filter { it.op == Op.MORE }
-            result[stat] = own.lastOrNull { it.op == Op.SET }?.value ?: if (stat in percent || stat == DAMAGE) {
-                more.fold(added + increase) { value, line -> (100 + value) * (1 + line.value / 100) - 100 }
-            } else {
-                more.fold(added * (1 + increase / 100)) { value, line -> value * (1 + line.value / 100) }
-            }
-        }
-        return result
-    }
+    fun fold(stats: Map<String, Double>, lines: List<StatLine>, percent: Set<String>): Map<String, Double> = StatFold.over(stats, lines, { it in percent || it == DAMAGE }, GuardianFloor.STRIKES)
 
     /** Every damage a fighter deals, in percent more — a percent stat whether or not the tables say so. */
     val DAMAGE: String = CoreStat.DAMAGE.code
@@ -292,9 +281,12 @@ data class Draught(
     val duration: Double,
     val invulnerable: Double,
     val conditional: List<ConditionalLine> = emptyList(),
+    /** Доли вылеченного здоровья, что глоток отдаёт мане и энергощиту (4.12.x, STAT-MISC-09): от фактически вылеченного, сразу и за время. */
+    val toMana: Double = 0.0,
+    val toShield: Double = 0.0,
 ) {
     /** Gives nothing but life (3.79.0): such a draught stops at full life and is not drunk on a full bar. */
-    val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && lines.isEmpty() && conditional.isEmpty() && invulnerable <= 0
+    val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && toMana <= 0 && toShield <= 0 && lines.isEmpty() && conditional.isEmpty() && invulnerable <= 0
 }
 
 /**
@@ -313,13 +305,16 @@ fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught 
     val (steady, conditioned) = lines.partition { it.condition == null }
     return Draught(
         life = lifeAmount * instant,
-        mana = manaAmount * instant + lifeAmount * own("FLASK_LIFE_TO_MANA") / 100 + manaCap * own("FLASK_SIP_MANA") / 100,
-        shield = lifeAmount * own("FLASK_LIFE_TO_SHIELD") / 100 + hero.maxShield * own("FLASK_SIP_SHIELD") / 100,
+        // Глоток маны - тоже восстановление фляги (4.12.x, STAT-MISC-02): «фляги не лечат» гасит и его
+        mana = manaAmount * instant + if (FlaskSheet.banned(CoreStat.FLASK_RECOVERY.code, hero::get)) 0.0 else manaCap * own("FLASK_SIP_MANA") / 100,
+        shield = hero.maxShield * own("FLASK_SIP_SHIELD") / 100,
         lifeRate = lifeAmount * (1 - instant) / duration,
         manaRate = manaAmount * (1 - instant) / duration,
         lines = steady.map { StatLine(it.stat, it.op, it.value * scale) },
         duration = duration,
         invulnerable = own("FLASK_INVULNERABLE"),
         conditional = conditioned.map { ConditionalLine(requireNotNull(it.condition), StatLine(it.stat, it.op, it.value * scale)) },
+        toMana = own("FLASK_LIFE_TO_MANA") / 100,
+        toShield = own("FLASK_LIFE_TO_SHIELD") / 100,
     )
 }

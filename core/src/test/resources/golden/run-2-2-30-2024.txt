@@ -1,11 +1,11 @@
 hero=WITCH zone=C1_BRINE_CAVES level=30 seed=2024 skill=FIREBALL
-phase=DEAD life=0.0000 seconds=29.4000 kills=5 bosses=0 deaths=1 events=16
+phase=DEAD life=0.0000 seconds=29.3000 kills=5 bosses=0 deaths=1 events=16
 0 ENGAGE 0 0 0 0 false false
 1 KILL 0 0 0 0 false false
 2 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=404 dealt={FIRE=404, PHYSICAL=3}
 3 ENGAGE 1 0 0 0 false false
 4 KILL 1 0 0 0 false false
-5 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=371 dealt={FIRE=371, PHYSICAL=5}
+5 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=371 dealt={FIRE=371, PHYSICAL=4}
 6 ENGAGE 2 0 0 0 false false
 7 KILL 2 0 0 0 false false
 8 FIGHT 0 0 0 0 false false fight=2/1/0/0/0/0 taken=0 healed=0 max=323 dealt={FIRE=323, PHYSICAL=5}
@@ -14,5 +14,5 @@ phase=DEAD life=0.0000 seconds=29.4000 kills=5 bosses=0 deaths=1 events=16
 11 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=0 healed=0 max=323 dealt={FIRE=323, PHYSICAL=2}
 12 ENGAGE 4 0 0 0 false false
 13 KILL 4 1 0 0 false false
-14 FIGHT 0 0 0 0 false false fight=22/0/0/0/0/0 taken=445 healed=0 max=477 dealt={FIRE=477, PHYSICAL=56}
+14 FIGHT 0 0 0 0 false false fight=22/0/0/0/0/0 taken=447 healed=0 max=324 dealt={FIRE=324, PHYSICAL=57}
 15 FALL 0 0 0 0 false false

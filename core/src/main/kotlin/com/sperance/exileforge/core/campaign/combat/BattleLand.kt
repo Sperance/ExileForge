@@ -23,7 +23,7 @@ import kotlin.math.min
  * around it; leech, stun and ailments follow, and the passives hear of it. [raw] - the blow by type before the target's defences
  * (Предначертание, 4.6.3).
  */
-internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant, raw: Map<DamageType, Double>) {
+internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Map<DamageType, Double>, foe: Int, blow: Blow, body: Combatant, raw: Map<DamageType, Double>, ailing: Map<DamageType, Double> = struck) {
     // Предначертание (4.6.0, «Каменная кожа»): удар по герою - что пропустят рычаги, до барьера и щита
     val taken = fateCapped(me, target, struck)
     val dealt = taken.values.sum()
@@ -85,7 +85,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         stun(target, rules.stun.duration)
         stunned = true
     }
-    val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments, blow.spell) else emptyList()
+    val inflicted = if (target.alive) inflict(me, target, taken, blow.ailments, blow.spell, ailing) else emptyList()
     val trace = pendingHit?.copy(
         landing = Landing(
             soakedBarrier, absorbed, manaPaid, bound - toLifeNow - manaPaid,
@@ -114,8 +114,8 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         flaskCharge("FLASK_CHARGE_WHEN_HIT")
         trigger(SkillEvent.HIT_TAKEN, me)
         powers.taken(PowerMoment(me, taken, blow.spell), kind == HitKind.CRIT)
-        // «Horror» (an essence) and the curse-when-hit essence (server 1.57.0): struck, the hero may lay their own curse on the one who struck.
-        val chance = target.body[CoreStat.CURSE_ON_HIT.code] + target.body[CoreStat.CURSE_WHEN_HIT.code]
+        // «Horror» (an essence): struck, the hero may lay their own curse on the one who struck.
+        val chance = target.body[CoreStat.CURSE_ON_HIT.code]
         if (chance > 0 && me.alive && random.nextDouble() * 100 < chance) curseOf()?.let { curse(it, listOf(me)) }
         watch()
     }
@@ -189,7 +189,9 @@ private fun Battle.buildUp(rule: BuildupRule, me: Fighter, body: Combatant, targ
             Buildup.FREEZE -> rule.freeze
             Buildup.ELECTROCUTE -> rule.electrocute
         }
-        val held = if (rarity == MonsterRarity.UNIQUE) effect.bossDuration else effect.duration
+        val base = if (rarity == MonsterRarity.UNIQUE) effect.bossDuration else effect.duration
+        // Лёд шкалы (4.12.x, STAT-DEF-01) - как заморозка удара: длительность заморозки и недугов нападающего, сокращение на себе цели
+        val held = if (kind == Buildup.FREEZE) base * body.ailmentDurationOnFoes(Ailment.FROZEN) * target.body.ailmentDuration(Ailment.FROZEN) else base
         when (kind) {
             Buildup.STUN -> {
                 stun(target, held)
@@ -211,7 +213,7 @@ private fun Battle.buildUp(rule: BuildupRule, me: Fighter, body: Combatant, targ
     return stunned
 }
 
-internal fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, extra: List<Pair<Ailment, Double>>, spell: Boolean): List<Ailment> {
+internal fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType, Double>, extra: List<Pair<Ailment, Double>>, spell: Boolean, ailing: Map<DamageType, Double> = taken): List<Ailment> {
     val rolled = ailmentRules.mapNotNull { (rule, what) ->
         val (ailment, type) = what
         // The freeze is a bar since 3.78.0: no chance to roll for it while the rule's bars are on.
@@ -220,10 +222,10 @@ internal fun Battle.inflict(me: Fighter, target: Fighter, taken: Map<DamageType,
         val base = if (me.side == Side.HERO) rule.heroChance ?: rule.chance else rule.chance
         val chance = (base + me.body.inflictChance(ailment)).coerceAtMost(100.0) / 100
         if (amount <= 0 || chance <= 0 || amount < target.body.maxLife * rule.threshold / 100 || checkDraw(me, RollKey.AILMENT) >= chance) return@mapNotNull null
-        afflict(me, target, ailment, taken, spell)
+        afflict(me, target, ailment, taken, spell, base = ailing)
     }
     val forced = extra.filter { it.first !in rolled && it.second > 0 }.mapNotNull { (ailment, chance) ->
-        if (checkDraw(me, RollKey.AILMENT) * 100 < chance) afflict(me, target, ailment, taken, spell) else null
+        if (checkDraw(me, RollKey.AILMENT) * 100 < chance) afflict(me, target, ailment, taken, spell, base = ailing) else null
     }
     return rolled + forced
 }
@@ -242,13 +244,14 @@ internal class AilmentWeight(private val step: Double, private val cap: Double) 
  * правила от удара. Сила недуга без урона растёт силой недуга нападающего ([Combatant.ailmentEffect]); приём недуга на цели и
  * потолок правила (4.11.0, изранение и иссушение) ложатся при чтении силы ([Fighter.held]).
  */
-internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, taken: Map<DamageType, Double>, spell: Boolean = false, weight: AilmentWeight? = null): Ailment? {
+internal fun Battle.afflict(me: Fighter, target: Fighter, ailment: Ailment, taken: Map<DamageType, Double>, spell: Boolean = false, weight: AilmentWeight? = null, base: Map<DamageType, Double> = taken): Ailment? {
     val (rule, type) = ruleOf[ailment] ?: return null
     if (target.body.immune(ailment)) return null
     val avoid = target.body.avoid(ailment)
     // Удача рода (4.6.2): избежание недугов героем - лучший из двух бросков
     if (avoid > 0 && checkDraw(target, RollKey.AVOID) < avoid) return null
-    val amount = type?.let { taken[it] }?.takeIf { it > 0 } ?: taken.values.sum()
+    // Сила урона во времени (4.12.x, COMBAT-03) - от урона удара без шока цели ([base]): шок ложится в тике один раз
+    val amount = type?.let { base[it] }?.takeIf { it > 0 } ?: base.values.sum()
     // 3.35.0: a faster damaging ailment deals the same in less time; the striker's shock and chill are stronger by their effect.
     val faster = if (ailment.hurts) 1 + me.body.fasterAilments else 1.0
     val duration = rule.duration * target.body.ailmentDuration(ailment) * me.body.ailmentDurationOnFoes(ailment) / faster
@@ -341,7 +344,7 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     val base = (rules.flasks.perKill[rarity] ?: 1.0) + if (rarity >= MonsterRarity.RARE) hero.body[AtlasStat.FLASK_RARE.code] else 0.0
     kit.flasks.forEachIndexed { i, flask ->
         flask ?: return@forEachIndexed
-        charges[i] = min(flask.sheet.maxCharges, charges[i] + flask.sheet.gained(base, hero.body::get))
+        chargeFlask(i, flask.sheet.gained(base, hero.body::get))
         // A lingering draught runs on for every kill made while it runs.
         val longer = flask.sheet.own("FLASK_DURATION_PER_KILL")
         if (longer > 0) draughtOf(i)?.let { running -> hero.effects[hero.effects.indexOf(running)] = running.copy(until = running.until + longer) }

@@ -186,8 +186,11 @@ class Battle(
         val invulnerable: Boolean get() = invulnerableUntil > time
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
 
-        /** Chill slows every action; the strongest chill counts. */
-        fun slow() = 1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100
+        /**
+         * Chill slows every action; the strongest chill counts. С 4.12.x (CAST-02) - единая скорость действий: холод и замедление аур
+         * врагов ([Combatant.pace]) одним множителем растягивают и замах, и перезарядку всех умений.
+         */
+        fun slow() = (1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100) / body.pace
 
         /** Shock makes every hit heavier; a curse can make it heavier still (2.78.0). */
         fun weakness() = 1 + held(Ailment.SHOCKED) / 100
@@ -247,6 +250,7 @@ class Battle(
         if (join.rage) {
             roundAt = time
             enrage = 0
+            calm()
         }
         if (join.fresh) places.clear()
         join.entering.forEach { index ->
@@ -296,11 +300,14 @@ class Battle(
     internal val fated: List<FateReaction> = FateReaction.of(kit)
     internal val fateFight = FateFight()
 
-    /** The auras of the foes still standing, summed per stat (server 0.66.0). */
+    /**
+     * The auras of the foes still standing (server 0.66.0): одинаковые ауры не складываются - действует сильнейшая, разные - вместе
+     * (4.12.x, STAT-MISC-07).
+     */
     internal fun auras(): Map<String, Double> {
-        val sum = mutableMapOf<String, Double>()
-        foeFighters.filter { it.alive }.forEach { foe -> foe.body.auras.forEach { (stat, value) -> sum.merge(stat, value, Double::plus) } }
-        return sum
+        val strongest = mutableMapOf<String, Double>()
+        foeFighters.filter { it.alive }.forEach { foe -> foe.body.auras.forEach { (stat, value) -> strongest.merge(stat, value, ::max) } }
+        return strongest
     }
 
     /**
@@ -416,7 +423,7 @@ class Battle(
             val draught = flask.sheet.draught(heroFighter.body, heroFighter.life, 0.0)
             heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.sheet.code, draught.lines, left, draught.duration, slot = i, conditional = draught.conditional)
             // Its recovery comes along with it (2.81.0): before, the draught's buff ran on but its healing stopped.
-            pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly) }
+            pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly, it.toMana, it.toShield) }
             flaskOpened[i] = true
         }
         // Принесённое с карты: недуги, баффы и проклятия, заряды - остатком своего времени ([HeroCarry])
@@ -440,7 +447,7 @@ class Battle(
             heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, chaos = a.chaos)
             if (a.ailment.hurts) heroFighter.tickedAt.putIfAbsent(a.ailment, 0.0)
         }
-        carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional) }
+        carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks) }
         carry.charges.forEach { heroCharges.carryIn(it) }
     }
 

@@ -17,7 +17,7 @@ import kotlin.math.min
  * Ярость (3.95.0 - стража; 4.3.0 - любого боя): каждые `every` секунд правила вида боя [Battle.rageRule] урон всех живых врагов -
  * стража, стаи, свиты, позже вставших - больше ещё на `damage` процентов; ступени складываются до `limit`. Вставший позже
  * догоняет ступень, что уже идёт; раунд боя (4.4.1) и смена подкреплений (4.8.0) начинают её заново, а ступень, что уже
- * лежит на враге, не снимают. Без бросков: бой остаётся тем же на тех же костях.
+ * лежит на враге, тоже снимают ([calm], 4.12.x). Без бросков: бой остаётся тем же на тех же костях.
  */
 internal fun Battle.rage() {
     val stacks = rageRule.stacks(rageClock)
@@ -34,6 +34,15 @@ internal fun Battle.rage() {
     }
 }
 
+/**
+ * Смена поля (4.12.x, COMBAT-06) начинает ярость заново и для выживших: их ступень снимается вместе с баффом, следующие ступени
+ * они копят с новыми врагами.
+ */
+internal fun Battle.calm() {
+    raged.clear()
+    foeFighters.forEach { foe -> if (foe.effects.removeAll { it.source == RAGE }) remake(foe) }
+}
+
 /** Источник баффа ярости: один на врага, каждая ступень заменяет прежнюю. */
 private const val RAGE = "GUARDIAN_RAGE"
 
@@ -42,10 +51,11 @@ internal fun Battle.monsterCast(me: Fighter) {
     val skills = foes[me.index].skills + learned[me.index].orEmpty()
     if (skills.isEmpty() || !heroFighter.alive) return
     for (skill in skills) {
-        val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown / 2 }
+        val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown / 2 * me.slow() }
         if (time < ready || me.mana + 1e-9 < skill.mana || !wanted(me, skill)) continue
         me.mana -= skill.mana
-        me.readyAt[skill.code] = time + skill.cooldown / me.body.recovery(skill.spell)
+        // Холод и замедление (4.12.x, CAST-02) растягивают и перезарядку
+        me.readyAt[skill.code] = time + skill.cooldown / me.body.recovery(skill.spell) * me.slow()
         monsterSkill(me, skill)
         return
     }

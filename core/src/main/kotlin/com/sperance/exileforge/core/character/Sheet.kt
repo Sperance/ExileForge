@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.character
 
 import com.sperance.exileforge.core.campaign.CombatSheet
+import com.sperance.exileforge.core.display.preciseStats
 import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
@@ -111,6 +112,13 @@ class HeroSheet(val stats: Map<String, Double>, val active: List<String>, val in
  * the class at the level, the tree, then the worn items in slot order, each checked against what came before.
  */
 object Sheets {
+    /**
+     * Наименьший сдвиг, что сравнение «было → стало» показывает (4.12.x, R6: лист точный, округляет показ): у характеристик с сотыми
+     * ([preciseStats]) - сотая, у прочих - половина десятой. Константы показа, не баланс.
+     */
+    private const val PRECISE_STEP = 0.005
+    private const val SHOWN_STEP = 0.05
+
     fun calculate(
         index: ContentIndex,
         level: Int,
@@ -184,7 +192,7 @@ object Sheets {
      */
     private fun changes(index: ContentIndex, before: Map<String, Double>, next: Map<String, Double>): List<StatDelta> = (before.keys + next.keys).filterNot { it in WornCount.STATS }.sortedBy { index.stats.order(it) }
         .map { StatDelta(it, before[it] ?: 0.0, next[it] ?: 0.0) }
-        .filter { abs(it.change) >= 0.05 }
+        .filter { abs(it.change) >= if (it.stat in preciseStats) PRECISE_STEP else SHOWN_STEP }
 
     /**
      * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на место [place] (3.90.3) или, без него,

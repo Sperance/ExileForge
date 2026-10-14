@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
-import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.HeroPools
 import com.sperance.exileforge.core.campaign.combat.HeroStance
@@ -29,6 +28,7 @@ import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.rules.content.TrialRun
 import com.sperance.exileforge.rules.roll.Dice
+import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.rules.roll.Streams
@@ -320,7 +320,7 @@ class TrialArena(
     private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
 
     /** The floor's growth: so many percent more life and damage on every monster of it. */
-    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + DamageType.entries.map { it.attack }).map { MonsterEffect(it, Op.MORE, power) }
+    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
 
     private fun play(dt: Double) {
         val fight = battle ?: return

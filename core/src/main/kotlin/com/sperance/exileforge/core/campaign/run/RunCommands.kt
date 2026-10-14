@@ -248,12 +248,14 @@ internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     val draught = flask.draught(hero, life, manaCap())
     charges = charges.toMutableList().also { it[slot] = if (flask.usesAll) 0.0 else (it[slot] - flask.perUse(hero::get)).coerceAtLeast(0.0) }
     flaskLeft = flaskLeft.toMutableList().also { it[slot] = draught.duration }
-    rates = rates.toMutableList().also { it[slot] = DraughtRate(draught.lifeRate, draught.manaRate) }
+    rates = rates.toMutableList().also { it[slot] = DraughtRate(draught.lifeRate, draught.manaRate, draught.toMana, draught.toShield) }
     rebody()
+    val before = life
     life = (life + draught.life).coerceAtMost(hero.maxLife)
     mana = (mana + draught.mana).coerceAtMost(manaCap())
-    // Щит глотка (4.9.x): доля лечения в энергощит и глоток щита - и на карте, как в бою
+    // Щит глотка (4.9.x): глоток щита - и на карте, как в бою; доли лечения в ману и щит (4.12.x) - от вылеченного
     shield = (shield + draught.shield).coerceAtMost(hero.maxShield)
+    healedInto(life - before, draught.toMana, draught.toShield)
 }
 
 /** Уход с карты (3.88.9): вне боя - всегда; бой идёт до конца, а карта - нет. С карты - концом `LEFT`, с итога - просто закрыть его. */

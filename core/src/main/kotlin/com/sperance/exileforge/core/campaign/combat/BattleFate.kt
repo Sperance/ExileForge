@@ -1107,14 +1107,15 @@ internal fun Battle.fateOverheal(excess: Double) {
 
 /**
  * Удар Предначертания по [target] (взрыв павшего, призрак, отражение): урон [damage] по типам режут защиты цели - физический
- * броня, прочие сопротивления - и урон, что она получает; затем барьер, щит (хаос мимо) и здоровье. Ответ - что дошло, по типам;
+ * броня, прочие сопротивления - урон, что она получает, и печати и законы Разлома; затем барьер, щит (хаос мимо) и здоровье. Ответ - что дошло, по типам;
  * пусто - ничего.
  */
 internal fun Battle.fateHit(target: Fighter, damage: Map<DamageType, Double>): Map<DamageType, Double> {
     if (!target.alive || target.invulnerable) return emptyMap()
     val dealt = damage.mapValues { (type, raw) ->
         val defence = if (type == DamageType.PHYSICAL) target.body.physicalMitigation(raw, rules.armour.factor) else target.body.resist(type)
-        raw * (1 - defence).coerceAtLeast(0.0) * target.body.damageTaken(type)
+        // Печати и законы Разлома (4.12.x, COMBAT-05) - как у удара и отражения
+        (raw * (1 - defence).coerceAtLeast(0.0) * target.body.damageTaken(type) * sealed(target) * lawTaken(target, type)).takeIf { it.isFinite() } ?: 0.0
     }.filterValues { it > 0 }
     val total = dealt.values.sum()
     if (total <= 0) return emptyMap()

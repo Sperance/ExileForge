@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
-import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.rules.content.AbyssRule
 import com.sperance.exileforge.rules.content.AbyssWave
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -15,6 +14,7 @@ import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssHoardView
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Dice
+import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -100,10 +100,10 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
     /** What the map's lines and the atlas do to every monster of the Abyss: more life, more damage, both. */
     fun buffs(effects: Map<String, Double>): List<MonsterEffect> = buildList {
         effects[MapStat.ABYSS_LIFE.code]?.let { add(MonsterEffect(CoreStat.HEALTH.code, Op.INCREASED, it)) }
-        effects[MapStat.ABYSS_DAMAGE.code]?.let { v -> DamageType.entries.forEach { add(MonsterEffect(it.attack, Op.INCREASED, v)) } }
-        effects[AtlasEffects.ABYSS_POWER]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + DamageType.entries.map { it.attack }).forEach { add(MonsterEffect(it, Op.MORE, v)) } }
+        effects[MapStat.ABYSS_DAMAGE.code]?.let { v -> GuardianFloor.STRIKES.forEach { add(MonsterEffect(it, Op.INCREASED, v)) } }
+        effects[AtlasEffects.ABYSS_POWER]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).forEach { add(MonsterEffect(it, Op.MORE, v)) } }
     }
 
     /** What the map's «stronger leaders» does to a leader alone. */
-    fun leaderBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStat.ABYSS_LEADER.code]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + DamageType.entries.map { it.attack }).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
+    fun leaderBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStat.ABYSS_LEADER.code]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
 }

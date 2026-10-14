@@ -87,6 +87,8 @@ data class TimedEffect(
     val slot: Int = -1,
     /** Условные строки (4.9.x): держатся, пока держится их условие, - как условные строки листа. */
     val conditional: List<ConditionalLine> = emptyList(),
+    /** Сколько стопок силы в его строках (4.12.x, STAT-PW2-15): следующая стопка растёт от них, и после переноса между боями. */
+    val stacks: Int = 1,
 ) {
     /** Строки на бойце при условиях героя [active]: постоянные и условные, чьё условие держится. */
     fun holding(active: Set<Condition>): List<StatLine> = if (conditional.isEmpty()) lines else lines + conditional.filter { !it.condition.target && it.condition in active }.map { it.line }
@@ -116,7 +118,13 @@ data class HeroPools(
  * How much life and mana a running draught still gives each second (2.81.0). It rides with the draught's
  * time left, so a flask drunk at the end of a fight keeps healing on the map and in the next fight.
  */
-data class DraughtRate(val life: Double = 0.0, val mana: Double = 0.0) {
+data class DraughtRate(
+    val life: Double = 0.0,
+    val mana: Double = 0.0,
+    /** Доли вылеченного глотком здоровья в ману и энергощит (4.12.x, STAT-MISC-09). */
+    val toMana: Double = 0.0,
+    val toShield: Double = 0.0,
+) {
     val flows: Boolean get() = life > 0 || mana > 0
 }
 

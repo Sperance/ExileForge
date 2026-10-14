@@ -16,7 +16,17 @@ internal fun Battle.powerShown(code: String, healed: Double) = self(code, healed
 internal fun Battle.flaskCharges(): Double = charges.sum()
 
 /** [amount] charges to every flask of the belt, up to each one's maximum. */
-internal fun Battle.chargeFlasks(amount: Double) = kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.sheet.maxCharges, charges[i] + amount) } }
+internal fun Battle.chargeFlasks(amount: Double) = kit.flasks.indices.forEach { chargeFlask(it, amount) }
+
+/**
+ * [amount] зарядов фляге места [slot], не выше её ёмкости - одна точка начисления зарядов в бою (4.12.x, STAT-MISC-03): фляги героя,
+ * что не получают зарядов ([com.sperance.exileforge.rules.sheet.FlaskSheet.starved]), не получают их ни одним путём.
+ */
+internal fun Battle.chargeFlask(slot: Int, amount: Double) {
+    val flask = kit.flasks.getOrNull(slot) ?: return
+    if (amount <= 0 || flask.sheet.starved(heroFighter.body::get)) return
+    charges[slot] = min(flask.sheet.maxCharges, charges[slot] + amount)
+}
 
 /** [amount] charges of [kind] for the hero (3.33.0): the body is made again with them. */
 internal fun Battle.gainCharges(kind: ChargeKind, amount: Int) {

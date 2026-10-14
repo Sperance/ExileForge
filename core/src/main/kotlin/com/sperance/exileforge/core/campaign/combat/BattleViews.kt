@@ -18,7 +18,7 @@ fun Battle.pools(): HeroPools = HeroPools(
     heroFighter.mana,
     charges.toList(),
     kit.flasks.indices.map { i -> draughtOf(i)?.let { (it.until - time).coerceAtLeast(0.0) } ?: 0.0 },
-    kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana) } ?: DraughtRate() },
+    kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana, it.toMana, it.toShield) } ?: DraughtRate() },
 )
 
 /**
@@ -28,7 +28,7 @@ fun Battle.pools(): HeroPools = HeroPools(
 fun Battle.carry(): HeroCarry = HeroCarry(
     heroFighter.ailments.filter { it.until > time }.map { CarriedAilment(it.ailment, it.until - time, it.magnitude, it.duration, it.chaos) },
     heroFighter.effects.filter { it.kind != EffectKind.FLASK && it.until > time && it.until - time < Battle.FOREVER / 2 && !riftSourced(it.source) }.map {
-        CarriedEffect(it.kind, it.source, it.lines, it.until - time, it.duration, icons[it.source].orEmpty(), it.counter, it.conditional)
+        CarriedEffect(it.kind, it.source, it.lines, it.until - time, it.duration, icons[it.source].orEmpty(), it.counter, it.conditional, it.stacks)
     },
     heroFighter.shield,
     heroCharges.carried(time),

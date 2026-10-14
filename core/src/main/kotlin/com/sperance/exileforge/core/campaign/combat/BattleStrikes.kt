@@ -69,8 +69,9 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         }
         return false
     }
-    // Server 1.32.0: a critical strike no heavier than a hit on one who takes none, and the non-critical ones more or less.
-    val multiplier = if (kind == HitKind.CRIT) max(1.0, body.critMultiplier(blow.spell) * keener + target.body.critTaken) else body.nonCritMore
+    // Server 1.32.0: a critical strike no heavier than a hit, and the non-critical ones more or less. Доп. урон крита (4.12.x,
+    // STAT-ATK-05) - доля цели `critTaken` от прибавки крита сверх удара
+    val multiplier = if (kind == HitKind.CRIT) max(1.0, 1 + (body.critMultiplier(blow.spell) * keener - 1) * target.body.critTaken) else body.nonCritMore
     // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
     val doubled = if (body.doubleDamage > 0 && draw() < body.doubleDamage) 2.0 else 1.0
     // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
@@ -99,6 +100,9 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Зеркало урона (4.6.1): запас сверх удара - теми же типами по их долям, до защит цели
     val stored = fateExtra(me)
     val partsSum = parts.values.sum()
+    // Урон для недугов (4.12.x, COMBAT-03): после защит и «получаемого урона» цели, но без шока, подавления и Укрепления - шок
+    // ложится в тике недуга, Укрепление и подавление режут только удар
+    val ailing = mutableMapOf<DamageType, Double>()
     val taken = parts.mapValues { (type, base) ->
         val spread = if (blow.spread) 1 + ((if (luckySpread) max(random.nextDouble(), random.nextDouble()) else random.nextDouble()) * 2 - 1) * rules.variance / 100 else 1.0
         val grown = base * spread * multiplier * against * body.damageMore * doubled * versus * fateMore
@@ -119,7 +123,9 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         val sealedOff = if (seals == 1.0) landed else landed * seals
         unruled += sealedOff
         val ruled = lawTaken(target, type)
-        val dealt = if (ruled == 1.0) sealedOff else sealedOff * ruled
+        // Удар конечен (4.12.x, COMBAT-02): NaN и бесконечность - не урон
+        val dealt = (if (ruled == 1.0) sealedOff else sealedOff * ruled).takeIf { it.isFinite() } ?: 0.0
+        ailing[type] = (defence * typeTaken * seals * ruled).takeIf { it.isFinite() } ?: 0.0
         spreadSum += base * spread
         takenSum += defence * typeTaken
         defended += defence
@@ -175,7 +181,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         add(FactorTrace(FactorKey.TOTAL, taken.values.sum()))
     }
     pendingHit = HitTrace(striker, struck, factors, types, null, origin)
-    land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw })
+    land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw }, ailing)
     if (me.alive && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
     return true
 }

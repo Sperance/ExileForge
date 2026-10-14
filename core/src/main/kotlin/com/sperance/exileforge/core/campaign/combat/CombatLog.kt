@@ -92,7 +92,16 @@ internal class Delayed(val rate: Double, val until: Double)
  * A recovery running over time: a draught's (its belt [slot]) or a recoup's (slot -1). A pure life draught
  * stops once life is full, as in PoE (3.79.0); [restored] and [wasted] go to the log's recovery shelf.
  */
-internal class Recovery(val life: Double, val mana: Double, var until: Double, val slot: Int, val stopsAtFull: Boolean = false) {
+internal class Recovery(
+    val life: Double,
+    val mana: Double,
+    var until: Double,
+    val slot: Int,
+    val stopsAtFull: Boolean = false,
+    /** Доли вылеченного здоровья в ману и энергощит (4.12.x, STAT-MISC-09). */
+    val toMana: Double = 0.0,
+    val toShield: Double = 0.0,
+) {
     var restored = 0.0
     var wasted = 0.0
 }

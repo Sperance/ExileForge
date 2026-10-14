@@ -89,7 +89,7 @@ private fun Battle.openingReady(kitSkill: KitSkill): Double {
     if (kitSkill.condition == SlotCondition.FIGHT_START) return time
     val body = heroFighter.body
     val share = rules.preparation(kitSkill.skill, kitSkill.level(body), body[PREPARATION])
-    return time + share * kitSkill.skill.cooldown / body.recovery(kitSkill.skill.spell)
+    return time + share * kitSkill.skill.cooldown / body.recovery(kitSkill.skill.spell) * heroFighter.slow()
 }
 
 private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Double) {
@@ -101,7 +101,8 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     if (!free) payFor(cost, skill.code)
     // Резонанс (4.6.1): применение слышат до самого удара - и до перезарядки, что он укорачивает (4.6.2)
     fateCast(skill.code)
-    hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery(skill.spell)
+    // Холод и замедление (4.12.x, CAST-02) растягивают перезарядку, как замах
+    hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery(skill.spell) * hero.slow()
     perform(kitSkill, level)
     // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }
@@ -156,10 +157,20 @@ private fun Battle.perform(kitSkill: KitSkill, level: Int, power: Double = 1.0) 
         if (buff.nextCrit) nextCrit = true
     }
     var healed = skill.heal?.let { heal(it, level, hero.body.skillHealing * power) } ?: 0.0
-    if (warcry && hero.body[CoreStat.WARCRY_HEAL.code] > 0) healed += restore(hero.body.maxLife * hero.body[CoreStat.WARCRY_HEAL.code] / 100 * power)
+    if (warcry && hero.body[CoreStat.WARCRY_HEAL.code] > 0) healed += warcryHeal(hero.body.maxLife * hero.body[CoreStat.WARCRY_HEAL.code] / 100 * power, skill.buff?.duration ?: 0.0)
     skill.shield?.let { hero.shield = min(hero.body.maxShield, hero.shield + hero.body.maxShield * it.at(level) / 100 * power) }
     skill.barrier?.let { ward(it, level, power, keep = power < 1) }
     self(skill.code, healed)
+}
+
+/**
+ * Лечение клича (4.12.x, STAT-ATK-06): [total] здоровья - восстановлением за время действия баффа клича [seconds], здоровья в секунду;
+ * клич с полного здоровья лечит урон, что придёт за это время. Без баффа - сразу. Ответ - что вернулось сразу.
+ */
+private fun Battle.warcryHeal(total: Double, seconds: Double): Double {
+    if (seconds <= 0) return restore(total)
+    recoveries += Recovery(total / seconds, 0.0, time + seconds, -1)
+    return 0.0
 }
 
 /** Дары применения (4.4.0, руны): барьер не ниже того, что уже стоит, и заряды своего вида. */
@@ -362,7 +373,14 @@ internal fun Battle.self(code: String, healed: Double = 0.0) = record(Side.HERO,
 /** A chance per flask of the belt to gain a charge, by a line of its own ([stat], in percent). */
 internal fun Battle.flaskCharge(stat: String) = kit.flasks.forEachIndexed { i, flask ->
     val chance = flask?.sheet?.own(stat) ?: return@forEachIndexed
-    if (chance > 0 && random.nextDouble() * 100 < chance) charges[i] = min(flask.sheet.maxCharges, charges[i] + 1)
+    if (chance > 0 && random.nextDouble() * 100 < chance) chargeFlask(i, 1.0)
+}
+
+/** Доли вылеченного глотком здоровья [healed] в ману и энергощит [me] (4.12.x, STAT-MISC-09): от фактически вылеченного. */
+internal fun Battle.healedInto(me: Fighter, healed: Double, toMana: Double, toShield: Double) {
+    if (healed <= 0) return
+    if (toMana > 0) manaBack(me, healed * toMana)
+    if (toShield > 0) me.shield = min(me.body.maxShield, me.shield + healed * toShield)
 }
 
 /**
@@ -396,7 +414,7 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     answer.shield?.let { hero.shield = min(hero.body.maxShield, hero.shield + hero.body.maxShield * it.at(level) / 100) }
     answer.barrier?.let { ward(it, level) }
     answer.buff?.let { buff(hero, code, it.stats.lines(level), it.duration, it.counter?.at(level) ?: 0.0) }
-    if (answer.flaskCharges > 0) kit.flasks.forEachIndexed { i, flask -> flask?.let { charges[i] = min(it.sheet.maxCharges, charges[i] + answer.flaskCharges) } }
+    if (answer.flaskCharges > 0) chargeFlasks(answer.flaskCharges.toDouble())
     // Возврат цены - не избыток восстановления (4.6.3): перелив Предначертания его не копит
     if (answer.refund && refund > 0) manaBack(hero, refund, spill = false)
     val hit = answer.hit
@@ -448,10 +466,11 @@ internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
     hero.ailments.removeAll { hero.body.immune(it.ailment) }
     manaBack(hero, draught.mana)
     hero.shield = min(hero.body.maxShield, hero.shield + draught.shield)
-    if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration, slot, draught.lifeOnly)
+    if (draught.lifeRate > 0 || draught.manaRate > 0) recoveries += Recovery(draught.lifeRate, draught.manaRate, time + draught.duration, slot, draught.lifeOnly, draught.toMana, draught.toShield)
     if (draught.invulnerable > 0) hero.invulnerableUntil = time + draught.invulnerable
     if (!free) trial.flasks++
     val healed = lifeBack(hero, draught.life, overheal = true)
+    healedInto(hero, healed, draught.toMana, draught.toShield)
     record(
         Side.HERO, Action.FLASK, HitKind.HIT, 0.0, null, healed, false, emptyList(), null, target()?.index ?: 0, flask.code, onSelf = true,
         trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, healed, flask.effect(hero.body::get), shot(hero), origin),

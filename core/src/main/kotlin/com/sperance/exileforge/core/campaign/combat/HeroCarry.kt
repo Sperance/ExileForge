@@ -58,6 +58,7 @@ data class CarriedEffect(
     val icon: String = "",
     val counter: Double = 0.0,
     val conditional: List<ConditionalLine> = emptyList(),
+    val stacks: Int = 1,
 )
 
 /** Заряды одного вида вне боя: [count] штук ещё [left] секунд. */

@@ -562,8 +562,7 @@ class ExpeditionRun(
             val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
-            val extraFountains = MapEffects.fountains(effects)
-            world.placeFountains(fountains.count.getOrElse(0) { 0 } + extraFountains, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } } + extraFountains, fountains.heal)
+            world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } }, fountains.heal)
             if (!vaal) {
                 // Открытые сундуки (3.89.0) стоят на своих местах: всего их столько, сколько осталось, и открытые
                 world.placeChests((campaign.chests[location.code.value]?.left ?: 0) + opened.size, opened)

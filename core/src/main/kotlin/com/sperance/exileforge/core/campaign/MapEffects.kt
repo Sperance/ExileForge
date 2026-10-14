@@ -9,13 +9,13 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatSource
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.roundToInt
 
 /** What a line of a map is, as the launch window marks it. */
 enum class MapLineKind {
@@ -27,7 +27,7 @@ enum class MapLineKind {
     companion object {
         /** Строки, что дают без спроса. */
         private val rewards: Set<String> = listOf(
-            MapStat.QUANTITY, MapStat.RARITY, MapStat.GOLD, MapStat.CHESTS, MapStat.FOUNTAINS, MapStat.HERO_HASTE,
+            MapStat.QUANTITY, MapStat.RARITY, MapStat.GOLD, MapStat.CHESTS, MapStat.HERO_HASTE,
             MapStat.HERO_ATTACK_SPEED, MapStat.HERO_LIFE, MapStat.HERO_LEECH, MapStat.CRYSTALS, MapStat.BOOKS, MapStat.ABYSS_CRACKS,
             MapStat.ABYSS_DEPTH, MapStat.ABYSS_HOARD, MapStat.ABYSS_UNIQUE, MapStat.ABYSS_ORBS, MapStat.ABYSS_RARE,
         ).mapTo(HashSet()) { it.code }
@@ -50,9 +50,9 @@ enum class MapLineKind {
  * hero's debuffs take their share of the sheet. What the map pays is rolled by the rules from the same context.
  */
 object MapEffects {
-    private val damage = DamageType.entries.map { it.attack }
+    /** Удары монстра (STAT-MAP-03): все виды его урона, и чары, - одна точка правил. */
+    private val damage = GuardianFloor.STRIKES
     private val resists = DamageType.entries.mapNotNull { it.resist }
-    private val lifeRegen = listOf(CoreStat.HEALTH_REGEN.code, CoreStat.LIFE_REGEN_PERCENT.code)
 
     /** The hero's critical chances a map lowers together: the attacks' and the spells' own (server 1.56.0). */
     private val criticalChances = listOf(CoreStat.CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_CHANCE.code)
@@ -90,18 +90,16 @@ object MapEffects {
     /** What a map does to its boss alone: so many percent more life and damage. */
     fun bossBuffs(effects: Map<String, Double>): List<MonsterEffect> = effects[MapStat.BOSS_POWER.code]?.takeIf { it > 0 }?.let { v -> (listOf(CoreStat.HEALTH.code) + damage).map { MonsterEffect(it, Op.MORE, v) } }.orEmpty()
 
-    /** Fountains a map adds beyond the rule's. */
-    fun fountains(effects: Map<String, Double>): Int = (effects[MapStat.FOUNTAINS.code] ?: 0.0).roundToInt().coerceAtLeast(0)
-
     fun hero(stats: Map<String, Double>, effects: Map<String, Double>): Map<String, Double> {
         if (effects.isEmpty()) return stats
         val sheet = stats.toMutableMap()
         effects[MapStat.HERO_RESIST.code]?.let { v -> resists.forEach { sheet[it] = (stats[it] ?: 0.0) - v } }
-        // "Less regeneration" takes both halves of life regen: the flat one and the share of maximum life (3.71.0)
-        effects[MapStat.HERO_REGEN.code]?.let { v -> lifeRegen.forEach { sheet[it] = (stats[it] ?: 0.0) * max(0.0, 1 - v / 100) } }
         fun add(stat: String, v: Double) {
             sheet[stat] = (sheet[stat] ?: 0.0) + v
         }
+        // «Меньше регенерации» карты (4.12.x, STAT-MAP-07) - общая строка листа `STOCK_LIFE_REGEN_LESS`: её читает `Recovery` - дно,
+        // вампиризм и регенерация одной долей
+        effects[MapStat.HERO_REGEN.code]?.let { add(CoreStat.LIFE_REGEN_LESS.code, it) }
         fun scale(stat: String, share: Double) {
             sheet[stat] = (sheet[stat] ?: 0.0) * max(0.0, 1 + share / 100)
         }

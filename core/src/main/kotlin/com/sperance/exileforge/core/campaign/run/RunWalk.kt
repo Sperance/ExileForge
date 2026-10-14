@@ -178,8 +178,10 @@ internal fun ExpeditionRun.recover(dt: Double) {
             val rate = rates.getOrNull(i) ?: return@forEachIndexed
             val slice = min(dt, left)
             if (slice <= 0 || !rate.flows) return@forEachIndexed
+            val before = life
             life = (life + rate.life * slice).coerceAtMost(hero.maxLife)
             mana = (mana + rate.mana * slice).coerceAtMost(manaCap())
+            healedInto(life - before, rate.toMana, rate.toShield)
         }
         flaskLeft = flaskLeft.map { (it - dt).coerceAtLeast(0.0) }
         if (flaskLeft.map { it > 0 } != before) rebody()
@@ -204,4 +206,11 @@ internal fun ExpeditionRun.openGate() {
     }
     gate = vaalZone
     phase = RunPhase.GATE
+}
+
+/** Доли вылеченного глотком здоровья [healed] в ману и энергощит вне боя (4.12.x, STAT-MISC-09) - как в бою, от вылеченного. */
+internal fun ExpeditionRun.healedInto(healed: Double, toMana: Double, toShield: Double) {
+    if (healed <= 0) return
+    mana = (mana + healed * toMana).coerceAtMost(manaCap())
+    shield = (shield + healed * toShield).coerceAtMost(hero.maxShield)
 }

@@ -40,6 +40,7 @@ import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.PowerLine
 import com.sperance.exileforge.rules.content.PowerScale
 import com.sperance.exileforge.rules.content.PowerTarget
+import com.sperance.exileforge.rules.content.RecoveryPool
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
@@ -309,17 +310,19 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                 val lines = effect.lines.filter { it.stat != MOVEMENT_SPEED }
                 if (lines.isEmpty()) return 0.0
                 val stacks = stacksOf(hero, power.stat, EffectKind.BUFF, effect.stacks)
-                battle.lay(hero, TimedEffect(EffectKind.BUFF, power.stat, lines.map { line(power, it, stacks) }, battle.time + duration, duration))
+                battle.lay(hero, TimedEffect(EffectKind.BUFF, power.stat, lines.map { line(power, it, stacks) }, battle.time + duration, duration, stacks = stacks))
             }
 
             PowerAct.HEX -> targets(effect.to, moment).forEach { foe ->
                 val stacks = stacksOf(foe, power.stat, EffectKind.CURSE, effect.stacks)
-                battle.lay(foe, TimedEffect(EffectKind.CURSE, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration))
+                battle.lay(foe, TimedEffect(EffectKind.CURSE, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration, stacks = stacks))
             }
 
+            // Лечение сил (4.12.x, COMBAT-01, STAT-PW1-10) читает `Recovery`: здоровье - долей здоровья (запрет, Изранение), без потолка
+            // вампиризма; мана - долей маны (Иссушение); щит не режется
             PowerAct.HEAL -> return when (effect.of) {
                 PowerBase.MANA -> {
-                    hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100)
+                    hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100 * hero.share(RecoveryPool.MANA))
                     0.0
                 }
 
@@ -328,11 +331,11 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                     0.0
                 }
 
-                PowerBase.DEALT -> battle.restore(moment.damage * amount / 100 * body.recoveryRate)
+                PowerBase.DEALT -> battle.restore(moment.damage * amount / 100 * body.recoveryRate * hero.share(RecoveryPool.LIFE))
 
-                PowerBase.TAKEN -> battle.restore(lastTaken * amount / 100 * body.recoveryRate)
+                PowerBase.TAKEN -> battle.restore(lastTaken * amount / 100 * body.recoveryRate * hero.share(RecoveryPool.LIFE))
 
-                else -> battle.restore(body.maxLife * amount / 100)
+                else -> battle.restore(body.maxLife * amount / 100 * hero.share(RecoveryPool.LIFE))
             }
 
             PowerAct.HURT -> when (effect.of) {
@@ -354,7 +357,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
                     dealt += damage.values.sum()
                     battle.strike(hero, foe, Blow(damage, Action.SKILL, spell = effect.of != PowerBase.WEAPON, skill = power.stat, spread = effect.of == PowerBase.WEAPON))
                 }
-                if (effect.leech > 0) return battle.restore(dealt * effect.leech / 100 * body.recoveryRate)
+                if (effect.leech > 0) return battle.restore(dealt * effect.leech / 100 * body.recoveryRate * hero.share(RecoveryPool.LIFE))
             }
 
             PowerAct.AILMENT -> {
@@ -469,11 +472,14 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         return mapOf((type ?: DamageType.PHYSICAL) to base * share)
     }
 
-    /** How many times a power's effect lies on [fighter] with this one: one more while it still lies, up to [most]. */
+    /**
+     * How many times a power's effect lies on [fighter] with this one: one more while it still lies, up to [most]. Лежащий эффект
+     * помнит свои стопки (4.12.x, STAT-PW2-15): бафф, перенесённый из прошлого боя захода, растёт дальше, а не начинает с одной.
+     */
     private fun stacksOf(fighter: Battle.Fighter, source: String, kind: EffectKind, most: Int): Int {
         val key = "$source#${fighter.index}"
-        val lying = fighter.effects.any { it.kind == kind && it.source == source && it.until > battle.time }
-        return (if (lying) min(max(1, most), (stackCount[key] ?: 0) + 1) else 1).also { stackCount[key] = it }
+        val lying = fighter.effects.filter { it.kind == kind && it.source == source && it.until > battle.time }.maxOfOrNull { it.stacks }
+        return (if (lying != null) min(max(1, most), max(stackCount[key] ?: 0, lying) + 1) else 1).also { stackCount[key] = it }
     }
 
     private companion object {

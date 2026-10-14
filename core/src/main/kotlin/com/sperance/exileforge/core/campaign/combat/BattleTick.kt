@@ -104,7 +104,9 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     // Доля восстановления (4.11.0, [Fighter.share]): «меньше регенерации», запрет листа и изранение; иссушение - мане.
     // Доля регенерации маны здоровью (4.11.x, [RecoveryShare.lifeFromMana]) - та же регенерация здоровья
     val manaCurb = me.curb(RecoveryPool.MANA)
-    val lifeRegen = me.body.regen(RegenPool.LIFE) * me.share(RecoveryPool.LIFE) + RecoveryShare.lifeFromMana(me.body, rules.mana, manaCurb, me.curb(RecoveryPool.LIFE))
+    // Регенерация здоровья (4.12.x) - одна формула правил [RecoveryShare.lifeRegen]: плоская и доля максимума на общий множитель и долю
+    val lifeCurb = me.curb(RecoveryPool.LIFE)
+    val lifeRegen = RecoveryShare.lifeRegen(me.body, rules.regen, lifeCurb) + RecoveryShare.lifeFromMana(me.body, rules.mana, manaCurb, lifeCurb)
     val regenerated = lifeBack(me, recovery(me, lifeRegen * me.body.recoveryRate * dt))
     if (me === heroFighter) lifeMeter.regen(regenerated)
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
@@ -115,6 +117,7 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
             val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)
             val gain = draught.life * slice
             val restored = lifeBack(me, gain, overheal = draught.slot >= 0)
+            healedInto(me, restored, draught.toMana, draught.toShield)
             draught.restored += restored
             draught.wasted += gain - restored
             manaBack(me, draught.mana * slice)
@@ -321,9 +324,11 @@ private fun Battle.degenerate(me: Fighter, dt: Double) {
         lifeMeter.delayed(before - me.life)
     }
     val share = me.body.lifeDegenShare
-    if (share > 0) {
+    // Отрицательная регенерация листа (4.12.x, STAT-ATK-04) - потеря здоровья в секунду, как деген ([RecoveryShare.lifeLoss])
+    val loss = RecoveryShare.lifeLoss(me.body)
+    if (share > 0 || loss > 0) {
         val before = me.life
-        me.life = max(0.0, me.life - max(me.body.maxLife * share, rules.minDot / TICK) * dt)
+        me.life = max(0.0, me.life - (max(me.body.maxLife * share, if (share > 0) rules.minDot / TICK else 0.0) + loss) * dt)
         if (hero) lifeMeter.degen(before - me.life)
     }
     if (!me.alive) fell(me)

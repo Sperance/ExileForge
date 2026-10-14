@@ -3,7 +3,6 @@ package com.sperance.exileforge.core.campaign
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
-import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.DraughtRate
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.FoeTotem
@@ -45,6 +44,7 @@ import com.sperance.exileforge.rules.rift.RiftFight
 import com.sperance.exileforge.rules.rift.RiftFoe
 import com.sperance.exileforge.rules.rift.RiftRun
 import com.sperance.exileforge.rules.roll.Dice
+import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.MonsterEffect
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -238,7 +238,7 @@ class RiftArena(
     }
 
     /** Рост узла: на столько процентов больше здоровья и урона у каждого врага. */
-    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + DamageType.entries.map { it.attack }).map { MonsterEffect(it, Op.MORE, power) }
+    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
 
     /** Механики стража акта и правила забега для боя. */
     private fun riftCombat(): RiftCombat {

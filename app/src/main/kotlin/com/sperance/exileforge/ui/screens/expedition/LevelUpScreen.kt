@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.run.LevelUp
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -54,7 +55,16 @@ import kotlin.math.sin
  * разделы, открытые по таблице `unlocks` ([opened], 4.2.0), и ближайший следующий ([next]). Тестировщику открыто всё -
  * ни тех, ни другого.
  */
-internal data class LevelGains(val stats: List<Pair<String, Double>>, val active: Int, val passive: Int, val points: Int, val opened: List<Feature>, val next: Feature?)
+internal data class LevelGains(
+    val stats: List<Pair<String, Double>>,
+    val active: Int,
+    val passive: Int,
+    val points: Int,
+    val opened: List<Feature>,
+    val next: Feature?,
+    /** Умения класса и общие, что стали доступны на этих уровнях (0.14.0, SKILL-02): их книги теперь падают и читаются. */
+    val skills: List<String> = emptyList(),
+)
 
 internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean): LevelGains {
     val stats = heroClass?.perLevel.orEmpty().filterValues { it != 0.0 }.map { (stat, value) -> stat to value * rise.levels }
@@ -67,6 +77,7 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
         points = index?.classes?.let { it.pointsTotal(rise.to) - it.pointsTotal(rise.from) } ?: 0,
         opened = if (tester) emptyList() else Feature.gained(rise.from, rise.to, index?.rules),
         next = if (tester) null else Feature.next(rise.to, index?.rules),
+        skills = heroClass?.let { c -> index?.skills?.ofClass(c.code)?.filter { it.unlock in (rise.from + 1)..rise.to }?.map { it.code } }.orEmpty(),
     )
 }
 
@@ -120,7 +131,7 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
                     ui("levelup.active_slot", gains.active).takeIf { gains.active > 0 },
                     ui("levelup.passive_slot", gains.passive).takeIf { gains.passive > 0 },
                     ui("levelup.points", gains.points).takeIf { gains.points > 0 },
-                )
+                ) + gains.skills.map { ui("levelup.skill", SkillText.title(it)) }
                 if (unlocks.isNotEmpty() && shown > gains.stats.size) {
                     Column(
                         Modifier.fillMaxWidth().padding(top = 8.dp).background(Gold.copy(alpha = .10f), RoundedCornerShape(8.dp))

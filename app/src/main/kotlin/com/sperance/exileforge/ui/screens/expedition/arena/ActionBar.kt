@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
@@ -57,36 +58,44 @@ import com.sperance.exileforge.ui.theme.*
     val index = game.index
     val skills = game.hero?.skills ?: HeroSkills()
     val stats = fight.heroBody?.stats ?: game.hero?.stats.orEmpty()
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+    // Четыре слота умений (0.14.0, SKILL-02) с тремя флягами - плитки меньше, чтобы ряд влез в узкий экран
+    val compact = fight.skills.size > COMPACT_FROM
+    val side = if (compact) COMPACT_SIDE else SKILL_SIDE
+    val flask = if (compact) COMPACT_FLASK else FLASK_SIDE
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
         fight.flasks.forEach { view ->
             if (view == null) {
-                Box(Modifier.size(44.dp).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
+                Box(Modifier.size(flask).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
             } else {
-                FlaskButton(view, live) { onCommand(RunCommand.Drink(view.slot)) }
+                FlaskButton(view, live, flask) { onCommand(RunCommand.Drink(view.slot)) }
             }
         }
         Spacer(Modifier.weight(1f))
         fight.skills.forEach { view ->
             if (view == null) {
-                EmptySkillSlot()
+                EmptySkillSlot(side)
             } else {
                 val skill = index?.skills?.byCode?.get(view.code)
                 val tier = remember(skill, skills, stats) { skill?.let { index?.skillGrowth?.tier(it, skills, stats) } ?: HeroSkills.FIRST_TIER }
-                SkillButton(view, skill, tier, live, { view.readyAt(fight, frame.now(fight)) }, onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
+                SkillButton(view, skill, tier, live, side, { view.readyAt(fight, frame.now(fight)) }, onInfo = { onInfo(view) }) { onCommand(RunCommand.Cast(view.slot)) }
             }
         }
     }
 }
 
-/** Сторона квадрата умения в бою (4.4.1). */
+/** Сторона квадрата умения в бою (4.4.1) и круга фляги; при четырёх слотах (SKILL-02) - меньше. */
 private val SKILL_SIDE = 52.dp
+private val FLASK_SIDE = 44.dp
+private val COMPACT_SIDE = 44.dp
+private val COMPACT_FLASK = 40.dp
+private const val COMPACT_FROM = 3
 
-/** Скругление плитки умения - как у [NeonSkillIcon]: четверть стороны. */
+/** Скругление плитки умения - как у [NeonSkillIcon]: четверть стороны (у малой плитки разница меньше точки). */
 private val SkillShape = RoundedCornerShape(SKILL_SIDE / 4)
 
 /** Пустой слот умения: пунктирный квадрат размера иконки. */
-@Composable private fun EmptySkillSlot() {
-    Canvas(Modifier.size(SKILL_SIDE)) {
+@Composable private fun EmptySkillSlot(side: Dp) {
+    Canvas(Modifier.size(side)) {
         val line = 1.dp.toPx()
         drawRoundRect(
             Bronze.copy(alpha = .6f),
@@ -100,15 +109,15 @@ private val SkillShape = RoundedCornerShape(SKILL_SIDE / 4)
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, live: Boolean, readyNow: () -> Float, onInfo: () -> Unit, onTap: () -> Unit) {
+private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, live: Boolean, side: Dp, readyNow: () -> Float, onInfo: () -> Unit, onTap: () -> Unit) {
     val ready = view.ready >= 1f && view.locked <= 0.0
     Box(
-        Modifier.size(SKILL_SIDE)
+        Modifier.size(side)
             .combinedClickable(onLongClick = onInfo) { if (live && ready && view.affordable) onTap() }
             .semantics { contentDescription = SkillText.title(view.code) },
     ) {
         if (skill != null) {
-            NeonSkillIcon(skill, tier, SKILL_SIDE)
+            NeonSkillIcon(skill, tier, side)
         } else {
             SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), GoldBright)
         }
@@ -196,10 +205,10 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
     }
 }
 
-@Composable private fun FlaskButton(view: FlaskView, live: Boolean, onTap: () -> Unit) {
+@Composable private fun FlaskButton(view: FlaskView, live: Boolean, side: Dp, onTap: () -> Unit) {
     val tint = flaskTint(view.kind)
     Box(
-        Modifier.size(44.dp).clip(CircleShape).background(Color(0xE60A0D12))
+        Modifier.size(side).clip(CircleShape).background(Color(0xE60A0D12))
             .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
             .clickable(enabled = live && view.usable, onClick = onTap),
         contentAlignment = Alignment.Center,

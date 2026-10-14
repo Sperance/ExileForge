@@ -85,7 +85,7 @@ import kotlin.math.roundToInt
  * «минус цели - награда» строками модификаторов, как их пишет словарь сервера; выбрать один или пройти мимо ([onLeave]). Панель над
  * картой, как у кристалла.
  */
-@Composable private fun AltarSheet(game: GameUi, altar: MapFeature.Altar, onLeave: () -> Unit, onPick: (Int) -> Unit) {
+@Composable internal fun AltarSheet(game: GameUi, altar: MapFeature.Altar, onLeave: () -> Unit, onPick: (Int) -> Unit) {
     val index = game.index ?: return
     fun text(line: Line) = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: line.code.value
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {

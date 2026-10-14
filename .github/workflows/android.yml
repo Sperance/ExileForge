@@ -309,6 +309,14 @@ jobs:
             ui-results.txt
             release-smoke.txt
             design-preview
+      # Снимки ключевых экранов (0.14.0, UI-SHOTS): KeyScreensShotTest кладёт их в design/shots - отдельный артефакт
+      - name: Upload key screen shots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: exile-forge-shots
+          path: design-preview/shots
+          if-no-files-found: warn
       - name: Preview image in verification log
         run: python3 -c "import base64,pathlib; print('DESIGN_IMAGE_START'); print(base64.b64encode(pathlib.Path('design-preview/arsenal.jpg').read_bytes()).decode()); print('DESIGN_IMAGE_END')"
       - name: Hero preview in verification log

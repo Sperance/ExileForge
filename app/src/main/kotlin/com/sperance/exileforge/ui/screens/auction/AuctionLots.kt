@@ -50,6 +50,7 @@ import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.trade.AuctionFees
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -80,13 +81,15 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         items(market.ownLots, key = { it.id }) { lot ->
-            val window = game.index?.rules?.auction?.extendWindowMillis ?: 0L
-            LotRow(game, lot, mark = lotExpiry(lot)?.let { if (lot.extendable(window)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
+            val rules = game.index?.rules?.auction
+            LotRow(game, lot, mark = lotExpiry(lot)?.let { if (rules != null && lot.extendable(rules)) it + " · " + ui("auction.extend_now") else it }, withSeller = false) { openLot = lot.id }
         }
     }
     market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
         // On its last day the author may give it another week (3.79.0), as often as they like.
-        val extendable = game.index?.rules?.auction?.let { lot.extendable(it.extendWindowMillis) } == true
+        // Продление (ECON-05): не больше `auction.extendMax` раз, каждое - за плату выставления
+        val extendable = game.index?.rules?.auction?.let { lot.extendable(it) } == true
+        val fee = game.index?.let { AuctionFees.listing(it, game.heroLevel, lot.priceOrb, lot.price) } ?: 0L
         LotSheet(
             game,
             lot,
@@ -98,11 +101,11 @@ import com.sperance.exileforge.ui.theme.*
             extra = if (extendable) {
                 (
                     {
-                        ForgeOutlinedButton(enabled = !game.busy, onClick = {
+                        ForgeOutlinedButton(enabled = !game.busy && (game.hero?.money ?: 0L) >= fee, onClick = {
                             openLot = null
                             vm.extend(lot.id)
                         }, modifier = Modifier.fillMaxWidth()) {
-                            Text(ui("auction.extend", game.index?.rules?.auction?.lotDays ?: 7))
+                            Text(ui("auction.extend_fee", game.index?.rules?.auction?.lotDays ?: 7, fee))
                         }
                     }
                     )

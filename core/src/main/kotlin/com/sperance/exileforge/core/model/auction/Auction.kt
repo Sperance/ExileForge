@@ -50,6 +50,8 @@ import kotlinx.serialization.Serializable
     val buyerName: String = "",
     val soldAt: Long = 0,
     val sold: ItemInstance? = null,
+    /** Сколько раз лот продлён (сервер, ECON-05): не больше `auction.extendMax`. */
+    val extended: Int = 0,
     val version: Long = 0,
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
@@ -73,6 +75,9 @@ import kotlinx.serialization.Serializable
 
     /** Whether its author may extend it now (3.79.0, server 1.74.0): on sale, with no more than [window] ms left. */
     fun extendable(window: Long, now: Long = System.currentTimeMillis()): Boolean = onSale && timeLeft(now)?.let { it in 1..window } == true
+
+    /** Продлевается ли лот сейчас по правилам аукциона [rules] (ECON-05): в окне продления и не сверх `extendMax` раз. */
+    fun extendable(rules: com.sperance.exileforge.rules.content.AuctionRules, now: Long = System.currentTimeMillis()): Boolean = extended < rules.extendMax && extendable(rules.extendWindowMillis, now)
     fun belongsTo(heroId: String): Boolean = sellerId == heroId
 
     /** An equipment lot names a template, a stack lot names an item of the bag. */

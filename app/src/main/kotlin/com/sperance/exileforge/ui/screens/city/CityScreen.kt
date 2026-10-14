@@ -150,7 +150,7 @@ private fun cityTiles(game: GameUi, board: Quests, trade: Market, guilds: Guilds
 private fun questsReady(quests: Quests): Int = quests.board?.let { board -> (board.daily + board.weekly + board.contracts).count { it.done && !it.claimed } } ?: 0
 
 /** Свои лоты, срок которых подходит к концу и которые уже можно продлить (окно продления правил). */
-private fun lotsToExtend(game: GameUi, market: Market): Int = game.index?.rules?.auction?.let { rules -> market.myLots.count { it.extendable(rules.extendWindowMillis) } } ?: 0
+private fun lotsToExtend(game: GameUi, market: Market): Int = game.index?.rules?.auction?.let { rules -> market.myLots.count { it.extendable(rules) } } ?: 0
 
 /** How many quests wait for their reward, or how many are under way; сюжет (4.2.0) - в «Походе», не здесь. */
 private fun questNews(quests: Quests): String {

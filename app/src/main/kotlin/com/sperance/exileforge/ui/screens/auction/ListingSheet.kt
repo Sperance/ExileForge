@@ -14,6 +14,7 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
+import com.sperance.exileforge.rules.trade.AuctionFees
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.inputs
@@ -79,9 +80,13 @@ fun ListingSheet(
                     Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
                 }
             }
+            // Плата за место (ECON-05) - правилом `AuctionFees`, та же, что спишет сервер; не возвращается
+            val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
+            val money = game.hero?.money ?: 0L
+            if (fee > 0) Text(ui("sell.listing_fee", fee), color = if (money >= fee) Gold else LifeRed, style = MaterialTheme.typography.bodySmall)
             MutedText(ui("sell.note"))
-            // Аукцион ещё закрыт (3.94.0): кнопка неактивна, и рядом сказано, когда он откроется
-            val closed = auctionClosed(game)
+            // Аукцион ещё закрыт (3.94.0): кнопка неактивна, и рядом сказано, когда он откроется; не хватает золота на плату - тоже
+            val closed = auctionClosed(game) ?: ui("sell.listing_short", fee).takeIf { money < fee }
             ForgeButton(enabled = closed == null && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("sell.list"))
             }

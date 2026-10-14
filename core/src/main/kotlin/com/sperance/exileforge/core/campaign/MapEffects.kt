@@ -27,7 +27,7 @@ enum class MapLineKind {
     companion object {
         /** Строки, что дают без спроса. */
         private val rewards: Set<String> = listOf(
-            MapStat.QUANTITY, MapStat.RARITY, MapStat.EXPERIENCE, MapStat.GOLD, MapStat.CHESTS, MapStat.FOUNTAINS, MapStat.HERO_HASTE,
+            MapStat.QUANTITY, MapStat.RARITY, MapStat.GOLD, MapStat.CHESTS, MapStat.FOUNTAINS, MapStat.HERO_HASTE,
             MapStat.HERO_ATTACK_SPEED, MapStat.HERO_LIFE, MapStat.HERO_LEECH, MapStat.CRYSTALS, MapStat.BOOKS, MapStat.ABYSS_CRACKS,
             MapStat.ABYSS_DEPTH, MapStat.ABYSS_HOARD, MapStat.ABYSS_UNIQUE, MapStat.ABYSS_ORBS, MapStat.ABYSS_RARE,
         ).mapTo(HashSet()) { it.code }

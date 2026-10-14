@@ -23,6 +23,8 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.Roll
+import com.sperance.exileforge.rules.sheet.AmplifiedLine
+import com.sperance.exileforge.rules.sheet.Amplify
 import com.sperance.exileforge.rules.sheet.FlaskSheet
 import com.sperance.exileforge.rules.sheet.SellPrice
 import com.sperance.exileforge.rules.sheet.SheetCalculator
@@ -103,8 +105,18 @@ data class ItemLine(
     val text: String,
     val marks: AffixMarks,
     val itemLevel: Int = 0,
+    /** Строка, усиленная усилителями своей вещи (AMP-01): [values] и [text] - уже итог, ролл и процент - здесь; null - как есть. */
+    val amplified: AmplifiedLine? = null,
 ) {
     val code: ModifierCode get() = roll.code
+
+    /** Разбор усиленной строки (AMP-01): «ролл 134 · ▲ +15% = 154», значения через « / »; null - строка не усилена. */
+    val amplifiedText: String? get() = amplified?.let { amp ->
+        val stats = amp.rolled.indices.map { definition?.effectOf(it)?.stat.orEmpty() }
+        val rolled = amp.rolled.mapIndexed { i, v -> modNumber(stats[i], v) }.joinToString(" / ")
+        val shown = amp.shown.mapIndexed { i, v -> modNumber(stats[i], v) }.joinToString(" / ")
+        ui("modinfo.amplified_value", rolled, modNumber("", amp.percent), shown)
+    }
     val affix: Boolean get() = definition?.affix == true
 
     /** 0 the bottom of the tier, 1 its top; a fixed range is perfect; null for a line with no tier. */
@@ -195,10 +207,12 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val lines: List<ItemLine> by lazy {
         item.rolls.map { roll ->
             val def = index.modifier(roll.code)
-            val values = def?.let(roll::values).orEmpty()
             val tier = def?.tier(roll.tier)?.takeIf { ranged }
+            // Усилители своей вещи (AMP-01) - правилом `Amplify`: строка печатает итог, ролл и процент - в разборе
+            val amplified = if (ranged) null else Amplify.line(index, roll, item.rolls)
+            val values = amplified?.shown ?: def?.let(roll::values).orEmpty()
             val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values) } ?: modifierLine(index, it, values) } ?: displayName(roll.code.value)
-            ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level)
+            ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level, amplified)
         }
     }
 

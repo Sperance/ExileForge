@@ -48,6 +48,7 @@ fun ModifierInfoSheet(line: ItemLine, onDismiss: () -> Unit) {
                 Fact(ui("modinfo.kind"), line.kindText())
                 if (line.roll.tier > 0 && line.tierCount > 0) TierScale(line.roll.tier, line.tierOpen)
                 line.range?.let { Fact(ui("modinfo.range"), it) }
+                line.amplifiedText?.let { Fact(ui("modinfo.amplified"), it) }
                 line.quality?.takeIf { line.range != null }?.let { share ->
                     if (line.fixed) {
                         Fact(ui("modinfo.position"), ui("modinfo.fixed"))

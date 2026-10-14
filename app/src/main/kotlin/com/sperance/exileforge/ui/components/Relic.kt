@@ -260,6 +260,8 @@ private fun DrawScope.hexPath(): Path {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TierHex(line.marks, if (big) 20.dp else 16.dp)
+        // Усиленная строка (AMP-01): ▲ у значка, текст - уже итог; ролл и процент - в разборе по нажатию
+        if (line.amplified != null) Text(ui("relic.amplified"), color = Vital, style = if (big) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall)
         Text(
             line.text,
             color = modColor(line.marks),

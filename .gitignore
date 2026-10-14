@@ -12,3 +12,6 @@ local.properties
 
 # Claude Code worktrees and session files
 .claude/
+
+# Кэш байткода Python скриптов - не исходник.
+__pycache__/

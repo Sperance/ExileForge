@@ -452,7 +452,10 @@ class ExpeditionWorld(
          */
         fun heroSpeed(rules: ExpeditionRules, stats: Map<String, Double>, bossSlain: Boolean = false): Double = rules.heroSpeed * (1 + (stats[CoreStat.MOVEMENT_SPEED.code] ?: 0.0) / 100).coerceIn(rules.minSpeed, rules.maxSpeed) * (if (bossSlain) rules.bossSlainSpeed else 1.0)
 
-        /** How far the hero sees: the sheet's light radius — the base, if the server sent none — times the biome's light. */
-        fun lightRadius(rules: ExpeditionRules, stats: Map<String, Double>, biomeLight: Double): Double = ((stats[CoreStat.LIGHT_RADIUS.code]?.takeIf { it > 0 } ?: rules.defaultLight) * biomeLight).coerceIn(rules.minLight, rules.maxLight)
+        /**
+         * How far the hero sees: the sheet's light radius — the base, if the sheet has none — times the biome's light. Свет листа ноль и
+         * ниже (0.14.0, STAT-MISC-12: «−100% света» и сильнее) - наименьший радиус правил, а не база: база - только без строки в листе.
+         */
+        fun lightRadius(rules: ExpeditionRules, stats: Map<String, Double>, biomeLight: Double): Double = ((stats[CoreStat.LIGHT_RADIUS.code]?.coerceAtLeast(0.0) ?: rules.defaultLight) * biomeLight).coerceIn(rules.minLight, rules.maxLight)
     }
 }

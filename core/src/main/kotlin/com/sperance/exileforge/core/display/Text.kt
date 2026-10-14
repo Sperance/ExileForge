@@ -156,8 +156,11 @@ private fun shareText(value: Double): String {
 /** The rules' modifier text over the server's dictionary as it stands now. */
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index, serverLocale::string)
 
-/** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
-fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def, values)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effectOf(i), v) }) }
+/**
+ * A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. [carrier] (0.14.0,
+ * STAT-MISC-01) - слот вещи со строкой: «этой фляги» и «во время действия» - только на самой фляге.
+ */
+fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>, carrier: Slot? = null): String = modifierText(index).template(def, values, carrier)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effectOf(i), v) }) }
     ?: values.mapIndexed { i, v -> def.effectOf(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code.value) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */

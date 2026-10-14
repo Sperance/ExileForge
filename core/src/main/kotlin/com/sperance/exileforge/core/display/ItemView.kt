@@ -211,7 +211,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
             // Усилители своей вещи (AMP-01) - правилом `Amplify`: строка печатает итог, ролл и процент - в разборе
             val amplified = if (ranged) null else Amplify.line(index, roll, item.rolls)
             val values = amplified?.shown ?: def?.let(roll::values).orEmpty()
-            val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values) } ?: modifierLine(index, it, values) } ?: displayName(roll.code.value)
+            val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values, template.slot) } ?: modifierLine(index, it, values, template.slot) } ?: displayName(roll.code.value)
             ItemLine(roll, def, values, words, AffixMarks.of(def, roll), level, amplified)
         }
     }
@@ -397,7 +397,7 @@ fun sidesText(sides: AffixSides): String = ui("card.sides", sides.prefixes, side
 fun recipeText(index: ContentIndex, recipe: BenchRecipe): String = rangedLine(index, recipe.modifier, recipe.values)
 
 /** A modifier's sentence with each value as its range: "+(70–79) to maximum Life" — a bench line, an essence's guarantee. */
-fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>): String {
+fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>, carrier: Slot? = null): String {
     val def = index.modifier(modifier)
     val ranges = values.filter { it.size == 2 }.mapIndexed { i, (min, max) ->
         val stat = def?.effectOf(i)?.stat.orEmpty()
@@ -405,7 +405,7 @@ fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>)
         val high = modNumber(stat, max)
         if (low == high) low else "($low–$high)"
     }
-    val template = def?.let { modifierText(index).template(it) } ?: return ranges.joinToString(" · ").ifBlank { displayName(modifier.value) }
+    val template = def?.let { modifierText(index).template(it, carrier) } ?: return ranges.joinToString(" · ").ifBlank { displayName(modifier.value) }
     return fillTemplate(template, ranges)
 }
 

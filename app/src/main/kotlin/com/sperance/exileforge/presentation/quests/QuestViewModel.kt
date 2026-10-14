@@ -62,6 +62,7 @@ class QuestViewModel(
 
     /** Закон трона за пройденную главу: выбор навсегда, без перевыбора. */
     fun law(code: String) = actions.law(code)
+    fun book(chapter: Int, code: String) = actions.book(chapter, code)
     fun claimGuild(questId: String? = null, goal: String? = null) = actions.claimGuild(questId, goal)
 
     /** Свёрнутость карточки сюжета (4.4.x), из настроек устройства. */

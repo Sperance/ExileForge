@@ -12,10 +12,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.StoryBooks
 import com.sperance.exileforge.rules.content.StoryChapter
 import com.sperance.exileforge.rules.content.ThroneLaw
 import com.sperance.exileforge.rules.text.LocaleKey
@@ -83,3 +86,32 @@ import com.sperance.exileforge.ui.theme.*
 /** Строки закона в шторке подтверждения: что получит герой и что получат монстры дальше. */
 private fun ledger(index: ContentIndex, law: ThroneLaw): List<LedgerLine> = law.hero.map { LedgerLine(ui("story.law.ledger_hero"), lineText(index, it), Tone.GAIN) } +
     law.monsters.map { LedgerLine(ui("story.law.ledger_monsters"), lineText(index, it), Tone.SPEND) }
+
+/**
+ * Книга за пройденную главу [chapter] (0.14.0, SKILL-02): варианты правил ([StoryBooks.options]) - умения своего класса или общие,
+ * открытые к уровню главы; [onTake] - книга в сумку. Выбор один на главу.
+ */
+@Composable internal fun BookChoice(index: ContentIndex, chapter: Int, heroClass: String, skills: HeroSkills, busy: Boolean, onTake: (Int, String) -> Unit) {
+    val region = index.quests.story.getOrNull(chapter)?.region ?: return
+    ForgePanel(accent = GoldBright) {
+        Engraved(ui("story.book.title"), accent = GoldBright)
+        MutedText(ui("story.book.choose", loc(LocaleKey.chapterTitle(region))))
+        StoryBooks(index).options(chapter, heroClass, skills).forEach { code ->
+            val skill = index.skills.byCode[code] ?: return@forEach
+            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                NeonSkillIcon(skill, HeroSkills.FIRST_TIER, 36.dp)
+                Column(Modifier.weight(1f)) {
+                    Text(SkillText.title(code), color = Parchment, style = MaterialTheme.typography.bodyMedium)
+                    MutedText(
+                        listOfNotNull(
+                            ui("skills.type.${skill.type.name}"),
+                            ui("story.book.common").takeIf { skill.common },
+                            ui("story.book.known", skills.level(code)).takeIf { skills.level(code) > 0 },
+                        ).joinToString(" · "),
+                    )
+                }
+                ForgeButton({ onTake(chapter, code) }, enabled = !busy) { Text(ui("story.book.take")) }
+            }
+        }
+    }
+}

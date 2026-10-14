@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.quests
 
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.hero.HeroRepository
@@ -70,6 +71,9 @@ class QuestActions(
 
     /** Закон трона [code] за пройденную главу - навсегда; лист героя перечитывается снимком того же ответа. */
     fun law(code: String) = board(ui("story.law.toast", loc(LocaleKey.lawName(code)))) { api.quests.law(it, code) }
+
+    /** Книга умения [code] за пройденную главу [chapter] (SKILL-02): ложится в сумку; снимок героя - тем же ответом. */
+    fun book(chapter: Int, code: String) = board(ui("story.book.toast", SkillText.title(code))) { api.quests.book(it, chapter, code) }
 
     fun claimGuild(questId: String? = null, goal: String? = null) = command(ui("quest.toast.claimed")) { id ->
         val guild = api.quests.claimGuild(id, questId, goal)

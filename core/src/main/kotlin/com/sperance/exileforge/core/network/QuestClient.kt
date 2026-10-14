@@ -40,6 +40,12 @@ class QuestClient internal constructor(private val http: Transport) {
      */
     suspend fun law(heroId: String, code: String): QuestBoard = http.post("$HERO_QUESTS/law", heroQuery(heroId, "code" to code))
 
+    /**
+     * Книга умения [code] за пройденную главу [chapter] (0.14.0, SKILL-02): одна на главу, из вариантов `StoryBooks.options`. Отказы -
+     * `QU_011` (книги нет среди вариантов), `QU_012` (глава не пройдена или книга уже взята).
+     */
+    suspend fun book(heroId: String, chapter: Int, code: String): QuestBoard = http.post("$HERO_QUESTS/book", heroQuery(heroId, "chapter" to chapter.toString(), "code" to code))
+
     /** Задания гильдии с выдачей суток (4.9.0, сервер `POST guild/quests/refresh`). */
     suspend fun guild(heroId: String): GuildQuests = http.post("$GUILD_QUESTS/refresh", heroQuery(heroId))
 

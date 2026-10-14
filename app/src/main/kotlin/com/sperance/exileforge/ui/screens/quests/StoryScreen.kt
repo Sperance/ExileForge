@@ -38,6 +38,7 @@ import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StoryFold
 import com.sperance.exileforge.rules.content.QuestBoard
+import com.sperance.exileforge.rules.content.StoryBooks
 import com.sperance.exileforge.rules.content.ThroneLaws
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.*
@@ -90,14 +91,14 @@ import org.koin.compose.viewmodel.koinViewModel
     board ?: return
     val shape = RoundedCornerShape(12.dp)
     // Трон пройденной главы ждёт выбора закона - карточка зовёт к нему раньше шага, даже когда сюжет уже пройден
-    if (ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty()) {
+    if (ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty() || StoryBooks(index).pending(board.chapter, board.books).isNotEmpty()) {
         Row(
             modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = GoldBright).clickable(role = Role.Button, onClick = onOpen).padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
-            Text(ui("story.card_law"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
+            Text(ui(if (ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty()) "story.card_law" else "story.card_book"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
         }
         return
     }
@@ -161,7 +162,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable fun StoryButton(game: GameUi, board: QuestBoard?, vm: QuestViewModel, modifier: Modifier = Modifier) {
     val index = game.index ?: return
     board ?: return
-    val law = ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty()
+    val law = ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty() || StoryBooks(index).pending(board.chapter, board.books).isNotEmpty()
     val quest = board.story
     if (!law && (quest == null || index.quests.story.getOrNull(board.chapter) == null)) return
     var open by remember { mutableStateOf(false) }
@@ -209,6 +210,13 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
     val taken = game.heroInfo?.laws.orEmpty()
     laws.pending(board.chapter, taken).forEach { throne ->
         item(key = "law-${throne.region}") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { LawChoice(index, throne, busy, vm::law) } }
+    }
+    // Книга за пройденную главу (0.14.0, SKILL-02): после закона трона, по одной на главу
+    val hero = game.hero
+    if (hero != null) {
+        StoryBooks(index).pending(board.chapter, board.books).forEach { chapter ->
+            item(key = "book-$chapter") { BookChoice(index, chapter, hero.heroClass, hero.skills, busy, vm::book) }
+        }
     }
     val chosen = taken.mapNotNull(laws::law)
     val chapter = chapters.getOrNull(board.chapter)

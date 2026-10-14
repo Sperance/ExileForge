@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.display.rangedLine
 import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
@@ -33,7 +34,6 @@ import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -41,18 +41,28 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /** Полосы кузницы над навигацией (3.80.24): выбранная сфера, эссенция или строка верстака с удерживаемой кнопкой. */
-/** The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. */
-@Composable internal fun EssenceBar(game: GameUi, code: String, instance: ItemInstance, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
+/**
+ * The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. С 0.14.0
+ * (ASANA-N12) под именем - что гарантия даст именно этой вещи: «Даст T5 из 6: +(12–18)% к урону огнём» (`OrbApplier.essenceGuarantee`).
+ */
+@Composable internal fun EssenceBar(game: GameUi, code: String, view: ItemView, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
     val owned = game.bagAmount(code) ?: 0L
-    val essence = game.index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
+    val index = game.index
+    val essence = index?.essence(code)?.takeIf { owned > 0 && accepted(code) }
     ForgeBar {
-        if (essence == null) {
+        if (index == null || essence == null) {
             Text(ui("forge.pick_essence"), color = Muted)
             return@ForgeBar
         }
         BarTitle(ForgeGlyphs.Shard, Elder, itemTitle(code), stock(code, owned, 1))
-        HoldButton(ui("confirm.hold", ui("forge.apply_essence")), Elder, enabled = enabled && !instance.corrupted, rearm = true) {
-            onApply(instance.id, code)
+        val gives = remember(essence, view.item, index) {
+            OrbApplier(index).essenceGuarantee(essence, view.item, view.template)?.let { roll ->
+                index.modifier(roll.code)?.let { def -> def.tier(roll.tier)?.let { tier -> ui("forge.essence_gives", roll.tier, def.tiers.size, rangedLine(index, def.code, tier.values)) } }
+            }
+        }
+        gives?.let { Text(it, color = Elder, style = MaterialTheme.typography.bodySmall) }
+        HoldButton(ui("confirm.hold", ui("forge.apply_essence")), Elder, enabled = enabled && !view.item.corrupted, rearm = true) {
+            onApply(view.item.id, code)
         }
     }
 }

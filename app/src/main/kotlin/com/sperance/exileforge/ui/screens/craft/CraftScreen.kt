@@ -137,7 +137,7 @@ internal const val UNCRAFT = "-"
                 ForgeSection.ORBS -> OrbBar(game, smithy, target, chosen, enabled, quality?.lost ?: 0, chanceUniques, { engraving = true }) { vm.applyOrb(target, it) }
                 ForgeSection.SEALS -> gear?.let { SealBar(game, smithy, it, sealChosen, enabled) { code -> vm.applySeal(it.id, code) } }
                 ForgeSection.BENCH -> gear?.let { BenchBar(game, vm, it.view, benchLine, enabled) }
-                ForgeSection.ESSENCES -> gear?.let { EssenceBar(game, smithy.essence, it.view.item, enabled, { code -> code !in essenceRefusals }, vm::applyEssence) }
+                ForgeSection.ESSENCES -> gear?.let { EssenceBar(game, smithy.essence, it.view, enabled, { code -> code !in essenceRefusals }, vm::applyEssence) }
             }
         }
     }

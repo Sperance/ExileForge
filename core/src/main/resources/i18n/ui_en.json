@@ -1707,6 +1707,7 @@
   "forge.no_essences": "No essences in the bag. The crystals on the maps hold them.",
   "forge.pick_essence": "Pick an essence above",
   "essence.note": "A normal item becomes rare with the essence's line guaranteed; a rare one is rolled anew around it when the step allows.",
+  "forge.essence_gives": "Gives this item T{0} of {1}: {2}",
   "enum.slot.FLASK": "Flask 1",
   "enum.slot.FLASK_2": "Flask 2",
   "mod.kind.ESSENCE": "Essence",

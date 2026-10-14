@@ -101,8 +101,8 @@ class ServerIntegrationTest {
             val rerolled = assertNotNull(api.hero.applyOrb(heroId, rare.id, Orb.CHAOS_ORB.name).item)
             assertEquals(rare.id, rerolled.id)
             assertTrue(rerolled.rolls.count { index.modifier(it.code)?.affix == true } >= floor)
-            // Выданная вещь (сервер 4.9.0) у торговца ничего не стоит
-            assertEquals(0L, api.hero.sell(heroId, api.hero.unequip(heroId, rare.id).id).gold, "a granted item sold for gold")
+            // Выданная вещь (сервер 4.12.x) метки не несёт: торговец платит за неё, как за добытую
+            assertTrue(api.hero.sell(heroId, api.hero.unequip(heroId, rare.id).id).gold > 0, "a granted item sold for nothing")
 
             // The run: a seed from the server, the same zone here, the journal paid on replay — every reward rolled by the server alone.
             // Открытые зоны клиент считает сам по правилам (3.94.1): у нового героя пройденных нет.
@@ -142,7 +142,7 @@ class ServerIntegrationTest {
             val starterOrb = Orb.ORB_OF_TRANSMUTATION.name
             val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
             api.hero.grant(heroId, "level", "level" to auctionLevel.toString())
-            // Герою-тестировщику аукцион закрыт (сервер SEC-03): отказ как выданной вещи; без отметки он торгует как игрок
+            // Герою-тестировщику аукцион закрыт (сервер SEC-03): отказ GR_001 по отметке героя; без отметки он торгует как игрок
             assertEquals("GR_001", assertFailsWith<ApiFailure> { api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1) }.code)
             assertEquals(false, api.moderation.setTester(heroId, false))
             val held = bag(starterOrb)

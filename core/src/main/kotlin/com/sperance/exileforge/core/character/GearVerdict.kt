@@ -7,7 +7,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EquipSlots
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
-import com.sperance.exileforge.rules.sheet.CombatProfile
 import kotlin.math.abs
 
 /**
@@ -40,19 +39,23 @@ sealed interface GearVerdict {
 
 /**
  * Вердикт снаряжения (3.89.0): [offence] и [defence] - доли изменения урона в секунду и эффективного запаса здоровья
- * (0.12 - на 12% больше). Считается правилами: лист с вещью против листа без неё.
+ * (0.12 - на 12% больше). Считается правилами: лист с вещью против листа без неё. Урон (4.12.x, COMBAT-04) - натиск Мощи героя
+ * (`Might.offense`: удар листа и умения) - та же формула, что Мощь и темп сервера.
  */
 data class SheetVerdict(val offence: Double, val defence: Double) : GearVerdict {
     override val score: Double get() = offence + defence
 
     companion object {
-        /** Вердикт листа [after] против [before] героя уровня [level]: оба листа меряются одним и тем же ударом. */
-        fun of(index: ContentIndex, level: Int, before: Map<String, Double>, after: Map<String, Double>): SheetVerdict {
+        /**
+         * Вердикт листа [after] против [before] героя уровня [level]: оба листа меряются одним и тем же ударом; урон - натиск Мощи
+         * без вещи [offenceBefore] и с ней [offenceAfter].
+         */
+        fun of(index: ContentIndex, level: Int, before: Map<String, Double>, after: Map<String, Double>, offenceBefore: Double, offenceAfter: Double): SheetVerdict {
             val rules = index.campaign.combat
             val was = Combatant(before, level, rules)
             val hit = Toughness.referenceHit(was)
             return SheetVerdict(
-                change(CombatProfile.of(index, before).best, CombatProfile.of(index, after).best),
+                change(offenceBefore, offenceAfter),
                 change(Toughness.of(was, hit), Toughness.of(Combatant(after, level, rules), hit)),
             )
         }
@@ -148,7 +151,7 @@ class GearVerdicts {
                 // Фляга листа героя не меняет (4.2.0): её меряют строками листа фляги против надетой в этом гнезде.
                 slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])
 
-                else -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, place, hero.info.laws, hero.info.fate)
+                else -> hero.combat?.might?.offense?.let { offence -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, offence, place, hero.info.laws, hero.info.fate, hero.skills) }
             }
             WearPlace(place, worn[place], verdict)
         }

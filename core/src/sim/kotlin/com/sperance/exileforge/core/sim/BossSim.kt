@@ -79,7 +79,7 @@ class BossSim(private val index: ContentIndex, private val fights: Int, private 
                     heroClass.code, strategy.name, zone.code.value, zone.boss.value, zone.level, foes.map { it.first().body.maxLife }.average(),
                     odds.sumOf { it.wins }, odds.sumOf { it.fights }, odds.sumOf { it.seconds * it.fights } / odds.sumOf { it.fights }.coerceAtLeast(1),
                     odds.flatMap { it.causes.entries }.groupingBy { it.key }.fold(0) { sum, entry -> sum + entry.value },
-                    body.maxLife + body.maxShield, DamageType.ELEMENTS.map(body::resist).average(), CombatProfile.of(index, body.stats).best,
+                    body.maxLife + body.maxShield, DamageType.ELEMENTS.map(body::resist).average(), CombatProfile.of(index, body.stats, body.level).best,
                 )
             }
         }

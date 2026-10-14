@@ -93,7 +93,7 @@ class SimKit(val index: ContentIndex) {
     fun worth(stats: Map<String, Double>, level: Int, penalty: Double): Double {
         val body = Combatant(MapEffects.hero(stats, if (penalty > 0) mapOf(MapStat.HERO_RESIST.code to penalty) else emptyMap()), level, rules)
         val taken = DamageType.entries.sumOf { type -> TAKEN_WEIGHT[type]!! * (1 - body.resist(type)) } / TAKEN_WEIGHT.values.sum()
-        return (body.maxLife + body.maxShield) / taken.coerceAtLeast(0.05) * CombatProfile.of(index, stats).best
+        return (body.maxLife + body.maxShield) / taken.coerceAtLeast(0.05) * CombatProfile.of(index, stats, level).best
     }
 
     private fun wearable(heroClass: HeroClass, level: Int): List<ItemTemplate> {

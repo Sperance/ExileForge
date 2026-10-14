@@ -1,9 +1,9 @@
 hero=RANGER zone=C1_SHIP_GRAVEYARD level=20 seed=11 skill=SPLIT_ARROW
-phase=DEAD life=0.0000 seconds=28.2000 kills=2 bosses=0 deaths=1 events=7
+phase=DEAD life=0.0000 seconds=28.3000 kills=2 bosses=0 deaths=1 events=7
 0 ENGAGE 0 0 0 0 false false
 1 KILL 0 1 0 0 false false
 2 KILL 0 0 0 0 false false
-3 FIGHT 0 0 0 0 false false fight=28/2/0/0/1/0 taken=270 healed=0 max=6 dealt={PHYSICAL=80}
+3 FIGHT 0 0 0 0 false false fight=30/3/0/0/1/0 taken=299 healed=0 max=6 dealt={PHYSICAL=80}
 4 ENGAGE 1 0 0 0 false false
-5 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=42 healed=0 max=4 dealt={PHYSICAL=16}
+5 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/0 taken=17 healed=0 max=4 dealt={PHYSICAL=7}
 6 FALL 0 0 0 0 false false

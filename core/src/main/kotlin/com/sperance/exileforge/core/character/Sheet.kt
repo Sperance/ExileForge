@@ -196,7 +196,8 @@ object Sheets {
 
     /**
      * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на место [place] (3.90.3) или, без него,
-     * на то, что выберут правила. Null, когда шаблона вещи нет в контенте.
+     * на то, что выберут правила. Урон (4.12.x, COMBAT-04) - натиск Мощи: нынешний [offence] против листа боя с вещью и умениями
+     * [skills]. Null, когда шаблона вещи нет в контенте или листа боя нет.
      */
     fun verdict(
         index: ContentIndex,
@@ -206,10 +207,17 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         before: Map<String, Double>,
+        offence: Double,
         place: Slot? = null,
         laws: List<String> = emptyList(),
         fate: String? = null,
-    ): SheetVerdict? = worn(index, item, items, place)?.let { SheetVerdict.of(index, level, before, calculate(index, level, heroClass, tree, it, laws, fate).stats) }
+        skills: HeroSkills = HeroSkills(),
+    ): SheetVerdict? {
+        val after = worn(index, item, items, place) ?: return null
+        val sheet = calculate(index, level, heroClass, tree, after, laws, fate)
+        val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped }) ?: return null
+        return SheetVerdict.of(index, level, before, sheet.stats, offence, combat.might.offense)
+    }
 
     /**
      * The hero's items with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),

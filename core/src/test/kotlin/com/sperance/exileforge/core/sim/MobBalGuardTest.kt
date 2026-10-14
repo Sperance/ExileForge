@@ -1,6 +1,9 @@
 package com.sperance.exileforge.core.sim
 
 import com.sperance.exileforge.core.TestContent
+import com.sperance.exileforge.rules.content.HeroClass
+import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.Zone
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -32,8 +35,41 @@ class MobBalGuardTest {
         assertTrue(boss in 50.0..150.0, "страж: $boss с (цель 50-150)")
     }
 
+    /**
+     * Сторож каждого стража (MOB-BAL-GUARD, быстрый вариант полного прогона `:core:mobBal -Pmode=guard`): эталоны всех классов бьются
+     * с каждым стражем кампании - по бою на каждом из [ROLLS] бросков босса, кости детерминированы. Вещи эталона ищутся на сетке уровней
+     * [GEAR_GRID] (поиск вещей дороже боёв) и переносятся на уровень зоны ([MobKit.relevel]); полоса вещей и штраф сопротивлений - своей
+     * зоны. Медиана времени победы стража держится в коридоре своего акта с допуском выборки [TOLERANCE] (полный прогон - 0,5-2×).
+     */
+    @Test
+    fun everyGuardianStaysInItsActCorridor() {
+        val sim = MobBal(index, fights = ROLLS, rolls = ROLLS, monsterSamples = 1, cache = null)
+        val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
+        // Старшие уровни первыми: их постройки и бои дольше, параллельный поток так меньше ждёт хвоста
+        val keys = zones.sortedByDescending { it.level }.flatMap { zone -> sim.classesOf(emptySet()).map { zone to it } }
+        fun penalty(zone: Zone) = index.campaign.resistPenalty(zone.code, false)
+        fun gear(zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, gearLevel(zone.level), Archetype(campaignBand(zone.level)), penalty(zone))
+        keys.distinctBy { (zone, heroClass) -> listOf(heroClass.code, gearLevel(zone.level), campaignBand(zone.level), penalty(zone)) }
+            .parallelStream().forEach { (zone, heroClass) -> gear(zone, heroClass) }
+        val rows = keys.parallelStream().map { (zone, heroClass) -> sim.boss(zone, sim.kit.relevel(gear(zone, heroClass), zone.level), 0, Rarity.COMMON, CAP) }.toList()
+        val verdicts = guard(index, rows, TOLERANCE)
+        assertTrue(zones.size >= 100 && verdicts.size == zones.size, "the check proves nothing: ${verdicts.size} of ${zones.size} guardians")
+        val out = verdicts.filter { it.values.last() == false }
+        assertTrue(out.isEmpty(), "стражи вне коридора акта ($TOLERANCE медианы): " + out.joinToString("; ") { it.tsv() })
+    }
+
+    /** Уровень поиска вещей для зоны уровня [level]: старший узел [GEAR_GRID] не выше него - вещи отстают от зоны не больше шага сетки. */
+    private fun gearLevel(level: Int): Int = GEAR_GRID.last { it <= level }
+
     private companion object {
         const val ROLLS = 2
         const val SAMPLES = 3
+        const val CAP = 300.0
+
+        /** Сетка уровней поиска вещей: шаг ~10% уровня (1, 2, ... 10, 12, 14, ... 84, 93). */
+        val GEAR_GRID: List<Int> = generateSequence(1) { (it * 1.1).toInt() + 1 }.takeWhile { it <= 100 }.toList()
+
+        /** Допуск выборки (2 боя на класс, вещи сетки): на контенте 0.13.2 доли стражей 0,40-2,49 медианы акта. */
+        val TOLERANCE = 0.33..3.0
     }
 }

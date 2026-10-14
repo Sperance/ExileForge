@@ -285,6 +285,19 @@ class MobKit(val index: ContentIndex) {
         return Hero(heroClass, level, archetype, SimBuild(items, tree, skills, flasks), "uniques=$uniqueCount skills=${skills.active.filterNotNull().joinToString("+") { it.skill }}")
     }
 
+    /**
+     * Эталон [hero] на уровне [level] (не ниже его): те же вещи, а дерево, умения и фляги - уровня [level]. Поиск вещей - самая дорогая
+     * часть постройки, быстрый сторож (`MobBalGuardTest`) строит вещи на сетке уровней и переносит их на уровень зоны.
+     */
+    fun relevel(hero: Hero, level: Int): Hero {
+        require(level >= hero.level) { "items of level ${hero.level} cannot be worn below it, at $level" }
+        if (level == hero.level) return hero
+        val tree = tree(hero.heroClass, index.classes.pointsTotal(level), hero.archetype.style)
+        val skills = skills(hero.heroClass.code, level, stats(hero.heroClass, level, tree, hero.build.items), hero.archetype.style)
+        val build = SimBuild(hero.build.items, tree, skills, flasks(level, if (hero.archetype.band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE))
+        return hero.copy(level = level, build = build, note = hero.note + " gear@${hero.level}")
+    }
+
     private fun isUnique(item: ItemInstance) = index.template(item.template)?.unique == true
 
     fun flasks(level: Int, rarity: Rarity): List<BeltFlask?> {
@@ -590,14 +603,17 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
                 Prober.probe(index, arena, m, run.areaLevel, 7_000L + s)
             }
         }
-        out[BOSS] = List(rolls) { r ->
-            val (fx, act) = mapEffects(zone, tier, mapRarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
-            val rr = run(zone, hero, SimKit.SEED + r, act)
-            val a = Arena(index, hero, heroEffects(zone, fx, act != null))
-            val boss = Spawns(index, rr).boss(zone, MapEffects.buffs(fx), MapEffects.bossBuffs(fx))!!
-            Prober.probe(index, a, boss, rr.levelOf(zone), 8_000L + r)
-        }
+        out[BOSS] = bossProbes(zone, hero, tier, mapRarity)
         return Triple(run, arena, out)
+    }
+
+    /** Зонды стража зоны [zone] ([rolls] бросков босса со строками карты тира [tier]): урон героя по нему и время до смерти героя. */
+    fun bossProbes(zone: Zone, hero: Hero, tier: Int = 0, mapRarity: Rarity = Rarity.COMMON): List<Probe> = List(rolls) { r ->
+        val (fx, act) = mapEffects(zone, tier, mapRarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
+        val rr = run(zone, hero, SimKit.SEED + r, act)
+        val a = Arena(index, hero, heroEffects(zone, fx, act != null))
+        val boss = Spawns(index, rr).boss(zone, MapEffects.buffs(fx), MapEffects.bossBuffs(fx))!!
+        Prober.probe(index, a, boss, rr.levelOf(zone), 8_000L + r)
     }
 
     /**
@@ -950,9 +966,9 @@ fun main(args: Array<String>) {
 
 /**
  * Сторож стражей (В-11/12, полный прогон): у каждого стража медиана времени победы эталонов всех классов - в 0,5-2× медианы стражей
- * своего акта ([GUARD_BAND]); строка `guard` - зона, страж, акт, время, медиана акта, доля, в коридоре ли.
+ * своего акта ([band], по умолчанию [GUARD_BAND]); строка `guard` - зона, страж, акт, время, медиана акта, доля, в коридоре ли.
  */
-fun guard(index: ContentIndex, rows: List<Row>): List<Row> {
+fun guard(index: ContentIndex, rows: List<Row>, band: ClosedFloatingPointRange<Double> = GUARD_BAND): List<Row> {
     val wins = rows.filter { it.values[0] == "boss" }.groupBy { it.values[1] as String }.mapValues { (_, list) ->
         list.map { it.values[11] as Double }.filter { it > 0 }.sorted().let { if (it.isEmpty()) 0.0 else it[it.size / 2] }
     }
@@ -962,7 +978,7 @@ fun guard(index: ContentIndex, rows: List<Row>): List<Row> {
         zones.map { zone ->
             val share = if (median > 0) wins.getValue(zone) / median else 0.0
             val boss = index.campaign.zones.first { it.code.value == zone }.boss.value
-            Row(listOf("guard", zone, boss, act, wins.getValue(zone), median, share, share in GUARD_BAND))
+            Row(listOf("guard", zone, boss, act, wins.getValue(zone), median, share, share in band))
         }
     }
 }

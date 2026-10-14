@@ -49,7 +49,7 @@
 | [Eclipse Ring](#eclipse_ring) | Редкий | 85 |
 | [The Orrery Cog](#orrery_cog) | Уникальный | 81 |
 | [Praetor's Drowned Seal](#praetors_drowned_seal) | Уникальный | 84 |
-| [The Crown Collector's Hoard](#crown_collectors_hoard) | Уникальный | 97 |
+| [The The Crown Collector's Hoard](#crown_collectors_hoard) | Уникальный | 97 |
 | [Summit Sigil](#summit_sigil) | Уникальный | 99 |
 | [Giantslayer's Tithe](#giantslayers_tithe) | Уникальный | 48 |
 | [Hoarfrost Seal](#hoarfrost_seal) | Уникальный | 36 |
@@ -1043,7 +1043,7 @@
 
 - 40% увеличение урона от горения · [Урон от горения](../reference/Stats/Stats-HERO.md#stock_burning_damage)
 - +-20% к сопротивлению огню · [Сопротивление огню](../reference/Stats/Stats-HERO.md#stock_resist_fire)
-- Ваши поджоги наносят урон хаосом вместо огня · [Чёрное пламя](../reference/Stats/Stats-POWER.md#power_blackflame_pact)
+- Ваши поджоги наносят урон хаосом вместо огня · [Пожирающая тьма](../reference/Stats/Stats-POWER.md#power_blackflame_pact)
 - 10–15% шанс поджечь при ударе · [Тление](../reference/Stats/Stats-POWER.md#power_blackflame_kindle)
 
 
@@ -1291,7 +1291,7 @@
 
 ## CROWN_COLLECTORS_HOARD <a href="#crown_collectors_hoard" id="crown_collectors_hoard"></a>
 
-### The Crown Collector's Hoard <a href="#crown-collectors-hoard" id="crown-collectors-hoard"></a>
+### The The Crown Collector's Hoard <a href="#crown-collectors-hoard" id="crown-collectors-hoard"></a>
 
 Каждый король, что ему встретился, всё ещё здесь — по кусочкам.
 
@@ -1442,7 +1442,7 @@
 | --- | --- |
 | Слот · `slot` | `RING` |
 | Редкость · `rarity` | `UNIQUE` |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 
 ---
 Основание: [актуальный исходник](https://github.com/Sperance/ktor-bestgame/blob/fa8c3991681e20ef4d62548bf954d0b031a905a5/src/main/resources/content/equipment.json), срез `fa8c399` / клиент `9faca17`, 03.10.2026.

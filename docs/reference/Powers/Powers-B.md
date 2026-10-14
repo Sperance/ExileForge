@@ -730,7 +730,7 @@
 
 ## POWER_BLACKFLAME_PACT <a href="#power_blackflame_pact" id="power_blackflame_pact"></a>
 
-### Чёрное пламя <a href="#чёрное-пламя" id="чёрное-пламя"></a>
+### Пожирающая тьма <a href="#чёрное-пламя" id="чёрное-пламя"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -741,7 +741,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Чёрное пламя](../Stats/Stats-POWER.md#power_blackflame_pact) |
+| Характеристика · `stat` | [Пожирающая тьма](../Stats/Stats-POWER.md#power_blackflame_pact) |
 | sheet | Операция: `ADD`; to: [Поджоги хаосом](../Stats/Stats-HERO.md#stock_ignite_as_chaos) |
 
 

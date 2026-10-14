@@ -1257,7 +1257,7 @@
 - +5–8% к шансу блока · [Шанс блока](../reference/Stats/Stats-HERO.md#stock_block_chance)
 - +3–5% к максимуму шанса блока · [Максимум блока](../reference/Stats/Stats-HERO.md#stock_block_max)
 - Блок восстанавливает 1.5–3% максимума здоровья · [Покаянная стойка](../reference/Stats/Stats-POWER.md#power_remorseful_guard)
-- +5–8% к шансу блока, пока здоровья меньше 50% · [Последний рубеж](../reference/Stats/Stats-POWER.md#power_last_ground)
+- +5–8% к шансу блока, пока здоровья меньше 50% · [Покаянный рубеж](../reference/Stats/Stats-POWER.md#power_last_ground)
 - 20–30% шанс получить Укрепление при ударе · [Укрепление при ударе](../reference/Stats/Stats-HERO.md#stock_fortify_on_hit)
 
 
@@ -1848,7 +1848,7 @@
 
 Пустота не нападает. Пустота ждёт.
 
-**Русское название:** Оберег Древнего
+**Русское название:** Оберег Пустоты
 
 **Уникальный · Щиты**
 

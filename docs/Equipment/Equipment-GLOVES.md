@@ -76,7 +76,7 @@
 | [Astral Gloves](#astral_gloves) | Редкий | 88 |
 | [Voidgrasp Mitts](#voidgrasp_mitts) | Редкий | 88 |
 | [Windrunner Gloves](#windrunner_gloves) | Редкий | 88 |
-| [The Kelp Priest's Grasp](#kelp_priests_vestment) | Уникальный | 88 |
+| [The The Kelp Priest's Grasp](#kelp_priests_vestment) | Уникальный | 88 |
 | [Sunsmith's Hammerhand](#sunsmiths_hammerhand) | Уникальный | 95 |
 | [Climber's Grip](#climbers_grip) | Уникальный | 99 |
 | [Brawler's Abandon](#brawlers_abandon) | Уникальный | 45 |
@@ -1955,7 +1955,7 @@
 - 10–14% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
 - 1–2% урона крадётся здоровьем · [Общий вампиризм](../reference/Stats/Stats-HERO.md#stock_leech_all)
 - Низкое здоровье восстанавливает 30–40% здоровья, раз за бой · [Долг Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_debt)
-- Падение здоровья до низкого даёт барьер в 15–25% максимума здоровья на 4 с, не чаще раза в 15 с · [Последний рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
+- Падение здоровья до низкого даёт барьер в 15–25% максимума здоровья на 4 с, не чаще раза в 15 с · [Покаянный рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
 
 
 | Параметр | Значение |
@@ -2126,7 +2126,7 @@
 
 ## KELP_PRIESTS_VESTMENT <a href="#kelp_priests_vestment" id="kelp_priests_vestment"></a>
 
-### The Kelp Priest's Grasp <a href="#kelp-priests-grasp" id="kelp-priests-grasp"></a>
+### The The Kelp Priest's Grasp <a href="#kelp-priests-grasp" id="kelp-priests-grasp"></a>
 
 Скользкие руки держат дольше всех.
 

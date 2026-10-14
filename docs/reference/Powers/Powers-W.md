@@ -110,12 +110,12 @@
 
 ## POWER_WAR_SHOUT <a href="#power_war_shout" id="power_war_shout"></a>
 
-### Боевой клич <a href="#боевой-клич" id="боевой-клич"></a>
+### Вой стаи <a href="#боевой-клич" id="боевой-клич"></a>
 
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Боевой клич](../Stats/Stats-POWER.md#power_war_shout) |
+| Характеристика · `stat` | [Вой стаи](../Stats/Stats-POWER.md#power_war_shout) |
 | Событие · `on` | `EVERY` |
 | every | 8 |
 | Эффекты · `effects` | Действие: `HEX`; Свойства: Характеристика: [Урон](../Stats/Stats-HERO.md#stock_damage); Длительность: 3; to: `ALL` |

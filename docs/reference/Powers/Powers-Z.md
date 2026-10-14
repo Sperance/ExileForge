@@ -2,7 +2,7 @@
 
 ## POWER_ZENITH_GLARE <a href="#power_zenith_glare" id="power_zenith_glare"></a>
 
-### Полуденный блеск <a href="#полуденный-блеск" id="полуденный-блеск"></a>
+### Блеск зенита <a href="#полуденный-блеск" id="полуденный-блеск"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -13,7 +13,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Полуденный блеск](../Stats/Stats-POWER.md#power_zenith_glare) |
+| Характеристика · `stat` | [Блеск зенита](../Stats/Stats-POWER.md#power_zenith_glare) |
 | Событие · `on` | `STANDING` |
 | checks | check: `LIFE_FULL` |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Множитель критического удара](../Stats/Stats-HERO.md#stock_critical_multiplier) |

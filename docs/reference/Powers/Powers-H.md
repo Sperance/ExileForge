@@ -200,7 +200,7 @@
 
 ## POWER_HOLLOW_ECHO <a href="#power_hollow_echo" id="power_hollow_echo"></a>
 
-### Эхо пустоты <a href="#эхо-пустоты" id="эхо-пустоты"></a>
+### Пустой отзвук <a href="#эхо-пустоты" id="эхо-пустоты"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -211,7 +211,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Эхо пустоты](../Stats/Stats-POWER.md#power_hollow_echo) |
+| Характеристика · `stat` | [Пустой отзвук](../Stats/Stats-POWER.md#power_hollow_echo) |
 | Событие · `on` | `SHIELD_BROKEN` |
 | Перезарядка, с · `cooldown` | 8 |
 | Эффекты · `effects` | Действие: `BARRIER`; Длительность: 3 |

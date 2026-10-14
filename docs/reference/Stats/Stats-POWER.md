@@ -105,7 +105,7 @@
 | [Болотная кровь](#power_mire_blood) | POWER_MIRE_BLOOD |
 | [Болотное дыхание](#power_bog_breath) | POWER_BOG_BREATH |
 | [Тактика стаи](#power_pack_tactics) | POWER_PACK_TACTICS |
-| [Вой вожака](#power_alpha_howl) | POWER_ALPHA_HOWL |
+| [Вой первого волка](#power_alpha_howl) | POWER_ALPHA_HOWL |
 | [Клятва стража](#power_wardens_vow) | POWER_WARDENS_VOW |
 | [Могильный договор](#power_grave_pact) | POWER_GRAVE_PACT |
 | [Костяная десятина](#power_bone_tithe) | POWER_BONE_TITHE |
@@ -128,9 +128,9 @@
 | [Закалка водой](#power_quench) | POWER_QUENCH |
 | [Горновой вихрь](#power_forge_gale) | POWER_FORGE_GALE |
 | [Дерзкий вызов](#power_brazen_call) | POWER_BRAZEN_CALL |
-| [Боевой клич](#power_war_shout) | POWER_WAR_SHOUT |
+| [Вой стаи](#power_war_shout) | POWER_WAR_SHOUT |
 | [Непреклонность](#power_unyielding) | POWER_UNYIELDING |
-| [Последний рубеж](#power_last_stand) | POWER_LAST_STAND |
+| [Покаянный рубеж](#power_last_stand) | POWER_LAST_STAND |
 | [Солнечная вспышка](#power_solar_flare) | POWER_SOLAR_FLARE |
 | [Благословение солнца](#power_suns_blessing) | POWER_SUNS_BLESSING |
 | [Вечные пески](#power_eternal_sands) | POWER_ETERNAL_SANDS |
@@ -148,7 +148,7 @@
 | [Звёздный заслон](#power_starlight_ward) | POWER_STARLIGHT_WARD |
 | [Обет кровавой царицы](#power_atziris_vow) | POWER_ATZIRIS_VOW |
 | [Взор пустоты](#power_void_sight) | POWER_VOID_SIGHT |
-| [Эхо пустоты](#power_void_echo) | POWER_VOID_ECHO |
+| [Пустой отзвук](#power_void_echo) | POWER_VOID_ECHO |
 | [Покров веков](#power_eternity_shroud) | POWER_ETERNITY_SHROUD |
 | [Нетленное тело](#power_timeless_body) | POWER_TIMELESS_BODY |
 | [Мироразлом](#power_worldbreak) | POWER_WORLDBREAK |
@@ -200,7 +200,7 @@
 | [Звёздная грация](#power_starbound_grace) | POWER_STARBOUND_GRACE |
 | [Кровавая баня](#power_bloodbath) | POWER_BLOODBATH |
 | [Хороший пёс](#power_good_dog) | POWER_GOOD_DOG |
-| [Последний рубеж](#power_last_ground) | POWER_LAST_GROUND |
+| [Покаянный рубеж](#power_last_ground) | POWER_LAST_GROUND |
 | [Вспышка феникса](#power_phoenix_flare) | POWER_PHOENIX_FLARE |
 | [Преломление](#power_refraction) | POWER_REFRACTION |
 | [Раскол брони](#power_sunder) | POWER_SUNDER |
@@ -216,7 +216,7 @@
 | [Хрустальная кромка](#power_crystal_edge) | POWER_CRYSTAL_EDGE |
 | [Челюсти глубин](#power_drowning_jaws) | POWER_DROWNING_JAWS |
 | [Кузнечная закалка](#power_forge_temper) | POWER_FORGE_TEMPER |
-| [Звон наковальни](#power_anvil_ring) | POWER_ANVIL_RING |
+| [Гул наковальни](#power_anvil_ring) | POWER_ANVIL_RING |
 | [Горячие руки](#power_hot_hands) | POWER_HOT_HANDS |
 | [Железная поступь](#power_iron_footing) | POWER_IRON_FOOTING |
 | [Тяжёлые звенья](#power_heavy_links) | POWER_HEAVY_LINKS |
@@ -249,7 +249,7 @@
 | [Зеркальная гладь](#power_polished_face) | POWER_POLISHED_FACE |
 | [Долг времени](#power_time_debt) | POWER_TIME_DEBT |
 | [Сжатие колец](#power_tightening_coil) | POWER_TIGHTENING_COIL |
-| [Эхо пустоты](#power_hollow_echo) | POWER_HOLLOW_ECHO |
+| [Пустой отзвук](#power_hollow_echo) | POWER_HOLLOW_ECHO |
 | [Спокойный центр](#power_calm_center) | POWER_CALM_CENTER |
 | [Добавка](#power_second_helping) | POWER_SECOND_HELPING |
 | [Тихое начало](#power_silent_opening) | POWER_SILENT_OPENING |
@@ -267,14 +267,14 @@
 | [Гул моря](#power_sea_hum) | POWER_SEA_HUM |
 | [Колыбельная](#power_lullaby) | POWER_LULLABY |
 | [Корни гнили](#power_rooted_in_rot) | POWER_ROOTED_IN_ROT |
-| [Вой вожака](#power_leaders_howl) | POWER_LEADERS_HOWL |
+| [Вой первого волка](#power_leaders_howl) | POWER_LEADERS_HOWL |
 | [Тайник](#power_hidden_cache) | POWER_HIDDEN_CACHE |
 | [Холод склепа](#power_crypt_chill) | POWER_CRYPT_CHILL |
 | [Осколочный заслон](#power_shard_ward) | POWER_SHARD_WARD |
 | [Дань тирана](#power_tyrants_tribute) | POWER_TYRANTS_TRIBUTE |
 | [Ледяной трон](#power_frozen_throne) | POWER_FROZEN_THRONE |
 | [Всплывшая молитва](#power_floating_prayer) | POWER_FLOATING_PRAYER |
-| [Полуденный блеск](#power_noon_glare) | POWER_NOON_GLARE |
+| [Блеск зенита](#power_noon_glare) | POWER_NOON_GLARE |
 | [Жужжащее облако](#power_buzzing_cloud) | POWER_BUZZING_CLOUD |
 | [Неугасимые угли](#power_undying_embers) | POWER_UNDYING_EMBERS |
 | [Бесконечное падение](#power_endless_fall) | POWER_ENDLESS_FALL |
@@ -372,9 +372,9 @@
 | [Кристальный глоток](#power_crystal_draught) | POWER_CRYSTAL_DRAUGHT |
 | [Заслон привала](#power_waypoint_ward) | POWER_WAYPOINT_WARD |
 | [Десятина землемера](#power_surveyors_tithe) | POWER_SURVEYORS_TITHE |
-| [Звон наковальни](#power_anvil_peal) | POWER_ANVIL_PEAL |
+| [Гул наковальни](#power_anvil_peal) | POWER_ANVIL_PEAL |
 | [Темп закалки](#power_quench_tempo) | POWER_QUENCH_TEMPO |
-| [Полуденный блеск](#power_zenith_glare) | POWER_ZENITH_GLARE |
+| [Блеск зенита](#power_zenith_glare) | POWER_ZENITH_GLARE |
 | [Закатная десятина](#power_dusk_tithe) | POWER_DUSK_TITHE |
 | [Сосредоточение охотника](#power_stalking_focus) | POWER_STALKING_FOCUS |
 | [Прыжок](#power_pounce) | POWER_POUNCE |
@@ -479,7 +479,7 @@
 | [Стойка цапли](#power_heron_stance) | POWER_HERON_STANCE |
 | [Удар цапли](#power_heron_strike) | POWER_HERON_STRIKE |
 | [Хватка ищейки](#power_hound_bite) | POWER_HOUND_BITE |
-| [Чёрное пламя](#power_dark_consumption) | POWER_DARK_CONSUMPTION |
+| [Пожирающая тьма](#power_dark_consumption) | POWER_DARK_CONSUMPTION |
 | [Тёмный пир](#power_dark_feast) | POWER_DARK_FEAST |
 | [Гнев алтаря](#power_altar_wrath) | POWER_ALTAR_WRATH |
 | [Взгляд Изнанки](#power_altar_vaal_sight) | POWER_ALTAR_VAAL_SIGHT |
@@ -589,7 +589,7 @@
 | [Зелёный пульс](#power_emerald_pulse) | POWER_EMERALD_PULSE |
 | [Капитанский сундук](#power_avarice_hoard) | POWER_AVARICE_HOARD |
 | [Жадность](#power_avarice_greed) | POWER_AVARICE_GREED |
-| [Чёрное пламя](#power_blackflame_pact) | POWER_BLACKFLAME_PACT |
+| [Пожирающая тьма](#power_blackflame_pact) | POWER_BLACKFLAME_PACT |
 | [Тление](#power_blackflame_kindle) | POWER_BLACKFLAME_KINDLE |
 | [Отблеск](#power_dreamshard_glint) | POWER_DREAMSHARD_GLINT |
 | [Усыпление](#power_dreamshard_sleep) | POWER_DREAMSHARD_SLEEP |
@@ -601,7 +601,7 @@
 | [Бдение](#power_shorewatch_vigil) | POWER_SHOREWATCH_VIGIL |
 | [Сторожевой огонь](#power_shorewatch_beacon) | POWER_SHOREWATCH_BEACON |
 | [Кровь Владыки](#power_sovereign_blood) | POWER_SOVEREIGN_BLOOD |
-| [Погребальный костёр](#power_sovereign_pyre) | POWER_SOVEREIGN_PYRE |
+| [Фениксов костёр](#power_sovereign_pyre) | POWER_SOVEREIGN_PYRE |
 | [Обморожение](#power_hush_frostbite) | POWER_HUSH_FROSTBITE |
 | [Недвижность](#power_hush_stillness) | POWER_HUSH_STILLNESS |
 | [Родниковая связь](#power_spring_bond) | POWER_SPRING_BOND |
@@ -715,7 +715,7 @@
 | [Серное дыхание](#power_sulphur_breath) | POWER_SULPHUR_BREATH |
 | [Заряженная кромка](#power_charged_edge) | POWER_CHARGED_EDGE |
 | [Железная кровь](#power_iron_blood) | POWER_IRON_BLOOD |
-| [Холодный расчёт](#power_cold_calculus) | POWER_COLD_CALCULUS |
+| [Трезвый расчёт](#power_cold_calculus) | POWER_COLD_CALCULUS |
 | [Камень-оберег](#power_wardstone) | POWER_WARDSTONE |
 | [Танец клинков](#power_blade_dance) | POWER_BLADE_DANCE |
 | [Небесная кузня](#power_skyforge) | POWER_SKYFORGE |
@@ -2446,7 +2446,7 @@
 
 ## POWER_ALPHA_HOWL <a href="#power_alpha_howl" id="power_alpha_howl"></a>
 
-### Вой вожака <a href="#вой-вожака" id="вой-вожака"></a>
+### Вой первого волка <a href="#вой-вожака" id="вой-вожака"></a>
 
 
 | Параметр | Значение |
@@ -2825,7 +2825,7 @@
 
 ## POWER_WAR_SHOUT <a href="#power_war_shout" id="power_war_shout"></a>
 
-### Боевой клич <a href="#боевой-клич" id="боевой-клич"></a>
+### Вой стаи <a href="#боевой-клич" id="боевой-клич"></a>
 
 
 | Параметр | Значение |
@@ -2853,7 +2853,7 @@
 
 ## POWER_LAST_STAND <a href="#power_last_stand" id="power_last_stand"></a>
 
-### Последний рубеж <a href="#последний-рубеж" id="последний-рубеж"></a>
+### Покаянный рубеж <a href="#последний-рубеж" id="последний-рубеж"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3153,7 +3153,7 @@
 
 ## POWER_VOID_ECHO <a href="#power_void_echo" id="power_void_echo"></a>
 
-### Эхо пустоты <a href="#эхо-пустоты" id="эхо-пустоты"></a>
+### Пустой отзвук <a href="#эхо-пустоты" id="эхо-пустоты"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -4013,7 +4013,7 @@
 
 ## POWER_LAST_GROUND <a href="#power_last_ground" id="power_last_ground"></a>
 
-### Последний рубеж <a href="#последний-рубеж-1" id="последний-рубеж-1"></a>
+### Покаянный рубеж <a href="#последний-рубеж-1" id="последний-рубеж-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -4279,7 +4279,7 @@
 
 ## POWER_ANVIL_RING <a href="#power_anvil_ring" id="power_anvil_ring"></a>
 
-### Звон наковальни <a href="#звон-наковальни" id="звон-наковальни"></a>
+### Гул наковальни <a href="#звон-наковальни" id="звон-наковальни"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -4822,7 +4822,7 @@
 
 ## POWER_HOLLOW_ECHO <a href="#power_hollow_echo" id="power_hollow_echo"></a>
 
-### Эхо пустоты <a href="#эхо-пустоты-1" id="эхо-пустоты-1"></a>
+### Пустой отзвук <a href="#эхо-пустоты-1" id="эхо-пустоты-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -5122,7 +5122,7 @@
 
 ## POWER_LEADERS_HOWL <a href="#power_leaders_howl" id="power_leaders_howl"></a>
 
-### Вой вожака <a href="#вой-вожака-1" id="вой-вожака-1"></a>
+### Вой первого волка <a href="#вой-вожака-1" id="вой-вожака-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -5241,7 +5241,7 @@
 
 ## POWER_NOON_GLARE <a href="#power_noon_glare" id="power_noon_glare"></a>
 
-### Полуденный блеск <a href="#полуденный-блеск" id="полуденный-блеск"></a>
+### Блеск зенита <a href="#полуденный-блеск" id="полуденный-блеск"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -6901,7 +6901,7 @@
 
 ## POWER_ANVIL_PEAL <a href="#power_anvil_peal" id="power_anvil_peal"></a>
 
-### Звон наковальни <a href="#звон-наковальни-1" id="звон-наковальни-1"></a>
+### Гул наковальни <a href="#звон-наковальни-1" id="звон-наковальни-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -6935,7 +6935,7 @@
 
 ## POWER_ZENITH_GLARE <a href="#power_zenith_glare" id="power_zenith_glare"></a>
 
-### Полуденный блеск <a href="#полуденный-блеск-1" id="полуденный-блеск-1"></a>
+### Блеск зенита <a href="#полуденный-блеск-1" id="полуденный-блеск-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -8696,7 +8696,7 @@
 
 ## POWER_DARK_CONSUMPTION <a href="#power_dark_consumption" id="power_dark_consumption"></a>
 
-### Чёрное пламя <a href="#чёрное-пламя" id="чёрное-пламя"></a>
+### Пожирающая тьма <a href="#чёрное-пламя" id="чёрное-пламя"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -10560,7 +10560,7 @@
 
 ## POWER_BLACKFLAME_PACT <a href="#power_blackflame_pact" id="power_blackflame_pact"></a>
 
-### Чёрное пламя <a href="#чёрное-пламя-1" id="чёрное-пламя-1"></a>
+### Пожирающая тьма <a href="#чёрное-пламя-1" id="чёрное-пламя-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -10764,7 +10764,7 @@
 
 ## POWER_SOVEREIGN_PYRE <a href="#power_sovereign_pyre" id="power_sovereign_pyre"></a>
 
-### Погребальный костёр <a href="#погребальный-костёр" id="погребальный-костёр"></a>
+### Фениксов костёр <a href="#погребальный-костёр" id="погребальный-костёр"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -12666,7 +12666,7 @@
 
 ## POWER_COLD_CALCULUS <a href="#power_cold_calculus" id="power_cold_calculus"></a>
 
-### Холодный расчёт <a href="#холодный-расчёт" id="холодный-расчёт"></a>
+### Трезвый расчёт <a href="#холодный-расчёт" id="холодный-расчёт"></a>
 
 **Чтение свойства** (`{v}` — значение):
 

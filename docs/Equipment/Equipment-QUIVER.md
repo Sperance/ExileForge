@@ -31,7 +31,7 @@
 | [Void Fletching](#void_fletching) | Уникальный | 65 |
 | [The Lone Arrow](#the_lone_arrow) | Уникальный | 18 |
 | [Starlight Quiver](#starlight_quiver) | Редкий | 85 |
-| [The Prism Hunter's Trophy](#prism_hunters_trophy) | Уникальный | 78 |
+| [The The Prism Hunter's Trophy](#prism_hunters_trophy) | Уникальный | 78 |
 | [The Barbed Hunt](#the_barbed_hunt) | Уникальный | 44 |
 | [Starhunter Quiver](#starhunter_quiver) | Уникальный | 60 |
 
@@ -194,7 +194,7 @@
 
 ### Rearguard <a href="#rearguard-1" id="rearguard-1"></a>
 
-Последний рубеж, который несёшь за спиной.
+Покаянный рубеж, который несёшь за спиной.
 
 **Русское название:** Арьергард
 
@@ -755,7 +755,7 @@
 
 ## PRISM_HUNTERS_TROPHY <a href="#prism_hunters_trophy" id="prism_hunters_trophy"></a>
 
-### The Prism Hunter's Trophy <a href="#prism-hunters-trophy" id="prism-hunters-trophy"></a>
+### The The Prism Hunter's Trophy <a href="#prism-hunters-trophy" id="prism-hunters-trophy"></a>
 
 Каждая стрела — цвет, каждый цвет — смерть.
 

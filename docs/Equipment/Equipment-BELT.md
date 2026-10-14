@@ -39,7 +39,7 @@
 | [Chasm-Hunger Cord](#chasm_hunger_belt) | Уникальный | 52 |
 | [Burden of the Atlas](#burden_of_atlas) | Уникальный | 60 |
 | [Godsteel Belt](#godsteel_belt) | Редкий | 85 |
-| [The Pearl Eater's Coil](#pearl_eaters_coil) | Уникальный | 88 |
+| [The The Pearl Eater's Coil](#pearl_eaters_coil) | Уникальный | 88 |
 | [Girdle of the War Avatar](#avatar_of_wars_girdle) | Уникальный | 95 |
 | [Highwater Mark](#highwater_mark) | Уникальный | 98 |
 | [Scarknit Cord](#scarknit_cord) | Уникальный | 42 |
@@ -989,7 +989,7 @@
 
 ## PEARL_EATERS_COIL <a href="#pearl_eaters_coil" id="pearl_eaters_coil"></a>
 
-### The Pearl Eater's Coil <a href="#pearl-eaters-coil" id="pearl-eaters-coil"></a>
+### The The Pearl Eater's Coil <a href="#pearl-eaters-coil" id="pearl-eaters-coil"></a>
 
 Он глотает жемчуг. Он глотает всё.
 

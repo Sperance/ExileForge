@@ -1072,7 +1072,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 110; STOCK_ATTACK_PHYSICAL: 9; STOCK_ATTACK_CHAOS: 5; STOCK_ARMOR: 60; STOCK_RESIST_CHAOS: 40; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 
 
 ## CHASM_WHISPER_QUEEN <a href="#chasm_whisper_queen" id="chasm_whisper_queen"></a>

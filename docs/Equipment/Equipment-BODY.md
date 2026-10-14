@@ -85,7 +85,7 @@
 | [Voidweave Armour](#voidweave_armour) | Редкий | 88 |
 | [Windrunner Garb](#windrunner_garb) | Редкий | 88 |
 | [Matriarch's Glass Heart](#matriarchs_glass_heart) | Уникальный | 77 |
-| [The Coral Queen's Carapace](#coral_queens_carapace) | Уникальный | 85 |
+| [The The Coral Queen's Carapace](#coral_queens_carapace) | Уникальный | 85 |
 | [The Last God's Mantle](#last_gods_mantle) | Уникальный | 100 |
 | [Pinnacle Plate](#pinnacle_plate) | Уникальный | 100 |
 | [Stonewarden's Hauberk](#stonewardens_hauberk) | Уникальный | 52 |
@@ -1316,7 +1316,7 @@
 - +70–90 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - +30–40 к порогу оглушения · [Порог оглушения](../reference/Stats/Stats-HERO.md#stock_stun_threshold)
 - Сердце наковальни · ADD · -12–-8 · [Сердце наковальни](../reference/Stats/Stats-POWER.md#power_anvil_heart)
-- При получении удара бьёт в ответ физическим уроном в 3–5% вашей брони, не чаще раза в 2 с · [Звон наковальни](../reference/Stats/Stats-POWER.md#power_anvil_ring)
+- При получении удара бьёт в ответ физическим уроном в 3–5% вашей брони, не чаще раза в 2 с · [Гул наковальни](../reference/Stats/Stats-POWER.md#power_anvil_ring)
 
 
 | Параметр | Значение |
@@ -1354,7 +1354,7 @@
 - 3–5% дополнительного снижения физического урона · [Снижение физического урона](../reference/Stats/Stats-HERO.md#stock_physical_reduction)
 - -6–-4% увеличение получаемого урона · [Получаемый урон](../reference/Stats/Stats-HERO.md#stock_damage_taken)
 - +8–12% к снижению физического урона, пока здоровья меньше 50% · [Непреклонность](../reference/Stats/Stats-POWER.md#power_unyielding)
-- Падение здоровья до низкого даёт барьер в 15–25% максимума здоровья на 4 с, не чаще раза в 15 с · [Последний рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
+- Падение здоровья до низкого даёт барьер в 15–25% максимума здоровья на 4 с, не чаще раза в 15 с · [Покаянный рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
 
 
 | Параметр | Значение |
@@ -2472,7 +2472,7 @@
 
 ## CORAL_QUEENS_CARAPACE <a href="#coral_queens_carapace" id="coral_queens_carapace"></a>
 
-### The Coral Queen's Carapace <a href="#coral-queens-carapace" id="coral-queens-carapace"></a>
+### The The Coral Queen's Carapace <a href="#coral-queens-carapace" id="coral-queens-carapace"></a>
 
 Растили тысячу лет. Сломали за день.
 

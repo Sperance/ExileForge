@@ -1455,7 +1455,7 @@
 
 ### Doryani's Catalyst <a href="#doryanis-catalyst" id="doryanis-catalyst"></a>
 
-Ваал потянулись за силой, и сила потянулась в ответ.
+Изнанки потянулись за силой, и сила потянулась в ответ.
 
 **Русское название:** Катализатор Дориани
 
@@ -1774,7 +1774,7 @@
 - +15–25 к урону от огня · [Урон огнём](../reference/Stats/Stats-HERO.md#stock_attack_fire)
 - 60–90% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical)
 - Каждый 5-й удар огнём бьёт всех врагов на 50–70% урона оружия огнём · [Солнечный протуберанец](../reference/Stats/Stats-POWER.md#power_sunflare)
-- Критический удар с шансом 30–50% поджигает · [Полуденный блеск](../reference/Stats/Stats-POWER.md#power_noon_glare)
+- Критический удар с шансом 30–50% поджигает · [Блеск зенита](../reference/Stats/Stats-POWER.md#power_noon_glare)
 
 
 | Параметр | Значение |
@@ -2287,7 +2287,7 @@
 
 ### Sacrificial Fang <a href="#sacrificial-fang" id="sacrificial-fang"></a>
 
-Жрецы Ваал никогда его не чистили. В крови и был весь смысл.
+Жрецы Изнанки никогда его не чистили. В крови и был весь смысл.
 
 **Русское название:** Жертвенный клык
 
@@ -2423,7 +2423,7 @@
 - 80–110% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical)
 - +8–14 к урону от огня · [Урон огнём](../reference/Stats/Stats-HERO.md#stock_attack_fire)
 - +15–25 к порогу оглушения · [Порог оглушения](../reference/Stats/Stats-HERO.md#stock_stun_threshold)
-- Каждый 4-й удар с шансом 40–60% оглушает врага на 0,8 с · [Звон наковальни](../reference/Stats/Stats-POWER.md#power_anvil_peal)
+- Каждый 4-й удар с шансом 40–60% оглушает врага на 0,8 с · [Гул наковальни](../reference/Stats/Stats-POWER.md#power_anvil_peal)
 - Оглушение врага даёт 10–15% увеличения скорости атаки на 3 с · [Темп закалки](../reference/Stats/Stats-POWER.md#power_quench_tempo)
 
 
@@ -3044,7 +3044,7 @@
 - 20% шанс отравить · [Шанс отравления](../reference/Stats/Stats-HERO.md#stock_poison_chance)
 - 40% увеличение урона от яда · [Урон от яда](../reference/Stats/Stats-HERO.md#stock_poison_damage)
 - +10–20 к урону хаосом · [Урон хаосом](../reference/Stats/Stats-HERO.md#stock_attack_chaos)
-- 15% урона огнём превращается в хаос · [Чёрное пламя](../reference/Stats/Stats-POWER.md#power_dark_consumption)
+- 15% урона огнём превращается в хаос · [Пожирающая тьма](../reference/Stats/Stats-POWER.md#power_dark_consumption)
 - Убийство отравленного врага восстанавливает 2–3% максимума здоровья · [Тёмный пир](../reference/Stats/Stats-POWER.md#power_dark_feast)
 
 
@@ -4334,7 +4334,7 @@
 - Добавляет 25–38 урона от огня к заклинаниям · [Огненный урон к заклинаниям](../reference/Stats/Stats-HERO.md#stock_spell_add_fire)
 - 45–60% увеличение урона от огня · [Урон огнём](../reference/Stats/Stats-HERO.md#stock_attack_fire)
 - +30–40 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
-- Убитые горящие враги взрываются: 4–5% их макс. здоровья уроном огнём по остальным · [Погребальный костёр](../reference/Stats/Stats-POWER.md#power_sovereign_pyre)
+- Убитые горящие враги взрываются: 4–5% их макс. здоровья уроном огнём по остальным · [Фениксов костёр](../reference/Stats/Stats-POWER.md#power_sovereign_pyre)
 - Убийство наносит всем врагам урон огнём, равный 8–12% вашего максимума здоровья · [Пламя тризны](../reference/Stats/Stats-POWER.md#power_kaoms_blaze)
 
 
@@ -4999,7 +4999,7 @@
 | Вид · `kind` | `WEAPON` |
 | Редкость · `rarity` | `UNIQUE` |
 | Вид оружия · `weaponType` | `SWORD` |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 
 ---
 Основание: [актуальный исходник](https://github.com/Sperance/ktor-bestgame/blob/fa8c3991681e20ef4d62548bf954d0b031a905a5/src/main/resources/content/equipment.json), срез `fa8c399` / клиент `9faca17`, 03.10.2026.

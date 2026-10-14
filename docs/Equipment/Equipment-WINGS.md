@@ -919,7 +919,7 @@
 - Питомец наносит на 40–60% больше урона · [Урон питомца](../reference/Stats/Stats-HERO.md#stock_pet_damage)
 - +35–45% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
 - Удар питомца даёт вам 4.6–6.9% увеличения урона на 3 с, до 5 раз · [Сбор стаи](../reference/Stats/Stats-POWER.md#power_pack_rally)
-- Вой вожака · ADD · -23–-13.8 · [Вой вожака](../reference/Stats/Stats-POWER.md#power_alpha_howl)
+- Вой первого волка · ADD · -23–-13.8 · [Вой первого волка](../reference/Stats/Stats-POWER.md#power_alpha_howl)
 
 
 | Параметр | Значение |

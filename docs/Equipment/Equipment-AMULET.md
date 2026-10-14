@@ -48,7 +48,7 @@
 | [Garland of Spores and Ash](#crown_of_spores_and_ash) | Мифический | 62 |
 | [Astral Amulet](#astral_amulet) | Редкий | 85 |
 | [Herald's Last Breath](#heralds_last_breath) | Уникальный | 76 |
-| [The Vault Warden's Key](#vault_wardens_key) | Уникальный | 86 |
+| [The The Vault Warden's Key](#vault_wardens_key) | Уникальный | 86 |
 | [Scales of the Judge](#judge_of_souls_scales) | Уникальный | 94 |
 | [Atlas of Ascent](#atlas_of_ascent) | Уникальный | 98 |
 | [Oracle's Tally](#oracles_tally) | Уникальный | 58 |
@@ -427,7 +427,7 @@
 - +40–60 к максимуму энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
 - +10–15% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all)
 - У вас нет маны; даёт энергощит, равный 15–25% максимума здоровья · [Полый сосуд](../reference/Stats/Stats-POWER.md#power_hollow_vessel)
-- Когда энергощит разбит, даёт барьер в 15–20% максимума здоровья на 3 с, не чаще раза в 8 с · [Эхо пустоты](../reference/Stats/Stats-POWER.md#power_hollow_echo)
+- Когда энергощит разбит, даёт барьер в 15–20% максимума здоровья на 3 с, не чаще раза в 8 с · [Пустой отзвук](../reference/Stats/Stats-POWER.md#power_hollow_echo)
 
 
 | Параметр | Значение |
@@ -545,7 +545,7 @@
 - +10–15 к ловкости · [Ловкость](../reference/Stats/Stats-HERO.md#stock_agility)
 - 5–8% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
 - Убийство даёт 5–8% увеличения скорости атаки на 4 с, до 3 раз · [Запах крови](../reference/Stats/Stats-POWER.md#power_blood_scent)
-- +10–15% урона в первые 4 с боя · [Вой вожака](../reference/Stats/Stats-POWER.md#power_leaders_howl)
+- +10–15% урона в первые 4 с боя · [Вой первого волка](../reference/Stats/Stats-POWER.md#power_leaders_howl)
 
 
 | Параметр | Значение |
@@ -590,7 +590,7 @@
 
 Вырвано у последнего верховного жреца. Оно не перестало биться — лишь сменило хозяина.
 
-**Русское название:** Сердце Ваал
+**Русское название:** Сердце Изнанки
 
 **Уникальный · Амулеты**
 
@@ -877,7 +877,7 @@
 - +4–5% к максимуму сопротивления огню · [Максимум сопротивления огню](../reference/Stats/Stats-HERO.md#stock_resist_max_fire)
 - 25–35% увеличение урона от огня · [Урон огнём](../reference/Stats/Stats-HERO.md#stock_attack_fire)
 - 20% физического урона атак превращается в огонь · [Кровь Владыки](../reference/Stats/Stats-POWER.md#power_sovereign_blood)
-- Убитые горящие враги взрываются: 4–5% их макс. здоровья уроном огнём по остальным · [Погребальный костёр](../reference/Stats/Stats-POWER.md#power_sovereign_pyre)
+- Убитые горящие враги взрываются: 4–5% их макс. здоровья уроном огнём по остальным · [Фениксов костёр](../reference/Stats/Stats-POWER.md#power_sovereign_pyre)
 
 
 | Параметр | Значение |
@@ -1055,7 +1055,7 @@
 - Питомец получает +8–12% к скорости атаки · [Скорость атаки питомца](../reference/Stats/Stats-HERO.md#stock_pet_attack_speed)
 - +10–15 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
 - Ваши убийства лечат питомца на 8–12% его здоровья · [Узы стаи](../reference/Stats/Stats-POWER.md#power_pack_bond)
-- Вой вожака · ADD · -20–-12 · [Вой вожака](../reference/Stats/Stats-POWER.md#power_alpha_howl)
+- Вой первого волка · ADD · -20–-12 · [Вой первого волка](../reference/Stats/Stats-POWER.md#power_alpha_howl)
 
 
 | Параметр | Значение |
@@ -1273,7 +1273,7 @@
 
 ## VAULT_WARDENS_KEY <a href="#vault_wardens_key" id="vault_wardens_key"></a>
 
-### The Vault Warden's Key <a href="#vault-wardens-key" id="vault-wardens-key"></a>
+### The The Vault Warden's Key <a href="#vault-wardens-key" id="vault-wardens-key"></a>
 
 Он открывает каждую дверь империи. Ни одной не осталось.
 

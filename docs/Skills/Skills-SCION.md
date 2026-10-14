@@ -25,7 +25,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `ATTACK` |
 | Уровень открытия · `unlock` | 1 |
 | icon | `orb_facet` |
@@ -43,7 +43,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `ATTACK` |
 | Уровень открытия · `unlock` | 6 |
 | icon | `throwing` |
@@ -61,7 +61,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `SPELL` |
 | Уровень открытия · `unlock` | 12 |
 | icon | `lightning` |
@@ -79,7 +79,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `WARCRY` |
 | Уровень открытия · `unlock` | 20 |
 | icon | `combat` |
@@ -96,7 +96,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `CURSE` |
 | Уровень открытия · `unlock` | 30 |
 | icon | `dark` |
@@ -114,7 +114,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `HEAL` |
 | Уровень открытия · `unlock` | 40 |
 | icon | `regen` |
@@ -132,7 +132,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `AURA` |
 | Уровень открытия · `unlock` | 1 |
 | icon | `orb` |
@@ -147,7 +147,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `BONUS` |
 | Уровень открытия · `unlock` | 5 |
 | icon | `resist` |
@@ -161,7 +161,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `TRIGGER` |
 | Уровень открытия · `unlock` | 10 |
 | icon | `mirror` |
@@ -175,7 +175,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `AURA` |
 | Уровень открытия · `unlock` | 16 |
 | icon | `magical` |
@@ -190,7 +190,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `BONUS` |
 | Уровень открытия · `unlock` | 24 |
 | icon | `speed` |
@@ -204,7 +204,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `TRIGGER` |
 | Уровень открытия · `unlock` | 32 |
 | icon | `potion` |
@@ -218,7 +218,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `BONUS` |
 | Уровень открытия · `unlock` | 42 |
 | icon | `leech` |
@@ -232,7 +232,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| Класс · `heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | Тип · `type` | `TRIGGER` |
 | Уровень открытия · `unlock` | 52 |
 | icon | `health` |

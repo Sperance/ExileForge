@@ -892,14 +892,14 @@
 | Теги · `tags` | `power`; `passive` |
 
 
-- +{v}% шанса двойного урона за каждые 200 меткости, до 40% · [Холодный расчёт](../Stats/Stats-POWER.md#power_cold_calculus)
+- +{v}% шанса двойного урона за каждые 200 меткости, до 40% · [Трезвый расчёт](../Stats/Stats-POWER.md#power_cold_calculus)
 
 ### NATURAL <a href="#natural-46" id="natural-46"></a>
 
 
 | Тир | Мин. ilvl | Вес | Диапазоны эффектов |
 | --- | --- | --- | --- |
-| 1 | 1 | 1000 | +1% шанса двойного урона за каждые 200 меткости, до 40% · [Холодный расчёт](../Stats/Stats-POWER.md#power_cold_calculus) |
+| 1 | 1 | 1000 | +1% шанса двойного урона за каждые 200 меткости, до 40% · [Трезвый расчёт](../Stats/Stats-POWER.md#power_cold_calculus) |
 
 
 ## PASSIVE_POWER_CRYSTAL_SIGHT <a href="#passive_power_crystal_sight" id="passive_power_crystal_sight"></a>

@@ -73,7 +73,7 @@
 
 ## POWER_VOID_ECHO <a href="#power_void_echo" id="power_void_echo"></a>
 
-### Эхо пустоты <a href="#эхо-пустоты" id="эхо-пустоты"></a>
+### Пустой отзвук <a href="#эхо-пустоты" id="эхо-пустоты"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -84,7 +84,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Эхо пустоты](../Stats/Stats-POWER.md#power_void_echo) |
+| Характеристика · `stat` | [Пустой отзвук](../Stats/Stats-POWER.md#power_void_echo) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `SKILL_USE` |
 | Эффекты · `effects` | Действие: `COOLDOWNS`; Количество: 999 |

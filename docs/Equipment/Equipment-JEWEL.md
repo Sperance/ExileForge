@@ -114,7 +114,7 @@
 **Свойства**
 
 - +10–15 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
-- +10–15% множителя критического удара при полном здоровье · [Полуденный блеск](../reference/Stats/Stats-POWER.md#power_zenith_glare)
+- +10–15% множителя критического удара при полном здоровье · [Блеск зенита](../reference/Stats/Stats-POWER.md#power_zenith_glare)
 - Убийство врага восстанавливает 3–5% максимума маны · [Закатная десятина](../reference/Stats/Stats-POWER.md#power_dusk_tithe)
 
 

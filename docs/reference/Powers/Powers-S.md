@@ -1715,7 +1715,7 @@
 
 ## POWER_SOVEREIGN_PYRE <a href="#power_sovereign_pyre" id="power_sovereign_pyre"></a>
 
-### Погребальный костёр <a href="#погребальный-костёр" id="погребальный-костёр"></a>
+### Фениксов костёр <a href="#погребальный-костёр" id="погребальный-костёр"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -1726,7 +1726,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Погребальный костёр](../Stats/Stats-POWER.md#power_sovereign_pyre) |
+| Характеристика · `stat` | [Фениксов костёр](../Stats/Stats-POWER.md#power_sovereign_pyre) |
 | Событие · `on` | `KILL` |
 | checks | check: `TARGET_AILMENT`; word: `IGNITE` |
 | Эффекты · `effects` | Действие: `DAMAGE`; Тип: `FIRE`; of: `TARGET_LIFE`; to: `OTHERS` |

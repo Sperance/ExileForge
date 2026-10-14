@@ -1221,7 +1221,7 @@
 
 **Свойства**
 
-- 6% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 6% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -1236,7 +1236,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1251,7 +1251,7 @@
 
 **Свойства**
 
-- 9% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 9% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -1266,7 +1266,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1281,7 +1281,7 @@
 
 **Свойства**
 
-- 6% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 6% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -1296,7 +1296,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1311,7 +1311,7 @@
 
 **Свойства**
 
-- 9% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 9% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -1326,7 +1326,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1341,7 +1341,7 @@
 
 **Свойства**
 
-- 6% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 6% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -1356,7 +1356,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -2976,7 +2976,7 @@
 
 **Свойства**
 
-- 10% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 10% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -2991,7 +2991,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3006,7 +3006,7 @@
 
 **Свойства**
 
-- 15% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 15% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -3021,7 +3021,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3036,7 +3036,7 @@
 
 **Свойства**
 
-- 10% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 10% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -3051,7 +3051,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3066,7 +3066,7 @@
 
 **Свойства**
 
-- 15% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 15% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -3081,7 +3081,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3096,7 +3096,7 @@
 
 **Свойства**
 
-- 10% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 10% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -3111,7 +3111,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3126,7 +3126,7 @@
 
 **Свойства**
 
-- 15% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 15% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -4926,7 +4926,7 @@
 
 **Свойства**
 
-- 14% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 14% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -4941,7 +4941,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -4956,7 +4956,7 @@
 
 **Свойства**
 
-- 21% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 21% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -4971,7 +4971,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -4986,7 +4986,7 @@
 
 **Свойства**
 
-- 14% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 14% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -5001,7 +5001,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -5016,7 +5016,7 @@
 
 **Свойства**
 
-- 21% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 21% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -5031,7 +5031,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -5046,7 +5046,7 @@
 
 **Свойства**
 
-- 14% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 14% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -5061,7 +5061,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -5076,7 +5076,7 @@
 
 **Свойства**
 
-- 21% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 21% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -5091,7 +5091,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -6441,7 +6441,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -6456,7 +6456,7 @@
 
 **Свойства**
 
-- 5.2% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 5.2% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -6741,7 +6741,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -6756,7 +6756,7 @@
 
 **Свойства**
 
-- 3.5% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 3.5% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -6846,7 +6846,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -7086,7 +7086,7 @@
 
 **Свойства**
 
-- 5.2% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
+- 5.2% больше шанс уникалки Изнанки · [Атлас: уникалки Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
 | Параметр | Значение |
@@ -7101,7 +7101,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда прорех Изнанки · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -7266,7 +7266,7 @@
 
 **Свойства**
 
-- 3.5% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 3.5% к шансу портала Изнанки · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |

@@ -136,7 +136,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `MASTERY` |
-| Связанные узлы · `connections` | [Родник](Tree-NOTABLE.md#scn_a_1); [Глубокий колодец](Tree-NOTABLE.md#scn_a_2) |
+| Связанные узлы · `connections` | [Родник](Tree-NOTABLE.md#scn_a_1); [Колодец мудреца](Tree-NOTABLE.md#scn_a_2) |
 | Варианты · `options` | 12% увеличение максимума маны · [Мана](../reference/Stats/Stats-HERO.md#stock_mana); 20% увеличение скорости регенерации маны · [Восстановление маны](../reference/Stats/Stats-HERO.md#stock_mana_regen); 0.6% урона крадётся маной · [Кража маны](../reference/Stats/Stats-HERO.md#stock_leech_mana); +2 маны за каждый удар по врагу · [Мана за удар](../reference/Stats/Stats-HERO.md#stock_mana_on_hit); 10% увеличение эффективности резерва аур · [Эффективность резерва](../reference/Stats/Stats-HERO.md#stock_reservation); +38 к максимуму маны · [Мана](../reference/Stats/Stats-HERO.md#stock_mana) |
 
 
@@ -248,7 +248,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `MASTERY` |
-| Связанные узлы · `connections` | [Долгий глоток](Tree-NOTABLE.md#mar_c2_3); [Крепкий настой](Tree-NOTABLE.md#mar_c2_4); [Бережный глоток](Tree-NOTABLE.md#mar_c2_5) |
+| Связанные узлы · `connections` | [Затяжной глоток](Tree-NOTABLE.md#mar_c2_3); [Крепкий настой](Tree-NOTABLE.md#mar_c2_4); [Бережный глоток](Tree-NOTABLE.md#mar_c2_5) |
 | Варианты · `options` | 10% увеличение эффекта фляг · [Эффект фляг](../reference/Stats/Stats-HERO.md#stock_flask_effect); 10% увеличение длительности фляг · [Длительность фляг](../reference/Stats/Stats-HERO.md#stock_flask_duration); 25% увеличение получаемых зарядов фляг · [Заряды фляг](../reference/Stats/Stats-HERO.md#stock_flask_charges_gained); 8% уменьшение расхода зарядов фляг · [Расход зарядов](../reference/Stats/Stats-HERO.md#stock_flask_charges_used); 25% увеличение восстановления здоровья флягами · [Восстановление флягами жизни](../reference/Stats/Stats-HERO.md#stock_flask_life_recovery); 10% увеличение силы лечения умений · [Лечение умений](../reference/Stats/Stats-HERO.md#stock_skill_healing) |
 
 
@@ -312,7 +312,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `MASTERY` |
-| Связанные узлы · `connections` | [Кровавый долг](Tree-NOTABLE.md#due_c0_1); [Стена щитов](Tree-NOTABLE.md#due_c0_3) |
+| Связанные узлы · `connections` | [Кровавый долг](Tree-NOTABLE.md#due_c0_1); [Сомкнутые щиты](Tree-NOTABLE.md#due_c0_3) |
 | Варианты · `options` | 12% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed); 18% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical); 10% шанс вызвать кровотечение · [Шанс кровотечения](../reference/Stats/Stats-HERO.md#stock_bleed_chance); 38% увеличение урона от кровотечения · [Урон от кровотечения](../reference/Stats/Stats-HERO.md#stock_bleed_damage); +3 здоровья за каждый удар по врагу · [Здоровье за удар](../reference/Stats/Stats-HERO.md#stock_health_on_hit); 8% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed) |
 
 
@@ -456,7 +456,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `MASTERY` |
-| Связанные узлы · `connections` | [Холодный расчёт](Tree-NOTABLE.md#ran_c3_1); [Точный глаз](Tree-NOTABLE.md#ran_c3_4); [Смертельный изгиб](Tree-NOTABLE.md#ran_c3_5) |
+| Связанные узлы · `connections` | [Трезвый расчёт](Tree-NOTABLE.md#ran_c3_1); [Точный глаз](Tree-NOTABLE.md#ran_c3_4); [Смертельный изгиб](Tree-NOTABLE.md#ran_c3_5) |
 | Варианты · `options` | 38% увеличение шанса критического удара · [Шанс критического удара](../reference/Stats/Stats-HERO.md#stock_critical_chance); +9% к множителю критического удара · [Множитель критического удара](../reference/Stats/Stats-HERO.md#stock_critical_multiplier); +24% к множителю критического удара · [Множитель критического удара](../reference/Stats/Stats-HERO.md#stock_critical_multiplier); 3.2% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed); 21% увеличение шанса критического удара · [Шанс критического удара](../reference/Stats/Stats-HERO.md#stock_critical_chance); +12 здоровья за убийство · [Здоровье за убийство](../reference/Stats/Stats-HERO.md#stock_health_on_kill); +3% к максимуму шанса критического удара · [Максимум шанса крита](../reference/Stats/Stats-HERO.md#stock_critical_max); 38% увеличение шанса критического удара · [Шанс критического удара](../reference/Stats/Stats-HERO.md#stock_critical_chance) |
 
 

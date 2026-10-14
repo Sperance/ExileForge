@@ -81,7 +81,7 @@
 | [Astral Diadem](#astral_diadem) | Редкий | 88 |
 | [Voidgaze Mask](#voidgaze_mask) | Редкий | 88 |
 | [Windrunner Hood](#windrunner_hood) | Редкий | 88 |
-| [The Mirror Knight's Visor](#mirror_knights_visor) | Уникальный | 80 |
+| [The The Mirror Knight's Visor](#mirror_knights_visor) | Уникальный | 80 |
 | [Sovereign's Skycrown](#sovereigns_skycrown) | Уникальный | 80 |
 | [The Drowned Emperor's Crown](#emperors_drowned_crown) | Уникальный | 90 |
 | [The Stargazer's Lens](#stargazers_lens) | Уникальный | 97 |
@@ -1188,7 +1188,7 @@
 - +30–45 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - 50–70% увеличение брони · [Броня](../reference/Stats/Stats-HERO.md#stock_armor)
 - +15–25 к порогу оглушения · [Порог оглушения](../reference/Stats/Stats-HERO.md#stock_stun_threshold)
-- Боевой клич · ADD · -15–-10 · [Боевой клич](../reference/Stats/Stats-POWER.md#power_war_shout)
+- Вой стаи · ADD · -15–-10 · [Вой стаи](../reference/Stats/Stats-POWER.md#power_war_shout)
 - Каждые 8 с боевой клич даёт +15–25% урона на 3 с · [Ободряющий клич](../reference/Stats/Stats-POWER.md#power_rallying_cry)
 
 
@@ -1649,7 +1649,7 @@
 - +40–48% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all)
 - 45–60% увеличение редкости находимых предметов · [Редкость добычи](../reference/Stats/Stats-HERO.md#stock_rarity)
 - 20–30% увеличения шанса уникального предмета с боссов и стражей · [Взор пустоты](../reference/Stats/Stats-POWER.md#power_void_sight)
-- Применение умения с шансом 15–25% обновляет все перезарядки · [Эхо пустоты](../reference/Stats/Stats-POWER.md#power_void_echo)
+- Применение умения с шансом 15–25% обновляет все перезарядки · [Пустой отзвук](../reference/Stats/Stats-POWER.md#power_void_echo)
 
 
 | Параметр | Значение |
@@ -2382,7 +2382,7 @@
 
 ## MIRROR_KNIGHTS_VISOR <a href="#mirror_knights_visor" id="mirror_knights_visor"></a>
 
-### The Mirror Knight's Visor <a href="#mirror-knights-visor" id="mirror-knights-visor"></a>
+### The The Mirror Knight's Visor <a href="#mirror-knights-visor" id="mirror-knights-visor"></a>
 
 Ты видишь в нём себя — и выглядишь напуганным.
 

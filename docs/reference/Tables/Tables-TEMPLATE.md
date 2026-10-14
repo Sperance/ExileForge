@@ -3300,7 +3300,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Mirror Knight's Visor](../../Equipment/Equipment-HELMET.md#mirror_knights_visor) | 100 | — | — | 0 |
+| [The The Mirror Knight's Visor](../../Equipment/Equipment-HELMET.md#mirror_knights_visor) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_ORRERY_ENGINE <a href="#boss-boss_orrery_engine" id="boss-boss_orrery_engine"></a>
@@ -3345,7 +3345,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Prism Hunter's Trophy](../../Equipment/Equipment-QUIVER.md#prism_hunters_trophy) | 100 | — | — | 0 |
+| [The The Prism Hunter's Trophy](../../Equipment/Equipment-QUIVER.md#prism_hunters_trophy) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_GATE_PRAETOR <a href="#boss-boss_gate_praetor" id="boss-boss_gate_praetor"></a>
@@ -3375,7 +3375,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Coral Queen's Carapace](../../Equipment/Equipment-BODY.md#coral_queens_carapace) | 100 | — | — | 0 |
+| [The The Coral Queen's Carapace](../../Equipment/Equipment-BODY.md#coral_queens_carapace) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_VAULT_WARDEN <a href="#boss-boss_vault_warden" id="boss-boss_vault_warden"></a>
@@ -3390,7 +3390,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Vault Warden's Key](../../Equipment/Equipment-AMULET.md#vault_wardens_key) | 100 | — | — | 0 |
+| [The The Vault Warden's Key](../../Equipment/Equipment-AMULET.md#vault_wardens_key) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_DROWNED_ORATOR <a href="#boss-boss_drowned_orator" id="boss-boss_drowned_orator"></a>
@@ -3420,7 +3420,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Pearl Eater's Coil](../../Equipment/Equipment-BELT.md#pearl_eaters_coil) | 100 | — | — | 0 |
+| [The The Pearl Eater's Coil](../../Equipment/Equipment-BELT.md#pearl_eaters_coil) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_LEGION_TRIBUNE <a href="#boss-boss_legion_tribune" id="boss-boss_legion_tribune"></a>
@@ -3450,7 +3450,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Kelp Priest's Grasp](../../Equipment/Equipment-GLOVES.md#kelp_priests_vestment) | 100 | — | — | 0 |
+| [The The Kelp Priest's Grasp](../../Equipment/Equipment-GLOVES.md#kelp_priests_vestment) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_TRENCH_DRAKE <a href="#boss-boss_trench_drake" id="boss-boss_trench_drake"></a>
@@ -3465,7 +3465,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Trench Drake Scale](../../Equipment/Equipment-BOOTS.md#trench_drake_scale) | 100 | — | — | 0 |
+| [The The Trench Drake Scale](../../Equipment/Equipment-BOOTS.md#trench_drake_scale) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_THRESHOLD_GUARDIAN <a href="#boss-boss_threshold_guardian" id="boss-boss_threshold_guardian"></a>
@@ -3570,7 +3570,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [The Crown Collector's Hoard](../../Equipment/Equipment-RING.md#crown_collectors_hoard) | 100 | — | — | 0 |
+| [The The Crown Collector's Hoard](../../Equipment/Equipment-RING.md#crown_collectors_hoard) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_NOTHING_WALKER <a href="#boss-boss_nothing_walker" id="boss-boss_nothing_walker"></a>

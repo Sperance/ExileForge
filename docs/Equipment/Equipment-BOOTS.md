@@ -79,7 +79,7 @@
 | [Astral Slippers](#astral_slippers) | Редкий | 88 |
 | [Voidstep Boots](#voidstep_boots) | Редкий | 88 |
 | [Windrunner Boots](#windrunner_boots) | Редкий | 88 |
-| [The Trench Drake Scale](#trench_drake_scale) | Уникальный | 89 |
+| [The The Trench Drake Scale](#trench_drake_scale) | Уникальный | 89 |
 | [Walker of Nothing's Step](#walker_of_nothings_step) | Уникальный | 98 |
 | [Everclimb Greaves](#everclimb_greaves) | Уникальный | 98 |
 | [Deserter's Stride](#deserters_stride) | Уникальный | 34 |
@@ -1261,7 +1261,7 @@
 - 6–10% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
 - 40–60% увеличение уклонения · [Уклонение](../reference/Stats/Stats-HERO.md#stock_evasion)
 - 2–4% увеличения скорости атаки за каждого врага, до 5 · [Тактика стаи](../reference/Stats/Stats-POWER.md#power_pack_tactics)
-- Вой вожака · ADD · -20–-12 · [Вой вожака](../reference/Stats/Stats-POWER.md#power_alpha_howl)
+- Вой первого волка · ADD · -20–-12 · [Вой первого волка](../reference/Stats/Stats-POWER.md#power_alpha_howl)
 
 
 | Параметр | Значение |
@@ -2235,7 +2235,7 @@
 
 ## TRENCH_DRAKE_SCALE <a href="#trench_drake_scale" id="trench_drake_scale"></a>
 
-### The Trench Drake Scale <a href="#trench-drake-scale" id="trench-drake-scale"></a>
+### The The Trench Drake Scale <a href="#trench-drake-scale" id="trench-drake-scale"></a>
 
 Её создало давление. Давление её не сломит.
 
@@ -2316,7 +2316,7 @@
 - +200–260 к броне · [Броня](../reference/Stats/Stats-HERO.md#stock_armor)
 - +80–110 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - За каждый выигранный бой 3.5–5.8% увеличения урона на следующий · [Утомлённый путём](../reference/Stats/Stats-POWER.md#power_road_weary)
-- Падение здоровья до низкого даёт барьер в 17.2–28.7% максимума здоровья на 4 с, не чаще раза в 15 с · [Последний рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
+- Падение здоровья до низкого даёт барьер в 17.2–28.7% максимума здоровья на 4 с, не чаще раза в 15 с · [Покаянный рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
 
 
 | Параметр | Значение |

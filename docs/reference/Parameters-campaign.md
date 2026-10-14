@@ -747,7 +747,7 @@
 | `monsters[60].stats.STOCK_SHOCK_CHANCE` | 25 |
 | `monsters[60].stats.STOCK_MANA` | 30 |
 | `monsters[60].boss` | Да |
-| `monsters[60].skills` | [Разряд](Monster-skills.md#mob_zap); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[60].skills` | [Разряд](Monster-skills.md#mob_zap); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[60].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_CRACKLING](Modifiers/Modifiers-MONSTER.md#mob_crackling) |
 | `monsters[60].tables` | [boss:BOSS_SHARD_QUEEN](Tables/Tables-TEMPLATE.md#boss-boss_shard_queen) |
 | `monsters[61].code` | [Пепельный тиран](Bosses.md#boss_ashen_tyrant) |
@@ -1416,7 +1416,7 @@
 | `monsters[101].stats.STOCK_MANA_REGEN` | 4 |
 | `monsters[101].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[101].boss` | Да |
-| `monsters[101].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[101].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[101].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_WITHERING](Modifiers/Modifiers-MONSTER.md#mob_withering) |
 | `monsters[101].tables` | [boss:BOSS_HIGH_EMBALMER](Tables/Tables-TEMPLATE.md#boss-boss_high_embalmer) |
 | `monsters[102].code` | [Жрец Солнца](Bosses.md#boss_sun_priest) |
@@ -1626,7 +1626,7 @@
 | `monsters[114].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[114].stats.STOCK_MANA` | 30 |
 | `monsters[114].boss` | Да |
-| `monsters[114].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[114].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[114].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_BLIGHTED](Modifiers/Modifiers-MONSTER.md#mob_blighted) |
 | `monsters[114].tables` | [boss:BOSS_CANOPY_HORROR](Tables/Tables-TEMPLATE.md#boss-boss_canopy_horror) |
 | `monsters[115].code` | [Споровый владыка](Bosses.md#boss_spore_lord) |
@@ -1785,7 +1785,7 @@
 | `monsters[124].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[124].stats.STOCK_MANA` | 30 |
 | `monsters[124].boss` | Да |
-| `monsters[124].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[124].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[124].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_TOXIC](Modifiers/Modifiers-MONSTER.md#mob_toxic) |
 | `monsters[124].tables` | [boss:BOSS_SULPHUR_KING](Tables/Tables-TEMPLATE.md#boss-boss_sulphur_king) |
 | `monsters[125].code` | [Генерал-перебежчик](Bosses.md#boss_turncoat_general) |
@@ -1844,7 +1844,7 @@
 | `monsters[128].stats.STOCK_IGNITE_CHANCE` | 20 |
 | `monsters[128].stats.STOCK_MANA` | 30 |
 | `monsters[128].boss` | Да |
-| `monsters[128].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[128].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[128].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_FIREPROOF](Modifiers/Modifiers-MONSTER.md#mob_fireproof) |
 | `monsters[128].tables` | [boss:BOSS_FURNACE_MASTER](Tables/Tables-TEMPLATE.md#boss-boss_furnace_master) |
 | `monsters[128].trait` | `TRAIT_GROUNDED` |
@@ -1985,7 +1985,7 @@
 | `monsters[137].stats.STOCK_IGNITE_CHANCE` | 20 |
 | `monsters[137].stats.STOCK_MANA` | 30 |
 | `monsters[137].boss` | Да |
-| `monsters[137].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[137].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[137].fixed` | [BOSS_COLOSSAL](Modifiers/Modifiers-MONSTER.md#boss_colossal); [MOB_FLAMING](Modifiers/Modifiers-MONSTER.md#mob_flaming) |
 | `monsters[137].tables` | [boss:BOSS_VENT_DRAGON](Tables/Tables-TEMPLATE.md#boss-boss_vent_dragon) |
 | `monsters[138].code` | [Клятвенное пламя](Bosses.md#boss_infernal_gatekeeper) |
@@ -2089,7 +2089,7 @@
 | `monsters[143].stats.STOCK_MANA_REGEN` | 4 |
 | `monsters[143].stats.STOCK_FREEZE_CHANCE` | 20 |
 | `monsters[143].boss` | Да |
-| `monsters[143].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[143].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[143].fixed` | [BOSS_MIRROR_SHELL](Modifiers/Modifiers-MONSTER.md#boss_mirror_shell); [MOB_ARCANE](Modifiers/Modifiers-MONSTER.md#mob_arcane) |
 | `monsters[143].tables` | [boss:BOSS_FALLEN_ABBOT](Tables/Tables-TEMPLATE.md#boss-boss_fallen_abbot) |
 | `monsters[144].code` | [Шептун](Bosses.md#boss_whisperer) |
@@ -2285,7 +2285,7 @@
 | `monsters[155].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[155].stats.STOCK_MANA` | 30 |
 | `monsters[155].boss` | Да |
-| `monsters[155].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[155].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[155].fixed` | [BOSS_IMMORTAL](Modifiers/Modifiers-MONSTER.md#boss_immortal); [MOB_BLIGHTED](Modifiers/Modifiers-MONSTER.md#mob_blighted) |
 | `monsters[155].tables` | [boss:BOSS_MOTHER_BLIGHT](Tables/Tables-TEMPLATE.md#boss-boss_mother_blight) |
 | `monsters[156].code` | [Ткач завесы](Bosses.md#boss_veil_weaver) |
@@ -2489,7 +2489,7 @@
 | `monsters[171].stats.STOCK_RESIST_CHAOS` | 40 |
 | `monsters[171].stats.STOCK_MANA` | 30 |
 | `monsters[171].boss` | Да |
-| `monsters[171].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[171].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[171].fixed` | [ABYSS_MOB_BLOODTHIRSTY](Modifiers/Modifiers-MONSTER.md#abyss_mob_bloodthirsty) |
 | `monsters[172].code` | [Королева шёпотов](Monsters.md#chasm_whisper_queen) |
 | `monsters[172].form` | `WRAITH` |
@@ -3294,7 +3294,7 @@
 | `monsters[228].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[228].stats.STOCK_MANA` | 30 |
 | `monsters[228].boss` | Да |
-| `monsters[228].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[228].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[228].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_TOXIC](Modifiers/Modifiers-MONSTER.md#mob_toxic) |
 | `monsters[228].tables` | [boss:BOSS_THRESHOLD_GUARDIAN](Tables/Tables-TEMPLATE.md#boss-boss_threshold_guardian) |
 | `monsters[229].code` | [Звёздный прилив](Bosses.md#boss_star_tide) |
@@ -3445,7 +3445,7 @@
 | `monsters[237].stats.STOCK_MANA_REGEN` | 4 |
 | `monsters[237].stats.STOCK_FREEZE_CHANCE` | 20 |
 | `monsters[237].boss` | Да |
-| `monsters[237].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[237].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[237].fixed` | [BOSS_MIRROR_SHELL](Modifiers/Modifiers-MONSTER.md#boss_mirror_shell); [MOB_ARCANE](Modifiers/Modifiers-MONSTER.md#mob_arcane) |
 | `monsters[237].tables` | [boss:BOSS_WAR_AVATAR](Tables/Tables-TEMPLATE.md#boss-boss_war_avatar) |
 | `monsters[238].code` | [Мать Пустоты](Bosses.md#boss_void_mother) |
@@ -3461,7 +3461,7 @@
 | `monsters[238].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[238].stats.STOCK_MANA` | 30 |
 | `monsters[238].boss` | Да |
-| `monsters[238].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[238].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[238].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_BLIGHTED](Modifiers/Modifiers-MONSTER.md#mob_blighted) |
 | `monsters[238].tables` | [boss:BOSS_VOID_MOTHER](Tables/Tables-TEMPLATE.md#boss-boss_void_mother) |
 | `monsters[239].code` | [Звездочёт](Bosses.md#boss_stargazer) |
@@ -3478,7 +3478,7 @@
 | `monsters[239].stats.STOCK_IGNITE_CHANCE` | 20 |
 | `monsters[239].stats.STOCK_MANA` | 30 |
 | `monsters[239].boss` | Да |
-| `monsters[239].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsters[239].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsters[239].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_FIREPROOF](Modifiers/Modifiers-MONSTER.md#mob_fireproof) |
 | `monsters[239].tables` | [boss:BOSS_STARGAZER](Tables/Tables-TEMPLATE.md#boss-boss_stargazer) |
 | `monsters[240].code` | [Собиратель корон](Bosses.md#boss_crown_collector) |
@@ -6382,7 +6382,7 @@
 | `traits.list[50].skill` | [Ядовитый плевок](Monster-skills.md#mob_spit) |
 | `traits.list[51].code` | `TRAIT_SKILL_WARCRY` |
 | `traits.list[51].icon` | `combat` |
-| `traits.list[51].skill` | [Боевой клич](Monster-skills.md#mob_warcry) |
+| `traits.list[51].skill` | [Вой стаи](Monster-skills.md#mob_warcry) |
 | `traits.list[52].code` | `TRAIT_SKILL_ENFEEBLE` |
 | `traits.list[52].icon` | `dark` |
 | `traits.list[52].skill` | [Слабость](Monster-skills.md#mob_enfeeble) |

@@ -2925,7 +2925,7 @@
 - 120–160% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical)
 - +30–40 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
 - 10–15% шанс получить заряд выносливости при убийстве · [Стойкое убийство](../reference/Stats/Stats-POWER.md#power_endurance_on_kill)
-- Падение здоровья до низкого даёт барьер в 15–25% максимума здоровья на 4 с, не чаще раза в 15 с · [Последний рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
+- Падение здоровья до низкого даёт барьер в 15–25% максимума здоровья на 4 с, не чаще раза в 15 с · [Покаянный рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
 
 
 | Параметр | Значение |

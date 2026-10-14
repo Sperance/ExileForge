@@ -58,7 +58,7 @@
 | `classes[5].base.STOCK_MANA` | 55 |
 | `classes[5].weapon` | [Rusted Spike](../Equipment/Equipment-WEAPON_1H.md#rusted_spike) |
 | `classes[5].armour` | [Scare Mask](../Equipment/Equipment-HELMET.md#scare_mask); [Padded Vest](../Equipment/Equipment-BODY.md#padded_vest); [Rawhide Boots](../Equipment/Equipment-BOOTS.md#rawhide_boots) |
-| `classes[6].code` | [Скион (Scion)](../Classes.md#scion) |
+| `classes[6].code` | [Потомок (Heir)](../Classes.md#scion) |
 | `classes[6].difficulty` | 3 |
 | `classes[6].startNode` | [Потомок](../Tree/Tree-START.md#scion_start) |
 | `classes[6].base.STOCK_STRENGTH` | 20 |

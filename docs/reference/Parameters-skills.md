@@ -42,7 +42,7 @@
 | `classes[5].code` | [Тень (Shadow)](../Classes.md#shadow) |
 | `classes[5].attributes` | [Ловкость](Stats/Stats-HERO.md#stock_agility); [Интеллект](Stats/Stats-HERO.md#stock_intellect) |
 | `classes[5].mana` | 50 |
-| `classes[6].code` | [Скион (Scion)](../Classes.md#scion) |
+| `classes[6].code` | [Потомок (Heir)](../Classes.md#scion) |
 | `classes[6].attributes` | [Сила](Stats/Stats-HERO.md#stock_strength); [Ловкость](Stats/Stats-HERO.md#stock_agility); [Интеллект](Stats/Stats-HERO.md#stock_intellect) |
 | `classes[6].mana` | 45 |
 | `skills[0].code` | [Тяжёлый удар](../Skills/Skills-MARAUDER.md#heavy_strike) |
@@ -1068,7 +1068,7 @@
 | `skills[89].trigger.on` | `EVADE` |
 | `skills[89].trigger.heal.mana` | 1; 4 |
 | `skills[90].code` | [Стихийный удар](../Skills/Skills-SCION.md#elemental_hit) |
-| `skills[90].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[90].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[90].type` | `ATTACK` |
 | `skills[90].unlock` | 1 |
 | `skills[90].icon` | `orb_facet` |
@@ -1083,7 +1083,7 @@
 | `skills[90].hit.ailments[0].ailment` | `ELEMENT` |
 | `skills[90].hit.ailments[0].chance` | 25; 40 |
 | `skills[91].code` | [Спектральный бросок](../Skills/Skills-SCION.md#spectral_throw) |
-| `skills[91].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[91].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[91].type` | `ATTACK` |
 | `skills[91].unlock` | 6 |
 | `skills[91].icon` | `throwing` |
@@ -1094,7 +1094,7 @@
 | `skills[91].hit.targets` | 2 |
 | `skills[91].hit.weapon` | 93; 161 |
 | `skills[92].code` | [Дуга](../Skills/Skills-SCION.md#arc) |
-| `skills[92].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[92].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[92].type` | `SPELL` |
 | `skills[92].unlock` | 12 |
 | `skills[92].icon` | `lightning` |
@@ -1107,7 +1107,7 @@
 | `skills[92].hit.spell.min` | 16.1; 145.7 |
 | `skills[92].hit.spell.max` | 47.3; 437.2 |
 | `skills[93].code` | [Клич единства](../Skills/Skills-SCION.md#rallying_cry) |
-| `skills[93].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[93].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[93].type` | `WARCRY` |
 | `skills[93].unlock` | 20 |
 | `skills[93].icon` | `combat` |
@@ -1121,7 +1121,7 @@
 | `skills[93].buff.stats[1].stat` | [Все сопротивления стихиям](Stats/Stats-HERO.md#stock_resist_all) |
 | `skills[93].buff.stats[1].value` | 10; 20 |
 | `skills[94].code` | [Путы времени](../Skills/Skills-SCION.md#temporal_chains) |
-| `skills[94].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[94].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[94].type` | `CURSE` |
 | `skills[94].unlock` | 30 |
 | `skills[94].icon` | `dark` |
@@ -1135,7 +1135,7 @@
 | `skills[94].curse.stats[0].op` | `MORE` |
 | `skills[94].curse.stats[0].value` | -15; -35 |
 | `skills[95].code` | [Возрождение](../Skills/Skills-SCION.md#renewal) |
-| `skills[95].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[95].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[95].type` | `HEAL` |
 | `skills[95].unlock` | 40 |
 | `skills[95].icon` | `regen` |
@@ -1146,7 +1146,7 @@
 | `skills[95].heal.life` | 15; 35 |
 | `skills[95].heal.mana` | 10; 20 |
 | `skills[96].code` | [Гармония](../Skills/Skills-SCION.md#harmony) |
-| `skills[96].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[96].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[96].type` | `AURA` |
 | `skills[96].unlock` | 1 |
 | `skills[96].icon` | `orb` |
@@ -1158,14 +1158,14 @@
 | `skills[96].stats[2].stat` | [Интеллект](Stats/Stats-HERO.md#stock_intellect) |
 | `skills[96].stats[2].value` | 10; 40 |
 | `skills[97].code` | [Наследие](../Skills/Skills-SCION.md#legacy) |
-| `skills[97].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[97].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[97].type` | `BONUS` |
 | `skills[97].unlock` | 5 |
 | `skills[97].icon` | `resist` |
 | `skills[97].stats[0].stat` | [Все сопротивления стихиям](Stats/Stats-HERO.md#stock_resist_all) |
 | `skills[97].stats[0].value` | 5; 15 |
 | `skills[98].code` | [Отзвук](../Skills/Skills-SCION.md#echo) |
-| `skills[98].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[98].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[98].type` | `TRIGGER` |
 | `skills[98].unlock` | 10 |
 | `skills[98].icon` | `mirror` |
@@ -1173,7 +1173,7 @@
 | `skills[98].trigger.chance` | 10; 20 |
 | `skills[98].trigger.refund` | Да |
 | `skills[99].code` | [Резонанс](../Skills/Skills-SCION.md#resonance) |
-| `skills[99].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[99].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[99].type` | `AURA` |
 | `skills[99].unlock` | 16 |
 | `skills[99].icon` | `magical` |
@@ -1182,7 +1182,7 @@
 | `skills[99].stats[0].op` | `INCREASED` |
 | `skills[99].stats[0].value` | 8; 25 |
 | `skills[100].code` | [Универсал](../Skills/Skills-SCION.md#adept) |
-| `skills[100].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[100].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[100].type` | `BONUS` |
 | `skills[100].unlock` | 24 |
 | `skills[100].icon` | `speed` |
@@ -1190,7 +1190,7 @@
 | `skills[100].stats[0].op` | `INCREASED` |
 | `skills[100].stats[0].value` | 8; 20 |
 | `skills[101].code` | [Эхо фляг](../Skills/Skills-SCION.md#flask_echo) |
-| `skills[101].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[101].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[101].type` | `TRIGGER` |
 | `skills[101].unlock` | 32 |
 | `skills[101].icon` | `potion` |
@@ -1198,7 +1198,7 @@
 | `skills[101].trigger.chance` | 15; 30 |
 | `skills[101].trigger.flaskCharges` | 1 |
 | `skills[102].code` | [Жажда силы](../Skills/Skills-SCION.md#hunger_for_power) |
-| `skills[102].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[102].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[102].type` | `BONUS` |
 | `skills[102].unlock` | 42 |
 | `skills[102].icon` | `leech` |
@@ -1207,7 +1207,7 @@
 | `skills[102].stats[1].stat` | [Мана за убийство](Stats/Stats-HERO.md#stock_mana_on_kill) |
 | `skills[102].stats[1].value` | 1; 4 |
 | `skills[103].code` | [Воля к жизни](../Skills/Skills-SCION.md#will_to_live) |
-| `skills[103].heroClass` | [Скион (Scion)](../Classes.md#scion) |
+| `skills[103].heroClass` | [Потомок (Heir)](../Classes.md#scion) |
 | `skills[103].type` | `TRIGGER` |
 | `skills[103].unlock` | 52 |
 | `skills[103].icon` | `health` |
@@ -1260,7 +1260,7 @@
 | `monsterSkills[3].hit.convert` | 100; 100 |
 | `monsterSkills[3].hit.ailments[0].ailment` | `POISON` |
 | `monsterSkills[3].hit.ailments[0].chance` | 50; 50 |
-| `monsterSkills[4].code` | [Боевой клич](Monster-skills.md#mob_warcry) |
+| `monsterSkills[4].code` | [Вой стаи](Monster-skills.md#mob_warcry) |
 | `monsterSkills[4].icon` | `combat` |
 | `monsterSkills[4].mana` | 12 |
 | `monsterSkills[4].cooldown` | 12 |

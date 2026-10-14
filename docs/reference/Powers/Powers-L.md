@@ -57,7 +57,7 @@
 
 ## POWER_LAST_STAND <a href="#power_last_stand" id="power_last_stand"></a>
 
-### Последний рубеж <a href="#последний-рубеж" id="последний-рубеж"></a>
+### Покаянный рубеж <a href="#последний-рубеж" id="последний-рубеж"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -68,7 +68,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Последний рубеж](../Stats/Stats-POWER.md#power_last_stand) |
+| Характеристика · `stat` | [Покаянный рубеж](../Stats/Stats-POWER.md#power_last_stand) |
 | Событие · `on` | `LOW_LIFE` |
 | Перезарядка, с · `cooldown` | 15 |
 | Эффекты · `effects` | Действие: `BARRIER`; Длительность: 4 |
@@ -95,7 +95,7 @@
 
 ## POWER_LAST_GROUND <a href="#power_last_ground" id="power_last_ground"></a>
 
-### Последний рубеж <a href="#последний-рубеж-1" id="последний-рубеж-1"></a>
+### Покаянный рубеж <a href="#последний-рубеж-1" id="последний-рубеж-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -106,7 +106,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Последний рубеж](../Stats/Stats-POWER.md#power_last_ground) |
+| Характеристика · `stat` | [Покаянный рубеж](../Stats/Stats-POWER.md#power_last_ground) |
 | Событие · `on` | `STANDING` |
 | checks | check: `LIFE_BELOW`; Значение: 50 |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Шанс блока](../Stats/Stats-HERO.md#stock_block_chance) |
@@ -133,7 +133,7 @@
 
 ## POWER_LEADERS_HOWL <a href="#power_leaders_howl" id="power_leaders_howl"></a>
 
-### Вой вожака <a href="#вой-вожака" id="вой-вожака"></a>
+### Вой первого волка <a href="#вой-вожака" id="вой-вожака"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -144,7 +144,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Вой вожака](../Stats/Stats-POWER.md#power_leaders_howl) |
+| Характеристика · `stat` | [Вой первого волка](../Stats/Stats-POWER.md#power_leaders_howl) |
 | Событие · `on` | `FIGHT_START` |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Урон](../Stats/Stats-HERO.md#stock_damage); Длительность: 4 |
 

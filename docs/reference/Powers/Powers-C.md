@@ -960,7 +960,7 @@
 
 ## POWER_COLD_CALCULUS <a href="#power_cold_calculus" id="power_cold_calculus"></a>
 
-### Холодный расчёт <a href="#холодный-расчёт" id="холодный-расчёт"></a>
+### Трезвый расчёт <a href="#холодный-расчёт" id="холодный-расчёт"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -971,7 +971,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Холодный расчёт](../Stats/Stats-POWER.md#power_cold_calculus) |
+| Характеристика · `stat` | [Трезвый расчёт](../Stats/Stats-POWER.md#power_cold_calculus) |
 | sheet | Операция: `PER`; Предшествующие зоны: [Меткость](../Stats/Stats-HERO.md#stock_accuracy); to: [Шанс двойного урона](../Stats/Stats-HERO.md#stock_double_damage); per: 200; cap: 40 |
 
 ---

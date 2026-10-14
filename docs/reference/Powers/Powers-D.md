@@ -553,7 +553,7 @@
 
 ## POWER_DARK_CONSUMPTION <a href="#power_dark_consumption" id="power_dark_consumption"></a>
 
-### Чёрное пламя <a href="#чёрное-пламя" id="чёрное-пламя"></a>
+### Пожирающая тьма <a href="#чёрное-пламя" id="чёрное-пламя"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -564,7 +564,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Чёрное пламя](../Stats/Stats-POWER.md#power_dark_consumption) |
+| Характеристика · `stat` | [Пожирающая тьма](../Stats/Stats-POWER.md#power_dark_consumption) |
 | sheet | Операция: `CONVERT`; Предшествующие зоны: [Урон огнём](../Stats/Stats-HERO.md#stock_attack_fire); to: [Урон хаосом](../Stats/Stats-HERO.md#stock_attack_chaos) |
 
 

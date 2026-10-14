@@ -148,12 +148,12 @@
 
 ## POWER_ALPHA_HOWL <a href="#power_alpha_howl" id="power_alpha_howl"></a>
 
-### Вой вожака <a href="#вой-вожака" id="вой-вожака"></a>
+### Вой первого волка <a href="#вой-вожака" id="вой-вожака"></a>
 
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Вой вожака](../Stats/Stats-POWER.md#power_alpha_howl) |
+| Характеристика · `stat` | [Вой первого волка](../Stats/Stats-POWER.md#power_alpha_howl) |
 | Событие · `on` | `FIGHT_START` |
 | Эффекты · `effects` | Действие: `HEX`; Свойства: Характеристика: [Скорость атаки](../Stats/Stats-HERO.md#stock_attack_speed); Операция: `INCREASED`; Длительность: 4; to: `ALL` |
 
@@ -299,7 +299,7 @@
 
 ## POWER_ANVIL_RING <a href="#power_anvil_ring" id="power_anvil_ring"></a>
 
-### Звон наковальни <a href="#звон-наковальни" id="звон-наковальни"></a>
+### Гул наковальни <a href="#звон-наковальни" id="звон-наковальни"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -310,7 +310,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Звон наковальни](../Stats/Stats-POWER.md#power_anvil_ring) |
+| Характеристика · `stat` | [Гул наковальни](../Stats/Stats-POWER.md#power_anvil_ring) |
 | Событие · `on` | `HIT_TAKEN` |
 | Перезарядка, с · `cooldown` | 2 |
 | Эффекты · `effects` | Действие: `DAMAGE`; of: `ARMOUR`; Тип: `PHYSICAL` |
@@ -428,7 +428,7 @@
 
 ## POWER_ANVIL_PEAL <a href="#power_anvil_peal" id="power_anvil_peal"></a>
 
-### Звон наковальни <a href="#звон-наковальни-1" id="звон-наковальни-1"></a>
+### Гул наковальни <a href="#звон-наковальни-1" id="звон-наковальни-1"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -439,7 +439,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Звон наковальни](../Stats/Stats-POWER.md#power_anvil_peal) |
+| Характеристика · `stat` | [Гул наковальни](../Stats/Stats-POWER.md#power_anvil_peal) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `HIT` |
 | checks | check: `NTH`; Значение: 4 |

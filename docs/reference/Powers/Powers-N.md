@@ -20,7 +20,7 @@
 
 ## POWER_NOON_GLARE <a href="#power_noon_glare" id="power_noon_glare"></a>
 
-### Полуденный блеск <a href="#полуденный-блеск" id="полуденный-блеск"></a>
+### Блеск зенита <a href="#полуденный-блеск" id="полуденный-блеск"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -31,7 +31,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Полуденный блеск](../Stats/Stats-POWER.md#power_noon_glare) |
+| Характеристика · `stat` | [Блеск зенита](../Stats/Stats-POWER.md#power_noon_glare) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `CRIT` |
 | Эффекты · `effects` | Действие: `AILMENT`; Состояние: `IGNITE` |

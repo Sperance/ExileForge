@@ -301,7 +301,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.4; STOCK_HEALTH: 29.256; STOCK_ATTACK_PHYSICAL: 3.032; STOCK_ATTACK_LIGHTNING: 3.527; STOCK_CRITICAL_CHANCE: 12; STOCK_SHOCK_CHANCE: 25; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Разряд](Monster-skills.md#mob_zap); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Разряд](Monster-skills.md#mob_zap); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_SHARD_QUEEN](Tables/Tables-TEMPLATE.md#boss-boss_shard_queen) |
 
 
@@ -1159,7 +1159,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_4](Tables/Tables-LOOT.md#loot-boss_4) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 28.511; STOCK_ATTACK_PHYSICAL: 2.854; STOCK_ATTACK_CHAOS: 1.715; STOCK_RESIST_CHAOS: 40; STOCK_CRITICAL_CHANCE: 8; STOCK_ATTACK_MAGICAL: 1.981; STOCK_CAST_SPEED: 1; STOCK_MANA: 60; STOCK_MANA_REGEN: 4; STOCK_POISON_CHANCE: 20 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_HIGH_EMBALMER](Tables/Tables-TEMPLATE.md#boss-boss_high_embalmer) |
 
 
@@ -1428,7 +1428,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_5](Tables/Tables-LOOT.md#loot-boss_5) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.4; STOCK_HEALTH: 17.079; STOCK_ATTACK_PHYSICAL: 1.233; STOCK_ATTACK_CHAOS: 1.587; STOCK_RESIST_CHAOS: 40; STOCK_CRITICAL_CHANCE: 12; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_CANOPY_HORROR](Tables/Tables-TEMPLATE.md#boss-boss_canopy_horror) |
 
 
@@ -1635,7 +1635,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 0.8; STOCK_HEALTH: 41.241; STOCK_ATTACK_PHYSICAL: 3.128; STOCK_ATTACK_CHAOS: 1.418; STOCK_RESIST_CHAOS: 40; STOCK_ARMOR: 90; STOCK_BLOCK_CHANCE: 25; STOCK_STUN_THRESHOLD: 22; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_SULPHUR_KING](Tables/Tables-TEMPLATE.md#boss-boss_sulphur_king) |
 
 
@@ -1718,7 +1718,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.15; STOCK_HEALTH: 13.889; STOCK_ATTACK_PHYSICAL: 1.222; STOCK_ATTACK_FIRE: 0.85; STOCK_RESIST_FIRE: 40; STOCK_ARMOR: 50; STOCK_HEALTH_REGEN: 0.202; STOCK_IGNITE_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_FURNACE_MASTER](Tables/Tables-TEMPLATE.md#boss-boss_furnace_master) |
 | Особенность · `trait` | `TRAIT_GROUNDED` |
 
@@ -1904,7 +1904,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 16.256; STOCK_ATTACK_PHYSICAL: 1.126; STOCK_ATTACK_FIRE: 0.99; STOCK_RESIST_FIRE: 40; STOCK_IGNITE_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_VENT_DRAGON](Tables/Tables-TEMPLATE.md#boss-boss_vent_dragon) |
 
 
@@ -2029,7 +2029,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 24.607; STOCK_ATTACK_PHYSICAL: 2.353; STOCK_ATTACK_COLD: 1.414; STOCK_RESIST_COLD: 40; STOCK_CRITICAL_CHANCE: 8; STOCK_ATTACK_MAGICAL: 1.647; STOCK_CAST_SPEED: 1; STOCK_MANA: 60; STOCK_MANA_REGEN: 4; STOCK_FREEZE_CHANCE: 20 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_FALLEN_ABBOT](Tables/Tables-TEMPLATE.md#boss-boss_fallen_abbot) |
 
 
@@ -2281,7 +2281,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 0.9; STOCK_HEALTH: 4.746; STOCK_ATTACK_CHAOS: 0.343; STOCK_RESIST_CHAOS: 70; STOCK_HEALTH_REGEN: 0.102; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_MOTHER_BLIGHT](Tables/Tables-TEMPLATE.md#boss-boss_mother_blight) |
 
 
@@ -2993,7 +2993,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 0.8; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 2.482; STOCK_ATTACK_CHAOS: 1.125; STOCK_RESIST_CHAOS: 40; STOCK_ARMOR: 90; STOCK_BLOCK_CHANCE: 25; STOCK_STUN_THRESHOLD: 22; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_THRESHOLD_GUARDIAN](Tables/Tables-TEMPLATE.md#boss-boss_threshold_guardian) |
 
 
@@ -3177,7 +3177,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 3.129; STOCK_ATTACK_COLD: 1.88; STOCK_RESIST_COLD: 40; STOCK_CRITICAL_CHANCE: 8; STOCK_ATTACK_MAGICAL: 2.19; STOCK_CAST_SPEED: 1; STOCK_MANA: 60; STOCK_MANA_REGEN: 4; STOCK_FREEZE_CHANCE: 20 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_WAR_AVATAR](Tables/Tables-TEMPLATE.md#boss-boss_war_avatar) |
 
 
@@ -3198,7 +3198,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.4; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 2.362; STOCK_ATTACK_CHAOS: 3.04; STOCK_RESIST_CHAOS: 40; STOCK_CRITICAL_CHANCE: 12; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_VOID_MOTHER](Tables/Tables-TEMPLATE.md#boss-boss_void_mother) |
 
 
@@ -3219,7 +3219,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.15; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 2.879; STOCK_ATTACK_FIRE: 2.002; STOCK_RESIST_FIRE: 40; STOCK_ARMOR: 50; STOCK_HEALTH_REGEN: 0.476; STOCK_IGNITE_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Вой стаи](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_STARGAZER](Tables/Tables-TEMPLATE.md#boss-boss_stargazer) |
 
 

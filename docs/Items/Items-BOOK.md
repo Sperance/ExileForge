@@ -1380,7 +1380,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 23 |
 
 
@@ -1394,7 +1394,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 38 |
 
 
@@ -1408,7 +1408,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 56 |
 
 
@@ -1422,7 +1422,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 80 |
 
 
@@ -1436,7 +1436,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 110 |
 
 
@@ -1450,7 +1450,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 140 |
 
 
@@ -1464,7 +1464,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 23 |
 
 
@@ -1478,7 +1478,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 35 |
 
 
@@ -1492,7 +1492,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 50 |
 
 
@@ -1506,7 +1506,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 68 |
 
 
@@ -1520,7 +1520,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 92 |
 
 
@@ -1534,7 +1534,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 116 |
 
 
@@ -1548,7 +1548,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 146 |
 
 
@@ -1562,7 +1562,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Скион (Scion)](../Classes.md#scion) |
+| Подкатегория · `subCategory` | [Потомок (Heir)](../Classes.md#scion) |
 | Базовая цена · `price` | 176 |
 
 ---

@@ -23,6 +23,7 @@ import com.sperance.exileforge.rules.content.SkillHit
 import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.sheet.CastTime
 import com.sperance.exileforge.rules.sheet.lines
 import kotlin.math.max
 import kotlin.math.min
@@ -37,8 +38,6 @@ private const val MAX_DEPTH = 2
 /** A skill's element picked at random, and its ailment named by the element that struck (server 0.69.0). */
 private const val RANDOM = "RANDOM"
 
-/** Quick preparation (3.13.0): shortens how much of a skill's cooldown still runs as a fight opens. */
-private val PREPARATION: String = CoreStat.SKILL_PREPARATION.code
 private const val ELEMENT = "ELEMENT"
 
 /** Whether a slot's [condition] holds now; an opening one only until its slot has fired this fight. */
@@ -61,35 +60,42 @@ private fun Battle.holds(condition: SlotCondition, opened: Boolean): Boolean {
 
 /**
  * The active slots in order: a ready one whose condition holds, or that was tapped, is used; one short of
- * mana is passed over (3.17.0), so a cheaper heal or guard further down still answers.
+ * mana is passed over (3.17.0), so a cheaper heal or guard further down still answers. С 4.12.x (SKILL-01) подготовки нет - слоты
+ * готовы с начала боя; умение применяется своё время ([CastTime]), и пока идёт применение, прочие слоты и удар ждут.
  */
 internal fun Battle.useSkills() {
     val hero = heroFighter
+    if (hero.casting != null) return
     for ((slot, kitSkill) in kit.actives.withIndex()) {
         kitSkill ?: continue
         val tapped = slot in taps
-        if (time < hero.readyAt.getOrPut(slotKey(slot)) { openingReady(kitSkill) }) continue
+        if (time < (hero.readyAt[slotKey(slot)] ?: 0.0)) continue
         if (skillLock(slot) > 0) continue
         if (!tapped && !holds(kitSkill.condition, opened[slot])) continue
         if (foeFighters.none { it.alive }) return
         val level = kitSkill.level(hero.body)
-        val cost = cost(kitSkill, level)
-        if (!skillsFree() && !affords(cost)) continue
+        if (!skillsFree() && !affords(cost(kitSkill, level))) continue
         opened[slot] = true
-        castSlot(slot, kitSkill, level, cost)
-        if (!hero.alive || outcome != null) return
+        beginCast(hero, slotKey(slot), kitSkill.skill.code, castSeconds(kitSkill)) { applied(slot, kitSkill, level) }
+        if (hero.casting != null || !hero.alive || outcome != null) return
     }
 }
 
-/**
- * When a slot is first ready in this fight: after the skill's preparation at its level — its share of the cooldown,
- * shortened by the hero's quick preparation (3.13.0) — a fight-start skill at once.
- */
-private fun Battle.openingReady(kitSkill: KitSkill): Double {
-    if (kitSkill.condition == SlotCondition.FIGHT_START) return time
-    val body = heroFighter.body
-    val share = rules.preparation(kitSkill.skill, kitSkill.level(body), body[PREPARATION])
-    return time + share * kitSkill.skill.cooldown / body.recovery(kitSkill.skill.spell) * heroFighter.slow()
+/** Секунды применения слота героя: «Вечерня» делает его мгновенным, холод и замедление растягивают, как замах. */
+private fun Battle.castSeconds(kitSkill: KitSkill): Double {
+    if (quickCasts > 0) {
+        quickCasts--
+        return 0.0
+    }
+    return CastTime.of(kitSkill.skill, heroFighter.body, rules) * heroFighter.slow()
+}
+
+/** Применение слота [slot] закончено: умение срабатывает, если на него ещё хватает маны, иначе пропадает без перезарядки. */
+private fun Battle.applied(slot: Int, kitSkill: KitSkill, level: Int) {
+    if (foeFighters.none { it.alive }) return
+    val cost = cost(kitSkill, level)
+    if (!skillsFree() && !affords(cost)) return
+    castSlot(slot, kitSkill, level, cost)
 }
 
 private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Double) {
@@ -101,8 +107,8 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     if (!free) payFor(cost, skill.code)
     // Резонанс (4.6.1): применение слышат до самого удара - и до перезарядки, что он укорачивает (4.6.2)
     fateCast(skill.code)
-    // Холод и замедление (4.12.x, CAST-02) растягивают перезарядку, как замах
-    hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery(skill.spell) * hero.slow()
+    // Холод и замедление (4.12.x, CAST-02) растягивают перезарядку, как замах; она идёт с конца применения (SKILL-01)
+    hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery * hero.slow()
     perform(kitSkill, level)
     // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }

@@ -11,13 +11,17 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.Foe
 import com.sperance.exileforge.core.campaign.combat.Side
+import com.sperance.exileforge.core.campaign.combat.castTick
 import com.sperance.exileforge.core.campaign.combat.monsterCast
 import com.sperance.exileforge.core.campaign.combat.place
 import com.sperance.exileforge.core.campaign.combat.strike
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.sheet.CastTime
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -54,7 +58,28 @@ class CombatRulesTest {
         assertEquals(1 / 0.5, b.heroFighter.slow(), 1e-9)
         foe.readyAt[skill.code] = 0.0
         b.monsterCast(foe)
-        assertEquals(skill.cooldown / foe.body.recovery(skill.spell) * 1.3, foe.readyAt.getValue(skill.code) - b.time, 1e-9)
+        // SKILL-01: холод растягивает и применение; перезарядка идёт с его конца
+        val cast = assertNotNull(foe.casting)
+        assertEquals(CastTime.of(skill, foe.body, rules) * 1.3, cast.until - cast.from, 1e-9)
+        cast.finish()
+        assertEquals(skill.cooldown / foe.body.recovery * 1.3, foe.readyAt.getValue(skill.code) - b.time, 1e-9)
+    }
+
+    /** SKILL-01: оглушение прерывает применение - умение не срабатывает, маны не тратит, перезарядка не начинается. */
+    @Test
+    fun a_stun_breaks_a_cast() {
+        val skill = index.skills.monsterSkills.first { it.hit != null }
+        val b = battle(body(), Foe(body(mapOf(CoreStat.MANA.code to 100.0), life = 1e9), skills = listOf(skill)))
+        val foe = b.foe(0)
+        foe.readyAt[skill.code] = 0.0
+        val mana = foe.mana
+        b.monsterCast(foe)
+        assertNotNull(foe.casting)
+        foe.heldUntil = b.time + 1
+        b.castTick(foe)
+        assertNull(foe.casting)
+        assertEquals(mana, foe.mana, 1e-9)
+        assertEquals(0.0, foe.readyAt.getValue(skill.code), 1e-9)
     }
 
     /** COMBAT-02: пустой удар по цели без брони - ноль, не NaN; оба живы. */

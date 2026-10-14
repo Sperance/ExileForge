@@ -141,6 +141,8 @@ data class SkillView(
     val seconds: Double = 0.0,
     /** Сколько ещё секунд слот заперт «Запечатыванием» Стража Врат (3.96.0); 0 - свободен. */
     val locked: Double = 0.0,
+    /** Доля пройденного применения слота (4.12.x, SKILL-01); 0 - слот не применяется. */
+    val casting: Float = 0f,
 )
 
 /** A flask of the belt as its button draws it (2.78.0): charges, the price of a draught, and how much of one is left (0 none). */

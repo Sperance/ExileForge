@@ -48,13 +48,10 @@ data class Combatant(
     val damageMore = max(0.0, 1 + stat(CoreStat.DAMAGE.code) / 100)
 
     /**
-     * How fast its skills recover: the cooldown recovery, and a spell's cast speed on top - the cast speed no higher than its cap,
-     * the whole no faster than the rules' shortest cooldown (server 1.76.0).
+     * How fast its skills recover: the cooldown recovery, no faster than the rules' shortest cooldown (server 1.76.0). С 4.12.x
+     * (SKILL-01) скорость чар перезарядку не ускоряет - только применение (`CastTime`).
      */
-    fun recovery(spell: Boolean): Double {
-        val cast = if (spell) stat(CoreStat.CAST_SPEED.code).coerceAtMost(rules.caps.castSpeed) else 0.0
-        return (1 + (stat(CoreStat.COOLDOWN_RECOVERY.code) + cast) / 100).coerceIn(rules.floors.recovery, rules.caps.recoveryMax)
-    }
+    val recovery: Double = (1 + stat(CoreStat.COOLDOWN_RECOVERY.code) / 100).coerceIn(rules.floors.recovery, rules.caps.recoveryMax)
 
     /** What is left of a skill's price in mana: the reduction under the rules' cap (4.12.x, STAT-ATK-08). */
     val skillCost = rules.caps.skillPrice(stat(CoreStat.SKILL_COST.code))

@@ -39,7 +39,6 @@ import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillRules
@@ -243,5 +242,3 @@ internal fun Exchange(
         }
     }
 }
-
-internal val PREPARATION: String = CoreStat.SKILL_PREPARATION.code

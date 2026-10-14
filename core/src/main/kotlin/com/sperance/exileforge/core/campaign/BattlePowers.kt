@@ -44,6 +44,7 @@ import com.sperance.exileforge.rules.content.RecoveryPool
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 /**
  * What a power's event was about (2.79.0): the foe struck or striking, what the blow did, whether a
@@ -411,6 +412,9 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
             // Повтор (4.4.0): только что применённое умение ещё раз на amount% силы - эхом, без нового SKILL_USE
             PowerAct.RECAST -> moment.cast?.let { battle.echoCast(it, moment.level, amount / 100) }
+
+            // Мгновенность (4.12.x, SKILL-01: «Вечерня»): следующие применения умений героя - без времени применения
+            PowerAct.QUICKEN -> battle.quickCasts += amount.roundToInt()
 
             PowerAct.RETALIATE -> {
                 if (moment.target?.side != Side.MONSTER) return 0.0

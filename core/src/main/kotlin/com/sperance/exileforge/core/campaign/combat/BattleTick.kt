@@ -56,17 +56,23 @@ internal fun Battle.step(dt: Double) {
             }
         }
         useFlasks()
-        if (!hero.held) useSkills()
+        // Применение (4.12.x, SKILL-01): оглушение и заморозка его прерывают, конец - срабатывание
+        castTick(hero)
+        if (!hero.held && outcome == null) useSkills()
     }
     taps.clear()
     drinks.clear()
-    foeFighters.forEach { if (it.alive && !it.held) monsterCast(it) }
+    foeFighters.forEach { foe ->
+        if (!foe.alive || outcome != null) return@forEach
+        castTick(foe)
+        if (!foe.held) monsterCast(foe)
+    }
     if (finished()) return
     // Whoever is due first acts first; several may be due in one slice.
     val order = dueOrder()
     for (k in order.indices) {
         val me = order[k]
-        if (!me.alive || me.held || me.nextAttack > time) continue
+        if (!me.alive || me.held || me.casting != null || me.nextAttack > time) continue
         val target = if (me.side == Side.HERO) target() else heroFighter
         if (target != null) strike(me, target, swingOf(me))
         me.nextAttack = time + me.attackInterval * me.slow() * cadence(me)

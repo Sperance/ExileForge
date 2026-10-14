@@ -132,6 +132,12 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
             Text(fineNumber(view.seconds), color = Parchment, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
         }
         if (view.locked > 0.0) SealedSlot(view.locked, SkillShape)
+        // Полоса применения (4.12.x, SKILL-01): пока умение применяется, золотая черта растёт слева направо по низу плитки
+        if (view.casting > 0f) {
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).clip(SkillShape).background(Color.Black.copy(alpha = .5f))) {
+                Box(Modifier.fillMaxWidth(view.casting).fillMaxHeight().background(GoldBright))
+            }
+        }
         Text(
             "${view.cost}",
             color = if (view.affordable) Rune else LifeRed,
@@ -157,7 +163,7 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
 
 /**
  * A skill's page over the fight (3.24.0): what the grimoire says of it at its level — damage, cost, cooldown,
- * preparation and effects — with the condition its slot fires on. The fight holds while the page is open.
+ * cast time and effects — with the condition its slot fires on. The fight holds while the page is open.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -182,7 +188,7 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
                 Text(ui("skills.level_short", view.level), color = Gold, style = MaterialTheme.typography.titleLarge)
             }
             if (index != null && skill != null) {
-                SkillFacts(index, skill, view.level, game.hero?.stats.orEmpty(), condition = view.condition)
+                SkillFacts(index, skill, view.level, game.hero?.stats.orEmpty(), game.hero?.level ?: 1, condition = view.condition)
             } else {
                 MutedText(ui("common.loading"))
             }

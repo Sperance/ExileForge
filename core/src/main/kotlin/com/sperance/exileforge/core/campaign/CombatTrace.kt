@@ -173,6 +173,10 @@ enum class NoteKind {
      * разбор - [NoteTrace.flow]. Недуги пишутся своими строками.
      */
     LIFE_FLOW,
+
+    /** Применение умения (4.12.x, SKILL-01): ref - умение, value - секунды; прервано оглушением или заморозкой - [CAST_BROKEN]. */
+    CAST,
+    CAST_BROKEN,
     ;
 
     val recovery: Boolean get() = this in RECOVERY

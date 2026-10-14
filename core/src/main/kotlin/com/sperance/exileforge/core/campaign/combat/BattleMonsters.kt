@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.sheet.CastTime
 import com.sperance.exileforge.rules.sheet.lines
 import kotlin.math.max
 import kotlin.math.min
@@ -46,19 +47,28 @@ internal fun Battle.calm() {
 /** Источник баффа ярости: один на врага, каждая ступень заменяет прежнюю. */
 private const val RAGE = "GUARDIAN_RAGE"
 
-/** A monster's skills, the first ready one it has the mana for and a reason to use: a heal when hurt, a buff or a curse not already on. */
+/**
+ * A monster's skills, the first ready one it has the mana for and a reason to use: a heal when hurt, a buff or a curse not already on.
+ * С 4.12.x (SKILL-01) умение применяется своё время ([CastTime]): удар ждёт, оглушение и заморозка прерывают; мана и перезарядка - в конце.
+ */
 internal fun Battle.monsterCast(me: Fighter) {
+    if (me.casting != null) return
     val skills = foes[me.index].skills + learned[me.index].orEmpty()
     if (skills.isEmpty() || !heroFighter.alive) return
     for (skill in skills) {
         val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown / 2 * me.slow() }
         if (time < ready || me.mana + 1e-9 < skill.mana || !wanted(me, skill)) continue
-        me.mana -= skill.mana
-        // Холод и замедление (4.12.x, CAST-02) растягивают и перезарядку
-        me.readyAt[skill.code] = time + skill.cooldown / me.body.recovery(skill.spell) * me.slow()
-        monsterSkill(me, skill)
+        beginCast(me, skill.code, skill.code, CastTime.of(skill, me.body, rules) * me.slow()) { monsterApplied(me, skill) }
         return
     }
+}
+
+/** Применение монстра [me] закончено: мана, перезарядка (холод и замедление её растягивают, CAST-02) и действие. */
+private fun Battle.monsterApplied(me: Fighter, skill: MonsterSkill) {
+    if (!heroFighter.alive || me.mana + 1e-9 < skill.mana) return
+    me.mana -= skill.mana
+    me.readyAt[skill.code] = time + skill.cooldown / me.body.recovery * me.slow()
+    monsterSkill(me, skill)
 }
 
 private fun Battle.wanted(me: Fighter, skill: MonsterSkill): Boolean = when {

@@ -155,6 +155,9 @@ class Battle(
         /** When each of its skills is ready again, by code for a monster and by slot for the hero (2.78.0). */
         val readyAt = mutableMapOf<String, Double>()
 
+        /** Умение, что боец применяет сейчас (4.12.x, SKILL-01): удар и прочие умения ждут его конца; null - не применяет. */
+        internal var casting: Casting? = null
+
         /** Its low-life lines are on (2.78.0). */
         var low = false
 
@@ -386,6 +389,9 @@ class Battle(
     /** The next blow of the hero is a critical strike (a cloak of shadows). */
     internal var nextCrit = false
 
+    /** Сколько ещё применений умений героя в этом бою мгновенны (4.12.x, SKILL-01: «Вечерня», `PowerAct.QUICKEN`). */
+    internal var quickCasts = 0
+
     /** How deep in answers the fight is: an answer may set off one more, never a chain. */
     internal var depth = 0
 
@@ -489,7 +495,7 @@ class Battle(
     internal fun draughtOf(slot: Int): TimedEffect? = heroFighter.effects.firstOrNull { it.kind == EffectKind.FLASK && it.slot == slot && it.until > time }
     internal fun skillsFree(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.sheet?.skillsFree == true && draughtOf(i) != null }
     internal fun slotKey(slot: Int) = "#$slot"
-    internal fun cost(kitSkill: KitSkill, level: Int): Double = (kitSkill.skill.mana?.at(level) ?: 0.0) * heroFighter.body.skillCost
+    internal fun cost(kitSkill: KitSkill, level: Int): Double = kitSkill.mana(level, heroFighter.body.level) * heroFighter.body.skillCost
 
     /** Moves the fight on by [dt] seconds in fixed slices, so a frame's length never changes what happens. */
     fun advance(dt: Double) {

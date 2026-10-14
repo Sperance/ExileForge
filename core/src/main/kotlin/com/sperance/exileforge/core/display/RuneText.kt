@@ -29,7 +29,7 @@ object RuneText {
             RuneOp.SPLIT, RuneOp.FORK, RuneOp.CHARGE -> op(rune, count)
             RuneOp.CHAIN -> op(rune, count, number(rune.extra))
             RuneOp.ECHO, RuneOp.BARRIER -> op(rune, number(value), number(rune.extra))
-            RuneOp.COOLDOWN, RuneOp.MANA, RuneOp.PREPARE, RuneOp.DURATION, RuneOp.LEECH, RuneOp.EFFECT -> op(rune, number(value))
+            RuneOp.COOLDOWN, RuneOp.MANA, RuneOp.CAST, RuneOp.DURATION, RuneOp.LEECH, RuneOp.EFFECT -> op(rune, number(value))
             RuneOp.INFUSE -> infuse(rune, value, rune.extra * power)
         }
     }

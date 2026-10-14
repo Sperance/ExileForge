@@ -38,6 +38,7 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillGrowthView
+import com.sperance.exileforge.core.display.SkillPace
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -50,6 +51,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.ManaPrice
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillRules
@@ -99,10 +101,10 @@ internal fun SkillSheet(
                 Text(if (learned > 0) ui("skills.level_short", learned) else "—", color = Gold, style = MaterialTheme.typography.titleLarge)
             }
             if (learned > 0) XpBar(index, skill, view)
-            SkillFacts(index, forged, learned.coerceAtLeast(1), stats)
+            SkillFacts(index, forged, learned.coerceAtLeast(1), stats, heroLevel)
             if (learned in 1 until view.cap) {
                 Caption(ui("skills.at_level", next))
-                SkillFacts(index, forged, next, stats, ModBlue.copy(alpha = .75f))
+                SkillFacts(index, forged, next, stats, heroLevel, ModBlue.copy(alpha = .75f))
             }
             if (!view.capped || learned == 0) {
                 BookButton(game, index, skill, view, heroLevel, stats) {
@@ -125,28 +127,32 @@ internal fun SkillSheet(
 }
 
 /**
- * What a skill does at [level]: its price and pace, then every line — the preparation (3.13.0) among them, shortened by
- * the skill's level and the hero's quick preparation in [stats]. The grimoire's page and the fight's sheet (3.24.0) both
- * read it; a slotted skill's own [condition] stands in for the page's default.
+ * What a skill does at [level]: its price and pace, then every line. С 4.12.x (SKILL-01, BUILD-01) подготовки нет: темп - время
+ * применения и перезарядка по листу героя [stats] уровня [heroLevel], цена маны (атаки - от уровня героя) и строка «цена в секунду
+ * / ваша регенерация». The grimoire's page and the fight's sheet (3.24.0) both read it; a slotted skill's own [condition] stands in
+ * for the page's default.
  */
 @Composable internal fun SkillFacts(
     index: ContentIndex,
     skill: SkillDefinition,
     level: Int,
     stats: Map<String, Double>,
+    heroLevel: Int,
     tone: Color = ModBlue,
     condition: SlotCondition? = null,
 ) {
-    Price(skill, level, condition)
-    val quickness = stats[PREPARATION] ?: 0.0
-    SkillLines(SkillText.lines(skill, level) + listOfNotNull(SkillText.preparation(skill, level, index.campaign.combat, quickness)), tone)
+    val hero = remember(stats, heroLevel) { Combatant(stats, heroLevel, index.campaign.combat) }
+    val pace = remember(skill, level, hero) { SkillText.pace(skill, level, hero, ManaPrice.of(skill, index.skills.rules)) }
+    Price(skill, pace, condition)
+    SkillLines(SkillText.lines(skill, level) + listOfNotNull(pace?.let(SkillText::manaRate)), tone)
 }
 
-/** An active skill's price and pace, an aura's reserve: the chips over its lines. */
-@Composable internal fun Price(skill: SkillDefinition, level: Int, condition: SlotCondition? = null) {
+/** An active skill's price and pace (цена, применение, перезарядка у героя), an aura's reserve: the chips over its lines. */
+@Composable internal fun Price(skill: SkillDefinition, pace: SkillPace?, condition: SlotCondition? = null) {
     val chips = listOfNotNull(
-        SkillText.cost(skill.mana, level)?.let { ui("skills.cost", it) },
-        skill.cooldown.takeIf { it > 0 }?.let { ui("skills.cooldown", fineNumber(it)) },
+        pace?.let { ui("skills.cost", fineNumber(it.mana)) },
+        pace?.let { ui("skills.cast", fineNumber(it.cast)) },
+        pace?.cooldown?.takeIf { it > 0 }?.let { ui("skills.cooldown", fineNumber(it)) },
         (condition ?: skill.condition).takeIf { skill.kind == SkillKind.ACTIVE }?.let { ui("skills.default_condition", conditionTitle(it)) },
     )
     if (chips.isNotEmpty()) Text(chips.joinToString(" · "), color = Rune, style = MaterialTheme.typography.labelMedium)

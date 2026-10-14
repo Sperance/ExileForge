@@ -303,7 +303,16 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.RECOVER_RECOUP -> ui("expedition.log_note_recover_recoup", note.value.roundToInt())
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())
         NoteKind.LIFE_FLOW -> note.flow?.let(::lifeFlowLine).orEmpty()
+        NoteKind.CAST -> castLine("expedition.log_note_cast", event, monster, SkillText.title(note.ref), fineNumber(note.value))
+        NoteKind.CAST_BROKEN -> castLine("expedition.log_note_cast_broken", event, monster, SkillText.title(note.ref))
     }
+}
+
+/** Строка применения умения (4.12.x, SKILL-01): своя у героя, у врага - с его именем ([key] с `_foe`). */
+private fun castLine(key: String, event: CombatEvent, monster: String, vararg args: Any): String = if (event.actor == Side.HERO) {
+    ui(key, *args)
+} else {
+    ui("${key}_foe", monster, *args)
 }
 
 /** Итог здоровья за секунду (4.9.3): «Здоровье −12/с · реген +8 · деген 2%». */

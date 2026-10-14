@@ -1,11 +1,11 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.ManaPrice
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.Op
-import com.sperance.exileforge.rules.content.Scale
 import com.sperance.exileforge.rules.content.SkillAilment
 import com.sperance.exileforge.rules.content.SkillBarrier
 import com.sperance.exileforge.rules.content.SkillBuff
@@ -17,7 +17,8 @@ import com.sperance.exileforge.rules.content.SkillHit
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillStat
 import com.sperance.exileforge.rules.content.SkillTrigger
-import com.sperance.exileforge.rules.content.SlotCondition
+import com.sperance.exileforge.rules.sheet.CastTime
+import com.sperance.exileforge.rules.sheet.Recovery
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.rules.text.ModifierText
 import kotlin.math.abs
@@ -79,16 +80,18 @@ object SkillText {
     }
 
     /**
-     * How much of an active skill's cooldown still runs as a fight opens (3.13.0) at [level], and what is left of it
-     * after the hero's quick preparation [quickness]; null for a skill with no cooldown to prepare.
+     * Темп активного умения у героя [hero] (4.12.x, SKILL-01, BUILD-01): цена маны на уровне [level] по [price] со снижением цены
+     * листа, время применения ([CastTime]) и перезарядка на его листе, регенерация маны; у пассивного - null. Им гримуар и лист боя
+     * печатают «применение · перезарядка» и «цена в секунду / ваша регенерация».
      */
-    fun preparation(skill: SkillDefinition, level: Int, rules: CombatRules, quickness: Double): String? {
-        if (skill.kind != SkillKind.ACTIVE || skill.cooldown <= 0) return null
-        if (skill.condition == SlotCondition.FIGHT_START) return ui("skill.line.prepare_none")
-        val own = rules.preparation(skill, level, 0.0) * 100
-        val quick = rules.preparation(skill, level, quickness) * 100
-        return if (quick < own) ui("skill.line.prepare_quick", number(own), number(quick)) else ui("skill.line.prepare", number(own))
+    fun pace(skill: SkillDefinition, level: Int, hero: Combatant, price: ManaPrice): SkillPace? {
+        if (skill.kind != SkillKind.ACTIVE) return null
+        val mana = (skill.mana?.let { price.of(it, level, hero.level) } ?: 0.0) * hero.skillCost
+        return SkillPace(mana, CastTime.of(skill, hero, hero.rules), skill.cooldown / hero.recovery, Recovery.manaRegen(hero, hero.rules.mana))
     }
+
+    /** Строка цены маны в секунду цикла против регенерации героя (BUILD-01). */
+    fun manaRate(pace: SkillPace): String = ui("skill.line.mana_rate", fineNumber(pace.manaRate), fineNumber(pace.regen))
 
     /** What a monster's skill does, for the scouting panel and the log: one sentence. */
     fun monster(skill: MonsterSkill): List<String> = buildList {
@@ -202,5 +205,16 @@ object SkillText {
         .filter(String::isNotBlank).joinToString(" ")
 
     /** A skill's price in mana at [level], as the book prints it. */
-    fun cost(mana: Scale?, level: Int): String? = mana?.let { number(it.at(level)) }
+}
+
+/**
+ * Темп активного умения у героя (4.12.x, SKILL-01, BUILD-01): [mana] - цена применения, [cast] - секунды применения, [cooldown] -
+ * перезарядка после него, [regen] - регенерация маны героя в секунду.
+ */
+data class SkillPace(val mana: Double, val cast: Double, val cooldown: Double, val regen: Double) {
+    /** Секунды цикла: применение и перезарядка. */
+    val period: Double get() = cast + cooldown
+
+    /** Цена маны в секунду цикла. */
+    val manaRate: Double get() = if (period > 0) mana / period else 0.0
 }

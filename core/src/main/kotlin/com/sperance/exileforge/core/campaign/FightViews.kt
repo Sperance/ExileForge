@@ -178,10 +178,13 @@ private fun Battle.bossHud(): BossHud? {
     val i = guardian ?: return null
     val foe = foes[i]
     val fighter = foeFighters[i]
-    val cast = (foe.skills + learned[i].orEmpty()).mapNotNull { skill ->
+    // Умение, что босс применяет сейчас (SKILL-01), - на подходе первым: осталось его применения
+    val casting = fighter.casting?.let { c -> CastView(c.code, (c.until - time).coerceAtLeast(0.0), c.until - c.from) }
+    val coming = (foe.skills + learned[i].orEmpty()).mapNotNull { skill ->
         val ready = fighter.readyAt[skill.code] ?: return@mapNotNull null
-        CastView(skill.code, (ready - time).coerceAtLeast(0.0), skill.cooldown / fighter.body.recovery(skill.spell))
-    }.minByOrNull { it.left }?.takeIf { fighter.alive }
+        CastView(skill.code, (ready - time).coerceAtLeast(0.0), skill.cooldown / fighter.body.recovery)
+    }
+    val cast = (casting ?: coming.minByOrNull { it.left })?.takeIf { fighter.alive }
     val slots = slotHolders.map { holder ->
         when (holder) {
             null -> null

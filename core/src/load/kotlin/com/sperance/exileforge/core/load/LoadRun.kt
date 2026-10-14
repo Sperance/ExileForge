@@ -111,7 +111,7 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
         val zone = index.zone(zoneCode) ?: return
         val hero = p.hero
         val sheet = Sheets.calculate(index, hero.level, hero.heroClass, p.tree, p.items)
-        val skill = index.skills.ofClass(hero.heroClass).firstOrNull { it.type.kind == SkillKind.ACTIVE && it.unlock <= hero.level }
+        val skill = index.skills.own(hero.heroClass).firstOrNull { it.type.kind == SkillKind.ACTIVE && it.unlock <= hero.level }
         val skills = HeroSkills(learned = skill?.let { mapOf(it.code to 1) }.orEmpty(), active = listOf(skill?.let { ActiveSlot(it.code, SlotCondition.READY) }))
         val gear = HeroGear(sheet.stats, hero.level, sheet.model, HeroStance.of(hero.heroClass), Loadout.of(skills, index, hero.heroClass, emptyList(), sheet.stats, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, start.seed, start.context)

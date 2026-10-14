@@ -207,7 +207,7 @@ class MobKit(val index: ContentIndex) {
         }
         val forced = System.getProperty("force").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
         val actives = learned.filter { it.first.type.kind == SkillKind.ACTIVE && styled(it.first) }.map { it.first }
-            .sortedWith(compareByDescending<SkillDefinition> { it.code in forced }.thenByDescending { it.hit != null && it.condition == SlotCondition.READY }.thenByDescending { it.unlock })
+            .sortedWith(compareByDescending<SkillDefinition> { it.code in forced }.thenByDescending { it.hit != null && it.condition == SlotCondition.READY && !it.common }.thenByDescending { it.unlock })
             .take(skillRules.activeSlots(level))
         val passives = learned.filter { it.first.type.kind == SkillKind.PASSIVE }.map { it.first }.sortedByDescending { it.unlock }.take(skillRules.passiveSlots(level))
         return HeroSkills(learned = learned.associate { (skill, at) -> skill.code to at }, active = actives.map { ActiveSlot(it.code, it.condition) }, passive = passives.map { it.code })

@@ -109,7 +109,13 @@ internal sealed interface Pick {
                     item { Slots(index, skills, level, body.stats) { pick = it } }
                     item { Caption(ui("skills.book_of", classTitle(classCode))) }
                     // Only what the hero has learned (2.81.0): an unread book's skill appears once its book is read.
-                    items(pages.filter { skills.level(it.code) > 0 }, key = { it.code }) { skill ->
+                    items(pages.filter { !it.common && skills.level(it.code) > 0 }, key = { it.code }) { skill ->
+                        Page(game, index, skill, skills, level, body.stats, slotOf(skills, skill.code)) { page = skill.code }
+                    }
+                    // Общие умения (0.14.0, SKILL-02) - своим разделом: любому классу, атрибут - свой у умения
+                    val shared = pages.filter { it.common && skills.level(it.code) > 0 }
+                    if (shared.isNotEmpty()) item { Caption(ui("skills.book_common")) }
+                    items(shared, key = { it.code }) { skill ->
                         Page(game, index, skill, skills, level, body.stats, slotOf(skills, skill.code)) { page = skill.code }
                     }
                     item { Books(game, index, pages) { exchanging = true } }

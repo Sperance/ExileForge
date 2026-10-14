@@ -64,7 +64,7 @@ class ExpeditionGoldenTest {
         val zone = index.campaign.zones[case.zone % index.campaign.zones.size]
         val sheet = Sheets.calculate(index, case.level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
         // The class's first active skill, as a fresh hero wields it.
-        val skill = index.skills.ofClass(heroClass.code).firstOrNull { it.type.kind == SkillKind.ACTIVE && it.unlock <= case.level }
+        val skill = index.skills.own(heroClass.code).firstOrNull { it.type.kind == SkillKind.ACTIVE && it.unlock <= case.level }
         val skills = HeroSkills(learned = skill?.let { mapOf(it.code to case.level.coerceAtMost(20)) }.orEmpty(), active = listOf(skill?.let { ActiveSlot(it.code, SlotCondition.READY) }))
         // Two plain life flasks on the belt: a naked hero would fall before the boss.
         val flasks = List(2) { n ->

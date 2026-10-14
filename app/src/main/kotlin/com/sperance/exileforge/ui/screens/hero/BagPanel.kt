@@ -187,7 +187,7 @@ internal fun compactCount(amount: Long): String = when {
     val orb = Orb.of(code)
     val forgeable = orb != null && orb != Orb.ORB_OF_REGRET
     val skill = game.index?.skills?.byBook(code)
-    val readable = skill != null && skill.heroClass == game.hero?.heroClass
+    val readable = skill != null && game.hero?.heroClass?.let(skill::fits) == true
     val essence = game.index?.essence(code) != null
     val seal = game.index?.seal(code) != null
     // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.

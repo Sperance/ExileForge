@@ -207,7 +207,7 @@ class SimKit(val index: ContentIndex) {
     fun skills(heroClass: String, level: Int, stats: Map<String, Double>): HeroSkills {
         val learned = index.skills.ofClass(heroClass).filter { it.unlock <= level }.mapNotNull { skill -> skillLevel(skill, level, stats)?.let { skill to it } }
         val actives = learned.filter { it.first.type.kind == SkillKind.ACTIVE }.map { it.first }
-            .sortedWith(compareByDescending<SkillDefinition> { it.hit != null && it.condition == SlotCondition.READY }.thenByDescending { it.unlock })
+            .sortedWith(compareByDescending<SkillDefinition> { it.hit != null && it.condition == SlotCondition.READY && !it.common }.thenByDescending { it.unlock })
             .take(skillRules.activeSlots(level))
         val passives = learned.filter { it.first.type.kind == SkillKind.PASSIVE }.map { it.first }.sortedByDescending { it.unlock }.take(skillRules.passiveSlots(level))
         return HeroSkills(

@@ -52,7 +52,7 @@ data class ClassGuide(
                 attributes = ATTRIBUTES.map { it to (stats[it] ?: 0.0) },
                 vitals = VITALS.mapNotNull { stat -> stats[stat]?.takeIf { it > 0 }?.let { stat to it } },
                 weapon = heroClass.weapon,
-                skills = index.skills.ofClass(code).filter { it.type.kind == SkillKind.ACTIVE }.sortedBy { it.unlock },
+                skills = index.skills.own(code).filter { it.type.kind == SkillKind.ACTIVE }.sortedBy { it.unlock },
                 start = index.tree.node(heroClass.startNode),
                 region = region,
                 keystones = region.mapNotNull(index.tree::node).filter { it.type == SkillNodeType.KEYSTONE }.sortedBy { it.code },

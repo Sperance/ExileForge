@@ -77,8 +77,8 @@ class ServerIntegrationTest {
         val created = api.hero.create(admin.id, "Contract", "", heroClass)
         val heroId = created.id
         try {
-            // Тестировщик - отметка героя (сервер ROLE-01): роль администратора выдач не открывает, отметку ставит администратор
-            assertEquals("AUTH_007", assertFailsWith<ApiFailure> { api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 1) }.code)
+            // Выдачи (сервер ROLE-01, 4.12.x): администратор выдаёт любому герою и без отметки тестировщика; отметку ставит модерация
+            api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 1)
             assertTrue(api.moderation.setTester(heroId, true))
             val parts = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId))))
             assertTrue(parts.complete, "the first view did not bring every part")

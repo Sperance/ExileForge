@@ -131,7 +131,7 @@
 | [Таблицы · MODIFIER](reference/Tables/Tables-MODIFIER.md) | Tables-MODIFIER |
 | [Таблицы · TEMPLATE](reference/Tables/Tables-TEMPLATE.md) | Tables-TEMPLATE |
 | [Таблицы · VALUE](reference/Tables/Tables-VALUE.md) | Tables-VALUE |
-| [Торговец, аукцион, тайник и переполнение](Trade.md) | Trade |
+| [Коробейник, аукцион, тайник и переполнение](Trade.md) | Trade |
 | [Дерево пассивных навыков](Tree/README.md) | Tree |
 | [ATTRIBUTE](Tree/Tree-ATTRIBUTE.md) | Tree-ATTRIBUTE |
 | [JEWEL_SOCKET](Tree/Tree-JEWEL_SOCKET.md) | Tree-JEWEL_SOCKET |
@@ -148,8 +148,8 @@
 | [Изумрудные дебри](World/World-REGION_4.md) | World-REGION_4 |
 | [Огненный рубеж](World/World-REGION_5.md) | World-REGION_5 |
 | [Бездна](World/World-REGION_6.md) | World-REGION_6 |
-| [Расколотые небеса](World/World-REGION_7.md) | World-REGION_7 |
-| [Утонувшая империя](World/World-REGION_8.md) | World-REGION_8 |
+| [Разбитое небо](World/World-REGION_7.md) | World-REGION_7 |
+| [Затопленная империя](World/World-REGION_8.md) | World-REGION_8 |
 | [Чертоги богов](World/World-REGION_9.md) | World-REGION_9 |
 
 [↑ На главную](README.md) · [Все страницы](Catalogs.md)

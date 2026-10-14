@@ -220,7 +220,7 @@
 
 ## POWER_SAFFELL_PRISM <a href="#power_saffell_prism" id="power_saffell_prism"></a>
 
-### Призма Саффелла <a href="#призма-саффелла" id="призма-саффелла"></a>
+### Призма заслона <a href="#призма-саффелла" id="призма-саффелла"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -231,7 +231,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Призма Саффелла](../Stats/Stats-POWER.md#power_saffell_prism) |
+| Характеристика · `stat` | [Призма заслона](../Stats/Stats-POWER.md#power_saffell_prism) |
 | sheet | Операция: `PER`; Предшествующие зоны: [Все сопротивления стихиям](../Stats/Stats-HERO.md#stock_resist_all); to: [Шанс блока](../Stats/Stats-HERO.md#stock_block_chance); per: 10 |
 
 

@@ -31,7 +31,7 @@
 
 ## RANGER <a href="#ranger" id="ranger"></a>
 
-### Охотница (Ranger) <a href="#охотница-ranger" id="охотница-ranger"></a>
+### Следопытка (Ranger) <a href="#охотница-ranger" id="охотница-ranger"></a>
 
 Ловкость: уклонение и скорость
 
@@ -44,7 +44,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Код · `code` | [Охотница (Ranger)](#ranger) |
+| Код · `code` | [Следопытка (Ranger)](#ranger) |
 | difficulty | 2 |
 | startNode | [Следопыт](Tree/Tree-START.md#dex_start) |
 | Базовые свойства · `base` | STOCK_STRENGTH: 14; STOCK_AGILITY: 32; STOCK_INTELLECT: 14; STOCK_MANA: 45 |

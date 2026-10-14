@@ -19,7 +19,7 @@
 
 ## POWER_LIONEYES_AIM <a href="#power_lioneyes_aim" id="power_lioneyes_aim"></a>
 
-### Прицел Львиного Глаза <a href="#прицел-львиного-глаза" id="прицел-львиного-глаза"></a>
+### Прицел ловчего <a href="#прицел-львиного-глаза" id="прицел-львиного-глаза"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -30,7 +30,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Прицел Львиного Глаза](../Stats/Stats-POWER.md#power_lioneyes_aim) |
+| Характеристика · `stat` | [Прицел ловчего](../Stats/Stats-POWER.md#power_lioneyes_aim) |
 | Событие · `on` | `STANDING` |
 | checks | check: `FOES_AT_MOST`; Значение: 1 |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Урон](../Stats/Stats-HERO.md#stock_damage) |

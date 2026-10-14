@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.traitViews
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.mapTitle
+import com.sperance.exileforge.core.display.monsterLore
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseTitle
@@ -96,6 +97,10 @@ internal fun BossDossier(
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(name, color = rarityTint(boss.rarity), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             MutedText(ui("challenge.subtitle", level, number(maxLife)))
+        }
+        // Кодекс стража (0.13.3, LORE-01): строка лора хранителя трона или стража механики, если она есть
+        monsterLore(boss.code.value)?.let { lore ->
+            Text(lore, color = Parchment, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
         val known = server
         val share = known?.share

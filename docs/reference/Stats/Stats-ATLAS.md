@@ -6,9 +6,9 @@
 | [Атлас: редкость предметов на картах](../Modifiers/Modifiers-ATLAS.md#atlas_rarity) | ATLAS_RARITY |
 | [Атлас: опыт на картах](../Modifiers/Modifiers-ATLAS.md#atlas_experience) | ATLAS_EXPERIENCE |
 | [Атлас: шанс выпадения карт](../Modifiers/Modifiers-ATLAS.md#atlas_map_drop) | ATLAS_MAP_DROP |
-| [Атлас: шанс портала Ваал](../Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) | ATLAS_VAAL_CHANCE |
-| [Атлас: награда Ваал-зон](../Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) | ATLAS_VAAL_REWARD |
-| [Атлас: минимум модификаторов Ваал-зоны](../Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) | ATLAS_VAAL_MIN_MODS |
+| [Атлас: шанс прорехи Изнанки](../Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) | ATLAS_VAAL_CHANCE |
+| [Атлас: награда прорех Изнанки](../Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) | ATLAS_VAAL_REWARD |
+| [Атлас: минимум модификаторов прорехи Изнанки](../Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) | ATLAS_VAAL_MIN_MODS |
 | [Атлас: сундуки на картах](../Modifiers/Modifiers-ATLAS.md#atlas_chests) | ATLAS_CHESTS |
 | [Атлас: источники на картах](../Modifiers/Modifiers-ATLAS.md#atlas_fountains) | ATLAS_FOUNTAINS |
 | [Атлас: число монстров](../Modifiers/Modifiers-ATLAS.md#atlas_pack_size) | ATLAS_PACK_SIZE |
@@ -55,10 +55,10 @@
 | [Атлас: скорость монстров](../Modifiers/Modifiers-ATLAS.md#atlas_monster_speed) | ATLAS_MONSTER_SPEED |
 | [Атлас: тир карт](../Modifiers/Modifiers-ATLAS.md#atlas_map_tier) | ATLAS_MAP_TIER |
 | [Атлас: захваченные карты](../Modifiers/Modifiers-ATLAS.md#atlas_map_influence) | ATLAS_MAP_INFLUENCE |
-| [Атлас: вещи влияния](../Modifiers/Modifiers-ATLAS.md#atlas_influence_items) | ATLAS_INFLUENCE_ITEMS |
+| [Атлас: вещи с влиянием](../Modifiers/Modifiers-ATLAS.md#atlas_influence_items) | ATLAS_INFLUENCE_ITEMS |
 | [Атлас: сила захваченных карт](../Modifiers/Modifiers-ATLAS.md#atlas_influence_power) | ATLAS_INFLUENCE_POWER |
-| [Атлас: только Создатель](../Modifiers/Modifiers-ATLAS.md#atlas_influence_shaper) | ATLAS_INFLUENCE_SHAPER |
-| [Атлас: только Древний](../Modifiers/Modifiers-ATLAS.md#atlas_influence_elder) | ATLAS_INFLUENCE_ELDER |
+| [Атлас: влияние только Зодчего](../Modifiers/Modifiers-ATLAS.md#atlas_influence_shaper) | ATLAS_INFLUENCE_SHAPER |
+| [Атлас: влияние только Пустоты](../Modifiers/Modifiers-ATLAS.md#atlas_influence_elder) | ATLAS_INFLUENCE_ELDER |
 
 
 ## ATLAS_QUANTITY <a href="#atlas_quantity" id="atlas_quantity"></a>
@@ -131,7 +131,7 @@
 
 ## ATLAS_VAAL_CHANCE <a href="#atlas_vaal_chance" id="atlas_vaal_chance"></a>
 
-### Атлас: шанс портала Ваал <a href="#атлас-шанс-портала-ваал" id="атлас-шанс-портала-ваал"></a>
+### Атлас: шанс прорехи Изнанки <a href="#атлас-шанс-портала-ваал" id="атлас-шанс-портала-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -148,7 +148,7 @@
 
 ## ATLAS_VAAL_REWARD <a href="#atlas_vaal_reward" id="atlas_vaal_reward"></a>
 
-### Атлас: награда Ваал-зон <a href="#атлас-награда-ваал-зон" id="атлас-награда-ваал-зон"></a>
+### Атлас: награда прорех Изнанки <a href="#атлас-награда-ваал-зон" id="атлас-награда-ваал-зон"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -165,7 +165,7 @@
 
 ## ATLAS_VAAL_MIN_MODS <a href="#atlas_vaal_min_mods" id="atlas_vaal_min_mods"></a>
 
-### Атлас: минимум модификаторов Ваал-зоны <a href="#атлас-минимум-модификаторов-ваал-зоны" id="атлас-минимум-модификаторов-ваал-зоны"></a>
+### Атлас: минимум модификаторов прорехи Изнанки <a href="#атлас-минимум-модификаторов-ваал-зоны" id="атлас-минимум-модификаторов-ваал-зоны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -964,7 +964,7 @@
 
 ## ATLAS_INFLUENCE_ITEMS <a href="#atlas_influence_items" id="atlas_influence_items"></a>
 
-### Атлас: вещи влияния <a href="#атлас-вещи-влияния" id="атлас-вещи-влияния"></a>
+### Атлас: вещи с влиянием <a href="#атлас-вещи-влияния" id="атлас-вещи-влияния"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -998,7 +998,7 @@
 
 ## ATLAS_INFLUENCE_SHAPER <a href="#atlas_influence_shaper" id="atlas_influence_shaper"></a>
 
-### Атлас: только Создатель <a href="#атлас-только-создатель" id="атлас-только-создатель"></a>
+### Атлас: влияние только Зодчего <a href="#атлас-только-создатель" id="атлас-только-создатель"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -1015,7 +1015,7 @@
 
 ## ATLAS_INFLUENCE_ELDER <a href="#atlas_influence_elder" id="atlas_influence_elder"></a>
 
-### Атлас: только Древний <a href="#атлас-только-древний" id="атлас-только-древний"></a>
+### Атлас: влияние только Пустоты <a href="#атлас-только-древний" id="атлас-только-древний"></a>
 
 **Чтение свойства** (`{v}` — значение):
 

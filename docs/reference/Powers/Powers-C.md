@@ -786,7 +786,7 @@
 
 ## POWER_CARESS_DEVOTION <a href="#power_caress_devotion" id="power_caress_devotion"></a>
 
-### Осквернённая преданность <a href="#осквернённая-преданность" id="осквернённая-преданность"></a>
+### Порченая преданность <a href="#осквернённая-преданность" id="осквернённая-преданность"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -797,8 +797,8 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Осквернённая преданность](../Stats/Stats-POWER.md#power_caress_devotion) |
-| sheet | Операция: `PER`; Предшествующие зоны: [Надетые осквернённые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Урон](../Stats/Stats-HERO.md#stock_damage); cap: 48; Операция: `MORE`; Предшествующие зоны: [Надетые осквернённые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Броня](../Stats/Stats-HERO.md#stock_armor); Значение: 4; cap: 32; Операция: `MORE`; Предшествующие зоны: [Надетые осквернённые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Уклонение](../Stats/Stats-HERO.md#stock_evasion); Значение: 4; cap: 32; Операция: `MORE`; Предшествующие зоны: [Надетые осквернённые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Энергетический щит](../Stats/Stats-HERO.md#stock_energy_shield); Значение: 4; cap: 32 |
+| Характеристика · `stat` | [Порченая преданность](../Stats/Stats-POWER.md#power_caress_devotion) |
+| sheet | Операция: `PER`; Предшествующие зоны: [Надетые порченые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Урон](../Stats/Stats-HERO.md#stock_damage); cap: 48; Операция: `MORE`; Предшествующие зоны: [Надетые порченые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Броня](../Stats/Stats-HERO.md#stock_armor); Значение: 4; cap: 32; Операция: `MORE`; Предшествующие зоны: [Надетые порченые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Уклонение](../Stats/Stats-HERO.md#stock_evasion); Значение: 4; cap: 32; Операция: `MORE`; Предшествующие зоны: [Надетые порченые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Энергетический щит](../Stats/Stats-HERO.md#stock_energy_shield); Значение: 4; cap: 32 |
 
 
 ## POWER_CARRION_FEAST <a href="#power_carrion_feast" id="power_carrion_feast"></a>

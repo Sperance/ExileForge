@@ -1221,7 +1221,7 @@
 
 **Свойства**
 
-- 6% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 6% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -1236,7 +1236,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1266,7 +1266,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1281,7 +1281,7 @@
 
 **Свойства**
 
-- 6% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 6% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -1296,7 +1296,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1326,7 +1326,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1341,7 +1341,7 @@
 
 **Свойства**
 
-- 6% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 6% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -1356,7 +1356,7 @@
 
 **Свойства**
 
-- 3% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 3% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1986,7 +1986,7 @@
 
 **Свойства**
 
-- +1.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -2016,7 +2016,7 @@
 
 **Свойства**
 
-- +1.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -2076,7 +2076,7 @@
 
 **Свойства**
 
-- +1.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -2976,7 +2976,7 @@
 
 **Свойства**
 
-- 10% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 10% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -2991,7 +2991,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3021,7 +3021,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3036,7 +3036,7 @@
 
 **Свойства**
 
-- 10% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 10% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -3051,7 +3051,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3081,7 +3081,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3096,7 +3096,7 @@
 
 **Свойства**
 
-- 10% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 10% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -3111,7 +3111,7 @@
 
 **Свойства**
 
-- 5% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 5% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -3876,7 +3876,7 @@
 
 **Свойства**
 
-- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -3906,7 +3906,7 @@
 
 **Свойства**
 
-- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -3966,7 +3966,7 @@
 
 **Свойства**
 
-- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -4011,7 +4011,7 @@
 
 **Свойства**
 
-- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -4926,7 +4926,7 @@
 
 **Свойства**
 
-- 14% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 14% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -4941,7 +4941,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -4971,7 +4971,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -4986,7 +4986,7 @@
 
 **Свойства**
 
-- 14% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 14% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -5001,7 +5001,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -5031,7 +5031,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -5046,7 +5046,7 @@
 
 **Свойства**
 
-- 14% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 14% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -5061,7 +5061,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -5091,7 +5091,7 @@
 
 **Свойства**
 
-- 7% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 7% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -5856,7 +5856,7 @@
 
 **Свойства**
 
-- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -5886,7 +5886,7 @@
 
 **Свойства**
 
-- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -5946,7 +5946,7 @@
 
 **Свойства**
 
-- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -5991,7 +5991,7 @@
 
 **Свойства**
 
-- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -6006,7 +6006,7 @@
 
 **Свойства**
 
-- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +4.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -6066,7 +6066,7 @@
 
 **Свойства**
 
-- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -6096,7 +6096,7 @@
 
 **Свойства**
 
-- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -6441,7 +6441,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -6471,7 +6471,7 @@
 
 **Свойства**
 
-- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -6741,7 +6741,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -6756,7 +6756,7 @@
 
 **Свойства**
 
-- 3.5% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 3.5% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -6846,7 +6846,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -7101,7 +7101,7 @@
 
 **Свойства**
 
-- 1.8% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 1.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -7266,7 +7266,7 @@
 
 **Свойства**
 
-- 3.5% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 3.5% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -7326,7 +7326,7 @@
 
 **Свойства**
 
-- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -7341,7 +7341,7 @@
 
 **Свойства**
 
-- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +1% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |

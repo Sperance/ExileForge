@@ -7056,7 +7056,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `SMALL` |
-| Связанные узлы · `connections` | [Узел порчи](Tree-NOTABLE.md#sha_n3_4); [Порча](#sha_t6_1) |
+| Связанные узлы · `connections` | [Узел колдовства](Tree-NOTABLE.md#sha_n3_4); [Порча](#sha_t6_1) |
 
 
 ## MAR_T6_1 <a href="#mar_t6_1" id="mar_t6_1"></a>

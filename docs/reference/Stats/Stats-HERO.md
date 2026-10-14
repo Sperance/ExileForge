@@ -175,7 +175,7 @@
 | [Длительность зарядов](#stock_charge_duration) | STOCK_CHARGE_DURATION |
 | [Пустые слоты экипировки](#stock_worn_empty_slots) | STOCK_WORN_EMPTY_SLOTS |
 | [Надетые уникальные предметы](#stock_worn_uniques) | STOCK_WORN_UNIQUES |
-| [Надетые осквернённые предметы](#stock_worn_corrupted) | STOCK_WORN_CORRUPTED |
+| [Надетые порченые предметы](#stock_worn_corrupted) | STOCK_WORN_CORRUPTED |
 | [Надетые самоцветы](#stock_worn_jewels) | STOCK_WORN_JEWELS |
 | [Отложенный урон по здоровью](#stock_life_damage_delayed) | STOCK_LIFE_DAMAGE_DELAYED |
 | [Срок отложенного урона](#stock_life_damage_delay) | STOCK_LIFE_DAMAGE_DELAY |
@@ -3586,7 +3586,7 @@
 
 ## STOCK_WORN_CORRUPTED <a href="#stock_worn_corrupted" id="stock_worn_corrupted"></a>
 
-### Надетые осквернённые предметы <a href="#надетые-осквернённые-предметы" id="надетые-осквернённые-предметы"></a>
+### Надетые порченые предметы <a href="#надетые-осквернённые-предметы" id="надетые-осквернённые-предметы"></a>
 
 Работающие осквернённые предметы на вас.
 

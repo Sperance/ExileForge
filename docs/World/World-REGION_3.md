@@ -5,21 +5,21 @@
 | [Солончаки](#c3_salt_flats) | 25 | [Солевой скиталец](../reference/Bosses.md#boss_salt_walker) | [Храм утонувших](World-REGION_2.md#c2_drowned_temple) |
 | [Караванный путь](#c3_caravan_road) | 25 | [Мясник караванов](../reference/Bosses.md#boss_caravan_butcher) | [Храм утонувших](World-REGION_2.md#c2_drowned_temple) |
 | [Красное ущелье](#c3_red_gorge) | 25 | [Тиран ущелья](../reference/Bosses.md#boss_gorge_tyrant) | [Храм утонувших](World-REGION_2.md#c2_drowned_temple) |
-| [Поющие барханы](#c3_singing_dunes) | 27 | [Сирена барханов](../reference/Bosses.md#boss_dune_siren) | [Солончаки](#c3_salt_flats) |
-| [Засыпанный город](#c3_buried_city) | 27 | [Песчаный магистрат](../reference/Bosses.md#boss_sand_magistrate) | [Солончаки](#c3_salt_flats); [Караванный путь](#c3_caravan_road) |
+| [Гудящие барханы](#c3_singing_dunes) | 27 | [Сирена барханов](../reference/Bosses.md#boss_dune_siren) | [Солончаки](#c3_salt_flats) |
+| [Засыпанный город](#c3_buried_city) | 27 | [Песчаный судья](../reference/Bosses.md#boss_sand_magistrate) | [Солончаки](#c3_salt_flats); [Караванный путь](#c3_caravan_road) |
 | [Гнездовье стервятников](#c3_vulture_roost) | 27 | [Мать падали](../reference/Bosses.md#boss_carrion_mother) | [Караванный путь](#c3_caravan_road); [Красное ущелье](#c3_red_gorge) |
 | [Иссохший оазис](#c3_withered_oasis) | 27 | [Змей оазиса](../reference/Bosses.md#boss_oasis_serpent) | [Красное ущелье](#c3_red_gorge) |
-| [Стеклянная пустыня](#c3_glass_desert) | 29 | [Стеклянный колосс](../reference/Bosses.md#boss_glass_colossus) | [Поющие барханы](#c3_singing_dunes); [Засыпанный город](#c3_buried_city) |
+| [Оплавленная пустыня](#c3_glass_desert) | 29 | [Стеклянный колосс](../reference/Bosses.md#boss_glass_colossus) | [Гудящие барханы](#c3_singing_dunes); [Засыпанный город](#c3_buried_city) |
 | [Стан налётчиков](#c3_raider_camp) | 29 | [Хан налётчиков](../reference/Bosses.md#boss_raider_khan) | [Засыпанный город](#c3_buried_city); [Гнездовье стервятников](#c3_vulture_roost) |
 | [Скорпионье гнездо](#c3_scorpion_nest) | 29 | [Скорпионья матриарх](../reference/Bosses.md#boss_scorpion_matriarch) | [Гнездовье стервятников](#c3_vulture_roost) |
-| [Долина миражей](#c3_mirage_vale) | 31 | [Ткач миражей](../reference/Bosses.md#boss_mirage_weaver) | [Стеклянная пустыня](#c3_glass_desert) |
-| [Гробницы царей](#c3_tombs_of_kings) | 31 | [Царь-мумия](../reference/Bosses.md#boss_mummy_king) | [Стеклянная пустыня](#c3_glass_desert); [Стан налётчиков](#c3_raider_camp) |
+| [Долина миражей](#c3_mirage_vale) | 31 | [Ткач миражей](../reference/Bosses.md#boss_mirage_weaver) | [Оплавленная пустыня](#c3_glass_desert) |
+| [Гробницы царей](#c3_tombs_of_kings) | 31 | [Царь-мумия](../reference/Bosses.md#boss_mummy_king) | [Оплавленная пустыня](#c3_glass_desert); [Стан налётчиков](#c3_raider_camp) |
 | [Песчаниковая арка](#c3_sandstone_arch) | 31 | [Страж арки](../reference/Bosses.md#boss_arch_sentinel) | [Стан налётчиков](#c3_raider_camp); [Скорпионье гнездо](#c3_scorpion_nest) |
 | [Сухое русло](#c3_dry_riverbed) | 31 | [Обитатель русла](../reference/Bosses.md#boss_riverbed_lurker) | [Скорпионье гнездо](#c3_scorpion_nest) |
 | [Зал бальзамировщиков](#c3_embalmers_hall) | 33 | [Верховный бальзамировщик](../reference/Bosses.md#boss_high_embalmer) | [Гробницы царей](#c3_tombs_of_kings) |
 | [Храм Солнца](#c3_sun_temple) | 33 | [Жрец Солнца](../reference/Bosses.md#boss_sun_priest) | [Гробницы царей](#c3_tombs_of_kings); [Песчаниковая арка](#c3_sandstone_arch) |
-| [Грозовое плато](#c3_storm_mesa) | 33 | [Грозовой Рух](../reference/Bosses.md#boss_storm_roc) | [Песчаниковая арка](#c3_sandstone_arch); [Сухое русло](#c3_dry_riverbed) |
-| [Пирамида Солнечного царя](#c3_sun_kings_pyramid) | 35 | [Солнечный царь](../reference/Bosses.md#boss_sun_king) | [Зал бальзамировщиков](#c3_embalmers_hall); [Храм Солнца](#c3_sun_temple); [Грозовое плато](#c3_storm_mesa) |
+| [Грозовое плато](#c3_storm_mesa) | 33 | [Грозовой рух](../reference/Bosses.md#boss_storm_roc) | [Песчаниковая арка](#c3_sandstone_arch); [Сухое русло](#c3_dry_riverbed) |
+| [Пирамида Солнечного Царя](#c3_sun_kings_pyramid) | 35 | [Солнечный Царь](../reference/Bosses.md#boss_sun_king) | [Зал бальзамировщиков](#c3_embalmers_hall); [Храм Солнца](#c3_sun_temple); [Грозовое плато](#c3_storm_mesa) |
 
 
 ## C3_SALT_FLATS <a href="#c3_salt_flats" id="c3_salt_flats"></a>
@@ -39,7 +39,7 @@
 | light | 1.25 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Солевой скиталец](../reference/Bosses.md#boss_salt_walker) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -61,7 +61,7 @@
 | light | 1.25 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Мясник караванов](../reference/Bosses.md#boss_caravan_butcher) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -83,14 +83,14 @@
 | light | 1.1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Тиран ущелья](../reference/Bosses.md#boss_gorge_tyrant) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C3_SINGING_DUNES <a href="#c3_singing_dunes" id="c3_singing_dunes"></a>
 
-### Поющие барханы <a href="#поющие-барханы" id="поющие-барханы"></a>
+### Гудящие барханы <a href="#поющие-барханы" id="поющие-барханы"></a>
 
 Барханы гудят на ветру, и в этом гуле слышны голоса пропавших.
 
@@ -105,7 +105,7 @@
 | light | 1.25 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Сирена барханов](../reference/Bosses.md#boss_dune_siren) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -126,8 +126,8 @@
 | Количество · `count` | 51; 66 |
 | light | 1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
-| Страж · `boss` | [Песчаный магистрат](../reference/Bosses.md#boss_sand_magistrate) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Страж · `boss` | [Песчаный судья](../reference/Bosses.md#boss_sand_magistrate) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -149,7 +149,7 @@
 | light | 1.1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Мать падали](../reference/Bosses.md#boss_carrion_mother) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -171,14 +171,14 @@
 | light | 1.25 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Змей оазиса](../reference/Bosses.md#boss_oasis_serpent) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C3_GLASS_DESERT <a href="#c3_glass_desert" id="c3_glass_desert"></a>
 
-### Стеклянная пустыня <a href="#стеклянная-пустыня" id="стеклянная-пустыня"></a>
+### Оплавленная пустыня <a href="#стеклянная-пустыня" id="стеклянная-пустыня"></a>
 
 Песок, сплавленный в стекло древним пламенем, режет подошвы и слепит глаза.
 
@@ -187,13 +187,13 @@
 | --- | --- |
 | Биом · `biome` | `DESERT` |
 | Уровень · `level` | 29 |
-| Предшествующие зоны · `from` | [Поющие барханы](#c3_singing_dunes); [Засыпанный город](#c3_buried_city) |
+| Предшествующие зоны · `from` | [Гудящие барханы](#c3_singing_dunes); [Засыпанный город](#c3_buried_city) |
 | Монстры · `monsters` | [Дух самума](../reference/Monsters.md#sandstorm_spirit); [Песчаный скорпион](../reference/Monsters.md#sand_scorpion); [Песчаниковый голем](../reference/Monsters.md#sandstone_golem) |
 | Количество · `count` | 51; 66 |
 | light | 1.25 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Стеклянный колосс](../reference/Bosses.md#boss_glass_colossus) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -215,7 +215,7 @@
 | light | 1.1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Хан налётчиков](../reference/Bosses.md#boss_raider_khan) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -237,7 +237,7 @@
 | light | 1.1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Скорпионья матриарх](../reference/Bosses.md#boss_scorpion_matriarch) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -253,13 +253,13 @@
 | --- | --- |
 | Биом · `biome` | `DESERT` |
 | Уровень · `level` | 31 |
-| Предшествующие зоны · `from` | [Стеклянная пустыня](#c3_glass_desert) |
+| Предшествующие зоны · `from` | [Оплавленная пустыня](#c3_glass_desert) |
 | Монстры · `monsters` | [Дух самума](../reference/Monsters.md#sandstorm_spirit); [Барханный хищник](../reference/Monsters.md#dune_stalker); [Мумия](../reference/Monsters.md#mummy) |
 | Количество · `count` | 51; 66 |
 | light | 1.25 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Ткач миражей](../reference/Bosses.md#boss_mirage_weaver) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -275,13 +275,13 @@
 | --- | --- |
 | Биом · `biome` | `CRYPT` |
 | Уровень · `level` | 31 |
-| Предшествующие зоны · `from` | [Стеклянная пустыня](#c3_glass_desert); [Стан налётчиков](#c3_raider_camp) |
+| Предшествующие зоны · `from` | [Оплавленная пустыня](#c3_glass_desert); [Стан налётчиков](#c3_raider_camp) |
 | Монстры · `monsters` | [Мумия](../reference/Monsters.md#mummy); [Дух самума](../reference/Monsters.md#sandstorm_spirit); [Песчаниковый голем](../reference/Monsters.md#sandstone_golem) |
 | Количество · `count` | 51; 66 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Царь-мумия](../reference/Bosses.md#boss_mummy_king) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -303,7 +303,7 @@
 | light | 1.1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Страж арки](../reference/Bosses.md#boss_arch_sentinel) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -325,7 +325,7 @@
 | light | 1.25 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Обитатель русла](../reference/Bosses.md#boss_riverbed_lurker) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -347,7 +347,7 @@
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Верховный бальзамировщик](../reference/Bosses.md#boss_high_embalmer) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -369,7 +369,7 @@
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
 | Страж · `boss` | [Жрец Солнца](../reference/Bosses.md#boss_sun_priest) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -390,15 +390,15 @@
 | Количество · `count` | 51; 66 |
 | light | 1.1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
-| Страж · `boss` | [Грозовой Рух](../reference/Bosses.md#boss_storm_roc) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Страж · `boss` | [Грозовой рух](../reference/Bosses.md#boss_storm_roc) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C3_SUN_KINGS_PYRAMID <a href="#c3_sun_kings_pyramid" id="c3_sun_kings_pyramid"></a>
 
-### Пирамида Солнечного царя <a href="#пирамида-солнечного-царя" id="пирамида-солнечного-царя"></a>
+### Пирамида Солнечного Царя <a href="#пирамида-солнечного-царя" id="пирамида-солнечного-царя"></a>
 
 Под вершиной пирамиды спит тот, кто правил песками, и сон его чуток.
 
@@ -413,8 +413,8 @@
 | Количество · `count` | 51; 66 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_4](../reference/Tables/Tables-LOOT.md#loot-chest_4) |
-| Страж · `boss` | [Солнечный царь](../reference/Bosses.md#boss_sun_king) |
-| Изначально осквернён · `corrupted` | [Осквернённый Палач](../reference/Monsters.md#corrupted_4) |
+| Страж · `boss` | [Солнечный Царь](../reference/Bosses.md#boss_sun_king) |
+| Изначально осквернён · `corrupted` | [Порченый палач](../reference/Monsters.md#corrupted_4) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

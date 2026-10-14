@@ -211,7 +211,7 @@
 | [Обманный выпад](#sha_n2_4) | SHA_N2_4 |
 | [Ловкая защита](#sha_n2_5) | SHA_N2_5 |
 | [Ведьмина метка](#sha_n3_2) | SHA_N3_2 |
-| [Узел порчи](#sha_n3_4) | SHA_N3_4 |
+| [Узел колдовства](#sha_n3_4) | SHA_N3_4 |
 | [Могильный шёпот](#sha_n3_5) | SHA_N3_5 |
 
 
@@ -3273,7 +3273,7 @@
 
 **Свойства**
 
-- Низкое здоровье восстанавливает 12% здоровья, раз за бой · [Долг Ваал](../reference/Stats/Stats-POWER.md#power_vaal_debt)
+- Низкое здоровье восстанавливает 12% здоровья, раз за бой · [Долг Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_debt)
 - 15% к длительности зарядов · [Длительность зарядов](../reference/Stats/Stats-HERO.md#stock_charge_duration)
 - +31 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 
@@ -3764,7 +3764,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `NOTABLE` |
-| Связанные узлы · `connections` | [Порча](Tree-SMALL.md#wit_n2_3); [Мастерство: порча](Tree-MASTERY.md#wit_n2_m) |
+| Связанные узлы · `connections` | [Порча](Tree-SMALL.md#wit_n2_3); [Мастерство: колдовство](Tree-MASTERY.md#wit_n2_m) |
 
 
 ## WIT_N2_4 <a href="#wit_n2_4" id="wit_n2_4"></a>
@@ -3785,7 +3785,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `NOTABLE` |
-| Связанные узлы · `connections` | [Чёрная нить](#wit_n2_5); [Мастерство: порча](Tree-MASTERY.md#wit_n2_m) |
+| Связанные узлы · `connections` | [Чёрная нить](#wit_n2_5); [Мастерство: колдовство](Tree-MASTERY.md#wit_n2_m) |
 
 
 ## WIT_N2_5 <a href="#wit_n2_5" id="wit_n2_5"></a>
@@ -3806,7 +3806,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `NOTABLE` |
-| Связанные узлы · `connections` | [Мастерство: порча](Tree-MASTERY.md#wit_n2_m) |
+| Связанные узлы · `connections` | [Мастерство: колдовство](Tree-MASTERY.md#wit_n2_m) |
 
 
 ## WIT_N3_2 <a href="#wit_n3_2" id="wit_n3_2"></a>
@@ -4008,7 +4008,7 @@
 
 **Свойства**
 
-- Низкое здоровье восстанавливает 15% здоровья, раз за бой · [Долг Ваал](../reference/Stats/Stats-POWER.md#power_vaal_debt)
+- Низкое здоровье восстанавливает 15% здоровья, раз за бой · [Долг Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_debt)
 - 6% полученного урона возвращается здоровьем · [Возврат здоровья](../reference/Stats/Stats-HERO.md#stock_life_recoup)
 - +31 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 
@@ -4583,12 +4583,12 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `NOTABLE` |
-| Связанные узлы · `connections` | [Порча](Tree-SMALL.md#sha_n3_3); [Мастерство: порча](Tree-MASTERY.md#sha_n3_m) |
+| Связанные узлы · `connections` | [Порча](Tree-SMALL.md#sha_n3_3); [Мастерство: колдовство](Tree-MASTERY.md#sha_n3_m) |
 
 
 ## SHA_N3_4 <a href="#sha_n3_4" id="sha_n3_4"></a>
 
-### Узел порчи <a href="#узел-порчи" id="узел-порчи"></a>
+### Узел колдовства <a href="#узел-порчи" id="узел-порчи"></a>
 
 Крупный узел темы «Порча».
 
@@ -4604,7 +4604,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `NOTABLE` |
-| Связанные узлы · `connections` | [Могильный шёпот](#sha_n3_5); [Мастерство: порча](Tree-MASTERY.md#sha_n3_m) |
+| Связанные узлы · `connections` | [Могильный шёпот](#sha_n3_5); [Мастерство: колдовство](Tree-MASTERY.md#sha_n3_m) |
 
 
 ## SHA_N3_5 <a href="#sha_n3_5" id="sha_n3_5"></a>
@@ -4625,7 +4625,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Тип · `type` | `NOTABLE` |
-| Связанные узлы · `connections` | [Мастерство: порча](Tree-MASTERY.md#sha_n3_m) |
+| Связанные узлы · `connections` | [Мастерство: колдовство](Tree-MASTERY.md#sha_n3_m) |
 
 ---
 Основание: [актуальный исходник](https://github.com/Sperance/ktor-bestgame/blob/fa8c3991681e20ef4d62548bf954d0b031a905a5/src/main/resources/content/tree.json), срез `fa8c399` / клиент `9faca17`, 03.10.2026.

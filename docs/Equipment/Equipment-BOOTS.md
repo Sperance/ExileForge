@@ -79,7 +79,7 @@
 | [Astral Slippers](#astral_slippers) | Редкий | 88 |
 | [Voidstep Boots](#voidstep_boots) | Редкий | 88 |
 | [Windrunner Boots](#windrunner_boots) | Редкий | 88 |
-| [Trench Drake Scale](#trench_drake_scale) | Уникальный | 89 |
+| [The Trench Drake Scale](#trench_drake_scale) | Уникальный | 89 |
 | [Walker of Nothing's Step](#walker_of_nothings_step) | Уникальный | 98 |
 | [Everclimb Greaves](#everclimb_greaves) | Уникальный | 98 |
 | [Deserter's Stride](#deserters_stride) | Уникальный | 34 |
@@ -1611,7 +1611,7 @@
 - 20–25% увеличение скорости передвижения · [Скорость передвижения](../reference/Stats/Stats-HERO.md#stock_movement_speed)
 - +30–40% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
 - +40–60 к максимуму энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
-- Удар хаосом по вам даёт заслон в 6–10% максимума здоровья на 3 с, не чаще раза в 3 с · [Ваальская кожа](../reference/Stats/Stats-POWER.md#power_vaal_skin)
+- Удар хаосом по вам даёт заслон в 6–10% максимума здоровья на 3 с, не чаще раза в 3 с · [Изнаночная кожа](../reference/Stats/Stats-POWER.md#power_vaal_skin)
 - +3–5% урона за каждого врага под недугом, до 5 · [Ползучая гниль](../reference/Stats/Stats-POWER.md#power_spreading_rot)
 
 
@@ -1852,7 +1852,7 @@
 - 25% увеличение скорости передвижения · [Скорость передвижения](../reference/Stats/Stats-HERO.md#stock_movement_speed)
 - -40% к длительности зарядов · [Длительность зарядов](../reference/Stats/Stats-HERO.md#stock_charge_duration)
 - -40% увеличение радиуса света · [Радиус света](../reference/Stats/Stats-HERO.md#stock_light_radius)
-- +5% к уклонению за каждый заряд ярости · [Шаг разлома](../reference/Stats/Stats-POWER.md#power_rift_step)
+- +5% к уклонению за каждый заряд ярости · [Шаг в расщелину](../reference/Stats/Stats-POWER.md#power_rift_step)
 - 15–20% шанс получить заряд ярости при убийстве · [Яростное убийство](../reference/Stats/Stats-POWER.md#power_frenzy_on_kill)
 
 
@@ -2235,7 +2235,7 @@
 
 ## TRENCH_DRAKE_SCALE <a href="#trench_drake_scale" id="trench_drake_scale"></a>
 
-### Trench Drake Scale <a href="#trench-drake-scale" id="trench-drake-scale"></a>
+### The Trench Drake Scale <a href="#trench-drake-scale" id="trench-drake-scale"></a>
 
 Её создало давление. Давление её не сломит.
 

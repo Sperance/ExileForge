@@ -369,7 +369,7 @@
 - +80–100 к максимуму энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
 - +25–35% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
 - 10–15% увеличение скорости передвижения · [Скорость передвижения](../reference/Stats/Stats-HERO.md#stock_movement_speed)
-- Уклонение с шансом 30–50% проклинает нападавшего · [Уход в бездну](../reference/Stats/Stats-POWER.md#power_abyss_dodge)
+- Уклонение с шансом 30–50% проклинает нападавшего · [Уход в Бездну](../reference/Stats/Stats-POWER.md#power_abyss_dodge)
 - 8–12% увеличения уклонения за каждого проклятого врага, до 5 · [Бесконечное падение](../reference/Stats/Stats-POWER.md#power_endless_fall)
 
 

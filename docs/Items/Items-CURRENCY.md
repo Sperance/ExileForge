@@ -15,13 +15,13 @@
 | [Orb of Annulment](#orb_of_annulment) | ORB_OF_ANNULMENT | 4000 |
 | [Orb of Scouring](#orb_of_scouring) | ORB_OF_SCOURING | 200 |
 | [Blessed Orb](#blessed_orb) | BLESSED_ORB | 500 |
-| [Vaal Orb](#vaal_orb) | VAAL_ORB | 800 |
+| [Orb of the Underside](#vaal_orb) | VAAL_ORB | 800 |
 | [Orb of Chance](#orb_of_chance) | ORB_OF_CHANCE | 60 |
-| [Mirror of Kalandra](#mirror_of_kalandra) | MIRROR_OF_KALANDRA | 10000000 |
+| [Mirror of the Flats](#mirror_of_kalandra) | MIRROR_OF_KALANDRA | 10000000 |
 | [Orb of Regret](#orb_of_regret) | ORB_OF_REGRET | 150 |
 | [Fracturing Orb](#fracturing_orb) | FRACTURING_ORB | 15000 |
-| [Shaper's Orb](#shapers_orb) | SHAPERS_ORB | 20000 |
-| [Elder Orb](#elder_orb) | ELDER_ORB | 20000 |
+| [Architect's Orb](#shapers_orb) | SHAPERS_ORB | 20000 |
+| [Void Orb](#elder_orb) | ELDER_ORB | 20000 |
 | [Abyss Orb](#abyss_orb) | ABYSS_ORB | 20000 |
 | [Unveiling Orb](#unveiling_orb) | UNVEILING_ORB | 400 |
 | [Orb of Quality](#quality_orb) | QUALITY_ORB | 40 |
@@ -183,7 +183,7 @@
 
 ## VAAL_ORB <a href="#vaal_orb" id="vaal_orb"></a>
 
-### Vaal Orb <a href="#vaal-orb" id="vaal-orb"></a>
+### Orb of the Underside <a href="#vaal-orb" id="vaal-orb"></a>
 
 Оскверняет предмет или карту навсегда — после этого их не меняют никакие сферы. Равный шанс: ничего; врождённый модификатор заменяется модификатором осквернения (у инструмента — особой строкой труда); предмет заново становится редким (не у уникальных, мифических и фляг); или каждое значение модификаторов ×0,8–1,2, сверх предела тира. Подходит и для фляг.
 
@@ -191,7 +191,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `CURRENCY` |
-| Подкатегория · `subCategory` | [Vaal Orb](#vaal_orb) |
+| Подкатегория · `subCategory` | [Orb of the Underside](#vaal_orb) |
 | Базовая цена · `price` | 800 |
 
 
@@ -211,7 +211,7 @@
 
 ## MIRROR_OF_KALANDRA <a href="#mirror_of_kalandra" id="mirror_of_kalandra"></a>
 
-### Mirror of Kalandra <a href="#mirror-of-kalandra" id="mirror-of-kalandra"></a>
+### Mirror of the Flats <a href="#mirror-of-kalandra" id="mirror-of-kalandra"></a>
 
 Создаёт точную копию предмета; копия неизменяема — сферы и эссенции её не берут. Оригинал остаётся как был. Не для фляг, осквернённых и уже отражённых вещей.
 
@@ -219,7 +219,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `CURRENCY` |
-| Подкатегория · `subCategory` | [Mirror of Kalandra](#mirror_of_kalandra) |
+| Подкатегория · `subCategory` | [Mirror of the Flats](#mirror_of_kalandra) |
 | Базовая цена · `price` | 10000000 |
 
 
@@ -253,29 +253,29 @@
 
 ## SHAPERS_ORB <a href="#shapers_orb" id="shapers_orb"></a>
 
-### Shaper's Orb <a href="#shapers-orb" id="shapers-orb"></a>
+### Architect's Orb <a href="#shapers-orb" id="shapers-orb"></a>
 
-Редкий предмет без влияния получает влияние Создателя и модификатор из его пула (нужно свободное место). На инструменты и карты не действует: карту захватывает Печать Создателя.
+Редкий предмет без влияния получает влияние Создателя и модификатор из его пула (нужно свободное место). На инструменты и карты не действует: карту захватывает Оттиск Зодчего.
 
 
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `CURRENCY` |
-| Подкатегория · `subCategory` | [Shaper's Orb](#shapers_orb) |
+| Подкатегория · `subCategory` | [Architect's Orb](#shapers_orb) |
 | Базовая цена · `price` | 20000 |
 
 
 ## ELDER_ORB <a href="#elder_orb" id="elder_orb"></a>
 
-### Elder Orb <a href="#elder-orb" id="elder-orb"></a>
+### Void Orb <a href="#elder-orb" id="elder-orb"></a>
 
-Редкий предмет без влияния получает влияние Древнего и модификатор из его пула (нужно свободное место). На инструменты и карты не действует: карту захватывает Печать Древнего.
+Редкий предмет без влияния получает влияние Древнего и модификатор из его пула (нужно свободное место). На инструменты и карты не действует: карту захватывает Оттиск Пустоты.
 
 
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `CURRENCY` |
-| Подкатегория · `subCategory` | [Elder Orb](#elder_orb) |
+| Подкатегория · `subCategory` | [Void Orb](#elder_orb) |
 | Базовая цена · `price` | 20000 |
 
 
@@ -283,7 +283,7 @@
 
 ### Abyss Orb <a href="#abyss-orb" id="abyss-orb"></a>
 
-Редкий предмет без влияния получает влияние Бездны и модификатор из её пула (нужно свободное место). На инструменты и карты не действует: карту захватывает Печать Бездны.
+Редкий предмет без влияния получает влияние Бездны и модификатор из её пула (нужно свободное место). На инструменты и карты не действует: карту захватывает Оттиск Бездны.
 
 
 | Параметр | Значение |

@@ -2,9 +2,9 @@
 
 | Зона | Уровень | Страж | Открывается из |
 | --- | --- | --- | --- |
-| [Кромка джунглей](#c4_jungle_edge) | 37 | [Лесной ловчий](../reference/Bosses.md#boss_jungle_stalker) | [Пирамида Солнечного царя](World-REGION_3.md#c3_sun_kings_pyramid) |
-| [Мангровая дельта](#c4_mangrove_delta) | 37 | [Мангровая Пасть](../reference/Bosses.md#boss_mangrove_maw) | [Пирамида Солнечного царя](World-REGION_3.md#c3_sun_kings_pyramid) |
-| [Заросшая дорога](#c4_overgrown_road) | 37 | [Замшелый легионер](../reference/Bosses.md#boss_moss_legionary) | [Пирамида Солнечного царя](World-REGION_3.md#c3_sun_kings_pyramid) |
+| [Кромка джунглей](#c4_jungle_edge) | 37 | [Ловчий джунглей](../reference/Bosses.md#boss_jungle_stalker) | [Пирамида Солнечного Царя](World-REGION_3.md#c3_sun_kings_pyramid) |
+| [Мангровая дельта](#c4_mangrove_delta) | 37 | [Мангровая пасть](../reference/Bosses.md#boss_mangrove_maw) | [Пирамида Солнечного Царя](World-REGION_3.md#c3_sun_kings_pyramid) |
+| [Заросшая дорога](#c4_overgrown_road) | 37 | [Замшелый легионер](../reference/Bosses.md#boss_moss_legionary) | [Пирамида Солнечного Царя](World-REGION_3.md#c3_sun_kings_pyramid) |
 | [Орхидейная поляна](#c4_orchid_glade) | 39 | [Орхидейная дриада](../reference/Bosses.md#boss_orchid_dryad) | [Кромка джунглей](#c4_jungle_edge) |
 | [Тропа пантеры](#c4_panther_trail) | 39 | [Теневая пантера](../reference/Bosses.md#boss_shadow_panther) | [Кромка джунглей](#c4_jungle_edge); [Мангровая дельта](#c4_mangrove_delta) |
 | [Осиная лощина](#c4_wasp_hollow) | 39 | [Осиная матрона](../reference/Bosses.md#boss_wasp_matron) | [Мангровая дельта](#c4_mangrove_delta) |
@@ -13,13 +13,13 @@
 | [Янтарные ходы](#c4_amber_tunnels) | 41 | [Янтарный страж](../reference/Bosses.md#boss_amber_warden) | [Тропа пантеры](#c4_panther_trail); [Осиная лощина](#c4_wasp_hollow) |
 | [Плачущий полог](#c4_weeping_canopy) | 41 | [Ужас полога](../reference/Bosses.md#boss_canopy_horror) | [Осиная лощина](#c4_wasp_hollow); [Роща душителей](#c4_strangler_grove) |
 | [Грибные низины](#c4_fungal_lowlands) | 43 | [Споровый владыка](../reference/Bosses.md#boss_spore_lord) | [Змеиное святилище](#c4_serpent_shrine) |
-| [Стоянка пропавшей экспедиции](#c4_lost_expedition) | 43 | [Обезумевший первопроходец](../reference/Bosses.md#boss_mad_explorer) | [Змеиное святилище](#c4_serpent_shrine); [Янтарные ходы](#c4_amber_tunnels) |
+| [Стоянка пропавшей экспедиции](#c4_lost_expedition) | 43 | [Обезумевший проводник](../reference/Bosses.md#boss_mad_explorer) | [Змеиное святилище](#c4_serpent_shrine); [Янтарные ходы](#c4_amber_tunnels) |
 | [Выводковые камеры](#c4_brood_chambers) | 43 | [Кормилица выводка](../reference/Bosses.md#boss_brood_nurse) | [Янтарные ходы](#c4_amber_tunnels); [Плачущий полог](#c4_weeping_canopy) |
 | [Затопленная чаща](#c4_flooded_thicket) | 43 | [Гидра чащи](../reference/Bosses.md#boss_thicket_hydra) | [Плачущий полог](#c4_weeping_canopy) |
 | [Древо-великан](#c4_great_tree) | 45 | [Хранитель Древа](../reference/Bosses.md#boss_tree_warden) | [Грибные низины](#c4_fungal_lowlands); [Стоянка пропавшей экспедиции](#c4_lost_expedition) |
 | [Сады богомолов](#c4_mantis_gardens) | 45 | [Принц богомолов](../reference/Bosses.md#boss_mantis_prince) | [Стоянка пропавшей экспедиции](#c4_lost_expedition) |
 | [Маточные соты](#c4_royal_combs) | 45 | [Страж царицы](../reference/Bosses.md#boss_royal_guardian) | [Затопленная чаща](#c4_flooded_thicket) |
-| [Сердце улья](#c4_hive_heart) | 47 | [Царица улья](../reference/Bosses.md#boss_hive_queen) | [Древо-великан](#c4_great_tree); [Сады богомолов](#c4_mantis_gardens); [Маточные соты](#c4_royal_combs) |
+| [Сердце улья](#c4_hive_heart) | 47 | [Царица Улья](../reference/Bosses.md#boss_hive_queen) | [Древо-великан](#c4_great_tree); [Сады богомолов](#c4_mantis_gardens); [Маточные соты](#c4_royal_combs) |
 
 
 ## C4_JUNGLE_EDGE <a href="#c4_jungle_edge" id="c4_jungle_edge"></a>
@@ -33,13 +33,13 @@
 | --- | --- |
 | Биом · `biome` | `JUNGLE` |
 | Уровень · `level` | 37 |
-| Предшествующие зоны · `from` | [Пирамида Солнечного царя](World-REGION_3.md#c3_sun_kings_pyramid) |
-| Монстры · `monsters` | [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
+| Предшествующие зоны · `from` | [Пирамида Солнечного Царя](World-REGION_3.md#c3_sun_kings_pyramid) |
+| Монстры · `monsters` | [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Духовой стрелок](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
 | Количество · `count` | 51; 66 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
-| Страж · `boss` | [Лесной ловчий](../reference/Bosses.md#boss_jungle_stalker) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Страж · `boss` | [Ловчий джунглей](../reference/Bosses.md#boss_jungle_stalker) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -55,13 +55,13 @@
 | --- | --- |
 | Биом · `biome` | `MIRE` |
 | Уровень · `level` | 37 |
-| Предшествующие зоны · `from` | [Пирамида Солнечного царя](World-REGION_3.md#c3_sun_kings_pyramid) |
-| Монстры · `monsters` | [Споровик](../reference/Monsters.md#sporeling); [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
+| Предшествующие зоны · `from` | [Пирамида Солнечного Царя](World-REGION_3.md#c3_sun_kings_pyramid) |
+| Монстры · `monsters` | [Споровик](../reference/Monsters.md#sporeling); [Духовой стрелок](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
-| Страж · `boss` | [Мангровая Пасть](../reference/Bosses.md#boss_mangrove_maw) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Страж · `boss` | [Мангровая пасть](../reference/Bosses.md#boss_mangrove_maw) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -77,13 +77,13 @@
 | --- | --- |
 | Биом · `biome` | `RUINS` |
 | Уровень · `level` | 37 |
-| Предшествующие зоны · `from` | [Пирамида Солнечного царя](World-REGION_3.md#c3_sun_kings_pyramid) |
-| Монстры · `monsters` | [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter); [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Споровик](../reference/Monsters.md#sporeling) |
+| Предшествующие зоны · `from` | [Пирамида Солнечного Царя](World-REGION_3.md#c3_sun_kings_pyramid) |
+| Монстры · `monsters` | [Духовой стрелок](../reference/Monsters.md#blowgun_hunter); [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Споровик](../reference/Monsters.md#sporeling) |
 | Количество · `count` | 51; 66 |
 | light | 1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Замшелый легионер](../reference/Bosses.md#boss_moss_legionary) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -105,7 +105,7 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Орхидейная дриада](../reference/Bosses.md#boss_orchid_dryad) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -122,12 +122,12 @@
 | Биом · `biome` | `JUNGLE` |
 | Уровень · `level` | 39 |
 | Предшествующие зоны · `from` | [Кромка джунглей](#c4_jungle_edge); [Мангровая дельта](#c4_mangrove_delta) |
-| Монстры · `monsters` | [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
+| Монстры · `monsters` | [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Духовой стрелок](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
 | Количество · `count` | 51; 66 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Теневая пантера](../reference/Bosses.md#boss_shadow_panther) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -149,7 +149,7 @@
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Осиная матрона](../reference/Bosses.md#boss_wasp_matron) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -166,12 +166,12 @@
 | Биом · `biome` | `JUNGLE` |
 | Уровень · `level` | 39 |
 | Предшествующие зоны · `from` | [Заросшая дорога](#c4_overgrown_road) |
-| Монстры · `monsters` | [Споровик](../reference/Monsters.md#sporeling); [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter) |
+| Монстры · `monsters` | [Споровик](../reference/Monsters.md#sporeling); [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Духовой стрелок](../reference/Monsters.md#blowgun_hunter) |
 | Количество · `count` | 51; 66 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Лиана-душитель](../reference/Bosses.md#boss_strangler_vine) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -188,12 +188,12 @@
 | Биом · `biome` | `TEMPLE` |
 | Уровень · `level` | 41 |
 | Предшествующие зоны · `from` | [Тропа пантеры](#c4_panther_trail) |
-| Монстры · `monsters` | [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis); [Споровик](../reference/Monsters.md#sporeling) |
+| Монстры · `monsters` | [Духовой стрелок](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis); [Споровик](../reference/Monsters.md#sporeling) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Змеиный оракул](../reference/Bosses.md#boss_serpent_oracle) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -215,7 +215,7 @@
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Янтарный страж](../reference/Bosses.md#boss_amber_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -237,7 +237,7 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Ужас полога](../reference/Bosses.md#boss_canopy_horror) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -254,12 +254,12 @@
 | Биом · `biome` | `JUNGLE` |
 | Уровень · `level` | 43 |
 | Предшествующие зоны · `from` | [Змеиное святилище](#c4_serpent_shrine) |
-| Монстры · `monsters` | [Споровик](../reference/Monsters.md#sporeling); [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
+| Монстры · `monsters` | [Споровик](../reference/Monsters.md#sporeling); [Духовой стрелок](../reference/Monsters.md#blowgun_hunter); [Богомол-великан](../reference/Monsters.md#giant_mantis) |
 | Количество · `count` | 51; 66 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Споровый владыка](../reference/Bosses.md#boss_spore_lord) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -276,12 +276,12 @@
 | Биом · `biome` | `RUINS` |
 | Уровень · `level` | 43 |
 | Предшествующие зоны · `from` | [Змеиное святилище](#c4_serpent_shrine); [Янтарные ходы](#c4_amber_tunnels) |
-| Монстры · `monsters` | [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter); [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Споровик](../reference/Monsters.md#sporeling) |
+| Монстры · `monsters` | [Духовой стрелок](../reference/Monsters.md#blowgun_hunter); [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Споровик](../reference/Monsters.md#sporeling) |
 | Количество · `count` | 51; 66 |
 | light | 1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
-| Страж · `boss` | [Обезумевший первопроходец](../reference/Bosses.md#boss_mad_explorer) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Страж · `boss` | [Обезумевший проводник](../reference/Bosses.md#boss_mad_explorer) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -303,7 +303,7 @@
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Кормилица выводка](../reference/Bosses.md#boss_brood_nurse) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -325,7 +325,7 @@
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Гидра чащи](../reference/Bosses.md#boss_thicket_hydra) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -342,12 +342,12 @@
 | Биом · `biome` | `JUNGLE` |
 | Уровень · `level` | 45 |
 | Предшествующие зоны · `from` | [Грибные низины](#c4_fungal_lowlands); [Стоянка пропавшей экспедиции](#c4_lost_expedition) |
-| Монстры · `monsters` | [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Богомол-великан](../reference/Monsters.md#giant_mantis); [Охотник с трубкой](../reference/Monsters.md#blowgun_hunter) |
+| Монстры · `monsters` | [Изумрудная пантера](../reference/Monsters.md#emerald_panther); [Богомол-великан](../reference/Monsters.md#giant_mantis); [Духовой стрелок](../reference/Monsters.md#blowgun_hunter) |
 | Количество · `count` | 51; 66 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Хранитель Древа](../reference/Bosses.md#boss_tree_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -369,7 +369,7 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Принц богомолов](../reference/Bosses.md#boss_mantis_prince) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -391,7 +391,7 @@
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
 | Страж · `boss` | [Страж царицы](../reference/Bosses.md#boss_royal_guardian) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -413,8 +413,8 @@
 | Количество · `count` | 51; 66 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_5](../reference/Tables/Tables-LOOT.md#loot-chest_5) |
-| Страж · `boss` | [Царица улья](../reference/Bosses.md#boss_hive_queen) |
-| Изначально осквернён · `corrupted` | [Осквернённый Пожиратель](../reference/Monsters.md#corrupted_5) |
+| Страж · `boss` | [Царица Улья](../reference/Bosses.md#boss_hive_queen) |
+| Изначально осквернён · `corrupted` | [Порченый пожиратель](../reference/Monsters.md#corrupted_5) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

@@ -20,7 +20,7 @@
 
 ## POWER_VENTORS_WAGER <a href="#power_ventors_wager" id="power_ventors_wager"></a>
 
-### Ставка Вентора <a href="#ставка-вентора" id="ставка-вентора"></a>
+### Ставка шулера <a href="#ставка-вентора" id="ставка-вентора"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -31,7 +31,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Ставка Вентора](../Stats/Stats-POWER.md#power_ventors_wager) |
+| Характеристика · `stat` | [Ставка шулера](../Stats/Stats-POWER.md#power_ventors_wager) |
 | world | gain: `QUANTITY`; against: `UNIQUE` |
 
 
@@ -148,7 +148,7 @@
 
 ## POWER_VAAL_OFFERING <a href="#power_vaal_offering" id="power_vaal_offering"></a>
 
-### Подношение Ваал <a href="#подношение-ваал" id="подношение-ваал"></a>
+### Подношение Изнанки <a href="#подношение-ваал" id="подношение-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -159,7 +159,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Подношение Ваал](../Stats/Stats-POWER.md#power_vaal_offering) |
+| Характеристика · `stat` | [Подношение Изнанки](../Stats/Stats-POWER.md#power_vaal_offering) |
 | Событие · `on` | `KILL` |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Урон хаосом](../Stats/Stats-HERO.md#stock_attack_chaos); Операция: `INCREASED`; Длительность: 4; stacks: 5 |
 
@@ -178,7 +178,7 @@
 
 ## POWER_VAAL_BLOODLINE <a href="#power_vaal_bloodline" id="power_vaal_bloodline"></a>
 
-### Кровь Ваал <a href="#кровь-ваал" id="кровь-ваал"></a>
+### Кровь Изнанки <a href="#кровь-ваал" id="кровь-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -189,7 +189,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Кровь Ваал](../Stats/Stats-POWER.md#power_vaal_bloodline) |
+| Характеристика · `stat` | [Кровь Изнанки](../Stats/Stats-POWER.md#power_vaal_bloodline) |
 | Событие · `on` | `STANDING` |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Общий вампиризм](../Stats/Stats-HERO.md#stock_leech_all); scale: `MISSING_LIFE`; cap: 5 |
 
@@ -233,7 +233,7 @@
 
 ## POWER_VAAL_SKIN <a href="#power_vaal_skin" id="power_vaal_skin"></a>
 
-### Ваальская кожа <a href="#ваальская-кожа" id="ваальская-кожа"></a>
+### Изнаночная кожа <a href="#ваальская-кожа" id="ваальская-кожа"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -244,7 +244,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Ваальская кожа](../Stats/Stats-POWER.md#power_vaal_skin) |
+| Характеристика · `stat` | [Изнаночная кожа](../Stats/Stats-POWER.md#power_vaal_skin) |
 | Событие · `on` | `HIT_TAKEN` |
 | checks | check: `DAMAGE_TYPE`; word: `CHAOS` |
 | Перезарядка, с · `cooldown` | 3 |
@@ -363,7 +363,7 @@
 
 ## POWER_VAAL_DEBT <a href="#power_vaal_debt" id="power_vaal_debt"></a>
 
-### Долг Ваал <a href="#долг-ваал" id="долг-ваал"></a>
+### Долг Изнанки <a href="#долг-ваал" id="долг-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -374,7 +374,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Долг Ваал](../Stats/Stats-POWER.md#power_vaal_debt) |
+| Характеристика · `stat` | [Долг Изнанки](../Stats/Stats-POWER.md#power_vaal_debt) |
 | Событие · `on` | `LOW_LIFE` |
 | Перезарядка, с · `cooldown` | -1 |
 | Эффекты · `effects` | Действие: `HEAL`; of: `LIFE` |

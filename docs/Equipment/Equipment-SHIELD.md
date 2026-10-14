@@ -12,7 +12,7 @@
 | [Iron Tower Shield](#iron_tower_shield) | Редкий | 22 |
 | [Bronze Tower Shield](#bronze_tower_shield) | Редкий | 34 |
 | [Girded Tower Shield](#girded_tower_shield) | Редкий | 49 |
-| [Ezomyte Tower Shield](#ezomyte_tower_shield) | Редкий | 64 |
+| [Northern Tower Shield](#ezomyte_tower_shield) | Редкий | 64 |
 | [Goathide Buckler](#goathide_buckler) | Обычный | 1 |
 | [Pine Buckler](#pine_buckler) | Волшебный | 8 |
 | [Painted Buckler](#painted_buckler) | Редкий | 16 |
@@ -245,9 +245,9 @@
 
 ## EZOMYTE_TOWER_SHIELD <a href="#ezomyte_tower_shield" id="ezomyte_tower_shield"></a>
 
-### Ezomyte Tower Shield <a href="#ezomyte-tower-shield" id="ezomyte-tower-shield"></a>
+### Northern Tower Shield <a href="#ezomyte-tower-shield" id="ezomyte-tower-shield"></a>
 
-**Русское название:** Эзомитский башенный щит
+**Русское название:** Северный башенный щит
 
 **Редкий · Щиты**
 
@@ -569,7 +569,7 @@
 
 ### Ancient Spirit Shield <a href="#ancient-spirit-shield" id="ancient-spirit-shield"></a>
 
-**Русское название:** Древний щит духа
+**Русское название:** Пустота щит духа
 
 **Редкий · Щиты**
 
@@ -1332,7 +1332,7 @@
 - Отражает 10–15% полученного урона ударившему · [Отражение](../reference/Stats/Stats-HERO.md#stock_reflect)
 - Получаемый урон стихиями · ADD · -10–-8 · [Получаемый урон стихиями](../reference/Stats/Stats-HERO.md#stock_elemental_taken)
 - +4–6% к максимуму шанса блока · [Максимум блока](../reference/Stats/Stats-HERO.md#stock_block_max)
-- +1–2% к шансу блока за каждые 10% ко всем сопротивлениям · [Призма Саффелла](../reference/Stats/Stats-POWER.md#power_saffell_prism)
+- +1–2% к шансу блока за каждые 10% ко всем сопротивлениям · [Призма заслона](../reference/Stats/Stats-POWER.md#power_saffell_prism)
 - Преломление · ADD · -15–-10 · [Преломление](../reference/Stats/Stats-POWER.md#power_refraction)
 
 
@@ -1846,7 +1846,7 @@
 
 ### Elder's Ward <a href="#elders-ward" id="elders-ward"></a>
 
-Древний не нападает. Древний ждёт.
+Пустота не нападает. Пустота ждёт.
 
 **Русское название:** Оберег Древнего
 
@@ -1866,8 +1866,8 @@
 
 - +8% к шансу блока · [Шанс блока](../reference/Stats/Stats-HERO.md#stock_block_chance)
 - +40–60 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
-- 100% шанса блока атак добавляется к шансу блока заклинаний · [Терпение Древнего](../reference/Stats/Stats-POWER.md#power_elder_mirror)
-- Блок бьёт атакующего на 50–70% урона оружия хаосом · [Укор Древнего](../reference/Stats/Stats-POWER.md#power_elder_rebuke)
+- 100% шанса блока атак добавляется к шансу блока заклинаний · [Терпение Пустоты](../reference/Stats/Stats-POWER.md#power_elder_mirror)
+- Блок бьёт атакующего на 50–70% урона оружия хаосом · [Укор Пустоты](../reference/Stats/Stats-POWER.md#power_elder_rebuke)
 
 
 | Параметр | Значение |

@@ -425,7 +425,7 @@
 
 ## POWER_DESECRATED_OFFERING <a href="#power_desecrated_offering" id="power_desecrated_offering"></a>
 
-### Осквернённое подношение <a href="#осквернённое-подношение" id="осквернённое-подношение"></a>
+### Порченое подношение <a href="#осквернённое-подношение" id="осквернённое-подношение"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -436,7 +436,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Осквернённое подношение](../Stats/Stats-POWER.md#power_desecrated_offering) |
+| Характеристика · `stat` | [Порченое подношение](../Stats/Stats-POWER.md#power_desecrated_offering) |
 | Событие · `on` | `KILL` |
 | Эффекты · `effects` | Действие: `HURT`; of: `LIFE`; Количество: 2; Действие: `BUFF`; Свойства: Характеристика: [Физический урон](../Stats/Stats-HERO.md#stock_attack_physical); Операция: `INCREASED`; Длительность: 4; stacks: 3 |
 

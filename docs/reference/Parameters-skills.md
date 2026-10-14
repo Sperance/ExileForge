@@ -27,7 +27,7 @@
 | `classes[0].code` | [Мародёр (Marauder)](../Classes.md#marauder) |
 | `classes[0].attributes` | [Сила](Stats/Stats-HERO.md#stock_strength) |
 | `classes[0].mana` | 30 |
-| `classes[1].code` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `classes[1].code` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `classes[1].attributes` | [Ловкость](Stats/Stats-HERO.md#stock_agility) |
 | `classes[1].mana` | 40 |
 | `classes[2].code` | [Ведьма (Witch)](../Classes.md#witch) |
@@ -215,7 +215,7 @@
 | `skills[14].trigger.hit.targets` | 1 |
 | `skills[14].trigger.hit.weapon` | 100; 180 |
 | `skills[15].code` | [Расщеплённая стрела](../Skills/Skills-RANGER.md#split_arrow) |
-| `skills[15].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[15].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[15].type` | `ATTACK` |
 | `skills[15].unlock` | 1 |
 | `skills[15].icon` | [bow](Tables/Tables-MODIFIER.md#bow) |
@@ -226,7 +226,7 @@
 | `skills[15].hit.targets` | 3 |
 | `skills[15].hit.weapon` | 93; 155 |
 | `skills[16].code` | [Прицельный выстрел](../Skills/Skills-RANGER.md#snipe) |
-| `skills[16].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[16].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[16].type` | `ATTACK` |
 | `skills[16].unlock` | 6 |
 | `skills[16].icon` | `critical` |
@@ -239,7 +239,7 @@
 | `skills[16].hit.stats[0].stat` | [Шанс критического удара](Stats/Stats-HERO.md#stock_critical_chance) |
 | `skills[16].hit.stats[0].value` | 5; 15 |
 | `skills[17].code` | [Ледяной выстрел](../Skills/Skills-RANGER.md#ice_shot) |
-| `skills[17].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[17].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[17].type` | `ATTACK` |
 | `skills[17].unlock` | 12 |
 | `skills[17].icon` | `cold` |
@@ -256,7 +256,7 @@
 | `skills[17].hit.ailments[1].ailment` | `FREEZE` |
 | `skills[17].hit.ailments[1].chance` | 10; 25 |
 | `skills[18].code` | [Дождь стрел](../Skills/Skills-RANGER.md#rain_of_arrows) |
-| `skills[18].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[18].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[18].type` | `ATTACK` |
 | `skills[18].unlock` | 20 |
 | `skills[18].icon` | [quiver](Tables/Tables-MODIFIER.md#quiver) |
@@ -268,7 +268,7 @@
 | `skills[18].hit.hits` | 2 |
 | `skills[18].hit.weapon` | 100.8; 173.6 |
 | `skills[19].code` | [Метка снайпера](../Skills/Skills-RANGER.md#snipers_mark) |
-| `skills[19].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[19].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[19].type` | `CURSE` |
 | `skills[19].unlock` | 30 |
 | `skills[19].icon` | `focus` |
@@ -283,7 +283,7 @@
 | `skills[19].curse.stats[1].stat` | [Получаемый урон](Stats/Stats-HERO.md#stock_damage_taken) |
 | `skills[19].curse.stats[1].value` | 10; 25 |
 | `skills[20].code` | [Покров ветра](../Skills/Skills-RANGER.md#wind_veil) |
-| `skills[20].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[20].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[20].type` | `GUARD` |
 | `skills[20].unlock` | 40 |
 | `skills[20].icon` | `air` |
@@ -296,7 +296,7 @@
 | `skills[20].buff.stats[0].op` | `INCREASED` |
 | `skills[20].buff.stats[0].value` | 30; 80 |
 | `skills[21].code` | [Яростный выстрел](../Skills/Skills-RANGER.md#frenzy_strike) |
-| `skills[21].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[21].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[21].type` | `ATTACK` |
 | `skills[21].unlock` | 50 |
 | `skills[21].icon` | `speed` |
@@ -309,7 +309,7 @@
 | `skills[21].charges.kind` | `FRENZY` |
 | `skills[21].charges.gain` | 1; 1 |
 | `skills[22].code` | [Грация](../Skills/Skills-RANGER.md#grace) |
-| `skills[22].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[22].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[22].type` | `AURA` |
 | `skills[22].unlock` | 1 |
 | `skills[22].icon` | `evasion` |
@@ -318,7 +318,7 @@
 | `skills[22].stats[0].op` | `INCREASED` |
 | `skills[22].stats[0].value` | 20; 60 |
 | `skills[23].code` | [Зоркий глаз](../Skills/Skills-RANGER.md#eagle_eye) |
-| `skills[23].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[23].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[23].type` | `BONUS` |
 | `skills[23].unlock` | 5 |
 | `skills[23].icon` | `critical` |
@@ -326,7 +326,7 @@
 | `skills[23].stats[0].op` | `INCREASED` |
 | `skills[23].stats[0].value` | 20; 60 |
 | `skills[24].code` | [Охотничий азарт](../Skills/Skills-RANGER.md#hunters_thrill) |
-| `skills[24].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[24].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[24].type` | `TRIGGER` |
 | `skills[24].unlock` | 10 |
 | `skills[24].icon` | `potion` |
@@ -334,7 +334,7 @@
 | `skills[24].trigger.chance` | 20; 50 |
 | `skills[24].trigger.flaskCharges` | 1 |
 | `skills[25].code` | [Спешка](../Skills/Skills-RANGER.md#haste) |
-| `skills[25].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[25].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[25].type` | `AURA` |
 | `skills[25].unlock` | 16 |
 | `skills[25].icon` | `speed` |
@@ -346,7 +346,7 @@
 | `skills[25].stats[1].op` | `INCREASED` |
 | `skills[25].stats[1].value` | 5; 15 |
 | `skills[26].code` | [Лёгкая стопа](../Skills/Skills-RANGER.md#light_foot) |
-| `skills[26].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[26].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[26].type` | `BONUS` |
 | `skills[26].unlock` | 24 |
 | `skills[26].icon` | `agility` |
@@ -357,7 +357,7 @@
 | `skills[26].stats[1].op` | `INCREASED` |
 | `skills[26].stats[1].value` | 10; 30 |
 | `skills[27].code` | [Порыв ветра](../Skills/Skills-RANGER.md#gust) |
-| `skills[27].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[27].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[27].type` | `TRIGGER` |
 | `skills[27].unlock` | 32 |
 | `skills[27].icon` | `air` |
@@ -367,7 +367,7 @@
 | `skills[27].trigger.buff.stats[0].op` | `INCREASED` |
 | `skills[27].trigger.buff.stats[0].value` | 10; 25 |
 | `skills[28].code` | [Ядовитые наконечники](../Skills/Skills-RANGER.md#poisoned_tips) |
-| `skills[28].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[28].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[28].type` | `BONUS` |
 | `skills[28].unlock` | 42 |
 | `skills[28].icon` | `poison` |
@@ -376,7 +376,7 @@
 | `skills[28].stats[1].stat` | [Урон от яда](Stats/Stats-HERO.md#stock_poison_damage) |
 | `skills[28].stats[1].value` | 10; 30 |
 | `skills[29].code` | [Ледяная вспышка](../Skills/Skills-RANGER.md#frost_burst) |
-| `skills[29].heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `skills[29].heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `skills[29].type` | `TRIGGER` |
 | `skills[29].unlock` | 52 |
 | `skills[29].icon` | `cold` |
@@ -535,7 +535,7 @@
 | `skills[41].stats[0].stat` | [Мана](Stats/Stats-HERO.md#stock_mana) |
 | `skills[41].stats[0].op` | `INCREASED` |
 | `skills[41].stats[0].value` | 8; 25 |
-| `skills[42].code` | [Раскол стихий](../Skills/Skills-WITCH.md#elemental_surge) |
+| `skills[42].code` | [Всплеск стихий](../Skills/Skills-WITCH.md#elemental_surge) |
 | `skills[42].heroClass` | [Ведьма (Witch)](../Classes.md#witch) |
 | `skills[42].type` | `TRIGGER` |
 | `skills[42].unlock` | 32 |
@@ -1260,7 +1260,7 @@
 | `monsterSkills[3].hit.convert` | 100; 100 |
 | `monsterSkills[3].hit.ailments[0].ailment` | `POISON` |
 | `monsterSkills[3].hit.ailments[0].chance` | 50; 50 |
-| `monsterSkills[4].code` | [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsterSkills[4].code` | [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsterSkills[4].icon` | `combat` |
 | `monsterSkills[4].mana` | 12 |
 | `monsterSkills[4].cooldown` | 12 |

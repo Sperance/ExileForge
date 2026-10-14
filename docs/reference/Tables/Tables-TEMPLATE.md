@@ -37,7 +37,7 @@
 | [Rusted Coif](../../Equipment/Equipment-HELMET.md#rusted_coif) | 100 | — | — | 0 |
 | [Great Helmet](../../Equipment/Equipment-HELMET.md#great_helmet) | 100 | — | — | 0 |
 | [Aventail Helmet](../../Equipment/Equipment-HELMET.md#aventail_helmet) | 100 | — | — | 0 |
-| [Magistrate Crown](../../Equipment/Equipment-HELMET.md#magistrate_crown) | 100 | — | — | 0 |
+| [Judge's Crown](../../Equipment/Equipment-HELMET.md#magistrate_crown) | 100 | — | — | 0 |
 | [Praetor Crown](../../Equipment/Equipment-HELMET.md#praetor_crown) | 100 | — | — | 0 |
 | [Scare Mask](../../Equipment/Equipment-HELMET.md#scare_mask) | 100 | — | — | 0 |
 | [Iron Mask](../../Equipment/Equipment-HELMET.md#iron_mask) | 100 | — | — | 0 |
@@ -58,7 +58,7 @@
 | [Silken Vest](../../Equipment/Equipment-BODY.md#silken_vest) | 100 | — | — | 0 |
 | [Scholar's Robe](../../Equipment/Equipment-BODY.md#scholar_s_robe) | 100 | — | — | 0 |
 | [Necromancer Silks](../../Equipment/Equipment-BODY.md#necromancer_silks) | 100 | — | — | 0 |
-| [Vaal Regalia](../../Equipment/Equipment-BODY.md#vaal_regalia) | 100 | — | — | 0 |
+| [Underside Regalia](../../Equipment/Equipment-BODY.md#vaal_regalia) | 100 | — | — | 0 |
 | [Scale Vest](../../Equipment/Equipment-BODY.md#scale_vest) | 100 | — | — | 0 |
 | [Light Brigandine](../../Equipment/Equipment-BODY.md#light_brigandine) | 100 | — | — | 0 |
 | [Full Scale Armour](../../Equipment/Equipment-BODY.md#full_scale_armour) | 100 | — | — | 0 |
@@ -138,7 +138,7 @@
 | [Corroded Tower Shield](../../Equipment/Equipment-SHIELD.md#corroded_tower_shield) | 100 | — | — | 0 |
 | [Rawhide Tower Shield](../../Equipment/Equipment-SHIELD.md#rawhide_tower_shield) | 100 | — | — | 0 |
 | [Bronze Tower Shield](../../Equipment/Equipment-SHIELD.md#bronze_tower_shield) | 100 | — | — | 0 |
-| [Ezomyte Tower Shield](../../Equipment/Equipment-SHIELD.md#ezomyte_tower_shield) | 100 | — | — | 0 |
+| [Northern Tower Shield](../../Equipment/Equipment-SHIELD.md#ezomyte_tower_shield) | 100 | — | — | 0 |
 | [Goathide Buckler](../../Equipment/Equipment-SHIELD.md#goathide_buckler) | 100 | — | — | 0 |
 | [Pine Buckler](../../Equipment/Equipment-SHIELD.md#pine_buckler) | 100 | — | — | 0 |
 | [Painted Buckler](../../Equipment/Equipment-SHIELD.md#painted_buckler) | 100 | — | — | 0 |
@@ -177,7 +177,7 @@
 | [Rusted Hatchet](../../Equipment/Equipment-WEAPON_1H.md#rusted_hatchet) | 100 | — | — | 0 |
 | [Jade Hatchet](../../Equipment/Equipment-WEAPON_1H.md#jade_hatchet) | 100 | — | — | 0 |
 | [Boarding Axe](../../Equipment/Equipment-WEAPON_1H.md#boarding_axe) | 100 | — | — | 0 |
-| [Vaal Hatchet](../../Equipment/Equipment-WEAPON_1H.md#vaal_hatchet) | 100 | — | — | 0 |
+| [Underside Hatchet](../../Equipment/Equipment-WEAPON_1H.md#vaal_hatchet) | 100 | — | — | 0 |
 | [Runic Hatchet](../../Equipment/Equipment-WEAPON_1H.md#runic_hatchet) | 100 | — | — | 0 |
 | [Driftwood Wand](../../Equipment/Equipment-WEAPON_1H.md#driftwood_wand) | 100 | — | — | 0 |
 | [Goat's Horn](../../Equipment/Equipment-WEAPON_1H.md#goat_s_horn) | 100 | — | — | 0 |
@@ -197,7 +197,7 @@
 | [Etched Greatsword](../../Equipment/Equipment-WEAPON_2H.md#etched_greatsword) | 100 | — | — | 0 |
 | [Ornate Sword](../../Equipment/Equipment-WEAPON_2H.md#ornate_sword) | 100 | — | — | 0 |
 | [Butcher Sword](../../Equipment/Equipment-WEAPON_2H.md#butcher_sword) | 100 | — | — | 0 |
-| [Vaal Greatsword](../../Equipment/Equipment-WEAPON_2H.md#vaal_greatsword) | 100 | — | — | 0 |
+| [Underside Greatsword](../../Equipment/Equipment-WEAPON_2H.md#vaal_greatsword) | 100 | — | — | 0 |
 | [Infernal Sword](../../Equipment/Equipment-WEAPON_2H.md#infernal_sword) | 100 | — | — | 0 |
 | [Stone Axe](../../Equipment/Equipment-WEAPON_2H.md#stone_axe) | 100 | — | — | 0 |
 | [Jade Chopper](../../Equipment/Equipment-WEAPON_2H.md#jade_chopper) | 100 | — | — | 0 |
@@ -638,7 +638,7 @@
 | [Rusted Coif](../../Equipment/Equipment-HELMET.md#rusted_coif) | 100 | — | — | 0 |
 | [Great Helmet](../../Equipment/Equipment-HELMET.md#great_helmet) | 100 | — | — | 0 |
 | [Aventail Helmet](../../Equipment/Equipment-HELMET.md#aventail_helmet) | 100 | — | — | 0 |
-| [Magistrate Crown](../../Equipment/Equipment-HELMET.md#magistrate_crown) | 100 | — | — | 0 |
+| [Judge's Crown](../../Equipment/Equipment-HELMET.md#magistrate_crown) | 100 | — | — | 0 |
 | [Praetor Crown](../../Equipment/Equipment-HELMET.md#praetor_crown) | 100 | — | — | 0 |
 | [Scare Mask](../../Equipment/Equipment-HELMET.md#scare_mask) | 100 | — | — | 0 |
 | [Iron Mask](../../Equipment/Equipment-HELMET.md#iron_mask) | 100 | — | — | 0 |
@@ -659,7 +659,7 @@
 | [Silken Vest](../../Equipment/Equipment-BODY.md#silken_vest) | 100 | — | — | 0 |
 | [Scholar's Robe](../../Equipment/Equipment-BODY.md#scholar_s_robe) | 100 | — | — | 0 |
 | [Necromancer Silks](../../Equipment/Equipment-BODY.md#necromancer_silks) | 100 | — | — | 0 |
-| [Vaal Regalia](../../Equipment/Equipment-BODY.md#vaal_regalia) | 100 | — | — | 0 |
+| [Underside Regalia](../../Equipment/Equipment-BODY.md#vaal_regalia) | 100 | — | — | 0 |
 | [Scale Vest](../../Equipment/Equipment-BODY.md#scale_vest) | 100 | — | — | 0 |
 | [Light Brigandine](../../Equipment/Equipment-BODY.md#light_brigandine) | 100 | — | — | 0 |
 | [Full Scale Armour](../../Equipment/Equipment-BODY.md#full_scale_armour) | 100 | — | — | 0 |
@@ -739,7 +739,7 @@
 | [Corroded Tower Shield](../../Equipment/Equipment-SHIELD.md#corroded_tower_shield) | 100 | — | — | 0 |
 | [Rawhide Tower Shield](../../Equipment/Equipment-SHIELD.md#rawhide_tower_shield) | 100 | — | — | 0 |
 | [Bronze Tower Shield](../../Equipment/Equipment-SHIELD.md#bronze_tower_shield) | 100 | — | — | 0 |
-| [Ezomyte Tower Shield](../../Equipment/Equipment-SHIELD.md#ezomyte_tower_shield) | 100 | — | — | 0 |
+| [Northern Tower Shield](../../Equipment/Equipment-SHIELD.md#ezomyte_tower_shield) | 100 | — | — | 0 |
 | [Goathide Buckler](../../Equipment/Equipment-SHIELD.md#goathide_buckler) | 100 | — | — | 0 |
 | [Pine Buckler](../../Equipment/Equipment-SHIELD.md#pine_buckler) | 100 | — | — | 0 |
 | [Painted Buckler](../../Equipment/Equipment-SHIELD.md#painted_buckler) | 100 | — | — | 0 |
@@ -778,7 +778,7 @@
 | [Rusted Hatchet](../../Equipment/Equipment-WEAPON_1H.md#rusted_hatchet) | 100 | — | — | 0 |
 | [Jade Hatchet](../../Equipment/Equipment-WEAPON_1H.md#jade_hatchet) | 100 | — | — | 0 |
 | [Boarding Axe](../../Equipment/Equipment-WEAPON_1H.md#boarding_axe) | 100 | — | — | 0 |
-| [Vaal Hatchet](../../Equipment/Equipment-WEAPON_1H.md#vaal_hatchet) | 100 | — | — | 0 |
+| [Underside Hatchet](../../Equipment/Equipment-WEAPON_1H.md#vaal_hatchet) | 100 | — | — | 0 |
 | [Runic Hatchet](../../Equipment/Equipment-WEAPON_1H.md#runic_hatchet) | 100 | — | — | 0 |
 | [Driftwood Wand](../../Equipment/Equipment-WEAPON_1H.md#driftwood_wand) | 100 | — | — | 0 |
 | [Goat's Horn](../../Equipment/Equipment-WEAPON_1H.md#goat_s_horn) | 100 | — | — | 0 |
@@ -798,7 +798,7 @@
 | [Etched Greatsword](../../Equipment/Equipment-WEAPON_2H.md#etched_greatsword) | 100 | — | — | 0 |
 | [Ornate Sword](../../Equipment/Equipment-WEAPON_2H.md#ornate_sword) | 100 | — | — | 0 |
 | [Butcher Sword](../../Equipment/Equipment-WEAPON_2H.md#butcher_sword) | 100 | — | — | 0 |
-| [Vaal Greatsword](../../Equipment/Equipment-WEAPON_2H.md#vaal_greatsword) | 100 | — | — | 0 |
+| [Underside Greatsword](../../Equipment/Equipment-WEAPON_2H.md#vaal_greatsword) | 100 | — | — | 0 |
 | [Infernal Sword](../../Equipment/Equipment-WEAPON_2H.md#infernal_sword) | 100 | — | — | 0 |
 | [Stone Axe](../../Equipment/Equipment-WEAPON_2H.md#stone_axe) | 100 | — | — | 0 |
 | [Jade Chopper](../../Equipment/Equipment-WEAPON_2H.md#jade_chopper) | 100 | — | — | 0 |
@@ -1011,7 +1011,7 @@
 | [Rusted Coif](../../Equipment/Equipment-HELMET.md#rusted_coif) | 100 | — | — | 0 |
 | [Great Helmet](../../Equipment/Equipment-HELMET.md#great_helmet) | 100 | — | — | 0 |
 | [Aventail Helmet](../../Equipment/Equipment-HELMET.md#aventail_helmet) | 100 | — | — | 0 |
-| [Magistrate Crown](../../Equipment/Equipment-HELMET.md#magistrate_crown) | 100 | — | — | 0 |
+| [Judge's Crown](../../Equipment/Equipment-HELMET.md#magistrate_crown) | 100 | — | — | 0 |
 | [Praetor Crown](../../Equipment/Equipment-HELMET.md#praetor_crown) | 100 | — | — | 0 |
 | [Scare Mask](../../Equipment/Equipment-HELMET.md#scare_mask) | 100 | — | — | 0 |
 | [Iron Mask](../../Equipment/Equipment-HELMET.md#iron_mask) | 100 | — | — | 0 |
@@ -1032,7 +1032,7 @@
 | [Silken Vest](../../Equipment/Equipment-BODY.md#silken_vest) | 100 | — | — | 0 |
 | [Scholar's Robe](../../Equipment/Equipment-BODY.md#scholar_s_robe) | 100 | — | — | 0 |
 | [Necromancer Silks](../../Equipment/Equipment-BODY.md#necromancer_silks) | 100 | — | — | 0 |
-| [Vaal Regalia](../../Equipment/Equipment-BODY.md#vaal_regalia) | 100 | — | — | 0 |
+| [Underside Regalia](../../Equipment/Equipment-BODY.md#vaal_regalia) | 100 | — | — | 0 |
 | [Scale Vest](../../Equipment/Equipment-BODY.md#scale_vest) | 100 | — | — | 0 |
 | [Light Brigandine](../../Equipment/Equipment-BODY.md#light_brigandine) | 100 | — | — | 0 |
 | [Full Scale Armour](../../Equipment/Equipment-BODY.md#full_scale_armour) | 100 | — | — | 0 |
@@ -1112,7 +1112,7 @@
 | [Corroded Tower Shield](../../Equipment/Equipment-SHIELD.md#corroded_tower_shield) | 100 | — | — | 0 |
 | [Rawhide Tower Shield](../../Equipment/Equipment-SHIELD.md#rawhide_tower_shield) | 100 | — | — | 0 |
 | [Bronze Tower Shield](../../Equipment/Equipment-SHIELD.md#bronze_tower_shield) | 100 | — | — | 0 |
-| [Ezomyte Tower Shield](../../Equipment/Equipment-SHIELD.md#ezomyte_tower_shield) | 100 | — | — | 0 |
+| [Northern Tower Shield](../../Equipment/Equipment-SHIELD.md#ezomyte_tower_shield) | 100 | — | — | 0 |
 | [Goathide Buckler](../../Equipment/Equipment-SHIELD.md#goathide_buckler) | 100 | — | — | 0 |
 | [Pine Buckler](../../Equipment/Equipment-SHIELD.md#pine_buckler) | 100 | — | — | 0 |
 | [Painted Buckler](../../Equipment/Equipment-SHIELD.md#painted_buckler) | 100 | — | — | 0 |
@@ -1151,7 +1151,7 @@
 | [Rusted Hatchet](../../Equipment/Equipment-WEAPON_1H.md#rusted_hatchet) | 100 | — | — | 0 |
 | [Jade Hatchet](../../Equipment/Equipment-WEAPON_1H.md#jade_hatchet) | 100 | — | — | 0 |
 | [Boarding Axe](../../Equipment/Equipment-WEAPON_1H.md#boarding_axe) | 100 | — | — | 0 |
-| [Vaal Hatchet](../../Equipment/Equipment-WEAPON_1H.md#vaal_hatchet) | 100 | — | — | 0 |
+| [Underside Hatchet](../../Equipment/Equipment-WEAPON_1H.md#vaal_hatchet) | 100 | — | — | 0 |
 | [Runic Hatchet](../../Equipment/Equipment-WEAPON_1H.md#runic_hatchet) | 100 | — | — | 0 |
 | [Driftwood Wand](../../Equipment/Equipment-WEAPON_1H.md#driftwood_wand) | 100 | — | — | 0 |
 | [Goat's Horn](../../Equipment/Equipment-WEAPON_1H.md#goat_s_horn) | 100 | — | — | 0 |
@@ -1171,7 +1171,7 @@
 | [Etched Greatsword](../../Equipment/Equipment-WEAPON_2H.md#etched_greatsword) | 100 | — | — | 0 |
 | [Ornate Sword](../../Equipment/Equipment-WEAPON_2H.md#ornate_sword) | 100 | — | — | 0 |
 | [Butcher Sword](../../Equipment/Equipment-WEAPON_2H.md#butcher_sword) | 100 | — | — | 0 |
-| [Vaal Greatsword](../../Equipment/Equipment-WEAPON_2H.md#vaal_greatsword) | 100 | — | — | 0 |
+| [Underside Greatsword](../../Equipment/Equipment-WEAPON_2H.md#vaal_greatsword) | 100 | — | — | 0 |
 | [Infernal Sword](../../Equipment/Equipment-WEAPON_2H.md#infernal_sword) | 100 | — | — | 0 |
 | [Stone Axe](../../Equipment/Equipment-WEAPON_2H.md#stone_axe) | 100 | — | — | 0 |
 | [Jade Chopper](../../Equipment/Equipment-WEAPON_2H.md#jade_chopper) | 100 | — | — | 0 |
@@ -3300,7 +3300,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Mirror Knight's Visor](../../Equipment/Equipment-HELMET.md#mirror_knights_visor) | 100 | — | — | 0 |
+| [The Mirror Knight's Visor](../../Equipment/Equipment-HELMET.md#mirror_knights_visor) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_ORRERY_ENGINE <a href="#boss-boss_orrery_engine" id="boss-boss_orrery_engine"></a>
@@ -3345,7 +3345,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Prism Hunter's Trophy](../../Equipment/Equipment-QUIVER.md#prism_hunters_trophy) | 100 | — | — | 0 |
+| [The Prism Hunter's Trophy](../../Equipment/Equipment-QUIVER.md#prism_hunters_trophy) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_GATE_PRAETOR <a href="#boss-boss_gate_praetor" id="boss-boss_gate_praetor"></a>
@@ -3375,7 +3375,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Coral Queen's Carapace](../../Equipment/Equipment-BODY.md#coral_queens_carapace) | 100 | — | — | 0 |
+| [The Coral Queen's Carapace](../../Equipment/Equipment-BODY.md#coral_queens_carapace) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_VAULT_WARDEN <a href="#boss-boss_vault_warden" id="boss-boss_vault_warden"></a>
@@ -3390,7 +3390,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vault Warden's Key](../../Equipment/Equipment-AMULET.md#vault_wardens_key) | 100 | — | — | 0 |
+| [The Vault Warden's Key](../../Equipment/Equipment-AMULET.md#vault_wardens_key) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_DROWNED_ORATOR <a href="#boss-boss_drowned_orator" id="boss-boss_drowned_orator"></a>
@@ -3420,7 +3420,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Pearl Eater's Coil](../../Equipment/Equipment-BELT.md#pearl_eaters_coil) | 100 | — | — | 0 |
+| [The Pearl Eater's Coil](../../Equipment/Equipment-BELT.md#pearl_eaters_coil) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_LEGION_TRIBUNE <a href="#boss-boss_legion_tribune" id="boss-boss_legion_tribune"></a>
@@ -3450,7 +3450,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Kelp Priest's Grasp](../../Equipment/Equipment-GLOVES.md#kelp_priests_vestment) | 100 | — | — | 0 |
+| [The Kelp Priest's Grasp](../../Equipment/Equipment-GLOVES.md#kelp_priests_vestment) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_TRENCH_DRAKE <a href="#boss-boss_trench_drake" id="boss-boss_trench_drake"></a>
@@ -3465,7 +3465,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Trench Drake Scale](../../Equipment/Equipment-BOOTS.md#trench_drake_scale) | 100 | — | — | 0 |
+| [The Trench Drake Scale](../../Equipment/Equipment-BOOTS.md#trench_drake_scale) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_THRESHOLD_GUARDIAN <a href="#boss-boss_threshold_guardian" id="boss-boss_threshold_guardian"></a>
@@ -3570,7 +3570,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Crown Collector's Hoard](../../Equipment/Equipment-RING.md#crown_collectors_hoard) | 100 | — | — | 0 |
+| [The Crown Collector's Hoard](../../Equipment/Equipment-RING.md#crown_collectors_hoard) | 100 | — | — | 0 |
 
 
 ## boss-BOSS_NOTHING_WALKER <a href="#boss-boss_nothing_walker" id="boss-boss_nothing_walker"></a>

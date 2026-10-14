@@ -77,7 +77,7 @@
 
 ## POWER_ABYSS_DODGE <a href="#power_abyss_dodge" id="power_abyss_dodge"></a>
 
-### Уход в бездну <a href="#уход-в-бездну" id="уход-в-бездну"></a>
+### Уход в Бездну <a href="#уход-в-бездну" id="уход-в-бездну"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -88,7 +88,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Уход в бездну](../Stats/Stats-POWER.md#power_abyss_dodge) |
+| Характеристика · `stat` | [Уход в Бездну](../Stats/Stats-POWER.md#power_abyss_dodge) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `EVADE` |
 | Эффекты · `effects` | Действие: `CURSE` |
@@ -173,7 +173,7 @@
 
 ## POWER_ABYSSAL_GAZE <a href="#power_abyssal_gaze" id="power_abyssal_gaze"></a>
 
-### Взгляд бездны <a href="#взгляд-бездны" id="взгляд-бездны"></a>
+### Взор без дна <a href="#взгляд-бездны" id="взгляд-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -184,14 +184,14 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Взгляд бездны](../Stats/Stats-POWER.md#power_abyssal_gaze) |
+| Характеристика · `stat` | [Взор без дна](../Stats/Stats-POWER.md#power_abyssal_gaze) |
 | Событие · `on` | `STANDING` |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Урон](../Stats/Stats-HERO.md#stock_damage); scale: `CURSED_FOES`; cap: 5 |
 
 
 ## POWER_ABYSS_CALL <a href="#power_abyss_call" id="power_abyss_call"></a>
 
-### Зов бездны <a href="#зов-бездны" id="зов-бездны"></a>
+### Зов Бездны <a href="#зов-бездны" id="зов-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -202,7 +202,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Зов бездны](../Stats/Stats-POWER.md#power_abyss_call) |
+| Характеристика · `stat` | [Зов Бездны](../Stats/Stats-POWER.md#power_abyss_call) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `FIGHT_START` |
 | Эффекты · `effects` | Действие: `CURSE`; to: `ALL` |
@@ -210,7 +210,7 @@
 
 ## POWER_ATZIRIS_VOW <a href="#power_atziris_vow" id="power_atziris_vow"></a>
 
-### Обет Атзири <a href="#обет-атзири" id="обет-атзири"></a>
+### Обет кровавой царицы <a href="#обет-атзири" id="обет-атзири"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -221,14 +221,14 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Обет Атзири](../Stats/Stats-POWER.md#power_atziris_vow) |
+| Характеристика · `stat` | [Обет кровавой царицы](../Stats/Stats-POWER.md#power_atziris_vow) |
 | Событие · `on` | `HIT` |
 | Эффекты · `effects` | Действие: `DAMAGE`; of: `DEALT`; Тип: `CHAOS` |
 
 
 ## POWER_ABYSSAL_TIDE <a href="#power_abyssal_tide" id="power_abyssal_tide"></a>
 
-### Прилив бездны <a href="#прилив-бездны" id="прилив-бездны"></a>
+### Прилив Бездны <a href="#прилив-бездны" id="прилив-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -239,7 +239,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Прилив бездны](../Stats/Stats-POWER.md#power_abyssal_tide) |
+| Характеристика · `stat` | [Прилив Бездны](../Stats/Stats-POWER.md#power_abyssal_tide) |
 | Событие · `on` | `SKILL_USE` |
 | checks | check: `SPELL` |
 | Эффекты · `effects` | Действие: `DAMAGE`; of: `INTELLECT`; Тип: `CHAOS`; to: `ALL` |
@@ -247,7 +247,7 @@
 
 ## POWER_ABYSSAL_HEART <a href="#power_abyssal_heart" id="power_abyssal_heart"></a>
 
-### Сердце бездны <a href="#сердце-бездны" id="сердце-бездны"></a>
+### Сердце Бездны <a href="#сердце-бездны" id="сердце-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -258,7 +258,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Сердце бездны](../Stats/Stats-POWER.md#power_abyssal_heart) |
+| Характеристика · `stat` | [Сердце Бездны](../Stats/Stats-POWER.md#power_abyssal_heart) |
 | sheet | Операция: `PER`; Предшествующие зоны: [Сила](../Stats/Stats-HERO.md#stock_strength); to: [Здоровье](../Stats/Stats-HERO.md#stock_health); per: 10 |
 
 
@@ -485,7 +485,7 @@
 
 ## POWER_ALTAR_VAAL_SIGHT <a href="#power_altar_vaal_sight" id="power_altar_vaal_sight"></a>
 
-### Взгляд Ваал <a href="#взгляд-ваал" id="взгляд-ваал"></a>
+### Взгляд Изнанки <a href="#взгляд-ваал" id="взгляд-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -496,8 +496,8 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Взгляд Ваал](../Stats/Stats-POWER.md#power_altar_vaal_sight) |
-| sheet | Операция: `PER`; Предшествующие зоны: [Надетые осквернённые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Урон](../Stats/Stats-HERO.md#stock_damage) |
+| Характеристика · `stat` | [Взгляд Изнанки](../Stats/Stats-POWER.md#power_altar_vaal_sight) |
+| sheet | Операция: `PER`; Предшествующие зоны: [Надетые порченые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Урон](../Stats/Stats-HERO.md#stock_damage) |
 
 
 ## POWER_ANVIL_SPARK <a href="#power_anvil_spark" id="power_anvil_spark"></a>
@@ -561,7 +561,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Характеристика · `stat` | [Презрение алтаря](../Stats/Stats-POWER.md#power_altar_scorn) |
-| sheet | Операция: `ADD`; Предшествующие зоны: [Надетые осквернённые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Урон](../Stats/Stats-HERO.md#stock_damage); under: 1 |
+| sheet | Операция: `ADD`; Предшествующие зоны: [Надетые порченые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Урон](../Stats/Stats-HERO.md#stock_damage); under: 1 |
 
 
 ## POWER_AVARICE_HOARD <a href="#power_avarice_hoard" id="power_avarice_hoard"></a>
@@ -656,7 +656,7 @@
 
 ## POWER_ABYSS_GRIN <a href="#power_abyss_grin" id="power_abyss_grin"></a>
 
-### Оскал бездны <a href="#оскал-бездны" id="оскал-бездны"></a>
+### Оскал Бездны <a href="#оскал-бездны" id="оскал-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -667,7 +667,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Оскал бездны](../Stats/Stats-POWER.md#power_abyss_grin) |
+| Характеристика · `stat` | [Оскал Бездны](../Stats/Stats-POWER.md#power_abyss_grin) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `KILL` |
 | Эффекты · `effects` | Действие: `CURSE`; to: `ALL` |

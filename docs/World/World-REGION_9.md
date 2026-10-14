@@ -2,9 +2,9 @@
 
 | Зона | Уровень | Страж | Открывается из |
 | --- | --- | --- | --- |
-| [Порог богов](#c9_gods_threshold) | 91 | [Страж порога](../reference/Bosses.md#boss_threshold_guardian) | [Утонувший трон](World-REGION_8.md#c8_drowned_throne) |
-| [Астральный берег](#c9_astral_shore) | 91 | [Звёздный прилив](../reference/Bosses.md#boss_star_tide) | [Утонувший трон](World-REGION_8.md#c8_drowned_throne) |
-| [Поля забвения](#c9_fields_of_oblivion) | 91 | [Забвение](../reference/Bosses.md#boss_forgetting) | [Утонувший трон](World-REGION_8.md#c8_drowned_throne) |
+| [Порог богов](#c9_gods_threshold) | 91 | [Страж порога](../reference/Bosses.md#boss_threshold_guardian) | [Затонувший трон](World-REGION_8.md#c8_drowned_throne) |
+| [Астральный берег](#c9_astral_shore) | 91 | [Звёздный прилив](../reference/Bosses.md#boss_star_tide) | [Затонувший трон](World-REGION_8.md#c8_drowned_throne) |
+| [Поля забвения](#c9_fields_of_oblivion) | 91 | [Забвение](../reference/Bosses.md#boss_forgetting) | [Затонувший трон](World-REGION_8.md#c8_drowned_throne) |
 | [Зал суда](#c9_hall_of_judgement) | 93 | [Судья душ](../reference/Bosses.md#boss_judge_of_souls) | [Порог богов](#c9_gods_threshold) |
 | [Мост созвездий](#c9_constellation_bridge) | 93 | [Зверь созвездий](../reference/Bosses.md#boss_constellation_beast) | [Порог богов](#c9_gods_threshold); [Астральный берег](#c9_astral_shore) |
 | [Безымянный архив](#c9_nameless_archive) | 93 | [Последний архивариус](../reference/Bosses.md#boss_archivist) | [Астральный берег](#c9_astral_shore); [Поля забвения](#c9_fields_of_oblivion) |
@@ -12,11 +12,11 @@
 | [Астральный сад](#c9_astral_orchard) | 95 | [Хранитель сада](../reference/Bosses.md#boss_orchard_keeper) | [Зал суда](#c9_hall_of_judgement); [Мост созвездий](#c9_constellation_bridge) |
 | [Пустой пантеон](#c9_hollow_pantheon) | 95 | [Пустой бог](../reference/Bosses.md#boss_hollow_god) | [Зал суда](#c9_hall_of_judgement); [Мост созвездий](#c9_constellation_bridge); [Безымянный архив](#c9_nameless_archive) |
 | [Зал войны](#c9_hall_of_war) | 95 | [Аватар войны](../reference/Bosses.md#boss_war_avatar) | [Мост созвездий](#c9_constellation_bridge); [Безымянный архив](#c9_nameless_archive); [Солнечная кузня](#c9_sunforge) |
-| [Беззвёздная пустота](#c9_starless_void) | 95 | [Мать пустоты](../reference/Bosses.md#boss_void_mother) | [Безымянный архив](#c9_nameless_archive); [Солнечная кузня](#c9_sunforge) |
+| [Безвидная пустота](#c9_starless_void) | 95 | [Мать Пустоты](../reference/Bosses.md#boss_void_mother) | [Безымянный архив](#c9_nameless_archive); [Солнечная кузня](#c9_sunforge) |
 | [Небесная обсерватория](#c9_celestial_observatory) | 98 | [Звездочёт](../reference/Bosses.md#boss_stargazer) | [Астральный сад](#c9_astral_orchard); [Пустой пантеон](#c9_hollow_pantheon) |
 | [Дорога к трону](#c9_throne_road) | 98 | [Собиратель корон](../reference/Bosses.md#boss_crown_collector) | [Пустой пантеон](#c9_hollow_pantheon); [Зал войны](#c9_hall_of_war) |
-| [Край ничто](#c9_edge_of_nothing) | 98 | [Странник ничто](../reference/Bosses.md#boss_nothing_walker) | [Зал войны](#c9_hall_of_war); [Беззвёздная пустота](#c9_starless_void) |
-| [Последний трон](#c9_last_throne) | 100 | [Последний бог](../reference/Bosses.md#boss_last_god) | [Небесная обсерватория](#c9_celestial_observatory); [Дорога к трону](#c9_throne_road); [Край ничто](#c9_edge_of_nothing) |
+| [Край ничто](#c9_edge_of_nothing) | 98 | [Странник ничто](../reference/Bosses.md#boss_nothing_walker) | [Зал войны](#c9_hall_of_war); [Безвидная пустота](#c9_starless_void) |
+| [Последний трон](#c9_last_throne) | 100 | [Последний Бог](../reference/Bosses.md#boss_last_god) | [Небесная обсерватория](#c9_celestial_observatory); [Дорога к трону](#c9_throne_road); [Край ничто](#c9_edge_of_nothing) |
 
 
 ## C9_GODS_THRESHOLD <a href="#c9_gods_threshold" id="c9_gods_threshold"></a>
@@ -30,13 +30,13 @@
 | --- | --- |
 | Биом · `biome` | `GODHALL` |
 | Уровень · `level` | 91 |
-| Предшествующие зоны · `from` | [Утонувший трон](World-REGION_8.md#c8_drowned_throne) |
+| Предшествующие зоны · `from` | [Затонувший трон](World-REGION_8.md#c8_drowned_throne) |
 | Монстры · `monsters` | [Божественный страж](../reference/Monsters.md#divine_warden); [Падший архонт](../reference/Monsters.md#fallen_archon); [Титан пустоты](../reference/Monsters.md#void_titan) |
 | Количество · `count` | 57; 74 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Страж порога](../reference/Bosses.md#boss_threshold_guardian) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -52,13 +52,13 @@
 | --- | --- |
 | Биом · `biome` | `ASTRAL` |
 | Уровень · `level` | 91 |
-| Предшествующие зоны · `from` | [Утонувший трон](World-REGION_8.md#c8_drowned_throne) |
-| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot) |
+| Предшествующие зоны · `from` | [Затонувший трон](World-REGION_8.md#c8_drowned_throne) |
+| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot) |
 | Количество · `count` | 57; 74 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Звёздный прилив](../reference/Bosses.md#boss_star_tide) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -74,13 +74,13 @@
 | --- | --- |
 | Биом · `biome` | `OBLIVION` |
 | Уровень · `level` | 91 |
-| Предшествующие зоны · `from` | [Утонувший трон](World-REGION_8.md#c8_drowned_throne) |
-| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
+| Предшествующие зоны · `from` | [Затонувший трон](World-REGION_8.md#c8_drowned_throne) |
+| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
 | Количество · `count` | 57; 74 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Забвение](../reference/Bosses.md#boss_forgetting) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -102,7 +102,7 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Судья душ](../reference/Bosses.md#boss_judge_of_souls) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -119,12 +119,12 @@
 | Биом · `biome` | `ASTRAL` |
 | Уровень · `level` | 93 |
 | Предшествующие зоны · `from` | [Порог богов](#c9_gods_threshold); [Астральный берег](#c9_astral_shore) |
-| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot) |
+| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot) |
 | Количество · `count` | 57; 74 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Зверь созвездий](../reference/Bosses.md#boss_constellation_beast) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -141,12 +141,12 @@
 | Биом · `biome` | `OBLIVION` |
 | Уровень · `level` | 93 |
 | Предшествующие зоны · `from` | [Астральный берег](#c9_astral_shore); [Поля забвения](#c9_fields_of_oblivion) |
-| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
+| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
 | Количество · `count` | 57; 74 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Последний архивариус](../reference/Bosses.md#boss_archivist) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -168,7 +168,7 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Солнечный кузнец](../reference/Bosses.md#boss_sun_smith) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -185,12 +185,12 @@
 | Биом · `biome` | `ASTRAL` |
 | Уровень · `level` | 95 |
 | Предшествующие зоны · `from` | [Зал суда](#c9_hall_of_judgement); [Мост созвездий](#c9_constellation_bridge) |
-| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot) |
+| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot) |
 | Количество · `count` | 57; 74 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Хранитель сада](../reference/Bosses.md#boss_orchard_keeper) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -207,12 +207,12 @@
 | Биом · `biome` | `OBLIVION` |
 | Уровень · `level` | 95 |
 | Предшествующие зоны · `from` | [Зал суда](#c9_hall_of_judgement); [Мост созвездий](#c9_constellation_bridge); [Безымянный архив](#c9_nameless_archive) |
-| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
+| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
 | Количество · `count` | 57; 74 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Пустой бог](../reference/Bosses.md#boss_hollow_god) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -234,14 +234,14 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Аватар войны](../reference/Bosses.md#boss_war_avatar) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C9_STARLESS_VOID <a href="#c9_starless_void" id="c9_starless_void"></a>
 
-### Беззвёздная пустота <a href="#беззвёздная-пустота" id="беззвёздная-пустота"></a>
+### Безвидная пустота <a href="#беззвёздная-пустота" id="беззвёздная-пустота"></a>
 
 Здесь забыты даже звёзды.
 
@@ -251,12 +251,12 @@
 | Биом · `biome` | `OBLIVION` |
 | Уровень · `level` | 95 |
 | Предшествующие зоны · `from` | [Безымянный архив](#c9_nameless_archive); [Солнечная кузня](#c9_sunforge) |
-| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
+| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
 | Количество · `count` | 57; 74 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
-| Страж · `boss` | [Мать пустоты](../reference/Bosses.md#boss_void_mother) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Страж · `boss` | [Мать Пустоты](../reference/Bosses.md#boss_void_mother) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -273,12 +273,12 @@
 | Биом · `biome` | `ASTRAL` |
 | Уровень · `level` | 98 |
 | Предшествующие зоны · `from` | [Астральный сад](#c9_astral_orchard); [Пустой пантеон](#c9_hollow_pantheon) |
-| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot) |
+| Монстры · `monsters` | [Астральный зверь](../reference/Monsters.md#astral_beast); [Звёздный дракон](../reference/Monsters.md#star_dragon); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot) |
 | Количество · `count` | 57; 74 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Звездочёт](../reference/Bosses.md#boss_stargazer) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -300,7 +300,7 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Собиратель корон](../reference/Bosses.md#boss_crown_collector) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -316,13 +316,13 @@
 | --- | --- |
 | Биом · `biome` | `OBLIVION` |
 | Уровень · `level` | 98 |
-| Предшествующие зоны · `from` | [Зал войны](#c9_hall_of_war); [Беззвёздная пустота](#c9_starless_void) |
-| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Клятвенный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
+| Предшествующие зоны · `from` | [Зал войны](#c9_hall_of_war); [Безвидная пустота](#c9_starless_void) |
+| Монстры · `monsters` | [Тень забвения](../reference/Monsters.md#oblivion_shade); [Богоприсяжный фанатик](../reference/Monsters.md#godsworn_zealot); [Титан пустоты](../reference/Monsters.md#void_titan) |
 | Количество · `count` | 57; 74 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
 | Страж · `boss` | [Странник ничто](../reference/Bosses.md#boss_nothing_walker) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -344,8 +344,8 @@
 | Количество · `count` | 57; 74 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_9](../reference/Tables/Tables-LOOT.md#loot-chest_9) |
-| Страж · `boss` | [Последний бог](../reference/Bosses.md#boss_last_god) |
-| Изначально осквернён · `corrupted` | [Осквернённая машина богов](../reference/Monsters.md#corrupted_9) |
+| Страж · `boss` | [Последний Бог](../reference/Bosses.md#boss_last_god) |
+| Изначально осквернён · `corrupted` | [Порченая машина богов](../reference/Monsters.md#corrupted_9) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

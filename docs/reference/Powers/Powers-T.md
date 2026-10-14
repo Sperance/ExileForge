@@ -661,7 +661,7 @@
 
 ## POWER_TRIBUNAL_MIND <a href="#power_tribunal_mind" id="power_tribunal_mind"></a>
 
-### Разум над плотью <a href="#разум-над-плотью" id="разум-над-плотью"></a>
+### Разум трибунала <a href="#разум-над-плотью" id="разум-над-плотью"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -672,7 +672,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Разум над плотью](../Stats/Stats-POWER.md#power_tribunal_mind) |
+| Характеристика · `stat` | [Разум трибунала](../Stats/Stats-POWER.md#power_tribunal_mind) |
 | sheet | Операция: `ADD`; to: [Мана прежде здоровья](../Stats/Stats-HERO.md#stock_mana_before_life) |
 
 

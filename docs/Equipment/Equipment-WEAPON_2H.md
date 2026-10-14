@@ -19,7 +19,7 @@
 | [Headman Sword](#headman_sword) | Волшебный | 34 |
 | [Butcher Sword](#butcher_sword) | Редкий | 40 |
 | [Reaver Greatsword](#reaver_greatsword) | Редкий | 52 |
-| [Vaal Greatsword](#vaal_greatsword) | Редкий | 64 |
+| [Underside Greatsword](#vaal_greatsword) | Редкий | 64 |
 | [Infernal Sword](#infernal_sword) | Редкий | 67 |
 | [Stone Axe](#stone_axe) | Обычный | 4 |
 | [Jade Chopper](#jade_chopper) | Волшебный | 9 |
@@ -457,9 +457,9 @@
 
 ## VAAL_GREATSWORD <a href="#vaal_greatsword" id="vaal_greatsword"></a>
 
-### Vaal Greatsword <a href="#vaal-greatsword" id="vaal-greatsword"></a>
+### Underside Greatsword <a href="#vaal-greatsword" id="vaal-greatsword"></a>
 
-**Русское название:** Двуручный меч ваал
+**Русское название:** Двуручный меч Изнанки
 
 **Редкий · Двуручное оружие**
 
@@ -786,7 +786,7 @@
 
 - 250–300% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical)
 - +30–40 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
-- 30–40% больше физического урона, на 15% меньше скорость атаки · [Сокрушение Марохи](../reference/Stats/Stats-POWER.md#power_marohi_crush)
+- 30–40% больше физического урона, на 15% меньше скорость атаки · [Удар валуна](../reference/Stats/Stats-POWER.md#power_marohi_crush)
 - Каждый 3-й удар оглушает на 0.3–0.5 с · [Сокрушительный удар](../reference/Stats/Stats-POWER.md#power_crushing_blow)
 - 10–20% шанс получить Нечестивую мощь при убийстве · [Нечестивая мощь при убийстве](../reference/Stats/Stats-HERO.md#stock_unholy_might_on_kill)
 
@@ -1346,7 +1346,7 @@
 - 140–180% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical)
 - +15–25 к урону хаосом · [Урон хаосом](../reference/Stats/Stats-HERO.md#stock_attack_chaos)
 - 0.6–1% физического урона атак крадётся здоровьем · [Физический вампиризм](../reference/Stats/Stats-HERO.md#stock_leech_physical)
-- Каждое убийство стоит 2% максимума здоровья и даёт 15–25% увеличения физического урона на 4 с, до 3 раз · [Осквернённое подношение](../reference/Stats/Stats-POWER.md#power_desecrated_offering)
+- Каждое убийство стоит 2% максимума здоровья и даёт 15–25% увеличения физического урона на 4 с, до 3 раз · [Порченое подношение](../reference/Stats/Stats-POWER.md#power_desecrated_offering)
 - +25–40% множителя крита ниже 50% здоровья · [Порченое рвение](../reference/Stats/Stats-POWER.md#power_corrupt_zeal)
 
 
@@ -1676,7 +1676,7 @@
 - +1 к уровню атакующих умений · [Уровень атак](../reference/Stats/Stats-HERO.md#stock_attack_level)
 - 30–40% увеличение урона от кровотечения · [Урон от кровотечения](../reference/Stats/Stats-HERO.md#stock_bleed_damage)
 - 40–50% шанс удара атакой вызвать кровотечение в 2 стака · [Разрыв](../reference/Stats/Stats-POWER.md#power_disfavour_rend)
-- +5–6% к урону за каждый надетый осквернённый предмет · [Взгляд Ваал](../reference/Stats/Stats-POWER.md#power_altar_vaal_sight)
+- +5–6% к урону за каждый надетый осквернённый предмет · [Взгляд Изнанки](../reference/Stats/Stats-POWER.md#power_altar_vaal_sight)
 
 
 | Параметр | Значение |
@@ -2276,7 +2276,7 @@
 
 ### Vile Staff <a href="#vile-staff" id="vile-staff"></a>
 
-**Русское название:** Скверный посох
+**Русское название:** Мерзкий посох
 
 **Редкий · Двуручное оружие**
 
@@ -2848,7 +2848,7 @@
 - +1 к максимуму зарядов силы · [Максимум зарядов силы](../reference/Stats/Stats-HERO.md#stock_max_power_charges)
 - 70–100% увеличение урона хаосом · [Урон хаосом](../reference/Stats/Stats-HERO.md#stock_attack_chaos)
 - 80–110% увеличение урона чар · [Урон чар](../reference/Stats/Stats-HERO.md#stock_spell_damage)
-- Заклинание выпускает волну: урон хаосом всем врагам в 100–150% интеллекта · [Прилив бездны](../reference/Stats/Stats-POWER.md#power_abyssal_tide)
+- Заклинание выпускает волну: урон хаосом всем врагам в 100–150% интеллекта · [Прилив Бездны](../reference/Stats/Stats-POWER.md#power_abyssal_tide)
 - 20–25% к урону заклинаний за каждый заряд силы (до 4) · [Резонанс пустоты](../reference/Stats/Stats-POWER.md#power_void_resonance)
 
 
@@ -2886,7 +2886,7 @@
 - +8–12% к шансу блока · [Шанс блока](../reference/Stats/Stats-HERO.md#stock_block_chance)
 - +12–18% к шансу блока заклинаний · [Шанс блока заклинаний](../reference/Stats/Stats-HERO.md#stock_spell_block)
 - 130–170% увеличение урона чар · [Урон чар](../reference/Stats/Stats-HERO.md#stock_spell_damage)
-- 100% шанса блока атак добавляется к шансу блока заклинаний · [Терпение Древнего](../reference/Stats/Stats-POWER.md#power_elder_mirror)
+- 100% шанса блока атак добавляется к шансу блока заклинаний · [Терпение Пустоты](../reference/Stats/Stats-POWER.md#power_elder_mirror)
 - Блок восстанавливает 4–6% максимума ЭЩ · [Покров авроры](../reference/Stats/Stats-POWER.md#power_aurora_ward)
 
 

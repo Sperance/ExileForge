@@ -26,7 +26,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `ATTACK` |
 | Уровень открытия · `unlock` | 1 |
 | icon | [bow](../reference/Tables/Tables-MODIFIER.md#bow) |
@@ -44,7 +44,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `ATTACK` |
 | Уровень открытия · `unlock` | 6 |
 | icon | `critical` |
@@ -62,7 +62,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `ATTACK` |
 | Уровень открытия · `unlock` | 12 |
 | icon | `cold` |
@@ -80,7 +80,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `ATTACK` |
 | Уровень открытия · `unlock` | 20 |
 | icon | [quiver](../reference/Tables/Tables-MODIFIER.md#quiver) |
@@ -98,7 +98,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `CURSE` |
 | Уровень открытия · `unlock` | 30 |
 | icon | `focus` |
@@ -116,7 +116,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `GUARD` |
 | Уровень открытия · `unlock` | 40 |
 | icon | `air` |
@@ -134,7 +134,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `ATTACK` |
 | Уровень открытия · `unlock` | 50 |
 | icon | `speed` |
@@ -153,7 +153,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `AURA` |
 | Уровень открытия · `unlock` | 1 |
 | icon | `evasion` |
@@ -168,7 +168,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `BONUS` |
 | Уровень открытия · `unlock` | 5 |
 | icon | `critical` |
@@ -182,7 +182,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `TRIGGER` |
 | Уровень открытия · `unlock` | 10 |
 | icon | `potion` |
@@ -196,7 +196,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `AURA` |
 | Уровень открытия · `unlock` | 16 |
 | icon | `speed` |
@@ -211,7 +211,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `BONUS` |
 | Уровень открытия · `unlock` | 24 |
 | icon | `agility` |
@@ -225,7 +225,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `TRIGGER` |
 | Уровень открытия · `unlock` | 32 |
 | icon | `air` |
@@ -239,7 +239,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `BONUS` |
 | Уровень открытия · `unlock` | 42 |
 | icon | `poison` |
@@ -253,7 +253,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Тип · `type` | `TRIGGER` |
 | Уровень открытия · `unlock` | 52 |
 | icon | `cold` |

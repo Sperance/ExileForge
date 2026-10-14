@@ -220,6 +220,7 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
             }
         }
         item(key = "laws") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TakenLaws(index, chosen) } }
+        item(key = "codex") { StoryCodex(chapters, chapters.size) }
         return
     }
     item {
@@ -239,6 +240,7 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
         }
     }
     item(key = "laws") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { TakenLaws(index, chosen) } }
+    item(key = "codex") { StoryCodex(chapters, board.chapter + 1) }
 }
 
 @Composable private fun StepLine(text: String, color: Color) {

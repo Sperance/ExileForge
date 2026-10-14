@@ -4,44 +4,44 @@
 
 | Существо | Код |
 | --- | --- |
-| [Зовущий Прилив](#boss_tidecaller) | BOSS_TIDECALLER |
-| [Мать Рассола](#boss_brine_mother) | BOSS_BRINE_MOTHER |
-| [Болотная Королева](#boss_bog_queen) | BOSS_BOG_QUEEN |
-| [Вожак Стаи](#boss_alpha_wolf) | BOSS_ALPHA_WOLF |
-| [Страж Руин](#boss_ruin_warden) | BOSS_RUIN_WARDEN |
+| [Зовущий прилив](#boss_tidecaller) | BOSS_TIDECALLER |
+| [Мать рассола](#boss_brine_mother) | BOSS_BRINE_MOTHER |
+| [Болотная ведьма](#boss_bog_queen) | BOSS_BOG_QUEEN |
+| [Вожак стаи](#boss_alpha_wolf) | BOSS_ALPHA_WOLF |
+| [Последний часовой](#boss_ruin_warden) | BOSS_RUIN_WARDEN |
 | [Владыка Склепа](#boss_crypt_lord) | BOSS_CRYPT_LORD |
-| [Королева Осколков](#boss_shard_queen) | BOSS_SHARD_QUEEN |
-| [Пепельный Тиран](#boss_ashen_tyrant) | BOSS_ASHEN_TYRANT |
-| [Ледяной Монарх](#boss_frost_monarch) | BOSS_FROST_MONARCH |
+| [Королева осколков](#boss_shard_queen) | BOSS_SHARD_QUEEN |
+| [Пепельный тиран](#boss_ashen_tyrant) | BOSS_ASHEN_TYRANT |
+| [Ледяной монарх](#boss_frost_monarch) | BOSS_FROST_MONARCH |
 | [Утонувший Бог](#boss_drowned_god) | BOSS_DROWNED_GOD |
 | [Капитан «Скорби»](#boss_sorrow_captain) | BOSS_SORROW_CAPTAIN |
-| [Королева Гнёзд](#boss_nest_queen) | BOSS_NEST_QUEEN |
+| [Старый буревестник](#boss_nest_queen) | BOSS_NEST_QUEEN |
 | [Смотритель Маяка](#boss_lamp_warden) | BOSS_LAMP_WARDEN |
 | [Паромщик](#boss_ferryman) | BOSS_FERRYMAN |
-| [Король Контрабандистов](#boss_smuggler_king) | BOSS_SMUGGLER_KING |
-| [Трясинный Змей](#boss_mire_serpent) | BOSS_MIRE_SERPENT |
-| [Матёрый Волколак](#boss_old_werewolf) | BOSS_OLD_WEREWOLF |
-| [Комендант Заставы](#boss_outpost_commander) | BOSS_OUTPOST_COMMANDER |
-| [Вождь Кургана](#boss_barrow_chieftain) | BOSS_BARROW_CHIEFTAIN |
-| [Бригадир Проходчиков](#boss_foreman) | BOSS_FOREMAN |
-| [Белая Рысь](#boss_white_lynx) | BOSS_WHITE_LYNX |
-| [Рудный Голем](#boss_ore_golem) | BOSS_ORE_GOLEM |
-| [Прядильщица Жеод](#boss_geode_spinner) | BOSS_GEODE_SPINNER |
-| [Лич Инея](#boss_rime_lich) | BOSS_RIME_LICH |
-| [Старейший Тролль](#boss_elder_troll) | BOSS_ELDER_TROLL |
-| [Мать Гончих](#boss_hound_mother) | BOSS_HOUND_MOTHER |
+| [Король контрабандистов](#boss_smuggler_king) | BOSS_SMUGGLER_KING |
+| [Трясинный змей](#boss_mire_serpent) | BOSS_MIRE_SERPENT |
+| [Матёрый волколак](#boss_old_werewolf) | BOSS_OLD_WEREWOLF |
+| [Комендант заставы](#boss_outpost_commander) | BOSS_OUTPOST_COMMANDER |
+| [Вождь кургана](#boss_barrow_chieftain) | BOSS_BARROW_CHIEFTAIN |
+| [Бригадир проходчиков](#boss_foreman) | BOSS_FOREMAN |
+| [Белая рысь](#boss_white_lynx) | BOSS_WHITE_LYNX |
+| [Рудный голем](#boss_ore_golem) | BOSS_ORE_GOLEM |
+| [Прядильщица жеод](#boss_geode_spinner) | BOSS_GEODE_SPINNER |
+| [Лич инея](#boss_rime_lich) | BOSS_RIME_LICH |
+| [Старейший тролль](#boss_elder_troll) | BOSS_ELDER_TROLL |
+| [Мать гончих](#boss_hound_mother) | BOSS_HOUND_MOTHER |
 | [Громовержец](#boss_thunder_caller) | BOSS_THUNDER_CALLER |
-| [Жрица Глубин](#boss_deep_priestess) | BOSS_DEEP_PRIESTESS |
-| [Обсидиановый Колосс](#boss_obsidian_colossus) | BOSS_OBSIDIAN_COLOSSUS |
-| [Шлаковый Червь](#boss_slag_worm) | BOSS_SLAG_WORM |
+| [Жрица глубин](#boss_deep_priestess) | BOSS_DEEP_PRIESTESS |
+| [Обсидиановый колосс](#boss_obsidian_colossus) | BOSS_OBSIDIAN_COLOSSUS |
+| [Шлаковый червь](#boss_slag_worm) | BOSS_SLAG_WORM |
 | [Хладоклык](#boss_frostfang) | BOSS_FROSTFANG |
-| [Глашатай Бездны](#boss_abyss_herald) | BOSS_ABYSS_HERALD |
-| [Кастелян Пепла](#boss_ash_castellan) | BOSS_ASH_CASTELLAN |
+| [Глашатай глубин](#boss_abyss_herald) | BOSS_ABYSS_HERALD |
+| [Кастелян пепла](#boss_ash_castellan) | BOSS_ASH_CASTELLAN |
 | [Солевой скиталец](#boss_salt_walker) | BOSS_SALT_WALKER |
 | [Мясник караванов](#boss_caravan_butcher) | BOSS_CARAVAN_BUTCHER |
 | [Тиран ущелья](#boss_gorge_tyrant) | BOSS_GORGE_TYRANT |
 | [Сирена барханов](#boss_dune_siren) | BOSS_DUNE_SIREN |
-| [Песчаный магистрат](#boss_sand_magistrate) | BOSS_SAND_MAGISTRATE |
+| [Песчаный судья](#boss_sand_magistrate) | BOSS_SAND_MAGISTRATE |
 | [Мать падали](#boss_carrion_mother) | BOSS_CARRION_MOTHER |
 | [Змей оазиса](#boss_oasis_serpent) | BOSS_OASIS_SERPENT |
 | [Стеклянный колосс](#boss_glass_colossus) | BOSS_GLASS_COLOSSUS |
@@ -53,10 +53,10 @@
 | [Обитатель русла](#boss_riverbed_lurker) | BOSS_RIVERBED_LURKER |
 | [Верховный бальзамировщик](#boss_high_embalmer) | BOSS_HIGH_EMBALMER |
 | [Жрец Солнца](#boss_sun_priest) | BOSS_SUN_PRIEST |
-| [Грозовой Рух](#boss_storm_roc) | BOSS_STORM_ROC |
-| [Солнечный царь](#boss_sun_king) | BOSS_SUN_KING |
-| [Лесной ловчий](#boss_jungle_stalker) | BOSS_JUNGLE_STALKER |
-| [Мангровая Пасть](#boss_mangrove_maw) | BOSS_MANGROVE_MAW |
+| [Грозовой рух](#boss_storm_roc) | BOSS_STORM_ROC |
+| [Солнечный Царь](#boss_sun_king) | BOSS_SUN_KING |
+| [Ловчий джунглей](#boss_jungle_stalker) | BOSS_JUNGLE_STALKER |
+| [Мангровая пасть](#boss_mangrove_maw) | BOSS_MANGROVE_MAW |
 | [Замшелый легионер](#boss_moss_legionary) | BOSS_MOSS_LEGIONARY |
 | [Орхидейная дриада](#boss_orchid_dryad) | BOSS_ORCHID_DRYAD |
 | [Теневая пантера](#boss_shadow_panther) | BOSS_SHADOW_PANTHER |
@@ -66,17 +66,17 @@
 | [Янтарный страж](#boss_amber_warden) | BOSS_AMBER_WARDEN |
 | [Ужас полога](#boss_canopy_horror) | BOSS_CANOPY_HORROR |
 | [Споровый владыка](#boss_spore_lord) | BOSS_SPORE_LORD |
-| [Обезумевший первопроходец](#boss_mad_explorer) | BOSS_MAD_EXPLORER |
+| [Обезумевший проводник](#boss_mad_explorer) | BOSS_MAD_EXPLORER |
 | [Кормилица выводка](#boss_brood_nurse) | BOSS_BROOD_NURSE |
 | [Гидра чащи](#boss_thicket_hydra) | BOSS_THICKET_HYDRA |
 | [Хранитель Древа](#boss_tree_warden) | BOSS_TREE_WARDEN |
 | [Принц богомолов](#boss_mantis_prince) | BOSS_MANTIS_PRINCE |
 | [Страж царицы](#boss_royal_guardian) | BOSS_ROYAL_GUARDIAN |
-| [Царица улья](#boss_hive_queen) | BOSS_HIVE_QUEEN |
+| [Царица Улья](#boss_hive_queen) | BOSS_HIVE_QUEEN |
 | [Пепельный бегемот](#boss_cinder_behemoth) | BOSS_CINDER_BEHEMOTH |
 | [Серный король](#boss_sulphur_king) | BOSS_SULPHUR_KING |
-| [Генерал-предатель](#boss_turncoat_general) | BOSS_TURNCOAT_GENERAL |
-| [Лавовый змей](#boss_lava_wyrm) | BOSS_LAVA_WYRM |
+| [Генерал-перебежчик](#boss_turncoat_general) | BOSS_TURNCOAT_GENERAL |
+| [Лавовый змий](#boss_lava_wyrm) | BOSS_LAVA_WYRM |
 | [Обсидиановая гарпия](#boss_obsidian_harpy) | BOSS_OBSIDIAN_HARPY |
 | [Хозяин печей](#boss_furnace_master) | BOSS_FURNACE_MASTER |
 | [Вечный осаждающий](#boss_eternal_besieger) | BOSS_ETERNAL_BESIEGER |
@@ -87,13 +87,13 @@
 | [Тлеющий лич](#boss_smouldering_lich) | BOSS_SMOULDERING_LICH |
 | [Кузнец войны](#boss_warsmith) | BOSS_WARSMITH |
 | [Горящий капитан](#boss_burning_captain) | BOSS_BURNING_CAPTAIN |
-| [Жерловой дракон](#boss_vent_dragon) | BOSS_VENT_DRAGON |
-| [Привратник преисподней](#boss_infernal_gatekeeper) | BOSS_INFERNAL_GATEKEEPER |
+| [Дракон жерла](#boss_vent_dragon) | BOSS_VENT_DRAGON |
+| [Клятвенное пламя](#boss_infernal_gatekeeper) | BOSS_INFERNAL_GATEKEEPER |
 | [Сердце горы](#boss_mountain_heart) | BOSS_MOUNTAIN_HEART |
 | [Владыка Пламени](#boss_flame_sovereign) | BOSS_FLAME_SOVEREIGN |
-| [Страж разлома](#boss_rift_watcher) | BOSS_RIFT_WATCHER |
+| [Страж пропасти](#boss_rift_watcher) | BOSS_RIFT_WATCHER |
 | [Чумной жнец](#boss_plague_reaper) | BOSS_PLAGUE_REAPER |
-| [Падший аббат](#boss_fallen_abbot) | BOSS_FALLEN_ABBOT |
+| [Падший настоятель](#boss_fallen_abbot) | BOSS_FALLEN_ABBOT |
 | [Шептун](#boss_whisperer) | BOSS_WHISPERER |
 | [Садовник гнили](#boss_rot_gardener) | BOSS_ROT_GARDENER |
 | [Чумной лекарь](#boss_plague_doctor) | BOSS_PLAGUE_DOCTOR |
@@ -105,13 +105,13 @@
 | [Иссохший великан](#boss_withered_giant) | BOSS_WITHERED_GIANT |
 | [Жрица затмения](#boss_eclipse_priestess) | BOSS_ECLIPSE_PRIESTESS |
 | [Безглазый](#boss_eyeless_one) | BOSS_EYELESS_ONE |
-| [Мать гнили](#boss_mother_blight) | BOSS_MOTHER_BLIGHT |
+| [Гнилосердая](#boss_mother_blight) | BOSS_MOTHER_BLIGHT |
 | [Ткач завесы](#boss_veil_weaver) | BOSS_VEIL_WEAVER |
 | [Вечный привратник](#boss_endless_warden) | BOSS_ENDLESS_WARDEN |
 | [Король бездны](#boss_abyss_king) | BOSS_ABYSS_KING |
 | [Вестник ветров](#boss_wind_herald) | BOSS_WIND_HERALD |
 | [Стеклянная праматерь](#boss_glass_matriarch) | BOSS_GLASS_MATRIARCH |
-| [Громовой змей](#boss_thunder_wyrm) | BOSS_THUNDER_WYRM |
+| [Громовой змий](#boss_thunder_wyrm) | BOSS_THUNDER_WYRM |
 | [Хранитель моста](#boss_bridge_keeper) | BOSS_BRIDGE_KEEPER |
 | [Зеркальный рыцарь](#boss_mirror_knight) | BOSS_MIRROR_KNIGHT |
 | [Тиран шпиля](#boss_spire_tyrant) | BOSS_SPIRE_TYRANT |
@@ -123,7 +123,7 @@
 | [Машина планетария](#boss_orrery_engine) | BOSS_ORRERY_ENGINE |
 | [Недвижное око](#boss_still_eye) | BOSS_STILL_EYE |
 | [Стеклянный хор](#boss_glass_choir) | BOSS_GLASS_CHOIR |
-| [Владыка разбитого неба](#boss_sky_sovereign) | BOSS_SKY_SOVEREIGN |
+| [Владыка Разбитого Неба](#boss_sky_sovereign) | BOSS_SKY_SOVEREIGN |
 | [Претор врат](#boss_gate_praetor) | BOSS_GATE_PRAETOR |
 | [Коралловая королева](#boss_coral_queen) | BOSS_CORAL_QUEEN |
 | [Страж хранилищ](#boss_vault_warden) | BOSS_VAULT_WARDEN |
@@ -132,13 +132,13 @@
 | [Ужас акведука](#boss_aqueduct_horror) | BOSS_AQUEDUCT_HORROR |
 | [Трибун легиона](#boss_legion_tribune) | BOSS_LEGION_TRIBUNE |
 | [Жрец водорослей](#boss_kelp_priest) | BOSS_KELP_PRIEST |
-| [То, что в цистерне](#boss_cistern_thing) | BOSS_CISTERN_THING |
+| [Первый из спящих](#boss_cistern_thing) | BOSS_CISTERN_THING |
 | [Рыночный барон](#boss_market_baron) | BOSS_MARKET_BARON |
 | [Пасть атолла](#boss_atoll_maw) | BOSS_ATOLL_MAW |
 | [Инженер приливов](#boss_tide_engineer) | BOSS_TIDE_ENGINEER |
 | [Хозяйка терм](#boss_bath_matron) | BOSS_BATH_MATRON |
 | [Дрейк впадины](#boss_trench_drake) | BOSS_TRENCH_DRAKE |
-| [Утонувший император](#boss_drowned_emperor) | BOSS_DROWNED_EMPEROR |
+| [Утонувший Император](#boss_drowned_emperor) | BOSS_DROWNED_EMPEROR |
 | [Страж порога](#boss_threshold_guardian) | BOSS_THRESHOLD_GUARDIAN |
 | [Звёздный прилив](#boss_star_tide) | BOSS_STAR_TIDE |
 | [Забвение](#boss_forgetting) | BOSS_FORGETTING |
@@ -149,16 +149,16 @@
 | [Хранитель сада](#boss_orchard_keeper) | BOSS_ORCHARD_KEEPER |
 | [Пустой бог](#boss_hollow_god) | BOSS_HOLLOW_GOD |
 | [Аватар войны](#boss_war_avatar) | BOSS_WAR_AVATAR |
-| [Мать пустоты](#boss_void_mother) | BOSS_VOID_MOTHER |
+| [Мать Пустоты](#boss_void_mother) | BOSS_VOID_MOTHER |
 | [Звездочёт](#boss_stargazer) | BOSS_STARGAZER |
 | [Собиратель корон](#boss_crown_collector) | BOSS_CROWN_COLLECTOR |
 | [Странник ничто](#boss_nothing_walker) | BOSS_NOTHING_WALKER |
-| [Последний бог](#boss_last_god) | BOSS_LAST_GOD |
+| [Последний Бог](#boss_last_god) | BOSS_LAST_GOD |
 
 
 ## BOSS_TIDECALLER <a href="#boss_tidecaller" id="boss_tidecaller"></a>
 
-### Зовущий Прилив <a href="#зовущий-прилив" id="зовущий-прилив"></a>
+### Зовущий прилив <a href="#зовущий-прилив" id="зовущий-прилив"></a>
 
 **Встроенные модификаторы**
 
@@ -180,7 +180,7 @@
 
 ## BOSS_BRINE_MOTHER <a href="#boss_brine_mother" id="boss_brine_mother"></a>
 
-### Мать Рассола <a href="#мать-рассола" id="мать-рассола"></a>
+### Мать рассола <a href="#мать-рассола" id="мать-рассола"></a>
 
 **Встроенные модификаторы**
 
@@ -201,7 +201,7 @@
 
 ## BOSS_BOG_QUEEN <a href="#boss_bog_queen" id="boss_bog_queen"></a>
 
-### Болотная Королева <a href="#болотная-королева" id="болотная-королева"></a>
+### Болотная ведьма <a href="#болотная-королева" id="болотная-королева"></a>
 
 **Встроенные модификаторы**
 
@@ -222,7 +222,7 @@
 
 ## BOSS_ALPHA_WOLF <a href="#boss_alpha_wolf" id="boss_alpha_wolf"></a>
 
-### Вожак Стаи <a href="#вожак-стаи" id="вожак-стаи"></a>
+### Вожак стаи <a href="#вожак-стаи" id="вожак-стаи"></a>
 
 **Встроенные модификаторы**
 
@@ -243,7 +243,7 @@
 
 ## BOSS_RUIN_WARDEN <a href="#boss_ruin_warden" id="boss_ruin_warden"></a>
 
-### Страж Руин <a href="#страж-руин" id="страж-руин"></a>
+### Последний часовой <a href="#страж-руин" id="страж-руин"></a>
 
 **Встроенные модификаторы**
 
@@ -286,7 +286,7 @@
 
 ## BOSS_SHARD_QUEEN <a href="#boss_shard_queen" id="boss_shard_queen"></a>
 
-### Королева Осколков <a href="#королева-осколков" id="королева-осколков"></a>
+### Королева осколков <a href="#королева-осколков" id="королева-осколков"></a>
 
 **Встроенные модификаторы**
 
@@ -301,13 +301,13 @@
 | Таблица добычи · `loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.4; STOCK_HEALTH: 29.256; STOCK_ATTACK_PHYSICAL: 3.032; STOCK_ATTACK_LIGHTNING: 3.527; STOCK_CRITICAL_CHANCE: 12; STOCK_SHOCK_CHANCE: 25; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Разряд](Monster-skills.md#mob_zap); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Разряд](Monster-skills.md#mob_zap); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_SHARD_QUEEN](Tables/Tables-TEMPLATE.md#boss-boss_shard_queen) |
 
 
 ## BOSS_ASHEN_TYRANT <a href="#boss_ashen_tyrant" id="boss_ashen_tyrant"></a>
 
-### Пепельный Тиран <a href="#пепельный-тиран" id="пепельный-тиран"></a>
+### Пепельный тиран <a href="#пепельный-тиран" id="пепельный-тиран"></a>
 
 **Встроенные модификаторы**
 
@@ -329,7 +329,7 @@
 
 ## BOSS_FROST_MONARCH <a href="#boss_frost_monarch" id="boss_frost_monarch"></a>
 
-### Ледяной Монарх <a href="#ледяной-монарх" id="ледяной-монарх"></a>
+### Ледяной монарх <a href="#ледяной-монарх" id="ледяной-монарх"></a>
 
 **Встроенные модификаторы**
 
@@ -395,7 +395,7 @@
 
 ## BOSS_NEST_QUEEN <a href="#boss_nest_queen" id="boss_nest_queen"></a>
 
-### Королева Гнёзд <a href="#королева-гнёзд" id="королева-гнёзд"></a>
+### Старый буревестник <a href="#королева-гнёзд" id="королева-гнёзд"></a>
 
 **Встроенные модификаторы**
 
@@ -459,7 +459,7 @@
 
 ## BOSS_SMUGGLER_KING <a href="#boss_smuggler_king" id="boss_smuggler_king"></a>
 
-### Король Контрабандистов <a href="#король-контрабандистов" id="король-контрабандистов"></a>
+### Король контрабандистов <a href="#король-контрабандистов" id="король-контрабандистов"></a>
 
 **Встроенные модификаторы**
 
@@ -480,7 +480,7 @@
 
 ## BOSS_MIRE_SERPENT <a href="#boss_mire_serpent" id="boss_mire_serpent"></a>
 
-### Трясинный Змей <a href="#трясинный-змей" id="трясинный-змей"></a>
+### Трясинный змей <a href="#трясинный-змей" id="трясинный-змей"></a>
 
 **Встроенные модификаторы**
 
@@ -501,7 +501,7 @@
 
 ## BOSS_OLD_WEREWOLF <a href="#boss_old_werewolf" id="boss_old_werewolf"></a>
 
-### Матёрый Волколак <a href="#матёрый-волколак" id="матёрый-волколак"></a>
+### Матёрый волколак <a href="#матёрый-волколак" id="матёрый-волколак"></a>
 
 **Встроенные модификаторы**
 
@@ -522,7 +522,7 @@
 
 ## BOSS_OUTPOST_COMMANDER <a href="#boss_outpost_commander" id="boss_outpost_commander"></a>
 
-### Комендант Заставы <a href="#комендант-заставы" id="комендант-заставы"></a>
+### Комендант заставы <a href="#комендант-заставы" id="комендант-заставы"></a>
 
 **Встроенные модификаторы**
 
@@ -542,7 +542,7 @@
 
 ## BOSS_BARROW_CHIEFTAIN <a href="#boss_barrow_chieftain" id="boss_barrow_chieftain"></a>
 
-### Вождь Кургана <a href="#вождь-кургана" id="вождь-кургана"></a>
+### Вождь кургана <a href="#вождь-кургана" id="вождь-кургана"></a>
 
 **Встроенные модификаторы**
 
@@ -563,7 +563,7 @@
 
 ## BOSS_FOREMAN <a href="#boss_foreman" id="boss_foreman"></a>
 
-### Бригадир Проходчиков <a href="#бригадир-проходчиков" id="бригадир-проходчиков"></a>
+### Бригадир проходчиков <a href="#бригадир-проходчиков" id="бригадир-проходчиков"></a>
 
 **Встроенные модификаторы**
 
@@ -584,7 +584,7 @@
 
 ## BOSS_WHITE_LYNX <a href="#boss_white_lynx" id="boss_white_lynx"></a>
 
-### Белая Рысь <a href="#белая-рысь" id="белая-рысь"></a>
+### Белая рысь <a href="#белая-рысь" id="белая-рысь"></a>
 
 **Встроенные модификаторы**
 
@@ -604,7 +604,7 @@
 
 ## BOSS_ORE_GOLEM <a href="#boss_ore_golem" id="boss_ore_golem"></a>
 
-### Рудный Голем <a href="#рудный-голем" id="рудный-голем"></a>
+### Рудный голем <a href="#рудный-голем" id="рудный-голем"></a>
 
 **Встроенные модификаторы**
 
@@ -625,7 +625,7 @@
 
 ## BOSS_GEODE_SPINNER <a href="#boss_geode_spinner" id="boss_geode_spinner"></a>
 
-### Прядильщица Жеод <a href="#прядильщица-жеод" id="прядильщица-жеод"></a>
+### Прядильщица жеод <a href="#прядильщица-жеод" id="прядильщица-жеод"></a>
 
 **Встроенные модификаторы**
 
@@ -646,7 +646,7 @@
 
 ## BOSS_RIME_LICH <a href="#boss_rime_lich" id="boss_rime_lich"></a>
 
-### Лич Инея <a href="#лич-инея" id="лич-инея"></a>
+### Лич инея <a href="#лич-инея" id="лич-инея"></a>
 
 **Встроенные модификаторы**
 
@@ -667,7 +667,7 @@
 
 ## BOSS_ELDER_TROLL <a href="#boss_elder_troll" id="boss_elder_troll"></a>
 
-### Старейший Тролль <a href="#старейший-тролль" id="старейший-тролль"></a>
+### Старейший тролль <a href="#старейший-тролль" id="старейший-тролль"></a>
 
 **Встроенные модификаторы**
 
@@ -689,7 +689,7 @@
 
 ## BOSS_HOUND_MOTHER <a href="#boss_hound_mother" id="boss_hound_mother"></a>
 
-### Мать Гончих <a href="#мать-гончих" id="мать-гончих"></a>
+### Мать гончих <a href="#мать-гончих" id="мать-гончих"></a>
 
 **Встроенные модификаторы**
 
@@ -731,7 +731,7 @@
 
 ## BOSS_DEEP_PRIESTESS <a href="#boss_deep_priestess" id="boss_deep_priestess"></a>
 
-### Жрица Глубин <a href="#жрица-глубин" id="жрица-глубин"></a>
+### Жрица глубин <a href="#жрица-глубин" id="жрица-глубин"></a>
 
 **Встроенные модификаторы**
 
@@ -751,7 +751,7 @@
 
 ## BOSS_OBSIDIAN_COLOSSUS <a href="#boss_obsidian_colossus" id="boss_obsidian_colossus"></a>
 
-### Обсидиановый Колосс <a href="#обсидиановый-колосс" id="обсидиановый-колосс"></a>
+### Обсидиановый колосс <a href="#обсидиановый-колосс" id="обсидиановый-колосс"></a>
 
 **Встроенные модификаторы**
 
@@ -772,7 +772,7 @@
 
 ## BOSS_SLAG_WORM <a href="#boss_slag_worm" id="boss_slag_worm"></a>
 
-### Шлаковый Червь <a href="#шлаковый-червь" id="шлаковый-червь"></a>
+### Шлаковый червь <a href="#шлаковый-червь" id="шлаковый-червь"></a>
 
 **Встроенные модификаторы**
 
@@ -813,7 +813,7 @@
 
 ## BOSS_ABYSS_HERALD <a href="#boss_abyss_herald" id="boss_abyss_herald"></a>
 
-### Глашатай Бездны <a href="#глашатай-бездны" id="глашатай-бездны"></a>
+### Глашатай глубин <a href="#глашатай-бездны" id="глашатай-бездны"></a>
 
 **Встроенные модификаторы**
 
@@ -834,7 +834,7 @@
 
 ## BOSS_ASH_CASTELLAN <a href="#boss_ash_castellan" id="boss_ash_castellan"></a>
 
-### Кастелян Пепла <a href="#кастелян-пепла" id="кастелян-пепла"></a>
+### Кастелян пепла <a href="#кастелян-пепла" id="кастелян-пепла"></a>
 
 **Встроенные модификаторы**
 
@@ -937,7 +937,7 @@
 
 ## BOSS_SAND_MAGISTRATE <a href="#boss_sand_magistrate" id="boss_sand_magistrate"></a>
 
-### Песчаный магистрат <a href="#песчаный-магистрат" id="песчаный-магистрат"></a>
+### Песчаный судья <a href="#песчаный-магистрат" id="песчаный-магистрат"></a>
 
 **Встроенные модификаторы**
 
@@ -1159,7 +1159,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_4](Tables/Tables-LOOT.md#loot-boss_4) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 28.511; STOCK_ATTACK_PHYSICAL: 2.854; STOCK_ATTACK_CHAOS: 1.715; STOCK_RESIST_CHAOS: 40; STOCK_CRITICAL_CHANCE: 8; STOCK_ATTACK_MAGICAL: 1.981; STOCK_CAST_SPEED: 1; STOCK_MANA: 60; STOCK_MANA_REGEN: 4; STOCK_POISON_CHANCE: 20 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_HIGH_EMBALMER](Tables/Tables-TEMPLATE.md#boss-boss_high_embalmer) |
 
 
@@ -1186,7 +1186,7 @@
 
 ## BOSS_STORM_ROC <a href="#boss_storm_roc" id="boss_storm_roc"></a>
 
-### Грозовой Рух <a href="#грозовой-рух" id="грозовой-рух"></a>
+### Грозовой рух <a href="#грозовой-рух" id="грозовой-рух"></a>
 
 **Встроенные модификаторы**
 
@@ -1207,7 +1207,7 @@
 
 ## BOSS_SUN_KING <a href="#boss_sun_king" id="boss_sun_king"></a>
 
-### Солнечный царь <a href="#солнечный-царь" id="солнечный-царь"></a>
+### Солнечный Царь <a href="#солнечный-царь" id="солнечный-царь"></a>
 
 **Встроенные модификаторы**
 
@@ -1229,7 +1229,7 @@
 
 ## BOSS_JUNGLE_STALKER <a href="#boss_jungle_stalker" id="boss_jungle_stalker"></a>
 
-### Лесной ловчий <a href="#лесной-ловчий" id="лесной-ловчий"></a>
+### Ловчий джунглей <a href="#лесной-ловчий" id="лесной-ловчий"></a>
 
 **Встроенные модификаторы**
 
@@ -1249,7 +1249,7 @@
 
 ## BOSS_MANGROVE_MAW <a href="#boss_mangrove_maw" id="boss_mangrove_maw"></a>
 
-### Мангровая Пасть <a href="#мангровая-пасть" id="мангровая-пасть"></a>
+### Мангровая пасть <a href="#мангровая-пасть" id="мангровая-пасть"></a>
 
 **Встроенные модификаторы**
 
@@ -1428,7 +1428,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_5](Tables/Tables-LOOT.md#loot-boss_5) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.4; STOCK_HEALTH: 17.079; STOCK_ATTACK_PHYSICAL: 1.233; STOCK_ATTACK_CHAOS: 1.587; STOCK_RESIST_CHAOS: 40; STOCK_CRITICAL_CHANCE: 12; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_CANOPY_HORROR](Tables/Tables-TEMPLATE.md#boss-boss_canopy_horror) |
 
 
@@ -1455,7 +1455,7 @@
 
 ## BOSS_MAD_EXPLORER <a href="#boss_mad_explorer" id="boss_mad_explorer"></a>
 
-### Обезумевший первопроходец <a href="#обезумевший-первопроходец" id="обезумевший-первопроходец"></a>
+### Обезумевший проводник <a href="#обезумевший-первопроходец" id="обезумевший-первопроходец"></a>
 
 **Встроенные модификаторы**
 
@@ -1577,7 +1577,7 @@
 
 ## BOSS_HIVE_QUEEN <a href="#boss_hive_queen" id="boss_hive_queen"></a>
 
-### Царица улья <a href="#царица-улья" id="царица-улья"></a>
+### Царица Улья <a href="#царица-улья" id="царица-улья"></a>
 
 **Встроенные модификаторы**
 
@@ -1635,13 +1635,13 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 0.8; STOCK_HEALTH: 41.241; STOCK_ATTACK_PHYSICAL: 3.128; STOCK_ATTACK_CHAOS: 1.418; STOCK_RESIST_CHAOS: 40; STOCK_ARMOR: 90; STOCK_BLOCK_CHANCE: 25; STOCK_STUN_THRESHOLD: 22; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_SULPHUR_KING](Tables/Tables-TEMPLATE.md#boss-boss_sulphur_king) |
 
 
 ## BOSS_TURNCOAT_GENERAL <a href="#boss_turncoat_general" id="boss_turncoat_general"></a>
 
-### Генерал-предатель <a href="#генерал-предатель" id="генерал-предатель"></a>
+### Генерал-перебежчик <a href="#генерал-предатель" id="генерал-предатель"></a>
 
 **Встроенные модификаторы**
 
@@ -1662,7 +1662,7 @@
 
 ## BOSS_LAVA_WYRM <a href="#boss_lava_wyrm" id="boss_lava_wyrm"></a>
 
-### Лавовый змей <a href="#лавовый-змей" id="лавовый-змей"></a>
+### Лавовый змий <a href="#лавовый-змей" id="лавовый-змей"></a>
 
 **Встроенные модификаторы**
 
@@ -1718,7 +1718,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.15; STOCK_HEALTH: 13.889; STOCK_ATTACK_PHYSICAL: 1.222; STOCK_ATTACK_FIRE: 0.85; STOCK_RESIST_FIRE: 40; STOCK_ARMOR: 50; STOCK_HEALTH_REGEN: 0.202; STOCK_IGNITE_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_FURNACE_MASTER](Tables/Tables-TEMPLATE.md#boss-boss_furnace_master) |
 | Особенность · `trait` | `TRAIT_GROUNDED` |
 
@@ -1889,7 +1889,7 @@
 
 ## BOSS_VENT_DRAGON <a href="#boss_vent_dragon" id="boss_vent_dragon"></a>
 
-### Жерловой дракон <a href="#жерловой-дракон" id="жерловой-дракон"></a>
+### Дракон жерла <a href="#жерловой-дракон" id="жерловой-дракон"></a>
 
 **Встроенные модификаторы**
 
@@ -1904,13 +1904,13 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 16.256; STOCK_ATTACK_PHYSICAL: 1.126; STOCK_ATTACK_FIRE: 0.99; STOCK_RESIST_FIRE: 40; STOCK_IGNITE_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_VENT_DRAGON](Tables/Tables-TEMPLATE.md#boss-boss_vent_dragon) |
 
 
 ## BOSS_INFERNAL_GATEKEEPER <a href="#boss_infernal_gatekeeper" id="boss_infernal_gatekeeper"></a>
 
-### Привратник преисподней <a href="#привратник-преисподней" id="привратник-преисподней"></a>
+### Клятвенное пламя <a href="#привратник-преисподней" id="привратник-преисподней"></a>
 
 **Встроенные модификаторы**
 
@@ -1972,7 +1972,7 @@
 
 ## BOSS_RIFT_WATCHER <a href="#boss_rift_watcher" id="boss_rift_watcher"></a>
 
-### Страж разлома <a href="#страж-разлома" id="страж-разлома"></a>
+### Страж пропасти <a href="#страж-разлома" id="страж-разлома"></a>
 
 **Встроенные модификаторы**
 
@@ -2014,7 +2014,7 @@
 
 ## BOSS_FALLEN_ABBOT <a href="#boss_fallen_abbot" id="boss_fallen_abbot"></a>
 
-### Падший аббат <a href="#падший-аббат" id="падший-аббат"></a>
+### Падший настоятель <a href="#падший-аббат" id="падший-аббат"></a>
 
 **Встроенные модификаторы**
 
@@ -2029,7 +2029,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 24.607; STOCK_ATTACK_PHYSICAL: 2.353; STOCK_ATTACK_COLD: 1.414; STOCK_RESIST_COLD: 40; STOCK_CRITICAL_CHANCE: 8; STOCK_ATTACK_MAGICAL: 1.647; STOCK_CAST_SPEED: 1; STOCK_MANA: 60; STOCK_MANA_REGEN: 4; STOCK_FREEZE_CHANCE: 20 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_FALLEN_ABBOT](Tables/Tables-TEMPLATE.md#boss-boss_fallen_abbot) |
 
 
@@ -2266,7 +2266,7 @@
 
 ## BOSS_MOTHER_BLIGHT <a href="#boss_mother_blight" id="boss_mother_blight"></a>
 
-### Мать гнили <a href="#мать-гнили" id="мать-гнили"></a>
+### Гнилосердая <a href="#мать-гнили" id="мать-гнили"></a>
 
 **Встроенные модификаторы**
 
@@ -2281,7 +2281,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 0.9; STOCK_HEALTH: 4.746; STOCK_ATTACK_CHAOS: 0.343; STOCK_RESIST_CHAOS: 70; STOCK_HEALTH_REGEN: 0.102; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_MOTHER_BLIGHT](Tables/Tables-TEMPLATE.md#boss-boss_mother_blight) |
 
 
@@ -2395,7 +2395,7 @@
 
 ## BOSS_THUNDER_WYRM <a href="#boss_thunder_wyrm" id="boss_thunder_wyrm"></a>
 
-### Громовой змей <a href="#громовой-змей" id="громовой-змей"></a>
+### Громовой змий <a href="#громовой-змей" id="громовой-змей"></a>
 
 **Встроенные модификаторы**
 
@@ -2647,7 +2647,7 @@
 
 ## BOSS_SKY_SOVEREIGN <a href="#boss_sky_sovereign" id="boss_sky_sovereign"></a>
 
-### Владыка разбитого неба <a href="#владыка-разбитого-неба" id="владыка-разбитого-неба"></a>
+### Владыка Разбитого Неба <a href="#владыка-разбитого-неба" id="владыка-разбитого-неба"></a>
 
 **Встроенные модификаторы**
 
@@ -2835,7 +2835,7 @@
 
 ## BOSS_CISTERN_THING <a href="#boss_cistern_thing" id="boss_cistern_thing"></a>
 
-### То, что в цистерне <a href="#то-что-в-цистерне" id="то-что-в-цистерне"></a>
+### Первый из спящих <a href="#то-что-в-цистерне" id="то-что-в-цистерне"></a>
 
 **Встроенные модификаторы**
 
@@ -2956,7 +2956,7 @@
 
 ## BOSS_DROWNED_EMPEROR <a href="#boss_drowned_emperor" id="boss_drowned_emperor"></a>
 
-### Утонувший император <a href="#утонувший-император" id="утонувший-император"></a>
+### Утонувший Император <a href="#утонувший-император" id="утонувший-император"></a>
 
 **Встроенные модификаторы**
 
@@ -2993,7 +2993,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 0.8; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 2.482; STOCK_ATTACK_CHAOS: 1.125; STOCK_RESIST_CHAOS: 40; STOCK_ARMOR: 90; STOCK_BLOCK_CHANCE: 25; STOCK_STUN_THRESHOLD: 22; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_THRESHOLD_GUARDIAN](Tables/Tables-TEMPLATE.md#boss-boss_threshold_guardian) |
 
 
@@ -3177,13 +3177,13 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 3.129; STOCK_ATTACK_COLD: 1.88; STOCK_RESIST_COLD: 40; STOCK_CRITICAL_CHANCE: 8; STOCK_ATTACK_MAGICAL: 2.19; STOCK_CAST_SPEED: 1; STOCK_MANA: 60; STOCK_MANA_REGEN: 4; STOCK_FREEZE_CHANCE: 20 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_WAR_AVATAR](Tables/Tables-TEMPLATE.md#boss-boss_war_avatar) |
 
 
 ## BOSS_VOID_MOTHER <a href="#boss_void_mother" id="boss_void_mother"></a>
 
-### Мать пустоты <a href="#мать-пустоты" id="мать-пустоты"></a>
+### Мать Пустоты <a href="#мать-пустоты" id="мать-пустоты"></a>
 
 **Встроенные модификаторы**
 
@@ -3198,7 +3198,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.4; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 2.362; STOCK_ATTACK_CHAOS: 3.04; STOCK_RESIST_CHAOS: 40; STOCK_CRITICAL_CHANCE: 12; STOCK_POISON_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_VOID_MOTHER](Tables/Tables-TEMPLATE.md#boss-boss_void_mother) |
 
 
@@ -3219,7 +3219,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.15; STOCK_HEALTH: 32.719; STOCK_ATTACK_PHYSICAL: 2.879; STOCK_ATTACK_FIRE: 2.002; STOCK_RESIST_FIRE: 40; STOCK_ARMOR: 50; STOCK_HEALTH_REGEN: 0.476; STOCK_IGNITE_CHANCE: 20; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | Таблицы · `tables` | [boss:BOSS_STARGAZER](Tables/Tables-TEMPLATE.md#boss-boss_stargazer) |
 
 
@@ -3267,7 +3267,7 @@
 
 ## BOSS_LAST_GOD <a href="#boss_last_god" id="boss_last_god"></a>
 
-### Последний бог <a href="#последний-бог" id="последний-бог"></a>
+### Последний Бог <a href="#последний-бог" id="последний-бог"></a>
 
 **Встроенные модификаторы**
 

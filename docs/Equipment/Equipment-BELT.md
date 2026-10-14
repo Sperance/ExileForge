@@ -39,7 +39,7 @@
 | [Chasm-Hunger Cord](#chasm_hunger_belt) | Уникальный | 52 |
 | [Burden of the Atlas](#burden_of_atlas) | Уникальный | 60 |
 | [Godsteel Belt](#godsteel_belt) | Редкий | 85 |
-| [Pearl Eater's Coil](#pearl_eaters_coil) | Уникальный | 88 |
+| [The Pearl Eater's Coil](#pearl_eaters_coil) | Уникальный | 88 |
 | [Girdle of the War Avatar](#avatar_of_wars_girdle) | Уникальный | 95 |
 | [Highwater Mark](#highwater_mark) | Уникальный | 98 |
 | [Scarknit Cord](#scarknit_cord) | Уникальный | 42 |
@@ -243,7 +243,7 @@
 - +20–30% к сопротивлению холоду · [Сопротивление холоду](../reference/Stats/Stats-HERO.md#stock_resist_cold)
 - Восстанавливает 8–12 здоровья в секунду · [Восстановление здоровья](../reference/Stats/Stats-HERO.md#stock_health_regen)
 - +0.5–1 к регенерации здоровья в секунду за каждые 10 силы · [Кровь великана](../reference/Stats/Stats-POWER.md#power_giant_blood)
-- 30–50% увеличения брони, пока здоровья меньше 50% · [Стойкость каруи](../reference/Stats/Stats-POWER.md#power_karui_grit)
+- 30–50% увеличения брони, пока здоровья меньше 50% · [Упорство великана](../reference/Stats/Stats-POWER.md#power_karui_grit)
 
 
 | Параметр | Значение |
@@ -989,7 +989,7 @@
 
 ## PEARL_EATERS_COIL <a href="#pearl_eaters_coil" id="pearl_eaters_coil"></a>
 
-### Pearl Eater's Coil <a href="#pearl-eaters-coil" id="pearl-eaters-coil"></a>
+### The Pearl Eater's Coil <a href="#pearl-eaters-coil" id="pearl-eaters-coil"></a>
 
 Он глотает жемчуг. Он глотает всё.
 
@@ -1007,7 +1007,7 @@
 - +100–130 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - 10–14% полученного урона возвращается здоровьем · [Возврат здоровья](../reference/Stats/Stats-HERO.md#stock_life_recoup)
 - 15–20% увеличение эффекта фляг · [Эффект фляг](../reference/Stats/Stats-HERO.md#stock_flask_effect)
-- Низкое здоровье восстанавливает 34.5–46% здоровья, раз за бой · [Долг Ваал](../reference/Stats/Stats-POWER.md#power_vaal_debt)
+- Низкое здоровье восстанавливает 34.5–46% здоровья, раз за бой · [Долг Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_debt)
 - Удары по отравленным возвращают 2.3–4.6% урона здоровьем · [Голод глубин](../reference/Stats/Stats-POWER.md#power_hunger_of_depths)
 
 

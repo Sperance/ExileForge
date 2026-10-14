@@ -25,7 +25,7 @@
 | [Scholar's Robe](#scholar_s_robe) | Редкий | 18 |
 | [Acolyte Robe](#acolyte_robe) | Редкий | 33 |
 | [Necromancer Silks](#necromancer_silks) | Редкий | 48 |
-| [Vaal Regalia](#vaal_regalia) | Редкий | 68 |
+| [Underside Regalia](#vaal_regalia) | Редкий | 68 |
 | [Scale Vest](#scale_vest) | Обычный | 1 |
 | [Light Brigandine](#light_brigandine) | Волшебный | 8 |
 | [Full Scale Armour](#full_scale_armour) | Редкий | 28 |
@@ -85,7 +85,7 @@
 | [Voidweave Armour](#voidweave_armour) | Редкий | 88 |
 | [Windrunner Garb](#windrunner_garb) | Редкий | 88 |
 | [Matriarch's Glass Heart](#matriarchs_glass_heart) | Уникальный | 77 |
-| [Coral Queen's Carapace](#coral_queens_carapace) | Уникальный | 85 |
+| [The Coral Queen's Carapace](#coral_queens_carapace) | Уникальный | 85 |
 | [The Last God's Mantle](#last_gods_mantle) | Уникальный | 100 |
 | [Pinnacle Plate](#pinnacle_plate) | Уникальный | 100 |
 | [Stonewarden's Hauberk](#stonewardens_hauberk) | Уникальный | 52 |
@@ -585,9 +585,9 @@
 
 ## VAAL_REGALIA <a href="#vaal_regalia" id="vaal_regalia"></a>
 
-### Vaal Regalia <a href="#vaal-regalia" id="vaal-regalia"></a>
+### Underside Regalia <a href="#vaal-regalia" id="vaal-regalia"></a>
 
-**Русское название:** Регалии ваал
+**Русское название:** Регалии Изнанки
 
 **Редкий · Нагрудники**
 
@@ -1207,7 +1207,7 @@
 - +474 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - 20–40% больше урона от огня · [Урон огнём](../reference/Stats/Stats-HERO.md#stock_attack_fire)
 - 20–30% увеличение скорости восстановления здоровья и щита · [Скорость восстановления](../reference/Stats/Stats-HERO.md#stock_recovery_rate)
-- Убийство наносит всем врагам урон огнём, равный 8–12% вашего максимума здоровья · [Пламя Каома](../reference/Stats/Stats-POWER.md#power_kaoms_blaze)
+- Убийство наносит всем врагам урон огнём, равный 8–12% вашего максимума здоровья · [Пламя тризны](../reference/Stats/Stats-POWER.md#power_kaoms_blaze)
 - Запечатанное сердце · ADD · -30–-20 · [Запечатанное сердце](../reference/Stats/Stats-POWER.md#power_sealed_heart)
 
 
@@ -1809,7 +1809,7 @@
 - 105–141% увеличение брони · [Броня](../reference/Stats/Stats-HERO.md#stock_armor)
 - +-5% к максимуму всех сопротивлений · [Максимум сопротивлений стихиям](../reference/Stats/Stats-HERO.md#stock_resist_max_all)
 - Стихийный урон по вам снижается наивысшим из ваших стихийных сопротивлений · [Опытный оплот](../reference/Stats/Stats-POWER.md#power_prototype_bulwark)
-- 4–6% больше брони за каждый надетый осквернённый предмет · [Обшивка Ваал](../reference/Stats/Stats-POWER.md#power_prototype_plating)
+- 4–6% больше брони за каждый надетый осквернённый предмет · [Обшивка Изнанки](../reference/Stats/Stats-POWER.md#power_prototype_plating)
 
 
 | Параметр | Значение |
@@ -2086,8 +2086,8 @@
 
 - 74–99% увеличение энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
 - 20% увеличение скорости восполнения энергетического щита · [Восполнение щита](../reference/Stats/Stats-HERO.md#stock_shield_recharge)
-- Максимум здоровья равен 1; иммунитет к урону хаосом · [Прививка хаоса](../reference/Stats/Stats-POWER.md#power_embalmed)
-- Когда ЭЩ разрушен, вы неуязвимы 1–1.5 с (откат 20 с) · [Печать бальзамировщика](../reference/Stats/Stats-POWER.md#power_embalmers_seal)
+- Максимум здоровья равен 1; иммунитет к урону хаосом · [Бальзам нетления](../reference/Stats/Stats-POWER.md#power_embalmed)
+- Когда ЭЩ разрушен, вы неуязвимы 1–1.5 с (откат 20 с) · [Знак бальзамировщика](../reference/Stats/Stats-POWER.md#power_embalmers_seal)
 
 
 | Параметр | Значение |
@@ -2191,7 +2191,7 @@
 - 8–12% полученного урона возвращается здоровьем · [Возврат здоровья](../reference/Stats/Stats-HERO.md#stock_life_recoup)
 - +60–90 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - +15–25% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
-- Низкое здоровье восстанавливает 25–35% здоровья, раз за бой · [Долг Ваал](../reference/Stats/Stats-POWER.md#power_vaal_debt)
+- Низкое здоровье восстанавливает 25–35% здоровья, раз за бой · [Долг Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_debt)
 - Убийство даёт барьер в 6–10% максимума здоровья на 4 с · [Вуаль смерти](../reference/Stats/Stats-POWER.md#power_deaths_veil)
 
 
@@ -2307,7 +2307,7 @@
 
 ### Skyforged Lamellar <a href="#skyforged-lamellar" id="skyforged-lamellar"></a>
 
-**Русское название:** Небокованная ламелляр
+**Русское название:** Небокованный ламеллар
 
 **Редкий · Нагрудники**
 
@@ -2472,7 +2472,7 @@
 
 ## CORAL_QUEENS_CARAPACE <a href="#coral_queens_carapace" id="coral_queens_carapace"></a>
 
-### Coral Queen's Carapace <a href="#coral-queens-carapace" id="coral-queens-carapace"></a>
+### The Coral Queen's Carapace <a href="#coral-queens-carapace" id="coral-queens-carapace"></a>
 
 Растили тысячу лет. Сломали за день.
 

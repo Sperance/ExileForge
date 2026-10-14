@@ -2,21 +2,21 @@
 
 | Зона | Уровень | Страж | Открывается из |
 | --- | --- | --- | --- |
-| [Приливный берег](#c1_tidal_shore) | 1 | [Зовущий Прилив](../reference/Bosses.md#boss_tidecaller) | — |
+| [Приливный берег](#c1_tidal_shore) | 1 | [Зовущий прилив](../reference/Bosses.md#boss_tidecaller) | — |
 | [Кладбище кораблей](#c1_ship_graveyard) | 3 | [Капитан «Скорби»](../reference/Bosses.md#boss_sorrow_captain) | [Приливный берег](#c1_tidal_shore) |
-| [Солёные пещеры](#c1_brine_caves) | 3 | [Мать Рассола](../reference/Bosses.md#boss_brine_mother) | [Приливный берег](#c1_tidal_shore) |
-| [Птичьи утёсы](#c1_gull_cliffs) | 3 | [Королева Гнёзд](../reference/Bosses.md#boss_nest_queen) | [Приливный берег](#c1_tidal_shore) |
+| [Солёные пещеры](#c1_brine_caves) | 3 | [Мать рассола](../reference/Bosses.md#boss_brine_mother) | [Приливный берег](#c1_tidal_shore) |
+| [Чаячьи утёсы](#c1_gull_cliffs) | 3 | [Старый буревестник](../reference/Bosses.md#boss_nest_queen) | [Приливный берег](#c1_tidal_shore) |
 | [Маяк утопленников](#c1_drowned_lighthouse) | 5 | [Смотритель Маяка](../reference/Bosses.md#boss_lamp_warden) | [Кладбище кораблей](#c1_ship_graveyard) |
-| [Гнилая топь](#c1_rotting_mire) | 5 | [Болотная Королева](../reference/Bosses.md#boss_bog_queen) | [Кладбище кораблей](#c1_ship_graveyard); [Солёные пещеры](#c1_brine_caves) |
-| [Туманная переправа](#c1_misty_ferry) | 5 | [Паромщик](../reference/Bosses.md#boss_ferryman) | [Солёные пещеры](#c1_brine_caves); [Птичьи утёсы](#c1_gull_cliffs) |
-| [Грот контрабандистов](#c1_smugglers_grotto) | 5 | [Король Контрабандистов](../reference/Bosses.md#boss_smuggler_king) | [Птичьи утёсы](#c1_gull_cliffs) |
-| [Шепчущий лес](#c1_whispering_wood) | 7 | [Вожак Стаи](../reference/Bosses.md#boss_alpha_wolf) | [Маяк утопленников](#c1_drowned_lighthouse); [Гнилая топь](#c1_rotting_mire) |
-| [Чёрная гать](#c1_black_causeway) | 7 | [Трясинный Змей](../reference/Bosses.md#boss_mire_serpent) | [Гнилая топь](#c1_rotting_mire); [Туманная переправа](#c1_misty_ferry) |
-| [Волчья чаща](#c1_wolf_thicket) | 7 | [Матёрый Волколак](../reference/Bosses.md#boss_old_werewolf) | [Туманная переправа](#c1_misty_ferry) |
-| [Павшие руины](#c1_fallen_ruins) | 9 | [Страж Руин](../reference/Bosses.md#boss_ruin_warden) | [Шепчущий лес](#c1_whispering_wood); [Чёрная гать](#c1_black_causeway) |
-| [Старая застава](#c1_old_outpost) | 9 | [Комендант Заставы](../reference/Bosses.md#boss_outpost_commander) | [Чёрная гать](#c1_black_causeway); [Волчья чаща](#c1_wolf_thicket) |
-| [Курган вождя](#c1_chieftains_barrow) | 9 | [Вождь Кургана](../reference/Bosses.md#boss_barrow_chieftain) | [Волчья чаща](#c1_wolf_thicket) |
-| [Склеп изгнанников](#c1_crypt_of_exiles) | 11 | [Владыка Склепа](../reference/Bosses.md#boss_crypt_lord) | [Павшие руины](#c1_fallen_ruins); [Старая застава](#c1_old_outpost) |
+| [Гнилая топь](#c1_rotting_mire) | 5 | [Болотная ведьма](../reference/Bosses.md#boss_bog_queen) | [Кладбище кораблей](#c1_ship_graveyard); [Солёные пещеры](#c1_brine_caves) |
+| [Туманная переправа](#c1_misty_ferry) | 5 | [Паромщик](../reference/Bosses.md#boss_ferryman) | [Солёные пещеры](#c1_brine_caves); [Чаячьи утёсы](#c1_gull_cliffs) |
+| [Грот контрабандистов](#c1_smugglers_grotto) | 5 | [Король контрабандистов](../reference/Bosses.md#boss_smuggler_king) | [Чаячьи утёсы](#c1_gull_cliffs) |
+| [Шепчущий лес](#c1_whispering_wood) | 7 | [Вожак стаи](../reference/Bosses.md#boss_alpha_wolf) | [Маяк утопленников](#c1_drowned_lighthouse); [Гнилая топь](#c1_rotting_mire) |
+| [Чёрная гать](#c1_black_causeway) | 7 | [Трясинный змей](../reference/Bosses.md#boss_mire_serpent) | [Гнилая топь](#c1_rotting_mire); [Туманная переправа](#c1_misty_ferry) |
+| [Волчья чаща](#c1_wolf_thicket) | 7 | [Матёрый волколак](../reference/Bosses.md#boss_old_werewolf) | [Туманная переправа](#c1_misty_ferry) |
+| [Руины дозора](#c1_fallen_ruins) | 9 | [Последний часовой](../reference/Bosses.md#boss_ruin_warden) | [Шепчущий лес](#c1_whispering_wood); [Чёрная гать](#c1_black_causeway) |
+| [Старая застава](#c1_old_outpost) | 9 | [Комендант заставы](../reference/Bosses.md#boss_outpost_commander) | [Чёрная гать](#c1_black_causeway); [Волчья чаща](#c1_wolf_thicket) |
+| [Курган вождя](#c1_chieftains_barrow) | 9 | [Вождь кургана](../reference/Bosses.md#boss_barrow_chieftain) | [Волчья чаща](#c1_wolf_thicket) |
+| [Склеп изгнанников](#c1_crypt_of_exiles) | 11 | [Владыка Склепа](../reference/Bosses.md#boss_crypt_lord) | [Руины дозора](#c1_fallen_ruins); [Старая застава](#c1_old_outpost) |
 
 
 ## C1_TIDAL_SHORE <a href="#c1_tidal_shore" id="c1_tidal_shore"></a>
@@ -34,8 +34,8 @@
 | Количество · `count` | 37; 51 |
 | light | 1.2 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
-| Страж · `boss` | [Зовущий Прилив](../reference/Bosses.md#boss_tidecaller) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Страж · `boss` | [Зовущий прилив](../reference/Bosses.md#boss_tidecaller) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -57,7 +57,7 @@
 | light | 1.1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
 | Страж · `boss` | [Капитан «Скорби»](../reference/Bosses.md#boss_sorrow_captain) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -78,15 +78,15 @@
 | Количество · `count` | 37; 51 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
-| Страж · `boss` | [Мать Рассола](../reference/Bosses.md#boss_brine_mother) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Страж · `boss` | [Мать рассола](../reference/Bosses.md#boss_brine_mother) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C1_GULL_CLIFFS <a href="#c1_gull_cliffs" id="c1_gull_cliffs"></a>
 
-### Птичьи утёсы <a href="#птичьи-утёсы" id="птичьи-утёсы"></a>
+### Чаячьи утёсы <a href="#птичьи-утёсы" id="птичьи-утёсы"></a>
 
 Скалы над прибоем, где гнездятся твари крупнее чаек.
 
@@ -100,8 +100,8 @@
 | Количество · `count` | 37; 51 |
 | light | 1.3 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
-| Страж · `boss` | [Королева Гнёзд](../reference/Bosses.md#boss_nest_queen) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Страж · `boss` | [Старый буревестник](../reference/Bosses.md#boss_nest_queen) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -123,7 +123,7 @@
 | light | 1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
 | Страж · `boss` | [Смотритель Маяка](../reference/Bosses.md#boss_lamp_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -140,12 +140,12 @@
 | Биом · `biome` | `MIRE` |
 | Уровень · `level` | 5 |
 | Предшествующие зоны · `from` | [Кладбище кораблей](#c1_ship_graveyard); [Солёные пещеры](#c1_brine_caves) |
-| Монстры · `monsters` | [Болотный зомби](../reference/Monsters.md#mire_zombie); [Трясинный скрытень](../reference/Monsters.md#bog_lurker); [Болотная пиявка](../reference/Monsters.md#swamp_leech) |
+| Монстры · `monsters` | [Болотный мертвяк](../reference/Monsters.md#mire_zombie); [Трясинный скрытень](../reference/Monsters.md#bog_lurker); [Болотная пиявка](../reference/Monsters.md#swamp_leech) |
 | Количество · `count` | 44; 57 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
-| Страж · `boss` | [Болотная Королева](../reference/Bosses.md#boss_bog_queen) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Страж · `boss` | [Болотная ведьма](../reference/Bosses.md#boss_bog_queen) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -161,13 +161,13 @@
 | --- | --- |
 | Биом · `biome` | `MIRE` |
 | Уровень · `level` | 5 |
-| Предшествующие зоны · `from` | [Солёные пещеры](#c1_brine_caves); [Птичьи утёсы](#c1_gull_cliffs) |
-| Монстры · `monsters` | [Болотный зомби](../reference/Monsters.md#mire_zombie); [Утопленник](../reference/Monsters.md#drowned); [Болотная пиявка](../reference/Monsters.md#swamp_leech) |
+| Предшествующие зоны · `from` | [Солёные пещеры](#c1_brine_caves); [Чаячьи утёсы](#c1_gull_cliffs) |
+| Монстры · `monsters` | [Болотный мертвяк](../reference/Monsters.md#mire_zombie); [Утопленник](../reference/Monsters.md#drowned); [Болотная пиявка](../reference/Monsters.md#swamp_leech) |
 | Количество · `count` | 44; 57 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
 | Страж · `boss` | [Паромщик](../reference/Bosses.md#boss_ferryman) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -183,13 +183,13 @@
 | --- | --- |
 | Биом · `biome` | `CAVE` |
 | Уровень · `level` | 5 |
-| Предшествующие зоны · `from` | [Птичьи утёсы](#c1_gull_cliffs) |
+| Предшествующие зоны · `from` | [Чаячьи утёсы](#c1_gull_cliffs) |
 | Монстры · `monsters` | [Береговой краб](../reference/Monsters.md#shore_crab); [Пещерная летучая мышь](../reference/Monsters.md#cave_bat); [Утопленник](../reference/Monsters.md#drowned) |
 | Количество · `count` | 44; 57 |
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_1](../reference/Tables/Tables-LOOT.md#loot-chest_1) |
-| Страж · `boss` | [Король Контрабандистов](../reference/Bosses.md#boss_smuggler_king) |
-| Изначально осквернён · `corrupted` | [Осквернённый Страж](../reference/Monsters.md#corrupted_1) |
+| Страж · `boss` | [Король контрабандистов](../reference/Bosses.md#boss_smuggler_king) |
+| Изначально осквернён · `corrupted` | [Порченый страж](../reference/Monsters.md#corrupted_1) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -210,8 +210,8 @@
 | Количество · `count` | 44; 57 |
 | light | 1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_2](../reference/Tables/Tables-LOOT.md#loot-chest_2) |
-| Страж · `boss` | [Вожак Стаи](../reference/Bosses.md#boss_alpha_wolf) |
-| Изначально осквернён · `corrupted` | [Осквернённый Вестник](../reference/Monsters.md#corrupted_2) |
+| Страж · `boss` | [Вожак стаи](../reference/Bosses.md#boss_alpha_wolf) |
+| Изначально осквернён · `corrupted` | [Порченый вестник](../reference/Monsters.md#corrupted_2) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -228,12 +228,12 @@
 | Биом · `biome` | `MIRE` |
 | Уровень · `level` | 7 |
 | Предшествующие зоны · `from` | [Гнилая топь](#c1_rotting_mire); [Туманная переправа](#c1_misty_ferry) |
-| Монстры · `monsters` | [Трясинный скрытень](../reference/Monsters.md#bog_lurker); [Болотная пиявка](../reference/Monsters.md#swamp_leech); [Болотный зомби](../reference/Monsters.md#mire_zombie) |
+| Монстры · `monsters` | [Трясинный скрытень](../reference/Monsters.md#bog_lurker); [Болотная пиявка](../reference/Monsters.md#swamp_leech); [Болотный мертвяк](../reference/Monsters.md#mire_zombie) |
 | Количество · `count` | 44; 57 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_2](../reference/Tables/Tables-LOOT.md#loot-chest_2) |
-| Страж · `boss` | [Трясинный Змей](../reference/Bosses.md#boss_mire_serpent) |
-| Изначально осквернён · `corrupted` | [Осквернённый Вестник](../reference/Monsters.md#corrupted_2) |
+| Страж · `boss` | [Трясинный змей](../reference/Bosses.md#boss_mire_serpent) |
+| Изначально осквернён · `corrupted` | [Порченый вестник](../reference/Monsters.md#corrupted_2) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -254,15 +254,15 @@
 | Количество · `count` | 44; 57 |
 | light | 0.95 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_2](../reference/Tables/Tables-LOOT.md#loot-chest_2) |
-| Страж · `boss` | [Матёрый Волколак](../reference/Bosses.md#boss_old_werewolf) |
-| Изначально осквернён · `corrupted` | [Осквернённый Вестник](../reference/Monsters.md#corrupted_2) |
+| Страж · `boss` | [Матёрый волколак](../reference/Bosses.md#boss_old_werewolf) |
+| Изначально осквернён · `corrupted` | [Порченый вестник](../reference/Monsters.md#corrupted_2) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C1_FALLEN_RUINS <a href="#c1_fallen_ruins" id="c1_fallen_ruins"></a>
 
-### Павшие руины <a href="#павшие-руины" id="павшие-руины"></a>
+### Руины дозора <a href="#павшие-руины" id="павшие-руины"></a>
 
 Развалины крепости, всё ещё охраняемые её гарнизоном.
 
@@ -272,12 +272,12 @@
 | Биом · `biome` | `RUINS` |
 | Уровень · `level` | 9 |
 | Предшествующие зоны · `from` | [Шепчущий лес](#c1_whispering_wood); [Чёрная гать](#c1_black_causeway) |
-| Монстры · `monsters` | [Скелет-воин](../reference/Monsters.md#skeleton_warrior); [Костяной лучник](../reference/Monsters.md#bone_archer); [Страж руин](../reference/Monsters.md#ruin_sentry) |
+| Монстры · `monsters` | [Скелет-воин](../reference/Monsters.md#skeleton_warrior); [Костяной лучник](../reference/Monsters.md#bone_archer); [Каменный часовой](../reference/Monsters.md#ruin_sentry) |
 | Количество · `count` | 44; 57 |
 | light | 1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_2](../reference/Tables/Tables-LOOT.md#loot-chest_2) |
-| Страж · `boss` | [Страж Руин](../reference/Bosses.md#boss_ruin_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый Вестник](../reference/Monsters.md#corrupted_2) |
+| Страж · `boss` | [Последний часовой](../reference/Bosses.md#boss_ruin_warden) |
+| Изначально осквернён · `corrupted` | [Порченый вестник](../reference/Monsters.md#corrupted_2) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -298,8 +298,8 @@
 | Количество · `count` | 44; 57 |
 | light | 1 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_2](../reference/Tables/Tables-LOOT.md#loot-chest_2) |
-| Страж · `boss` | [Комендант Заставы](../reference/Bosses.md#boss_outpost_commander) |
-| Изначально осквернён · `corrupted` | [Осквернённый Вестник](../reference/Monsters.md#corrupted_2) |
+| Страж · `boss` | [Комендант заставы](../reference/Bosses.md#boss_outpost_commander) |
+| Изначально осквернён · `corrupted` | [Порченый вестник](../reference/Monsters.md#corrupted_2) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -320,8 +320,8 @@
 | Количество · `count` | 44; 57 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_2](../reference/Tables/Tables-LOOT.md#loot-chest_2) |
-| Страж · `boss` | [Вождь Кургана](../reference/Bosses.md#boss_barrow_chieftain) |
-| Изначально осквернён · `corrupted` | [Осквернённый Вестник](../reference/Monsters.md#corrupted_2) |
+| Страж · `boss` | [Вождь кургана](../reference/Bosses.md#boss_barrow_chieftain) |
+| Изначально осквернён · `corrupted` | [Порченый вестник](../reference/Monsters.md#corrupted_2) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -337,14 +337,14 @@
 | --- | --- |
 | Биом · `biome` | `CRYPT` |
 | Уровень · `level` | 11 |
-| Предшествующие зоны · `from` | [Павшие руины](#c1_fallen_ruins); [Старая застава](#c1_old_outpost) |
+| Предшествующие зоны · `from` | [Руины дозора](#c1_fallen_ruins); [Старая застава](#c1_old_outpost) |
 | Финал региона · `finale` | Да |
 | Монстры · `monsters` | [Упырь](../reference/Monsters.md#ghoul); [Скелет-воин](../reference/Monsters.md#skeleton_warrior); [Склепный призрак](../reference/Monsters.md#crypt_wraith); [Костяной лучник](../reference/Monsters.md#bone_archer) |
 | Количество · `count` | 44; 57 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_2](../reference/Tables/Tables-LOOT.md#loot-chest_2) |
 | Страж · `boss` | [Владыка Склепа](../reference/Bosses.md#boss_crypt_lord) |
-| Изначально осквернён · `corrupted` | [Осквернённый Вестник](../reference/Monsters.md#corrupted_2) |
+| Изначально осквернён · `corrupted` | [Порченый вестник](../reference/Monsters.md#corrupted_2) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

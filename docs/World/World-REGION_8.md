@@ -1,22 +1,22 @@
-# Утонувшая империя
+# Затопленная империя
 
 | Зона | Уровень | Страж | Открывается из |
 | --- | --- | --- | --- |
-| [Затонувшие врата](#c8_sunken_gate) | 81 | [Претор врат](../reference/Bosses.md#boss_gate_praetor) | [Трон разбитого неба](World-REGION_7.md#c7_shattered_throne) |
-| [Коралловые сады](#c8_coral_gardens) | 81 | [Коралловая королева](../reference/Bosses.md#boss_coral_queen) | [Трон разбитого неба](World-REGION_7.md#c7_shattered_throne) |
-| [Приливные хранилища](#c8_tide_vaults) | 81 | [Страж хранилищ](../reference/Bosses.md#boss_vault_warden) | [Трон разбитого неба](World-REGION_7.md#c7_shattered_throne) |
-| [Утонувший форум](#c8_drowned_forum) | 83 | [Утонувший оратор](../reference/Bosses.md#boss_drowned_orator) | [Затонувшие врата](#c8_sunken_gate) |
+| [Затонувшие врата](#c8_sunken_gate) | 81 | [Претор врат](../reference/Bosses.md#boss_gate_praetor) | [Трон Разбитого Неба](World-REGION_7.md#c7_shattered_throne) |
+| [Коралловые сады](#c8_coral_gardens) | 81 | [Коралловая королева](../reference/Bosses.md#boss_coral_queen) | [Трон Разбитого Неба](World-REGION_7.md#c7_shattered_throne) |
+| [Приливные хранилища](#c8_tide_vaults) | 81 | [Страж хранилищ](../reference/Bosses.md#boss_vault_warden) | [Трон Разбитого Неба](World-REGION_7.md#c7_shattered_throne) |
+| [Затонувший форум](#c8_drowned_forum) | 83 | [Утонувший оратор](../reference/Bosses.md#boss_drowned_orator) | [Затонувшие врата](#c8_sunken_gate) |
 | [Жемчужный риф](#c8_pearl_reef) | 83 | [Пожиратель жемчуга](../reference/Bosses.md#boss_pearl_eater) | [Затонувшие врата](#c8_sunken_gate); [Коралловые сады](#c8_coral_gardens) |
 | [Затопленный акведук](#c8_flooded_aqueduct) | 83 | [Ужас акведука](../reference/Bosses.md#boss_aqueduct_horror) | [Коралловые сады](#c8_coral_gardens); [Приливные хранилища](#c8_tide_vaults) |
 | [Казармы легиона](#c8_legion_barracks) | 83 | [Трибун легиона](../reference/Bosses.md#boss_legion_tribune) | [Приливные хранилища](#c8_tide_vaults) |
-| [Собор водорослей](#c8_kelp_cathedral) | 85 | [Жрец водорослей](../reference/Bosses.md#boss_kelp_priest) | [Утонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef) |
-| [Запечатанная цистерна](#c8_sealed_cistern) | 85 | [То, что в цистерне](../reference/Bosses.md#boss_cistern_thing) | [Утонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef); [Затопленный акведук](#c8_flooded_aqueduct) |
+| [Собор водорослей](#c8_kelp_cathedral) | 85 | [Жрец водорослей](../reference/Bosses.md#boss_kelp_priest) | [Затонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef) |
+| [Запечатанная цистерна](#c8_sealed_cistern) | 85 | [Первый из спящих](../reference/Bosses.md#boss_cistern_thing) | [Затонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef); [Затопленный акведук](#c8_flooded_aqueduct) |
 | [Затонувший рынок](#c8_sunken_market) | 85 | [Рыночный барон](../reference/Bosses.md#boss_market_baron) | [Жемчужный риф](#c8_pearl_reef); [Затопленный акведук](#c8_flooded_aqueduct); [Казармы легиона](#c8_legion_barracks) |
 | [Выбеленный атолл](#c8_bleached_atoll) | 85 | [Пасть атолла](../reference/Bosses.md#boss_atoll_maw) | [Затопленный акведук](#c8_flooded_aqueduct); [Казармы легиона](#c8_legion_barracks) |
 | [Машина приливов](#c8_tidal_engine) | 88 | [Инженер приливов](../reference/Bosses.md#boss_tide_engineer) | [Собор водорослей](#c8_kelp_cathedral); [Запечатанная цистерна](#c8_sealed_cistern) |
 | [Императорские термы](#c8_imperial_baths) | 88 | [Хозяйка терм](../reference/Bosses.md#boss_bath_matron) | [Запечатанная цистерна](#c8_sealed_cistern); [Затонувший рынок](#c8_sunken_market) |
 | [Бездонная впадина](#c8_abyssal_trench) | 88 | [Дрейк впадины](../reference/Bosses.md#boss_trench_drake) | [Затонувший рынок](#c8_sunken_market); [Выбеленный атолл](#c8_bleached_atoll) |
-| [Утонувший трон](#c8_drowned_throne) | 90 | [Утонувший император](../reference/Bosses.md#boss_drowned_emperor) | [Машина приливов](#c8_tidal_engine); [Императорские термы](#c8_imperial_baths) |
+| [Затонувший трон](#c8_drowned_throne) | 90 | [Утонувший Император](../reference/Bosses.md#boss_drowned_emperor) | [Машина приливов](#c8_tidal_engine); [Императорские термы](#c8_imperial_baths) |
 
 
 ## C8_SUNKEN_GATE <a href="#c8_sunken_gate" id="c8_sunken_gate"></a>
@@ -30,13 +30,13 @@
 | --- | --- |
 | Биом · `biome` | `SUNKEN` |
 | Уровень · `level` | 81 |
-| Предшествующие зоны · `from` | [Трон разбитого неба](World-REGION_7.md#c7_shattered_throne) |
+| Предшествующие зоны · `from` | [Трон Разбитого Неба](World-REGION_7.md#c7_shattered_throne) |
 | Монстры · `monsters` | [Утопленник-легионер](../reference/Monsters.md#drowned_legionary); [Глубинный скрытень](../reference/Monsters.md#deep_lurker); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
 | Количество · `count` | 55; 71 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Претор врат](../reference/Bosses.md#boss_gate_praetor) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -52,13 +52,13 @@
 | --- | --- |
 | Биом · `biome` | `CORAL` |
 | Уровень · `level` | 81 |
-| Предшествующие зоны · `from` | [Трон разбитого неба](World-REGION_7.md#c7_shattered_throne) |
-| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Бездонный угорь](../reference/Monsters.md#abyssal_eel) |
+| Предшествующие зоны · `from` | [Трон Разбитого Неба](World-REGION_7.md#c7_shattered_throne) |
+| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel) |
 | Количество · `count` | 55; 71 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Коралловая королева](../reference/Bosses.md#boss_coral_queen) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -74,20 +74,20 @@
 | --- | --- |
 | Биом · `biome` | `TIDEVAULT` |
 | Уровень · `level` | 81 |
-| Предшествующие зоны · `from` | [Трон разбитого неба](World-REGION_7.md#c7_shattered_throne) |
-| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Бездонный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
+| Предшествующие зоны · `from` | [Трон Разбитого Неба](World-REGION_7.md#c7_shattered_throne) |
+| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
 | Количество · `count` | 55; 71 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Страж хранилищ](../reference/Bosses.md#boss_vault_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C8_DROWNED_FORUM <a href="#c8_drowned_forum" id="c8_drowned_forum"></a>
 
-### Утонувший форум <a href="#утонувший-форум" id="утонувший-форум"></a>
+### Затонувший форум <a href="#утонувший-форум" id="утонувший-форум"></a>
 
 Здесь всё ещё произносят речи — мёртвые.
 
@@ -102,7 +102,7 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Утонувший оратор](../reference/Bosses.md#boss_drowned_orator) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -119,12 +119,12 @@
 | Биом · `biome` | `CORAL` |
 | Уровень · `level` | 83 |
 | Предшествующие зоны · `from` | [Затонувшие врата](#c8_sunken_gate); [Коралловые сады](#c8_coral_gardens) |
-| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Бездонный угорь](../reference/Monsters.md#abyssal_eel) |
+| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel) |
 | Количество · `count` | 55; 71 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Пожиратель жемчуга](../reference/Bosses.md#boss_pearl_eater) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -141,12 +141,12 @@
 | Биом · `biome` | `TIDEVAULT` |
 | Уровень · `level` | 83 |
 | Предшествующие зоны · `from` | [Коралловые сады](#c8_coral_gardens); [Приливные хранилища](#c8_tide_vaults) |
-| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Бездонный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
+| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
 | Количество · `count` | 55; 71 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Ужас акведука](../reference/Bosses.md#boss_aqueduct_horror) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -168,7 +168,7 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Трибун легиона](../reference/Bosses.md#boss_legion_tribune) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -184,13 +184,13 @@
 | --- | --- |
 | Биом · `biome` | `CORAL` |
 | Уровень · `level` | 85 |
-| Предшествующие зоны · `from` | [Утонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef) |
-| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Бездонный угорь](../reference/Monsters.md#abyssal_eel) |
+| Предшествующие зоны · `from` | [Затонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef) |
+| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel) |
 | Количество · `count` | 55; 71 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Жрец водорослей](../reference/Bosses.md#boss_kelp_priest) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -206,13 +206,13 @@
 | --- | --- |
 | Биом · `biome` | `TIDEVAULT` |
 | Уровень · `level` | 85 |
-| Предшествующие зоны · `from` | [Утонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef); [Затопленный акведук](#c8_flooded_aqueduct) |
-| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Бездонный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
+| Предшествующие зоны · `from` | [Затонувший форум](#c8_drowned_forum); [Жемчужный риф](#c8_pearl_reef); [Затопленный акведук](#c8_flooded_aqueduct) |
+| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
 | Количество · `count` | 55; 71 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
-| Страж · `boss` | [То, что в цистерне](../reference/Bosses.md#boss_cistern_thing) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Страж · `boss` | [Первый из спящих](../reference/Bosses.md#boss_cistern_thing) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -234,7 +234,7 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Рыночный барон](../reference/Bosses.md#boss_market_baron) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -251,12 +251,12 @@
 | Биом · `biome` | `CORAL` |
 | Уровень · `level` | 85 |
 | Предшествующие зоны · `from` | [Затопленный акведук](#c8_flooded_aqueduct); [Казармы легиона](#c8_legion_barracks) |
-| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Бездонный угорь](../reference/Monsters.md#abyssal_eel) |
+| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel) |
 | Количество · `count` | 55; 71 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Пасть атолла](../reference/Bosses.md#boss_atoll_maw) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -273,12 +273,12 @@
 | Биом · `biome` | `TIDEVAULT` |
 | Уровень · `level` | 88 |
 | Предшествующие зоны · `from` | [Собор водорослей](#c8_kelp_cathedral); [Запечатанная цистерна](#c8_sealed_cistern) |
-| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Бездонный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
+| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake) |
 | Количество · `count` | 55; 71 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Инженер приливов](../reference/Bosses.md#boss_tide_engineer) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -300,7 +300,7 @@
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Хозяйка терм](../reference/Bosses.md#boss_bath_matron) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -317,19 +317,19 @@
 | Биом · `biome` | `CORAL` |
 | Уровень · `level` | 88 |
 | Предшествующие зоны · `from` | [Затонувший рынок](#c8_sunken_market); [Выбеленный атолл](#c8_bleached_atoll) |
-| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Бездонный угорь](../reference/Monsters.md#abyssal_eel) |
+| Монстры · `monsters` | [Коралловый исполин](../reference/Monsters.md#coral_behemoth); [Жемчужная сирена](../reference/Monsters.md#pearl_siren); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel) |
 | Количество · `count` | 55; 71 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
 | Страж · `boss` | [Дрейк впадины](../reference/Bosses.md#boss_trench_drake) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C8_DROWNED_THRONE <a href="#c8_drowned_throne" id="c8_drowned_throne"></a>
 
-### Утонувший трон <a href="#утонувший-трон" id="утонувший-трон"></a>
+### Затонувший трон <a href="#утонувший-трон" id="утонувший-трон"></a>
 
 Император всё ещё сидит здесь — и всё ещё в короне.
 
@@ -340,12 +340,12 @@
 | Уровень · `level` | 90 |
 | Предшествующие зоны · `from` | [Машина приливов](#c8_tidal_engine); [Императорские термы](#c8_imperial_baths) |
 | Финал региона · `finale` | Да |
-| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Бездонный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake); [Жемчужная сирена](../reference/Monsters.md#pearl_siren) |
+| Монстры · `monsters` | [Приливный конструкт](../reference/Monsters.md#tide_construct); [Глубоководный угорь](../reference/Monsters.md#abyssal_eel); [Солёный дрейк](../reference/Monsters.md#brine_drake); [Жемчужная сирена](../reference/Monsters.md#pearl_siren) |
 | Количество · `count` | 55; 71 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_8](../reference/Tables/Tables-LOOT.md#loot-chest_8) |
-| Страж · `boss` | [Утонувший император](../reference/Bosses.md#boss_drowned_emperor) |
-| Изначально осквернён · `corrupted` | [Осквернённый левиафан](../reference/Monsters.md#corrupted_8) |
+| Страж · `boss` | [Утонувший Император](../reference/Bosses.md#boss_drowned_emperor) |
+| Изначально осквернён · `corrupted` | [Порченый левиафан](../reference/Monsters.md#corrupted_8) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

@@ -55,7 +55,7 @@
 
 ## POWER_HYRRIS_TOXIN <a href="#power_hyrris_toxin" id="power_hyrris_toxin"></a>
 
-### Яд Хирри <a href="#яд-хирри" id="яд-хирри"></a>
+### Яд ледяных шипов <a href="#яд-хирри" id="яд-хирри"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -66,7 +66,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Яд Хирри](../Stats/Stats-POWER.md#power_hyrris_toxin) |
+| Характеристика · `stat` | [Яд ледяных шипов](../Stats/Stats-POWER.md#power_hyrris_toxin) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `INFLICT` |
 | checks | check: `AILMENT`; word: `CHILL` |

@@ -30,7 +30,7 @@
 | [Broad Hatchet](#broad_hatchet) | Редкий | 31 |
 | [War Hatchet](#war_hatchet) | Редкий | 42 |
 | [Spectral Hatchet](#spectral_hatchet) | Редкий | 52 |
-| [Vaal Hatchet](#vaal_hatchet) | Редкий | 62 |
+| [Underside Hatchet](#vaal_hatchet) | Редкий | 62 |
 | [Runic Hatchet](#runic_hatchet) | Редкий | 71 |
 | [Driftwood Wand](#driftwood_wand) | Обычный | 1 |
 | [Goat's Horn](#goat_s_horn) | Волшебный | 6 |
@@ -852,9 +852,9 @@
 
 ## VAAL_HATCHET <a href="#vaal_hatchet" id="vaal_hatchet"></a>
 
-### Vaal Hatchet <a href="#vaal-hatchet" id="vaal-hatchet"></a>
+### Underside Hatchet <a href="#vaal-hatchet" id="vaal-hatchet"></a>
 
-**Русское название:** Топорик ваал
+**Русское название:** Топорик Изнанки
 
 **Редкий · Одноручное оружие**
 
@@ -1439,7 +1439,7 @@
 - 50–70% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical)
 - 50–70% увеличение длительности яда на врагах · [Длительность яда](../reference/Stats/Stats-HERO.md#stock_poison_duration)
 - 30–40% увеличение урона по отравленным врагам · [Урон по отравленным](../reference/Stats/Stats-HERO.md#stock_damage_vs_poisoned)
-- Убийство отравленного врага с шансом 50–80% переносит его состояния на остальных врагов · [Рецепт Бино](../reference/Stats/Stats-POWER.md#power_binos_spread)
+- Убийство отравленного врага с шансом 50–80% переносит его состояния на остальных врагов · [Рецепт отравителя](../reference/Stats/Stats-POWER.md#power_binos_spread)
 - Удары по отравленным врагам возвращают здоровьем 2–4% нанесённого урона · [Проба на вкус](../reference/Stats/Stats-POWER.md#power_taste_test)
 
 
@@ -1514,7 +1514,7 @@
 - 150–200% увеличение физического урона · [Физический урон](../reference/Stats/Stats-HERO.md#stock_attack_physical)
 - 10–14% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
 - +30–40 к ловкости · [Ловкость](../reference/Stats/Stats-HERO.md#stock_agility)
-- +20–30% урона, пока против вас один враг · [Прицел Львиного Глаза](../reference/Stats/Stats-POWER.md#power_lioneyes_aim)
+- +20–30% урона, пока против вас один враг · [Прицел ловчего](../reference/Stats/Stats-POWER.md#power_lioneyes_aim)
 - Каждый 4-й удар метит врага: 4 с он получает на 10–15% больше урона · [Меченая добыча](../reference/Stats/Stats-POWER.md#power_marked_prey)
 
 
@@ -2309,7 +2309,7 @@
 - +15–20 к урону хаосом · [Урон хаосом](../reference/Stats/Stats-HERO.md#stock_attack_chaos)
 - 24–32% увеличение шанса критического удара · [Шанс критического удара](../reference/Stats/Stats-HERO.md#stock_critical_chance)
 - 0.6–0.8% физического урона атак крадётся здоровьем · [Физический вампиризм](../reference/Stats/Stats-HERO.md#stock_leech_physical)
-- Убийство даёт 6–10% увеличения урона хаосом на 4 с, до 5 раз · [Подношение Ваал](../reference/Stats/Stats-POWER.md#power_vaal_offering)
+- Убийство даёт 6–10% увеличения урона хаосом на 4 с, до 5 раз · [Подношение Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_offering)
 - Удары с шансом 15–25% отравляют · [Порченое лезвие](../reference/Stats/Stats-POWER.md#power_tainted_edge)
 
 
@@ -3085,7 +3085,7 @@
 - +20–40 к урону хаосом · [Урон хаосом](../reference/Stats/Stats-HERO.md#stock_attack_chaos)
 - 20% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
 - Убийство даёт 20–30% к урону на 4 с · [Гнев алтаря](../reference/Stats/Stats-POWER.md#power_altar_wrath)
-- +4–6% к урону за каждый надетый осквернённый предмет · [Взгляд Ваал](../reference/Stats/Stats-POWER.md#power_altar_vaal_sight)
+- +4–6% к урону за каждый надетый осквернённый предмет · [Взгляд Изнанки](../reference/Stats/Stats-POWER.md#power_altar_vaal_sight)
 
 
 | Параметр | Значение |
@@ -4076,7 +4076,7 @@
 - 20–28% увеличение урона от холода · [Урон холодом](../reference/Stats/Stats-HERO.md#stock_attack_cold)
 - +12–18 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
 - Убитый охлаждённый враг раскалывается: 15–25% его максимума здоровья холодом остальным врагам · [Раскол](../reference/Stats/Stats-POWER.md#power_shatter)
-- Убийство охлаждённого врага восстанавливает 2–4% максимума здоровья · [Мороз Берека](../reference/Stats/Stats-POWER.md#power_bereks_frost)
+- Убийство охлаждённого врага восстанавливает 2–4% максимума здоровья · [Хватка стужи](../reference/Stats/Stats-POWER.md#power_bereks_frost)
 
 
 | Параметр | Значение |
@@ -4223,7 +4223,7 @@
 - +40–60 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - +30–40 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
 - 35–50% увеличение урона от стихий · [Урон от стихий](../reference/Stats/Stats-HERO.md#stock_elemental_damage)
-- +4–6 к максимуму здоровья за каждые 10 силы · [Сердце бездны](../reference/Stats/Stats-POWER.md#power_abyssal_heart)
+- +4–6 к максимуму здоровья за каждые 10 силы · [Сердце Бездны](../reference/Stats/Stats-POWER.md#power_abyssal_heart)
 - +1% к урону за каждые 10 Силы · [Кристальная мощь](../reference/Stats/Stats-POWER.md#power_crystal_strength)
 
 
@@ -4335,7 +4335,7 @@
 - 45–60% увеличение урона от огня · [Урон огнём](../reference/Stats/Stats-HERO.md#stock_attack_fire)
 - +30–40 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
 - Убитые горящие враги взрываются: 4–5% их макс. здоровья уроном огнём по остальным · [Погребальный костёр](../reference/Stats/Stats-POWER.md#power_sovereign_pyre)
-- Убийство наносит всем врагам урон огнём, равный 8–12% вашего максимума здоровья · [Пламя Каома](../reference/Stats/Stats-POWER.md#power_kaoms_blaze)
+- Убийство наносит всем врагам урон огнём, равный 8–12% вашего максимума здоровья · [Пламя тризны](../reference/Stats/Stats-POWER.md#power_kaoms_blaze)
 
 
 | Параметр | Значение |
@@ -4634,7 +4634,7 @@
 - Урон пробивает 8–12% сопротивлений стихиям · [Пробивание стихий](../reference/Stats/Stats-HERO.md#stock_penetrate_elemental)
 - +15–25 к урону от холода · [Урон холодом](../reference/Stats/Stats-HERO.md#stock_attack_cold)
 - 8–12% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
-- Шок врага с шансом 30–50% ещё и охлаждает его · [Буря Берека](../reference/Stats/Stats-POWER.md#power_bereks_storm)
+- Шок врага с шансом 30–50% ещё и охлаждает его · [Ярость грозы](../reference/Stats/Stats-POWER.md#power_bereks_storm)
 - Каждый 3-й удар бьёт всех врагов на 20–30% урона оружия молнией · [Грозовой залп](../reference/Stats/Stats-POWER.md#power_storm_volley)
 
 
@@ -4799,7 +4799,7 @@
 | Вид · `kind` | `WEAPON` |
 | Редкость · `rarity` | `UNIQUE` |
 | Вид оружия · `weaponType` | `BOW` |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 
 
 ## EMBERWITCH_WAND <a href="#emberwitch_wand" id="emberwitch_wand"></a>

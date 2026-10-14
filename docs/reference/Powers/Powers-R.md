@@ -458,7 +458,7 @@
 
 ## POWER_RIFT_STEP <a href="#power_rift_step" id="power_rift_step"></a>
 
-### Шаг разлома <a href="#шаг-разлома" id="шаг-разлома"></a>
+### Шаг в расщелину <a href="#шаг-разлома" id="шаг-разлома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -469,7 +469,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Шаг разлома](../Stats/Stats-POWER.md#power_rift_step) |
+| Характеристика · `stat` | [Шаг в расщелину](../Stats/Stats-POWER.md#power_rift_step) |
 | Событие · `on` | `STANDING` |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Уклонение](../Stats/Stats-HERO.md#stock_evasion); Операция: `INCREASED`; scale: `FRENZY_CHARGES`; cap: 10 |
 

@@ -1040,7 +1040,7 @@
 
 - 15% увеличение урона хаосом · [Урон хаосом](../reference/Stats/Stats-HERO.md#stock_attack_chaos)
 - 2% урона крадётся здоровьем · [Общий вампиризм](../reference/Stats/Stats-HERO.md#stock_leech_all)
-- Во время действия удары наносят ещё 10–15% своего урона хаосом · [Обет Атзири](../reference/Stats/Stats-POWER.md#power_atziris_vow)
+- Во время действия удары наносят ещё 10–15% своего урона хаосом · [Обет кровавой царицы](../reference/Stats/Stats-POWER.md#power_atziris_vow)
 - Во время действия убийство восстанавливает 3–5% максимума здоровья · [Жажда королевы](../reference/Stats/Stats-POWER.md#power_queens_thirst)
 
 

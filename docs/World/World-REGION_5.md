@@ -4,22 +4,22 @@
 | --- | --- | --- | --- |
 | [Опалённые предгорья](#c5_scorched_foothills) | 49 | [Пепельный бегемот](../reference/Bosses.md#boss_cinder_behemoth) | [Сердце улья](World-REGION_4.md#c4_hive_heart) |
 | [Серные копи](#c5_brimstone_mines) | 49 | [Серный король](../reference/Bosses.md#boss_sulphur_king) | [Сердце улья](World-REGION_4.md#c4_hive_heart) |
-| [Пограничный форт](#c5_frontier_fort) | 49 | [Генерал-предатель](../reference/Bosses.md#boss_turncoat_general) | [Сердце улья](World-REGION_4.md#c4_hive_heart) |
-| [Лавовые поля](#c5_lava_fields) | 51 | [Лавовый змей](../reference/Bosses.md#boss_lava_wyrm) | [Опалённые предгорья](#c5_scorched_foothills) |
+| [Пограничный форт](#c5_frontier_fort) | 49 | [Генерал-перебежчик](../reference/Bosses.md#boss_turncoat_general) | [Сердце улья](World-REGION_4.md#c4_hive_heart) |
+| [Лавовые поля](#c5_lava_fields) | 51 | [Лавовый змий](../reference/Bosses.md#boss_lava_wyrm) | [Опалённые предгорья](#c5_scorched_foothills) |
 | [Обсидиановые шпили](#c5_obsidian_spires) | 51 | [Обсидиановая гарпия](../reference/Bosses.md#boss_obsidian_harpy) | [Опалённые предгорья](#c5_scorched_foothills); [Серные копи](#c5_brimstone_mines) |
 | [Плавильня](#c5_smeltery) | 51 | [Хозяин печей](../reference/Bosses.md#boss_furnace_master) | [Серные копи](#c5_brimstone_mines); [Пограничный форт](#c5_frontier_fort) |
 | [Осадный лагерь](#c5_siege_camp) | 51 | [Вечный осаждающий](../reference/Bosses.md#boss_eternal_besieger) | [Пограничный форт](#c5_frontier_fort) |
 | [Долина пеплопада](#c5_ashfall_valley) | 53 | [Пепельная вдова](../reference/Bosses.md#boss_ash_widow) | [Лавовые поля](#c5_lava_fields); [Обсидиановые шпили](#c5_obsidian_spires) |
-| [Огненная река](#c5_magma_river) | 53 | [Огненный перевозчик](../reference/Bosses.md#boss_magma_ferryman) | [Обсидиановые шпили](#c5_obsidian_spires) |
+| [Река магмы](#c5_magma_river) | 53 | [Огненный перевозчик](../reference/Bosses.md#boss_magma_ferryman) | [Обсидиановые шпили](#c5_obsidian_spires) |
 | [Внешние стены](#c5_outer_walls) | 53 | [Страж стен](../reference/Bosses.md#boss_wall_warden) | [Осадный лагерь](#c5_siege_camp) |
 | [Кальдерное озеро](#c5_caldera_lake) | 55 | [Кипящий ужас](../reference/Bosses.md#boss_boiling_horror) | [Долина пеплопада](#c5_ashfall_valley) |
-| [Пепельная пустошь](#c5_cinder_wastes) | 55 | [Тлеющий лич](../reference/Bosses.md#boss_smouldering_lich) | [Долина пеплопада](#c5_ashfall_valley); [Огненная река](#c5_magma_river) |
-| [Военные кузни](#c5_war_forges) | 55 | [Кузнец войны](../reference/Bosses.md#boss_warsmith) | [Огненная река](#c5_magma_river); [Внешние стены](#c5_outer_walls) |
+| [Пепельный склон](#c5_cinder_wastes) | 55 | [Тлеющий лич](../reference/Bosses.md#boss_smouldering_lich) | [Долина пеплопада](#c5_ashfall_valley); [Река магмы](#c5_magma_river) |
+| [Военные кузни](#c5_war_forges) | 55 | [Кузнец войны](../reference/Bosses.md#boss_warsmith) | [Река магмы](#c5_magma_river); [Внешние стены](#c5_outer_walls) |
 | [Горящие казармы](#c5_burning_barracks) | 55 | [Горящий капитан](../reference/Bosses.md#boss_burning_captain) | [Внешние стены](#c5_outer_walls) |
-| [Драконье жерло](#c5_dragons_vent) | 57 | [Жерловой дракон](../reference/Bosses.md#boss_vent_dragon) | [Кальдерное озеро](#c5_caldera_lake); [Пепельная пустошь](#c5_cinder_wastes) |
-| [Инфернальные врата](#c5_infernal_gate) | 57 | [Привратник преисподней](../reference/Bosses.md#boss_infernal_gatekeeper) | [Пепельная пустошь](#c5_cinder_wastes); [Военные кузни](#c5_war_forges) |
+| [Драконье жерло](#c5_dragons_vent) | 57 | [Дракон жерла](../reference/Bosses.md#boss_vent_dragon) | [Кальдерное озеро](#c5_caldera_lake); [Пепельный склон](#c5_cinder_wastes) |
+| [Врата Цитадели](#c5_infernal_gate) | 57 | [Клятвенное пламя](../reference/Bosses.md#boss_infernal_gatekeeper) | [Пепельный склон](#c5_cinder_wastes); [Военные кузни](#c5_war_forges) |
 | [Расплавленное ядро](#c5_molten_core) | 57 | [Сердце горы](../reference/Bosses.md#boss_mountain_heart) | [Военные кузни](#c5_war_forges) |
-| [Цитадель Пламени](#c5_flame_citadel) | 59 | [Владыка Пламени](../reference/Bosses.md#boss_flame_sovereign) | [Драконье жерло](#c5_dragons_vent); [Инфернальные врата](#c5_infernal_gate); [Расплавленное ядро](#c5_molten_core) |
+| [Цитадель Пламени](#c5_flame_citadel) | 59 | [Владыка Пламени](../reference/Bosses.md#boss_flame_sovereign) | [Драконье жерло](#c5_dragons_vent); [Врата Цитадели](#c5_infernal_gate); [Расплавленное ядро](#c5_molten_core) |
 
 
 ## C5_SCORCHED_FOOTHILLS <a href="#c5_scorched_foothills" id="c5_scorched_foothills"></a>
@@ -34,12 +34,12 @@
 | Биом · `biome` | `VOLCANO` |
 | Уровень · `level` | 49 |
 | Предшествующие зоны · `from` | [Сердце улья](World-REGION_4.md#c4_hive_heart) |
-| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Огненный змей](../reference/Monsters.md#fire_drake); [Магмовый голем](../reference/Monsters.md#magma_golem) |
+| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Огненный дрейк](../reference/Monsters.md#fire_drake); [Магмовый голем](../reference/Monsters.md#magma_golem) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Пепельный бегемот](../reference/Bosses.md#boss_cinder_behemoth) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -61,7 +61,7 @@
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Серный король](../reference/Bosses.md#boss_sulphur_king) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -78,12 +78,12 @@
 | Биом · `biome` | `CITADEL` |
 | Уровень · `level` | 49 |
 | Предшествующие зоны · `from` | [Сердце улья](World-REGION_4.md#c4_hive_heart) |
-| Монстры · `monsters` | [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle) |
+| Монстры · `monsters` | [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle) |
 | Количество · `count` | 51; 66 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
-| Страж · `boss` | [Генерал-предатель](../reference/Bosses.md#boss_turncoat_general) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Страж · `boss` | [Генерал-перебежчик](../reference/Bosses.md#boss_turncoat_general) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -100,12 +100,12 @@
 | Биом · `biome` | `VOLCANO` |
 | Уровень · `level` | 51 |
 | Предшествующие зоны · `from` | [Опалённые предгорья](#c5_scorched_foothills) |
-| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Огненный змей](../reference/Monsters.md#fire_drake); [Магмовый голем](../reference/Monsters.md#magma_golem) |
+| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Огненный дрейк](../reference/Monsters.md#fire_drake); [Магмовый голем](../reference/Monsters.md#magma_golem) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
-| Страж · `boss` | [Лавовый змей](../reference/Bosses.md#boss_lava_wyrm) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Страж · `boss` | [Лавовый змий](../reference/Bosses.md#boss_lava_wyrm) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -127,7 +127,7 @@
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Обсидиановая гарпия](../reference/Bosses.md#boss_obsidian_harpy) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -144,12 +144,12 @@
 | Биом · `biome` | `MINES` |
 | Уровень · `level` | 51 |
 | Предшествующие зоны · `from` | [Серные копи](#c5_brimstone_mines); [Пограничный форт](#c5_frontier_fort) |
-| Монстры · `monsters` | [Магмовый голем](../reference/Monsters.md#magma_golem); [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Лавовый бес](../reference/Monsters.md#lava_imp) |
+| Монстры · `monsters` | [Магмовый голем](../reference/Monsters.md#magma_golem); [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Лавовый бес](../reference/Monsters.md#lava_imp) |
 | Количество · `count` | 51; 66 |
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Хозяин печей](../reference/Bosses.md#boss_furnace_master) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -166,12 +166,12 @@
 | Биом · `biome` | `CITADEL` |
 | Уровень · `level` | 51 |
 | Предшествующие зоны · `from` | [Пограничный форт](#c5_frontier_fort) |
-| Монстры · `monsters` | [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle) |
+| Монстры · `monsters` | [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle) |
 | Количество · `count` | 51; 66 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Вечный осаждающий](../reference/Bosses.md#boss_eternal_besieger) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -188,19 +188,19 @@
 | Биом · `biome` | `ASH` |
 | Уровень · `level` | 53 |
 | Предшествующие зоны · `from` | [Лавовые поля](#c5_lava_fields); [Обсидиановые шпили](#c5_obsidian_spires) |
-| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Огненный змей](../reference/Monsters.md#fire_drake); [Горгулья](../reference/Monsters.md#gargoyle) |
+| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Огненный дрейк](../reference/Monsters.md#fire_drake); [Горгулья](../reference/Monsters.md#gargoyle) |
 | Количество · `count` | 51; 66 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Пепельная вдова](../reference/Bosses.md#boss_ash_widow) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C5_MAGMA_RIVER <a href="#c5_magma_river" id="c5_magma_river"></a>
 
-### Огненная река <a href="#огненная-река" id="огненная-река"></a>
+### Река магмы <a href="#огненная-река" id="огненная-река"></a>
 
 Река расплавленного камня и перевозчик, что берёт плату кровью.
 
@@ -210,12 +210,12 @@
 | Биом · `biome` | `VOLCANO` |
 | Уровень · `level` | 53 |
 | Предшествующие зоны · `from` | [Обсидиановые шпили](#c5_obsidian_spires) |
-| Монстры · `monsters` | [Огненный змей](../reference/Monsters.md#fire_drake); [Магмовый голем](../reference/Monsters.md#magma_golem); [Лавовый бес](../reference/Monsters.md#lava_imp) |
+| Монстры · `monsters` | [Огненный дрейк](../reference/Monsters.md#fire_drake); [Магмовый голем](../reference/Monsters.md#magma_golem); [Лавовый бес](../reference/Monsters.md#lava_imp) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Огненный перевозчик](../reference/Bosses.md#boss_magma_ferryman) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -232,12 +232,12 @@
 | Биом · `biome` | `CITADEL` |
 | Уровень · `level` | 53 |
 | Предшествующие зоны · `from` | [Осадный лагерь](#c5_siege_camp) |
-| Монстры · `monsters` | [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Горгулья](../reference/Monsters.md#gargoyle); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock) |
+| Монстры · `monsters` | [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Горгулья](../reference/Monsters.md#gargoyle); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock) |
 | Количество · `count` | 51; 66 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Страж стен](../reference/Bosses.md#boss_wall_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -254,19 +254,19 @@
 | Биом · `biome` | `VOLCANO` |
 | Уровень · `level` | 55 |
 | Предшествующие зоны · `from` | [Долина пеплопада](#c5_ashfall_valley) |
-| Монстры · `monsters` | [Огненный змей](../reference/Monsters.md#fire_drake); [Лавовый бес](../reference/Monsters.md#lava_imp); [Магмовый голем](../reference/Monsters.md#magma_golem) |
+| Монстры · `monsters` | [Огненный дрейк](../reference/Monsters.md#fire_drake); [Лавовый бес](../reference/Monsters.md#lava_imp); [Магмовый голем](../reference/Monsters.md#magma_golem) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Кипящий ужас](../reference/Bosses.md#boss_boiling_horror) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C5_CINDER_WASTES <a href="#c5_cinder_wastes" id="c5_cinder_wastes"></a>
 
-### Пепельная пустошь <a href="#пепельная-пустошь" id="пепельная-пустошь"></a>
+### Пепельный склон <a href="#пепельная-пустошь" id="пепельная-пустошь"></a>
 
 Земля выгорела дочерна, но что-то на ней всё ещё тлеет и движется.
 
@@ -275,13 +275,13 @@
 | --- | --- |
 | Биом · `biome` | `ASH` |
 | Уровень · `level` | 55 |
-| Предшествующие зоны · `from` | [Долина пеплопада](#c5_ashfall_valley); [Огненная река](#c5_magma_river) |
-| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Горгулья](../reference/Monsters.md#gargoyle); [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight) |
+| Предшествующие зоны · `from` | [Долина пеплопада](#c5_ashfall_valley); [Река магмы](#c5_magma_river) |
+| Монстры · `monsters` | [Лавовый бес](../reference/Monsters.md#lava_imp); [Горгулья](../reference/Monsters.md#gargoyle); [Рыцарь пламени](../reference/Monsters.md#infernal_knight) |
 | Количество · `count` | 51; 66 |
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Тлеющий лич](../reference/Bosses.md#boss_smouldering_lich) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -297,13 +297,13 @@
 | --- | --- |
 | Биом · `biome` | `CITADEL` |
 | Уровень · `level` | 55 |
-| Предшествующие зоны · `from` | [Огненная река](#c5_magma_river); [Внешние стены](#c5_outer_walls) |
-| Монстры · `monsters` | [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Магмовый голем](../reference/Monsters.md#magma_golem); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock) |
+| Предшествующие зоны · `from` | [Река магмы](#c5_magma_river); [Внешние стены](#c5_outer_walls) |
+| Монстры · `monsters` | [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Магмовый голем](../reference/Monsters.md#magma_golem); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock) |
 | Количество · `count` | 51; 66 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Кузнец войны](../reference/Bosses.md#boss_warsmith) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -320,12 +320,12 @@
 | Биом · `biome` | `CITADEL` |
 | Уровень · `level` | 55 |
 | Предшествующие зоны · `from` | [Внешние стены](#c5_outer_walls) |
-| Монстры · `monsters` | [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Лавовый бес](../reference/Monsters.md#lava_imp) |
+| Монстры · `monsters` | [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Лавовый бес](../reference/Monsters.md#lava_imp) |
 | Количество · `count` | 51; 66 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Горящий капитан](../reference/Bosses.md#boss_burning_captain) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -341,20 +341,20 @@
 | --- | --- |
 | Биом · `biome` | `VOLCANO` |
 | Уровень · `level` | 57 |
-| Предшествующие зоны · `from` | [Кальдерное озеро](#c5_caldera_lake); [Пепельная пустошь](#c5_cinder_wastes) |
-| Монстры · `monsters` | [Огненный змей](../reference/Monsters.md#fire_drake); [Лавовый бес](../reference/Monsters.md#lava_imp); [Горгулья](../reference/Monsters.md#gargoyle) |
+| Предшествующие зоны · `from` | [Кальдерное озеро](#c5_caldera_lake); [Пепельный склон](#c5_cinder_wastes) |
+| Монстры · `monsters` | [Огненный дрейк](../reference/Monsters.md#fire_drake); [Лавовый бес](../reference/Monsters.md#lava_imp); [Горгулья](../reference/Monsters.md#gargoyle) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
-| Страж · `boss` | [Жерловой дракон](../reference/Bosses.md#boss_vent_dragon) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Страж · `boss` | [Дракон жерла](../reference/Bosses.md#boss_vent_dragon) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C5_INFERNAL_GATE <a href="#c5_infernal_gate" id="c5_infernal_gate"></a>
 
-### Инфернальные врата <a href="#инфернальные-врата" id="инфернальные-врата"></a>
+### Врата Цитадели <a href="#инфернальные-врата" id="инфернальные-врата"></a>
 
 Врата цитадели, за которыми слышен смех тех, кто призвал огонь.
 
@@ -363,13 +363,13 @@
 | --- | --- |
 | Биом · `biome` | `CITADEL` |
 | Уровень · `level` | 57 |
-| Предшествующие зоны · `from` | [Пепельная пустошь](#c5_cinder_wastes); [Военные кузни](#c5_war_forges) |
-| Монстры · `monsters` | [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle) |
+| Предшествующие зоны · `from` | [Пепельный склон](#c5_cinder_wastes); [Военные кузни](#c5_war_forges) |
+| Монстры · `monsters` | [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle) |
 | Количество · `count` | 51; 66 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
-| Страж · `boss` | [Привратник преисподней](../reference/Bosses.md#boss_infernal_gatekeeper) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Страж · `boss` | [Клятвенное пламя](../reference/Bosses.md#boss_infernal_gatekeeper) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -386,12 +386,12 @@
 | Биом · `biome` | `VOLCANO` |
 | Уровень · `level` | 57 |
 | Предшествующие зоны · `from` | [Военные кузни](#c5_war_forges) |
-| Монстры · `monsters` | [Магмовый голем](../reference/Monsters.md#magma_golem); [Огненный змей](../reference/Monsters.md#fire_drake); [Лавовый бес](../reference/Monsters.md#lava_imp) |
+| Монстры · `monsters` | [Магмовый голем](../reference/Monsters.md#magma_golem); [Огненный дрейк](../reference/Monsters.md#fire_drake); [Лавовый бес](../reference/Monsters.md#lava_imp) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Сердце горы](../reference/Bosses.md#boss_mountain_heart) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -407,14 +407,14 @@
 | --- | --- |
 | Биом · `biome` | `CITADEL` |
 | Уровень · `level` | 59 |
-| Предшествующие зоны · `from` | [Драконье жерло](#c5_dragons_vent); [Инфернальные врата](#c5_infernal_gate); [Расплавленное ядро](#c5_molten_core) |
+| Предшествующие зоны · `from` | [Драконье жерло](#c5_dragons_vent); [Врата Цитадели](#c5_infernal_gate); [Расплавленное ядро](#c5_molten_core) |
 | Финал региона · `finale` | Да |
-| Монстры · `monsters` | [Инфернальный рыцарь](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle); [Лавовый бес](../reference/Monsters.md#lava_imp) |
+| Монстры · `monsters` | [Рыцарь пламени](../reference/Monsters.md#infernal_knight); [Чернокнижник цитадели](../reference/Monsters.md#citadel_warlock); [Горгулья](../reference/Monsters.md#gargoyle); [Лавовый бес](../reference/Monsters.md#lava_imp) |
 | Количество · `count` | 51; 66 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Владыка Пламени](../reference/Bosses.md#boss_flame_sovereign) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

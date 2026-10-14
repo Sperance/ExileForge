@@ -5,22 +5,22 @@
 | Предмет | Код | Базовая цена |
 | --- | --- | --- |
 | [Vivid Catalyst](#catalyst_life) | CATALYST_LIFE | 60 |
-| [Fertile Catalyst](#catalyst_defence) | CATALYST_DEFENCE | 60 |
+| [Warding Catalyst](#catalyst_defence) | CATALYST_DEFENCE | 60 |
 | [Prismatic Catalyst](#catalyst_elemental) | CATALYST_ELEMENTAL | 60 |
 | [Abrasive Catalyst](#catalyst_physical) | CATALYST_PHYSICAL | 60 |
 | [Noxious Catalyst](#catalyst_chaos) | CATALYST_CHAOS | 60 |
 | [Turbulent Catalyst](#catalyst_speed) | CATALYST_SPEED | 60 |
 | [Intrinsic Catalyst](#catalyst_attribute) | CATALYST_ATTRIBUTE | 60 |
 | [Imbued Catalyst](#catalyst_caster) | CATALYST_CASTER | 60 |
-| [Omen of Sinistral Chaos](#omen_sinistral_chaos) | OMEN_SINISTRAL_CHAOS | 800 |
-| [Omen of Dextral Chaos](#omen_dextral_chaos) | OMEN_DEXTRAL_CHAOS | 800 |
-| [Omen of Sinistral Exaltation](#omen_sinistral_exaltation) | OMEN_SINISTRAL_EXALTATION | 800 |
-| [Omen of Dextral Exaltation](#omen_dextral_exaltation) | OMEN_DEXTRAL_EXALTATION | 800 |
+| [Dawn Omen of Chaos](#omen_sinistral_chaos) | OMEN_SINISTRAL_CHAOS | 800 |
+| [Dusk Omen of Chaos](#omen_dextral_chaos) | OMEN_DEXTRAL_CHAOS | 800 |
+| [Dawn Omen of Exaltation](#omen_sinistral_exaltation) | OMEN_SINISTRAL_EXALTATION | 800 |
+| [Dusk Omen of Exaltation](#omen_dextral_exaltation) | OMEN_DEXTRAL_EXALTATION | 800 |
 | [Omen of Greater Exaltation](#omen_greater_exaltation) | OMEN_GREATER_EXALTATION | 800 |
-| [Omen of Sinistral Coronation](#omen_sinistral_coronation) | OMEN_SINISTRAL_CORONATION | 800 |
-| [Omen of Dextral Coronation](#omen_dextral_coronation) | OMEN_DEXTRAL_CORONATION | 800 |
-| [Omen of Sinistral Annulment](#omen_sinistral_annulment) | OMEN_SINISTRAL_ANNULMENT | 800 |
-| [Omen of Dextral Annulment](#omen_dextral_annulment) | OMEN_DEXTRAL_ANNULMENT | 800 |
+| [Dawn Omen of Coronation](#omen_sinistral_coronation) | OMEN_SINISTRAL_CORONATION | 800 |
+| [Dusk Omen of Coronation](#omen_dextral_coronation) | OMEN_DEXTRAL_CORONATION | 800 |
+| [Dawn Omen of Annulment](#omen_sinistral_annulment) | OMEN_SINISTRAL_ANNULMENT | 800 |
+| [Dusk Omen of Annulment](#omen_dextral_annulment) | OMEN_DEXTRAL_ANNULMENT | 800 |
 | [Omen of Light](#omen_light) | OMEN_LIGHT | 800 |
 | [Omen of Corruption](#omen_corruption) | OMEN_CORRUPTION | 800 |
 | [Omen of Choice](#omen_choice) | OMEN_CHOICE | 1500 |
@@ -43,7 +43,7 @@
 
 ## CATALYST_DEFENCE <a href="#catalyst_defence" id="catalyst_defence"></a>
 
-### Fertile Catalyst <a href="#fertile-catalyst" id="fertile-catalyst"></a>
+### Warding Catalyst <a href="#fertile-catalyst" id="fertile-catalyst"></a>
 
 Качество усиливает модификаторы брони, уклонения, энергощита и блока. Тратится вместе со Сферой качества.
 
@@ -141,7 +141,7 @@
 
 ## OMEN_SINISTRAL_CHAOS <a href="#omen_sinistral_chaos" id="omen_sinistral_chaos"></a>
 
-### Omen of Sinistral Chaos <a href="#omen-of-sinistral-chaos" id="omen-of-sinistral-chaos"></a>
+### Dawn Omen of Chaos <a href="#omen-of-sinistral-chaos" id="omen-of-sinistral-chaos"></a>
 
 Сфера хаоса, потраченная вместе с ним, перебрасывает только префиксы; суффиксы остаются.
 
@@ -155,7 +155,7 @@
 
 ## OMEN_DEXTRAL_CHAOS <a href="#omen_dextral_chaos" id="omen_dextral_chaos"></a>
 
-### Omen of Dextral Chaos <a href="#omen-of-dextral-chaos" id="omen-of-dextral-chaos"></a>
+### Dusk Omen of Chaos <a href="#omen-of-dextral-chaos" id="omen-of-dextral-chaos"></a>
 
 Сфера хаоса, потраченная вместе с ним, перебрасывает только суффиксы; префиксы остаются.
 
@@ -169,7 +169,7 @@
 
 ## OMEN_SINISTRAL_EXALTATION <a href="#omen_sinistral_exaltation" id="omen_sinistral_exaltation"></a>
 
-### Omen of Sinistral Exaltation <a href="#omen-of-sinistral-exaltation" id="omen-of-sinistral-exaltation"></a>
+### Dawn Omen of Exaltation <a href="#omen-of-sinistral-exaltation" id="omen-of-sinistral-exaltation"></a>
 
 Сфера возвышения, потраченная вместе с ним, добавляет только префикс.
 
@@ -183,7 +183,7 @@
 
 ## OMEN_DEXTRAL_EXALTATION <a href="#omen_dextral_exaltation" id="omen_dextral_exaltation"></a>
 
-### Omen of Dextral Exaltation <a href="#omen-of-dextral-exaltation" id="omen-of-dextral-exaltation"></a>
+### Dusk Omen of Exaltation <a href="#omen-of-dextral-exaltation" id="omen-of-dextral-exaltation"></a>
 
 Сфера возвышения, потраченная вместе с ним, добавляет только суффикс.
 
@@ -211,7 +211,7 @@
 
 ## OMEN_SINISTRAL_CORONATION <a href="#omen_sinistral_coronation" id="omen_sinistral_coronation"></a>
 
-### Omen of Sinistral Coronation <a href="#omen-of-sinistral-coronation" id="omen-of-sinistral-coronation"></a>
+### Dawn Omen of Coronation <a href="#omen-of-sinistral-coronation" id="omen-of-sinistral-coronation"></a>
 
 Сфера царей, потраченная вместе с ним, добавляет префикс.
 
@@ -225,7 +225,7 @@
 
 ## OMEN_DEXTRAL_CORONATION <a href="#omen_dextral_coronation" id="omen_dextral_coronation"></a>
 
-### Omen of Dextral Coronation <a href="#omen-of-dextral-coronation" id="omen-of-dextral-coronation"></a>
+### Dusk Omen of Coronation <a href="#omen-of-dextral-coronation" id="omen-of-dextral-coronation"></a>
 
 Сфера царей, потраченная вместе с ним, добавляет суффикс.
 
@@ -239,7 +239,7 @@
 
 ## OMEN_SINISTRAL_ANNULMENT <a href="#omen_sinistral_annulment" id="omen_sinistral_annulment"></a>
 
-### Omen of Sinistral Annulment <a href="#omen-of-sinistral-annulment" id="omen-of-sinistral-annulment"></a>
+### Dawn Omen of Annulment <a href="#omen-of-sinistral-annulment" id="omen-of-sinistral-annulment"></a>
 
 Сфера отмены, потраченная вместе с ним, убирает только префикс.
 
@@ -253,7 +253,7 @@
 
 ## OMEN_DEXTRAL_ANNULMENT <a href="#omen_dextral_annulment" id="omen_dextral_annulment"></a>
 
-### Omen of Dextral Annulment <a href="#omen-of-dextral-annulment" id="omen-of-dextral-annulment"></a>
+### Dusk Omen of Annulment <a href="#omen-of-dextral-annulment" id="omen-of-dextral-annulment"></a>
 
 Сфера отмены, потраченная вместе с ним, убирает только суффикс.
 
@@ -283,7 +283,7 @@
 
 ### Omen of Corruption <a href="#omen-of-corruption" id="omen-of-corruption"></a>
 
-Сфера Ваал, потраченная вместе с ним, не проходит впустую: исход «ничего» исключён.
+Сфера Изнанки, потраченная вместе с ним, не проходит впустую: исход «ничего» исключён.
 
 
 | Параметр | Значение |
@@ -297,7 +297,7 @@
 
 ### Omen of Choice <a href="#omen-of-choice" id="omen-of-choice"></a>
 
-Сфера алхимии или возвышения либо Печать алхимии, потраченная вместе с ним, предлагает три варианта строки вместо случайной — на снаряжении, инструменте и карте; выбранный встаёт на место. Сфера алхимии при этом сначала даёт свои 4–6 модификаторов.
+Сфера алхимии или возвышения либо Оттиск алхимии, потраченная вместе с ним, предлагает три варианта строки вместо случайной — на снаряжении, инструменте и карте; выбранный встаёт на место. Сфера алхимии при этом сначала даёт свои 4–6 модификаторов.
 
 
 | Параметр | Значение |

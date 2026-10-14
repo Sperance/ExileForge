@@ -380,7 +380,7 @@
 
 ## POWER_EMBALMED <a href="#power_embalmed" id="power_embalmed"></a>
 
-### Прививка хаоса <a href="#прививка-хаоса" id="прививка-хаоса"></a>
+### Бальзам нетления <a href="#прививка-хаоса" id="прививка-хаоса"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -391,13 +391,13 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Прививка хаоса](../Stats/Stats-POWER.md#power_embalmed) |
+| Характеристика · `stat` | [Бальзам нетления](../Stats/Stats-POWER.md#power_embalmed) |
 | sheet | Операция: `SET`; to: [Здоровье](../Stats/Stats-HERO.md#stock_health); Значение: 1; Операция: `SET`; to: [Иммунитет к хаосу](../Stats/Stats-HERO.md#stock_chaos_immune); Значение: 1 |
 
 
 ## POWER_EMBALMERS_SEAL <a href="#power_embalmers_seal" id="power_embalmers_seal"></a>
 
-### Печать бальзамировщика <a href="#печать-бальзамировщика" id="печать-бальзамировщика"></a>
+### Знак бальзамировщика <a href="#печать-бальзамировщика" id="печать-бальзамировщика"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -408,7 +408,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Печать бальзамировщика](../Stats/Stats-POWER.md#power_embalmers_seal) |
+| Характеристика · `stat` | [Знак бальзамировщика](../Stats/Stats-POWER.md#power_embalmers_seal) |
 | Тип броска · `roll` | `DURATION` |
 | Событие · `on` | `SHIELD_BROKEN` |
 | Перезарядка, с · `cooldown` | 20 |
@@ -525,7 +525,7 @@
 
 ## POWER_ELDER_MIRROR <a href="#power_elder_mirror" id="power_elder_mirror"></a>
 
-### Терпение Древнего <a href="#терпение-древнего" id="терпение-древнего"></a>
+### Терпение Пустоты <a href="#терпение-древнего" id="терпение-древнего"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -536,13 +536,13 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Терпение Древнего](../Stats/Stats-POWER.md#power_elder_mirror) |
+| Характеристика · `stat` | [Терпение Пустоты](../Stats/Stats-POWER.md#power_elder_mirror) |
 | sheet | Операция: `GAIN`; Предшествующие зоны: [Шанс блока](../Stats/Stats-HERO.md#stock_block_chance); to: [Шанс блока заклинаний](../Stats/Stats-HERO.md#stock_spell_block) |
 
 
 ## POWER_ELDER_REBUKE <a href="#power_elder_rebuke" id="power_elder_rebuke"></a>
 
-### Укор Древнего <a href="#укор-древнего" id="укор-древнего"></a>
+### Укор Пустоты <a href="#укор-древнего" id="укор-древнего"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -553,7 +553,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Укор Древнего](../Stats/Stats-POWER.md#power_elder_rebuke) |
+| Характеристика · `stat` | [Укор Пустоты](../Stats/Stats-POWER.md#power_elder_rebuke) |
 | Событие · `on` | `BLOCK` |
 | Эффекты · `effects` | Действие: `DAMAGE`; Тип: `CHAOS` |
 

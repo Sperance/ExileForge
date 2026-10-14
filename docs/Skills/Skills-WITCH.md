@@ -14,7 +14,7 @@
 | [Жатва маны](#mana_harvest) | MANA_HARVEST |
 | [Ясность](#clarity) | CLARITY |
 | [Глубокий резерв](#deep_reserve) | DEEP_RESERVE |
-| [Раскол стихий](#elemental_surge) | ELEMENTAL_SURGE |
+| [Всплеск стихий](#elemental_surge) | ELEMENTAL_SURGE |
 | [Беглые чары](#swift_casting) | SWIFT_CASTING |
 | [Последний оплот](#last_ward) | LAST_WARD |
 
@@ -221,7 +221,7 @@
 
 ## ELEMENTAL_SURGE <a href="#elemental_surge" id="elemental_surge"></a>
 
-### Раскол стихий <a href="#раскол-стихий" id="раскол-стихий"></a>
+### Всплеск стихий <a href="#раскол-стихий" id="раскол-стихий"></a>
 
 
 | Параметр | Значение |

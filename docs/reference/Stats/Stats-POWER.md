@@ -42,7 +42,7 @@
 | [Солнечный протуберанец](#power_sunflare) | POWER_SUNFLARE |
 | [Рой из тела](#power_swarm_burst) | POWER_SWARM_BURST |
 | [Прожигание](#power_cinder_pierce) | POWER_CINDER_PIERCE |
-| [Уход в бездну](#power_abyss_dodge) | POWER_ABYSS_DODGE |
+| [Уход в Бездну](#power_abyss_dodge) | POWER_ABYSS_DODGE |
 | [Пожирание](#power_devour) | POWER_DEVOUR |
 | [Пожиратель миров](#power_worldeater) | POWER_WORLDEATER |
 | [Всевидение](#power_all_seeing) | POWER_ALL_SEEING |
@@ -61,7 +61,7 @@
 | [Преданная стремительность](#power_devoted_swiftness) | POWER_DEVOTED_SWIFTNESS |
 | [Ненасытная шкура](#power_gluttonous_hide) | POWER_GLUTTONOUS_HIDE |
 | [Толстая шкура](#power_thick_hide) | POWER_THICK_HIDE |
-| [Пламя Каома](#power_kaoms_blaze) | POWER_KAOMS_BLAZE |
+| [Пламя тризны](#power_kaoms_blaze) | POWER_KAOMS_BLAZE |
 | [Запечатанное сердце](#power_sealed_heart) | POWER_SEALED_HEART |
 | [Разрыв туши](#power_carcass_burst) | POWER_CARCASS_BURST |
 | [Хруст костей](#power_bone_crunch) | POWER_BONE_CRUNCH |
@@ -79,23 +79,23 @@
 | [Охота за головами](#power_headhunt) | POWER_HEADHUNT |
 | [Собиратель трофеев](#power_trophy_hunter) | POWER_TROPHY_HUNTER |
 | [Налог магната](#power_magnate_tax) | POWER_MAGNATE_TAX |
-| [Буря Берека](#power_bereks_storm) | POWER_BEREKS_STORM |
-| [Мороз Берека](#power_bereks_frost) | POWER_BEREKS_FROST |
-| [Ставка Вентора](#power_ventors_wager) | POWER_VENTORS_WAGER |
-| [Ярость Каома](#power_kaoms_rage) | POWER_KAOMS_RAGE |
+| [Ярость грозы](#power_bereks_storm) | POWER_BEREKS_STORM |
+| [Хватка стужи](#power_bereks_frost) | POWER_BEREKS_FROST |
+| [Ставка шулера](#power_ventors_wager) | POWER_VENTORS_WAGER |
+| [Ярость пепельного вождя](#power_kaoms_rage) | POWER_KAOMS_RAGE |
 | [Звёздная гармония](#power_astral_harmony) | POWER_ASTRAL_HARMONY |
 | [Бойня](#power_carnage) | POWER_CARNAGE |
-| [Находка Биско](#power_biscos_find) | POWER_BISCOS_FIND |
+| [Находка ищейки](#power_biscos_find) | POWER_BISCOS_FIND |
 | [Покаянная стойка](#power_remorseful_guard) | POWER_REMORSEFUL_GUARD |
 | [Возрождение феникса](#power_phoenix_rebirth) | POWER_PHOENIX_REBIRTH |
-| [Призма Саффелла](#power_saffell_prism) | POWER_SAFFELL_PRISM |
+| [Призма заслона](#power_saffell_prism) | POWER_SAFFELL_PRISM |
 | [Сквозной выстрел](#power_drill_shot) | POWER_DRILL_SHOT |
 | [Арьергард](#power_rearguard) | POWER_REARGUARD |
-| [Яд Хирри](#power_hyrris_toxin) | POWER_HYRRIS_TOXIN |
-| [Рецепт Бино](#power_binos_spread) | POWER_BINOS_SPREAD |
+| [Яд ледяных шипов](#power_hyrris_toxin) | POWER_HYRRIS_TOXIN |
+| [Рецепт отравителя](#power_binos_spread) | POWER_BINOS_SPREAD |
 | [Всплеск катализатора](#power_catalyst_surge) | POWER_CATALYST_SURGE |
-| [Прицел Львиного Глаза](#power_lioneyes_aim) | POWER_LIONEYES_AIM |
-| [Сокрушение Марохи](#power_marohi_crush) | POWER_MAROHI_CRUSH |
+| [Прицел ловчего](#power_lioneyes_aim) | POWER_LIONEYES_AIM |
+| [Удар валуна](#power_marohi_crush) | POWER_MAROHI_CRUSH |
 | [Звёздная ковка](#power_starforged) | POWER_STARFORGED |
 | [Гегемония](#power_hegemony) | POWER_HEGEMONY |
 | [Смена прилива](#power_tide_turn) | POWER_TIDE_TURN |
@@ -139,14 +139,14 @@
 | [Разум роя](#power_hivemind) | POWER_HIVEMIND |
 | [Клеймо владыки](#power_sovereign_brand) | POWER_SOVEREIGN_BRAND |
 | [Расплавленное ядро](#power_molten_core) | POWER_MOLTEN_CORE |
-| [Взгляд бездны](#power_abyssal_gaze) | POWER_ABYSSAL_GAZE |
-| [Зов бездны](#power_abyss_call) | POWER_ABYSS_CALL |
+| [Взор без дна](#power_abyssal_gaze) | POWER_ABYSSAL_GAZE |
+| [Зов Бездны](#power_abyss_call) | POWER_ABYSS_CALL |
 | [Голод пустоты](#power_void_hunger) | POWER_VOID_HUNGER |
 | [Милость святой](#power_saints_grace) | POWER_SAINTS_GRACE |
 | [Зеркальный ответ](#power_mirror_riposte) | POWER_MIRROR_RIPOSTE |
 | [Кипящий гнев](#power_seething_rage) | POWER_SEETHING_RAGE |
 | [Звёздный заслон](#power_starlight_ward) | POWER_STARLIGHT_WARD |
-| [Обет Атзири](#power_atziris_vow) | POWER_ATZIRIS_VOW |
+| [Обет кровавой царицы](#power_atziris_vow) | POWER_ATZIRIS_VOW |
 | [Взор пустоты](#power_void_sight) | POWER_VOID_SIGHT |
 | [Эхо пустоты](#power_void_echo) | POWER_VOID_ECHO |
 | [Покров веков](#power_eternity_shroud) | POWER_ETERNITY_SHROUD |
@@ -161,9 +161,9 @@
 | [Кровавое неистовство](#power_blood_frenzy) | POWER_BLOOD_FRENZY |
 | [Метеор](#power_meteor) | POWER_METEOR |
 | [Звёздный осколок](#power_starshard) | POWER_STARSHARD |
-| [Прилив бездны](#power_abyssal_tide) | POWER_ABYSSAL_TIDE |
+| [Прилив Бездны](#power_abyssal_tide) | POWER_ABYSSAL_TIDE |
 | [Глубокий разум](#power_deep_mind) | POWER_DEEP_MIND |
-| [Сердце бездны](#power_abyssal_heart) | POWER_ABYSSAL_HEART |
+| [Сердце Бездны](#power_abyssal_heart) | POWER_ABYSSAL_HEART |
 | [Сердцебиение](#power_heartbeat) | POWER_HEARTBEAT |
 | [Воля бездны](#power_abyss_will) | POWER_ABYSS_WILL |
 | [Мощь титанов](#power_titans_might) | POWER_TITANS_MIGHT |
@@ -193,10 +193,10 @@
 | [Сирокко](#power_sirocco) | POWER_SIROCCO |
 | [Седьмое вознесение](#power_seventh_ascent) | POWER_SEVENTH_ASCENT |
 | [Пир пасти](#power_maw_feast) | POWER_MAW_FEAST |
-| [Стойкость каруи](#power_karui_grit) | POWER_KARUI_GRIT |
+| [Упорство великана](#power_karui_grit) | POWER_KARUI_GRIT |
 | [Тугой кошель](#power_golden_purse) | POWER_GOLDEN_PURSE |
 | [Удачный расклад](#power_lucky_break) | POWER_LUCKY_BREAK |
-| [Стойкость Каома](#power_kaoms_endurance) | POWER_KAOMS_ENDURANCE |
+| [Стойкость пепельного вождя](#power_kaoms_endurance) | POWER_KAOMS_ENDURANCE |
 | [Звёздная грация](#power_starbound_grace) | POWER_STARBOUND_GRACE |
 | [Кровавая баня](#power_bloodbath) | POWER_BLOODBATH |
 | [Хороший пёс](#power_good_dog) | POWER_GOOD_DOG |
@@ -290,7 +290,7 @@
 | [Отсвет очага](#power_hearth_glow) | POWER_HEARTH_GLOW |
 | [Бдящие тени](#power_watching_shadows) | POWER_WATCHING_SHADOWS |
 | [Звёздная нить](#power_star_thread) | POWER_STAR_THREAD |
-| [Подношение Ваал](#power_vaal_offering) | POWER_VAAL_OFFERING |
+| [Подношение Изнанки](#power_vaal_offering) | POWER_VAAL_OFFERING |
 | [Порченое лезвие](#power_tainted_edge) | POWER_TAINTED_EDGE |
 | [Жертвенный договор](#power_sacrificial_pact) | POWER_SACRIFICIAL_PACT |
 | [Взгляд из-под маски](#power_veiled_gaze) | POWER_VEILED_GAZE |
@@ -301,7 +301,7 @@
 | [Ритуальный разруб](#power_ritual_cleave) | POWER_RITUAL_CLEAVE |
 | [Сердцеед](#power_heart_taker) | POWER_HEART_TAKER |
 | [Прилив порчи](#power_corruption_surge) | POWER_CORRUPTION_SURGE |
-| [Кровь Ваал](#power_vaal_bloodline) | POWER_VAAL_BLOODLINE |
+| [Кровь Изнанки](#power_vaal_bloodline) | POWER_VAAL_BLOODLINE |
 | [Следопыт](#power_wayfinder) | POWER_WAYFINDER |
 | [Прокладка пути](#power_trailblaze) | POWER_TRAILBLAZE |
 | [Разведка](#power_survey) | POWER_SURVEY |
@@ -388,7 +388,7 @@
 | [Аппетит принца](#power_princes_appetite) | POWER_PRINCES_APPETITE |
 | [Лихорадка толпы](#power_crowd_fever) | POWER_CROWD_FEVER |
 | [Разогнать стаю](#power_scatter_the_pack) | POWER_SCATTER_THE_PACK |
-| [Осквернённое подношение](#power_desecrated_offering) | POWER_DESECRATED_OFFERING |
+| [Порченое подношение](#power_desecrated_offering) | POWER_DESECRATED_OFFERING |
 | [Порченое рвение](#power_corrupt_zeal) | POWER_CORRUPT_ZEAL |
 | [Закалённые шипы](#power_tempered_spines) | POWER_TEMPERED_SPINES |
 | [Закалённая кожа](#power_quenched_skin) | POWER_QUENCHED_SKIN |
@@ -426,7 +426,7 @@
 | [Опалённый приход](#power_scorched_arrival) | POWER_SCORCHED_ARRIVAL |
 | [Неразорванная нить](#power_unbroken_line) | POWER_UNBROKEN_LINE |
 | [Глубинное зрение](#power_depth_sight) | POWER_DEPTH_SIGHT |
-| [Ваальская кожа](#power_vaal_skin) | POWER_VAAL_SKIN |
+| [Изнаночная кожа](#power_vaal_skin) | POWER_VAAL_SKIN |
 | [Ползучая гниль](#power_spreading_rot) | POWER_SPREADING_ROT |
 | [Нанесённая добыча](#power_charted_spoils) | POWER_CHARTED_SPOILS |
 | [Шаг в сторону](#power_sidestep) | POWER_SIDESTEP |
@@ -482,7 +482,7 @@
 | [Чёрное пламя](#power_dark_consumption) | POWER_DARK_CONSUMPTION |
 | [Тёмный пир](#power_dark_feast) | POWER_DARK_FEAST |
 | [Гнев алтаря](#power_altar_wrath) | POWER_ALTAR_WRATH |
-| [Взгляд Ваал](#power_altar_vaal_sight) | POWER_ALTAR_VAAL_SIGHT |
+| [Взгляд Изнанки](#power_altar_vaal_sight) | POWER_ALTAR_VAAL_SIGHT |
 | [Костяная связка](#power_bone_binding) | POWER_BONE_BINDING |
 | [Костяной взрыв](#power_bone_burst) | POWER_BONE_BURST |
 | [Бесцветное пламя](#power_anvil_spark) | POWER_ANVIL_SPARK |
@@ -509,14 +509,14 @@
 | [Украденные огни](#power_lamp_hoard) | POWER_LAMP_HOARD |
 | [Укол шипа](#power_thorn_prick) | POWER_THORN_PRICK |
 | [Колючий ответ](#power_thorn_retort) | POWER_THORN_RETORT |
-| [Разум над плотью](#power_tribunal_mind) | POWER_TRIBUNAL_MIND |
+| [Разум трибунала](#power_tribunal_mind) | POWER_TRIBUNAL_MIND |
 | [Приговор](#power_tribunal_verdict) | POWER_TRIBUNAL_VERDICT |
 | [Индиговый разум](#power_indigo_mind) | POWER_INDIGO_MIND |
 | [Шёпот прилива](#power_indigo_surge) | POWER_INDIGO_SURGE |
 | [Попутный ветер](#power_sailcloth_fair_wind) | POWER_SAILCLOTH_FAIR_WIND |
 | [Выброшенное морем](#power_sailcloth_salvage) | POWER_SAILCLOTH_SALVAGE |
 | [Опытный оплот](#power_prototype_bulwark) | POWER_PROTOTYPE_BULWARK |
-| [Обшивка Ваал](#power_prototype_plating) | POWER_PROTOTYPE_PLATING |
+| [Обшивка Изнанки](#power_prototype_plating) | POWER_PROTOTYPE_PLATING |
 | [Заземление](#power_coil_grounding) | POWER_COIL_GROUNDING |
 | [Разряд](#power_coil_discharge) | POWER_COIL_DISCHARGE |
 | [Очаг Рубежа](#power_flamecloak_hearth) | POWER_FLAMECLOAK_HEARTH |
@@ -531,14 +531,14 @@
 | [Под молотом](#power_forge_dome_anvil) | POWER_FORGE_DOME_ANVIL |
 | [Переливание](#power_doctor_transfusion) | POWER_DOCTOR_TRANSFUSION |
 | [Миазмы](#power_doctor_miasma) | POWER_DOCTOR_MIASMA |
-| [Прививка хаоса](#power_embalmed) | POWER_EMBALMED |
-| [Печать бальзамировщика](#power_embalmers_seal) | POWER_EMBALMERS_SEAL |
+| [Бальзам нетления](#power_embalmed) | POWER_EMBALMED |
+| [Знак бальзамировщика](#power_embalmers_seal) | POWER_EMBALMERS_SEAL |
 | [Ледяная хватка](#power_rimesorrow_grip) | POWER_RIMESORROW_GRIP |
 | [Немеющие слёзы](#power_rimesorrow_numb) | POWER_RIMESORROW_NUMB |
 | [Кристальная мощь](#power_crystal_strength) | POWER_CRYSTAL_STRENGTH |
 | [Кристальный разум](#power_crystal_mind) | POWER_CRYSTAL_MIND |
 | [Кристальная грация](#power_crystal_grace) | POWER_CRYSTAL_GRACE |
-| [Осквернённая преданность](#power_caress_devotion) | POWER_CARESS_DEVOTION |
+| [Порченая преданность](#power_caress_devotion) | POWER_CARESS_DEVOTION |
 | [Презрение алтаря](#power_altar_scorn) | POWER_ALTAR_SCORN |
 | [Объятие глубин](#power_deep_embrace) | POWER_DEEP_EMBRACE |
 | [Ритм гребца](#power_keeper_oars) | POWER_KEEPER_OARS |
@@ -551,7 +551,7 @@
 | [Сменённое знамя](#power_turncoat_switch) | POWER_TURNCOAT_SWITCH |
 | [Самоцветный след](#power_plague_trail_hoard) | POWER_PLAGUE_TRAIL_HOARD |
 | [Зараза](#power_plague_trail_burst) | POWER_PLAGUE_TRAIL_BURST |
-| [Шаг разлома](#power_rift_step) | POWER_RIFT_STEP |
+| [Шаг в расщелину](#power_rift_step) | POWER_RIFT_STEP |
 | [След грозы](#power_stormwake_bolt) | POWER_STORMWAKE_BOLT |
 | [Горящий песок](#power_stormwake_stride) | POWER_STORMWAKE_STRIDE |
 | [Бросок монеты](#power_luckdash_gamble) | POWER_LUCKDASH_GAMBLE |
@@ -612,8 +612,8 @@
 | [Полное затмение](#power_aurora_eclipse) | POWER_AURORA_ECLIPSE |
 | [Иссохший сок](#power_giant_wither) | POWER_GIANT_WITHER |
 | [Корни великана](#power_giant_roots) | POWER_GIANT_ROOTS |
-| [Терпение Древнего](#power_elder_mirror) | POWER_ELDER_MIRROR |
-| [Укор Древнего](#power_elder_rebuke) | POWER_ELDER_REBUKE |
+| [Терпение Пустоты](#power_elder_mirror) | POWER_ELDER_MIRROR |
+| [Укор Пустоты](#power_elder_rebuke) | POWER_ELDER_REBUKE |
 | [Милость смотрителя](#power_charity_share) | POWER_CHARITY_SHARE |
 | [Сплочение](#power_charity_rally) | POWER_CHARITY_RALLY |
 | [Ледниковые наконечники](#power_glacier_tip) | POWER_GLACIER_TIP |
@@ -681,14 +681,14 @@
 | [Могильная клятва](#power_grave_oath) | POWER_GRAVE_OATH |
 | [Шёпот гибели](#power_whispered_doom) | POWER_WHISPERED_DOOM |
 | [Дань налётчика](#power_raiders_toll) | POWER_RAIDERS_TOLL |
-| [Долг Ваал](#power_vaal_debt) | POWER_VAAL_DEBT |
+| [Долг Изнанки](#power_vaal_debt) | POWER_VAAL_DEBT |
 | [Песнь улья](#power_hive_song) | POWER_HIVE_SONG |
 | [Облако спор](#power_spore_cloud) | POWER_SPORE_CLOUD |
 | [Сердце горна](#power_furnace_core) | POWER_FURNACE_CORE |
 | [Касание чумы](#power_plague_touch) | POWER_PLAGUE_TOUCH |
 | [Кровавый сглаз](#power_blood_hex) | POWER_BLOOD_HEX |
 | [Бесконечная осада](#power_endless_siege) | POWER_ENDLESS_SIEGE |
-| [Оскал бездны](#power_abyss_grin) | POWER_ABYSS_GRIN |
+| [Оскал Бездны](#power_abyss_grin) | POWER_ABYSS_GRIN |
 | [Сделка с пустотой](#power_void_trade) | POWER_VOID_TRADE |
 | [Голод глубин](#power_hunger_of_depths) | POWER_HUNGER_OF_DEPTHS |
 | [Двойные клыки](#power_twin_fangs) | POWER_TWIN_FANGS |
@@ -1393,7 +1393,7 @@
 
 ## POWER_ABYSS_DODGE <a href="#power_abyss_dodge" id="power_abyss_dodge"></a>
 
-### Уход в бездну <a href="#уход-в-бездну" id="уход-в-бездну"></a>
+### Уход в Бездну <a href="#уход-в-бездну" id="уход-в-бездну"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -1704,7 +1704,7 @@
 
 ## POWER_KAOMS_BLAZE <a href="#power_kaoms_blaze" id="power_kaoms_blaze"></a>
 
-### Пламя Каома <a href="#пламя-каома" id="пламя-каома"></a>
+### Пламя тризны <a href="#пламя-каома" id="пламя-каома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2004,7 +2004,7 @@
 
 ## POWER_BEREKS_STORM <a href="#power_bereks_storm" id="power_bereks_storm"></a>
 
-### Буря Берека <a href="#буря-берека" id="буря-берека"></a>
+### Ярость грозы <a href="#буря-берека" id="буря-берека"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2021,7 +2021,7 @@
 
 ## POWER_BEREKS_FROST <a href="#power_bereks_frost" id="power_bereks_frost"></a>
 
-### Мороз Берека <a href="#мороз-берека" id="мороз-берека"></a>
+### Хватка стужи <a href="#мороз-берека" id="мороз-берека"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2038,7 +2038,7 @@
 
 ## POWER_VENTORS_WAGER <a href="#power_ventors_wager" id="power_ventors_wager"></a>
 
-### Ставка Вентора <a href="#ставка-вентора" id="ставка-вентора"></a>
+### Ставка шулера <a href="#ставка-вентора" id="ставка-вентора"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2055,7 +2055,7 @@
 
 ## POWER_KAOMS_RAGE <a href="#power_kaoms_rage" id="power_kaoms_rage"></a>
 
-### Ярость Каома <a href="#ярость-каома" id="ярость-каома"></a>
+### Ярость пепельного вождя <a href="#ярость-каома" id="ярость-каома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2106,7 +2106,7 @@
 
 ## POWER_BISCOS_FIND <a href="#power_biscos_find" id="power_biscos_find"></a>
 
-### Находка Биско <a href="#находка-биско" id="находка-биско"></a>
+### Находка ищейки <a href="#находка-биско" id="находка-биско"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2157,7 +2157,7 @@
 
 ## POWER_SAFFELL_PRISM <a href="#power_saffell_prism" id="power_saffell_prism"></a>
 
-### Призма Саффелла <a href="#призма-саффелла" id="призма-саффелла"></a>
+### Призма заслона <a href="#призма-саффелла" id="призма-саффелла"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2208,7 +2208,7 @@
 
 ## POWER_HYRRIS_TOXIN <a href="#power_hyrris_toxin" id="power_hyrris_toxin"></a>
 
-### Яд Хирри <a href="#яд-хирри" id="яд-хирри"></a>
+### Яд ледяных шипов <a href="#яд-хирри" id="яд-хирри"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2225,7 +2225,7 @@
 
 ## POWER_BINOS_SPREAD <a href="#power_binos_spread" id="power_binos_spread"></a>
 
-### Рецепт Бино <a href="#рецепт-бино" id="рецепт-бино"></a>
+### Рецепт отравителя <a href="#рецепт-бино" id="рецепт-бино"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2259,7 +2259,7 @@
 
 ## POWER_LIONEYES_AIM <a href="#power_lioneyes_aim" id="power_lioneyes_aim"></a>
 
-### Прицел Львиного Глаза <a href="#прицел-львиного-глаза" id="прицел-львиного-глаза"></a>
+### Прицел ловчего <a href="#прицел-львиного-глаза" id="прицел-львиного-глаза"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -2276,7 +2276,7 @@
 
 ## POWER_MAROHI_CRUSH <a href="#power_marohi_crush" id="power_marohi_crush"></a>
 
-### Сокрушение Марохи <a href="#сокрушение-марохи" id="сокрушение-марохи"></a>
+### Удар валуна <a href="#сокрушение-марохи" id="сокрушение-марохи"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3000,7 +3000,7 @@
 
 ## POWER_ABYSSAL_GAZE <a href="#power_abyssal_gaze" id="power_abyssal_gaze"></a>
 
-### Взгляд бездны <a href="#взгляд-бездны" id="взгляд-бездны"></a>
+### Взор без дна <a href="#взгляд-бездны" id="взгляд-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3017,7 +3017,7 @@
 
 ## POWER_ABYSS_CALL <a href="#power_abyss_call" id="power_abyss_call"></a>
 
-### Зов бездны <a href="#зов-бездны" id="зов-бездны"></a>
+### Зов Бездны <a href="#зов-бездны" id="зов-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3119,7 +3119,7 @@
 
 ## POWER_ATZIRIS_VOW <a href="#power_atziris_vow" id="power_atziris_vow"></a>
 
-### Обет Атзири <a href="#обет-атзири" id="обет-атзири"></a>
+### Обет кровавой царицы <a href="#обет-атзири" id="обет-атзири"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3362,7 +3362,7 @@
 
 ## POWER_ABYSSAL_TIDE <a href="#power_abyssal_tide" id="power_abyssal_tide"></a>
 
-### Прилив бездны <a href="#прилив-бездны" id="прилив-бездны"></a>
+### Прилив Бездны <a href="#прилив-бездны" id="прилив-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3396,7 +3396,7 @@
 
 ## POWER_ABYSSAL_HEART <a href="#power_abyssal_heart" id="power_abyssal_heart"></a>
 
-### Сердце бездны <a href="#сердце-бездны" id="сердце-бездны"></a>
+### Сердце Бездны <a href="#сердце-бездны" id="сердце-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3894,7 +3894,7 @@
 
 ## POWER_KARUI_GRIT <a href="#power_karui_grit" id="power_karui_grit"></a>
 
-### Стойкость каруи <a href="#стойкость-каруи" id="стойкость-каруи"></a>
+### Упорство великана <a href="#стойкость-каруи" id="стойкость-каруи"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -3945,7 +3945,7 @@
 
 ## POWER_KAOMS_ENDURANCE <a href="#power_kaoms_endurance" id="power_kaoms_endurance"></a>
 
-### Стойкость Каома <a href="#стойкость-каома" id="стойкость-каома"></a>
+### Стойкость пепельного вождя <a href="#стойкость-каома" id="стойкость-каома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -5513,7 +5513,7 @@
 
 ## POWER_VAAL_OFFERING <a href="#power_vaal_offering" id="power_vaal_offering"></a>
 
-### Подношение Ваал <a href="#подношение-ваал" id="подношение-ваал"></a>
+### Подношение Изнанки <a href="#подношение-ваал" id="подношение-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -5694,7 +5694,7 @@
 
 ## POWER_VAAL_BLOODLINE <a href="#power_vaal_bloodline" id="power_vaal_bloodline"></a>
 
-### Кровь Ваал <a href="#кровь-ваал" id="кровь-ваал"></a>
+### Кровь Изнанки <a href="#кровь-ваал" id="кровь-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -7173,7 +7173,7 @@
 
 ## POWER_DESECRATED_OFFERING <a href="#power_desecrated_offering" id="power_desecrated_offering"></a>
 
-### Осквернённое подношение <a href="#осквернённое-подношение" id="осквернённое-подношение"></a>
+### Порченое подношение <a href="#осквернённое-подношение" id="осквернённое-подношение"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -7813,7 +7813,7 @@
 
 ## POWER_VAAL_SKIN <a href="#power_vaal_skin" id="power_vaal_skin"></a>
 
-### Ваальская кожа <a href="#ваальская-кожа" id="ваальская-кожа"></a>
+### Изнаночная кожа <a href="#ваальская-кожа" id="ваальская-кожа"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -8747,7 +8747,7 @@
 
 ## POWER_ALTAR_VAAL_SIGHT <a href="#power_altar_vaal_sight" id="power_altar_vaal_sight"></a>
 
-### Взгляд Ваал <a href="#взгляд-ваал" id="взгляд-ваал"></a>
+### Взгляд Изнанки <a href="#взгляд-ваал" id="взгляд-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -9206,7 +9206,7 @@
 
 ## POWER_TRIBUNAL_MIND <a href="#power_tribunal_mind" id="power_tribunal_mind"></a>
 
-### Разум над плотью <a href="#разум-над-плотью" id="разум-над-плотью"></a>
+### Разум трибунала <a href="#разум-над-плотью" id="разум-над-плотью"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -9325,7 +9325,7 @@
 
 ## POWER_PROTOTYPE_PLATING <a href="#power_prototype_plating" id="power_prototype_plating"></a>
 
-### Обшивка Ваал <a href="#обшивка-ваал" id="обшивка-ваал"></a>
+### Обшивка Изнанки <a href="#обшивка-ваал" id="обшивка-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -9580,7 +9580,7 @@
 
 ## POWER_EMBALMED <a href="#power_embalmed" id="power_embalmed"></a>
 
-### Прививка хаоса <a href="#прививка-хаоса" id="прививка-хаоса"></a>
+### Бальзам нетления <a href="#прививка-хаоса" id="прививка-хаоса"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -9597,7 +9597,7 @@
 
 ## POWER_EMBALMERS_SEAL <a href="#power_embalmers_seal" id="power_embalmers_seal"></a>
 
-### Печать бальзамировщика <a href="#печать-бальзамировщика" id="печать-бальзамировщика"></a>
+### Знак бальзамировщика <a href="#печать-бальзамировщика" id="печать-бальзамировщика"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -9699,7 +9699,7 @@
 
 ## POWER_CARESS_DEVOTION <a href="#power_caress_devotion" id="power_caress_devotion"></a>
 
-### Осквернённая преданность <a href="#осквернённая-преданность" id="осквернённая-преданность"></a>
+### Порченая преданность <a href="#осквернённая-преданность" id="осквернённая-преданность"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -9914,7 +9914,7 @@
 
 ## POWER_RIFT_STEP <a href="#power_rift_step" id="power_rift_step"></a>
 
-### Шаг разлома <a href="#шаг-разлома" id="шаг-разлома"></a>
+### Шаг в расщелину <a href="#шаг-разлома" id="шаг-разлома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -10939,7 +10939,7 @@
 
 ## POWER_ELDER_MIRROR <a href="#power_elder_mirror" id="power_elder_mirror"></a>
 
-### Терпение Древнего <a href="#терпение-древнего" id="терпение-древнего"></a>
+### Терпение Пустоты <a href="#терпение-древнего" id="терпение-древнего"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -10956,7 +10956,7 @@
 
 ## POWER_ELDER_REBUKE <a href="#power_elder_rebuke" id="power_elder_rebuke"></a>
 
-### Укор Древнего <a href="#укор-древнего" id="укор-древнего"></a>
+### Укор Пустоты <a href="#укор-древнего" id="укор-древнего"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -12088,7 +12088,7 @@
 
 ## POWER_VAAL_DEBT <a href="#power_vaal_debt" id="power_vaal_debt"></a>
 
-### Долг Ваал <a href="#долг-ваал" id="долг-ваал"></a>
+### Долг Изнанки <a href="#долг-ваал" id="долг-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -12207,7 +12207,7 @@
 
 ## POWER_ABYSS_GRIN <a href="#power_abyss_grin" id="power_abyss_grin"></a>
 
-### Оскал бездны <a href="#оскал-бездны" id="оскал-бездны"></a>
+### Оскал Бездны <a href="#оскал-бездны" id="оскал-бездны"></a>
 
 **Чтение свойства** (`{v}` — значение):
 

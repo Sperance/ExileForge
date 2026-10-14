@@ -65,7 +65,7 @@
 | `orbs.choices` | 3 |
 | `flasks.starter` | [Small Life Flask](../Equipment/Equipment-FLASK.md#flask_small_life) |
 | `flasks.maxQuality` | 20 |
-| `flasks.orbs` | [Orb of Transmutation](../Items/Items-CURRENCY.md#orb_of_transmutation); [Orb of Alteration](../Items/Items-CURRENCY.md#orb_of_alteration); [Orb of Augmentation](../Items/Items-CURRENCY.md#orb_of_augmentation); [Orb of Scouring](../Items/Items-CURRENCY.md#orb_of_scouring); [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance); [Blessed Orb](../Items/Items-CURRENCY.md#blessed_orb); [Divine Orb](../Items/Items-CURRENCY.md#divine_orb); [Vaal Orb](../Items/Items-CURRENCY.md#vaal_orb); [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
+| `flasks.orbs` | [Orb of Transmutation](../Items/Items-CURRENCY.md#orb_of_transmutation); [Orb of Alteration](../Items/Items-CURRENCY.md#orb_of_alteration); [Orb of Augmentation](../Items/Items-CURRENCY.md#orb_of_augmentation); [Orb of Scouring](../Items/Items-CURRENCY.md#orb_of_scouring); [Orb of Chance](../Items/Items-CURRENCY.md#orb_of_chance); [Blessed Orb](../Items/Items-CURRENCY.md#blessed_orb); [Divine Orb](../Items/Items-CURRENCY.md#divine_orb); [Orb of the Underside](../Items/Items-CURRENCY.md#vaal_orb); [Orb of Quality](../Items/Items-CURRENCY.md#quality_orb) |
 | `starter.gold` | 25 |
 | `starter.toolPrefix` | `BRONZE_` |
 | `starter.orbs.ORB_OF_TRANSMUTATION` | 5 |

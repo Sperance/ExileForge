@@ -2,11 +2,11 @@
 
 | Зона | Уровень | Страж | Открывается из |
 | --- | --- | --- | --- |
-| [Край разлома](#c6_rift_edge) | 61 | [Страж разлома](../reference/Bosses.md#boss_rift_watcher) | [Цитадель Пламени](World-REGION_5.md#c5_flame_citadel) |
+| [Край пропасти](#c6_rift_edge) | 61 | [Страж пропасти](../reference/Bosses.md#boss_rift_watcher) | [Цитадель Пламени](World-REGION_5.md#c5_flame_citadel) |
 | [Чумные поля](#c6_blighted_fields) | 61 | [Чумной жнец](../reference/Bosses.md#boss_plague_reaper) | [Цитадель Пламени](World-REGION_5.md#c5_flame_citadel) |
-| [Покинутое аббатство](#c6_forsaken_abbey) | 61 | [Падший аббат](../reference/Bosses.md#boss_fallen_abbot) | [Цитадель Пламени](World-REGION_5.md#c5_flame_citadel) |
-| [Шепчущая пропасть](#c6_whispering_chasm) | 63 | [Шептун](../reference/Bosses.md#boss_whisperer) | [Край разлома](#c6_rift_edge) |
-| [Гниющий сад](#c6_rotting_orchard) | 63 | [Садовник гнили](../reference/Bosses.md#boss_rot_gardener) | [Край разлома](#c6_rift_edge); [Чумные поля](#c6_blighted_fields) |
+| [Покинутое аббатство](#c6_forsaken_abbey) | 61 | [Падший настоятель](../reference/Bosses.md#boss_fallen_abbot) | [Цитадель Пламени](World-REGION_5.md#c5_flame_citadel) |
+| [Шепчущая пропасть](#c6_whispering_chasm) | 63 | [Шептун](../reference/Bosses.md#boss_whisperer) | [Край пропасти](#c6_rift_edge) |
+| [Гниющий сад](#c6_rotting_orchard) | 63 | [Садовник гнили](../reference/Bosses.md#boss_rot_gardener) | [Край пропасти](#c6_rift_edge); [Чумные поля](#c6_blighted_fields) |
 | [Чумная деревня](#c6_plague_village) | 63 | [Чумной лекарь](../reference/Bosses.md#boss_plague_doctor) | [Чумные поля](#c6_blighted_fields); [Покинутое аббатство](#c6_forsaken_abbey) |
 | [Костница](#c6_ossuary) | 63 | [Собиратель костей](../reference/Bosses.md#boss_bone_collector) | [Покинутое аббатство](#c6_forsaken_abbey) |
 | [Берег пустоты](#c6_void_shore) | 65 | [Кракен пустоты](../reference/Bosses.md#boss_void_kraken) | [Шепчущая пропасть](#c6_whispering_chasm) |
@@ -16,7 +16,7 @@
 | [Иссохший лес](#c6_withered_wood) | 67 | [Иссохший великан](../reference/Bosses.md#boss_withered_giant) | [Берег пустоты](#c6_void_shore); [Споровый собор](#c6_spore_cathedral) |
 | [Алтарь затмения](#c6_eclipse_altar) | 67 | [Жрица затмения](../reference/Bosses.md#boss_eclipse_priestess) | [Споровый собор](#c6_spore_cathedral); [Павшая звезда](#c6_fallen_star) |
 | [Беззвёздная глубь](#c6_starless_deep) | 67 | [Безглазый](../reference/Bosses.md#boss_eyeless_one) | [Павшая звезда](#c6_fallen_star) |
-| [Гнилое сердце](#c6_rotten_heart) | 69 | [Мать гнили](../reference/Bosses.md#boss_mother_blight) | [Иссохший лес](#c6_withered_wood) |
+| [Гнилое сердце](#c6_rotten_heart) | 69 | [Гнилосердая](../reference/Bosses.md#boss_mother_blight) | [Иссохший лес](#c6_withered_wood) |
 | [Завеса теней](#c6_veil_of_shadows) | 69 | [Ткач завесы](../reference/Bosses.md#boss_veil_weaver) | [Иссохший лес](#c6_withered_wood); [Алтарь затмения](#c6_eclipse_altar) |
 | [Бесконечная лестница](#c6_endless_stair) | 69 | [Вечный привратник](../reference/Bosses.md#boss_endless_warden) | [Алтарь затмения](#c6_eclipse_altar); [Беззвёздная глубь](#c6_starless_deep) |
 | [Трон бездны](#c6_abyssal_throne) | 70 | [Король бездны](../reference/Bosses.md#boss_abyss_king) | [Гнилое сердце](#c6_rotten_heart); [Завеса теней](#c6_veil_of_shadows); [Бесконечная лестница](#c6_endless_stair) |
@@ -24,7 +24,7 @@
 
 ## C6_RIFT_EDGE <a href="#c6_rift_edge" id="c6_rift_edge"></a>
 
-### Край разлома <a href="#край-разлома" id="край-разлома"></a>
+### Край пропасти <a href="#край-разлома" id="край-разлома"></a>
 
 Земля обрывается в пустоту, и пустота смотрит в ответ.
 
@@ -34,12 +34,12 @@
 | Биом · `biome` | `ABYSS` |
 | Уровень · `level` | 61 |
 | Предшествующие зоны · `from` | [Цитадель Пламени](World-REGION_5.md#c5_flame_citadel) |
-| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун бездны](../reference/Monsters.md#abyss_crawler); [Тень бездны](../reference/Monsters.md#abyssal_shade) |
+| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун Бездны](../reference/Monsters.md#abyss_crawler); [Тень Бездны](../reference/Monsters.md#abyssal_shade) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
-| Страж · `boss` | [Страж разлома](../reference/Bosses.md#boss_rift_watcher) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Страж · `boss` | [Страж пропасти](../reference/Bosses.md#boss_rift_watcher) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -61,7 +61,7 @@
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Чумной жнец](../reference/Bosses.md#boss_plague_reaper) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -78,12 +78,12 @@
 | Биом · `biome` | `TEMPLE` |
 | Уровень · `level` | 61 |
 | Предшествующие зоны · `from` | [Цитадель Пламени](World-REGION_5.md#c5_flame_citadel) |
-| Монстры · `monsters` | [Чумоносец](../reference/Monsters.md#plague_bearer); [Тень бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn) |
+| Монстры · `monsters` | [Чумоносец](../reference/Monsters.md#plague_bearer); [Тень Бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
-| Страж · `boss` | [Падший аббат](../reference/Bosses.md#boss_fallen_abbot) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Страж · `boss` | [Падший настоятель](../reference/Bosses.md#boss_fallen_abbot) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -99,13 +99,13 @@
 | --- | --- |
 | Биом · `biome` | `ABYSS` |
 | Уровень · `level` | 63 |
-| Предшествующие зоны · `from` | [Край разлома](#c6_rift_edge) |
-| Монстры · `monsters` | [Тень бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун бездны](../reference/Monsters.md#abyss_crawler) |
+| Предшествующие зоны · `from` | [Край пропасти](#c6_rift_edge) |
+| Монстры · `monsters` | [Тень Бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун Бездны](../reference/Monsters.md#abyss_crawler) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Шептун](../reference/Bosses.md#boss_whisperer) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -121,13 +121,13 @@
 | --- | --- |
 | Биом · `biome` | `BLIGHT` |
 | Уровень · `level` | 63 |
-| Предшествующие зоны · `from` | [Край разлома](#c6_rift_edge); [Чумные поля](#c6_blighted_fields) |
+| Предшествующие зоны · `from` | [Край пропасти](#c6_rift_edge); [Чумные поля](#c6_blighted_fields) |
 | Монстры · `monsters` | [Гнилошляп](../reference/Monsters.md#blightcap); [Чумная оса](../reference/Monsters.md#plague_wasp); [Чумоносец](../reference/Monsters.md#plague_bearer) |
 | Количество · `count` | 51; 66 |
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Садовник гнили](../reference/Bosses.md#boss_rot_gardener) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -149,7 +149,7 @@
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Чумной лекарь](../reference/Bosses.md#boss_plague_doctor) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -166,12 +166,12 @@
 | Биом · `biome` | `CRYPT` |
 | Уровень · `level` | 63 |
 | Предшествующие зоны · `from` | [Покинутое аббатство](#c6_forsaken_abbey) |
-| Монстры · `monsters` | [Чумоносец](../reference/Monsters.md#plague_bearer); [Ползун бездны](../reference/Monsters.md#abyss_crawler); [Тень бездны](../reference/Monsters.md#abyssal_shade) |
+| Монстры · `monsters` | [Чумоносец](../reference/Monsters.md#plague_bearer); [Ползун Бездны](../reference/Monsters.md#abyss_crawler); [Тень Бездны](../reference/Monsters.md#abyssal_shade) |
 | Количество · `count` | 51; 66 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Собиратель костей](../reference/Bosses.md#boss_bone_collector) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -188,12 +188,12 @@
 | Биом · `biome` | `ABYSS` |
 | Уровень · `level` | 65 |
 | Предшествующие зоны · `from` | [Шепчущая пропасть](#c6_whispering_chasm) |
-| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Тень бездны](../reference/Monsters.md#abyssal_shade); [Ползун бездны](../reference/Monsters.md#abyss_crawler) |
+| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Тень Бездны](../reference/Monsters.md#abyssal_shade); [Ползун Бездны](../reference/Monsters.md#abyss_crawler) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Кракен пустоты](../reference/Bosses.md#boss_void_kraken) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -210,12 +210,12 @@
 | Биом · `biome` | `BLIGHT` |
 | Уровень · `level` | 65 |
 | Предшествующие зоны · `from` | [Гниющий сад](#c6_rotting_orchard); [Чумная деревня](#c6_plague_village) |
-| Монстры · `monsters` | [Гнилошляп](../reference/Monsters.md#blightcap); [Чумоносец](../reference/Monsters.md#plague_bearer); [Тень бездны](../reference/Monsters.md#abyssal_shade) |
+| Монстры · `monsters` | [Гнилошляп](../reference/Monsters.md#blightcap); [Чумоносец](../reference/Monsters.md#plague_bearer); [Тень Бездны](../reference/Monsters.md#abyssal_shade) |
 | Количество · `count` | 51; 66 |
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Споровый кардинал](../reference/Bosses.md#boss_spore_cardinal) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -232,12 +232,12 @@
 | Биом · `biome` | `ABYSS` |
 | Уровень · `level` | 65 |
 | Предшествующие зоны · `from` | [Чумная деревня](#c6_plague_village) |
-| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун бездны](../reference/Monsters.md#abyss_crawler); [Чумная оса](../reference/Monsters.md#plague_wasp) |
+| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун Бездны](../reference/Monsters.md#abyss_crawler); [Чумная оса](../reference/Monsters.md#plague_wasp) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Звёздное отродье](../reference/Bosses.md#boss_star_spawn) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -254,12 +254,12 @@
 | Биом · `biome` | `CRYPT` |
 | Уровень · `level` | 67 |
 | Предшествующие зоны · `from` | [Берег пустоты](#c6_void_shore) |
-| Монстры · `monsters` | [Ползун бездны](../reference/Monsters.md#abyss_crawler); [Чумоносец](../reference/Monsters.md#plague_bearer); [Тень бездны](../reference/Monsters.md#abyssal_shade) |
+| Монстры · `monsters` | [Ползун Бездны](../reference/Monsters.md#abyss_crawler); [Чумоносец](../reference/Monsters.md#plague_bearer); [Тень Бездны](../reference/Monsters.md#abyssal_shade) |
 | Количество · `count` | 51; 66 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Червь катакомб](../reference/Bosses.md#boss_catacomb_worm) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -281,7 +281,7 @@
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Иссохший великан](../reference/Bosses.md#boss_withered_giant) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -298,12 +298,12 @@
 | Биом · `biome` | `TEMPLE` |
 | Уровень · `level` | 67 |
 | Предшествующие зоны · `from` | [Споровый собор](#c6_spore_cathedral); [Павшая звезда](#c6_fallen_star) |
-| Монстры · `monsters` | [Тень бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Чумоносец](../reference/Monsters.md#plague_bearer) |
+| Монстры · `monsters` | [Тень Бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Чумоносец](../reference/Monsters.md#plague_bearer) |
 | Количество · `count` | 51; 66 |
 | light | 0.85 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Жрица затмения](../reference/Bosses.md#boss_eclipse_priestess) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -320,12 +320,12 @@
 | Биом · `biome` | `ABYSS` |
 | Уровень · `level` | 67 |
 | Предшествующие зоны · `from` | [Павшая звезда](#c6_fallen_star) |
-| Монстры · `monsters` | [Ползун бездны](../reference/Monsters.md#abyss_crawler); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Тень бездны](../reference/Monsters.md#abyssal_shade) |
+| Монстры · `monsters` | [Ползун Бездны](../reference/Monsters.md#abyss_crawler); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Тень Бездны](../reference/Monsters.md#abyssal_shade) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Безглазый](../reference/Bosses.md#boss_eyeless_one) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -346,8 +346,8 @@
 | Количество · `count` | 51; 66 |
 | light | 0.75 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
-| Страж · `boss` | [Мать гнили](../reference/Bosses.md#boss_mother_blight) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Страж · `boss` | [Гнилосердая](../reference/Bosses.md#boss_mother_blight) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -364,12 +364,12 @@
 | Биом · `biome` | `ABYSS` |
 | Уровень · `level` | 69 |
 | Предшествующие зоны · `from` | [Иссохший лес](#c6_withered_wood); [Алтарь затмения](#c6_eclipse_altar) |
-| Монстры · `monsters` | [Тень бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун бездны](../reference/Monsters.md#abyss_crawler) |
+| Монстры · `monsters` | [Тень Бездны](../reference/Monsters.md#abyssal_shade); [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун Бездны](../reference/Monsters.md#abyss_crawler) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Ткач завесы](../reference/Bosses.md#boss_veil_weaver) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -386,12 +386,12 @@
 | Биом · `biome` | `ABYSS` |
 | Уровень · `level` | 69 |
 | Предшествующие зоны · `from` | [Алтарь затмения](#c6_eclipse_altar); [Беззвёздная глубь](#c6_starless_deep) |
-| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун бездны](../reference/Monsters.md#abyss_crawler); [Чумная оса](../reference/Monsters.md#plague_wasp) |
+| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Ползун Бездны](../reference/Monsters.md#abyss_crawler); [Чумная оса](../reference/Monsters.md#plague_wasp) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Вечный привратник](../reference/Bosses.md#boss_endless_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -409,12 +409,12 @@
 | Уровень · `level` | 70 |
 | Предшествующие зоны · `from` | [Гнилое сердце](#c6_rotten_heart); [Завеса теней](#c6_veil_of_shadows); [Бесконечная лестница](#c6_endless_stair) |
 | Финал региона · `finale` | Да |
-| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Тень бездны](../reference/Monsters.md#abyssal_shade); [Ползун бездны](../reference/Monsters.md#abyss_crawler); [Чумоносец](../reference/Monsters.md#plague_bearer) |
+| Монстры · `monsters` | [Порождение пустоты](../reference/Monsters.md#void_spawn); [Тень Бездны](../reference/Monsters.md#abyssal_shade); [Ползун Бездны](../reference/Monsters.md#abyss_crawler); [Чумоносец](../reference/Monsters.md#plague_bearer) |
 | Количество · `count` | 51; 66 |
 | light | 0.6 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_6](../reference/Tables/Tables-LOOT.md#loot-chest_6) |
 | Страж · `boss` | [Король бездны](../reference/Bosses.md#boss_abyss_king) |
-| Изначально осквернён · `corrupted` | [Осквернённый Архонт](../reference/Monsters.md#corrupted_6) |
+| Изначально осквернён · `corrupted` | [Порченый архонт](../reference/Monsters.md#corrupted_6) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

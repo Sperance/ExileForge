@@ -31,7 +31,7 @@
 | [Void Fletching](#void_fletching) | Уникальный | 65 |
 | [The Lone Arrow](#the_lone_arrow) | Уникальный | 18 |
 | [Starlight Quiver](#starlight_quiver) | Редкий | 85 |
-| [Prism Hunter's Trophy](#prism_hunters_trophy) | Уникальный | 78 |
+| [The Prism Hunter's Trophy](#prism_hunters_trophy) | Уникальный | 78 |
 | [The Barbed Hunt](#the_barbed_hunt) | Уникальный | 44 |
 | [Starhunter Quiver](#starhunter_quiver) | Уникальный | 60 |
 
@@ -241,7 +241,7 @@
 - +15–25 к урону от холода · [Урон холодом](../reference/Stats/Stats-HERO.md#stock_attack_cold)
 - 0.4–0.8% физического урона атак крадётся здоровьем · [Физический вампиризм](../reference/Stats/Stats-HERO.md#stock_leech_physical)
 - 40–60% увеличение длительности кровотечения на врагах · [Длительность кровотечения](../reference/Stats/Stats-HERO.md#stock_bleed_duration)
-- Охлаждение врага с шансом 40–60% вызывает у него кровотечение · [Яд Хирри](../reference/Stats/Stats-POWER.md#power_hyrris_toxin)
+- Охлаждение врага с шансом 40–60% вызывает у него кровотечение · [Яд ледяных шипов](../reference/Stats/Stats-POWER.md#power_hyrris_toxin)
 - Убийство кровоточащего врага с шансом 30–50% охлаждает всех врагов · [Мёрзлая рана](../reference/Stats/Stats-POWER.md#power_frozen_wound)
 
 
@@ -755,7 +755,7 @@
 
 ## PRISM_HUNTERS_TROPHY <a href="#prism_hunters_trophy" id="prism_hunters_trophy"></a>
 
-### Prism Hunter's Trophy <a href="#prism-hunters-trophy" id="prism-hunters-trophy"></a>
+### The Prism Hunter's Trophy <a href="#prism-hunters-trophy" id="prism-hunters-trophy"></a>
 
 Каждая стрела — цвет, каждый цвет — смерть.
 
@@ -845,7 +845,7 @@
 | --- | --- |
 | Слот · `slot` | `QUIVER` |
 | Редкость · `rarity` | `UNIQUE` |
-| Класс · `heroClass` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Класс · `heroClass` | [Следопытка (Ranger)](../Classes.md#ranger) |
 
 ---
 Основание: [актуальный исходник](https://github.com/Sperance/ktor-bestgame/blob/fa8c3991681e20ef4d62548bf954d0b031a905a5/src/main/resources/content/equipment.json), срез `fa8c399` / клиент `9faca17`, 03.10.2026.

@@ -54,7 +54,7 @@
 
 ## POWER_MAROHI_CRUSH <a href="#power_marohi_crush" id="power_marohi_crush"></a>
 
-### Сокрушение Марохи <a href="#сокрушение-марохи" id="сокрушение-марохи"></a>
+### Удар валуна <a href="#сокрушение-марохи" id="сокрушение-марохи"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -65,7 +65,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Сокрушение Марохи](../Stats/Stats-POWER.md#power_marohi_crush) |
+| Характеристика · `stat` | [Удар валуна](../Stats/Stats-POWER.md#power_marohi_crush) |
 | sheet | Операция: `MORE`; to: [Физический урон](../Stats/Stats-HERO.md#stock_attack_physical); Операция: `MORE`; to: [Скорость атаки](../Stats/Stats-HERO.md#stock_attack_speed); Значение: -15 |
 
 

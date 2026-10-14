@@ -749,7 +749,7 @@
 | `professions[4].jobs[28].level` | 24 |
 | `professions[4].jobs[28].seconds` | 600 |
 | `professions[4].jobs[28].nothing` | 35 |
-| `professions[4].jobs[28].output` | [Vaal Orb](../Items/Items-CURRENCY.md#vaal_orb) |
+| `professions[4].jobs[28].output` | [Orb of the Underside](../Items/Items-CURRENCY.md#vaal_orb) |
 | `professions[4].jobs[28].experience` | 20 |
 | `professions[4].jobs[28].extra` | — |
 | `professions[4].jobs[28].kind` | `ITEM` |

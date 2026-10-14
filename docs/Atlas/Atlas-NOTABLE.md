@@ -262,8 +262,8 @@
 
 **Свойства**
 
-- 15% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
-- 4.8% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 15% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 4.8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -278,8 +278,8 @@
 
 **Свойства**
 
-- 9% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
-- +1 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов Ваал-зоны](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
+- 9% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- +1 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
 
 
 | Параметр | Значение |
@@ -423,7 +423,7 @@
 **Свойства**
 
 - +2.4% к шансу, что выпавшая карта захвачена влиянием · [Атлас: захваченные карты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_map_influence)
-- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +3% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -438,7 +438,7 @@
 
 **Свойства**
 
-- +4.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +4.8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 - Монстры захваченных карт: 4.8% больше здоровья и урона (и больше награда) · [Атлас: сила захваченных карт](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_power)
 
 
@@ -710,8 +710,8 @@
 
 **Свойства**
 
-- 25% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
-- 8% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 25% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 8% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -726,8 +726,8 @@
 
 **Свойства**
 
-- 15% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
-- +1 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов Ваал-зоны](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
+- 15% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- +1 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
 
 
 | Параметр | Значение |
@@ -743,7 +743,7 @@
 **Свойства**
 
 - 35% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
-- 10% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 10% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -983,7 +983,7 @@
 **Свойства**
 
 - +4% к шансу, что выпавшая карта захвачена влиянием · [Атлас: захваченные карты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_map_influence)
-- +5% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +5% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -998,7 +998,7 @@
 
 **Свойства**
 
-- +8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +8% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 - Монстры захваченных карт: 8% больше здоровья и урона (и больше награда) · [Атлас: сила захваченных карт](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_power)
 
 
@@ -1015,7 +1015,7 @@
 **Свойства**
 
 - +5% к шансу, что выпавшая карта захвачена влиянием · [Атлас: захваченные карты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_map_influence)
-- +5% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +5% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -1270,8 +1270,8 @@
 
 **Свойства**
 
-- 35% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
-- 11.2% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- 35% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 11.2% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
 
 
 | Параметр | Значение |
@@ -1286,8 +1286,8 @@
 
 **Свойства**
 
-- 21% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
-- +1 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов Ваал-зоны](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
+- 21% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- +1 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
 
 
 | Параметр | Значение |
@@ -1303,7 +1303,7 @@
 **Свойства**
 
 - 49% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
-- 14% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 14% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 
 
 | Параметр | Значение |
@@ -1526,7 +1526,7 @@
 **Свойства**
 
 - +5.6% к шансу, что выпавшая карта захвачена влиянием · [Атлас: захваченные карты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_map_influence)
-- +7% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +7% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |
@@ -1541,7 +1541,7 @@
 
 **Свойства**
 
-- +11.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +11.2% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 - Монстры захваченных карт: 11.2% больше здоровья и урона (и больше награда) · [Атлас: сила захваченных карт](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_power)
 
 
@@ -1558,7 +1558,7 @@
 **Свойства**
 
 - +7% к шансу, что выпавшая карта захвачена влиянием · [Атлас: захваченные карты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_map_influence)
-- +7% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи влияния](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
+- +7% к шансу, что вещь с захваченной карты несёт её влияние · [Атлас: вещи с влиянием](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_items)
 
 
 | Параметр | Значение |

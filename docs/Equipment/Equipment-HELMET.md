@@ -33,7 +33,7 @@
 | [Great Helmet](#great_helmet) | Волшебный | 22 |
 | [Aventail Helmet](#aventail_helmet) | Редкий | 37 |
 | [Warden Crown](#warden_crown) | Редкий | 48 |
-| [Magistrate Crown](#magistrate_crown) | Редкий | 58 |
+| [Judge's Crown](#magistrate_crown) | Редкий | 58 |
 | [Praetor Crown](#praetor_crown) | Редкий | 68 |
 | [Scare Mask](#scare_mask) | Обычный | 1 |
 | [Iron Mask](#iron_mask) | Волшебный | 17 |
@@ -81,7 +81,7 @@
 | [Astral Diadem](#astral_diadem) | Редкий | 88 |
 | [Voidgaze Mask](#voidgaze_mask) | Редкий | 88 |
 | [Windrunner Hood](#windrunner_hood) | Редкий | 88 |
-| [Mirror Knight's Visor](#mirror_knights_visor) | Уникальный | 80 |
+| [The Mirror Knight's Visor](#mirror_knights_visor) | Уникальный | 80 |
 | [Sovereign's Skycrown](#sovereigns_skycrown) | Уникальный | 80 |
 | [The Drowned Emperor's Crown](#emperors_drowned_crown) | Уникальный | 90 |
 | [The Stargazer's Lens](#stargazers_lens) | Уникальный | 97 |
@@ -798,9 +798,9 @@
 
 ## MAGISTRATE_CROWN <a href="#magistrate_crown" id="magistrate_crown"></a>
 
-### Magistrate Crown <a href="#magistrate-crown" id="magistrate-crown"></a>
+### Judge's Crown <a href="#magistrate-crown" id="magistrate-crown"></a>
 
-**Русское название:** Корона магистрата
+**Русское название:** Корона судьи
 
 **Редкий · Шлемы**
 
@@ -1260,8 +1260,8 @@
 - +60–80 к максимуму энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
 - +30–40% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
 - -8–-6% увеличение получаемого урона · [Получаемый урон](../reference/Stats/Stats-HERO.md#stock_damage_taken)
-- +4–6% урона за каждого проклятого врага, до 5 · [Взгляд бездны](../reference/Stats/Stats-POWER.md#power_abyssal_gaze)
-- С шансом 50–80% в начале боя проклинает всех врагов · [Зов бездны](../reference/Stats/Stats-POWER.md#power_abyss_call)
+- +4–6% урона за каждого проклятого врага, до 5 · [Взор без дна](../reference/Stats/Stats-POWER.md#power_abyssal_gaze)
+- С шансом 50–80% в начале боя проклинает всех врагов · [Зов Бездны](../reference/Stats/Stats-POWER.md#power_abyss_call)
 
 
 | Параметр | Значение |
@@ -1930,7 +1930,7 @@
 - +40–60 к максимуму маны · [Мана](../reference/Stats/Stats-HERO.md#stock_mana)
 - 30% увеличение скорости регенерации маны · [Восстановление маны](../reference/Stats/Stats-HERO.md#stock_mana_regen)
 - +15–25 к урону от молнии · [Урон молнией](../reference/Stats/Stats-HERO.md#stock_attack_lightning)
-- 18–22% получаемого урона снимается с маны до здоровья · [Разум над плотью](../reference/Stats/Stats-POWER.md#power_tribunal_mind)
+- 18–22% получаемого урона снимается с маны до здоровья · [Разум трибунала](../reference/Stats/Stats-POWER.md#power_tribunal_mind)
 - 20–30% к урону молнией, пока маны больше 50% · [Приговор](../reference/Stats/Stats-POWER.md#power_tribunal_verdict)
 
 
@@ -2070,7 +2070,7 @@
 - Наносящие урон состояния действуют на 8–12% быстрее · [Ускорение урона состояний](../reference/Stats/Stats-HERO.md#stock_faster_ailments)
 - +50–70 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - Каждые 5 с с шансом 30–45% отравляет всех врагов · [Облако спор](../reference/Stats/Stats-POWER.md#power_spore_cloud)
-- Убийство отравленного врага с шансом 50–80% переносит его состояния на остальных врагов · [Рецепт Бино](../reference/Stats/Stats-POWER.md#power_binos_spread)
+- Убийство отравленного врага с шансом 50–80% переносит его состояния на остальных врагов · [Рецепт отравителя](../reference/Stats/Stats-POWER.md#power_binos_spread)
 
 
 | Параметр | Значение |
@@ -2139,8 +2139,8 @@
 - 20–30% шанс получить Нечестивую мощь при убийстве · [Нечестивая мощь при убийстве](../reference/Stats/Stats-HERO.md#stock_unholy_might_on_kill)
 - +20–30% к сопротивлению хаосу · [Сопротивление хаосу](../reference/Stats/Stats-HERO.md#stock_resist_chaos)
 - +40–60 к максимуму энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
-- Убийство с шансом 10–20% проклинает всех врагов · [Оскал бездны](../reference/Stats/Stats-POWER.md#power_abyss_grin)
-- Уклонение с шансом 30–50% проклинает нападавшего · [Уход в бездну](../reference/Stats/Stats-POWER.md#power_abyss_dodge)
+- Убийство с шансом 10–20% проклинает всех врагов · [Оскал Бездны](../reference/Stats/Stats-POWER.md#power_abyss_grin)
+- Уклонение с шансом 30–50% проклинает нападавшего · [Уход в Бездну](../reference/Stats/Stats-POWER.md#power_abyss_dodge)
 
 
 | Параметр | Значение |
@@ -2382,7 +2382,7 @@
 
 ## MIRROR_KNIGHTS_VISOR <a href="#mirror_knights_visor" id="mirror_knights_visor"></a>
 
-### Mirror Knight's Visor <a href="#mirror-knights-visor" id="mirror-knights-visor"></a>
+### The Mirror Knight's Visor <a href="#mirror-knights-visor" id="mirror-knights-visor"></a>
 
 Ты видишь в нём себя — и выглядишь напуганным.
 

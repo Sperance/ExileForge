@@ -8,7 +8,7 @@
 | [Береговой краб](#shore_crab) | SHORE_CRAB |
 | [Пещерная летучая мышь](#cave_bat) | CAVE_BAT |
 | [Солёный плевун](#brine_spitter) | BRINE_SPITTER |
-| [Болотный зомби](#mire_zombie) | MIRE_ZOMBIE |
+| [Болотный мертвяк](#mire_zombie) | MIRE_ZOMBIE |
 | [Трясинный скрытень](#bog_lurker) | BOG_LURKER |
 | [Болотная пиявка](#swamp_leech) | SWAMP_LEECH |
 | [Одичавший волк](#feral_wolf) | FERAL_WOLF |
@@ -16,12 +16,12 @@
 | [Лесной паук](#wood_spider) | WOOD_SPIDER |
 | [Скелет-воин](#skeleton_warrior) | SKELETON_WARRIOR |
 | [Костяной лучник](#bone_archer) | BONE_ARCHER |
-| [Страж руин](#ruin_sentry) | RUIN_SENTRY |
+| [Каменный часовой](#ruin_sentry) | RUIN_SENTRY |
 | [Упырь](#ghoul) | GHOUL |
 | [Склепный призрак](#crypt_wraith) | CRYPT_WRAITH |
 | [Кристальный голем](#crystal_golem) | CRYSTAL_GOLEM |
 | [Осколочный ползун](#shard_scuttler) | SHARD_SCUTTLER |
-| [Обитатель туннелей](#tunnel_dweller) | TUNNEL_DWELLER |
+| [Одержимый рудокоп](#tunnel_dweller) | TUNNEL_DWELLER |
 | [Угольная гончая](#cinder_hound) | CINDER_HOUND |
 | [Пепельный мертвец](#ash_revenant) | ASH_REVENANT |
 | [Магмовый слизень](#magma_slug) | MAGMA_SLUG |
@@ -30,7 +30,7 @@
 | [Снежный охотник](#snow_stalker) | SNOW_STALKER |
 | [Храмовый фанатик](#temple_zealot) | TEMPLE_ZEALOT |
 | [Глубинный](#deep_one) | DEEP_ONE |
-| [Послушник бездны](#abyssal_acolyte) | ABYSSAL_ACOLYTE |
+| [Послушник Бездны](#abyssal_acolyte) | ABYSSAL_ACOLYTE |
 | [Храмовый страж](#temple_guardian) | TEMPLE_GUARDIAN |
 | [Песчаный скорпион](#sand_scorpion) | SAND_SCORPION |
 | [Барханный хищник](#dune_stalker) | DUNE_STALKER |
@@ -42,33 +42,33 @@
 | [Изумрудная пантера](#emerald_panther) | EMERALD_PANTHER |
 | [Споровик](#sporeling) | SPORELING |
 | [Богомол-великан](#giant_mantis) | GIANT_MANTIS |
-| [Охотник с трубкой](#blowgun_hunter) | BLOWGUN_HUNTER |
+| [Духовой стрелок](#blowgun_hunter) | BLOWGUN_HUNTER |
 | [Трутень улья](#hive_drone) | HIVE_DRONE |
 | [Солдат улья](#hive_soldier) | HIVE_SOLDIER |
 | [Плевун выводка](#brood_spitter) | BROOD_SPITTER |
 | [Лавовый бес](#lava_imp) | LAVA_IMP |
 | [Магмовый голем](#magma_golem) | MAGMA_GOLEM |
-| [Огненный змей](#fire_drake) | FIRE_DRAKE |
-| [Инфернальный рыцарь](#infernal_knight) | INFERNAL_KNIGHT |
+| [Огненный дрейк](#fire_drake) | FIRE_DRAKE |
+| [Рыцарь пламени](#infernal_knight) | INFERNAL_KNIGHT |
 | [Чернокнижник цитадели](#citadel_warlock) | CITADEL_WARLOCK |
 | [Горгулья](#gargoyle) | GARGOYLE |
 | [Порождение пустоты](#void_spawn) | VOID_SPAWN |
-| [Ползун бездны](#abyss_crawler) | ABYSS_CRAWLER |
-| [Тень бездны](#abyssal_shade) | ABYSSAL_SHADE |
+| [Ползун Бездны](#abyss_crawler) | ABYSS_CRAWLER |
+| [Тень Бездны](#abyssal_shade) | ABYSSAL_SHADE |
 | [Гнилошляп](#blightcap) | BLIGHTCAP |
 | [Чумоносец](#plague_bearer) | PLAGUE_BEARER |
 | [Чумная оса](#plague_wasp) | PLAGUE_WASP |
-| [Осквернённый Страж](#corrupted_1) | CORRUPTED_1 |
-| [Осквернённый Вестник](#corrupted_2) | CORRUPTED_2 |
-| [Осквернённый Владыка](#corrupted_3) | CORRUPTED_3 |
-| [Осквернённый Палач](#corrupted_4) | CORRUPTED_4 |
-| [Осквернённый Пожиратель](#corrupted_5) | CORRUPTED_5 |
-| [Осквернённый Архонт](#corrupted_6) | CORRUPTED_6 |
+| [Порченый страж](#corrupted_1) | CORRUPTED_1 |
+| [Порченый вестник](#corrupted_2) | CORRUPTED_2 |
+| [Порченый владыка](#corrupted_3) | CORRUPTED_3 |
+| [Порченый палач](#corrupted_4) | CORRUPTED_4 |
+| [Порченый пожиратель](#corrupted_5) | CORRUPTED_5 |
+| [Порченый архонт](#corrupted_6) | CORRUPTED_6 |
 | [Отродье Бездны](#chasm_spawn) | CHASM_SPAWN |
 | [Пиявка глубин](#chasm_leech) | CHASM_LEECH |
 | [Шептун Бездны](#chasm_whisperer) | CHASM_WHISPERER |
 | [Ловец из пропасти](#chasm_stalker) | CHASM_STALKER |
-| [Проклинатель пустоты](#chasm_hexer) | CHASM_HEXER |
+| [Проклинатель Бездны](#chasm_hexer) | CHASM_HEXER |
 | [Громила Бездны](#chasm_brute) | CHASM_BRUTE |
 | [Хозяин ямы](#chasm_pit_master) | CHASM_PIT_MASTER |
 | [Королева шёпотов](#chasm_whisper_queen) | CHASM_WHISPER_QUEEN |
@@ -79,24 +79,24 @@
 | [Громовой дрейк](#thunder_drake) | THUNDER_DRAKE |
 | [Осколочный голем](#shard_golem) | SHARD_GOLEM |
 | [Падший серафим](#fallen_seraph) | FALLEN_SERAPH |
-| [Зефирный призрак](#zephyr_wraith) | ZEPHYR_WRAITH |
-| [Осквернённый повелитель бурь](#corrupted_7) | CORRUPTED_7 |
+| [Призрак ветра](#zephyr_wraith) | ZEPHYR_WRAITH |
+| [Порченый повелитель бурь](#corrupted_7) | CORRUPTED_7 |
 | [Утопленник-легионер](#drowned_legionary) | DROWNED_LEGIONARY |
 | [Коралловый исполин](#coral_behemoth) | CORAL_BEHEMOTH |
-| [Бездонный угорь](#abyssal_eel) | ABYSSAL_EEL |
+| [Глубоководный угорь](#abyssal_eel) | ABYSSAL_EEL |
 | [Приливный конструкт](#tide_construct) | TIDE_CONSTRUCT |
 | [Жемчужная сирена](#pearl_siren) | PEARL_SIREN |
 | [Глубинный скрытень](#deep_lurker) | DEEP_LURKER |
 | [Солёный дрейк](#brine_drake) | BRINE_DRAKE |
-| [Осквернённый левиафан](#corrupted_8) | CORRUPTED_8 |
+| [Порченый левиафан](#corrupted_8) | CORRUPTED_8 |
 | [Божественный страж](#divine_warden) | DIVINE_WARDEN |
 | [Астральный зверь](#astral_beast) | ASTRAL_BEAST |
-| [Клятвенный фанатик](#godsworn_zealot) | GODSWORN_ZEALOT |
+| [Богоприсяжный фанатик](#godsworn_zealot) | GODSWORN_ZEALOT |
 | [Тень забвения](#oblivion_shade) | OBLIVION_SHADE |
 | [Звёздный дракон](#star_dragon) | STAR_DRAGON |
 | [Падший архонт](#fallen_archon) | FALLEN_ARCHON |
 | [Титан пустоты](#void_titan) | VOID_TITAN |
-| [Осквернённая машина богов](#corrupted_9) | CORRUPTED_9 |
+| [Порченая машина богов](#corrupted_9) | CORRUPTED_9 |
 
 
 ## DROWNED <a href="#drowned" id="drowned"></a>
@@ -157,7 +157,7 @@
 
 ## MIRE_ZOMBIE <a href="#mire_zombie" id="mire_zombie"></a>
 
-### Болотный зомби <a href="#болотный-зомби" id="болотный-зомби"></a>
+### Болотный мертвяк <a href="#болотный-зомби" id="болотный-зомби"></a>
 
 
 | Параметр | Значение |
@@ -269,7 +269,7 @@
 
 ## RUIN_SENTRY <a href="#ruin_sentry" id="ruin_sentry"></a>
 
-### Страж руин <a href="#страж-руин" id="страж-руин"></a>
+### Каменный часовой <a href="#страж-руин" id="страж-руин"></a>
 
 
 | Параметр | Значение |
@@ -339,7 +339,7 @@
 
 ## TUNNEL_DWELLER <a href="#tunnel_dweller" id="tunnel_dweller"></a>
 
-### Обитатель туннелей <a href="#обитатель-туннелей" id="обитатель-туннелей"></a>
+### Одержимый рудокоп <a href="#обитатель-туннелей" id="обитатель-туннелей"></a>
 
 
 | Параметр | Значение |
@@ -465,7 +465,7 @@
 
 ## ABYSSAL_ACOLYTE <a href="#abyssal_acolyte" id="abyssal_acolyte"></a>
 
-### Послушник бездны <a href="#послушник-бездны" id="послушник-бездны"></a>
+### Послушник Бездны <a href="#послушник-бездны" id="послушник-бездны"></a>
 
 
 | Параметр | Значение |
@@ -633,7 +633,7 @@
 
 ## BLOWGUN_HUNTER <a href="#blowgun_hunter" id="blowgun_hunter"></a>
 
-### Охотник с трубкой <a href="#охотник-с-трубкой" id="охотник-с-трубкой"></a>
+### Духовой стрелок <a href="#охотник-с-трубкой" id="охотник-с-трубкой"></a>
 
 
 | Параметр | Значение |
@@ -717,7 +717,7 @@
 
 ## FIRE_DRAKE <a href="#fire_drake" id="fire_drake"></a>
 
-### Огненный змей <a href="#огненный-змей" id="огненный-змей"></a>
+### Огненный дрейк <a href="#огненный-змей" id="огненный-змей"></a>
 
 
 | Параметр | Значение |
@@ -731,7 +731,7 @@
 
 ## INFERNAL_KNIGHT <a href="#infernal_knight" id="infernal_knight"></a>
 
-### Инфернальный рыцарь <a href="#инфернальный-рыцарь" id="инфернальный-рыцарь"></a>
+### Рыцарь пламени <a href="#инфернальный-рыцарь" id="инфернальный-рыцарь"></a>
 
 
 | Параметр | Значение |
@@ -787,7 +787,7 @@
 
 ## ABYSS_CRAWLER <a href="#abyss_crawler" id="abyss_crawler"></a>
 
-### Ползун бездны <a href="#ползун-бездны" id="ползун-бездны"></a>
+### Ползун Бездны <a href="#ползун-бездны" id="ползун-бездны"></a>
 
 
 | Параметр | Значение |
@@ -801,7 +801,7 @@
 
 ## ABYSSAL_SHADE <a href="#abyssal_shade" id="abyssal_shade"></a>
 
-### Тень бездны <a href="#тень-бездны" id="тень-бездны"></a>
+### Тень Бездны <a href="#тень-бездны" id="тень-бездны"></a>
 
 
 | Параметр | Значение |
@@ -857,7 +857,7 @@
 
 ## CORRUPTED_1 <a href="#corrupted_1" id="corrupted_1"></a>
 
-### Осквернённый Страж <a href="#осквернённый-страж" id="осквернённый-страж"></a>
+### Порченый страж <a href="#осквернённый-страж" id="осквернённый-страж"></a>
 
 **Встроенные модификаторы**
 
@@ -876,7 +876,7 @@
 
 ## CORRUPTED_2 <a href="#corrupted_2" id="corrupted_2"></a>
 
-### Осквернённый Вестник <a href="#осквернённый-вестник" id="осквернённый-вестник"></a>
+### Порченый вестник <a href="#осквернённый-вестник" id="осквернённый-вестник"></a>
 
 **Встроенные модификаторы**
 
@@ -895,7 +895,7 @@
 
 ## CORRUPTED_3 <a href="#corrupted_3" id="corrupted_3"></a>
 
-### Осквернённый Владыка <a href="#осквернённый-владыка" id="осквернённый-владыка"></a>
+### Порченый владыка <a href="#осквернённый-владыка" id="осквернённый-владыка"></a>
 
 **Встроенные модификаторы**
 
@@ -914,7 +914,7 @@
 
 ## CORRUPTED_4 <a href="#corrupted_4" id="corrupted_4"></a>
 
-### Осквернённый Палач <a href="#осквернённый-палач" id="осквернённый-палач"></a>
+### Порченый палач <a href="#осквернённый-палач" id="осквернённый-палач"></a>
 
 **Встроенные модификаторы**
 
@@ -933,7 +933,7 @@
 
 ## CORRUPTED_5 <a href="#corrupted_5" id="corrupted_5"></a>
 
-### Осквернённый Пожиратель <a href="#осквернённый-пожиратель" id="осквернённый-пожиратель"></a>
+### Порченый пожиратель <a href="#осквернённый-пожиратель" id="осквернённый-пожиратель"></a>
 
 **Встроенные модификаторы**
 
@@ -952,7 +952,7 @@
 
 ## CORRUPTED_6 <a href="#corrupted_6" id="corrupted_6"></a>
 
-### Осквернённый Архонт <a href="#осквернённый-архонт" id="осквернённый-архонт"></a>
+### Порченый архонт <a href="#осквернённый-архонт" id="осквернённый-архонт"></a>
 
 **Встроенные модификаторы**
 
@@ -1028,7 +1028,7 @@
 
 ## CHASM_HEXER <a href="#chasm_hexer" id="chasm_hexer"></a>
 
-### Проклинатель пустоты <a href="#проклинатель-пустоты" id="проклинатель-пустоты"></a>
+### Проклинатель Бездны <a href="#проклинатель-пустоты" id="проклинатель-пустоты"></a>
 
 
 | Параметр | Значение |
@@ -1072,7 +1072,7 @@
 | Таблица добычи · `loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
 | Характеристики · `stats` | STOCK_ATTACK_SPEED: 1.1; STOCK_HEALTH: 110; STOCK_ATTACK_PHYSICAL: 9; STOCK_ATTACK_CHAOS: 5; STOCK_ARMOR: 60; STOCK_RESIST_CHAOS: 40; STOCK_MANA: 30 |
 | Страж · `boss` | Да |
-| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| Умения · `skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 
 
 ## CHASM_WHISPER_QUEEN <a href="#chasm_whisper_queen" id="chasm_whisper_queen"></a>
@@ -1201,7 +1201,7 @@
 
 ## ZEPHYR_WRAITH <a href="#zephyr_wraith" id="zephyr_wraith"></a>
 
-### Зефирный призрак <a href="#зефирный-призрак" id="зефирный-призрак"></a>
+### Призрак ветра <a href="#зефирный-призрак" id="зефирный-призрак"></a>
 
 
 | Параметр | Значение |
@@ -1215,7 +1215,7 @@
 
 ## CORRUPTED_7 <a href="#corrupted_7" id="corrupted_7"></a>
 
-### Осквернённый повелитель бурь <a href="#осквернённый-повелитель-бурь" id="осквернённый-повелитель-бурь"></a>
+### Порченый повелитель бурь <a href="#осквернённый-повелитель-бурь" id="осквернённый-повелитель-бурь"></a>
 
 **Встроенные модификаторы**
 
@@ -1263,7 +1263,7 @@
 
 ## ABYSSAL_EEL <a href="#abyssal_eel" id="abyssal_eel"></a>
 
-### Бездонный угорь <a href="#бездонный-угорь" id="бездонный-угорь"></a>
+### Глубоководный угорь <a href="#бездонный-угорь" id="бездонный-угорь"></a>
 
 
 | Параметр | Значение |
@@ -1333,7 +1333,7 @@
 
 ## CORRUPTED_8 <a href="#corrupted_8" id="corrupted_8"></a>
 
-### Осквернённый левиафан <a href="#осквернённый-левиафан" id="осквернённый-левиафан"></a>
+### Порченый левиафан <a href="#осквернённый-левиафан" id="осквернённый-левиафан"></a>
 
 **Встроенные модификаторы**
 
@@ -1380,7 +1380,7 @@
 
 ## GODSWORN_ZEALOT <a href="#godsworn_zealot" id="godsworn_zealot"></a>
 
-### Клятвенный фанатик <a href="#клятвенный-фанатик" id="клятвенный-фанатик"></a>
+### Богоприсяжный фанатик <a href="#клятвенный-фанатик" id="клятвенный-фанатик"></a>
 
 
 | Параметр | Значение |
@@ -1450,7 +1450,7 @@
 
 ## CORRUPTED_9 <a href="#corrupted_9" id="corrupted_9"></a>
 
-### Осквернённая машина богов <a href="#осквернённая-машина-богов" id="осквернённая-машина-богов"></a>
+### Порченая машина богов <a href="#осквернённая-машина-богов" id="осквернённая-машина-богов"></a>
 
 **Встроенные модификаторы**
 

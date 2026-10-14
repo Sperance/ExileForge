@@ -164,6 +164,11 @@ class UiStringsTest {
                 add("enum.orb.${it.name}.rule")
             }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
+            // Слова мира кодекса (0.13.3): имя и история
+            com.sperance.exileforge.core.display.LoreTerm.entries.forEach {
+                add("term.lore.${it.name}")
+                add("term.lore.${it.name}.text")
+            }
             MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
             // Причины санкций и роли гильдии (4.5.1): самоудаление и роли состава

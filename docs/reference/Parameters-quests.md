@@ -313,7 +313,7 @@
 | `rarities[3].orbs[1].code` | [Divine Orb](../Items/Items-CURRENCY.md#divine_orb) |
 | `rarities[3].orbs[1].amount` | 1 |
 | `rarities[3].orbs[1].weight` | 3 |
-| `rarities[3].orbs[2].code` | [Vaal Orb](../Items/Items-CURRENCY.md#vaal_orb) |
+| `rarities[3].orbs[2].code` | [Orb of the Underside](../Items/Items-CURRENCY.md#vaal_orb) |
 | `rarities[3].orbs[2].amount` | 2 |
 | `rarities[3].orbs[2].weight` | 3 |
 | `rarities[3].orbs[3].code` | [Chaos Orb](../Items/Items-CURRENCY.md#chaos_orb) |
@@ -476,7 +476,7 @@
 | `story[2].steps[5].code` | `S3_PYRAMID` |
 | `story[2].steps[5].counter` | `BOSSES` |
 | `story[2].steps[5].target` | 1 |
-| `story[2].steps[5].zone` | [Пирамида Солнечного царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
+| `story[2].steps[5].zone` | [Пирамида Солнечного Царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
 | `story[2].steps[5].rarity` | `UNIQUE` |
 | `story[3].region` | `REGION_4` |
 | `story[3].steps[0].code` | `S4_EDGE` |
@@ -531,7 +531,7 @@
 | `story[4].steps[4].code` | `S5_GATE` |
 | `story[4].steps[4].counter` | `BOSSES` |
 | `story[4].steps[4].target` | 1 |
-| `story[4].steps[4].zone` | [Инфернальные врата](../World/World-REGION_5.md#c5_infernal_gate) |
+| `story[4].steps[4].zone` | [Врата Цитадели](../World/World-REGION_5.md#c5_infernal_gate) |
 | `story[4].steps[4].rarity` | `RARE` |
 | `story[4].steps[5].code` | `S5_CITADEL` |
 | `story[4].steps[5].counter` | `BOSSES` |
@@ -542,7 +542,7 @@
 | `story[5].steps[0].code` | `S6_RIFT` |
 | `story[5].steps[0].counter` | `CLEAR` |
 | `story[5].steps[0].target` | 1 |
-| `story[5].steps[0].zone` | [Край разлома](../World/World-REGION_6.md#c6_rift_edge) |
+| `story[5].steps[0].zone` | [Край пропасти](../World/World-REGION_6.md#c6_rift_edge) |
 | `story[5].steps[0].rarity` | `COMMON` |
 | `story[5].steps[1].code` | `S6_ABBEY` |
 | `story[5].steps[1].counter` | `BOSSES` |
@@ -598,7 +598,7 @@
 | `story[6].steps[5].code` | `S7_6` |
 | `story[6].steps[5].counter` | `BOSSES` |
 | `story[6].steps[5].target` | 1 |
-| `story[6].steps[5].zone` | [Трон разбитого неба](../World/World-REGION_7.md#c7_shattered_throne) |
+| `story[6].steps[5].zone` | [Трон Разбитого Неба](../World/World-REGION_7.md#c7_shattered_throne) |
 | `story[6].steps[5].rarity` | `UNIQUE` |
 | `story[7].region` | `REGION_8` |
 | `story[7].steps[0].code` | `S8_1` |
@@ -629,7 +629,7 @@
 | `story[7].steps[5].code` | `S8_6` |
 | `story[7].steps[5].counter` | `BOSSES` |
 | `story[7].steps[5].target` | 1 |
-| `story[7].steps[5].zone` | [Утонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
+| `story[7].steps[5].zone` | [Затонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
 | `story[7].steps[5].rarity` | `UNIQUE` |
 | `story[8].region` | `REGION_9` |
 | `story[8].steps[0].code` | `S9_1` |

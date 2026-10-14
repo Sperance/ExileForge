@@ -84,14 +84,14 @@
 | [Shrieking Essence of Suffering](#essence_suffering_6) | ESSENCE_SUFFERING_6 | 160 |
 | [Deafening Essence of Suffering](#essence_suffering_7) | ESSENCE_SUFFERING_7 | 320 |
 | [Exalted Essence of Suffering](#essence_suffering_8) | ESSENCE_SUFFERING_8 | 640 |
-| [Whispering Essence of Wrath](#essence_wrath_1) | ESSENCE_WRATH_1 | 5 |
-| [Muttering Essence of Wrath](#essence_wrath_2) | ESSENCE_WRATH_2 | 10 |
-| [Weeping Essence of Wrath](#essence_wrath_3) | ESSENCE_WRATH_3 | 20 |
-| [Wailing Essence of Wrath](#essence_wrath_4) | ESSENCE_WRATH_4 | 40 |
-| [Screaming Essence of Wrath](#essence_wrath_5) | ESSENCE_WRATH_5 | 80 |
-| [Shrieking Essence of Wrath](#essence_wrath_6) | ESSENCE_WRATH_6 | 160 |
-| [Deafening Essence of Wrath](#essence_wrath_7) | ESSENCE_WRATH_7 | 320 |
-| [Exalted Essence of Wrath](#essence_wrath_8) | ESSENCE_WRATH_8 | 640 |
+| [Whispering Essence of Vengeance](#essence_wrath_1) | ESSENCE_WRATH_1 | 5 |
+| [Muttering Essence of Vengeance](#essence_wrath_2) | ESSENCE_WRATH_2 | 10 |
+| [Weeping Essence of Vengeance](#essence_wrath_3) | ESSENCE_WRATH_3 | 20 |
+| [Wailing Essence of Vengeance](#essence_wrath_4) | ESSENCE_WRATH_4 | 40 |
+| [Screaming Essence of Vengeance](#essence_wrath_5) | ESSENCE_WRATH_5 | 80 |
+| [Shrieking Essence of Vengeance](#essence_wrath_6) | ESSENCE_WRATH_6 | 160 |
+| [Deafening Essence of Vengeance](#essence_wrath_7) | ESSENCE_WRATH_7 | 320 |
+| [Exalted Essence of Vengeance](#essence_wrath_8) | ESSENCE_WRATH_8 | 640 |
 | [Whispering Essence of Doubt](#essence_doubt_1) | ESSENCE_DOUBT_1 | 5 |
 | [Muttering Essence of Doubt](#essence_doubt_2) | ESSENCE_DOUBT_2 | 10 |
 | [Weeping Essence of Doubt](#essence_doubt_3) | ESSENCE_DOUBT_3 | 20 |
@@ -1292,7 +1292,7 @@
 
 ## ESSENCE_WRATH_1 <a href="#essence_wrath_1" id="essence_wrath_1"></a>
 
-### Whispering Essence of Wrath <a href="#whispering-essence-of-wrath" id="whispering-essence-of-wrath"></a>
+### Whispering Essence of Vengeance <a href="#whispering-essence-of-wrath" id="whispering-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой: гарантированная строка и случайные остальные аффиксы; редкие перековывают эссенции от ступени «Воющая». Гарантия (слабейший тир): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 
@@ -1306,7 +1306,7 @@
 
 ## ESSENCE_WRATH_2 <a href="#essence_wrath_2" id="essence_wrath_2"></a>
 
-### Muttering Essence of Wrath <a href="#muttering-essence-of-wrath" id="muttering-essence-of-wrath"></a>
+### Muttering Essence of Vengeance <a href="#muttering-essence-of-wrath" id="muttering-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой: гарантированная строка и случайные остальные аффиксы; редкие перековывают эссенции от ступени «Воющая». Гарантия (тир ступени 2 из 8, не выше уровня вещи): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 
@@ -1320,7 +1320,7 @@
 
 ## ESSENCE_WRATH_3 <a href="#essence_wrath_3" id="essence_wrath_3"></a>
 
-### Weeping Essence of Wrath <a href="#weeping-essence-of-wrath" id="weeping-essence-of-wrath"></a>
+### Weeping Essence of Vengeance <a href="#weeping-essence-of-wrath" id="weeping-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой: гарантированная строка и случайные остальные аффиксы; редкие перековывают эссенции от ступени «Воющая». Гарантия (тир ступени 3 из 8, не выше уровня вещи): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 
@@ -1334,7 +1334,7 @@
 
 ## ESSENCE_WRATH_4 <a href="#essence_wrath_4" id="essence_wrath_4"></a>
 
-### Wailing Essence of Wrath <a href="#wailing-essence-of-wrath" id="wailing-essence-of-wrath"></a>
+### Wailing Essence of Vengeance <a href="#wailing-essence-of-wrath" id="wailing-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой, а редкую перековывает: гарантированная строка и случайные остальные аффиксы. Гарантия (тир ступени 4 из 8, не выше уровня вещи): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 
@@ -1348,7 +1348,7 @@
 
 ## ESSENCE_WRATH_5 <a href="#essence_wrath_5" id="essence_wrath_5"></a>
 
-### Screaming Essence of Wrath <a href="#screaming-essence-of-wrath" id="screaming-essence-of-wrath"></a>
+### Screaming Essence of Vengeance <a href="#screaming-essence-of-wrath" id="screaming-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой, а редкую перековывает: гарантированная строка и случайные остальные аффиксы. Гарантия (тир ступени 5 из 8, не выше уровня вещи): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 
@@ -1362,7 +1362,7 @@
 
 ## ESSENCE_WRATH_6 <a href="#essence_wrath_6" id="essence_wrath_6"></a>
 
-### Shrieking Essence of Wrath <a href="#shrieking-essence-of-wrath" id="shrieking-essence-of-wrath"></a>
+### Shrieking Essence of Vengeance <a href="#shrieking-essence-of-wrath" id="shrieking-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой, а редкую перековывает: гарантированная строка и случайные остальные аффиксы. Гарантия (тир ступени 6 из 8, не выше уровня вещи): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 
@@ -1376,7 +1376,7 @@
 
 ## ESSENCE_WRATH_7 <a href="#essence_wrath_7" id="essence_wrath_7"></a>
 
-### Deafening Essence of Wrath <a href="#deafening-essence-of-wrath" id="deafening-essence-of-wrath"></a>
+### Deafening Essence of Vengeance <a href="#deafening-essence-of-wrath" id="deafening-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой, а редкую перековывает: гарантированная строка и случайные остальные аффиксы. Гарантия (тир ступени 7 из 8, не выше уровня вещи): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 
@@ -1390,7 +1390,7 @@
 
 ## ESSENCE_WRATH_8 <a href="#essence_wrath_8" id="essence_wrath_8"></a>
 
-### Exalted Essence of Wrath <a href="#exalted-essence-of-wrath" id="exalted-essence-of-wrath"></a>
+### Exalted Essence of Vengeance <a href="#exalted-essence-of-wrath" id="exalted-essence-of-wrath"></a>
 
 Обычную (белую) вещь делает редкой, а редкую перековывает: гарантированная строка и случайные остальные аффиксы. Гарантия (лучший тир, открытый уровнем вещи): «Урон умений» — оружие атак, колчан; «Урон чар» — прочее снаряжение.
 

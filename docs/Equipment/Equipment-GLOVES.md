@@ -76,7 +76,7 @@
 | [Astral Gloves](#astral_gloves) | Редкий | 88 |
 | [Voidgrasp Mitts](#voidgrasp_mitts) | Редкий | 88 |
 | [Windrunner Gloves](#windrunner_gloves) | Редкий | 88 |
-| [Kelp Priest's Grasp](#kelp_priests_vestment) | Уникальный | 88 |
+| [The Kelp Priest's Grasp](#kelp_priests_vestment) | Уникальный | 88 |
 | [Sunsmith's Hammerhand](#sunsmiths_hammerhand) | Уникальный | 95 |
 | [Climber's Grip](#climbers_grip) | Уникальный | 99 |
 | [Brawler's Abandon](#brawlers_abandon) | Уникальный | 45 |
@@ -1743,7 +1743,7 @@
 **Свойства**
 
 - +40–60 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
-- За каждый надетый осквернённый предмет (до 8): +5–6% к урону и +4% к броне, уклонению и ЭЩ · [Осквернённая преданность](../reference/Stats/Stats-POWER.md#power_caress_devotion)
+- За каждый надетый осквернённый предмет (до 8): +5–6% к урону и +4% к броне, уклонению и ЭЩ · [Порченая преданность](../reference/Stats/Stats-POWER.md#power_caress_devotion)
 - Презрение алтаря · ADD · -10 · [Презрение алтаря](../reference/Stats/Stats-POWER.md#power_altar_scorn)
 
 
@@ -1954,7 +1954,7 @@
 - 8–12% полученного урона возвращается здоровьем · [Возврат здоровья](../reference/Stats/Stats-HERO.md#stock_life_recoup)
 - 10–14% увеличение скорости атаки · [Скорость атаки](../reference/Stats/Stats-HERO.md#stock_attack_speed)
 - 1–2% урона крадётся здоровьем · [Общий вампиризм](../reference/Stats/Stats-HERO.md#stock_leech_all)
-- Низкое здоровье восстанавливает 30–40% здоровья, раз за бой · [Долг Ваал](../reference/Stats/Stats-POWER.md#power_vaal_debt)
+- Низкое здоровье восстанавливает 30–40% здоровья, раз за бой · [Долг Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_debt)
 - Падение здоровья до низкого даёт барьер в 15–25% максимума здоровья на 4 с, не чаще раза в 15 с · [Последний рубеж](../reference/Stats/Stats-POWER.md#power_last_stand)
 
 
@@ -2126,7 +2126,7 @@
 
 ## KELP_PRIESTS_VESTMENT <a href="#kelp_priests_vestment" id="kelp_priests_vestment"></a>
 
-### Kelp Priest's Grasp <a href="#kelp-priests-grasp" id="kelp-priests-grasp"></a>
+### The Kelp Priest's Grasp <a href="#kelp-priests-grasp" id="kelp-priests-grasp"></a>
 
 Скользкие руки держат дольше всех.
 
@@ -2144,7 +2144,7 @@
 - +90–120 к максимуму энергетического щита · [Энергетический щит](../reference/Stats/Stats-HERO.md#stock_energy_shield)
 - 12–16% увеличение эффекта проклятий · [Эффект проклятий](../reference/Stats/Stats-HERO.md#stock_curse_effect)
 - 8–12% увеличение скорости сотворения · [Скорость применения](../reference/Stats/Stats-HERO.md#stock_cast_speed)
-- С шансом 57.5–92% в начале боя проклинает всех врагов · [Зов бездны](../reference/Stats/Stats-POWER.md#power_abyss_call)
+- С шансом 57.5–92% в начале боя проклинает всех врагов · [Зов Бездны](../reference/Stats/Stats-POWER.md#power_abyss_call)
 - Удары по вам с шансом 17.2–28.7% проклинают атакующего · [Кровавый сглаз](../reference/Stats/Stats-POWER.md#power_blood_hex)
 
 

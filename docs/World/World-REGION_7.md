@@ -1,10 +1,10 @@
-# Расколотые небеса
+# Разбитое небо
 
 | Зона | Уровень | Страж | Открывается из |
 | --- | --- | --- | --- |
 | [Небесная пристань](#c7_sky_landing) | 71 | [Вестник ветров](../reference/Bosses.md#boss_wind_herald) | [Трон бездны](World-REGION_6.md#c6_abyssal_throne) |
 | [Стеклянные дюны](#c7_glass_dunes) | 71 | [Стеклянная праматерь](../reference/Bosses.md#boss_glass_matriarch) | [Трон бездны](World-REGION_6.md#c6_abyssal_throne) |
-| [Громовые ступени](#c7_thunder_steps) | 71 | [Громовой змей](../reference/Bosses.md#boss_thunder_wyrm) | [Трон бездны](World-REGION_6.md#c6_abyssal_throne) |
+| [Громовые ступени](#c7_thunder_steps) | 71 | [Громовой змий](../reference/Bosses.md#boss_thunder_wyrm) | [Трон бездны](World-REGION_6.md#c6_abyssal_throne) |
 | [Разбитый мост](#c7_broken_bridge) | 73 | [Хранитель моста](../reference/Bosses.md#boss_bridge_keeper) | [Небесная пристань](#c7_sky_landing) |
 | [Зеркальная равнина](#c7_mirror_flats) | 73 | [Зеркальный рыцарь](../reference/Bosses.md#boss_mirror_knight) | [Небесная пристань](#c7_sky_landing); [Стеклянные дюны](#c7_glass_dunes) |
 | [Шпиль молний](#c7_lightning_spire) | 73 | [Тиран шпиля](../reference/Bosses.md#boss_spire_tyrant) | [Стеклянные дюны](#c7_glass_dunes); [Громовые ступени](#c7_thunder_steps) |
@@ -15,8 +15,8 @@
 | [Призменный каньон](#c7_prism_canyon) | 75 | [Призменный охотник](../reference/Bosses.md#boss_prism_hunter) | [Шпиль молний](#c7_lightning_spire); [Храм ветров](#c7_wind_temple) |
 | [Павший планетарий](#c7_fallen_orrery) | 78 | [Машина планетария](../reference/Bosses.md#boss_orrery_engine) | [Расколотый венец](#c7_shattered_crown); [Облачная цитадель](#c7_cloud_citadel) |
 | [Око бури](#c7_eye_of_the_storm) | 78 | [Недвижное око](../reference/Bosses.md#boss_still_eye) | [Облачная цитадель](#c7_cloud_citadel); [Стена бурь](#c7_stormwall) |
-| [Поющее стекло](#c7_singing_glass) | 78 | [Стеклянный хор](../reference/Bosses.md#boss_glass_choir) | [Стена бурь](#c7_stormwall); [Призменный каньон](#c7_prism_canyon) |
-| [Трон разбитого неба](#c7_shattered_throne) | 80 | [Владыка разбитого неба](../reference/Bosses.md#boss_sky_sovereign) | [Павший планетарий](#c7_fallen_orrery); [Око бури](#c7_eye_of_the_storm) |
+| [Звенящее стекло](#c7_singing_glass) | 78 | [Стеклянный хор](../reference/Bosses.md#boss_glass_choir) | [Стена бурь](#c7_stormwall); [Призменный каньон](#c7_prism_canyon) |
+| [Трон Разбитого Неба](#c7_shattered_throne) | 80 | [Владыка Разбитого Неба](../reference/Bosses.md#boss_sky_sovereign) | [Павший планетарий](#c7_fallen_orrery); [Око бури](#c7_eye_of_the_storm) |
 
 
 ## C7_SKY_LANDING <a href="#c7_sky_landing" id="c7_sky_landing"></a>
@@ -31,12 +31,12 @@
 | Биом · `biome` | `SKYREACH` |
 | Уровень · `level` | 71 |
 | Предшествующие зоны · `from` | [Трон бездны](World-REGION_6.md#c6_abyssal_throne) |
-| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Вестник ветров](../reference/Bosses.md#boss_wind_herald) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -58,7 +58,7 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Стеклянная праматерь](../reference/Bosses.md#boss_glass_matriarch) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -75,12 +75,12 @@
 | Биом · `biome` | `STORMPEAK` |
 | Уровень · `level` | 71 |
 | Предшествующие зоны · `from` | [Трон бездны](World-REGION_6.md#c6_abyssal_throne) |
-| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
-| Страж · `boss` | [Громовой змей](../reference/Bosses.md#boss_thunder_wyrm) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Страж · `boss` | [Громовой змий](../reference/Bosses.md#boss_thunder_wyrm) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -97,12 +97,12 @@
 | Биом · `biome` | `SKYREACH` |
 | Уровень · `level` | 73 |
 | Предшествующие зоны · `from` | [Небесная пристань](#c7_sky_landing) |
-| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Хранитель моста](../reference/Bosses.md#boss_bridge_keeper) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -124,7 +124,7 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Зеркальный рыцарь](../reference/Bosses.md#boss_mirror_knight) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -141,12 +141,12 @@
 | Биом · `biome` | `STORMPEAK` |
 | Уровень · `level` | 73 |
 | Предшествующие зоны · `from` | [Стеклянные дюны](#c7_glass_dunes); [Громовые ступени](#c7_thunder_steps) |
-| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Тиран шпиля](../reference/Bosses.md#boss_spire_tyrant) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -163,12 +163,12 @@
 | Биом · `biome` | `SKYREACH` |
 | Уровень · `level` | 73 |
 | Предшествующие зоны · `from` | [Громовые ступени](#c7_thunder_steps) |
-| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Страж колоколов](../reference/Bosses.md#boss_bell_warden) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -190,7 +190,7 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Коронованный осколок](../reference/Bosses.md#boss_crown_shard) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -207,12 +207,12 @@
 | Биом · `biome` | `SKYREACH` |
 | Уровень · `level` | 75 |
 | Предшествующие зоны · `from` | [Разбитый мост](#c7_broken_bridge); [Зеркальная равнина](#c7_mirror_flats); [Шпиль молний](#c7_lightning_spire) |
-| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Облачный маршал](../reference/Bosses.md#boss_cloud_marshal) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -229,12 +229,12 @@
 | Биом · `biome` | `STORMPEAK` |
 | Уровень · `level` | 75 |
 | Предшествующие зоны · `from` | [Зеркальная равнина](#c7_mirror_flats); [Шпиль молний](#c7_lightning_spire); [Храм ветров](#c7_wind_temple) |
-| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Титан бури](../reference/Bosses.md#boss_storm_titan) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -256,7 +256,7 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Призменный охотник](../reference/Bosses.md#boss_prism_hunter) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -273,12 +273,12 @@
 | Биом · `biome` | `SKYREACH` |
 | Уровень · `level` | 78 |
 | Предшествующие зоны · `from` | [Расколотый венец](#c7_shattered_crown); [Облачная цитадель](#c7_cloud_citadel) |
-| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Грозовая гарпия](../reference/Monsters.md#storm_harpy); [Падший серафим](../reference/Monsters.md#fallen_seraph); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.8 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Машина планетария](../reference/Bosses.md#boss_orrery_engine) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
@@ -295,19 +295,19 @@
 | Биом · `biome` | `STORMPEAK` |
 | Уровень · `level` | 78 |
 | Предшествующие зоны · `from` | [Облачная цитадель](#c7_cloud_citadel); [Стена бурь](#c7_stormwall) |
-| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith) |
+| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Призрак ветра](../reference/Monsters.md#zephyr_wraith) |
 | Количество · `count` | 53; 69 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Недвижное око](../reference/Bosses.md#boss_still_eye) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C7_SINGING_GLASS <a href="#c7_singing_glass" id="c7_singing_glass"></a>
 
-### Поющее стекло <a href="#поющее-стекло" id="поющее-стекло"></a>
+### Звенящее стекло <a href="#поющее-стекло" id="поющее-стекло"></a>
 
 Ветер играет на дюнах, как на органе.
 
@@ -322,14 +322,14 @@
 | light | 0.9 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
 | Страж · `boss` | [Стеклянный хор](../reference/Bosses.md#boss_glass_choir) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 
 
 ## C7_SHATTERED_THRONE <a href="#c7_shattered_throne" id="c7_shattered_throne"></a>
 
-### Трон разбитого неба <a href="#трон-разбитого-неба" id="трон-разбитого-неба"></a>
+### Трон Разбитого Неба <a href="#трон-разбитого-неба" id="трон-разбитого-неба"></a>
 
 Здесь небо разбили, и здесь им правят.
 
@@ -340,12 +340,12 @@
 | Уровень · `level` | 80 |
 | Предшествующие зоны · `from` | [Павший планетарий](#c7_fallen_orrery); [Око бури](#c7_eye_of_the_storm) |
 | Финал региона · `finale` | Да |
-| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Зефирный призрак](../reference/Monsters.md#zephyr_wraith); [Осколочный голем](../reference/Monsters.md#shard_golem) |
+| Монстры · `monsters` | [Громовой дрейк](../reference/Monsters.md#thunder_drake); [Небесный часовой](../reference/Monsters.md#sky_sentinel); [Призрак ветра](../reference/Monsters.md#zephyr_wraith); [Осколочный голем](../reference/Monsters.md#shard_golem) |
 | Количество · `count` | 53; 69 |
 | light | 0.7 |
 | Добыча сундуков · `chestLoot` | [loot:CHEST_7](../reference/Tables/Tables-LOOT.md#loot-chest_7) |
-| Страж · `boss` | [Владыка разбитого неба](../reference/Bosses.md#boss_sky_sovereign) |
-| Изначально осквернён · `corrupted` | [Осквернённый повелитель бурь](../reference/Monsters.md#corrupted_7) |
+| Страж · `boss` | [Владыка Разбитого Неба](../reference/Bosses.md#boss_sky_sovereign) |
+| Изначально осквернён · `corrupted` | [Порченый повелитель бурь](../reference/Monsters.md#corrupted_7) |
 | size | 72 |
 | Таблицы · `tables` | [mob:monster](../reference/Tables/Tables-MODIFIER.md#mob-monster) |
 

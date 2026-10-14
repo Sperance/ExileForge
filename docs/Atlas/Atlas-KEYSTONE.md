@@ -192,7 +192,7 @@
 
 **Свойства**
 
-- 40% к шансу портала Ваал · [Атлас: шанс портала Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
+- 40% к шансу портала Ваал · [Атлас: шанс прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance)
 - 60% больше шанс уникалки Ваал · [Атлас: уникалки Ваал](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique)
 
 
@@ -208,8 +208,8 @@
 
 **Свойства**
 
-- 45% больше награда Ваал-зон · [Атлас: награда Ваал-зон](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
-- +2 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов Ваал-зоны](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
+- 45% больше награда Ваал-зон · [Атлас: награда прорех Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward)
+- +2 к минимуму модификаторов Ваал-зоны · [Атлас: минимум модификаторов прорехи Изнанки](../reference/Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods)
 
 
 | Параметр | Значение |
@@ -352,7 +352,7 @@
 
 **Свойства**
 
-- Случайно захваченные карты - только Древним · [Атлас: только Древний](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_elder)
+- Случайно захваченные карты - только Древним · [Атлас: влияние только Пустоты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_elder)
 - +6% к шансу, что выпавшая карта захвачена влиянием · [Атлас: захваченные карты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_map_influence)
 
 
@@ -368,7 +368,7 @@
 
 **Свойства**
 
-- Случайно захваченные карты - только Создателем · [Атлас: только Создатель](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_shaper)
+- Случайно захваченные карты - только Создателем · [Атлас: влияние только Зодчего](../reference/Modifiers/Modifiers-ATLAS.md#atlas_influence_shaper)
 - +6% к шансу, что выпавшая карта захвачена влиянием · [Атлас: захваченные карты](../reference/Modifiers/Modifiers-ATLAS.md#atlas_map_influence)
 
 

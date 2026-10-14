@@ -1443,14 +1443,14 @@
 | Теги · `tags` | `power`; `passive` |
 
 
-- Низкое здоровье восстанавливает {v}% здоровья, раз за бой · [Долг Ваал](../Stats/Stats-POWER.md#power_vaal_debt)
+- Низкое здоровье восстанавливает {v}% здоровья, раз за бой · [Долг Изнанки](../Stats/Stats-POWER.md#power_vaal_debt)
 
 ### NATURAL <a href="#natural-75" id="natural-75"></a>
 
 
 | Тир | Мин. ilvl | Вес | Диапазоны эффектов |
 | --- | --- | --- | --- |
-| 1 | 1 | 1000 | Низкое здоровье восстанавливает 1% здоровья, раз за бой · [Долг Ваал](../Stats/Stats-POWER.md#power_vaal_debt) |
+| 1 | 1 | 1000 | Низкое здоровье восстанавливает 1% здоровья, раз за бой · [Долг Изнанки](../Stats/Stats-POWER.md#power_vaal_debt) |
 
 
 ## PASSIVE_POWER_VENOM_HEART <a href="#passive_power_venom_heart" id="passive_power_venom_heart"></a>

@@ -369,7 +369,7 @@
 
 ## POWER_PROTOTYPE_PLATING <a href="#power_prototype_plating" id="power_prototype_plating"></a>
 
-### Обшивка Ваал <a href="#обшивка-ваал" id="обшивка-ваал"></a>
+### Обшивка Изнанки <a href="#обшивка-ваал" id="обшивка-ваал"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -380,8 +380,8 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Обшивка Ваал](../Stats/Stats-POWER.md#power_prototype_plating) |
-| sheet | Операция: `MORE`; Предшествующие зоны: [Надетые осквернённые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Броня](../Stats/Stats-HERO.md#stock_armor) |
+| Характеристика · `stat` | [Обшивка Изнанки](../Stats/Stats-POWER.md#power_prototype_plating) |
+| sheet | Операция: `MORE`; Предшествующие зоны: [Надетые порченые предметы](../Stats/Stats-HERO.md#stock_worn_corrupted); to: [Броня](../Stats/Stats-HERO.md#stock_armor) |
 
 
 ## POWER_PLAGUE_TRAIL_HOARD <a href="#power_plague_trail_hoard" id="power_plague_trail_hoard"></a>

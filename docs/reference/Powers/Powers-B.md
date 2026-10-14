@@ -95,7 +95,7 @@
 
 ## POWER_BEREKS_STORM <a href="#power_bereks_storm" id="power_bereks_storm"></a>
 
-### Буря Берека <a href="#буря-берека" id="буря-берека"></a>
+### Ярость грозы <a href="#буря-берека" id="буря-берека"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -106,7 +106,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Буря Берека](../Stats/Stats-POWER.md#power_bereks_storm) |
+| Характеристика · `stat` | [Ярость грозы](../Stats/Stats-POWER.md#power_bereks_storm) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `INFLICT` |
 | checks | check: `AILMENT`; word: `SHOCK` |
@@ -115,7 +115,7 @@
 
 ## POWER_BEREKS_FROST <a href="#power_bereks_frost" id="power_bereks_frost"></a>
 
-### Мороз Берека <a href="#мороз-берека" id="мороз-берека"></a>
+### Хватка стужи <a href="#мороз-берека" id="мороз-берека"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -126,7 +126,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Мороз Берека](../Stats/Stats-POWER.md#power_bereks_frost) |
+| Характеристика · `stat` | [Хватка стужи](../Stats/Stats-POWER.md#power_bereks_frost) |
 | Событие · `on` | `KILL` |
 | checks | check: `TARGET_AILMENT`; word: `CHILL` |
 | Эффекты · `effects` | Действие: `HEAL`; of: `LIFE` |
@@ -134,7 +134,7 @@
 
 ## POWER_BISCOS_FIND <a href="#power_biscos_find" id="power_biscos_find"></a>
 
-### Находка Биско <a href="#находка-биско" id="находка-биско"></a>
+### Находка ищейки <a href="#находка-биско" id="находка-биско"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -145,13 +145,13 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Находка Биско](../Stats/Stats-POWER.md#power_biscos_find) |
+| Характеристика · `stat` | [Находка ищейки](../Stats/Stats-POWER.md#power_biscos_find) |
 | world | gain: `RARITY`; against: `NORMAL`; `MAGIC` |
 
 
 ## POWER_BINOS_SPREAD <a href="#power_binos_spread" id="power_binos_spread"></a>
 
-### Рецепт Бино <a href="#рецепт-бино" id="рецепт-бино"></a>
+### Рецепт отравителя <a href="#рецепт-бино" id="рецепт-бино"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -162,7 +162,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Рецепт Бино](../Stats/Stats-POWER.md#power_binos_spread) |
+| Характеристика · `stat` | [Рецепт отравителя](../Stats/Stats-POWER.md#power_binos_spread) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `KILL` |
 | checks | check: `TARGET_AILMENT`; word: `POISON` |

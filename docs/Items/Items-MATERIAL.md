@@ -41,7 +41,7 @@
 | [Quick Flux](#quick_flux) | QUICK_FLUX | 100 |
 | [Crest Fragment](#crest_fragment) | CREST_FRAGMENT | 150 |
 | [Rush Key](#rush_key) | RUSH_KEY | 750 |
-| [Tower Seal](#tower_seal) | TOWER_SEAL | 200 |
+| [Tower Key](#tower_seal) | TOWER_SEAL | 200 |
 | [Minor Experience Potion](#potion_experience_t1) | POTION_EXPERIENCE_T1 | 60 |
 | [Experience Potion](#potion_experience_t2) | POTION_EXPERIENCE_T2 | 180 |
 | [Greater Experience Potion](#potion_experience_t3) | POTION_EXPERIENCE_T3 | 450 |
@@ -585,7 +585,7 @@
 
 ## TOWER_SEAL <a href="#tower_seal" id="tower_seal"></a>
 
-### Tower Seal <a href="#tower-seal" id="tower-seal"></a>
+### Tower Key <a href="#tower-seal" id="tower-seal"></a>
 
 Открывает вход в бесконечную башню с последнего чекпоинта
 

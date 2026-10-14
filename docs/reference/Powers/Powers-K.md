@@ -2,7 +2,7 @@
 
 ## POWER_KAOMS_BLAZE <a href="#power_kaoms_blaze" id="power_kaoms_blaze"></a>
 
-### Пламя Каома <a href="#пламя-каома" id="пламя-каома"></a>
+### Пламя тризны <a href="#пламя-каома" id="пламя-каома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -13,14 +13,14 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Пламя Каома](../Stats/Stats-POWER.md#power_kaoms_blaze) |
+| Характеристика · `stat` | [Пламя тризны](../Stats/Stats-POWER.md#power_kaoms_blaze) |
 | Событие · `on` | `KILL` |
 | Эффекты · `effects` | Действие: `DAMAGE`; of: `LIFE`; Тип: `FIRE`; to: `ALL` |
 
 
 ## POWER_KAOMS_RAGE <a href="#power_kaoms_rage" id="power_kaoms_rage"></a>
 
-### Ярость Каома <a href="#ярость-каома" id="ярость-каома"></a>
+### Ярость пепельного вождя <a href="#ярость-каома" id="ярость-каома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -31,7 +31,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Ярость Каома](../Stats/Stats-POWER.md#power_kaoms_rage) |
+| Характеристика · `stat` | [Ярость пепельного вождя](../Stats/Stats-POWER.md#power_kaoms_rage) |
 | Тип броска · `roll` | `CHANCE` |
 | Событие · `on` | `CRIT` |
 | Эффекты · `effects` | Действие: `CHARGES`; Количество: 3 |
@@ -39,7 +39,7 @@
 
 ## POWER_KARUI_GRIT <a href="#power_karui_grit" id="power_karui_grit"></a>
 
-### Стойкость каруи <a href="#стойкость-каруи" id="стойкость-каруи"></a>
+### Упорство великана <a href="#стойкость-каруи" id="стойкость-каруи"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -50,7 +50,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Стойкость каруи](../Stats/Stats-POWER.md#power_karui_grit) |
+| Характеристика · `stat` | [Упорство великана](../Stats/Stats-POWER.md#power_karui_grit) |
 | Событие · `on` | `STANDING` |
 | checks | check: `LIFE_BELOW`; Значение: 50 |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Броня](../Stats/Stats-HERO.md#stock_armor); Операция: `INCREASED` |
@@ -58,7 +58,7 @@
 
 ## POWER_KAOMS_ENDURANCE <a href="#power_kaoms_endurance" id="power_kaoms_endurance"></a>
 
-### Стойкость Каома <a href="#стойкость-каома" id="стойкость-каома"></a>
+### Стойкость пепельного вождя <a href="#стойкость-каома" id="стойкость-каома"></a>
 
 **Чтение свойства** (`{v}` — значение):
 
@@ -69,7 +69,7 @@
 
 | Параметр | Значение |
 | --- | --- |
-| Характеристика · `stat` | [Стойкость Каома](../Stats/Stats-POWER.md#power_kaoms_endurance) |
+| Характеристика · `stat` | [Стойкость пепельного вождя](../Stats/Stats-POWER.md#power_kaoms_endurance) |
 | Событие · `on` | `CRIT` |
 | Эффекты · `effects` | Действие: `BUFF`; Свойства: Характеристика: [Снижение физического урона](../Stats/Stats-HERO.md#stock_physical_reduction); Длительность: 4; stacks: 3 |
 

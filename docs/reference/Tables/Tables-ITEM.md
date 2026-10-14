@@ -19,22 +19,22 @@
 | [Orb of Alchemy](../../Items/Items-CURRENCY.md#orb_of_alchemy) | 180 | — | — | 0 |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 120 | — | — | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | — | — | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | — | — | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | — | — | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 80 | — | — | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 20 | — | — | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 20 | — | — | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 10 | — | — | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 5 | — | — | 0 |
-| [Mirror of Kalandra](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 1 | — | — | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 6 | — | — | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 6 | — | — | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 6 | — | — | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 6 | — | — | 0 |
+| [Mirror of the Flats](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 1 | — | — | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 6 | — | — | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 6 | — | — | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 6 | — | — | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 6 | — | — | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 6 | — | — | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 6 | — | — | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 6 | — | — | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 6 | — | — | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 6 | — | — | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 6 | — | — | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 6 | — | — | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 6 | — | — | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 6 | — | — | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 6 | — | — | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 6 | — | — | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 15 | — | — | 0 |

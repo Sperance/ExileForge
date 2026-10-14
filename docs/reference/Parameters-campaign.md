@@ -95,7 +95,7 @@
 | `monsters[3].stats.STOCK_ATTACK_COLD` | 2.5 |
 | `monsters[3].stats.STOCK_RESIST_COLD` | 30 |
 | `monsters[3].trait` | `TRAIT_SKILL_ICE_BOLT` |
-| `monsters[4].code` | [Болотный зомби](Monsters.md#mire_zombie) |
+| `monsters[4].code` | [Болотный мертвяк](Monsters.md#mire_zombie) |
 | `monsters[4].form` | `HUMANOID` |
 | `monsters[4].experience` | 22 |
 | `monsters[4].loot` | [loot:T1](Tables/Tables-LOOT.md#loot-t1) |
@@ -177,7 +177,7 @@
 | `monsters[11].stats.STOCK_ATTACK_PHYSICAL` | 5 |
 | `monsters[11].stats.STOCK_CRITICAL_CHANCE` | 12 |
 | `monsters[11].trait` | `TRAIT_KEEN_EYE` |
-| `monsters[12].code` | [Страж руин](Monsters.md#ruin_sentry) |
+| `monsters[12].code` | [Каменный часовой](Monsters.md#ruin_sentry) |
 | `monsters[12].form` | `GOLEM` |
 | `monsters[12].experience` | 26 |
 | `monsters[12].loot` | [loot:T2](Tables/Tables-LOOT.md#loot-t2) |
@@ -233,7 +233,7 @@
 | `monsters[16].stats.STOCK_ATTACK_LIGHTNING` | 3 |
 | `monsters[16].stats.STOCK_EVASION` | 25 |
 | `monsters[16].trait` | `TRAIT_STATIC` |
-| `monsters[17].code` | [Обитатель туннелей](Monsters.md#tunnel_dweller) |
+| `monsters[17].code` | [Одержимый рудокоп](Monsters.md#tunnel_dweller) |
 | `monsters[17].form` | `HUMANOID` |
 | `monsters[17].experience` | 22 |
 | `monsters[17].loot` | [loot:T3](Tables/Tables-LOOT.md#loot-t3) |
@@ -337,7 +337,7 @@
 | `monsters[25].stats.STOCK_RESIST_COLD` | 40 |
 | `monsters[25].stats.STOCK_LEECH_ALL` | 3 |
 | `monsters[25].trait` | `TRAIT_SKILL_MANA_DRAIN` |
-| `monsters[26].code` | [Послушник бездны](Monsters.md#abyssal_acolyte) |
+| `monsters[26].code` | [Послушник Бездны](Monsters.md#abyssal_acolyte) |
 | `monsters[26].form` | `WRAITH` |
 | `monsters[26].experience` | 26 |
 | `monsters[26].loot` | [loot:T3](Tables/Tables-LOOT.md#loot-t3) |
@@ -470,7 +470,7 @@
 | `monsters[37].stats.STOCK_CRITICAL_CHANCE` | 12 |
 | `monsters[37].stats.STOCK_EVASION` | 25 |
 | `monsters[37].trait` | `TRAIT_FRENZIED` |
-| `monsters[38].code` | [Охотник с трубкой](Monsters.md#blowgun_hunter) |
+| `monsters[38].code` | [Духовой стрелок](Monsters.md#blowgun_hunter) |
 | `monsters[38].form` | `HUMANOID` |
 | `monsters[38].experience` | 23 |
 | `monsters[38].loot` | [loot:T5](Tables/Tables-LOOT.md#loot-t5) |
@@ -531,7 +531,7 @@
 | `monsters[43].stats.STOCK_ARMOR` | 55 |
 | `monsters[43].stats.STOCK_RESIST_FIRE` | 75 |
 | `monsters[43].trait` | `TRAIT_PROVOKE` |
-| `monsters[44].code` | [Огненный змей](Monsters.md#fire_drake) |
+| `monsters[44].code` | [Огненный дрейк](Monsters.md#fire_drake) |
 | `monsters[44].form` | `SERPENT` |
 | `monsters[44].experience` | 26 |
 | `monsters[44].loot` | [loot:T6](Tables/Tables-LOOT.md#loot-t6) |
@@ -541,7 +541,7 @@
 | `monsters[44].stats.STOCK_ATTACK_FIRE` | 5 |
 | `monsters[44].stats.STOCK_RESIST_FIRE` | 50 |
 | `monsters[44].trait` | `TRAIT_SKILL_FLAME_BREATH` |
-| `monsters[45].code` | [Инфернальный рыцарь](Monsters.md#infernal_knight) |
+| `monsters[45].code` | [Рыцарь пламени](Monsters.md#infernal_knight) |
 | `monsters[45].form` | `DEMON` |
 | `monsters[45].experience` | 30 |
 | `monsters[45].loot` | [loot:T6](Tables/Tables-LOOT.md#loot-t6) |
@@ -587,7 +587,7 @@
 | `monsters[48].stats.STOCK_ATTACK_CHAOS` | 6 |
 | `monsters[48].stats.STOCK_RESIST_CHAOS` | 60 |
 | `monsters[48].trait` | `TRAIT_VOLATILE` |
-| `monsters[49].code` | [Ползун бездны](Monsters.md#abyss_crawler) |
+| `monsters[49].code` | [Ползун Бездны](Monsters.md#abyss_crawler) |
 | `monsters[49].form` | `SPIDER` |
 | `monsters[49].experience` | 24 |
 | `monsters[49].loot` | [loot:T6](Tables/Tables-LOOT.md#loot-t6) |
@@ -597,7 +597,7 @@
 | `monsters[49].stats.STOCK_ATTACK_CHAOS` | 3 |
 | `monsters[49].stats.STOCK_EVASION` | 30 |
 | `monsters[49].trait` | `TRAIT_VOIDTOUCHED` |
-| `monsters[50].code` | [Тень бездны](Monsters.md#abyssal_shade) |
+| `monsters[50].code` | [Тень Бездны](Monsters.md#abyssal_shade) |
 | `monsters[50].form` | `WRAITH` |
 | `monsters[50].experience` | 27 |
 | `monsters[50].loot` | [loot:T6](Tables/Tables-LOOT.md#loot-t6) |
@@ -643,7 +643,7 @@
 | `monsters[53].stats.STOCK_ATTACK_CHAOS` | 3 |
 | `monsters[53].stats.STOCK_EVASION` | 35 |
 | `monsters[53].trait` | `TRAIT_VENOM_STING` |
-| `monsters[54].code` | [Зовущий Прилив](Bosses.md#boss_tidecaller) |
+| `monsters[54].code` | [Зовущий прилив](Bosses.md#boss_tidecaller) |
 | `monsters[54].form` | `HUMANOID` |
 | `monsters[54].experience` | 60 |
 | `monsters[54].loot` | [loot:BOSS_1](Tables/Tables-LOOT.md#loot-boss_1) |
@@ -658,7 +658,7 @@
 | `monsters[54].fixed` | [MOB_TOUGH](Modifiers/Modifiers-MONSTER.md#mob_tough); [BOSS_TEMPEST](Modifiers/Modifiers-MONSTER.md#boss_tempest) |
 | `monsters[54].tables` | [boss:BOSS_TIDECALLER](Tables/Tables-TEMPLATE.md#boss-boss_tidecaller) |
 | `monsters[54].trait` | `TRAIT_CRUSHER` |
-| `monsters[55].code` | [Мать Рассола](Bosses.md#boss_brine_mother) |
+| `monsters[55].code` | [Мать рассола](Bosses.md#boss_brine_mother) |
 | `monsters[55].form` | `CRAB` |
 | `monsters[55].experience` | 60 |
 | `monsters[55].loot` | [loot:BOSS_1](Tables/Tables-LOOT.md#loot-boss_1) |
@@ -673,7 +673,7 @@
 | `monsters[55].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Слабость](Monster-skills.md#mob_enfeeble) |
 | `monsters[55].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_STRONG](Modifiers/Modifiers-MONSTER.md#mob_strong) |
 | `monsters[55].tables` | [boss:BOSS_BRINE_MOTHER](Tables/Tables-TEMPLATE.md#boss-boss_brine_mother) |
-| `monsters[56].code` | [Болотная Королева](Bosses.md#boss_bog_queen) |
+| `monsters[56].code` | [Болотная ведьма](Bosses.md#boss_bog_queen) |
 | `monsters[56].form` | `SLUG` |
 | `monsters[56].experience` | 60 |
 | `monsters[56].loot` | [loot:BOSS_1](Tables/Tables-LOOT.md#loot-boss_1) |
@@ -688,7 +688,7 @@
 | `monsters[56].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Кража маны](Monster-skills.md#mob_mana_drain) |
 | `monsters[56].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_REGENERATING](Modifiers/Modifiers-MONSTER.md#mob_regenerating) |
 | `monsters[56].tables` | [boss:BOSS_BOG_QUEEN](Tables/Tables-TEMPLATE.md#boss-boss_bog_queen) |
-| `monsters[57].code` | [Вожак Стаи](Bosses.md#boss_alpha_wolf) |
+| `monsters[57].code` | [Вожак стаи](Bosses.md#boss_alpha_wolf) |
 | `monsters[57].form` | `BEAST` |
 | `monsters[57].experience` | 60 |
 | `monsters[57].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -703,7 +703,7 @@
 | `monsters[57].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Кража маны](Monster-skills.md#mob_mana_drain) |
 | `monsters[57].fixed` | [MOB_HASTED](Modifiers/Modifiers-MONSTER.md#mob_hasted); [BOSS_EXECUTIONER](Modifiers/Modifiers-MONSTER.md#boss_executioner) |
 | `monsters[57].tables` | [boss:BOSS_ALPHA_WOLF](Tables/Tables-TEMPLATE.md#boss-boss_alpha_wolf) |
-| `monsters[58].code` | [Страж Руин](Bosses.md#boss_ruin_warden) |
+| `monsters[58].code` | [Последний часовой](Bosses.md#boss_ruin_warden) |
 | `monsters[58].form` | `GOLEM` |
 | `monsters[58].experience` | 60 |
 | `monsters[58].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -735,7 +735,7 @@
 | `monsters[59].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[59].fixed` | [BOSS_IMMORTAL](Modifiers/Modifiers-MONSTER.md#boss_immortal); [MOB_VAMPIRIC](Modifiers/Modifiers-MONSTER.md#mob_vampiric) |
 | `monsters[59].tables` | [boss:BOSS_CRYPT_LORD](Tables/Tables-TEMPLATE.md#boss-boss_crypt_lord) |
-| `monsters[60].code` | [Королева Осколков](Bosses.md#boss_shard_queen) |
+| `monsters[60].code` | [Королева осколков](Bosses.md#boss_shard_queen) |
 | `monsters[60].form` | `SPIDER` |
 | `monsters[60].experience` | 60 |
 | `monsters[60].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -747,10 +747,10 @@
 | `monsters[60].stats.STOCK_SHOCK_CHANCE` | 25 |
 | `monsters[60].stats.STOCK_MANA` | 30 |
 | `monsters[60].boss` | Да |
-| `monsters[60].skills` | [Разряд](Monster-skills.md#mob_zap); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[60].skills` | [Разряд](Monster-skills.md#mob_zap); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[60].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_CRACKLING](Modifiers/Modifiers-MONSTER.md#mob_crackling) |
 | `monsters[60].tables` | [boss:BOSS_SHARD_QUEEN](Tables/Tables-TEMPLATE.md#boss-boss_shard_queen) |
-| `monsters[61].code` | [Пепельный Тиран](Bosses.md#boss_ashen_tyrant) |
+| `monsters[61].code` | [Пепельный тиран](Bosses.md#boss_ashen_tyrant) |
 | `monsters[61].form` | `BRUTE` |
 | `monsters[61].experience` | 60 |
 | `monsters[61].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -767,7 +767,7 @@
 | `monsters[61].fixed` | [MOB_BURNING](Modifiers/Modifiers-MONSTER.md#mob_burning); [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord) |
 | `monsters[61].tables` | [boss:BOSS_ASHEN_TYRANT](Tables/Tables-TEMPLATE.md#boss-boss_ashen_tyrant) |
 | `monsters[61].trait` | `TRAIT_CRUSHER` |
-| `monsters[62].code` | [Ледяной Монарх](Bosses.md#boss_frost_monarch) |
+| `monsters[62].code` | [Ледяной монарх](Bosses.md#boss_frost_monarch) |
 | `monsters[62].form` | `WRAITH` |
 | `monsters[62].experience` | 60 |
 | `monsters[62].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -820,7 +820,7 @@
 | `monsters[64].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_CHILLING](Modifiers/Modifiers-MONSTER.md#mob_chilling) |
 | `monsters[64].tables` | [boss:BOSS_SORROW_CAPTAIN](Tables/Tables-TEMPLATE.md#boss-boss_sorrow_captain) |
 | `monsters[64].trait` | `TRAIT_CRUSHER` |
-| `monsters[65].code` | [Королева Гнёзд](Bosses.md#boss_nest_queen) |
+| `monsters[65].code` | [Старый буревестник](Bosses.md#boss_nest_queen) |
 | `monsters[65].form` | `BAT` |
 | `monsters[65].experience` | 60 |
 | `monsters[65].loot` | [loot:BOSS_1](Tables/Tables-LOOT.md#loot-boss_1) |
@@ -869,7 +869,7 @@
 | `monsters[67].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Слабость](Monster-skills.md#mob_enfeeble) |
 | `monsters[67].fixed` | [BOSS_DREAD](Modifiers/Modifiers-MONSTER.md#boss_dread); [MOB_DRAINING](Modifiers/Modifiers-MONSTER.md#mob_draining) |
 | `monsters[67].tables` | [boss:BOSS_FERRYMAN](Tables/Tables-TEMPLATE.md#boss-boss_ferryman) |
-| `monsters[68].code` | [Король Контрабандистов](Bosses.md#boss_smuggler_king) |
+| `monsters[68].code` | [Король контрабандистов](Bosses.md#boss_smuggler_king) |
 | `monsters[68].form` | `HUMANOID` |
 | `monsters[68].experience` | 60 |
 | `monsters[68].loot` | [loot:BOSS_1](Tables/Tables-LOOT.md#loot-boss_1) |
@@ -883,7 +883,7 @@
 | `monsters[68].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[68].fixed` | [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [MOB_EVASIVE](Modifiers/Modifiers-MONSTER.md#mob_evasive) |
 | `monsters[68].tables` | [boss:BOSS_SMUGGLER_KING](Tables/Tables-TEMPLATE.md#boss-boss_smuggler_king) |
-| `monsters[69].code` | [Трясинный Змей](Bosses.md#boss_mire_serpent) |
+| `monsters[69].code` | [Трясинный змей](Bosses.md#boss_mire_serpent) |
 | `monsters[69].form` | `SERPENT` |
 | `monsters[69].experience` | 60 |
 | `monsters[69].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -898,7 +898,7 @@
 | `monsters[69].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Уязвимость](Monster-skills.md#mob_vulnerability) |
 | `monsters[69].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_TOXIC](Modifiers/Modifiers-MONSTER.md#mob_toxic) |
 | `monsters[69].tables` | [boss:BOSS_MIRE_SERPENT](Tables/Tables-TEMPLATE.md#boss-boss_mire_serpent) |
-| `monsters[70].code` | [Матёрый Волколак](Bosses.md#boss_old_werewolf) |
+| `monsters[70].code` | [Матёрый волколак](Bosses.md#boss_old_werewolf) |
 | `monsters[70].form` | `BEAST` |
 | `monsters[70].experience` | 60 |
 | `monsters[70].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -914,7 +914,7 @@
 | `monsters[70].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Уязвимость](Monster-skills.md#mob_vulnerability) |
 | `monsters[70].fixed` | [BOSS_EXECUTIONER](Modifiers/Modifiers-MONSTER.md#boss_executioner); [MOB_BERSERK](Modifiers/Modifiers-MONSTER.md#mob_berserk) |
 | `monsters[70].tables` | [boss:BOSS_OLD_WEREWOLF](Tables/Tables-TEMPLATE.md#boss-boss_old_werewolf) |
-| `monsters[71].code` | [Комендант Заставы](Bosses.md#boss_outpost_commander) |
+| `monsters[71].code` | [Комендант заставы](Bosses.md#boss_outpost_commander) |
 | `monsters[71].form` | `UNDEAD` |
 | `monsters[71].experience` | 60 |
 | `monsters[71].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -928,7 +928,7 @@
 | `monsters[71].boss` | Да |
 | `monsters[71].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[71].fixed` | [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [MOB_ARMOURED](Modifiers/Modifiers-MONSTER.md#mob_armoured) |
-| `monsters[72].code` | [Вождь Кургана](Bosses.md#boss_barrow_chieftain) |
+| `monsters[72].code` | [Вождь кургана](Bosses.md#boss_barrow_chieftain) |
 | `monsters[72].form` | `UNDEAD` |
 | `monsters[72].experience` | 60 |
 | `monsters[72].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -944,7 +944,7 @@
 | `monsters[72].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Уязвимость](Monster-skills.md#mob_vulnerability) |
 | `monsters[72].fixed` | [BOSS_IMMORTAL](Modifiers/Modifiers-MONSTER.md#boss_immortal); [MOB_FROSTBORN](Modifiers/Modifiers-MONSTER.md#mob_frostborn) |
 | `monsters[72].tables` | [boss:BOSS_BARROW_CHIEFTAIN](Tables/Tables-TEMPLATE.md#boss-boss_barrow_chieftain) |
-| `monsters[73].code` | [Бригадир Проходчиков](Bosses.md#boss_foreman) |
+| `monsters[73].code` | [Бригадир проходчиков](Bosses.md#boss_foreman) |
 | `monsters[73].form` | `HUMANOID` |
 | `monsters[73].experience` | 60 |
 | `monsters[73].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -960,7 +960,7 @@
 | `monsters[73].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Кража маны](Monster-skills.md#mob_mana_drain) |
 | `monsters[73].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_CRACKLING](Modifiers/Modifiers-MONSTER.md#mob_crackling) |
 | `monsters[73].tables` | [boss:BOSS_FOREMAN](Tables/Tables-TEMPLATE.md#boss-boss_foreman) |
-| `monsters[74].code` | [Белая Рысь](Bosses.md#boss_white_lynx) |
+| `monsters[74].code` | [Белая рысь](Bosses.md#boss_white_lynx) |
 | `monsters[74].form` | `BEAST` |
 | `monsters[74].experience` | 60 |
 | `monsters[74].loot` | [loot:BOSS_2](Tables/Tables-LOOT.md#loot-boss_2) |
@@ -977,7 +977,7 @@
 | `monsters[74].boss` | Да |
 | `monsters[74].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Слабость](Monster-skills.md#mob_enfeeble) |
 | `monsters[74].fixed` | [BOSS_EXECUTIONER](Modifiers/Modifiers-MONSTER.md#boss_executioner); [MOB_FREEZING](Modifiers/Modifiers-MONSTER.md#mob_freezing) |
-| `monsters[75].code` | [Рудный Голем](Bosses.md#boss_ore_golem) |
+| `monsters[75].code` | [Рудный голем](Bosses.md#boss_ore_golem) |
 | `monsters[75].form` | `GOLEM` |
 | `monsters[75].experience` | 60 |
 | `monsters[75].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -995,7 +995,7 @@
 | `monsters[75].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[75].fixed` | [BOSS_COLOSSAL](Modifiers/Modifiers-MONSTER.md#boss_colossal); [MOB_JUGGERNAUT](Modifiers/Modifiers-MONSTER.md#mob_juggernaut) |
 | `monsters[75].trait` | `TRAIT_UNSHAKEN` |
-| `monsters[76].code` | [Прядильщица Жеод](Bosses.md#boss_geode_spinner) |
+| `monsters[76].code` | [Прядильщица жеод](Bosses.md#boss_geode_spinner) |
 | `monsters[76].form` | `SPIDER` |
 | `monsters[76].experience` | 60 |
 | `monsters[76].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1011,7 +1011,7 @@
 | `monsters[76].skills` | [Разряд](Monster-skills.md#mob_zap) |
 | `monsters[76].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_STORMBORN](Modifiers/Modifiers-MONSTER.md#mob_stormborn) |
 | `monsters[76].tables` | [boss:BOSS_GEODE_SPINNER](Tables/Tables-TEMPLATE.md#boss-boss_geode_spinner) |
-| `monsters[77].code` | [Лич Инея](Bosses.md#boss_rime_lich) |
+| `monsters[77].code` | [Лич инея](Bosses.md#boss_rime_lich) |
 | `monsters[77].form` | `UNDEAD` |
 | `monsters[77].experience` | 60 |
 | `monsters[77].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1030,7 +1030,7 @@
 | `monsters[77].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Исцеление](Monster-skills.md#mob_heal) |
 | `monsters[77].fixed` | [BOSS_MIRROR_SHELL](Modifiers/Modifiers-MONSTER.md#boss_mirror_shell); [MOB_FROSTBORN](Modifiers/Modifiers-MONSTER.md#mob_frostborn) |
 | `monsters[77].tables` | [boss:BOSS_RIME_LICH](Tables/Tables-TEMPLATE.md#boss-boss_rime_lich) |
-| `monsters[78].code` | [Старейший Тролль](Bosses.md#boss_elder_troll) |
+| `monsters[78].code` | [Старейший тролль](Bosses.md#boss_elder_troll) |
 | `monsters[78].form` | `BRUTE` |
 | `monsters[78].experience` | 60 |
 | `monsters[78].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1048,7 +1048,7 @@
 | `monsters[78].fixed` | [BOSS_COLOSSAL](Modifiers/Modifiers-MONSTER.md#boss_colossal); [MOB_REGENERATING](Modifiers/Modifiers-MONSTER.md#mob_regenerating) |
 | `monsters[78].tables` | [boss:BOSS_ELDER_TROLL](Tables/Tables-TEMPLATE.md#boss-boss_elder_troll) |
 | `monsters[78].trait` | `TRAIT_CRUSHER` |
-| `monsters[79].code` | [Мать Гончих](Bosses.md#boss_hound_mother) |
+| `monsters[79].code` | [Мать гончих](Bosses.md#boss_hound_mother) |
 | `monsters[79].form` | `BEAST` |
 | `monsters[79].experience` | 60 |
 | `monsters[79].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1084,7 +1084,7 @@
 | `monsters[80].fixed` | [BOSS_TEMPEST](Modifiers/Modifiers-MONSTER.md#boss_tempest); [MOB_STORMBORN](Modifiers/Modifiers-MONSTER.md#mob_stormborn) |
 | `monsters[80].tables` | [boss:BOSS_THUNDER_CALLER](Tables/Tables-TEMPLATE.md#boss-boss_thunder_caller) |
 | `monsters[80].trait` | `TRAIT_GROUNDED` |
-| `monsters[81].code` | [Жрица Глубин](Bosses.md#boss_deep_priestess) |
+| `monsters[81].code` | [Жрица глубин](Bosses.md#boss_deep_priestess) |
 | `monsters[81].form` | `HUMANOID` |
 | `monsters[81].experience` | 60 |
 | `monsters[81].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1102,7 +1102,7 @@
 | `monsters[81].boss` | Да |
 | `monsters[81].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Слабость](Monster-skills.md#mob_enfeeble) |
 | `monsters[81].fixed` | [BOSS_DREAD](Modifiers/Modifiers-MONSTER.md#boss_dread); [MOB_WARDED](Modifiers/Modifiers-MONSTER.md#mob_warded) |
-| `monsters[82].code` | [Обсидиановый Колосс](Bosses.md#boss_obsidian_colossus) |
+| `monsters[82].code` | [Обсидиановый колосс](Bosses.md#boss_obsidian_colossus) |
 | `monsters[82].form` | `GOLEM` |
 | `monsters[82].experience` | 60 |
 | `monsters[82].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1120,7 +1120,7 @@
 | `monsters[82].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Каменная кожа](Monster-skills.md#mob_stoneskin) |
 | `monsters[82].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_FIREPROOF](Modifiers/Modifiers-MONSTER.md#mob_fireproof) |
 | `monsters[82].trait` | `TRAIT_UNSHAKEN` |
-| `monsters[83].code` | [Шлаковый Червь](Bosses.md#boss_slag_worm) |
+| `monsters[83].code` | [Шлаковый червь](Bosses.md#boss_slag_worm) |
 | `monsters[83].form` | `SLUG` |
 | `monsters[83].experience` | 60 |
 | `monsters[83].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1150,7 +1150,7 @@
 | `monsters[84].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Кража маны](Monster-skills.md#mob_mana_drain) |
 | `monsters[84].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_FREEZING](Modifiers/Modifiers-MONSTER.md#mob_freezing) |
 | `monsters[84].tables` | [boss:BOSS_FROSTFANG](Tables/Tables-TEMPLATE.md#boss-boss_frostfang) |
-| `monsters[85].code` | [Глашатай Бездны](Bosses.md#boss_abyss_herald) |
+| `monsters[85].code` | [Глашатай глубин](Bosses.md#boss_abyss_herald) |
 | `monsters[85].form` | `WRAITH` |
 | `monsters[85].experience` | 60 |
 | `monsters[85].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1168,7 +1168,7 @@
 | `monsters[85].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Исцеление](Monster-skills.md#mob_heal) |
 | `monsters[85].fixed` | [BOSS_MIRROR_SHELL](Modifiers/Modifiers-MONSTER.md#boss_mirror_shell); [MOB_WITHERING](Modifiers/Modifiers-MONSTER.md#mob_withering) |
 | `monsters[85].tables` | [boss:BOSS_ABYSS_HERALD](Tables/Tables-TEMPLATE.md#boss-boss_abyss_herald) |
-| `monsters[86].code` | [Кастелян Пепла](Bosses.md#boss_ash_castellan) |
+| `monsters[86].code` | [Кастелян пепла](Bosses.md#boss_ash_castellan) |
 | `monsters[86].form` | `UNDEAD` |
 | `monsters[86].experience` | 60 |
 | `monsters[86].loot` | [loot:BOSS_3](Tables/Tables-LOOT.md#loot-boss_3) |
@@ -1244,7 +1244,7 @@
 | `monsters[90].skills` | [Разряд](Monster-skills.md#mob_zap) |
 | `monsters[90].fixed` | [BOSS_TEMPEST](Modifiers/Modifiers-MONSTER.md#boss_tempest); [MOB_SHOCKING](Modifiers/Modifiers-MONSTER.md#mob_shocking) |
 | `monsters[90].tables` | [boss:BOSS_DUNE_SIREN](Tables/Tables-TEMPLATE.md#boss-boss_dune_siren) |
-| `monsters[91].code` | [Песчаный магистрат](Bosses.md#boss_sand_magistrate) |
+| `monsters[91].code` | [Песчаный судья](Bosses.md#boss_sand_magistrate) |
 | `monsters[91].form` | `UNDEAD` |
 | `monsters[91].experience` | 60 |
 | `monsters[91].loot` | [loot:BOSS_4](Tables/Tables-LOOT.md#loot-boss_4) |
@@ -1416,7 +1416,7 @@
 | `monsters[101].stats.STOCK_MANA_REGEN` | 4 |
 | `monsters[101].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[101].boss` | Да |
-| `monsters[101].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[101].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[101].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_WITHERING](Modifiers/Modifiers-MONSTER.md#mob_withering) |
 | `monsters[101].tables` | [boss:BOSS_HIGH_EMBALMER](Tables/Tables-TEMPLATE.md#boss-boss_high_embalmer) |
 | `monsters[102].code` | [Жрец Солнца](Bosses.md#boss_sun_priest) |
@@ -1438,7 +1438,7 @@
 | `monsters[102].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Кража маны](Monster-skills.md#mob_mana_drain) |
 | `monsters[102].fixed` | [BOSS_DREAD](Modifiers/Modifiers-MONSTER.md#boss_dread); [MOB_FLAMING](Modifiers/Modifiers-MONSTER.md#mob_flaming) |
 | `monsters[102].tables` | [boss:BOSS_SUN_PRIEST](Tables/Tables-TEMPLATE.md#boss-boss_sun_priest) |
-| `monsters[103].code` | [Грозовой Рух](Bosses.md#boss_storm_roc) |
+| `monsters[103].code` | [Грозовой рух](Bosses.md#boss_storm_roc) |
 | `monsters[103].form` | `BAT` |
 | `monsters[103].experience` | 60 |
 | `monsters[103].loot` | [loot:BOSS_4](Tables/Tables-LOOT.md#loot-boss_4) |
@@ -1454,7 +1454,7 @@
 | `monsters[103].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[103].fixed` | [BOSS_TEMPEST](Modifiers/Modifiers-MONSTER.md#boss_tempest); [MOB_STORMBORN](Modifiers/Modifiers-MONSTER.md#mob_stormborn) |
 | `monsters[103].tables` | [boss:BOSS_STORM_ROC](Tables/Tables-TEMPLATE.md#boss-boss_storm_roc) |
-| `monsters[104].code` | [Солнечный царь](Bosses.md#boss_sun_king) |
+| `monsters[104].code` | [Солнечный Царь](Bosses.md#boss_sun_king) |
 | `monsters[104].form` | `UNDEAD` |
 | `monsters[104].experience` | 60 |
 | `monsters[104].loot` | [loot:BOSS_4](Tables/Tables-LOOT.md#loot-boss_4) |
@@ -1471,7 +1471,7 @@
 | `monsters[104].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[104].fixed` | [BOSS_IMMORTAL](Modifiers/Modifiers-MONSTER.md#boss_immortal); [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [MOB_BURNING](Modifiers/Modifiers-MONSTER.md#mob_burning) |
 | `monsters[104].tables` | [boss:BOSS_SUN_KING](Tables/Tables-TEMPLATE.md#boss-boss_sun_king) |
-| `monsters[105].code` | [Лесной ловчий](Bosses.md#boss_jungle_stalker) |
+| `monsters[105].code` | [Ловчий джунглей](Bosses.md#boss_jungle_stalker) |
 | `monsters[105].form` | `BEAST` |
 | `monsters[105].experience` | 60 |
 | `monsters[105].loot` | [loot:BOSS_5](Tables/Tables-LOOT.md#loot-boss_5) |
@@ -1486,7 +1486,7 @@
 | `monsters[105].boss` | Да |
 | `monsters[105].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Исцеление](Monster-skills.md#mob_heal) |
 | `monsters[105].fixed` | [BOSS_EXECUTIONER](Modifiers/Modifiers-MONSTER.md#boss_executioner); [MOB_SWIFT](Modifiers/Modifiers-MONSTER.md#mob_swift) |
-| `monsters[106].code` | [Мангровая Пасть](Bosses.md#boss_mangrove_maw) |
+| `monsters[106].code` | [Мангровая пасть](Bosses.md#boss_mangrove_maw) |
 | `monsters[106].form` | `SERPENT` |
 | `monsters[106].experience` | 60 |
 | `monsters[106].loot` | [loot:BOSS_5](Tables/Tables-LOOT.md#loot-boss_5) |
@@ -1626,7 +1626,7 @@
 | `monsters[114].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[114].stats.STOCK_MANA` | 30 |
 | `monsters[114].boss` | Да |
-| `monsters[114].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[114].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[114].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_BLIGHTED](Modifiers/Modifiers-MONSTER.md#mob_blighted) |
 | `monsters[114].tables` | [boss:BOSS_CANOPY_HORROR](Tables/Tables-TEMPLATE.md#boss-boss_canopy_horror) |
 | `monsters[115].code` | [Споровый владыка](Bosses.md#boss_spore_lord) |
@@ -1644,7 +1644,7 @@
 | `monsters[115].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit) |
 | `monsters[115].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_REGENERATING](Modifiers/Modifiers-MONSTER.md#mob_regenerating) |
 | `monsters[115].tables` | [boss:BOSS_SPORE_LORD](Tables/Tables-TEMPLATE.md#boss-boss_spore_lord) |
-| `monsters[116].code` | [Обезумевший первопроходец](Bosses.md#boss_mad_explorer) |
+| `monsters[116].code` | [Обезумевший проводник](Bosses.md#boss_mad_explorer) |
 | `monsters[116].form` | `HUMANOID` |
 | `monsters[116].experience` | 60 |
 | `monsters[116].loot` | [loot:BOSS_5](Tables/Tables-LOOT.md#loot-boss_5) |
@@ -1735,7 +1735,7 @@
 | `monsters[121].boss` | Да |
 | `monsters[121].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[121].fixed` | [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [MOB_STALWART](Modifiers/Modifiers-MONSTER.md#mob_stalwart) |
-| `monsters[122].code` | [Царица улья](Bosses.md#boss_hive_queen) |
+| `monsters[122].code` | [Царица Улья](Bosses.md#boss_hive_queen) |
 | `monsters[122].form` | `INSECT` |
 | `monsters[122].experience` | 60 |
 | `monsters[122].loot` | [loot:BOSS_5](Tables/Tables-LOOT.md#loot-boss_5) |
@@ -1785,10 +1785,10 @@
 | `monsters[124].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[124].stats.STOCK_MANA` | 30 |
 | `monsters[124].boss` | Да |
-| `monsters[124].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[124].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[124].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_TOXIC](Modifiers/Modifiers-MONSTER.md#mob_toxic) |
 | `monsters[124].tables` | [boss:BOSS_SULPHUR_KING](Tables/Tables-TEMPLATE.md#boss-boss_sulphur_king) |
-| `monsters[125].code` | [Генерал-предатель](Bosses.md#boss_turncoat_general) |
+| `monsters[125].code` | [Генерал-перебежчик](Bosses.md#boss_turncoat_general) |
 | `monsters[125].form` | `HUMANOID` |
 | `monsters[125].experience` | 60 |
 | `monsters[125].loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
@@ -1802,7 +1802,7 @@
 | `monsters[125].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Каменная кожа](Monster-skills.md#mob_stoneskin) |
 | `monsters[125].fixed` | [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [MOB_STALWART](Modifiers/Modifiers-MONSTER.md#mob_stalwart) |
 | `monsters[125].tables` | [boss:BOSS_TURNCOAT_GENERAL](Tables/Tables-TEMPLATE.md#boss-boss_turncoat_general) |
-| `monsters[126].code` | [Лавовый змей](Bosses.md#boss_lava_wyrm) |
+| `monsters[126].code` | [Лавовый змий](Bosses.md#boss_lava_wyrm) |
 | `monsters[126].form` | `SERPENT` |
 | `monsters[126].experience` | 60 |
 | `monsters[126].loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
@@ -1844,7 +1844,7 @@
 | `monsters[128].stats.STOCK_IGNITE_CHANCE` | 20 |
 | `monsters[128].stats.STOCK_MANA` | 30 |
 | `monsters[128].boss` | Да |
-| `monsters[128].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[128].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[128].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_FIREPROOF](Modifiers/Modifiers-MONSTER.md#mob_fireproof) |
 | `monsters[128].tables` | [boss:BOSS_FURNACE_MASTER](Tables/Tables-TEMPLATE.md#boss-boss_furnace_master) |
 | `monsters[128].trait` | `TRAIT_GROUNDED` |
@@ -1973,7 +1973,7 @@
 | `monsters[136].boss` | Да |
 | `monsters[136].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Слабость](Monster-skills.md#mob_enfeeble) |
 | `monsters[136].fixed` | [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [MOB_BURNING](Modifiers/Modifiers-MONSTER.md#mob_burning) |
-| `monsters[137].code` | [Жерловой дракон](Bosses.md#boss_vent_dragon) |
+| `monsters[137].code` | [Дракон жерла](Bosses.md#boss_vent_dragon) |
 | `monsters[137].form` | `SERPENT` |
 | `monsters[137].experience` | 60 |
 | `monsters[137].loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
@@ -1985,10 +1985,10 @@
 | `monsters[137].stats.STOCK_IGNITE_CHANCE` | 20 |
 | `monsters[137].stats.STOCK_MANA` | 30 |
 | `monsters[137].boss` | Да |
-| `monsters[137].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[137].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[137].fixed` | [BOSS_COLOSSAL](Modifiers/Modifiers-MONSTER.md#boss_colossal); [MOB_FLAMING](Modifiers/Modifiers-MONSTER.md#mob_flaming) |
 | `monsters[137].tables` | [boss:BOSS_VENT_DRAGON](Tables/Tables-TEMPLATE.md#boss-boss_vent_dragon) |
-| `monsters[138].code` | [Привратник преисподней](Bosses.md#boss_infernal_gatekeeper) |
+| `monsters[138].code` | [Клятвенное пламя](Bosses.md#boss_infernal_gatekeeper) |
 | `monsters[138].form` | `DEMON` |
 | `monsters[138].experience` | 60 |
 | `monsters[138].loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
@@ -2039,7 +2039,7 @@
 | `monsters[140].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[140].fixed` | [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_FLAMING](Modifiers/Modifiers-MONSTER.md#mob_flaming) |
 | `monsters[140].tables` | [boss:BOSS_FLAME_SOVEREIGN](Tables/Tables-TEMPLATE.md#boss-boss_flame_sovereign) |
-| `monsters[141].code` | [Страж разлома](Bosses.md#boss_rift_watcher) |
+| `monsters[141].code` | [Страж пропасти](Bosses.md#boss_rift_watcher) |
 | `monsters[141].form` | `WRAITH` |
 | `monsters[141].experience` | 60 |
 | `monsters[141].loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
@@ -2073,7 +2073,7 @@
 | `monsters[142].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[142].fixed` | [BOSS_EXECUTIONER](Modifiers/Modifiers-MONSTER.md#boss_executioner); [MOB_BLIGHTED](Modifiers/Modifiers-MONSTER.md#mob_blighted) |
 | `monsters[142].tables` | [boss:BOSS_PLAGUE_REAPER](Tables/Tables-TEMPLATE.md#boss-boss_plague_reaper) |
-| `monsters[143].code` | [Падший аббат](Bosses.md#boss_fallen_abbot) |
+| `monsters[143].code` | [Падший настоятель](Bosses.md#boss_fallen_abbot) |
 | `monsters[143].form` | `HUMANOID` |
 | `monsters[143].experience` | 60 |
 | `monsters[143].loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
@@ -2089,7 +2089,7 @@
 | `monsters[143].stats.STOCK_MANA_REGEN` | 4 |
 | `monsters[143].stats.STOCK_FREEZE_CHANCE` | 20 |
 | `monsters[143].boss` | Да |
-| `monsters[143].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[143].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[143].fixed` | [BOSS_MIRROR_SHELL](Modifiers/Modifiers-MONSTER.md#boss_mirror_shell); [MOB_ARCANE](Modifiers/Modifiers-MONSTER.md#mob_arcane) |
 | `monsters[143].tables` | [boss:BOSS_FALLEN_ABBOT](Tables/Tables-TEMPLATE.md#boss-boss_fallen_abbot) |
 | `monsters[144].code` | [Шептун](Bosses.md#boss_whisperer) |
@@ -2273,7 +2273,7 @@
 | `monsters[154].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Каменная кожа](Monster-skills.md#mob_stoneskin) |
 | `monsters[154].fixed` | [BOSS_EXECUTIONER](Modifiers/Modifiers-MONSTER.md#boss_executioner); [MOB_VENOMOUS](Modifiers/Modifiers-MONSTER.md#mob_venomous) |
 | `monsters[154].tables` | [boss:BOSS_EYELESS_ONE](Tables/Tables-TEMPLATE.md#boss-boss_eyeless_one) |
-| `monsters[155].code` | [Мать гнили](Bosses.md#boss_mother_blight) |
+| `monsters[155].code` | [Гнилосердая](Bosses.md#boss_mother_blight) |
 | `monsters[155].form` | `FUNGUS` |
 | `monsters[155].experience` | 60 |
 | `monsters[155].loot` | [loot:BOSS_6](Tables/Tables-LOOT.md#loot-boss_6) |
@@ -2285,7 +2285,7 @@
 | `monsters[155].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[155].stats.STOCK_MANA` | 30 |
 | `monsters[155].boss` | Да |
-| `monsters[155].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[155].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[155].fixed` | [BOSS_IMMORTAL](Modifiers/Modifiers-MONSTER.md#boss_immortal); [MOB_BLIGHTED](Modifiers/Modifiers-MONSTER.md#mob_blighted) |
 | `monsters[155].tables` | [boss:BOSS_MOTHER_BLIGHT](Tables/Tables-TEMPLATE.md#boss-boss_mother_blight) |
 | `monsters[156].code` | [Ткач завесы](Bosses.md#boss_veil_weaver) |
@@ -2339,7 +2339,7 @@
 | `monsters[158].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Кража маны](Monster-skills.md#mob_mana_drain) |
 | `monsters[158].fixed` | [BOSS_IMMORTAL](Modifiers/Modifiers-MONSTER.md#boss_immortal); [BOSS_DREAD](Modifiers/Modifiers-MONSTER.md#boss_dread); [MOB_WITHERING](Modifiers/Modifiers-MONSTER.md#mob_withering) |
 | `monsters[158].tables` | [boss:BOSS_ABYSS_KING](Tables/Tables-TEMPLATE.md#boss-boss_abyss_king) |
-| `monsters[159].code` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `monsters[159].code` | [Порченый страж](Monsters.md#corrupted_1) |
 | `monsters[159].form` | `WRAITH` |
 | `monsters[159].experience` | 80 |
 | `monsters[159].loot` | [loot:CORRUPT_1](Tables/Tables-LOOT.md#loot-corrupt_1) |
@@ -2349,7 +2349,7 @@
 | `monsters[159].stats.STOCK_RESIST_CHAOS` | 35 |
 | `monsters[159].corrupted` | Да |
 | `monsters[159].fixed` | [MOB_VAMPIRIC](Modifiers/Modifiers-MONSTER.md#mob_vampiric); [MOB_DEADLY](Modifiers/Modifiers-MONSTER.md#mob_deadly) |
-| `monsters[160].code` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `monsters[160].code` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `monsters[160].form` | `WRAITH` |
 | `monsters[160].experience` | 110 |
 | `monsters[160].loot` | [loot:CORRUPT_2](Tables/Tables-LOOT.md#loot-corrupt_2) |
@@ -2360,7 +2360,7 @@
 | `monsters[160].stats.STOCK_RESIST_CHAOS` | 45 |
 | `monsters[160].corrupted` | Да |
 | `monsters[160].fixed` | [MOB_ARMOURED](Modifiers/Modifiers-MONSTER.md#mob_armoured); [MOB_BERSERK](Modifiers/Modifiers-MONSTER.md#mob_berserk) |
-| `monsters[161].code` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `monsters[161].code` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `monsters[161].form` | `WRAITH` |
 | `monsters[161].experience` | 150 |
 | `monsters[161].loot` | [loot:CORRUPT_3](Tables/Tables-LOOT.md#loot-corrupt_3) |
@@ -2371,7 +2371,7 @@
 | `monsters[161].stats.STOCK_RESIST_CHAOS` | 60 |
 | `monsters[161].corrupted` | Да |
 | `monsters[161].fixed` | [MOB_SHIELDED](Modifiers/Modifiers-MONSTER.md#mob_shielded); [MOB_ELEMENTALIST](Modifiers/Modifiers-MONSTER.md#mob_elementalist) |
-| `monsters[162].code` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `monsters[162].code` | [Порченый палач](Monsters.md#corrupted_4) |
 | `monsters[162].form` | `WRAITH` |
 | `monsters[162].experience` | 190 |
 | `monsters[162].loot` | [loot:CORRUPT_4](Tables/Tables-LOOT.md#loot-corrupt_4) |
@@ -2382,7 +2382,7 @@
 | `monsters[162].stats.STOCK_RESIST_CHAOS` | 65 |
 | `monsters[162].corrupted` | Да |
 | `monsters[162].fixed` | [MOB_VAMPIRIC](Modifiers/Modifiers-MONSTER.md#mob_vampiric); [MOB_MERCILESS](Modifiers/Modifiers-MONSTER.md#mob_merciless) |
-| `monsters[163].code` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `monsters[163].code` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `monsters[163].form` | `WRAITH` |
 | `monsters[163].experience` | 230 |
 | `monsters[163].loot` | [loot:CORRUPT_5](Tables/Tables-LOOT.md#loot-corrupt_5) |
@@ -2393,7 +2393,7 @@
 | `monsters[163].stats.STOCK_RESIST_CHAOS` | 70 |
 | `monsters[163].corrupted` | Да |
 | `monsters[163].fixed` | [MOB_WARDED](Modifiers/Modifiers-MONSTER.md#mob_warded); [MOB_HUNGERING](Modifiers/Modifiers-MONSTER.md#mob_hungering) |
-| `monsters[164].code` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `monsters[164].code` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `monsters[164].form` | `WRAITH` |
 | `monsters[164].experience` | 270 |
 | `monsters[164].loot` | [loot:CORRUPT_6](Tables/Tables-LOOT.md#loot-corrupt_6) |
@@ -2451,7 +2451,7 @@
 | `monsters[168].stats.STOCK_EVASION` | 40 |
 | `monsters[168].stats.STOCK_POISON_CHANCE` | 25 |
 | `monsters[168].trait` | `TRAIT_AMBUSHER` |
-| `monsters[169].code` | [Проклинатель пустоты](Monsters.md#chasm_hexer) |
+| `monsters[169].code` | [Проклинатель Бездны](Monsters.md#chasm_hexer) |
 | `monsters[169].form` | `HUMANOID` |
 | `monsters[169].experience` | 26 |
 | `monsters[169].loot` | [loot:T3](Tables/Tables-LOOT.md#loot-t3) |
@@ -2489,7 +2489,7 @@
 | `monsters[171].stats.STOCK_RESIST_CHAOS` | 40 |
 | `monsters[171].stats.STOCK_MANA` | 30 |
 | `monsters[171].boss` | Да |
-| `monsters[171].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[171].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[171].fixed` | [ABYSS_MOB_BLOODTHIRSTY](Modifiers/Modifiers-MONSTER.md#abyss_mob_bloodthirsty) |
 | `monsters[172].code` | [Королева шёпотов](Monsters.md#chasm_whisper_queen) |
 | `monsters[172].form` | `WRAITH` |
@@ -2583,7 +2583,7 @@
 | `monsters[179].stats.STOCK_MANA` | 45 |
 | `monsters[179].stats.STOCK_MANA_REGEN` | 3 |
 | `monsters[179].trait` | `TRAIT_SKILL_ZAP` |
-| `monsters[180].code` | [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `monsters[180].code` | [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `monsters[180].form` | `WRAITH` |
 | `monsters[180].experience` | 27 |
 | `monsters[180].loot` | [loot:T7](Tables/Tables-LOOT.md#loot-t7) |
@@ -2596,7 +2596,7 @@
 | `monsters[180].stats.STOCK_MANA` | 40 |
 | `monsters[180].stats.STOCK_MANA_REGEN` | 3 |
 | `monsters[180].trait` | `TRAIT_NIMBLE` |
-| `monsters[181].code` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `monsters[181].code` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `monsters[181].form` | `ANGEL` |
 | `monsters[181].experience` | 290 |
 | `monsters[181].loot` | [loot:CORRUPT_7](Tables/Tables-LOOT.md#loot-corrupt_7) |
@@ -2646,7 +2646,7 @@
 | `monsters[183].fixed` | [BOSS_WARLORD](Modifiers/Modifiers-MONSTER.md#boss_warlord); [MOB_FLAMING](Modifiers/Modifiers-MONSTER.md#mob_flaming) |
 | `monsters[183].tables` | [boss:BOSS_GLASS_MATRIARCH](Tables/Tables-TEMPLATE.md#boss-boss_glass_matriarch) |
 | `monsters[183].trait` | `TRAIT_ICE_SHELL` |
-| `monsters[184].code` | [Громовой змей](Bosses.md#boss_thunder_wyrm) |
+| `monsters[184].code` | [Громовой змий](Bosses.md#boss_thunder_wyrm) |
 | `monsters[184].form` | `DRAGON` |
 | `monsters[184].experience` | 60 |
 | `monsters[184].loot` | [loot:BOSS_7](Tables/Tables-LOOT.md#loot-boss_7) |
@@ -2846,7 +2846,7 @@
 | `monsters[195].boss` | Да |
 | `monsters[195].skills` | [Ледяная стрела](Monster-skills.md#mob_ice_bolt) |
 | `monsters[195].fixed` | [BOSS_DREAD](Modifiers/Modifiers-MONSTER.md#boss_dread); [MOB_CHILLING](Modifiers/Modifiers-MONSTER.md#mob_chilling) |
-| `monsters[196].code` | [Владыка разбитого неба](Bosses.md#boss_sky_sovereign) |
+| `monsters[196].code` | [Владыка Разбитого Неба](Bosses.md#boss_sky_sovereign) |
 | `monsters[196].form` | `DRAGON` |
 | `monsters[196].experience` | 60 |
 | `monsters[196].loot` | [loot:BOSS_7](Tables/Tables-LOOT.md#loot-boss_7) |
@@ -2883,7 +2883,7 @@
 | `monsters[198].stats.STOCK_ATTACK_PHYSICAL` | 8.56 |
 | `monsters[198].stats.STOCK_ARMOR` | 90 |
 | `monsters[198].trait` | `TRAIT_THORNS` |
-| `monsters[199].code` | [Бездонный угорь](Monsters.md#abyssal_eel) |
+| `monsters[199].code` | [Глубоководный угорь](Monsters.md#abyssal_eel) |
 | `monsters[199].form` | `SERPENT` |
 | `monsters[199].experience` | 29 |
 | `monsters[199].loot` | [loot:T8](Tables/Tables-LOOT.md#loot-t8) |
@@ -2934,7 +2934,7 @@
 | `monsters[203].stats.STOCK_ATTACK_COLD` | 8.56 |
 | `monsters[203].stats.STOCK_RESIST_COLD` | 60 |
 | `monsters[203].trait` | `TRAIT_SKILL_FROST_BREATH` |
-| `monsters[204].code` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `monsters[204].code` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `monsters[204].form` | `SERPENT` |
 | `monsters[204].experience` | 310 |
 | `monsters[204].loot` | [loot:CORRUPT_8](Tables/Tables-LOOT.md#loot-corrupt_8) |
@@ -3075,7 +3075,7 @@
 | `monsters[212].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Исцеление](Monster-skills.md#mob_heal) |
 | `monsters[212].fixed` | [BOSS_MIRROR_SHELL](Modifiers/Modifiers-MONSTER.md#boss_mirror_shell); [MOB_WITHERING](Modifiers/Modifiers-MONSTER.md#mob_withering) |
 | `monsters[212].tables` | [boss:BOSS_KELP_PRIEST](Tables/Tables-TEMPLATE.md#boss-boss_kelp_priest) |
-| `monsters[213].code` | [То, что в цистерне](Bosses.md#boss_cistern_thing) |
+| `monsters[213].code` | [Первый из спящих](Bosses.md#boss_cistern_thing) |
 | `monsters[213].form` | `DEMON` |
 | `monsters[213].experience` | 60 |
 | `monsters[213].loot` | [loot:BOSS_8](Tables/Tables-LOOT.md#loot-boss_8) |
@@ -3172,7 +3172,7 @@
 | `monsters[218].skills` | [Удар по земле](Monster-skills.md#mob_slam) |
 | `monsters[218].fixed` | [BOSS_TEMPEST](Modifiers/Modifiers-MONSTER.md#boss_tempest); [MOB_STORMBORN](Modifiers/Modifiers-MONSTER.md#mob_stormborn) |
 | `monsters[218].tables` | [boss:BOSS_TRENCH_DRAKE](Tables/Tables-TEMPLATE.md#boss-boss_trench_drake) |
-| `monsters[219].code` | [Утонувший император](Bosses.md#boss_drowned_emperor) |
+| `monsters[219].code` | [Утонувший Император](Bosses.md#boss_drowned_emperor) |
 | `monsters[219].form` | `UNDEAD` |
 | `monsters[219].experience` | 60 |
 | `monsters[219].loot` | [loot:BOSS_8](Tables/Tables-LOOT.md#loot-boss_8) |
@@ -3210,7 +3210,7 @@
 | `monsters[221].stats.STOCK_ATTACK_LIGHTNING` | 4.44 |
 | `monsters[221].stats.STOCK_EVASION` | 50 |
 | `monsters[221].trait` | `TRAIT_SKILL_THUNDERCLAP` |
-| `monsters[222].code` | [Клятвенный фанатик](Monsters.md#godsworn_zealot) |
+| `monsters[222].code` | [Богоприсяжный фанатик](Monsters.md#godsworn_zealot) |
 | `monsters[222].form` | `HUMANOID` |
 | `monsters[222].experience` | 33 |
 | `monsters[222].loot` | [loot:T9](Tables/Tables-LOOT.md#loot-t9) |
@@ -3267,7 +3267,7 @@
 | `monsters[226].stats.STOCK_ATTACK_CHAOS` | 4.44 |
 | `monsters[226].stats.STOCK_RESIST_CHAOS` | 60 |
 | `monsters[226].trait` | `TRAIT_SKILL_SLAM` |
-| `monsters[227].code` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `monsters[227].code` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `monsters[227].form` | `CONSTRUCT` |
 | `monsters[227].experience` | 330 |
 | `monsters[227].loot` | [loot:CORRUPT_9](Tables/Tables-LOOT.md#loot-corrupt_9) |
@@ -3294,7 +3294,7 @@
 | `monsters[228].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[228].stats.STOCK_MANA` | 30 |
 | `monsters[228].boss` | Да |
-| `monsters[228].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[228].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[228].fixed` | [BOSS_PLAGUEBEARER](Modifiers/Modifiers-MONSTER.md#boss_plaguebearer); [MOB_TOXIC](Modifiers/Modifiers-MONSTER.md#mob_toxic) |
 | `monsters[228].tables` | [boss:BOSS_THRESHOLD_GUARDIAN](Tables/Tables-TEMPLATE.md#boss-boss_threshold_guardian) |
 | `monsters[229].code` | [Звёздный прилив](Bosses.md#boss_star_tide) |
@@ -3445,10 +3445,10 @@
 | `monsters[237].stats.STOCK_MANA_REGEN` | 4 |
 | `monsters[237].stats.STOCK_FREEZE_CHANCE` | 20 |
 | `monsters[237].boss` | Да |
-| `monsters[237].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[237].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[237].fixed` | [BOSS_MIRROR_SHELL](Modifiers/Modifiers-MONSTER.md#boss_mirror_shell); [MOB_ARCANE](Modifiers/Modifiers-MONSTER.md#mob_arcane) |
 | `monsters[237].tables` | [boss:BOSS_WAR_AVATAR](Tables/Tables-TEMPLATE.md#boss-boss_war_avatar) |
-| `monsters[238].code` | [Мать пустоты](Bosses.md#boss_void_mother) |
+| `monsters[238].code` | [Мать Пустоты](Bosses.md#boss_void_mother) |
 | `monsters[238].form` | `SPIDER` |
 | `monsters[238].experience` | 60 |
 | `monsters[238].loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
@@ -3461,7 +3461,7 @@
 | `monsters[238].stats.STOCK_POISON_CHANCE` | 20 |
 | `monsters[238].stats.STOCK_MANA` | 30 |
 | `monsters[238].boss` | Да |
-| `monsters[238].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[238].skills` | [Ядовитый плевок](Monster-skills.md#mob_spit); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[238].fixed` | [BOSS_DEVASTATING](Modifiers/Modifiers-MONSTER.md#boss_devastating); [MOB_BLIGHTED](Modifiers/Modifiers-MONSTER.md#mob_blighted) |
 | `monsters[238].tables` | [boss:BOSS_VOID_MOTHER](Tables/Tables-TEMPLATE.md#boss-boss_void_mother) |
 | `monsters[239].code` | [Звездочёт](Bosses.md#boss_stargazer) |
@@ -3478,7 +3478,7 @@
 | `monsters[239].stats.STOCK_IGNITE_CHANCE` | 20 |
 | `monsters[239].stats.STOCK_MANA` | 30 |
 | `monsters[239].boss` | Да |
-| `monsters[239].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Клич ярости](Monster-skills.md#mob_warcry) |
+| `monsters[239].skills` | [Удар по земле](Monster-skills.md#mob_slam); [Боевой клич](Monster-skills.md#mob_warcry) |
 | `monsters[239].fixed` | [BOSS_SIEGE](Modifiers/Modifiers-MONSTER.md#boss_siege); [MOB_FIREPROOF](Modifiers/Modifiers-MONSTER.md#mob_fireproof) |
 | `monsters[239].tables` | [boss:BOSS_STARGAZER](Tables/Tables-TEMPLATE.md#boss-boss_stargazer) |
 | `monsters[240].code` | [Собиратель корон](Bosses.md#boss_crown_collector) |
@@ -3516,7 +3516,7 @@
 | `monsters[241].skills` | [Разряд](Monster-skills.md#mob_zap); [Кража маны](Monster-skills.md#mob_mana_drain) |
 | `monsters[241].fixed` | [BOSS_TEMPEST](Modifiers/Modifiers-MONSTER.md#boss_tempest); [MOB_STORMBORN](Modifiers/Modifiers-MONSTER.md#mob_stormborn) |
 | `monsters[241].tables` | [boss:BOSS_NOTHING_WALKER](Tables/Tables-TEMPLATE.md#boss-boss_nothing_walker) |
-| `monsters[242].code` | [Последний бог](Bosses.md#boss_last_god) |
+| `monsters[242].code` | [Последний Бог](Bosses.md#boss_last_god) |
 | `monsters[242].form` | `ANGEL` |
 | `monsters[242].experience` | 60 |
 | `monsters[242].loot` | [loot:BOSS_9](Tables/Tables-LOOT.md#loot-boss_9) |
@@ -3548,8 +3548,8 @@
 | `regions[0].zones[0].count` | 37; 51 |
 | `regions[0].zones[0].light` | 1.2 |
 | `regions[0].zones[0].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
-| `regions[0].zones[0].boss` | [Зовущий Прилив](Bosses.md#boss_tidecaller) |
-| `regions[0].zones[0].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[0].boss` | [Зовущий прилив](Bosses.md#boss_tidecaller) |
+| `regions[0].zones[0].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[0].size` | 72 |
 | `regions[0].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[1].code` | [Кладбище кораблей](../World/World-REGION_1.md#c1_ship_graveyard) |
@@ -3563,7 +3563,7 @@
 | `regions[0].zones[1].light` | 1.1 |
 | `regions[0].zones[1].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
 | `regions[0].zones[1].boss` | [Капитан «Скорби»](Bosses.md#boss_sorrow_captain) |
-| `regions[0].zones[1].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[1].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[1].size` | 72 |
 | `regions[0].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[2].code` | [Солёные пещеры](../World/World-REGION_1.md#c1_brine_caves) |
@@ -3576,11 +3576,11 @@
 | `regions[0].zones[2].count` | 37; 51 |
 | `regions[0].zones[2].light` | 0.8 |
 | `regions[0].zones[2].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
-| `regions[0].zones[2].boss` | [Мать Рассола](Bosses.md#boss_brine_mother) |
-| `regions[0].zones[2].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[2].boss` | [Мать рассола](Bosses.md#boss_brine_mother) |
+| `regions[0].zones[2].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[2].size` | 72 |
 | `regions[0].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[0].zones[3].code` | [Птичьи утёсы](../World/World-REGION_1.md#c1_gull_cliffs) |
+| `regions[0].zones[3].code` | [Чаячьи утёсы](../World/World-REGION_1.md#c1_gull_cliffs) |
 | `regions[0].zones[3].biome` | `SHORE` |
 | `regions[0].zones[3].level` | 3 |
 | `regions[0].zones[3].x` | 690 |
@@ -3590,8 +3590,8 @@
 | `regions[0].zones[3].count` | 37; 51 |
 | `regions[0].zones[3].light` | 1.3 |
 | `regions[0].zones[3].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
-| `regions[0].zones[3].boss` | [Королева Гнёзд](Bosses.md#boss_nest_queen) |
-| `regions[0].zones[3].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[3].boss` | [Старый буревестник](Bosses.md#boss_nest_queen) |
+| `regions[0].zones[3].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[3].size` | 72 |
 | `regions[0].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[4].code` | [Маяк утопленников](../World/World-REGION_1.md#c1_drowned_lighthouse) |
@@ -3605,7 +3605,7 @@
 | `regions[0].zones[4].light` | 1 |
 | `regions[0].zones[4].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
 | `regions[0].zones[4].boss` | [Смотритель Маяка](Bosses.md#boss_lamp_warden) |
-| `regions[0].zones[4].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[4].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[4].size` | 72 |
 | `regions[0].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[5].code` | [Гнилая топь](../World/World-REGION_1.md#c1_rotting_mire) |
@@ -3614,12 +3614,12 @@
 | `regions[0].zones[5].x` | 380 |
 | `regions[0].zones[5].y` | 385 |
 | `regions[0].zones[5].from` | [Кладбище кораблей](../World/World-REGION_1.md#c1_ship_graveyard); [Солёные пещеры](../World/World-REGION_1.md#c1_brine_caves) |
-| `regions[0].zones[5].monsters` | [Болотный зомби](Monsters.md#mire_zombie); [Трясинный скрытень](Monsters.md#bog_lurker); [Болотная пиявка](Monsters.md#swamp_leech) |
+| `regions[0].zones[5].monsters` | [Болотный мертвяк](Monsters.md#mire_zombie); [Трясинный скрытень](Monsters.md#bog_lurker); [Болотная пиявка](Monsters.md#swamp_leech) |
 | `regions[0].zones[5].count` | 44; 57 |
 | `regions[0].zones[5].light` | 0.9 |
 | `regions[0].zones[5].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
-| `regions[0].zones[5].boss` | [Болотная Королева](Bosses.md#boss_bog_queen) |
-| `regions[0].zones[5].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[5].boss` | [Болотная ведьма](Bosses.md#boss_bog_queen) |
+| `regions[0].zones[5].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[5].size` | 72 |
 | `regions[0].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[6].code` | [Туманная переправа](../World/World-REGION_1.md#c1_misty_ferry) |
@@ -3627,13 +3627,13 @@
 | `regions[0].zones[6].level` | 5 |
 | `regions[0].zones[6].x` | 570 |
 | `regions[0].zones[6].y` | 395 |
-| `regions[0].zones[6].from` | [Солёные пещеры](../World/World-REGION_1.md#c1_brine_caves); [Птичьи утёсы](../World/World-REGION_1.md#c1_gull_cliffs) |
-| `regions[0].zones[6].monsters` | [Болотный зомби](Monsters.md#mire_zombie); [Утопленник](Monsters.md#drowned); [Болотная пиявка](Monsters.md#swamp_leech) |
+| `regions[0].zones[6].from` | [Солёные пещеры](../World/World-REGION_1.md#c1_brine_caves); [Чаячьи утёсы](../World/World-REGION_1.md#c1_gull_cliffs) |
+| `regions[0].zones[6].monsters` | [Болотный мертвяк](Monsters.md#mire_zombie); [Утопленник](Monsters.md#drowned); [Болотная пиявка](Monsters.md#swamp_leech) |
 | `regions[0].zones[6].count` | 44; 57 |
 | `regions[0].zones[6].light` | 0.8 |
 | `regions[0].zones[6].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
 | `regions[0].zones[6].boss` | [Паромщик](Bosses.md#boss_ferryman) |
-| `regions[0].zones[6].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[6].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[6].size` | 72 |
 | `regions[0].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[7].code` | [Грот контрабандистов](../World/World-REGION_1.md#c1_smugglers_grotto) |
@@ -3641,13 +3641,13 @@
 | `regions[0].zones[7].level` | 5 |
 | `regions[0].zones[7].x` | 790 |
 | `regions[0].zones[7].y` | 405 |
-| `regions[0].zones[7].from` | [Птичьи утёсы](../World/World-REGION_1.md#c1_gull_cliffs) |
+| `regions[0].zones[7].from` | [Чаячьи утёсы](../World/World-REGION_1.md#c1_gull_cliffs) |
 | `regions[0].zones[7].monsters` | [Береговой краб](Monsters.md#shore_crab); [Пещерная летучая мышь](Monsters.md#cave_bat); [Утопленник](Monsters.md#drowned) |
 | `regions[0].zones[7].count` | 44; 57 |
 | `regions[0].zones[7].light` | 0.75 |
 | `regions[0].zones[7].chestLoot` | [loot:CHEST_1](Tables/Tables-LOOT.md#loot-chest_1) |
-| `regions[0].zones[7].boss` | [Король Контрабандистов](Bosses.md#boss_smuggler_king) |
-| `regions[0].zones[7].corrupted` | [Осквернённый Страж](Monsters.md#corrupted_1) |
+| `regions[0].zones[7].boss` | [Король контрабандистов](Bosses.md#boss_smuggler_king) |
+| `regions[0].zones[7].corrupted` | [Порченый страж](Monsters.md#corrupted_1) |
 | `regions[0].zones[7].size` | 72 |
 | `regions[0].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[8].code` | [Шепчущий лес](../World/World-REGION_1.md#c1_whispering_wood) |
@@ -3660,8 +3660,8 @@
 | `regions[0].zones[8].count` | 44; 57 |
 | `regions[0].zones[8].light` | 1 |
 | `regions[0].zones[8].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[0].zones[8].boss` | [Вожак Стаи](Bosses.md#boss_alpha_wolf) |
-| `regions[0].zones[8].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[0].zones[8].boss` | [Вожак стаи](Bosses.md#boss_alpha_wolf) |
+| `regions[0].zones[8].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[0].zones[8].size` | 72 |
 | `regions[0].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[9].code` | [Чёрная гать](../World/World-REGION_1.md#c1_black_causeway) |
@@ -3670,12 +3670,12 @@
 | `regions[0].zones[9].x` | 490 |
 | `regions[0].zones[9].y` | 530 |
 | `regions[0].zones[9].from` | [Гнилая топь](../World/World-REGION_1.md#c1_rotting_mire); [Туманная переправа](../World/World-REGION_1.md#c1_misty_ferry) |
-| `regions[0].zones[9].monsters` | [Трясинный скрытень](Monsters.md#bog_lurker); [Болотная пиявка](Monsters.md#swamp_leech); [Болотный зомби](Monsters.md#mire_zombie) |
+| `regions[0].zones[9].monsters` | [Трясинный скрытень](Monsters.md#bog_lurker); [Болотная пиявка](Monsters.md#swamp_leech); [Болотный мертвяк](Monsters.md#mire_zombie) |
 | `regions[0].zones[9].count` | 44; 57 |
 | `regions[0].zones[9].light` | 0.85 |
 | `regions[0].zones[9].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[0].zones[9].boss` | [Трясинный Змей](Bosses.md#boss_mire_serpent) |
-| `regions[0].zones[9].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[0].zones[9].boss` | [Трясинный змей](Bosses.md#boss_mire_serpent) |
+| `regions[0].zones[9].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[0].zones[9].size` | 72 |
 | `regions[0].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[10].code` | [Волчья чаща](../World/World-REGION_1.md#c1_wolf_thicket) |
@@ -3688,22 +3688,22 @@
 | `regions[0].zones[10].count` | 44; 57 |
 | `regions[0].zones[10].light` | 0.95 |
 | `regions[0].zones[10].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[0].zones[10].boss` | [Матёрый Волколак](Bosses.md#boss_old_werewolf) |
-| `regions[0].zones[10].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[0].zones[10].boss` | [Матёрый волколак](Bosses.md#boss_old_werewolf) |
+| `regions[0].zones[10].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[0].zones[10].size` | 72 |
 | `regions[0].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[0].zones[11].code` | [Павшие руины](../World/World-REGION_1.md#c1_fallen_ruins) |
+| `regions[0].zones[11].code` | [Руины дозора](../World/World-REGION_1.md#c1_fallen_ruins) |
 | `regions[0].zones[11].biome` | `RUINS` |
 | `regions[0].zones[11].level` | 9 |
 | `regions[0].zones[11].x` | 350 |
 | `regions[0].zones[11].y` | 680 |
 | `regions[0].zones[11].from` | [Шепчущий лес](../World/World-REGION_1.md#c1_whispering_wood); [Чёрная гать](../World/World-REGION_1.md#c1_black_causeway) |
-| `regions[0].zones[11].monsters` | [Скелет-воин](Monsters.md#skeleton_warrior); [Костяной лучник](Monsters.md#bone_archer); [Страж руин](Monsters.md#ruin_sentry) |
+| `regions[0].zones[11].monsters` | [Скелет-воин](Monsters.md#skeleton_warrior); [Костяной лучник](Monsters.md#bone_archer); [Каменный часовой](Monsters.md#ruin_sentry) |
 | `regions[0].zones[11].count` | 44; 57 |
 | `regions[0].zones[11].light` | 1 |
 | `regions[0].zones[11].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[0].zones[11].boss` | [Страж Руин](Bosses.md#boss_ruin_warden) |
-| `regions[0].zones[11].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[0].zones[11].boss` | [Последний часовой](Bosses.md#boss_ruin_warden) |
+| `regions[0].zones[11].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[0].zones[11].size` | 72 |
 | `regions[0].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[12].code` | [Старая застава](../World/World-REGION_1.md#c1_old_outpost) |
@@ -3716,8 +3716,8 @@
 | `regions[0].zones[12].count` | 44; 57 |
 | `regions[0].zones[12].light` | 1 |
 | `regions[0].zones[12].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[0].zones[12].boss` | [Комендант Заставы](Bosses.md#boss_outpost_commander) |
-| `regions[0].zones[12].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[0].zones[12].boss` | [Комендант заставы](Bosses.md#boss_outpost_commander) |
+| `regions[0].zones[12].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[0].zones[12].size` | 72 |
 | `regions[0].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[13].code` | [Курган вождя](../World/World-REGION_1.md#c1_chieftains_barrow) |
@@ -3730,8 +3730,8 @@
 | `regions[0].zones[13].count` | 44; 57 |
 | `regions[0].zones[13].light` | 0.7 |
 | `regions[0].zones[13].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[0].zones[13].boss` | [Вождь Кургана](Bosses.md#boss_barrow_chieftain) |
-| `regions[0].zones[13].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[0].zones[13].boss` | [Вождь кургана](Bosses.md#boss_barrow_chieftain) |
+| `regions[0].zones[13].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[0].zones[13].size` | 72 |
 | `regions[0].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[0].zones[14].code` | [Склеп изгнанников](../World/World-REGION_1.md#c1_crypt_of_exiles) |
@@ -3739,14 +3739,14 @@
 | `regions[0].zones[14].level` | 11 |
 | `regions[0].zones[14].x` | 470 |
 | `regions[0].zones[14].y` | 825 |
-| `regions[0].zones[14].from` | [Павшие руины](../World/World-REGION_1.md#c1_fallen_ruins); [Старая застава](../World/World-REGION_1.md#c1_old_outpost) |
+| `regions[0].zones[14].from` | [Руины дозора](../World/World-REGION_1.md#c1_fallen_ruins); [Старая застава](../World/World-REGION_1.md#c1_old_outpost) |
 | `regions[0].zones[14].finale` | Да |
 | `regions[0].zones[14].monsters` | [Упырь](Monsters.md#ghoul); [Скелет-воин](Monsters.md#skeleton_warrior); [Склепный призрак](Monsters.md#crypt_wraith); [Костяной лучник](Monsters.md#bone_archer) |
 | `regions[0].zones[14].count` | 44; 57 |
 | `regions[0].zones[14].light` | 0.7 |
 | `regions[0].zones[14].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
 | `regions[0].zones[14].boss` | [Владыка Склепа](Bosses.md#boss_crypt_lord) |
-| `regions[0].zones[14].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[0].zones[14].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[0].zones[14].size` | 72 |
 | `regions[0].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].code` | `REGION_2` |
@@ -3758,12 +3758,12 @@
 | `regions[1].zones[0].x` | 300 |
 | `regions[1].zones[0].y` | 1000 |
 | `regions[1].zones[0].from` | [Склеп изгнанников](../World/World-REGION_1.md#c1_crypt_of_exiles) |
-| `regions[1].zones[0].monsters` | [Обитатель туннелей](Monsters.md#tunnel_dweller); [Осколочный ползун](Monsters.md#shard_scuttler); [Пещерная летучая мышь](Monsters.md#cave_bat) |
+| `regions[1].zones[0].monsters` | [Одержимый рудокоп](Monsters.md#tunnel_dweller); [Осколочный ползун](Monsters.md#shard_scuttler); [Пещерная летучая мышь](Monsters.md#cave_bat) |
 | `regions[1].zones[0].count` | 51; 66 |
 | `regions[1].zones[0].light` | 0.85 |
 | `regions[1].zones[0].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[1].zones[0].boss` | [Бригадир Проходчиков](Bosses.md#boss_foreman) |
-| `regions[1].zones[0].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[1].zones[0].boss` | [Бригадир проходчиков](Bosses.md#boss_foreman) |
+| `regions[1].zones[0].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[1].zones[0].size` | 72 |
 | `regions[1].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[1].code` | [Кристальные копи](../World/World-REGION_2.md#c2_crystal_mines) |
@@ -3772,12 +3772,12 @@
 | `regions[1].zones[1].x` | 530 |
 | `regions[1].zones[1].y` | 990 |
 | `regions[1].zones[1].from` | [Склеп изгнанников](../World/World-REGION_1.md#c1_crypt_of_exiles) |
-| `regions[1].zones[1].monsters` | [Кристальный голем](Monsters.md#crystal_golem); [Осколочный ползун](Monsters.md#shard_scuttler); [Обитатель туннелей](Monsters.md#tunnel_dweller) |
+| `regions[1].zones[1].monsters` | [Кристальный голем](Monsters.md#crystal_golem); [Осколочный ползун](Monsters.md#shard_scuttler); [Одержимый рудокоп](Monsters.md#tunnel_dweller) |
 | `regions[1].zones[1].count` | 51; 66 |
 | `regions[1].zones[1].light` | 0.75 |
 | `regions[1].zones[1].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[1].zones[1].boss` | [Королева Осколков](Bosses.md#boss_shard_queen) |
-| `regions[1].zones[1].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[1].zones[1].boss` | [Королева осколков](Bosses.md#boss_shard_queen) |
+| `regions[1].zones[1].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[1].zones[1].size` | 72 |
 | `regions[1].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[2].code` | [Предгорный тракт](../World/World-REGION_2.md#c2_foothill_road) |
@@ -3786,26 +3786,26 @@
 | `regions[1].zones[2].x` | 760 |
 | `regions[1].zones[2].y` | 1005 |
 | `regions[1].zones[2].from` | [Склеп изгнанников](../World/World-REGION_1.md#c1_crypt_of_exiles) |
-| `regions[1].zones[2].monsters` | [Снежный охотник](Monsters.md#snow_stalker); [Одичавший волк](Monsters.md#feral_wolf); [Обитатель туннелей](Monsters.md#tunnel_dweller) |
+| `regions[1].zones[2].monsters` | [Снежный охотник](Monsters.md#snow_stalker); [Одичавший волк](Monsters.md#feral_wolf); [Одержимый рудокоп](Monsters.md#tunnel_dweller) |
 | `regions[1].zones[2].count` | 51; 66 |
 | `regions[1].zones[2].light` | 1.1 |
 | `regions[1].zones[2].chestLoot` | [loot:CHEST_2](Tables/Tables-LOOT.md#loot-chest_2) |
-| `regions[1].zones[2].boss` | [Белая Рысь](Bosses.md#boss_white_lynx) |
-| `regions[1].zones[2].corrupted` | [Осквернённый Вестник](Monsters.md#corrupted_2) |
+| `regions[1].zones[2].boss` | [Белая рысь](Bosses.md#boss_white_lynx) |
+| `regions[1].zones[2].corrupted` | [Порченый вестник](Monsters.md#corrupted_2) |
 | `regions[1].zones[2].size` | 72 |
 | `regions[1].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[1].zones[3].code` | [Глубинные штольни](../World/World-REGION_2.md#c2_deep_adits) |
+| `regions[1].zones[3].code` | [Нисходящие штольни](../World/World-REGION_2.md#c2_deep_adits) |
 | `regions[1].zones[3].biome` | `MINES` |
 | `regions[1].zones[3].level` | 15 |
 | `regions[1].zones[3].x` | 230 |
 | `regions[1].zones[3].y` | 1145 |
 | `regions[1].zones[3].from` | [Рудничный посёлок](../World/World-REGION_2.md#c2_miners_village) |
-| `regions[1].zones[3].monsters` | [Кристальный голем](Monsters.md#crystal_golem); [Обитатель туннелей](Monsters.md#tunnel_dweller); [Осколочный ползун](Monsters.md#shard_scuttler) |
+| `regions[1].zones[3].monsters` | [Кристальный голем](Monsters.md#crystal_golem); [Одержимый рудокоп](Monsters.md#tunnel_dweller); [Осколочный ползун](Monsters.md#shard_scuttler) |
 | `regions[1].zones[3].count` | 51; 66 |
 | `regions[1].zones[3].light` | 0.7 |
 | `regions[1].zones[3].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[3].boss` | [Рудный Голем](Bosses.md#boss_ore_golem) |
-| `regions[1].zones[3].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[3].boss` | [Рудный голем](Bosses.md#boss_ore_golem) |
+| `regions[1].zones[3].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[3].size` | 72 |
 | `regions[1].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[4].code` | [Жеодовая лощина](../World/World-REGION_2.md#c2_geode_hollow) |
@@ -3818,8 +3818,8 @@
 | `regions[1].zones[4].count` | 51; 66 |
 | `regions[1].zones[4].light` | 0.8 |
 | `regions[1].zones[4].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[4].boss` | [Прядильщица Жеод](Bosses.md#boss_geode_spinner) |
-| `regions[1].zones[4].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[4].boss` | [Прядильщица жеод](Bosses.md#boss_geode_spinner) |
+| `regions[1].zones[4].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[4].size` | 72 |
 | `regions[1].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[5].code` | [Замёрзший перевал](../World/World-REGION_2.md#c2_frozen_pass) |
@@ -3832,11 +3832,11 @@
 | `regions[1].zones[5].count` | 51; 66 |
 | `regions[1].zones[5].light` | 1.1 |
 | `regions[1].zones[5].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[5].boss` | [Ледяной Монарх](Bosses.md#boss_frost_monarch) |
-| `regions[1].zones[5].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[5].boss` | [Ледяной монарх](Bosses.md#boss_frost_monarch) |
+| `regions[1].zones[5].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[5].size` | 72 |
 | `regions[1].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[1].zones[6].code` | [Пепельная пустошь](../World/World-REGION_2.md#c2_ashen_wastes) |
+| `regions[1].zones[6].code` | [Пепельный склон](../World/World-REGION_2.md#c2_ashen_wastes) |
 | `regions[1].zones[6].biome` | `ASH` |
 | `regions[1].zones[6].level` | 15 |
 | `regions[1].zones[6].x` | 840 |
@@ -3846,8 +3846,8 @@
 | `regions[1].zones[6].count` | 51; 66 |
 | `regions[1].zones[6].light` | 0.9 |
 | `regions[1].zones[6].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[6].boss` | [Пепельный Тиран](Bosses.md#boss_ashen_tyrant) |
-| `regions[1].zones[6].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[6].boss` | [Пепельный тиран](Bosses.md#boss_ashen_tyrant) |
+| `regions[1].zones[6].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[6].size` | 72 |
 | `regions[1].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[7].code` | [Ледниковые гробницы](../World/World-REGION_2.md#c2_glacier_tombs) |
@@ -3855,13 +3855,13 @@
 | `regions[1].zones[7].level` | 17 |
 | `regions[1].zones[7].x` | 310 |
 | `regions[1].zones[7].y` | 1290 |
-| `regions[1].zones[7].from` | [Глубинные штольни](../World/World-REGION_2.md#c2_deep_adits) |
+| `regions[1].zones[7].from` | [Нисходящие штольни](../World/World-REGION_2.md#c2_deep_adits) |
 | `regions[1].zones[7].monsters` | [Ледяной призрак](Monsters.md#ice_wraith); [Упырь](Monsters.md#ghoul); [Снежный охотник](Monsters.md#snow_stalker) |
 | `regions[1].zones[7].count` | 51; 66 |
 | `regions[1].zones[7].light` | 0.8 |
 | `regions[1].zones[7].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[7].boss` | [Лич Инея](Bosses.md#boss_rime_lich) |
-| `regions[1].zones[7].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[7].boss` | [Лич инея](Bosses.md#boss_rime_lich) |
+| `regions[1].zones[7].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[7].size` | 72 |
 | `regions[1].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[8].code` | [Тролльи пещеры](../World/World-REGION_2.md#c2_troll_caves) |
@@ -3869,13 +3869,13 @@
 | `regions[1].zones[8].level` | 17 |
 | `regions[1].zones[8].x` | 540 |
 | `regions[1].zones[8].y` | 1285 |
-| `regions[1].zones[8].from` | [Глубинные штольни](../World/World-REGION_2.md#c2_deep_adits); [Замёрзший перевал](../World/World-REGION_2.md#c2_frozen_pass) |
+| `regions[1].zones[8].from` | [Нисходящие штольни](../World/World-REGION_2.md#c2_deep_adits); [Замёрзший перевал](../World/World-REGION_2.md#c2_frozen_pass) |
 | `regions[1].zones[8].monsters` | [Ледяной тролль](Monsters.md#frost_troll); [Снежный охотник](Monsters.md#snow_stalker); [Пещерная летучая мышь](Monsters.md#cave_bat) |
 | `regions[1].zones[8].count` | 51; 66 |
 | `regions[1].zones[8].light` | 0.85 |
 | `regions[1].zones[8].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[8].boss` | [Старейший Тролль](Bosses.md#boss_elder_troll) |
-| `regions[1].zones[8].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[8].boss` | [Старейший тролль](Bosses.md#boss_elder_troll) |
+| `regions[1].zones[8].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[8].size` | 72 |
 | `regions[1].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[9].code` | [Тлеющие поля](../World/World-REGION_2.md#c2_ember_fields) |
@@ -3883,13 +3883,13 @@
 | `regions[1].zones[9].level` | 17 |
 | `regions[1].zones[9].x` | 770 |
 | `regions[1].zones[9].y` | 1295 |
-| `regions[1].zones[9].from` | [Замёрзший перевал](../World/World-REGION_2.md#c2_frozen_pass); [Пепельная пустошь](../World/World-REGION_2.md#c2_ashen_wastes) |
+| `regions[1].zones[9].from` | [Замёрзший перевал](../World/World-REGION_2.md#c2_frozen_pass); [Пепельный склон](../World/World-REGION_2.md#c2_ashen_wastes) |
 | `regions[1].zones[9].monsters` | [Угольная гончая](Monsters.md#cinder_hound); [Магмовый слизень](Monsters.md#magma_slug); [Пепельный мертвец](Monsters.md#ash_revenant) |
 | `regions[1].zones[9].count` | 51; 66 |
 | `regions[1].zones[9].light` | 0.95 |
 | `regions[1].zones[9].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[9].boss` | [Мать Гончих](Bosses.md#boss_hound_mother) |
-| `regions[1].zones[9].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[9].boss` | [Мать гончих](Bosses.md#boss_hound_mother) |
+| `regions[1].zones[9].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[9].size` | 72 |
 | `regions[1].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[10].code` | [Грозовой пик](../World/World-REGION_2.md#c2_storm_peak) |
@@ -3903,7 +3903,7 @@
 | `regions[1].zones[10].light` | 1.2 |
 | `regions[1].zones[10].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
 | `regions[1].zones[10].boss` | [Громовержец](Bosses.md#boss_thunder_caller) |
-| `regions[1].zones[10].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[10].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[10].size` | 72 |
 | `regions[1].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[11].code` | [Затонувшее святилище](../World/World-REGION_2.md#c2_sunken_shrine) |
@@ -3916,8 +3916,8 @@
 | `regions[1].zones[11].count` | 51; 66 |
 | `regions[1].zones[11].light` | 0.85 |
 | `regions[1].zones[11].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[11].boss` | [Жрица Глубин](Bosses.md#boss_deep_priestess) |
-| `regions[1].zones[11].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[11].boss` | [Жрица глубин](Bosses.md#boss_deep_priestess) |
+| `regions[1].zones[11].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[11].size` | 72 |
 | `regions[1].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[12].code` | [Обсидиановый карьер](../World/World-REGION_2.md#c2_obsidian_quarry) |
@@ -3930,8 +3930,8 @@
 | `regions[1].zones[12].count` | 51; 66 |
 | `regions[1].zones[12].light` | 0.9 |
 | `regions[1].zones[12].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[12].boss` | [Обсидиановый Колосс](Bosses.md#boss_obsidian_colossus) |
-| `regions[1].zones[12].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[12].boss` | [Обсидиановый колосс](Bosses.md#boss_obsidian_colossus) |
+| `regions[1].zones[12].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[12].size` | 72 |
 | `regions[1].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[13].code` | [Шлаковые ямы](../World/World-REGION_2.md#c2_slag_pits) |
@@ -3944,8 +3944,8 @@
 | `regions[1].zones[13].count` | 51; 66 |
 | `regions[1].zones[13].light` | 0.95 |
 | `regions[1].zones[13].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[13].boss` | [Шлаковый Червь](Bosses.md#boss_slag_worm) |
-| `regions[1].zones[13].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[13].boss` | [Шлаковый червь](Bosses.md#boss_slag_worm) |
+| `regions[1].zones[13].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[13].size` | 72 |
 | `regions[1].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[14].code` | [Ледник Хладоклыка](../World/World-REGION_2.md#c2_frostfang_glacier) |
@@ -3959,24 +3959,24 @@
 | `regions[1].zones[14].light` | 1.15 |
 | `regions[1].zones[14].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
 | `regions[1].zones[14].boss` | [Хладоклык](Bosses.md#boss_frostfang) |
-| `regions[1].zones[14].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[14].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[14].size` | 72 |
 | `regions[1].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[1].zones[15].code` | [Лестница в бездну](../World/World-REGION_2.md#c2_abyssal_stair) |
+| `regions[1].zones[15].code` | [Затопленная лестница](../World/World-REGION_2.md#c2_abyssal_stair) |
 | `regions[1].zones[15].biome` | `TEMPLE` |
 | `regions[1].zones[15].level` | 21 |
 | `regions[1].zones[15].x` | 530 |
 | `regions[1].zones[15].y` | 1575 |
 | `regions[1].zones[15].from` | [Затонувшее святилище](../World/World-REGION_2.md#c2_sunken_shrine); [Обсидиановый карьер](../World/World-REGION_2.md#c2_obsidian_quarry) |
-| `regions[1].zones[15].monsters` | [Послушник бездны](Monsters.md#abyssal_acolyte); [Глубинный](Monsters.md#deep_one); [Храмовый фанатик](Monsters.md#temple_zealot) |
+| `regions[1].zones[15].monsters` | [Послушник Бездны](Monsters.md#abyssal_acolyte); [Глубинный](Monsters.md#deep_one); [Храмовый фанатик](Monsters.md#temple_zealot) |
 | `regions[1].zones[15].count` | 51; 66 |
 | `regions[1].zones[15].light` | 0.75 |
 | `regions[1].zones[15].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[15].boss` | [Глашатай Бездны](Bosses.md#boss_abyss_herald) |
-| `regions[1].zones[15].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[15].boss` | [Глашатай глубин](Bosses.md#boss_abyss_herald) |
+| `regions[1].zones[15].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[15].size` | 72 |
 | `regions[1].zones[15].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[1].zones[16].code` | [Тлеющая цитадель](../World/World-REGION_2.md#c2_cinder_citadel) |
+| `regions[1].zones[16].code` | [Тлеющий бастион](../World/World-REGION_2.md#c2_cinder_citadel) |
 | `regions[1].zones[16].biome` | `ASH` |
 | `regions[1].zones[16].level` | 21 |
 | `regions[1].zones[16].x` | 750 |
@@ -3986,8 +3986,8 @@
 | `regions[1].zones[16].count` | 51; 66 |
 | `regions[1].zones[16].light` | 0.85 |
 | `regions[1].zones[16].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
-| `regions[1].zones[16].boss` | [Кастелян Пепла](Bosses.md#boss_ash_castellan) |
-| `regions[1].zones[16].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[16].boss` | [Кастелян пепла](Bosses.md#boss_ash_castellan) |
+| `regions[1].zones[16].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[16].size` | 72 |
 | `regions[1].zones[16].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[1].zones[17].code` | [Храм утонувших](../World/World-REGION_2.md#c2_drowned_temple) |
@@ -3995,14 +3995,14 @@
 | `regions[1].zones[17].level` | 23 |
 | `regions[1].zones[17].x` | 530 |
 | `regions[1].zones[17].y` | 1725 |
-| `regions[1].zones[17].from` | [Ледник Хладоклыка](../World/World-REGION_2.md#c2_frostfang_glacier); [Лестница в бездну](../World/World-REGION_2.md#c2_abyssal_stair); [Тлеющая цитадель](../World/World-REGION_2.md#c2_cinder_citadel) |
+| `regions[1].zones[17].from` | [Ледник Хладоклыка](../World/World-REGION_2.md#c2_frostfang_glacier); [Затопленная лестница](../World/World-REGION_2.md#c2_abyssal_stair); [Тлеющий бастион](../World/World-REGION_2.md#c2_cinder_citadel) |
 | `regions[1].zones[17].finale` | Да |
-| `regions[1].zones[17].monsters` | [Храмовый фанатик](Monsters.md#temple_zealot); [Глубинный](Monsters.md#deep_one); [Послушник бездны](Monsters.md#abyssal_acolyte); [Храмовый страж](Monsters.md#temple_guardian) |
+| `regions[1].zones[17].monsters` | [Храмовый фанатик](Monsters.md#temple_zealot); [Глубинный](Monsters.md#deep_one); [Послушник Бездны](Monsters.md#abyssal_acolyte); [Храмовый страж](Monsters.md#temple_guardian) |
 | `regions[1].zones[17].count` | 51; 66 |
 | `regions[1].zones[17].light` | 0.85 |
 | `regions[1].zones[17].chestLoot` | [loot:CHEST_3](Tables/Tables-LOOT.md#loot-chest_3) |
 | `regions[1].zones[17].boss` | [Утонувший Бог](Bosses.md#boss_drowned_god) |
-| `regions[1].zones[17].corrupted` | [Осквернённый Владыка](Monsters.md#corrupted_3) |
+| `regions[1].zones[17].corrupted` | [Порченый владыка](Monsters.md#corrupted_3) |
 | `regions[1].zones[17].size` | 72 |
 | `regions[1].zones[17].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].code` | `REGION_3` |
@@ -4019,7 +4019,7 @@
 | `regions[2].zones[0].light` | 1.25 |
 | `regions[2].zones[0].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[0].boss` | [Солевой скиталец](Bosses.md#boss_salt_walker) |
-| `regions[2].zones[0].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[0].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[0].size` | 72 |
 | `regions[2].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[1].code` | [Караванный путь](../World/World-REGION_3.md#c3_caravan_road) |
@@ -4033,7 +4033,7 @@
 | `regions[2].zones[1].light` | 1.25 |
 | `regions[2].zones[1].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[1].boss` | [Мясник караванов](Bosses.md#boss_caravan_butcher) |
-| `regions[2].zones[1].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[1].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[1].size` | 72 |
 | `regions[2].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[2].code` | [Красное ущелье](../World/World-REGION_3.md#c3_red_gorge) |
@@ -4047,10 +4047,10 @@
 | `regions[2].zones[2].light` | 1.1 |
 | `regions[2].zones[2].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[2].boss` | [Тиран ущелья](Bosses.md#boss_gorge_tyrant) |
-| `regions[2].zones[2].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[2].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[2].size` | 72 |
 | `regions[2].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[2].zones[3].code` | [Поющие барханы](../World/World-REGION_3.md#c3_singing_dunes) |
+| `regions[2].zones[3].code` | [Гудящие барханы](../World/World-REGION_3.md#c3_singing_dunes) |
 | `regions[2].zones[3].biome` | `DESERT` |
 | `regions[2].zones[3].level` | 27 |
 | `regions[2].zones[3].x` | 230 |
@@ -4061,7 +4061,7 @@
 | `regions[2].zones[3].light` | 1.25 |
 | `regions[2].zones[3].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[3].boss` | [Сирена барханов](Bosses.md#boss_dune_siren) |
-| `regions[2].zones[3].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[3].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[3].size` | 72 |
 | `regions[2].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[4].code` | [Засыпанный город](../World/World-REGION_3.md#c3_buried_city) |
@@ -4074,8 +4074,8 @@
 | `regions[2].zones[4].count` | 51; 66 |
 | `regions[2].zones[4].light` | 1 |
 | `regions[2].zones[4].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
-| `regions[2].zones[4].boss` | [Песчаный магистрат](Bosses.md#boss_sand_magistrate) |
-| `regions[2].zones[4].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[4].boss` | [Песчаный судья](Bosses.md#boss_sand_magistrate) |
+| `regions[2].zones[4].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[4].size` | 72 |
 | `regions[2].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[5].code` | [Гнездовье стервятников](../World/World-REGION_3.md#c3_vulture_roost) |
@@ -4089,7 +4089,7 @@
 | `regions[2].zones[5].light` | 1.1 |
 | `regions[2].zones[5].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[5].boss` | [Мать падали](Bosses.md#boss_carrion_mother) |
-| `regions[2].zones[5].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[5].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[5].size` | 72 |
 | `regions[2].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[6].code` | [Иссохший оазис](../World/World-REGION_3.md#c3_withered_oasis) |
@@ -4103,21 +4103,21 @@
 | `regions[2].zones[6].light` | 1.25 |
 | `regions[2].zones[6].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[6].boss` | [Змей оазиса](Bosses.md#boss_oasis_serpent) |
-| `regions[2].zones[6].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[6].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[6].size` | 72 |
 | `regions[2].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[2].zones[7].code` | [Стеклянная пустыня](../World/World-REGION_3.md#c3_glass_desert) |
+| `regions[2].zones[7].code` | [Оплавленная пустыня](../World/World-REGION_3.md#c3_glass_desert) |
 | `regions[2].zones[7].biome` | `DESERT` |
 | `regions[2].zones[7].level` | 29 |
 | `regions[2].zones[7].x` | 310 |
 | `regions[2].zones[7].y` | 2190 |
-| `regions[2].zones[7].from` | [Поющие барханы](../World/World-REGION_3.md#c3_singing_dunes); [Засыпанный город](../World/World-REGION_3.md#c3_buried_city) |
+| `regions[2].zones[7].from` | [Гудящие барханы](../World/World-REGION_3.md#c3_singing_dunes); [Засыпанный город](../World/World-REGION_3.md#c3_buried_city) |
 | `regions[2].zones[7].monsters` | [Дух самума](Monsters.md#sandstorm_spirit); [Песчаный скорпион](Monsters.md#sand_scorpion); [Песчаниковый голем](Monsters.md#sandstone_golem) |
 | `regions[2].zones[7].count` | 51; 66 |
 | `regions[2].zones[7].light` | 1.25 |
 | `regions[2].zones[7].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[7].boss` | [Стеклянный колосс](Bosses.md#boss_glass_colossus) |
-| `regions[2].zones[7].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[7].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[7].size` | 72 |
 | `regions[2].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[8].code` | [Стан налётчиков](../World/World-REGION_3.md#c3_raider_camp) |
@@ -4131,7 +4131,7 @@
 | `regions[2].zones[8].light` | 1.1 |
 | `regions[2].zones[8].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[8].boss` | [Хан налётчиков](Bosses.md#boss_raider_khan) |
-| `regions[2].zones[8].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[8].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[8].size` | 72 |
 | `regions[2].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[9].code` | [Скорпионье гнездо](../World/World-REGION_3.md#c3_scorpion_nest) |
@@ -4145,7 +4145,7 @@
 | `regions[2].zones[9].light` | 1.1 |
 | `regions[2].zones[9].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[9].boss` | [Скорпионья матриарх](Bosses.md#boss_scorpion_matriarch) |
-| `regions[2].zones[9].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[9].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[9].size` | 72 |
 | `regions[2].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[10].code` | [Долина миражей](../World/World-REGION_3.md#c3_mirage_vale) |
@@ -4153,13 +4153,13 @@
 | `regions[2].zones[10].level` | 31 |
 | `regions[2].zones[10].x` | 230 |
 | `regions[2].zones[10].y` | 2335 |
-| `regions[2].zones[10].from` | [Стеклянная пустыня](../World/World-REGION_3.md#c3_glass_desert) |
+| `regions[2].zones[10].from` | [Оплавленная пустыня](../World/World-REGION_3.md#c3_glass_desert) |
 | `regions[2].zones[10].monsters` | [Дух самума](Monsters.md#sandstorm_spirit); [Барханный хищник](Monsters.md#dune_stalker); [Мумия](Monsters.md#mummy) |
 | `regions[2].zones[10].count` | 51; 66 |
 | `regions[2].zones[10].light` | 1.25 |
 | `regions[2].zones[10].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[10].boss` | [Ткач миражей](Bosses.md#boss_mirage_weaver) |
-| `regions[2].zones[10].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[10].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[10].size` | 72 |
 | `regions[2].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[11].code` | [Гробницы царей](../World/World-REGION_3.md#c3_tombs_of_kings) |
@@ -4167,13 +4167,13 @@
 | `regions[2].zones[11].level` | 31 |
 | `regions[2].zones[11].x` | 430 |
 | `regions[2].zones[11].y` | 2340 |
-| `regions[2].zones[11].from` | [Стеклянная пустыня](../World/World-REGION_3.md#c3_glass_desert); [Стан налётчиков](../World/World-REGION_3.md#c3_raider_camp) |
+| `regions[2].zones[11].from` | [Оплавленная пустыня](../World/World-REGION_3.md#c3_glass_desert); [Стан налётчиков](../World/World-REGION_3.md#c3_raider_camp) |
 | `regions[2].zones[11].monsters` | [Мумия](Monsters.md#mummy); [Дух самума](Monsters.md#sandstorm_spirit); [Песчаниковый голем](Monsters.md#sandstone_golem) |
 | `regions[2].zones[11].count` | 51; 66 |
 | `regions[2].zones[11].light` | 0.7 |
 | `regions[2].zones[11].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[11].boss` | [Царь-мумия](Bosses.md#boss_mummy_king) |
-| `regions[2].zones[11].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[11].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[11].size` | 72 |
 | `regions[2].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[12].code` | [Песчаниковая арка](../World/World-REGION_3.md#c3_sandstone_arch) |
@@ -4187,7 +4187,7 @@
 | `regions[2].zones[12].light` | 1.1 |
 | `regions[2].zones[12].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[12].boss` | [Страж арки](Bosses.md#boss_arch_sentinel) |
-| `regions[2].zones[12].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[12].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[12].size` | 72 |
 | `regions[2].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[13].code` | [Сухое русло](../World/World-REGION_3.md#c3_dry_riverbed) |
@@ -4201,7 +4201,7 @@
 | `regions[2].zones[13].light` | 1.25 |
 | `regions[2].zones[13].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[13].boss` | [Обитатель русла](Bosses.md#boss_riverbed_lurker) |
-| `regions[2].zones[13].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[13].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[13].size` | 72 |
 | `regions[2].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[14].code` | [Зал бальзамировщиков](../World/World-REGION_3.md#c3_embalmers_hall) |
@@ -4215,7 +4215,7 @@
 | `regions[2].zones[14].light` | 0.7 |
 | `regions[2].zones[14].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[14].boss` | [Верховный бальзамировщик](Bosses.md#boss_high_embalmer) |
-| `regions[2].zones[14].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[14].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[14].size` | 72 |
 | `regions[2].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[15].code` | [Храм Солнца](../World/World-REGION_3.md#c3_sun_temple) |
@@ -4229,7 +4229,7 @@
 | `regions[2].zones[15].light` | 0.85 |
 | `regions[2].zones[15].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
 | `regions[2].zones[15].boss` | [Жрец Солнца](Bosses.md#boss_sun_priest) |
-| `regions[2].zones[15].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[15].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[15].size` | 72 |
 | `regions[2].zones[15].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[2].zones[16].code` | [Грозовое плато](../World/World-REGION_3.md#c3_storm_mesa) |
@@ -4242,11 +4242,11 @@
 | `regions[2].zones[16].count` | 51; 66 |
 | `regions[2].zones[16].light` | 1.1 |
 | `regions[2].zones[16].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
-| `regions[2].zones[16].boss` | [Грозовой Рух](Bosses.md#boss_storm_roc) |
-| `regions[2].zones[16].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[16].boss` | [Грозовой рух](Bosses.md#boss_storm_roc) |
+| `regions[2].zones[16].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[16].size` | 72 |
 | `regions[2].zones[16].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[2].zones[17].code` | [Пирамида Солнечного царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
+| `regions[2].zones[17].code` | [Пирамида Солнечного Царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
 | `regions[2].zones[17].biome` | `CRYPT` |
 | `regions[2].zones[17].level` | 35 |
 | `regions[2].zones[17].x` | 530 |
@@ -4257,8 +4257,8 @@
 | `regions[2].zones[17].count` | 51; 66 |
 | `regions[2].zones[17].light` | 0.7 |
 | `regions[2].zones[17].chestLoot` | [loot:CHEST_4](Tables/Tables-LOOT.md#loot-chest_4) |
-| `regions[2].zones[17].boss` | [Солнечный царь](Bosses.md#boss_sun_king) |
-| `regions[2].zones[17].corrupted` | [Осквернённый Палач](Monsters.md#corrupted_4) |
+| `regions[2].zones[17].boss` | [Солнечный Царь](Bosses.md#boss_sun_king) |
+| `regions[2].zones[17].corrupted` | [Порченый палач](Monsters.md#corrupted_4) |
 | `regions[2].zones[17].size` | 72 |
 | `regions[2].zones[17].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].code` | `REGION_4` |
@@ -4269,13 +4269,13 @@
 | `regions[3].zones[0].level` | 37 |
 | `regions[3].zones[0].x` | 290 |
 | `regions[3].zones[0].y` | 2800 |
-| `regions[3].zones[0].from` | [Пирамида Солнечного царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
-| `regions[3].zones[0].monsters` | [Изумрудная пантера](Monsters.md#emerald_panther); [Охотник с трубкой](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
+| `regions[3].zones[0].from` | [Пирамида Солнечного Царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
+| `regions[3].zones[0].monsters` | [Изумрудная пантера](Monsters.md#emerald_panther); [Духовой стрелок](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
 | `regions[3].zones[0].count` | 51; 66 |
 | `regions[3].zones[0].light` | 0.9 |
 | `regions[3].zones[0].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
-| `regions[3].zones[0].boss` | [Лесной ловчий](Bosses.md#boss_jungle_stalker) |
-| `regions[3].zones[0].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[0].boss` | [Ловчий джунглей](Bosses.md#boss_jungle_stalker) |
+| `regions[3].zones[0].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[0].size` | 72 |
 | `regions[3].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[1].code` | [Мангровая дельта](../World/World-REGION_4.md#c4_mangrove_delta) |
@@ -4283,13 +4283,13 @@
 | `regions[3].zones[1].level` | 37 |
 | `regions[3].zones[1].x` | 520 |
 | `regions[3].zones[1].y` | 2790 |
-| `regions[3].zones[1].from` | [Пирамида Солнечного царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
-| `regions[3].zones[1].monsters` | [Споровик](Monsters.md#sporeling); [Охотник с трубкой](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
+| `regions[3].zones[1].from` | [Пирамида Солнечного Царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
+| `regions[3].zones[1].monsters` | [Споровик](Monsters.md#sporeling); [Духовой стрелок](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
 | `regions[3].zones[1].count` | 51; 66 |
 | `regions[3].zones[1].light` | 0.85 |
 | `regions[3].zones[1].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
-| `regions[3].zones[1].boss` | [Мангровая Пасть](Bosses.md#boss_mangrove_maw) |
-| `regions[3].zones[1].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[1].boss` | [Мангровая пасть](Bosses.md#boss_mangrove_maw) |
+| `regions[3].zones[1].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[1].size` | 72 |
 | `regions[3].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[2].code` | [Заросшая дорога](../World/World-REGION_4.md#c4_overgrown_road) |
@@ -4297,13 +4297,13 @@
 | `regions[3].zones[2].level` | 37 |
 | `regions[3].zones[2].x` | 770 |
 | `regions[3].zones[2].y` | 2805 |
-| `regions[3].zones[2].from` | [Пирамида Солнечного царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
-| `regions[3].zones[2].monsters` | [Охотник с трубкой](Monsters.md#blowgun_hunter); [Изумрудная пантера](Monsters.md#emerald_panther); [Споровик](Monsters.md#sporeling) |
+| `regions[3].zones[2].from` | [Пирамида Солнечного Царя](../World/World-REGION_3.md#c3_sun_kings_pyramid) |
+| `regions[3].zones[2].monsters` | [Духовой стрелок](Monsters.md#blowgun_hunter); [Изумрудная пантера](Monsters.md#emerald_panther); [Споровик](Monsters.md#sporeling) |
 | `regions[3].zones[2].count` | 51; 66 |
 | `regions[3].zones[2].light` | 1 |
 | `regions[3].zones[2].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[2].boss` | [Замшелый легионер](Bosses.md#boss_moss_legionary) |
-| `regions[3].zones[2].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[2].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[2].size` | 72 |
 | `regions[3].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[3].code` | [Орхидейная поляна](../World/World-REGION_4.md#c4_orchid_glade) |
@@ -4317,7 +4317,7 @@
 | `regions[3].zones[3].light` | 0.9 |
 | `regions[3].zones[3].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[3].boss` | [Орхидейная дриада](Bosses.md#boss_orchid_dryad) |
-| `regions[3].zones[3].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[3].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[3].size` | 72 |
 | `regions[3].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[4].code` | [Тропа пантеры](../World/World-REGION_4.md#c4_panther_trail) |
@@ -4326,12 +4326,12 @@
 | `regions[3].zones[4].x` | 420 |
 | `regions[3].zones[4].y` | 2950 |
 | `regions[3].zones[4].from` | [Кромка джунглей](../World/World-REGION_4.md#c4_jungle_edge); [Мангровая дельта](../World/World-REGION_4.md#c4_mangrove_delta) |
-| `regions[3].zones[4].monsters` | [Изумрудная пантера](Monsters.md#emerald_panther); [Охотник с трубкой](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
+| `regions[3].zones[4].monsters` | [Изумрудная пантера](Monsters.md#emerald_panther); [Духовой стрелок](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
 | `regions[3].zones[4].count` | 51; 66 |
 | `regions[3].zones[4].light` | 0.9 |
 | `regions[3].zones[4].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[4].boss` | [Теневая пантера](Bosses.md#boss_shadow_panther) |
-| `regions[3].zones[4].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[4].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[4].size` | 72 |
 | `regions[3].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[5].code` | [Осиная лощина](../World/World-REGION_4.md#c4_wasp_hollow) |
@@ -4345,7 +4345,7 @@
 | `regions[3].zones[5].light` | 0.7 |
 | `regions[3].zones[5].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[5].boss` | [Осиная матрона](Bosses.md#boss_wasp_matron) |
-| `regions[3].zones[5].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[5].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[5].size` | 72 |
 | `regions[3].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[6].code` | [Роща душителей](../World/World-REGION_4.md#c4_strangler_grove) |
@@ -4354,12 +4354,12 @@
 | `regions[3].zones[6].x` | 850 |
 | `regions[3].zones[6].y` | 2955 |
 | `regions[3].zones[6].from` | [Заросшая дорога](../World/World-REGION_4.md#c4_overgrown_road) |
-| `regions[3].zones[6].monsters` | [Споровик](Monsters.md#sporeling); [Изумрудная пантера](Monsters.md#emerald_panther); [Охотник с трубкой](Monsters.md#blowgun_hunter) |
+| `regions[3].zones[6].monsters` | [Споровик](Monsters.md#sporeling); [Изумрудная пантера](Monsters.md#emerald_panther); [Духовой стрелок](Monsters.md#blowgun_hunter) |
 | `regions[3].zones[6].count` | 51; 66 |
 | `regions[3].zones[6].light` | 0.9 |
 | `regions[3].zones[6].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[6].boss` | [Лиана-душитель](Bosses.md#boss_strangler_vine) |
-| `regions[3].zones[6].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[6].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[6].size` | 72 |
 | `regions[3].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[7].code` | [Змеиное святилище](../World/World-REGION_4.md#c4_serpent_shrine) |
@@ -4368,12 +4368,12 @@
 | `regions[3].zones[7].x` | 330 |
 | `regions[3].zones[7].y` | 3090 |
 | `regions[3].zones[7].from` | [Тропа пантеры](../World/World-REGION_4.md#c4_panther_trail) |
-| `regions[3].zones[7].monsters` | [Охотник с трубкой](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis); [Споровик](Monsters.md#sporeling) |
+| `regions[3].zones[7].monsters` | [Духовой стрелок](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis); [Споровик](Monsters.md#sporeling) |
 | `regions[3].zones[7].count` | 51; 66 |
 | `regions[3].zones[7].light` | 0.85 |
 | `regions[3].zones[7].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[7].boss` | [Змеиный оракул](Bosses.md#boss_serpent_oracle) |
-| `regions[3].zones[7].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[7].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[7].size` | 72 |
 | `regions[3].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[8].code` | [Янтарные ходы](../World/World-REGION_4.md#c4_amber_tunnels) |
@@ -4387,7 +4387,7 @@
 | `regions[3].zones[8].light` | 0.7 |
 | `regions[3].zones[8].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[8].boss` | [Янтарный страж](Bosses.md#boss_amber_warden) |
-| `regions[3].zones[8].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[8].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[8].size` | 72 |
 | `regions[3].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[9].code` | [Плачущий полог](../World/World-REGION_4.md#c4_weeping_canopy) |
@@ -4401,7 +4401,7 @@
 | `regions[3].zones[9].light` | 0.9 |
 | `regions[3].zones[9].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[9].boss` | [Ужас полога](Bosses.md#boss_canopy_horror) |
-| `regions[3].zones[9].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[9].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[9].size` | 72 |
 | `regions[3].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[10].code` | [Грибные низины](../World/World-REGION_4.md#c4_fungal_lowlands) |
@@ -4410,12 +4410,12 @@
 | `regions[3].zones[10].x` | 240 |
 | `regions[3].zones[10].y` | 3235 |
 | `regions[3].zones[10].from` | [Змеиное святилище](../World/World-REGION_4.md#c4_serpent_shrine) |
-| `regions[3].zones[10].monsters` | [Споровик](Monsters.md#sporeling); [Охотник с трубкой](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
+| `regions[3].zones[10].monsters` | [Споровик](Monsters.md#sporeling); [Духовой стрелок](Monsters.md#blowgun_hunter); [Богомол-великан](Monsters.md#giant_mantis) |
 | `regions[3].zones[10].count` | 51; 66 |
 | `regions[3].zones[10].light` | 0.9 |
 | `regions[3].zones[10].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[10].boss` | [Споровый владыка](Bosses.md#boss_spore_lord) |
-| `regions[3].zones[10].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[10].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[10].size` | 72 |
 | `regions[3].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[11].code` | [Стоянка пропавшей экспедиции](../World/World-REGION_4.md#c4_lost_expedition) |
@@ -4424,12 +4424,12 @@
 | `regions[3].zones[11].x` | 440 |
 | `regions[3].zones[11].y` | 3240 |
 | `regions[3].zones[11].from` | [Змеиное святилище](../World/World-REGION_4.md#c4_serpent_shrine); [Янтарные ходы](../World/World-REGION_4.md#c4_amber_tunnels) |
-| `regions[3].zones[11].monsters` | [Охотник с трубкой](Monsters.md#blowgun_hunter); [Изумрудная пантера](Monsters.md#emerald_panther); [Споровик](Monsters.md#sporeling) |
+| `regions[3].zones[11].monsters` | [Духовой стрелок](Monsters.md#blowgun_hunter); [Изумрудная пантера](Monsters.md#emerald_panther); [Споровик](Monsters.md#sporeling) |
 | `regions[3].zones[11].count` | 51; 66 |
 | `regions[3].zones[11].light` | 1 |
 | `regions[3].zones[11].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
-| `regions[3].zones[11].boss` | [Обезумевший первопроходец](Bosses.md#boss_mad_explorer) |
-| `regions[3].zones[11].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[11].boss` | [Обезумевший проводник](Bosses.md#boss_mad_explorer) |
+| `regions[3].zones[11].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[11].size` | 72 |
 | `regions[3].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[12].code` | [Выводковые камеры](../World/World-REGION_4.md#c4_brood_chambers) |
@@ -4443,7 +4443,7 @@
 | `regions[3].zones[12].light` | 0.7 |
 | `regions[3].zones[12].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[12].boss` | [Кормилица выводка](Bosses.md#boss_brood_nurse) |
-| `regions[3].zones[12].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[12].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[12].size` | 72 |
 | `regions[3].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[13].code` | [Затопленная чаща](../World/World-REGION_4.md#c4_flooded_thicket) |
@@ -4457,7 +4457,7 @@
 | `regions[3].zones[13].light` | 0.85 |
 | `regions[3].zones[13].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[13].boss` | [Гидра чащи](Bosses.md#boss_thicket_hydra) |
-| `regions[3].zones[13].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[13].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[13].size` | 72 |
 | `regions[3].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[14].code` | [Древо-великан](../World/World-REGION_4.md#c4_great_tree) |
@@ -4466,12 +4466,12 @@
 | `regions[3].zones[14].x` | 300 |
 | `regions[3].zones[14].y` | 3380 |
 | `regions[3].zones[14].from` | [Грибные низины](../World/World-REGION_4.md#c4_fungal_lowlands); [Стоянка пропавшей экспедиции](../World/World-REGION_4.md#c4_lost_expedition) |
-| `regions[3].zones[14].monsters` | [Изумрудная пантера](Monsters.md#emerald_panther); [Богомол-великан](Monsters.md#giant_mantis); [Охотник с трубкой](Monsters.md#blowgun_hunter) |
+| `regions[3].zones[14].monsters` | [Изумрудная пантера](Monsters.md#emerald_panther); [Богомол-великан](Monsters.md#giant_mantis); [Духовой стрелок](Monsters.md#blowgun_hunter) |
 | `regions[3].zones[14].count` | 51; 66 |
 | `regions[3].zones[14].light` | 0.9 |
 | `regions[3].zones[14].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[14].boss` | [Хранитель Древа](Bosses.md#boss_tree_warden) |
-| `regions[3].zones[14].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[14].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[14].size` | 72 |
 | `regions[3].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[15].code` | [Сады богомолов](../World/World-REGION_4.md#c4_mantis_gardens) |
@@ -4485,7 +4485,7 @@
 | `regions[3].zones[15].light` | 0.9 |
 | `regions[3].zones[15].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[15].boss` | [Принц богомолов](Bosses.md#boss_mantis_prince) |
-| `regions[3].zones[15].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[15].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[15].size` | 72 |
 | `regions[3].zones[15].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[16].code` | [Маточные соты](../World/World-REGION_4.md#c4_royal_combs) |
@@ -4499,7 +4499,7 @@
 | `regions[3].zones[16].light` | 0.7 |
 | `regions[3].zones[16].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
 | `regions[3].zones[16].boss` | [Страж царицы](Bosses.md#boss_royal_guardian) |
-| `regions[3].zones[16].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[16].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[16].size` | 72 |
 | `regions[3].zones[16].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[3].zones[17].code` | [Сердце улья](../World/World-REGION_4.md#c4_hive_heart) |
@@ -4513,8 +4513,8 @@
 | `regions[3].zones[17].count` | 51; 66 |
 | `regions[3].zones[17].light` | 0.7 |
 | `regions[3].zones[17].chestLoot` | [loot:CHEST_5](Tables/Tables-LOOT.md#loot-chest_5) |
-| `regions[3].zones[17].boss` | [Царица улья](Bosses.md#boss_hive_queen) |
-| `regions[3].zones[17].corrupted` | [Осквернённый Пожиратель](Monsters.md#corrupted_5) |
+| `regions[3].zones[17].boss` | [Царица Улья](Bosses.md#boss_hive_queen) |
+| `regions[3].zones[17].corrupted` | [Порченый пожиратель](Monsters.md#corrupted_5) |
 | `regions[3].zones[17].size` | 72 |
 | `regions[3].zones[17].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].code` | `REGION_5` |
@@ -4526,12 +4526,12 @@
 | `regions[4].zones[0].x` | 310 |
 | `regions[4].zones[0].y` | 3700 |
 | `regions[4].zones[0].from` | [Сердце улья](../World/World-REGION_4.md#c4_hive_heart) |
-| `regions[4].zones[0].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Огненный змей](Monsters.md#fire_drake); [Магмовый голем](Monsters.md#magma_golem) |
+| `regions[4].zones[0].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Огненный дрейк](Monsters.md#fire_drake); [Магмовый голем](Monsters.md#magma_golem) |
 | `regions[4].zones[0].count` | 51; 66 |
 | `regions[4].zones[0].light` | 0.85 |
 | `regions[4].zones[0].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[0].boss` | [Пепельный бегемот](Bosses.md#boss_cinder_behemoth) |
-| `regions[4].zones[0].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[0].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[0].size` | 72 |
 | `regions[4].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[1].code` | [Серные копи](../World/World-REGION_5.md#c5_brimstone_mines) |
@@ -4545,7 +4545,7 @@
 | `regions[4].zones[1].light` | 0.75 |
 | `regions[4].zones[1].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[1].boss` | [Серный король](Bosses.md#boss_sulphur_king) |
-| `regions[4].zones[1].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[1].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[1].size` | 72 |
 | `regions[4].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[2].code` | [Пограничный форт](../World/World-REGION_5.md#c5_frontier_fort) |
@@ -4554,12 +4554,12 @@
 | `regions[4].zones[2].x` | 770 |
 | `regions[4].zones[2].y` | 3705 |
 | `regions[4].zones[2].from` | [Сердце улья](../World/World-REGION_4.md#c4_hive_heart) |
-| `regions[4].zones[2].monsters` | [Инфернальный рыцарь](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle) |
+| `regions[4].zones[2].monsters` | [Рыцарь пламени](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle) |
 | `regions[4].zones[2].count` | 51; 66 |
 | `regions[4].zones[2].light` | 0.8 |
 | `regions[4].zones[2].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
-| `regions[4].zones[2].boss` | [Генерал-предатель](Bosses.md#boss_turncoat_general) |
-| `regions[4].zones[2].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[2].boss` | [Генерал-перебежчик](Bosses.md#boss_turncoat_general) |
+| `regions[4].zones[2].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[2].size` | 72 |
 | `regions[4].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[3].code` | [Лавовые поля](../World/World-REGION_5.md#c5_lava_fields) |
@@ -4568,12 +4568,12 @@
 | `regions[4].zones[3].x` | 230 |
 | `regions[4].zones[3].y` | 3845 |
 | `regions[4].zones[3].from` | [Опалённые предгорья](../World/World-REGION_5.md#c5_scorched_foothills) |
-| `regions[4].zones[3].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Огненный змей](Monsters.md#fire_drake); [Магмовый голем](Monsters.md#magma_golem) |
+| `regions[4].zones[3].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Огненный дрейк](Monsters.md#fire_drake); [Магмовый голем](Monsters.md#magma_golem) |
 | `regions[4].zones[3].count` | 51; 66 |
 | `regions[4].zones[3].light` | 0.85 |
 | `regions[4].zones[3].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
-| `regions[4].zones[3].boss` | [Лавовый змей](Bosses.md#boss_lava_wyrm) |
-| `regions[4].zones[3].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[3].boss` | [Лавовый змий](Bosses.md#boss_lava_wyrm) |
+| `regions[4].zones[3].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[3].size` | 72 |
 | `regions[4].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[4].code` | [Обсидиановые шпили](../World/World-REGION_5.md#c5_obsidian_spires) |
@@ -4587,7 +4587,7 @@
 | `regions[4].zones[4].light` | 0.85 |
 | `regions[4].zones[4].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[4].boss` | [Обсидиановая гарпия](Bosses.md#boss_obsidian_harpy) |
-| `regions[4].zones[4].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[4].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[4].size` | 72 |
 | `regions[4].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[5].code` | [Плавильня](../World/World-REGION_5.md#c5_smeltery) |
@@ -4596,12 +4596,12 @@
 | `regions[4].zones[5].x` | 640 |
 | `regions[4].zones[5].y` | 3840 |
 | `regions[4].zones[5].from` | [Серные копи](../World/World-REGION_5.md#c5_brimstone_mines); [Пограничный форт](../World/World-REGION_5.md#c5_frontier_fort) |
-| `regions[4].zones[5].monsters` | [Магмовый голем](Monsters.md#magma_golem); [Инфернальный рыцарь](Monsters.md#infernal_knight); [Лавовый бес](Monsters.md#lava_imp) |
+| `regions[4].zones[5].monsters` | [Магмовый голем](Monsters.md#magma_golem); [Рыцарь пламени](Monsters.md#infernal_knight); [Лавовый бес](Monsters.md#lava_imp) |
 | `regions[4].zones[5].count` | 51; 66 |
 | `regions[4].zones[5].light` | 0.75 |
 | `regions[4].zones[5].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[5].boss` | [Хозяин печей](Bosses.md#boss_furnace_master) |
-| `regions[4].zones[5].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[5].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[5].size` | 72 |
 | `regions[4].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[6].code` | [Осадный лагерь](../World/World-REGION_5.md#c5_siege_camp) |
@@ -4610,12 +4610,12 @@
 | `regions[4].zones[6].x` | 850 |
 | `regions[4].zones[6].y` | 3855 |
 | `regions[4].zones[6].from` | [Пограничный форт](../World/World-REGION_5.md#c5_frontier_fort) |
-| `regions[4].zones[6].monsters` | [Инфернальный рыцарь](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle) |
+| `regions[4].zones[6].monsters` | [Рыцарь пламени](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle) |
 | `regions[4].zones[6].count` | 51; 66 |
 | `regions[4].zones[6].light` | 0.8 |
 | `regions[4].zones[6].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[6].boss` | [Вечный осаждающий](Bosses.md#boss_eternal_besieger) |
-| `regions[4].zones[6].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[6].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[6].size` | 72 |
 | `regions[4].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[7].code` | [Долина пеплопада](../World/World-REGION_5.md#c5_ashfall_valley) |
@@ -4624,26 +4624,26 @@
 | `regions[4].zones[7].x` | 300 |
 | `regions[4].zones[7].y` | 3990 |
 | `regions[4].zones[7].from` | [Лавовые поля](../World/World-REGION_5.md#c5_lava_fields); [Обсидиановые шпили](../World/World-REGION_5.md#c5_obsidian_spires) |
-| `regions[4].zones[7].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Огненный змей](Monsters.md#fire_drake); [Горгулья](Monsters.md#gargoyle) |
+| `regions[4].zones[7].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Огненный дрейк](Monsters.md#fire_drake); [Горгулья](Monsters.md#gargoyle) |
 | `regions[4].zones[7].count` | 51; 66 |
 | `regions[4].zones[7].light` | 0.9 |
 | `regions[4].zones[7].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[7].boss` | [Пепельная вдова](Bosses.md#boss_ash_widow) |
-| `regions[4].zones[7].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[7].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[7].size` | 72 |
 | `regions[4].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[4].zones[8].code` | [Огненная река](../World/World-REGION_5.md#c5_magma_river) |
+| `regions[4].zones[8].code` | [Река магмы](../World/World-REGION_5.md#c5_magma_river) |
 | `regions[4].zones[8].biome` | `VOLCANO` |
 | `regions[4].zones[8].level` | 53 |
 | `regions[4].zones[8].x` | 530 |
 | `regions[4].zones[8].y` | 3985 |
 | `regions[4].zones[8].from` | [Обсидиановые шпили](../World/World-REGION_5.md#c5_obsidian_spires) |
-| `regions[4].zones[8].monsters` | [Огненный змей](Monsters.md#fire_drake); [Магмовый голем](Monsters.md#magma_golem); [Лавовый бес](Monsters.md#lava_imp) |
+| `regions[4].zones[8].monsters` | [Огненный дрейк](Monsters.md#fire_drake); [Магмовый голем](Monsters.md#magma_golem); [Лавовый бес](Monsters.md#lava_imp) |
 | `regions[4].zones[8].count` | 51; 66 |
 | `regions[4].zones[8].light` | 0.85 |
 | `regions[4].zones[8].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[8].boss` | [Огненный перевозчик](Bosses.md#boss_magma_ferryman) |
-| `regions[4].zones[8].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[8].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[8].size` | 72 |
 | `regions[4].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[9].code` | [Внешние стены](../World/World-REGION_5.md#c5_outer_walls) |
@@ -4652,12 +4652,12 @@
 | `regions[4].zones[9].x` | 770 |
 | `regions[4].zones[9].y` | 3995 |
 | `regions[4].zones[9].from` | [Осадный лагерь](../World/World-REGION_5.md#c5_siege_camp) |
-| `regions[4].zones[9].monsters` | [Инфернальный рыцарь](Monsters.md#infernal_knight); [Горгулья](Monsters.md#gargoyle); [Чернокнижник цитадели](Monsters.md#citadel_warlock) |
+| `regions[4].zones[9].monsters` | [Рыцарь пламени](Monsters.md#infernal_knight); [Горгулья](Monsters.md#gargoyle); [Чернокнижник цитадели](Monsters.md#citadel_warlock) |
 | `regions[4].zones[9].count` | 51; 66 |
 | `regions[4].zones[9].light` | 0.8 |
 | `regions[4].zones[9].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[9].boss` | [Страж стен](Bosses.md#boss_wall_warden) |
-| `regions[4].zones[9].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[9].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[9].size` | 72 |
 | `regions[4].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[10].code` | [Кальдерное озеро](../World/World-REGION_5.md#c5_caldera_lake) |
@@ -4666,26 +4666,26 @@
 | `regions[4].zones[10].x` | 220 |
 | `regions[4].zones[10].y` | 4135 |
 | `regions[4].zones[10].from` | [Долина пеплопада](../World/World-REGION_5.md#c5_ashfall_valley) |
-| `regions[4].zones[10].monsters` | [Огненный змей](Monsters.md#fire_drake); [Лавовый бес](Monsters.md#lava_imp); [Магмовый голем](Monsters.md#magma_golem) |
+| `regions[4].zones[10].monsters` | [Огненный дрейк](Monsters.md#fire_drake); [Лавовый бес](Monsters.md#lava_imp); [Магмовый голем](Monsters.md#magma_golem) |
 | `regions[4].zones[10].count` | 51; 66 |
 | `regions[4].zones[10].light` | 0.85 |
 | `regions[4].zones[10].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[10].boss` | [Кипящий ужас](Bosses.md#boss_boiling_horror) |
-| `regions[4].zones[10].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[10].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[10].size` | 72 |
 | `regions[4].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[4].zones[11].code` | [Пепельная пустошь](../World/World-REGION_5.md#c5_cinder_wastes) |
+| `regions[4].zones[11].code` | [Пепельный склон](../World/World-REGION_5.md#c5_cinder_wastes) |
 | `regions[4].zones[11].biome` | `ASH` |
 | `regions[4].zones[11].level` | 55 |
 | `regions[4].zones[11].x` | 420 |
 | `regions[4].zones[11].y` | 4140 |
-| `regions[4].zones[11].from` | [Долина пеплопада](../World/World-REGION_5.md#c5_ashfall_valley); [Огненная река](../World/World-REGION_5.md#c5_magma_river) |
-| `regions[4].zones[11].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Горгулья](Monsters.md#gargoyle); [Инфернальный рыцарь](Monsters.md#infernal_knight) |
+| `regions[4].zones[11].from` | [Долина пеплопада](../World/World-REGION_5.md#c5_ashfall_valley); [Река магмы](../World/World-REGION_5.md#c5_magma_river) |
+| `regions[4].zones[11].monsters` | [Лавовый бес](Monsters.md#lava_imp); [Горгулья](Monsters.md#gargoyle); [Рыцарь пламени](Monsters.md#infernal_knight) |
 | `regions[4].zones[11].count` | 51; 66 |
 | `regions[4].zones[11].light` | 0.9 |
 | `regions[4].zones[11].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[11].boss` | [Тлеющий лич](Bosses.md#boss_smouldering_lich) |
-| `regions[4].zones[11].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[11].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[11].size` | 72 |
 | `regions[4].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[12].code` | [Военные кузни](../World/World-REGION_5.md#c5_war_forges) |
@@ -4693,13 +4693,13 @@
 | `regions[4].zones[12].level` | 55 |
 | `regions[4].zones[12].x` | 630 |
 | `regions[4].zones[12].y` | 4130 |
-| `regions[4].zones[12].from` | [Огненная река](../World/World-REGION_5.md#c5_magma_river); [Внешние стены](../World/World-REGION_5.md#c5_outer_walls) |
-| `regions[4].zones[12].monsters` | [Инфернальный рыцарь](Monsters.md#infernal_knight); [Магмовый голем](Monsters.md#magma_golem); [Чернокнижник цитадели](Monsters.md#citadel_warlock) |
+| `regions[4].zones[12].from` | [Река магмы](../World/World-REGION_5.md#c5_magma_river); [Внешние стены](../World/World-REGION_5.md#c5_outer_walls) |
+| `regions[4].zones[12].monsters` | [Рыцарь пламени](Monsters.md#infernal_knight); [Магмовый голем](Monsters.md#magma_golem); [Чернокнижник цитадели](Monsters.md#citadel_warlock) |
 | `regions[4].zones[12].count` | 51; 66 |
 | `regions[4].zones[12].light` | 0.8 |
 | `regions[4].zones[12].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[12].boss` | [Кузнец войны](Bosses.md#boss_warsmith) |
-| `regions[4].zones[12].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[12].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[12].size` | 72 |
 | `regions[4].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[13].code` | [Горящие казармы](../World/World-REGION_5.md#c5_burning_barracks) |
@@ -4708,12 +4708,12 @@
 | `regions[4].zones[13].x` | 840 |
 | `regions[4].zones[13].y` | 4145 |
 | `regions[4].zones[13].from` | [Внешние стены](../World/World-REGION_5.md#c5_outer_walls) |
-| `regions[4].zones[13].monsters` | [Инфернальный рыцарь](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Лавовый бес](Monsters.md#lava_imp) |
+| `regions[4].zones[13].monsters` | [Рыцарь пламени](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Лавовый бес](Monsters.md#lava_imp) |
 | `regions[4].zones[13].count` | 51; 66 |
 | `regions[4].zones[13].light` | 0.8 |
 | `regions[4].zones[13].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[13].boss` | [Горящий капитан](Bosses.md#boss_burning_captain) |
-| `regions[4].zones[13].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[13].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[13].size` | 72 |
 | `regions[4].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[14].code` | [Драконье жерло](../World/World-REGION_5.md#c5_dragons_vent) |
@@ -4721,27 +4721,27 @@
 | `regions[4].zones[14].level` | 57 |
 | `regions[4].zones[14].x` | 300 |
 | `regions[4].zones[14].y` | 4280 |
-| `regions[4].zones[14].from` | [Кальдерное озеро](../World/World-REGION_5.md#c5_caldera_lake); [Пепельная пустошь](../World/World-REGION_5.md#c5_cinder_wastes) |
-| `regions[4].zones[14].monsters` | [Огненный змей](Monsters.md#fire_drake); [Лавовый бес](Monsters.md#lava_imp); [Горгулья](Monsters.md#gargoyle) |
+| `regions[4].zones[14].from` | [Кальдерное озеро](../World/World-REGION_5.md#c5_caldera_lake); [Пепельный склон](../World/World-REGION_5.md#c5_cinder_wastes) |
+| `regions[4].zones[14].monsters` | [Огненный дрейк](Monsters.md#fire_drake); [Лавовый бес](Monsters.md#lava_imp); [Горгулья](Monsters.md#gargoyle) |
 | `regions[4].zones[14].count` | 51; 66 |
 | `regions[4].zones[14].light` | 0.85 |
 | `regions[4].zones[14].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
-| `regions[4].zones[14].boss` | [Жерловой дракон](Bosses.md#boss_vent_dragon) |
-| `regions[4].zones[14].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[14].boss` | [Дракон жерла](Bosses.md#boss_vent_dragon) |
+| `regions[4].zones[14].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[14].size` | 72 |
 | `regions[4].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[4].zones[15].code` | [Инфернальные врата](../World/World-REGION_5.md#c5_infernal_gate) |
+| `regions[4].zones[15].code` | [Врата Цитадели](../World/World-REGION_5.md#c5_infernal_gate) |
 | `regions[4].zones[15].biome` | `CITADEL` |
 | `regions[4].zones[15].level` | 57 |
 | `regions[4].zones[15].x` | 530 |
 | `regions[4].zones[15].y` | 4275 |
-| `regions[4].zones[15].from` | [Пепельная пустошь](../World/World-REGION_5.md#c5_cinder_wastes); [Военные кузни](../World/World-REGION_5.md#c5_war_forges) |
-| `regions[4].zones[15].monsters` | [Инфернальный рыцарь](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle) |
+| `regions[4].zones[15].from` | [Пепельный склон](../World/World-REGION_5.md#c5_cinder_wastes); [Военные кузни](../World/World-REGION_5.md#c5_war_forges) |
+| `regions[4].zones[15].monsters` | [Рыцарь пламени](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle) |
 | `regions[4].zones[15].count` | 51; 66 |
 | `regions[4].zones[15].light` | 0.8 |
 | `regions[4].zones[15].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
-| `regions[4].zones[15].boss` | [Привратник преисподней](Bosses.md#boss_infernal_gatekeeper) |
-| `regions[4].zones[15].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[15].boss` | [Клятвенное пламя](Bosses.md#boss_infernal_gatekeeper) |
+| `regions[4].zones[15].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[15].size` | 72 |
 | `regions[4].zones[15].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[16].code` | [Расплавленное ядро](../World/World-REGION_5.md#c5_molten_core) |
@@ -4750,12 +4750,12 @@
 | `regions[4].zones[16].x` | 760 |
 | `regions[4].zones[16].y` | 4285 |
 | `regions[4].zones[16].from` | [Военные кузни](../World/World-REGION_5.md#c5_war_forges) |
-| `regions[4].zones[16].monsters` | [Магмовый голем](Monsters.md#magma_golem); [Огненный змей](Monsters.md#fire_drake); [Лавовый бес](Monsters.md#lava_imp) |
+| `regions[4].zones[16].monsters` | [Магмовый голем](Monsters.md#magma_golem); [Огненный дрейк](Monsters.md#fire_drake); [Лавовый бес](Monsters.md#lava_imp) |
 | `regions[4].zones[16].count` | 51; 66 |
 | `regions[4].zones[16].light` | 0.85 |
 | `regions[4].zones[16].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[16].boss` | [Сердце горы](Bosses.md#boss_mountain_heart) |
-| `regions[4].zones[16].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[16].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[16].size` | 72 |
 | `regions[4].zones[16].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[4].zones[17].code` | [Цитадель Пламени](../World/World-REGION_5.md#c5_flame_citadel) |
@@ -4763,31 +4763,31 @@
 | `regions[4].zones[17].level` | 59 |
 | `regions[4].zones[17].x` | 530 |
 | `regions[4].zones[17].y` | 4425 |
-| `regions[4].zones[17].from` | [Драконье жерло](../World/World-REGION_5.md#c5_dragons_vent); [Инфернальные врата](../World/World-REGION_5.md#c5_infernal_gate); [Расплавленное ядро](../World/World-REGION_5.md#c5_molten_core) |
+| `regions[4].zones[17].from` | [Драконье жерло](../World/World-REGION_5.md#c5_dragons_vent); [Врата Цитадели](../World/World-REGION_5.md#c5_infernal_gate); [Расплавленное ядро](../World/World-REGION_5.md#c5_molten_core) |
 | `regions[4].zones[17].finale` | Да |
-| `regions[4].zones[17].monsters` | [Инфернальный рыцарь](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle); [Лавовый бес](Monsters.md#lava_imp) |
+| `regions[4].zones[17].monsters` | [Рыцарь пламени](Monsters.md#infernal_knight); [Чернокнижник цитадели](Monsters.md#citadel_warlock); [Горгулья](Monsters.md#gargoyle); [Лавовый бес](Monsters.md#lava_imp) |
 | `regions[4].zones[17].count` | 51; 66 |
 | `regions[4].zones[17].light` | 0.8 |
 | `regions[4].zones[17].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[4].zones[17].boss` | [Владыка Пламени](Bosses.md#boss_flame_sovereign) |
-| `regions[4].zones[17].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[4].zones[17].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[4].zones[17].size` | 72 |
 | `regions[4].zones[17].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].code` | `REGION_6` |
 | `regions[5].label.x` | 880 |
 | `regions[5].label.y` | 4530 |
-| `regions[5].zones[0].code` | [Край разлома](../World/World-REGION_6.md#c6_rift_edge) |
+| `regions[5].zones[0].code` | [Край пропасти](../World/World-REGION_6.md#c6_rift_edge) |
 | `regions[5].zones[0].biome` | `ABYSS` |
 | `regions[5].zones[0].level` | 61 |
 | `regions[5].zones[0].x` | 300 |
 | `regions[5].zones[0].y` | 4600 |
 | `regions[5].zones[0].from` | [Цитадель Пламени](../World/World-REGION_5.md#c5_flame_citadel) |
-| `regions[5].zones[0].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Ползун бездны](Monsters.md#abyss_crawler); [Тень бездны](Monsters.md#abyssal_shade) |
+| `regions[5].zones[0].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Ползун Бездны](Monsters.md#abyss_crawler); [Тень Бездны](Monsters.md#abyssal_shade) |
 | `regions[5].zones[0].count` | 51; 66 |
 | `regions[5].zones[0].light` | 0.6 |
 | `regions[5].zones[0].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
-| `regions[5].zones[0].boss` | [Страж разлома](Bosses.md#boss_rift_watcher) |
-| `regions[5].zones[0].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[0].boss` | [Страж пропасти](Bosses.md#boss_rift_watcher) |
+| `regions[5].zones[0].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[0].size` | 72 |
 | `regions[5].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[1].code` | [Чумные поля](../World/World-REGION_6.md#c6_blighted_fields) |
@@ -4801,7 +4801,7 @@
 | `regions[5].zones[1].light` | 0.75 |
 | `regions[5].zones[1].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[1].boss` | [Чумной жнец](Bosses.md#boss_plague_reaper) |
-| `regions[5].zones[1].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[1].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[1].size` | 72 |
 | `regions[5].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[2].code` | [Покинутое аббатство](../World/World-REGION_6.md#c6_forsaken_abbey) |
@@ -4810,12 +4810,12 @@
 | `regions[5].zones[2].x` | 760 |
 | `regions[5].zones[2].y` | 4605 |
 | `regions[5].zones[2].from` | [Цитадель Пламени](../World/World-REGION_5.md#c5_flame_citadel) |
-| `regions[5].zones[2].monsters` | [Чумоносец](Monsters.md#plague_bearer); [Тень бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn) |
+| `regions[5].zones[2].monsters` | [Чумоносец](Monsters.md#plague_bearer); [Тень Бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn) |
 | `regions[5].zones[2].count` | 51; 66 |
 | `regions[5].zones[2].light` | 0.85 |
 | `regions[5].zones[2].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
-| `regions[5].zones[2].boss` | [Падший аббат](Bosses.md#boss_fallen_abbot) |
-| `regions[5].zones[2].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[2].boss` | [Падший настоятель](Bosses.md#boss_fallen_abbot) |
+| `regions[5].zones[2].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[2].size` | 72 |
 | `regions[5].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[3].code` | [Шепчущая пропасть](../World/World-REGION_6.md#c6_whispering_chasm) |
@@ -4823,13 +4823,13 @@
 | `regions[5].zones[3].level` | 63 |
 | `regions[5].zones[3].x` | 230 |
 | `regions[5].zones[3].y` | 4745 |
-| `regions[5].zones[3].from` | [Край разлома](../World/World-REGION_6.md#c6_rift_edge) |
-| `regions[5].zones[3].monsters` | [Тень бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn); [Ползун бездны](Monsters.md#abyss_crawler) |
+| `regions[5].zones[3].from` | [Край пропасти](../World/World-REGION_6.md#c6_rift_edge) |
+| `regions[5].zones[3].monsters` | [Тень Бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn); [Ползун Бездны](Monsters.md#abyss_crawler) |
 | `regions[5].zones[3].count` | 51; 66 |
 | `regions[5].zones[3].light` | 0.6 |
 | `regions[5].zones[3].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[3].boss` | [Шептун](Bosses.md#boss_whisperer) |
-| `regions[5].zones[3].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[3].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[3].size` | 72 |
 | `regions[5].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[4].code` | [Гниющий сад](../World/World-REGION_6.md#c6_rotting_orchard) |
@@ -4837,13 +4837,13 @@
 | `regions[5].zones[4].level` | 63 |
 | `regions[5].zones[4].x` | 430 |
 | `regions[5].zones[4].y` | 4750 |
-| `regions[5].zones[4].from` | [Край разлома](../World/World-REGION_6.md#c6_rift_edge); [Чумные поля](../World/World-REGION_6.md#c6_blighted_fields) |
+| `regions[5].zones[4].from` | [Край пропасти](../World/World-REGION_6.md#c6_rift_edge); [Чумные поля](../World/World-REGION_6.md#c6_blighted_fields) |
 | `regions[5].zones[4].monsters` | [Гнилошляп](Monsters.md#blightcap); [Чумная оса](Monsters.md#plague_wasp); [Чумоносец](Monsters.md#plague_bearer) |
 | `regions[5].zones[4].count` | 51; 66 |
 | `regions[5].zones[4].light` | 0.75 |
 | `regions[5].zones[4].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[4].boss` | [Садовник гнили](Bosses.md#boss_rot_gardener) |
-| `regions[5].zones[4].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[4].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[4].size` | 72 |
 | `regions[5].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[5].code` | [Чумная деревня](../World/World-REGION_6.md#c6_plague_village) |
@@ -4857,7 +4857,7 @@
 | `regions[5].zones[5].light` | 0.75 |
 | `regions[5].zones[5].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[5].boss` | [Чумной лекарь](Bosses.md#boss_plague_doctor) |
-| `regions[5].zones[5].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[5].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[5].size` | 72 |
 | `regions[5].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[6].code` | [Костница](../World/World-REGION_6.md#c6_ossuary) |
@@ -4866,12 +4866,12 @@
 | `regions[5].zones[6].x` | 850 |
 | `regions[5].zones[6].y` | 4755 |
 | `regions[5].zones[6].from` | [Покинутое аббатство](../World/World-REGION_6.md#c6_forsaken_abbey) |
-| `regions[5].zones[6].monsters` | [Чумоносец](Monsters.md#plague_bearer); [Ползун бездны](Monsters.md#abyss_crawler); [Тень бездны](Monsters.md#abyssal_shade) |
+| `regions[5].zones[6].monsters` | [Чумоносец](Monsters.md#plague_bearer); [Ползун Бездны](Monsters.md#abyss_crawler); [Тень Бездны](Monsters.md#abyssal_shade) |
 | `regions[5].zones[6].count` | 51; 66 |
 | `regions[5].zones[6].light` | 0.7 |
 | `regions[5].zones[6].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[6].boss` | [Собиратель костей](Bosses.md#boss_bone_collector) |
-| `regions[5].zones[6].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[6].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[6].size` | 72 |
 | `regions[5].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[7].code` | [Берег пустоты](../World/World-REGION_6.md#c6_void_shore) |
@@ -4880,12 +4880,12 @@
 | `regions[5].zones[7].x` | 310 |
 | `regions[5].zones[7].y` | 4890 |
 | `regions[5].zones[7].from` | [Шепчущая пропасть](../World/World-REGION_6.md#c6_whispering_chasm) |
-| `regions[5].zones[7].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Тень бездны](Monsters.md#abyssal_shade); [Ползун бездны](Monsters.md#abyss_crawler) |
+| `regions[5].zones[7].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Тень Бездны](Monsters.md#abyssal_shade); [Ползун Бездны](Monsters.md#abyss_crawler) |
 | `regions[5].zones[7].count` | 51; 66 |
 | `regions[5].zones[7].light` | 0.6 |
 | `regions[5].zones[7].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[7].boss` | [Кракен пустоты](Bosses.md#boss_void_kraken) |
-| `regions[5].zones[7].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[7].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[7].size` | 72 |
 | `regions[5].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[8].code` | [Споровый собор](../World/World-REGION_6.md#c6_spore_cathedral) |
@@ -4894,12 +4894,12 @@
 | `regions[5].zones[8].x` | 540 |
 | `regions[5].zones[8].y` | 4885 |
 | `regions[5].zones[8].from` | [Гниющий сад](../World/World-REGION_6.md#c6_rotting_orchard); [Чумная деревня](../World/World-REGION_6.md#c6_plague_village) |
-| `regions[5].zones[8].monsters` | [Гнилошляп](Monsters.md#blightcap); [Чумоносец](Monsters.md#plague_bearer); [Тень бездны](Monsters.md#abyssal_shade) |
+| `regions[5].zones[8].monsters` | [Гнилошляп](Monsters.md#blightcap); [Чумоносец](Monsters.md#plague_bearer); [Тень Бездны](Monsters.md#abyssal_shade) |
 | `regions[5].zones[8].count` | 51; 66 |
 | `regions[5].zones[8].light` | 0.75 |
 | `regions[5].zones[8].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[8].boss` | [Споровый кардинал](Bosses.md#boss_spore_cardinal) |
-| `regions[5].zones[8].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[8].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[8].size` | 72 |
 | `regions[5].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[9].code` | [Павшая звезда](../World/World-REGION_6.md#c6_fallen_star) |
@@ -4908,12 +4908,12 @@
 | `regions[5].zones[9].x` | 770 |
 | `regions[5].zones[9].y` | 4895 |
 | `regions[5].zones[9].from` | [Чумная деревня](../World/World-REGION_6.md#c6_plague_village) |
-| `regions[5].zones[9].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Ползун бездны](Monsters.md#abyss_crawler); [Чумная оса](Monsters.md#plague_wasp) |
+| `regions[5].zones[9].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Ползун Бездны](Monsters.md#abyss_crawler); [Чумная оса](Monsters.md#plague_wasp) |
 | `regions[5].zones[9].count` | 51; 66 |
 | `regions[5].zones[9].light` | 0.6 |
 | `regions[5].zones[9].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[9].boss` | [Звёздное отродье](Bosses.md#boss_star_spawn) |
-| `regions[5].zones[9].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[9].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[9].size` | 72 |
 | `regions[5].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[10].code` | [Пасть катакомб](../World/World-REGION_6.md#c6_catacomb_maw) |
@@ -4922,12 +4922,12 @@
 | `regions[5].zones[10].x` | 230 |
 | `regions[5].zones[10].y` | 5035 |
 | `regions[5].zones[10].from` | [Берег пустоты](../World/World-REGION_6.md#c6_void_shore) |
-| `regions[5].zones[10].monsters` | [Ползун бездны](Monsters.md#abyss_crawler); [Чумоносец](Monsters.md#plague_bearer); [Тень бездны](Monsters.md#abyssal_shade) |
+| `regions[5].zones[10].monsters` | [Ползун Бездны](Monsters.md#abyss_crawler); [Чумоносец](Monsters.md#plague_bearer); [Тень Бездны](Monsters.md#abyssal_shade) |
 | `regions[5].zones[10].count` | 51; 66 |
 | `regions[5].zones[10].light` | 0.7 |
 | `regions[5].zones[10].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[10].boss` | [Червь катакомб](Bosses.md#boss_catacomb_worm) |
-| `regions[5].zones[10].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[10].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[10].size` | 72 |
 | `regions[5].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[11].code` | [Иссохший лес](../World/World-REGION_6.md#c6_withered_wood) |
@@ -4941,7 +4941,7 @@
 | `regions[5].zones[11].light` | 0.75 |
 | `regions[5].zones[11].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[11].boss` | [Иссохший великан](Bosses.md#boss_withered_giant) |
-| `regions[5].zones[11].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[11].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[11].size` | 72 |
 | `regions[5].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[12].code` | [Алтарь затмения](../World/World-REGION_6.md#c6_eclipse_altar) |
@@ -4950,12 +4950,12 @@
 | `regions[5].zones[12].x` | 640 |
 | `regions[5].zones[12].y` | 5030 |
 | `regions[5].zones[12].from` | [Споровый собор](../World/World-REGION_6.md#c6_spore_cathedral); [Павшая звезда](../World/World-REGION_6.md#c6_fallen_star) |
-| `regions[5].zones[12].monsters` | [Тень бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn); [Чумоносец](Monsters.md#plague_bearer) |
+| `regions[5].zones[12].monsters` | [Тень Бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn); [Чумоносец](Monsters.md#plague_bearer) |
 | `regions[5].zones[12].count` | 51; 66 |
 | `regions[5].zones[12].light` | 0.85 |
 | `regions[5].zones[12].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[12].boss` | [Жрица затмения](Bosses.md#boss_eclipse_priestess) |
-| `regions[5].zones[12].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[12].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[12].size` | 72 |
 | `regions[5].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[13].code` | [Беззвёздная глубь](../World/World-REGION_6.md#c6_starless_deep) |
@@ -4964,12 +4964,12 @@
 | `regions[5].zones[13].x` | 850 |
 | `regions[5].zones[13].y` | 5045 |
 | `regions[5].zones[13].from` | [Павшая звезда](../World/World-REGION_6.md#c6_fallen_star) |
-| `regions[5].zones[13].monsters` | [Ползун бездны](Monsters.md#abyss_crawler); [Порождение пустоты](Monsters.md#void_spawn); [Тень бездны](Monsters.md#abyssal_shade) |
+| `regions[5].zones[13].monsters` | [Ползун Бездны](Monsters.md#abyss_crawler); [Порождение пустоты](Monsters.md#void_spawn); [Тень Бездны](Monsters.md#abyssal_shade) |
 | `regions[5].zones[13].count` | 51; 66 |
 | `regions[5].zones[13].light` | 0.6 |
 | `regions[5].zones[13].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[13].boss` | [Безглазый](Bosses.md#boss_eyeless_one) |
-| `regions[5].zones[13].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[13].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[13].size` | 72 |
 | `regions[5].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[14].code` | [Гнилое сердце](../World/World-REGION_6.md#c6_rotten_heart) |
@@ -4982,8 +4982,8 @@
 | `regions[5].zones[14].count` | 51; 66 |
 | `regions[5].zones[14].light` | 0.75 |
 | `regions[5].zones[14].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
-| `regions[5].zones[14].boss` | [Мать гнили](Bosses.md#boss_mother_blight) |
-| `regions[5].zones[14].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[14].boss` | [Гнилосердая](Bosses.md#boss_mother_blight) |
+| `regions[5].zones[14].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[14].size` | 72 |
 | `regions[5].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[15].code` | [Завеса теней](../World/World-REGION_6.md#c6_veil_of_shadows) |
@@ -4992,12 +4992,12 @@
 | `regions[5].zones[15].x` | 530 |
 | `regions[5].zones[15].y` | 5175 |
 | `regions[5].zones[15].from` | [Иссохший лес](../World/World-REGION_6.md#c6_withered_wood); [Алтарь затмения](../World/World-REGION_6.md#c6_eclipse_altar) |
-| `regions[5].zones[15].monsters` | [Тень бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn); [Ползун бездны](Monsters.md#abyss_crawler) |
+| `regions[5].zones[15].monsters` | [Тень Бездны](Monsters.md#abyssal_shade); [Порождение пустоты](Monsters.md#void_spawn); [Ползун Бездны](Monsters.md#abyss_crawler) |
 | `regions[5].zones[15].count` | 51; 66 |
 | `regions[5].zones[15].light` | 0.6 |
 | `regions[5].zones[15].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[15].boss` | [Ткач завесы](Bosses.md#boss_veil_weaver) |
-| `regions[5].zones[15].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[15].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[15].size` | 72 |
 | `regions[5].zones[15].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[16].code` | [Бесконечная лестница](../World/World-REGION_6.md#c6_endless_stair) |
@@ -5006,12 +5006,12 @@
 | `regions[5].zones[16].x` | 750 |
 | `regions[5].zones[16].y` | 5185 |
 | `regions[5].zones[16].from` | [Алтарь затмения](../World/World-REGION_6.md#c6_eclipse_altar); [Беззвёздная глубь](../World/World-REGION_6.md#c6_starless_deep) |
-| `regions[5].zones[16].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Ползун бездны](Monsters.md#abyss_crawler); [Чумная оса](Monsters.md#plague_wasp) |
+| `regions[5].zones[16].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Ползун Бездны](Monsters.md#abyss_crawler); [Чумная оса](Monsters.md#plague_wasp) |
 | `regions[5].zones[16].count` | 51; 66 |
 | `regions[5].zones[16].light` | 0.6 |
 | `regions[5].zones[16].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[16].boss` | [Вечный привратник](Bosses.md#boss_endless_warden) |
-| `regions[5].zones[16].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[16].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[16].size` | 72 |
 | `regions[5].zones[16].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[5].zones[17].code` | [Трон бездны](../World/World-REGION_6.md#c6_abyssal_throne) |
@@ -5021,12 +5021,12 @@
 | `regions[5].zones[17].y` | 5325 |
 | `regions[5].zones[17].from` | [Гнилое сердце](../World/World-REGION_6.md#c6_rotten_heart); [Завеса теней](../World/World-REGION_6.md#c6_veil_of_shadows); [Бесконечная лестница](../World/World-REGION_6.md#c6_endless_stair) |
 | `regions[5].zones[17].finale` | Да |
-| `regions[5].zones[17].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Тень бездны](Monsters.md#abyssal_shade); [Ползун бездны](Monsters.md#abyss_crawler); [Чумоносец](Monsters.md#plague_bearer) |
+| `regions[5].zones[17].monsters` | [Порождение пустоты](Monsters.md#void_spawn); [Тень Бездны](Monsters.md#abyssal_shade); [Ползун Бездны](Monsters.md#abyss_crawler); [Чумоносец](Monsters.md#plague_bearer) |
 | `regions[5].zones[17].count` | 51; 66 |
 | `regions[5].zones[17].light` | 0.6 |
 | `regions[5].zones[17].chestLoot` | [loot:CHEST_6](Tables/Tables-LOOT.md#loot-chest_6) |
 | `regions[5].zones[17].boss` | [Король бездны](Bosses.md#boss_abyss_king) |
-| `regions[5].zones[17].corrupted` | [Осквернённый Архонт](Monsters.md#corrupted_6) |
+| `regions[5].zones[17].corrupted` | [Порченый архонт](Monsters.md#corrupted_6) |
 | `regions[5].zones[17].size` | 72 |
 | `regions[5].zones[17].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].code` | `REGION_7` |
@@ -5038,12 +5038,12 @@
 | `regions[6].zones[0].x` | 298 |
 | `regions[6].zones[0].y` | 5483 |
 | `regions[6].zones[0].from` | [Трон бездны](../World/World-REGION_6.md#c6_abyssal_throne) |
-| `regions[6].zones[0].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[0].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[0].count` | 53; 69 |
 | `regions[6].zones[0].light` | 0.8 |
 | `regions[6].zones[0].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[0].boss` | [Вестник ветров](Bosses.md#boss_wind_herald) |
-| `regions[6].zones[0].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[0].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[0].size` | 72 |
 | `regions[6].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[1].code` | [Стеклянные дюны](../World/World-REGION_7.md#c7_glass_dunes) |
@@ -5057,7 +5057,7 @@
 | `regions[6].zones[1].light` | 0.9 |
 | `regions[6].zones[1].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[1].boss` | [Стеклянная праматерь](Bosses.md#boss_glass_matriarch) |
-| `regions[6].zones[1].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[1].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[1].size` | 72 |
 | `regions[6].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[2].code` | [Громовые ступени](../World/World-REGION_7.md#c7_thunder_steps) |
@@ -5066,12 +5066,12 @@
 | `regions[6].zones[2].x` | 753 |
 | `regions[6].zones[2].y` | 5482 |
 | `regions[6].zones[2].from` | [Трон бездны](../World/World-REGION_6.md#c6_abyssal_throne) |
-| `regions[6].zones[2].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[2].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[2].count` | 53; 69 |
 | `regions[6].zones[2].light` | 0.7 |
 | `regions[6].zones[2].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
-| `regions[6].zones[2].boss` | [Громовой змей](Bosses.md#boss_thunder_wyrm) |
-| `regions[6].zones[2].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[2].boss` | [Громовой змий](Bosses.md#boss_thunder_wyrm) |
+| `regions[6].zones[2].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[2].size` | 72 |
 | `regions[6].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[3].code` | [Разбитый мост](../World/World-REGION_7.md#c7_broken_bridge) |
@@ -5080,12 +5080,12 @@
 | `regions[6].zones[3].x` | 229 |
 | `regions[6].zones[3].y` | 5622 |
 | `regions[6].zones[3].from` | [Небесная пристань](../World/World-REGION_7.md#c7_sky_landing) |
-| `regions[6].zones[3].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[3].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[3].count` | 53; 69 |
 | `regions[6].zones[3].light` | 0.8 |
 | `regions[6].zones[3].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[3].boss` | [Хранитель моста](Bosses.md#boss_bridge_keeper) |
-| `regions[6].zones[3].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[3].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[3].size` | 72 |
 | `regions[6].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[4].code` | [Зеркальная равнина](../World/World-REGION_7.md#c7_mirror_flats) |
@@ -5099,7 +5099,7 @@
 | `regions[6].zones[4].light` | 0.9 |
 | `regions[6].zones[4].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[4].boss` | [Зеркальный рыцарь](Bosses.md#boss_mirror_knight) |
-| `regions[6].zones[4].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[4].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[4].size` | 72 |
 | `regions[6].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[5].code` | [Шпиль молний](../World/World-REGION_7.md#c7_lightning_spire) |
@@ -5108,12 +5108,12 @@
 | `regions[6].zones[5].x` | 633 |
 | `regions[6].zones[5].y` | 5624 |
 | `regions[6].zones[5].from` | [Стеклянные дюны](../World/World-REGION_7.md#c7_glass_dunes); [Громовые ступени](../World/World-REGION_7.md#c7_thunder_steps) |
-| `regions[6].zones[5].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[5].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[5].count` | 53; 69 |
 | `regions[6].zones[5].light` | 0.7 |
 | `regions[6].zones[5].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[5].boss` | [Тиран шпиля](Bosses.md#boss_spire_tyrant) |
-| `regions[6].zones[5].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[5].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[5].size` | 72 |
 | `regions[6].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[6].code` | [Храм ветров](../World/World-REGION_7.md#c7_wind_temple) |
@@ -5122,12 +5122,12 @@
 | `regions[6].zones[6].x` | 844 |
 | `regions[6].zones[6].y` | 5619 |
 | `regions[6].zones[6].from` | [Громовые ступени](../World/World-REGION_7.md#c7_thunder_steps) |
-| `regions[6].zones[6].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[6].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[6].count` | 53; 69 |
 | `regions[6].zones[6].light` | 0.8 |
 | `regions[6].zones[6].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[6].boss` | [Страж колоколов](Bosses.md#boss_bell_warden) |
-| `regions[6].zones[6].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[6].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[6].size` | 72 |
 | `regions[6].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[7].code` | [Расколотый венец](../World/World-REGION_7.md#c7_shattered_crown) |
@@ -5141,7 +5141,7 @@
 | `regions[6].zones[7].light` | 0.9 |
 | `regions[6].zones[7].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[7].boss` | [Коронованный осколок](Bosses.md#boss_crown_shard) |
-| `regions[6].zones[7].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[7].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[7].size` | 72 |
 | `regions[6].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[8].code` | [Облачная цитадель](../World/World-REGION_7.md#c7_cloud_citadel) |
@@ -5150,12 +5150,12 @@
 | `regions[6].zones[8].x` | 437 |
 | `regions[6].zones[8].y` | 5770 |
 | `regions[6].zones[8].from` | [Разбитый мост](../World/World-REGION_7.md#c7_broken_bridge); [Зеркальная равнина](../World/World-REGION_7.md#c7_mirror_flats); [Шпиль молний](../World/World-REGION_7.md#c7_lightning_spire) |
-| `regions[6].zones[8].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[8].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[8].count` | 53; 69 |
 | `regions[6].zones[8].light` | 0.8 |
 | `regions[6].zones[8].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[8].boss` | [Облачный маршал](Bosses.md#boss_cloud_marshal) |
-| `regions[6].zones[8].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[8].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[8].size` | 72 |
 | `regions[6].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[9].code` | [Стена бурь](../World/World-REGION_7.md#c7_stormwall) |
@@ -5164,12 +5164,12 @@
 | `regions[6].zones[9].x` | 631 |
 | `regions[6].zones[9].y` | 5776 |
 | `regions[6].zones[9].from` | [Зеркальная равнина](../World/World-REGION_7.md#c7_mirror_flats); [Шпиль молний](../World/World-REGION_7.md#c7_lightning_spire); [Храм ветров](../World/World-REGION_7.md#c7_wind_temple) |
-| `regions[6].zones[9].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[9].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[9].count` | 53; 69 |
 | `regions[6].zones[9].light` | 0.7 |
 | `regions[6].zones[9].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[9].boss` | [Титан бури](Bosses.md#boss_storm_titan) |
-| `regions[6].zones[9].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[9].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[9].size` | 72 |
 | `regions[6].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[10].code` | [Призменный каньон](../World/World-REGION_7.md#c7_prism_canyon) |
@@ -5183,7 +5183,7 @@
 | `regions[6].zones[10].light` | 0.9 |
 | `regions[6].zones[10].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[10].boss` | [Призменный охотник](Bosses.md#boss_prism_hunter) |
-| `regions[6].zones[10].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[10].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[10].size` | 72 |
 | `regions[6].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[11].code` | [Павший планетарий](../World/World-REGION_7.md#c7_fallen_orrery) |
@@ -5192,12 +5192,12 @@
 | `regions[6].zones[11].x` | 308 |
 | `regions[6].zones[11].y` | 5911 |
 | `regions[6].zones[11].from` | [Расколотый венец](../World/World-REGION_7.md#c7_shattered_crown); [Облачная цитадель](../World/World-REGION_7.md#c7_cloud_citadel) |
-| `regions[6].zones[11].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[11].monsters` | [Грозовая гарпия](Monsters.md#storm_harpy); [Падший серафим](Monsters.md#fallen_seraph); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[11].count` | 53; 69 |
 | `regions[6].zones[11].light` | 0.8 |
 | `regions[6].zones[11].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[11].boss` | [Машина планетария](Bosses.md#boss_orrery_engine) |
-| `regions[6].zones[11].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[11].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[11].size` | 72 |
 | `regions[6].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[6].zones[12].code` | [Око бури](../World/World-REGION_7.md#c7_eye_of_the_storm) |
@@ -5206,15 +5206,15 @@
 | `regions[6].zones[12].x` | 526 |
 | `regions[6].zones[12].y` | 5918 |
 | `regions[6].zones[12].from` | [Облачная цитадель](../World/World-REGION_7.md#c7_cloud_citadel); [Стена бурь](../World/World-REGION_7.md#c7_stormwall) |
-| `regions[6].zones[12].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Зефирный призрак](Monsters.md#zephyr_wraith) |
+| `regions[6].zones[12].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Призрак ветра](Monsters.md#zephyr_wraith) |
 | `regions[6].zones[12].count` | 53; 69 |
 | `regions[6].zones[12].light` | 0.7 |
 | `regions[6].zones[12].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[12].boss` | [Недвижное око](Bosses.md#boss_still_eye) |
-| `regions[6].zones[12].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[12].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[12].size` | 72 |
 | `regions[6].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[6].zones[13].code` | [Поющее стекло](../World/World-REGION_7.md#c7_singing_glass) |
+| `regions[6].zones[13].code` | [Звенящее стекло](../World/World-REGION_7.md#c7_singing_glass) |
 | `regions[6].zones[13].biome` | `GLASSWASTE` |
 | `regions[6].zones[13].level` | 78 |
 | `regions[6].zones[13].x` | 768 |
@@ -5225,22 +5225,22 @@
 | `regions[6].zones[13].light` | 0.9 |
 | `regions[6].zones[13].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
 | `regions[6].zones[13].boss` | [Стеклянный хор](Bosses.md#boss_glass_choir) |
-| `regions[6].zones[13].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[13].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[13].size` | 72 |
 | `regions[6].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[6].zones[14].code` | [Трон разбитого неба](../World/World-REGION_7.md#c7_shattered_throne) |
+| `regions[6].zones[14].code` | [Трон Разбитого Неба](../World/World-REGION_7.md#c7_shattered_throne) |
 | `regions[6].zones[14].biome` | `STORMPEAK` |
 | `regions[6].zones[14].level` | 80 |
 | `regions[6].zones[14].x` | 524 |
 | `regions[6].zones[14].y` | 6052 |
 | `regions[6].zones[14].from` | [Павший планетарий](../World/World-REGION_7.md#c7_fallen_orrery); [Око бури](../World/World-REGION_7.md#c7_eye_of_the_storm) |
 | `regions[6].zones[14].finale` | Да |
-| `regions[6].zones[14].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Зефирный призрак](Monsters.md#zephyr_wraith); [Осколочный голем](Monsters.md#shard_golem) |
+| `regions[6].zones[14].monsters` | [Громовой дрейк](Monsters.md#thunder_drake); [Небесный часовой](Monsters.md#sky_sentinel); [Призрак ветра](Monsters.md#zephyr_wraith); [Осколочный голем](Monsters.md#shard_golem) |
 | `regions[6].zones[14].count` | 53; 69 |
 | `regions[6].zones[14].light` | 0.7 |
 | `regions[6].zones[14].chestLoot` | [loot:CHEST_7](Tables/Tables-LOOT.md#loot-chest_7) |
-| `regions[6].zones[14].boss` | [Владыка разбитого неба](Bosses.md#boss_sky_sovereign) |
-| `regions[6].zones[14].corrupted` | [Осквернённый повелитель бурь](Monsters.md#corrupted_7) |
+| `regions[6].zones[14].boss` | [Владыка Разбитого Неба](Bosses.md#boss_sky_sovereign) |
+| `regions[6].zones[14].corrupted` | [Порченый повелитель бурь](Monsters.md#corrupted_7) |
 | `regions[6].zones[14].size` | 72 |
 | `regions[6].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].code` | `REGION_8` |
@@ -5251,13 +5251,13 @@
 | `regions[7].zones[0].level` | 81 |
 | `regions[7].zones[0].x` | 303 |
 | `regions[7].zones[0].y` | 6375 |
-| `regions[7].zones[0].from` | [Трон разбитого неба](../World/World-REGION_7.md#c7_shattered_throne) |
+| `regions[7].zones[0].from` | [Трон Разбитого Неба](../World/World-REGION_7.md#c7_shattered_throne) |
 | `regions[7].zones[0].monsters` | [Утопленник-легионер](Monsters.md#drowned_legionary); [Глубинный скрытень](Monsters.md#deep_lurker); [Солёный дрейк](Monsters.md#brine_drake) |
 | `regions[7].zones[0].count` | 55; 71 |
 | `regions[7].zones[0].light` | 0.8 |
 | `regions[7].zones[0].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[0].boss` | [Претор врат](Bosses.md#boss_gate_praetor) |
-| `regions[7].zones[0].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[0].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[0].size` | 72 |
 | `regions[7].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[1].code` | [Коралловые сады](../World/World-REGION_8.md#c8_coral_gardens) |
@@ -5265,13 +5265,13 @@
 | `regions[7].zones[1].level` | 81 |
 | `regions[7].zones[1].x` | 536 |
 | `regions[7].zones[1].y` | 6372 |
-| `regions[7].zones[1].from` | [Трон разбитого неба](../World/World-REGION_7.md#c7_shattered_throne) |
-| `regions[7].zones[1].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Бездонный угорь](Monsters.md#abyssal_eel) |
+| `regions[7].zones[1].from` | [Трон Разбитого Неба](../World/World-REGION_7.md#c7_shattered_throne) |
+| `regions[7].zones[1].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Глубоководный угорь](Monsters.md#abyssal_eel) |
 | `regions[7].zones[1].count` | 55; 71 |
 | `regions[7].zones[1].light` | 0.9 |
 | `regions[7].zones[1].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[1].boss` | [Коралловая королева](Bosses.md#boss_coral_queen) |
-| `regions[7].zones[1].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[1].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[1].size` | 72 |
 | `regions[7].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[2].code` | [Приливные хранилища](../World/World-REGION_8.md#c8_tide_vaults) |
@@ -5279,16 +5279,16 @@
 | `regions[7].zones[2].level` | 81 |
 | `regions[7].zones[2].x` | 767 |
 | `regions[7].zones[2].y` | 6379 |
-| `regions[7].zones[2].from` | [Трон разбитого неба](../World/World-REGION_7.md#c7_shattered_throne) |
-| `regions[7].zones[2].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Бездонный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
+| `regions[7].zones[2].from` | [Трон Разбитого Неба](../World/World-REGION_7.md#c7_shattered_throne) |
+| `regions[7].zones[2].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Глубоководный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
 | `regions[7].zones[2].count` | 55; 71 |
 | `regions[7].zones[2].light` | 0.7 |
 | `regions[7].zones[2].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[2].boss` | [Страж хранилищ](Bosses.md#boss_vault_warden) |
-| `regions[7].zones[2].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[2].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[2].size` | 72 |
 | `regions[7].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[7].zones[3].code` | [Утонувший форум](../World/World-REGION_8.md#c8_drowned_forum) |
+| `regions[7].zones[3].code` | [Затонувший форум](../World/World-REGION_8.md#c8_drowned_forum) |
 | `regions[7].zones[3].biome` | `SUNKEN` |
 | `regions[7].zones[3].level` | 83 |
 | `regions[7].zones[3].x` | 233 |
@@ -5299,7 +5299,7 @@
 | `regions[7].zones[3].light` | 0.8 |
 | `regions[7].zones[3].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[3].boss` | [Утонувший оратор](Bosses.md#boss_drowned_orator) |
-| `regions[7].zones[3].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[3].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[3].size` | 72 |
 | `regions[7].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[4].code` | [Жемчужный риф](../World/World-REGION_8.md#c8_pearl_reef) |
@@ -5308,12 +5308,12 @@
 | `regions[7].zones[4].x` | 425 |
 | `regions[7].zones[4].y` | 6531 |
 | `regions[7].zones[4].from` | [Затонувшие врата](../World/World-REGION_8.md#c8_sunken_gate); [Коралловые сады](../World/World-REGION_8.md#c8_coral_gardens) |
-| `regions[7].zones[4].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Бездонный угорь](Monsters.md#abyssal_eel) |
+| `regions[7].zones[4].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Глубоководный угорь](Monsters.md#abyssal_eel) |
 | `regions[7].zones[4].count` | 55; 71 |
 | `regions[7].zones[4].light` | 0.9 |
 | `regions[7].zones[4].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[4].boss` | [Пожиратель жемчуга](Bosses.md#boss_pearl_eater) |
-| `regions[7].zones[4].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[4].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[4].size` | 72 |
 | `regions[7].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[5].code` | [Затопленный акведук](../World/World-REGION_8.md#c8_flooded_aqueduct) |
@@ -5322,12 +5322,12 @@
 | `regions[7].zones[5].x` | 649 |
 | `regions[7].zones[5].y` | 6528 |
 | `regions[7].zones[5].from` | [Коралловые сады](../World/World-REGION_8.md#c8_coral_gardens); [Приливные хранилища](../World/World-REGION_8.md#c8_tide_vaults) |
-| `regions[7].zones[5].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Бездонный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
+| `regions[7].zones[5].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Глубоководный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
 | `regions[7].zones[5].count` | 55; 71 |
 | `regions[7].zones[5].light` | 0.7 |
 | `regions[7].zones[5].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[5].boss` | [Ужас акведука](Bosses.md#boss_aqueduct_horror) |
-| `regions[7].zones[5].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[5].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[5].size` | 72 |
 | `regions[7].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[6].code` | [Казармы легиона](../World/World-REGION_8.md#c8_legion_barracks) |
@@ -5341,7 +5341,7 @@
 | `regions[7].zones[6].light` | 0.8 |
 | `regions[7].zones[6].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[6].boss` | [Трибун легиона](Bosses.md#boss_legion_tribune) |
-| `regions[7].zones[6].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[6].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[6].size` | 72 |
 | `regions[7].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[7].code` | [Собор водорослей](../World/World-REGION_8.md#c8_kelp_cathedral) |
@@ -5349,13 +5349,13 @@
 | `regions[7].zones[7].level` | 85 |
 | `regions[7].zones[7].x` | 221 |
 | `regions[7].zones[7].y` | 6668 |
-| `regions[7].zones[7].from` | [Утонувший форум](../World/World-REGION_8.md#c8_drowned_forum); [Жемчужный риф](../World/World-REGION_8.md#c8_pearl_reef) |
-| `regions[7].zones[7].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Бездонный угорь](Monsters.md#abyssal_eel) |
+| `regions[7].zones[7].from` | [Затонувший форум](../World/World-REGION_8.md#c8_drowned_forum); [Жемчужный риф](../World/World-REGION_8.md#c8_pearl_reef) |
+| `regions[7].zones[7].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Глубоководный угорь](Monsters.md#abyssal_eel) |
 | `regions[7].zones[7].count` | 55; 71 |
 | `regions[7].zones[7].light` | 0.9 |
 | `regions[7].zones[7].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[7].boss` | [Жрец водорослей](Bosses.md#boss_kelp_priest) |
-| `regions[7].zones[7].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[7].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[7].size` | 72 |
 | `regions[7].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[8].code` | [Запечатанная цистерна](../World/World-REGION_8.md#c8_sealed_cistern) |
@@ -5363,13 +5363,13 @@
 | `regions[7].zones[8].level` | 85 |
 | `regions[7].zones[8].x` | 425 |
 | `regions[7].zones[8].y` | 6672 |
-| `regions[7].zones[8].from` | [Утонувший форум](../World/World-REGION_8.md#c8_drowned_forum); [Жемчужный риф](../World/World-REGION_8.md#c8_pearl_reef); [Затопленный акведук](../World/World-REGION_8.md#c8_flooded_aqueduct) |
-| `regions[7].zones[8].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Бездонный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
+| `regions[7].zones[8].from` | [Затонувший форум](../World/World-REGION_8.md#c8_drowned_forum); [Жемчужный риф](../World/World-REGION_8.md#c8_pearl_reef); [Затопленный акведук](../World/World-REGION_8.md#c8_flooded_aqueduct) |
+| `regions[7].zones[8].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Глубоководный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
 | `regions[7].zones[8].count` | 55; 71 |
 | `regions[7].zones[8].light` | 0.7 |
 | `regions[7].zones[8].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
-| `regions[7].zones[8].boss` | [То, что в цистерне](Bosses.md#boss_cistern_thing) |
-| `regions[7].zones[8].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[8].boss` | [Первый из спящих](Bosses.md#boss_cistern_thing) |
+| `regions[7].zones[8].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[8].size` | 72 |
 | `regions[7].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[9].code` | [Затонувший рынок](../World/World-REGION_8.md#c8_sunken_market) |
@@ -5383,7 +5383,7 @@
 | `regions[7].zones[9].light` | 0.8 |
 | `regions[7].zones[9].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[9].boss` | [Рыночный барон](Bosses.md#boss_market_baron) |
-| `regions[7].zones[9].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[9].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[9].size` | 72 |
 | `regions[7].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[10].code` | [Выбеленный атолл](../World/World-REGION_8.md#c8_bleached_atoll) |
@@ -5392,12 +5392,12 @@
 | `regions[7].zones[10].x` | 856 |
 | `regions[7].zones[10].y` | 6665 |
 | `regions[7].zones[10].from` | [Затопленный акведук](../World/World-REGION_8.md#c8_flooded_aqueduct); [Казармы легиона](../World/World-REGION_8.md#c8_legion_barracks) |
-| `regions[7].zones[10].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Бездонный угорь](Monsters.md#abyssal_eel) |
+| `regions[7].zones[10].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Глубоководный угорь](Monsters.md#abyssal_eel) |
 | `regions[7].zones[10].count` | 55; 71 |
 | `regions[7].zones[10].light` | 0.9 |
 | `regions[7].zones[10].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[10].boss` | [Пасть атолла](Bosses.md#boss_atoll_maw) |
-| `regions[7].zones[10].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[10].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[10].size` | 72 |
 | `regions[7].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[11].code` | [Машина приливов](../World/World-REGION_8.md#c8_tidal_engine) |
@@ -5406,12 +5406,12 @@
 | `regions[7].zones[11].x` | 296 |
 | `regions[7].zones[11].y` | 6822 |
 | `regions[7].zones[11].from` | [Собор водорослей](../World/World-REGION_8.md#c8_kelp_cathedral); [Запечатанная цистерна](../World/World-REGION_8.md#c8_sealed_cistern) |
-| `regions[7].zones[11].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Бездонный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
+| `regions[7].zones[11].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Глубоководный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake) |
 | `regions[7].zones[11].count` | 55; 71 |
 | `regions[7].zones[11].light` | 0.7 |
 | `regions[7].zones[11].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[11].boss` | [Инженер приливов](Bosses.md#boss_tide_engineer) |
-| `regions[7].zones[11].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[11].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[11].size` | 72 |
 | `regions[7].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[12].code` | [Императорские термы](../World/World-REGION_8.md#c8_imperial_baths) |
@@ -5425,7 +5425,7 @@
 | `regions[7].zones[12].light` | 0.8 |
 | `regions[7].zones[12].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[12].boss` | [Хозяйка терм](Bosses.md#boss_bath_matron) |
-| `regions[7].zones[12].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[12].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[12].size` | 72 |
 | `regions[7].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[7].zones[13].code` | [Бездонная впадина](../World/World-REGION_8.md#c8_abyssal_trench) |
@@ -5434,27 +5434,27 @@
 | `regions[7].zones[13].x` | 764 |
 | `regions[7].zones[13].y` | 6816 |
 | `regions[7].zones[13].from` | [Затонувший рынок](../World/World-REGION_8.md#c8_sunken_market); [Выбеленный атолл](../World/World-REGION_8.md#c8_bleached_atoll) |
-| `regions[7].zones[13].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Бездонный угорь](Monsters.md#abyssal_eel) |
+| `regions[7].zones[13].monsters` | [Коралловый исполин](Monsters.md#coral_behemoth); [Жемчужная сирена](Monsters.md#pearl_siren); [Глубоководный угорь](Monsters.md#abyssal_eel) |
 | `regions[7].zones[13].count` | 55; 71 |
 | `regions[7].zones[13].light` | 0.9 |
 | `regions[7].zones[13].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
 | `regions[7].zones[13].boss` | [Дрейк впадины](Bosses.md#boss_trench_drake) |
-| `regions[7].zones[13].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[13].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[13].size` | 72 |
 | `regions[7].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[7].zones[14].code` | [Утонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
+| `regions[7].zones[14].code` | [Затонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
 | `regions[7].zones[14].biome` | `TIDEVAULT` |
 | `regions[7].zones[14].level` | 90 |
 | `regions[7].zones[14].x` | 521 |
 | `regions[7].zones[14].y` | 6957 |
 | `regions[7].zones[14].from` | [Машина приливов](../World/World-REGION_8.md#c8_tidal_engine); [Императорские термы](../World/World-REGION_8.md#c8_imperial_baths) |
 | `regions[7].zones[14].finale` | Да |
-| `regions[7].zones[14].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Бездонный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake); [Жемчужная сирена](Monsters.md#pearl_siren) |
+| `regions[7].zones[14].monsters` | [Приливный конструкт](Monsters.md#tide_construct); [Глубоководный угорь](Monsters.md#abyssal_eel); [Солёный дрейк](Monsters.md#brine_drake); [Жемчужная сирена](Monsters.md#pearl_siren) |
 | `regions[7].zones[14].count` | 55; 71 |
 | `regions[7].zones[14].light` | 0.7 |
 | `regions[7].zones[14].chestLoot` | [loot:CHEST_8](Tables/Tables-LOOT.md#loot-chest_8) |
-| `regions[7].zones[14].boss` | [Утонувший император](Bosses.md#boss_drowned_emperor) |
-| `regions[7].zones[14].corrupted` | [Осквернённый левиафан](Monsters.md#corrupted_8) |
+| `regions[7].zones[14].boss` | [Утонувший Император](Bosses.md#boss_drowned_emperor) |
+| `regions[7].zones[14].corrupted` | [Порченый левиафан](Monsters.md#corrupted_8) |
 | `regions[7].zones[14].size` | 72 |
 | `regions[7].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].code` | `REGION_9` |
@@ -5465,13 +5465,13 @@
 | `regions[8].zones[0].level` | 91 |
 | `regions[8].zones[0].x` | 306 |
 | `regions[8].zones[0].y` | 7277 |
-| `regions[8].zones[0].from` | [Утонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
+| `regions[8].zones[0].from` | [Затонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
 | `regions[8].zones[0].monsters` | [Божественный страж](Monsters.md#divine_warden); [Падший архонт](Monsters.md#fallen_archon); [Титан пустоты](Monsters.md#void_titan) |
 | `regions[8].zones[0].count` | 57; 74 |
 | `regions[8].zones[0].light` | 0.8 |
 | `regions[8].zones[0].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[0].boss` | [Страж порога](Bosses.md#boss_threshold_guardian) |
-| `regions[8].zones[0].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[0].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[0].size` | 72 |
 | `regions[8].zones[0].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[1].code` | [Астральный берег](../World/World-REGION_9.md#c9_astral_shore) |
@@ -5479,13 +5479,13 @@
 | `regions[8].zones[1].level` | 91 |
 | `regions[8].zones[1].x` | 536 |
 | `regions[8].zones[1].y` | 7272 |
-| `regions[8].zones[1].from` | [Утонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
-| `regions[8].zones[1].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Клятвенный фанатик](Monsters.md#godsworn_zealot) |
+| `regions[8].zones[1].from` | [Затонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
+| `regions[8].zones[1].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot) |
 | `regions[8].zones[1].count` | 57; 74 |
 | `regions[8].zones[1].light` | 0.9 |
 | `regions[8].zones[1].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[1].boss` | [Звёздный прилив](Bosses.md#boss_star_tide) |
-| `regions[8].zones[1].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[1].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[1].size` | 72 |
 | `regions[8].zones[1].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[2].code` | [Поля забвения](../World/World-REGION_9.md#c9_fields_of_oblivion) |
@@ -5493,13 +5493,13 @@
 | `regions[8].zones[2].level` | 91 |
 | `regions[8].zones[2].x` | 764 |
 | `regions[8].zones[2].y` | 7278 |
-| `regions[8].zones[2].from` | [Утонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
-| `regions[8].zones[2].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Клятвенный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
+| `regions[8].zones[2].from` | [Затонувший трон](../World/World-REGION_8.md#c8_drowned_throne) |
+| `regions[8].zones[2].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
 | `regions[8].zones[2].count` | 57; 74 |
 | `regions[8].zones[2].light` | 0.7 |
 | `regions[8].zones[2].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[2].boss` | [Забвение](Bosses.md#boss_forgetting) |
-| `regions[8].zones[2].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[2].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[2].size` | 72 |
 | `regions[8].zones[2].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[3].code` | [Зал суда](../World/World-REGION_9.md#c9_hall_of_judgement) |
@@ -5513,7 +5513,7 @@
 | `regions[8].zones[3].light` | 0.8 |
 | `regions[8].zones[3].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[3].boss` | [Судья душ](Bosses.md#boss_judge_of_souls) |
-| `regions[8].zones[3].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[3].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[3].size` | 72 |
 | `regions[8].zones[3].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[4].code` | [Мост созвездий](../World/World-REGION_9.md#c9_constellation_bridge) |
@@ -5522,12 +5522,12 @@
 | `regions[8].zones[4].x` | 424 |
 | `regions[8].zones[4].y` | 7423 |
 | `regions[8].zones[4].from` | [Порог богов](../World/World-REGION_9.md#c9_gods_threshold); [Астральный берег](../World/World-REGION_9.md#c9_astral_shore) |
-| `regions[8].zones[4].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Клятвенный фанатик](Monsters.md#godsworn_zealot) |
+| `regions[8].zones[4].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot) |
 | `regions[8].zones[4].count` | 57; 74 |
 | `regions[8].zones[4].light` | 0.9 |
 | `regions[8].zones[4].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[4].boss` | [Зверь созвездий](Bosses.md#boss_constellation_beast) |
-| `regions[8].zones[4].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[4].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[4].size` | 72 |
 | `regions[8].zones[4].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[5].code` | [Безымянный архив](../World/World-REGION_9.md#c9_nameless_archive) |
@@ -5536,12 +5536,12 @@
 | `regions[8].zones[5].x` | 645 |
 | `regions[8].zones[5].y` | 7422 |
 | `regions[8].zones[5].from` | [Астральный берег](../World/World-REGION_9.md#c9_astral_shore); [Поля забвения](../World/World-REGION_9.md#c9_fields_of_oblivion) |
-| `regions[8].zones[5].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Клятвенный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
+| `regions[8].zones[5].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
 | `regions[8].zones[5].count` | 57; 74 |
 | `regions[8].zones[5].light` | 0.7 |
 | `regions[8].zones[5].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[5].boss` | [Последний архивариус](Bosses.md#boss_archivist) |
-| `regions[8].zones[5].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[5].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[5].size` | 72 |
 | `regions[8].zones[5].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[6].code` | [Солнечная кузня](../World/World-REGION_9.md#c9_sunforge) |
@@ -5555,7 +5555,7 @@
 | `regions[8].zones[6].light` | 0.8 |
 | `regions[8].zones[6].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[6].boss` | [Солнечный кузнец](Bosses.md#boss_sun_smith) |
-| `regions[8].zones[6].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[6].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[6].size` | 72 |
 | `regions[8].zones[6].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[7].code` | [Астральный сад](../World/World-REGION_9.md#c9_astral_orchard) |
@@ -5564,12 +5564,12 @@
 | `regions[8].zones[7].x` | 226 |
 | `regions[8].zones[7].y` | 7563 |
 | `regions[8].zones[7].from` | [Зал суда](../World/World-REGION_9.md#c9_hall_of_judgement); [Мост созвездий](../World/World-REGION_9.md#c9_constellation_bridge) |
-| `regions[8].zones[7].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Клятвенный фанатик](Monsters.md#godsworn_zealot) |
+| `regions[8].zones[7].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot) |
 | `regions[8].zones[7].count` | 57; 74 |
 | `regions[8].zones[7].light` | 0.9 |
 | `regions[8].zones[7].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[7].boss` | [Хранитель сада](Bosses.md#boss_orchard_keeper) |
-| `regions[8].zones[7].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[7].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[7].size` | 72 |
 | `regions[8].zones[7].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[8].code` | [Пустой пантеон](../World/World-REGION_9.md#c9_hollow_pantheon) |
@@ -5578,12 +5578,12 @@
 | `regions[8].zones[8].x` | 428 |
 | `regions[8].zones[8].y` | 7568 |
 | `regions[8].zones[8].from` | [Зал суда](../World/World-REGION_9.md#c9_hall_of_judgement); [Мост созвездий](../World/World-REGION_9.md#c9_constellation_bridge); [Безымянный архив](../World/World-REGION_9.md#c9_nameless_archive) |
-| `regions[8].zones[8].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Клятвенный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
+| `regions[8].zones[8].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
 | `regions[8].zones[8].count` | 57; 74 |
 | `regions[8].zones[8].light` | 0.7 |
 | `regions[8].zones[8].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[8].boss` | [Пустой бог](Bosses.md#boss_hollow_god) |
-| `regions[8].zones[8].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[8].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[8].size` | 72 |
 | `regions[8].zones[8].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[9].code` | [Зал войны](../World/World-REGION_9.md#c9_hall_of_war) |
@@ -5597,21 +5597,21 @@
 | `regions[8].zones[9].light` | 0.8 |
 | `regions[8].zones[9].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[9].boss` | [Аватар войны](Bosses.md#boss_war_avatar) |
-| `regions[8].zones[9].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[9].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[9].size` | 72 |
 | `regions[8].zones[9].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
-| `regions[8].zones[10].code` | [Беззвёздная пустота](../World/World-REGION_9.md#c9_starless_void) |
+| `regions[8].zones[10].code` | [Безвидная пустота](../World/World-REGION_9.md#c9_starless_void) |
 | `regions[8].zones[10].biome` | `OBLIVION` |
 | `regions[8].zones[10].level` | 95 |
 | `regions[8].zones[10].x` | 858 |
 | `regions[8].zones[10].y` | 7577 |
 | `regions[8].zones[10].from` | [Безымянный архив](../World/World-REGION_9.md#c9_nameless_archive); [Солнечная кузня](../World/World-REGION_9.md#c9_sunforge) |
-| `regions[8].zones[10].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Клятвенный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
+| `regions[8].zones[10].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
 | `regions[8].zones[10].count` | 57; 74 |
 | `regions[8].zones[10].light` | 0.7 |
 | `regions[8].zones[10].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
-| `regions[8].zones[10].boss` | [Мать пустоты](Bosses.md#boss_void_mother) |
-| `regions[8].zones[10].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[10].boss` | [Мать Пустоты](Bosses.md#boss_void_mother) |
+| `regions[8].zones[10].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[10].size` | 72 |
 | `regions[8].zones[10].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[11].code` | [Небесная обсерватория](../World/World-REGION_9.md#c9_celestial_observatory) |
@@ -5620,12 +5620,12 @@
 | `regions[8].zones[11].x` | 294 |
 | `regions[8].zones[11].y` | 7710 |
 | `regions[8].zones[11].from` | [Астральный сад](../World/World-REGION_9.md#c9_astral_orchard); [Пустой пантеон](../World/World-REGION_9.md#c9_hollow_pantheon) |
-| `regions[8].zones[11].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Клятвенный фанатик](Monsters.md#godsworn_zealot) |
+| `regions[8].zones[11].monsters` | [Астральный зверь](Monsters.md#astral_beast); [Звёздный дракон](Monsters.md#star_dragon); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot) |
 | `regions[8].zones[11].count` | 57; 74 |
 | `regions[8].zones[11].light` | 0.9 |
 | `regions[8].zones[11].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[11].boss` | [Звездочёт](Bosses.md#boss_stargazer) |
-| `regions[8].zones[11].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[11].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[11].size` | 72 |
 | `regions[8].zones[11].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[12].code` | [Дорога к трону](../World/World-REGION_9.md#c9_throne_road) |
@@ -5639,7 +5639,7 @@
 | `regions[8].zones[12].light` | 0.8 |
 | `regions[8].zones[12].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[12].boss` | [Собиратель корон](Bosses.md#boss_crown_collector) |
-| `regions[8].zones[12].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[12].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[12].size` | 72 |
 | `regions[8].zones[12].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[13].code` | [Край ничто](../World/World-REGION_9.md#c9_edge_of_nothing) |
@@ -5647,13 +5647,13 @@
 | `regions[8].zones[13].level` | 98 |
 | `regions[8].zones[13].x` | 753 |
 | `regions[8].zones[13].y` | 7711 |
-| `regions[8].zones[13].from` | [Зал войны](../World/World-REGION_9.md#c9_hall_of_war); [Беззвёздная пустота](../World/World-REGION_9.md#c9_starless_void) |
-| `regions[8].zones[13].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Клятвенный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
+| `regions[8].zones[13].from` | [Зал войны](../World/World-REGION_9.md#c9_hall_of_war); [Безвидная пустота](../World/World-REGION_9.md#c9_starless_void) |
+| `regions[8].zones[13].monsters` | [Тень забвения](Monsters.md#oblivion_shade); [Богоприсяжный фанатик](Monsters.md#godsworn_zealot); [Титан пустоты](Monsters.md#void_titan) |
 | `regions[8].zones[13].count` | 57; 74 |
 | `regions[8].zones[13].light` | 0.7 |
 | `regions[8].zones[13].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
 | `regions[8].zones[13].boss` | [Странник ничто](Bosses.md#boss_nothing_walker) |
-| `regions[8].zones[13].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[13].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[13].size` | 72 |
 | `regions[8].zones[13].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `regions[8].zones[14].code` | [Последний трон](../World/World-REGION_9.md#c9_last_throne) |
@@ -5667,8 +5667,8 @@
 | `regions[8].zones[14].count` | 57; 74 |
 | `regions[8].zones[14].light` | 0.8 |
 | `regions[8].zones[14].chestLoot` | [loot:CHEST_9](Tables/Tables-LOOT.md#loot-chest_9) |
-| `regions[8].zones[14].boss` | [Последний бог](Bosses.md#boss_last_god) |
-| `regions[8].zones[14].corrupted` | [Осквернённая машина богов](Monsters.md#corrupted_9) |
+| `regions[8].zones[14].boss` | [Последний Бог](Bosses.md#boss_last_god) |
+| `regions[8].zones[14].corrupted` | [Порченая машина богов](Monsters.md#corrupted_9) |
 | `regions[8].zones[14].size` | 72 |
 | `regions[8].zones[14].tables` | [mob:monster](Tables/Tables-MODIFIER.md#mob-monster) |
 | `combat.ailmentShare` | 0.5 |
@@ -5977,7 +5977,7 @@
 | `abyss.minLevel` | 10 |
 | `abyss.refreshHours` | 6 |
 | `abyss.depth` | 4; 6 |
-| `abyss.monsters` | [Отродье Бездны](Monsters.md#chasm_spawn); [Пиявка глубин](Monsters.md#chasm_leech); [Шептун Бездны](Monsters.md#chasm_whisperer); [Ловец из пропасти](Monsters.md#chasm_stalker); [Проклинатель пустоты](Monsters.md#chasm_hexer); [Громила Бездны](Monsters.md#chasm_brute) |
+| `abyss.monsters` | [Отродье Бездны](Monsters.md#chasm_spawn); [Пиявка глубин](Monsters.md#chasm_leech); [Шептун Бездны](Monsters.md#chasm_whisperer); [Ловец из пропасти](Monsters.md#chasm_stalker); [Проклинатель Бездны](Monsters.md#chasm_hexer); [Громила Бездны](Monsters.md#chasm_brute) |
 | `abyss.waves[0].count` | 3; 4 |
 | `abyss.waves[0].level` | 0 |
 | `abyss.waves[0].magic` | 10 |
@@ -6382,7 +6382,7 @@
 | `traits.list[50].skill` | [Ядовитый плевок](Monster-skills.md#mob_spit) |
 | `traits.list[51].code` | `TRAIT_SKILL_WARCRY` |
 | `traits.list[51].icon` | `combat` |
-| `traits.list[51].skill` | [Клич ярости](Monster-skills.md#mob_warcry) |
+| `traits.list[51].skill` | [Боевой клич](Monster-skills.md#mob_warcry) |
 | `traits.list[52].code` | `TRAIT_SKILL_ENFEEBLE` |
 | `traits.list[52].icon` | `dark` |
 | `traits.list[52].skill` | [Слабость](Monster-skills.md#mob_enfeeble) |

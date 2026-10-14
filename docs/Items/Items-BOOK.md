@@ -33,7 +33,7 @@
 | [Book: Gust](#book_gust) | BOOK_GUST | 116 |
 | [Book: Poisoned Tips](#book_poisoned_tips) | BOOK_POISONED_TIPS | 146 |
 | [Book: Frost Burst](#book_frost_burst) | BOOK_FROST_BURST | 176 |
-| [Book: Frenzy Strike](#book_frenzy_strike) | BOOK_FRENZY_STRIKE | 170 |
+| [Book: Frenzy Shot](#book_frenzy_strike) | BOOK_FRENZY_STRIKE | 170 |
 | [Book: Fireball](#book_fireball) | BOOK_FIREBALL | 23 |
 | [Book: Freezing Pulse](#book_freezing_pulse) | BOOK_FREEZING_PULSE | 38 |
 | [Book: Spark](#book_spark) | BOOK_SPARK | 56 |
@@ -73,7 +73,7 @@
 | [Book: Purity of Elements](#book_purity_of_elements) | BOOK_PURITY_OF_ELEMENTS | 23 |
 | [Book: Faith](#book_faith) | BOOK_FAITH | 35 |
 | [Book: Blessing](#book_blessing) | BOOK_BLESSING | 50 |
-| [Book: Wrath](#book_wrath) | BOOK_WRATH | 68 |
+| [Book: Heaven's Wrath](#book_wrath) | BOOK_WRATH | 68 |
 | [Book: Holy Arms](#book_holy_arms) | BOOK_HOLY_ARMS | 92 |
 | [Book: Righteousness](#book_righteousness) | BOOK_RIGHTEOUSNESS | 116 |
 | [Book: Fortitude](#book_fortitude) | BOOK_FORTITUDE | 146 |
@@ -330,7 +330,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 23 |
 
 
@@ -344,7 +344,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 38 |
 
 
@@ -358,7 +358,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 56 |
 
 
@@ -372,7 +372,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 80 |
 
 
@@ -386,7 +386,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 110 |
 
 
@@ -400,7 +400,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 140 |
 
 
@@ -414,7 +414,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 23 |
 
 
@@ -428,7 +428,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 35 |
 
 
@@ -442,7 +442,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 50 |
 
 
@@ -456,7 +456,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 68 |
 
 
@@ -470,7 +470,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 92 |
 
 
@@ -484,7 +484,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 116 |
 
 
@@ -498,7 +498,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 146 |
 
 
@@ -512,13 +512,13 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 176 |
 
 
 ## BOOK_FRENZY_STRIKE <a href="#book_frenzy_strike" id="book_frenzy_strike"></a>
 
-### Book: Frenzy Strike <a href="#book-frenzy-strike" id="book-frenzy-strike"></a>
+### Book: Frenzy Shot <a href="#book-frenzy-strike" id="book-frenzy-strike"></a>
 
 Учит умению «Яростный выстрел» (Охотницы) или поднимает его уровень
 
@@ -526,7 +526,7 @@
 | Параметр | Значение |
 | --- | --- |
 | Категория · `category` | `BOOK` |
-| Подкатегория · `subCategory` | [Охотница (Ranger)](../Classes.md#ranger) |
+| Подкатегория · `subCategory` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | Базовая цена · `price` | 170 |
 
 
@@ -688,7 +688,7 @@
 
 ### Book: Elemental Surge <a href="#book-elemental-surge" id="book-elemental-surge"></a>
 
-Учит умению «Раскол стихий» (Ведьмы) или поднимает его уровень
+Учит умению «Всплеск стихий» (Ведьмы) или поднимает его уровень
 
 
 | Параметр | Значение |
@@ -1078,7 +1078,7 @@
 
 ## BOOK_WRATH <a href="#book_wrath" id="book_wrath"></a>
 
-### Book: Wrath <a href="#book-wrath" id="book-wrath"></a>
+### Book: Heaven's Wrath <a href="#book-wrath" id="book-wrath"></a>
 
 Учит умению «Гнев небес» (Храмовника) или поднимает его уровень
 

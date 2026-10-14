@@ -48,7 +48,7 @@
 | [Garland of Spores and Ash](#crown_of_spores_and_ash) | Мифический | 62 |
 | [Astral Amulet](#astral_amulet) | Редкий | 85 |
 | [Herald's Last Breath](#heralds_last_breath) | Уникальный | 76 |
-| [Vault Warden's Key](#vault_wardens_key) | Уникальный | 86 |
+| [The Vault Warden's Key](#vault_wardens_key) | Уникальный | 86 |
 | [Scales of the Judge](#judge_of_souls_scales) | Уникальный | 94 |
 | [Atlas of Ascent](#atlas_of_ascent) | Уникальный | 98 |
 | [Oracle's Tally](#oracles_tally) | Уникальный | 58 |
@@ -306,7 +306,7 @@
 
 - 50–100% увеличение редкости находимых предметов · [Редкость добычи](../reference/Stats/Stats-HERO.md#stock_rarity)
 - 20–30% увеличение количества находимых предметов · [Количество добычи](../reference/Stats/Stats-HERO.md#stock_quantity)
-- 30–50% увеличения редкости предметов с обычных и волшебных монстров · [Находка Биско](../reference/Stats/Stats-POWER.md#power_biscos_find)
+- 30–50% увеличения редкости предметов с обычных и волшебных монстров · [Находка ищейки](../reference/Stats/Stats-POWER.md#power_biscos_find)
 - 10–15% увеличения количества предметов с обычных и волшебных монстров · [Хороший пёс](../reference/Stats/Stats-POWER.md#power_good_dog)
 
 
@@ -606,7 +606,7 @@
 - +22–30% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all)
 - 20–26% увеличение урона · [Урон](../reference/Stats/Stats-HERO.md#stock_damage)
 - Каждые 8 с порча вскипает: +20–30% урона на 4 с · [Прилив порчи](../reference/Stats/Stats-POWER.md#power_corruption_surge)
-- +0.3–0.5% вампиризма здоровья за каждые 10% недостающего здоровья, до 5 раз · [Кровь Ваал](../reference/Stats/Stats-POWER.md#power_vaal_bloodline)
+- +0.3–0.5% вампиризма здоровья за каждые 10% недостающего здоровья, до 5 раз · [Кровь Изнанки](../reference/Stats/Stats-POWER.md#power_vaal_bloodline)
 
 
 | Параметр | Значение |
@@ -725,7 +725,7 @@
 - +100–130 к ловкости · [Ловкость](../reference/Stats/Stats-HERO.md#stock_agility)
 - +100–130 к интеллекту · [Интеллект](../reference/Stats/Stats-HERO.md#stock_intellect)
 - 40–50% увеличение скорости восстановления здоровья и щита · [Скорость восстановления](../reference/Stats/Stats-HERO.md#stock_recovery_rate)
-- +4–6 к максимуму здоровья за каждые 10 силы · [Сердце бездны](../reference/Stats/Stats-POWER.md#power_abyssal_heart)
+- +4–6 к максимуму здоровья за каждые 10 силы · [Сердце Бездны](../reference/Stats/Stats-POWER.md#power_abyssal_heart)
 - Каждые 3 с восстанавливает 2–3% максимума здоровья · [Сердцебиение](../reference/Stats/Stats-POWER.md#power_heartbeat)
 - +4–6 к максимуму маны за каждые 10 интеллекта · [Воля бездны](../reference/Stats/Stats-POWER.md#power_abyss_will)
 
@@ -1116,7 +1116,7 @@
 - +1 к максимуму зарядов силы · [Максимум зарядов силы](../reference/Stats/Stats-HERO.md#stock_max_power_charges)
 - 50–70% увеличение шанса критического удара заклинаний · [Шанс крита заклинаний](../reference/Stats/Stats-HERO.md#stock_spell_critical_chance)
 - 20–30% шанс получить заряд силы при крите · [Тяга течения](../reference/Stats/Stats-POWER.md#power_undertow_pull)
-- Критический удар с шансом 30–50% даёт всем флягам 3 заряда · [Ярость Каома](../reference/Stats/Stats-POWER.md#power_kaoms_rage)
+- Критический удар с шансом 30–50% даёт всем флягам 3 заряда · [Ярость пепельного вождя](../reference/Stats/Stats-POWER.md#power_kaoms_rage)
 
 
 | Параметр | Значение |
@@ -1273,7 +1273,7 @@
 
 ## VAULT_WARDENS_KEY <a href="#vault_wardens_key" id="vault_wardens_key"></a>
 
-### Vault Warden's Key <a href="#vault-wardens-key" id="vault-wardens-key"></a>
+### The Vault Warden's Key <a href="#vault-wardens-key" id="vault-wardens-key"></a>
 
 Он открывает каждую дверь империи. Ни одной не осталось.
 

@@ -462,23 +462,23 @@
 | `nodes[61].y` | 44.77 |
 | `nodes[61].kind` | `NOTABLE` |
 | `nodes[61].parents` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a05) |
-| `nodes[61].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[61].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[61].lines[0].values` | 15 |
-| `nodes[61].lines[1].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[61].lines[1].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[61].lines[1].values` | 4.8 |
 | `nodes[62].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a02) |
 | `nodes[62].x` | 14.66 |
 | `nodes[62].y` | 34.6 |
 | `nodes[62].kind` | `SMALL` |
 | `nodes[62].parents` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a10); [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a08) |
-| `nodes[62].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[62].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[62].lines[0].values` | 6 |
 | `nodes[63].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a03) |
 | `nodes[63].x` | 31.42 |
 | `nodes[63].y` | 43.68 |
 | `nodes[63].kind` | `SMALL` |
 | `nodes[63].parents` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a11) |
-| `nodes[63].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[63].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[63].lines[0].values` | 3 |
 | `nodes[64].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a04) |
 | `nodes[64].x` | 24.36 |
@@ -492,21 +492,21 @@
 | `nodes[65].y` | 39.79 |
 | `nodes[65].kind` | `SMALL` |
 | `nodes[65].parents` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a06) |
-| `nodes[65].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[65].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[65].lines[0].values` | 3 |
 | `nodes[66].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a06) |
 | `nodes[66].x` | 20.18 |
 | `nodes[66].y` | 34.67 |
 | `nodes[66].kind` | `SMALL` |
 | `nodes[66].parents` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a02); [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a10) |
-| `nodes[66].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[66].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[66].lines[0].values` | 6 |
 | `nodes[67].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a07) |
 | `nodes[67].x` | 22.55 |
 | `nodes[67].y` | 28.05 |
 | `nodes[67].kind` | `SMALL` |
 | `nodes[67].parents` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a12) |
-| `nodes[67].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[67].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[67].lines[0].values` | 3 |
 | `nodes[68].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a08) |
 | `nodes[68].x` | 13.72 |
@@ -520,30 +520,30 @@
 | `nodes[69].y` | 46.37 |
 | `nodes[69].kind` | `NOTABLE` |
 | `nodes[69].parents` | [Альфа Жреца](../Atlas/Atlas-NOTABLE.md#atlas_vaal_a01) |
-| `nodes[69].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[69].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[69].lines[0].values` | 9 |
-| `nodes[69].lines[1].code` | [Атлас: минимум модификаторов Ваал-зоны](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
+| `nodes[69].lines[1].code` | [Атлас: минимум модификаторов прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
 | `nodes[69].lines[1].values` | 1 |
 | `nodes[70].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a10) |
 | `nodes[70].x` | 17.46 |
 | `nodes[70].y` | 29.77 |
 | `nodes[70].kind` | `SMALL` |
 | `nodes[70].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_vaal_p02) |
-| `nodes[70].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[70].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[70].lines[0].values` | 3 |
 | `nodes[71].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a11) |
 | `nodes[71].x` | 27.11 |
 | `nodes[71].y` | 46.86 |
 | `nodes[71].kind` | `SMALL` |
 | `nodes[71].parents` | [Бета Жреца](../Atlas/Atlas-NOTABLE.md#atlas_vaal_a09) |
-| `nodes[71].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[71].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[71].lines[0].values` | 6 |
 | `nodes[72].code` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a12) |
 | `nodes[72].x` | 26.51 |
 | `nodes[72].y` | 31.87 |
 | `nodes[72].kind` | `SMALL` |
 | `nodes[72].parents` | [Жрец](../Atlas/Atlas-SMALL.md#atlas_vaal_a04) |
-| `nodes[72].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[72].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[72].lines[0].values` | 3 |
 | `nodes[73].code` | [Грань](../Atlas/Atlas-SMALL.md#atlas_crystals_a01) |
 | `nodes[73].x` | 36.35 |
@@ -909,7 +909,7 @@
 | `nodes[122].y` | 35.05 |
 | `nodes[122].kind` | `SMALL` |
 | `nodes[122].parents` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a07) |
-| `nodes[122].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[122].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[122].lines[0].values` | 1.8 |
 | `nodes[123].code` | [Альфа Ока](../Atlas/Atlas-NOTABLE.md#atlas_influence_a03) |
 | `nodes[123].x` | -11.51 |
@@ -918,7 +918,7 @@
 | `nodes[123].parents` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a05) |
 | `nodes[123].lines[0].code` | [Атлас: захваченные карты](Modifiers/Modifiers-ATLAS.md#atlas_map_influence) |
 | `nodes[123].lines[0].values` | 2.4 |
-| `nodes[123].lines[1].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[123].lines[1].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[123].lines[1].values` | 3 |
 | `nodes[124].code` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a04) |
 | `nodes[124].x` | -7.86 |
@@ -932,7 +932,7 @@
 | `nodes[125].y` | 27.09 |
 | `nodes[125].kind` | `SMALL` |
 | `nodes[125].parents` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a04); [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a10) |
-| `nodes[125].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[125].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[125].lines[0].values` | 1.8 |
 | `nodes[126].code` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a06) |
 | `nodes[126].x` | -6.56 |
@@ -960,7 +960,7 @@
 | `nodes[129].y` | 33.84 |
 | `nodes[129].kind` | `SMALL` |
 | `nodes[129].parents` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a02) |
-| `nodes[129].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[129].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[129].lines[0].values` | 1.8 |
 | `nodes[130].code` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a10) |
 | `nodes[130].x` | -7.02 |
@@ -981,7 +981,7 @@
 | `nodes[132].y` | 27.94 |
 | `nodes[132].kind` | `NOTABLE` |
 | `nodes[132].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p05) |
-| `nodes[132].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[132].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[132].lines[0].values` | 4.8 |
 | `nodes[132].lines[1].code` | [Атлас: сила захваченных карт](Modifiers/Modifiers-ATLAS.md#atlas_influence_power) |
 | `nodes[132].lines[1].values` | 4.8 |
@@ -1533,32 +1533,32 @@
 | `nodes[206].y` | 39.1 |
 | `nodes[206].kind` | `SMALL` |
 | `nodes[206].parents` | [Альфа Алтаря](../Atlas/Atlas-NOTABLE.md#atlas_vaal_b02) |
-| `nodes[206].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[206].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[206].lines[0].values` | 10 |
 | `nodes[207].code` | [Альфа Алтаря](../Atlas/Atlas-NOTABLE.md#atlas_vaal_b02) |
 | `nodes[207].x` | 34.31 |
 | `nodes[207].y` | 33.34 |
 | `nodes[207].kind` | `NOTABLE` |
 | `nodes[207].parents` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b13) |
-| `nodes[207].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[207].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[207].lines[0].values` | 25 |
-| `nodes[207].lines[1].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[207].lines[1].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[207].lines[1].values` | 8 |
 | `nodes[208].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b03) |
 | `nodes[208].x` | 44.7 |
 | `nodes[208].y` | 31.4 |
 | `nodes[208].kind` | `SMALL` |
 | `nodes[208].parents` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b14) |
-| `nodes[208].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[208].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[208].lines[0].values` | 5 |
 | `nodes[209].code` | [Бета Алтаря](../Atlas/Atlas-NOTABLE.md#atlas_vaal_b04) |
 | `nodes[209].x` | 42.65 |
 | `nodes[209].y` | 19.64 |
 | `nodes[209].kind` | `NOTABLE` |
 | `nodes[209].parents` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b09) |
-| `nodes[209].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[209].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[209].lines[0].values` | 15 |
-| `nodes[209].lines[1].code` | [Атлас: минимум модификаторов Ваал-зоны](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
+| `nodes[209].lines[1].code` | [Атлас: минимум модификаторов прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
 | `nodes[209].lines[1].values` | 1 |
 | `nodes[210].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b05) |
 | `nodes[210].x` | 42.62 |
@@ -1572,21 +1572,21 @@
 | `nodes[211].y` | 31.82 |
 | `nodes[211].kind` | `SMALL` |
 | `nodes[211].parents` | [Гамма Алтаря](../Atlas/Atlas-NOTABLE.md#atlas_vaal_b12) |
-| `nodes[211].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[211].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[211].lines[0].values` | 5 |
 | `nodes[212].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b07) |
 | `nodes[212].x` | 29.36 |
 | `nodes[212].y` | 36.25 |
 | `nodes[212].kind` | `SMALL` |
 | `nodes[212].parents` | [Альфа Алтаря](../Atlas/Atlas-NOTABLE.md#atlas_vaal_b02) |
-| `nodes[212].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[212].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[212].lines[0].values` | 10 |
 | `nodes[213].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b08) |
 | `nodes[213].x` | 40.51 |
 | `nodes[213].y` | 26.29 |
 | `nodes[213].kind` | `SMALL` |
 | `nodes[213].parents` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b13) |
-| `nodes[213].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[213].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[213].lines[0].values` | 5 |
 | `nodes[214].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b09) |
 | `nodes[214].x` | 45 |
@@ -1600,14 +1600,14 @@
 | `nodes[215].y` | 22.51 |
 | `nodes[215].kind` | `SMALL` |
 | `nodes[215].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_vaal_p05) |
-| `nodes[215].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[215].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[215].lines[0].values` | 5 |
 | `nodes[216].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b11) |
 | `nodes[216].x` | 48.02 |
 | `nodes[216].y` | 36.7 |
 | `nodes[216].kind` | `SMALL` |
 | `nodes[216].parents` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b05) |
-| `nodes[216].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[216].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[216].lines[0].values` | 10 |
 | `nodes[217].code` | [Гамма Алтаря](../Atlas/Atlas-NOTABLE.md#atlas_vaal_b12) |
 | `nodes[217].x` | 50.68 |
@@ -1616,14 +1616,14 @@
 | `nodes[217].parents` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b09) |
 | `nodes[217].lines[0].code` | [Атлас: уникалки Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique) |
 | `nodes[217].lines[0].values` | 35 |
-| `nodes[217].lines[1].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[217].lines[1].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[217].lines[1].values` | 10 |
 | `nodes[218].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b13) |
 | `nodes[218].x` | 34.97 |
 | `nodes[218].y` | 28.45 |
 | `nodes[218].kind` | `SMALL` |
 | `nodes[218].parents` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b10) |
-| `nodes[218].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[218].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[218].lines[0].values` | 5 |
 | `nodes[219].code` | [Алтарь](../Atlas/Atlas-SMALL.md#atlas_vaal_b14) |
 | `nodes[219].x` | 39.36 |
@@ -2106,7 +2106,7 @@
 | `nodes[283].y` | 68.73 |
 | `nodes[283].kind` | `SMALL` |
 | `nodes[283].parents` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b06) |
-| `nodes[283].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[283].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[283].lines[0].values` | 3 |
 | `nodes[284].code` | [Альфа Шёпота](../Atlas/Atlas-NOTABLE.md#atlas_influence_b03) |
 | `nodes[284].x` | -23.52 |
@@ -2115,7 +2115,7 @@
 | `nodes[284].parents` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b12) |
 | `nodes[284].lines[0].code` | [Атлас: захваченные карты](Modifiers/Modifiers-ATLAS.md#atlas_map_influence) |
 | `nodes[284].lines[0].values` | 4 |
-| `nodes[284].lines[1].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[284].lines[1].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[284].lines[1].values` | 5 |
 | `nodes[285].code` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b04) |
 | `nodes[285].x` | -27.06 |
@@ -2129,7 +2129,7 @@
 | `nodes[286].y` | 76.56 |
 | `nodes[286].kind` | `SMALL` |
 | `nodes[286].parents` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b11) |
-| `nodes[286].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[286].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[286].lines[0].values` | 3 |
 | `nodes[287].code` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b06) |
 | `nodes[287].x` | -12.92 |
@@ -2157,7 +2157,7 @@
 | `nodes[290].y` | 66.6 |
 | `nodes[290].kind` | `SMALL` |
 | `nodes[290].parents` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b07) |
-| `nodes[290].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[290].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[290].lines[0].values` | 3 |
 | `nodes[291].code` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b10) |
 | `nodes[291].x` | -21.16 |
@@ -2178,14 +2178,14 @@
 | `nodes[293].y` | 71.25 |
 | `nodes[293].kind` | `SMALL` |
 | `nodes[293].parents` | [Шёпот](../Atlas/Atlas-SMALL.md#atlas_influence_b08) |
-| `nodes[293].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[293].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[293].lines[0].values` | 3 |
 | `nodes[294].code` | [Бета Шёпота](../Atlas/Atlas-NOTABLE.md#atlas_influence_b13) |
 | `nodes[294].x` | -18.09 |
 | `nodes[294].y` | 61.12 |
 | `nodes[294].kind` | `NOTABLE` |
 | `nodes[294].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p09) |
-| `nodes[294].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[294].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[294].lines[0].values` | 8 |
 | `nodes[294].lines[1].code` | [Атлас: сила захваченных карт](Modifiers/Modifiers-ATLAS.md#atlas_influence_power) |
 | `nodes[294].lines[1].values` | 8 |
@@ -2196,7 +2196,7 @@
 | `nodes[295].parents` | [Альфа Шёпота](../Atlas/Atlas-NOTABLE.md#atlas_influence_b03) |
 | `nodes[295].lines[0].code` | [Атлас: захваченные карты](Modifiers/Modifiers-ATLAS.md#atlas_map_influence) |
 | `nodes[295].lines[0].values` | 5 |
-| `nodes[295].lines[1].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[295].lines[1].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[295].lines[1].values` | 5 |
 | `nodes[296].code` | [Альфа Сокровищницы](../Atlas/Atlas-NOTABLE.md#atlas_loot_c01) |
 | `nodes[296].x` | 97.18 |
@@ -2848,14 +2848,14 @@
 | `nodes[381].y` | 51.01 |
 | `nodes[381].kind` | `SMALL` |
 | `nodes[381].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c07) |
-| `nodes[381].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[381].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[381].lines[0].values` | 14 |
 | `nodes[382].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c02) |
 | `nodes[382].x` | -89.14 |
 | `nodes[382].y` | 50.42 |
 | `nodes[382].kind` | `SMALL` |
 | `nodes[382].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c09) |
-| `nodes[382].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[382].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[382].lines[0].values` | 7 |
 | `nodes[383].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c03) |
 | `nodes[383].x` | -105.92 |
@@ -2869,14 +2869,14 @@
 | `nodes[384].y` | 48.03 |
 | `nodes[384].kind` | `SMALL` |
 | `nodes[384].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c01) |
-| `nodes[384].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[384].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[384].lines[0].values` | 7 |
 | `nodes[385].code` | [Сердце Порчи](../Atlas/Atlas-KEYSTONE.md#atlas_vaal_c05) |
 | `nodes[385].x` | -108.05 |
 | `nodes[385].y` | 58.92 |
 | `nodes[385].kind` | `KEYSTONE` |
 | `nodes[385].parents` | [Гамма Порчи](../Atlas/Atlas-NOTABLE.md#atlas_vaal_c17); [Венец Порчи](../Atlas/Atlas-KEYSTONE.md#atlas_vaal_c16) |
-| `nodes[385].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[385].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[385].lines[0].values` | 40 |
 | `nodes[385].lines[1].code` | [Атлас: уникалки Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique) |
 | `nodes[385].lines[1].values` | 60 |
@@ -2885,23 +2885,23 @@
 | `nodes[386].y` | 51.8 |
 | `nodes[386].kind` | `NOTABLE` |
 | `nodes[386].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c11); [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c02) |
-| `nodes[386].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[386].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[386].lines[0].values` | 35 |
-| `nodes[386].lines[1].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[386].lines[1].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[386].lines[1].values` | 11.2 |
 | `nodes[387].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c07) |
 | `nodes[387].x` | -98.51 |
 | `nodes[387].y` | 48.46 |
 | `nodes[387].kind` | `SMALL` |
 | `nodes[387].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c15) |
-| `nodes[387].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[387].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[387].lines[0].values` | 14 |
 | `nodes[388].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c08) |
 | `nodes[388].x` | -102.13 |
 | `nodes[388].y` | 38.8 |
 | `nodes[388].kind` | `SMALL` |
 | `nodes[388].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c03) |
-| `nodes[388].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[388].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[388].lines[0].values` | 7 |
 | `nodes[389].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c09) |
 | `nodes[389].x` | -88.06 |
@@ -2915,21 +2915,21 @@
 | `nodes[390].y` | 46.51 |
 | `nodes[390].kind` | `SMALL` |
 | `nodes[390].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c07) |
-| `nodes[390].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[390].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[390].lines[0].values` | 7 |
 | `nodes[391].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c11) |
 | `nodes[391].x` | -99.2 |
 | `nodes[391].y` | 54.26 |
 | `nodes[391].kind` | `SMALL` |
 | `nodes[391].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c07) |
-| `nodes[391].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[391].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[391].lines[0].values` | 14 |
 | `nodes[392].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c12) |
 | `nodes[392].x` | -93.49 |
 | `nodes[392].y` | 41.23 |
 | `nodes[392].kind` | `SMALL` |
 | `nodes[392].parents` | [Бета Порчи](../Atlas/Atlas-NOTABLE.md#atlas_vaal_c14) |
-| `nodes[392].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[392].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[392].lines[0].values` | 7 |
 | `nodes[393].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c13) |
 | `nodes[393].x` | -89.81 |
@@ -2943,25 +2943,25 @@
 | `nodes[394].y` | 35.95 |
 | `nodes[394].kind` | `NOTABLE` |
 | `nodes[394].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_vaal_p08) |
-| `nodes[394].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[394].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[394].lines[0].values` | 21 |
-| `nodes[394].lines[1].code` | [Атлас: минимум модификаторов Ваал-зоны](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
+| `nodes[394].lines[1].code` | [Атлас: минимум модификаторов прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
 | `nodes[394].lines[1].values` | 1 |
 | `nodes[395].code` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c15) |
 | `nodes[395].x` | -98.5 |
 | `nodes[395].y` | 43.35 |
 | `nodes[395].kind` | `SMALL` |
 | `nodes[395].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c12) |
-| `nodes[395].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[395].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[395].lines[0].values` | 7 |
 | `nodes[396].code` | [Венец Порчи](../Atlas/Atlas-KEYSTONE.md#atlas_vaal_c16) |
 | `nodes[396].x` | -108.32 |
 | `nodes[396].y` | 53.32 |
 | `nodes[396].kind` | `KEYSTONE` |
 | `nodes[396].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c01); [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c04) |
-| `nodes[396].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[396].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[396].lines[0].values` | 45 |
-| `nodes[396].lines[1].code` | [Атлас: минимум модификаторов Ваал-зоны](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
+| `nodes[396].lines[1].code` | [Атлас: минимум модификаторов прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_min_mods) |
 | `nodes[396].lines[1].values` | 2 |
 | `nodes[397].code` | [Гамма Порчи](../Atlas/Atlas-NOTABLE.md#atlas_vaal_c17) |
 | `nodes[397].x` | -102.63 |
@@ -2970,7 +2970,7 @@
 | `nodes[397].parents` | [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c01) |
 | `nodes[397].lines[0].code` | [Атлас: уникалки Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_unique) |
 | `nodes[397].lines[0].values` | 49 |
-| `nodes[397].lines[1].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[397].lines[1].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[397].lines[1].values` | 14 |
 | `nodes[398].code` | [Призма](../Atlas/Atlas-SMALL.md#atlas_crystals_c01) |
 | `nodes[398].x` | 20.77 |
@@ -3507,7 +3507,7 @@
 | `nodes[468].y` | 74.45 |
 | `nodes[468].kind` | `KEYSTONE` |
 | `nodes[468].parents` | [Бета Двуликого](../Atlas/Atlas-NOTABLE.md#atlas_influence_c09) |
-| `nodes[468].lines[0].code` | [Атлас: только Древний](Modifiers/Modifiers-ATLAS.md#atlas_influence_elder) |
+| `nodes[468].lines[0].code` | [Атлас: влияние только Пустоты](Modifiers/Modifiers-ATLAS.md#atlas_influence_elder) |
 | `nodes[468].lines[0].values` | 1 |
 | `nodes[468].lines[1].code` | [Атлас: захваченные карты](Modifiers/Modifiers-ATLAS.md#atlas_map_influence) |
 | `nodes[468].lines[1].values` | 6 |
@@ -3523,7 +3523,7 @@
 | `nodes[470].y` | 66.79 |
 | `nodes[470].kind` | `SMALL` |
 | `nodes[470].parents` | [Гамма Двуликого](../Atlas/Atlas-NOTABLE.md#atlas_influence_c12) |
-| `nodes[470].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[470].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[470].lines[0].values` | 4.2 |
 | `nodes[471].code` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c04) |
 | `nodes[471].x` | 76.79 |
@@ -3537,7 +3537,7 @@
 | `nodes[472].y` | 56.25 |
 | `nodes[472].kind` | `SMALL` |
 | `nodes[472].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c04) |
-| `nodes[472].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[472].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[472].lines[0].values` | 4.2 |
 | `nodes[473].code` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c06) |
 | `nodes[473].x` | 62.84 |
@@ -3553,7 +3553,7 @@
 | `nodes[474].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c11) |
 | `nodes[474].lines[0].code` | [Атлас: захваченные карты](Modifiers/Modifiers-ATLAS.md#atlas_map_influence) |
 | `nodes[474].lines[0].values` | 5.6 |
-| `nodes[474].lines[1].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[474].lines[1].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[474].lines[1].values` | 7 |
 | `nodes[475].code` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c08) |
 | `nodes[475].x` | 67.04 |
@@ -3567,7 +3567,7 @@
 | `nodes[476].y` | 72.04 |
 | `nodes[476].kind` | `NOTABLE` |
 | `nodes[476].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c03) |
-| `nodes[476].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[476].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[476].lines[0].values` | 11.2 |
 | `nodes[476].lines[1].code` | [Атлас: сила захваченных карт](Modifiers/Modifiers-ATLAS.md#atlas_influence_power) |
 | `nodes[476].lines[1].values` | 11.2 |
@@ -3583,7 +3583,7 @@
 | `nodes[478].y` | 68.39 |
 | `nodes[478].kind` | `SMALL` |
 | `nodes[478].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c16) |
-| `nodes[478].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[478].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[478].lines[0].values` | 4.2 |
 | `nodes[479].code` | [Гамма Двуликого](../Atlas/Atlas-NOTABLE.md#atlas_influence_c12) |
 | `nodes[479].x` | 70.73 |
@@ -3592,7 +3592,7 @@
 | `nodes[479].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c14) |
 | `nodes[479].lines[0].code` | [Атлас: захваченные карты](Modifiers/Modifiers-ATLAS.md#atlas_map_influence) |
 | `nodes[479].lines[0].values` | 7 |
-| `nodes[479].lines[1].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[479].lines[1].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[479].lines[1].values` | 7 |
 | `nodes[480].code` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c13) |
 | `nodes[480].x` | 68.61 |
@@ -3613,21 +3613,21 @@
 | `nodes[482].y` | 75.99 |
 | `nodes[482].kind` | `SMALL` |
 | `nodes[482].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c13) |
-| `nodes[482].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[482].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[482].lines[0].values` | 4.2 |
 | `nodes[483].code` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c16) |
 | `nodes[483].x` | 78.37 |
 | `nodes[483].y` | 68.86 |
 | `nodes[483].kind` | `SMALL` |
 | `nodes[483].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c10) |
-| `nodes[483].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[483].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[483].lines[0].values` | 4.2 |
 | `nodes[484].code` | [Венец Двуликого](../Atlas/Atlas-KEYSTONE.md#atlas_influence_c17) |
 | `nodes[484].x` | 86.98 |
 | `nodes[484].y` | 72.66 |
 | `nodes[484].kind` | `KEYSTONE` |
 | `nodes[484].parents` | [Двуликий](../Atlas/Atlas-SMALL.md#atlas_influence_c11) |
-| `nodes[484].lines[0].code` | [Атлас: только Создатель](Modifiers/Modifiers-ATLAS.md#atlas_influence_shaper) |
+| `nodes[484].lines[0].code` | [Атлас: влияние только Зодчего](Modifiers/Modifiers-ATLAS.md#atlas_influence_shaper) |
 | `nodes[484].lines[0].values` | 1 |
 | `nodes[484].lines[1].code` | [Атлас: захваченные карты](Modifiers/Modifiers-ATLAS.md#atlas_map_influence) |
 | `nodes[484].lines[1].values` | 6 |
@@ -3657,7 +3657,7 @@
 | `nodes[488].y` | 4.89 |
 | `nodes[488].kind` | `SMALL` |
 | `nodes[488].parents` | [Сердце Атласа](../Atlas/Atlas-START.md#atlas_start) |
-| `nodes[488].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[488].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[488].lines[0].values` | 1 |
 | `nodes[489].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p02) |
 | `nodes[489].x` | -5.8 |
@@ -3671,7 +3671,7 @@
 | `nodes[490].y` | 14.36 |
 | `nodes[490].kind` | `SMALL` |
 | `nodes[490].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p02) |
-| `nodes[490].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[490].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[490].lines[0].values` | 1 |
 | `nodes[491].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p04) |
 | `nodes[491].x` | -3.75 |
@@ -3832,7 +3832,7 @@
 | `nodes[513].y` | 37.41 |
 | `nodes[513].kind` | `SMALL` |
 | `nodes[513].parents` | [Око](../Atlas/Atlas-SMALL.md#atlas_influence_a02) |
-| `nodes[513].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[513].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[513].lines[0].values` | 1.8 |
 | `nodes[514].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_vaal_p02) |
 | `nodes[514].x` | 17.18 |
@@ -3846,7 +3846,7 @@
 | `nodes[515].y` | 21.47 |
 | `nodes[515].kind` | `SMALL` |
 | `nodes[515].parents` | [Путник](../Atlas/Atlas-SMALL.md#atlas_expedition_a05) |
-| `nodes[515].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[515].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[515].lines[0].values` | 1 |
 | `nodes[516].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p08) |
 | `nodes[516].x` | -12 |
@@ -3972,14 +3972,14 @@
 | `nodes[533].y` | 47.58 |
 | `nodes[533].kind` | `SMALL` |
 | `nodes[533].parents` | [Шпиль](../Atlas/Atlas-SMALL.md#atlas_tiers_b02) |
-| `nodes[533].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[533].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[533].lines[0].values` | 1.8 |
 | `nodes[534].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_vaal_p04) |
 | `nodes[534].x` | -82.94 |
 | `nodes[534].y` | 46.31 |
 | `nodes[534].kind` | `SMALL` |
 | `nodes[534].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_vaal_p03) |
-| `nodes[534].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[534].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[534].lines[0].values` | 3.5 |
 | `nodes[535].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_bosses_p03) |
 | `nodes[535].x` | -48.8 |
@@ -4021,7 +4021,7 @@
 | `nodes[540].y` | 17.56 |
 | `nodes[540].kind` | `SMALL` |
 | `nodes[540].parents` | [Грань](../Atlas/Atlas-SMALL.md#atlas_crystals_a07) |
-| `nodes[540].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[540].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[540].lines[0].values` | 1.8 |
 | `nodes[541].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_expedition_p05) |
 | `nodes[541].x` | 49.99 |
@@ -4140,7 +4140,7 @@
 | `nodes[557].y` | 55.42 |
 | `nodes[557].kind` | `SMALL` |
 | `nodes[557].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_vaal_p06); [Порча](../Atlas/Atlas-SMALL.md#atlas_vaal_c02) |
-| `nodes[557].lines[0].code` | [Атлас: награда Ваал-зон](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
+| `nodes[557].lines[0].code` | [Атлас: награда прорех Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_reward) |
 | `nodes[557].lines[0].values` | 1.8 |
 | `nodes[558].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_tiers_p04) |
 | `nodes[558].x` | 6.24 |
@@ -4217,7 +4217,7 @@
 | `nodes[568].y` | 30.93 |
 | `nodes[568].kind` | `SMALL` |
 | `nodes[568].parents` | [Фонарь](../Atlas/Atlas-SMALL.md#atlas_expedition_c16) |
-| `nodes[568].lines[0].code` | [Атлас: шанс портала Ваал](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
+| `nodes[568].lines[0].code` | [Атлас: шанс прорехи Изнанки](Modifiers/Modifiers-ATLAS.md#atlas_vaal_chance) |
 | `nodes[568].lines[0].values` | 3.5 |
 | `nodes[569].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_craft_p09) |
 | `nodes[569].x` | 94.85 |
@@ -4245,14 +4245,14 @@
 | `nodes[572].y` | 53.25 |
 | `nodes[572].kind` | `SMALL` |
 | `nodes[572].parents` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p11) |
-| `nodes[572].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[572].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[572].lines[0].values` | 1 |
 | `nodes[573].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p11) |
 | `nodes[573].x` | 71.61 |
 | `nodes[573].y` | 50.17 |
 | `nodes[573].kind` | `SMALL` |
 | `nodes[573].parents` | [Компас](../Atlas/Atlas-SMALL.md#atlas_maps_b05) |
-| `nodes[573].lines[0].code` | [Атлас: вещи влияния](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
+| `nodes[573].lines[0].code` | [Атлас: вещи с влиянием](Modifiers/Modifiers-ATLAS.md#atlas_influence_items) |
 | `nodes[573].lines[0].values` | 1 |
 | `nodes[574].code` | [Звёздная тропа](../Atlas/Atlas-SMALL.md#atlas_influence_p12) |
 | `nodes[574].x` | 61.27 |

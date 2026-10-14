@@ -49,7 +49,7 @@
 | [Eclipse Ring](#eclipse_ring) | Редкий | 85 |
 | [The Orrery Cog](#orrery_cog) | Уникальный | 81 |
 | [Praetor's Drowned Seal](#praetors_drowned_seal) | Уникальный | 84 |
-| [Crown Collector's Hoard](#crown_collectors_hoard) | Уникальный | 97 |
+| [The Crown Collector's Hoard](#crown_collectors_hoard) | Уникальный | 97 |
 | [Summit Sigil](#summit_sigil) | Уникальный | 99 |
 | [Giantslayer's Tithe](#giantslayers_tithe) | Уникальный | 48 |
 | [Hoarfrost Seal](#hoarfrost_seal) | Уникальный | 36 |
@@ -324,8 +324,8 @@
 - +20–30 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - +20–30% к сопротивлению холоду · [Сопротивление холоду](../reference/Stats/Stats-HERO.md#stock_resist_cold); +20–30% к сопротивлению молнии · [Сопротивление молнии](../reference/Stats/Stats-HERO.md#stock_resist_lightning)
 - 0.4–0.8% физического урона атак крадётся здоровьем · [Физический вампиризм](../reference/Stats/Stats-HERO.md#stock_leech_physical)
-- Шок врага с шансом 30–50% ещё и охлаждает его · [Буря Берека](../reference/Stats/Stats-POWER.md#power_bereks_storm)
-- Убийство охлаждённого врага восстанавливает 2–4% максимума здоровья · [Мороз Берека](../reference/Stats/Stats-POWER.md#power_bereks_frost)
+- Шок врага с шансом 30–50% ещё и охлаждает его · [Ярость грозы](../reference/Stats/Stats-POWER.md#power_bereks_storm)
+- Убийство охлаждённого врага восстанавливает 2–4% максимума здоровья · [Хватка стужи](../reference/Stats/Stats-POWER.md#power_bereks_frost)
 
 
 | Параметр | Значение |
@@ -355,7 +355,7 @@
 - 10–20% увеличение количества находимых предметов · [Количество добычи](../reference/Stats/Stats-HERO.md#stock_quantity)
 - +10–20 к максимуму здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 - +10–30% к всем сопротивлениям стихиям · [Все сопротивления стихиям](../reference/Stats/Stats-HERO.md#stock_resist_all)
-- 10–25% увеличения количества предметов с уникальных монстров · [Ставка Вентора](../reference/Stats/Stats-POWER.md#power_ventors_wager)
+- 10–25% увеличения количества предметов с уникальных монстров · [Ставка шулера](../reference/Stats/Stats-POWER.md#power_ventors_wager)
 - Убийство с шансом 5–10% обновляет все перезарядки · [Удачный расклад](../reference/Stats/Stats-POWER.md#power_lucky_break)
 
 
@@ -385,8 +385,8 @@
 - +15–25 к силе · [Сила](../reference/Stats/Stats-HERO.md#stock_strength)
 - +20–30% к сопротивлению огню · [Сопротивление огню](../reference/Stats/Stats-HERO.md#stock_resist_fire)
 - Восстанавливает 5–10 здоровья в секунду · [Восстановление здоровья](../reference/Stats/Stats-HERO.md#stock_health_regen)
-- Критический удар с шансом 30–50% даёт всем флягам 3 заряда · [Ярость Каома](../reference/Stats/Stats-POWER.md#power_kaoms_rage)
-- Критический удар даёт +2–4% к снижению физического урона на 4 с, до 3 раз · [Стойкость Каома](../reference/Stats/Stats-POWER.md#power_kaoms_endurance)
+- Критический удар с шансом 30–50% даёт всем флягам 3 заряда · [Ярость пепельного вождя](../reference/Stats/Stats-POWER.md#power_kaoms_rage)
+- Критический удар даёт +2–4% к снижению физического урона на 4 с, до 3 раз · [Стойкость пепельного вождя](../reference/Stats/Stats-POWER.md#power_kaoms_endurance)
 
 
 | Параметр | Значение |
@@ -608,7 +608,7 @@
 
 ### Band of Corruption <a href="#band-of-corruption" id="band-of-corruption"></a>
 
-Сфера Ваал обещала перемены. И сдержала слово.
+Сфера Изнанки обещала перемены. И сдержала слово.
 
 **Русское название:** Кольцо порчи
 
@@ -774,7 +774,7 @@
 
 - 120–150% увеличение урона чар · [Урон чар](../reference/Stats/Stats-HERO.md#stock_spell_damage)
 - 30–40% увеличение скорости сотворения · [Скорость применения](../reference/Stats/Stats-HERO.md#stock_cast_speed)
-- Заклинание выпускает волну: урон хаосом всем врагам в 100–150% интеллекта · [Прилив бездны](../reference/Stats/Stats-POWER.md#power_abyssal_tide)
+- Заклинание выпускает волну: урон хаосом всем врагам в 100–150% интеллекта · [Прилив Бездны](../reference/Stats/Stats-POWER.md#power_abyssal_tide)
 - Даёт энергощит, равный 20–30% максимума маны · [Глубокий разум](../reference/Stats/Stats-POWER.md#power_deep_mind)
 
 
@@ -1164,7 +1164,7 @@
 - +10–15% шанс подавить урон от заклинаний · [Подавление чар](../reference/Stats/Stats-HERO.md#stock_spell_suppression)
 - +20–30 к интеллекту · [Интеллект](../reference/Stats/Stats-HERO.md#stock_intellect)
 - Удары по вам с шансом 15–25% проклинают атакующего · [Кровавый сглаз](../reference/Stats/Stats-POWER.md#power_blood_hex)
-- С шансом 50–80% в начале боя проклинает всех врагов · [Зов бездны](../reference/Stats/Stats-POWER.md#power_abyss_call)
+- С шансом 50–80% в начале боя проклинает всех врагов · [Зов Бездны](../reference/Stats/Stats-POWER.md#power_abyss_call)
 - -10–-6% увеличение максимума здоровья · [Здоровье](../reference/Stats/Stats-HERO.md#stock_health)
 
 
@@ -1291,7 +1291,7 @@
 
 ## CROWN_COLLECTORS_HOARD <a href="#crown_collectors_hoard" id="crown_collectors_hoard"></a>
 
-### Crown Collector's Hoard <a href="#crown-collectors-hoard" id="crown-collectors-hoard"></a>
+### The Crown Collector's Hoard <a href="#crown-collectors-hoard" id="crown-collectors-hoard"></a>
 
 Каждый король, что ему встретился, всё ещё здесь — по кусочкам.
 

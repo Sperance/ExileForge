@@ -64,13 +64,13 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.008 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.006 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.004 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.004 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.015 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.02 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.1 | — | 0 |
 | [Orb of Quality](../../Items/Items-CURRENCY.md#quality_orb) | 100 | 0.025 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0015 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0015 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0015 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0015 | 1; 1 | 0 |
@@ -98,13 +98,13 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.012 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.008 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.005 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.005 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.015 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.02 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.1 | — | 0 |
 | [Orb of Quality](../../Items/Items-CURRENCY.md#quality_orb) | 100 | 0.025 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0015 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0015 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0015 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0015 | 1; 1 | 0 |
@@ -131,7 +131,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.012 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.015 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.01 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.006 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.006 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.001 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.015 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.02 | 1; 1 | 0 |
@@ -140,7 +140,7 @@
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.0005 | 1; 1 | 0 |
 | [Orb of Quality](../../Items/Items-CURRENCY.md#quality_orb) | 100 | 0.025 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0015 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0015 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0015 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0015 | 1; 1 | 0 |
@@ -167,7 +167,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.015 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.018 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.012 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.008 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.008 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.002 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.015 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.025 | 1; 1 | 0 |
@@ -176,7 +176,7 @@
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.001 | 1; 1 | 0 |
 | [Orb of Quality](../../Items/Items-CURRENCY.md#quality_orb) | 100 | 0.025 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0015 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0015 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0015 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0015 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0015 | 1; 1 | 0 |
@@ -275,7 +275,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.12514 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.10333 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.06 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.05 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.05 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.3 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.9 | — | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.45 | — | 0 |
@@ -302,7 +302,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.15514 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.12333 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.08 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.06 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.06 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0104 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.3 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.95 | — | 0 |
@@ -329,7 +329,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.18514 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.15333 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.1 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.08 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.08 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0204 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.35 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
@@ -413,7 +413,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.07029 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.05667 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.04 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.03 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.03 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.2 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.3 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.04 | 1; 1 | 0 |
@@ -421,15 +421,15 @@
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0008 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.025 | 1; 1 | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.002 | 1; 1 | 0 |
@@ -454,7 +454,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.09029 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.06667 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.05 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.04 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.04 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.2 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.32 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.04 | 1; 1 | 0 |
@@ -462,15 +462,15 @@
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0008 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.03 | 1; 1 | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.002 | 1; 1 | 0 |
@@ -494,25 +494,25 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.11029 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.08667 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.06 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.05 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.05 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0108 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.22 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.34 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.04 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.00105 | 1; 1 | 0 |
-| [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.005 | 1; 1 | 0 |
-| [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.005 | 1; 1 | 0 |
+| [Architect's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.005 | 1; 1 | 0 |
+| [Void Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.005 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.034999999999999996 | 1; 1 | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.002 | 1; 1 | 0 |
@@ -536,26 +536,26 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.13029 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.10667 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.08 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.06 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.06 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0208 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.25 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.36 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.04 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.1 | 1; 1 | 0 |
-| [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.01 | 1; 1 | 0 |
-| [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.01 | 1; 1 | 0 |
+| [Architect's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.01 | 1; 1 | 0 |
+| [Void Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01105 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.04 | 1; 1 | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.004 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.004 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.004 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.002 | 1; 1 | 0 |
@@ -578,7 +578,7 @@
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.5 | 2; 3 | 0 |
 | [Orb of Alchemy](../../Items/Items-CURRENCY.md#orb_of_alchemy) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.1 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.08 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.08 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.2 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.9 | — | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.4 | — | 0 |
@@ -600,7 +600,7 @@
 | [Orb of Alchemy](../../Items/Items-CURRENCY.md#orb_of_alchemy) | 100 | 0.35 | 1; 1 | 0 |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.15 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.15 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.1 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.1 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.06 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.25 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
@@ -622,7 +622,7 @@
 | --- | --- | --- | --- | --- |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.2 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.2 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.15 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.15 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.1 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.05 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.3 | 1; 1 | 0 |
@@ -645,7 +645,7 @@
 | --- | --- | --- | --- | --- |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.22 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.22 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.17 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.17 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.12 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.06 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.3 | 1; 1 | 0 |
@@ -668,7 +668,7 @@
 | --- | --- | --- | --- | --- |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.25 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.25 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.14 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.07 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.01 | 1; 1 | 0 |
@@ -692,7 +692,7 @@
 | --- | --- | --- | --- | --- |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.28 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.28 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.22 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.22 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.16 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.08 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.02 | 1; 1 | 0 |
@@ -700,7 +700,7 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.75 | — | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.01 | 1; 1 | 0 |
-| [Mirror of Kalandra](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.0005 | 1; 1 | 0 |
+| [Mirror of the Flats](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.0005 | 1; 1 | 0 |
 
 
 ## loot-T7 <a href="#loot-t7" id="loot-t7"></a>
@@ -721,7 +721,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.0165 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.0198 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.0132 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.0088 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.0088 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0022 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.0165 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.0275 | 1; 1 | 0 |
@@ -730,7 +730,7 @@
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.0011 | 1; 1 | 0 |
 | [Orb of Quality](../../Items/Items-CURRENCY.md#quality_orb) | 100 | 0.0275 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.00165 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.00165 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.00165 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.00165 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.00165 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.00165 | 1; 1 | 0 |
@@ -756,7 +756,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.20366 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.16867 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.11 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.088 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.088 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.02244 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.385 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
@@ -784,26 +784,26 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.14331 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.11733 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.088 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.066 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.066 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.02288 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.011 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.275 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.396 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.044 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.11 | 1; 1 | 0 |
-| [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.011 | 1; 1 | 0 |
-| [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.011 | 1; 1 | 0 |
+| [Architect's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.011 | 1; 1 | 0 |
+| [Void Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.011 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01216 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.044 | 1; 1 | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.0044 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.0044 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0044 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0044 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0044 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0044 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0044 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0044 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0044 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0044 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.0044 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.0044 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0022 | 1; 1 | 0 |
@@ -825,7 +825,7 @@
 | --- | --- | --- | --- | --- |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.308 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.308 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.242 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.242 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.176 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.088 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.022 | 1; 1 | 0 |
@@ -833,7 +833,7 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.825 | — | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.011 | 1; 1 | 0 |
-| [Mirror of Kalandra](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.00055 | 1; 1 | 0 |
+| [Mirror of the Flats](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.00055 | 1; 1 | 0 |
 
 
 ## loot-T8 <a href="#loot-t8" id="loot-t8"></a>
@@ -854,7 +854,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.018 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.0216 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.0144 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.0096 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.0096 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0024 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.018 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.03 | 1; 1 | 0 |
@@ -863,7 +863,7 @@
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.0012 | 1; 1 | 0 |
 | [Orb of Quality](../../Items/Items-CURRENCY.md#quality_orb) | 100 | 0.03 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0018 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0018 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0018 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0018 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0018 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0018 | 1; 1 | 0 |
@@ -889,7 +889,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.22217 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.184 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.12 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.096 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.096 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.02448 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.42 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
@@ -917,26 +917,26 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.15634 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.128 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.096 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.072 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.072 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.02496 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.012 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.3 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.432 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.048 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.12 | 1; 1 | 0 |
-| [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.012 | 1; 1 | 0 |
-| [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.012 | 1; 1 | 0 |
+| [Architect's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.012 | 1; 1 | 0 |
+| [Void Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.012 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01326 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.048 | 1; 1 | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.0048 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.0048 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0048 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0048 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0048 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0048 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0048 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0048 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0048 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0048 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.0048 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.0048 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0024 | 1; 1 | 0 |
@@ -958,7 +958,7 @@
 | --- | --- | --- | --- | --- |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.336 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.336 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.264 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.264 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.192 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.096 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.024 | 1; 1 | 0 |
@@ -966,7 +966,7 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.9 | — | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.012 | 1; 1 | 0 |
-| [Mirror of Kalandra](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.0006 | 1; 1 | 0 |
+| [Mirror of the Flats](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.0006 | 1; 1 | 0 |
 
 
 ## loot-T9 <a href="#loot-t9" id="loot-t9"></a>
@@ -987,7 +987,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.0195 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.0234 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.0156 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.0104 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.0104 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.0026 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.0195 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.0325 | 1; 1 | 0 |
@@ -996,7 +996,7 @@
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.0013 | 1; 1 | 0 |
 | [Orb of Quality](../../Items/Items-CURRENCY.md#quality_orb) | 100 | 0.0325 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.00195 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.00195 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.00195 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.00195 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.00195 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.00195 | 1; 1 | 0 |
@@ -1022,7 +1022,7 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.24069 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.19933 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.13 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.104 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.104 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.02652 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.455 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
@@ -1050,26 +1050,26 @@
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.16937 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.13867 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.104 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.078 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.078 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.02704 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.013 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.325 | 1; 1 | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.468 | — | 0 |
 | [Orb of Alteration](../../Items/Items-CURRENCY.md#orb_of_alteration) | 100 | 0.052 | 1; 1 | 0 |
 | [Orb of Augmentation](../../Items/Items-CURRENCY.md#orb_of_augmentation) | 100 | 0.13 | 1; 1 | 0 |
-| [Shaper's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.013 | 1; 1 | 0 |
-| [Elder Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.013 | 1; 1 | 0 |
+| [Architect's Orb](../../Items/Items-CURRENCY.md#shapers_orb) | 100 | 0.013 | 1; 1 | 0 |
+| [Void Orb](../../Items/Items-CURRENCY.md#elder_orb) | 100 | 0.013 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01437 | 1; 1 | 0 |
 | [Unveiling Orb](../../Items/Items-CURRENCY.md#unveiling_orb) | 100 | 0.052 | 1; 1 | 0 |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.0052 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.0052 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0052 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0052 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0052 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0052 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0052 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0052 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0052 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0052 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.0052 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.0052 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0026 | 1; 1 | 0 |
@@ -1091,7 +1091,7 @@
 | --- | --- | --- | --- | --- |
 | [Regal Orb](../../Items/Items-CURRENCY.md#regal_orb) | 100 | 0.364 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.364 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.286 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.286 | 1; 1 | 0 |
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 0.208 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.104 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.026 | 1; 1 | 0 |
@@ -1099,7 +1099,7 @@
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 1.0 | — | 0 |
 | [drop](Tables-TEMPLATE.md#drop) | 100 | 0.975 | — | 0 |
 | [Fracturing Orb](../../Items/Items-CURRENCY.md#fracturing_orb) | 100 | 0.013 | 1; 1 | 0 |
-| [Mirror of Kalandra](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.00065 | 1; 1 | 0 |
+| [Mirror of the Flats](../../Items/Items-CURRENCY.md#mirror_of_kalandra) | 100 | 0.00065 | 1; 1 | 0 |
 
 
 ## loot-LCHEST_WOODEN_T1 <a href="#loot-lchest_wooden_t1" id="loot-lchest_wooden_t1"></a>
@@ -1308,7 +1308,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1343,7 +1343,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1378,7 +1378,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1413,7 +1413,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1448,7 +1448,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1483,7 +1483,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1518,7 +1518,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1553,7 +1553,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1588,7 +1588,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -1623,7 +1623,7 @@
 | [Storm Flux](../../Items/Items-MATERIAL.md#storm_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Quick Flux](../../Items/Items-MATERIAL.md#quick_flux) | 100 | 0.0571 | 1; 1 | 0 |
 | [Vivid Catalyst](../../Items/Items-OMEN.md#catalyst_life) | 100 | 0.0312 | 1; 1 | 0 |
-| [Fertile Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
+| [Warding Catalyst](../../Items/Items-OMEN.md#catalyst_defence) | 100 | 0.0312 | 1; 1 | 0 |
 | [Prismatic Catalyst](../../Items/Items-OMEN.md#catalyst_elemental) | 100 | 0.0312 | 1; 1 | 0 |
 | [Abrasive Catalyst](../../Items/Items-OMEN.md#catalyst_physical) | 100 | 0.0312 | 1; 1 | 0 |
 | [Noxious Catalyst](../../Items/Items-OMEN.md#catalyst_chaos) | 100 | 0.0312 | 1; 1 | 0 |
@@ -2098,7 +2098,7 @@
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 1 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.8 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.02 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01 | 1; 1 | 0 |
@@ -2124,7 +2124,7 @@
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 1 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.8 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.02 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01 | 1; 1 | 0 |
@@ -2150,7 +2150,7 @@
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 1 | 1; 1 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.8 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.2 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.02 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01 | 1; 1 | 0 |
@@ -2175,7 +2175,7 @@
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 1.0 | 1; 2 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.7 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.3 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.02 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01 | 1; 1 | 0 |
@@ -2200,7 +2200,7 @@
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 1.0 | 1; 2 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.7 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.3 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.02 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01 | 1; 1 | 0 |
@@ -2225,7 +2225,7 @@
 | [Blessed Orb](../../Items/Items-CURRENCY.md#blessed_orb) | 100 | 1.0 | 1; 2 | 0 |
 | [Orb of Scouring](../../Items/Items-CURRENCY.md#orb_of_scouring) | 100 | 0.7 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 1 | 0 |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.3 | 1; 1 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Exalted Orb](../../Items/Items-CURRENCY.md#exalted_orb) | 100 | 0.02 | 1; 1 | 0 |
 | [Divine Orb](../../Items/Items-CURRENCY.md#divine_orb) | 100 | 0.01 | 1; 1 | 0 |
 | [Orb of Annulment](../../Items/Items-CURRENCY.md#orb_of_annulment) | 100 | 0.01 | 1; 1 | 0 |
@@ -2264,8 +2264,8 @@
 | [Weeping Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Muttering Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_2) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_3) | 100 | 0.1042 | 1; 1 | 0 |
-| [Muttering Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_2) | 100 | 0.1042 | 1; 1 | 0 |
-| [Weeping Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
+| [Muttering Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_2) | 100 | 0.1042 | 1; 1 | 0 |
+| [Weeping Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Muttering Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_2) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2307,8 +2307,8 @@
 | [Weeping Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Muttering Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_2) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_3) | 100 | 0.1042 | 1; 1 | 0 |
-| [Muttering Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_2) | 100 | 0.1042 | 1; 1 | 0 |
-| [Weeping Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
+| [Muttering Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_2) | 100 | 0.1042 | 1; 1 | 0 |
+| [Weeping Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Muttering Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_2) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2350,8 +2350,8 @@
 | [Wailing Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_4) | 100 | 0.1042 | 1; 1 | 0 |
-| [Weeping Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
-| [Wailing Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
+| [Weeping Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
+| [Wailing Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2393,8 +2393,8 @@
 | [Wailing Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_4) | 100 | 0.1042 | 1; 1 | 0 |
-| [Weeping Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
-| [Wailing Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
+| [Weeping Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
+| [Wailing Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2436,8 +2436,8 @@
 | [Wailing Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_4) | 100 | 0.1042 | 1; 1 | 0 |
-| [Weeping Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
-| [Wailing Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
+| [Weeping Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_3) | 100 | 0.1042 | 1; 1 | 0 |
+| [Wailing Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Weeping Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_3) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2479,8 +2479,8 @@
 | [Screaming Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_5) | 100 | 0.1042 | 1; 1 | 0 |
-| [Wailing Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
-| [Screaming Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
+| [Wailing Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
+| [Screaming Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2522,8 +2522,8 @@
 | [Screaming Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_5) | 100 | 0.1042 | 1; 1 | 0 |
-| [Wailing Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
-| [Screaming Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
+| [Wailing Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
+| [Screaming Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2565,8 +2565,8 @@
 | [Screaming Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_5) | 100 | 0.1042 | 1; 1 | 0 |
-| [Wailing Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
-| [Screaming Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
+| [Wailing Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
+| [Screaming Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2608,8 +2608,8 @@
 | [Screaming Essence of Rage](../../Items/Items-ESSENCE.md#essence_rage_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Suffering](../../Items/Items-ESSENCE.md#essence_suffering_5) | 100 | 0.1042 | 1; 1 | 0 |
-| [Wailing Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
-| [Screaming Essence of Wrath](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
+| [Wailing Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_4) | 100 | 0.1042 | 1; 1 | 0 |
+| [Screaming Essence of Vengeance](../../Items/Items-ESSENCE.md#essence_wrath_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Wailing Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_4) | 100 | 0.1042 | 1; 1 | 0 |
 | [Screaming Essence of Doubt](../../Items/Items-ESSENCE.md#essence_doubt_5) | 100 | 0.1042 | 1; 1 | 0 |
 | [Essence of Insanity](../../Items/Items-ESSENCE.md#essence_insanity) | 100 | 0.0125 | 1; 1 | 0 |
@@ -2781,7 +2781,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -2798,7 +2798,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -2815,7 +2815,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -2832,7 +2832,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -2849,7 +2849,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -2866,7 +2866,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -2883,7 +2883,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -2900,7 +2900,7 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Vaal Orb](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
+| [Orb of the Underside](../../Items/Items-CURRENCY.md#vaal_orb) | 100 | 1 | 2; 4 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.4 | 1; 1 | 0 |
 
 
@@ -3269,7 +3269,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3288,7 +3288,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3307,7 +3307,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3326,7 +3326,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3345,7 +3345,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3364,7 +3364,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3383,7 +3383,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3402,7 +3402,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3421,7 +3421,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3440,7 +3440,7 @@
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
 | [Crest Fragment](../../Items/Items-MATERIAL.md#crest_fragment) | 100 | 1 | 2; 4 | 0 |
-| [Tower Seal](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
+| [Tower Key](../../Items/Items-MATERIAL.md#tower_seal) | 100 | 0.6 | 1; 2 | 0 |
 | [Abyss Orb](../../Items/Items-CURRENCY.md#abyss_orb) | 100 | 0.3 | 1; 1 | 0 |
 | [Chaos Orb](../../Items/Items-CURRENCY.md#chaos_orb) | 100 | 0.5 | 1; 1 | 0 |
 
@@ -3618,17 +3618,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3650,17 +3650,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3682,17 +3682,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3714,17 +3714,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3746,17 +3746,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3778,17 +3778,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3810,17 +3810,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3842,17 +3842,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |
@@ -3874,17 +3874,17 @@
 
 | Объект / ссылка | Вес | Шанс | Количество | Мин. уровень |
 | --- | --- | --- | --- | --- |
-| [Omen of Sinistral Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Dextral Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dawn Omen of Chaos](../../Items/Items-OMEN.md#omen_sinistral_chaos) | 100 | 0.25 | 1; 1 | 0 |
+| [Dusk Omen of Chaos](../../Items/Items-OMEN.md#omen_dextral_chaos) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Light](../../Items/Items-OMEN.md#omen_light) | 100 | 0.25 | 1; 1 | 0 |
 | [Omen of Corruption](../../Items/Items-OMEN.md#omen_corruption) | 100 | 0.25 | 1; 1 | 0 |
-| [Omen of Sinistral Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Exaltation](../../Items/Items-OMEN.md#omen_sinistral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Exaltation](../../Items/Items-OMEN.md#omen_dextral_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Greater Exaltation](../../Items/Items-OMEN.md#omen_greater_exaltation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Sinistral Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
-| [Omen of Dextral Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Coronation](../../Items/Items-OMEN.md#omen_sinistral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Coronation](../../Items/Items-OMEN.md#omen_dextral_coronation) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dawn Omen of Annulment](../../Items/Items-OMEN.md#omen_sinistral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
+| [Dusk Omen of Annulment](../../Items/Items-OMEN.md#omen_dextral_annulment) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Choice](../../Items/Items-OMEN.md#omen_choice) | 100 | 0.0556 | 1; 1 | 0 |
 | [Omen of Tiers](../../Items/Items-OMEN.md#omen_tier) | 100 | 0.0556 | 1; 1 | 0 |
 | [Orb of Regret](../../Items/Items-CURRENCY.md#orb_of_regret) | 100 | 0.5 | 1; 2 | 0 |

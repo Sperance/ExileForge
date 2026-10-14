@@ -13,7 +13,7 @@
 | `classes[0].base.STOCK_MANA` | 35 |
 | `classes[0].weapon` | [Stone Axe](../Equipment/Equipment-WEAPON_2H.md#stone_axe) |
 | `classes[0].armour` | [Iron Hat](../Equipment/Equipment-HELMET.md#iron_hat); [Plate Vest](../Equipment/Equipment-BODY.md#plate_vest); [Iron Greaves](../Equipment/Equipment-BOOTS.md#iron_greaves) |
-| `classes[1].code` | [Охотница (Ranger)](../Classes.md#ranger) |
+| `classes[1].code` | [Следопытка (Ranger)](../Classes.md#ranger) |
 | `classes[1].difficulty` | 2 |
 | `classes[1].startNode` | [Следопыт](../Tree/Tree-START.md#dex_start) |
 | `classes[1].base.STOCK_STRENGTH` | 14 |

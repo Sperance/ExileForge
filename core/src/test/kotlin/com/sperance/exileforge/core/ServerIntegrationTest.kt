@@ -142,6 +142,8 @@ class ServerIntegrationTest {
             val starterOrb = Orb.ORB_OF_TRANSMUTATION.name
             val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
             api.hero.grant(heroId, "level", "level" to auctionLevel.toString())
+            // Плата за место лота (сервер ECON-05) - золотом продавца
+            api.hero.grant(heroId, "gold", "amount" to LISTING_GOLD.toString())
             // Герою-тестировщику аукцион закрыт (сервер SEC-03): отказ GR_001 по отметке героя; без отметки он торгует как игрок
             assertEquals("GR_001", assertFailsWith<ApiFailure> { api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1) }.code)
             assertEquals(false, api.moderation.setTester(heroId, false))
@@ -159,6 +161,7 @@ class ServerIntegrationTest {
             // Выдачи - на время отметки тестировщика: торгуют герои уже без неё
             api.moderation.setTester(traderHero, true)
             api.hero.grant(traderHero, "level", "level" to auctionLevel.toString())
+            api.hero.grant(traderHero, "gold", "amount" to LISTING_GOLD.toString())
             val grantedRing = api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE)
             // Герой-тестировщик не торгует (сервер 4.12.x): отказ GR_001 по отметке героя - метки «выдано» у вещи нет
             assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, grantedRing.id, Orb.CHAOS_ORB.name, 1) }.code)
@@ -204,6 +207,9 @@ class ServerIntegrationTest {
         }
     }
 }
+
+/** Золото на плату за места лотов контракта (сервер ECON-05): с запасом на несколько выставлений. */
+private const val LISTING_GOLD = 100_000L
 
 /** Сколько вещей выдаёт тестировщику один запрос `grant/rares` (`TESTER_MAX_BATCH` сервера по умолчанию). */
 private const val TESTER_BATCH = 50

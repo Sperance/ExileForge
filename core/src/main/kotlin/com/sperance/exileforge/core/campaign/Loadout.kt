@@ -49,13 +49,13 @@ data class BeltFlask(val sheet: FlaskSheet, val condition: SlotCondition) {
 }
 
 /** Глоток тратит все заряды (уникальная фляга). */
-val FlaskSheet.usesAll: Boolean get() = own("FLASK_USES_ALL") > 0
+val FlaskSheet.usesAll: Boolean get() = own(FlaskStat.USES_ALL.code) > 0
 
 /** Пока действует, навыки ничего не стоят. */
-val FlaskSheet.skillsFree: Boolean get() = own("FLASK_SKILLS_FREE") > 0
+val FlaskSheet.skillsFree: Boolean get() = own(FlaskStat.SKILLS_FREE.code) > 0
 
 /** Пока действует, удары накладывают проклятия класса. */
-val FlaskSheet.hexes: Boolean get() = own("FLASK_HITS_CURSE") > 0
+val FlaskSheet.hexes: Boolean get() = own(FlaskStat.HITS_CURSE.code) > 0
 
 /**
  * Умение в бою (4.9.0: одно с правилами, [com.sperance.exileforge.rules.sheet.KitSkill]) - что оно, изученный уровень и когда

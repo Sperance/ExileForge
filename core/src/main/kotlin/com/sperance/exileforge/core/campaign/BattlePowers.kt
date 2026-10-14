@@ -259,16 +259,16 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         return StatLine(line.stat, line.op, base * count * times)
     }
 
-    /** A count of the fight a line grows with. */
+    /** A count of the fight a line grows with; доли - целыми шагами своего счёта ([PowerScale.steps], его же называет текст силы). */
     private fun count(scale: PowerScale): Double = when (scale) {
         PowerScale.FOES -> battle.enemies().toDouble()
-        PowerScale.MISSING_LIFE -> floor((1 - hero.life / hero.body.maxLife) * 10)
+        PowerScale.MISSING_LIFE -> scale.steps(1 - hero.life / hero.body.maxLife)
         PowerScale.SECONDS -> floor(battle.time)
         PowerScale.KILLS -> kills.toDouble()
         PowerScale.CURSED_FOES -> battle.foeFighters.count { it.alive && it.cursed }.toDouble()
         PowerScale.AILED_FOES -> battle.foeFighters.count { it.alive && it.ailments.isNotEmpty() }.toDouble()
-        PowerScale.SHIELD -> if (hero.body.maxShield > 0) floor(hero.shield / hero.body.maxShield * 10) else 0.0
-        PowerScale.MANA -> battle.manaCap().takeIf { it > 0 }?.let { floor(hero.mana / it * 10) } ?: 0.0
+        PowerScale.SHIELD -> if (hero.body.maxShield > 0) scale.steps(hero.shield / hero.body.maxShield) else 0.0
+        PowerScale.MANA -> battle.manaCap().takeIf { it > 0 }?.let { scale.steps(hero.mana / it) } ?: 0.0
         PowerScale.CHARGES -> battle.flaskCharges()
         PowerScale.MOMENTUM -> momentum.toDouble()
         PowerScale.FRENZY_CHARGES -> battle.heroCharges.count(ChargeKind.FRENZY).toDouble()

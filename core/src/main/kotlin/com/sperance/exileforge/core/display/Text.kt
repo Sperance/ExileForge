@@ -154,7 +154,7 @@ private fun shareText(value: Double): String {
 }
 
 /** The rules' modifier text over the server's dictionary as it stands now. */
-fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)
+fun modifierText(index: ContentIndex): ModifierText = ModifierText(index, serverLocale::string)
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
 fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def, values)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effectOf(i), v) }) }
@@ -180,9 +180,9 @@ fun fillTemplate(template: String, values: List<String>): String = values.foldIn
  */
 fun signedNumber(value: Double, format: (Double) -> String = ::number): String = (if (value < 0) ModifierText.MINUS else "+") + format(kotlin.math.abs(value))
 
-/** Characteristics whose meaning lives in the fraction: rounding them destroys them. */
+/** Characteristics whose meaning lives in the fraction: rounding them destroys them. Скорость передвижения - целые проценты (4.12.x, STAT-MISC-10). */
 val preciseStats = setOf(
-    CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code, CoreStat.CRITICAL_CHANCE.code, CoreStat.CRITICAL_MULTIPLIER.code, CoreStat.MOVEMENT_SPEED.code,
+    CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code, CoreStat.CRITICAL_CHANCE.code, CoreStat.CRITICAL_MULTIPLIER.code,
     CoreStat.LEECH_PHYSICAL.code, CoreStat.LEECH_ALL.code, CoreStat.CRITICAL_VAMPIRE.code, CoreStat.SPELL_CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_MULTIPLIER.code,
 )
 

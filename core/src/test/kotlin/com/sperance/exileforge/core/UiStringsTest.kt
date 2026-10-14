@@ -237,6 +237,23 @@ class UiStringsTest {
             // Предначертание в бою (4.9.0): срабатывания рычагов в журнале, полка журнала и значки действующих рычагов
             com.sperance.exileforge.core.campaign.combat.FateBeat.entries.forEach { add("expedition.fate_beat.${it.name}") }
             com.sperance.exileforge.core.campaign.LogKind.entries.forEach { add("fight.log_shelf.${it.name}") }
+            // Семейства динамических ключей из перечислений (4.12.x, TEST-02): журнал боя, полки и разборы
+            com.sperance.exileforge.core.campaign.NoteKind.entries.forEach { add("trace.note.value.${it.name}") }
+            com.sperance.exileforge.core.campaign.FactorKey.entries.forEach {
+                add("trace.factor.${it.name}")
+                add("trace.factor.${it.name}.about")
+            }
+            com.sperance.exileforge.rules.content.BuffKind.entries.forEach { add("fight.buff.${it.name}") }
+            com.sperance.exileforge.rules.content.ChargeKind.entries.forEach { add("fight.charge.${it.name}") }
+            // Строка и механика фляги называются своей характеристикой, не мерой
+            com.sperance.exileforge.core.character.FlaskMeasure.entries.filter { it != com.sperance.exileforge.core.character.FlaskMeasure.LINE && it != com.sperance.exileforge.core.character.FlaskMeasure.MECHANIC }.forEach { add("flask.measure.${it.name}") }
+            com.sperance.exileforge.core.network.SanctionTarget.entries.forEach { add("moderation.target.${it.name}") }
+            com.sperance.exileforge.rules.content.Catalyst.entries.forEach { add("enum.catalyst.${it.name}") }
+            com.sperance.exileforge.rules.rift.RiftRest.entries.forEach { add("rift.rest.${it.name}") }
+            Rarity.entries.forEach {
+                add("quest.rarity.${it.name}")
+                add("stash.rarity_many.${it.name}")
+            }
             listOf("MISSING_LIFE_DAMAGE", "AVENGE_CRIT", "HIT_CAP", "ALTERNATE_SKILL", "MANA_OVERFLOW", "STORE_TAKEN", "FULL_LIFE_GUARD", "OVERHEAL_BARRIER", "WIN_STREAK", "KILL_STACKS")
                 .forEach { add("fight.fate_state.$it") }
         }
@@ -259,5 +276,27 @@ class UiStringsTest {
             "enum.stat.${stat.code}" !in own && server.any { (_, table) -> LocaleKey.statLabel(stat) !in table }
         }
         assertEquals(emptyList(), unnamed.map { it.code }, "stats without a title")
+    }
+
+    /**
+     * Имя характеристики у клиента - то же, что у сервера (4.12.x, TEXT-PACK, STAT-ATK-10): своя подпись `enum.stat.*` - лишь
+     * копия серверной с меткой «%» единицы, а не второе имя той же характеристики.
+     */
+    @Test
+    fun the_client_names_a_stat_as_the_server_does() {
+        val server = TestContent.serverLocales()
+        val mark = Regex("""[,\s]*%\s*$""")
+        var compared = 0
+        val drift = languages.flatMap { lang ->
+            val table = server[lang.code] ?: return@flatMap listOf("${lang.code}: no server dictionary")
+            UiStrings.keys(lang).filter { it.startsWith("enum.stat.") }.mapNotNull { key ->
+                val label = table["enum.EnumStatStock.${key.removePrefix("enum.stat.")}"] ?: return@mapNotNull null
+                compared++
+                val own = ui(lang, key).replace(mark, "")
+                "${lang.code} $key: «$own», у сервера «$label»".takeIf { own != label }
+            }
+        }
+        assertTrue(compared > 0, "no stat name compared: the check proves nothing")
+        assertEquals(emptyList(), drift, "client stat names differ from the server's")
     }
 }

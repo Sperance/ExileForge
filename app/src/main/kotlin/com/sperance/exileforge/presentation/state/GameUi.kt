@@ -1,6 +1,5 @@
 package com.sperance.exileforge.presentation.state
 
-import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroRepository
@@ -66,7 +65,12 @@ data class GameUi(
 
     /** Герой в игре - тестировщик (4.12.x, сервер ROLE-01). */
     val isTester: Boolean get() = session.tester(holding)
-    val adminTools: Boolean get() = BuildConfig.DEBUG && isAdmin && mode == AppMode.ADMIN
+
+    /** Модератор или администратор (4.12.x, ROLE-02). */
+    val isModerator: Boolean get() = session.isModerator
+
+    /** Инструменты администратора (4.12.x, ADMIN-UI): роль модерации аккаунта и режим вместе; права проверяет сервер. */
+    val adminTools: Boolean get() = isModerator && mode == AppMode.ADMIN
     val sessionEpoch: Int get() = session.sessionEpoch
     val index: ContentIndex? get() = world.content
     val heroId: String get() = holding.heroId

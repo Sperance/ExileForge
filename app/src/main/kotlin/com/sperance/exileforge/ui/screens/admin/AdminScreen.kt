@@ -23,6 +23,9 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Everything an administrator can do, in one place.
  *
+ * С 4.12.x (ADMIN-UI) экран в основной сборке: вкладку видят администратор и модератор в режиме инструментов, промокоды и выдачи -
+ * только администратор; права на каждое действие проверяет сервер.
+ *
  * It is the only tab a player does not have, which is the point: the promo codes open from here,
  * and the grant panel sits here rather than inside the Hero tab where a player would otherwise be
  * reading their own stash. The catalogue, the editor and the checks left with the content (3.0.0):
@@ -38,25 +41,28 @@ import org.koin.compose.viewmodel.koinViewModel
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ScreenHeader(
-            ui("account.administrator"),
+            ui(if (game.isAdmin) "account.administrator" else "account.moderator"),
             ui("admin.subtitle"),
             ForgeGlyphs.Scroll,
         )
 
-        ForgePanel {
-            Engraved(ui("admin.screens"))
-            ForgeOutlinedButton(enabled = !game.busy, onClick = {
-                vm.openRedemptions()
-                vm.loadRedemptions()
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("redemption.title"))
+        // Промокоды и выдачи любому герою (4.12.x, ADMIN-UI, ROLE-01) - только администратору; модератору здесь - режим игрока.
+        if (game.isAdmin) {
+            ForgePanel {
+                Engraved(ui("admin.screens"))
+                ForgeOutlinedButton(enabled = !game.busy, onClick = {
+                    vm.openRedemptions()
+                    vm.loadRedemptions()
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("redemption.title"))
+                }
+                MutedText(ui("admin.screens_note"))
             }
-            MutedText(ui("admin.screens_note"))
-        }
 
-        // Granting is done to a hero, so it needs one chosen — which is why it says so itself
-        // rather than being hidden when there is none.
-        AdminGrantPanel(game, vm)
+            // Granting is done to a hero, so it needs one chosen — which is why it says so itself
+            // rather than being hidden when there is none.
+            AdminGrantPanel(game, vm)
+        }
 
         ForgePanel {
             Engraved(ui("admin.mode"))

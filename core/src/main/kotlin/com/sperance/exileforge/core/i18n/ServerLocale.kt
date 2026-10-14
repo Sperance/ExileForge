@@ -99,15 +99,28 @@ fun locOr(key: String, fallback: String): String = if (serverLocale.contains(key
  * is already a whole sentence and is shown in the chosen language.
  */
 fun locError(code: String?, message: String, args: List<String> = emptyList()): String {
-    if (code.isNullOrBlank()) return message
+    if (code.isNullOrBlank()) return withoutIds(message)
     val key = LocaleKey.error(code)
-    if (!serverLocale.contains(key)) return message
-    val text = serverLocale.format(key, args)
+    if (!serverLocale.contains(key)) return withoutIds(message)
+    // Id в отказе игроку ничего не говорит (4.12.x, ASANA-03): аргумент-id не подставляется, код ошибки остаётся отчёту
+    val shown = args.map { if (ID.matches(it.trim())) "" else it }
+    val text = serverLocale.format(key, shown).let { if (shown != args) tidy(it) else withoutIds(it) }
     // A hole left unfilled means the server sent fewer arguments than the template wants, and half
     // a sentence is worse than the server's own. This is now rare: since 0.17.0 the envelope
     // carries what it interpolated.
-    return if (HOLE.containsMatchIn(text)) message else text
+    return if (HOLE.containsMatchIn(text)) withoutIds(message) else text
 }
+
+/** [text] без id-подобных слов (ASANA-03): id записей (24 hex), UUID и длинные hex-ключи; пустые скобки и кавычки убраны. */
+fun withoutIds(text: String): String = if (ID_WORD.containsMatchIn(text)) tidy(text.replace(ID_WORD, "")) else text
+
+/** Строка, из которой вынули слово: без пустых скобок и кавычек, двойных пробелов и пробела перед знаком. */
+private fun tidy(text: String): String = text.replace(EMPTY_WRAP, "").replace(Regex(" +([,.:;!?])"), "$1").replace(Regex(" {2,}"), " ").trim()
+
+/** Id записи, UUID или длинный hex-ключ целиком. */
+private val ID = Regex("(?i)[0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32,}")
+private val ID_WORD = Regex("(?i)(?<![0-9a-z])(?:[0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{32,})(?![0-9a-z])")
+private val EMPTY_WRAP = Regex("\\(\\s*\\)|«\\s*»|'\\s*'|\"\\s*\"")
 
 /**
  * Правило, спрошенное до команды (3.94.1): [check] из общих правил бросает [RuleViolation] - его отказ словами игрока, как

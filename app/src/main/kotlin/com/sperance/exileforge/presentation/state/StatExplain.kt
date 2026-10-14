@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.display.multiplierText
 import com.sperance.exileforge.core.display.nodeTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.shareNumber
+import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.statFlag
 import com.sperance.exileforge.core.display.statNumber
@@ -21,6 +22,8 @@ import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.StatSpread
+import com.sperance.exileforge.rules.content.WorldKind
+import com.sperance.exileforge.rules.content.WorldPart
 import com.sperance.exileforge.rules.sheet.Grant
 import com.sperance.exileforge.rules.sheet.Share
 import com.sperance.exileforge.rules.sheet.Shift
@@ -35,9 +38,10 @@ import kotlin.math.ln
 /**
  * The cards of a figure's window, in the order they are read; the colour is the UI's, keyed by the kind. 4.6.4: [SKILL] - пассивные
  * умения в бою (входят в итог), [FATE] - строки Предначертания, [RESHAPE] - его преобразования листа, [FIGHT] - что бой читает вместе
- * с цифрой, [LOW_LIFE] - бонусы низкого здоровья (в итог не входят).
+ * с цифрой, [LOW_LIFE] - бонусы низкого здоровья (в итог не входят), [APART] - силы добычи против отдельных врагов и шансы
+ * уникалок, карт и книг (4.12.x, STAT-PW1-13; в итог не входят).
  */
-enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE }
+enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE, APART }
 
 /** One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. */
 data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null)
@@ -68,7 +72,13 @@ class StatExplainer(private val game: GameUi) {
     private val passives = hero?.combat?.passives.orEmpty().associateBy { it.skill }
 
     /** [lowLife] - бонусы низкого здоровья на цифре с тем, что прибавят (4.6.4, [CombatSheet.lowLife]): в итог не входят. */
-    fun explain(breakdown: StatBreakdown, grants: List<Grant>, holders: (String) -> List<StatSource>, lowLife: List<Pair<PassiveSource, Double>> = emptyList()): StatExplanation {
+    fun explain(
+        breakdown: StatBreakdown,
+        grants: List<Grant>,
+        holders: (String) -> List<StatSource>,
+        lowLife: List<Pair<PassiveSource, Double>> = emptyList(),
+        apart: List<Pair<WorldPart, WorldKind>> = emptyList(),
+    ): StatExplanation {
         val stat = breakdown.stat
         val cards = mutableListOf<ShareCard>()
         if (breakdown.base != 0.0) {
@@ -97,6 +107,10 @@ class StatExplainer(private val game: GameUi) {
                 lowLife.map { (passive, gain) -> ShareRow(skillTitle(passive.skill), passive.lines.filter { stat in StatSpread.targets(it.stat, it.op) }.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, lowLifeNote(stat, passive, gain, breakdown)) },
                 "",
             )
+        }
+        // Силы добычи вне цифры (4.12.x, STAT-PW1-13): против кого или к какому шансу - строкой под силой
+        if (apart.isNotEmpty()) {
+            cards += ShareCard(ShareKind.APART, apart.map { (part, kind) -> ShareRow(statTitle(part.stat), signedNumber(part.value) + "%", apartNote(part, kind)) }, "")
         }
         return StatExplanation(
             stat,
@@ -175,6 +189,12 @@ class StatExplainer(private val game: GameUi) {
     private fun rowTitle(source: StatSource?): String = if (source?.kind == SourceKind.FATE) fateTitle(source.ref) else sourceTitle(source)
 
     /** What a low-life bonus adds in a fight; an increase or a «more» over no base says why it adds nothing. */
+    private fun apartNote(part: WorldPart, kind: WorldKind): String = if (kind.stock == null) {
+        ui("stat.apart.kind.${kind.name}")
+    } else {
+        ui("stat.apart.against", part.against.joinToString(", ") { ui("enum.monster_rarity.$it") })
+    }
+
     private fun lowLifeNote(stat: String, passive: PassiveSource, gain: Double, b: StatBreakdown): String {
         val idle = abs(gain) < 0.05 && b.flatSum == 0.0 && passive.lines.any { it.op == Op.INCREASED || it.op == Op.MORE }
         return "${ui("stat.passive.low_life")} · ${ui(if (idle) "stat.passive.idle" else "stat.passive.gain", signed(stat, gain, b.percent))}"

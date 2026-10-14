@@ -12,6 +12,7 @@ import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
+import com.sperance.exileforge.rules.content.WorldPart
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.Grant
 import com.sperance.exileforge.rules.sheet.HeroBody
@@ -198,6 +199,15 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         index.powers.worldParts(stats, kind).filter { it.on(null) }.map { Shift(StatSource(SourceKind.POWER, it.stat), it.value) }
     }
 
+    /**
+     * Силы добычи у строки сводки [stat], что в её цифру не входят (4.12.x, STAT-PW1-13): против отдельных редкостей монстров - у своей
+     * характеристики, шансы уникальных предметов - у редкости, карт и книг - у количества. Сервер катит их все; сводка называет их
+     * отдельно, как бонусы низкого здоровья.
+     */
+    fun lootApart(stat: String): List<Pair<WorldPart, WorldKind>> = WorldKind.entries.filter { kind -> (kind.stock ?: APART[kind])?.code == stat }.flatMap { kind ->
+        index.powers.worldParts(stats, kind).filter { kind.stock == null || !it.on(null) }.map { it to kind }
+    }
+
     /** Прямые цели строк пассивных умений и всё, что от них сдвинулось. */
     private val skilled: Set<String> by lazy {
         val direct = steady.flatMap { it.lines }.flatMap { StatSpread.targets(it.stat, it.op) }
@@ -270,6 +280,9 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
         /** Виды небоевых сил с характеристикой листа: их прибавка к добыче в сводке - вместе с силами. */
         private val LOOT = WorldKind.entries.filter { it.stock != null }
+
+        /** Строка сводки, у которой названы силы вида без своей характеристики ([lootApart]). */
+        private val APART = mapOf(WorldKind.UNIQUE to CoreStat.RARITY, WorldKind.MAP to CoreStat.QUANTITY, WorldKind.BOOK to CoreStat.QUANTITY)
 
         private fun moved(before: Map<String, Double>, after: Map<String, Double>): Map<String, Double> = (before.keys + after.keys)
             .associateWith { (after[it] ?: 0.0) - (before[it] ?: 0.0) }.filterValues { abs(it) >= MOVED }

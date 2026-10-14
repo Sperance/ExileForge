@@ -23,6 +23,7 @@ jobs:
       pull-requests: read
     outputs:
       core: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.core == 'true' }}
+      app: ${{ steps.filter.outputs.app == 'true' }}
       release: ${{ steps.release.outputs.pending }}
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +31,11 @@ jobs:
         id: filter
         if: ${{ github.event_name != 'workflow_dispatch' }}
         with:
-          # core и закреплённый сервер: от них зависят тесты core и клиент-серверный контракт
+          # core и закреплённый сервер: от них зависят тесты core и клиент-серверный контракт; app (TEST-01) - тесты core:
+          # UiStringsTest читает ключи `ui("…")` из исходников app
           filters: |
+            app:
+              - 'app/**'
             core:
               - 'core/**'
               - 'backend'
@@ -53,7 +57,8 @@ jobs:
 
   core:
     needs: changes
-    if: ${{ needs.changes.outputs.core == 'true' }}
+    # Перед релизом - всегда (TEST-01): релиз не выходит без словарей и тестов core
+    if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.app == 'true' || needs.changes.outputs.release == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     concurrency:

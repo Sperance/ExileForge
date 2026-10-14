@@ -30,7 +30,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
-import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
@@ -38,6 +37,7 @@ import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
@@ -45,6 +45,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.rules.text.ModifierText
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
@@ -128,12 +129,13 @@ import kotlin.math.sin
 
 /**
  * «+4% Количество предметов на картах», one per stat of a node's line; a count — chests, fountains, Vaal
- * modifiers — carries no percent. A line whose modifier the content does not hold reads as its sentence.
+ * modifiers, nodes, a merchant's goods — and a flag carry no percent. A line whose modifier the content does not hold reads as its sentence.
  */
 internal fun effectLines(index: ContentIndex, line: Line): List<String> {
     val def = index.modifier(line.code) ?: return listOf(lineText(index, line))
     return def.bind(line.values).map { (effect, value) ->
-        val unit = if (effect.stat in AtlasEffects.flat) "" else "%"
+        // Единица - из текста строки на сервере (4.12.x, STAT-MAP-09): «%» лишь у строки, что говорит процентами; счёт и флаг - без
+        val unit = if (locOr(ModifierText.templateKey(effect, negative = false), "").contains("{v}%")) "%" else ""
         // The dictionary's «Атлас: …» prefix is the screen's own title here (2.73.0).
         "${signedNumber(value)}$unit ${statTitle(effect.stat).substringAfter(": ")}"
     }

@@ -78,8 +78,10 @@ import kotlinx.serialization.json.JsonElement
  *      бане и удалении; `US_021`, `AUTH_007`; `BRY_002` - 409; маршруты манифеста - по сессии.
  * 82 - формы карт по биому (`expedition.shapes`), босс кольца - за воротами арены после доли зачищенных стай, Атлас - только в
  *      заходе по карте-предмету (4.12.8).
+ * 83 - тексты из контента: числа сил и пороги правил в шаблонах - плейсхолдеры `{p:…}`/`{r:…}`, их подставляет `ModifierText`
+ *      (`TextNumbers`); флаги фляги - единица `FLAG`, тексты отказов без id (0.13.0).
  */
-const val API_REVISION = 82
+const val API_REVISION = 83
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

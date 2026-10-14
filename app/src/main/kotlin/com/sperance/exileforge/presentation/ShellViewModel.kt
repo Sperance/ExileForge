@@ -2,7 +2,6 @@ package com.sperance.exileforge.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
@@ -35,6 +34,7 @@ import com.sperance.exileforge.presentation.state.Building
 import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.TAB_REDEMPTION
 import com.sperance.exileforge.presentation.state.TAB_TREE
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -122,14 +122,16 @@ class ShellViewModel(
     /** Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого. */
     fun tab(tab: Int) {
         if (!adminTools() && tab in ADMIN_TABS) return
+        // Промокоды (ADMIN-UI) заводит только администратор: модератору их экран не открывается
+        if (tab == TAB_REDEMPTION && !sessions.state.value.isAdmin) return
         commands.dismissMessage()
         val again = navigator.current.value.tab == tab
         navigator.tab(Route.ofTab(tab))
         if (again) reselects.tryEmit(tab)
     }
 
-    /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */
-    private fun adminTools(): Boolean = BuildConfig.DEBUG && sessions.state.value.isAdmin && modes.mode.value == AppMode.ADMIN
+    /** Инструменты администратора (4.12.x, ADMIN-UI): роль модерации аккаунта и режим вместе. */
+    private fun adminTools(): Boolean = sessions.state.value.isModerator && modes.mode.value == AppMode.ADMIN
 
     /** Здание Города (3.22.0) или площадь для null. */
     fun building(building: Building?) {

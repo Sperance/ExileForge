@@ -16,8 +16,8 @@ android {
         applicationId = "com.sperance.exileforge"
         minSdk = 26
         targetSdk = 37
-        versionCode = 362
-        versionName = "4.12.9"
+        versionCode = 363
+        versionName = "0.13.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         // Updates from GitHub Releases (3.72.0) close the game until checked: only the published build does that.
         buildConfigField("boolean", "UPDATES", "false")
@@ -75,15 +75,11 @@ android {
     testBuildType = "minifiedTest"
 }
 
-// The shrunk build ships release code: it takes release's player-only screens (admin, redemption) through the variant API,
-// the source set DSL does not reach the built-in Kotlin compilation.
+// Экраны администратора и промокодов (4.12.x, ADMIN-UI) - в основной сборке, их открывает роль аккаунта, а не вариант.
 androidComponents {
     // Debug не собирается нигде (4.12.x): вариант выключен - его задач нет ни локально, ни в CI. Ключ debug остаётся лишь ключом
     // подписи minifiedTest.
     beforeVariants(selector().withBuildType("debug")) { it.enable = false }
-    onVariants(selector().withBuildType("minifiedTest")) { variant ->
-        variant.sources.kotlin?.addStaticSourceDirectory("src/release/kotlin")
-    }
 }
 
 dependencies {

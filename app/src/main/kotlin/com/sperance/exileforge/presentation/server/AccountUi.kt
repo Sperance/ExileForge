@@ -1,6 +1,5 @@
 package com.sperance.exileforge.presentation.server
 
-import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.admin.Admin
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.Lang
@@ -38,8 +37,8 @@ data class AccountUi(
     /** Модерация и отчёты (3.88.5): модератор и администратор. */
     val isModerator: Boolean get() = session.isModerator
 
-    /** Администратор в инструментах: отладочная сборка, роль и режим вместе. */
-    val adminTools: Boolean get() = BuildConfig.DEBUG && isAdmin && mode == AppMode.ADMIN
+    /** Инструменты администратора (4.12.x, ADMIN-UI): роль модерации аккаунта и режим вместе; права проверяет сервер. */
+    val adminTools: Boolean get() = isModerator && mode == AppMode.ADMIN
     val index: ContentIndex? get() = world.content
     val heroId: String get() = hero.heroId
 

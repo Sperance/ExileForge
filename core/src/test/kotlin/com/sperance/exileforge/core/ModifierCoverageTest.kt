@@ -5,14 +5,13 @@ import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Effect
 import com.sperance.exileforge.rules.content.MapStat
-import com.sperance.exileforge.rules.text.ModifierText
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Every line a modifier or a unique can roll (3.81.0) is both told and counted: its stat is registered, has a template
- * for its operation in every server dictionary, and is one the engine reads — by name in the registries, as a power, or as one
- * of the families the fight builds its codes for at run time.
+ * Every line a modifier or a unique can roll (3.81.0) is counted: its stat is registered and is one the engine reads — by name
+ * in the registries, as a power, or as one of the families the fight builds its codes for at run time. Текст строки на каждом
+ * языке проверяет один тест - `LocalizationTest` сервера (4.12.x, TEST-05).
  */
 class ModifierCoverageTest {
     private val index = TestContent.index
@@ -42,16 +41,6 @@ class ModifierCoverageTest {
     fun everyRolledStatIsRegistered() {
         val missing = effects.map { it.stat }.distinct().filter { it !in index.stats }
         assertTrue(missing.isEmpty(), "not in stats.json: $missing")
-    }
-
-    @Test
-    fun everyRolledLineHasTextInEveryLanguage() {
-        TestContent.serverLocales().forEach { (lang, strings) ->
-            val missing = index.families.values.filter { family -> strings["modifier.${family.code}.name"] == null }
-                .flatMap { family -> family.effects.filter { strings[ModifierText.templateKey(it, false)] == null && strings["enum.EnumStatStock.${it.stat}"] == null } }
-                .map { "${it.stat}.${it.op}" }.distinct()
-            assertTrue(missing.isEmpty(), "$lang: no text for $missing")
-        }
     }
 
     @Test

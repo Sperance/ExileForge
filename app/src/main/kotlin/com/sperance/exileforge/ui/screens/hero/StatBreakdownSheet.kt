@@ -54,6 +54,7 @@ internal fun ShareKind.color(): Color = when (this) {
     ShareKind.AFTER -> Handcrafted
     ShareKind.FIGHT -> ShieldCyan
     ShareKind.LOW_LIFE -> Muted
+    ShareKind.APART -> Muted
 }
 
 /**
@@ -74,7 +75,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
     var trail by remember(stat) { mutableStateOf(listOf(stat)) }
     val current = trail.last()
     val view = remember(current, combat, shifts, game.lang) {
-        StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, combat.lowLife(current))
+        StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, combat.lowLife(current), combat.lootApart(current))
     }
     // Ключи карточек (4.9.0): по виду и заголовку - переход по цифрам не перекомпонует совпавшие карточки
     val cardKeys = remember(view) { contentKeys(view.cards) { "${it.kind}|${it.title}" } }

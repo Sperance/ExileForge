@@ -46,8 +46,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.vector
 import com.sperance.exileforge.ui.theme.*
-import java.text.DateFormat
-import java.util.Date
+import kotlinx.coroutines.delay
 import kotlin.math.PI
 import kotlin.math.cos
 
@@ -72,28 +71,61 @@ import kotlin.math.cos
     }
 }
 
-/** Шапка древа: «свободно / всего» крупно, уровень гильдии, сброс у главы и подсказка с числами правил. */
+/**
+ * Шапка древа: «свободно / всего» крупно, уровень гильдии и подсказка с числами правил. Сброс (0.14.0, ASANA-N03) - у главы
+ * удержанием; срок «раз в N дней» и живой таймер до следующего сброса видят все участники (первый сброс гильдии - сразу).
+ */
 @Composable private fun TreePoints(game: GameUi, vm: GuildViewModel, guild: GuildView, rule: GuildTreeRule, leader: Boolean) {
+    val now by produceState(System.currentTimeMillis(), guild.respecAt) {
+        while (guild.respecAt > value) {
+            delay(RESET_TICK_MS)
+            value = System.currentTimeMillis()
+        }
+    }
+    val ready = now >= guild.respecAt
     ForgePanel {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(guild.treePoints.toString(), color = Caution, style = relicName(22))
-                    MutedText(ui("guild.tree_total", rule.points(guild.level)), style = MaterialTheme.typography.labelMedium)
-                }
-                MutedText(ui("guild.tree_free_level", guild.level), style = MaterialTheme.typography.labelSmall)
+        Column(Modifier.fillMaxWidth()) {
+            Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(guild.treePoints.toString(), color = Caution, style = relicName(22))
+                MutedText(ui("guild.tree_total", rule.points(guild.level)), style = MaterialTheme.typography.labelMedium)
             }
-            if (leader) {
-                val free = System.currentTimeMillis() >= guild.respecAt
-                ForgeOutlinedButton(enabled = !game.busy && free && guild.tree.isNotEmpty(), onClick = vm::resetTree) { Text(ui("guild.tree_reset")) }
-            }
+            MutedText(ui("guild.tree_free_level", guild.level), style = MaterialTheme.typography.labelSmall)
         }
-        if (leader && System.currentTimeMillis() < guild.respecAt) {
-            MutedText(ui("guild.tree_reset_at", DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT).format(Date(guild.respecAt))), style = MaterialTheme.typography.labelSmall)
+        Spacer(Modifier.height(6.dp))
+        Text(
+            ui("guild.tree_reset_rule", rule.respecDays) + " · " + if (ready) ui("guild.tree_reset_ready") else ui("guild.tree_reset_in", resetLeft(guild.respecAt - now)),
+            color = if (ready) Vital else Caution,
+            style = MaterialTheme.typography.labelMedium,
+        )
+        if (leader) {
+            Spacer(Modifier.height(6.dp))
+            HoldButton(
+                label = ui("guild.tree_reset_hold"),
+                accent = LifeRed,
+                enabled = !game.busy && ready && guild.tree.isNotEmpty(),
+                rearm = true,
+                millis = RESET_HOLD_MS,
+                onHeld = vm::resetTree,
+            )
         }
-        MutedText(if (leader) ui("guild.tree_hint_leader", rule.rowGate, rule.respecDays) else ui("guild.tree_hint"), style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(6.dp))
+        MutedText(if (leader) ui("guild.tree_hint_leader", rule.rowGate) else ui("guild.tree_hint"), style = MaterialTheme.typography.bodySmall)
     }
 }
+
+/** Сколько ждать сброса: «6 д 23 ч 59 мин», меньше суток - без дней. */
+private fun resetLeft(millis: Long): String {
+    val minutes = (millis / 60_000).coerceAtLeast(0)
+    val days = minutes / (24 * 60)
+    val time = ui("merchant.time", minutes / 60 % 24, minutes % 60)
+    return if (days > 0) ui("guild.tree_reset_days", days, time) else time
+}
+
+/** Удержание сброса древа - дольше обычного подтверждения: сброс снимает все узлы гильдии. */
+private const val RESET_HOLD_MS = 1_200
+
+/** Шаг живого таймера до сброса. */
+private const val RESET_TICK_MS = 1_000L
 
 /**
  * «Созвездие»: подписи ветвей с очками в них, затем ряды древа; ряд выше первого - под «воротами» с [GuildTreeRule.rowGate].

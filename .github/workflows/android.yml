@@ -1,6 +1,8 @@
 name: Android checks
 on:
   push:
+    # Ветки-черновики wip не собираются и не публикуются (CLAUDE.md)
+    branches-ignore: [ 'wip', 'wip-*' ]
     # Правки только документации не собираются; RELEASE_NOTES.md нужен релизу - его правка запускает прогон
     paths:
       - '**'

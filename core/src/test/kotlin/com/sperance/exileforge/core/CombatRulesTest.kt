@@ -1,6 +1,8 @@
 package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.campaign.Loadout
+import com.sperance.exileforge.core.campaign.NoteKind
+import com.sperance.exileforge.core.campaign.NoteTrace
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.ActiveAilment
 import com.sperance.exileforge.core.campaign.combat.Ailment
@@ -19,6 +21,7 @@ import com.sperance.exileforge.core.campaign.combat.provokedSkills
 import com.sperance.exileforge.core.campaign.combat.provokedTaken
 import com.sperance.exileforge.core.campaign.combat.strike
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.sheet.CastTime
@@ -55,7 +58,7 @@ class CombatRulesTest {
     /** CAST-02: холод и замедление аур - один множитель замаха и перезарядки умений. */
     @Test
     fun chill_and_slow_stretch_skill_cooldowns() {
-        val skill = index.skills.monsterSkills.first { it.hit != null }.copy(mana = 0.0)
+        val skill = index.skills.monsterSkills.first { it.hit != null }
         val b = battle(body(), Foe(body(mapOf("AURA_SLOW" to 50.0), life = 1e9), skills = listOf(skill)))
         val foe = b.foe(0)
         b.place(foe, ActiveAilment(Ailment.CHILLED, 1e9, 30.0, 1e9, Side.HERO), false)
@@ -70,7 +73,10 @@ class CombatRulesTest {
         assertEquals(skill.cooldown / foe.body.recovery * 1.3, foe.readyAt.getValue(skill.code) - b.time, 1e-9)
     }
 
-    /** SKILL-01: оглушение прерывает применение - умение не срабатывает, маны не тратит, перезарядка не начинается. */
+    /**
+     * SKILL-01: оглушение прерывает применение - умение не срабатывает, маны не тратит, перезарядка не начинается; заново - не раньше
+     * паузы правил (0.14.0, ASANA-N01), прерывание в журнале.
+     */
     @Test
     fun a_stun_breaks_a_cast() {
         val skill = index.skills.monsterSkills.first { it.hit != null }
@@ -84,7 +90,32 @@ class CombatRulesTest {
         b.castTick(foe)
         assertNull(foe.casting)
         assertEquals(mana, foe.mana, 1e-9)
-        assertEquals(0.0, foe.readyAt.getValue(skill.code), 1e-9)
+        assertEquals(b.time + rules.cast.interruptPause, foe.readyAt.getValue(skill.code), 1e-9)
+        assertTrue(b.events.any { (it.trace as? NoteTrace)?.kind == NoteKind.CAST_BROKEN }, "the break is not in the log")
+    }
+
+    /**
+     * ASANA-N01: умения монстров маны не тратят - босс без маны с «Ударом по земле» и «Ослаблением» за 30 с бьёт «Ударом» не раз и не
+     * немеет; держит его только перезарядка.
+     */
+    @Test
+    fun a_boss_casts_without_mana() {
+        val skills = listOf("MOB_SLAM", "MOB_ENFEEBLE").map { index.skills.monsterByCode.getValue(it) }
+        val b = battle(body(life = 1e9), Foe(body(mapOf(CoreStat.MANA.code to 0.0), life = 1e9), MonsterRarity.UNIQUE, skills = skills))
+        repeat(300) { b.advance(0.1) }
+        val slams = b.events.count { it.actor == Side.MONSTER && it.skill == "MOB_SLAM" && it.trace !is NoteTrace }
+        assertTrue(slams >= 3, "the boss slammed $slams times in 30 s")
+    }
+
+    /** STAT-ATK-02 (0.14.0): возврат здоровья работает и у монстра - урон по нему возвращается за срок правила. */
+    @Test
+    fun a_monster_recoups_too() {
+        fun life(recoup: Double): Double {
+            val b = battle(body(), Foe(body(mapOf(CoreStat.LIFE_RECOUP.code to recoup), life = 1e6)))
+            repeat(60) { b.advance(0.1) }
+            return b.foe(0).life
+        }
+        assertTrue(life(50.0) > life(0.0), "a monster's recoup gave nothing back")
     }
 
     /** COMBAT-02: пустой удар по цели без брони - ноль, не NaN; оба живы. */

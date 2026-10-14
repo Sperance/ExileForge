@@ -67,6 +67,8 @@ internal fun Battle.step(dt: Double) {
         castTick(foe)
         // Спровоцированный (4.12.x, STAT-DEF-05) умений не применяет, босс - с медленной перезарядкой
         val silenced = provokedSkills(foe, dt)
+        // Выжигание маны (0.14.0, ASANA-N01) - медленная перезарядка
+        burnedSkills(foe, dt)
         if (!foe.held && !silenced) monsterCast(foe)
     }
     if (finished()) return
@@ -123,6 +125,8 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
     // Регенерация не переливается (4.6.3, Переполнение): перелив копит только избыток восстановления
     if (!manaless(me)) manaBack(me, RecoveryShare.manaRegen(me.body, rules.mana, manaCurb) * dt, spill = false)
+    // Возврат здоровья монстра (0.14.0, STAT-ATK-02): своей полки журнала у него нет
+    me.recouping.forEach { recoup -> lifeBack(me, recoup.life * min(dt, recoup.until - (time - dt)).coerceAtLeast(0.0)) }
     if (me === heroFighter) {
         recoveries.forEach { draught ->
             val slice = min(dt, draught.until - (time - dt)).coerceAtLeast(0.0)
@@ -166,6 +170,7 @@ private fun Battle.expire() {
     everyone.forEach { fighter ->
         if (fighter.barrier > 0 && fighter.barrierUntil <= time) fighter.barrier = 0.0
         if (fighter.effects.removeAll { it.until <= time }) remake(fighter)
+        fighter.recouping.removeAll { it.until <= time }
     }
     recoveries.removeAll { recovery -> (recovery.until <= time).also { if (it) logRecovery(recovery) } }
     if (heroCharges.expire(time)) remake(heroFighter)

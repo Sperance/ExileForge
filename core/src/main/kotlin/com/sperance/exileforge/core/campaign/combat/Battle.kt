@@ -161,6 +161,13 @@ class Battle(
         /** Рывок силы (4.12.x, STAT-PW1-01) в этом замахе: следующий удар - сразу, а не через интервал. */
         internal var rushed = false
 
+        /** Выжигание маны на монстре (0.14.0, ASANA-N01): до [burnUntil] его перезарядки идут в [burnFactor] раз медленнее. */
+        internal var burnUntil = -1.0
+        internal var burnFactor = 1.0
+
+        /** Возврат здоровья бойца-монстра (0.14.0, STAT-ATK-02): у героя - общий [recoveries] с журналом. */
+        internal val recouping = mutableListOf<Recovery>()
+
         /**
          * Провокация героя на этом враге (4.12.x, STAT-DEF-05): до [provokedUntil] спровоцирован силой [provoke], повторно - не
          * раньше [provokeFree].

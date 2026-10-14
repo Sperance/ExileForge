@@ -91,7 +91,6 @@ import com.sperance.exileforge.ui.theme.*
         hit?.raw?.forEach { (type, amount) -> add(ui("lore.damage_of", ui("skill.element.${type.name}")) to number(amount)) }
         hit?.taken?.let { add(ui("lore.damage_taken") to number(it)) }
         add(ui("lore.cooldown") to ui("lore.seconds", fineNumber(skill.cooldown)))
-        add(ui("lore.mana") to number(skill.mana))
     }
     LoreSheet(
         SkillText.title(code),

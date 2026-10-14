@@ -150,7 +150,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
                 FactorTrace(
                     FactorKey.CRIT,
                     multiplier,
-                    listOf(if (blow.spell) CoreStat.SPELL_CRITICAL_MULTIPLIER.code else CoreStat.CRITICAL_MULTIPLIER.code, CoreStat.CRITICAL_DAMAGE.code),
+                    listOf(if (blow.spell) CoreStat.SPELL_CRITICAL_MULTIPLIER.code else CoreStat.CRITICAL_MULTIPLIER.code),
                     listOf(CoreStat.CRITICAL_TAKEN.code),
                 ),
             )

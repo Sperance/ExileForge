@@ -31,7 +31,8 @@ internal fun Battle.beginCast(me: Fighter, key: String, code: String, seconds: D
 
 /**
  * Ход применения бойца [me]: оглушение и заморозка прерывают его - умение не срабатывает, маны не тратит, перезарядка не
- * начинается, замах идёт дальше; применённое срабатывает.
+ * начинается, замах идёт дальше; заново его не начать раньше паузы `combat.cast.interruptPause` (0.14.0, ASANA-N01: без вечного
+ * круга «начал - прерван»), журнал пишет прерывание с паузой. Применённое срабатывает.
  */
 internal fun Battle.castTick(me: Fighter) {
     val cast = me.casting ?: return
@@ -42,10 +43,29 @@ internal fun Battle.castTick(me: Fighter) {
     if (me.held) {
         me.casting = null
         me.nextAttack -= (cast.until - time).coerceAtLeast(0.0)
-        note(me, NoteKind.CAST_BROKEN, cast.code)
+        val pause = rules.cast.interruptPause
+        me.readyAt[cast.key] = max(me.readyAt[cast.key] ?: 0.0, time + pause)
+        note(me, NoteKind.CAST_BROKEN, cast.code, pause)
         return
     }
     if (time + 1e-9 < cast.until) return
     me.casting = null
     cast.finish()
+}
+
+/**
+ * Выжигание маны по монстру (0.14.0, ASANA-N01): маны у умений монстров нет - удар с выжиганием [burn] процентов замедляет перезарядку
+ * умений цели (`combat.cast`: сильнейшее замедление, срок - от последнего удара).
+ */
+internal fun Battle.burnSkills(target: Fighter, burn: Double) {
+    val rule = rules.cast
+    target.burnFactor = max(if (target.burnUntil > time) target.burnFactor else 1.0, rule.burnFactor(burn))
+    target.burnUntil = time + rule.burnSeconds
+}
+
+/** Перезарядки монстра [foe] под выжиганием за шаг [dt]: идут медленнее во столько раз, сколько велит выжигание. */
+internal fun Battle.burnedSkills(foe: Fighter, dt: Double) {
+    if (foe.burnUntil <= time || foe.burnFactor <= 1.0) return
+    val held = dt * (1 - 1 / foe.burnFactor)
+    foe.readyAt.replaceAll { _, at -> at + held }
 }

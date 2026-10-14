@@ -50,9 +50,9 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         target.shatter = false
         target.ailments.removeAll { it.ailment == Ailment.FROZEN }
     }
-    // 3.35.0: the hero's recoup gives a share of the hit back over the rule's seconds; a culling blow finishes a foe left low.
-    val recouped = if (target === heroFighter && target.alive && target.body.recoup > 0 && dealt > 0) dealt * target.body.recoup else 0.0
-    if (recouped > 0) recoveries += Recovery(recouped / rules.defence.recoup, 0.0, time + rules.defence.recoup, -1)
+    // 3.35.0: recoup gives a share of the hit back over the rule's seconds - любому бойцу (0.14.0, STAT-ATK-02); a culling blow finishes a foe left low.
+    val recouped = if (target.alive && target.body.recoup > 0 && dealt > 0) dealt * target.body.recoup else 0.0
+    if (recouped > 0) Recovery(recouped / rules.defence.recoup, 0.0, time + rules.defence.recoup, -1).let { if (target === heroFighter) recoveries += it else target.recouping += it }
     val culled = target.alive && !target.invulnerable && body.culling > 0 && target.life < target.body.maxLife * body.culling
     if (culled) target.life = 0.0
     val physical = taken[DamageType.PHYSICAL] ?: 0.0
@@ -70,7 +70,8 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     bloodPrice(me)
     // Mana (server 0.69.0): leeched and gained on hit; a burning blow takes the struck one's. Доля восстановления маны (4.11.0) режет оба.
     if (me.body.maxMana > 0) manaBack(me, (dealt * body.leechMana + if (blow.weapon) body.manaOnHit else 0.0) * me.share(RecoveryPool.MANA))
-    if (body.manaBurn > 0) target.mana = max(0.0, target.mana - target.body.maxMana * body.manaBurn)
+    // Выжигание маны (0.14.0, ASANA-N01): герою - его мана, монстру (умения без маны) - медленная перезарядка умений
+    if (body.manaBurn > 0) if (target === heroFighter) target.mana = max(0.0, target.mana - target.body.maxMana * body.manaBurn) else burnSkills(target, body.manaBurn * 100)
 
     var stunned = false
     val bars = rules.buildup

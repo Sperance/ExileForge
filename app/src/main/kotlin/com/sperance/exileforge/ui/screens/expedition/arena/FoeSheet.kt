@@ -172,7 +172,6 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
             val facts = listOfNotNull(
                 hit?.taken?.let { ui("fight.skill_hits_you", number(it)) },
                 skill?.let { ui("lore.cooldown") + " " + ui("lore.seconds", fineNumber(it.cooldown)) },
-                skill?.takeIf { it.mana > 0 }?.let { ui("lore.mana") + " " + number(it.mana) },
             )
             if (facts.isNotEmpty()) MutedText(facts.joinToString(" · "), style = MaterialTheme.typography.labelSmall)
             HorizontalDivider(color = Bronze.copy(alpha = .4f), modifier = Modifier.padding(top = 4.dp))

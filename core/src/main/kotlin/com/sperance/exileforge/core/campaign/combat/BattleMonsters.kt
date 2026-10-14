@@ -48,8 +48,9 @@ internal fun Battle.calm() {
 private const val RAGE = "GUARDIAN_RAGE"
 
 /**
- * A monster's skills, the first ready one it has the mana for and a reason to use: a heal when hurt, a buff or a curse not already on.
- * С 4.12.x (SKILL-01) умение применяется своё время ([CastTime]): удар ждёт, оглушение и заморозка прерывают; мана и перезарядка - в конце.
+ * A monster's skills, the first ready one it has a reason to use: a heal when hurt, a buff or a curse not already on.
+ * С 4.12.x (SKILL-01) умение применяется своё время ([CastTime]): удар ждёт, оглушение и заморозка прерывают; перезарядка - в конце.
+ * Маны умения монстров не тратят (0.14.0, ASANA-N01): их держит только перезарядка.
  */
 internal fun Battle.monsterCast(me: Fighter) {
     if (me.casting != null) return
@@ -57,16 +58,15 @@ internal fun Battle.monsterCast(me: Fighter) {
     if (skills.isEmpty() || !heroFighter.alive) return
     for (skill in skills) {
         val ready = me.readyAt.getOrPut(skill.code) { time + skill.cooldown / 2 * me.slow() }
-        if (time < ready || me.mana + 1e-9 < skill.mana || !wanted(me, skill)) continue
+        if (time < ready || !wanted(me, skill)) continue
         beginCast(me, skill.code, skill.code, CastTime.of(skill, me.body, rules) * me.slow()) { monsterApplied(me, skill) }
         return
     }
 }
 
-/** Применение монстра [me] закончено: мана, перезарядка (холод и замедление её растягивают, CAST-02) и действие. */
+/** Применение монстра [me] закончено: перезарядка (холод и замедление её растягивают, CAST-02) и действие. */
 private fun Battle.monsterApplied(me: Fighter, skill: MonsterSkill) {
-    if (!heroFighter.alive || me.mana + 1e-9 < skill.mana) return
-    me.mana -= skill.mana
+    if (!heroFighter.alive) return
     me.readyAt[skill.code] = time + skill.cooldown / me.body.recovery * me.slow()
     monsterSkill(me, skill)
 }
@@ -111,7 +111,9 @@ private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
         )
     }
     skill.buff?.let { buff ->
-        buff(me, skill.code, buff.stats.lines(1, 1 + me.body[CoreStat.WARCRY_EFFECT.code] / 100), buff.duration)
+        // «Эффект кличей» монстра растит только клич (0.14.0, STAT-ATK-11), не всякое благо
+        val effect = if (skill.warcry) 1 + me.body[CoreStat.WARCRY_EFFECT.code] / 100 else 1.0
+        buff(me, skill.code, buff.stats.lines(1, effect), buff.duration)
         record(Side.MONSTER, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, me.index, skill.code, onSelf = true)
     }
     skill.curse?.let { curse ->

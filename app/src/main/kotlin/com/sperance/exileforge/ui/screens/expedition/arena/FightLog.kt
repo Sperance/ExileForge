@@ -304,7 +304,8 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.RECOVER_WASTE -> ui("expedition.log_note_recover_waste", note.value.roundToInt())
         NoteKind.LIFE_FLOW -> note.flow?.let(::lifeFlowLine).orEmpty()
         NoteKind.CAST -> castLine("expedition.log_note_cast", event, monster, SkillText.title(note.ref), fineNumber(note.value))
-        NoteKind.CAST_BROKEN -> castLine("expedition.log_note_cast_broken", event, monster, SkillText.title(note.ref))
+        NoteKind.CAST_BROKEN -> castLine("expedition.log_note_cast_broken", event, monster, SkillText.title(note.ref), fineNumber(note.value))
+        NoteKind.CAST_NO_MANA -> ui("expedition.log_note_cast_no_mana", SkillText.title(note.ref), fineNumber(note.value))
         NoteKind.PROVOKED -> ui("expedition.log_note_provoked", monster, fineNumber(note.value))
     }
 }

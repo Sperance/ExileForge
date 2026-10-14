@@ -112,18 +112,15 @@ data class Combatant(
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
     val critChance = (stats[CRIT_CHANCE] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
 
-    /**
-     * The critical multiplier with the critical strike damage (server 1.57.0): that damage — 100 at base, on the hero's sheet
-     * and on a monster's — grows the crit's bonus over a hit, 150% at 140 striking for 170%; at 0 a crit hits as a hit.
-     */
-    val critMultiplier = rules.critical.effective(stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier, stats[CRIT_DAMAGE]) / 100
+    /** Чем бьёт крит (0.14.0, ASANA-N05): один множитель, без отдельного урона крита, не ниже удара и не выше потолка правил. */
+    val critMultiplier = rules.critical.effective(stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier) / 100
 
     /**
      * A spell's own critical chance and multiplier (server 1.56.0): the attacks' lines do nothing to it. The hero's sheet
      * always holds both from the rule's base; a fighter without them — a monster — casts with its attacks' figures.
      */
     val spellCritChance = stats[SPELL_CRIT_CHANCE]?.let { it.coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100 } ?: critChance
-    val spellCritMultiplier = stats[SPELL_CRIT_MULTIPLIER]?.let { rules.critical.effective(it, stats[CRIT_DAMAGE]) / 100 } ?: critMultiplier
+    val spellCritMultiplier = stats[SPELL_CRIT_MULTIPLIER]?.let { rules.critical.effective(it) / 100 } ?: critMultiplier
     val armour = max(0.0, stat(CoreStat.ARMOR.code))
     val evasion = max(0.0, stat(CoreStat.EVASION.code))
     val block = stat(CoreStat.BLOCK_CHANCE.code).coerceIn(0.0, ceiling(rules.ceilings.block)) / 100
@@ -320,7 +317,6 @@ data class Combatant(
     private companion object {
         val CRIT_CHANCE: String = CoreStat.CRITICAL_CHANCE.code
         val CRIT_MULTIPLIER: String = CoreStat.CRITICAL_MULTIPLIER.code
-        val CRIT_DAMAGE: String = CoreStat.CRITICAL_DAMAGE.code
         val SPELL_CRIT_CHANCE: String = CoreStat.SPELL_CRITICAL_CHANCE.code
         val SPELL_CRIT_MULTIPLIER: String = CoreStat.SPELL_CRITICAL_MULTIPLIER.code
     }

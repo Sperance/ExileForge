@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.campaign.combat
 import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.EffectTrace
 import com.sperance.exileforge.core.campaign.KitSkill
+import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.PowerMoment
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.draught
@@ -91,11 +92,17 @@ private fun Battle.castSeconds(kitSkill: KitSkill): Double {
     return CastTime.of(kitSkill.skill, heroFighter.body, rules) * heroFighter.slow()
 }
 
-/** Применение слота [slot] закончено: умение срабатывает, если на него ещё хватает маны, иначе пропадает без перезарядки. */
+/**
+ * Применение слота [slot] закончено: умение срабатывает, если на него ещё хватает маны, иначе пропадает без перезарядки - со строкой
+ * журнала (0.14.0, ASANA-N01).
+ */
 private fun Battle.applied(slot: Int, kitSkill: KitSkill, level: Int) {
     if (foeFighters.none { it.alive }) return
     val cost = cost(kitSkill, level)
-    if (!skillsFree() && !affords(cost)) return
+    if (!skillsFree() && !affords(cost)) {
+        note(heroFighter, NoteKind.CAST_NO_MANA, kitSkill.skill.code, cost)
+        return
+    }
     castSlot(slot, kitSkill, level, cost)
 }
 

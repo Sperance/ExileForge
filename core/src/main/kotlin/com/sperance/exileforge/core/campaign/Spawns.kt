@@ -71,7 +71,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
 
     /**
      * What a monster casts: a boss its own skills; a monster with mana and none of its own, the casters' spell
-     * of its leading element; one with a mad essence, one more of any monster's, and mana to cast it with.
+     * of its leading element; one with a mad essence, one more of any monster's.
      */
     fun skilled(monster: RolledMonster, dice: Dice): RolledMonster {
         val mana = monster.stats[CoreStat.MANA.code] ?: 0.0
@@ -81,7 +81,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         val borrows = (monster.stats[CoreStat.BORROW_SKILLS.code] ?: 0.0) > 0 && book.monsterSkills.isNotEmpty()
         val skills = (own + if (borrows) listOf(dice.pick(book.monsterSkills).code) else emptyList()).distinct()
         if (skills == monster.skills) return monster
-        val stats = if (borrows && mana <= 0) monster.stats + (CoreStat.MANA.code to campaign.combat.borrowedMana) else monster.stats
-        return monster.copy(skills = skills, stats = stats)
+        // Маны на чужое умение не нужно (0.14.0, ASANA-N01): умения монстров её не тратят
+        return monster.copy(skills = skills)
     }
 }

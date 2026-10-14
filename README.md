@@ -9,7 +9,7 @@ Android-клиент (Kotlin, Jetpack Compose) ARPG в духе Path of Exile д
 Сборка: JDK 17, Android SDK 37. Клонировать с `git clone --recurse-submodules`, затем
 
 ```bash
-./gradlew :core:test :app:assembleDebug
+./gradlew :core:test :app:assembleMinifiedTest
 ```
 
 - `RULES.md` - инварианты игры, архитектура, версии и CI; `CLAUDE.md` - порядок работы.

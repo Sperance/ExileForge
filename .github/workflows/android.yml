@@ -109,21 +109,11 @@ jobs:
         with:
           cache-read-only: false
           cache-cleanup: on-success
-      - run: bash gradlew :app:ktlintCheck :app:lintDebug :app:assembleDebug :app:assembleDebugAndroidTest
-      - uses: actions/upload-artifact@v4
-        with:
-          name: exile-forge-debug
-          path: app/build/outputs/apk/debug/*.apk
-      # Инструментальный APK - только эмулятору перед релизом
-      - if: ${{ needs.changes.outputs.release == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-apks-debug
-          path: app/build/outputs/apk/androidTest/debug/*.apk
-          if-no-files-found: error
-          retention-days: 1
+      # Отладочной сборки нет нигде (4.12.x): lint - по релизному варианту, APK - только R8-сборки ниже
+      - run: bash gradlew :app:ktlintCheck :app:lintRelease
 
-  # Сжатая R8 сборка с инструментальным APK: что R8 унёс лишнего, ловит смоук-тест на эмуляторе (4.3.1: единственная проверка R8).
+  # Сжатые R8 сборки с инструментальным APK (4.12.x - единственные тестовые, отладочной нет): `-PuiTests` - для всех UI-тестов
+  # (код приложения не ужат), без флага - строгий смоук R8 (4.3.1: единственная проверка R8).
   minified:
     needs: changes
     if: ${{ needs.changes.outputs.release == 'true' }}
@@ -151,7 +141,19 @@ jobs:
         with:
           cache-read-only: false
           cache-cleanup: on-success
-      - run: bash gradlew :app:assembleMinifiedTest :app:assembleMinifiedTestAndroidTest -PminifiedTests
+      - name: Build UI test APKs
+        run: |
+          bash gradlew :app:assembleMinifiedTest :app:assembleMinifiedTestAndroidTest -PuiTests
+          mkdir -p ui-apks
+          cp app/build/outputs/apk/minifiedTest/app-minifiedTest.apk ui-apks/app.apk
+          cp app/build/outputs/apk/androidTest/minifiedTest/app-minifiedTest-androidTest.apk ui-apks/app-androidTest.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-apks
+          path: ui-apks/*.apk
+          if-no-files-found: error
+          retention-days: 1
+      - run: bash gradlew :app:assembleMinifiedTest :app:assembleMinifiedTestAndroidTest
       - uses: actions/upload-artifact@v4
         with:
           name: ui-apks-minified
@@ -218,7 +220,7 @@ jobs:
 
   # UI-тесты и смоук R8 - только перед релизом: собранные APK приходят артефактами, Gradle здесь не нужен.
   emulator:
-    needs: [ changes, app, minified ]
+    needs: [ changes, minified ]
     if: ${{ needs.changes.outputs.release == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -232,12 +234,8 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: exile-forge-debug
-          path: app/build/outputs/apk/debug
-      - uses: actions/download-artifact@v4
-        with:
-          name: ui-apks-debug
-          path: app/build/outputs/apk/androidTest/debug
+          name: ui-apks
+          path: ui-apks
       - uses: actions/download-artifact@v4
         with:
           name: ui-apks-minified
@@ -273,12 +271,12 @@ jobs:
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+            adb install -r ui-apks/app.apk
+            adb install -r ui-apks/app-androidTest.apk
             adb shell am instrument -w com.sperance.exileforge.test/androidx.test.runner.AndroidJUnitRunner | tee ui-results.txt
             python3 -c "import pathlib,re; text=pathlib.Path('ui-results.txt').read_text(); assert re.search(r'OK \(\d+ tests?\)', text), text"
             adb pull /sdcard/Android/data/com.sperance.exileforge/files/design design-preview
-            # Debug и minifiedTest собраны на разных раннерах - разные debug-ключи: поверх не встают, ставим начисто
+            # Сборка UI-тестов и строгая R8 - разные APK одного пакета: ставим начисто
             adb uninstall com.sperance.exileforge.test
             adb uninstall com.sperance.exileforge
             adb install -r app/build/outputs/apk/minifiedTest/app-minifiedTest.apk

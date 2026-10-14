@@ -29,7 +29,7 @@ import org.junit.Rule
 import org.junit.Test
 
 /**
- * The app as it ships, run with `-PminifiedTests` against the `minifiedTest` build — the release one, shrunk by R8.
+ * The app as it ships, run against the strict `minifiedTest` build (без `-PuiTests`) — the release one, shrunk by R8.
  * It walks what a class R8 took away breaks first: the activity starting, the content parsed through the rules'
  * serializers, a hero and an item through the wire's, and an item's card and a modifier's line drawn.
  * The card is drawn in an activity of its own (3.66.4): the rule's host activity did not outlive MainActivity's start.

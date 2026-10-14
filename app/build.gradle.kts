@@ -55,8 +55,9 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             buildConfigField("boolean", "UPDATES", "true")
         }
-        // The release build under instrumentation (`-PminifiedTests`): R8 shrinks it as it ships, the smoke test runs over it.
-        // Signed with the debug key so the emulator takes it; the test rules keep only what the test APK calls into.
+        // The release build under instrumentation (4.12.x: единственная тестовая сборка - отладочной нет): R8 shrinks it as it ships.
+        // Signed with the debug key so the emulator takes it; the test rules keep only what the test APK calls into. С `-PuiTests`
+        // код приложения не ужимается (`proguard-ui-rules.pro`) - так на ней идут все UI-тесты; без него - строгий смоук R8.
         create("minifiedTest") {
             initWith(getByName("release"))
             signingConfig = signingConfigs.getByName("debug")
@@ -64,15 +65,22 @@ android {
             matchingFallbacks += listOf("release")
             proguardFile("proguard-test-rules.pro")
             testProguardFiles("proguard-test-rules.pro")
+            if (project.hasProperty("uiTests")) {
+                proguardFile("proguard-ui-rules.pro")
+                testProguardFiles("proguard-ui-rules.pro")
+            }
         }
     }
-    // The debug UI checks stay the default; the shrunk build is tested only when asked for.
-    testBuildType = if (project.hasProperty("minifiedTests")) "minifiedTest" else "debug"
+    // Отладочной сборки нет (4.12.x, решение владельца): инструментальные тесты - только на minifiedTest.
+    testBuildType = "minifiedTest"
 }
 
 // The shrunk build ships release code: it takes release's player-only screens (admin, redemption) through the variant API,
 // the source set DSL does not reach the built-in Kotlin compilation.
 androidComponents {
+    // Debug не собирается нигде (4.12.x): вариант выключен - его задач нет ни локально, ни в CI. Ключ debug остаётся лишь ключом
+    // подписи minifiedTest.
+    beforeVariants(selector().withBuildType("debug")) { it.enable = false }
     onVariants(selector().withBuildType("minifiedTest")) { variant ->
         variant.sources.kotlin?.addStaticSourceDirectory("src/release/kotlin")
     }
@@ -97,6 +105,5 @@ dependencies {
     androidTestImplementation(platform("androidx.compose:compose-bom:2026.09.00"))
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
     "minifiedTestImplementation"("androidx.compose.ui:ui-test-manifest")
 }

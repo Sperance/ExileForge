@@ -1,4 +1,4 @@
-# The minifiedTest build only (-PminifiedTests): the app is shrunk as in release, and these rules keep what the test APK
+# The minifiedTest build (strict, without -PuiTests): the app is shrunk as in release, and these rules keep what the test APK
 # links into by name — the libraries the test runner drives and the few entry points ReleaseSmokeTest calls. Everything
 # under those entry points (the content, the wire models and their serializers, the screens) is shrunk as it ships.
 

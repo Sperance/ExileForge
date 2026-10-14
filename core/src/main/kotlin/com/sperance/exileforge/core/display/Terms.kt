@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 
@@ -39,7 +40,9 @@ enum class Term(vararg val marks: String) {
     ;
 
     val title: String get() = ui("term.$name")
-    val text: String get() = ui("term.$name.text")
+
+    /** Правило термина; пороги, что оно называет (низкое здоровье), - из правил боя [rules], не из словаря. */
+    fun text(rules: CombatRules): String = ui("term.$name.text", number(rules.lowLife * 100), number(rules.passiveLowLife * 100))
 
     companion object {
         /** The terms the stats name, in the order of this list. */

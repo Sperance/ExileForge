@@ -495,9 +495,9 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
             PowerBase.DEALT -> moment.damage
 
-            // The foe of the moment's life — the one struck, or the one that fell — a fifth of it for a boss.
+            // Здоровье врага момента - ударенного или павшего; у босса и уникального - доля `combat.bossTargetLife` (MOB-BAL, В-7: прежняя пятая часть ×0,25)
             PowerBase.TARGET_LIFE -> (moment.target?.takeIf { it.side == Side.MONSTER } ?: foe).let { of ->
-                of.body.maxLife * if (battle.foes[of.index].rarity >= MonsterRarity.UNIQUE) 0.2 else 1.0
+                of.body.maxLife * if (battle.foes[of.index].rarity >= MonsterRarity.UNIQUE) battle.rules.bossTargetLife else 1.0
             }
 
             PowerBase.STRENGTH -> body[CoreStat.STRENGTH.code]

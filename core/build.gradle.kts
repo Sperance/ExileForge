@@ -26,6 +26,11 @@ val sim: SourceSet by sourceSets.creating {
     runtimeClasspath += output + compileClasspath + sourceSets.main.get().runtimeClasspath
 }
 kotlin.target.compilations.getByName("sim").associateWith(kotlin.target.compilations.getByName("main"))
+// Сторож темпа MOB-BAL (`MobBalGuardTest`) зовёт эталонных героев сима: тестам виден набор sim
+sourceSets.test {
+    compileClasspath += sim.output
+    runtimeClasspath += sim.output
+}
 
 tasks.register<JavaExec>("simulateBosses") {
     group = "reporting"
@@ -38,6 +43,22 @@ tasks.register<JavaExec>("simulateBosses") {
     providers.gradleProperty("rolls").orNull?.let { systemProperty("rolls", it) }
     providers.gradleProperty("zones").orNull?.let { systemProperty("zones", it) }
     args(layout.buildDirectory.file("reports/boss-sim.md").get().asFile.path)
+    outputs.upToDateWhen { false }
+}
+
+// Баланс монстров MOB-BAL (отчёт, не тест): эталонные герои против монстров и боссов кампании и карт настоящим боем клиента.
+// ./gradlew :core:mobBal [-Pcontent=<папка>] -Pmode=<campaign|probe|maps|sweep|runtime|bossmight|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]
+tasks.register<JavaExec>("mobBal") {
+    group = "reporting"
+    description = "Monster and boss balance against reference heroes: build/reports/mobbal.tsv"
+    classpath = sim.runtimeClasspath
+    mainClass.set("com.sperance.exileforge.core.sim.MobBalKt")
+    maxHeapSize = "6g"
+    val content = providers.gradleProperty("content").orElse(rootProject.layout.projectDirectory.dir("backend/src/main/resources/content").asFile.path)
+    systemProperty("content", content.get())
+    systemProperty("heroCache", providers.gradleProperty("heroCache").getOrElse(layout.buildDirectory.dir("mobbal-heroes").get().asFile.path))
+    listOf("mode", "fights", "rolls", "samples", "cap", "classes", "zones", "tiers", "mapRarities", "crossed", "mobs", "level", "band", "dummy", "levels", "variants", "force", "ladder", "countScales").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
+    args(providers.gradleProperty("out").getOrElse(layout.buildDirectory.file("reports/mobbal.tsv").get().asFile.path))
     outputs.upToDateWhen { false }
 }
 

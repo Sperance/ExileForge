@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.pools
 import com.sperance.exileforge.core.campaign.combat.traitsIn
+import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -113,19 +114,33 @@ internal fun ExpeditionRun.exit() {
 
 /**
  * Шаг автопрохода (3.2.0): мана и флаконы идут как в пути, и после короткой паузы берётся следующий шаг - бой начинается сразу,
- * сундук открывается, выход заканчивает заход.
+ * сундук открывается, выход заканчивает заход. Перед волной и стражем - отдых (MOB-BAL, В-15): на скорости автопрохода, пока
+ * здоровья меньше `autoRest.life`% и не дольше `autoRest.seconds`.
  */
 internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
     // Нет связи (4.0.0): шаг не берётся, пока сервер не ответит - события не копятся без подтверждения
     if (waitingLink) return
-    recover(dt)
+    val clock = if (pilot.resting != null) dt * speed else dt
+    recover(clock)
     // Недуги тикают и в автопробеге: тот же путь, что вручную
-    ailing(dt)
+    ailing(clock)
     if (phase != RunPhase.MAP) return
+    pilot.resting?.let { rested ->
+        val rule = pace.autoRest
+        if (rested + clock < rule.seconds && life < hero.maxLife * rule.life / 100) {
+            pilot.resting = rested + clock
+            return
+        }
+        pilot.resting = null
+    }
     pilot.rest -= dt * speed
     if (pilot.rest > 0) return
     pilot.rest = pace.autoBeat
     while (phase == RunPhase.MAP) {
+        if (pilot.restBefore(guarded = world.boss?.let { it.alive && !sealed } == true)) {
+            rest(pilot)
+            return
+        }
         when (val step = pilot.next()) {
             null -> {
                 autopilot = null
@@ -162,6 +177,19 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
             }
         }
     }
+}
+
+/**
+ * Отдых автопрохода (MOB-BAL, В-15): фляги здоровья, чьё лечение целиком ляжет в недостающее здоровье, - сразу, как выпил бы
+ * игрок; затем герой стоит, пока [drive] не решит, что хватит.
+ */
+private fun ExpeditionRun.rest(pilot: AutoPilot) {
+    kit.flasks.forEachIndexed { slot, flask ->
+        val draught = flask?.sheet?.draught(hero, life, manaCap()) ?: return@forEachIndexed
+        val heal = draught.life + draught.lifeRate * draught.duration
+        if (heal > 0 && heal <= hero.maxLife - life) drinkOnMap(slot)
+    }
+    pilot.resting = 0.0
 }
 
 /**

@@ -283,7 +283,7 @@ private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: ()
             }
             // Чем он бьёт и что это значит (3.95.2): хаос и яд идут мимо энергощита - лист говорит это до боя
             val terms = remember(body) { com.sperance.exileforge.core.display.Term.ofStats(body.stats.filterValues { it != 0.0 }.keys) }
-            TermsBlock(terms)
+            TermsBlock(terms, rules)
         }
     }
 }

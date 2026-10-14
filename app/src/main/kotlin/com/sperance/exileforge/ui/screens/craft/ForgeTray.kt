@@ -231,6 +231,7 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
 /** Знамения [omens], что лягут рядом с валютой на наковальне (сфера или печать Атласа, 4.6.4): выбранное снова - снимается. */
 @Composable fun OmenList(game: GameUi, omens: List<Omen>, chosenOmen: String, onSelect: (String) -> Unit) {
     val hero = game.hero ?: return
+    val index = game.index ?: return
     if (omens.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         omens.forEach { omen ->
@@ -258,6 +259,6 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
             }
         }
         // Общее правило катализаторов (4.2.0) - термином, один раз: описание каждого называет лишь свой вид.
-        if (omens.any { it.catalyst != null }) TermsBlock(listOf(Term.CATALYST))
+        if (omens.any { it.catalyst != null }) TermsBlock(listOf(Term.CATALYST), index.campaign.combat)
     }
 }

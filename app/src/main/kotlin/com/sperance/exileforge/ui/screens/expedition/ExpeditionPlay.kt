@@ -459,6 +459,8 @@ internal const val FOUNTAIN_TAP = .9
             Text(ui("auto.tally", auto.chests, hud.kills), color = Muted, style = MaterialTheme.typography.bodyMedium)
             // Нет связи (4.0.0): автопробег стоит и сам пойдёт дальше, когда сервер ответит
             if (auto.offline) Text(ui("auto.offline"), color = LifeRed, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
+            // Отдых перед волной (MOB-BAL, В-15): фляги и восстановление вне боя, как в ручном заходе
+            if (auto.resting) Text(ui("auto.resting"), color = Vital, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
             val life by remember(live) { derivedStateOf { live.value.heroLife } }
             Text(ui("auto.life", life, hud.heroMaxLife), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
             AutoFinish(hud, auto, hold = run, onFinish = onFinish) { enabled, label, onClick ->

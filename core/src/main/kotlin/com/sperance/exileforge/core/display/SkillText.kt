@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.display
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ManaPrice
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.Op
@@ -39,8 +40,11 @@ object SkillText {
         locOr("skill.$code.name", locOr(LocaleKey.traitName(code), locOr("enum.EnumStatStock.$code", displayName(code))))
     }
 
-    /** What [skill] does at [level]: its blow, its poison, its buff or curse, its healing, its lines or its answer. */
-    fun lines(skill: SkillDefinition, level: Int): List<String> = buildList {
+    /**
+     * What [skill] does at [level]: its blow, its poison, its buff or curse, its healing, its lines or its answer. Пороги низкого
+     * здоровья строк - из правил боя [rules] (MOB-BAL, хвост пакета 10), не из словаря.
+     */
+    fun lines(skill: SkillDefinition, level: Int, rules: CombatRules): List<String> = buildList {
         if (skill.reserve > 0) add(ui("skill.line.reserve", number(skill.reserve)))
         skill.hit?.let { addAll(hit(it, level)) }
         skill.dot?.let { dot ->
@@ -56,10 +60,10 @@ object SkillText {
         skill.shield?.let { add(ui("skill.line.shield", number(it.at(level)))) }
         skill.barrier?.let { add(barrier(it, level)) }
         if (skill.stats.isNotEmpty()) {
-            if (skill.lowLife) add(ui("skill.line.low_life"))
+            if (skill.lowLife) add(ui("skill.line.low_life", number(rules.passiveLowLife * 100)))
             addAll(stats(skill.stats, level))
         }
-        skill.trigger?.let { addAll(trigger(it, level)) }
+        skill.trigger?.let { addAll(trigger(it, level, rules)) }
         skill.charges?.let { addAll(charges(it, level)) }
         // Руны (4.4.0): эхо и дары применения
         skill.echo?.let { add(ui("skill.line.echo", number(it.chance), number(it.power))) }
@@ -145,7 +149,7 @@ object SkillText {
      * Срабатывание (3.94.0): условие и шанс одной фразой, и первое следствие в той же строке - «С шансом 20%, убив врага: +1 заряд
      * всем флягам»; прочие следствия и перезарядка - строками ниже. Строка без следствия больше не висит на двоеточии.
      */
-    private fun trigger(trigger: SkillTrigger, level: Int): List<String> {
+    private fun trigger(trigger: SkillTrigger, level: Int, rules: CombatRules): List<String> {
         val effects = buildList {
             trigger.heal?.let { addAll(heal(it, level)) }
             trigger.shield?.let { add(ui("skill.line.shield", number(it.at(level)))) }
@@ -156,7 +160,8 @@ object SkillText {
             trigger.ailment?.let { add(ui(if (trigger.twice) "skill.line.inflict_twice" else "skill.line.inflict", ailment(it))) }
             if (trigger.refund) add(ui("skill.line.refund"))
         }
-        val event = ui("skill.on.${trigger.on.name}")
+        // Событие низкого здоровья называет свой порог правил `combat.lowLife`; прочим числа не нужны
+        val event = ui("skill.on.${trigger.on.name}", number(rules.lowLife * 100))
         val head = trigger.chance?.let { ui("skill.line.chance_on", number(it.at(level)), event.replaceFirstChar { c -> c.lowercase() }) } ?: event
         return buildList {
             add(listOfNotNull(head, effects.firstOrNull()).joinToString(": "))

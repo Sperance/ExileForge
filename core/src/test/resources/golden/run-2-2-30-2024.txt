@@ -1,41 +1,23 @@
 hero=WITCH zone=C1_BRINE_CAVES level=30 seed=2024 skill=FIREBALL
-phase=DEAD life=0.0000 seconds=93.0000 kills=15 bosses=0 deaths=1 events=39
+phase=DEAD life=0.0000 seconds=28.2000 kills=7 bosses=0 deaths=1 events=21
 0 ENGAGE 0 0 0 0 false false
 1 KILL 0 0 0 0 false false
-2 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=3 healed=0 max=312 dealt={FIRE=312}
+2 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=7 healed=0 max=312 dealt={FIRE=312}
 3 ENGAGE 1 0 0 0 false false
 4 KILL 1 0 0 0 false false
-5 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=4 healed=0 max=346 dealt={FIRE=346}
+5 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=11 healed=0 max=346 dealt={FIRE=346}
 6 ENGAGE 2 0 0 0 false false
 7 KILL 2 0 0 0 false false
-8 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=14 healed=0 max=358 dealt={FIRE=358}
-9 ENGAGE 3 0 0 0 false false
-10 KILL 3 0 0 0 false false
-11 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=5 healed=0 max=417 dealt={FIRE=417}
-12 ENGAGE 4 0 0 0 false false
-13 KILL 4 1 0 0 false false
-14 KILL 4 0 0 0 false false
-15 KILL 4 2 0 0 false false
-16 FIGHT 0 0 0 0 false false fight=16/3/0/0/0/0 taken=157 healed=0 max=344 dealt={FIRE=649, PHYSICAL=60}
-17 ENGAGE 5 0 0 0 false false
-18 KILL 5 1 0 0 false false
-19 KILL 5 0 0 0 false false
-20 FIGHT 0 0 0 0 false false fight=9/0/0/0/0/0 taken=47 healed=0 max=384 dealt={FIRE=384, PHYSICAL=29}
-21 CHEST 0 0 0 0 false false
-22 ENGAGE 6 0 0 0 false false
-23 KILL 6 0 0 0 false false
-24 KILL 6 1 0 0 false false
-25 FIGHT 0 0 0 0 false false fight=13/0/0/0/0/0 taken=93 healed=0 max=366 dealt={FIRE=366, PHYSICAL=34}
-26 ENGAGE 7 0 0 0 false false
-27 KILL 7 0 0 0 false false
-28 FIGHT 0 0 0 0 false false fight=6/1/0/0/0/0 taken=31 healed=0 max=287 dealt={FIRE=287, PHYSICAL=10}
-29 ENGAGE 8 0 0 0 false false
-30 KILL 8 0 0 0 false false
-31 FIGHT 0 0 0 0 false false fight=13/0/0/0/0/0 taken=63 healed=0 max=408 dealt={FIRE=408, PHYSICAL=20}
-32 ENGAGE 9 0 0 0 false false
-33 KILL 9 0 0 0 false false
-34 FIGHT 0 0 0 0 false false fight=13/0/0/0/0/0 taken=98 healed=0 max=353 dealt={FIRE=353, PHYSICAL=16}
-35 ENGAGE 10 0 0 0 false false
-36 KILL 10 0 0 0 false false
-37 FIGHT 0 0 0 0 false false fight=16/0/0/0/0/0 taken=186 healed=0 max=389 dealt={FIRE=389, PHYSICAL=34}
-38 FALL 0 0 0 0 false false
+8 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=33 healed=0 max=358 dealt={FIRE=358}
+9 CHEST 0 0 0 0 false false
+10 ENGAGE 3 0 0 0 false false
+11 KILL 3 0 0 0 false false
+12 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=11 healed=0 max=417 dealt={FIRE=417}
+13 ENGAGE 4 0 0 0 false false
+14 KILL 4 1 0 0 false false
+15 KILL 4 0 0 0 false false
+16 KILL 4 2 0 0 false false
+17 FIGHT 0 0 0 0 false false fight=16/1/0/0/0/0 taken=393 healed=0 max=482 dealt={FIRE=1196, PHYSICAL=28}
+18 ENGAGE 5 0 0 0 false false
+19 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=16 healed=0 max=1 dealt={PHYSICAL=1}
+20 FALL 0 0 0 0 false false

@@ -203,7 +203,7 @@ import kotlin.math.sin
 
     // The game's words the lines use (3.81.0): «Всплеск магии», a charge, an ailment — each with its rule on a tap.
     val terms = remember(node.code, index) { Term.ofLines(index, node.lines + node.options.flatten()) }
-    TermsBlock(terms)
+    TermsBlock(terms, index.campaign.combat)
 
     if (allocated) {
         // A refund is held for a second (3.81.0): a tap on the wrong node no longer costs the point. Узел, без которого ветка

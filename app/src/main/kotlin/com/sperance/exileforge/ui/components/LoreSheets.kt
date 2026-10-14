@@ -126,7 +126,7 @@ import com.sperance.exileforge.ui.theme.*
 @Composable fun SkillCurseSheet(index: ContentIndex, code: String, owner: String?, left: Double?, onDismiss: () -> Unit) {
     val monster = index.skills.monsterByCode[code]
     val hero = index.skills.byCode[code]
-    val lines = monster?.let(SkillText::monster) ?: hero?.let { SkillText.lines(it, 1) }.orEmpty()
+    val lines = monster?.let(SkillText::monster) ?: hero?.let { SkillText.lines(it, 1, index.campaign.combat) }.orEmpty()
     val total = monster?.curse?.duration ?: hero?.curse?.duration
     CurseSheet(SkillText.title(code), owner, lines, left, total, null, onDismiss)
 }

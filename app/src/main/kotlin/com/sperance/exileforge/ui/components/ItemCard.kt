@@ -319,7 +319,7 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
         }
         if (terms.isNotEmpty()) {
             FoldRow(ui("term.title"), terms.size.toString(), look.muted, open = termsOpen) { termsOpen = !termsOpen }
-            if (termsOpen) TermsBlock(terms, Modifier.padding(bottom = 6.dp))
+            if (termsOpen) TermsBlock(terms, item.index.campaign.combat, Modifier.padding(bottom = 6.dp))
         }
     }
 }

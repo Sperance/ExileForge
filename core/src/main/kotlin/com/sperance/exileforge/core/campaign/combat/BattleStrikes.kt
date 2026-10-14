@@ -182,7 +182,8 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     }
     pendingHit = HitTrace(striker, struck, factors, types, null, origin)
     land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw }, ailing)
-    if (me.alive && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
+    // Отражение (MOB-BAL, В-5) - только от ударов: чары и недуги не отражаются
+    if (me.alive && !blow.spell && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
     return true
 }
 
@@ -236,7 +237,9 @@ private fun Battle.counter(attacker: Fighter) {
 
 /**
  * Thorns and reflect (server 0.66.0): the struck fighter gives a flat physical blow and a share of
- * what it took back to the attacker, each part reduced by the attacker's own armour or resistance.
+ * what it took back to the attacker, each part reduced by the attacker's own armour or resistance. По герою (MOB-BAL, В-5)
+ * отражённое за секунду боя - не больше `caps.reflected`% его максимума здоровья ([reflectCap]): длинный бой со стражем-зеркалом
+ * не убивает героя его же уроном.
  */
 private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType, Double>, foe: Int) {
     if (attacker.invulnerable) return
@@ -259,7 +262,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
         val rift = sealed(attacker) * lawTaken(attacker, type)
         TypeTrace(type, raw, raw, armour, resist, 0.0, if (rift == 1.0) hurt else hurt * rift) to defended
     }
-    val mitigated = types.associate { (trace, _) -> trace.type to trace.dealt }.filterValues { it > 0 }
+    val mitigated = reflectCap(attacker, types.associate { (trace, _) -> trace.type to trace.dealt }.filterValues { it > 0 })
     if (mitigated.isEmpty()) return
     val striker = shot(me)
     val struck = shot(attacker)
@@ -300,6 +303,24 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
         trace = HitTrace(striker, struck, factors, types.map { it.first }, landing, origin),
     )
     if (!attacker.alive) fell(attacker, killer = me)
+}
+
+/**
+ * Отражённое [dealt] по [attacker] под потолком (MOB-BAL, В-5): по герою за секунду боя - не больше `caps.reflected`% его
+ * максимума здоровья, части по видам урона - одной долей; по монстру - как есть.
+ */
+private fun Battle.reflectCap(attacker: Fighter, dealt: Map<DamageType, Double>): Map<DamageType, Double> {
+    if (attacker !== heroFighter || dealt.isEmpty()) return dealt
+    val second = time.toLong()
+    if (second != reflectSecond) {
+        reflectSecond = second
+        reflectTaken = 0.0
+    }
+    val room = (attacker.body.maxLife * rules.caps.reflected / 100 - reflectTaken).coerceAtLeast(0.0)
+    val total = dealt.values.sum()
+    val share = if (total <= room) 1.0 else room / total
+    reflectTaken += total * share
+    return if (share == 1.0) dealt else dealt.mapValues { it.value * share }.filterValues { it > 0 }
 }
 
 /** What a buildup gone off adds to a blow of [type] on [target] (3.78.0): stunned - all, frozen - the ice-breaker, electrocuted - lightning. */

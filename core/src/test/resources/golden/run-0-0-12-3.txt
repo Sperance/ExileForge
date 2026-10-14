@@ -1,12 +1,5 @@
 hero=MARAUDER zone=C1_TIDAL_SHORE level=12 seed=3 skill=HEAVY_STRIKE
-phase=DEAD life=0.0000 seconds=30.1000 kills=3 bosses=0 deaths=1 events=10
+phase=DEAD life=0.0000 seconds=20.0000 kills=0 bosses=0 deaths=1 events=3
 0 ENGAGE 0 0 0 0 false false
-1 KILL 0 0 0 0 false false
-2 FIGHT 0 0 0 0 false false fight=8/1/0/0/0/0 taken=22 healed=0 max=11 dealt={PHYSICAL=29}
-3 ENGAGE 1 0 0 0 false false
-4 KILL 1 0 0 0 false false
-5 FIGHT 0 0 0 0 false false fight=8/0/0/0/0/0 taken=29 healed=0 max=8 dealt={PHYSICAL=38}
-6 ENGAGE 2 0 0 0 false false
-7 KILL 2 0 0 0 false false
-8 FIGHT 0 0 0 0 false false fight=18/0/0/0/0/0 taken=154 healed=0 max=7 dealt={PHYSICAL=48}
-9 FALL 0 0 0 0 false false
+1 FIGHT 0 0 0 0 false false fight=22/0/1/0/0/0 taken=227 healed=0 max=4 dealt={PHYSICAL=35}
+2 FALL 0 0 0 0 false false

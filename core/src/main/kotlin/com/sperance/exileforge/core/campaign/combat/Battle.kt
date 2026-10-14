@@ -429,6 +429,10 @@ class Battle(
     internal var blockedAt = NEVER
     internal var critAt = NEVER
 
+    /** Отражённый урон по герою (MOB-BAL, В-5): секунда боя [reflectSecond] и сколько уже снято в ней - под `caps.reflected`. */
+    internal var reflectSecond = -1L
+    internal var reflectTaken = 0.0
+
     /** Whether the sheet or a flask of the belt (4.9.x) has conditional lines at all, and the hero's conditions at the last look (3.35.0). */
     internal val conditioned = model.conditional(Condition.entries.toSet()).isNotEmpty() || kit.flasks.any { flask -> flask?.sheet?.lines?.any { it.condition != null } == true }
     internal var conditions: Set<Condition> = emptySet()

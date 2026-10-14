@@ -217,7 +217,7 @@ class SimKit(val index: ContentIndex) {
         )
     }
 
-    private fun skillLevel(skill: SkillDefinition, level: Int, stats: Map<String, Double>): Int? = (SkillRules.MAX_LEVEL downTo 1).firstOrNull { skillRules.unmet(skill, it, level, stats).isEmpty() }
+    private fun skillLevel(skill: SkillDefinition, level: Int, stats: Map<String, Double>): Int? = (SkillRules.MAX_LEVEL downTo 1).firstOrNull { !skillRules.unmet(skill, it, level, stats) }
 
     /** Две фляги жизни редкости [rarity]: лучший шаблон фляги жизни, какой носят на [level]. */
     fun flasks(level: Int, rarity: Rarity): List<BeltFlask?> {

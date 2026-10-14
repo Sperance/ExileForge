@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -22,13 +23,13 @@ import com.sperance.exileforge.ui.theme.*
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun TermsBlock(terms: List<Term>, modifier: Modifier = Modifier) {
+fun TermsBlock(terms: List<Term>, rules: CombatRules, modifier: Modifier = Modifier) {
     if (terms.isEmpty()) return
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(ui("term.title"), color = Muted, style = MaterialTheme.typography.labelSmall)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             terms.forEach { term ->
-                Tipped({ Tip(term.title, term.text, Rune) }) {
+                Tipped({ Tip(term.title, term.text(rules), Rune) }) {
                     Text(
                         "ⓘ ${term.title}",
                         color = Rune,

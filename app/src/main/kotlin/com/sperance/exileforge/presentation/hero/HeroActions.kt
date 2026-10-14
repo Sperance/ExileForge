@@ -65,20 +65,20 @@ class HeroActions(
 
     /** Окно тестера (3.73.0): одна выдача `/hero/grant/` герою в игре. */
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = heroCommand { id ->
-        check(sessions.state.value.tester(heroes.state.value)) { ui("hero.grant_admin_only") }
+        check(sessions.state.value.grants(heroes.state.value)) { ui("hero.grant_admin_only") }
         api.hero.grant(id, what, *params)
         sync.readHero()
     }
 
     /** Тестеру или админу: названный шаблон герою, брошенный сервером. */
     fun grant(template: String, rarity: Rarity? = null) = heroCommand { id ->
-        check(sessions.state.value.tester(heroes.state.value)) { ui("hero.grant_admin_only") }
+        check(sessions.state.value.grants(heroes.state.value)) { ui("hero.grant_admin_only") }
         api.hero.grantEquipment(id, template, rarity)
     }
 
     /** Админу: случайный шаблон выбранной редкости и слота - выбран здесь из контента, брошен сервером. */
     fun grantRandom(rarityCode: String, slotCode: String) = heroCommand { id ->
-        check(sessions.state.value.tester(heroes.state.value)) { ui("hero.grant_admin_only") }
+        check(sessions.state.value.grants(heroes.state.value)) { ui("hero.grant_admin_only") }
         val index = world.state.value.content ?: error(ui("runtime.request_failed"))
         val rarity = Rarity.of(rarityCode)
         val slot = Slot.of(slotCode)
@@ -91,7 +91,7 @@ class HeroActions(
 
     /** Админу: стопка в сумку. */
     fun grantItem(code: String, amount: Long) = heroCommand { id ->
-        check(sessions.state.value.tester(heroes.state.value)) { ui("hero.bag_admin_only") }
+        check(sessions.state.value.grants(heroes.state.value)) { ui("hero.bag_admin_only") }
         api.hero.grantItem(id, code, amount)
     }
 

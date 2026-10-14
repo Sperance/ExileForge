@@ -36,9 +36,9 @@ data class HeroCarry(
         charges = charges.mapNotNull { it.copy(left = it.left - dt).takeIf { c -> c.left > 0 } },
     )
 
-    /** Строки, что несомое кладёт на героя вне боя: эффекты (условные - без условий боя) и заряды по правилам [rules]. */
-    fun lines(rules: ChargeRules): List<StatLine> = effects.flatMap { it.lines } +
-        charges.flatMap { charge -> rules.kinds[charge.kind]?.lines.orEmpty().map { StatLine(it.stat, it.op, (it.value ?: 0.0) * charge.count) } }
+    /** Строки, что несомое кладёт на героя вне боя: эффекты (условные - без условий боя) и заряды по правилам [rules] (null - без зарядов). */
+    fun lines(rules: ChargeRules?): List<StatLine> = effects.flatMap { it.lines } +
+        charges.flatMap { charge -> rules?.kinds?.get(charge.kind)?.lines.orEmpty().map { StatLine(it.stat, it.op, (it.value ?: 0.0) * charge.count) } }
 
     companion object {
         val NONE = HeroCarry()

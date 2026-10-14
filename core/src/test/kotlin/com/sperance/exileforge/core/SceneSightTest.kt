@@ -15,7 +15,7 @@ class SceneSightTest {
         var hidden = 0
         biomes.forEach { biome ->
             (1L..40L).forEach { seed ->
-                val map = MapGenerator.generate(seed, biome, monsters = 12, size = 56)
+                val map = MapGenerator.generate(seed, biome, monsters = 12, terrain = TestContent.index.campaign.expedition.terrain, size = 56)
                 checked++
                 if (!SceneSight.inView(map.exit.x, map.exit.y) { x, y -> !map.clear(x, y) }) hidden++
             }

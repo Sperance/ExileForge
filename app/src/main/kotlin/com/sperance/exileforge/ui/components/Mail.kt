@@ -173,7 +173,7 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
                 IgnoreList(feedback, activity.busy) { hero -> model.letters.ignore(hero.heroId, hero.name, on = false) }
                 return@Column
             }
-            MutedText(ui("mail.keep", game.index?.rules?.mail?.keepDays ?: MailRules().keepDays))
+            game.index?.rules?.mail?.keepDays?.let { MutedText(ui("mail.keep", it)) }
             MailActionsRow(model, feedback, activity.busy)
             MailTabs(feedback.mail, box) { box = it }
             val shown = feedback.mail.filter { box.holds(it.kind) }
@@ -311,7 +311,7 @@ private fun LetterSheet(game: GameUi, model: FeedbackViewModel, feedback: Feedba
             if (mail.answerable) {
                 ForgeButton(onClick = {
                     onClose()
-                    model.letters.reply(mail, game.index?.rules?.mail?.subject ?: MailRules().subject)
+                    model.letters.reply(mail, game.index?.rules?.mail?.subject ?: Int.MAX_VALUE)
                 }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(ui("mail.reply")) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -396,7 +396,7 @@ fun LetterHost(game: GameUi) {
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
     val draft = feedback.letter ?: return
-    val rules = game.index?.rules?.mail ?: MailRules()
+    val rules = game.index?.rules?.mail ?: return
     var subject by remember(draft) { mutableStateOf(draft.subject) }
     var body by remember(draft) { mutableStateOf("") }
     val quota = feedback.quota

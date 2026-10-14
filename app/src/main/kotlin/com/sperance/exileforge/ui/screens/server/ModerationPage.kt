@@ -62,7 +62,6 @@ import com.sperance.exileforge.presentation.admin.ModerationFilters
 import com.sperance.exileforge.presentation.admin.ModerationTab
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
-import com.sperance.exileforge.rules.content.ModerationRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*
@@ -373,10 +372,9 @@ private val FATE_GRID_HEIGHT = 228.dp
             }
         }
     }
-    if (account.isAdmin && hero != null) {
-        ServerSection(account, vm, hero)
-        TesterSection(account, vm, hero)
-    }
+    if (account.isAdmin && hero != null) ServerSection(account, vm, hero)
+    // Отметку тестировщика (4.12.x, сервер ROLE-02) ставят и снимают администратор и модератор
+    if (account.isModerator && hero != null) TesterSection(account, vm, hero)
     FateSection(dossier.account)
     dossier.sanctions.firstOrNull { it.active }?.let { active ->
         Text(
@@ -472,7 +470,7 @@ private val FATE_GRID_HEIGHT = 228.dp
 }
 
 /**
- * Тестировщик (4.12.x, сервер ROLE-01): отметка героя, не роль аккаунта - администратор ставит и снимает её здесь. Герою-тестировщику
+ * Тестировщик (4.12.x, сервер ROLE-01, ROLE-02): отметка героя, не роль аккаунта - администратор и модератор ставят и снимают её здесь. Герою-тестировщику
  * открыты окно тестирования и замки прогресса, закрыты аукцион и склад гильдии.
  */
 @Composable private fun TesterSection(account: AccountUi, vm: ModerationViewModel, hero: DossierHero) {
@@ -598,7 +596,7 @@ private const val SERVER_NAME = 32
  * контента или свой, категория, причина для игрока (4.12.x - её видит наказанный) и служебная заметка модерации.
  */
 @Composable private fun BanSheet(account: AccountUi, dossier: Dossier, device: DeviceView?, kind: SanctionKind, onDismiss: () -> Unit, onBan: (SanctionRequest) -> Unit) {
-    val presets = (account.index?.rules?.moderation ?: ModerationRules()).let { if (kind == SanctionKind.MUTE) it.muteHours else it.banHours }
+    val presets = account.index?.rules?.moderation?.let { if (kind == SanctionKind.MUTE) it.muteHours else it.banHours }.orEmpty()
     var target by remember {
         mutableStateOf(
             if (device != null) {

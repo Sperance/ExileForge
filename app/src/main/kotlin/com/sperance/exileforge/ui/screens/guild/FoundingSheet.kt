@@ -42,7 +42,7 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Founding) {
-    val rules = game.index?.guilds ?: GuildRules()
+    val rules = game.index?.guilds ?: return
     var name by remember { mutableStateOf("") }
     var tag by remember { mutableStateOf("") }
     var faction by remember { mutableStateOf(rules.factions.firstOrNull()?.code.orEmpty()) }

@@ -18,9 +18,10 @@ data class ChargeView(val kind: ChargeKind, val count: Int, val max: Int, val se
 /**
  * The hero's frenzy, power and endurance charges in one fight (3.33.0, server 1.32.0) under the rules' [rules]: at most
  * [ChargeRules.max] of a kind, all of a kind living as long as the last one gained — a gain refreshes every charge of it —
- * each laying its kind's lines on the hero. A fight starts with none.
+ * each laying its kind's lines on the hero. A fight starts with none. Без правил зарядов (null, 4.12.x: у правил нет значений по
+ * умолчанию) зарядов у героя нет.
  */
-internal class HeroCharges(private val rules: ChargeRules) {
+internal class HeroCharges(private val rules: ChargeRules?) {
     private val counts = EnumMap<ChargeKind, Int>(ChargeKind::class.java)
     private val until = EnumMap<ChargeKind, Double>(ChargeKind::class.java)
 
@@ -29,7 +30,7 @@ internal class HeroCharges(private val rules: ChargeRules) {
     /** [amount] charges of [kind] — each of `RANDOM` drawn from [random] — up to the maximum; whether any count changed. */
     fun gain(kind: ChargeKind, amount: Int, now: Double, sheet: Map<String, Double>, random: Random): Boolean {
         if (amount <= 0 || kind == ChargeKind.ALL) return false
-        val life = rules.lifetime(sheet)
+        val life = rules?.lifetime(sheet) ?: return false
         var changed = false
         repeat(amount) {
             val real = if (kind == ChargeKind.RANDOM) ChargeKind.REAL[random.nextInt(ChargeKind.REAL.size)] else kind
@@ -75,11 +76,11 @@ internal class HeroCharges(private val rules: ChargeRules) {
 
     /** What the charges lay on the hero: each kind's lines times its count. */
     fun lines(): List<StatLine> = counts.flatMap { (kind, count) ->
-        if (count <= 0) emptyList() else rules.kinds[kind]?.lines.orEmpty().map { StatLine(it.stat, it.op, (it.value ?: 0.0) * count) }
+        if (count <= 0) emptyList() else rules?.kinds?.get(kind)?.lines.orEmpty().map { StatLine(it.stat, it.op, (it.value ?: 0.0) * count) }
     }
 
     fun views(now: Double, sheet: Map<String, Double>): List<ChargeView> = ChargeKind.REAL.mapNotNull { kind ->
         val count = counts[kind]?.takeIf { it > 0 } ?: return@mapNotNull null
-        ChargeView(kind, count, rules.max(kind, sheet), max(0.0, (until[kind] ?: now) - now))
+        ChargeView(kind, count, rules?.max(kind, sheet) ?: 0, max(0.0, (until[kind] ?: now) - now))
     }
 }

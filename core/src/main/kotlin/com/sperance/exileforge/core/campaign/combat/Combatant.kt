@@ -44,7 +44,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
      */
     fun recovery(spell: Boolean): Double {
         val cast = if (spell) stat(CoreStat.CAST_SPEED.code).coerceAtMost(rules.caps.castSpeed) else 0.0
-        return (1 + (stat(CoreStat.COOLDOWN_RECOVERY.code) + cast) / 100).coerceIn(0.1, rules.caps.recoveryMax)
+        return (1 + (stat(CoreStat.COOLDOWN_RECOVERY.code) + cast) / 100).coerceIn(rules.floors.recovery, rules.caps.recoveryMax)
     }
 
     /** What is left of a skill's price in mana. */
@@ -227,7 +227,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
             sheet[CoreStat.RESIST_CHAOS.code] = (stats[CoreStat.RESIST_CHAOS.code] ?: 0.0) - v
         }
         auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet[CoreStat.DAMAGE_TAKEN.code] = (stats[CoreStat.DAMAGE_TAKEN.code] ?: 0.0) + v }
-        auras["AURA_SLOW"]?.let { v -> sheet[CoreStat.ATTACK_SPEED.code] = attackSpeed * max(0.1, 1 - v / 100) }
+        auras["AURA_SLOW"]?.let { v -> sheet[CoreStat.ATTACK_SPEED.code] = attackSpeed * max(rules.floors.slow, 1 - v / 100) }
         auras["AURA_RECOVERY"]?.let { v -> sheet[CoreStat.RECOVERY_RATE.code] = (stats[CoreStat.RECOVERY_RATE.code] ?: 0.0) - v }
         return Combatant(sheet, level, rules)
     }
@@ -344,7 +344,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
 
     /** It wears [kind] always: a monster's modifier or a map's. */
     fun wears(kind: BuffKind): Boolean = stat(kind.always) > 0
-    val buffDuration = max(0.1, 1 + stat(BuffKind.DURATION) / 100)
+    val buffDuration = max(rules.floors.buffDuration, 1 + stat(BuffKind.DURATION) / 100)
 
     /** Damage taken from hits, not over time: Fortify's work. */
     val hitTaken = DamageTaken.hits(this)
@@ -376,7 +376,7 @@ data class Combatant(val stats: Map<String, Double>, val level: Int, val rules: 
     val armourElemental = percent(CoreStat.ARMOUR_ELEMENTAL.code)
 
     /** How much sooner its shield starts to recharge after a hit. */
-    val rechargeStart = max(0.1, 1 + stat(CoreStat.SHIELD_RECHARGE_START.code) / 100)
+    val rechargeStart = max(rules.floors.shieldRecharge, 1 + stat(CoreStat.SHIELD_RECHARGE_START.code) / 100)
 
     /** Taunts (since server 0.62.0): while it stands, its foes must strike it first. */
     val taunt: Boolean get() = stat(CoreStat.TAUNT.code) > 0

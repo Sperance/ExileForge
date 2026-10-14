@@ -442,7 +442,7 @@ class ExpeditionWorld(
             boss: RolledMonster?,
             hasPortal: Boolean,
         ): ExpeditionWorld {
-            val layout = MapGenerator.generate(seed, zone.biome, packs.size, zone.size, rules.minChasm, rules.minPool)
+            val layout = MapGenerator.generate(seed, zone.biome, packs.size, rules.terrain, zone.size, rules.minChasm, rules.minPool)
             return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
         }
 

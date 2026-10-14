@@ -70,7 +70,7 @@ enum class TextSize(val scale: Float) { S(.9f), M(1f), L(1.15f) }
 typealias Buzz = com.sperance.exileforge.core.session.Buzz
 
 /** Скорости боя из правил (`fight.speeds`, 4.7.0); контента ещё нет - умолчания правил. */
-fun fightSpeeds(index: com.sperance.exileforge.rules.content.ContentIndex?): List<Int> = (index?.rules?.fight ?: com.sperance.exileforge.rules.content.FightRules()).speeds
+fun fightSpeeds(index: com.sperance.exileforge.rules.content.ContentIndex?): List<Int> = index?.rules?.fight?.speeds.orEmpty()
 
 /** Сколько нажатий кнопки скорости боя дают скорость [speed] из настроек: 1 → 2 → 4. */
 fun speedPresses(index: com.sperance.exileforge.rules.content.ContentIndex?, speed: Int): Int = fightSpeeds(index).indexOf(speed).coerceAtLeast(0)

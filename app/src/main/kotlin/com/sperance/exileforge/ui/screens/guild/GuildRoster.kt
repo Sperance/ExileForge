@@ -71,9 +71,9 @@ import com.sperance.exileforge.ui.theme.Vital
 /** Чем отбирается состав: правила гильдий (порог неактивности) и момент отбора [now] (мс эпохи). */
 internal data class RosterScope(val rules: GuildRules, val now: Long)
 
-/** Правила отбора состава [members]: момент берётся заново, когда пришёл новый состав или правила. */
-@Composable internal fun rememberRosterScope(game: GameUi, members: List<GuildMember>): RosterScope {
-    val rules = game.index?.guilds ?: GuildRules()
+/** Правила отбора состава [members]: момент берётся заново, когда пришёл новый состав или правила; контента нет - null. */
+@Composable internal fun rememberRosterScope(game: GameUi, members: List<GuildMember>): RosterScope? {
+    val rules = game.index?.guilds ?: return null
     return remember(rules, members) { RosterScope(rules, System.currentTimeMillis()) }
 }
 

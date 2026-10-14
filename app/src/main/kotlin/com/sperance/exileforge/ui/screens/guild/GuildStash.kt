@@ -277,8 +277,7 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
 @Composable
 private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
     val hero = game.hero ?: return
-    // Выданная вещь (4.9.0) другим героям не уходит: на склад - только свои вещи
-    val loose = hero.items.filter { !it.equipped && !it.socketed && !it.locked && !it.granted }
+    val loose = hero.items.filter { !it.equipped && !it.socketed && !it.locked }
     val stacks = hero.bag.filterValues { it > 0 }.keys.sortedBy { itemTitle(it) }
     var stack by remember { mutableStateOf<String?>(null) }
     var amount by remember { mutableStateOf("1") }

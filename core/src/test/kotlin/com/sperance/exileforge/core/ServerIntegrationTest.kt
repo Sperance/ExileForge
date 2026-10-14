@@ -160,13 +160,13 @@ class ServerIntegrationTest {
             api.moderation.setTester(traderHero, true)
             api.hero.grant(traderHero, "level", "level" to auctionLevel.toString())
             val grantedRing = api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE)
+            // Герой-тестировщик не торгует (сервер 4.12.x): отказ GR_001 по отметке героя - метки «выдано» у вещи нет
+            assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, grantedRing.id, Orb.CHAOS_ORB.name, 1) }.code)
             api.moderation.setTester(traderHero, false)
             api.moderation.setTester(heroId, true)
             api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 2)
             api.moderation.setTester(heroId, false)
-            // Выданная вещь не выставляется (сервер 4.9.0): продавец ставит свою стартовую вещь; стопки выдачей не помечаются
-            assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, grantedRing.id, Orb.CHAOS_ORB.name, 1) }.code)
-            val starter = HeroParts(traderHero).merge(assertNotNull(trader.hero.view(traderHero, HeroParts(traderHero)))).items.first { !it.granted }
+            val starter = HeroParts(traderHero).merge(assertNotNull(trader.hero.view(traderHero, HeroParts(traderHero)))).items.first { it.id != grantedRing.id }
             if (starter.equipped) trader.hero.unequip(traderHero, starter.id)
             val open = assertNotNull(trader.auction.sellEquipment(traderHero, starter.id, Orb.CHAOS_ORB.name, 1).lot).id
             val banned = assertNotNull(trader.auction.sellItem(traderHero, Orb.ORB_OF_TRANSMUTATION.name, 1, Orb.CHAOS_ORB.name, 1).lot).id

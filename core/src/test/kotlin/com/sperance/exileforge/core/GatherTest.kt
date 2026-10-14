@@ -7,7 +7,6 @@ import com.sperance.exileforge.core.campaign.run.AgentMode
 import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import com.sperance.exileforge.core.campaign.run.gathered
 import com.sperance.exileforge.rules.content.BehaviourRule
-import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.RolledMonster
@@ -31,7 +30,7 @@ class GatherTest {
 
     @Test
     fun the_brawl_gathers_by_walking_path_and_sight() {
-        val world = ExpeditionWorld(ExpeditionRules(gatherRadius = 3.0), map, spawns.map { listOf(monster()) }, heroSpeed = 1.0, seed = 1L, bossMonster = monster())
+        val world = ExpeditionWorld(TestContent.index.campaign.expedition.copy(gatherRadius = 3.0), map, spawns.map { listOf(monster()) }, heroSpeed = 1.0, seed = 1L, bossMonster = monster())
         val (fighting, near, chasing, hunting, behindWall) = world.agents
         chasing.mode = AgentMode.CHASING
         hunting.mode = AgentMode.HUNTING

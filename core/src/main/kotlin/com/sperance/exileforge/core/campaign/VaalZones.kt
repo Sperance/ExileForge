@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.rules.content.MonsterCode
+import com.sperance.exileforge.rules.content.VaalRule
 import com.sperance.exileforge.rules.content.Zone
 import kotlin.math.roundToInt
 
@@ -10,14 +11,15 @@ import kotlin.math.roundToInt
  */
 object VaalZones {
     const val BIOME = "VAAL"
-    private const val SHARE = 0.6
-    private const val MIN_SIZE = 32
 
     fun isZone(zone: Zone) = zone.biome == BIOME
 
-    /** The zone's map, cut from [location]: or null for a location with no guardian to stand at its end. */
-    fun zone(location: Zone): Zone? {
+    /**
+     * The zone's map, cut from [location] by the rule [vaal] (4.12.x: доля и наименьший размер - контент `vaal.zoneShare|zoneMinSize`):
+     * or null for a location with no guardian to stand at its end.
+     */
+    fun zone(location: Zone, vaal: VaalRule): Zone? {
         if (location.corrupted.value.isBlank()) return null
-        return location.copy(biome = BIOME, size = (location.size * SHARE).roundToInt().coerceAtLeast(MIN_SIZE), boss = location.corrupted, corrupted = MonsterCode(""))
+        return location.copy(biome = BIOME, size = (location.size * vaal.zoneShare).roundToInt().coerceAtLeast(vaal.zoneMinSize), boss = location.corrupted, corrupted = MonsterCode(""))
     }
 }

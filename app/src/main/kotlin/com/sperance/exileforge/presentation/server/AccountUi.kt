@@ -32,6 +32,9 @@ data class AccountUi(
     /** Выбранный герой - тестировщик (4.12.x, сервер ROLE-01): окно тестирования - ему. */
     val isTester: Boolean get() = session.tester(hero)
 
+    /** Окно тестирования (4.12.x, сервер ROLE-01): герою-тестировщику и любому герою администратора. */
+    val grants: Boolean get() = session.grants(hero)
+
     /** Модерация и отчёты (3.88.5): модератор и администратор. */
     val isModerator: Boolean get() = session.isModerator
 

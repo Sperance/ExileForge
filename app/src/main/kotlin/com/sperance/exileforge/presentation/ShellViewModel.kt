@@ -36,7 +36,6 @@ import com.sperance.exileforge.presentation.state.Buzz
 import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.TAB_TREE
-import com.sperance.exileforge.rules.content.FeedbackRules
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -97,10 +96,11 @@ class ShellViewModel(
      * ([BugDelivery]) и уходит оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать.
      */
     fun reportBug(report: BugReportRequest, shot: ScreenShot? = null, onQueued: suspend () -> Unit = {}) = bugs.file({
-        val rules = game.value.index?.rules?.feedback ?: FeedbackRules()
-        val screenshot = shot?.takeIf { report.kind.shots }?.let { ScreenCapture.encode(it, rules) }
+        // Без прочитанного контента (4.12.x: у правил нет значений по умолчанию) отчёт уходит без снимка и без журнала сбоев
+        val rules = game.value.index?.rules?.feedback
+        val screenshot = rules?.let { feedback -> shot?.takeIf { report.kind.shots }?.let { ScreenCapture.encode(it, feedback) } }
         val built = report.copy(screenshot = screenshot)
-        connection.current.value?.bugReport(built, rules.failures) ?: built
+        connection.current.value?.bugReport(built, rules?.failures ?: 0) ?: built
     }, onQueued)
 
     /** Аккорд громкости (4.8.0): лист отчёта со снимком, снятым до него; null - снимок не вышел, лист всё равно открывается. */

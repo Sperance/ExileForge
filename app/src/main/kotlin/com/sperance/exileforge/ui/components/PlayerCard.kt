@@ -217,7 +217,7 @@ private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () 
     }
     letter?.takeIf { it != MailGate.OPEN }?.let { gate ->
         val rules = game.index?.rules
-        MutedText(gateText(gate, null, rules?.mail ?: MailRules(), rules?.unlockLevel(MailRules.SECTION) ?: 1))
+        rules?.let { MutedText(gateText(gate, null, it.mail, it.unlockLevel(MailRules.SECTION))) }
     }
 }
 

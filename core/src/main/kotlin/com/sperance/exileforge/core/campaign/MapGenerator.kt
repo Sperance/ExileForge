@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.content.TerrainRule
 import kotlin.math.abs
 import kotlin.random.Random
 
@@ -94,7 +95,8 @@ object MapGenerator {
 
     fun liquidOf(biome: String): Liquid? = liquids[biome]
 
-    fun generate(seed: Long, biome: String, monsters: Int, size: Int = 48, minChasm: Int = 1, minPool: Int = 1): ExpeditionMap {
+    /** Карта зоны; [terrain] (4.12.x, ARCH-02) - доли пропастей и воды из контента (`expedition.terrain`). */
+    fun generate(seed: Long, biome: String, monsters: Int, terrain: TerrainRule, size: Int = 48, minChasm: Int = 1, minPool: Int = 1): ExpeditionMap {
         val random = Random(seed)
         val grid = Array(size * size) { Tile.WALL }
         when (styleOf(biome)) {
@@ -138,20 +140,20 @@ object MapGenerator {
         }
         val keep = setOf(start, exit) + spawns
         val liquid = liquidOf(biome)
-        chasms(grid, size, random, chasmOf(biome), keep, share = if (biome in wet) WET_CHASM_SHARE else CHASM_SHARE, minimum = minChasm)
+        chasms(grid, size, random, chasmOf(biome), keep, share = if (biome in wet) terrain.wetChasmShare else terrain.chasmShare, minimum = minChasm, swerve = terrain.crackSwerve)
         // Вода (3.95.0) - после ям и стай: их места она не сдвигает
-        liquid?.let { waters(grid, size, random, keep, share = if (biome in wet) WET_WATER_SHARE else WATER_SHARE) }
+        liquid?.let { waters(grid, size, random, keep, share = if (biome in wet) terrain.wetWaterShare else terrain.waterShare, terrain = terrain) }
         fillPuddles(grid, size, start, minPool)
         return ExpeditionMap(size, size, grid, decor, start, exit, spawns, liquid)
     }
 
     /**
-     * Chasms (3.91.0): shapes of the biome are tried until about [CHASM_SHARE] of the ground is gone; a lone shape smaller than
+     * Chasms (3.91.0): shapes of the biome are tried until about [share] of the ground is gone (трещина виляет с шансом [swerve]); a lone shape smaller than
      * [minimum] cells is not cut (4.7.0). A shape is cut only on
      * open ground two steps or more from [keep] and only if every remaining piece of ground is still reachable from the
      * first kept cell, so a map never splits; a shape that would split it is put back.
      */
-    private fun chasms(grid: Array<Tile>, size: Int, random: Random, shape: ChasmShape, keep: Set<Cell>, share: Double, minimum: Int) {
+    private fun chasms(grid: Array<Tile>, size: Int, random: Random, shape: ChasmShape, keep: Set<Cell>, share: Double, minimum: Int, swerve: Double) {
         val target = (grid.count { it == Tile.FLOOR } * share).toInt()
         val from = keep.first()
         var cut = 0
@@ -160,7 +162,7 @@ object MapGenerator {
             val seed = Cell(random.nextInt(2, size - 2), random.nextInt(2, size - 2))
             val cells = when (shape) {
                 ChasmShape.PIT -> pit(seed, random.nextInt(2, 7), random)
-                ChasmShape.CRACK -> crack(seed, random.nextInt(4, 10), random)
+                ChasmShape.CRACK -> crack(seed, random.nextInt(4, 10), random, swerve)
             }.filter { it.x in 1 until size - 1 && it.y in 1 until size - 1 && grid[it.y * size + it.x] == Tile.FLOOR }
             if (cells.isEmpty() || cells.any { cell -> keep.any { abs(it.x - cell.x) + abs(it.y - cell.y) < 2 } }) return@repeat
             // Меньше [minimum] клеток - не пропасть, а пятно (4.7.0): режется, только если прирастает к уже вырезанной
@@ -180,7 +182,7 @@ object MapGenerator {
      * извилистая полоса через полкарты, и каждая её клетка, что разорвала бы карту, остаётся сушей: так у реки появляются броды.
      * Ни вода, ни брод не встают ближе двух шагов к старту, выходу и стаям.
      */
-    private fun waters(grid: Array<Tile>, size: Int, random: Random, keep: Set<Cell>, share: Double) {
+    private fun waters(grid: Array<Tile>, size: Int, random: Random, keep: Set<Cell>, share: Double, terrain: TerrainRule) {
         val target = (grid.count { it == Tile.FLOOR } * share).toInt()
         val from = keep.first()
         var cut = 0
@@ -190,8 +192,8 @@ object MapGenerator {
         repeat(WATER_TRIES) {
             if (cut >= target) return
             val seed = Cell(random.nextInt(2, size - 2), random.nextInt(2, size - 2))
-            if (random.nextDouble() < RIVER_CHANCE) {
-                river(seed, random.nextInt(size / 3, size * 2 / 3), random).filter(::open).forEach { cell ->
+            if (random.nextDouble() < terrain.riverChance) {
+                river(seed, random.nextInt(size / 3, size * 2 / 3), random, terrain.riverBend).filter(::open).forEach { cell ->
                     grid[cell.y * size + cell.x] = Tile.WATER
                     if (whole()) cut++ else grid[cell.y * size + cell.x] = Tile.FLOOR
                 }
@@ -240,7 +242,7 @@ object MapGenerator {
     }
 
     /** Река: полоса шириной в клетку-две, что держит курс и петляет; [length] - шагов. */
-    private fun river(seed: Cell, length: Int, random: Random): List<Cell> {
+    private fun river(seed: Cell, length: Int, random: Random, bend: Double): List<Cell> {
         val horizontal = random.nextBoolean()
         var x = seed.x
         var y = seed.y
@@ -250,7 +252,7 @@ object MapGenerator {
             // Шире в половине мест: полоса читается рекой, а не трещиной
             if (random.nextBoolean()) cells += if (horizontal) Cell(x, y + 1) else Cell(x + 1, y)
             if (horizontal) x++ else y++
-            if (random.nextDouble() < RIVER_BEND) if (horizontal) y += if (random.nextBoolean()) 1 else -1 else x += if (random.nextBoolean()) 1 else -1
+            if (random.nextDouble() < bend) if (horizontal) y += if (random.nextBoolean()) 1 else -1 else x += if (random.nextBoolean()) 1 else -1
         }
         return cells.toList()
     }
@@ -266,28 +268,20 @@ object MapGenerator {
     }
 
     /** A crack: a line of [length] cells from [seed], keeping its course and swerving now and then. */
-    private fun crack(seed: Cell, length: Int, random: Random): List<Cell> {
+    private fun crack(seed: Cell, length: Int, random: Random, swerve: Double): List<Cell> {
         val horizontal = random.nextBoolean()
         var x = seed.x
         var y = seed.y
         return List(length) {
             Cell(x, y).also {
                 if (horizontal) x++ else y++
-                if (random.nextDouble() < CRACK_SWERVE) if (horizontal) y += if (random.nextBoolean()) 1 else -1 else x += if (random.nextBoolean()) 1 else -1
+                if (random.nextDouble() < swerve) if (horizontal) y += if (random.nextBoolean()) 1 else -1 else x += if (random.nextBoolean()) 1 else -1
             }
         }
     }
 
-    /** The share of the ground chasms take, how many shapes are tried for it, and how often a crack swerves. */
-    private const val CHASM_SHARE = 0.04
-
-    /** Доли пола под ямами и водой у водных биомов и под водой у прочих с водой (3.95.0); попытки и вид реки. */
-    private const val WET_CHASM_SHARE = 0.015
-    private const val WET_WATER_SHARE = 0.06
-    private const val WATER_SHARE = 0.025
+    /** Сколько пятен воды и пропастей пробуется за карту (доли и вид реки - контент, [TerrainRule]). */
     private const val WATER_TRIES = 40
-    private const val RIVER_CHANCE = 0.5
-    private const val RIVER_BEND = 0.35
     private const val CHASM_TRIES = 60
 
     /** Восемь соседей клетки: пятно глади связно и по диагонали - так его рисует контур. */
@@ -295,7 +289,6 @@ object MapGenerator {
 
     /** Четыре соседа клетки: пропасть прирастает к пропасти по стороне. */
     private val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
-    private const val CRACK_SWERVE = 0.3
 
     /** Walkers dig from the middle until about two fifths of the map is open, then the edges are smoothed. */
     private fun cavern(grid: Array<Tile>, size: Int, random: Random) {

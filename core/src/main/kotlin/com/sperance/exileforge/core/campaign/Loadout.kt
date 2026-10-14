@@ -74,8 +74,8 @@ data class Loadout(
     val curses: List<KitSkill> = emptyList(),
     /** The book of the unique items' powers (2.79.0): which of them the hero has, their sheet says. */
     val powers: PowerBook = PowerBook(),
-    /** The rules of the hero's frenzy, power and endurance charges (3.33.0, server 1.32.0). */
-    val charges: ChargeRules = ChargeRules(),
+    /** The rules of the hero's frenzy, power and endurance charges (3.33.0, server 1.32.0); null - зарядов нет (4.12.x). */
+    val charges: ChargeRules? = null,
     /** Предначертание аккаунта (4.6.0): рычаги боя ([FateKit]). */
     val fate: FateKit = FateKit.NONE,
 ) {
@@ -83,10 +83,10 @@ data class Loadout(
     val heroKit: HeroKit by lazy { HeroKit(actives, passives, curses) }
 
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
-    fun reserved(hero: Combatant): Double = heroKit.reserved(hero)
+    fun reserved(hero: Combatant): Double = heroKit.reserved(hero, hero.rules.floors.reserve)
 
     /** Сколько процентов максимума маны держит пассивное умение [passive] (4.6.4): аура - свою долю на эффективности резерва листа. */
-    fun reserve(passive: KitSkill, hero: Combatant): Double = heroKit.reserve(passive, hero)
+    fun reserve(passive: KitSkill, hero: Combatant): Double = heroKit.reserve(passive, hero, hero.rules.floors.reserve)
 
     /**
      * What the passives lay on the sheet all the time: an aura's lines stronger by the aura effect, a bonus's
@@ -113,7 +113,7 @@ data class Loadout(
             flasks: List<BeltFlask?>,
             stats: Map<String, Double> = emptyMap(),
             powers: PowerBook = PowerBook(),
-            charges: ChargeRules = ChargeRules(),
+            charges: ChargeRules? = null,
             fate: FateKit = FateKit.NONE,
         ): Loadout {
             val kit = HeroKit.of(index, skills, heroClass, stats)
@@ -304,7 +304,7 @@ data class Draught(
  */
 fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught {
     val duration = duration(hero::get)
-    val low = life < hero.maxLife * LOW_LIFE
+    val low = life < hero.maxLife * hero.rules.lowLife
     val recover = recovery(hero::get) * if (low) 1 + own("FLASK_LOW_LIFE_RECOVERY") / 100 else 1.0
     val lifeAmount = own(FlaskStat.LIFE.code) * recover
     val manaAmount = own(FlaskStat.MANA.code) * recover
@@ -323,6 +323,3 @@ fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught 
         conditional = conditioned.map { ConditionalLine(requireNotNull(it.condition), StatLine(it.stat, it.op, it.value * scale)) },
     )
 }
-
-/** "Low life", as a flask and a passive's answer read it: under this share of the maximum. */
-const val LOW_LIFE = 0.35

@@ -78,7 +78,7 @@ internal fun ExpeditionRun.carriedEffects(): List<EffectView> = carry.effects.ma
 }
 
 /** Заряды героя вне боя - плитками полки, как в бою. */
-internal fun ExpeditionRun.carriedCharges(): List<ChargeView> = carry.charges.map { ChargeView(it.kind, it.count, kit.charges.max(it.kind, hero.stats), tenths(it.left)) }
+internal fun ExpeditionRun.carriedCharges(): List<ChargeView> = carry.charges.map { ChargeView(it.kind, it.count, kit.charges?.max(it.kind, hero.stats) ?: 0, tenths(it.left)) }
 
 /** Секунды до десятой вверх: снимок экрана не меняется каждый кадр. */
 private fun tenths(seconds: Double): Double = ceil(seconds * 10) / 10

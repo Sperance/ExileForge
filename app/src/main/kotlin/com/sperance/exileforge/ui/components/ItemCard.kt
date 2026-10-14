@@ -169,8 +169,6 @@ fun ItemCard(
         ) {
             item.states.forEach { Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp)) }
             if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
-            // Выдано (4.9.0): вещь выдачи - другим героям не уходит
-            if (item.item.granted) Icon(Icons.Outlined.Redeem, ui("item.granted"), tint = GoldBright, modifier = Modifier.size(15.dp))
             if (waiting) PendingMark()
             Spacer(Modifier.weight(1f))
             // Кольцо качества роллов (4.6.5) - у всех редкостей, легенда тоже: по строкам с вилкой

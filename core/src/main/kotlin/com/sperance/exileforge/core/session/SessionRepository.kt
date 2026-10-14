@@ -45,6 +45,9 @@ data class Session(
     fun tester(holding: HeroHolding): Boolean = holding.hero?.takeIf { it.id == holding.heroId }?.info?.tester
         ?: (characters.firstOrNull { it.id == holding.heroId }?.tester == true)
 
+    /** Откроет ли сервер выдачи окна тестирования герою [holding] (4.12.x, сервер ROLE-01): администратор - любому, иначе - тестировщику. */
+    fun grants(holding: HeroHolding): Boolean = isAdmin || tester(holding)
+
     /** Герои, что держат место аккаунта (4.5.1): удалённый самим игроком место освободил сразу, удалённый модерацией - нет. */
     val slotHolders: Int get() = characters.count { sanctions[it.id]?.voluntary != true }
 

@@ -82,13 +82,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         val borrows = (monster.stats[CoreStat.BORROW_SKILLS.code] ?: 0.0) > 0 && book.monsterSkills.isNotEmpty()
         val skills = (own + if (borrows) listOf(dice.pick(book.monsterSkills).code) else emptyList()).distinct()
         if (skills == monster.skills) return monster
-        val stats = if (borrows && mana <= 0) monster.stats + (CoreStat.MANA.code to BORROWED_MANA) else monster.stats
+        val stats = if (borrows && mana <= 0) monster.stats + (CoreStat.MANA.code to campaign.combat.borrowedMana) else monster.stats
         return monster.copy(skills = skills, stats = stats)
-    }
-
-    /** Whether this run hides a Vaal portal: [chance] of it, on a zone with a guardian of corruption to stand at the zone's end. */
-
-    companion object {
-        private const val BORROWED_MANA = 40.0
     }
 }

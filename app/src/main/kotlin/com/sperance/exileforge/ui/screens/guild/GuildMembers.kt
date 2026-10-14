@@ -53,7 +53,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     val openPlayer = rememberPlayerCard()
     // Места офицеров - из `guilds.json`; без прочитанного контента повышение не предлагается
     val officerSeat = game.index?.guilds?.officerSeat(guild.officers) == true
-    val scope = rememberRosterScope(game, guild.members)
+    val scope = rememberRosterScope(game, guild.members) ?: return
     val roll = remember(guild.members, order) { order?.sort(guild.members) ?: RosterOrder.byRole(guild.members) }
     val shown = remember(roll, filter, query, scope) { roll.filter { filter.keeps(it, scope) && it.named(query) } }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(vertical = 10.dp)) {

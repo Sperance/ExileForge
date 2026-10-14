@@ -541,7 +541,7 @@ class ExpeditionRun(
              */
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
         ): ExpeditionRun {
-            val zone = if (vaal) VaalZones.zone(location) ?: location else location
+            val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
             val context = run.context
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
             // The act's resistance penalty (3.18.0, server 1.16.0) rides with the map's own "less resistances".

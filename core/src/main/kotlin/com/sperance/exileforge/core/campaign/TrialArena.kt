@@ -95,7 +95,7 @@ class TrialArena(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     val rules = index.campaign.combat
-    private val trials: TrialRules = index.campaign.trials ?: TrialRules()
+    private val trials: TrialRules = checkNotNull(index.campaign.trials) { "campaign: no trials" }
     private val run = Run(index, TrialRules.arena(index.campaign, trial.heroLevel), trial.seed, context)
     private val spawns = Spawns(index, run)
     private val waves = AbyssWaves(index, run)

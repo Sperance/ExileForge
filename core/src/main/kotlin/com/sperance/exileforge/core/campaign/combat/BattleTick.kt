@@ -2,7 +2,6 @@ package com.sperance.exileforge.core.campaign.combat
 
 import com.sperance.exileforge.core.campaign.FactorKey
 import com.sperance.exileforge.core.campaign.FactorTrace
-import com.sperance.exileforge.core.campaign.LOW_LIFE
 import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.PowerMoment
 import com.sperance.exileforge.core.campaign.StatLines
@@ -162,7 +161,7 @@ private fun Battle.expire() {
 internal fun Battle.watch() {
     val hero = heroFighter
     if (hero.alive) {
-        val below = hero.life < hero.body.maxLife * LOW_LIFE
+        val below = hero.life < hero.body.maxLife * rules.lowLife
         if (below && !belowLow) {
             trigger(SkillEvent.LOW_LIFE)
             powers.fire(PowerEvent.LOW_LIFE)
@@ -176,7 +175,8 @@ internal fun Battle.watch() {
             }
             shieldUp = up
         }
-        val low = hero.life < hero.body.maxLife / 2
+        // Бонусы низкого здоровья пассивных - ниже своей доли правил (4.12.x, ARCH-02: прежде половина в коде)
+        val low = hero.life < hero.body.maxLife * rules.passiveLowLife
         if (low != hero.low && model.lowLife.isNotEmpty()) {
             hero.low = low
             remake(hero)
@@ -199,7 +199,7 @@ internal fun Battle.watch() {
     foeFighters.forEach { foe -> if (foe.alive) phase(foe) }
     if (slotHolders.isNotEmpty()) totemTick()
     foeFighters.forEach { foe ->
-        val low = foe.alive && foe.life < foe.body.maxLife / 2
+        val low = foe.alive && foe.life < foe.body.maxLife * rules.passiveLowLife
         if (low != foe.low && foe.model.body(emptyList())[CoreStat.LOW_LIFE_SPEED.code] > 0) {
             foe.low = low
             remake(foe)
@@ -255,7 +255,7 @@ internal fun Battle.heroConditions(): Set<Condition> {
     val body = hero.body
     fun recent(at: Double) = time - at <= rules.recentSeconds
     return buildSet {
-        if (hero.life < body.maxLife * LOW_LIFE) add(Condition.LOW_LIFE)
+        if (hero.life < body.maxLife * rules.lowLife) add(Condition.LOW_LIFE)
         if (hero.life >= body.maxLife - 0.5) add(Condition.FULL_LIFE)
         if (body.maxShield > 0 && hero.shield >= body.maxShield - 0.5) add(Condition.FULL_SHIELD)
         if (recent(killedAt)) add(Condition.RECENT_KILL)

@@ -185,7 +185,7 @@ internal enum class SettingsPage(val title: String) {
                 dot = if (account.link.offline) LifeRed else Vital,
             ) { onPage(SettingsPage.SERVER) }
             AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(SettingsPage.CLIENT) }
-            if (account.isTester) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
+            if (account.grants) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
             // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.
             if (BuildConfig.DEBUG && account.isAdmin && !account.adminTools) {

@@ -172,7 +172,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                 pick,
                 enabled = armed && !game.busy,
                 verb = "sell.do_n_return",
-                shards = { lots -> game.shardsFor(lots.filterNot { it.piece.item.granted }.map { it.piece.rarity }) },
+                shards = { lots -> game.shardsFor(lots.map { it.piece.rarity }) },
                 onCancel = {
                     pick.clear()
                     selling = false

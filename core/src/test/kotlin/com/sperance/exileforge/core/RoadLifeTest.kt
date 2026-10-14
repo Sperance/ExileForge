@@ -11,7 +11,6 @@ import com.sperance.exileforge.core.quests.live
 import com.sperance.exileforge.rules.content.ChargeKind
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Counter
-import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.content.Rarity
@@ -48,7 +47,7 @@ class RoadLifeTest {
 
     @Test
     fun boss_slain_speed_lies_over_the_sheet_cap() {
-        val rules = ExpeditionRules(heroSpeed = 3.0, bossSlainSpeed = 2.0)
+        val rules = TestContent.index.campaign.expedition.copy(heroSpeed = 3.0, bossSlainSpeed = 2.0)
         val fast = mapOf(CoreStat.MOVEMENT_SPEED.code to 400.0)
         assertEquals(3.0 * 2.5, ExpeditionWorld.heroSpeed(rules, fast), 1e-9)
         assertEquals(3.0 * 2.5 * 2.0, ExpeditionWorld.heroSpeed(rules, fast, bossSlain = true), 1e-9)

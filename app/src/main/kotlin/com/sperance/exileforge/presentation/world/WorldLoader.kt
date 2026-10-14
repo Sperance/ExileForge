@@ -228,7 +228,8 @@ class WorldLoader(
             trace.end(reading, e)
             throw e
         }
-        val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsed { ContentLoader.load { chunks.getValue(it).first } } }
+        // Контент, проверенный сервером, - терпимым JSON клиента (4.12.x, CONTENT-02): строгий разбор - только на старте сервера
+        val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsed { ContentLoader.load(WireJson) { chunks.getValue(it).first } } }
         chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
         world.update { it.copy(content = index, contentHash = manifest.hash) }
     }
@@ -267,7 +268,7 @@ class WorldLoader(
                 store.chunk(server, file)?.takeIf { it.first.isNotBlank() && it.first == manifest.content.chunks[file] }?.second ?: return false
             }
             val index = try {
-                parsed { ContentLoader.load { texts.getValue(it) } }
+                parsed { ContentLoader.load(WireJson) { texts.getValue(it) } }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) {

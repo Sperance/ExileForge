@@ -247,6 +247,16 @@ jobs:
           path: app/build/outputs/apk
       - name: Enable emulator acceleration
         run: sudo chmod 666 /dev/kvm
+      # Эмулятор ставится заранее и с повторами (0.13.0): обрыв скачивания («Error on ZipFile unknown archive») ронял job, а
+      # уже поставленный пакет раннер эмулятора не качает заново
+      - name: Install the emulator
+        run: |
+          sdk="${ANDROID_HOME:-/usr/local/lib/android/sdk}/cmdline-tools/latest/bin/sdkmanager"
+          for attempt in 1 2 3; do
+            "$sdk" --install emulator --channel=0 > /dev/null && [ -x "${ANDROID_HOME:-/usr/local/lib/android/sdk}/emulator/emulator" ] && exit 0
+            sleep $((attempt * 15))
+          done
+          exit 1
       # Снимок загруженного эмулятора в кэше: прогон стартует из него, а не с холодной загрузки
       - uses: actions/cache@v4
         id: avd-cache

@@ -30,14 +30,12 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
+import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.signedNumber
-import com.sperance.exileforge.core.display.statTitle
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
@@ -45,7 +43,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Orb
-import com.sperance.exileforge.rules.text.ModifierText
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*
@@ -91,13 +88,24 @@ import kotlin.math.sin
                 val now = totals[line.code]?.firstOrNull() ?: 0.0
                 val value = line.values.firstOrNull() ?: 0.0
                 val after = if (isTaken) now - value else now + value
+                // Итог с основой правил (0.14.0, ASANA-N08): «шанс 15% + узлы 3,6% = 18,6%», а не одна сумма узлов
+                val base = index.modifier(line.code)?.effectOf(0)?.let { AtlasEffects.base(index, it.stat) }
                 Text(
-                    ui(if (isTaken) "atlas.compare_refund" else "atlas.compare_take", number(now), number(after)),
+                    if (base != null) {
+                        ui(if (isTaken) "atlas.total_refund" else "atlas.total_take", number(base + now), number(base + after), number(base))
+                    } else {
+                        ui(if (isTaken) "atlas.compare_refund" else "atlas.compare_take", number(now), number(after))
+                    },
                     color = Sky.text.copy(alpha = .7f),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(start = 14.dp),
                 )
             }
+        }
+        // Взаимоисключающие ключевые узлы (0.14.0, ASANA-N09): пара названа всегда, взятый второй гасит кнопку с причиной
+        val blocker = AtlasFog.excludedBy(graph, node.code, taken)
+        node.excludes.forEach { other ->
+            Text(ui("atlas.excludes", atlasNodeTitle(other)), color = Caution, style = MaterialTheme.typography.labelSmall)
         }
         val canTake = AtlasFog.canTake(graph, node.code, taken)
         val canRefund = AtlasFog.canRefund(graph, node.code, taken)
@@ -107,6 +115,7 @@ import kotlin.math.sin
                     node.kind == AtlasNodeKind.START -> ui("atlas.start_hint")
                     isTaken && canRefund -> ui("atlas.refund_hint", price)
                     isTaken -> ui("atlas.holds_hint")
+                    blocker != null -> ui("atlas.excluded_hint", atlasNodeTitle(blocker))
                     canTake && available <= 0 -> ui("atlas.no_points")
                     canTake -> ui("atlas.take_hint")
                     else -> ui("atlas.far_hint")
@@ -122,24 +131,18 @@ import kotlin.math.sin
                 ) { Text(ui("atlas.take")) }
 
                 canRefund -> ForgeOutlinedButton(onClick = onRefund, enabled = enabled) { Text(ui("atlas.refund"), color = Sky.text) }
+
+                blocker != null -> ForgeButton(onClick = {}, enabled = false) { Text(ui("atlas.take")) }
             }
         }
     }
 }
 
 /**
- * «+4% Количество предметов на картах», one per stat of a node's line; a count — chests, fountains, Vaal
- * modifiers, nodes, a merchant's goods — and a flag carry no percent. A line whose modifier the content does not hold reads as its sentence.
+ * Строка узла Атласа полной фразой словаря сервера (0.14.0, ASANA-N08): «+1,8% к шансу, что вещь, выпавшая на захваченной карте,
+ * несёт влияние этой карты»; флаг - фраза без числа («…захватывает только Зодчий»). Короткое имя характеристики узел не печатает.
  */
-internal fun effectLines(index: ContentIndex, line: Line): List<String> {
-    val def = index.modifier(line.code) ?: return listOf(lineText(index, line))
-    return def.bind(line.values).map { (effect, value) ->
-        // Единица - из текста строки на сервере (4.12.x, STAT-MAP-09): «%» лишь у строки, что говорит процентами; счёт и флаг - без
-        val unit = if (locOr(ModifierText.templateKey(effect, negative = false), "").contains("{v}%")) "%" else ""
-        // The dictionary's «Атлас: …» prefix is the screen's own title here (2.73.0).
-        "${signedNumber(value)}$unit ${statTitle(effect.stat).substringAfter(": ")}"
-    }
-}
+internal fun effectLines(index: ContentIndex, line: Line): List<String> = listOf(lineText(index, line))
 
 /** The atlas's lines added up (3.54.0): by modifier code, value by value, over every taken node. */
 internal object AtlasTotals {

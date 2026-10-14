@@ -12,7 +12,11 @@ import com.sperance.exileforge.rules.content.MapStat
  * the server decides every command, this only draws the same rule in advance.
  */
 object AtlasFog {
-    fun canTake(graph: AtlasGraph, code: String, taken: Set<String>): Boolean = code !in taken && code != graph.start && graph.isAdjacentTo(code, taken)
+    /** Взять можно соседний свободный узел, если его не исключает уже взятый (0.14.0, ASANA-N09: «только Зодчий» / «только Пустота»). */
+    fun canTake(graph: AtlasGraph, code: String, taken: Set<String>): Boolean = code !in taken && code != graph.start && graph.isAdjacentTo(code, taken) && !graph.excluded(code, taken)
+
+    /** Взятый узел, что не даёт взять [code] (0.14.0, ASANA-N09), - его имя называет причина. */
+    fun excludedBy(graph: AtlasGraph, code: String, taken: Set<String>): String? = graph.node(code)?.excludes?.firstOrNull { it in taken }
 
     fun canRefund(graph: AtlasGraph, code: String, taken: Set<String>): Boolean = code in taken && code != graph.start && graph.isConnected(taken - code)
 
@@ -87,6 +91,19 @@ object AtlasEffects {
         mapOf(MapStat.PACK_SIZE.code to (atlas[PACK_SIZE] ?: 0.0), MapStat.RARE_MONSTERS.code to (atlas[RARE_MONSTERS] ?: 0.0)) +
             (hero.keys + GUARDIAN_POWER + ABYSS_POWER + com.sperance.exileforge.rules.content.BrewStat.ALL).associateWith { atlas[it] ?: 0.0 }
         ).filterValues { it != 0.0 }
+
+    /**
+     * Основа строки Атласа в правилах (0.14.0, ASANA-N08): узлы прибавляют к ней свои числа, итог - основа плюс сумма узлов.
+     * `null` - у строки основы нет (итог - сама сумма узлов).
+     */
+    fun base(index: ContentIndex, stat: String): Double? = index.campaign.maps.influence.let { rule ->
+        when (stat) {
+            AtlasStat.MAP_INFLUENCE.code -> rule.chance
+            AtlasStat.INFLUENCE_ITEMS.code -> rule.items
+            AtlasStat.INFLUENCE_POWER.code -> rule.power
+            else -> null
+        }
+    }
 
     fun portalChance(index: ContentIndex, atlas: Map<String, Double>): Double = (index.campaign.corruption.chance * (1 + (atlas[VAAL_CHANCE] ?: 0.0) / 100)).coerceIn(0.0, 1.0)
 

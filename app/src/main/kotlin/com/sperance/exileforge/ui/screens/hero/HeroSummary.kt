@@ -144,19 +144,25 @@ private val StatSection.glyph: Glyph get() = when (this) {
         // The mana's share the auras hold reads under its name: the figure on the right is the whole pool.
         val reserve = if (key == MANA_STAT) remember(game.hero, game.index) { game.manaReserve() }?.takeIf { it.percent > 0 } else null
         val parts = remember(key, figures, game.index) { game.index?.let { partsText(key, figures.stats, it) } }
+        // Пределы (4.12.x, R3): сводка печатает действующее число, а набранное сверх предела - под именем «предел; набрано N»
+        val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
+        val evasion = remember(key, figures, game.index, game.hero?.level) {
+            if (key != StatLimits.EVASION) null else game.index?.campaign?.let { campaign -> game.hero?.level?.let { StatLimits.evasion(figures.stats, it, campaign) } }
+        }
         Column(Modifier.weight(1f)) {
             Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             reserve?.let { Text(ui("hero.mana_reserved", number(it.percent)), color = ManaBlue, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
             parts?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+            limit?.takeIf { it.clamped }?.let { Text(ui("stat.cap.reached", statValue(key, it.gathered, game.index)), color = Caution, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+            evasion?.let { Text(ui("stat.evasion_chance", number(it.effective), number(it.cap)), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
         }
         was?.let { Text(statValue(key, it, game.index), color = Muted, style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.LineThrough) }
-        // A capped figure (3.12.0) reads as the fight reads it, greyed when it lies above; the ceiling is in the figure's window.
-        val limit = game.index?.campaign?.combat?.let { StatLimits.of(key, figures.stats, it) }
+        // A capped figure (3.12.0) reads as the fight reads it (4.12.x, R3: действующее число); the ceiling is in the figure's window.
         Text(
-            statValue(key, value, game.index),
+            statValue(key, limit?.effective ?: value, game.index),
             color = when {
                 was != null -> Ember
-                (limit?.over ?: 0.0) > 0 -> Muted
+                limit?.clamped == true -> Caution
                 else -> Parchment
             },
             style = MaterialTheme.typography.titleMedium,

@@ -58,6 +58,9 @@ class WorldLoader(
     private var localeJob: Job? = null
     private var iconJob: Job? = null
 
+    /** Словарь, иконки и портреты - каждый одним полётом (4.12.x, NET-5): старт, перепроверка и обновление не качают их дважды. */
+    private val flights = SingleFlight<String>(scope)
+
     /** Language is global: core validation messages and Compose both read it, so switch them together. */
     fun language(lang: Lang) {
         if (languages.lang.value == lang) return
@@ -72,7 +75,9 @@ class WorldLoader(
      * The server's dictionary for one language: the stored copy first, so the app starts with names even
      * offline; the manifest's hash then says whether it is still the dictionary the server is serving.
      */
-    suspend fun loadLocale(language: Lang) {
+    suspend fun loadLocale(language: Lang) = flights.run("locale:${language.code}") { readLocale(language) }
+
+    private suspend fun readLocale(language: Lang) {
         val server = sessions.state.value.server
         // Шаги словаря видны в окне запуска (3.82.0): память устройства, манифест, сервер.
         val cached = trace.step(StartStage.DICTIONARY, "start.step.cache") {
@@ -107,7 +112,9 @@ class WorldLoader(
         }
     }
 
-    suspend fun loadIcons() {
+    suspend fun loadIcons() = flights.run(ICONS) { readIcons() }
+
+    private suspend fun readIcons() {
         val server = sessions.state.value.server
         val cached = trace.step(StartStage.ICONS, "start.step.cache") {
             store.icons(server)?.also { (hash, document) -> applyIcons(parsed { IconBundle.parse(hash, document) }) }
@@ -152,7 +159,7 @@ class WorldLoader(
     /** Parsing a served document is CPU work of its size, and never belongs on the main thread. */
     private suspend fun <T> parsed(parse: () -> T): T = withContext(Dispatchers.Default) { parse() }
 
-    suspend fun loadPortraits() = trace.step(StartStage.ICONS, "start.step.portraits") { readPortraits() }
+    suspend fun loadPortraits() = trace.step(StartStage.ICONS, "start.step.portraits") { flights.run(PORTRAITS) { readPortraits() } }
 
     private suspend fun readPortraits() {
         val server = sessions.state.value.server
@@ -285,3 +292,7 @@ private const val LOCK_WAIT_MS = 20_000L
 
 /** Что сервер сказал о себе в манифесте (3.88.2) - экран «Контракт сервера» показывает это рядом с закреплённым сервером. */
 private fun World.server(manifest: StaticManifest) = copy(serverVersion = manifest.version, serverRevision = manifest.revision, serverCommit = manifest.commit)
+
+/** Ключи полётов иконок и портретов. */
+private const val ICONS = "icons"
+private const val PORTRAITS = "portraits"

@@ -234,7 +234,8 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
         switches = emptyList(),
         show = ui("filter.show_all"),
         resettable = draft != draft.cleared(),
-        onReset = { draft = draft.cleared() },
+        // «Сбросить» (4.12.x, ASANA-15) применяет сброс сразу и закрывает шторку
+        onReset = { onApply(draft.cleared()) },
         onShow = { onApply(draft) },
         onDismiss = onDismiss,
     )

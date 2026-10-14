@@ -1,54 +1,47 @@
 package com.sperance.exileforge.core.display
 
-import com.sperance.exileforge.rules.content.Ceiling
-import com.sperance.exileforge.rules.content.CombatRules
+import com.sperance.exileforge.rules.content.CampaignFile
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.sheet.StatCaps
+import com.sperance.exileforge.rules.sheet.StatReading
 
 /**
  * A figure a fight counts only up to a ceiling (3.12.0): a resistance under its maximum; block, critical chance and
- * physical reduction under their own (3.13.0).
- * [effective] is the figure as the fight reads it — an element's resistance with «all resistances» — [base] the
- * rules' own cap, [raises] the stats that lift it with what they give now, [cap] where it stands, and [hard] the
- * ceiling no raise passes, when there is one.
+ * physical reduction under their own (3.13.0). С 4.12.x (R3) - каждый предел реестра правил `StatCaps`: потолки боя, подавление и
+ * отклонение, длительности на себе, доли, скорость атаки и чар, свет и шаг карты.
+ * [gathered] - сколько набрано (у стихии - с «всеми сопротивлениями», у скорости чар - со скоростью применения умений),
+ * [effective] - что бой читает на самом деле, [base] - предел правил без поднятий, [raises] - что его поднимает и сколько,
+ * [cap] - где он стоит, [hard] - выше чего не поднять, [floor] - ниже чего бой не читает.
  */
-data class StatLimit(val stat: String, val effective: Double, val base: Double, val raises: List<Pair<String, Double>>, val cap: Double, val hard: Double?) {
+data class StatLimit(
+    val stat: String,
+    val gathered: Double,
+    val effective: Double,
+    val base: Double,
+    val raises: List<Pair<String, Double>>,
+    val cap: Double,
+    val hard: Double?,
+    val floor: Double? = null,
+) {
     /** What lies above the cap and does nothing in a fight. */
-    val over: Double get() = (effective - cap).coerceAtLeast(0.0)
+    val over: Double get() = (gathered - cap).coerceAtLeast(0.0)
+
+    /** Бой читает не набранное (4.12.x, R3): оно выше предела или ниже дна - сводка печатает «предел; набрано N». */
+    val clamped: Boolean get() = effective != gathered
 }
 
-/** The ceilings of the hero's figures, read exactly as `Combatant` applies them. */
+/** The ceilings of the hero's figures, read from the rules' one registry (`StatCaps`) - exactly as the fight applies them. */
 object StatLimits {
-    private val CHAOS: String = CoreStat.RESIST_CHAOS.code
-    private val ALL: String = CoreStat.RESIST_ALL.code
-    private val MAX_ALL: String = CoreStat.RESIST_MAX_ALL.code
-    private val ELEMENTS = setOf(CoreStat.RESIST_FIRE.code, CoreStat.RESIST_COLD.code, CoreStat.RESIST_LIGHTNING.code)
-
-    fun of(stat: String, stats: Map<String, Double>, rules: CombatRules): StatLimit? = when (stat) {
-        in ELEMENTS, CHAOS -> resistance(stat, stats, rules)
-        else -> ceilings(rules)[stat]?.let { ceiling(stat, stats, it) }
+    fun of(stat: String, stats: Map<String, Double>, campaign: CampaignFile): StatLimit? {
+        val cap = StatCaps.of(stat, campaign) ?: return null
+        val read = { code: String -> stats[code] ?: 0.0 }
+        val raises = cap.raises.map { it to read(it) }.filter { it.second != 0.0 }
+        return StatLimit(stat, cap.gathered(stat, read), cap.effective(stat, read), cap.base, raises, cap.at(read), cap.hard, cap.floor)
     }
 
-    private fun ceilings(rules: CombatRules): Map<String, Ceiling> = mapOf(
-        CoreStat.BLOCK_CHANCE.code to rules.ceilings.block,
-        CoreStat.SPELL_BLOCK.code to rules.ceilings.spellBlock,
-        CoreStat.CRITICAL_CHANCE.code to rules.ceilings.critical,
-        CoreStat.SPELL_CRITICAL_CHANCE.code to rules.ceilings.critical,
-        CoreStat.PHYSICAL_REDUCTION.code to rules.ceilings.physical,
-    )
+    /** Шанс уклонения героя уровня [level] (4.12.x, R3): от меткости врага его уровня, под пределом правил. */
+    fun evasion(stats: Map<String, Double>, level: Int, campaign: CampaignFile): StatReading = StatCaps.evasion({ stats[it] ?: 0.0 }, level, campaign.combat)
 
-    private fun ceiling(stat: String, stats: Map<String, Double>, limit: Ceiling): StatLimit {
-        val raised = stats[limit.raise] ?: 0.0
-        val raises = listOf(limit.raise to raised).filter { it.second != 0.0 }
-        return StatLimit(stat, stats[stat] ?: 0.0, limit.base, raises, limit.at(raised), limit.hard)
-    }
-
-    /** Chaos stands alone; the three elements also take «all resistances» and «all maximum resistances». */
-    private fun resistance(stat: String, stats: Map<String, Double>, rules: CombatRules): StatLimit {
-        val chaos = stat == CHAOS
-        val raises = listOfNotNull(stat.replace("STOCK_RESIST_", "STOCK_RESIST_MAX_"), MAX_ALL.takeUnless { chaos })
-            .map { it to (stats[it] ?: 0.0) }.filter { it.second != 0.0 }
-        val cap = (rules.resistCap + raises.sumOf { it.second }).coerceIn(0.0, rules.resistHardCap)
-        val effective = (stats[stat] ?: 0.0) + if (chaos) 0.0 else stats[ALL] ?: 0.0
-        return StatLimit(stat, effective, rules.resistCap, raises, cap, rules.resistHardCap)
-    }
+    /** Характеристика, под которой сводка печатает шанс уклонения. */
+    val EVASION: String = CoreStat.EVASION.code
 }

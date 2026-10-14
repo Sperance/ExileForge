@@ -336,10 +336,8 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
         ),
         show = ui("filter.show_all"),
         resettable = draft != draft.cleared() || mine,
-        onReset = {
-            draft = draft.cleared()
-            mine = false
-        },
+        // «Сбросить» (4.12.x, ASANA-15) применяет сброс сразу и закрывает шторку
+        onReset = { if (!game.busy) onApply(draft.cleared(), false) },
         onShow = { if (!game.busy) onApply(draft, mine) },
         onDismiss = onDismiss,
     )

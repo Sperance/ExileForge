@@ -68,6 +68,7 @@ internal class WallRelief private constructor(
         var near: Path? = null
         val cap = Path()
         val edges = ArrayList<FrontEdge>()
+        var slope: Path? = null
         var area = 0f
         var sumX = 0f
         var sumY = 0f
@@ -89,7 +90,12 @@ internal class WallRelief private constructor(
                 val dx = contour.xs[m] - contour.xs[k]
                 val dy = contour.ys[m] - contour.ys[k]
                 val length = hypot(dx, dy)
-                if (length < 1e-4f || dy - dx <= length * FRONT) continue
+                if (length < 1e-4f) continue
+                if (dy - dx < -length * FRONT) {
+                    back(sealX(contour.xs[k]), sealY(contour.ys[k]), sealX(contour.xs[m]), sealY(contour.ys[m]), dy / length, -dx / length)
+                    continue
+                }
+                if (dy - dx <= length * FRONT) continue
                 edges += FrontEdge(sealX(contour.xs[k]), sealY(contour.ys[k]), sealX(contour.xs[m]), sealY(contour.ys[m]), dy / length, -dx / length)
             }
             if (abs(twice) > 1e-6f) {
@@ -97,6 +103,22 @@ internal class WallRelief private constructor(
                 sumX += gx / 6
                 sumY += gy / 6
             }
+        }
+
+        /**
+         * Дальняя от камеры кромка массива (4.12.x, ASANA-01) - скат: полоса крышки от кромки вглубь на [SLOPE_DEPTH] клетки, у кромки
+         * ниже на долю высоты [SLOPE_DROP] - верх массива скругляется вниз, а не обрывается плоским краем; кадр кладёт её сумраком.
+         */
+        private fun back(ax: Float, ay: Float, bx: Float, by: Float, nx: Float, ny: Float) {
+            val path = slope ?: Path().also { slope = it }
+            val low = height * (1 - SLOPE_DROP)
+            fun px(mx: Float, my: Float) = (mx - my) * unit
+            fun py(mx: Float, my: Float, z: Float) = (mx + my) * unit / 2 - z
+            path.moveTo(px(ax, ay), py(ax, ay, low))
+            path.lineTo(px(bx, by), py(bx, by, low))
+            path.lineTo(px(bx - nx * SLOPE_DEPTH, by - ny * SLOPE_DEPTH), py(bx - nx * SLOPE_DEPTH, by - ny * SLOPE_DEPTH, height))
+            path.lineTo(px(ax - nx * SLOPE_DEPTH, ay - ny * SLOPE_DEPTH), py(ax - nx * SLOPE_DEPTH, ay - ny * SLOPE_DEPTH, height))
+            path.close()
         }
 
         fun plate(contour: WallField.Contour) = polygon(plate ?: Path().also { plate = it }, contour, 0f, seal = true)
@@ -120,7 +142,7 @@ internal class WallRelief private constructor(
                 sketch.cap()
                 sketch.foot()
             }
-            return WallPiece(depth, cap, sketch.faces(), sketch.dusk(), sketch.rim(), sketch.marks(WallLayer.FACE), sketch.marks(WallLayer.CAP), sketch.marks(WallLayer.FOOT))
+            return WallPiece(depth, cap, sketch.faces(), sketch.dusk(), sketch.rim(), sketch.marks(WallLayer.FACE), sketch.marks(WallLayer.CAP), sketch.marks(WallLayer.FOOT), slope)
         }
 
         /** Многоугольник квадрата в холст на высоте [z]; [seal] выносит вершины на границе клетки к соседу. */
@@ -163,6 +185,10 @@ private const val SEAL = .012f
 /** Грань смотрит к камере, если её нормаль хоть немного глядит в `+x+y` (доля длины отрезка). */
 private const val FRONT = .02f
 
+/** Скат дальней кромки (4.12.x, ASANA-01): насколько вглубь массива, в клетках, и на какую долю высоты ниже у самой кромки. */
+private const val SLOPE_DEPTH = .35f
+private const val SLOPE_DROP = .35f
+
 /** Кусок меньше этой площади (в клетках) - пыль сглаживания, не рисуется. */
 private const val MIN_AREA = .002f
 
@@ -181,7 +207,8 @@ internal class WallCell(val plate: Path?, val far: Path?, val near: Path?, val p
 
 /**
  * Кусок массива в клетке: [depth] - глубина для сортировки с жетонами, [cap] - крышка, [faces] - видимые грани (нулевой путь
- * - все грани, остальные - доли тени по повороту), [dusk] - сумрак к подножию, [rim] - фаска по кромке, метки текстуры слоями.
+ * - все грани, остальные - доли тени по повороту), [dusk] - сумрак к подножию, [rim] - фаска по кромке, метки текстуры слоями,
+ * [slope] - скат дальней кромки.
  */
 internal class WallPiece(
     val depth: Double,
@@ -192,6 +219,8 @@ internal class WallPiece(
     val faceMarks: Array<WallMark>,
     val capMarks: Array<WallMark>,
     val footMarks: Array<WallMark>,
+    /** Скат дальней кромки (4.12.x, ASANA-01): сумрак поверх крышки у края, что смотрит от камеры; нет такого края - null. */
+    val slope: Path? = null,
 )
 
 /** Метка текстуры: путь одной краской. */

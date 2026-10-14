@@ -299,7 +299,7 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Bool
  * Добытая вещь «Полем боя» (3.88.6): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
  * Надетая (3.90.0, [presence]) - строкой с меткой «Надето», без действий.
  */
-@Composable internal fun PieceLine(item: ItemView, presence: LootPresence, selected: Boolean = false, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, selected = selected, onLongClick = onLongClick, onClick = onClick)
+@Composable internal fun PieceLine(item: ItemView, presence: LootPresence, selected: Boolean = false, onLongClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, selected = selected, trailing = trailing, onLongClick = onLongClick, onClick = onClick)
 
 /** A stack of the bag as a chip: its icon, its name and how many. */
 @Composable internal fun StackChip(game: GameUi, code: String, amount: Long, onClick: () -> Unit) {

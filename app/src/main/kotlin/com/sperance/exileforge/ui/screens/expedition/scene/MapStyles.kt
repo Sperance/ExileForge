@@ -82,6 +82,8 @@ internal abstract class MapStyle {
         scope.drawPath(piece.cap, tone(tones.cap, light, alpha = alpha))
         piece.rim?.let { scope.drawPath(it, rim(tones, palette, x, y, frame.time, light).let { c -> c.copy(alpha = c.alpha * alpha) }) }
         marks(frame, piece.capMarks, tones, alpha, light)
+        // Скат дальней кромки (4.12.x, ASANA-01): верх массива уходит в «тьму скалы», а не обрывается плитой
+        piece.slope?.let { scope.drawPath(it, Color.Black.copy(alpha = SLOPE_DUSK * alpha)) }
         marks(frame, piece.footMarks, tones, alpha, light)
     }
 
@@ -222,6 +224,9 @@ internal class PaletteBrush(private val make: (Palette) -> Brush) {
 
 /** Тень грани, что смотрит в `+x`, против освещённой, что смотрит в `+y`. */
 private const val FACE_SHADE = .36f
+
+/** Сумрак ската дальней кромки массива (4.12.x, ASANA-01). */
+private const val SLOPE_DUSK = .45f
 
 /** Глубина пропасти (4.7.0): на сколько клетки тьма сдвинута к зрителю - видна дальняя стенка. */
 private const val CHASM_DEPTH = .24f

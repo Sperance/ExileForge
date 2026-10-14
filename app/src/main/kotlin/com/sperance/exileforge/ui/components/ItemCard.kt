@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.display.NeedKind
 import com.sperance.exileforge.core.display.PropertyValue
 import com.sperance.exileforge.core.display.Term
 import com.sperance.exileforge.core.display.lineText
+import com.sperance.exileforge.core.display.modifierText
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stampText
@@ -57,13 +58,17 @@ import com.sperance.exileforge.ui.theme.*
  * so there is no label to put on the left of a number any more. The glyph is the characteristic
  * the modifier's first effect changes.
  */
-@Composable fun ModifierLine(index: ContentIndex, line: Line) = ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index))
+@Composable fun ModifierLine(index: ContentIndex, line: Line) {
+    // Замена значения (4.12.x, ASANA-02) - цена узла, не бонус: строка цветом потери
+    val penalty = index.modifier(line.code)?.let { modifierText(index).penalty(it) } == true
+    ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index), if (penalty) LifeRed else ModBlue)
+}
 
-/** A modifier's sentence already worded, under the glyph of what it changes. */
-@Composable fun ModifierLine(text: String, glyph: Glyph = Glyph.INFO) {
+/** A modifier's sentence already worded, under the glyph of what it changes; [tint] - цвет текста (штраф - потерей). */
+@Composable fun ModifierLine(text: String, glyph: Glyph = Glyph.INFO, tint: Color = ModBlue) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Icon(glyph.vector, null, tint = Rune, modifier = Modifier.size(16.dp))
-        Text(text, color = ModBlue, style = MaterialTheme.typography.bodyMedium)
+        Icon(glyph.vector, null, tint = if (tint == ModBlue) Rune else tint, modifier = Modifier.size(16.dp))
+        Text(text, color = tint, style = MaterialTheme.typography.bodyMedium)
     }
 }
 

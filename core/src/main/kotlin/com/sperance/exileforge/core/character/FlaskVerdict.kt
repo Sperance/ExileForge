@@ -21,6 +21,9 @@ enum class FlaskMeasure(val higherBetter: Boolean, val read: (FlaskReadout) -> D
     USES(true, { it.uses.toDouble() }),
     EFFECT(true, FlaskReadout::effect),
     LINE(true, { 0.0 }),
+
+    /** Своя механика фляги без меры (4.12.x, ASANA-05): заряды за крит, перелив, шанс не тратить заряд… - [FlaskRow.stat]. */
+    MECHANIC(true, { 0.0 }),
 }
 
 /**
@@ -74,11 +77,14 @@ data class FlaskVerdict(val rows: List<FlaskRow>) : GearVerdict {
         /** Строки сводки [after] против [before]: мера, что у обеих ноль, не печатается; сила эффекта - только у фляг со строками. */
         fun of(before: FlaskReadout?, after: FlaskReadout): FlaskVerdict {
             val lined = after.lines.isNotEmpty() || before?.lines.orEmpty().isNotEmpty()
-            val measures = FlaskMeasure.entries.filter { it != FlaskMeasure.LINE && (lined || it != FlaskMeasure.EFFECT) }.map { FlaskRow(it, before?.let(it.read) ?: 0.0, it.read(after)) }
+            val measures = FlaskMeasure.entries.filter { it != FlaskMeasure.LINE && it != FlaskMeasure.MECHANIC && (lined || it != FlaskMeasure.EFFECT) }.map { FlaskRow(it, before?.let(it.read) ?: 0.0, it.read(after)) }
             val was = before?.lines.orEmpty().groupBy { it.stat to it.op }.mapValues { (_, ops) -> ops.sumOf { it.value } }
             val will = after.lines.groupBy { it.stat to it.op }.mapValues { (_, ops) -> ops.sumOf { it.value } }
             val lines = (was.keys + will.keys).distinct().map { key -> FlaskRow(FlaskMeasure.LINE, was[key] ?: 0.0, will[key] ?: 0.0, key.first, key.second) }
-            return FlaskVerdict((measures + lines).filter { it.before != 0.0 || it.after != 0.0 })
+            // Механики фляги (4.12.x, ASANA-05): и те, что пропадут с заменой
+            val held = before?.mechanics.orEmpty()
+            val mechanics = (held.keys + after.mechanics.keys).distinct().map { stat -> FlaskRow(FlaskMeasure.MECHANIC, held[stat] ?: 0.0, after.mechanics[stat] ?: 0.0, stat) }
+            return FlaskVerdict((measures + lines + mechanics).filter { it.before != 0.0 || it.after != 0.0 })
         }
     }
 }

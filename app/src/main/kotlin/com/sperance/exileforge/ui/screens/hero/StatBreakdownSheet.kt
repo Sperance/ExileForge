@@ -91,7 +91,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
                 }
             }
             item { Header(current, view, accent, game) }
-            game.index?.campaign?.combat?.let { StatLimits.of(current, combat.stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
+            game.index?.campaign?.let { StatLimits.of(current, combat.stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
             if (current == MANA_STAT) game.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
@@ -148,9 +148,10 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
         SourceLine(ShareRow(ui("stat.cap.base"), value(limit.base)), open)
         limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, game.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat), open) }
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
+        limit.floor?.let { SourceLine(ShareRow(ui("stat.cap.floor"), value(it)), open) }
         Text(
-            ui("stat.cap.counts", value(minOf(limit.effective, limit.cap))) + if (limit.over > 0) " · " + ui("stat.cap.over", value(limit.over)) else "",
-            color = if (limit.over > 0) Muted else Parchment,
+            ui("stat.cap.counts", value(limit.effective)) + if (limit.clamped) " · " + ui("stat.cap.gathered", value(limit.gathered)) else "",
+            color = if (limit.clamped) Muted else Parchment,
             style = MaterialTheme.typography.labelSmall,
         )
     }

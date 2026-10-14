@@ -9,7 +9,8 @@ dependencies {
     api("com.sperance.exileforge:rules:1.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    api("com.squareup.okhttp3:okhttp:5.5.0")
+    // OkHttp - деталь ядра (4.12.x, ARCH-03): наружу - свои типы (`HttpLink`), `:app` его не видит
+    implementation("com.squareup.okhttp3:okhttp:5.5.0")
     testImplementation(kotlin("test-junit"))
     testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")

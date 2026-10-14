@@ -155,7 +155,8 @@ class ConnectionActions(
                         FlushOutcome.EMPTY
                     }
                     if (foreign > 0) notices.toast(ui("link.foreign", foreign), NoticeKind.DONE)
-                    if (wasOffline || delivered > 0) refreshScreen()
+                    // Доставленные команды принесли героя своими снимками (4.12.x, NET-7): после очереди он не перечитывается
+                    if (wasOffline || delivered > 0) refreshScreen(hero = delivered == 0)
                     when (outcome) {
                         FlushOutcome.OFFLINE -> {
                             down(null)
@@ -189,8 +190,11 @@ class ConnectionActions(
         e
     }
 
-    /** What the player looks at, read again quietly: the hero always, and the tab's own data where it has any. */
-    fun refreshScreen() {
+    /**
+     * What the player looks at, read again quietly: the hero (unless [hero] is off - the queue's answers already brought it), and
+     * the tab's own data where it has any.
+     */
+    fun refreshScreen(hero: Boolean = true) {
         run {
             val now = navigator.current.value
             when (now.phase) {
@@ -199,7 +203,7 @@ class ConnectionActions(
                 AppPhase.CHARACTERS -> read(Reads.CHARACTERS, silent = true) { characterActions.readCharacters() }
 
                 AppPhase.GAME -> {
-                    read(Reads.HERO, silent = true) { heroSync.readHero() }
+                    if (hero) read(Reads.HERO, silent = true) { heroSync.readHero() }
                     when (now.tab) {
                         TAB_CRAFTS -> crafts.load(silent = true)
 

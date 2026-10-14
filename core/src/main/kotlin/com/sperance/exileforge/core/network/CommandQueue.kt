@@ -166,5 +166,8 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
          * a gateway that did not reach the server. Anything else of 4xx/5xx is the server's word, and final.
          */
         fun transient(status: Int?): Boolean = status == 409 || status == 429 || status in 502..504
+
+        /** Код сервера «эта же команда ещё выполняется» (409): новая команда с ним не ждёт в очереди (4.12.x, NET-8). */
+        const val BUSY = "IDEM_001"
     }
 }

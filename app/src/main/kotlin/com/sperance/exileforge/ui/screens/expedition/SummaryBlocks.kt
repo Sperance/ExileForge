@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -32,7 +33,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.BoostSource
 import com.sperance.exileforge.core.campaign.LootBreakdown
@@ -134,37 +134,41 @@ private fun sourceTone(source: BoostSource): Color = when (source) {
 private fun amount(value: Double): String = number(value.roundToLong().toDouble())
 
 /**
- * «Сданы задания» (4.10.0, макет «Итоги карты», вариант A): задания, что сдались разом после карты, - строка на задание с его
- * наградой фишками справа, внизу - всего за задания.
+ * «Сданы задания» (4.10.0; 4.12.x ASANA-09, макет «Сданы задания», вариант A «список с фишками»): задания, что сдались разом после
+ * карты, - имя задания на всю ширину, под ним награда фишками; между заданиями тонкая черта. «Всего за задания» - только при двух
+ * и больше: у одного задания она повторяла бы его фишки.
  */
 @Composable internal fun TurnedInBlock(turnedIn: List<QuestTurnIn>) {
     if (turnedIn.isEmpty()) return
     SummaryCard(ui("summary.quests"), turnedIn.size.toString(), Vital) {
-        turnedIn.forEach { quest ->
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("✓", color = Vital, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-                Text(quest.title, color = Parchment, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                RewardChips(quest.rewards)
+        turnedIn.forEachIndexed { i, quest ->
+            if (i > 0) HorizontalDivider(thickness = 1.dp, color = PanelRaised)
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("✓", color = Vital, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                    Text(quest.title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                }
+                RewardChips(quest.rewards, Modifier.padding(start = 18.dp))
             }
         }
+        if (turnedIn.size < 2) return@SummaryCard
         val all = turnedIn.map { it.rewards }
         val total = QuestReward(
             gold = all.sumOf { it.gold },
             experience = all.sumOf { it.experience },
             orbs = all.flatMap { it.orbs.entries }.groupBy({ it.key }, { it.value }).mapValues { it.value.sum() },
         )
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(ui("summary.quests_total"), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-            RewardChips(total)
-        }
+        HorizontalDivider(thickness = 1.dp, color = PanelRaised)
+        Text(ui("summary.quests_total"), color = Muted, style = MaterialTheme.typography.labelMedium)
+        RewardChips(total)
     }
 }
 
-/** Награда задания фишками: золото, опыт, сферы. */
+/** Награда задания фишками: золото, опыт, сферы - с начала строки, с переносом. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RewardChips(reward: QuestReward) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+private fun RewardChips(reward: QuestReward, modifier: Modifier = Modifier) {
+    FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (reward.gold > 0) Chip(ui("quest.toast.gold", number(reward.gold.toDouble())), GoldBright)
         if (reward.experience > 0) Chip(ui("quest.toast.experience", number(reward.experience)), Rune)
         reward.orbs.forEach { (code, amount) -> Chip(ui("quest.toast.orb", itemTitle(code), amount), Brass) }

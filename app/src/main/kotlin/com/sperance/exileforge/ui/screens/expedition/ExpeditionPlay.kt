@@ -163,7 +163,13 @@ import kotlin.math.roundToInt
                         if (hud.auto == null && !dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
                         if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
                         // Лист объекта карты (3.90.0): алтарь, торговец, узел ремесла
-                        hud.feature?.let { FeatureSheet(game, it, { live.value.feature?.gathering }, onCommand = model::runCommand) }
+                        // Полоса сбора (4.12.x, ASANA-06) - доля пульса этого кадра: чтение часов захода подписывает её рисование на кадр
+                        hud.feature?.let {
+                            FeatureSheet(game, it, {
+                                clock.floatValue
+                                run.pulse.gather
+                            }, onCommand = model::runCommand)
+                        }
                         if (leaving) {
                             DockPanel {
                                 ConfirmSheet(

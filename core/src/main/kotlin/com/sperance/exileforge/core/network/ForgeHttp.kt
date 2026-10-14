@@ -28,12 +28,24 @@ object ForgeHttp {
             .followRedirects(false).followSslRedirects(false)
             .build()
     }
-    val client: OkHttpClient by built
+    internal val client: OkHttpClient by built
+
+    /** Сеть процесса для приложения (4.12.x, ARCH-03): `:app` держит её, не зная OkHttp. */
+    val link: HttpLink by lazy { HttpLink(client) }
 
     /** Back from the background or a locked screen: the pooled sockets may be dead on the far side, and a command is never retried on one. */
     fun dropIdleConnections() {
         if (built.isInitialized()) client.connectionPool.evictAll()
     }
+}
+
+/**
+ * Сетевой клиент ядра (4.12.x, ARCH-03): своя обёртка вокруг клиента OkHttp - `:app` передаёт её [GameApi] и
+ * [com.sperance.exileforge.core.update.Updates], а OkHttp остаётся деталью ядра (`implementation`).
+ */
+class HttpLink internal constructor(internal val client: OkHttpClient) {
+    /** Сбросить простаивающие соединения пула: после смены сети они мертвы на том конце. */
+    fun dropIdleConnections() = client.connectionPool.evictAll()
 }
 
 /**

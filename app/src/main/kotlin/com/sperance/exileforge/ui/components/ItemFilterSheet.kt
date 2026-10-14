@@ -86,14 +86,16 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
         filter.tweaks(state.shelf),
         onOpen,
         modifier,
+        onClear = { state.update(state.shelf.defaults) }.takeIf { filter != state.shelf.defaults },
     )
 }
 
 /**
  * Строка над любым списком с фильтром (4.x): [summary] - порядок и поиск словами, [shown] - сколько
- * видно, справа значок фильтра с числом [tweaks]; любое нажатие - [onOpen].
+ * видно, справа значок фильтра с числом [tweaks]; любое нажатие - [onOpen]. Фильтр сужает список - крестик [onClear] сбрасывает его
+ * сразу, без шторки (4.12.x, ASANA-15).
  */
-@Composable fun FilterBar(summary: String, shown: Int, tweaks: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {
+@Composable fun FilterBar(summary: String, shown: Int, tweaks: Int, onOpen: () -> Unit, modifier: Modifier = Modifier, onClear: (() -> Unit)? = null) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(
             summary,
@@ -106,6 +108,12 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
                 .padding(horizontal = 6.dp, vertical = 8.dp),
         )
         Text(shown.toString(), color = Muted, style = MaterialTheme.typography.labelMedium)
+        onClear?.let { clear ->
+            Box(
+                Modifier.requiredSize(30.dp).clip(CircleShape).clickable(role = Role.Button, onClickLabel = ui("filter.reset"), onClick = clear),
+                contentAlignment = Alignment.Center,
+            ) { Text("✕", color = Muted, style = MaterialTheme.typography.labelMedium) }
+        }
         ItemFilterButton(tweaks, onOpen)
     }
 }
@@ -113,7 +121,8 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 /**
  * Шторка фильтра списка предметов (4.2.0, «Аккордеон»): грани списка [ItemFilterState.shelf] - тип ([groups] - что есть в
  * списке), редкость плитками ([rarities]), качество, порядок, и переключатели «сделано мной», «могу надеть», «скрыть надетое».
- * Правки идут в черновик; «Показать N» ([count] - сколько пройдёт черновик) применяет его, «Сбросить» - к обычному списка.
+ * Правки идут в черновик; «Показать N» ([count] - сколько пройдёт черновик) применяет его, «Сбросить» (4.12.x, ASANA-15) сразу
+ * применяет обычный списка и закрывает шторку.
  */
 @Composable
 fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: List<Rarity>, lang: Lang, count: (ItemFilter) -> Int, onDismiss: () -> Unit) {
@@ -150,7 +159,10 @@ fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: L
         switches = switches,
         show = ui("filter.show", shown),
         resettable = draft != shelf.defaults,
-        onReset = { draft = shelf.defaults },
+        onReset = {
+            state.update(shelf.defaults)
+            onDismiss()
+        },
         onShow = {
             state.update(draft)
             onDismiss()

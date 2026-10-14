@@ -63,6 +63,12 @@ class HeroSync(
     private var parts: HeroParts? = null
     private var copyJob: Job? = null
 
+    /** Последний сложенный лист и его отпечаток частей (4.12.x, PERF-02). */
+    @Volatile private var sheets: DrawnSheet? = null
+
+    /** Лист героя [sheet] и лист боя [combat], сложенные из частей с отпечатком [key] на контенте [index]. */
+    private class DrawnSheet(val key: String, val index: com.sperance.exileforge.rules.content.ContentIndex, val sheet: com.sperance.exileforge.core.character.HeroSheet, val combat: CombatSheet?)
+
     /** Номер последнего слияния, чей рисунок идёт; более старый, пришедший позже, отбрасывается. */
     private var drawing = 0L
 
@@ -71,6 +77,7 @@ class HeroSync(
 
     fun forget() {
         parts = null
+        sheets = null
         announcedPoints.clear()
         copyJob?.cancel()
     }
@@ -79,6 +86,19 @@ class HeroSync(
     fun restore(heroId: String, snapshot: HeroSnapshot) {
         parts = null
         apply(heroId, snapshot, keep = false)
+    }
+
+    /**
+     * Части героя [heroId] из его копии на устройстве (4.12.x, NET-6): вход в героя из меню шлёт серверу их отпечатки и `If-None-Match`,
+     * и сервер отвечает только сдвинутым или 304, а не всем героем. Копия чужого аккаунта или другой ревизии API не годится.
+     */
+    suspend fun seed(heroId: String) {
+        val server = sessions.state.value.server
+        val account = sessions.state.value.profile?.id ?: return
+        val text = store.heroCopy(server, heroId) ?: return
+        val copy = withContext(Dispatchers.Default) { runCatching { WireJson.decodeFromString(HeroCopy.serializer(), text) }.getOrNull() } ?: return
+        if (copy.revision != API_REVISION || copy.account.id != account) return
+        parts = HeroParts(heroId).merge(copy.snapshot, fresh = false).takeIf { it.complete }
     }
 
     /** Что команда на [heroId] говорит серверу о частях у клиента; `null` ничего не просит. */
@@ -142,9 +162,16 @@ class HeroSync(
         draw = scope.launch {
             val view = withContext(Dispatchers.Default) {
                 val info = merged.hero
-                val sheet = Sheets.calculate(index, info.level, info.heroClass, merged.tree, merged.items, info.laws, info.fate)
-                // Лист боя сводки (4.6.4) складывается здесь же, вне главного потока: цифры и отметки - сразу
-                val combat = CombatSheet.of(index, sheet, info.level, info.heroClass, info.skills, info.fate, merged.items.filter { it.equipped })?.also { it.figures }
+                // Лист складывается заново, только если сдвинулись герой, дерево или вещи (4.12.x, PERF-02): снимок с одной сумкой,
+                // заходом или торговцем берёт прежний
+                val key = merged.sheetKey()
+                val (sheet, combat) = sheets?.takeIf { it.key == key && it.index === index }?.let { it.sheet to it.combat } ?: run {
+                    val sheet = Sheets.calculate(index, info.level, info.heroClass, merged.tree, merged.items, info.laws, info.fate)
+                    // Лист боя сводки (4.6.4) складывается здесь же, вне главного потока: цифры и отметки - сразу
+                    val combat = CombatSheet.of(index, sheet, info.level, info.heroClass, info.skills, info.fate, merged.items.filter { it.equipped })?.also { it.figures }
+                    sheets = DrawnSheet(key, index, sheet, combat)
+                    sheet to combat
+                }
                 HeroView(info, merged.items, merged.overflow, merged.bag, merged.tree, merged.campaign, merged.crafts, merged.merchant, sheet, combat = combat)
             }
             if (ticket != drawing || parts !== merged) return@launch

@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.update
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.core.network.ForgeHttp
+import com.sperance.exileforge.core.network.HttpLink
 import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
@@ -10,7 +11,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import okhttp3.CacheControl
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
@@ -67,9 +67,9 @@ object UpdatePolicy {
  * Обновления только с GitHub Releases (3.86.0): последний релиз отдаёт `update.json` и APK по постоянным адресам,
  * GitHub уводит их редиректом на свой CDN. Нет релиза (404) - обновлений нет.
  */
-class Updates(client: OkHttpClient = ForgeHttp.client) {
+class Updates(link: HttpLink = ForgeHttp.link) {
     // APK качается долго: без общего предела вызова, но с пределом молчания между байтами. Редиректы GitHub - свои.
-    private val http = client.newBuilder().followRedirects(true).followSslRedirects(true)
+    private val http = link.client.newBuilder().followRedirects(true).followSslRedirects(true)
         .readTimeout(60, TimeUnit.SECONDS).callTimeout(0, TimeUnit.SECONDS).build()
 
     // Описание сборки маленькое: вызов, который тянется, обрывается - проверка всегда возвращается.

@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.network.ForgeHttp
+import com.sperance.exileforge.core.network.HttpLink
 import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.quests.QuestRepository
@@ -83,7 +84,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.combine
-import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.singleOf
@@ -113,7 +113,7 @@ val appModule = module {
     single { Foreground() }
     single { ServerReach(get(), lazy { get<ConnectionActions>() }, get(named(APP_SCOPE)), get(), get()) }
     // Один HTTP-клиент на процесс (3.80.45): пул соединений, потоки и TLS-сессии общие у всех серверов и обновлений.
-    single<OkHttpClient> { ForgeHttp.client }
+    single<HttpLink> { ForgeHttp.link }
     singleOf(::Navigator)
     single { ConnectionEventsHub() }
     single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>(), StallReports(get(), get(named(APP_SCOPE)))) }

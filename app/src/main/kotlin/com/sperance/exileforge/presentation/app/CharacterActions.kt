@@ -115,6 +115,8 @@ class CharacterActions(
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
             warmupActions.clear()
             heroSync.forget()
+            // Части героя с устройства (4.12.x, NET-6): чтение героя просит лишь сдвинутое, а не всего героя
+            heroSync.seed(id)
             // The hero the next launch opens straight into (3.30.0).
             store.saveLastHero(sessions.state.value.server, id)
             loader.ensureContent(fresh = true)

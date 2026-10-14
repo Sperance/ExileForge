@@ -157,7 +157,7 @@ private fun shareText(value: Double): String {
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index.stats, serverLocale::string)
 
 /** A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. */
-fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effectOf(i), v) }) }
+fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>): String = modifierText(index).template(def, values)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effectOf(i), v) }) }
     ?: values.mapIndexed { i, v -> def.effectOf(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code.value) }
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */

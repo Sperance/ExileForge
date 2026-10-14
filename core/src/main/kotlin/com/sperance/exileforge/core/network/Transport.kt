@@ -295,7 +295,9 @@ class Transport(
             unreached(e)
             if (responseText.isBlank()) responseText = e.message.orEmpty()
             // The answer never came, or the server said "not yet": the command waits with its key, and the replay is the same command.
-            val later = if (e is ApiFailure) CommandQueue.transient(e.status) else e is java.io.IOException
+            // Дубль, что сервер ещё выполняет (`IDEM_001`, 4.12.x NET-8), в очередь не встаёт: игрок видит «Это действие уже
+            // выполняется», а ответ первой команды приносит героя сам.
+            val later = if (e is ApiFailure) CommandQueue.transient(e.status) && e.code != CommandQueue.BUSY else e is java.io.IOException
             if (waits != null && queued != null && later) {
                 waits.add(queued)
                 throw CommandQueued(queued, e)

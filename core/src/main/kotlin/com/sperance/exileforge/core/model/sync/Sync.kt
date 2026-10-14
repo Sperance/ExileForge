@@ -128,7 +128,7 @@ const val API_REVISION = 82
  * answers `If-None-Match`. The items come in [ItemBuckets] by id and their order as a part of its own
  * (1.1.0): a new drop moves one bucket and the order, not the whole stash.
  */
-class HeroParts(val heroId: String, val version: String = "", private val parts: Map<String, HeroPart> = emptyMap()) {
+class HeroParts(val heroId: String, val version: String = "", private val parts: Map<String, HeroPart> = emptyMap(), private val memo: PartMemo = PartMemo()) {
     val complete: Boolean get() = NAMES.all { it in parts }
 
     /** `hero=<hash>,items=<hash>,…`, or `none`: the header is how a client asks for a snapshot at all. */
@@ -138,16 +138,22 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     fun merge(snapshot: HeroSnapshot, fresh: Boolean = true): HeroParts {
         // A fresh answer brings the server's clock (4.11.x, [HeroSnapshot.now]): the one moment its offset can be measured.
         if (fresh) ServerClock.heard(snapshot.now)
-        return HeroParts(heroId, snapshot.version, parts + snapshot.parts)
+        return HeroParts(heroId, snapshot.version, parts + snapshot.parts, memo)
     }
 
     /** Every part held, as one snapshot: what the device keeps of the hero for the next launch (3.30.0). */
     fun snapshot(): HeroSnapshot = HeroSnapshot(version, parts)
 
+    /**
+     * Отпечаток листа героя (4.12.x, PERF-02): части, из которых он складывается, - герой, дерево, вещи и их порядок. Совпал с
+     * прошлым - лист не пересчитывается (пришли только сумка, заход, ремёсла или торговец).
+     */
+    fun sheetKey(): String = (listOf(HERO, TREE, ItemBuckets.ORDER) + ItemBuckets.names).joinToString(",") { parts[it]?.version.orEmpty() }
+
     val hero: HeroInfo get() = decode(HERO, HeroInfo.serializer())
-    val items: List<ItemInstance> get() {
+    val items: List<ItemInstance> get() = memo.derived(ITEMS, sheetKey()) {
         val byId = ItemBuckets.names.flatMap { decode(it, ListSerializer(ItemInstance.serializer())) }.associateBy { it.id }
-        return decode(ItemBuckets.ORDER, ListSerializer(String.serializer())).mapNotNull(byId::get)
+        decode(ItemBuckets.ORDER, ListSerializer(String.serializer())).mapNotNull(byId::get)
     }
     val overflow: List<ItemInstance> get() = decode(OVERFLOW, ListSerializer(ItemInstance.serializer()))
     val bag: Map<String, Long> get() = decode(BAG, MapSerializer(String.serializer(), Long.serializer()))
@@ -156,7 +162,11 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val crafts: WorkState get() = decode(CRAFTS, WorkState.serializer())
     val merchant: MerchantStock get() = decode(MERCHANT, MerchantStock.serializer())
 
-    private fun <T> decode(name: String, serializer: KSerializer<T>): T = WireJson.decodeFromJsonElement(serializer, parts.getValue(name).data)
+    /** Часть [name] разобранной: та же часть (отпечаток) разбирается один раз на героя (4.12.x, PERF-02). */
+    private fun <T> decode(name: String, serializer: KSerializer<T>): T {
+        val part = parts.getValue(name)
+        return memo.derived(name, part.version) { WireJson.decodeFromJsonElement(serializer, part.data) }
+    }
 
     companion object {
         const val HEADER = "X-Hero-Parts"
@@ -168,5 +178,22 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
         const val CRAFTS = "crafts"
         const val MERCHANT = "merchant"
         val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, ItemBuckets.ORDER) + ItemBuckets.names
+
+        /** Ключ памяти собранных вещей (не часть сервера). */
+        private const val ITEMS = "#items"
+    }
+}
+
+/**
+ * Память разобранных частей героя (4.12.x, PERF-02): по имени - отпечаток и значение. Слияние снимка несёт её дальше, так что
+ * часть, чей отпечаток не сдвинулся, не разбирается заново; сдвинулась - разбирается и заменяет прежнее.
+ */
+class PartMemo {
+    private val values = java.util.concurrent.ConcurrentHashMap<String, Pair<String, Any?>>()
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T> derived(name: String, version: String, make: () -> T): T {
+        values[name]?.takeIf { it.first == version }?.let { return it.second as T }
+        return make().also { values[name] = version to it }
     }
 }

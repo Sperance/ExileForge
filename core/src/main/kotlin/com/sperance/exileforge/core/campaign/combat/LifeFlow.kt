@@ -5,7 +5,15 @@ package com.sperance.exileforge.core.campaign.combat
  * в процентах) и отложенного урона [delayed], всё - здоровья в секунду. В бою недуги сюда не входят: их урон пишется своими
  * строками. На карте ([ailments]) - входят: урон недугов в секунду, что несёт герой.
  */
-data class LifeFlow(val regen: Double = 0.0, val degen: Double = 0.0, val delayed: Double = 0.0, val degenShare: Double = 0.0, val ailments: Double = 0.0) {
+data class LifeFlow(
+    val regen: Double = 0.0,
+    val degen: Double = 0.0,
+    val delayed: Double = 0.0,
+    val degenShare: Double = 0.0,
+    val ailments: Double = 0.0,
+    /** Из [regen] - отдых вне боя `offCombatRegen` (4.12.x, UI-X2): на карте разбор называет его отдельно от регенерации листа. */
+    val rest: Double = 0.0,
+) {
     /** Сколько здоровья в секунду прибывает (плюс) или уходит (минус). */
     val net: Double get() = regen - degen - delayed - ailments
 

@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandStore
 import com.sperance.exileforge.core.network.FailureState
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.HttpLink
 import com.sperance.exileforge.core.network.ManifestCache
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.network.ServerAlarm
@@ -39,7 +40,6 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 
 class SessionActions(
     repositories: Repositories,
@@ -56,7 +56,7 @@ class SessionActions(
     private val lazyCharacters: Lazy<CharacterActions>,
     private val lazyWarmup: Lazy<WarmupActions>,
     /** HTTP-клиент процесса (3.80.45, из Koin): все серверы делят его пул и TLS-сессии. */
-    private val http: OkHttpClient,
+    private val http: HttpLink,
     private val trace: StartupTrace,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val connectionActions: ConnectionActions get() = lazyConnection.value
@@ -298,7 +298,7 @@ class SessionActions(
             val stale = awaySince?.let { (System.nanoTime() - it) / 1_000_000 > STALE_AWAY_MS } == true
             awaySince = null
             scope.launch {
-                withContext(Dispatchers.IO) { http.connectionPool.evictAll() }
+                withContext(Dispatchers.IO) { http.dropIdleConnections() }
                 val session = sessions.state.value
                 val link = links.state.value
                 val reread = session.signedIn && navigator.current.value.phase != AppPhase.AUTH &&
@@ -446,7 +446,8 @@ class SessionActions(
         })
         created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
-        // Любая ошибка ответа (4.3.1) и обрыв без ответа - повод проверить сборку; 426 сервера - сразу, как сервер новее при входе.
+        // Проверку сборки (NET-3, закрыто 4.12.x) поднимают 426 сервера (сразу, как сервер новее при входе), сбой сервера (5xx, битый
+        // ответ) и обрыв без ответа; отказ правила (4xx) - слово сервера, не повод искать обновление.
         created.onServerError = { alarm ->
             when (alarm) {
                 ServerAlarm.OUTDATED -> newerServer.tryEmit(Unit)

@@ -37,12 +37,15 @@ internal value class RoadLife(val net: Double) {
          * Из чего скорость: регенерация листа и доля регенерации маны ([Recovery.lifeFromMana], 4.11.x) под долей восстановления и
          * срезом недугов [curb] ([manaCurb] - маны) плюс отдых `offCombatRegen`, пока [resting], против дегена листа.
          */
-        fun flow(body: Combatant, pace: ExpeditionRules, mana: ManaRule, curb: Double = 0.0, manaCurb: Double = 0.0, resting: Boolean = true): LifeFlow = LifeFlow(
-            regen = (Recovery.lifeRegen(body, body.rules.regen, curb) + Recovery.lifeFromMana(body, mana, manaCurb, curb)) * body.recoveryRate +
-                if (resting) body.maxLife * pace.offCombatRegen / 100 else 0.0,
-            // Отрицательная регенерация (4.12.x, STAT-ATK-04) - потеря здоровья в секунду, как деген
-            degen = body.maxLife * body.lifeDegenShare + Recovery.lifeLoss(body),
-            degenShare = body.lifeDegenShare * 100,
-        )
+        fun flow(body: Combatant, pace: ExpeditionRules, mana: ManaRule, curb: Double = 0.0, manaCurb: Double = 0.0, resting: Boolean = true): LifeFlow {
+            val rest = if (resting) body.maxLife * pace.offCombatRegen / 100 else 0.0
+            return LifeFlow(
+                regen = (Recovery.lifeRegen(body, body.rules.regen, curb) + Recovery.lifeFromMana(body, mana, manaCurb, curb)) * body.recoveryRate + rest,
+                // Отрицательная регенерация (4.12.x, STAT-ATK-04) - потеря здоровья в секунду, как деген
+                degen = body.maxLife * body.lifeDegenShare + Recovery.lifeLoss(body),
+                degenShare = body.lifeDegenShare * 100,
+                rest = rest,
+            )
+        }
     }
 }

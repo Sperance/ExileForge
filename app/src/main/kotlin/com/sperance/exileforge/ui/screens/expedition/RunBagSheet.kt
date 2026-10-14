@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -22,6 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -30,6 +33,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.run.BagEntry
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.LootKind
+import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
@@ -42,6 +46,7 @@ import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.rememberInspect
+import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
@@ -71,11 +76,23 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
         }
     }
     val pieces = bag.sumOf { entry -> entry.reward?.let { it.equipment.size + it.items.values.sum().toInt() } ?: 0 }
+    val haptics = LocalHapticFeedback.current
+    // Пометка к продаже удержанием (4.12.x, ASANA-16): то же, что кнопка карточки, - монета на строке, лёгкий отклик, счёт в шапке
+    val mark = { id: String ->
+        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+        vm.toggleSaleMark(id)
+    }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         RunPanel(Modifier, GoldBright, footer = { ForgeOutlinedButton(onClick = onClose, modifier = Modifier.fillMaxWidth()) { Text(ui("common.close")) } }) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(ui("expedition.bag.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 Text(ui("expedition.bag.count", pieces, bag.size), color = Muted, style = MaterialTheme.typography.labelSmall)
+            }
+            if (expedition.saleMarks.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    SaleCoin()
+                    Text(ui("expedition.bag.marked", expedition.saleMarks.size), color = GoldBright, style = MaterialTheme.typography.labelMedium)
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (gold > 0) Text(ui("expedition.loot_gold", gold), color = GoldBright)
@@ -86,7 +103,7 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
             bag.forEachIndexed { at, entry ->
                 key(entry.n) {
                     if (at > 0) HorizontalDivider(color = Bronze)
-                    BagPortion(game, entry, fresh = at == 0, now = now, arriving = expedition.pending > 0, onItem = { looked = it }) { inspect(Inspect.Stack(it)) }
+                    BagPortion(game, entry, fresh = at == 0, now = now, arriving = expedition.pending > 0, marks = expedition.saleMarks, onMark = mark, onItem = { looked = it }) { inspect(Inspect.Stack(it)) }
                 }
             }
             if (awaiting > 0) Text(ui("expedition.bag.awaiting", awaiting), color = Muted, style = MaterialTheme.typography.labelSmall)
@@ -101,7 +118,7 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
 /** Порция одного события: «когда · откуда» (у новейшей - «новое»), вещи строками, стопки чипами. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long, arriving: Boolean, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
+private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long, arriving: Boolean, marks: Set<String>, onMark: (String) -> Unit, onItem: (ItemView) -> Unit, onStack: (String) -> Unit) {
     val reward = entry.reward ?: return
     Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -117,7 +134,16 @@ private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long,
         }
         game.presentLoot(reward.equipment, arriving = arriving).forEach { (instance, presence) ->
             key(instance.id) {
-                game.view(instance)?.let { piece -> PieceLine(piece, presence) { onItem(piece) } }
+                game.view(instance)?.let { piece ->
+                    val marked = piece.id in marks
+                    PieceLine(
+                        piece,
+                        presence,
+                        selected = marked,
+                        onLongClick = { onMark(piece.id) }.takeIf { presence.actionable },
+                        trailing = if (marked) ({ SaleCoin() }) else null,
+                    ) { onItem(piece) }
+                }
             }
         }
         if (reward.items.isNotEmpty()) {
@@ -127,6 +153,9 @@ private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long,
         }
     }
 }
+
+/** Монета пометки к продаже (4.12.x, ASANA-16). */
+@Composable private fun SaleCoin() = GlyphIcon(Glyph.CURRENCY, GoldBright, Modifier.size(16.dp))
 
 /** Откуда порция: монстр - его именем, прочее - видом события. */
 private fun fromTitle(entry: BagEntry): String = entry.from.monster?.takeIf { entry.from.kind == LootKind.MONSTER }?.let(::monsterTitle) ?: ui("expedition.bag.from.${entry.from.kind.name}")

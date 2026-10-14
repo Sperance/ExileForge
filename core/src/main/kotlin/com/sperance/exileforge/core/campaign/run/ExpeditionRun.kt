@@ -423,6 +423,7 @@ class ExpeditionRun(
             }
         }
         pulse.capture(fight)
+        pulse.gather(channel?.elapsed, channel?.spot?.node?.seconds ?: 0.0)
         if (cadence.due(dt, commanded, leaps(), fight)) state.value = snapshot()
     }
 

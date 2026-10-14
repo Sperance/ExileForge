@@ -268,9 +268,13 @@ internal fun flowTint(net: Double): Color = when {
     else -> Muted
 }
 
-/** Из чего сложился итог: «реген +8 · деген 2% · отложенный урон −14 · недуги −34» (недуги - на карте); без источников - пусто. */
+/**
+ * Из чего сложился итог: «реген +8 · отдых вне боя +8 · деген 2% · отложенный урон −14 · недуги −34» (отдых и недуги - на карте,
+ * 4.12.x UI-X2: сумма частей сходится с итогом); без источников - пусто.
+ */
 internal fun flowParts(flow: LifeFlow): String = listOfNotNull(
-    ui("fight.flow.regen", flow.regen.roundToInt()).takeIf { flow.regen >= 1 },
+    ui("fight.flow.regen", (flow.regen - flow.rest).roundToInt()).takeIf { flow.regen - flow.rest >= 1 },
+    ui("fight.flow.rest", flow.rest.roundToInt()).takeIf { flow.rest >= 1 },
     ui("fight.flow.degen", fineNumber(flow.degenShare)).takeIf { flow.degen > 0 },
     ui("fight.flow.delayed", flow.delayed.roundToInt()).takeIf { flow.delayed > 0 },
     ui("fight.flow.ailments", flow.ailments.roundToInt()).takeIf { flow.ailments >= .5 },

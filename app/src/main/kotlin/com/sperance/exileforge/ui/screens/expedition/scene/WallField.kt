@@ -12,7 +12,8 @@ import kotlin.math.floor
 internal class EdgeNoise(val amplitude: Float, val scale: Float, val rough: Float)
 
 /**
- * Сглаженное поле скалы карты: сумма гауссиан («метаболы») по клеткам каймы - стенам, что касаются пола (8 соседей), - плюс
+ * Сглаженное поле скалы карты: сумма гауссиан («метаболы») по клеткам каймы - стенам, что касаются пола (8 соседей), и (4.12.x,
+ * ASANA-01) по стенам за каймой на [DEEP] шага вглубь с затухающим весом - массив сплошной, а не лента в клетку, - плюс
  * детерминированный шум края стиля [edge]. Поле считается раз на карту в узлах сетки по [STEPS] на клетку, так что каждый
  * квадрат marching squares лежит внутри одной клетки карты: изолинии режутся по клеткам без пересчёта.
  *
@@ -24,7 +25,36 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
     private val cols = width * STEPS + 1
     private val rows = height * STEPS + 1
     private val rim = BooleanArray(width * height) { map.rimRock(it % width, it / width) }
+    private val weight = depthWeights()
     private val values = FloatArray(cols * rows)
+
+    /** Вес клетки в поле: кайма - 1, стена за ней - по шагу вглубь ([DEEP_WEIGHTS]), дальше и не стена - 0. */
+    private fun depthWeights(): FloatArray {
+        val weight = FloatArray(width * height)
+        var front = (0 until width * height).filter { rim[it] }
+        front.forEach { weight[it] = 1f }
+        for (w in DEEP_WEIGHTS) {
+            val next = ArrayList<Int>()
+            for (cell in front) {
+                val x = cell % width
+                val y = cell / width
+                for (dy in -1..1) {
+                    for (dx in -1..1) {
+                        val nx = x + dx
+                        val ny = y + dy
+                        if (nx !in 0 until width || ny !in 0 until height) continue
+                        val n = ny * width + nx
+                        if (weight[n] == 0f && map.tile(nx, ny) == Tile.WALL) {
+                            weight[n] = w
+                            next += n
+                        }
+                    }
+                }
+            }
+            front = next
+        }
+        return weight
+    }
 
     init {
         // Гауссиана разделима: вес клетки - произведение весов по осям, по доле шага внутри клетки и сдвигу до клетки
@@ -41,7 +71,7 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
                     if (y !in 0 until height) continue
                     for (kx in 0..REACH * 2) {
                         val x = cx + kx - REACH
-                        if (x in 0 until width && rim[y * width + x]) sum += wx[kx] * wy[ky]
+                        if (x in 0 until width) sum += weight[y * width + x] * wx[kx] * wy[ky]
                     }
                 }
                 values[j * cols + i] = sum + edge.amplitude * (fractal(i.toFloat() / STEPS, j.toFloat() / STEPS) - .5f) * 2f
@@ -141,6 +171,15 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
         /** Пороги мягкой тени у подножия: дальний край и ближний, плотнее. */
         const val AO_FAR = .34f
         const val AO_NEAR = .58f
+
+        /**
+         * Веса стены за каймой по шагу вглубь (4.12.x, ASANA-01): массив сплошной на 2-3 клетки, затем поле затухает - крышка уходит
+         * в «тьму скалы», а не обрывается плитой.
+         */
+        private val DEEP_WEIGHTS = floatArrayOf(.85f, .6f)
+
+        /** Шагов вглубь за каймой, что входят в поле. */
+        val DEEP = DEEP_WEIGHTS.size
 
         private const val REACH = 2
         private const val SPREAD = 2.2f

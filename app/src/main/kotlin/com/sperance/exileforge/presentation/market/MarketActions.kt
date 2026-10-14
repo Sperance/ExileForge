@@ -36,6 +36,7 @@ class MarketActions(
     private val connection: ServerConnection,
     private val commands: CommandRunner,
     private val notices: Notices,
+    private val events: GameEvents,
 ) {
     private val api: GameApi get() = connection.api
     private val market: Market get() = repository.state.value
@@ -99,11 +100,26 @@ class MarketActions(
     }
 
     fun buyOffer(offerId: String) = trade(writing = true) {
-        api.merchant.buy(heroes.heroId, offerId)
+        restocked { api.merchant.buy(heroes.heroId, offerId) }
     }
 
     fun buyOrb(code: String) = trade(writing = true) {
-        api.merchant.buyOrb(heroes.heroId, code)
+        restocked { api.merchant.buyOrb(heroes.heroId, code) }
+    }
+
+    /**
+     * Покупка с полки, что успела смениться (4.12.x, ASANA-04): отказ `CH_017` - не ошибка игрока, а старая витрина - герой
+     * перечитывается (полка едет в его снимке), тост «Витрина обновилась».
+     */
+    private suspend fun restocked(buy: suspend () -> Unit) {
+        try {
+            buy()
+        } catch (e: ApiFailure) {
+            if (e.code != RESTOCKED) throw e
+            heroes.stale()
+            events.heroChanged()
+            notices.toast(ui("merchant.restocked"), NoticeKind.DONE)
+        }
     }
 
     /**
@@ -196,6 +212,9 @@ class MarketActions(
     private companion object {
         /** Код сервера «уровень героя слишком мал для аукциона». */
         const val LEVEL_GATE = "AU_002"
+
+        /** Код сервера «у торговца нет такого предложения»: полка сменилась. */
+        const val RESTOCKED = "CH_017"
     }
 }
 

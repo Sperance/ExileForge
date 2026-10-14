@@ -6,7 +6,7 @@ import com.sperance.exileforge.core.i18n.ui
 import kotlin.math.roundToInt
 
 /** Имя строки сравнения фляг (4.2.0): мера листа фляги или характеристика, что фляга кладёт на героя. */
-fun flaskRowTitle(row: FlaskRow): String = if (row.measure == FlaskMeasure.LINE) statTitle(row.stat) else ui("flask.measure.${row.measure.name}")
+fun flaskRowTitle(row: FlaskRow): String = if (row.measure == FlaskMeasure.LINE || row.measure == FlaskMeasure.MECHANIC) statTitle(row.stat) else ui("flask.measure.${row.measure.name}")
 
 /** Число строки сравнения фляг [value] в единицах её меры: доли - процентами, длительность - секундами. */
 fun flaskRowValue(row: FlaskRow, value: Double): String = when (row.measure) {
@@ -16,4 +16,5 @@ fun flaskRowValue(row: FlaskRow, value: Double): String = when (row.measure) {
     FlaskMeasure.CHARGES, FlaskMeasure.PER_USE -> fineNumber(value)
     FlaskMeasure.USES -> value.toInt().toString()
     FlaskMeasure.LINE -> statNumber(row.stat, value) + effectUnit(row.stat, row.op)
+    FlaskMeasure.MECHANIC -> statValue(row.stat, value)
 }

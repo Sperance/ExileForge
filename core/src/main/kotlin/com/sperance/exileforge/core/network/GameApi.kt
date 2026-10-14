@@ -24,7 +24,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.encodeToJsonElement
-import okhttp3.OkHttpClient
 
 /** "No account for this device yet" — the server's way of saying "register it". */
 private const val REVISION_RETRIES = 2
@@ -52,10 +51,10 @@ private val RATE_WAITS = listOf(2_000L, 5_000L, 12_000L)
 class GameApi(
     server: String,
     private val journal: RequestJournal = RequestJournal(),
-    client: OkHttpClient = ForgeHttp.client,
+    link: HttpLink = ForgeHttp.link,
     private val onUnauthorized: () -> Unit = {},
 ) {
-    private val http = Transport(server, journal, client) {
+    private val http = Transport(server, journal, link.client) {
         account = null
         onUnauthorized()
     }

@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.network.HttpLink
 import com.sperance.exileforge.core.update.AvailableUpdate
 import com.sperance.exileforge.core.update.Updates
 import com.sperance.exileforge.core.update.Wire
@@ -33,7 +34,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.OkHttpClient
 import java.io.File
 
 /**
@@ -69,13 +69,13 @@ class UpdateViewModel(
     app: Application,
     private val reach: ServerReach,
     newerServer: Flow<Unit> = emptyFlow(),
-    http: OkHttpClient,
+    http: HttpLink,
     private val trace: StartupTrace,
     private val resources: GameResources,
     private val playing: Flow<Boolean>,
     serverFailed: Flow<Unit> = emptyFlow(),
 ) : AndroidViewModel(app) {
-    private val updates = Updates(client = http)
+    private val updates = Updates(http)
 
     // A build that does not update itself (debug, the tested shrunk one) never checks by itself: only a check by hand runs.
     private val mutable = MutableStateFlow(UpdateState(checking = BuildConfig.UPDATES))

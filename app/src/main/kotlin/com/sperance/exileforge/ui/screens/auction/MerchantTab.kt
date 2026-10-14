@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.model.trade.MerchantOrb
@@ -103,6 +104,17 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     val shelf = { draft: ItemFilter -> game.itemShelf(wares, ItemShelf.MERCHANT, draft) { prices[it.id] } }
     val visible = remember(offers, filterState.filter, game.hero) { shelf(filterState.filter).map { it.id } }
     val byId = remember(offers) { offers.associateBy { it.first.item.id } }
+    // Таймер дошёл до нуля (4.12.x, ASANA-04): витрина и полка сфер перечитываются сами, пока экран открыт; открытая карточка
+    // товара, которого больше нет, закрывается
+    stock?.refreshAt?.takeIf { it > 0 }?.let { at ->
+        LaunchedEffect(at) {
+            delay((at - serverNow()).coerceAtLeast(0) + RENEW_SLACK_MS)
+            heroModel.load()
+        }
+    }
+    LaunchedEffect(stock?.offers) {
+        if (chosen != null && stock?.offers.orEmpty().none { it.id == chosen?.id }) chosen = null
+    }
     // Шапка и полоса кошелька уходят при прокрутке вниз (3.88.9), вкладки остаются.
     CollapsibleHeader {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -183,9 +195,9 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
 
 /** «Новый товар через 2:14:03» (3.90.3): первая строка списка товаров, тикает раз в секунду по часам устройства. */
 @Composable private fun RenewalRow(at: Long) {
-    val now by produceState(System.currentTimeMillis(), at) {
+    val now by produceState(serverNow(), at) {
         while (true) {
-            value = System.currentTimeMillis()
+            value = serverNow()
             delay(1_000)
         }
     }
@@ -198,6 +210,12 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
         Text(ui("merchant.renews", countdown(((at - now) / 1_000).coerceAtLeast(0))), color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/** Часы сервера (полка меняется по ним): часы устройства со сдвигом последнего ответа. */
+private fun serverNow(): Long = System.currentTimeMillis() + ServerClock.offset
+
+/** Насколько позже нуля таймера витрина перечитывается: окно полки сервера уже сменилось. */
+private const val RENEW_SLACK_MS = 1_500L
 
 /** Секунды как `h:mm:ss`. */
 private fun countdown(seconds: Long): String = "%d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60)

@@ -21,6 +21,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
@@ -28,10 +30,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.number
@@ -49,6 +53,9 @@ import com.sperance.exileforge.ui.components.LocalLore
 import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.relicName
+import com.sperance.exileforge.ui.icons.BagIcon
+import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.OfferSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
@@ -114,16 +121,80 @@ import kotlin.math.roundToInt
 }
 
 /**
- * Странствующий торговец: вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка не нажимается.
- * Нажатие на товар открывает полную карточку со сравнением с надетым - ту же, что у лавки Города (4.2.0).
+ * Единый шаблон листа объекта карты (4.12.x, ASANA-12, макет «Окно сбора», вариант C): метка вида [kind] цветом [tone], гнездо с
+ * иконкой [icon], имя [name] серифом и подпись [sub], факты фишками [facts], своё тело [body] (товары, полоса сбора) и действия
+ * [actions] одной строкой. Новый объект карты с листом - этот шаблон, а не своя вёрстка.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FeatureCard(
+    kind: String,
+    tone: Color,
+    name: String,
+    sub: String?,
+    facts: List<FeatureFact>,
+    icon: @Composable () -> Unit,
+    onDismiss: () -> Unit,
+    body: @Composable ColumnScope.() -> Unit = {},
+    actions: @Composable RowScope.() -> Unit,
+) {
+    ForgeSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            val pill = RoundedCornerShape(50)
+            Text(
+                kind.uppercase(),
+                color = tone,
+                style = MaterialTheme.typography.labelSmall,
+                letterSpacing = 0.8.sp,
+                modifier = Modifier.background(tone.copy(alpha = .07f), pill).border(1.dp, tone.copy(alpha = .4f), pill).padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val socket = RoundedCornerShape(10.dp)
+                Box(Modifier.size(50.dp).background(Abyss, socket).border(1.dp, tone.copy(alpha = .45f), socket), contentAlignment = Alignment.Center) { icon() }
+                Column(Modifier.weight(1f)) {
+                    Text(name, color = GoldBright, style = relicName(17))
+                    sub?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium) }
+                }
+            }
+            if (facts.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    facts.forEach { fact ->
+                        Text(
+                            fact.text,
+                            color = fact.tone,
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            modifier = Modifier.background(fact.tone.copy(alpha = .08f), pill).border(1.dp, fact.tone.copy(alpha = .3f), pill).padding(horizontal = 9.dp, vertical = 4.dp),
+                        )
+                    }
+                }
+            }
+            body()
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
+        }
+    }
+}
+
+/** Факт объекта карты фишкой: текст и его цвет. */
+private data class FeatureFact(val text: String, val tone: Color = Parchment)
+
+/**
+ * Странствующий торговец (шаблон объекта карты): вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка
+ * не нажимается. Нажатие на товар открывает полную карточку со сравнением с надетым - ту же, что у лавки Города (4.2.0).
  */
 @Composable private fun MerchantSheet(game: GameUi, merchant: MapFeature.Merchant, bought: List<Int>, onCommand: (RunCommand) -> Unit) {
     val money = game.hero?.money ?: 0L
     var chosen by remember { mutableStateOf<Int?>(null) }
-    ForgeSheet(onDismissRequest = { onCommand(RunCommand.StepOff) }) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui("feature.merchant.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            MutedText(ui("feature.merchant.note", number(money.toDouble())))
+    val left = merchant.offers.indices.count { it !in bought }
+    FeatureCard(
+        kind = ui("feature.kind.MERCHANT"),
+        tone = GoldBright,
+        name = ui("feature.merchant.title"),
+        sub = ui("feature.merchant.note", number(money.toDouble())),
+        facts = listOf(FeatureFact(ui("feature.merchant.left", left)), FeatureFact(ui("feature.merchant.bought", bought.size), Vital).takeIf { bought.isNotEmpty() }).filterNotNull(),
+        icon = { Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(28.dp)) },
+        onDismiss = { onCommand(RunCommand.StepOff) },
+        body = {
             merchant.offers.forEachIndexed { i, offer ->
                 val item = game.view(offer.item) ?: return@forEachIndexed
                 val sold = i in bought
@@ -142,8 +213,9 @@ import kotlin.math.roundToInt
                     onClick = { chosen = i },
                 )
             }
-            ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.leave")) }
-        }
+        },
+    ) {
+        ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.weight(1f)) { Text(ui("feature.leave")) }
     }
     chosen?.takeIf { it !in bought }?.let { i ->
         val offer = merchant.offers.getOrNull(i) ?: return@let
@@ -155,24 +227,51 @@ import kotlin.math.roundToInt
 }
 
 /**
- * Узел ремесла: что даёт и сколько собирать. Без инструмента профессии сбор не начать - лист говорит, какой нужен; под стражами
- * сокровищ ([guarded], 4.9.0) - тоже, пока они стоят; идущий сбор показывает свою долю.
+ * Узел ремесла (шаблон объекта карты, 4.12.x ASANA-12): ресурс в гнезде, профессия и её уровень, факты фишками - сколько штук,
+ * опыт ремесла, сколько уже есть, инструмент (надет - зелёным, нет - красным «нужен»). Под стражами сокровищ ([guarded], 4.9.0)
+ * сбор не начать, пока они стоят; идущий сбор - полоса, что идёт по кадру ([gathering], ASANA-06).
  */
 @Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, busy: Boolean, gathering: () -> Float?, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
-    val tooled = game.hero?.equipped?.containsKey(node.tool) == true
-    ForgeSheet(onDismissRequest = { onCommand(RunCommand.StepOff) }) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(ui("feature.node.title", itemTitle(node.job.output)), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            MutedText(ui("feature.node.yield", number(node.seconds), node.amount.first(), node.amount.last()))
-            if (!tooled) Text(ui("feature.node.tool", professionTitle(node.profession)), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-            if (guarded) Text(ui("feature.guarded"), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
+    val index = game.index
+    val tool = game.hero?.equipped?.get(node.tool)
+    val output = node.job.output
+    val level = game.hero?.crafts?.professions?.get(node.profession)?.level ?: 1
+    val experience = index?.let { it.professions.rules.experience(node.job) * node.share } ?: 0.0
+    val facts = listOfNotNull(
+        FeatureFact(ui("feature.node.amount", node.amount.first(), node.amount.last())),
+        FeatureFact(ui("feature.node.experience", number(experience)), Rune).takeIf { experience > 0 },
+        game.bagAmount(output)?.let { FeatureFact(ui("feature.node.have", number(it.toDouble()))) },
+        if (tool != null) FeatureFact(equipmentTitle(tool.template), Vital) else FeatureFact(ui("feature.node.tool", professionTitle(node.profession)), LifeRed),
+        FeatureFact(ui("feature.guarded"), LifeRed).takeIf { guarded },
+    )
+    FeatureCard(
+        kind = ui("feature.kind.NODE"),
+        tone = Vital,
+        name = itemTitle(output),
+        sub = ui("feature.node.profession", professionTitle(node.profession), level),
+        facts = facts,
+        icon = { BagIcon(output, Modifier.size(30.dp)) },
+        onDismiss = { onCommand(RunCommand.StepOff) },
+        body = {
             if (busy) {
-                Text(ui("feature.node.gathering"), color = Rune, style = MaterialTheme.typography.bodyMedium)
-                // Доля сбора читается в рисовании полосы: лист не перекомпонуется на каждом её шаге
-                LinearProgressIndicator(progress = { gathering() ?: 0f }, modifier = Modifier.fillMaxWidth(), color = Gold)
-            } else {
-                ForgeButton(enabled = tooled && !guarded, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.node.gather")) }
-                ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) { Text(ui("feature.leave")) }
+                Row(Modifier.fillMaxWidth()) {
+                    Text(ui("feature.node.gathering"), color = Rune, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+                    Text(ui("feature.node.seconds", number(node.seconds)), color = Vital, style = MaterialTheme.typography.labelMedium)
+                }
+                // Доля сбора читается в рисовании полосы по кадру: лист не перекомпонуется на каждом её шаге
+                Box(
+                    Modifier.fillMaxWidth().height(10.dp).background(Abyss, RoundedCornerShape(5.dp)).drawBehind {
+                        val share = (gathering() ?: 0f).coerceIn(0f, 1f)
+                        drawRoundRect(Brush.horizontalGradient(listOf(Vital.copy(alpha = .6f), Vital)), size = size.copy(width = size.width * share), cornerRadius = CornerRadius(size.height / 2))
+                    },
+                )
+            }
+        },
+    ) {
+        if (!busy) {
+            ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.weight(1f)) { Text(ui("feature.leave")) }
+            ForgeButton(enabled = tool != null && !guarded, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.weight(2f)) {
+                Text(ui("feature.node.gather_for", number(node.seconds)))
             }
         }
     }

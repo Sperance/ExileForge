@@ -1,37 +1,28 @@
 package com.sperance.exileforge.ui.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import com.sperance.exileforge.core.character.FlaskVerdict
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdict.Shift
-import com.sperance.exileforge.core.character.SheetVerdict
+import com.sperance.exileforge.core.character.MightShift
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.gearVerdict
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
-import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Vital
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlin.math.roundToInt
 
 /**
  * Вердикт вещи для героя (3.89.0), сложенный вне главного потока и запомненный на вещь и лист героя: строки длинного
@@ -45,78 +36,29 @@ import kotlin.math.roundToInt
     return verdict
 }
 
-/** Одна из двух осей вердикта листа: урон или защита, с глифом, словом и долей изменения. */
-private enum class VerdictAxis(val glyph: ImageVector, val key: String, val change: (SheetVerdict) -> Double) {
-    OFFENCE(ForgeGlyphs.Swords, "verdict.offence", SheetVerdict::offence),
-    DEFENCE(ForgeGlyphs.Kite, "verdict.defence", SheetVerdict::defence),
-}
-
-private fun Shift.arrow(): String = when (this) {
-    Shift.UP -> "▲"
-    Shift.DOWN -> "▼"
-    Shift.EVEN -> "="
-}
-
 private fun Shift.tint(): Color = when (this) {
     Shift.UP -> Vital
     Shift.DOWN -> LifeRed
     Shift.EVEN -> Muted
 }
 
-/** «+12%» / «−4%»: доля изменения целыми процентами со знаком. */
-private fun percent(change: Double): String {
-    val value = (change * 100).roundToInt()
-    return signedNumber(value.toDouble()) { "${it.toInt()}" } + "%"
-}
-
 /**
- * Итог вердикта над «Если надеть» в карточке вещи: «Урон ▲ +12% · Защита ▼ −4%» (3.89.0) у снаряжения, «Фляга ▲ лучше 3 · хуже 0»
- * у фляги (4.2.0) - по строкам её листа.
+ * Изменение Мощи «+1.2k» / «−340» / «=» (0.14.0, ASANA-N04): Мощь героя с вещью минус нынешняя, коротким числом со знаком;
+ * меньше полупроцента - «=». Урона и защиты стрелками больше нет - одна мера, та же, что «было → стало» карточки.
  */
-@Composable fun GearVerdictSummary(verdict: GearVerdict, modifier: Modifier = Modifier) = when (verdict) {
-    is SheetVerdict -> SheetSummary(verdict, modifier)
-    is FlaskVerdict -> FlaskSummary(verdict, modifier)
+private fun MightShift.figure(): Pair<String, Shift> {
+    val shift = Shift.of(change)
+    return (if (shift == Shift.EVEN) "=" else signedNumber(after - before) { compactNumber(it) }) to shift
 }
 
-@Composable private fun FlaskSummary(verdict: FlaskVerdict, modifier: Modifier) {
-    val shift = verdict.shift
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(ui("verdict.flask"), color = Muted, style = MaterialTheme.typography.labelLarge)
-        Text(shift.arrow(), color = shift.tint(), fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.labelLarge)
-        Text(ui("verdict.flask_rows", verdict.better, verdict.worse), color = shift.tint(), style = MaterialTheme.typography.labelLarge)
-    }
+/** Итог над «Если надеть» в карточке вещи (0.14.0, ASANA-N04): «⚜ Мощь +1.2k» - у снаряжения и у фляги. */
+@Composable fun GearVerdictSummary(verdict: GearVerdict, modifier: Modifier = Modifier) {
+    val (figure, shift) = verdict.might?.figure() ?: return
+    Text(ui("verdict.might", figure), modifier, color = shift.tint(), fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.labelLarge)
 }
 
-@Composable private fun SheetSummary(verdict: SheetVerdict, modifier: Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        VerdictAxis.entries.forEachIndexed { at, axis ->
-            if (at > 0) Text("·", color = Muted, style = MaterialTheme.typography.labelLarge)
-            val change = axis.change(verdict)
-            val shift = Shift.of(change)
-            Text(ui(axis.key), color = Muted, style = MaterialTheme.typography.labelLarge)
-            Text(
-                if (shift == Shift.EVEN) shift.arrow() else "${shift.arrow()} ${percent(change)}",
-                color = shift.tint(),
-                fontWeight = FontWeight.ExtraBold,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-    }
-}
-
-/** Значок строки (3.89.0): глиф урона и защиты, у каждого стрелка вверх, вниз или «=»; у фляги (4.2.0) - глиф фляги и итог её строк. */
+/** Значок строки списка (0.14.0, ASANA-N04): «⚜ +1.2k» - сумка, тайники, склад, добыча; у фляги тоже. */
 @Composable fun GearVerdictBadge(verdict: GearVerdict, modifier: Modifier = Modifier) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        when (verdict) {
-            is SheetVerdict -> VerdictAxis.entries.forEach { axis -> BadgeMark(axis.glyph, ui(axis.key), Shift.of(axis.change(verdict))) }
-            is FlaskVerdict -> BadgeMark(ForgeGlyphs.Flask, ui("verdict.flask"), verdict.shift)
-        }
-    }
-}
-
-@Composable private fun BadgeMark(glyph: ImageVector, label: String, shift: Shift) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-        Icon(glyph, label, tint = shift.tint(), modifier = Modifier.size(12.dp))
-        Text(shift.arrow(), color = shift.tint(), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelSmall)
-    }
+    val (figure, shift) = verdict.might?.figure() ?: return
+    Text(ui("might.short", figure), modifier, color = shift.tint(), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall)
 }

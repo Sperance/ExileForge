@@ -50,7 +50,7 @@ data class FlaskRow(val measure: FlaskMeasure, val before: Double, val after: Do
  * Вердикт фляги (4.2.0): строки её листа против фляги в том же гнезде при бонусах героя к флягам. Лист героя фляга не меняет,
  * поэтому урон и защита ей не мера - карточка сравнивает лечение, длительность, заряды, эффект и строки.
  */
-data class FlaskVerdict(val rows: List<FlaskRow>) : GearVerdict {
+data class FlaskVerdict(val rows: List<FlaskRow>, override val might: MightShift? = null) : GearVerdict {
     /** Строк, что станут лучше и хуже. */
     val better: Int get() = rows.count { it.shift == Shift.UP }
     val worse: Int get() = rows.count { it.shift == Shift.DOWN }

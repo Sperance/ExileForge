@@ -7,6 +7,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EquipSlots
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.MightReading
 import kotlin.math.abs
 
 /**
@@ -16,6 +17,12 @@ import kotlin.math.abs
 sealed interface GearVerdict {
     /** Насколько смена лучше в целом: по нему улучшения идут первыми. */
     val score: Double
+
+    /**
+     * Мощь героя сейчас и с вещью (0.14.0, ASANA-N04) - одна мера для снаряжения и фляг: значок «⚜ +N / −N» списков и
+     * карточки; null - Мощь ещё не посчитана.
+     */
+    val might: MightShift?
 
     /** Куда сдвинулась величина, когда сдвиг достаточно велик, чтобы о нём говорить. */
     enum class Shift {
@@ -42,21 +49,22 @@ sealed interface GearVerdict {
  * (0.12 - на 12% больше). Считается правилами: лист с вещью против листа без неё. Урон (4.12.x, COMBAT-04) - натиск Мощи героя
  * (`Might.offense`: удар листа и умения) - та же формула, что Мощь и темп сервера.
  */
-data class SheetVerdict(val offence: Double, val defence: Double) : GearVerdict {
+data class SheetVerdict(val offence: Double, val defence: Double, override val might: MightShift? = null) : GearVerdict {
     override val score: Double get() = offence + defence
 
     companion object {
         /**
          * Вердикт листа [after] против [before] героя уровня [level]: оба листа меряются одним и тем же ударом; урон - натиск Мощи
-         * без вещи [offenceBefore] и с ней [offenceAfter].
+         * без вещи [mightBefore] и с ней [mightAfter], они же - Мощь «было → стало».
          */
-        fun of(index: ContentIndex, level: Int, before: Map<String, Double>, after: Map<String, Double>, offenceBefore: Double, offenceAfter: Double): SheetVerdict {
+        fun of(index: ContentIndex, level: Int, before: Map<String, Double>, after: Map<String, Double>, mightBefore: MightReading, mightAfter: MightReading): SheetVerdict {
             val rules = index.campaign.combat
             val was = Combatant(before, level, rules)
             val hit = Toughness.referenceHit(was)
             return SheetVerdict(
-                change(offenceBefore, offenceAfter),
+                change(mightBefore.offense, mightAfter.offense),
                 change(Toughness.of(was, hit), Toughness.of(Combatant(after, level, rules), hit)),
+                MightShift(mightBefore.value, mightAfter.value),
             )
         }
 
@@ -148,12 +156,17 @@ class GearVerdicts {
             val verdict = when {
                 !wearable -> null
 
-                // Фляга листа героя не меняет (4.2.0): её меряют строками листа фляги против надетой в этом гнезде.
-                slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])
+                // Фляга листа героя не меняет (4.2.0): её меряют строками листа фляги против надетой в этом гнезде, а Мощь
+                // (0.14.0, ASANA-N04) - листом боя с ней: глоток фляги здоровья входит в стойкость.
+                slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])?.copy(might = flaskMight(index, hero, item, place))
 
-                else -> hero.combat?.might?.offense?.let { offence -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, offence, place, hero.info.laws, hero.info.fate, hero.skills) }
+                else -> hero.combat?.might?.let { might -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, might, place, hero.info.laws, hero.info.fate, hero.skills) }
             }
             WearPlace(place, worn[place], verdict)
         }
+    }
+
+    private fun flaskMight(index: ContentIndex, hero: HeroView, item: ItemInstance, place: Slot): MightShift? = hero.combat?.might?.let { before ->
+        Sheets.wearing(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, place, hero.info.laws, hero.info.fate, hero.skills).might?.let { MightShift(before.value, it.value) }
     }
 }

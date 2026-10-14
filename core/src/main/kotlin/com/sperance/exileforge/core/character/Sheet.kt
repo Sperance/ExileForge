@@ -196,7 +196,7 @@ object Sheets {
 
     /**
      * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на место [place] (3.90.3) или, без него,
-     * на то, что выберут правила. Урон (4.12.x, COMBAT-04) - натиск Мощи: нынешний [offence] против листа боя с вещью и умениями
+     * на то, что выберут правила. Урон (4.12.x, COMBAT-04) - натиск Мощи: нынешняя Мощь [might] против листа боя с вещью и умениями
      * [skills]. Null, когда шаблона вещи нет в контенте или листа боя нет.
      */
     fun verdict(
@@ -207,7 +207,7 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         before: Map<String, Double>,
-        offence: Double,
+        might: MightReading,
         place: Slot? = null,
         laws: List<String> = emptyList(),
         fate: String? = null,
@@ -216,7 +216,7 @@ object Sheets {
         val after = worn(index, item, items, place) ?: return null
         val sheet = calculate(index, level, heroClass, tree, after, laws, fate)
         val combat = CombatSheet.of(index, sheet, level, heroClass, skills, fate, after.filter { it.equipped }) ?: return null
-        return SheetVerdict.of(index, level, before, sheet.stats, offence, combat.might.offense)
+        return SheetVerdict.of(index, level, before, sheet.stats, might, combat.might)
     }
 
     /**

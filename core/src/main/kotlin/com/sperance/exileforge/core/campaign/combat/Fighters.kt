@@ -68,9 +68,10 @@ data class Foe(
 
 /**
  * What lies on a fighter for a while (2.78.0); [harmful] - во вред тому, на ком лежит. [HINDER] (4.4.1) - помеха свойства
- * монстра на герое: вредит, но не проклятие (его не снимает и не считает ничто, что ищет проклятия).
+ * монстра на герое: вредит, но не проклятие (его не снимает и не считает ничто, что ищет проклятия). [MARK] (0.14.0, SKILL-02) - метка
+ * героя с подрывом на враге: не проклятие, `counter` - доля урона, что она копит, в процентах.
  */
-enum class EffectKind(val harmful: Boolean = false) { BUFF, CURSE(harmful = true), FLASK, HINDER(harmful = true) }
+enum class EffectKind(val harmful: Boolean = false) { BUFF, CURSE(harmful = true), FLASK, HINDER(harmful = true), MARK(harmful = true) }
 
 /**
  * A buff, a curse or a flask's draught on a fighter (2.78.0): its [lines] until [until], named by its

@@ -56,6 +56,7 @@ object SkillText {
             addAll(stats(curse.stats, level))
         }
         skill.buff?.let { addAll(buff(it, level)) }
+        skill.mark?.let { add(ui("skill.line.mark", fineNumber(it.duration), number(it.share.at(level)), it.neighbours, element(it.element))) }
         skill.heal?.let { addAll(heal(it, level)) }
         skill.shield?.let { add(ui("skill.line.shield", number(it.at(level)))) }
         skill.barrier?.let { add(barrier(it, level)) }

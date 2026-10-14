@@ -140,11 +140,16 @@ internal fun Shelved.row(): ShelfRow = when (this) {
                 view.source == PROVOKED -> "fight.src.provoke"
                 view.kind == EffectKind.CURSE -> "fight.src.curse"
                 view.kind == EffectKind.HINDER -> "fight.src.hinder"
+                view.kind == EffectKind.MARK -> "fight.src.mark"
                 view.lasting -> "fight.src.worn"
                 else -> "fight.src.buff"
             },
         ),
-        if (view.source == PROVOKED) listOf(ui("fight.provoked_hint")) else view.lines.map { SkillText.statLine(it.stat, it.op, it.value) },
+        when {
+            view.source == PROVOKED -> listOf(ui("fight.provoked_hint"))
+            view.kind == EffectKind.MARK -> listOf(ui("fight.mark_hint"))
+            else -> view.lines.map { SkillText.statLine(it.stat, it.op, it.value) }
+        },
         view.seconds.takeUnless { view.lasting },
     )
 

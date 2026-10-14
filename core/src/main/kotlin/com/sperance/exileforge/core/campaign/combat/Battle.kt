@@ -405,6 +405,9 @@ class Battle(
     var lifeFlow: LifeFlow = LifeFlow.NONE
         internal set
 
+    /** Метки героя на врагах (0.14.0, SKILL-02): по месту врага - одна на цель. */
+    internal val marks = mutableMapOf<Int, BattleMark>()
+
     /** The next blow of the hero is a critical strike (a cloak of shadows). */
     internal var nextCrit = false
 

@@ -307,6 +307,7 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
         NoteKind.CAST_BROKEN -> castLine("expedition.log_note_cast_broken", event, monster, SkillText.title(note.ref), fineNumber(note.value))
         NoteKind.CAST_NO_MANA -> ui("expedition.log_note_cast_no_mana", SkillText.title(note.ref), fineNumber(note.value))
         NoteKind.PROVOKED -> ui("expedition.log_note_provoked", monster, fineNumber(note.value))
+        NoteKind.MARK_BURST -> ui("expedition.log_note_mark_burst", SkillText.title(note.ref), note.value.roundToInt())
     }
 }
 

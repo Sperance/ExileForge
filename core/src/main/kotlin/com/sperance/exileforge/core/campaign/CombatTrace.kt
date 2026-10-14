@@ -184,6 +184,9 @@ enum class NoteKind {
 
     /** Провокация героя (4.12.x, STAT-DEF-05): враг спровоцирован на value секунд. */
     PROVOKED,
+
+    /** Подрыв метки героя (0.14.0, SKILL-02): ref - умение, value - урон подрыва по каждой цели. */
+    MARK_BURST,
     ;
 
     val recovery: Boolean get() = this in RECOVERY

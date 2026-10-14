@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.ActiveAilment
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.Battle
+import com.sperance.exileforge.core.campaign.combat.BattleMark
 import com.sperance.exileforge.core.campaign.combat.Blow
 import com.sperance.exileforge.core.campaign.combat.Buildup
 import com.sperance.exileforge.core.campaign.combat.Combatant
@@ -213,5 +214,25 @@ class CombatRulesTest {
         foe.readyAt["X"] = 5.0
         assertTrue(b.provokedSkills(foe, 1.0))
         assertEquals(6.0, foe.readyAt.getValue("X"), 1e-9)
+    }
+
+    /**
+     * SKILL-02: метка копит долю прошедшего урона героя по цели и, истекши, взрывается им мимо защит по цели и соседу; подрыв - в журнале.
+     */
+    @Test
+    fun a_mark_stores_damage_and_bursts_on_neighbours() {
+        val b = battle(body(life = 1e9), Foe(body(life = 1e6)), Foe(body(life = 1e6)))
+        val target = assertNotNull(b.target())
+        val other = b.foe(1 - target.index)
+        val mark = BattleMark("MARK_OF_RUIN", 0.5, 3.0, 1, DamageType.CHAOS)
+        b.marks[target.index] = mark
+        repeat(25) { b.advance(0.1) }
+        val stored = mark.pool
+        assertTrue(stored > 0, "the mark stored nothing")
+        val before = other.life
+        repeat(6) { b.advance(0.1) }
+        assertTrue(target.index !in b.marks, "the mark did not burst")
+        assertEquals(before - stored, other.life, 1e-6)
+        assertTrue(b.events.any { (it.trace as? NoteTrace)?.kind == NoteKind.MARK_BURST }, "the burst is not in the log")
     }
 }

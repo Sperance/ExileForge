@@ -34,6 +34,7 @@ internal fun Battle.step(dt: Double) {
         burn(it, dt)
     }
     lifeFlowLine()
+    marksTick()
     expire()
     fateTicks(dt)
     if (finished()) return
@@ -425,7 +426,7 @@ private fun Battle.burn(me: Fighter, dt: Double) {
 }
 
 /** Damage over time on [me]: a barrier soaks it first, then the shield — unless it is [chaos] — then life. */
-private fun Battle.wound(me: Fighter, amount: Double, chaos: Boolean) {
+internal fun Battle.wound(me: Fighter, amount: Double, chaos: Boolean) {
     var rest = amount
     if (me.barrier > 0) {
         val soaked = min(me.barrier, rest)

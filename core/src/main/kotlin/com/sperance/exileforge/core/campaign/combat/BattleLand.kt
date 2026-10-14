@@ -45,6 +45,8 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     val manaPaid = manaBefore - target.mana
     target.life = max(0.0, target.life - toLifeNow)
     target.lastHit = time
+    // Метка с подрывом (0.14.0, SKILL-02) копит долю прошедшего урона героя
+    markDealt(me, target, dealt)
     // The blow that breaks a buildup's ice (3.78.0): heavier, and the fighter thaws.
     if (target.shatter) {
         target.shatter = false
@@ -325,6 +327,8 @@ internal fun Battle.place(target: Fighter, laid: ActiveAilment, stacks: Boolean)
 /** A foe down: a kill to report, life and mana on kill and the flasks' charges for the hero (2.78.0), its aura lifted, and a focus on it let go. */
 internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fighter? = null) {
     if (fighter.side != Side.MONSTER || fighter.index in fallenOrder || fighter.index in retinueDown) return
+    // Метка павшего (0.14.0, SKILL-02) взрывается сразу - по соседям
+    marks[fighter.index]?.let { detonate(fighter, it) }
     val ailing = fighter.ailments.toList()
     // Проклятие павшего (4.12.x, STAT-PW2-02) - до снятия его эффектов: «убитый проклятый» читает его
     val cursed = fighter.cursed

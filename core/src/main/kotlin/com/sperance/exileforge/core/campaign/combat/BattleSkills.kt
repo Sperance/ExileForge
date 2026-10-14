@@ -153,10 +153,11 @@ private fun Battle.perform(kitSkill: KitSkill, level: Int, power: Double = 1.0) 
     val landed = skill.hit?.let { heroHit(it, level, skill.code, skill.spell, skill.type == SkillType.ATTACK, bonus = bonus) } ?: false
     skill.dot?.let { heroDot(it, level, skill.code, skill.spell, power) }
     skill.curse?.let { curse(kitSkill, targets(it.targets), level) }
+    skill.mark?.let { mark(kitSkill, it, level, power) }
     // A generator gives its charges once its blow lands on a foe — or, with no blow, a warcry's, on use.
     charged?.gain?.let { gain -> if (skill.hit == null || landed) gainCharges(charged.kind, gain.at(level).roundToInt()) }
     skill.cast?.let { gifts(it, level) }
-    if (skill.hit != null || skill.dot != null || skill.curse != null) return
+    if (skill.hit != null || skill.dot != null || skill.curse != null || skill.mark != null) return
     val warcry = skill.type == SkillType.WARCRY
     skill.buff?.let { buff ->
         val speed = if (warcry) hero.body[CoreStat.WARCRY_SPEED.code] else 0.0

@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.feedback.LetterActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.guildEntryLevel
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*
@@ -143,17 +144,21 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
             ForgeOutlinedButton(enabled = !game.busy && target.isNotBlank(), onClick = { vm.lookup(target) }) { Text(ui("guild.find")) }
         }
         recruit?.let { found ->
+            // Уровень вступления (0.14.0, ASANA-N13): ниже открытия гильдий и порога гильдии - кнопка погашена, причина под ней
+            val need = guildEntryLevel(game.index?.rules, guild.minLevel)
+            val low = found.level < need
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Column(Modifier.weight(1f)) {
                     Text(found.name, color = GoldBright, style = MaterialTheme.typography.titleSmall)
                     MutedText(ui("guild.recruit_line", classTitle(found.heroClass), found.level, found.number))
                     found.guild?.let { Text(ui("guild.recruit_taken", it), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
                 }
-                ForgeButton(enabled = !game.busy && found.guild == null, onClick = {
+                ForgeButton(enabled = !game.busy && found.guild == null && !low, onClick = {
                     vm.invite(found.number.ifBlank { found.name })
                     target = ""
                 }) { Text(ui("guild.invite")) }
             }
+            if (low) Text(ui("guild.recruit_low", need), color = LifeRed, style = MaterialTheme.typography.labelSmall)
         }
     }
 }

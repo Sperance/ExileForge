@@ -56,6 +56,7 @@ import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.player.PlayerCardViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.guildEntryLevel
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.hero.titleName
@@ -209,12 +210,16 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
     val rights = card.rights
     val letter = rights.letter
+    // Гильдии открываются с уровня `unlocks` (0.14.0, ASANA-N13): младшего героя не позвать - кнопка погашена, причина ниже
+    val guildNeed = guildEntryLevel(game.index?.rules)
+    val guildLow = card.level < guildNeed
     // Малые кнопки одной строкой (4.7.0, макет «Компактные кнопки», вариант A)
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (letter != null) SmallAction(Icons.Outlined.Mail, ui("player.write"), onWrite, primary = true, enabled = !game.busy && letter == MailGate.OPEN)
-        if (rights.invite) SmallAction(Icons.Outlined.Flag, ui("player.invite"), onInvite, enabled = !game.busy)
+        if (rights.invite) SmallAction(Icons.Outlined.Flag, ui("player.invite"), onInvite, enabled = !game.busy && !guildLow)
         SmallAction(Icons.Outlined.Gavel, ui("player.lots", card.lots), onLots, enabled = !game.busy)
     }
+    if (rights.invite && guildLow) MutedText(ui("guild.recruit_low", guildNeed))
     letter?.takeIf { it != MailGate.OPEN }?.let { gate ->
         val rules = game.index?.rules
         rules?.let { MutedText(gateText(gate, null, it.mail, it.unlockLevel(MailRules.SECTION))) }

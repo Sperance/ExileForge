@@ -42,3 +42,9 @@ fun GameUi.unlocked(feature: Feature?): Boolean = feature == null || isTester ||
 
 /** Уровень, с которого раздел открыт, по таблице `unlocks` ([EngineRules.unlockLevel]); без правил - первый. */
 fun Feature.level(rules: EngineRules?): Int = rules?.unlockLevel(name) ?: 1
+
+/**
+ * С какого уровня героя можно взять в гильдию (0.14.0, ASANA-N13): открытие гильдий (`unlocks` → `GUILD`) и порог самой гильдии
+ * [guildMin]. Сервер держит то же на каждом пути вступления; клиент гасит кнопку заранее и называет уровень.
+ */
+fun guildEntryLevel(rules: EngineRules?, guildMin: Int = 1): Int = maxOf(Feature.GUILD.level(rules), guildMin)

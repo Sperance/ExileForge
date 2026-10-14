@@ -56,31 +56,54 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
         /**
          * Сравнение листа героя: каждая сдвинутая характеристика [delta]; рост - к лучшему. С контентом [index] (4.6.5) - только
          * строки сводки (часть строки и сила уникальной - внутри своей строки), множитель - «100% → 60%», разница - «−40%».
+         * С листом героя [sheet] уровня [level] (0.14.0, ASANA-N07) уклонение и броня - процентом защиты, разница - в п.п.
          */
-        fun of(delta: List<StatDelta>, index: ContentIndex? = null, off: Set<String> = emptySet()): Comparison = Comparison(
-            delta.filter { index == null || index.stats.section(it.stat) != null && index.stats[it.stat]?.partOf == null }.map {
-                val multiplier = index?.stats?.get(it.stat)?.multiplier == true
-                ComparisonLine(
-                    statTitle(it.stat),
-                    statValue(it.stat, it.before, index),
-                    if (it.stat in off) ui("compare.off") else statValue(it.stat, it.after, index),
-                    when {
-                        multiplier -> factorChange((100 + it.after) / (100 + it.before))
+        fun of(delta: List<StatDelta>, index: ContentIndex? = null, off: Set<String> = emptySet(), sheet: Map<String, Double>? = null, level: Int = 0): Comparison {
+            val after = sheet?.let { it + delta.associate { change -> change.stat to change.after } }
+            return Comparison(
+                delta.filter { index == null || index.stats.section(it.stat) != null && index.stats[it.stat]?.partOf == null }.map {
+                    if (index != null && sheet != null && after != null) defenceLine(it, index, sheet, after, level)?.let { line -> return@map line }
+                    val multiplier = index?.stats?.get(it.stat)?.multiplier == true
+                    ComparisonLine(
+                        statTitle(it.stat),
+                        statValue(it.stat, it.before, index),
+                        if (it.stat in off) ui("compare.off") else statValue(it.stat, it.after, index),
+                        when {
+                            multiplier -> factorChange((100 + it.after) / (100 + it.before))
 
-                        // Флаг (4.8.0) не прибавляется: разница - его новая отметка
-                        statFlag(it.stat, index) -> statValue(it.stat, it.after, index)
+                            // Флаг (4.8.0) не прибавляется: разница - его новая отметка
+                            statFlag(it.stat, index) -> statValue(it.stat, it.after, index)
 
-                        else -> signed(it.change) { size -> statValue(it.stat, size, index) }
-                    },
-                    it.change > 0,
-                    StatPriority.rank(it.stat),
-                    share(it.before, it.after),
-                )
-            } + (off - delta.map { it.stat }.toSet()).map { stat ->
-                // Отключение (4.12.x, ASANA-02) видно и тогда, когда сейчас и так ноль: узел всё равно закроет характеристику
-                ComparisonLine(statTitle(stat), statValue(stat, 0.0, index), ui("compare.off"), "", false, StatPriority.rank(stat), 1.0)
-            },
-        )
+                            else -> signed(it.change) { size -> statValue(it.stat, size, index) }
+                        },
+                        it.change > 0,
+                        StatPriority.rank(it.stat),
+                        share(it.before, it.after),
+                    )
+                } + (off - delta.map { it.stat }.toSet()).map { stat ->
+                    // Отключение (4.12.x, ASANA-02) видно и тогда, когда сейчас и так ноль: узел всё равно закроет характеристику
+                    ComparisonLine(statTitle(stat), statValue(stat, 0.0, index), ui("compare.off"), "", false, StatPriority.rank(stat), 1.0)
+                },
+            )
+        }
+
+        /** Уклонение и броня процентом защиты (0.14.0, ASANA-N07): «38% → 42%», «+4 п.п.»; прочее - null. */
+        private fun defenceLine(change: StatDelta, index: ContentIndex, sheet: Map<String, Double>, after: Map<String, Double>, level: Int): ComparisonLine? {
+            val was = StatLimits.defence(change.stat, sheet, level, index)?.effective ?: return null
+            val will = StatLimits.defence(change.stat, after, level, index)?.effective ?: return null
+            return ComparisonLine(
+                ui(if (change.stat == StatLimits.EVASION) "stat.defence_title.evasion" else "stat.defence_title.armour"),
+                ui("stat.defence_percent", number(was)),
+                ui("stat.defence_percent", number(will)),
+                signed(will - was) { size -> ui("compare.points", number(size)) },
+                if (abs(will - was) < POINT_NOISE) null else will > was,
+                StatPriority.rank(change.stat),
+                share(was, will),
+            )
+        }
+
+        /** Сдвиг защиты меньше сотой п.п. - шум округления, без цвета. */
+        private const val POINT_NOISE = 0.01
 
         /** Характеристики, что строки [lines] заменяют нулём (4.12.x, ASANA-02): «Нет регенерации здоровья» - сравнение пишет «отключится». */
         fun switchedOff(index: ContentIndex, lines: List<Line>): Set<String> = lines.flatMapTo(HashSet()) { line ->

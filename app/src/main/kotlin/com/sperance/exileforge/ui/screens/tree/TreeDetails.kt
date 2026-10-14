@@ -65,6 +65,7 @@ import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.allocationDelta
+import com.sperance.exileforge.presentation.state.figures
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.presentation.tree.TreeViewModel
@@ -254,7 +255,7 @@ import kotlin.math.sin
     if (node.type == SkillNodeType.JEWEL_SOCKET || (node.options.isNotEmpty() && choice == null)) return
     val change by produceState<Comparison?>(null, node.code, choice, game.hero, index) {
         val lines = node.lines + choice?.let { node.options.getOrNull(it) }.orEmpty()
-        value = withContext(Dispatchers.Default) { Comparison.of(game.allocationDelta(node.code, choice), game.index, Comparison.switchedOff(index, lines)) }
+        value = withContext(Dispatchers.Default) { Comparison.of(game.allocationDelta(node.code, choice), game.index, Comparison.switchedOff(index, lines), game.hero?.figures?.values, game.hero?.level ?: 0) }
     }
     change?.let { StatComparison(ui("tree.changes"), it) }
 }

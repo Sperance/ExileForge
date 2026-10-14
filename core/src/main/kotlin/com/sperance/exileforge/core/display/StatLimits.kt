@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.rules.content.CampaignFile
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.sheet.StatCaps
 import com.sperance.exileforge.rules.sheet.StatReading
@@ -42,6 +43,23 @@ object StatLimits {
     /** Шанс уклонения героя уровня [level] (4.12.x, R3): от меткости врага его уровня, под пределом правил. */
     fun evasion(stats: Map<String, Double>, level: Int, campaign: CampaignFile): StatReading = StatCaps.evasion({ stats[it] ?: 0.0 }, level, campaign.combat)
 
+    /**
+     * Защита процентом (0.14.0, ASANA-N07): уклонение - шанс против меткости врага уровня героя [level], броня - снижение
+     * физического урона от удара эталонного врага Мощи (`StatCaps.physical`, `MightRule.reference`). Сводка печатает его главным
+     * числом, сравнение - разницей в п.п.; прочие характеристики - null.
+     */
+    fun defence(stat: String, stats: Map<String, Double>, level: Int, index: ContentIndex): StatReading? {
+        val read = { code: String -> stats[code] ?: 0.0 }
+        return when (stat) {
+            EVASION -> evasion(stats, level, index.campaign)
+            ARMOUR -> StatCaps.physical(read, index.rules.might.reference(read), index.campaign.combat)
+            else -> null
+        }
+    }
+
     /** Характеристика, под которой сводка печатает шанс уклонения. */
     val EVASION: String = CoreStat.EVASION.code
+
+    /** Броня: сводка печатает снижение физического урона. */
+    val ARMOUR: String = CoreStat.ARMOR.code
 }

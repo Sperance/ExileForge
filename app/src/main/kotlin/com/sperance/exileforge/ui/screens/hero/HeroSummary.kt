@@ -124,7 +124,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
         }
         stats.forEach { (key, value) ->
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
-            StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, accent, figures, game, Modifier.fillMaxWidth().clickable { open(key) })
+            StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, before, accent, figures, game, Modifier.fillMaxWidth().clickable { open(key) })
         }
     }
 }
@@ -134,7 +134,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
  * 4.6.4: за числом - значок ауры и ✦ Предначертания, если они её сдвинули. 4.6.5: строка с частями (`partOf`) - итог боя, под
  * именем - из чего он: «12 + 1.5% от максимума».
  */
-@Composable private fun StatCell(key: String, value: Double, was: Double?, accent: Color, figures: StatFigures, game: GameUi, modifier: Modifier) {
+@Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, modifier: Modifier) {
     Row(
         modifier.then(if (was != null) Modifier.background(Ember.copy(alpha = .08f)) else Modifier).padding(horizontal = 12.dp, vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -146,20 +146,24 @@ private val StatSection.glyph: Glyph get() = when (this) {
         val parts = remember(key, figures, game.index) { game.index?.let { partsText(key, figures.stats, it) } }
         // Пределы (4.12.x, R3): сводка печатает действующее число, а набранное сверх предела - под именем «предел; набрано N»
         val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
-        val evasion = remember(key, figures, game.index, game.hero?.level) {
-            if (key != StatLimits.EVASION) null else game.index?.campaign?.let { campaign -> game.hero?.level?.let { StatLimits.evasion(figures.stats, it, campaign) } }
-        }
+        // Уклонение и броня (0.14.0, ASANA-N07): главным - шанс уклонения и снижение физического урона, сырое число - мелко под именем
+        val level = game.hero?.level
+        val defence = remember(key, figures, game.index, level) { game.index?.let { index -> level?.let { StatLimits.defence(key, figures.stats, it, index) } } }
+        val defenceWas = remember(key, before, game.index, level) { if (was == null) null else game.index?.let { index -> level?.let { before?.let { sheet -> StatLimits.defence(key, sheet, it, index) } } } }
         Column(Modifier.weight(1f)) {
             Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
             reserve?.let { Text(ui("hero.mana_reserved", number(it.percent)), color = ManaBlue, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
             parts?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
             limit?.takeIf { it.clamped }?.let { Text(ui("stat.cap.reached", statValue(key, it.gathered, game.index)), color = Caution, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
-            evasion?.let { Text(ui("stat.evasion_chance", number(it.effective), number(it.cap)), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+            defence?.let {
+                val raw = ui(if (key == StatLimits.EVASION) "stat.defence_raw.evasion" else "stat.defence_raw.armour", statValue(key, value, game.index), number(it.cap))
+                Text(raw, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
+            }
         }
-        was?.let { Text(statValue(key, it, game.index), color = Muted, style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.LineThrough) }
+        was?.let { Text(defenceWas?.let { old -> ui("stat.defence_percent", number(old.effective)) } ?: statValue(key, it, game.index), color = Muted, style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.LineThrough) }
         // A capped figure (3.12.0) reads as the fight reads it (4.12.x, R3: действующее число); the ceiling is in the figure's window.
         Text(
-            statValue(key, limit?.effective ?: value, game.index),
+            defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: statValue(key, limit?.effective ?: value, game.index),
             color = when {
                 was != null -> Ember
                 limit?.clamped == true -> Caution

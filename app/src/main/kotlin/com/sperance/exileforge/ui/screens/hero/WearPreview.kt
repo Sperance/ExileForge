@@ -23,6 +23,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.figures
 import com.sperance.exileforge.presentation.state.might
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.wearPlaces
@@ -81,7 +82,7 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
     // Фляга листа героя не меняет (4.2.0): вместо пустого итога героя - строки её листа против фляги в выбранном гнезде.
     val flask = game.index?.template(item.template)?.slot?.isFlask == true
     val outcome = remember(item, game.hero, game.index, place) { if (flask) null else game.wearing(item, place) }
-    val delta = remember(outcome) { outcome?.let { Comparison.of(it.delta, game.index) } }
+    val delta = remember(outcome) { outcome?.let { Comparison.of(it.delta, game.index, sheet = game.hero?.figures?.values, level = game.hero?.level ?: 0) } }
     // Мощь «было → стало» (4.8.0): Мощь героя сейчас и с вещью - из того же листа боя, что сдвиги
     val might = game.hero?.might?.let { before -> outcome?.might?.let { MightShift(before.value, it.value) } }
     if (unmet.isEmpty()) {

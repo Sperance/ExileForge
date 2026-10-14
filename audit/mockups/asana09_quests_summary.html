@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Сданы задания · макеты</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Theme.kt / Depth.kt / rarityColor() */
+  --ink:#0C1115;--abyss:#0A0E12;--panel:#0F161B;--raised:#16212A;--gold:#3FB67A;--goldB:#EEF8F1;--bronze:#1F2C35;
+  --parch:#D5E0E6;--muted:#7A8D99;--rune:#8FD3FF;--life:#D24A43;--brass:#C9A26B;--caution:#F2C94C;--vital:#7BE0A6;
+  --dTop:rgba(34,46,56,.92);--dBot:rgba(18,26,33,.92);
+  --common:#C8C8C8;--magic:#8E8EFF;--rare:#F2E46B;--unique:#D9853B;--uniqueName:#FFB774;--myth:#FFD99A;
+}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 50% -10%,#14202a 0%,var(--ink) 55%,var(--abyss) 100%);color:var(--parch);
+  font:14px/1.4 system-ui,-apple-system,Roboto,"Segoe UI",sans-serif;min-height:100vh}
+.page{max-width:1320px;margin:0 auto;padding:28px 16px 64px}
+h1{font-family:Cinzel,Georgia,serif;font-weight:700;letter-spacing:1.5px;margin:0 0 6px;color:var(--goldB)}
+.lead{color:var(--muted);max-width:820px;margin:0 0 8px}
+.variant{border-top:1px solid var(--bronze);padding:28px 0 8px;margin-top:20px}
+.vhead{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;flex-wrap:wrap}
+.vletter{font-family:Cinzel,serif;font-size:28px;font-weight:700;color:var(--gold);width:44px;height:44px;border:1px solid var(--gold);
+  border-radius:10px;display:grid;place-items:center;flex:none;background:rgba(63,182,122,.06)}
+.vtitle{font-family:Cinzel,serif;font-size:19px;color:var(--goldB);margin:2px 0 4px}
+.pc{font-size:13px;color:var(--muted);margin:0}
+.pc b.p{color:var(--vital);font-weight:600}.pc b.m{color:var(--life);font-weight:600}
+.phones{display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.ph-wrap{display:flex;flex-direction:column;gap:8px}
+.ph-label{font-size:12px;color:var(--muted);letter-spacing:.4px}
+.phone{width:360px;border:1px solid #22313b;border-radius:26px;padding:18px 14px 16px;
+  background:linear-gradient(#0E151A,var(--ink) 40%,var(--abyss));box-shadow:0 20px 50px rgba(0,0,0,.45)}
+.phone.w412{width:412px}
+@media (max-width:460px){.phone,.phone.w412{width:100%}}
+/* Шапка итогов (контекст) */
+.sum-h{font-family:Cinzel,serif;text-align:center;font-size:18px;letter-spacing:2px;color:var(--goldB);margin:0}
+.sum-sub{text-align:center;color:var(--muted);font-size:12px;margin:2px 0 12px}
+.ctx{display:flex;gap:8px;margin-bottom:10px;opacity:.55}
+.ctx div{flex:1;background:var(--panel);border:1px solid var(--bronze);border-radius:8px;padding:8px 10px}
+.ctx b{display:block;font-size:15px}.ctx span{font-size:11px;color:var(--muted)}
+.next{margin-top:12px;height:42px;border-radius:10px;background:var(--gold);color:#04210F;font-weight:700;display:grid;place-items:center;opacity:.6}
+/* Общие */
+.block{background:var(--abyss);border:1px solid rgba(123,224,166,.45);border-radius:8px;padding:10px}
+.cap{display:flex;gap:6px;align-items:center;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px}
+.cap b{color:var(--vital);font-size:12px;letter-spacing:0}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;line-height:1;padding:4px 8px;border-radius:99px;white-space:nowrap;
+  border:1px solid color-mix(in srgb,currentColor 35%,transparent);background:color-mix(in srgb,currentColor 10%,transparent)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+svg.i{width:14px;height:14px;flex:none}
+/* Вариант A */
+.qa{display:flex;gap:8px;padding:6px 0}
+.qa+.qa{border-top:1px solid rgba(31,44,53,.8)}
+.ck{color:var(--vital);font-weight:800;font-size:13px;line-height:18px}
+.qt{color:var(--parch);font-size:13.5px;margin-bottom:5px}
+.tot{border-top:1px solid var(--bronze);margin-top:6px;padding-top:8px}
+.tot .lbl{color:var(--muted);font-size:12px;margin-bottom:5px}
+/* Вариант B */
+.qb{position:relative;display:flex;gap:10px;padding:10px;border-radius:8px;background:linear-gradient(var(--dTop),var(--dBot));
+  border:1px solid var(--bronze);margin-bottom:8px}
+.medal{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;color:var(--vital);font-weight:800;
+  border:1.5px solid rgba(123,224,166,.6);background:radial-gradient(circle,rgba(123,224,166,.18),transparent 70%)}
+.qb .qt{font-family:Georgia,serif;font-size:14px;margin-bottom:7px}
+.rw{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+.ri{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:600}
+.ri svg{width:18px;height:18px}
+.sock{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:linear-gradient(var(--dTop),var(--dBot));
+  border:1px solid color-mix(in srgb,var(--c) 45%,transparent);box-shadow:0 0 8px color-mix(in srgb,var(--c) 25%,transparent)}
+.sock.leg{border-radius:50%;background:linear-gradient(#24150C,#120B07);border-color:#F2A65A;box-shadow:0 0 10px rgba(240,150,90,.45)}
+.sock svg{width:20px;height:20px}
+.item{display:inline-flex;align-items:center;gap:6px;font-size:12px;max-width:170px}
+.item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:Cinzel,serif;font-size:11.5px}
+.sumbar{margin-top:2px;border-radius:8px;padding:10px;border:1px solid rgba(63,182,122,.5);
+  background:linear-gradient(180deg,rgba(63,182,122,.10),rgba(63,182,122,.02))}
+.sumbar .lbl{font-family:Cinzel,serif;font-size:12px;letter-spacing:1.5px;color:var(--goldB);margin-bottom:8px;display:flex;justify-content:space-between}
+.sumbar .lbl small{font-family:system-ui,sans-serif;letter-spacing:0;color:var(--muted);font-size:11px}
+.big{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.big div{background:rgba(10,14,18,.6);border-radius:6px;padding:6px 2px}
+.big svg{width:20px;height:20px;display:block;margin:0 auto 2px}
+.big b{display:block;font-size:14px}.big span{font-size:10.5px;color:var(--muted)}
+/* Вариант C */
+.led{background:var(--abyss);border:1px solid var(--bronze);border-radius:8px;overflow:hidden}
+.led-h{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-bottom:1px solid var(--bronze);
+  background:linear-gradient(var(--raised),var(--panel))}
+.led-h .t{font-family:Cinzel,serif;font-size:13px;letter-spacing:1.6px;color:var(--goldB)}
+.led-h .n{color:var(--vital);font-weight:700;font-size:12px}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--bronze)}
+.tiles div{padding:8px 6px;text-align:center;border-right:1px solid var(--bronze)}
+.tiles div:last-child{border-right:0}
+.tiles b{display:flex;align-items:center;justify-content:center;gap:4px;font-size:15px}
+.tiles span{font-size:10.5px;color:var(--muted)}
+.lrow{display:grid;grid-template-columns:18px 1fr 92px 56px;gap:8px;align-items:center;padding:7px 10px;font-size:12.5px}
+.lrow+.lrow{border-top:1px dashed rgba(31,44,53,.9)}
+.lrow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .v{text-align:right;font-weight:700;color:var(--vital);font-variant-numeric:tabular-nums}
+.seg{display:flex;height:6px;border-radius:3px;overflow:hidden;background:#141d24}
+.seg i{display:block;height:100%}
+.sect{font-size:10.5px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted);padding:8px 10px 2px}
+.ichips{display:flex;flex-wrap:wrap;gap:5px;padding:4px 10px 10px}
+.ichip{font-family:Cinzel,serif;font-size:11px;padding:4px 8px;border-radius:5px;border:1px solid color-mix(in srgb,var(--c) 50%,transparent);
+  color:var(--n);background:linear-gradient(var(--t),var(--b))}
+.qlist{border-top:1px solid var(--bronze);padding:4px 10px 8px}
+.ql{display:flex;gap:7px;align-items:baseline;font-size:12px;padding:3px 0}
+.ql .dot{width:8px;height:8px;border-radius:2px;flex:none;transform:translateY(1px)}
+.ql .tt{flex:1;color:var(--parch)}
+.ql .r{color:var(--muted);font-size:11px;white-space:nowrap}
+.note{font-size:12px;color:var(--muted);border-left:2px solid var(--bronze);padding:4px 10px;margin:14px 0 0;max-width:860px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="coin" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#F2C94C"/><circle cx="10" cy="10" r="5.6" fill="none" stroke="#9c7a1e" stroke-width="1.3"/><path d="M8.6 6.6h2.8v6.8H8.6z" fill="#9c7a1e" opacity=".7"/></symbol>
+    <symbol id="xp" viewBox="0 0 20 20"><path d="M10 2l2.3 5.2 5.7.5-4.3 3.8 1.3 5.6L10 14.2 5 17.1l1.3-5.6L2 7.7l5.7-.5z" fill="#8FD3FF"/></symbol>
+    <symbol id="orb" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="#C9A26B"/><circle cx="10" cy="10" r="7.5" fill="url(#og)"/><circle cx="7.5" cy="7" r="2.2" fill="#fff" opacity=".55"/></symbol>
+    <symbol id="chaos" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7.5" fill="#C9A26B"/><path d="M10 4.5l1.4 3.6 3.8-.9-2.5 3 2.5 3-3.8-.9L10 15.5l-1.4-3.6-3.8.9 2.5-3-2.5-3 3.8.9z" fill="#3b2a12" opacity=".75"/></symbol>
+    <symbol id="sword" viewBox="0 0 20 20"><path d="M15.5 2.5l2 2-8 8-2-2zM6 11l3 3-1.2 1.2-1-.6-2.6 2.6-1.2-1.2 2.6-2.6-.6-1z" fill="currentColor"/></symbol>
+    <symbol id="armor" viewBox="0 0 20 20"><path d="M6 3l4 2 4-2 3 2-1 5h-2v7H6v-7H4L3 5z" fill="currentColor"/></symbol>
+    <radialGradient id="og" cx="35%" cy="30%"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#000" stop-opacity=".25"/></radialGradient>
+  </defs>
+</svg>
+
+<div class="page">
+  <h1>Сданы задания · итоги карты</h1>
+  <p class="lead">ASANA-09. Блок в итогах карты «Пепельная пустошь». Решение владельца: заголовок задания на всю ширину, награды под ним, «Всего» только при 2+ заданиях. Слева - одно задание (360 dp), справа - четыре (412 dp). Цвета - <code>Theme.kt</code>, вещи - цветом редкости (<code>rarityColor</code>/<code>relicLook</code>).</p>
+
+  <section class="variant">
+    <div class="vhead"><div class="vletter">A</div><div>
+      <div class="vtitle">Минималистичный список</div>
+      <p class="pc"><b class="p">+</b> Минимум кода: та же <code>SummaryCard</code> и фишки, только столбцом; ничего не разъедется при любой длине. <b class="m">−</b> Фишки текстом длинные, четыре задания с вещами занимают много высоты.</p>
+    </div></div>
+    <div class="phones" id="A"></div>
+  </section>
+
+  <section class="variant">
+    <div class="vhead"><div class="vletter">B</div><div>
+      <div class="vtitle">Карточки заданий с иконками</div>
+      <p class="pc"><b class="p">+</b> Награды читаются с одного взгляда, вещь в гнезде редкости ведёт в карточку; итог при 2+ - плитками. <b class="m">−</b> Сферы иконками без имени - нужно касание или подпись; блок выше, чем A.</p>
+    </div></div>
+    <div class="phones" id="B"></div>
+  </section>
+
+  <section class="variant">
+    <div class="vhead"><div class="vletter">C</div><div>
+      <div class="vtitle">Книга учёта (как WorkLedger)</div>
+      <p class="pc"><b class="p">+</b> Тот же язык, что «Итог работы»: итоги плитками, строка на награду с полосой вклада заданий, вещи чипами редкости; много заданий не растят блок. <b class="m">−</b> Связь «задание → награда» видна только цветом полосы и списком снизу.</p>
+    </div></div>
+    <div class="phones" id="C"></div>
+  </section>
+
+  <p class="note">Вещей в <code>QuestReward</code> сейчас нет (золото, опыт, сферы) - вещи на макетах показывают, как блок примет награду-вещь, если она появится. Касание фишки сферы или вещи открывает карточку (правило «Карточка предмета», 4.3.2). Числа - пример.</p>
+</div>
+
+<script>
+const R = {COMMON:{c:'#C8C8C8',n:'#C8C8C8',t:'rgba(34,46,56,.92)',b:'rgba(18,26,33,.92)'},
+  MAGIC:{c:'#8E8EFF',n:'#8E8EFF',t:'rgba(34,46,56,.92)',b:'rgba(18,26,33,.92)'},
+  RARE:{c:'#F2E46B',n:'#F2E46B',t:'rgba(34,46,56,.92)',b:'rgba(18,26,33,.92)'},
+  UNIQUE:{c:'#D9853B',n:'#FFB774',t:'#24150C',b:'#120B07',leg:1},
+  MYTHICAL:{c:'#FFD99A',n:'#FFD99A',t:'#2B1A48',b:'#0C0A16',leg:1}};
+const one=[{t:'Одолеть стража Пепельной пустоши',g:1240,x:3850,o:[['Сфера хаоса',1,'chaos']],it:[]}];
+const four=[
+  {t:'Пройти новые зоны: 3 из 3',g:600,x:2100,o:[],it:[]},
+  {t:'Убить 40 монстров в Пепельной пустоши',g:450,x:0,o:[['Сфера перемен',3,'orb']],it:[]},
+  {t:'Открыть 5 сундуков',g:300,x:900,o:[],it:[['Медный меч','MAGIC','sword']]},
+  {t:'Одолеть стража Пепельной пустоши',g:1240,x:3850,o:[['Сфера хаоса',1,'chaos']],it:[['Латы Медного Горна','UNIQUE','armor']]}];
+const fmt=n=>n.toLocaleString('ru-RU');
+const ic=(id,cls='i')=>`<svg class="${cls}"><use href="#${id}"/></svg>`;
+const QC=['#7BE0A6','#8FD3FF','#C9A26B','#B48CFF'];
+function total(qs){const o={};const it=[];let g=0,x=0;qs.forEach(q=>{g+=q.g;x+=q.x;q.o.forEach(([n,a,i])=>{o[n]=o[n]||[0,i];o[n][0]+=a});it.push(...q.it)});return{g,x,o,it}}
+function frame(inner,w,label){return `<div class="ph-wrap"><div class="ph-label">${label}</div><div class="phone ${w}">
+  <p class="sum-h">ИТОГИ КАРТЫ</p><p class="sum-sub">Пепельная пустошь · 3:42 · уровень 14</p>
+  <div class="ctx"><div><b style="color:var(--goldB)">12 480</b><span>золота за карту</span></div><div><b style="color:var(--rune)">48 200</b><span>опыта за карту</span></div></div>
+  ${inner}<div class="next">Дальше</div></div></div>`}
+/* A */
+function chipsA(q){let s='';if(q.g)s+=`<span class="chip" style="color:var(--goldB)">+${fmt(q.g)} золота</span>`;
+  if(q.x)s+=`<span class="chip" style="color:var(--rune)">+${fmt(q.x)} опыта</span>`;
+  q.o.forEach(([n,a])=>s+=`<span class="chip" style="color:var(--brass)">${n} ×${a}</span>`);
+  q.it.forEach(([n,r])=>s+=`<span class="chip" style="color:${R[r].n};font-family:Cinzel,serif">${n}</span>`);return `<div class="chips">${s}</div>`}
+function A(qs){let s=`<div class="block"><div class="cap">Сданы задания <b>${qs.length}</b></div>`;
+  qs.forEach(q=>s+=`<div class="qa"><span class="ck">✓</span><div style="flex:1;min-width:0"><div class="qt">${q.t}</div>${chipsA(q)}</div></div>`);
+  if(qs.length>1){const t=total(qs);s+=`<div class="tot"><div class="lbl">Всего за задания</div>${chipsA({g:t.g,x:t.x,o:Object.entries(t.o).map(([n,[a]])=>[n,a]),it:t.it})}</div>`}
+  return s+'</div>'}
+/* B */
+function itemB([n,r,i]){const L=R[r];return `<span class="item"><span class="sock ${L.leg?'leg':''}" style="--c:${L.c};color:${L.c}">${ic(i,'')}</span><span style="color:${L.n}">${n}</span></span>`}
+function B(qs){let s=`<div class="cap">Сданы задания <b>${qs.length}</b></div>`;
+  qs.forEach(q=>{let r='';if(q.g)r+=`<span class="ri" style="color:var(--goldB)">${ic('coin','')}${fmt(q.g)}</span>`;
+    if(q.x)r+=`<span class="ri" style="color:var(--rune)">${ic('xp','')}${fmt(q.x)}</span>`;
+    q.o.forEach(([n,a,i])=>r+=`<span class="ri" style="color:var(--brass)" title="${n}">${ic(i,'')}×${a}</span>`);
+    q.it.forEach(x=>r+=itemB(x));
+    s+=`<div class="qb"><div class="medal">✓</div><div style="flex:1;min-width:0"><div class="qt">${q.t}</div><div class="rw">${r}</div></div></div>`});
+  if(qs.length>1){const t=total(qs);const orbs=Object.values(t.o).reduce((a,[n])=>a+n,0);
+    s+=`<div class="sumbar"><div class="lbl">ИТОГО ЗА ЗАДАНИЯ<small>касание - разбор</small></div><div class="big">
+    <div>${ic('coin','')}<b style="color:var(--goldB)">${fmt(t.g)}</b><span>золота</span></div>
+    <div>${ic('xp','')}<b style="color:var(--rune)">${fmt(t.x)}</b><span>опыта</span></div>
+    <div>${ic('orb','')}<b style="color:var(--brass)">${orbs}</b><span>сфер</span></div>
+    <div><svg style="color:${R.UNIQUE.c}"><use href="#armor"/></svg><b style="color:var(--parch)">${t.it.length}</b><span>вещи</span></div></div></div>`}
+  return s}
+/* C */
+function C(qs){const t=total(qs);const orbs=Object.values(t.o).reduce((a,[n])=>a+n,0);
+  let s=`<div class="led"><div class="led-h"><span class="t">СДАНЫ ЗАДАНИЯ</span><span class="n">✓ ${qs.length}</span></div>
+  <div class="tiles"><div><b style="color:var(--goldB)">${ic('coin')}${fmt(t.g)}</b><span>золото</span></div>
+  <div><b style="color:var(--rune)">${ic('xp')}${fmt(t.x)}</b><span>опыт ▲ 0,4 ур.</span></div>
+  <div><b style="color:var(--brass)">${ic('orb')}${orbs}</b><span>сфер</span></div></div>`;
+  const seg=f=>{const vals=qs.map(f);const sum=vals.reduce((a,b)=>a+b,0)||1;return `<div class="seg">${vals.map((v,i)=>v?`<i style="width:${v/sum*100}%;background:${QC[i]}"></i>`:'').join('')}</div>`};
+  s+=`<div class="sect">Книга учёта</div>`;
+  s+=`<div class="lrow">${ic('coin')}<span class="nm">Золото</span>${seg(q=>q.g)}<span class="v">+${fmt(t.g)}</span></div>`;
+  if(t.x)s+=`<div class="lrow">${ic('xp')}<span class="nm">Опыт</span>${seg(q=>q.x)}<span class="v">+${fmt(t.x)}</span></div>`;
+  Object.entries(t.o).forEach(([n,[a,i]])=>s+=`<div class="lrow">${ic(i)}<span class="nm">${n}</span>${seg(q=>q.o.filter(o=>o[0]===n).reduce((x,o)=>x+o[1],0))}<span class="v">+${a}</span></div>`);
+  if(t.it.length){s+=`<div class="sect">Вещи</div><div class="ichips">${t.it.map(([n,r])=>`<span class="ichip" style="--c:${R[r].c};--n:${R[r].n};--t:${R[r].t};--b:${R[r].b}">${n}</span>`).join('')}</div>`}
+  if(qs.length>1){s+=`<div class="qlist">${qs.map((q,i)=>`<div class="ql"><span class="dot" style="background:${QC[i]}"></span><span class="tt">${q.t}</span><span class="r">${[q.g?fmt(q.g)+' зол.':'',q.x?fmt(q.x)+' оп.':'',q.o.length?q.o.length+' сф.':'',q.it.length?q.it.length+' вещ.':''].filter(Boolean).join(' · ')}</span></div>`).join('')}</div>`}
+  else s+=`<div class="qlist"><div class="ql"><span class="dot" style="background:${QC[0]}"></span><span class="tt">${qs[0].t}</span></div></div>`;
+  return s+'</div>'}
+for(const [id,f] of [['A',A],['B',B],['C',C]]){
+  document.getElementById(id).innerHTML=frame(f(one),'','1 задание · 360 dp')+frame(f(four),'w412','4 задания · 412 dp');
+}
+</script>
+</body>
+</html>

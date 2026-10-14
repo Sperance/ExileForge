@@ -13,4 +13,3 @@ Android-клиент (Kotlin, Jetpack Compose) ARPG в духе Path of Exile д
 ```
 
 - `RULES.md` - инварианты игры, архитектура, версии и CI; `CLAUDE.md` - порядок работы.
-- `docs/` - описание механик для игрока.

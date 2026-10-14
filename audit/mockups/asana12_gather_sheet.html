@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Окно сбора · макеты</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0C1115;--abyss:#0A0E12;--panel:#0F161B;--raised:#16212A;--gold:#3FB67A;--goldB:#EEF8F1;--bronze:#1F2C35;
+  --parch:#D5E0E6;--muted:#7A8D99;--rune:#8FD3FF;--life:#D24A43;--brass:#C9A26B;--caution:#F2C94C;--vital:#7BE0A6;
+  --cyan:#63B7C4;--ember:#D9642E;--line:#18232B;--common:#C8C8C8}
+*{box-sizing:border-box}
+html,body{overflow-x:hidden}
+body{margin:0;background:linear-gradient(180deg,#0E151A,var(--ink) 40%,var(--abyss));color:var(--parch);
+  font:14px/1.45 system-ui,-apple-system,Roboto,"Segoe UI",sans-serif;min-height:100vh}
+.page{max-width:1280px;margin:0 auto;padding:20px 16px 48px}
+h1{font-family:Cinzel,Georgia,serif;font-weight:700;letter-spacing:1px;margin:0 0 6px;color:var(--goldB);font-size:22px}
+.lead{color:var(--muted);margin:0 0 4px;font-size:13px;max-width:760px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:28px 22px;margin-top:18px;align-items:start}
+.variant{min-width:0;border-top:1px solid var(--bronze);padding-top:14px}
+.vhead{display:flex;gap:12px;align-items:flex-start;margin-bottom:10px}
+.vletter{font-family:Cinzel,serif;font-size:22px;font-weight:700;color:var(--gold);width:38px;height:38px;flex:none;
+  border:1px solid var(--gold);border-radius:9px;display:grid;place-items:center;background:rgba(63,182,122,.06)}
+.vtitle{font-family:Cinzel,serif;font-size:16px;color:var(--goldB);margin:0 0 3px}
+.pc{font-size:12.5px;color:var(--muted);margin:0}
+.pc b.p{color:var(--vital)}.pc b.m{color:var(--life)}
+
+/* Вкладки состояний (чистый CSS: radio + label) */
+.tabs-in{position:absolute;opacity:0;pointer-events:none}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.tabs label{cursor:pointer;font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--bronze);color:var(--muted);
+  background:var(--panel);user-select:none}
+.tabs label:hover{color:var(--parch)}
+.st{display:none}
+/* связка вкладок: n1..n5 */
+.variant input.n1:checked ~ .tabs label.n1,.variant input.n2:checked ~ .tabs label.n2,.variant input.n3:checked ~ .tabs label.n3,
+.variant input.n4:checked ~ .tabs label.n4,.variant input.n5:checked ~ .tabs label.n5{color:var(--goldB);border-color:var(--gold);background:rgba(63,182,122,.12)}
+.variant input.n1:checked ~ .stage .st.n1,.variant input.n2:checked ~ .stage .st.n2,.variant input.n3:checked ~ .stage .st.n3,
+.variant input.n4:checked ~ .stage .st.n4,.variant input.n5:checked ~ .stage .st.n5{display:block}
+.tabs-in:focus-visible + *{outline:none}
+
+/* Кадр: низ экрана телефона */
+.frame{width:100%;max-width:400px;border:1px solid #22313b;border-top:1px dashed #2b3a45;border-radius:0 0 22px 22px;
+  background:#0b0f12;box-shadow:0 14px 34px rgba(0,0,0,.45)}
+.cut{font-size:11px;color:var(--muted);margin:0 0 4px;letter-spacing:.3px}
+
+/* Полоска карты */
+.map{position:relative;min-height:120px;background:
+  radial-gradient(160px 90px at 60% 55%,rgba(255,196,120,.12),transparent 70%),
+  radial-gradient(90px 50px at 10% 30%,#1b1f25 60%,transparent 62%),
+  radial-gradient(110px 60px at 95% 80%,#1b1f25 60%,transparent 62%),
+  repeating-linear-gradient(45deg,#2c3236 0 14px,#292f33 14px 28px)}
+.map::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(5,7,9,.55),transparent 40%,rgba(5,7,9,.6));pointer-events:none}
+.hero{position:absolute;left:38%;top:58px;width:30px;height:30px;border-radius:50%;z-index:2;
+  background:radial-gradient(circle at 40% 35%,#d7e3ea,#5d6d78);border:2px solid var(--vital);box-shadow:0 0 0 3px rgba(123,224,166,.18),0 5px 9px rgba(0,0,0,.6)}
+.node{position:absolute;left:calc(38% + 52px);top:48px;width:36px;height:36px;border-radius:50%;z-index:2;display:grid;place-items:center;
+  background:radial-gradient(circle,#2a3a2c,#141c16);border:1px solid #4f7a55;box-shadow:0 0 14px rgba(123,224,166,.25)}
+.node svg{width:22px;height:22px}
+.node.done{filter:grayscale(1) brightness(.55);box-shadow:none}
+.node.altar{background:radial-gradient(circle,#2a2440,#141220);border-color:#6d5aa8;box-shadow:0 0 14px rgba(162,107,255,.3)}
+.mtag{position:absolute;z-index:3;font-size:10.5px;padding:2px 7px;border-radius:999px;background:rgba(10,14,18,.85);border:1px solid var(--bronze);color:var(--muted)}
+
+/* Общие элементы листа */
+.sheet{position:relative;background:linear-gradient(180deg,#111A20,var(--panel));border-top:1px solid var(--bronze);
+  border-radius:16px 16px 20px 20px;margin-top:-12px;padding:8px 14px 14px;z-index:4}
+.grab{width:38px;height:4px;border-radius:2px;background:#2b3a45;margin:2px auto 10px}
+.row{display:flex;gap:12px;align-items:center}
+.slot{flex:none;width:50px;height:50px;border-radius:10px;display:grid;place-items:center;border:1px solid #3b5a42;
+  background:radial-gradient(circle at 50% 40%,#1d2b22,#0f1612)}
+.slot svg{width:30px;height:30px}
+.slot.altar{border-color:#5a4a8c;background:radial-gradient(circle at 50% 40%,#231d36,#100e18)}
+.name{font-family:Cinzel,serif;font-weight:700;color:var(--goldB);font-size:17px;margin:0;line-height:1.2}
+.sub{font-size:12px;color:var(--muted);margin:2px 0 0}
+.facts{font-size:13px;color:var(--parch);margin:10px 0 0}
+.facts .x{color:var(--rune)}.facts .dot{color:#3d4d58;margin:0 4px}
+.box{margin-top:10px;padding:9px 10px;border-radius:10px;background:var(--raised);border:1px solid var(--line)}
+.prof{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+.prof b{color:var(--goldB);font-weight:600}.prof span{color:var(--muted)}
+.bar{height:6px;border-radius:3px;background:#0c1317}
+.bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#2f8f5d,var(--gold))}
+.bar.gain i{background:linear-gradient(90deg,#2f8f5d,var(--gold) 80%,var(--vital))}
+.tool{display:flex;align-items:center;gap:8px;font-size:12.5px;margin-top:8px}
+.tool svg{width:18px;height:18px;flex:none}
+.tool .ok{margin-left:auto;color:var(--vital);font-size:12px}
+.tool .bad{margin-left:auto;color:var(--life);font-size:12px}
+.tool.missing{color:var(--life)}
+.btns{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;min-height:44px;border-radius:10px;border:1px solid var(--bronze);background:var(--raised);color:var(--parch);
+  font:600 14px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px}
+.btn.pri{flex:2;background:linear-gradient(180deg,#46c486,#2f9a63);border-color:#58d496;color:#04210F}
+.btn.off{background:#1a232a;border-color:#26333d;color:#58697a}
+.btn small{font-weight:500;opacity:.8}
+.hint{font-size:12px;color:var(--muted);margin:8px 0 0}
+.hint.warn{color:var(--caution)}
+.prog{margin-top:12px}
+.prog .bar{height:10px;border-radius:5px}
+.prog .bar i{animation:fill 3s linear infinite}
+.prog .lbl{display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px}
+@keyframes fill{from{width:0}to{width:100%}}
+@media (prefers-reduced-motion:reduce){.prog .bar i,.ring circle.fg{animation:none!important}}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:4px 9px;border-radius:999px;background:var(--raised);
+  border:1px solid var(--line);color:var(--parch);white-space:nowrap}
+.chip.g{color:var(--vital);border-color:#2c5a40;background:rgba(123,224,166,.08)}
+.chip.r{color:var(--life);border-color:#5a2c2c;background:rgba(210,74,67,.08)}
+.chip.b{color:var(--rune);border-color:#2c4a5a}
+.chip.v{color:#C6A8FF;border-color:#4a3a72}
+.chip svg{width:14px;height:14px}
+
+/* Вариант B: плашка над узлом */
+.mapB{min-height:0;padding:12px 12px 14px;display:flex;flex-direction:column;align-items:center}
+.plate{position:relative;z-index:4;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:12px;
+  background:rgba(15,22,27,.94);border:1px solid #3b5a42;box-shadow:0 8px 18px rgba(0,0,0,.5);max-width:100%}
+.plate::after{content:"";position:absolute;left:50%;bottom:-7px;width:12px;height:12px;margin-left:-6px;transform:rotate(45deg);
+  background:rgba(15,22,27,.94);border-right:1px solid #3b5a42;border-bottom:1px solid #3b5a42}
+.plate .slot{width:40px;height:40px}.plate .slot svg{width:24px;height:24px}
+.plate .pn{font-family:Cinzel,serif;font-weight:700;color:var(--goldB);font-size:14px;line-height:1.2}
+.plate .pf{font-size:11.5px;color:var(--muted)}
+.plate .act{margin-left:4px;flex:none;font-size:12px;font-weight:700;color:#04210F;background:linear-gradient(180deg,#46c486,#2f9a63);
+  border-radius:8px;padding:7px 10px;white-space:nowrap}
+.plate.off{border-color:#5a2c2c}.plate.off::after{border-color:#5a2c2c}
+.plate.off .act{background:#2a1a1a;color:var(--life)}
+.groundB{position:relative;height:64px;width:100%;margin-top:12px}
+.groundB .hero{left:calc(50% - 64px);top:16px}
+.groundB .node{left:calc(50% - 18px);top:10px;width:42px;height:42px}
+.ring{position:absolute;left:calc(50% - 26px);top:2px;width:58px;height:58px;z-index:3}
+.ring circle{fill:none;stroke-width:4}
+.ring .bg{stroke:rgba(10,14,18,.7)}
+.ring .fg{stroke:var(--vital);stroke-linecap:round;stroke-dasharray:163;stroke-dashoffset:65;transform:rotate(-90deg);transform-origin:50% 50%;
+  animation:ring 3s linear infinite}
+@keyframes ring{from{stroke-dashoffset:163}to{stroke-dashoffset:0}}
+.ringlbl{position:absolute;left:calc(50% + 40px);top:20px;font-size:11.5px;color:var(--vital);z-index:3;white-space:nowrap}
+.bag{position:absolute;right:4px;top:12px;z-index:3;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;
+  background:var(--panel);border:1px solid var(--bronze)}
+.bag svg{width:22px;height:22px}
+.bag.hit{border-color:var(--gold);box-shadow:0 0 0 3px rgba(63,182,122,.25)}
+.belowB{padding:10px 14px 14px;border-top:1px solid var(--bronze);font-size:12.5px;color:var(--muted)}
+.belowB b{color:var(--parch);font-weight:600}
+
+/* Вариант C: метка вида */
+.kind{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;
+  padding:2px 8px;border-radius:999px;border:1px solid #2c5a40;color:var(--vital);background:rgba(123,224,166,.06);margin-bottom:8px}
+.kind.altar{border-color:#4a3a72;color:#C6A8FF;background:rgba(162,107,255,.07)}
+.foot{margin-top:28px;font-size:12px;color:var(--muted);border-top:1px solid var(--bronze);padding-top:12px}
+</style>
+</head>
+<body>
+<!-- Иконки -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="herb" viewBox="0 0 32 32"><path d="M16 29V12" stroke="#7BE0A6" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M16 18c-6 0-9-4-9-9 5 0 9 3 9 9zM16 14c5 0 8-3 8-8-5 0-8 3-8 8zM16 23c4 0 7-2 8-6-4 0-7 2-8 6z" fill="#3FB67A"/></symbol>
+    <symbol id="sickle" viewBox="0 0 24 24"><path d="M6 20l3-3" stroke="#C9A26B" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M9 17C6 11 10 4 18 4c-5 2-7 7-5 11z" fill="#C98F55"/></symbol>
+    <symbol id="altar" viewBox="0 0 32 32"><path d="M7 26h18v-3H7zM9 23h14l-2-8H11z" fill="#6d5aa8"/><path d="M16 4c3 4 3 7 0 10-3-3-3-6 0-10z" fill="#C6A8FF"/></symbol>
+    <symbol id="bag" viewBox="0 0 24 24"><path d="M7 8h10l1.5 12h-13z" fill="#C9A26B"/><path d="M9 8V6a3 3 0 016 0v2" stroke="#C9A26B" stroke-width="1.8" fill="none"/></symbol>
+  </defs>
+</svg>
+
+<div class="page">
+  <h1>Окно сбора ресурса</h1>
+  <p class="lead">ASANA-12 · сейчас <code>NodeSheet</code>: заголовок, строка и две кнопки. Три варианта; у каждого — нижняя часть экрана карты и само окно. Состояние переключайте вкладками над кадром.</p>
+
+  <div class="grid">
+
+  <!-- ===== A ===== -->
+  <section class="variant" id="va">
+    <div class="vhead"><div class="vletter">A</div><div>
+      <h2 class="vtitle">Нижний лист, подробный</h2>
+      <p class="pc"><b class="p">+</b> всё о ресурсе в одном месте: выход, опыт, запас, профессия, инструмент; ближе всего к текущему коду.<br>
+      <b class="m">−</b> лист закрывает низ карты; на каждый узел — лишнее касание.</p></div></div>
+    <input type="radio" name="a" id="a1" class="tabs-in n1" checked><input type="radio" name="a" id="a2" class="tabs-in n2">
+    <input type="radio" name="a" id="a3" class="tabs-in n3"><input type="radio" name="a" id="a4" class="tabs-in n4">
+    <div class="tabs"><label for="a1" class="n1">Готов</label><label for="a2" class="n2">Идёт сбор</label><label for="a3" class="n3">Нет инструмента</label><label for="a4" class="n4">Собрано</label></div>
+    <div class="stage">
+      <p class="cut">низ экрана карты</p>
+
+      <div class="st n1"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div></div>
+        <div class="sheet"><div class="grab"></div>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Полынь</p><p class="sub">Трава · обычный ресурс</p></div></div>
+          <p class="facts">2–4 шт.<span class="dot">·</span><span class="x">+18 опыта ремесла</span><span class="dot">·</span>есть 37</p>
+          <div class="box">
+            <div class="prof"><b>Травничество · ур. 12</b><span>1 240 / 1 940</span></div><div class="bar"><i style="width:64%"></i></div>
+            <div class="tool"><svg><use href="#sickle"/></svg>Бронзовый серп<span class="ok">✓ подходит</span></div>
+          </div>
+          <div class="btns"><div class="btn">Отойти</div><div class="btn pri">Собрать <small>· 3 с</small></div></div>
+        </div></div></div>
+
+      <div class="st n2"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div><span class="mtag" style="left:calc(38% + 2px);top:16px">собирает…</span></div>
+        <div class="sheet"><div class="grab"></div>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Полынь</p><p class="sub">Трава · обычный ресурс</p></div></div>
+          <p class="facts">2–4 шт.<span class="dot">·</span><span class="x">+18 опыта ремесла</span><span class="dot">·</span>есть 37</p>
+          <div class="prog"><div class="lbl"><span>Сбор серпом…</span><span style="color:var(--vital)">1,8 с</span></div><div class="bar"><i style="width:40%"></i></div></div>
+          <p class="hint">Шаг в сторону или удар врага прерывает сбор.</p>
+          <div class="btns"><div class="btn">Отменить</div></div>
+        </div></div></div>
+
+      <div class="st n3"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div></div>
+        <div class="sheet"><div class="grab"></div>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Полынь</p><p class="sub">Трава · обычный ресурс</p></div></div>
+          <p class="facts">2–4 шт.<span class="dot">·</span><span class="x">+18 опыта ремесла</span><span class="dot">·</span>есть 37</p>
+          <div class="box">
+            <div class="prof"><b>Травничество · ур. 12</b><span>1 240 / 1 940</span></div><div class="bar"><i style="width:64%"></i></div>
+            <div class="tool missing"><svg style="opacity:.45"><use href="#sickle"/></svg>Нужен серп<span class="bad">✕ нет в сумке</span></div>
+          </div>
+          <p class="hint warn">Серп продаёт торговец в лагере.</p>
+          <div class="btns"><div class="btn">Отойти</div><div class="btn off">Собрать</div></div>
+        </div></div></div>
+
+      <div class="st n4"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node done"><svg><use href="#herb"/></svg></div><span class="mtag" style="left:calc(38% + 44px);top:92px">пусто</span></div>
+        <div class="sheet"><div class="grab"></div>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Собрано</p><p class="sub">Полынь · узел опустел</p></div></div>
+          <div class="chips"><span class="chip g"><svg><use href="#herb"/></svg>+3 Полынь</span><span class="chip b">+18 опыта ремесла</span><span class="chip">есть 40</span></div>
+          <div class="box">
+            <div class="prof"><b>Травничество · ур. 12</b><span>1 258 / 1 940</span></div><div class="bar gain"><i style="width:65%"></i></div>
+          </div>
+          <div class="btns"><div class="btn pri">Готово</div></div>
+        </div></div></div>
+    </div>
+  </section>
+
+  <!-- ===== B ===== -->
+  <section class="variant" id="vb">
+    <div class="vhead"><div class="vletter">B</div><div>
+      <h2 class="vtitle">Плашка над узлом</h2>
+      <p class="pc"><b class="p">+</b> одно касание, карта открыта; прогресс кольцом на узле, итог фишкой летит в сумку.<br>
+      <b class="m">−</b> мало места: профессия и запас не видны; плашка может перекрыть врагов рядом.</p></div></div>
+    <input type="radio" name="b" id="b1" class="tabs-in n1" checked><input type="radio" name="b" id="b2" class="tabs-in n2">
+    <input type="radio" name="b" id="b3" class="tabs-in n3"><input type="radio" name="b" id="b4" class="tabs-in n4">
+    <div class="tabs"><label for="b1" class="n1">Готов</label><label for="b2" class="n2">Идёт сбор</label><label for="b3" class="n3">Нет инструмента</label><label for="b4" class="n4">Собрано</label></div>
+    <div class="stage">
+      <p class="cut">низ экрана карты</p>
+
+      <div class="st n1"><div class="frame">
+        <div class="map mapB">
+          <div class="plate"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><div class="pn">Полынь</div><div class="pf">2–4 шт. · серп ✓ · есть 37</div></div><div class="act">Собрать · 3 с</div></div>
+          <div class="groundB"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div><div class="bag"><svg><use href="#bag"/></svg></div></div>
+        </div>
+        <div class="belowB">Касание плашки — сбор. Уйти — просто идти дальше, кнопки «Отойти» нет.</div>
+      </div></div>
+
+      <div class="st n2"><div class="frame">
+        <div class="map mapB">
+          <div class="groundB" style="margin-top:4px"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div>
+            <svg class="ring" viewBox="0 0 58 58"><circle class="bg" cx="29" cy="29" r="26"/><circle class="fg" cx="29" cy="29" r="26"/></svg>
+            <span class="ringlbl">1,8 с</span><div class="bag"><svg><use href="#bag"/></svg></div></div>
+        </div>
+        <div class="belowB">Плашка исчезла, остаётся кольцо прогресса вокруг узла. <b>Шаг в сторону — отмена.</b></div>
+      </div></div>
+
+      <div class="st n3"><div class="frame">
+        <div class="map mapB">
+          <div class="plate off"><div class="slot" style="opacity:.6"><svg><use href="#herb"/></svg></div>
+            <div><div class="pn">Полынь</div><div class="pf" style="color:var(--life)">нужен серп</div></div><div class="act">Нет серпа</div></div>
+          <div class="groundB"><div class="hero"></div><div class="node" style="opacity:.6"><svg><use href="#herb"/></svg></div><div class="bag"><svg><use href="#bag"/></svg></div></div>
+        </div>
+        <div class="belowB">Касание плашки — подсказка: <b>серп продаёт торговец в лагере.</b></div>
+      </div></div>
+
+      <div class="st n4"><div class="frame">
+        <div class="map mapB">
+          <span class="chip g" style="align-self:flex-end">↘ <svg><use href="#herb"/></svg>+3 Полынь</span>
+          <div class="groundB" style="margin-top:4px"><div class="hero"></div><div class="node done"><svg><use href="#herb"/></svg></div>
+            <div class="bag hit"><svg><use href="#bag"/></svg></div></div>
+        </div>
+        <div class="belowB">Фишка «+3 Полынь» улетает в сумку; рядом мелко — <b>+18 опыта ремесла</b>. Узел гаснет.</div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- ===== C ===== -->
+  <section class="variant" id="vc">
+    <div class="vhead"><div class="vletter">C</div><div>
+      <h2 class="vtitle">Единый шаблон объекта карты</h2>
+      <p class="pc"><b class="p">+</b> один компонент для узла, алтаря, торговца: метка вида, гнездо, имя, факты фишками, действия.<br>
+      <b class="m">−</b> больше работы (переделать все листы); общий шаблон менее «особенный» для каждого объекта.</p></div></div>
+    <input type="radio" name="c" id="c1" class="tabs-in n1" checked><input type="radio" name="c" id="c2" class="tabs-in n2">
+    <input type="radio" name="c" id="c3" class="tabs-in n3"><input type="radio" name="c" id="c4" class="tabs-in n4">
+    <input type="radio" name="c" id="c5" class="tabs-in n5">
+    <div class="tabs"><label for="c1" class="n1">Готов</label><label for="c2" class="n2">Идёт сбор</label><label for="c3" class="n3">Нет инструмента</label><label for="c4" class="n4">Собрано</label><label for="c5" class="n5">Алтарь</label></div>
+    <div class="stage">
+      <p class="cut">низ экрана карты</p>
+
+      <div class="st n1"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div></div>
+        <div class="sheet"><div class="grab"></div>
+          <span class="kind">◆ Ресурс · трава</span>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Полынь</p><p class="sub">Травничество · ур. 12</p></div></div>
+          <div class="chips"><span class="chip">2–4 шт.</span><span class="chip b">+18 опыта ремесла</span><span class="chip">есть 37</span><span class="chip g"><svg><use href="#sickle"/></svg>Бронзовый серп</span></div>
+          <div class="btns"><div class="btn">Отойти</div><div class="btn pri">Собрать <small>· 3 с</small></div></div>
+        </div></div></div>
+
+      <div class="st n2"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div></div>
+        <div class="sheet"><div class="grab"></div>
+          <span class="kind">◆ Ресурс · трава</span>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Полынь</p><p class="sub">Травничество · ур. 12</p></div></div>
+          <div class="prog"><div class="lbl"><span>Сбор…</span><span style="color:var(--vital)">1,8 с</span></div><div class="bar"><i style="width:40%"></i></div></div>
+          <div class="btns"><div class="btn">Отменить</div></div>
+        </div></div></div>
+
+      <div class="st n3"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node"><svg><use href="#herb"/></svg></div></div>
+        <div class="sheet"><div class="grab"></div>
+          <span class="kind">◆ Ресурс · трава</span>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Полынь</p><p class="sub">Травничество · ур. 12</p></div></div>
+          <div class="chips"><span class="chip">2–4 шт.</span><span class="chip">есть 37</span><span class="chip r"><svg><use href="#sickle"/></svg>нужен серп</span></div>
+          <p class="hint warn">Серп продаёт торговец в лагере.</p>
+          <div class="btns"><div class="btn">Отойти</div><div class="btn off">Собрать</div></div>
+        </div></div></div>
+
+      <div class="st n4"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node done"><svg><use href="#herb"/></svg></div></div>
+        <div class="sheet"><div class="grab"></div>
+          <span class="kind">◆ Ресурс · собрано</span>
+          <div class="row"><div class="slot"><svg><use href="#herb"/></svg></div>
+            <div><p class="name">Полынь</p><p class="sub">Узел опустел</p></div></div>
+          <div class="chips"><span class="chip g">+3 Полынь</span><span class="chip b">+18 опыта ремесла</span><span class="chip">есть 40</span></div>
+          <div class="btns"><div class="btn pri">Готово</div></div>
+        </div></div></div>
+
+      <div class="st n5"><div class="frame">
+        <div class="map"><div class="hero"></div><div class="node altar"><svg><use href="#altar"/></svg></div></div>
+        <div class="sheet"><div class="grab"></div>
+          <span class="kind altar">✦ Алтарь</span>
+          <div class="row"><div class="slot altar"><svg><use href="#altar"/></svg></div>
+            <div><p class="name">Алтарь пепла</p><p class="sub">Благословение на заход</p></div></div>
+          <div class="chips"><span class="chip v">+15% урона огнём</span><span class="chip">до конца захода</span><span class="chip r">−10% здоровья</span></div>
+          <div class="btns"><div class="btn">Отойти</div><div class="btn pri">Принять дар</div></div>
+        </div></div></div>
+    </div>
+  </section>
+
+  </div>
+  <p class="foot">Макет, в репозиторий не коммитится. Цвета и шрифт — из темы игры (<code>Theme.kt</code>): Panel, Gold, Vital, Rune, Cinzel для заголовков.</p>
+</div>
+</body>
+</html>

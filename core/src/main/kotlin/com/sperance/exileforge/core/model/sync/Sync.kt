@@ -76,8 +76,10 @@ import kotlinx.serialization.json.JsonElement
  * 81 - безопасность и данные (4.12.x): тестировщик - отметка героя (`HeroInfo.tester`, `DossierHero.tester`, `admin/moderation/tester`),
  *      роли аккаунта `TESTER` нет; экран санкции - `SanctionNotice` с причиной для игрока, немота без номера и заметки, причина в
  *      бане и удалении; `US_021`, `AUTH_007`; `BRY_002` - 409; маршруты манифеста - по сессии.
+ * 82 - формы карт по биому (`expedition.shapes`), босс кольца - за воротами арены после доли зачищенных стай, Атлас - только в
+ *      заходе по карте-предмету (4.12.8).
  */
-const val API_REVISION = 81
+const val API_REVISION = 82
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

@@ -3874,6 +3874,7 @@
   "expedition.log_note_totem": "{0} raises the {1}",
   "expedition.log_note_totem_fall": "The {0} crumbles",
   "expedition.seal_progress": "Guardian's seal: {0} of {1} rares fallen",
+  "expedition.gate_progress": "Arena gate: {0} of {1} packs cleared",
   "trials.rush_locked": "No need to forge a key yet: a Boss Trial opens once every zone of a region is cleared. Closest — {0}, zones left: {1}",
   "trials.rush_tier_first": "first tier",
   "trials.rush_tier_named": "Tier {0}: {1}",

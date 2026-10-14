@@ -41,6 +41,7 @@ import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapDescription
 import com.sperance.exileforge.core.display.mapTitle
+import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
@@ -52,6 +53,7 @@ import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.AtlasBonuses
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Monster
@@ -101,7 +103,10 @@ import com.sperance.exileforge.ui.theme.*
     // A map taken by an influence (3.52.0, server 1.50.0): stronger monsters — the risk pays for them — its influence on the loot;
     // the Abyss (server 1.65.0) only from its orb, with its cracks besides.
     val influence = picked.item.influence?.takeIf { index.campaign.maps.influence.accepts(it) }
-    val bonus = LootRoller(index).activeMap(zone.code, picked.view.effects(), rarity, influence = influence)
+    // «Эффект модификаторов карт» Атласа (4.12.8): карта печатает действующие числа - как их сложит сервер на входе
+    val atlas = remember(game.hero?.info?.atlas, index) { AtlasBonuses.of(index.atlasGraph, game.hero?.info?.atlas.orEmpty(), index::modifier) }
+    val loot = LootRoller(index)
+    val bonus = loot.activeMap(zone.code, loot.atlasPowers(loot.mapEffects(picked.item, atlas.mapEffect), atlas.effects), rarity, picked.item.mapTier, influence, atlas.effects)
     influence?.let {
         val rule = index.campaign.maps.influence
         Text(
@@ -115,12 +120,12 @@ import com.sperance.exileforge.ui.theme.*
         Figure(bonus.rarity, ui("expedition.launch_rarity"))
         Figure(bonus.experience, ui("expedition.launch_experience"))
     }
-    lines(picked.view, index).forEach { LineRow(it) }
+    lines(picked.view, index, atlas.mapEffect).forEach { LineRow(it) }
     MutedText(ui("expedition.launch_spent"))
 }
 
 /** The picked map's lines in the order it rolled them; a composite line is a harm if any of its stats is one. */
-internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.lines.map { line ->
+internal fun lines(map: ItemView, index: ContentIndex, atlasEffect: Double = 1.0): List<MapLine> = map.lines.map { line ->
     val effects = line.definition?.effects.orEmpty()
     val kinds = effects.map { MapLineKind.of(index, it.stat) }
     val kind = when {
@@ -128,8 +133,11 @@ internal fun lines(map: ItemView, index: ContentIndex): List<MapLine> = map.line
         MapLineKind.REWARD in kinds -> MapLineKind.REWARD
         else -> MapLineKind.CONTENT
     }
-    val risk = line.definition?.bind(line.values).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value) }
-    MapLine(line.text, kind, risk)
+    // Действующие значения строки (4.12.8): Атлас усиливает только строки `scalable` - печать, флаги и счётные как есть
+    val def = line.definition
+    val values = def?.let { LootRoller(index).mapValues(it, line.values, atlasEffect) } ?: line.values
+    val risk = def?.bind(values).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value) }
+    MapLine(if (def != null && values != line.values) modifierLine(index, def, values) else line.text, kind, risk)
 }
 
 @Composable internal fun LineRow(line: MapLine) {

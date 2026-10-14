@@ -1,7 +1,15 @@
 package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.rules.content.MapShape
 import com.sperance.exileforge.rules.content.TerrainRule
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.atan2
+import kotlin.math.ceil
+import kotlin.math.cos
+import kotlin.math.hypot
+import kotlin.math.roundToInt
+import kotlin.math.sin
 import kotlin.random.Random
 
 /**
@@ -15,7 +23,7 @@ enum class Liquid { WATER, SWAMP, LAVA, ICE, TAR, VOID }
 
 data class Cell(val x: Int, val y: Int)
 
-/** How the ground is carved: open caverns, or rooms joined by corridors. */
+/** Узор стен (облик скалы): живая скала пещер или обточенный камень залов - формы комнат ([MapShape.ROOMS]). */
 enum class MapStyle { CAVERN, HALLS }
 
 /** How a biome's chasms look (3.91.0): round pits and sinkholes, or long narrow cracks. */
@@ -37,7 +45,22 @@ class ExpeditionMap(
     val spawns: List<Cell>,
     /** Чем полна вода карты (3.95.0); null - воды нет. */
     val liquid: Liquid? = null,
+    /**
+     * Ворота арены кольца (4.12.8, ASANA-10): клетки скалы между кольцом и ареной босса; пока доля стай не зачищена, они стоят
+     * скалой, затем [openGate] делает их полом. Пусто - ворот нет.
+     */
+    gate: List<Cell> = emptyList(),
 ) {
+    /** Клетки ворот, что ещё стоят скалой. */
+    var gate: List<Cell> = gate
+        private set
+
+    /** Ворота открываются: их клетки становятся полом - правка карты, сцена перерисует скалу. */
+    internal fun openGate() {
+        gate.forEach { carve(it, Tile.FLOOR) }
+        gate = emptyList()
+    }
+
     fun tile(x: Int, y: Int): Tile = if (x in 0 until width && y in 0 until height) tiles[y * width + x] else Tile.WALL
     fun walkable(x: Int, y: Int) = tile(x, y) == Tile.FLOOR
 
@@ -70,9 +93,8 @@ class ExpeditionMap(
  */
 object MapGenerator {
 
-    private val halls = setOf("RUINS", "CRYPT", "MINES", "TEMPLE", "CITADEL", VaalZones.BIOME)
-
-    fun styleOf(biome: String): MapStyle = if (biome in halls) MapStyle.HALLS else MapStyle.CAVERN
+    /** Узор стен формы [shape]: у комнат - обточенный камень, у прочих - живая скала. */
+    fun styleOf(shape: MapShape): MapStyle = if (shape == MapShape.ROOMS) MapStyle.HALLS else MapStyle.CAVERN
 
     /** Biomes whose ground splits into cracks; the rest sink into pits. */
     private val cracked = setOf("CAVE", "MINES", "CANYON", "VOLCANO", "ASH", "STORMPEAK", "SKYREACH", "GLASSWASTE", "FROST", "CITADEL", "RUINS", "CRYPT", "TEMPLE", "GODHALL", "ASTRAL", "OBLIVION")
@@ -95,40 +117,49 @@ object MapGenerator {
 
     fun liquidOf(biome: String): Liquid? = liquids[biome]
 
-    /** Карта зоны; [terrain] (4.12.x, ARCH-02) - доли пропастей и воды из контента (`expedition.terrain`). */
-    fun generate(seed: Long, biome: String, monsters: Int, terrain: TerrainRule, size: Int = 48, minChasm: Int = 1, minPool: Int = 1): ExpeditionMap {
+    /**
+     * Карта зоны; [terrain] (4.12.x, ARCH-02) - доли пропастей и воды из контента (`expedition.terrain`); [shape] (4.12.8, ASANA-10) -
+     * форма по биому (`expedition.shapes`): пещера, комнаты и коридоры, кольцо вокруг арены, острова с мостами. Форма сама ставит вход
+     * и место босса; каждая из [monsters] стай встаёт на карту - шаг между стаями сужается, пока не встанут все.
+     */
+    fun generate(
+        seed: Long,
+        biome: String,
+        monsters: Int,
+        terrain: TerrainRule,
+        size: Int = 48,
+        minChasm: Int = 1,
+        minPool: Int = 1,
+        shape: MapShape = MapShape.CAVERN,
+    ): ExpeditionMap {
         val random = Random(seed)
         val grid = Array(size * size) { Tile.WALL }
-        when (styleOf(biome)) {
-            MapStyle.CAVERN -> cavern(grid, size, random)
-            MapStyle.HALLS -> halls(grid, size, random)
+        val plan = when (shape) {
+            MapShape.CAVERN -> Plan().also { cavern(grid, size, random) }
+            MapShape.ROOMS -> rooms(grid, size, random)
+            MapShape.RING -> ring(grid, size, random)
+            MapShape.ISLANDS -> islands(grid, size, random)
         }
-        val start = (0 until size * size).filter { grid[it] == Tile.FLOOR }.let { floor ->
+        val start = plan.start?.takeIf { grid[it.y * size + it.x] == Tile.FLOOR } ?: (0 until size * size).filter { grid[it] == Tile.FLOOR }.let { floor ->
             // The start is the far end of the map from its middle: the walk leads across it.
             val middle = distances(grid, size, Cell(size / 2, size / 2).let { nearest(grid, size, it) })
             floor.maxBy { middle[it] }.let { Cell(it % size, it / size) }
         }
         val fromStart = distances(grid, size, start)
         // Whatever the start cannot reach is filled back in: nothing may stand where no one can walk.
-        for (i in grid.indices) if (fromStart[i] < 0) grid[i] = Tile.WALL
+        for (i in grid.indices) if (fromStart[i] < 0 && grid[i] == Tile.FLOOR) grid[i] = Tile.WALL
         // The exit stands in the open (3.79.0): off the walls, where the perspective of the scene does not hide it.
         fun roomy(i: Int) = grid[i] == Tile.FLOOR && i % size in 1 until size - 1 && i / size in 1 until size - 1 &&
             grid[i - 1] == Tile.FLOOR && grid[i + 1] == Tile.FLOOR && grid[i - size] == Tile.FLOOR && grid[i + size] == Tile.FLOOR
         fun rock(x: Int, y: Int) = x !in 0 until size || y !in 0 until size || grid[y * size + x] == Tile.WALL
-        // ...и так, чтобы скала перед ним по ходу камеры не закрыла его овал (3.95.3)
+        // ...и так, чтобы скала перед ним по ходу камеры не закрыла его овал (3.95.3); у формы - её место босса (ASANA-10)
         val roomyCells = grid.indices.filter(::roomy)
-        val exitIndex = roomyCells.filter { SceneSight.inView(it % size, it / size, ::rock) }.ifEmpty { roomyCells }.ifEmpty { grid.indices.filter { grid[it] == Tile.FLOOR } }
-            .maxBy { fromStart[it] }
+        val exitIndex = plan.exit?.let { it.y * size + it.x }?.takeIf(::roomy)
+            ?: roomyCells.filter { SceneSight.inView(it % size, it / size, ::rock) }.ifEmpty { roomyCells }.ifEmpty { grid.indices.filter { grid[it] == Tile.FLOOR } }
+                .maxBy { fromStart[it] }
         val exit = Cell(exitIndex % size, exitIndex / size)
         val fromExit = distances(grid, size, exit)
-
-        val candidates = grid.indices.filter { grid[it] == Tile.FLOOR && fromStart[it] >= 8 && fromExit[it] >= 3 }.shuffled(random)
-        val spawns = mutableListOf<Cell>()
-        for (index in candidates) {
-            if (spawns.size >= monsters) break
-            val cell = Cell(index % size, index / size)
-            if (spawns.none { abs(it.x - cell.x) + abs(it.y - cell.y) < 5 }) spawns += cell
-        }
+        val spawns = spawns(grid, size, random, monsters, fromStart, fromExit, plan.reserved)
         val decor = IntArray(size * size) { index ->
             if (grid[index] != Tile.FLOOR || fromStart[index] < 2 || index == exitIndex) {
                 0
@@ -138,14 +169,245 @@ object MapGenerator {
                 0
             }
         }
-        val keep = setOf(start, exit) + spawns
+        val keep = setOf(start, exit) + spawns + plan.gate
         val liquid = liquidOf(biome)
         chasms(grid, size, random, chasmOf(biome), keep, share = if (biome in wet) terrain.wetChasmShare else terrain.chasmShare, minimum = minChasm, swerve = terrain.crackSwerve)
         // Вода (3.95.0) - после ям и стай: их места она не сдвигает
         liquid?.let { waters(grid, size, random, keep, share = if (biome in wet) terrain.wetWaterShare else terrain.waterShare, terrain = terrain) }
         fillPuddles(grid, size, start, minPool)
-        return ExpeditionMap(size, size, grid, decor, start, exit, spawns, liquid)
+        // Ворота арены (ASANA-10) встают скалой последними: до них арена считалась частью карты
+        val gate = plan.gate.filter { grid[it.y * size + it.x] == Tile.FLOOR }.onEach { grid[it.y * size + it.x] = Tile.WALL }
+        return ExpeditionMap(size, size, grid, decor, start, exit, spawns, liquid ?: Liquid.WATER.takeIf { Tile.WATER in grid }, gate)
     }
+
+    /**
+     * Что форма карты решила сама (ASANA-10): вход [start], место босса [exit], ворота арены [gate] и клетки, где стаи не встают
+     * ([reserved]: арена и проход к ней). null - как у пещеры: вход - дальний край от середины, босс - дальше всего от входа.
+     */
+    private class Plan(val start: Cell? = null, val exit: Cell? = null, val gate: List<Cell> = emptyList(), val reserved: Set<Int> = emptySet())
+
+    /**
+     * Места стай: не ближе 8 шагов от входа и 3 от выхода, вне [reserved]; шаг между стаями - [SPAWN_GAP] клеток, а если все [count]
+     * не встали - уже, до соседних клеток: каждая стая захода стоит на карте (иначе печать и ворота не снять).
+     */
+    private fun spawns(grid: Array<Tile>, size: Int, random: Random, count: Int, fromStart: IntArray, fromExit: IntArray, reserved: Set<Int>): List<Cell> {
+        val open = grid.indices.filter { grid[it] == Tile.FLOOR && it !in reserved && fromExit[it] >= 3 }
+        val candidates = open.filter { fromStart[it] >= 8 }.ifEmpty { open.filter { fromStart[it] >= 2 } }.shuffled(random)
+        val spawns = mutableListOf<Cell>()
+        for (gap in SPAWN_GAP downTo 1) {
+            for (index in candidates) {
+                if (spawns.size >= count) return spawns
+                val cell = Cell(index % size, index / size)
+                if (spawns.none { abs(it.x - cell.x) + abs(it.y - cell.y) < gap }) spawns += cell
+            }
+        }
+        return spawns
+    }
+
+    /**
+     * A - комнаты и коридоры (ASANA-10, макет «Формы карт»): комнаты по площади карты, коридоры шириной 2 - остов-дерево по ближним
+     * комнатам и пара петель, чтобы не ходить назад; в больших залах - колонны. Вход - комната у нижнего края, босс - в самой дальней
+     * по пути комнате.
+     */
+    private fun rooms(grid: Array<Tile>, size: Int, random: Random): Plan {
+        val target = (size * size / ROOM_AREA).coerceIn(ROOMS_MIN, ROOMS_MAX)
+        val widest = (size / 4).coerceIn(ROOM_MIN + 1, ROOM_MAX)
+        val rooms = mutableListOf<Room>()
+        repeat(ROOM_TRIES) {
+            if (rooms.size >= target) return@repeat
+            val w = random.nextInt(ROOM_MIN, widest + 1)
+            val h = random.nextInt(ROOM_MIN - 1, widest)
+            if (size - w - 4 <= 2 || size - h - 4 <= 2) return@repeat
+            val room = Room(random.nextInt(2, size - w - 2), random.nextInt(2, size - h - 2), w, h)
+            if (rooms.all { it.apart(room, ROOM_MARGIN) }) rooms += room
+        }
+        if (rooms.isEmpty()) return Plan().also { cavern(grid, size, random) }
+        rooms.forEach { room -> for (y in room.y until room.y + room.h) for (x in room.x until room.x + room.w) grid[y * size + x] = Tile.FLOOR }
+        val degree = IntArray(rooms.size)
+        fun join(a: Int, b: Int) {
+            wideCorridor(grid, size, rooms[a].centre, rooms[b].centre, random)
+            degree[a]++
+            degree[b]++
+        }
+        // Остов-дерево: каждая новая комната - к ближайшей из уже связанных
+        val joined = mutableListOf(0)
+        val waiting = (1 until rooms.size).toMutableList()
+        while (waiting.isNotEmpty()) {
+            val (a, b) = joined.flatMap { a -> waiting.map { b -> a to b } }.minBy { (a, b) -> rooms[a].distance(rooms[b]) }
+            join(a, b)
+            joined += b
+            waiting.remove(b)
+        }
+        // Петли: тупик - ещё и ко второй ближней комнате
+        rooms.indices.filter { degree[it] == 1 }.shuffled(random).take(LOOPS).forEach { a ->
+            rooms.indices.filter { it != a }.sortedBy { rooms[a].distance(rooms[it]) }.getOrNull(1)?.let { join(a, it) }
+        }
+        rooms.filter { it.w >= PILLAR_W && it.h >= PILLAR_H }.forEach { room ->
+            listOf(room.x + 2 to room.y + 2, room.x + room.w - 3 to room.y + 2, room.x + 2 to room.y + room.h - 3, room.x + room.w - 3 to room.y + room.h - 3)
+                .forEach { (x, y) -> grid[y * size + x] = Tile.WALL }
+        }
+        val first = rooms.minBy { it.centre.x + (size - it.centre.y) }
+        val reach = distances(grid, size, first.centre)
+        val boss = rooms.filter { it !== first }.maxByOrNull { reach[it.centre.y * size + it.centre.x] } ?: first
+        return Plan(first.centre, boss.centre)
+    }
+
+    /** Комната формы A: угол, ширина и высота. */
+    private class Room(val x: Int, val y: Int, val w: Int, val h: Int) {
+        val centre = Cell(x + w / 2, y + h / 2)
+        fun apart(other: Room, margin: Int) = x + w + margin < other.x || other.x + other.w + margin < x || y + h + margin < other.y || other.y + other.h + margin < y
+        fun distance(other: Room) = hypot((centre.x - other.centre.x).toDouble(), (centre.y - other.centre.y).toDouble())
+    }
+
+    /** Коридор шириной 2 буквой Г от [from] к [to]. */
+    private fun wideCorridor(grid: Array<Tile>, size: Int, from: Cell, to: Cell, random: Random) {
+        fun open(x: Int, y: Int) {
+            if (x in 1 until size - 1 && y in 1 until size - 1) grid[y * size + x] = Tile.FLOOR
+        }
+        val corner = if (random.nextBoolean()) Cell(to.x, from.y) else Cell(from.x, to.y)
+        listOf(from to corner, corner to to).forEach { (a, b) ->
+            for (x in minOf(a.x, b.x)..maxOf(a.x, b.x)) {
+                for (y in minOf(a.y, b.y)..maxOf(a.y, b.y)) {
+                    open(x, y)
+                    open(x + 1, y)
+                    open(x, y + 1)
+                    open(x + 1, y + 1)
+                }
+            }
+        }
+    }
+
+    /**
+     * B - кольцо вокруг арены босса (ASANA-10): неровное кольцо, круглая арена в скальном поясе, проход к ней сверху - за воротами;
+     * снаружи кольца - ниши-тупики для сундуков. Вход - снизу на кольце, до ворот - пол-кольца в любую сторону.
+     */
+    private fun ring(grid: Array<Tile>, size: Int, random: Random): Plan {
+        val scale = size / RING_BASE
+        val c = (size - 1) / 2.0
+        val phases = DoubleArray(4) { random.nextDouble() * 2 * PI }
+        fun inner(a: Double) = (14.2 + 1.3 * sin(3 * a + phases[0]) + 0.8 * sin(5 * a + phases[1])) * scale
+        fun outer(a: Double) = minOf((21.5 + 1.6 * sin(2 * a + phases[2]) + 1.0 * sin(7 * a + phases[3])) * scale, c - 1)
+        val arena = ARENA_RADIUS * scale
+        val reserved = HashSet<Int>()
+        for (y in 0 until size) {
+            for (x in 0 until size) {
+                val r = hypot(x - c, y - c)
+                val a = atan2(y - c, x - c)
+                if (r < arena || (r > inner(a) && r < outer(a))) grid[y * size + x] = Tile.FLOOR
+                if (r <= inner(a)) reserved += y * size + x
+            }
+        }
+        // Проход к арене сверху; ворота - его средний ряд
+        val cx = c.roundToInt()
+        val top = (c - inner(-PI / 2)).roundToInt() - 1
+        val bottom = (c - arena).roundToInt() + 1
+        for (y in top..bottom) for (x in cx - 1..cx + 1) grid[y * size + x] = Tile.FLOOR
+        val gateRow = (top + bottom) / 2
+        val gate = (cx - 1..cx + 1).map { Cell(it, gateRow) }
+        NICHES.forEach { base ->
+            val a = base + random.nextDouble() * NICHE_JITTER
+            val edge = outer(a)
+            val far = edge + NICHE_DEPTH * scale
+            val nx = c + cos(a) * far
+            val ny = c + sin(a) * far
+            for (y in 1 until size - 1) for (x in 1 until size - 1) if (hypot(x - nx, y - ny) < NICHE_RADIUS * scale) grid[y * size + x] = Tile.FLOOR
+            val steps = ceil(far - edge + 1).toInt() * 2
+            for (t in 0..steps) {
+                val r = edge - 1 + (far - edge + 1) * t / steps
+                val x = (c + cos(a) * r).roundToInt()
+                val y = (c + sin(a) * r).roundToInt()
+                if (x in 1 until size - 2 && y in 1 until size - 1) {
+                    grid[y * size + x] = Tile.FLOOR
+                    grid[y * size + x + 1] = Tile.FLOOR
+                }
+            }
+        }
+        val south = PI / 2
+        val start = Cell(cx, (c + (inner(south) + outer(south)) / 2).roundToInt())
+        grid[start.y * size + start.x] = Tile.FLOOR
+        return Plan(start, Cell(cx, cx), gate, reserved)
+    }
+
+    /**
+     * C - острова через воду (ASANA-10): цепь островов от угла к углу и два боковых, мосты шириной 2 - пол поверх воды. Вход - на
+     * первом острове, босс - на последнем, самом большом; цепь наугад отражена, чтобы карты не повторялись.
+     */
+    private fun islands(grid: Array<Tile>, size: Int, random: Random): Plan {
+        val scale = size / ISLES_BASE
+        for (i in grid.indices) grid[i] = if (i % size in 2 until size - 2 && i / size in 2 until size - 2) Tile.WATER else Tile.WALL
+        val flipX = random.nextBoolean()
+        val flipY = random.nextBoolean()
+        fun at(x: Double, y: Double) = Pair((if (flipX) ISLES_BASE - x else x) * scale, (if (flipY) ISLES_BASE - y else y) * scale)
+        val chain = CHAIN.mapIndexed { i, (x, y) ->
+            val (px, py) = at(x + random.nextInt(-2, 3), y + random.nextInt(-2, 3))
+            Isle(px, py, (if (i == CHAIN.lastIndex) BOSS_ISLE else ISLE_MIN + random.nextDouble() * ISLE_SPREAD) * scale)
+        }
+        val sides = SIDES.map { side ->
+            val (px, py) = at(side.x + random.nextInt(0, 4), side.y + random.nextInt(0, 4))
+            Isle(px, py, SIDE_ISLE * scale)
+        }
+        (chain + sides).forEach { isle ->
+            val p0 = random.nextDouble() * 2 * PI
+            val p1 = random.nextDouble() * 2 * PI
+            for (y in 2 until size - 2) {
+                for (x in 2 until size - 2) {
+                    val a = atan2(y - isle.y, x - isle.x)
+                    if (hypot(x - isle.x, y - isle.y) < isle.r * (1 + 0.18 * sin(3 * a + p0) + 0.1 * sin(5 * a + p1))) grid[y * size + x] = Tile.FLOOR
+                }
+            }
+        }
+        fun bridge(a: Isle, b: Isle) {
+            val steps = (hypot(b.x - a.x, b.y - a.y) * 2).toInt().coerceAtLeast(1)
+            for (t in 0..steps) {
+                val x = (a.x + (b.x - a.x) * t / steps).roundToInt()
+                val y = (a.y + (b.y - a.y) * t / steps).roundToInt()
+                listOf(x to y, x + 1 to y, x to y + 1).forEach { (bx, by) -> if (bx in 2 until size - 2 && by in 2 until size - 2) grid[by * size + bx] = Tile.FLOOR }
+            }
+        }
+        chain.zipWithNext().forEach { (a, b) -> bridge(a, b) }
+        SIDES.forEachIndexed { i, side -> bridge(chain[side.link], sides[i]) }
+        val first = chain.first()
+        val last = chain.last()
+        return Plan(Cell(first.x.roundToInt(), first.y.roundToInt()), Cell(last.x.roundToInt(), last.y.roundToInt()))
+    }
+
+    /** Остров формы C: середина и радиус. */
+    private class Isle(val x: Double, val y: Double, val r: Double)
+
+    /** Боковой остров формы C на сетке [ISLES_BASE]: угол разброса и остров цепи, к которому ведёт мост. */
+    private class Side(val x: Double, val y: Double, val link: Int)
+
+    /** Шаг между стаями, клеток (сужается, пока все стаи не встанут). */
+    private const val SPAWN_GAP = 5
+
+    /** Форма A: клеток карты на комнату, пределы числа комнат, стороны комнаты, попыток, зазор, петель и размер зала с колоннами. */
+    private const val ROOM_AREA = 330
+    private const val ROOMS_MIN = 4
+    private const val ROOMS_MAX = 10
+    private const val ROOM_MIN = 6
+    private const val ROOM_MAX = 11
+    private const val ROOM_TRIES = 400
+    private const val ROOM_MARGIN = 3
+    private const val LOOPS = 2
+    private const val PILLAR_W = 9
+    private const val PILLAR_H = 7
+
+    /** Форма B на карте [RING_BASE] клеток: радиус арены, ниши снаружи кольца - углы, разброс угла, глубина и радиус. */
+    private const val RING_BASE = 52.0
+    private const val ARENA_RADIUS = 8.5
+    private val NICHES = listOf(0.35, 2.6, 3.75, 5.75)
+    private const val NICHE_JITTER = 0.3
+    private const val NICHE_DEPTH = 2.5
+    private const val NICHE_RADIUS = 2.6
+
+    /** Форма C на карте [ISLES_BASE] клеток: цепь островов от угла к углу, боковые острова, радиусы островов. */
+    private const val ISLES_BASE = 60.0
+    private val CHAIN = listOf(9.0 to 50.0, 22.0 to 40.0, 30.0 to 27.0, 42.0 to 33.0, 50.0 to 12.0)
+    private val SIDES = listOf(Side(12.0, 24.0, 1), Side(46.0, 49.0, 3))
+    private const val ISLE_MIN = 5.5
+    private const val ISLE_SPREAD = 1.8
+    private const val BOSS_ISLE = 8.5
+    private const val SIDE_ISLE = 4.6
 
     /**
      * Chasms (3.91.0): shapes of the biome are tried until about [share] of the ground is gone (трещина виляет с шансом [swerve]); a lone shape smaller than
@@ -321,40 +583,6 @@ object MapGenerator {
                 if (copy[y * size + x] == Tile.WALL && around >= 6) grid[y * size + x] = Tile.FLOOR
             }
         }
-    }
-
-    /** Rooms of a few sizes, each joined to the one before it by an L-shaped corridor. */
-    private fun halls(grid: Array<Tile>, size: Int, random: Random) {
-        val rooms = mutableListOf<Cell>()
-        repeat(40) {
-            if (rooms.size >= 11) return@repeat
-            val w = random.nextInt(4, 9)
-            val h = random.nextInt(4, 9)
-            val x = random.nextInt(2, size - w - 2)
-            val y = random.nextInt(2, size - h - 2)
-            val centre = Cell(x + w / 2, y + h / 2)
-            if (rooms.any { abs(it.x - centre.x) < 6 && abs(it.y - centre.y) < 6 }) return@repeat
-            for (dy in 0 until h) for (dx in 0 until w) grid[(y + dy) * size + x + dx] = Tile.FLOOR
-            rooms.lastOrNull()?.let { corridor(grid, size, it, centre, random) }
-            rooms += centre
-        }
-    }
-
-    private fun corridor(grid: Array<Tile>, size: Int, from: Cell, to: Cell, random: Random) {
-        val horizontalFirst = random.nextBoolean()
-        val corner = if (horizontalFirst) Cell(to.x, from.y) else Cell(from.x, to.y)
-        fun dig(a: Cell, b: Cell) {
-            var x = a.x
-            var y = a.y
-            while (true) {
-                grid[y * size + x] = Tile.FLOOR
-                if (x == b.x && y == b.y) break
-                x += (b.x - x).coerceIn(-1, 1)
-                y += (b.y - y).coerceIn(-1, 1)
-            }
-        }
-        dig(from, corner)
-        dig(corner, to)
     }
 
     private fun nearest(grid: Array<Tile>, size: Int, cell: Cell): Cell = grid.indices.filter { grid[it] == Tile.FLOOR }.minBy { abs(it % size - cell.x) + abs(it / size - cell.y) }.let { Cell(it % size, it / size) }

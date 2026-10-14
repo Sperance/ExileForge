@@ -3874,6 +3874,7 @@
   "expedition.log_note_totem": "{0} ставит тотем «{1}»",
   "expedition.log_note_totem_fall": "Тотем «{0}» рассыпался",
   "expedition.seal_progress": "Печать стража: пало {0} из {1} редких",
+  "expedition.gate_progress": "Ворота арены: зачищено {0} из {1} стай",
   "trials.rush_locked": "Ключ ковать пока незачем: испытание откроется, когда вы зачистите все зоны региона. Ближе всего — {0}, осталось зон: {1}",
   "trials.rush_tier_first": "первая ступень",
   "trials.rush_tier_named": "Ступень {0}: {1}",

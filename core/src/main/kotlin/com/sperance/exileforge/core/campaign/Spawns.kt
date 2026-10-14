@@ -30,8 +30,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     }
 
     /**
-     * Стая, что встаёт посреди захода (3.90.0, сервер 1.81.3): подкрепление алтаря (`Run.REINFORCEMENT + k`) или страж сокровищ
-     * (`Run.GUARD + номер объекта`) - жетон [token], вожак редкий; [buffs] карты на каждом, навыки - на своём потоке.
+     * Стая, что встаёт посреди захода (3.90.0, сервер 1.81.3): страж сокровищ (`Run.GUARD + номер объекта`) - жетон [token], вожак редкий; [buffs] карты на каждом, навыки - на своём потоке.
      */
     fun summoned(token: Int, buffs: List<MonsterEffect>): List<RolledMonster> {
         val casting = run.streams.of("summonedCasting", token)

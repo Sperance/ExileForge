@@ -323,6 +323,10 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
                 run.seal?.takeIf { !it.open }?.let { seal ->
                     Text(ui("expedition.seal_progress", seal.killed, seal.need), color = Color(0xFFC9A0FF), style = MaterialTheme.typography.labelSmall)
                 }
+                // Ворота арены кольца (4.12.8): сколько стай зачищено из нужных
+                run.arenaGate?.takeIf { !it.open }?.let { gate ->
+                    Text(ui("expedition.gate_progress", gate.cleared, gate.need), color = Color(0xFFF2C94C), style = MaterialTheme.typography.labelSmall)
+                }
                 Journal(hud, onRetry)
                 // Life under the map's name (2.72.0), out of the middle of the view; the mana and the belt under it (2.78.0).
                 MapVitals(live, Modifier.fillMaxWidth())

@@ -78,7 +78,7 @@ class ExpeditionWorld(
     /** Stepping off the portal a refused gate left the hero on: it does not open again underfoot. */
     internal var portalArmed = true
 
-    /** Монстры карты: жетоны, босс и стаи подкрепления алтаря (3.90.0), что встают посреди захода ([summon]). */
+    /** Монстры карты: жетоны, босс и стаи, что встают посреди захода ([summon]: стражи сокровищ). */
     private val roster: MutableList<MonsterAgent> = (
         packs.take(map.spawns.size).zip(map.spawns).mapIndexed { index, (pack, cell) ->
             MonsterAgent(index, pack, cell.x + 0.5, cell.y + 0.5).also { agent ->
@@ -89,7 +89,7 @@ class ExpeditionWorld(
     val agents: List<MonsterAgent> get() = roster
 
     /**
-     * Стая подкрепления жетона [token] встаёт рядом с [near] (3.90.0, сделка алтаря): в паре шагов от клетки, на полу. Один
+     * Стая жетона [token] встаёт рядом с [near] (3.90.0): в паре шагов от клетки, на полу. Один
      * жетон встаёт один раз.
      */
     fun summon(token: Int, pack: List<RolledMonster>, near: Cell) {
@@ -408,7 +408,7 @@ class ExpeditionWorld(
         /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
         internal const val MIN_WALK = 0.8
 
-        /** Как далеко от алтаря встаёт стая подкрепления, в шагах. */
+        /** Как далеко от объекта встаёт стая стражей, в шагах. */
         private const val SUMMON_STEPS = 3
         internal const val REPATH = 0.4
         internal val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, 1 to -1, -1 to 1, -1 to -1)
@@ -442,7 +442,7 @@ class ExpeditionWorld(
             boss: RolledMonster?,
             hasPortal: Boolean,
         ): ExpeditionWorld {
-            val layout = MapGenerator.generate(seed, zone.biome, packs.size, rules.terrain, zone.size, rules.minChasm, rules.minPool)
+            val layout = MapGenerator.generate(seed, zone.biome, packs.size, rules.terrain, zone.size, rules.minChasm, rules.minPool, rules.shapeOf(zone.biome).shape)
             return ExpeditionWorld(rules, layout, packs, heroSpeed(rules, heroStats), seed, lightRadius(rules, heroStats, zone.light), boss, hasPortal)
         }
 

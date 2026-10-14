@@ -53,10 +53,11 @@ internal fun ExpeditionRun.walk(dt: Double) {
     // Недуги - из боя и ловушек (3.90.0) - тикают на дороге, и они убивают
     ailing(dt)
     if (phase != RunPhase.MAP) return
+    openArena()
     val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
     when (val event = world.step(dt, x, y)) {
         // Страж вручную (3.92.0) - сперва экран-вызов
-        // Печать стража (3.93.0): запечатанный босс не встаёт
+        // Печать стража (3.93.0) и ворота арены (4.12.8): запечатанный босс не встаёт
         is WorldEvent.Encounter -> if (event.agent !== world.boss) {
             engage(event.agent)
         } else if (!sealed) {

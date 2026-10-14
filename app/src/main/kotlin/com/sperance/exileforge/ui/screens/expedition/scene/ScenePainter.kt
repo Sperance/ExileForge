@@ -126,7 +126,7 @@ internal class ScenePainter {
         val biome = run.zone.biome
         val style = MapStyles.of(biome)
         val shape = MapRelief.of(map, world.shoreline, relief).also { relief = it }
-        val rock = WallRelief.of(map, shape, style, MapGenerator.styleOf(biome), palette, unit, walls).also { walls = it }
+        val rock = WallRelief.of(map, shape, style, MapGenerator.styleOf(run.index.campaign.expedition.shapeOf(biome).shape), palette, unit, walls).also { walls = it }
         // Узор воды и пропастей - декор (4.2.0): без `LocalMotion` стоит
         frame.unit = unit
         frame.time = decor

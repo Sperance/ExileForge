@@ -12,13 +12,17 @@ import kotlin.math.roundToInt
 /** The hero's charges as their counters draw them (3.33.0). */
 fun Battle.chargeViews(): List<ChargeView> = heroCharges.views(time, heroFighter.body.stats)
 
-/** What the hero walks out with: life, mana, the flasks' charges and the seconds each draught still runs. */
+/**
+ * What the hero walks out with: life, mana, the flasks' charges and the seconds each draught still runs. Следующему бою забега
+ * испытания и Разлома (4.12.x, STAT-PW2-05) - и силы: счёт «каждое N-е» и их баффы остатком времени; прочего несомого они не несут.
+ */
 fun Battle.pools(): HeroPools = HeroPools(
     heroFighter.life,
     heroFighter.mana,
     charges.toList(),
     kit.flasks.indices.map { i -> draughtOf(i)?.let { (it.until - time).coerceAtLeast(0.0) } ?: 0.0 },
     kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana, it.toMana, it.toShield) } ?: DraughtRate() },
+    HeroCarry(effects = carriedEffects().filter { it.source in kit.powers.byStat }, counts = powers.tally),
 )
 
 /**
@@ -27,12 +31,16 @@ fun Battle.pools(): HeroPools = HeroPools(
  */
 fun Battle.carry(): HeroCarry = HeroCarry(
     heroFighter.ailments.filter { it.until > time }.map { CarriedAilment(it.ailment, it.until - time, it.magnitude, it.duration, it.chaos) },
-    heroFighter.effects.filter { it.kind != EffectKind.FLASK && it.until > time && it.until - time < Battle.FOREVER / 2 && !riftSourced(it.source) }.map {
-        CarriedEffect(it.kind, it.source, it.lines, it.until - time, it.duration, icons[it.source].orEmpty(), it.counter, it.conditional, it.stacks)
-    },
+    carriedEffects(),
     heroFighter.shield,
     heroCharges.carried(time),
+    powers.tally,
 )
+
+/** Временные баффы и проклятия героя остатком времени: не глотки, не носимое весь бой и не Разлома. */
+private fun Battle.carriedEffects(): List<CarriedEffect> = heroFighter.effects.filter { it.kind != EffectKind.FLASK && it.until > time && it.until - time < Battle.FOREVER / 2 && !riftSourced(it.source) }.map {
+    CarriedEffect(it.kind, it.source, it.lines, it.until - time, it.duration, icons[it.source].orEmpty(), it.counter, it.conditional, it.stacks)
+}
 
 /** The active slots as their buttons draw them; null where a slot is empty. */
 fun Battle.skillViews(): List<SkillView?> = kit.actives.mapIndexed { slot, kitSkill ->

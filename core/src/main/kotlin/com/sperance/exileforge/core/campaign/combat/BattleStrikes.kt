@@ -77,7 +77,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
     val facing = if (me === heroFighter) states(target).let { states -> max(0.0, model.against(states) + me.effects.sumOf { it.against(states) }) } else 0.0
     val versus = versus(blow, facing)
-    val eased = eased(target, blow) * target.body.hitTaken * blightTaken(me, target)
+    val eased = eased(target, blow) * target.body.hitTaken * blightTaken(me, target) * provokedTaken(me, target)
     // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
     // "damage taken" of the target scales what got through; server 0.69.0: so does a curse on it.
     val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body[CoreStat.DAMAGE_VS_CURSED.code]) / 100 else 1.0)

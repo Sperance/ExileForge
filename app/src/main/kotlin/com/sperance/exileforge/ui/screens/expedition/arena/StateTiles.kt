@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.skills.FlaskBottle
 import com.sperance.exileforge.ui.theme.*
@@ -125,6 +126,9 @@ private const val FATE_GLYPH = "✦"
             FlaskBottle(flask, 1f, true, Modifier.fillMaxSize().padding(horizontal = side / 4, vertical = side / 8))
         } else if (buff != null) {
             com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
+        } else if (view.source == PROVOKED) {
+            // Провокация героя на враге (4.12.x, STAT-DEF-05) - знаком своей характеристики
+            com.sperance.exileforge.ui.icons.StatIcon(CoreStat.PROVOKE.code, tint, Modifier.fillMaxSize().padding(side / 6))
         } else {
             SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
         }

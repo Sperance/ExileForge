@@ -91,7 +91,7 @@ import kotlin.math.sin
                 val outline = shape.createOutline(size, layoutDirection, this)
                 swingAura(outline, Gold, glow)
                 drawOutline(outline, if (acting > 0f) PanelRaised else HeroGround)
-                if (fight.heroTaunt && acting == 0f && !hit) tauntAura(outline, frame.time)
+                if (fight.heroProvoke != null && acting == 0f && !hit) tauntAura(outline, frame.time)
                 drawContent()
                 val border = when {
                     hit -> LifeRed
@@ -136,7 +136,7 @@ import kotlin.math.sin
                             modifier = Modifier.weight(1f),
                         )
                         // The hero's own mark (2.72.0): the taunt's seal, opening its window on a tap.
-                        if (fight.heroTaunt) TauntSeal(frame, Modifier.size(22.dp)) { tauntTip(true) }
+                        fight.heroProvoke?.let { provoke -> TauntSeal(frame, Modifier.size(22.dp)) { tauntTip(provoke) } }
                     }
                     // The pools as bars of their own (3.24.0): the shield over life, mana under it, each with its figures and share.
                     if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))

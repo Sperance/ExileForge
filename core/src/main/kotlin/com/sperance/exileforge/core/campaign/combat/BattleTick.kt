@@ -65,7 +65,9 @@ internal fun Battle.step(dt: Double) {
     foeFighters.forEach { foe ->
         if (!foe.alive || outcome != null) return@forEach
         castTick(foe)
-        if (!foe.held) monsterCast(foe)
+        // Спровоцированный (4.12.x, STAT-DEF-05) умений не применяет, босс - с медленной перезарядкой
+        val silenced = provokedSkills(foe, dt)
+        if (!foe.held && !silenced) monsterCast(foe)
     }
     if (finished()) return
     // Whoever is due first acts first; several may be due in one slice.
@@ -74,8 +76,11 @@ internal fun Battle.step(dt: Double) {
         val me = order[k]
         if (!me.alive || me.held || me.casting != null || me.nextAttack > time) continue
         val target = if (me.side == Side.HERO) target() else heroFighter
+        me.rushed = false
         if (target != null) strike(me, target, swingOf(me))
-        me.nextAttack = time + me.attackInterval * me.slow() * cadence(me)
+        // Рывок силы в этом замахе (4.12.x, STAT-PW1-01) не стирается интервалом: следующий удар - сразу
+        me.nextAttack = if (me.rushed) time else time + me.attackInterval * me.slow() * cadence(me)
+        me.rushed = false
         if (finished()) return
     }
     watch()

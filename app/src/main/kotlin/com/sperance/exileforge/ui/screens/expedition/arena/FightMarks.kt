@@ -17,12 +17,20 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.*
+import com.sperance.exileforge.core.campaign.run.ProvokeView
+import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.sin
 
-internal fun tauntTip(hero: Boolean) = Tip(ui("fight.taunt"), ui(if (hero) "fight.taunt_hero" else "fight.taunt_hint"), TauntCrimson)
+internal fun tauntTip(provoke: ProvokeView?) = Tip(
+    ui("fight.taunt"),
+    provoke?.let {
+        ui("fight.taunt_hero", fineNumber(it.chance), fineNumber(it.seconds), fineNumber(it.cut), fineNumber(it.bossCut), fineNumber(it.immunity), fineNumber(it.bossImmunity))
+    } ?: ui("fight.taunt_hint"),
+    TauntCrimson,
+)
 
 /** The taunt's colours: dried blood and old gold. */
 private val TauntCrimson = Color(0xFFB8373A)

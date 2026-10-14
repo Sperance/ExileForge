@@ -137,13 +137,14 @@ internal fun Shelved.row(): ShelfRow = when (this) {
             when {
                 view.passive -> "fight.src.passive"
                 view.flask != null -> "fight.src.flask"
+                view.source == PROVOKED -> "fight.src.provoke"
                 view.kind == EffectKind.CURSE -> "fight.src.curse"
                 view.kind == EffectKind.HINDER -> "fight.src.hinder"
                 view.lasting -> "fight.src.worn"
                 else -> "fight.src.buff"
             },
         ),
-        view.lines.map { SkillText.statLine(it.stat, it.op, it.value) },
+        if (view.source == PROVOKED) listOf(ui("fight.provoked_hint")) else view.lines.map { SkillText.statLine(it.stat, it.op, it.value) },
         view.seconds.takeUnless { view.lasting },
     )
 
@@ -169,6 +170,7 @@ internal fun Shelved.row(): ShelfRow = when (this) {
 /** Имя эффекта: бафф правил - по виду, бафф дара - даром, глоток - флаконом, прочее - умением. */
 internal fun effectTitle(view: EffectView): String = when {
     view.buff != null -> ui("fight.buff.${view.buff!!.name}")
+    view.source == PROVOKED -> ui("fight.provoked")
     fateSourced(view.source) -> ui("fight.fate_buff")
     view.flask != null -> equipmentTitle(view.source)
     else -> SkillText.title(view.source)

@@ -208,6 +208,12 @@ data class CastView(val code: String, val left: Double, val total: Double) {
  */
 data class BuildupView(val leading: Buildup?, val share: Float, val bars: List<Float>, val stunned: Boolean, val frozen: Boolean, val electrocuted: Boolean)
 
+/**
+ * Провокация героя для подсказки (4.12.x, STAT-DEF-05): шанс [chance]%, на [seconds] секунд, урон спровоцированного по герою
+ * меньше на [cut]% (боссов - [bossCut]%), повторно - через [immunity] секунд (боссов - [bossImmunity]).
+ */
+data class ProvokeView(val chance: Double, val seconds: Double, val cut: Double, val bossCut: Double, val immunity: Double, val bossImmunity: Double)
+
 data class FightHud(
     val leader: RolledMonster,
     val foes: List<FoeView>,
@@ -227,7 +233,8 @@ data class FightHud(
     val paused: Boolean = false,
     val target: Int? = null,
     val focus: Int? = null,
-    val heroTaunt: Boolean = false,
+    /** Провокация героя (4.12.x, STAT-DEF-05): её числа для подсказки; null - героя без провокации. */
+    val heroProvoke: ProvokeView? = null,
     /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
     val heroMana: Int = 0,
     val heroMaxMana: Int = 0,

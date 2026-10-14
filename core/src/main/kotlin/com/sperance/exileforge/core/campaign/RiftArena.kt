@@ -334,7 +334,7 @@ class RiftArena(
             rounds = fight.rounds
         }
         val fightHud = if (fight != null && leader != null) {
-            fight.hud(monsters, leader, speed, started, paused, hero.taunt, this.fight.level, round = round, rounds = rounds)
+            fight.hud(monsters, leader, speed, started, paused, this.fight.level, round = round, rounds = rounds)
         } else {
             null
         }

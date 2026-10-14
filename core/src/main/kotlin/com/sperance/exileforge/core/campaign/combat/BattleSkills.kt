@@ -24,6 +24,7 @@ import com.sperance.exileforge.rules.content.SkillTrigger
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.sheet.CastTime
+import com.sperance.exileforge.rules.sheet.extraTargets
 import com.sperance.exileforge.rules.sheet.lines
 import kotlin.math.max
 import kotlin.math.min
@@ -113,7 +114,7 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }
     trigger(SkillEvent.SKILL_USE, refund = if (free) 0.0 else cost)
-    powers.fire(PowerEvent.SKILL_USE, PowerMoment(target(), spell = skill.spell, cast = kitSkill, level = level))
+    powers.fire(PowerEvent.SKILL_USE, PowerMoment(target(), spell = skill.spell, cast = kitSkill, level = level, slot = slotKey(slot)))
 }
 
 /**
@@ -191,7 +192,8 @@ private fun Battle.heroHit(hit: SkillHit, level: Int, code: String, spell: Boole
     val hero = heroFighter
     val own = hit.stats.lines(level)
     val body = if (own.isEmpty()) hero.body else heroBody(own)
-    val more = if (attack && hit.targets > 0) body[CoreStat.SKILL_TARGETS.code].toInt().coerceAtLeast(0) else 0
+    // Доп. цели (4.12.x, STAT-PW2-07): атакам и заклинаниям - каждым своя характеристика, одна функция с Мощью
+    val more = if (hit.targets > 0) extraTargets(attack, spell) { body[it.code] } else 0
     val struck = only?.let { listOf(it) } ?: targets(if (hit.targets <= 0) 0 else hit.targets + more)
     val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
     val primary = struck.firstOrNull()
@@ -482,5 +484,6 @@ internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
         trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, healed, flask.effect(hero.body::get), shot(hero), origin),
     )
     if (healed > 0 || draught.lifeRate > 0) trigger(SkillEvent.HEALED)
-    powers.fire(PowerEvent.FLASK)
+    // Сила глотка на уникальной фляге отвечает только на свою флягу (4.12.x, STAT-PW2-11)
+    powers.fire(PowerEvent.FLASK, PowerMoment(flask = draught.lines.mapTo(HashSet()) { it.stat }))
 }

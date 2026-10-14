@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.campaign.combat.effects
 import com.sperance.exileforge.core.campaign.combat.fateGlows
 import com.sperance.exileforge.core.campaign.combat.flaskViews
 import com.sperance.exileforge.core.campaign.combat.passiveViews
+import com.sperance.exileforge.core.campaign.combat.provokeView
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.combat.strikes
 import com.sperance.exileforge.core.campaign.run.AilmentView
@@ -41,7 +42,6 @@ internal fun Battle.hud(
     speed: Int,
     started: Boolean,
     paused: Boolean,
-    heroTaunt: Boolean,
     level: Int,
     round: Int = 1,
     rounds: Int = 1,
@@ -89,7 +89,7 @@ internal fun Battle.hud(
         events = newestFirst(),
         started = started, paused = paused,
         target = target()?.index, focus = focus,
-        heroTaunt = heroTaunt,
+        heroProvoke = provokeView(),
         heroMana = h.mana.roundToInt(), heroMaxMana = manaCap().roundToInt(), heroReserved = manaReserved().roundToInt(),
         skills = skillViews(), flasks = flaskViews(), heroEffects = effects(h), heroCharges = chargeViews(), heroFate = fateGlows(),
         heroBarrier = h.barrier.roundToInt(),

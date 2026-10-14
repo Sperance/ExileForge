@@ -177,6 +177,9 @@ enum class NoteKind {
     /** Применение умения (4.12.x, SKILL-01): ref - умение, value - секунды; прервано оглушением или заморозкой - [CAST_BROKEN]. */
     CAST,
     CAST_BROKEN,
+
+    /** Провокация героя (4.12.x, STAT-DEF-05): враг спровоцирован на value секунд. */
+    PROVOKED,
     ;
 
     val recovery: Boolean get() = this in RECOVERY

@@ -401,8 +401,14 @@ class TrialArena(
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
         val fightHud = if (fight != null && leader != null) {
             fight.hud(
-                monsters, leader, speed, started, paused, hero.taunt, level,
-                round = if (trial.kind == TrialKind.RUSH) step + 1 else fight.round + 1, rounds = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else fight.rounds,
+                monsters,
+                leader,
+                speed,
+                started,
+                paused,
+                level,
+                round = if (trial.kind == TrialKind.RUSH) step + 1 else fight.round + 1,
+                rounds = if (trial.kind == TrialKind.RUSH) plan?.size ?: 1 else fight.rounds,
             )
         } else {
             null

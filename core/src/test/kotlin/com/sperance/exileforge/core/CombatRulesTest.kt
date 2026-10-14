@@ -14,8 +14,13 @@ import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.castTick
 import com.sperance.exileforge.core.campaign.combat.monsterCast
 import com.sperance.exileforge.core.campaign.combat.place
+import com.sperance.exileforge.core.campaign.combat.provoke
+import com.sperance.exileforge.core.campaign.combat.provokedSkills
+import com.sperance.exileforge.core.campaign.combat.provokedTaken
 import com.sperance.exileforge.core.campaign.combat.strike
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.PowerBook
+import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.sheet.CastTime
 import kotlin.random.Random
 import kotlin.test.Test
@@ -27,7 +32,7 @@ import kotlin.test.assertTrue
 /**
  * Правила боя пакета 4 (4.12.x) на живом бою клиента: единая скорость действий (CAST-02), конечный урон (COMBAT-02), лечение сил
  * под `Recovery` (COMBAT-01), потолки (STAT-ATK-08), лёд шкалы с длительностями (STAT-DEF-01), одинаковые ауры (STAT-MISC-07),
- * отрицательная регенерация (STAT-ATK-04).
+ * отрицательная регенерация (STAT-ATK-04); пакет 7 - одна сила возрождения на смерть (STAT-PW1-02), провокация героя (STAT-DEF-05).
  */
 class CombatRulesTest {
     private val index get() = TestContent.index
@@ -147,5 +152,35 @@ class CombatRulesTest {
         }
         val (plain, time) = life(0.0)
         assertEquals(plain - 6.0 * time, life(-6.0).first, 0.5)
+    }
+
+    /** STAT-PW1-02: на смерти тратится одна сила возрождения - вторая поднимает на следующей смерти. */
+    @Test
+    fun one_rebirth_per_death() {
+        val kit = Loadout(powers = PowerBook(index.powers.powers.filter { it.stat == "POWER_PHOENIX_REBIRTH" || it.stat == "POWER_UNWILLING_DEATH" }))
+        val b = battle(body(mapOf("POWER_PHOENIX_REBIRTH" to 30.0, "POWER_UNWILLING_DEATH" to 40.0)), Foe(body(life = 1e9)), kit = kit)
+        val hero = b.heroFighter
+        repeat(2) {
+            hero.life = 0.0
+            b.powers.fire(PowerEvent.DEATH)
+            assertTrue(hero.alive, "death ${it + 1} found no power left")
+        }
+        hero.life = 0.0
+        b.powers.fire(PowerEvent.DEATH)
+        assertTrue(!hero.alive)
+    }
+
+    /** STAT-DEF-05: спровоцированный бьёт героя слабее (до потолка правила) и не применяет умений - его перезарядки стоят. */
+    @Test
+    fun a_provoked_foe_hits_softer_and_waits() {
+        val provoke = rules.caps.provoke
+        val b = battle(body(mapOf(CoreStat.PROVOKE.code to provoke * 2)), Foe(body(life = 1e9)))
+        val foe = b.foe(0)
+        repeat(1000) { if (!foe.provoked) b.provoke(foe) }
+        assertTrue(foe.provoked)
+        assertEquals(1 - rules.provoke.cut(provoke, false) / 100, b.provokedTaken(foe, b.heroFighter), 1e-9)
+        foe.readyAt["X"] = 5.0
+        assertTrue(b.provokedSkills(foe, 1.0))
+        assertEquals(6.0, foe.readyAt.getValue("X"), 1e-9)
     }
 }

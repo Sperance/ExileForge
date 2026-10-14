@@ -158,6 +158,18 @@ class Battle(
         /** Умение, что боец применяет сейчас (4.12.x, SKILL-01): удар и прочие умения ждут его конца; null - не применяет. */
         internal var casting: Casting? = null
 
+        /** Рывок силы (4.12.x, STAT-PW1-01) в этом замахе: следующий удар - сразу, а не через интервал. */
+        internal var rushed = false
+
+        /**
+         * Провокация героя на этом враге (4.12.x, STAT-DEF-05): до [provokedUntil] спровоцирован силой [provoke], повторно - не
+         * раньше [provokeFree].
+         */
+        internal var provokedUntil = -1.0
+        internal var provokeFree = -1.0
+        internal var provoke = 0.0
+        val provoked: Boolean get() = provokedUntil > time
+
         /** Its low-life lines are on (2.78.0). */
         var low = false
 
@@ -401,7 +413,7 @@ class Battle(
     internal var shieldUp = true
 
     /** The hero's powers (2.79.0): the unique items' answers to what happens here. */
-    internal val powers = PowerRunner(this, kit.powers, cleared)
+    internal val powers = PowerRunner(this, kit.powers, cleared, pools?.carry?.counts.orEmpty())
 
     /** The hero's frenzy, power and endurance charges (3.33.0, server 1.32.0): none as a fight opens. */
     internal val heroCharges = HeroCharges(kit.charges)

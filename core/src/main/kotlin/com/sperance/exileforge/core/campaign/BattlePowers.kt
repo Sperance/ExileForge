@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.combat.lay
 import com.sperance.exileforge.core.campaign.combat.note
 import com.sperance.exileforge.core.campaign.combat.place
 import com.sperance.exileforge.core.campaign.combat.powerShown
+import com.sperance.exileforge.core.campaign.combat.remake
 import com.sperance.exileforge.core.campaign.combat.restore
 import com.sperance.exileforge.core.campaign.combat.slay
 import com.sperance.exileforge.core.campaign.combat.strike
@@ -49,7 +50,9 @@ import kotlin.math.roundToInt
 /**
  * What a power's event was about (2.79.0): the foe struck or striking, what the blow did, whether a
  * spell's, the ailment laid, and a fallen foe's ailments before they were cleared. С 4.4.0 у `SKILL_USE` - умение [cast]
- * на уровне [level], что сила `RECAST` повторяет.
+ * на уровне [level], что сила `RECAST` повторяет. С 4.12.x (пакет 7): [cursed] - павший был проклят до снятия эффектов
+ * (STAT-PW2-02), [slot] - слот только что применённого умения (STAT-PW2-08), [flask] - характеристики, что кладёт выпитая
+ * фляга (STAT-PW2-11).
  */
 internal class PowerMoment(
     val target: Battle.Fighter? = null,
@@ -59,6 +62,9 @@ internal class PowerMoment(
     val ailments: List<ActiveAilment> = emptyList(),
     val cast: KitSkill? = null,
     val level: Int = 1,
+    val cursed: Boolean = false,
+    val slot: String? = null,
+    val flask: Set<String>? = null,
 ) {
     val damage: Double get() = taken.values.sum()
 }
@@ -79,11 +85,18 @@ private fun Power.amount(own: Double?, value: Double): Double = own ?: if (roll 
 private fun Power.duration(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.DURATION) value else 0.0
 private fun Power.chance(value: Double): Double = chance ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.CHANCE) value else 100.0
 
-internal class PowerRunner(private val battle: Battle, book: PowerBook, private val cleared: Boolean = false) {
+/**
+ * Силы героя в бою. [carried] (4.12.x, STAT-PW2-05) - счётчики «каждое N-е», принесённые из прошлых боёв захода или забега
+ * испытания: счёт идёт дальше, а не с нуля ([tally] отдаёт его следующему бою).
+ */
+internal class PowerRunner(private val battle: Battle, book: PowerBook, private val cleared: Boolean = false, carried: Map<String, Int> = emptyMap()) {
     private val byEvent: Map<PowerEvent, List<Power>> = book.powers.filter { it.on != null }.groupBy { it.on!! }
     private val standingPowers = byEvent[PowerEvent.STANDING].orEmpty()
     private val readyAt = mutableMapOf<String, Double>()
-    private val counts = mutableMapOf<String, Int>()
+    private val counts = carried.toMutableMap()
+
+    /** Счётчики «каждое N-е» на конце боя - их несёт следующий бой захода. */
+    val tally: Map<String, Int> get() = counts.toMap()
     private val stackCount = mutableMapOf<String, Int>()
     private val lastBeat = mutableMapOf<String, Double>()
     private var busy = false
@@ -189,12 +202,17 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
     fun fire(event: PowerEvent, moment: PowerMoment = PowerMoment()) {
         if (busy || battle.outcome != null || (!hero.alive && event != PowerEvent.DEATH)) return
-        byEvent[event]?.forEach { power -> if (value(power) != 0.0) run(power, moment) }
+        byEvent[event]?.forEach { power ->
+            // Одна смерть - одна сила возрождения (4.12.x, STAT-PW1-02): поднятый герой прочие силы смерти бережёт до следующей
+            if (event == PowerEvent.DEATH && hero.alive) return@forEach
+            if (value(power) != 0.0) run(power, moment)
+        }
     }
 
     private fun run(power: Power, moment: PowerMoment) {
         val value = value(power)
         if (battle.time < (readyAt[power.stat] ?: -1.0)) return
+        if (!ownSip(power, moment)) return
         if (!power.checks.filter { it.check != PowerCheckKind.NTH }.all { holds(it, power, moment) }) return
         power.checks.firstOrNull { it.check == PowerCheckKind.NTH }?.let { nth ->
             val count = (counts[power.stat] ?: 0) + 1
@@ -221,6 +239,16 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         } finally {
             busy = false
         }
+    }
+
+    /**
+     * Сила глотка на уникальной фляге (4.12.x, STAT-PW2-11) отвечает только на глоток своей фляги: пока её строки лежат на герое,
+     * глоток другой фляги её не будит. Та же сила с прочих вещей отвечает на любой глоток.
+     */
+    private fun ownSip(power: Power, moment: PowerMoment): Boolean {
+        val drunk = moment.flask ?: return true
+        if (power.stat in drunk) return true
+        return hero.effects.none { it.kind == EffectKind.FLASK && it.until > battle.time && it.lines.any { line -> line.stat == power.stat } }
     }
 
     private fun line(power: Power, line: PowerLine, times: Int = 1, draw: Boolean = true): StatLine {
@@ -269,7 +297,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerCheckKind.TARGET_BLIGHTED -> target != null && battle.foes[target.index].tainted
             PowerCheckKind.TARGET_AILED -> target != null && (target.ailments.isNotEmpty() || moment.ailments.isNotEmpty())
             PowerCheckKind.TARGET_AILMENT -> target != null && (target.ailments + moment.ailments).any { it.ailment.word == check.word }
-            PowerCheckKind.TARGET_CURSED -> target?.cursed == true
+            PowerCheckKind.TARGET_CURSED -> target != null && (target.cursed || moment.cursed)
             PowerCheckKind.TARGET_LIFE_BELOW -> target != null && target.life < target.body.maxLife * share
             PowerCheckKind.TARGET_LIFE_ABOVE -> target != null && target.life > target.body.maxLife * share
             PowerCheckKind.FIGHT_BEFORE -> battle.time < check.value
@@ -306,12 +334,11 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
         val duration = power.duration(effect.duration, value)
         val body = hero.body
         when (effect.act) {
+            // Скорость передвижения бафф несёт на карту остатком времени (4.12.x, STAT-PW1-04): в бою она ничего не меняет
             PowerAct.BUFF -> {
-                // Movement speed matters only on the map (server 1.32.0): a fight's buff leaves it out.
-                val lines = effect.lines.filter { it.stat != MOVEMENT_SPEED }
-                if (lines.isEmpty()) return 0.0
+                if (effect.lines.isEmpty()) return 0.0
                 val stacks = stacksOf(hero, power.stat, EffectKind.BUFF, effect.stacks)
-                battle.lay(hero, TimedEffect(EffectKind.BUFF, power.stat, lines.map { line(power, it, stacks) }, battle.time + duration, duration, stacks = stacks))
+                battle.lay(hero, TimedEffect(EffectKind.BUFF, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration, stacks = stacks))
             }
 
             PowerAct.HEX -> targets(effect.to, moment).forEach { foe ->
@@ -381,17 +408,25 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
             PowerAct.DELAY -> targets(effect.to, moment).forEach { it.nextAttack += duration }
 
-            PowerAct.RUSH -> hero.nextAttack = min(hero.nextAttack, battle.time)
+            // Рывок (4.12.x, STAT-PW1-01) переживает замах, в котором сработал: следующий удар - сразу
+            PowerAct.RUSH -> {
+                hero.nextAttack = min(hero.nextAttack, battle.time)
+                hero.rushed = true
+            }
 
             PowerAct.CHARGES -> battle.chargeFlasks(amount)
 
-            PowerAct.COOLDOWNS -> hero.readyAt.replaceAll { _, at -> at - amount }
+            // «Остальные» перезарядки (4.12.x, STAT-PW2-08) - кроме только что применённого умения
+            PowerAct.COOLDOWNS -> hero.readyAt.replaceAll { slot, at -> if (effect.to == PowerTarget.OTHERS && slot == moment.slot) at else at - amount }
 
             PowerAct.NEXT_CRIT -> battle.nextCrit = true
 
             PowerAct.INVULNERABLE -> hero.invulnerableUntil = max(hero.invulnerableUntil, battle.time + duration)
 
             PowerAct.CLEANSE -> hero.ailments.clear()
+
+            // Снятие проклятий (4.12.x, STAT-PW2-09): лист героя - без их строк
+            PowerAct.UNCURSE -> if (hero.effects.removeAll { it.kind == EffectKind.CURSE }) battle.remake(hero)
 
             PowerAct.SPREAD -> targets(PowerTarget.OTHERS, moment).forEach { foe ->
                 moment.ailments.forEach { spread -> battle.place(foe, spread.copy(until = battle.time + spread.duration), stacks = spread.ailment.hurts) }
@@ -492,7 +527,6 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerAct.DAMAGE, PowerAct.AILMENT, PowerAct.CURSE, PowerAct.SPREAD, PowerAct.DELAY, PowerAct.STUN, PowerAct.ECHO, PowerAct.RETALIATE,
             PowerAct.CHARGE, PowerAct.RECAST,
         )
-        val MOVEMENT_SPEED: String = CoreStat.MOVEMENT_SPEED.code
 
         /** Events too frequent to log a line each. */
         val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT)

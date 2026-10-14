@@ -102,6 +102,7 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         if (target.alive && hexing()) hex(target)
         if (blow.weapon) chanceBuff(BuffKind.FORTIFY)
         if (kind == HitKind.CRIT) critAt = time
+        if (blow.primary && target.alive) provoke(target)
         if (kind == HitKind.CRIT) {
             flaskCharge("FLASK_CHARGE_ON_CRIT")
             trigger(SkillEvent.CRIT, target, taken = taken)
@@ -324,6 +325,8 @@ internal fun Battle.place(target: Fighter, laid: ActiveAilment, stacks: Boolean)
 internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fighter? = null) {
     if (fighter.side != Side.MONSTER || fighter.index in fallenOrder || fighter.index in retinueDown) return
     val ailing = fighter.ailments.toList()
+    // Проклятие павшего (4.12.x, STAT-PW2-02) - до снятия его эффектов: «убитый проклятый» читает его
+    val cursed = fighter.cursed
     fighter.ailments.clear()
     fighter.effects.clear()
     // Свита (3.92.0) - не убийство: о ней не сообщают; босс уводит свою за собой
@@ -351,7 +354,7 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     }
     trigger(SkillEvent.KILL)
     if (spell) trigger(SkillEvent.SPELL_KILL)
-    powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing))
+    powers.killed(PowerMoment(fighter, spell = spell, ailments = ailing, cursed = cursed))
     lastWords(fighter)
     fateFell(fighter, ailing)
 }

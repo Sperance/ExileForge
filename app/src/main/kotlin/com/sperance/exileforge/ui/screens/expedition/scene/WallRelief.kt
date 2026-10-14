@@ -53,6 +53,9 @@ internal class WallRelief private constructor(
      */
     fun deep(x: Int, y: Int) = map.tile(x, y) == Tile.WALL && !field.rim(x, y)
 
+    /** Высота массива у клетки [x], [y] в клетках сцены (0.14.0, ASANA-N10): дверь и рычаг встают в рост своей стены. */
+    fun height(x: Int, y: Int): Float = style.wallHeight(riseNear(x, y))
+
     private fun fits(map: ExpeditionMap, relief: MapRelief, style: MapStyle, palette: Palette, unit: Float) = this.map === map && this.relief === relief && this.style === style && this.palette === palette && this.unit == unit
 
     /** Высота массива клетки: своя у стены, у выступа на соседней клетке - ближайшей стены каймы (массивы 8-связны). */

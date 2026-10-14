@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.painter.Painter
+import com.sperance.exileforge.core.campaign.Tile
 import com.sperance.exileforge.core.campaign.run.AltarSpot
 import com.sperance.exileforge.core.campaign.run.BlightSpot
 import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
@@ -19,7 +20,9 @@ import com.sperance.exileforge.rules.run.FeatureKind
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Rune
+import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.sin
 
 // ==================== Объекты карты (3.90.0, сервер 1.81.3) ====================
@@ -36,7 +39,8 @@ internal fun ScenePainter.standFeature(queue: Standing, spot: FeatureSpot, world
 
         is RoomSpot -> {
             val (ex, ey) = spot.entrance
-            if (!spot.opened) queue.add(depth(ex, ey) + .1, Standing.FEATURE, spot, ROOM_ENTRANCE)
+            // Открытый вход (0.14.0, ASANA-N10) тоже рисуется: проём с распахнутыми створками; тайная трещина открытой не видна
+            if (!spot.opened || spot.kind == FeatureKind.VAULT) queue.add(depth(ex, ey) + .1, Standing.FEATURE, spot, ROOM_ENTRANCE)
             spot.lever?.takeIf { world.explored(it.x, it.y) }?.let { queue.add(depth(it.x, it.y), Standing.FEATURE, spot, ROOM_LEVER) }
             spot.chest.takeIf { spot.opened && world.explored(it.x, it.y) }?.let { queue.add(depth(it.x, it.y), Standing.FEATURE, spot, ROOM_CHEST) }
         }
@@ -62,10 +66,13 @@ internal fun ScenePainter.drawFeature(spot: FeatureSpot, part: Int, world: Exped
         is RoomSpot -> when (part) {
             ROOM_ENTRANCE -> {
                 val (ex, ey) = spot.entrance
-                drawEntrance(ex + .5, ey + .5, spot.kind == FeatureKind.VAULT, spot.progress.toFloat(), glow(ex, ey))
+                if (spot.kind == FeatureKind.VAULT) drawDoor(doorFace(world, ex, ey), wallRise(ex, ey), spot.opened, glow(ex, ey)) else drawCrack(ex + .5, ey + .5, spot.progress.toFloat(), glow(ex, ey))
             }
 
-            ROOM_LEVER -> spot.lever?.let { drawLever(it.x + .5, it.y + .5, spot.opened, glow(it.x, it.y)) }
+            ROOM_LEVER -> spot.lever?.let { lever ->
+                val face = leverFace(world, lever.x, lever.y)
+                if (face != null) drawWallLever(face, spot.opened, glow(lever.x, lever.y)) else drawLever(lever.x + .5, lever.y + .5, spot.opened, glow(lever.x, lever.y))
+            }
 
             else -> spot.chest.let { drawChest(it.x + .5, it.y + .5, spot.looted, glow(it.x, it.y)) }
         }
@@ -226,43 +233,210 @@ internal fun ScenePainter.drawTrap(spot: TrapSpot, light: Float) {
 /** Сколько секунд горит вспышка сработавшей ловушки. */
 private const val FLASH_SECONDS = .45
 
-/**
- * Вход в комнату на стене: тайная - светлая трещина, что ярче, пока герой стоит рядом; запертая (4.7.0, макет «Рычаги и
- * двери», вариант A) - арка в камне, створка в кованых полосах и замок-ромб, что тлеет, пока дверь заперта.
- */
-internal fun ScenePainter.drawEntrance(x: Double, y: Double, door: Boolean, progress: Float, light: Float) {
+/** Тайный вход - светлая трещина в скале, что ярче, пока герой стоит рядом. */
+internal fun ScenePainter.drawCrack(x: Double, y: Double, progress: Float, light: Float) {
     val cx = isoX(x, y)
     val cy = isoY(x, y)
-    if (door) return drawDoor(cx, cy, light)
     pen.color = Color(0xFFE8E0C8).copy(alpha = (.35f + .55f * progress) * light)
     pen.polyline(cx - unit * .05f, cy + unit * .95f, cx + unit * .08f, cy + unit * .7f, cx - unit * .06f, cy + unit * .5f, cx + unit * .05f, cy + unit * .25f, width = unit * .04f)
 }
 
-/** Запертая дверь: каменный проём с аркой, тёмное дерево, две кованые полосы, шов створок и тлеющий замок. */
-private fun ScenePainter.drawDoor(cx: Float, cy: Float, light: Float) {
-    val half = unit * .32f
-    val top = cy + unit * 1.05f
-    // Проём: камень вокруг арки
-    pen.color = tone(Color(0xFF4A4540), light)
-    pen.rect(cx - half - unit * .07f, cy + unit * .05f, (half + unit * .07f) * 2, unit * .82f)
-    pen.circle(cx, cy + unit * .87f, half + unit * .07f)
-    // Створка: тёмное дерево до арки
-    pen.color = tone(Color(0xFF4A2E18), light)
-    pen.rect(cx - half, cy + unit * .08f, half * 2, unit * .79f)
-    pen.circle(cx, cy + unit * .87f, half)
-    // Кованые полосы и шов
-    pen.color = tone(Color(0xFF5A5B62), light)
-    pen.line(cx - half, cy + unit * .32f, cx + half, cy + unit * .32f, unit * .055f)
-    pen.line(cx - half, cy + unit * .66f, cx + half, cy + unit * .66f, unit * .055f)
-    pen.color = tone(Color(0xFF2A1A0E), light)
-    pen.line(cx, cy + unit * .08f, cx, top - unit * .1f, unit * .025f)
-    // Замок: ромб, что тлеет, пока дверь заперта
-    val glow = .65f + .35f * sin(time * 2.4f)
-    pen.color = Palettes.torch.copy(alpha = .3f * glow * light)
-    pen.circle(cx, cy + unit * .5f, unit * .16f)
-    pen.color = Color(0xFFF2B45A).copy(alpha = glow * light)
-    pen.quad(cx, cy + unit * .6f, cx + unit * .07f, cy + unit * .5f, cx, cy + unit * .4f, cx - unit * .07f, cy + unit * .5f)
+/**
+ * Грань стены в изометрии (0.14.0, ASANA-N10, макет «Дверь и рычаг», вариант A): от угла [x0], [y0] вдоль ([ax], [ay]) на одну
+ * клетку, к камере - по нормали ([nx], [ny]). Точка грани - доля [s] вдоль, высота [t] в клетках и шаг [n] от грани к камере.
+ */
+internal class WallFace(private val x0: Double, private val y0: Double, private val ax: Double, private val ay: Double, private val nx: Double, private val ny: Double) {
+    fun x(painter: ScenePainter, s: Double, n: Double = 0.0): Float = painter.isoX(x0 + ax * s + nx * n, y0 + ay * s + ny * n)
+
+    fun y(painter: ScenePainter, s: Double, t: Double, n: Double = 0.0): Float = painter.isoY(x0 + ax * s + nx * n, y0 + ay * s + ny * n) + (t * painter.unit).toFloat()
+
+    companion object {
+        /** Ближняя к камере грань клетки [x], [y], что смотрит вдоль +y (вниз-влево) или +x (вниз-вправо). */
+        fun facingY(x: Int, y: Int) = WallFace(x.toDouble(), y + 1.0, 1.0, 0.0, 0.0, 1.0)
+
+        fun facingX(x: Int, y: Int) = WallFace(x + 1.0, y.toDouble(), 0.0, 1.0, 1.0, 0.0)
+    }
 }
+
+/**
+ * Грань двери: вход - стена толщиной в клетку между полом перед ним и полом комнаты, обе её грани на оси прохода - дверные;
+ * рисуется та, что смотрит в камеру.
+ */
+private fun doorFace(world: ExpeditionWorld, x: Int, y: Int): WallFace {
+    val alongY = world.map.tile(x, y + 1) != Tile.WALL || world.map.tile(x, y - 1) != Tile.WALL
+    return if (alongY) WallFace.facingY(x, y) else WallFace.facingX(x, y)
+}
+
+/** Грань стены за рычагом [x], [y], видная камере; нет такой стены - null (рычаг на постаменте). */
+private fun leverFace(world: ExpeditionWorld, x: Int, y: Int): WallFace? = when {
+    world.map.tile(x, y - 1) == Tile.WALL -> WallFace.facingY(x, y - 1)
+    world.map.tile(x - 1, y) == Tile.WALL -> WallFace.facingX(x - 1, y)
+    else -> null
+}
+
+/** Точки многоугольников двери: одна на сцену, без массива на кадр. */
+private val doorPoints = FloatArray(64)
+
+/**
+ * Арка на грани [face] в [doorPoints]: прямые косяки от [t0] до [t1] между [s0] и [s1], сверху полукруг; число точек.
+ * Глубина [n] - шаг от грани к камере.
+ */
+private fun ScenePainter.arch(face: WallFace, s0: Double, s1: Double, t0: Double, t1: Double, n: Double = 0.0): Int {
+    var k = 0
+    fun put(s: Double, t: Double) {
+        doorPoints[k * 2] = face.x(this, s, n)
+        doorPoints[k * 2 + 1] = face.y(this, s, t, n)
+        k++
+    }
+    put(s0, t0)
+    put(s0, t1)
+    val r = (s1 - s0) / 2
+    val mid = (s0 + s1) / 2
+    for (i in 1 until ARCH_STEPS) {
+        val a = PI - PI * i / ARCH_STEPS
+        put(mid + r * cos(a), t1 + r * sin(a))
+    }
+    put(s1, t1)
+    put(s1, t0)
+    return k
+}
+
+/**
+ * Дверь в плоскости стены (0.14.0, ASANA-N10, макет «Дверь и рычаг», вариант A): каменные косяки и арка с замковым камнем,
+ * две створки из досок в кованых полосах с петлями и кольцами; закрытая - из щели между створками бьёт тёплый свет и ложится
+ * полосой на пол; открытая - створки распахнуты внутрь, проём светится. Высота - в рост стены [rise].
+ */
+private fun ScenePainter.drawDoor(face: WallFace, rise: Double, open: Boolean, light: Float) {
+    val height = minOf(DOOR_MAX, rise - DOOR_HEADROOM)
+    val s0 = .16
+    val s1 = .84
+    val radius = (s1 - s0) / 2
+    val spring = (height - radius).coerceAtLeast(radius / 2)
+    val flicker = if (motion) .7f + .3f * sin(time * 3.1f) else 1f
+    // Свет на полу перед дверью
+    pen.color = Palettes.torch.copy(alpha = (if (open) .3f else .12f * flicker) * light)
+    val far = if (open) 1.4 else 1.0
+    pen.quad(face.x(this, .42), face.y(this, .42, 0.0), face.x(this, .58), face.y(this, .58, 0.0), face.x(this, if (open) .95 else .66, far), face.y(this, if (open) .95 else .66, 0.0, far), face.x(this, if (open) .05 else .34, far), face.y(this, if (open) .05 else .34, 0.0, far))
+    // Косяки и арка
+    pen.color = tone(DOOR_STONE, 1.05f * light)
+    pen.polygon(doorPoints, arch(face, s0 - .07, s1 + .07, 0.0, spring))
+    pen.color = tone(DOOR_STONE, .6f * light)
+    for (i in 0 until VOUSSOIRS) {
+        val a = PI - PI * (i + .5) / VOUSSOIRS
+        pen.line(face.x(this, .5 + radius * cos(a)), face.y(this, .5 + radius * cos(a), spring + radius * sin(a)), face.x(this, .5 + (radius + .07) * cos(a)), face.y(this, .5 + (radius + .07) * cos(a), spring + (radius + .07) * sin(a)), 1f)
+    }
+    val hole = arch(face, s0, s1, 0.0, spring)
+    if (!open) closedLeaves(face, hole, s0, s1, height, flicker, light) else openLeaves(face, hole, s0, s1, height, light)
+    // Замковый камень
+    pen.color = tone(DOOR_STONE_HI, light)
+    val top = spring + radius
+    pen.quad(face.x(this, .44), face.y(this, .44, top + .06), face.x(this, .56), face.y(this, .56, top + .06), face.x(this, .54), face.y(this, .54, top - .04), face.x(this, .46), face.y(this, .46, top - .04))
+}
+
+/** Закрытые створки: доски, кованые полосы, петли, кольца у шва и свет из щели. */
+private fun ScenePainter.closedLeaves(face: WallFace, hole: Int, s0: Double, s1: Double, height: Double, flicker: Float, light: Float) {
+    pen.color = tone(DOOR_WOOD, light)
+    pen.polygon(doorPoints, hole)
+    val bands = doubleArrayOf(height * .22, height * .56)
+    pen.clipped(doorPoints, hole) {
+        pen.color = tone(DOOR_WOOD_DARK, light)
+        for (i in 1 until PLANKS) {
+            val s = s0 + (s1 - s0) * i / PLANKS
+            pen.line(face.x(this, s), face.y(this, s, 0.0), face.x(this, s), face.y(this, s, height + .1), maxOf(1f, unit * .018f))
+        }
+        bands.forEach { t ->
+            pen.color = tone(DOOR_METAL, light)
+            pen.line(face.x(this, s0), face.y(this, s0, t), face.x(this, s1), face.y(this, s1, t), unit * .06f)
+        }
+    }
+    pen.color = tone(DOOR_METAL_HI, .9f * light)
+    bands.forEach { t ->
+        pen.circle(face.x(this, s0 + .02), face.y(this, s0 + .02, t), unit * .045f)
+        pen.circle(face.x(this, s1 - .02), face.y(this, s1 - .02, t), unit * .045f)
+    }
+    pen.color = tone(DOOR_METAL_HI, light)
+    val ring = unit * .1f
+    for (s in doubleArrayOf(.44, .56)) pen.ring(face.x(this, s) - ring / 2, face.y(this, s, height * .4) - ring / 2, ring, ring, maxOf(1f, unit * .02f))
+    // Свет из щели между створками
+    pen.color = Palettes.torch.copy(alpha = .25f * flicker * light)
+    pen.line(face.x(this, .5), face.y(this, .5, .02), face.x(this, .5), face.y(this, .5, height - .02), unit * .12f)
+    pen.color = SLIT_LIGHT.copy(alpha = .95f * flicker * light)
+    pen.line(face.x(this, .5), face.y(this, .5, .02), face.x(this, .5), face.y(this, .5, height - .02), maxOf(1.2f, unit * .025f))
+}
+
+/** Открытый проём: отсвет снизу и створки, распахнутые внутрь от петель. */
+private fun ScenePainter.openLeaves(face: WallFace, hole: Int, s0: Double, s1: Double, height: Double, light: Float) {
+    // Проём не заливается: вход стал полом, герой и монстры проходят в нём видимыми
+    pen.clipped(doorPoints, hole) {
+        pen.color = Palettes.torch.copy(alpha = .2f * light)
+        pen.circle(face.x(this, .5), face.y(this, .5, .1), unit * .5f)
+        for ((hinge, swing) in listOf(s0 to .22, s1 to -.22)) {
+            pen.color = tone(DOOR_WOOD, .75f * light)
+            pen.quad(face.x(this, hinge), face.y(this, hinge, 0.0), face.x(this, hinge + swing, -LEAF_DEPTH), face.y(this, hinge + swing, 0.0, -LEAF_DEPTH), face.x(this, hinge + swing, -LEAF_DEPTH), face.y(this, hinge + swing, height, -LEAF_DEPTH), face.x(this, hinge), face.y(this, hinge, height))
+            pen.color = tone(DOOR_METAL, .9f * light)
+            for (t in doubleArrayOf(height * .22, height * .56)) pen.line(face.x(this, hinge), face.y(this, hinge, t), face.x(this, hinge + swing, -LEAF_DEPTH), face.y(this, hinge + swing, t, -LEAF_DEPTH), unit * .05f)
+        }
+    }
+}
+
+/**
+ * Рычаг на стене (0.14.0, ASANA-N10, макет «Дверь и рычаг», вариант A): железная пластина с прорезью и заклёпками на грани
+ * стены за рычагом, рукоять выходит к камере - вверх, с тёплым набалдашником и ореолом, пока ждёт; вниз, когда потянут, и над
+ * пластиной зажигается лампа.
+ */
+private fun ScenePainter.drawWallLever(face: WallFace, pulled: Boolean, light: Float) {
+    pen.color = tone(DOOR_METAL, .8f * light)
+    pen.quad(face.x(this, .3), face.y(this, .3, .32), face.x(this, .7), face.y(this, .7, .32), face.x(this, .7), face.y(this, .7, .95), face.x(this, .3), face.y(this, .3, .95))
+    pen.color = tone(DOOR_METAL_HI, light)
+    for ((s, t) in listOf(.34 to .36, .66 to .36, .34 to .91, .66 to .91)) pen.circle(face.x(this, s), face.y(this, s, t), unit * .022f)
+    pen.color = Color(0xFF0C0806).copy(alpha = light)
+    pen.line(face.x(this, .5), face.y(this, .5, .4), face.x(this, .5), face.y(this, .5, .86), unit * .05f)
+    // Лампа над пластиной: зелёная, когда рычаг потянут
+    val lampX = face.x(this, .5)
+    val lampY = face.y(this, .5, 1.04)
+    if (pulled) {
+        pen.color = LEVER_LAMP.copy(alpha = .3f * light)
+        pen.circle(lampX, lampY, unit * .2f)
+    }
+    pen.color = if (pulled) LEVER_LAMP.copy(alpha = light) else tone(Color(0xFF2A2A2A), light)
+    pen.circle(lampX, lampY, unit * .05f)
+    // Рукоять от оси к камере: вверх - ждёт, вниз - потянута
+    val pivotX = face.x(this, .5)
+    val pivotY = face.y(this, .5, .62)
+    val tipX = face.x(this, .5, if (pulled) .3 else .24)
+    val tipY = face.y(this, .5, if (pulled) .32 else 1.0, if (pulled) .3 else .24)
+    pen.color = tone(DOOR_METAL, .6f * light)
+    pen.circle(pivotX, pivotY, unit * .06f)
+    pen.color = tone(Color(0xFF6B4A2A), 1.1f * light)
+    pen.line(pivotX, pivotY, tipX, tipY, unit * .065f)
+    if (!pulled) {
+        pen.color = Palettes.torch.copy(alpha = (.2f + .15f * sin(decor * 2.4f)) * light)
+        pen.circle(tipX, tipY, unit * .35f)
+    }
+    pen.color = if (pulled) tone(Color(0xFF7A6A4A), light) else Color(0xFFE0A64A).copy(alpha = light)
+    pen.circle(tipX, tipY, unit * .085f)
+}
+
+/** Дверь не выше стольких клеток и ниже стены на столько. */
+private const val DOOR_MAX = 1.12
+private const val DOOR_HEADROOM = .2
+
+/** Створки распахнуты вглубь комнаты на столько клеток. */
+private const val LEAF_DEPTH = .62
+
+/** Точек на полукруг арки, клиньев арки и досок створок. */
+private const val ARCH_STEPS = 12
+private const val VOUSSOIRS = 5
+private const val PLANKS = 6
+
+private val DOOR_STONE = Color(0xFF5A544C)
+private val DOOR_STONE_HI = Color(0xFF7A7268)
+private val DOOR_WOOD = Color(0xFF5A3A20)
+private val DOOR_WOOD_DARK = Color(0xFF2E1C0E)
+private val DOOR_METAL = Color(0xFF5A5B62)
+private val DOOR_METAL_HI = Color(0xFF8A8C94)
+private val SLIT_LIGHT = Color(0xFFFFE2A8)
+private val LEVER_LAMP = Color(0xFF7BE0A6)
 
 /**
  * Рычаг (4.7.0, макет «Рычаги и двери», вариант A): каменный постамент с шестернёй и рукоять с латунным набалдашником, вдвое

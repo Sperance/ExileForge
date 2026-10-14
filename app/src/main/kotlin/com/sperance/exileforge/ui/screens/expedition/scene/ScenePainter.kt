@@ -101,6 +101,9 @@ internal class ScenePainter {
     internal fun isoX(x: Double, y: Double) = ((x - y) * unit).toFloat()
     internal fun isoY(x: Double, y: Double) = (-(x + y) * unit / 2).toFloat()
 
+    /** Высота стены у клетки в клетках сцены (0.14.0, ASANA-N10); до первой раскладки стен - обычная. */
+    internal fun wallRise(x: Int, y: Int): Double = (walls?.height(x, y) ?: PLAIN_WALL).toDouble()
+
     /**
      * Как освещена клетка (с 2.32.0): полностью у героя, к краю света тускнеет, увиденное прежде - тускло; свет считается от
      * середины клетки героя без мерцания факела, так что земля и скала перезаписываются лишь со сменой клетки.
@@ -431,3 +434,6 @@ internal inline fun nearby(test: (dx: Int, dy: Int) -> Boolean): Boolean {
     for (dy in -1..1) for (dx in -1..1) if (test(dx, dy)) return true
     return false
 }
+
+/** Высота стены, пока раскладки стен ещё нет. */
+private const val PLAIN_WALL = 1.5f

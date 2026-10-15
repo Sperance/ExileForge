@@ -1100,6 +1100,7 @@
   "hero.xp_total": "всего {0}",
   "item.equipment": "Предмет экипировки",
   "item.unnamed": "Без названия",
+  "locale.missing": "…",
   "item.lock": "Запереть",
   "levelup.title": "Новый уровень",
   "levelup.active_slot": "Открыт слот активного умения: +{0}",

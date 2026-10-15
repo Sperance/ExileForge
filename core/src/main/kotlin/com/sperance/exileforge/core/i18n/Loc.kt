@@ -94,6 +94,9 @@ fun ui(lang: Lang, key: String, vararg args: Any?): String = args.foldIndexed(Ui
  */
 fun uiOr(lang: Lang, key: String, fallback: String): String = UiStrings.table(lang)[key] ?: fallback
 
+/** A label, or what [fallback] gives when the table has no such key - спрошенное, только если подписи нет (0.14.5, #48). */
+inline fun uiOr(lang: Lang, key: String, fallback: () -> String): String = UiStrings.table(lang)[key] ?: fallback()
+
 /**
  * The key of a counted noun.
  *

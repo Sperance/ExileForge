@@ -76,11 +76,14 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
  */
 @Volatile var serverLocale: LocaleBundle = LocaleBundle()
 
-/** A server string by key. Without a dictionary, or without the key, the key itself comes back. */
-fun loc(key: String): String = serverLocale[key]
+/**
+ * A server string by key. Без ключа в словаре (0.14.5, #48) - не сам ключ, а нейтральная заглушка, и дыра уходит в
+ * [LocaleHoles]: словарь перечитывается, след ложится в отчёт.
+ */
+fun loc(key: String): String = serverLocale.string(key) ?: LocaleHoles.missing(key)
 
-/** A server string with its arguments filled; the arguments are themselves keys. */
-fun loc(key: String, args: List<String>): String = serverLocale.format(key, args)
+/** A server string with its arguments filled; the arguments are themselves keys. Нет шаблона - заглушка, как у [loc]. */
+fun loc(key: String, args: List<String>): String = if (serverLocale.contains(key)) serverLocale.format(key, args) else LocaleHoles.missing(key)
 
 /**
  * A server string, or a fallback when the dictionary has no such key.

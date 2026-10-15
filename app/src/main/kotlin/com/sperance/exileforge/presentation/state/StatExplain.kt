@@ -18,7 +18,6 @@ import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.StatSpread
@@ -218,7 +217,7 @@ class StatExplainer(private val game: GameUi) {
             SourceKind.LAW -> loc(LocaleKey.lawName(source.ref))
 
             // Предначертание аккаунта (4.6.0): строка листа называется даром
-            SourceKind.FATE -> ui("stat.src.fate", locOr("fate.${source.ref}.name", source.ref))
+            SourceKind.FATE -> ui("stat.src.fate", loc(LocaleKey.fateName(source.ref)))
 
             SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS, SourceKind.FIGHT -> statTitle(source.ref)
 

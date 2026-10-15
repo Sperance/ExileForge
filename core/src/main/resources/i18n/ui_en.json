@@ -1100,6 +1100,7 @@
   "hero.xp_total": "{0} in total",
   "item.equipment": "Equipment item",
   "item.unnamed": "Unnamed",
+  "locale.missing": "…",
   "item.lock": "Lock",
   "levelup.title": "New level",
   "levelup.active_slot": "Active skill slot unlocked: +{0}",

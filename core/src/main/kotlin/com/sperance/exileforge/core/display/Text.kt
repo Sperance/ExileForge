@@ -70,7 +70,10 @@ fun mapItemTitle(zone: MapCode): String = loc(LocaleKey.mapItemName(), listOf(ma
 fun mapDescription(code: String): String = locOr(LocaleKey.mapDescription(code), "")
 fun regionTitle(code: String): String = locOr(LocaleKey.regionName(code), displayName(code))
 fun classTitle(code: String): String = locOr(LocaleKey.className(code), displayName(code))
-fun nodeTitle(code: String): String = locOr(LocaleKey.skillNodeName(code), displayName(code))
+
+/** Имя узла дерева - только словарём (0.14.5, #48): нет строки - заглушка и дыра словаря ([loc]), не код. */
+fun nodeTitle(code: String): String = loc(LocaleKey.skillNodeName(code))
+
 fun atlasNodeTitle(code: String): String = locOr(LocaleKey.atlasNodeName(code), displayName(code))
 fun professionTitle(code: String): String = locOr(LocaleKey.professionName(code), displayName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
@@ -84,11 +87,11 @@ fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobT
 
 /**
  * Title of a stat: the client's own table first (it takes an explicit language), then the server's label
- * for the stat's group, then the humanised code.
+ * for the stat's group. Нет и его (0.14.5, #48) - заглушка и дыра словаря ([loc]), кода игрок не видит.
  */
 fun statTitle(stat: String, lang: Lang = uiLanguage): String = rawStatTitle(stat, lang).replace(PERCENT_MARK, "")
 
-private fun rawStatTitle(stat: String, lang: Lang): String = uiOr(lang, "enum.stat.$stat", locOr("enum.EnumStatStock.$stat", displayName(stat.substringAfter('_'), lang)))
+private fun rawStatTitle(stat: String, lang: Lang): String = uiOr(lang, "enum.stat.$stat") { loc("enum.EnumStatStock.$stat") }
 
 /** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure (3.2.0). */
 private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")

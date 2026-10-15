@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.display.serverPortraits
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.i18n.LocaleBundle
+import com.sperance.exileforge.core.i18n.LocaleHoles
 import com.sperance.exileforge.core.i18n.LocaleManifest
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
@@ -20,6 +21,7 @@ import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.ServerStore
+import com.sperance.exileforge.presentation.app.ReportEvidence
 import com.sperance.exileforge.presentation.app.StartStage
 import com.sperance.exileforge.presentation.app.StartupTrace
 import com.sperance.exileforge.rules.content.ContentFiles
@@ -53,8 +55,17 @@ class WorldLoader(
     private val languages: LanguageRepository,
     private val scope: CoroutineScope,
     private val trace: StartupTrace,
+    evidence: ReportEvidence,
 ) : GameResources {
     private val api: GameApi get() = connection.api
+
+    init {
+        // Дыра словаря (0.14.5, #48): след в последних действиях отчёта, первая дыра редакции - перечитать словарь
+        LocaleHoles.listener = { key, refetch ->
+            evidence.trail.hole(key)
+            if (refetch) refreshLocale()
+        }
+    }
     private var localeJob: Job? = null
     private var iconJob: Job? = null
 

@@ -2,6 +2,7 @@ package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.i18n.LocaleHoles
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -95,10 +96,13 @@ fun leverText(effect: FateEffect): String = FateField.entries.fold(loc(LocaleKey
 /** Действующая судьбоносная строка дара [fate] с правилом [knob]; null - такой строки нет. */
 private fun knobBoon(index: ContentIndex, fate: FateEffects, knob: FateKnob): FateBoon? = fate.boons.firstOrNull { (index.fates.boons.def(it.fate, it.boon, it.tier) as? FateBoonDef.Knob)?.knob == knob }
 
-/** Шаг «Перестройка» разбора (4.6.4): рычаг или правило строки [ref] дара [fate] его текстом. */
+/**
+ * Шаг «Перестройка» разбора (4.6.4): рычаг или правило строки [ref] дара [fate] его текстом. Ни того, ни другого (0.14.5, #48) -
+ * заглушка и дыра словаря (`LocaleHoles`), а не код рычага.
+ */
 fun reshapeText(index: ContentIndex, fate: FateEffects, ref: String): String {
     FateLever.entries.firstOrNull { it.name == ref }?.let(fate::of)?.let { return leverText(it) }
-    return FateKnob.entries.firstOrNull { it.name == ref }?.let { knobBoon(index, fate, it) }?.let { boonText(index, it) } ?: ref
+    return FateKnob.entries.firstOrNull { it.name == ref }?.let { knobBoon(index, fate, it) }?.let { boonText(index, it) } ?: LocaleHoles.missing(LocaleKey.fateLever(ref))
 }
 
 /**

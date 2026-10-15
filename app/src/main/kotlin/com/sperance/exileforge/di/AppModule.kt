@@ -143,7 +143,7 @@ val appModule = module {
     single { StallWatchdog(androidContext(), get(), get()) }
     single { com.sperance.exileforge.presentation.app.CrashKeeper(androidContext()) }
     single { com.sperance.exileforge.presentation.app.ReportEvidence(androidContext(), get(), get(named(APP_SCOPE))) }
-    single { WorldLoader(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
+    single { WorldLoader(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get()) }
     single { LanguageRepository() }
     single { LinkRepository() }
     single { AdminRepository() }

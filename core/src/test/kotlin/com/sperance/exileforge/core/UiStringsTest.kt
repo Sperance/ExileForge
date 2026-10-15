@@ -286,6 +286,22 @@ class UiStringsTest {
     }
 
     /**
+     * Узел дерева, дар и рычаг дара, что называет окно разбора (0.14.5, #48), названы в каждом словаре сервера: кода на их месте
+     * клиент не пишет, дыра была бы заглушкой - её ловит этот тест, а не игрок.
+     */
+    @Test
+    fun every_tree_node_and_fate_the_breakdown_names_is_named() {
+        val index = TestContent.index
+        val server = TestContent.serverLocales()
+        assertTrue(server.isNotEmpty(), "server locale files not found")
+        val keys = index.tree.byCode.keys.map(LocaleKey::skillNodeName) +
+            index.fates.all.map { LocaleKey.fateName(it.code) } +
+            com.sperance.exileforge.rules.content.FateLever.entries.map { LocaleKey.fateLever(it.name) }
+        val holes = server.flatMap { (lang, table) -> keys.filterNot(table::containsKey).map { "$lang: $it" } }
+        assertEquals(emptyList(), holes, "names missing from the server dictionaries")
+    }
+
+    /**
      * Имя характеристики у клиента - то же, что у сервера (4.12.x, TEXT-PACK, STAT-ATK-10): своя подпись `enum.stat.*` - лишь
      * копия серверной с меткой «%» единицы, а не второе имя той же характеристики.
      */

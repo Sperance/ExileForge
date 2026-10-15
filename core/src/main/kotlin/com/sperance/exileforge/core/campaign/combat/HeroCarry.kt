@@ -29,9 +29,6 @@ data class HeroCarry(
     /** Нечего нести, кроме щита. */
     val bare: Boolean get() = ailments.isEmpty() && effects.isEmpty() && charges.isEmpty()
 
-    /** На герое недуг, что ранит во времени: отдых вне боя под ним не идёт. */
-    val hurting: Boolean get() = ailments.any { it.ailment.hurts }
-
     /** Прошло [dt] секунд вне боя: всё тает, истёкшее уходит. */
     fun after(dt: Double): HeroCarry = copy(
         ailments = ailments.mapNotNull { it.copy(left = it.left - dt).takeIf { a -> a.left > 0 } },

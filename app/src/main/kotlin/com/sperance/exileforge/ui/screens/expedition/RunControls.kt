@@ -59,7 +59,7 @@ import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
-import com.sperance.exileforge.ui.screens.expedition.arena.flowNumber
+import com.sperance.exileforge.ui.screens.expedition.arena.flowLabel
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
@@ -67,7 +67,6 @@ import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.screens.expedition.scene.SceneCamera
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
-import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.hypot
@@ -87,14 +86,23 @@ import kotlin.math.roundToInt
     mana: Int = 0,
     maxMana: Int = 0,
     reserved: Int = 0,
-    /** Итог здоровья в секунду на карте (макет «Эффекты героя на карте», вариант C): «· −14/с» на полосе жизни; null - не писать. */
+    /**
+     * Итог здоровья в секунду на карте (макет «Эффекты героя на карте», вариант C): «· −14/с» на полосе жизни, только пока здоровье
+     * меняется ([LifeFlow.moves], 0.14.5, #52); null - не писать.
+     */
     flow: LifeFlow? = null,
+    /** Касание полосы жизни с меткой итога - его разбор (0.14.5, #52); null - полоса не нажимается. */
+    onFlow: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(5.dp)
     val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
     val shieldShare by animateFloatAsState(if (maxShield > 0) shield / maxShield.toFloat() else 0f, label = "shield")
+    val moving = flow?.takeIf { it.moves(life.toDouble(), maxLife.toDouble()) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Box(Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).border(1.dp, LifeRim, shape)) {
+        Box(
+            Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).border(1.dp, LifeRim, shape)
+                .then(if (moving != null && onFlow != null) Modifier.clickable(onClickLabel = ui("fight.flow.title"), onClick = onFlow) else Modifier),
+        ) {
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.verticalGradient(listOf(LifeTop, LifeRed, LifeDeep))))
             // Блик литой полосы: верхние две пятых чуть светлее
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight(.4f).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent))))
@@ -109,8 +117,8 @@ import kotlin.math.roundToInt
                     append(ui("expedition.vitals_figure", number(life.toDouble()), number(maxLife.toDouble())))
                     if (maxShield > 0) withStyle(SpanStyle(color = ShieldBright, fontWeight = FontWeight.SemiBold)) { append("  ◈ " + number(shield.toDouble())) }
                     // Чистый итог в секунду - светлым на литой полосе: убыль розовым, прибыль зелёным
-                    flow?.takeIf { abs(it.net) >= .5 }?.let { f ->
-                        withStyle(SpanStyle(color = if (f.net < 0) FlowLoss else Vital, fontWeight = FontWeight.SemiBold)) { append(" · " + ui("fight.flow.rate", flowNumber(f.net))) }
+                    moving?.let { f ->
+                        withStyle(SpanStyle(color = if (f.net < 0 || f.stalledBy != null) FlowLoss else Vital, fontWeight = FontWeight.SemiBold)) { append(" · " + flowLabel(f)) }
                     }
                 },
                 11.sp,

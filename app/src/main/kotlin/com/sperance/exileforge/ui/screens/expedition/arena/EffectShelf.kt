@@ -283,7 +283,45 @@ internal fun flowParts(flow: LifeFlow): String = listOfNotNull(
     ui("fight.flow.degen", fineNumber(flow.degenShare)).takeIf { flow.degen > 0 },
     ui("fight.flow.delayed", flow.delayed.roundToInt()).takeIf { flow.delayed > 0 },
     ui("fight.flow.ailments", flow.ailments.roundToInt()).takeIf { flow.ailments >= .5 },
+    ui("fight.flow.shielded", flow.shielded.roundToInt()).takeIf { flow.shielded >= .5 },
 ).joinToString(" · ")
+
+/** Итог здоровья на полосе жизни (0.14.5, #52): «+27/с», под ранящим недугом - «−13/с · кровотечение». */
+internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight.flow.rate_cause", flowNumber(flow.net), ui("fight.flow.stalled.${it.name}")) }
+    ?: ui("fight.flow.rate", flowNumber(flow.net))
+
+/**
+ * Разбор здоровья в секунду на карте (0.14.5, #52) - касанием метки на полосе жизни: регенерация, отдых, деген, недуги и что принял
+ * щит строками с итогом; под ранящим недугом - чем он глушит восстановление. Читает живой снимок: числа идут.
+ */
+@Composable internal fun LifeFlowSheet(flow: () -> LifeFlow?, onDismiss: () -> Unit) {
+    ForgeSheet(onDismissRequest = onDismiss) {
+        val now = flow() ?: return@ForgeSheet
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 16.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            FlowSummary(now)
+            FlowPart(ui("fight.flow.part.regen"), now.regen - now.rest)
+            FlowPart(ui("fight.flow.part.rest"), now.rest)
+            if (now.degen > 0) FlowPart(ui("fight.flow.part.degen"), -now.degen)
+            if (now.ailments >= .5) FlowPart(ui("fight.flow.part.ailments"), -now.ailments)
+            if (now.shielded >= .5) FlowPart(ui("fight.flow.part.shielded"), now.shielded)
+            now.stalledBy?.let { ailment ->
+                MutedText(
+                    ui("fight.flow.stalled_note", ui(ailment.key()), flowNumber(now.stalled)),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+/** Строка разбора: имя части и её вклад в секунду со знаком. */
+@Composable private fun FlowPart(title: String, value: Double) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text(ui("fight.flow.rate", flowNumber(value)), color = flowTint(value), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+    }
+}
 
 /** Плитка итога здоровья (4.9.3): «−12/с» красным, «+8/с» зелёным, сверху рельса героя; [stacked] - «/с» строкой ниже. */
 @Composable internal fun FlowTile(flow: LifeFlow, modifier: Modifier, stacked: Boolean = true) {

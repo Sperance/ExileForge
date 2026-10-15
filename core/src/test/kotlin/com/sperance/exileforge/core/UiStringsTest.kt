@@ -197,6 +197,8 @@ class UiStringsTest {
                 add("enum.ailment.${it.name}")
                 add("fight.effect.${it.name}")
             }
+            // Ранящий недуг на метке здоровья карты (0.14.5, #52): «−13/с · кровотечение»
+            Ailment.entries.filter { it.hurts }.forEach { add("fight.flow.stalled.${it.name}") }
             DamageType.entries.forEach { add("enum.damage.${it.name}") }
             AffixKind.entries.forEach { add("mod.kind.${it.name}") }
             StatSection.entries.filter { it != StatSection.NONE }.forEach { add("enum.stat_group.${it.name}") }

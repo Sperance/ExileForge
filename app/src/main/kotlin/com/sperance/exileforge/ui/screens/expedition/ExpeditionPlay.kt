@@ -50,6 +50,7 @@ import com.sperance.exileforge.ui.components.RunMenuItem
 import com.sperance.exileforge.ui.components.raritySpine
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
+import com.sperance.exileforge.ui.screens.expedition.arena.LifeFlowSheet
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.expedition.scene.rememberRunClock
 import com.sperance.exileforge.ui.theme.*
@@ -248,7 +249,9 @@ private fun RunHud.screenOnly(): RunHud = when (phase) {
 /** Полосы героя на карте из живого снимка: тикают сами, не трогая панель. */
 @Composable private fun MapVitals(live: State<RunHud>, modifier: Modifier) {
     val now by remember(live) { derivedStateOf { live.value.let { VitalsView(it.heroLife, it.heroMaxLife, it.heroShield, it.heroMaxShield, it.heroMana, it.heroMaxMana, it.heroReserved, it.lifeFlow) } } }
-    Vitals(now.life, now.maxLife, now.shield, now.maxShield, modifier, now.mana, now.maxMana, now.reserved, flow = now.flow)
+    var breakdown by remember { mutableStateOf(false) }
+    Vitals(now.life, now.maxLife, now.shield, now.maxShield, modifier, now.mana, now.maxMana, now.reserved, flow = now.flow) { breakdown = true }
+    if (breakdown) LifeFlowSheet({ live.value.lifeFlow }) { breakdown = false }
 }
 
 /** Полосы героя одним значением: перекомпоновка - лишь когда сменилось число. */

@@ -1,9 +1,11 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.campaign.ChargeView
+import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.AilmentLaw
 import com.sperance.exileforge.core.campaign.combat.CarriedAilment
 import com.sperance.exileforge.core.campaign.combat.EffectView
+import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.core.campaign.combat.LifeFlow
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.RecoveryPool
@@ -54,11 +56,26 @@ internal fun ExpeditionRun.afflict(fresh: CarriedAilment) {
 internal fun ExpeditionRun.curb(pool: RecoveryPool): Double = law.curb(hero, carry.ailments, pool)
 
 /**
- * Итог здоровья на карте в секунду: регенерация листа (под долей восстановления и недугами) и отдых вне боя - только без ранящего
- * недуга ([RoadLife]), деген листа и урон недугов. Плитка на полосе жизни и лист эффектов карты.
+ * Ранящие недуги на герое вне боя с уроном в секунду каждого ([AilmentLaw.perSecond]); сильнейший из них глушит восстановление
+ * на карте (0.14.5, #52, [stalling]).
  */
-internal fun ExpeditionRun.roadFlow(): LifeFlow = RoadLife.flow(hero, pace, rules.mana, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), resting = !carry.hurting)
-    .copy(ailments = carry.ailments.filter { it.ailment.hurts }.sumOf { law.perSecond(hero, carry.ailments, it) })
+private fun ExpeditionRun.hurtingRates(): List<Pair<CarriedAilment, Double>> = carry.ailments.filter { it.ailment.hurts }.map { it to law.perSecond(hero, carry.ailments, it) }
+
+/** Ранящий недуг, что глушит регенерацию и отдых на карте (0.14.5, #52): сильнейший по урону в секунду; нет - null. */
+internal fun ExpeditionRun.stalling(): Ailment? = hurtingRates().maxByOrNull { it.second }?.first?.ailment
+
+/**
+ * Итог здоровья на карте в секунду: регенерация листа (под долей восстановления и недугами) и отдых вне боя - только без ранящего
+ * недуга ([RoadLife], 0.14.5, #52), деген листа и урон недугов; что из него принимает энергощит (яд и хаос - мимо), здоровья не
+ * трогает ([LifeFlow.shielded]). Метка на полосе жизни и лист эффектов карты.
+ */
+internal fun ExpeditionRun.roadFlow(): LifeFlow {
+    val rates = hurtingRates()
+    val total = rates.sumOf { it.second }
+    val piercing = rates.filter { AilmentLaw.piercing(it.first) }.sumOf { it.second }
+    return RoadLife.flow(hero, pace, rules.mana, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
+        .copy(ailments = total, shielded = EnergyShield.absorbed(shield, total, piercing))
+}
 
 /** Недуги на герое вне боя - плитками полки, как в бою: по недугу - доля времени, стаки, секунды (до десятой) и сила. */
 internal fun ExpeditionRun.carriedAilments(): List<AilmentView> = carry.ailments.groupBy { it.ailment }.map { (ailment, same) ->

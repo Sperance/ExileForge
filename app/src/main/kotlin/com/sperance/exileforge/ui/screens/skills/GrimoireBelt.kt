@@ -185,6 +185,7 @@ internal fun Exchange(
         ) {
             Text(ui("skills.exchange_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("skills.exchange_rule", rule.books, number(price.toDouble())))
+            HoldHint(HoldSubject.SKILL)
             Caption(ui("skills.exchange_give", chosen.size, rule.books))
             // Касание отбирает книгу, долгое нажатие - карточка её умения (0.14.4, #25)
             val inspect = rememberSkillInspect()

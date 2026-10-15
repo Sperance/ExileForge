@@ -36,6 +36,8 @@ import com.sperance.exileforge.presentation.state.ItemSection
 import com.sperance.exileforge.presentation.state.ItemType
 import com.sperance.exileforge.ui.components.AffixBadge
 import com.sperance.exileforge.ui.components.BaseChip
+import com.sperance.exileforge.ui.components.HoldHint
+import com.sperance.exileforge.ui.components.HoldSubject
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.InspectAction
 import com.sperance.exileforge.ui.components.ItemFilterState
@@ -169,6 +171,8 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
             }
         }
         if (item.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+        // Метка строки называет свой вид удержанием (0.14.5, #39)
+        if (item.lines.any { it.marks.kind != null }) HoldHint(HoldSubject.INFO)
     }
 }
 

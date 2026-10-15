@@ -173,7 +173,7 @@ private const val MAIL_SHOWN = 9
     }
     Box {
         Row(
-            Modifier.combinedClickable(enabled = tap != null, onClickLabel = look.label, onLongClick = { open = true }) { tap?.invoke() }
+            Modifier.combinedClickable(enabled = tap != null, onClickLabel = look.label, onLongClickLabel = ui("hint.hold.info"), onLongClick = { open = true }) { tap?.invoke() }
                 .padding(horizontal = 6.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(3.dp),

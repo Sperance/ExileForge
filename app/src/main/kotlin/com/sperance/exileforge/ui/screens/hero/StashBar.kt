@@ -90,7 +90,7 @@ private fun RailEntry(label: String, count: Int, on: Boolean, onClick: () -> Uni
     Box(
         Modifier.size(48.dp).then(if (on) Modifier.depthRaised(shape) else Modifier.depthInset(shape)).clip(shape)
             .semantics { contentDescription = ui("hero.slot_count", label, count) }
-            .combinedClickable(role = Role.Tab, onLongClick = { tip = true }, onClick = onClick),
+            .combinedClickable(role = Role.Tab, onLongClickLabel = ui("hint.hold.info"), onLongClick = { tip = true }, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         icon(if (on) Gold else Muted)

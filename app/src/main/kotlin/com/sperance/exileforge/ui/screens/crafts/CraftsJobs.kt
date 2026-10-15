@@ -202,6 +202,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             }
             if (work.job.targetsItem && targets.isNotEmpty()) {
                 Engraved(ui("crafts.pick_item"))
+                HoldHint(HoldSubject.ITEM)
                 targets.forEach { view ->
                     ItemRow(view, selected = view.id == item, price = game.sellPrice(view.item), onLongClick = { inspect(Inspect.Copy(view.item)) }) { target = view.id }
                 }

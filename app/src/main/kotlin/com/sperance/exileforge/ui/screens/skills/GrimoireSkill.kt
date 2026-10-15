@@ -209,7 +209,7 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
                 color = GoldBright,
                 style = MaterialTheme.typography.titleMedium,
             )
-            if (offered.isEmpty()) MutedText(ui("skills.nothing_learned"))
+            if (offered.isEmpty()) MutedText(ui("skills.nothing_learned")) else HoldHint(HoldSubject.SKILL)
             // Касание ставит умение в ячейку, долгое нажатие - его карточка (0.14.4, #25)
             val inspect = rememberSkillInspect()
             offered.forEach { skill ->

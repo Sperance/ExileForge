@@ -19,6 +19,8 @@ import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.HoldHint
+import com.sperance.exileforge.ui.components.HoldSubject
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemFilterBar
 import com.sperance.exileforge.ui.components.ItemFilterSheet
@@ -48,6 +50,7 @@ internal fun TargetPicker(game: GameUi, filterState: ItemFilterState, current: S
     val shown = remember(stash, filterState.filter, game.hero) { shelf(filterState.filter) }
     LazyColumn(Modifier.fillMaxWidth(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { Engraved(ui("forge.pick_item")) }
+        if (stash.isNotEmpty()) item { HoldHint(HoldSubject.ITEM) }
         item { ItemFilterBar(filterState, shown.size, onOpen = { filtering = true }) }
         if (shown.isEmpty()) item { Text(ui(if (stash.isEmpty()) "forge.stash_empty" else "filter.empty"), color = Muted) }
         items(shown, key = { it.id }) { piece ->

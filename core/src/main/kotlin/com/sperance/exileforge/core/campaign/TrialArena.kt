@@ -319,8 +319,8 @@ class TrialArena(
 
     private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
 
-    /** The floor's growth: so many percent more life and damage on every monster of it. */
-    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
+    /** The floor's growth: so many percent more life and damage on every monster of it (0.14.0: ступень раша ниже нуля - меньше). */
+    private fun growth(power: Double): List<MonsterEffect> = if (power == 0.0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
 
     private fun play(dt: Double) {
         val fight = battle ?: return

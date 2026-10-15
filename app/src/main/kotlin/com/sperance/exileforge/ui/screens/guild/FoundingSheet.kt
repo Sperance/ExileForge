@@ -50,14 +50,14 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var color by remember { mutableStateOf(rules.colors.firstOrNull().orEmpty()) }
     var mode by remember { mutableStateOf(GuildMode.OPEN) }
     var minLevel by remember { mutableStateOf("1") }
-    val money = game.hero?.money
     val price = rules.create.price.of(game.heroLevel)
+    val bill = game.goldBill(price)
     // Возраст героя (4.2.0): с создания должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат
     val readyAt = game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) }
     val refusal = when {
         !game.isTester && game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
         !game.isTester && readyAt != null && readyAt > System.currentTimeMillis() -> ui("guild.found_age", rules.create.heroDays, weekText(readyAt))
-        money != null && money < price -> ui("guild.found_gold", number(price.toDouble()))
+        bill?.affordable == false -> bill.shortText()
         name.trim().length !in rules.nameLength -> ui("guild.found_name", rules.nameLength.first, rules.nameLength.last)
         tag.length !in rules.tagLength -> ui("guild.found_tag", rules.tagLength.first, rules.tagLength.last)
         faction.isBlank() -> ui("guild.api.faction")
@@ -94,12 +94,15 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
             ModePicker(mode, enabled = true) { mode = it }
             MinLevelField(minLevel, enabled = true) { minLevel = it }
             OrnateDivider()
-            PropertyRow(ui("guild.found_price"), number(price.toDouble()), Glyph.CURRENCY)
+            // Цена и кошелёк одним чипом (0.14.5, #42)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MutedText(ui("guild.found_price"), Modifier.weight(1f))
+                bill?.let { GoldCost(it) } ?: GoldPrice(price)
+            }
             PropertyRow(ui("guild.found_level_row"), rules.create.level.toString(), Glyph.LEVEL)
-            money?.let { PropertyRow(ui("merchant.gold"), number(it.toDouble()), Glyph.CURRENCY) }
             refusal?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
             HoldButton(
-                ui("guild.found_for", number(price.toDouble())),
+                bill?.payLabel(ui("guild.found_for", number(price.toDouble()))) ?: ui("guild.found_for", number(price.toDouble())),
                 Gold,
                 Modifier.fillMaxWidth(),
                 enabled = !game.busy && refusal == null,

@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -82,13 +83,19 @@ fun ListingSheet(
             }
             // Плата за место (ECON-05) - правилом `AuctionFees`, та же, что спишет сервер; не возвращается
             val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
-            val money = game.hero?.money ?: 0L
-            if (fee > 0) Text(ui("sell.listing_fee", fee), color = if (money >= fee) Gold else LifeRed, style = MaterialTheme.typography.bodySmall)
+            // Плата против кошелька (0.14.5, #42): чип «цена / есть», не хватает - кнопка гаснет с недостачей
+            val bill = game.goldBill(fee).takeIf { fee > 0 }
+            bill?.let {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MutedText(ui("sell.listing_fee"), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                    GoldCost(it)
+                }
+            }
             MutedText(ui("sell.note"))
-            // Аукцион ещё закрыт (3.94.0): кнопка неактивна, и рядом сказано, когда он откроется; не хватает золота на плату - тоже
-            val closed = auctionClosed(game) ?: ui("sell.listing_short", fee).takeIf { money < fee }
-            ForgeButton(enabled = closed == null && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("sell.list"))
+            // Аукцион ещё закрыт (3.94.0): кнопка неактивна, и рядом сказано, когда он откроется
+            val closed = auctionClosed(game)
+            ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
+                Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
             }
             closed?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall) }
         }

@@ -31,6 +31,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.launch
 
@@ -75,6 +76,11 @@ fun ConfirmSheet(
     icon: (@Composable () -> Unit)? = null,
     /** A choice under the ledger (the atlas's payment, server 1.65.0): drawn as given, between the ledger and the note. */
     options: (@Composable () -> Unit)? = null,
+    /**
+     * Оплата золотом (0.14.5, #42): строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка погашена, а [warning]
+     * без своего говорит недостачу.
+     */
+    gold: GoldBill? = null,
     onConfirm: () -> Unit,
 ) {
     val accent = if (danger) LifeRed else Gold
@@ -96,16 +102,17 @@ fun ConfirmSheet(
                         subtitle?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }
                     }
                 }
-                if (ledger.isNotEmpty()) Ledger(ledger)
+                val lines = ledger + gold?.goldLedger().orEmpty()
+                if (lines.isNotEmpty()) Ledger(lines)
                 options?.invoke()
                 note?.let { MutedText(it) }
-                warning?.let {
+                (warning ?: gold?.takeUnless { it.affordable }?.shortText())?.let {
                     Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                         Icon(Icons.Outlined.ErrorOutline, null, tint = LifeRed, modifier = Modifier.size(16.dp).padding(top = 1.dp))
                         Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked) {
+                HoldButton(ui("confirm.hold", confirm.lowercase()), accent, enabled = !blocked && gold?.affordable != false) {
                     onDismiss()
                     onConfirm()
                 }

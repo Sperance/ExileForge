@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -59,7 +60,8 @@ import kotlin.math.sin
     node: AtlasNode,
     taken: Set<String>,
     available: Int,
-    price: Long,
+    /** Цена снятия узла золотом против кошелька (0.14.5, #42); null - герой не прочитан. */
+    refund: GoldBill?,
     enabled: Boolean,
     onTake: () -> Unit,
     onRefund: () -> Unit,
@@ -113,7 +115,7 @@ import kotlin.math.sin
             MutedText(
                 when {
                     node.kind == AtlasNodeKind.START -> ui("atlas.start_hint")
-                    isTaken && canRefund -> ui("atlas.refund_hint", price)
+                    isTaken && canRefund -> ui("atlas.refund_hint")
                     isTaken -> ui("atlas.holds_hint")
                     blocker != null -> ui("atlas.excluded_hint", atlasNodeTitle(blocker))
                     canTake && available <= 0 -> ui("atlas.no_points")
@@ -130,7 +132,10 @@ import kotlin.math.sin
                     colors = ButtonDefaults.buttonColors(containerColor = Sky.take, contentColor = Color.White),
                 ) { Text(ui("atlas.take")) }
 
-                canRefund -> ForgeOutlinedButton(onClick = onRefund, enabled = enabled) { Text(ui("atlas.refund"), color = Sky.text) }
+                canRefund -> {
+                    refund?.let { GoldCost(it) }
+                    ForgeOutlinedButton(onClick = onRefund, enabled = enabled) { Text(ui("atlas.refund"), color = Sky.text) }
+                }
 
                 blocker != null -> ForgeButton(onClick = {}, enabled = false) { Text(ui("atlas.take")) }
             }

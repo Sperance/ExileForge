@@ -30,6 +30,7 @@ import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.itemIcon
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.itemVisualKind
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
@@ -152,6 +153,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
                 fee.takeIf { it > 0 }?.let { LedgerLine(feeRate?.let { r -> ui("auction.fee_rate", r) } ?: ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
                 have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
+                // Золото после сбора (0.14.5, #42): «Останется» и для кошелька, тем же счётом, что у всех оплат золотом
+                game.goldBill(fee)?.takeIf { fee > 0 && it.affordable }?.let { LedgerLine(ui("confirm.left"), ui("merchant.gold_amount", number(it.left.toDouble()))) },
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
                 LedgerLine(ui("auction.seller"), sellerName(lot)),
             ),

@@ -70,16 +70,14 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     if (buying) {
-        val short = hero.money < price
         ConfirmSheet(
             title = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)),
             confirm = ui("stash.buy"),
             subtitle = "$label · ${ui("stash.ceiling", rules.maxSlots)}",
             onDismiss = { buying = false },
-            ledger = listOf(LedgerLine(ui("confirm.spend"), ui("merchant.gold_amount", price), Tone.SPEND)),
             note = listOfNotNull(ui("stash.places_note"), ui("stash.full_hint", rules.overflowSlots).takeIf { full }).joinToString("\n"),
-            blocked = short || game.busy,
-            warning = ui("stash.no_gold").takeIf { short },
+            blocked = game.busy,
+            gold = game.goldBill(price),
         ) {
             buying = false
             vm.expandStash()

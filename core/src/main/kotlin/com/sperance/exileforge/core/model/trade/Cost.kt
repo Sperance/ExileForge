@@ -29,3 +29,18 @@ data class Cost(val items: Map<String, Long> = emptyMap(), val gold: Long = 0) {
 data class Shortfall(val items: Map<String, Long> = emptyMap(), val gold: Long = 0) {
     val isEmpty: Boolean get() = items.isEmpty() && gold <= 0
 }
+
+/**
+ * Цена в золоте против кошелька (0.14.5, #42): [price] и [have] - что есть у героя. «Хватает ли» решает [Cost.shortfall] - одна
+ * точка на всё, что платится золотом: чип цены, кнопка оплаты и строки подтверждения читают этот счёт, а не сравнивают сами.
+ */
+data class GoldBill(val price: Long, val have: Long) {
+    /** Сколько золота не хватает; хватает - 0. */
+    val short: Long get() = Cost.gold(price).shortfall({ 0L }, have).gold
+
+    /** Хватает ли золота. */
+    val affordable: Boolean get() = short <= 0
+
+    /** Сколько останется после оплаты; не хватает - 0. */
+    val left: Long get() = (have - price).coerceAtLeast(0)
+}

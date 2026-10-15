@@ -177,14 +177,18 @@ internal fun Exchange(
     var chosen by remember { mutableStateOf(listOf<String>()) }
     var target by remember { mutableStateOf<String?>(null) }
     val price = rule.goldPerLevel * hero.level
-    val money = hero.money
+    // Цена обмена против кошелька (0.14.5, #42): тот же счёт, что у всех оплат золотом
+    val bill = game.goldBill(price)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(ui("skills.exchange_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            MutedText(ui("skills.exchange_rule", rule.books, number(price.toDouble())))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MutedText(ui("skills.exchange_rule", rule.books, number(price.toDouble())), Modifier.weight(1f))
+                bill?.let { GoldCost(it) }
+            }
             HoldHint(HoldSubject.SKILL)
             Caption(ui("skills.exchange_give", chosen.size, rule.books))
             // Касание отбирает книгу, долгое нажатие - карточка её умения (0.14.4, #25)
@@ -230,8 +234,7 @@ internal fun Exchange(
                     }
                 }
             }
-            val ready = chosen.size == rule.books && target != null && money >= price && !game.busy
-            if (money < price) Text(ui("skills.exchange_gold", number(price.toDouble())), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+            val ready = chosen.size == rule.books && target != null && bill?.affordable == true && !game.busy
             ForgeButton(
                 enabled = ready,
                 onClick = {
@@ -243,7 +246,7 @@ internal fun Exchange(
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = Blood, contentColor = GoldBright),
-            ) { Text(ui("skills.exchange")) }
+            ) { Text(bill?.payLabel(ui("skills.exchange")) ?: ui("skills.exchange")) }
         }
     }
 }

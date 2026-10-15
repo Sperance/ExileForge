@@ -116,6 +116,8 @@ class GuildActions(
     private fun stashCommand(done: String, block: suspend (String) -> GuildStashView) = command(done) { id ->
         val stash = block(id)
         guild { it.copy(stash = stash) }
+        // Ответ хранилища несёт золото героя после записи (0.14.5, #42): взятие за золото видно в кошельке сразу, цена сверяется с ним
+        heroes.money(stash.money)
     }
 
     /**

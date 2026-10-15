@@ -66,6 +66,7 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.GoldPrice
 import com.sperance.exileforge.ui.components.HoldButton
 import com.sperance.exileforge.ui.components.Inspect
@@ -76,6 +77,7 @@ import com.sperance.exileforge.ui.components.RarityTiles
 import com.sperance.exileforge.ui.components.Spinner
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.components.rememberInspect
+import com.sperance.exileforge.ui.components.shortText
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.auction.ActiveFilter
@@ -250,14 +252,16 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
     val view = entry.item?.let { game.view(it) }
     val inspect = rememberInspect()
     val price = StashTakePrice.of(index, entry.item, entry.code, entry.amount)
+    // Цена взятия против кошелька героя (0.14.5, #42) - тот же счёт, что у всех цен в золоте
+    val bill = game.goldBill(price)
     val reason = when {
         stash.takesLeft == 0 -> ui("guild.stash_no_takes")
-        stash.money < price -> ui("guild.stash_no_gold", number(price.toDouble()))
+        bill?.affordable == false -> bill.shortText()
         else -> null
     }
     val action = InspectAction(ui("guild.stash_take"), enabled = !game.busy && reason == null, reason = reason, hold = true, figure = number(price.toDouble()).takeIf { price > 0 }, run = onTake)
     val open = { inspect(entry.item?.let { Inspect.Copy(it, action) } ?: Inspect.Stack(entry.code, action)) }
-    val tag: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { GoldPrice(price) }
+    val tag: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { bill?.takeIf { price > 0 }?.let { GoldCost(it) } ?: GoldPrice(price) }
     val by = listOf(ui("guild.stash_by", entry.by))
     if (view != null) {
         ItemTradeRow(view, enabled = true, unmet = game.unmetFor(view.code), extra = by, onClick = open, price = tag)

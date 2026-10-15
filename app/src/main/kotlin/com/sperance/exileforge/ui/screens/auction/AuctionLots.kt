@@ -101,11 +101,14 @@ import com.sperance.exileforge.ui.theme.*
             extra = if (extendable) {
                 (
                     {
-                        ForgeOutlinedButton(enabled = !game.busy && (game.hero?.money ?: 0L) >= fee, onClick = {
+                        // Плата продления против кошелька (0.14.5, #42)
+                        val bill = game.goldBill(fee)
+                        bill?.let { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { GoldCost(it) } }
+                        ForgeOutlinedButton(enabled = !game.busy && bill?.affordable == true, onClick = {
                             openLot = null
                             vm.extend(lot.id)
                         }, modifier = Modifier.fillMaxWidth()) {
-                            Text(ui("auction.extend_fee", game.index?.rules?.auction?.lotDays ?: 7, fee))
+                            Text(bill?.payLabel(ui("auction.extend_fee", game.index?.rules?.auction?.lotDays ?: 7, fee)) ?: ui("auction.extend_fee", game.index?.rules?.auction?.lotDays ?: 7, fee))
                         }
                     }
                     )

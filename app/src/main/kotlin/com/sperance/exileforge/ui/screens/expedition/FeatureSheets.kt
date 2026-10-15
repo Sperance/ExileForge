@@ -48,11 +48,13 @@ import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.GoldCost
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LocalLore
 import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.Lore
 import com.sperance.exileforge.ui.components.MutedText
+import com.sperance.exileforge.ui.components.payLabel
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -208,8 +210,13 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
                         if (sold) {
                             Text(ui("feature.merchant.sold"), color = Vital, style = MaterialTheme.typography.labelMedium)
                         } else {
-                            ForgeButton(enabled = money >= offer.price, onClick = { onCommand(RunCommand.Choose(i)) }, modifier = Modifier.fillMaxWidth()) {
-                                Text(ui("feature.merchant.buy", number(offer.price.toDouble())))
+                            // Цена против кошелька (0.14.5, #42): чип «цена / есть», не хватает - кнопка пишет недостачу
+                            val bill = game.goldBill(offer.price)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                bill?.let { GoldCost(it) }
+                                ForgeButton(enabled = bill?.affordable == true, onClick = { onCommand(RunCommand.Choose(i)) }, modifier = Modifier.weight(1f)) {
+                                    Text(bill?.payLabel(ui("feature.merchant.buy", number(offer.price.toDouble()))) ?: ui("feature.merchant.buy", number(offer.price.toDouble())))
+                                }
                             }
                         }
                     },
@@ -222,7 +229,7 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
     }
     chosen?.takeIf { it !in bought }?.let { i ->
         val offer = merchant.offers.getOrNull(i) ?: return@let
-        OfferSheet(game, offer.item, offer.price, money, onDismiss = { chosen = null }) {
+        OfferSheet(game, offer.item, offer.price, onDismiss = { chosen = null }) {
             chosen = null
             onCommand(RunCommand.Choose(i))
         }

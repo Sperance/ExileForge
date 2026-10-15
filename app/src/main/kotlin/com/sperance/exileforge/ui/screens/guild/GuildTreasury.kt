@@ -57,8 +57,10 @@ import com.sperance.exileforge.ui.theme.*
                     ForgeTextButton(enabled = !game.busy, onClick = { amount = most.toString() }) { Text(ui("guild.give_max", number(most.toDouble()))) }
                 }
                 val over = left != null && count > left
-                val short = have != null && count > have
-                if (short) Text(ui("guild.give_short"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                // Сумма против кошелька (0.14.5, #42): тот же счёт, что у всех оплат золотом
+                val bill = game.goldBill(count)
+                val short = bill?.affordable == false
+                if (short) bill?.let { Text(it.shortText(), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 if (over) Text(ui("guild.give_over_limit", number((left ?: 0L).toDouble())), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 // Кнопка остаётся на экране: после каждого удержания она снова взводится, поле чистится только принятым вкладом
                 HoldButton(

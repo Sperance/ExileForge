@@ -38,6 +38,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.command.UserProfile
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroView
+import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
@@ -158,7 +159,7 @@ class KeyScreensShotTest {
         // Ключевые «только Зодчий / только Пустота» (ASANA-N09): второй погашен с причиной
         val node = index.atlas.nodes.first { it.excludes.isNotEmpty() }
         val taken = setOf(index.atlasGraph.start) + node.excludes + index.atlasGraph.neighbours(node.code)
-        NodeSheet(index, node, taken, available = 3, price = 100, enabled = true, onTake = {}, onRefund = {}, modifier = Modifier)
+        NodeSheet(index, node, taken, available = 3, refund = GoldBill(100, 500), enabled = true, onTake = {}, onRefund = {}, modifier = Modifier)
     }
 
     @Test fun mapWithDoor() = shot("map", scroll = false) {

@@ -222,7 +222,13 @@ private fun joinBlock(game: GameUi, card: GuildCard, waiting: Boolean): String? 
                     },
                 )
             }
-            if (card.mode != GuildMode.OPEN && price > 0) MutedText(ui("guild.apply_note"))
+            // Цена вступления против кошелька (0.14.5, #42): спишется при принятии - заявку можно подать и без неё
+            if (card.mode != GuildMode.OPEN && price > 0) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MutedText(ui("guild.apply_note"), Modifier.weight(1f))
+                    game.goldBill(price)?.let { GoldCost(it) }
+                }
+            }
         }
     }
 }

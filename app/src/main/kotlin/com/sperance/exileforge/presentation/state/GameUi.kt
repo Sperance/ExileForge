@@ -13,6 +13,7 @@ import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.model.trade.Shortfall
 import com.sperance.exileforge.core.model.tree.TreeState
 import com.sperance.exileforge.core.network.Link
@@ -99,6 +100,9 @@ data class GameUi(
 
     /** Чего герою не хватает на [cost] (3.89.0); null, пока герой не прочитан. */
     fun shortfall(cost: Cost): Shortfall? = hero?.let { h -> cost.shortfall({ h.bag[it] ?: 0L }, h.money) }
+
+    /** Цена [price] в золоте против кошелька героя (0.14.5, #42); null, пока герой не прочитан. */
+    fun goldBill(price: Long): GoldBill? = hero?.let { GoldBill(price, it.money) }
     val orbs: List<Item> get() = HeroLens.orbs(index)
     val currencies: List<Item> get() = HeroLens.currencies(index)
     val bench: List<BenchRecipe> get() = HeroLens.bench(index, hero)

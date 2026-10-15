@@ -20,8 +20,10 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
+import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.character.Sheets
@@ -37,6 +39,7 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
+import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -50,15 +53,21 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.content.TakenNode
+import com.sperance.exileforge.rules.content.TrialKind
+import com.sperance.exileforge.rules.content.TrialRun
 import com.sperance.exileforge.rules.run.AltarPact
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.ui.components.LocalMotion
+import com.sperance.exileforge.ui.screens.admin.AdminPanels
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
+import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
 import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen
 import com.sperance.exileforge.ui.screens.expedition.NodeSheet
+import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
+import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
@@ -71,13 +80,14 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.koin.core.context.GlobalContext
 import java.io.File
 
 /**
  * Снимки ключевых экранов (0.14.0, UI-SHOTS): каждый экран рисуется над контентом закреплённого сервера по-русски, без анимаций,
  * и ложится в `design/shots/<имя>.jpg` - CI выгружает их артефактом `exile-forge-shots`; что обрезано или наехало, видно там.
  * Экраны: задания и контракты (макет B), гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
- * карта со стенами и дверью комнаты.
+ * карта со стенами и дверью комнаты, панель боя на 4 слота, окно сбора, админка.
  */
 class KeyScreensShotTest {
     @get:Rule val compose = createComposeRule()
@@ -158,6 +168,37 @@ class KeyScreensShotTest {
         }
         expedition.update(0.0)
         ExpeditionScene(expedition, mutableFloatStateOf(0f), heroClass.code, Modifier.fillMaxWidth().height(640.dp))
+    }
+
+    /** Панель боя на 4 слота (SKILL-02): живой бой раша - четыре активных умения класса в слотах. */
+    @Test fun fightBar() = shot("fight", scroll = false) {
+        val level = 50
+        val actives = index.skills.ofClass(heroClass.code).filter { it.unlock <= level && it.kind == SkillKind.ACTIVE }.take(4)
+        val skills = HeroSkills(learned = actives.associate { it.code to 5 }, active = actives.map { ActiveSlot(it.code, SlotCondition.READY) })
+        val sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
+        val kit = Loadout.of(skills, index, heroClass.code, emptyList(), sheet.stats, index.powers, index.rules.charges)
+        val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), kit, index.stats.percent)
+        val region = index.campaign.regions.first()
+        val arena = TrialArena(index, TrialRun("shot", TrialKind.RUSH, 7L, level, 0L, region = region.code), RunContext(heroClass.code, level), gear, emptyList(), onEvent = {})
+        val fight = checkNotNull(arena.hud.value.fight) { "the rush stands no fight" }
+        ActionBar(game(level), fight, FightFrame(mutableFloatStateOf(0f), arena.pulse), {}) {}
+    }
+
+    /** Окно сбора (ASANA-12, шаблон листа объекта карты): узел ремесла на карте, полоса сбора на 40%. */
+    @Test fun gathering() = shot("gathering", scroll = false) {
+        val level = 20
+        val zone = index.campaign.zones.first { it.level >= level }
+        val run = Run(index, zone, 7L, RunContext(heroClass.code, level, forced = setOf(MapMechanic.NODES)))
+        val node = run.features.all.filterIsInstance<MapFeature.Node>().first()
+        Box(Modifier.height(640.dp)) { FeatureSheet(game(level), FeatureView(node, emptyList(), gathering = .4f)) {} }
+    }
+
+    /** Админка с ролью администратора (ADMIN-UI): промокоды, выдачи, режим. */
+    @Test fun admin() = shot("admin", scroll = false) {
+        val vm: AdminViewModel = GlobalContext.get().get()
+        val plain = game(40)
+        val game = plain.copy(session = plain.session.copy(profile = UserProfile("owner", role = "ADMIN")))
+        Box(Modifier.height(1400.dp)) { AdminPanels(game, vm) }
     }
 
     /** Строка модификатора [code] серединой первого тира. */

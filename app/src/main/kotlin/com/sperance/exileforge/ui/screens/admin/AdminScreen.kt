@@ -36,6 +36,11 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable fun AdminScreen() {
     val vm = koinViewModel<AdminViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
+    AdminPanels(game, vm)
+}
+
+/** Панели админки по состоянию [game] (0.14.0, UI-SHOTS: снимок экрана рисует их с ролью администратора). */
+@Composable internal fun AdminPanels(game: GameUi, vm: AdminViewModel) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),

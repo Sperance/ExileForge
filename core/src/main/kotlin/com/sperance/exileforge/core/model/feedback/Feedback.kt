@@ -24,12 +24,11 @@ import kotlinx.serialization.Serializable
 @Serializable enum class ReportStatus { CREATED, SENT, REJECTED }
 
 /**
- * Судьба Issue отчёта (0.14.1, GH-ISSUES; сервер `IssueState`): открыт - [OPEN] («В работе») и [IN_PROGRESS] («Исправляется»);
+ * Судьба Issue отчёта (0.14.1, GH-ISSUES; сервер `IssueState`): открыт - [OPEN] («В работе»; 0.14.4 - метки «в работе» нет);
  * закрыт выполненным - [FIXED] (с версией), отказом - [NOT_PLANNED], [DUPLICATE], [INVALID].
  */
 @Serializable enum class IssueState(val open: Boolean) {
     OPEN(true),
-    IN_PROGRESS(true),
     FIXED(false),
     NOT_PLANNED(false),
     DUPLICATE(false),
@@ -56,8 +55,8 @@ import kotlinx.serialization.Serializable
 /** Запись переписки Issue (0.14.2): кто, что и когда (ISO-8601). */
 @Serializable data class IssueNote(val author: NoteAuthor, val text: String, val at: String = "")
 
-/** Что модерация делает с Issue отчёта из игры (0.14.2, сервер `IssueMove`): ответить, взять в работу, закрыть с причиной. */
-@Serializable enum class IssueMove { REPLY, PROGRESS, FIXED, NOT_PLANNED, INVALID, DUPLICATE }
+/** Что модерация делает с Issue отчёта из игры (0.14.2, сервер `IssueMove`): ответить или закрыть с причиной. */
+@Serializable enum class IssueMove { REPLY, FIXED, NOT_PLANNED, INVALID, DUPLICATE }
 
 /** Текст ответа в Issue из игры (0.14.2): автора отчёта или модерации. */
 @Serializable data class ReportAnswer(val text: String)

@@ -24,13 +24,10 @@ import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.presentation.app.WarmStep
-import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.ItemCard
-import com.sperance.exileforge.ui.components.WarmupScreen
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.HeroSummary
@@ -77,7 +74,6 @@ class NarrowScreenTest {
                     HeroSummary(state)
                     EquipmentLedger(state) { _, _ -> }
                     ItemCard(boots, detailed = true, actionLabel = "Свойства")
-                    Box(Modifier.height(360.dp)) { WarmupScreen(Warmup("hero", setOf(WarmStep.CONTENT, WarmStep.LOCALE))) }
                 }
             }
         }

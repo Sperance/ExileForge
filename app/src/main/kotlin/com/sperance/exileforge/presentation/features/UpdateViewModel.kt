@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.HttpLink
+import com.sperance.exileforge.core.session.WireFit
 import com.sperance.exileforge.core.update.AvailableUpdate
 import com.sperance.exileforge.core.update.Updates
 import com.sperance.exileforge.core.update.Wire
@@ -23,6 +24,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.filterNotNull
@@ -33,7 +35,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 
 /**
@@ -116,6 +117,15 @@ class UpdateViewModel(
             viewModelScope.launch { refreshResources() }
             // The server answered: its wire may make a build required, so the check runs again with it.
             viewModelScope.launch { reach.state.map { it.wire }.filterNotNull().distinctUntilChanged().collect { ask(Request.CHECK) } }
+            // Сервер новее сборки (0.14.4): окно запуска ждёт новую сборку - она ищется каждые [AWAIT_POLL_MS], пока не найдётся
+            viewModelScope.launch {
+                reach.window.map { it.fit == WireFit.GAME_BEHIND }.distinctUntilChanged().collectLatest { behind ->
+                    while (behind && state.value.update == null) {
+                        check(outdated = true)
+                        if (state.value.update == null) delay(AWAIT_POLL_MS)
+                    }
+                }
+            }
             // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour -
             // мимо очереди: без новой сборки игра дальше входа не пойдёт, и ресурсов ей ждать незачем.
             viewModelScope.launch { newerServer.collect { check(outdated = true) } }
@@ -145,12 +155,13 @@ class UpdateViewModel(
     }
 
     /**
-     * Очередь проверок: первая ждёт ресурсов старта (не дольше [RESOURCES_WAIT_MS] - без связи они могут и не прийти), каждая
-     * следующая идёт сразу, и в походе тоже; сверка ресурсов просьбы [Request.RECHECK] - своим чередом ([refreshResources]).
-     * После каждой проверки следующая плановая встаёт через час, после отказа GitHub - через минуту.
+     * Очередь проверок: первая ждёт провода сервера (не дольше [WIRE_WAIT_MS] - без связи он может и не прийти; 0.14.4 - не
+     * ресурсов: окно запуска держит игру до конца проверки, она идёт сразу), каждая следующая идёт сразу, и в походе тоже; сверка
+     * ресурсов просьбы [Request.RECHECK] - своим чередом ([refreshResources]). После каждой проверки следующая плановая встаёт
+     * через час, после отказа GitHub - через минуту.
      */
     private suspend fun serve() {
-        trace.step(StartStage.VERSION, "start.step.wait_resources") { withTimeoutOrNull(RESOURCES_WAIT_MS) { resources.ready.first { it } } }
+        trace.step(StartStage.VERSION, "start.step.server_manifest") { reach.wire(WIRE_WAIT_MS) }
         while (true) {
             pending.filterNotNull().first()
             val request = pending.getAndUpdate { null } ?: continue
@@ -237,6 +248,11 @@ class UpdateViewModel(
         }
     }
 
+    /** «Проверить сейчас» окна запуска (0.14.4): сервер новее сборки - новая ищется тут же, а не через [AWAIT_POLL_MS]. */
+    fun checkNow() {
+        if (BuildConfig.UPDATES) viewModelScope.launch { check(outdated = true) }
+    }
+
     /** «Обновить»: the APK is downloaded from GitHub (resumed where it broke off), its SHA-256 checked, the installer asked. */
     fun install() {
         val update = state.value.update ?: return
@@ -282,8 +298,11 @@ class UpdateViewModel(
         /** Возвращение в игру проверяет сборку, только если GitHub отвечал не позже этого (4.9.0). */
         const val RESUME_GAP_MS = 10 * 60_000L
 
-        /** Дольше этого первая проверка не ждёт ресурсов старта: без связи они не придут, а сборку искать надо. */
-        const val RESOURCES_WAIT_MS = 30_000L
+        /** Дольше этого первая проверка не ждёт провода сервера: без связи он не придёт, а сборку искать надо. */
+        const val WIRE_WAIT_MS = 20_000L
+
+        /** Как часто ищется новая сборка, пока сервер новее этой (0.14.4). */
+        const val AWAIT_POLL_MS = 30_000L
 
         /** Back in the game while installing: the installer's answer is waited for this long before the retry is offered. */
         const val INSTALLER_GRACE_MS = 3_000L

@@ -50,7 +50,7 @@ class FeedbackClient internal constructor(private val http: Transport) {
     /** Issue в GitHub (0.14.1, GH-ISSUES): из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
     suspend fun toIssue(id: String): AdminReport = http.post("$ADMIN/feedback/issue", mapOf("id" to id))
 
-    /** Issue из игры (0.14.2): ответ модерации, «в работу», закрытие с причиной; [duplicate] - номер оригинала у дубля. */
+    /** Issue из игры (0.14.2): ответ модерации, закрытие с причиной; [duplicate] - номер оригинала у дубля. */
     suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int = 0): AdminReport = http.post(
         "$ADMIN/feedback/issue/move",
         mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),

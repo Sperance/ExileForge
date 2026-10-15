@@ -90,7 +90,7 @@ class FeedbackViewModel(
         notices.toast(ui("feedback.answer_sent"))
     }
 
-    /** Модерация ведёт Issue отчёта из игры (0.14.2): ответ, «в работу», закрытие с причиной; судьба приходит из GitHub сразу. */
+    /** Модерация ведёт Issue отчёта из игры (0.14.2): ответ или закрытие с причиной; судьба приходит из GitHub сразу. */
     fun steerIssue(id: String, move: IssueMove, text: String, duplicate: Int = 0) = answer(ui("feedback.issue_moved")) { api.feedback.steer(id, move, text, duplicate) }
 
     /** Отчёт в GitHub Issues (0.14.1): сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */

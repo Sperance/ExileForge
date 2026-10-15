@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.components
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -11,11 +12,15 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.Lifecycle
@@ -26,9 +31,12 @@ import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reach
 import com.sperance.exileforge.core.session.StartGate
+import com.sperance.exileforge.core.session.StartInput
 import com.sperance.exileforge.core.session.StartVerdict
 import com.sperance.exileforge.presentation.app.ReachState
 import com.sperance.exileforge.presentation.app.StartWindow
+import com.sperance.exileforge.presentation.app.WarmStep
+import com.sperance.exileforge.presentation.app.Warmup
 import com.sperance.exileforge.presentation.features.UpdateState
 import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.theme.*
@@ -44,18 +52,21 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
 }
 
 /**
- * Окно запуска и обновлений (3.86.0). Пока сервер не ответил - несколько строк: версия и данные устройства. Ответил -
- * окна нет ([StartGate]), догрузка видна на экранах. Сервер молчит - так и написано, повтор сам через 10 с, «Повторить
- * сейчас» и «Играть без связи». Любая найденная сборка закрывает игру до установки. Ни одно окно запуска и обновления не
- * закрывается «назад» или касанием мимо. [busy] - идёт поход или испытание: найденное обновление ждёт его конца, а пока
- * о нём говорит плашка сверху ([UpdateHint]), не мешая бою.
+ * Окно запуска, обновления и прогрева - одно (0.14.4, макет «Окно запуска», вариант B «Заставка с полосой»): заставка во весь экран,
+ * внизу - что идёт сейчас и общая полоса, шаги - по «Подробнее». Что показать, решает [StartGate] по модели (связь, провод сервера,
+ * проверка сборки, мир устройства, прогрев героя [warmup]); обязательное обновление и несовпавший провод сервера держат окно, пока
+ * не разрешатся, - игра пишет, чего ждёт. Окно появляется не раньше [SHOW_DELAY_MS] (быстрый запуск его не мигает), а показавшись,
+ * держится не меньше [MIN_SHOWN_MS] и уходит одним переходом: «отпущен» - флаг модели на весь процесс ([ServerReach.release]),
+ * а не экрана. Ни назад, ни касание мимо его не закрывают. [busy] - идёт поход, испытание или Разлом: найденное обновление ждёт
+ * его конца, а пока о нём говорит плашка сверху ([UpdateHint]), не мешая бою.
  */
 @Composable fun UpdateGate(
     updates: UpdateViewModel,
     busy: Boolean,
     stages: StartStages,
     window: StartWindow,
-    onRetry: () -> Unit,
+    warmup: Warmup?,
+    actions: StartActions,
     diagnostics: () -> String,
 ) {
     // Не привязано к жизненному циклу (3.87.0): окно запуска обязано видеть каждое изменение, пока оно на экране.
@@ -66,14 +77,27 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.resumed() }
     // Back from the settings or the system installer: the permission is asked again, a closed installer stops waiting.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updates.foreground() }
-    // The window is the start's, once: a server lost later in the game is the banner's.
-    var released by rememberSaveable { mutableStateOf(false) }
-    val verdict = StartGate.verdict(reach.reach, s.mandatory && !busy, window.elapsedMs)
-    LaunchedEffect(verdict) { if (verdict == StartVerdict.RELEASE) released = true }
-    // Предел окна и на стороне экрана: даже если модель не дошла до него, окно уходит само.
-    LaunchedEffect(Unit) {
-        delay(StartGate.LIMIT_MS)
-        released = true
+    val warming = warmup?.takeIf { !it.finished }
+    val verdict = StartGate.verdict(
+        StartInput(reach.reach, window.fit, s.mandatory, s.checking, stages.deviceReady, warming != null, window.elapsedMs, window.released, busy),
+    )
+    LaunchedEffect(verdict) { if (verdict == StartVerdict.RELEASE) actions.release() }
+    // Появление с задержкой и не короче [MIN_SHOWN_MS]: последний показанный вид держится, пока окно уходит
+    var visible by remember { mutableStateOf(false) }
+    var shownAt by remember { mutableLongStateOf(0L) }
+    var face by remember { mutableStateOf(verdict.takeIf { it.shown } ?: StartVerdict.HOLD) }
+    if (verdict.shown) face = verdict
+    LaunchedEffect(verdict.shown) {
+        if (verdict.shown) {
+            if (!visible) {
+                delay(SHOW_DELAY_MS)
+                shownAt = System.currentTimeMillis()
+                visible = true
+            }
+        } else if (visible) {
+            delay((MIN_SHOWN_MS - (System.currentTimeMillis() - shownAt)).coerceAtLeast(0))
+            visible = false
+        }
     }
     var waited by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -81,30 +105,129 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
         waited = true
     }
     when {
-        verdict == StartVerdict.UPDATE -> Locked { UpdateBody(s, updates) }
+        visible -> Splash {
+            when (face) {
+                StartVerdict.UPDATE -> UpdateBody(s, updates)
 
-        !released -> Locked {
-            Text(ui("start.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-            StartRows(s, stages, reach)
-            if (verdict == StartVerdict.UNREACHABLE) {
-                Text(ui("start.unreachable"), color = Ember, style = MaterialTheme.typography.bodyMedium)
-                ForgeButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) { Text(ui("start.retry")) }
-            }
-            if (verdict == StartVerdict.UNREACHABLE || waited) {
-                ForgeOutlinedButton(onClick = { released = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("start.offline")) }
-                CopyLog {
-                    "--- window\nlifecycle=${lifecycle.currentState} verdict=$verdict released=$released busy=$busy\nseen $window\nseen update checking=${s.checking} " +
-                        "update=${s.update?.info?.versionName} failure=${s.failure}\nlive update checking=${updates.state.value.checking}\n$stages\n" + diagnostics()
+                StartVerdict.AWAIT_GAME -> Awaiting(ui("launch.await_game.title"), ui("launch.await_game.text"), null, updates::checkNow)
+
+                StartVerdict.AWAIT_SERVER -> Awaiting(ui("launch.await_server.title"), ui("launch.await_server.text"), reach.retryAt, actions.checkFit)
+
+                StartVerdict.WARMING -> warming?.let { Warming(it) }
+
+                else -> {
+                    Starting(s, stages, reach, unreachable = face == StartVerdict.UNREACHABLE)
+                    if (face == StartVerdict.UNREACHABLE) ForgeButton(onClick = actions.retry, modifier = Modifier.fillMaxWidth()) { Text(ui("start.retry")) }
+                    if (face == StartVerdict.UNREACHABLE || waited) {
+                        ForgeOutlinedButton(onClick = actions.release, modifier = Modifier.fillMaxWidth()) { Text(ui("start.offline")) }
+                        CopyLog {
+                            "--- window\nlifecycle=${lifecycle.currentState} verdict=$verdict face=$face visible=$visible busy=$busy\nseen $window\nseen update checking=${s.checking} " +
+                                "update=${s.update?.info?.versionName} failure=${s.failure}\nlive update checking=${updates.state.value.checking}\n$stages\nwarmup=$warmup\n" + diagnostics()
+                        }
+                    }
                 }
             }
         }
 
-        s.askSources -> Locked { SourcesBody() }
+        s.askSources && window.released -> Locked { SourcesBody() }
 
         // Сборка найдена в походе или испытании: игру она закроет по их концу, а пока - плашка сверху, ничего не держит
         busy -> s.update?.let { UpdateHint(it.info.versionName) }
     }
 }
+
+/** Что окно запуска умеет сделать по кнопкам: повторить связь, отпустить старт («Играть без связи»), перечитать провод сервера. */
+class StartActions(val retry: () -> Unit, val release: () -> Unit, val checkFit: () -> Unit)
+
+/** Запуск: что идёт сейчас строкой, общая полоса по шагам (связь, версия, мир устройства) и шаги - по «Подробнее». */
+@Composable private fun ColumnScope.Starting(s: UpdateState, stages: StartStages, reach: ReachState, unreachable: Boolean) {
+    val steps = listOf(reach.reach == Reach.ANSWERED, !s.checking, stages.deviceReady)
+    val now = when {
+        unreachable -> ui("start.unreachable")
+        reach.reach != Reach.ANSWERED -> ui("launch.step.server")
+        s.progress != null -> ui("start.state.downloading", (s.progress * 100).toInt())
+        s.checking -> ui("launch.step.version")
+        !stages.deviceReady -> ui("launch.step.device")
+        else -> ui("launch.step.ready")
+    }
+    Status(now, steps.count { it }.toFloat() / steps.size, if (unreachable) Ember else Gold) { StartRows(s, stages, reach) }
+}
+
+/** Прогрев героя: шаг, что идёт, полоса и все шаги - по «Подробнее». */
+@Composable private fun ColumnScope.Warming(warmup: Warmup) {
+    val current = WarmStep.entries.firstOrNull { it !in warmup.done }
+    Status(ui("launch.step.world", current?.let { ui("warmup.step.${it.name}") } ?: ui("launch.step.ready")), warmup.progress, Gold) {
+        WarmStep.entries.forEach { step -> StartRow(ui("warmup.step.${step.name}"), if (step in warmup.done) RowState.DONE else RowState.RUN, "") }
+    }
+}
+
+/** Провода не совпали: что ждём и почему, когда следующая проверка ([nextAt], null - без отсчёта) и «Проверить сейчас». */
+@Composable private fun ColumnScope.Awaiting(title: String, text: String, nextAt: Long?, onCheck: () -> Unit) {
+    Text(title, color = Caution, style = MaterialTheme.typography.titleMedium)
+    MutedText(text)
+    LinearProgressIndicator(Modifier.fillMaxWidth(), color = Caution, trackColor = PanelRaised)
+    nextAt?.let { at ->
+        val now by ticking()
+        MutedText(ui("launch.next_check", ((at - now + 999) / 1000).coerceAtLeast(0)), style = MaterialTheme.typography.labelSmall)
+    }
+    ForgeOutlinedButton(onClick = onCheck, modifier = Modifier.fillMaxWidth()) { Text(ui("launch.check_now")) }
+}
+
+/** Строка «что идёт», полоса доли [progress] и шаги [details] - по «Подробнее». */
+@Composable private fun ColumnScope.Status(now: String, progress: Float, tint: Color, details: @Composable ColumnScope.() -> Unit) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    Text(now, color = Parchment, style = MaterialTheme.typography.bodyMedium)
+    LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = tint, trackColor = PanelRaised)
+    Text(
+        ui(if (open) "launch.less" else "launch.more", (progress * 100).toInt()),
+        color = Rune,
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.align(Alignment.End).clickable(role = Role.Button) { open = !open }.padding(4.dp),
+    )
+    if (open) Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = details)
+}
+
+/** Часы окна: пересчёт отсчётов раз в [TICK_MS]. */
+@Composable private fun ticking(): State<Long> = produceState(System.currentTimeMillis()) {
+    while (true) {
+        delay(TICK_MS)
+        value = System.currentTimeMillis()
+    }
+}
+
+/** Заставка во весь экран: знак игры по центру, версия под ним, внизу - [content] окна; ни назад, ни касание мимо не закрывают. */
+@Composable private fun Splash(content: @Composable ColumnScope.() -> Unit) {
+    Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        ChordOverDialog()
+        Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(PanelRaised, Ink), radius = SPLASH_GLOW)).systemBarsPadding()) {
+            Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(BRAND, color = GoldBright, style = MaterialTheme.typography.headlineMedium, fontFamily = FontFamily.Serif, letterSpacing = 3.sp)
+                VersionLabel()
+            }
+            Column(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().widthIn(max = 480.dp).heightIn(max = SPLASH_PANEL).verticalScroll(rememberScrollState())
+                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+                content = content,
+            )
+        }
+    }
+}
+
+/** Знак игры на заставке - бренд, не строка словаря. */
+private const val BRAND = "EXILE FORGE"
+
+/** Окно запуска появляется не раньше этого: быстрый запуск обходится без него. */
+private const val SHOW_DELAY_MS = 600L
+
+/** Показавшееся окно держится не меньше этого: без мигания. */
+private const val MIN_SHOWN_MS = 800L
+
+/** Размах свечения заставки. */
+private const val SPLASH_GLOW = 1200f
+
+/** Наибольшая высота нижней части заставки: длинные заметки обновления прокручиваются. */
+private val SPLASH_PANEL = 560.dp
 
 /** Плашка сверху над боем: найдено обновление, оно встанет по концу похода или испытания; касания идут мимо неё. */
 @Composable private fun UpdateHint(version: String) {
@@ -120,12 +243,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
 
 /** Строки окна запуска: что проверяется или качается сейчас, по пункту на строку; связь - только когда её нет. */
 @Composable private fun StartRows(s: UpdateState, stages: StartStages, reach: ReachState) {
-    val now by produceState(System.currentTimeMillis()) {
-        while (true) {
-            delay(TICK_MS)
-            value = System.currentTimeMillis()
-        }
-    }
+    val now by ticking()
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Связь - не пункт для игрока: строка появляется только с ошибкой, вместе с отсчётом до повтора.
         if (reach.reach == Reach.UNREACHABLE) {

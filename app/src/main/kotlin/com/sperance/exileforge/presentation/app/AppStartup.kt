@@ -21,6 +21,7 @@ import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -46,6 +47,7 @@ class AppStartup(
     private val trace: StartupTrace,
     private val watchdog: StallWatchdog,
     private val crashes: CrashKeeper,
+    private val reach: ServerReach,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     /**
      * Запуск после сборки (3.80.12): отражения репозиториев и старт сессии. Из конструктора корутины не запускаются -
@@ -80,15 +82,9 @@ class AppStartup(
                 commands.ready()
                 loader.refreshLocale()
                 loader.refreshIcons()
-                val saved = trace.step(StartStage.SESSION, "start.step.token") { store.token(server) }
-                // The fast start (3.30.0): the last hero from the device at once, the session confirmed behind it.
-                if (saved != null) {
-                    if (!sessionActions.fastStart(server, saved)) sessionActions.resume(saved)
-                } else if (store.deviceSession.first()) {
-                    sessionActions.playOnThisDevice(silent = true)
-                } else {
-                    trace.note(StartStage.SESSION, "start.step.no_session")
-                }
+                join(server)
+                // Сервер старше сборки обновился, пока окно запуска ждало (0.14.4): вход, что сервер не принял, - снова
+                scope.launch { reach.fitted.receiveAsFlow().collect { join(server) } }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -99,6 +95,19 @@ class AppStartup(
             } finally {
                 trace.started()
             }
+        }
+    }
+
+    /** Вход: быстрый с устройства, по сохранённой сессии или по устройству; сессии нет - ничего. */
+    private suspend fun join(server: String) {
+        val saved = trace.step(StartStage.SESSION, "start.step.token") { store.token(server) }
+        // The fast start (3.30.0): the last hero from the device at once, the session confirmed behind it.
+        if (saved != null) {
+            if (!sessionActions.fastStart(server, saved)) sessionActions.resume(saved)
+        } else if (store.deviceSession.first()) {
+            sessionActions.playOnThisDevice(silent = true)
+        } else {
+            trace.note(StartStage.SESSION, "start.step.no_session")
         }
     }
 

@@ -26,8 +26,8 @@ class StartWindowTest {
         }
     }
 
-    /** Окна нет, или оно сказало, что сервер молчит, - но не «подключение…». */
-    private fun settled(): Boolean = compose.onAllNodesWithText(ui("start.title")).fetchSemanticsNodes().isEmpty() ||
+    /** Окно не ждёт связи (0.14.4: одно окно запуска) или сказало, что сервер молчит, - но не «связь с сервером…». */
+    private fun settled(): Boolean = compose.onAllNodesWithText(ui("launch.step.server")).fetchSemanticsNodes().isEmpty() ||
         compose.onAllNodesWithText(ui("start.retry")).fetchSemanticsNodes().isNotEmpty()
 
     private companion object {

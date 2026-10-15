@@ -14,7 +14,6 @@ import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.Send
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.BugReport
-import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
@@ -97,7 +96,6 @@ enum class ReportFate(val tint: Color, val icon: ImageVector, val closed: Boolea
     REJECTED(Color(0xFFC9746F), Icons.Outlined.Shield, closed = true),
     SENT(Color(0xFFF2C94C), Icons.AutoMirrored.Outlined.Send),
     OPEN(Color(0xFFF2C94C), Icons.AutoMirrored.Outlined.FormatListBulleted),
-    IN_PROGRESS(Color(0xFFD9853B), Icons.Outlined.Build),
     FIXED(Color(0xFF7BE0A6), Icons.Outlined.CheckCircle, closed = true),
     NOT_PLANNED(Color(0xFF9AA7B0), Icons.Outlined.Close, closed = true),
     INVALID(Color(0xFF9AA7B0), Icons.Outlined.Block, closed = true),
@@ -113,7 +111,6 @@ enum class ReportFate(val tint: Color, val icon: ImageVector, val closed: Boolea
 
             else -> when (issue.state) {
                 IssueState.OPEN -> OPEN
-                IssueState.IN_PROGRESS -> IN_PROGRESS
                 IssueState.FIXED -> FIXED
                 IssueState.NOT_PLANNED -> NOT_PLANNED
                 IssueState.INVALID -> INVALID
@@ -123,7 +120,7 @@ enum class ReportFate(val tint: Color, val icon: ImageVector, val closed: Boolea
     }
 }
 
-/** Слова судьбы [fate] отчёта вида [kind]: «Исправляется», версия и номер дубля; [short] - для узкой плашки. */
+/** Слова судьбы [fate] отчёта вида [kind]: «В работе», версия и номер дубля; [short] - для узкой плашки. */
 fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Boolean = false): String {
     val version = issue?.version.orEmpty()
     return when (fate) {
@@ -131,7 +128,6 @@ fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Bo
         ReportFate.REJECTED -> ui(if (short) "feedback.fate.rejected_short" else "feedback.fate.rejected")
         ReportFate.SENT -> ui("feedback.fate.sent")
         ReportFate.OPEN -> ui("feedback.fate.open")
-        ReportFate.IN_PROGRESS -> ui("feedback.fate.fixing")
         ReportFate.FIXED -> if (version.isBlank()) ui("feedback.fate.fixed") else ui("feedback.fate.fixed_in", version)
         ReportFate.NOT_PLANNED -> ui(if (short) "feedback.fate.wontfix_short" else "feedback.fate.wontfix")
         ReportFate.INVALID -> ui("feedback.fate.invalid")
@@ -158,7 +154,7 @@ enum class ReportsTab { MINE, KNOWN }
 /**
  * Отчёты (0.14.1, GH-ISSUES, макет A; 0.14.2 - без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
  * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −», поиск
- * по тексту и номеру). Открытые выше закрытых; известные - сначала «Исправляется», затем по рейтингу и номеру. Списки
+ * по тексту и номеру). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
  * перечитываются (0.14.4, #33) потягиванием вниз и нажатием на уже открытую вкладку.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -230,11 +226,11 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
     }
 }
 
-/** Известные проблемы по поиску [query] (текст или «#номер»): «Исправляется» первыми, затем по рейтингу и номеру. */
+/** Известные проблемы по поиску [query] (текст или «#номер»): по рейтингу, затем по номеру. */
 private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> {
     val words = query.trim().removePrefix("#")
     return all.filter { words.isEmpty() || it.text.contains(words, ignoreCase = true) || it.issue?.number?.toString() == words }
-        .sortedWith(compareBy<KnownReport> { it.issue?.state != IssueState.IN_PROGRESS }.thenByDescending { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
+        .sortedWith(compareByDescending<KnownReport> { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
 }
 
 /**
@@ -283,22 +279,21 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 }
 
 /**
- * Путь отчёта для шкалы (0.14.2, #23): четыре шага - принят, отправлен, в работе, итог; [reached] - сколько пройдено (последний
- * пройденный - «сейчас»), [tint] - цвет судьбы; последний шаг - итог: у отказа это сам отказ, у дубля - его номер.
+ * Путь отчёта для шкалы (0.14.2, #23; 0.14.4 - три шага): принят, в работе (Issue открыт - отправка и работа теперь одно), итог;
+ * [reached] - сколько пройдено (последний пройденный - «сейчас»), [tint] - цвет судьбы; последний шаг - итог: у отказа это сам
+ * отказ, у дубля - его номер.
  */
 private data class StepPath(val labels: List<String>, val reached: Int, val tint: Color) {
     companion object {
         fun of(fate: ReportFate, kind: FeedbackKind, issue: IssueView?): StepPath {
-            val work = ui("feedback.fate.fixing")
             val done = ui("feedback.fate.fixed")
-            val base = listOf(ui("feedback.step.accepted"), ui("feedback.fate.sent"), work)
+            val base = listOf(ui("feedback.step.accepted"), ui("feedback.fate.open"))
             return when (fate) {
                 ReportFate.MODERATION -> StepPath(base + done, 1, fate.tint)
                 ReportFate.REJECTED -> StepPath(listOf(base[0], fateTitle(fate, kind, issue, short = true)), 2, fate.tint)
                 ReportFate.SENT, ReportFate.OPEN -> StepPath(base + done, 2, fate.tint)
-                ReportFate.IN_PROGRESS -> StepPath(base + done, 3, fate.tint)
-                ReportFate.FIXED -> StepPath(base + fateTitle(fate, kind, issue), 4, fate.tint)
-                ReportFate.NOT_PLANNED, ReportFate.INVALID, ReportFate.DUPLICATE -> StepPath(base.take(2) + fateTitle(fate, kind, issue, short = true), 3, fate.tint)
+                ReportFate.FIXED -> StepPath(base + fateTitle(fate, kind, issue), 3, fate.tint)
+                ReportFate.NOT_PLANNED, ReportFate.INVALID, ReportFate.DUPLICATE -> StepPath(base + fateTitle(fate, kind, issue, short = true), 3, fate.tint)
             }
         }
     }

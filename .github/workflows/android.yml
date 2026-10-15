@@ -484,7 +484,7 @@ jobs:
             [ "$state" = OPEN ] || continue
             word="Закрыто"
             gh issue comment "$n" --body "$word в ${tag#v}"
-            gh issue edit "$n" --add-label "$tag" --remove-label in-progress || gh issue edit "$n" --add-label "$tag"
+            gh issue edit "$n" --add-label "$tag"
             gh issue close "$n" --reason completed
             echo "closed #$n: $word в ${tag#v}"
           done

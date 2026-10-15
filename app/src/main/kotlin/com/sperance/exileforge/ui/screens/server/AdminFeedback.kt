@@ -230,7 +230,7 @@ private const val REASON = 400
 private const val SEARCH = 60
 
 /**
- * Ведение Issue из игры (0.14.2): слово модерации (уходит комментарием) и действие - ответить, взять в работу, закрыть
+ * Ведение Issue из игры (0.14.2): слово модерации (уходит комментарием) и действие - ответить, закрыть
  * исправленным, отказом или дублем (с номером оригинала). Судьба приходит из GitHub сразу.
  */
 @Composable private fun IssueSteer(account: AccountUi, vm: FeedbackViewModel, id: String) {

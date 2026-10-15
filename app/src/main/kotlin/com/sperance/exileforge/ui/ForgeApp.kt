@@ -1,6 +1,7 @@
 package com.sperance.exileforge.ui
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
@@ -39,10 +40,10 @@ import com.sperance.exileforge.ui.components.LocalUpdates
 import com.sperance.exileforge.ui.components.MailSheet
 import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.ReportsSheet
+import com.sperance.exileforge.ui.components.StartActions
 import com.sperance.exileforge.ui.components.StartStages
 import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.UpdateGate
-import com.sperance.exileforge.ui.components.WarmupScreen
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
 import com.sperance.exileforge.ui.screens.city.CityScreen
@@ -109,7 +110,19 @@ import org.koin.compose.viewmodel.koinViewModel
             shell.game.map { g -> StartStages(g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0) }.distinctUntilChanged()
         }.collectAsState(StartStages(contentReady = false, dictionaryReady = false, iconsReady = false))
         val watchdog = koinInject<StallWatchdog>()
-        UpdateGate(updates, busy = expedition != null || trial != null, stages = stages, window = window, onRetry = shell.reach::retry, diagnostics = watchdog::diagnostics)
+        // 0.14.4: прогрев героя - то же окно запуска; прогрев другого героя - не этого
+        val warmup by shell.warmup.collectAsState()
+        val heroId by remember(shell) { shell.game.map { it.heroId }.distinctUntilChanged() }.collectAsState("")
+        val actions = remember(shell) { StartActions(shell.reach::retry, shell.reach::release, shell.reach::checkFit) }
+        UpdateGate(
+            updates,
+            busy = expedition != null || trial != null || rift.arena != null,
+            stages = stages,
+            window = window,
+            warmup = warmup?.takeIf { it.heroId == heroId },
+            actions = actions,
+            diagnostics = watchdog::diagnostics,
+        )
     }
 }
 
@@ -170,7 +183,8 @@ import org.koin.compose.viewmodel.koinViewModel
                                         // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
                                         notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
 
-                                        warming != null -> WarmupScreen(warming)
+                                        // Прогрев (0.14.4): его показывает окно запуска поверх, под ним - пустая заставка, а не полусобранная игра
+                                        warming != null -> Box(Modifier.fillMaxSize().background(Ink))
 
                                         run != null -> ExpeditionPlay(run)
 

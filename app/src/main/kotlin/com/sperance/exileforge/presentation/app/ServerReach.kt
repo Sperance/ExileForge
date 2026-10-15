@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.app
 import com.sperance.exileforge.core.session.Reach
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.StartGate
+import com.sperance.exileforge.core.session.WireFit
 import com.sperance.exileforge.core.update.Wire
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -23,8 +24,13 @@ import kotlinx.coroutines.withTimeoutOrNull
 /** Связь со стартом в миг: где она, провод ответившего сервера и когда следующая попытка. */
 data class ReachState(val reach: Reach = Reach.CONNECTING, val wire: Wire? = null, val retryAt: Long = 0)
 
-/** Окно запуска глазами модели (3.87.0): связь и сколько идёт старт - по ним [StartGate] решает, держать ли окно. */
-data class StartWindow(val reach: ReachState = ReachState(), val elapsedMs: Long = 0)
+/**
+ * Окно запуска глазами модели (3.87.0): связь, сколько идёт старт и отпущен ли он ([released], 0.14.4 - на весь процесс, а не на
+ * экран) - по ним [StartGate] решает, держать ли окно; [fit] - провод ответившего сервера против этой сборки.
+ */
+data class StartWindow(val reach: ReachState = ReachState(), val elapsedMs: Long = 0, val released: Boolean = false) {
+    val fit: WireFit? get() = reach.wire?.let(WireFit::of)
+}
 
 /**
  * Связь с сервером на старте (3.86.0): манифест сервера спрашивается сразу, а не ответил - каждые [RETRY_MS] снова или по
@@ -43,9 +49,16 @@ class ServerReach(
     private val nudge = Channel<Unit>(Channel.CONFLATED)
     private var started = false
     private val elapsed = MutableStateFlow(0L)
+    private val released = MutableStateFlow(false)
+    private val awaitNudge = Channel<Unit>(Channel.CONFLATED)
 
     /** Окно запуска как его решает модель, а не экран: связь и время старта, тиком до предела [StartGate.LIMIT_MS]. */
-    val window: StateFlow<StartWindow> = combine(state, elapsed, ::StartWindow).stateIn(scope, SharingStarted.Eagerly, StartWindow())
+    val window: StateFlow<StartWindow> = combine(state, elapsed, released, ::StartWindow).stateIn(scope, SharingStarted.Eagerly, StartWindow())
+
+    /** Старт отпущен (0.14.4): окно старта больше не возвращается - ни экраном, ни после пересоздания Activity. */
+    fun release() {
+        released.value = true
+    }
 
     fun start() {
         if (started) return
@@ -71,6 +84,7 @@ class ServerReach(
                 if (wire != null) {
                     mutable.value = ReachState(Reach.ANSWERED, wire)
                     if (failed) lazyLink.value.wake(now = true)
+                    awaitFit()
                     return@launch
                 }
                 failed = true
@@ -87,6 +101,30 @@ class ServerReach(
     fun retry() {
         nudge.trySend(Unit)
     }
+
+    /**
+     * Провод сервера не совпал с этой сборкой (0.14.4): манифест перечитывается каждые [AWAIT_POLL_MS] или по «Проверить сейчас»
+     * ([checkFit]), пока провода не сойдутся - сервер, что старше сборки, обновится сам; сборку новее ищет [UpdateViewModel].
+     * Сошлись - игра снова входит в сессию ([fitted]).
+     */
+    private suspend fun awaitFit() {
+        if (WireFit.of(state.value.wire ?: return) == WireFit.MATCH) return
+        while (state.value.wire?.let(WireFit::of) != WireFit.MATCH) {
+            mutable.update { it.copy(retryAt = System.currentTimeMillis() + AWAIT_POLL_MS) }
+            withTimeoutOrNull(AWAIT_POLL_MS) { awaitNudge.receive() }
+            foreground.awaitFront()
+            freshWire()
+        }
+        fitted.trySend(Unit)
+    }
+
+    /** «Проверить сейчас» при несовпавшем проводе. */
+    fun checkFit() {
+        awaitNudge.trySend(Unit)
+    }
+
+    /** Провода сошлись после ожидания: сессия, что не вошла с чужим сервером, входит снова. */
+    val fitted = Channel<Unit>(Channel.CONFLATED)
 
     /**
      * Провод сервера сейчас: манифест спрашивается заново - сервер мог смениться, пока игра была в фоне, и провод старта
@@ -115,5 +153,8 @@ class ServerReach(
         /** Дольше этого свежий провод не ждётся: проверка обновления идёт с прежним. */
         const val FRESH_MS = 10_000L
         const val TICK_MS = 500L
+
+        /** Как часто перечитывается провод сервера, пока он не совпал со сборкой (0.14.4). */
+        const val AWAIT_POLL_MS = 30_000L
     }
 }

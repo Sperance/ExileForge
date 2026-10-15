@@ -89,7 +89,8 @@ import kotlinx.serialization.json.JsonElement
  *      Без предложений (`SUGGESTION`, `IssueState.DONE`, `inputs.suggestion`; `Suggestion` → `KnownReport`), голос - за ошибку;
  *      переписка `IssueView.notes`, ответ автора `POST bugreport/answer`, модерация Issue `POST admin/feedback/issue/move`.
  * 87 - пакет 0.14.4: без «Похожее уже известно» (`bugreport/similar`, `feedback.similar`); захват выгрузки Issue
- *      `feedback.exportHoldMinutes`.
+ *      `feedback.exportHoldMinutes`; без метки «в работе» (`IssueState.IN_PROGRESS`, `IssueMove.PROGRESS`); руна умения
+ *      `SkillDefinition.sigil`.
  */
 const val API_REVISION = 87
 

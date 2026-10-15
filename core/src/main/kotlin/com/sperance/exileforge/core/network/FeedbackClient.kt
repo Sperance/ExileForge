@@ -22,6 +22,12 @@ private const val ADMIN = "api/v1/admin"
 class FeedbackClient internal constructor(private val http: Transport) {
     suspend fun suggestions(): List<Suggestion> = http.get("$REPORTS/suggestions")
     suspend fun mine(): List<OwnReport> = http.get("$REPORTS/mine")
+
+    /** Известные проблемы (0.14.1, GH-ISSUES): ошибки и предложения с открытым Issue, по рейтингу. */
+    suspend fun known(): List<Suggestion> = http.get("$REPORTS/known", mapOf("size" to KNOWN_PAGE.toString()))
+
+    /** Похожее уже известно (0.14.1): открытые известные проблемы, близкие к черновику [text]. */
+    suspend fun similar(text: String): List<Suggestion> = http.get("$REPORTS/similar", mapOf("text" to text))
     suspend fun vote(id: String, vote: Vote): Suggestion = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
 
     /** Удаление отчёта (4.3.0, сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
@@ -39,8 +45,13 @@ class FeedbackClient internal constructor(private val http: Transport) {
 
     suspend fun setStatus(id: String, status: ReportStatus, reason: String): AdminReport = http.post("$ADMIN/feedback/status", mapOf("id" to id, "status" to status.name, "reason" to reason))
 
-    /** To Asana (3.75.0, server 1.70.0): a task of it, its link kept on the report, the status «in progress». */
-    suspend fun toAsana(id: String): AdminReport = http.post("$ADMIN/feedback/asana", mapOf("id" to id))
+    /** Issue в GitHub (0.14.1, GH-ISSUES): из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
+    suspend fun toIssue(id: String): AdminReport = http.post("$ADMIN/feedback/issue", mapOf("id" to id))
+
+    private companion object {
+        /** Известных проблем за раз: весь открытый список, поиск и фильтр - на клиенте. */
+        const val KNOWN_PAGE = 100
+    }
 }
 
 /**

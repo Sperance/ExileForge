@@ -82,8 +82,10 @@ import kotlinx.serialization.json.JsonElement
  *      (`TextNumbers`); флаги фляги - единица `FLAG`, тексты отказов без id (0.13.0).
  * 84 - пакет 0.14.0: без урона крита, заёмной маны и маны умений монстров; применение и пауза после прерывания (`combat.cast`),
  *      общие умения, метки, алтари с вариантами, исключения узлов Атласа; книга за главу `POST hero/quests/book`, `QuestBoard.books`.
+ * 85 - пакет 0.14.1: отчёты в GitHub Issues (`OwnReport.issue`, `Suggestion.kind|issue`, `REJECTED`, `bugreport/known|similar`,
+ *      `admin/feedback/issue`), без снимков экрана; кривая вождей Бездны `abyss.leaderPower`, оборона классов строками.
  */
-const val API_REVISION = 84
+const val API_REVISION = 85
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

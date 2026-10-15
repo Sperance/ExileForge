@@ -6,9 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.lifecycle.lifecycleScope
 import com.sperance.exileforge.platform.FrameRateCap
-import com.sperance.exileforge.platform.ScreenCapture
 import com.sperance.exileforge.platform.VolumeChord
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.app.NetworkWatch
@@ -16,7 +14,6 @@ import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.ForgeApp
 import com.sperance.exileforge.ui.components.LocalVolumeChord
 import com.sperance.exileforge.ui.theme.ForgeTheme
-import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf
 
@@ -34,10 +31,10 @@ class MainActivity : ComponentActivity() {
     private val network by lazy { NetworkWatch(applicationContext, shell::networkBack) }
 
     /**
-     * Громкость↑ и Громкость↓ вместе (4.8.0): снимок окна, пока лист отчёта ещё не открыт, затем сам лист. Уровня приложения
-     * (4.9.0): окна диалогов цепляются к нему через [LocalVolumeChord], снимок складывает окно Activity и окно диалога.
+     * Громкость↑ и Громкость↓ вместе (4.8.0): лист отчёта. Уровня приложения (4.9.0): окна диалогов цепляются к нему через
+     * [LocalVolumeChord]. Снимков экрана нет (0.14.1, GH-ISSUES).
      */
-    private val chord = VolumeChord { top -> lifecycleScope.launch { shell.requestBug(ScreenCapture.capture(window, top)) } }
+    private val chord = VolumeChord { shell.requestBug() }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent): Boolean = chord.onKey(event) || super.onKeyDown(keyCode, event)
 

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.feedback
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.hero.HeroRepository
@@ -8,6 +9,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.MailRequest
+import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.core.network.GameApi
@@ -17,7 +19,10 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.data.settings.RepliesSeen
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 
 /**
  * Голоса игроков и почта аккаунта (3.73.0): предложения с голосами, свои отчёты, чтение администратора,
@@ -33,9 +38,13 @@ class FeedbackViewModel(
     private val heroes: HeroRepository,
     /** Почта между героями (4.6.3): окно письма, ответ, игнор, жалоба - общие с карточкой игрока и гильдией. */
     val letters: LetterActions,
+    private val replies: RepliesSeen,
 ) : ViewModel() {
     val feedback: StateFlow<Feedback> = repository.state
     val activity = commands.state
+
+    /** Виденные ответы на свои отчёты (0.14.1): отпечаток по id отчёта. */
+    val seen: StateFlow<Map<String, String>> = replies.seen.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     private val api: GameApi get() = connection.api
 
@@ -44,17 +53,30 @@ class FeedbackViewModel(
     /** Адресат из карточки игрока (4.5.1) для формы письма: отдаётся один раз и забывается. */
     fun takeMailTo(): String = feedback.value.mailTo.also { if (it.isNotEmpty()) feedback { f -> f.copy(mailTo = "") } }
 
-    fun loadSuggestions() = commands.read(Reads.FEEDBACK) {
-        val suggestions = api.feedback.suggestions()
+    /** Свои отчёты и известные проблемы (0.14.1, GH-ISSUES): обе вкладки листа отчётов. */
+    fun loadReports() = commands.read(Reads.FEEDBACK) {
         val mine = api.feedback.mine()
-        feedback { it.copy(suggestions = suggestions, mine = mine) }
+        val known = api.feedback.known()
+        feedback { it.copy(known = known, mine = mine) }
     }
 
-    /** Тот же голос снова снимает его; голос за другую сторону переключает. */
+    /** Ответы на свои отчёты [reports] видены (вкладка «Мои» открыта). */
+    fun markSeen(reports: List<OwnReport>) = replies.mark(reports.mapNotNull { own -> own.replyPrint?.let { own.id to it } }.filter { (id, print) -> seen.value[id] != print }.toMap())
+
+    /** Похожее уже известно (0.14.1): тихо, по черновику [text]; короткий черновик - пусто. */
+    fun findSimilar(text: String) {
+        if (!sessions.state.value.signedIn || text.trim().length < SIMILAR_FROM) return feedback { it.copy(similar = emptyList()) }
+        commands.read(Reads.FEEDBACK, restart = true, silent = true) {
+            val similar = api.feedback.similar(text.trim())
+            feedback { it.copy(similar = similar) }
+        }
+    }
+
+    /** Тот же голос снова снимает его; голос за другую сторону переключает. Известное и похожее - одним ответом. */
     fun vote(id: String, vote: Vote) = commands.task(writing = true) {
-        val current = feedback.value.suggestions.firstOrNull { it.id == id } ?: return@task
+        val current = (feedback.value.known + feedback.value.similar).firstOrNull { it.id == id } ?: return@task
         val answered = api.feedback.vote(id, if (current.vote == vote) Vote.NONE else vote)
-        feedback { f -> f.copy(suggestions = f.suggestions.map { if (it.id == id) answered else it }) }
+        feedback { f -> f.copy(known = f.known.map { if (it.id == id) answered else it }, similar = f.similar.map { if (it.id == id) answered else it }) }
     }
 
     fun loadReports(kind: FeedbackKind?, status: ReportStatus?) = commands.read(Reads.FEEDBACK) {
@@ -65,18 +87,13 @@ class FeedbackViewModel(
 
     fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
 
-    /** Отчёт в Asana (3.75.0): сервер заводит задачу и отвечает отчётом как он теперь стоит. */
-    fun reportToAsana(id: String) = answer(ui("feedback.asana_done")) {
-        // 3.75.1: сервер старше 1.70.0 такого маршрута не знает и отвечал «обнови приложение» - обновлять надо сервер.
-        val live = api.manifest(fresh = true)
-        check(live.capabilities.has("POST", ASANA_ROUTE)) { ui("feedback.asana_stale_server", live.version.ifBlank { "?" }) }
-        api.feedback.toAsana(id)
-    }
+    /** Отчёт в GitHub Issues (0.14.1): сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
+    fun reportToIssue(id: String) = answer(ui("feedback.issue_done")) { api.feedback.toIssue(id) }
 
     /** Удаление отчёта (4.3.0): уходит из своих, из общего списка и из окна модерации разом. */
     fun deleteReport(id: String) = commands.task(writing = true) {
         api.feedback.delete(id)
-        feedback { f -> f.copy(mine = f.mine.filterNot { it.id == id }, suggestions = f.suggestions.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
+        feedback { f -> f.copy(mine = f.mine.filterNot { it.id == id }, known = f.known.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
         notices.toast(ui("feedback.deleted"))
     }
 
@@ -133,6 +150,7 @@ class FeedbackViewModel(
     }
 
     private companion object {
-        const val ASANA_ROUTE = "/api/v1/admin/feedback/asana"
+        /** Похожее ищется с черновика не короче стольких знаков. */
+        const val SIMILAR_FROM = 12
     }
 }

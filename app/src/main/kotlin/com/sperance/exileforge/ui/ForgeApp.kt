@@ -38,8 +38,8 @@ import com.sperance.exileforge.ui.components.LocalSettings
 import com.sperance.exileforge.ui.components.LocalUpdates
 import com.sperance.exileforge.ui.components.MailSheet
 import com.sperance.exileforge.ui.components.OrnateDivider
+import com.sperance.exileforge.ui.components.ReportsSheet
 import com.sperance.exileforge.ui.components.StartStages
-import com.sperance.exileforge.ui.components.SuggestionsSheet
 import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.WarmupScreen
@@ -131,10 +131,10 @@ import org.koin.compose.viewmodel.koinViewModel
     // Системные листы (4.7.0): отчёт об ошибке и настройки - и из оболочки, и из меню забега
     val sheets = remember { com.sperance.exileforge.ui.components.SystemSheets() }
     val drafts = koinInject<DraftStore>()
-    // Снимок к отчёту (4.8.0): снят до листа - аккордом громкости в Activity или здесь, когда лист открыли жук и меню забега
-    val bugShot = com.sperance.exileforge.ui.components.rememberBugShot(sheets, shell.bugRequests)
-    // Players' suggestions and the inbox (3.73.0): sheets over everything, like the beetle's.
-    var suggestionsOpen by remember { mutableStateOf(false) }
+    // Аккорд громкости в Activity открывает лист отчёта (4.8.0)
+    LaunchedEffect(shell) { shell.bugRequests.collect { sheets.bug = true } }
+    // Отчёты (0.14.1, макет A): «Мои» и «Известные» - лист поверх всего, как жук; null - закрыт, иначе открытая вкладка.
+    var reportsTab by remember { mutableStateOf<com.sperance.exileforge.ui.components.ReportsTab?>(null) }
     var mailOpen by remember { mutableStateOf(false) }
     LaunchedEffect(route.phase, game.heroId) { if (route.phase == AppPhase.GAME && game.heroId.isNotBlank()) shell.warmUp() }
     // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
@@ -187,19 +187,18 @@ import org.koin.compose.viewmodel.koinViewModel
     }
     // Настройки поверх забега (4.7.0): из оболочки они - экран стека, из меню забега - этот лист, забег под ним держится
     if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
-    if (sheets.bug && bugShot.ready) {
+    if (sheets.bug) {
         BugSheet(
             game,
             route,
             expedition,
             drafts,
             onDismiss = { sheets.bug = false },
-            onSuggestions = { suggestionsOpen = true },
-            shot = bugShot.shot,
-            onSend = { report, shot -> shell.reportBug(report, shot) { drafts.clear(report.kind) } },
+            onReports = { reportsTab = it },
+            onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
         )
     }
-    if (suggestionsOpen) SuggestionsSheet { suggestionsOpen = false }
+    reportsTab?.let { tab -> ReportsSheet(tab) { reportsTab = null } }
     // Вложения письма открывают карточку предмета (4.3.2): лист почты стоит вне хозяина игры - у него свой
     if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
     // Новое письмо (4.6.3): из карточки игрока, «Ответить» и рассылки гильдии - лист поверх всего, и поверх ящика

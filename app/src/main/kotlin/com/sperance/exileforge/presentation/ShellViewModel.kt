@@ -13,8 +13,6 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.data.settings.PreferencesRepository
-import com.sperance.exileforge.platform.ScreenCapture
-import com.sperance.exileforge.platform.ScreenShot
 import com.sperance.exileforge.presentation.app.AppStartup
 import com.sperance.exileforge.presentation.app.BugDelivery
 import com.sperance.exileforge.presentation.app.ConnectionActions
@@ -91,25 +89,23 @@ class ShellViewModel(
     fun warmUp() = warming.start()
 
     /**
-     * Отчёт жука (3.48.0): со входом или без. Снимок [shot] (4.8.0) сжимается в пределы правил `feedback` и едет в отчёте,
-     * если вид отчёта его берёт; не вписался - отчёт уходит без него. С 4.9.0 собранный отчёт сразу ложится в очередь на диске
-     * ([BugDelivery]) и уходит оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать.
+     * Отчёт жука (3.48.0): со входом или без. С 4.9.0 собранный отчёт сразу ложится в очередь на диске ([BugDelivery]) и уходит
+     * оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать. Снимков экрана нет
+     * (0.14.1, GH-ISSUES).
      */
-    fun reportBug(report: BugReportRequest, shot: ScreenShot? = null, onQueued: suspend () -> Unit = {}) = bugs.file({
-        // Без прочитанного контента (4.12.x: у правил нет значений по умолчанию) отчёт уходит без снимка и без журнала сбоев
+    fun reportBug(report: BugReportRequest, onQueued: suspend () -> Unit = {}) = bugs.file({
+        // Без прочитанного контента (4.12.x: у правил нет значений по умолчанию) отчёт уходит без журнала сбоев
         val rules = game.value.index?.rules?.feedback
-        val screenshot = rules?.let { feedback -> shot?.takeIf { report.kind.shots }?.let { ScreenCapture.encode(it, feedback) } }
-        val built = report.copy(screenshot = screenshot)
-        connection.current.value?.bugReport(built, rules?.failures ?: 0) ?: built
+        connection.current.value?.bugReport(report, rules?.failures ?: 0) ?: report
     }, onQueued)
 
-    /** Аккорд громкости (4.8.0): лист отчёта со снимком, снятым до него; null - снимок не вышел, лист всё равно открывается. */
-    private val bugShots = MutableSharedFlow<ScreenShot?>(extraBufferCapacity = 1)
-    val bugRequests: SharedFlow<ScreenShot?> = bugShots
+    /** Аккорд громкости (4.8.0): просьба открыть лист отчёта. */
+    private val bugAsks = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val bugRequests: SharedFlow<Unit> = bugAsks
 
-    /** Открыть лист отчёта со снимком [shot] (4.8.0): его откроет хозяин системных листов. */
-    fun requestBug(shot: ScreenShot?) {
-        bugShots.tryEmit(shot)
+    /** Открыть лист отчёта: его откроет хозяин системных листов. */
+    fun requestBug() {
+        bugAsks.tryEmit(Unit)
     }
 
     /** Срез «игра» для экранов этой модели (3.80.33). */

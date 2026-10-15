@@ -105,20 +105,22 @@ import org.koin.compose.viewmodel.koinViewModel
                 onClick = { vm.setReportStatus(report.id, chosen, reason) },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(ui("feedback.save_status")) }
-            // Asana (3.75.0; сама с «Отправлено» с 4.0.1): отказ Asana - красной строкой с повтором, выгруженный - ссылкой.
-            if (report.asanaError.isNotBlank()) {
-                Text(ui("feedback.asana_failed", report.asanaError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToAsana(report.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("feedback.asana_retry"))
+            // GitHub Issues (0.14.1, GH-ISSUES; сам с «Отправлено»): отказ GitHub - красной строкой с повтором, выгруженный - ссылкой
+            // на Issue и его судьбой в игре
+            if (report.issueError.isNotBlank() && report.issue == null) {
+                Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("feedback.issue_retry"))
                 }
             }
-            if (report.asanaUrl.isNotBlank()) {
+            report.issue?.let { issue ->
                 val uri = LocalUriHandler.current
-                ForgeTextButton(enabled = report.asanaUrl.startsWith("http"), onClick = { uri.openUri(report.asanaUrl) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("feedback.in_asana"))
+                FatePill(ReportFate.of(report.status, issue), report.kind, issue, short = false)
+                ForgeTextButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(ui("feedback.in_issue", issue.number))
                 }
             }
-            // Удаление (4.3.0): ошибку и предложение - с вопросом; задача в Asana остаётся
+            // Удаление (4.3.0): ошибку и предложение - с вопросом; Issue в GitHub остаётся
             if (entry.deletable) ReportDeleteButton(!account.busy) { deleting = true }
         }
     }

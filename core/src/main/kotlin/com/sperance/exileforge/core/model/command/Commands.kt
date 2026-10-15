@@ -102,8 +102,6 @@ data class ApiCapabilities(val routes: Set<String>) {
     val clientVersion: String = "",
     /** Последние неудачные запросы (4.3.1), не больше `rules.feedback.failures`: только у отчёта об ошибке. */
     val failures: List<RequestFailure> = emptyList(),
-    /** Снимок экрана (4.8.0): JPEG в base64 в пределах `rules.feedback.shotSide|shotBytes`; только у вида, что его берёт ([FeedbackKind.shots]). */
-    val screenshot: String? = null,
     /**
      * Ключ отчёта (4.9.0): один на отчёт, с ним отчёт повторяется из очереди на диске ([com.sperance.exileforge.core.feedback.BugOutbox]),
      * пока сервер не ответит; второй раз сервер его не запишет. Пусто - без защиты от повтора.
@@ -111,11 +109,8 @@ data class ApiCapabilities(val routes: Set<String>) {
     val key: String = "",
 )
 
-/**
- * Ответ на приём отчёта (4.10.0): [id] записанного отчёта; [shotDropped] - снимок был, но сверх часового предела снимков
- * (`feedback.shotsPerHour`), и отчёт записан без него.
- */
-@Serializable data class FiledReport(val id: String, val shotDropped: Boolean = false)
+/** Ответ на приём отчёта (4.10.0): [id] записанного отчёта. Снимков экрана нет (0.14.1, GH-ISSUES). */
+@Serializable data class FiledReport(val id: String)
 
 /**
  * Кто шлёт отчёт (3.88.0): версия сборки и отпечаток устройства от приложения, активный герой - если он есть. Каждый

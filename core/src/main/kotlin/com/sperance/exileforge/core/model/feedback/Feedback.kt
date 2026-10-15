@@ -5,12 +5,9 @@ import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion; жалоба на письмо героя (4.6.3) - [COMPLAINT].
- * [shots] (4.8.0) - к отчёту можно приложить снимок экрана: только к ошибке, она сразу уходит в Asana (как `FeedbackKind.shots` сервера).
- */
-@Serializable enum class FeedbackKind(val shots: Boolean = false) {
-    BUG(shots = true),
+/** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion; жалоба на письмо героя (4.6.3) - [COMPLAINT]. */
+@Serializable enum class FeedbackKind {
+    BUG,
     SUGGESTION,
     APPEAL,
     COMPLAINT,
@@ -18,10 +15,36 @@ import kotlinx.serialization.Serializable
 
 /**
  * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.3.0: первый
- * комментарий модерации к созданному), [SENT] - отправлен в Asana. Куда отчёт может перейти и можно ли голосовать,
- * решает машина состояний сервера: она приходит полями [AdminReport.moves] и [Suggestion.votable].
+ * комментарий модерации к созданному), [SENT] - отправлен Issue в GitHub (0.14.1), [REJECTED] - отклонён модерацией с причиной.
+ * Куда отчёт может перейти и можно ли голосовать, решает машина состояний сервера: она приходит полями [AdminReport.moves] и
+ * [Suggestion.votable].
  */
-@Serializable enum class ReportStatus { CREATED, REVIEW, SENT }
+@Serializable enum class ReportStatus { CREATED, REVIEW, SENT, REJECTED }
+
+/**
+ * Судьба Issue отчёта (0.14.1, GH-ISSUES; сервер `IssueState`): открыт - [OPEN] («В работе») и [IN_PROGRESS] («Исправляется» у
+ * ошибки, «Делается» у предложения); закрыт выполненным - [FIXED] / [DONE] (с версией), отказом - [NOT_PLANNED], [DUPLICATE],
+ * [INVALID].
+ */
+@Serializable enum class IssueState(val open: Boolean) {
+    OPEN(true),
+    IN_PROGRESS(true),
+    FIXED(false),
+    DONE(false),
+    NOT_PLANNED(false),
+    DUPLICATE(false),
+    INVALID(false),
+}
+
+/** Issue отчёта (0.14.1): номер и ссылка в публичном репозитории, судьба, версия исправления, слово разработчика, дубль чего. */
+@Serializable data class IssueView(
+    val number: Int,
+    val url: String = "",
+    val state: IssueState = IssueState.OPEN,
+    val version: String = "",
+    val comment: String = "",
+    val duplicate: Int = 0,
+)
 
 /** A player's vote on a suggestion: one per account, switched by tapping again. */
 @Serializable enum class Vote { LIKE, DISLIKE, NONE }
@@ -36,8 +59,11 @@ import kotlinx.serialization.Serializable
     val vote: Vote,
     val mine: Boolean,
     val createdAt: String = "",
-    /** Можно ли зрителю голосовать (4.3.0): не своё и ещё не отправленное - решает сервер. */
+    /** Можно ли зрителю голосовать (4.3.0): не своё и ещё ждёт решения (0.14.1: и пока Issue открыт) - решает сервер. */
     val votable: Boolean = false,
+    /** Ошибка или предложение (0.14.1: известные проблемы - и ошибки). */
+    val kind: FeedbackKind = FeedbackKind.SUGGESTION,
+    val issue: IssueView? = null,
 ) {
     val rating: Int get() = likes - dislikes
 }
@@ -54,7 +80,15 @@ import kotlinx.serialization.Serializable
     val createdAt: String = "",
     /** Автор может удалить его (4.3.0): ошибку и предложение - да, апелляцию - нет. */
     val deletable: Boolean = false,
-)
+    /** Issue отчёта (0.14.1); null - ещё не отправлен. */
+    val issue: IssueView? = null,
+) {
+    /** Последний ответ автору (0.14.1): слово разработчика в Issue, иначе слово модерации; пусто - ответа нет. */
+    val reply: String get() = issue?.comment?.takeIf { it.isNotBlank() } ?: reason
+
+    /** Отпечаток последнего ответа: сменился - ответ новый; null - ответа нет. */
+    val replyPrint: String? get() = reply.takeIf { it.isNotBlank() }?.hashCode()?.toString()
+}
 
 /** A report whole, as the administrator reads it. */
 @Serializable data class FullReport(
@@ -72,10 +106,13 @@ import kotlinx.serialization.Serializable
     val dislikes: List<String> = emptyList(),
     val reason: String = "",
     val createdAt: String = "",
-    /** The task in Asana once the administrator exported it (3.75.0, server 1.70.0); blank before. */
-    val asanaUrl: String = "",
-    /** Код последнего отказа Asana (3.88.7, сервер 1.80.9): выгрузка не удалась; пусто - всё ушло. */
-    val asanaError: String = "",
+    /** Issue отчёта (0.14.1, GH-ISSUES); null - не выгружен. */
+    val issue: IssueView? = null,
+    /** Код последнего отказа GitHub (0.14.1): выгрузка не удалась; пусто - всё ушло. */
+    val issueError: String = "",
+    /** Класс и уровень героя автора (0.14.1) - то, что о герое есть в Issue. */
+    val heroClass: String = "",
+    val heroLevel: Int = 0,
     /** Последние неудачные запросы автора (4.3.1, сервер 1.84), новые первыми. */
     val failures: List<com.sperance.exileforge.core.model.command.RequestFailure> = emptyList(),
 )

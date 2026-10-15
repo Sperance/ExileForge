@@ -105,6 +105,7 @@ val appModule = module {
     single { ServerStore(androidContext()) }
     single { GuideStore(androidContext()) }
     single { DraftStore(androidContext(), get(named(APP_SCOPE))) }
+    single { com.sperance.exileforge.data.settings.RepliesSeen(androidContext(), get(named(APP_SCOPE))) }
     single { BugDelivery(androidContext(), get(), get(), get(named(APP_SCOPE))) }
     single { PreferencesRepository(get(), get(named(APP_SCOPE))) }
     single { SessionRepository(DEFAULT_SERVER) }

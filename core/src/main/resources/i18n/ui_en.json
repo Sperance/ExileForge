@@ -891,7 +891,7 @@
   "map.legend_hero": "Hero",
   "map.legend_chest": "Chest",
   "map.legend_fountain": "Fountain",
-  "fountain.offer": "Fountain: +{0}% life and mana, flask charges",
+  "fountain.offer": "Fountain: +{0}% life and mana, all flasks refilled",
   "fountain.take": "Take",
   "fountain.leave": "Step away",
   "feature.altar.title": "Altar of Bargain",

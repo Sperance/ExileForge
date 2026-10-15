@@ -67,7 +67,7 @@ import com.sperance.exileforge.ui.theme.*
             if (view == null) {
                 Box(Modifier.size(flask).border(1.dp, Bronze.copy(alpha = .35f), CircleShape))
             } else {
-                FlaskButton(view, live, flask) { onCommand(RunCommand.Drink(view.slot)) }
+                FlaskGain(view.charges, flaskTint(view.kind)) { FlaskButton(view, live, flask) { onCommand(RunCommand.Drink(view.slot)) } }
             }
         }
         Spacer(Modifier.weight(1f))

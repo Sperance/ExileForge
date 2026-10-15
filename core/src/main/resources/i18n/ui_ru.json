@@ -891,7 +891,7 @@
   "map.legend_hero": "Герой",
   "map.legend_chest": "Сундук",
   "map.legend_fountain": "Фонтан",
-  "fountain.offer": "Фонтан: +{0}% здоровья и маны, заряды фляг",
+  "fountain.offer": "Фонтан: +{0}% здоровья и маны, все фляги полны",
   "fountain.take": "Взять",
   "fountain.leave": "Отойти",
   "feature.altar.title": "Алтарь сделки",

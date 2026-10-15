@@ -359,18 +359,20 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
         flasks.forEach { view ->
             if (view == null) return@forEach
             val tint = flaskTint(view.kind)
-            Box(
-                Modifier.size(34.dp).clip(CircleShape).background(Color(0xE60A0D12))
-                    .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
-                    .clickable(enabled = view.usable) { onDrink(view.slot) }.semantics { contentDescription = ui("expedition.drink") },
-                contentAlignment = Alignment.Center,
-            ) {
-                Canvas(Modifier.fillMaxSize()) {
-                    val fill = if (view.maxCharges > 0) view.charges / view.maxCharges.toFloat() else 0f
-                    drawRect(tint.copy(alpha = if (view.usable) .55f else .25f), topLeft = Offset(0f, size.height * (1 - fill)), size = Size(size.width, size.height * fill))
-                    if (view.active > 0f) drawArc(GoldBright, -90f, 360f * view.active, false, style = Stroke(2.5.dp.toPx()))
+            FlaskGain(view.charges, tint) {
+                Box(
+                    Modifier.size(34.dp).clip(CircleShape).background(Color(0xE60A0D12))
+                        .border(if (view.active > 0f) 2.dp else 1.dp, if (view.active > 0f) GoldBright else Bronze, CircleShape)
+                        .clickable(enabled = view.usable) { onDrink(view.slot) }.semantics { contentDescription = ui("expedition.drink") },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Canvas(Modifier.fillMaxSize()) {
+                        val fill = if (view.maxCharges > 0) view.charges / view.maxCharges.toFloat() else 0f
+                        drawRect(tint.copy(alpha = if (view.usable) .55f else .25f), topLeft = Offset(0f, size.height * (1 - fill)), size = Size(size.width, size.height * fill))
+                        if (view.active > 0f) drawArc(GoldBright, -90f, 360f * view.active, false, style = Stroke(2.5.dp.toPx()))
+                    }
+                    Text("${view.charges}", color = GoldBright, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
-                Text("${view.charges}", color = GoldBright, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

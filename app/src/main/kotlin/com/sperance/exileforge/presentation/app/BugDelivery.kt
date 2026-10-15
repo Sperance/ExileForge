@@ -1,43 +1,36 @@
 package com.sperance.exileforge.presentation.app
 
 import android.content.Context
+import com.sperance.exileforge.core.feedback.BugCourier
+import com.sperance.exileforge.core.feedback.BugNews
 import com.sperance.exileforge.core.feedback.BugOutbox
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
-import com.sperance.exileforge.core.network.ApiFailure
-import com.sperance.exileforge.core.network.CommandQueue
 import com.sperance.exileforge.core.session.NoticeKind
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.ServerConnection
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
  * Доставка отчётов об ошибке (4.9.0) - «очередь на диске» [BugOutbox]: отчёт со сжатым снимком сразу ложится файлом и уходит
  * повторами под своим ключом, пока сервер не ответит. Не зависит от занятости [com.sperance.exileforge.core.session.CommandRunner]
- * и переживает краш и перезапуск: оставшееся в очереди уходит, как только есть связь. Принят - тост «отправлено», отклонён
- * окончательно - тост с причиной; нет связи - один тост «уйдёт, когда будет связь» и повтор с отступом. Один на приложение.
+ * и переживает краш и перезапуск: оставшееся в очереди уходит, как только есть связь. Везёт один долгоживущий курьер
+ * ([BugCourier], 0.14.5, #43): новый отчёт и возврат связи его будят, запрос в полёте не рвут. Вести - тостами: ушедшие за проход -
+ * один тост («Отчёт отправлен» или «Отправлено отчётов: N»), отклонённый окончательно - с причиной, нет связи - один тост «уйдёт,
+ * когда будет связь». Один на приложение.
  */
 class BugDelivery(context: Context, private val connection: ServerConnection, private val notices: Notices, private val scope: CoroutineScope) {
-    private val outbox = BugOutbox(File(context.filesDir, OUTBOX_DIR))
-    private val disk = Mutex()
-    private var draining: Job? = null
+    private val courier = BugCourier(BugOutbox(File(context.filesDir, OUTBOX_DIR)), { connection.api.sendBug(it) }, ::tell)
 
     init {
-        // Оставшееся с прошлого запуска уходит, как только встанет связь с сервером
+        // Курьер выходит в путь, как только встанет связь с сервером: оставшееся с прошлого запуска уходит сразу
         scope.launch {
             connection.current.filterNotNull().first()
-            kick()
+            courier.run()
         }
     }
 
@@ -47,62 +40,22 @@ class BugDelivery(context: Context, private val connection: ServerConnection, pr
      */
     fun file(build: suspend () -> BugReportRequest, onQueued: suspend () -> Unit = {}) {
         scope.launch {
-            val report = build()
-            disk.withLock { withContext(Dispatchers.IO) { outbox.put(report) } }
+            courier.put(build())
             onQueued()
-            kick()
         }
     }
 
     /** Связь вернулась - ждущие отчёты уходят сразу, без досиживания отступа. */
-    fun kick() {
-        if (!connection.ready) return
-        draining?.cancel()
-        draining = scope.launch { drain() }
-    }
+    fun kick() = courier.wake()
 
-    private suspend fun drain() {
-        var attempt = 0
-        var told = false
-        while (true) {
-            val next = disk.withLock { withContext(Dispatchers.IO) { outbox.pending() } }.firstOrNull() ?: return
-            val delivered = try {
-                connection.api.sendBug(next)
-                notices.toast(ui("bug.sent"))
-                true
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: ApiFailure) {
-                if (CommandQueue.transient(e.status)) {
-                    false
-                } else {
-                    notices.toast(ui("bug.refused", e.message.orEmpty()), NoticeKind.FAILED)
-                    true
-                }
-            } catch (_: Exception) {
-                // Сеть: тот же ключ позже
-                false
-            }
-            if (delivered) {
-                disk.withLock { withContext(Dispatchers.IO) { outbox.remove(next.key) } }
-                attempt = 0
-                continue
-            }
-            if (!told) {
-                told = true
-                notices.toast(ui("bug.queued"))
-            }
-            delay(RETRY_FIRST shl attempt.coerceAtMost(RETRY_DOUBLINGS))
-            attempt++
-        }
+    private fun tell(news: BugNews) = when (news) {
+        is BugNews.Sent -> notices.toast(if (news.count == 1) ui("bug.sent") else ui("bug.sent_many", news.count))
+        is BugNews.Refused -> notices.toast(ui("bug.refused", news.reason), NoticeKind.FAILED)
+        BugNews.Queued -> notices.toast(ui("bug.queued"))
     }
 
     private companion object {
         /** Папка очереди в личных файлах приложения. */
         const val OUTBOX_DIR = "bug_outbox"
-
-        /** Первый отступ повтора, мс, и сколько раз он удваивается (2 с → 2 мин). */
-        const val RETRY_FIRST = 2_000L
-        const val RETRY_DOUBLINGS = 6
     }
 }

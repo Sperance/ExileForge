@@ -80,8 +80,10 @@ import kotlinx.serialization.json.JsonElement
  *      заходе по карте-предмету (4.12.8).
  * 83 - тексты из контента: числа сил и пороги правил в шаблонах - плейсхолдеры `{p:…}`/`{r:…}`, их подставляет `ModifierText`
  *      (`TextNumbers`); флаги фляги - единица `FLAG`, тексты отказов без id (0.13.0).
+ * 84 - пакет 0.14.0: без урона крита, заёмной маны и маны умений монстров; применение и пауза после прерывания (`combat.cast`),
+ *      общие умения, метки, алтари с вариантами, исключения узлов Атласа; книга за главу `POST hero/quests/book`, `QuestBoard.books`.
  */
-const val API_REVISION = 83
+const val API_REVISION = 84
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

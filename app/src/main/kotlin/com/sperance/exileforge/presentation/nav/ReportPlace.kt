@@ -23,16 +23,23 @@ fun reportPlace(route: Route): ReportPlace {
     val root = route.root ?: route
     val (tab, area) = when (root.tab) {
         TAB_HERO -> "nav.hero" to "hero"
+
         TAB_PROGRESS -> "nav.progress" to "progress"
+
         TAB_EXPEDITION -> "nav.expedition" to if (route == Route.Atlas) "atlas" else "run"
+
         TAB_CITY -> "nav.city" to when (route) {
             Route.Guild -> "guild"
             Route.Auction -> "auction"
             else -> "city"
         }
+
         TAB_CRAFTS -> "nav.crafts" to "crafts"
+
         TAB_ADMIN -> "nav.admin" to "admin"
+
         TAB_SETTINGS -> null to "settings"
+
         else -> null to "hero"
     }
     val title = tab?.let(::ui)

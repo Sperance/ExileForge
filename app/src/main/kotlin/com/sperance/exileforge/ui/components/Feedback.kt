@@ -317,8 +317,7 @@ private fun shortDate(createdAt: String): String = createdAt.take(10).split('-')
  * Переписка карточки (0.14.2): слово модерации при решении ([reason]), затем вся переписка Issue по порядку - разработчик,
  * модерация из игры и автор.
  */
-private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, String>> =
-    listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + issue?.notes.orEmpty().map { it.author to it.text }
+private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, String>> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + issue?.notes.orEmpty().map { it.author to it.text }
 
 /** Запись переписки цитатой: разработчик - руной слева, модерация - золотом слева, автор - пергаментом справа. */
 @Composable private fun ThreadNote(who: NoteAuthor, words: String) {

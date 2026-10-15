@@ -86,6 +86,8 @@ import kotlinx.serialization.json.JsonElement
  *      `admin/feedback/issue`), без снимков экрана; кривая вождей Бездны `abyss.leaderPower`, оборона классов строками.
  * 86 - пакет 0.14.2: вид отчёта `CRASH` (падения - сразу Issue), `BugReportRequest.traces|trail|heroSheet`, открытые ключи
  *      контекста отчёта; фонтан 40%, оборона классов без строки получаемого урона.
+ *      Без предложений (`SUGGESTION`, `IssueState.DONE`, `inputs.suggestion`; `Suggestion` → `KnownReport`), голос - за ошибку;
+ *      переписка `IssueView.notes`, ответ автора `POST bugreport/answer`, модерация Issue `POST admin/feedback/issue/move`.
  */
 const val API_REVISION = 86
 

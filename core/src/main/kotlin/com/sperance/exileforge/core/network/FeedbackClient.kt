@@ -4,13 +4,15 @@ import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
+import com.sperance.exileforge.core.model.feedback.IssueMove
+import com.sperance.exileforge.core.model.feedback.KnownReport
 import com.sperance.exileforge.core.model.feedback.LetterRequest
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
+import com.sperance.exileforge.core.model.feedback.ReportAnswer
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.feedback.Suggestion
 import com.sperance.exileforge.core.model.feedback.Vote
 import kotlinx.serialization.json.encodeToJsonElement
 
@@ -18,17 +20,19 @@ private const val REPORTS = "api/v1/bugreport"
 private const val MAIL = "api/v1/mail"
 private const val ADMIN = "api/v1/admin"
 
-/** Players' suggestions and one's own reports (3.73.0, server 1.69.0); the administrator's view of them all. */
+/** Known reports and one's own (3.73.0, server 1.69.0; 0.14.2 - без предложений); the administrator's view of them all. */
 class FeedbackClient internal constructor(private val http: Transport) {
-    suspend fun suggestions(): List<Suggestion> = http.get("$REPORTS/suggestions")
     suspend fun mine(): List<OwnReport> = http.get("$REPORTS/mine")
 
-    /** Известные проблемы (0.14.1, GH-ISSUES): ошибки и предложения с открытым Issue, по рейтингу. */
-    suspend fun known(): List<Suggestion> = http.get("$REPORTS/known", mapOf("size" to KNOWN_PAGE.toString()))
+    /** Известные проблемы (0.14.1, GH-ISSUES): ошибки с открытым Issue, по рейтингу. */
+    suspend fun known(): List<KnownReport> = http.get("$REPORTS/known", mapOf("size" to KNOWN_PAGE.toString()))
 
     /** Похожее уже известно (0.14.1): открытые известные проблемы, близкие к черновику [text]. */
-    suspend fun similar(text: String): List<Suggestion> = http.get("$REPORTS/similar", mapOf("text" to text))
-    suspend fun vote(id: String, vote: Vote): Suggestion = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
+    suspend fun similar(text: String): List<KnownReport> = http.get("$REPORTS/similar", mapOf("text" to text))
+    suspend fun vote(id: String, vote: Vote): KnownReport = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
+
+    /** Ответ автора в Issue своего отчёта (0.14.2, сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */
+    suspend fun answer(id: String, text: String): OwnReport = http.post("$REPORTS/answer", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
     /** Удаление отчёта (4.3.0, сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
     suspend fun delete(id: String) {
@@ -47,6 +51,13 @@ class FeedbackClient internal constructor(private val http: Transport) {
 
     /** Issue в GitHub (0.14.1, GH-ISSUES): из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
     suspend fun toIssue(id: String): AdminReport = http.post("$ADMIN/feedback/issue", mapOf("id" to id))
+
+    /** Issue из игры (0.14.2): ответ модерации, «в работу», закрытие с причиной; [duplicate] - номер оригинала у дубля. */
+    suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int = 0): AdminReport = http.post(
+        "$ADMIN/feedback/issue/move",
+        mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),
+        WireJson.encodeToJsonElement(ReportAnswer(text)),
+    )
 
     private companion object {
         /** Известных проблем за раз: весь открытый список, поиск и фильтр - на клиенте. */

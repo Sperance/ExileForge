@@ -28,6 +28,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.i18n.loc
+import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
@@ -67,9 +68,10 @@ fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
 private fun systemLine(mail: Mail, part: String): String {
     if (mail.key in AUCTION_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let(::lotItemTitle).orEmpty(), mail.args.getOrNull(1).orEmpty()))
     val kind = mail.args.getOrNull(0)?.takeIf { it.isNotBlank() }?.let(::kindTitle).orEmpty()
-    val status = mail.args.getOrNull(1)?.takeIf { it.isNotBlank() }?.let(::statusTitle).orEmpty()
+    // Судьба Issue (0.14.2, `mail.feedback_issue`): второй аргумент - судьба Issue, пятый - версия исправления
+    val status = mail.args.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { if (mail.key == ISSUE_MAIL) issueStateTitle(it, mail.args.getOrNull(4).orEmpty()) else statusTitle(it) }.orEmpty()
     return when (part) {
-        "subject" -> loc("${mail.key}.subject", listOf(kind))
+        "subject" -> loc("${mail.key}.subject", listOf(kind, status))
         else -> loc("${mail.key}.body", listOf(status, mail.args.getOrNull(2).orEmpty()))
     }
 }
@@ -523,3 +525,12 @@ private const val QUOTE_LINES = 3
 private const val DAY_MS = 86_400_000L
 private const val SECOND_MS = 1_000L
 private const val TICK_MS = 1_000L
+
+/** Письмо о новой судьбе Issue отчёта (0.14.2). */
+private const val ISSUE_MAIL = "mail.feedback_issue"
+
+/** Судьба Issue по имени словами сервера; исправленный - «Исправлено в X», если версия известна. */
+private fun issueStateTitle(name: String, version: String): String {
+    if (name == "FIXED" && version.isNotBlank()) return ui("feedback.fate.fixed_in", version)
+    return locOr("enum.IssueState.$name", name)
+}

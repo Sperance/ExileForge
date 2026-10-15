@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailEquipment
 import com.sperance.exileforge.core.model.feedback.MailRequest
@@ -31,9 +32,10 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The administrator's reading of players' reports (3.73.0): bugs and suggestions apart, filtered by status, each with its
- * author and where it was written; a new status with a word for the author, who gets a letter about it. С 4.3.0 - только
- * допустимые переходы статуса и удаление ошибок и предложений.
+ * The administrator's reading of players' reports (3.73.0): by kind (0.14.2: ошибки, падения, апелляции, жалобы - без
+ * предложений), filtered by status, each with its author and where it was written; a new status with a word for the author, who
+ * gets a letter about it. С 4.3.0 - только допустимые переходы статуса и удаление; с 0.14.2 - переписка Issue и ведение Issue из
+ * игры (ответ, «в работу», закрытие с причиной).
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>()
@@ -71,7 +73,7 @@ import org.koin.compose.viewmodel.koinViewModel
         MutedText(
             listOfNotNull(
                 report.createdAt.replace('T', ' ').take(16),
-                ui("feedback.votes", report.likes.size, report.dislikes.size).takeIf { report.kind == FeedbackKind.SUGGESTION },
+                ui("feedback.votes", report.likes.size, report.dislikes.size).takeIf { report.kind == FeedbackKind.BUG },
                 report.screen.takeIf { it.isNotBlank() },
             ).joinToString(" · "),
         )
@@ -119,6 +121,8 @@ import org.koin.compose.viewmodel.koinViewModel
                 ForgeTextButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }, modifier = Modifier.fillMaxWidth()) {
                     Text(ui("feedback.in_issue", issue.number))
                 }
+                issue.notes.forEach { note -> MutedText("${ui("feedback.who.${note.author.name.lowercase()}")}: ${note.text}", style = MaterialTheme.typography.labelSmall) }
+                if (issue.state.open) IssueSteer(account, vm, report.id)
             }
             // Удаление (4.3.0): ошибку и предложение - с вопросом; Issue в GitHub остаётся
             if (entry.deletable) ReportDeleteButton(!account.busy) { deleting = true }
@@ -128,6 +132,39 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 private const val REASON = 400
+
+/**
+ * Ведение Issue из игры (0.14.2): слово модерации (уходит комментарием) и действие - ответить, взять в работу, закрыть
+ * исправленным, отказом или дублем (с номером оригинала). Судьба приходит из GitHub сразу.
+ */
+@Composable private fun IssueSteer(account: AccountUi, vm: FeedbackViewModel, id: String) {
+    var note by remember(id) { mutableStateOf("") }
+    var original by remember(id) { mutableStateOf("") }
+    OutlinedTextField(note, { note = it.take(REASON) }, label = { Text(ui("feedback.move.text")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+    OutlinedTextField(
+        original,
+        { original = it.filter(Char::isDigit).take(DUPLICATE_DIGITS) },
+        label = { Text(ui("feedback.move.duplicate")) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        IssueMove.entries.forEach { move ->
+            val ready = when (move) {
+                IssueMove.REPLY -> note.isNotBlank()
+                IssueMove.DUPLICATE -> original.isNotBlank()
+                else -> true
+            }
+            ForgeOutlinedButton(enabled = !account.busy && ready, onClick = { vm.steerIssue(id, move, note, original.toIntOrNull() ?: 0) }) {
+                Text(ui("feedback.move.${move.name}"))
+            }
+        }
+    }
+}
+
+/** Номер Issue-оригинала у дубля - не длиннее. */
+private const val DUPLICATE_DIGITS = 6
 
 /**
  * The administrator's letter (3.73.0): to one account by login or, blank, to every account; a subject, a text, and what it

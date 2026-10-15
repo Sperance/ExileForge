@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
@@ -86,6 +87,16 @@ class FeedbackViewModel(
     }
 
     fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
+
+    /** Ответ автора в Issue своего отчёта (0.14.2): уходит комментарием; отчёт возвращается с перепиской. */
+    fun answerReport(id: String, text: String) = commands.task(writing = true) {
+        val answered = api.feedback.answer(id, text)
+        feedback { f -> f.copy(mine = f.mine.map { if (it.id == id) answered else it }) }
+        notices.toast(ui("feedback.answer_sent"))
+    }
+
+    /** Модерация ведёт Issue отчёта из игры (0.14.2): ответ, «в работу», закрытие с причиной; судьба приходит из GitHub сразу. */
+    fun steerIssue(id: String, move: IssueMove, text: String, duplicate: Int = 0) = answer(ui("feedback.issue_moved")) { api.feedback.steer(id, move, text, duplicate) }
 
     /** Отчёт в GitHub Issues (0.14.1): сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
     fun reportToIssue(id: String) = answer(ui("feedback.issue_done")) { api.feedback.toIssue(id) }

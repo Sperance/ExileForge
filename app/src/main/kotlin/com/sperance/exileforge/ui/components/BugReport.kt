@@ -23,7 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -103,42 +102,30 @@ fun BugSheet(
     val model = koinViewModel<FeedbackViewModel>()
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
-    // A bug or a suggestion (3.73.0): the player picks; a suggestion goes into the public list, so it needs an account.
-    // The words of each and the kind last open come back from the device (3.75.0) and are kept as they are typed.
-    var kind by remember { mutableStateOf(FeedbackKind.BUG) }
-    val texts = remember { mutableStateMapOf<FeedbackKind, String>() }
+    // Только отчёт об ошибке (0.14.2: предложений нет); черновик возвращается с устройства (3.75.0) и пишется по мере набора.
+    val kind = FeedbackKind.BUG
+    var text by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
-        val draft = drafts.read()
-        if (texts.isEmpty()) kind = draft.kind
-        draft.texts.forEach { (k, v) -> if (k !in texts) texts[k] = v }
+        if (text.isEmpty()) text = drafts.read().texts[kind].orEmpty()
     }
-    val text = texts[kind].orEmpty()
     // Похожее (0.14.1) ищется, когда игрок перестал печатать
-    LaunchedEffect(text, kind) {
+    LaunchedEffect(text) {
         delay(SIMILAR_PAUSE_MS)
         model.findSimilar(text)
     }
     val clipboard = LocalClipboardManager.current
-    val limit = if (kind == FeedbackKind.SUGGESTION) game.inputs.suggestion else game.inputs.report
+    val limit = game.inputs.report
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(ui("bug.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            PillTabs(listOf(kindTitle(FeedbackKind.BUG), kindTitle(FeedbackKind.SUGGESTION)), kind.ordinal, {
-                kind = FeedbackKind.entries[it]
-                drafts.save(kind, texts[kind].orEmpty())
-            }, segmented = true)
-            if (kind == FeedbackKind.BUG) {
-                Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
-            } else {
-                MutedText(ui(if (game.session.signedIn) "feedback.suggestion_hint" else "feedback.sign_in_first"))
-            }
+            Text(ui("bug.where", screen), color = Rune, style = MaterialTheme.typography.labelLarge)
             OutlinedTextField(
                 text,
                 {
-                    texts[kind] = it.take(limit)
-                    drafts.save(kind, texts[kind].orEmpty())
+                    text = it.take(limit)
+                    drafts.save(kind, text)
                 },
-                label = { Text(ui(if (kind == FeedbackKind.BUG) "bug.text" else "feedback.text")) },
+                label = { Text(ui("bug.text")) },
                 minLines = 4,
                 supportingText = { Text(ui("bug.count", text.length, limit)) },
                 // The words alone to the clipboard (3.75.0), to keep or pass on elsewhere.
@@ -150,7 +137,7 @@ fun BugSheet(
                 modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
             )
             ForgeButton(
-                enabled = text.isNotBlank() && (kind == FeedbackKind.BUG || game.session.signedIn),
+                enabled = text.isNotBlank(),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
                     onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind))

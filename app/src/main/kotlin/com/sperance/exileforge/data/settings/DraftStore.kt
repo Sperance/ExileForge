@@ -15,7 +15,7 @@ private val Context.drafts by preferencesDataStore("feedback_drafts")
 data class FeedbackDraft(val kind: FeedbackKind = FeedbackKind.BUG, val texts: Map<FeedbackKind, String> = emptyMap())
 
 /**
- * The words of an unsent report or suggestion (3.75.0), one per kind, and the kind last open: they outlive the sheet and
+ * The words of an unsent report (3.75.0; 0.14.2 - без предложений), one per kind, and the kind last open: they outlive the sheet and
  * the app, and go only once the server has taken them.
  */
 class DraftStore(private val context: Context, private val scope: CoroutineScope) {

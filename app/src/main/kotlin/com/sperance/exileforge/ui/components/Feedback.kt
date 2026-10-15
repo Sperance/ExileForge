@@ -19,7 +19,6 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Lightbulb
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Shield
@@ -49,9 +48,10 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.model.feedback.IssueState
 import com.sperance.exileforge.core.model.feedback.IssueView
+import com.sperance.exileforge.core.model.feedback.KnownReport
+import com.sperance.exileforge.core.model.feedback.NoteAuthor
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.feedback.Suggestion
 import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.ui.theme.*
@@ -97,7 +97,6 @@ enum class ReportFate(val tint: Color, val icon: ImageVector, val closed: Boolea
     OPEN(Color(0xFFF2C94C), Icons.AutoMirrored.Outlined.FormatListBulleted),
     IN_PROGRESS(Color(0xFFD9853B), Icons.Outlined.Build),
     FIXED(Color(0xFF7BE0A6), Icons.Outlined.CheckCircle, closed = true),
-    DONE(Color(0xFF7BE0A6), Icons.Outlined.CheckCircle, closed = true),
     NOT_PLANNED(Color(0xFF9AA7B0), Icons.Outlined.Close, closed = true),
     INVALID(Color(0xFF9AA7B0), Icons.Outlined.Block, closed = true),
     DUPLICATE(Color(0xFF9AA7B0), Icons.Outlined.ContentCopy, closed = true),
@@ -114,7 +113,6 @@ enum class ReportFate(val tint: Color, val icon: ImageVector, val closed: Boolea
                 IssueState.OPEN -> OPEN
                 IssueState.IN_PROGRESS -> IN_PROGRESS
                 IssueState.FIXED -> FIXED
-                IssueState.DONE -> DONE
                 IssueState.NOT_PLANNED -> NOT_PLANNED
                 IssueState.INVALID -> INVALID
                 IssueState.DUPLICATE -> DUPLICATE
@@ -123,7 +121,7 @@ enum class ReportFate(val tint: Color, val icon: ImageVector, val closed: Boolea
     }
 }
 
-/** Слова судьбы [fate] отчёта вида [kind]: «Исправляется» у ошибки и «Делается» у предложения, версия и номер дубля; [short] - для узкой плашки. */
+/** Слова судьбы [fate] отчёта вида [kind]: «Исправляется», версия и номер дубля; [short] - для узкой плашки. */
 fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Boolean = false): String {
     val version = issue?.version.orEmpty()
     return when (fate) {
@@ -131,9 +129,8 @@ fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Bo
         ReportFate.REJECTED -> ui(if (short) "feedback.fate.rejected_short" else "feedback.fate.rejected")
         ReportFate.SENT -> ui("feedback.fate.sent")
         ReportFate.OPEN -> ui("feedback.fate.open")
-        ReportFate.IN_PROGRESS -> ui(if (kind == FeedbackKind.SUGGESTION) "feedback.fate.doing" else "feedback.fate.fixing")
+        ReportFate.IN_PROGRESS -> ui("feedback.fate.fixing")
         ReportFate.FIXED -> if (version.isBlank()) ui("feedback.fate.fixed") else ui("feedback.fate.fixed_in", version)
-        ReportFate.DONE -> if (version.isBlank()) ui("feedback.fate.done") else ui("feedback.fate.done_in", version)
         ReportFate.NOT_PLANNED -> ui(if (short) "feedback.fate.wontfix_short" else "feedback.fate.wontfix")
         ReportFate.INVALID -> ui("feedback.fate.invalid")
         ReportFate.DUPLICATE -> issue?.duplicate?.takeIf { it > 0 }?.let { ui("feedback.fate.duplicate_of", it) } ?: ui("feedback.fate.duplicate")
@@ -156,18 +153,10 @@ fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Bo
 /** Вкладка листа отчётов (0.14.1, макет A): свои отчёты или известные проблемы. */
 enum class ReportsTab { MINE, KNOWN }
 
-/** Фильтр известных проблем по виду. */
-private enum class KindFilter(val key: String, val kind: FeedbackKind?) {
-    ALL("feedback.filter.all", null),
-    BUGS("feedback.filter.bugs", FeedbackKind.BUG),
-    IDEAS("feedback.filter.ideas", FeedbackKind.SUGGESTION),
-}
-
 /**
- * Отчёты (0.14.1, GH-ISSUES, макет A - доработка прежнего листа предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и
- * ответами; число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки и предложения из игры с
- * голосованием; поиск по тексту и номеру, фильтр по виду). Открытые выше закрытых; ошибки - сначала «Исправляется», затем по
- * номеру, предложения - по рейтингу.
+ * Отчёты (0.14.1, GH-ISSUES, макет A; 0.14.2 - без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
+ * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −», поиск
+ * по тексту и номеру). Открытые выше закрытых; известные - сначала «Исправляется», затем по рейтингу и номеру.
  */
 @Composable
 fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
@@ -179,7 +168,6 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(start) }
     var deleting by remember { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
-    var filter by rememberSaveable { mutableStateOf(KindFilter.ALL) }
     val fresh = feedback.mine.filter { own -> own.replyPrint?.let { it != seen[own.id] } == true }.map { it.id }.toSet()
     // Открытая «Мои» гасит новые ответы - но точки этого показа остаются до следующего открытия
     val shownFresh = remember(tab, feedback.mine) { fresh }
@@ -198,18 +186,17 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                PillTabs(KindFilter.entries.map { ui(it.key) }, filter.ordinal, { filter = KindFilter.entries[it] }, segmented = true)
             }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
                 when (tab) {
                     ReportsTab.MINE -> {
                         val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
                         if (mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
-                        items(mine, key = { it.id }) { own -> OwnCard(own, own.id in shownFresh, !activity.busy) { deleting = own.id } }
+                        items(mine, key = { it.id }) { own -> OwnCard(own, own.id in shownFresh, !activity.busy, onAnswer = { text -> model.answerReport(own.id, text) }) { deleting = own.id } }
                     }
 
                     ReportsTab.KNOWN -> {
-                        val known = knownList(feedback.known, query, filter.kind)
+                        val known = knownList(feedback.known, query)
                         if (known.isEmpty()) item { MutedText(ui("feedback.none_known")) }
                         items(known, key = { it.id }) { KnownCard(it, enabled = !activity.busy) { v -> model.vote(it.id, v) } }
                     }
@@ -220,13 +207,11 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
     }
 }
 
-/** Известные проблемы по поиску [query] (текст или «#номер») и виду [kind]: ошибки - «Исправляется» первыми, затем по номеру; предложения - по рейтингу. */
-private fun knownList(all: List<Suggestion>, query: String, kind: FeedbackKind?): List<Suggestion> {
+/** Известные проблемы по поиску [query] (текст или «#номер»): «Исправляется» первыми, затем по рейтингу и номеру. */
+private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> {
     val words = query.trim().removePrefix("#")
-    val found = all.filter { kind == null || it.kind == kind }.filter { words.isEmpty() || it.text.contains(words, ignoreCase = true) || it.issue?.number?.toString() == words }
-    val (bugs, ideas) = found.partition { it.kind == FeedbackKind.BUG }
-    return bugs.sortedWith(compareBy<Suggestion> { it.issue?.state != IssueState.IN_PROGRESS }.thenBy { it.issue?.number ?: Int.MAX_VALUE }) +
-        ideas.sortedByDescending { it.rating }
+    return all.filter { words.isEmpty() || it.text.contains(words, ignoreCase = true) || it.issue?.number?.toString() == words }
+        .sortedWith(compareBy<KnownReport> { it.issue?.state != IssueState.IN_PROGRESS }.thenByDescending { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
 }
 
 /**
@@ -240,9 +225,10 @@ private fun knownList(all: List<Suggestion>, query: String, kind: FeedbackKind?)
     fate: ReportFate,
     issue: IssueView?,
     createdAt: String,
-    reply: Pair<String, String>?,
+    thread: List<Pair<NoteAuthor, String>>,
     dim: Boolean,
     fresh: Boolean = false,
+    onAnswer: ((String) -> Unit)? = null,
     footer: @Composable RowScope.() -> Unit,
 ) {
     val shape = RoundedCornerShape(12.dp)
@@ -257,17 +243,8 @@ private fun knownList(all: List<Suggestion>, query: String, kind: FeedbackKind?)
         }
         Text(text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
         FateSteps(StepPath.of(fate, kind, issue), Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp))
-        reply?.let { (who, words) ->
-            Column(
-                Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp).fillMaxWidth()
-                    .background(Rune.copy(alpha = .08f), RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
-                    .drawBehind { drawRect(Rune, size = Size(3.dp.toPx(), size.height)) }
-                    .padding(start = 11.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
-            ) {
-                Text(who, color = Rune, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                Text(words, color = Parchment, style = MaterialTheme.typography.bodySmall)
-            }
-        }
+        thread.forEach { (who, words) -> ThreadNote(who, words) }
+        onAnswer?.let { send -> AnswerField(send) }
         Row(
             Modifier.fillMaxWidth().background(PanelRaised).padding(horizontal = 12.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -289,16 +266,15 @@ private fun knownList(all: List<Suggestion>, query: String, kind: FeedbackKind?)
 private data class StepPath(val labels: List<String>, val reached: Int, val tint: Color) {
     companion object {
         fun of(fate: ReportFate, kind: FeedbackKind, issue: IssueView?): StepPath {
-            val idea = kind == FeedbackKind.SUGGESTION
-            val work = ui(if (idea) "feedback.fate.doing" else "feedback.fate.fixing")
-            val done = ui(if (idea) "feedback.fate.done" else "feedback.fate.fixed")
+            val work = ui("feedback.fate.fixing")
+            val done = ui("feedback.fate.fixed")
             val base = listOf(ui("feedback.step.accepted"), ui("feedback.fate.sent"), work)
             return when (fate) {
                 ReportFate.MODERATION -> StepPath(base + done, 1, fate.tint)
                 ReportFate.REJECTED -> StepPath(listOf(base[0], fateTitle(fate, kind, issue, short = true)), 2, fate.tint)
                 ReportFate.SENT, ReportFate.OPEN -> StepPath(base + done, 2, fate.tint)
                 ReportFate.IN_PROGRESS -> StepPath(base + done, 3, fate.tint)
-                ReportFate.FIXED, ReportFate.DONE -> StepPath(base + fateTitle(fate, kind, issue), 4, fate.tint)
+                ReportFate.FIXED -> StepPath(base + fateTitle(fate, kind, issue), 4, fate.tint)
                 ReportFate.NOT_PLANNED, ReportFate.INVALID, ReportFate.DUPLICATE -> StepPath(base.take(2) + fateTitle(fate, kind, issue, short = true), 3, fate.tint)
             }
         }
@@ -337,35 +313,74 @@ private data class StepPath(val labels: List<String>, val reached: Int, val tint
 /** День и месяц отчёта из ISO-времени сервера («2026-10-15T13:06:30» → «15.10»); не разобралось - пусто. */
 private fun shortDate(createdAt: String): String = createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, month, day) -> "$day.$month" }.orEmpty()
 
-/** Кто ответил последним: слово разработчика в Issue главнее слова модерации; ответа нет - null. */
-private fun lastWord(issue: IssueView?, reason: String): Pair<String, String>? =
-    issue?.comment?.takeIf { it.isNotBlank() }?.let { ui("feedback.who.dev") to it } ?: reason.takeIf { it.isNotBlank() }?.let { ui("feedback.who.mod") to it }
+/**
+ * Переписка карточки (0.14.2): слово модерации при решении ([reason]), затем вся переписка Issue по порядку - разработчик,
+ * модерация из игры и автор.
+ */
+private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, String>> =
+    listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + issue?.notes.orEmpty().map { it.author to it.text }
 
-@Composable private fun KindMark(kind: FeedbackKind) {
-    Icon(if (kind == FeedbackKind.SUGGESTION) Icons.Outlined.Lightbulb else Icons.Outlined.BugReport, kindTitle(kind), tint = Muted, modifier = Modifier.size(16.dp))
+/** Запись переписки цитатой: разработчик - руной слева, модерация - золотом слева, автор - пергаментом справа. */
+@Composable private fun ThreadNote(who: NoteAuthor, words: String) {
+    val tint = when (who) {
+        NoteAuthor.DEVELOPER -> Rune
+        NoteAuthor.MODERATION -> Gold
+        NoteAuthor.AUTHOR -> Parchment
+    }
+    val mine = who == NoteAuthor.AUTHOR
+    Column(
+        Modifier.padding(start = if (mine) 36.dp else 12.dp, end = if (mine) 12.dp else 36.dp).padding(bottom = 8.dp).fillMaxWidth()
+            .background(tint.copy(alpha = .08f), RoundedCornerShape(8.dp))
+            .drawBehind { drawRect(tint, topLeft = Offset(if (mine) size.width - 3.dp.toPx() else 0f, 0f), size = Size(3.dp.toPx(), size.height)) }
+            .padding(horizontal = 11.dp, vertical = 6.dp),
+    ) {
+        Text(ui("feedback.who.${who.name.lowercase()}"), color = tint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+        Text(words, color = Parchment, style = MaterialTheme.typography.bodySmall)
+    }
 }
 
-@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, enabled: Boolean, onDelete: () -> Unit) {
+/** Ответ автора в Issue (0.14.2): поле и «Отправить»; уходит комментарием в GitHub и встаёт в переписку. */
+@Composable private fun AnswerField(onSend: (String) -> Unit) {
+    var text by rememberSaveable { mutableStateOf("") }
+    Row(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(text, { text = it.take(ANSWER_MAX) }, placeholder = { Text(ui("feedback.answer")) }, maxLines = 4, modifier = Modifier.weight(1f))
+        ForgeTextButton(
+            enabled = text.isNotBlank(),
+            onClick = {
+                onSend(text.trim())
+                text = ""
+            },
+        ) { Text(ui("feedback.answer_send"), color = Gold, style = MaterialTheme.typography.labelMedium) }
+    }
+}
+
+@Composable private fun KindMark(kind: FeedbackKind) {
+    Icon(Icons.Outlined.BugReport, kindTitle(kind), tint = Muted, modifier = Modifier.size(16.dp))
+}
+
+@Composable private fun OwnCard(own: OwnReport, fresh: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
-    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, lastWord(own.issue, own.reason), dim = fate.closed, fresh = fresh) {
-        if (own.kind == FeedbackKind.SUGGESTION) Score(own.likes, own.dislikes)
+    // Ответить в Issue можно, пока он открыт (0.14.2)
+    val answer = onAnswer.takeIf { own.issue?.state?.open == true && enabled }
+    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, thread(own.issue, own.reason), dim = fate.closed, fresh = fresh, onAnswer = answer) {
+        Score(own.likes, own.dislikes)
         if (own.deletable) ReportDeleteButton(enabled, onDelete)
     }
 }
 
-@Composable private fun KnownCard(known: Suggestion, enabled: Boolean, onVote: (Vote) -> Unit) {
+@Composable private fun KnownCard(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
     val fate = ReportFate.of(known.status, known.issue)
-    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, lastWord(known.issue, ""), dim = false) {
+    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, thread(known.issue, ""), dim = false) {
         if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
-        if (known.kind == FeedbackKind.SUGGESTION) VoteRow(known, enabled, onVote)
+        VoteRow(known, enabled, onVote)
     }
 }
 
 /**
  * Похожее уже известно (0.14.1, GH-ISSUES мелочи): под формой отчёта - до трёх открытых известных проблем, близких к черновику,
- * с голосованием за предложения: игрок видит, что об этом уже знают, и голосует, а не пишет дубль.
+ * с голосованием «+ / −»: игрок видит, что об этом уже знают, и голосует, а не пишет дубль.
  */
-@Composable fun SimilarKnown(similar: List<Suggestion>, enabled: Boolean, onVote: (String, Vote) -> Unit) {
+@Composable fun SimilarKnown(similar: List<KnownReport>, enabled: Boolean, onVote: (String, Vote) -> Unit) {
     if (similar.isEmpty()) return
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(ui("feedback.similar"), color = Rune, style = MaterialTheme.typography.labelLarge)
@@ -378,9 +393,9 @@ private fun lastWord(issue: IssueView?, reason: String): Pair<String, String>? =
     Text(ui("feedback.score", likes, dislikes), color = Muted, style = MaterialTheme.typography.labelSmall)
 }
 
-@Composable private fun VoteRow(suggestion: Suggestion, enabled: Boolean, onVote: (Vote) -> Unit) {
-    VoteButton("+", suggestion.likes, suggestion.vote == Vote.LIKE, Vital, enabled && suggestion.votable) { onVote(Vote.LIKE) }
-    VoteButton("−", suggestion.dislikes, suggestion.vote == Vote.DISLIKE, LifeRed, enabled && suggestion.votable) { onVote(Vote.DISLIKE) }
+@Composable private fun VoteRow(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
+    VoteButton("+", known.likes, known.vote == Vote.LIKE, Vital, enabled && known.votable) { onVote(Vote.LIKE) }
+    VoteButton("−", known.dislikes, known.vote == Vote.DISLIKE, LifeRed, enabled && known.votable) { onVote(Vote.DISLIKE) }
 }
 
 /** Удаление отчёта (4.3.0) - всегда с вопросом: оно жёсткое и не возвращается. */
@@ -414,6 +429,9 @@ private fun lastWord(issue: IssueView?, reason: String): Pair<String, String>? =
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
+
+/** Длина ответа автора в Issue из игры (0.14.2): сервер всё равно режет по `inputs.report`. */
+private const val ANSWER_MAX = 1000
 
 /** Закрытые свои отчёты приглушены. */
 private const val DIM = .6f

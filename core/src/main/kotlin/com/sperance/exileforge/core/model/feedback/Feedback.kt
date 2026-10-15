@@ -8,7 +8,6 @@ import kotlinx.serialization.Serializable
 /** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion; жалоба на письмо героя (4.6.3) - [COMPLAINT]. */
 @Serializable enum class FeedbackKind {
     BUG,
-    SUGGESTION,
     APPEAL,
     COMPLAINT,
 
@@ -20,26 +19,27 @@ import kotlinx.serialization.Serializable
  * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.3.0: первый
  * комментарий модерации к созданному), [SENT] - отправлен Issue в GitHub (0.14.1), [REJECTED] - отклонён модерацией с причиной.
  * Куда отчёт может перейти и можно ли голосовать, решает машина состояний сервера: она приходит полями [AdminReport.moves] и
- * [Suggestion.votable].
+ * [KnownReport.votable].
  */
 @Serializable enum class ReportStatus { CREATED, REVIEW, SENT, REJECTED }
 
 /**
- * Судьба Issue отчёта (0.14.1, GH-ISSUES; сервер `IssueState`): открыт - [OPEN] («В работе») и [IN_PROGRESS] («Исправляется» у
- * ошибки, «Делается» у предложения); закрыт выполненным - [FIXED] / [DONE] (с версией), отказом - [NOT_PLANNED], [DUPLICATE],
- * [INVALID].
+ * Судьба Issue отчёта (0.14.1, GH-ISSUES; сервер `IssueState`): открыт - [OPEN] («В работе») и [IN_PROGRESS] («Исправляется»);
+ * закрыт выполненным - [FIXED] (с версией), отказом - [NOT_PLANNED], [DUPLICATE], [INVALID].
  */
 @Serializable enum class IssueState(val open: Boolean) {
     OPEN(true),
     IN_PROGRESS(true),
     FIXED(false),
-    DONE(false),
     NOT_PLANNED(false),
     DUPLICATE(false),
     INVALID(false),
 }
 
-/** Issue отчёта (0.14.1): номер и ссылка в публичном репозитории, судьба, версия исправления, слово разработчика, дубль чего. */
+/**
+ * Issue отчёта (0.14.1): номер и ссылка в публичном репозитории, судьба, версия исправления, слово разработчика, дубль чего; с
+ * 0.14.2 (сервер API 86) - вся переписка [notes].
+ */
 @Serializable data class IssueView(
     val number: Int,
     val url: String = "",
@@ -47,13 +47,26 @@ import kotlinx.serialization.Serializable
     val version: String = "",
     val comment: String = "",
     val duplicate: Int = 0,
+    val notes: List<IssueNote> = emptyList(),
 )
 
-/** A player's vote on a suggestion: one per account, switched by tapping again. */
+/** Кто написал в Issue (0.14.2): разработчик в GitHub, модерация из игры или автор отчёта из игры. */
+@Serializable enum class NoteAuthor { DEVELOPER, MODERATION, AUTHOR }
+
+/** Запись переписки Issue (0.14.2): кто, что и когда (ISO-8601). */
+@Serializable data class IssueNote(val author: NoteAuthor, val text: String, val at: String = "")
+
+/** Что модерация делает с Issue отчёта из игры (0.14.2, сервер `IssueMove`): ответить, взять в работу, закрыть с причиной. */
+@Serializable enum class IssueMove { REPLY, PROGRESS, FIXED, NOT_PLANNED, INVALID, DUPLICATE }
+
+/** Текст ответа в Issue из игры (0.14.2): автора отчёта или модерации. */
+@Serializable data class ReportAnswer(val text: String)
+
+/** A player's vote on a report (0.14.2: «+ / −» у ошибок): one per account, switched by tapping again. */
 @Serializable enum class Vote { LIKE, DISLIKE, NONE }
 
-/** A suggestion in the public list: no author — only the administrator sees who wrote it; [mine] marks the viewer's own. */
-@Serializable data class Suggestion(
+/** A known report in the public list (0.14.2: ошибки, без предложений): no author — only the administrator sees who wrote it; [mine] marks the viewer's own. */
+@Serializable data class KnownReport(
     val id: String,
     val text: String,
     val status: ReportStatus,
@@ -65,7 +78,7 @@ import kotlinx.serialization.Serializable
     /** Можно ли зрителю голосовать (4.3.0): не своё и ещё ждёт решения (0.14.1: и пока Issue открыт) - решает сервер. */
     val votable: Boolean = false,
     /** Ошибка или предложение (0.14.1: известные проблемы - и ошибки). */
-    val kind: FeedbackKind = FeedbackKind.SUGGESTION,
+    val kind: FeedbackKind = FeedbackKind.BUG,
     val issue: IssueView? = null,
 ) {
     val rating: Int get() = likes - dislikes
@@ -86,8 +99,8 @@ import kotlinx.serialization.Serializable
     /** Issue отчёта (0.14.1); null - ещё не отправлен. */
     val issue: IssueView? = null,
 ) {
-    /** Последний ответ автору (0.14.1): слово разработчика в Issue, иначе слово модерации; пусто - ответа нет. */
-    val reply: String get() = issue?.comment?.takeIf { it.isNotBlank() } ?: reason
+    /** Последний ответ автору (0.14.1; 0.14.2 - последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
+    val reply: String get() = issue?.notes?.lastOrNull { it.author != NoteAuthor.AUTHOR }?.text ?: issue?.comment?.takeIf { it.isNotBlank() } ?: reason
 
     /** Отпечаток последнего ответа: сменился - ответ новый; null - ответа нет. */
     val replyPrint: String? get() = reply.takeIf { it.isNotBlank() }?.hashCode()?.toString()

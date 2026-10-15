@@ -5,7 +5,7 @@ import com.sperance.exileforge.core.model.feedback.IgnoredHero
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.OwnReport
-import com.sperance.exileforge.core.model.feedback.Suggestion
+import com.sperance.exileforge.core.model.feedback.KnownReport
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -16,10 +16,10 @@ import kotlinx.coroutines.flow.update
  */
 data class Feedback(
     /** Известные проблемы (0.14.1, GH-ISSUES): ошибки и предложения с открытым Issue. */
-    val known: List<Suggestion> = emptyList(),
+    val known: List<KnownReport> = emptyList(),
     val mine: List<OwnReport> = emptyList(),
     /** Похожее уже известно (0.14.1): известные проблемы, близкие к черновику отчёта. */
-    val similar: List<Suggestion> = emptyList(),
+    val similar: List<KnownReport> = emptyList(),
     val reports: List<AdminReport> = emptyList(),
     val mail: List<Mail> = emptyList(),
     val unread: Int = 0,

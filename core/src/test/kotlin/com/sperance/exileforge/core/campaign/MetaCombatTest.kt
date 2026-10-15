@@ -214,6 +214,10 @@ class MetaCombatTest {
             Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 13),
             Scenario("WITCH", SkillType.SPELL, 0.8, cleared = true, seed = 17),
             Scenario("WITCH", SkillType.SPELL, 1.3, cleared = false, seed = 11),
+            // 0.14.1, оборона классов строкой: Мародёр получает на 30% меньше урона - ещё две стаи, где он теряет здоровье (лечение от
+            // урона живое) и где горят поджоги
+            Scenario("MARAUDER", SkillType.ATTACK, 1.75, cleared = false, seed = 13),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 7),
         )
 
         /** Известные строки и силы, что эталонная схватка не меняет, - с причиной. */

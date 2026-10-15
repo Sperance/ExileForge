@@ -138,7 +138,7 @@ class KeyScreensShotTest {
     @Test fun altar() = shot("altar", scroll = false) {
         val offers = index.campaign.features?.altar?.offers.orEmpty().take(2)
         val pacts = offers.mapNotNull { offer -> line(offer.boon)?.let { boon -> line(offer.curse)?.let { curse -> AltarPact(boon, curse, offer.code, offer.target) } } }
-        Box(Modifier.height(640.dp)) { AltarSheet(game(40), MapFeature.Altar(0, pacts), {}, {}) }
+        Box(Modifier.height(ALTAR_HEIGHT)) { AltarSheet(game(40), MapFeature.Altar(0, pacts), {}, {}) }
     }
 
     @Test fun storyBook() = shot("book") {
@@ -270,5 +270,8 @@ class KeyScreensShotTest {
 
         /** Активных слотов умений (SKILL-02). */
         const val SLOTS = 4
+
+        /** Высота листа алтаря: два варианта и «Пройти мимо» целиком (0.14.1 - на 640 dp кнопка срезалась). */
+        val ALTAR_HEIGHT = 780.dp
     }
 }

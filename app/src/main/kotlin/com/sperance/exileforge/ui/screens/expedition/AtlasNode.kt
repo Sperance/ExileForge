@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.atlas.AtlasFog
+import com.sperance.exileforge.core.display.atlasLineNote
 import com.sperance.exileforge.core.display.atlasNodeTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.lineText
@@ -86,6 +87,10 @@ import kotlin.math.sin
         val totals = remember(taken) { AtlasTotals.of(index, taken) }
         node.lines.forEach { line ->
             effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
+            // Что делает характеристика строки (0.15.0, #41): пояснение сервера серым под строкой
+            atlasLineNote(index, line)?.let { note ->
+                Text(note, color = Sky.text.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
+            }
             if (node.kind != AtlasNodeKind.START) {
                 val now = totals[line.code]?.firstOrNull() ?: 0.0
                 val value = line.values.firstOrNull() ?: 0.0

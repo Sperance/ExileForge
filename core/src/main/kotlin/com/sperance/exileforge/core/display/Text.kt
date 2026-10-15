@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.rules.content.StatGroup
 import com.sperance.exileforge.rules.content.StatUnit
 import com.sperance.exileforge.rules.content.WeaponType
 import com.sperance.exileforge.rules.text.LocaleKey
@@ -168,6 +169,14 @@ fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>, ca
 
 /** A fixed line — a base, a class's or a tree node's — as one sentence. */
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code.value)
+
+/**
+ * Пояснение строки узла Атласа (0.15.0, #41): что делает её характеристика, словами сервера (`stat.desc.<код>` - есть у каждой
+ * характеристики Атласа) - серой строкой под строкой узла; строка не Атласа - null.
+ */
+fun atlasLineNote(index: ContentIndex, line: Line): String? = index.modifier(line.code)?.effectOf(0)?.stat
+    ?.takeIf { index.stats[it]?.group == StatGroup.ATLAS }
+    ?.let { loc(LocaleKey.statDescription(it)) }
 
 /**
  * A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. Плюс шаблона перед

@@ -24,6 +24,15 @@ object Mights {
 data class MightShift(val before: Double, val after: Double) {
     /** Доля изменения (0.05 - на 5% больше); без прежней Мощи - ноль. */
     val change: Double get() = if (before > 0) after / before - 1 else 0.0
+
+    /** Куда сдвинулась Мощь: меньше полупроцента - шум ([GearVerdict.Shift.EVEN]). */
+    val shift: GearVerdict.Shift get() = GearVerdict.Shift.of(change)
+
+    /**
+     * Сдвиг стоит показа (0.14.5, #44) - одно правило на все места (значок списков, строка карточки): Мощь посчитана и сдвиг не
+     * шум. Нет - ни «⚜ =», ни пустой строки «было → стало».
+     */
+    val shown: Boolean get() = before > 0 && shift != GearVerdict.Shift.EVEN
 }
 
 /**

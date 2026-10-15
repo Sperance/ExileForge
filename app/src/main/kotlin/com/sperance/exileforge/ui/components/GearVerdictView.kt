@@ -43,22 +43,14 @@ private fun Shift.tint(): Color = when (this) {
 }
 
 /**
- * Изменение Мощи «+1.2k» / «−340» / «=» (0.14.0, ASANA-N04): Мощь героя с вещью минус нынешняя, коротким числом со знаком;
- * меньше полупроцента - «=». Урона и защиты стрелками больше нет - одна мера, та же, что «было → стало» карточки.
+ * Изменение Мощи «+1.2k» / «−340» (0.14.0, ASANA-N04): Мощь героя с вещью минус нынешняя, коротким числом со знаком. Урона и защиты
+ * стрелками больше нет - одна мера, та же, что «было → стало» карточки; сдвиг, что не стоит показа ([MightShift.shown], 0.14.5,
+ * #44), не пишется вовсе.
  */
-private fun MightShift.figure(): Pair<String, Shift> {
-    val shift = Shift.of(change)
-    return (if (shift == Shift.EVEN) "=" else signedNumber(after - before) { compactNumber(it) }) to shift
-}
-
-/** Итог над «Если надеть» в карточке вещи (0.14.0, ASANA-N04): «⚜ Мощь +1.2k» - у снаряжения и у фляги. */
-@Composable fun GearVerdictSummary(verdict: GearVerdict, modifier: Modifier = Modifier) {
-    val (figure, shift) = verdict.might?.figure() ?: return
-    Text(ui("verdict.might", figure), modifier, color = shift.tint(), fontWeight = FontWeight.ExtraBold, style = MaterialTheme.typography.labelLarge)
-}
+private fun MightShift.figure(): String = signedNumber(after - before) { compactNumber(it) }
 
 /** Значок строки списка (0.14.0, ASANA-N04): «⚜ +1.2k» - сумка, тайники, склад, добыча; у фляги тоже. */
 @Composable fun GearVerdictBadge(verdict: GearVerdict, modifier: Modifier = Modifier) {
-    val (figure, shift) = verdict.might?.figure() ?: return
-    Text(ui("might.short", figure), modifier, color = shift.tint(), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall)
+    val might = verdict.might?.takeIf { it.shown } ?: return
+    Text(ui("might.short", might.figure()), modifier, color = might.shift.tint(), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall)
 }

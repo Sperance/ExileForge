@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.character.MightStanding
 import com.sperance.exileforge.core.character.Mights
@@ -186,14 +187,15 @@ private fun MightDefense.parts(): List<DefensePart> = listOf(
     Text(if (value > 0) mightLine(value) else ui("might.short", PENDING), color = tint, fontSize = fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = modifier)
 }
 
-/** Мощь героя «было → стало» с вещью (4.8.0) - строкой сравнения, как у [StatComparison], с плашкой разницы. */
+/**
+ * Мощь героя «было → стало» с вещью (4.8.0) - строкой сравнения, как у [StatComparison], с плашкой разницы; одна строка Мощи в
+ * карточке (0.14.5, #44), и только когда сдвиг стоит показа ([MightShift.shown]).
+ */
 @Composable fun MightComparison(shift: MightShift, look: RelicLook? = null) {
+    if (!shift.shown) return
     val muted = look?.muted ?: Muted
     val faint = look?.faint ?: Bronze
-    val better = when {
-        mightText(shift.after) == mightText(shift.before) -> null
-        else -> shift.after > shift.before
-    }
+    val better = shift.shift == GearVerdict.Shift.UP
     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(MIGHT_GLYPH, color = Caution, style = MaterialTheme.typography.bodySmall)
         Text(ui("might.title"), color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))

@@ -108,7 +108,7 @@ const val LOCKED_TILE_ALPHA = .45f
 }
 
 /** Пунктирная рамка заглушки (4.11.x): контур [shape] штрихами цвета [color]. */
-private fun Modifier.dashedBorder(color: Color, shape: Shape): Modifier = drawBehind {
+internal fun Modifier.dashedBorder(color: Color, shape: Shape): Modifier = drawBehind {
     val stroke = 1.dp.toPx()
     val dash = 6.dp.toPx()
     drawOutline(shape.createOutline(size, layoutDirection, this), color, style = Stroke(stroke, pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash))))

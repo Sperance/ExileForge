@@ -233,10 +233,13 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
     }
 }
 
-/** When a slot fires, or a flask is drunk, by itself: every condition — a flask's own kind's too, and the mana's only for a flask. */
+/**
+ * When a slot fires, or a flask is drunk, by itself: every condition — a flask's own kind's too, and the mana's only for a flask.
+ * [onSwap] (0.14.5, #38) - «Заменить умение» ячейки под условиями.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ConditionPicker(title: String, current: SlotCondition?, flask: Boolean, onDismiss: () -> Unit, onPick: (SlotCondition?) -> Unit) {
+internal fun ConditionPicker(title: String, current: SlotCondition?, flask: Boolean, onDismiss: () -> Unit, onSwap: (() -> Unit)? = null, onPick: (SlotCondition?) -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -256,6 +259,7 @@ internal fun ConditionPicker(title: String, current: SlotCondition?, flask: Bool
                     Text(condition?.let(::conditionTitle) ?: ui("skills.condition.KIND"), color = if (on) GoldBright else Parchment)
                 }
             }
+            onSwap?.let { ForgeTextButton(onClick = it, modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) { Text(ui("skills.swap_skill"), color = Rune) } }
         }
     }
 }

@@ -31,16 +31,18 @@ import androidx.compose.ui.unit.sp
     maxLines: Int = 2,
     minLines: Int = 1,
     step: TextUnit = FIT_STEP,
+    /** Выравнивание строк (0.14.5): по центру - плитки, с начала - строки списков. */
+    textAlign: TextAlign = TextAlign.Center,
 ) {
     val measurer = rememberTextMeasurer()
     val tight = style.copy(letterSpacing = 0.sp)
-    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier, contentAlignment = if (textAlign == TextAlign.Center) Alignment.Center else Alignment.CenterStart) {
         val width = constraints.maxWidth
         val size = remember(text, tight, width, max, min, maxLines, step) { fittedSize(measurer, text, tight, width, max, min, maxLines, step) }
         Text(
             text,
             color = color,
-            style = tight.copy(fontSize = size, lineHeight = (size.value * LINE_HEIGHT).sp, textAlign = TextAlign.Center),
+            style = tight.copy(fontSize = size, lineHeight = (size.value * LINE_HEIGHT).sp, textAlign = textAlign),
             maxLines = maxLines,
             minLines = minLines,
             overflow = TextOverflow.Ellipsis,

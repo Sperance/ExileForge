@@ -6,7 +6,6 @@ import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.model.hero.UniqueFind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ItemTemplate
-import com.sperance.exileforge.rules.table.TableKind
 
 /** Найденный уникальный шаблон: он сам и его находка. */
 data class FoundUnique(val template: ItemTemplate, val find: UniqueFind)
@@ -21,30 +20,23 @@ data class UniquePool(val tag: String, val title: String, val templates: List<It
 }
 
 /**
- * Альбом уникальных вещей (3.90.2): что вообще бывает и откуда. Пул - таблица шаблонов контента, целиком из уникальных и
- * мифических (мир, шанс, кузня, Бездна, мифические, механики); таблицы боссов (`boss:*`) - отдельная группа, по пулу на
- * босса. Смешанные таблицы добычи пулом не считаются: их уникалки и так лежат в пулах выше. Новая таблица в контенте -
- * новый пул без правки кода; название - словарь клиента `history.pool.<тег>`, босс - его имя.
+ * Альбом уникальных вещей (3.90.2): что вообще бывает и откуда. С 0.15.0 (#51) - категории правил ([ContentIndex.album],
+ * `rules.json` → `album`): каждая уникальная и мифическая вещь лежит ровно в одной категории - первой по порядку старшинства
+ * контента (боссы, мифические, механики, мир), пустая категория не показывается, пул Сферы удачи - способ получить вещь, а не её
+ * источник, - в альбом не входит. Категории группы (`boss:*`) - отдельная группа, по пулу на босса; прочие - пулы в порядке
+ * контента. Новая категория - запись контента без правки кода; название - словарь клиента `history.pool.<тег>`, босс - его имя.
  */
 class UniqueAlbum(index: ContentIndex, lang: Lang = uiLanguage) {
-    /** Все уникальные и мифические шаблоны контента. */
-    val all: List<ItemTemplate> = index.templates.values.filter { it.unique }
+    private val album = index.album
 
-    val pools: List<UniquePool>
-    val bosses: List<UniquePool>
+    /** Все уникальные и мифические шаблоны альбома - каждый в одной категории. */
+    val all: List<ItemTemplate> = album.categories.flatMap { it.templates }
 
-    init {
-        val tables = index.tables.tags.filter { index.tables.kind(it) == TableKind.TEMPLATE }.mapNotNull { tag ->
-            val members = index.templatePool(listOf(tag)).map { it.value }.distinctBy { it.code }
-            members.takeIf { it.isNotEmpty() }?.let { tag to it }
-        }
-        val (boss, rest) = tables.partition { (tag, _) -> tag.startsWith(BOSS) }
-        pools = rest.filter { (_, members) -> members.all { it.unique } }
-            .map { (tag, members) -> UniquePool(tag, ui(lang, "history.pool.$tag"), members) }
-            .sortedByDescending { it.templates.size }
-        bosses = boss.mapNotNull { (tag, members) -> members.filter { it.unique }.takeIf { it.isNotEmpty() }?.let { UniquePool(tag, monsterTitle(tag.removePrefix(BOSS)), it) } }
-            .sortedBy { it.title }
-    }
+    /** Категории по порядку контента. */
+    val pools: List<UniquePool> = album.categories.filterNot { it.grouped }.map { UniquePool(it.tag, ui(lang, "history.pool.${it.tag}"), it.templates) }
+
+    /** Боссы - по пулу на босса, по имени. */
+    val bosses: List<UniquePool> = album.categories.filter { it.grouped }.map { UniquePool(it.tag, monsterTitle(it.tag.removePrefix(BOSS)), it.templates) }.sortedBy { it.title }
 
     /** Сколько шаблонов контента найдено: шаблон, которого контент больше не знает, не в счёт. */
     fun count(finds: Map<String, UniqueFind>): Int = all.count { it.code in finds }

@@ -4,7 +4,6 @@ import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.CombatRules
-import com.sperance.exileforge.rules.content.ManaPrice
 import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.SkillAilment
@@ -85,13 +84,14 @@ object SkillText {
     }
 
     /**
-     * Темп активного умения у героя [hero] (4.12.x, SKILL-01, BUILD-01): цена маны на уровне [level] по [price] со снижением цены
-     * листа, время применения ([CastTime]) и перезарядка на его листе, регенерация маны; у пассивного - null. Им гримуар и лист боя
-     * печатают «применение · перезарядка» и «цена в секунду / ваша регенерация».
+     * Темп активного умения у героя [hero] (4.12.x, SKILL-01, BUILD-01): цена маны умения уровня [level] (0.15.0, #40:
+     * [SkillDefinition.manaAt], у всех видов - по уровню умения) со снижением цены листа, время применения ([CastTime]) и перезарядка
+     * на его листе, регенерация маны; у пассивного - null. Им гримуар и лист боя печатают «применение · перезарядка» и «цена в секунду
+     * / ваша регенерация».
      */
-    fun pace(skill: SkillDefinition, level: Int, hero: Combatant, price: ManaPrice): SkillPace? {
+    fun pace(skill: SkillDefinition, level: Int, hero: Combatant): SkillPace? {
         if (skill.kind != SkillKind.ACTIVE) return null
-        val mana = (skill.mana?.let { price.of(it, level, hero.level) } ?: 0.0) * hero.skillCost
+        val mana = skill.manaAt(level) * hero.skillCost
         return SkillPace(mana, CastTime.of(skill, hero, hero.rules), skill.cooldown / hero.recovery, Recovery.manaRegen(hero, hero.rules.mana))
     }
 

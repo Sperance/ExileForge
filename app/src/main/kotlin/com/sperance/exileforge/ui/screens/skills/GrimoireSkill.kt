@@ -52,7 +52,6 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
-import com.sperance.exileforge.rules.content.ManaPrice
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillRules
@@ -143,7 +142,7 @@ internal fun SkillSheet(
     condition: SlotCondition? = null,
 ) {
     val hero = remember(stats, heroLevel) { Combatant(stats, heroLevel, index.campaign.combat) }
-    val pace = remember(skill, level, hero) { SkillText.pace(skill, level, hero, ManaPrice.of(skill, index.skills.rules)) }
+    val pace = remember(skill, level, hero) { SkillText.pace(skill, level, hero) }
     Price(skill, pace, condition)
     SkillLines(SkillText.lines(skill, level, index.campaign.combat) + listOfNotNull(pace?.let(SkillText::manaRate)), tone)
 }

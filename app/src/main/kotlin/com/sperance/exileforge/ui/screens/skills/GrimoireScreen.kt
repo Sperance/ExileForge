@@ -109,6 +109,12 @@ internal sealed interface Pick {
             when (section) {
                 GrimoireSection.SKILLS -> {
                     item { Slots(index, skills, level, body.stats) { pick = it } }
+                    // Можно изучить (0.15.0, #47): неизученные умения своего класса и общие, чья книга лежит в сумке, - с «Изучить»
+                    val learnable = pages.filter { skills.level(it.code) == 0 && bookCount(game, it.code) > 0 }
+                    if (learnable.isNotEmpty()) item { Caption(ui("skills.can_learn")) }
+                    items(learnable, key = { "learn:" + it.code }) { skill ->
+                        Learnable(game, index, skill, skills, level, body.stats, onOpen = { page = skill.code }) { vm.learnSkill(skill.code) }
+                    }
                     item { Caption(ui("skills.book_of", classTitle(classCode))) }
                     // Only what the hero has learned (2.81.0): an unread book's skill appears once its book is read.
                     items(pages.filter { !it.common && skills.level(it.code) > 0 }, key = { it.code }) { skill ->
@@ -362,6 +368,18 @@ private const val SLOT_COLUMNS = 2
             )
         }
         Text(if (learned > 0) ui("skills.level_short", learned) else "—", color = if (learned > 0) Gold else Muted, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
+/**
+ * Умение, что можно изучить (0.15.0, #47): страница неизученного умения, чья книга в сумке, и под ней «Изучить» - тот же путь, что
+ * лист умения ([BookButton]: погашена с причиной, если герою не хватает уровня или атрибутов).
+ */
+@Composable private fun Learnable(game: GameUi, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, stats: Map<String, Double>, onOpen: () -> Unit, onLearn: () -> Unit) {
+    val view = remember(skill, skills, heroLevel, stats) { SkillGrowthView.of(index, skill, skills, heroLevel, stats) }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Page(game, index, skill, skills, heroLevel, stats, null, onOpen)
+        BookButton(game, index, skill, view, heroLevel, stats, onLearn)
     }
 }
 

@@ -91,8 +91,12 @@ import kotlinx.serialization.json.JsonElement
  * 87 - пакет 0.14.4: без «Похожее уже известно» (`bugreport/similar`, `feedback.similar`); захват выгрузки Issue
  *      `feedback.exportHoldMinutes`; без метки «в работе» (`IssueState.IN_PROGRESS`, `IssueMove.PROGRESS`); руна умения
  *      `SkillDefinition.sigil`.
+ * 88 - пакет 0.15.0: книга за главу отвечает `StoryBookTaken` и учит умение сразу (#47); цена маны всех умений - по уровню умения,
+ *      без `ManaPrice` (#40); полярность `StatDef.gain` (#46); порядок альбома уникалок `rules.album` (#51); пояснения
+ *      `stat.desc.ATLAS_*` (#41); `POST admin/fate?code=` (#35); заголовок `X-Client-Version`, `DossierAccount.lastSeenAt`,
+ *      `DossierHero.lastSeenAt` (#36).
  */
-const val API_REVISION = 87
+const val API_REVISION = 88
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

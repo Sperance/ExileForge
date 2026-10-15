@@ -22,6 +22,8 @@ import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.QuestClaimAll
 import com.sperance.exileforge.rules.content.QuestClaimed
 import com.sperance.exileforge.rules.content.QuestKind
+import com.sperance.exileforge.rules.content.StoryBookOutcome
+import com.sperance.exileforge.rules.content.StoryBookTaken
 import com.sperance.exileforge.rules.text.LocaleKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -72,8 +74,15 @@ class QuestActions(
     /** Закон трона [code] за пройденную главу - навсегда; лист героя перечитывается снимком того же ответа. */
     fun law(code: String) = board(ui("story.law.toast", loc(LocaleKey.lawName(code)))) { api.quests.law(it, code) }
 
-    /** Книга умения [code] за пройденную главу [chapter] (SKILL-02): ложится в сумку; снимок героя - тем же ответом. */
-    fun book(chapter: Int, code: String) = board(ui("story.book.toast", SkillText.title(code))) { api.quests.book(it, chapter, code) }
+    /**
+     * Книга умения [code] за пройденную главу [chapter] (SKILL-02; 0.15.0, #47): неизученное умение, что герой тянет, сервер учит сразу,
+     * иначе книга ложится в сумку - тост называет, что стало с книгой ([bookToast]); снимок героя - тем же ответом.
+     */
+    fun book(chapter: Int, code: String) = command(::bookToast) { id ->
+        val taken = api.quests.book(id, chapter, code)
+        show(id, taken.board)
+        taken
+    }
 
     fun claimGuild(questId: String? = null, goal: String? = null) = command(ui("quest.toast.claimed")) { id ->
         val guild = api.quests.claimGuild(id, questId, goal)
@@ -117,16 +126,26 @@ class QuestActions(
 
     private fun hero(): String = heroes.heroId.also { check(it.isNotBlank()) { ui("auction.choose_character") } }
 
-    private fun board(done: String, block: suspend (String) -> QuestBoard) = command(done) { id ->
-        val board = block(id)
+    private fun board(done: String, block: suspend (String) -> QuestBoard) = command(done) { id -> show(id, block(id)) }
+
+    /** Доска [board] из ответа команды героя [id]: на экран, если герой ещё тот же, и его золото. */
+    private fun show(id: String, board: QuestBoard) {
         if (heroes.onScreen(id)) quests { it.copy(board = board) }
         heroes.money(board.money)
     }
 
     /** Одна команда квестов: по одной за раз и без повторов; награда приходит снимком героя в том же ответе (3.94.1). */
-    private fun command(done: String, block: suspend (String) -> Unit) = commands.task(writing = true, touches = setOf(Reads.QUESTS, Reads.GUILD_QUESTS, Reads.HERO)) {
-        block(hero())
-        notices.toast(done)
+    private fun command(done: String, block: suspend (String) -> Unit) = command({ done }, block)
+
+    /** Команда квестов, чей тост [done] читает её итог. */
+    private fun <R> command(done: (R) -> String, block: suspend (String) -> R) = commands.task(writing = true, touches = setOf(Reads.QUESTS, Reads.GUILD_QUESTS, Reads.HERO)) {
+        notices.toast(done(block(hero())))
+    }
+
+    /** Тост книги за главу (#47): умение изучено или книга в сумке (уже изучено, не хватает требований). */
+    private fun bookToast(taken: StoryBookTaken): String = when (taken.outcome) {
+        StoryBookOutcome.LEARNED -> ui("story.book.learned", SkillText.title(taken.skill))
+        StoryBookOutcome.KNOWN, StoryBookOutcome.UNMET -> ui("story.book.toast", SkillText.title(taken.skill))
     }
 
     /** Что сдано, одной строкой: первые заголовки, сколько ещё, и награды суммой. */

@@ -521,7 +521,7 @@ class Battle(
     internal fun draughtOf(slot: Int): TimedEffect? = heroFighter.effects.firstOrNull { it.kind == EffectKind.FLASK && it.slot == slot && it.until > time }
     internal fun skillsFree(): Boolean = kit.flasks.indices.any { i -> kit.flasks[i]?.sheet?.skillsFree == true && draughtOf(i) != null }
     internal fun slotKey(slot: Int) = "#$slot"
-    internal fun cost(kitSkill: KitSkill, level: Int): Double = kitSkill.mana(level, heroFighter.body.level) * heroFighter.body.skillCost
+    internal fun cost(kitSkill: KitSkill, level: Int): Double = kitSkill.mana(level) * heroFighter.body.skillCost
 
     /** Moves the fight on by [dt] seconds in fixed slices, so a frame's length never changes what happens. */
     fun advance(dt: Double) {

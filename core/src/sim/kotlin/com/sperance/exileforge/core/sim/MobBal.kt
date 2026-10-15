@@ -766,7 +766,7 @@ object Prober {
         val t = arena.battle(listOf(arena.phases.foe(immortal(m), level)), seed + 1, false)
         while (t.time < TTD_CAP && t.outcome == null) t.advance(0.5)
         val body = arena.phases.foe(m, level).body
-        val regen = (com.sperance.exileforge.rules.sheet.Recovery.lifeRegen(body, index.campaign.combat.regen) * body.recoveryRate / body.maxLife).coerceAtMost(index.rules.fight.recoveryCap / 100)
+        val regen = (com.sperance.exileforge.rules.sheet.Recovery.lifeFlow(body, index.campaign.combat).gain / body.maxLife).coerceAtMost(index.rules.fight.recoveryCap / 100)
         return Probe(life, flat, perAction, if (t.outcome == Outcome.LOSS) t.time else TTD_CAP, actions / DUMMY, share, regen)
     }
 }

@@ -73,7 +73,7 @@ internal fun ExpeditionRun.roadFlow(): LifeFlow {
     val rates = hurtingRates()
     val total = rates.sumOf { it.second }
     val piercing = rates.filter { AilmentLaw.piercing(it.first) }.sumOf { it.second }
-    return RoadLife.flow(hero, pace, rules.mana, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
+    return RoadLife.flow(hero, pace, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
         .copy(ailments = total, shielded = EnergyShield.absorbed(shield, total, piercing))
 }
 

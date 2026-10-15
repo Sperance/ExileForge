@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.campaign.PassiveSource
+import com.sperance.exileforge.core.campaign.ReadingPart
 import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
@@ -159,11 +160,25 @@ class StatExplainer(private val game: GameUi) {
         val value = signed(stat, shift.delta, percent)
         val better = judge(stat, shift.delta)
         return when (shift.source.kind) {
-            SourceKind.FIGHT -> ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = shift.source.ref, better = better)
+            SourceKind.FIGHT -> ReadingPart.of(shift.source.ref)?.let { part -> partRow(stat, part, value, better) }
+                ?: ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = shift.source.ref, better = better)
+
             SourceKind.SKILL, SourceKind.RESHAPE -> ShareRow(sourceTitle(shift.source), value, skillNote(shift.source), better = better)
+
             else -> ShareRow(shiftTitle(shift.source, holders), value, shift.from?.let { from -> ui("stat.from", statTitle(from)) }, better = better)
         }
     }
+
+    /**
+     * Часть чтения боя (0.15.0, #50): своё имя, у множителя - он сам под именем («×0.50»), касание - характеристика, что её задаёт.
+     */
+    private fun partRow(stat: String, part: ReadingPart, value: String, better: Boolean?): ShareRow {
+        val times = factorOf(stat, part)
+        return ShareRow(ui("stat.flow.${part.name}"), value, times?.let { "×${factor(it)} · " + ui("stat.fight.note") } ?: ui("stat.fight.note"), link = part.stat, better = better)
+    }
+
+    /** Множитель части [part] чтения боя цифры [stat] на листе героя; прибавка - null. */
+    private fun factorOf(stat: String, part: ReadingPart): Double? = hero?.combat?.steps(stat)?.firstOrNull { it.part == part }?.factor
 
     /**
      * Что даёт строка разбора характеристике [stat] - к лучшему ли (0.15.0, #46): одна точка оценки [StatPolarity]; замена
@@ -341,10 +356,26 @@ class StatExplainer(private val game: GameUi) {
         b.set?.let { text += " → ${fmt(stat, it.value, Op.SET, b.percent)}" }
         val formed = fmt(stat, b.formed, Op.ADD, b.percent, sign = false)
         if (parts.size > 1 && b.set == null) text += " = $formed"
+        // Поток восстановления (0.15.0, #50) - по шагам, как его читает бой: «26.4 + 9.0 = 35.4 × 0.50 = 17.7 − 2.0 = 15.7»
+        if (b.shifts.any { it.source.kind == SourceKind.FIGHT && ReadingPart.of(it.source.ref) != null }) return text + steps(b)
         val shifted = b.shifts.sumOf { it.delta }
-        if (abs(shifted) >= 0.05) text += " ${signed(stat, shifted, b.percent).replaceFirst("+", "+ ").replaceFirst("−", "− ")} = ${fmt(stat, b.total, Op.ADD, b.percent, sign = false)}"
+        if (abs(shifted) >= 0.05) text += " ${signedStep(stat, shifted, b.percent)} = ${fmt(stat, b.total, Op.ADD, b.percent, sign = false)}"
         return text
     }
+
+    /** Сдвиги [b] по одному: множитель части чтения боя - «× f», прочее - прибавкой; после каждого - итог. */
+    private fun steps(b: StatBreakdown): String = buildString {
+        var at = b.formed
+        b.shifts.filter { abs(it.delta) >= 0.005 }.forEach { shift ->
+            val times = ReadingPart.of(shift.source.ref)?.takeIf { shift.source.kind == SourceKind.FIGHT }?.let { factorOf(b.stat, it) }
+            append(if (times != null) " × ${factor(times)}" else " ${signedStep(b.stat, shift.delta, b.percent)}")
+            at += shift.delta
+            append(" = ${fmt(b.stat, at, Op.ADD, b.percent, sign = false)}")
+        }
+    }
+
+    /** Сдвиг со знаком отдельным словом формулы: «+ 9.0», «− 2.0». */
+    private fun signedStep(stat: String, value: Double, percent: Boolean): String = signed(stat, value, percent).replaceFirst("+", "+ ").replaceFirst("−", "− ")
 
     private fun factor(value: Double): String = String.format(java.util.Locale.ROOT, "%.2f", value)
 

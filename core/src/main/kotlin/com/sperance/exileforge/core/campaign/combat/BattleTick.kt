@@ -116,16 +116,15 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
     // The bars melt once no blow has filled them for the rule's delay (3.78.0).
     rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
     // Доля восстановления (4.11.0, [Fighter.share]): «меньше регенерации», запрет листа и изранение; иссушение - мане.
-    // Доля регенерации маны здоровью (4.11.x, [RecoveryShare.lifeFromMana]) - та же регенерация здоровья
     val manaCurb = me.curb(RecoveryPool.MANA)
-    // Регенерация здоровья (4.12.x) - одна формула правил [RecoveryShare.lifeRegen]: плоская и доля максимума на общий множитель и долю
-    val lifeCurb = me.curb(RecoveryPool.LIFE)
-    val lifeRegen = RecoveryShare.lifeRegen(me.body, rules.regen, lifeCurb) + RecoveryShare.lifeFromMana(me.body, rules.mana, manaCurb, lifeCurb)
-    val regenerated = lifeBack(me, recovery(me, lifeRegen * me.body.recoveryRate * dt))
+    // Поток здоровья (#50) - одна функция правил со сводкой, картой и Мощью: пополнение - регенерация листа и из маны под долей и
+    // недугами на скорость восстановления; потери и деген - в [degenerate] (у дегена боя своё дно урона во времени)
+    val life = RecoveryShare.lifeFlow(me.body, rules, me.curb(RecoveryPool.LIFE), manaCurb)
+    val regenerated = lifeBack(me, recovery(me, life.gain * dt))
     if (me === heroFighter) lifeMeter.regen(regenerated)
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
     // Регенерация не переливается (4.6.3, Переполнение): перелив копит только избыток восстановления
-    if (!manaless(me)) manaBack(me, RecoveryShare.manaRegen(me.body, rules.mana, manaCurb) * dt, spill = false)
+    if (!manaless(me)) manaBack(me, RecoveryShare.manaFlow(me.body, rules.mana, manaCurb).total * dt, spill = false)
     // Возврат здоровья монстра (0.14.0, STAT-ATK-02): своей полки журнала у него нет
     me.recouping.forEach { recoup -> lifeBack(me, recoup.life * min(dt, recoup.until - (time - dt)).coerceAtLeast(0.0)) }
     if (me === heroFighter) {
@@ -341,7 +340,7 @@ private fun Battle.degenerate(me: Fighter, dt: Double) {
         lifeMeter.delayed(before - me.life)
     }
     val share = me.body.lifeDegenShare
-    // Отрицательная регенерация листа (4.12.x, STAT-ATK-04) - потеря здоровья в секунду, как деген ([RecoveryShare.lifeLoss])
+    // Отрицательная регенерация листа (4.12.x, STAT-ATK-04) - потеря здоровья в секунду, как деген: часть потока [RecoveryShare.lifeLoss]
     val loss = RecoveryShare.lifeLoss(me.body)
     if (share > 0 || loss > 0) {
         val before = me.life

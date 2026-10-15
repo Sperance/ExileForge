@@ -54,15 +54,15 @@ class RoadLifeTest {
         val index = TestContent.index
         val hero = Combatant(mapOf(CoreStat.HEALTH.code to 1_000.0, CoreStat.HEALTH_REGEN.code to 50.0), 40, index.campaign.combat)
         val pace = index.campaign.expedition
-        val free = RoadLife.flow(hero, pace, index.campaign.combat.mana)
+        val free = RoadLife.flow(hero, pace)
         assertTrue(free.regen > free.rest && free.rest > 0, "regeneration and rest flow without an ailment")
-        Ailment.entries.filterNot { it.hurts }.forEach { assertEquals(free, RoadLife.flow(hero, pace, index.campaign.combat.mana, stalledBy = it)) }
-        val bled = RoadLife.flow(hero, pace, index.campaign.combat.mana, stalledBy = Ailment.BLEEDING)
+        Ailment.entries.filterNot { it.hurts }.forEach { assertEquals(free, RoadLife.flow(hero, pace, stalledBy = it)) }
+        val bled = RoadLife.flow(hero, pace, stalledBy = Ailment.BLEEDING)
         assertEquals(0.0, bled.regen)
         assertEquals(0.0, bled.rest)
         assertEquals(free.regen, bled.stalled, 1e-9)
         assertEquals(free.degen, bled.degen, 1e-9)
-        assertTrue(RoadLife.of(hero, pace, index.campaign.combat.mana, stalledBy = Ailment.POISONED).net <= 0)
+        assertTrue(RoadLife.of(hero, pace, stalledBy = Ailment.POISONED).net <= 0)
     }
 
     @Test

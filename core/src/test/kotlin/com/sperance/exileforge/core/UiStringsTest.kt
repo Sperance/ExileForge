@@ -169,6 +169,8 @@ class UiStringsTest {
                 add("term.lore.${it.name}")
                 add("term.lore.${it.name}.text")
             }
+            // Части чтения боя в разборе (0.15.0, #50)
+            com.sperance.exileforge.core.campaign.ReadingPart.entries.forEach { add("stat.flow.${it.name}") }
             // Термины свёртки строк (0.15.0, #46: изранение и иссушение тоже): имя и правило
             com.sperance.exileforge.core.display.Term.entries.forEach {
                 add("term.${it.name}")

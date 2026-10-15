@@ -9,7 +9,6 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
-import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.WorldPart
@@ -36,10 +35,11 @@ data class PassiveSource(val skill: String, val level: Int, val reserve: Double,
 
 /**
  * Что бой читает вместе с характеристикой (4.6.4, как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] - общее
- * сопротивление стихиям к каждой стихии, долю максимума к плоской регенерации (4.12.x - итог боя `Recovery.lifeRegen`) и к здоровью
- * за убийство. [creates] - строка сводки появляется и без своей характеристики (общее сопротивление даёт строки
- * стихий, доля максимума - строку регенерации); иначе прибавка ложится лишь на уже бывшую строку. Часть строки сводки из
- * контента (`StatDef.partOf`) читается здесь же - так строка и её разбор сходятся с боем.
+ * сопротивление стихиям к каждой стихии. Восстановление (0.15.0, #50) - потоком правил по шагам ([steps]): регенерация здоровья и
+ * маны (`Recovery.lifeFlow`/`manaFlow`), щита и здоровье за убийство - так строка сводки равна тому, что даёт бой, а разбор
+ * называет каждую часть. [creates] - строка сводки появляется и без своей характеристики (общее сопротивление даёт строки стихий,
+ * доля максимума - строку регенерации); иначе прибавка ложится лишь на уже бывшую строку. Часть строки сводки из контента
+ * (`StatDef.partOf`) читается здесь же - так строка и её разбор сходятся с боем.
  */
 enum class FightReading(val stat: String, val from: String, val creates: Boolean) {
     FIRE(CoreStat.RESIST_FIRE.code, CoreStat.RESIST_ALL.code, true),
@@ -47,30 +47,122 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
     LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.RESIST_ALL.code, true),
 
     /**
-     * Регенерация здоровья (4.12.x): строка сводки - здоровья в секунду, как его читает бой ([Recovery.lifeRegen]: плоская и доля
-     * максимума на общий множитель и долю восстановления); отрицательная - потеря в секунду ([Recovery.lifeLoss]).
+     * Регенерация здоровья (#50): строка сводки - итог потока здоровья в секунду, как его читает бой ([Recovery.lifeFlow]): плоская,
+     * доля максимума, общий множитель правил и доля восстановления, регенерация из маны, скорость восстановления, потери и деген.
      */
     LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, true) {
-        override fun adds(body: Combatant): Double = Recovery.lifeRegen(body, body.rules.regen) - Recovery.lifeLoss(body) - body[CoreStat.HEALTH_REGEN.code]
+        override fun steps(body: Combatant): List<ReadingStep> {
+            val flow = Recovery.lifeFlow(body, body.rules)
+            return ReadingSteps(body[stat]).apply {
+                to(ReadingPart.LIFE_OF_MAX, flow.raw)
+                // Отрицательная сумма - потеря: множитель и доля её не режут
+                if (flow.raw > 0) {
+                    to(ReadingPart.LIFE_RULE, flow.raw * flow.rule, flow.rule)
+                    to(ReadingPart.LIFE_SHARE, flow.regen, flow.share)
+                }
+                to(ReadingPart.FROM_MANA, flow.regen - flow.loss + flow.mana)
+                to(ReadingPart.RATE, flow.gain - flow.loss, flow.rate.takeIf { flow.loss == 0.0 })
+                to(ReadingPart.DRAIN, flow.total)
+            }.steps
+        }
     },
+
+    /** Регенерация щита (#50): плоская и доля максимума на скорость восстановления - как в бою (`EnergyShield.recovered`). */
     SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, true) {
-        override fun adds(body: Combatant): Double = RegenPool.SHIELD.fromShare(body)
+        override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
+            val raw = RegenPool.SHIELD.flat(body) + RegenPool.SHIELD.fromShare(body)
+            to(ReadingPart.SHIELD_OF_MAX, raw)
+            to(ReadingPart.RATE, raw * body.recoveryRate, body.recoveryRate)
+        }.steps
     },
 
     /**
-     * Регенерация маны (4.11.x): строка сводки - маны в секунду, как её читает бой ([Recovery.manaRegen]): к плоской - доля максимума
-     * по правилу боя, её «увеличение» `STOCK_MANA_REGEN` и доля восстановления.
+     * Регенерация маны (4.11.x; #50): строка сводки - итог потока маны в секунду ([Recovery.manaFlow]): к плоской - доля максимума по
+     * правилу боя, её «увеличение» `STOCK_MANA_REGEN` и доля восстановления.
      */
     MANA_REGEN(CoreStat.MANA_REGEN_FLAT.code, CoreStat.MANA_REGEN.code, true) {
-        override fun adds(body: Combatant): Double = Recovery.manaRegen(body, body.rules.mana) - body[CoreStat.MANA_REGEN_FLAT.code]
+        override fun steps(body: Combatant): List<ReadingStep> {
+            val flow = Recovery.manaFlow(body, body.rules.mana)
+            val base = flow.ofMax + flow.flat
+            return ReadingSteps(body[stat]).apply {
+                to(ReadingPart.MANA_OF_MAX, base)
+                to(ReadingPart.MANA_INCREASE, base * flow.increase, flow.increase)
+                to(ReadingPart.MANA_SHARE, flow.total, flow.share)
+            }.steps
+        }
     },
+
+    /** Здоровье за убийство (#50): плоское и доля максимума на скорость восстановления - как в бою (`Battle.slain`). */
     LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true) {
-        override fun adds(body: Combatant): Double = body.maxLife * body.lifeOnKillShare
+        override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
+            val raw = body.lifeOnKill + body.maxLife * body.lifeOnKillShare
+            to(ReadingPart.KILL_OF_MAX, raw)
+            to(ReadingPart.RATE, raw * body.recoveryRate, body.recoveryRate)
+        }.steps
     },
     ;
 
-    /** Что бой прибавляет к цифре [stat] тела [body]: по умолчанию - саму характеристику [from]. */
-    open fun adds(body: Combatant): Double = body[from]
+    /** Шаги чтения тела [body] поверх цифры [stat] (#50); null - чтение одной прибавкой характеристики [from]. */
+    open fun steps(body: Combatant): List<ReadingStep>? = null
+
+    /** Что бой прибавляет к цифре [stat] тела [body]: сумма шагов или сама характеристика [from]. */
+    fun adds(body: Combatant): Double = steps(body)?.sumOf { it.delta } ?: body[from]
+
+    /** Сдвиги разбора: шаг - своим сдвигом (источник [ReadingPart.ref], касание - его характеристика), иначе одна прибавка [from]. */
+    fun shifts(body: Combatant): List<Shift> = steps(body)?.map { Shift(StatSource(SourceKind.FIGHT, it.part.ref), it.delta, it.part.stat) }
+        ?: listOf(Shift(StatSource(SourceKind.FIGHT, from), body[from], from)).filter { it.delta != 0.0 }
+}
+
+/**
+ * Часть чтения боя (0.15.0, #50) - строка разбора восстановления со своим именем (`stat.flow.<часть>`) и характеристикой [stat],
+ * что её задаёт (касание открывает её разбор; у правила боя её нет). В разборе часть - сдвиг чтения боя с источником [ref].
+ */
+enum class ReadingPart(val stat: String?) {
+    LIFE_OF_MAX(CoreStat.LIFE_REGEN_PERCENT.code),
+    LIFE_RULE(null),
+    LIFE_SHARE(CoreStat.LIFE_REGEN_LESS.code),
+    FROM_MANA(CoreStat.MANA_REGEN_TO_LIFE.code),
+    RATE(CoreStat.RECOVERY_RATE.code),
+    DRAIN(CoreStat.LIFE_DEGEN_PERCENT.code),
+    MANA_OF_MAX(CoreStat.MANA.code),
+    MANA_INCREASE(CoreStat.MANA_REGEN.code),
+    MANA_SHARE(CoreStat.MANA_REGEN_LESS.code),
+    SHIELD_OF_MAX(CoreStat.ENERGY_REGEN_PERCENT.code),
+    KILL_OF_MAX(CoreStat.HEALTH_ON_KILL_PERCENT.code),
+    ;
+
+    /** Источник сдвига части в разборе ([SourceKind.FIGHT]). */
+    val ref: String get() = PREFIX + name
+
+    companion object {
+        private const val PREFIX = "flow."
+
+        /** Часть по источнику сдвига разбора; не часть - null. */
+        fun of(ref: String): ReadingPart? = if (ref.startsWith(PREFIX)) entries.firstOrNull { it.ref == ref } else null
+    }
+}
+
+/**
+ * Шаг чтения боя (#50): часть [part], что она меняет в цифре ([delta]), и множитель [factor] прежнего итога, если шаг - множитель
+ * (правило боя, доля, скорость восстановления); прибавка - null.
+ */
+data class ReadingStep(val part: ReadingPart, val delta: Double, val factor: Double? = null)
+
+/** Сборщик шагов чтения от цифры [start]: каждый шаг - разница его итога с прежним; пустой шаг не пишется. */
+private class ReadingSteps(start: Double) {
+    private var at = start
+    val steps = mutableListOf<ReadingStep>()
+
+    fun to(part: ReadingPart, value: Double, factor: Double? = null) {
+        val delta = value - at
+        if (abs(delta) > EMPTY) steps += ReadingStep(part, delta, factor)
+        at = value
+    }
+
+    private companion object {
+        /** Шаг меньше этого - след округления, не часть. */
+        const val EMPTY = 1e-9
+    }
 }
 
 /**
@@ -175,24 +267,11 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
             val stat = kind.stock!!.code
             index.powers.loot(fighter.stats, kind).takeIf { it != 0.0 || stat in fighter.stats }?.let { values[stat] = it }
         }
-        // Регенерация здоровья (4.11.0) - как её читает бой: «меньше регенерации», запрет и порог листа (`Recovery.share` правил)
-        values[LIFE_REGEN]?.let { values[LIFE_REGEN] = it * lifeShare(fighter.stats) }
         return values
     }
 
-    /** Доля регенерации здоровья листа [stats] без недугов (4.11.0): одна функция правил с боем. */
-    private fun lifeShare(stats: Map<String, Double>): Double = Recovery.share({ stats[it] ?: 0.0 }, RecoveryPool.LIFE)
-
-    /**
-     * Сдвиг регенерации здоровья долей [lifeShare] (4.11.0) поверх разбора с итогом [total]: под картой ([layer]) - доля листа под
-     * её сдвигами; null - доля полная.
-     */
-    private fun lifeCurb(stat: String, total: Double, layer: Map<String, List<Shift>>): Shift? {
-        if (stat != LIFE_REGEN) return null
-        val moved = layer.mapValues { (_, shifts) -> shifts.sumOf { it.delta } }
-        val share = lifeShare(stats + moved.mapValues { (key, delta) -> (stats[key] ?: 0.0) + delta })
-        return Shift(StatSource(SourceKind.FIGHT, CoreStat.LIFE_REGEN_LESS.code), total * (share - 1)).takeIf { abs(it.delta) >= MOVED }
-    }
+    /** Шаги чтения боя цифры [stat] на теле героя (#50): части восстановления с множителями - для строк и формулы разбора. */
+    fun steps(stat: String): List<ReadingStep> = FightReading.entries.filter { it.stat == stat }.flatMap { it.steps(body).orEmpty() }
 
     /** Силы уникалок в прибавке добычи [stat] (4.10.x): каждая сила против всех монстров - своим сдвигом, как её считает [read]. */
     private fun lootPowers(stat: String): List<Shift> = LOOT.filter { it.stock?.code == stat }.flatMap { kind ->
@@ -233,21 +312,20 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
      */
     fun explain(stat: String, layer: Map<String, List<Shift>> = emptyMap()): StatBreakdown {
         val readings = FightReading.entries.filter { it.stat == stat }
-        val fight = readings.map { Shift(StatSource(SourceKind.FIGHT, it.from), it.adds(body), it.from) }.filter { it.delta != 0.0 }
-        val raw = explainer.explain(stat).shifted(scaled[stat].orEmpty() + fight + lootPowers(stat) + layer[stat].orEmpty() + readings.flatMap { read(it, layer) })
-        return lifeCurb(stat, raw.total, layer)?.let { raw.shifted(listOf(it)) } ?: raw
+        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + readings.flatMap { it.shifts(body) } + lootPowers(stat) + layer[stat].orEmpty() + readings.flatMap { read(it, layer) })
     }
 
     /**
      * Что сдвиги [layer] сделали с чтением [reading]: каждый источник положен на лист один, а что они делают только вместе -
-     * последнему, как в `MapEffects.heroShifts`; сумма равна чтению листа под всеми сдвигами без своего.
+     * последнему, как в `MapEffects.heroShifts`; сумма равна чтению листа под всеми сдвигами, и своей цифры тоже (#50).
      */
     private fun read(reading: FightReading, layer: Map<String, List<Shift>>): List<Shift> {
         if (layer.isEmpty()) return emptyList()
         val own = reading.adds(body)
         fun under(moves: List<Pair<String, Double>>): Double = reading.adds(Combatant(moves.fold(stats) { sheet, (key, delta) -> sheet + (key to (sheet[key] ?: 0.0) + delta) }, body.level, body.rules)) - own
         val bySource = LinkedHashMap<StatSource, MutableList<Pair<String, Double>>>()
-        layer.forEach { (key, shifts) -> if (key != reading.stat) shifts.forEach { bySource.getOrPut(it.source) { mutableListOf() } += key to it.delta } }
+        // Сдвиг самой цифры тоже двигает чтение (#50: плоскую регенерацию режут множитель и доля) - сверх своего сдвига
+        layer.forEach { (key, shifts) -> shifts.forEach { bySource.getOrPut(it.source) { mutableListOf() } += key to it.delta } }
         val parts = bySource.mapNotNull { (source, moves) -> under(moves).takeIf { abs(it) >= MOVED }?.let { Shift(source, it, reading.from) } }.toMutableList()
         val rest = under(bySource.values.flatten()) - parts.sumOf { it.delta }
         if (abs(rest) < MOVED) return parts
@@ -274,9 +352,6 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     companion object {
         /** Сдвиг меньше этого - не сдвиг: десятые листа. */
         private const val MOVED = 0.05
-
-        /** Плоская регенерация здоровья: её цифра сводки - с долей [Recovery.share]. */
-        private val LIFE_REGEN = RegenPool.LIFE.flatStat
 
         /** Виды небоевых сил с характеристикой листа: их прибавка к добыче в сводке - вместе с силами. */
         private val LOOT = WorldKind.entries.filter { it.stock != null }

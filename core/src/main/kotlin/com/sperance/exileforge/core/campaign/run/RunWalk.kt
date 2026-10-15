@@ -194,12 +194,13 @@ private fun ExpeditionRun.rest(pilot: AutoPilot) {
 
 /**
  * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена; под ранящим
- * недугом - ни того, ни другого, 0.14.5, #52), мана ([Recovery.manaRegen], 4.11.0 - под долей восстановления листа; недуги на герое режут и её), энергощит
+ * недугом - ни того, ни другого, 0.14.5, #52), мана (поток маны [Recovery.manaFlow], #50 - под долей восстановления листа; недуги на
+ * герое режут и её), энергощит
  * и идущие флаконы.
  */
 internal fun ExpeditionRun.recover(dt: Double) {
-    life = RoadLife.of(hero, pace, rules.mana, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), stalling()).after(life, hero.maxLife, dt)
-    mana = (mana + Recovery.manaRegen(hero, rules.mana, curb(RecoveryPool.MANA)) * dt).coerceAtMost(manaCap())
+    life = RoadLife.of(hero, pace, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), stalling()).after(life, hero.maxLife, dt)
+    mana = (mana + Recovery.manaFlow(hero, rules.mana, curb(RecoveryPool.MANA)).total * dt).coerceAtMost(manaCap())
     shield = EnergyShield.recovered(hero, rules, shield, seconds - hitAt, dt)
     if (flaskLeft.any { it > 0 }) {
         val before = flaskLeft.map { it > 0 }

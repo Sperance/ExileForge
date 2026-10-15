@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.model.fate
 
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.rules.content.Fate
 import kotlinx.serialization.Serializable
@@ -14,8 +15,8 @@ data class FateCard(
     val name: String = "fate.$code.name",
     val description: String = "fate.$code.description",
 ) {
-    /** Имя дара на языке игрока; нет ключа - код. */
-    val title: String get() = locOr(name, code)
+    /** Имя дара на языке игрока; нет ключа (0.15.0, #48) - заглушка и дыра словаря, не код. */
+    val title: String get() = loc(name)
 
     /** Что дар делает, словами сервера. */
     val text: String get() = locOr(description, "")

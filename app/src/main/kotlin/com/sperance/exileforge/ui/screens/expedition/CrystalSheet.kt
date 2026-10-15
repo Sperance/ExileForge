@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
@@ -64,7 +65,7 @@ import com.sperance.exileforge.ui.theme.*
                 }
             }
             // The guardian: the zone's monster, rare, named by what its essences make of it.
-            val traits = kinds.map { "«" + locOr("essence.$it.monster", displayName(it)) + "»" }
+            val traits = kinds.map { "«" + loc("essence.$it.monster") + "»" }
             Text(ui("crystal.guardian", monsterTitle(view.guardian), traits.joinToString(", ")), color = Rune, style = MaterialTheme.typography.bodySmall)
             if (view.stronger) Text(ui("crystal.stronger", number(index?.essences?.crystals?.stronger ?: 0.0)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
             view.outcome?.let { Text(ui("crystal.outcome.$it"), color = GoldBright, style = MaterialTheme.typography.bodyMedium) }

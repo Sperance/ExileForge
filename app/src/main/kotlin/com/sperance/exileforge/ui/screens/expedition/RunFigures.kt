@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.i18n.locFirst
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.text.LocaleKey
@@ -102,5 +103,5 @@ internal fun typeTitle(type: DamageType): String = ui("enum.damage.${type.name}"
 
 internal fun skillTitle(code: String): String = when (code) {
     RunStats.ATTACK, RunStats.TICK, RunStats.REFLECT -> ui("run.skill.$code")
-    else -> locOr(LocaleKey.skillName(code), locOr(LocaleKey.traitName(code), code))
+    else -> locFirst(LocaleKey.skillName(code), LocaleKey.traitName(code))
 }

@@ -86,6 +86,12 @@ fun loc(key: String): String = serverLocale.string(key) ?: LocaleHoles.missing(k
 fun loc(key: String, args: List<String>): String = if (serverLocale.contains(key)) serverLocale.format(key, args) else LocaleHoles.missing(key)
 
 /**
+ * Имя из словаря сервера по первому ключу [keys], что в нём есть (0.15.0, #48): вещь, работа ремесла, умение - у кода бывает
+ * несколько мест в словаре. Нет ни одного - заглушка и дыра словаря по первому ключу, как у [loc], а не код.
+ */
+fun locFirst(vararg keys: String): String = keys.firstOrNull(serverLocale::contains)?.let { serverLocale[it] } ?: LocaleHoles.missing(keys.first())
+
+/**
  * A server string, or a fallback when the dictionary has no such key.
  *
  * Used where the client would otherwise print a raw key at the player: an entity whose code is not

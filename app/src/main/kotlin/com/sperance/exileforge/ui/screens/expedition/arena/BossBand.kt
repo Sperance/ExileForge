@@ -69,6 +69,7 @@ import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.display.totemTitle
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.RiftLaw
@@ -955,7 +956,7 @@ private fun Stolen(boss: BossHud) {
     LaunchedEffect(Unit) { arrive.animateTo(1f, tween(CHIP_MS, easing = FastOutSlowInEasing)) }
     val shape = RoundedCornerShape(4.dp)
     Text(
-        locOr("rift.boon.$code.name", code),
+        loc("rift.boon.$code.name"),
         color = RiftText,
         fontFamily = FontFamily.Serif,
         fontSize = 9.sp,

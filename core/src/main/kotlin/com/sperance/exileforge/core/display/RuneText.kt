@@ -16,7 +16,7 @@ fun roman(tier: Int): String = ui("skills.tier_mark.$tier")
  * стихийное действие - словарь клиента. Числа руны растут на её силу [power] (`1 + STOCK_RUNE_EFFECT / 100`), как в бою.
  */
 object RuneText {
-    fun family(rune: RuneDefinition): String = locOr(LocaleKey.enumLabel("EnumRuneFamily", rune.family.name), displayName(rune.family.name))
+    fun family(rune: RuneDefinition): String = loc(LocaleKey.enumLabel("EnumRuneFamily", rune.family.name))
 
     /** Виды умений, в которые руна встаёт, через запятую. */
     fun types(rune: RuneDefinition): String = rune.types.joinToString(", ") { ui("skills.type.${it.name}") }

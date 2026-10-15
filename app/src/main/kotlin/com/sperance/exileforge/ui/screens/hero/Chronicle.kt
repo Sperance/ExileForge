@@ -30,8 +30,8 @@ import com.sperance.exileforge.rules.content.Stat
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
-/** A title as the dictionary names it; its code while the dictionary has not come. */
-fun titleName(code: String): String = locOr("title.$code", code)
+/** A title as the dictionary names it; нет строки (0.15.0, #48) - заглушка и дыра словаря, не код. */
+fun titleName(code: String): String = loc("title.$code")
 
 /** The three steps of an achievement: bronze, silver, gold — a single one-off step is gold. */
 private val Medals = listOf(Color(0xFFC08457), Color(0xFFC9D1D9), Color(0xFFFFD166))

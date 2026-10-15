@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.display
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.loc
+import com.sperance.exileforge.core.i18n.locFirst
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
@@ -37,51 +38,54 @@ fun rarityTitle(value: String, lang: Lang = uiLanguage): String = ui(lang, "enum
 fun weaponTitle(value: WeaponType, lang: Lang = uiLanguage): String = ui(lang, "enum.weapon.${value.name}")
 fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = ui(lang, "enum.node.${type.name}")
 
-/** The name of an equipment template, out of the dictionary; a code it does not know reads as the code. */
-fun equipmentTitle(code: String): String = if (code.isBlank()) ui("item.equipment") else locOr(LocaleKey.equipmentName(code), displayName(code))
+/**
+ * Имена из словаря сервера (0.15.0, #48): шаблон снаряжения, вещь, монстр, свойство, фаза, тотем, карта, регион, класс, узел Атласа,
+ * профессия, работа - нет строки в словаре на устройстве - заглушка «…» и дыра словаря ([loc], `LocaleHoles`), не код.
+ */
+fun equipmentTitle(code: String): String = if (code.isBlank()) ui("item.equipment") else loc(LocaleKey.equipmentName(code))
 fun equipmentDescription(code: String): String = locOr(LocaleKey.equipmentDescription(code), "")
 
 /** The name of a stacking item — an orb, a material, a book, an essence. */
-fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else locOr(LocaleKey.itemName(code), uiOr(uiLanguage, "enum.orb.$code", displayName(code)))
+fun itemTitle(code: String): String = if (code.isBlank()) ui("common.item") else locOr(LocaleKey.itemName(code), uiOr(uiLanguage, "enum.orb.$code") { loc(LocaleKey.itemName(code)) })
 fun itemDescription(code: String): String = locOr(LocaleKey.itemDescription(code), uiOr(uiLanguage, "enum.orb.$code.rule", ""))
 
 /** The English trade name, one in every language, for a full card only; null when the dictionary has none or it is the shown name already. */
 fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) LocaleKey.equipmentTrade(code) else LocaleKey.itemTrade(code), "").takeIf { it.isNotBlank() && it != (if (equipment) equipmentTitle(code) else itemTitle(code)) }
 
-fun monsterTitle(code: String): String = locOr(LocaleKey.monsterName(code), displayName(code))
+fun monsterTitle(code: String): String = loc(LocaleKey.monsterName(code))
 fun monsterTitle(code: MonsterCode): String = monsterTitle(code.value)
 
 /** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds, `{3}` - потолок складываний (4.4.1). */
-fun traitTitle(code: String): String = locOr(LocaleKey.traitName(code), displayName(code))
+fun traitTitle(code: String): String = loc(LocaleKey.traitName(code))
 fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0, stacks: Int = 0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds), stacks.toString()))
 
 /** Фаза босса (3.92.0): название шаблона и что он делает. */
-fun phaseTitle(code: String): String = locOr("phase.$code.name", displayName(code))
+fun phaseTitle(code: String): String = loc("phase.$code.name")
 fun phaseText(code: String): String = locOr("phase.$code.description", "")
 
 /** Тотем босса (3.93.0): название и что делает, пока стоит. */
-fun totemTitle(code: String): String = locOr("totem.$code.name", displayName(code))
+fun totemTitle(code: String): String = loc("totem.$code.name")
 fun totemText(code: String): String = locOr("totem.$code.description", "")
 
-fun mapTitle(code: String): String = locOr(LocaleKey.mapName(code), displayName(code))
+fun mapTitle(code: String): String = loc(LocaleKey.mapName(code))
 fun mapTitle(code: MapCode): String = mapTitle(code.value)
 
 /** A map item by its zone: «Tidal Shore Map». */
 fun mapItemTitle(zone: MapCode): String = loc(LocaleKey.mapItemName(), listOf(mapTitle(zone)))
 fun mapDescription(code: String): String = locOr(LocaleKey.mapDescription(code), "")
-fun regionTitle(code: String): String = locOr(LocaleKey.regionName(code), displayName(code))
-fun classTitle(code: String): String = locOr(LocaleKey.className(code), displayName(code))
+fun regionTitle(code: String): String = loc(LocaleKey.regionName(code))
+fun classTitle(code: String): String = loc(LocaleKey.className(code))
 
 /** Имя узла дерева - только словарём (0.14.5, #48): нет строки - заглушка и дыра словаря ([loc]), не код. */
 fun nodeTitle(code: String): String = loc(LocaleKey.skillNodeName(code))
 
-fun atlasNodeTitle(code: String): String = locOr(LocaleKey.atlasNodeName(code), displayName(code))
-fun professionTitle(code: String): String = locOr(LocaleKey.professionName(code), displayName(code))
+fun atlasNodeTitle(code: String): String = loc(LocaleKey.atlasNodeName(code))
+fun professionTitle(code: String): String = loc(LocaleKey.professionName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
-fun jobTitle(code: String): String = locOr(LocaleKey.jobName(code), displayName(code))
+fun jobTitle(code: String): String = loc(LocaleKey.jobName(code))
 
 /** What a choosing work was told to make: the item, the smith's group and attribute (3.46.0), the tool base (server 4.3.0) or the skill of a tier ritual (4.4.0). */
-fun choiceTitle(choice: String): String = locOr(LocaleKey.itemName(choice), locOr(LocaleKey.choiceName(choice), locOr(LocaleKey.equipmentName(choice), locOr(LocaleKey.skillName(choice), displayName(choice)))))
+fun choiceTitle(choice: String): String = locFirst(LocaleKey.itemName(choice), LocaleKey.choiceName(choice), LocaleKey.equipmentName(choice), LocaleKey.skillName(choice))
 
 /** A work with its choice (3.45.0): «Condense Essence · Weeping Essence of Greed». */
 fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${choiceTitle(choice)}"

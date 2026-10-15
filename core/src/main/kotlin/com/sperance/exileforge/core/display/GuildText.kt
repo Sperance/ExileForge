@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.display
 
+import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
@@ -16,11 +17,14 @@ import com.sperance.exileforge.rules.content.GuildRole
 const val GUILD_GOLD = "GOLD"
 
 object GuildText {
-    /** A faction's name and word (3.28.0): the server's dictionary first, the app's own table for the three it ships with, then the code. */
-    fun faction(code: String): String = locOr("guild.faction.$code.name", uiOr(uiLanguage, "guild.faction.$code.name", displayName(code)))
+    /**
+     * A faction's name and word (3.28.0): the server's dictionary first, the app's own table for the three it ships with; нет ни там,
+     * ни там (0.15.0, #48) - заглушка и дыра словаря, как у звания, герба и узла древа.
+     */
+    fun faction(code: String): String = locOr("guild.faction.$code.name", uiOr(uiLanguage, "guild.faction.$code.name") { loc("guild.faction.$code.name") })
     fun factionLore(code: String): String = locOr("guild.faction.$code.description", uiOr(uiLanguage, "guild.faction.$code.description", ""))
-    fun rank(code: String): String = locOr("guild.rank.$code", displayName(code))
-    fun emblem(code: String): String = locOr("guild.emblem.$code", displayName(code))
+    fun rank(code: String): String = loc("guild.rank.$code")
+    fun emblem(code: String): String = loc("guild.emblem.$code")
     fun mode(mode: GuildMode): String = locOr("guild.mode.${mode.name}", ui("guild.mode.${mode.name}"))
     fun role(role: GuildRole): String = locOr("guild.role.${role.name}", ui("guild.role.${role.name}"))
 
@@ -29,7 +33,9 @@ object GuildText {
 
     /** One journal line: `{0}` the hero, `{1}` the figure — a contribution's amount and what it was, a rank, a level, a name. */
     fun log(entry: GuildLogEntry): String {
-        val template = locOr("guild.log.${entry.kind}", "{0} · ${displayName(entry.kind)} {1}")
+        // Нет шаблона (0.15.0, #48) - герой и число остаются, на месте действия - заглушка и дыра словаря, не код
+        val key = "guild.log.${entry.kind}"
+        val template = locOr(key, "").ifBlank { "{0} · ${loc(key)} {1}" }
         return template.replace("{0}", entry.heroName).replace("{1}", logValue(entry)).trim()
     }
 
@@ -39,7 +45,7 @@ object GuildText {
         "RANK_UP" -> rank(entry.value)
 
         // 3.79.0: a tree node by its name; a stash line is a stack (`<amount> <code>`) or an item's template.
-        "TREE_NODE" -> locOr("guild.node.${entry.value}.name", displayName(entry.value))
+        "TREE_NODE" -> loc("guild.node.${entry.value}.name")
 
         "STASH_IN", "STASH_OUT" -> if (' ' in entry.value) contribution(entry.value.substringBefore(' '), entry.value.substringAfter(' ')) else equipmentTitle(entry.value)
 

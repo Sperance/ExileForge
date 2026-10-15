@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.i18n.locFirst
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.CombatRules
@@ -36,7 +37,7 @@ object SkillText {
         phaseTitle(code.substringBefore('#'))
     } else {
         // Свойство монстра (4.4.1) - источник помехи и проклятия на герое: названо свойством
-        locOr("skill.$code.name", locOr(LocaleKey.traitName(code), locOr("enum.EnumStatStock.$code", displayName(code))))
+        locFirst("skill.$code.name", LocaleKey.traitName(code), "enum.EnumStatStock.$code")
     }
 
     /**

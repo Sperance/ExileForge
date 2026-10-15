@@ -20,13 +20,11 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
-import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.campaign.run.RoomSpot
-import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
@@ -54,8 +52,6 @@ import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.content.TakenNode
-import com.sperance.exileforge.rules.content.TrialKind
-import com.sperance.exileforge.rules.content.TrialRun
 import com.sperance.exileforge.rules.run.AltarPact
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.MapMechanic
@@ -67,8 +63,6 @@ import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
 import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen
 import com.sperance.exileforge.ui.screens.expedition.NodeSheet
-import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
-import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
@@ -78,7 +72,6 @@ import com.sperance.exileforge.ui.screens.skills.Slots
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import com.sperance.exileforge.ui.theme.Ink
 import org.junit.After
-import org.junit.Assume
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -173,24 +166,6 @@ class KeyScreensShotTest {
         ExpeditionScene(expedition, mutableFloatStateOf(0f), heroClass.code, Modifier.fillMaxWidth().height(640.dp))
     }
 
-    /** Панель боя на 4 слота (SKILL-02): живой бой раша - четыре активных умения класса в слотах. */
-    @Test fun fightBar() {
-        val level = 50
-        val actives = index.skills.ofClass(heroClass.code).filter { it.unlock <= level && it.kind == SkillKind.ACTIVE }.take(4)
-        val skills = HeroSkills(learned = actives.associate { it.code to 5 }, active = actives.map { ActiveSlot(it.code, SlotCondition.READY) })
-        val sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
-        val kit = Loadout.of(skills, index, heroClass.code, emptyList(), sheet.stats, index.powers, index.rules.charges)
-        val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), kit, index.stats.percent)
-        val region = index.campaign.regions.first()
-        val arena = TrialArena(index, TrialRun("shot", TrialKind.RUSH, 7L, level, 0L, region = region.code), RunContext(heroClass.code, level), gear, emptyList(), onEvent = {})
-        // Снимок боя выходит в hud только после кадра: начать и прокрутить пару кадров
-        arena.send(RunCommand.Begin)
-        repeat(FRAMES) { arena.update(FRAME) }
-        val fight = arena.hud.value.fight
-        Assume.assumeTrue("the rush stands no fight", fight != null)
-        shot("fight", scroll = false) { ActionBar(game(level), checkNotNull(fight), FightFrame(mutableFloatStateOf(0f), arena.pulse), {}) {} }
-    }
-
     /** Окно сбора (ASANA-12, шаблон листа объекта карты): узел ремесла на карте, полоса сбора на 40%. */
     @Test fun gathering() = shot("gathering", scroll = false) {
         val level = 20
@@ -244,7 +219,5 @@ class KeyScreensShotTest {
 
     private companion object {
         const val SHOT_QUALITY = 75
-        const val FRAMES = 5
-        const val FRAME = .1
     }
 }

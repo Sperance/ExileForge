@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextMeasurer
@@ -17,8 +18,8 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Подпись в узком месте, что не рвёт слов (0.14.1): до [maxLines] строк, кегль от [max] вниз до [min] шагом [step] - первый, при
- * котором текст встаёт в ширину места переносами только между словами. Не встал и на [min] - [min] с многоточием. Строк всегда
- * не меньше [minLines]: соседние плитки ряда держат одну высоту.
+ * котором текст встаёт в ширину места переносами только между словами; разрядка букв в узком месте снимается. Не встал и на
+ * [min] - [min] с многоточием. Строк всегда не меньше [minLines]: соседние плитки ряда держат одну высоту.
  */
 @Composable fun WordFitText(
     text: String,
@@ -32,13 +33,14 @@ import androidx.compose.ui.unit.sp
     step: TextUnit = FIT_STEP,
 ) {
     val measurer = rememberTextMeasurer()
-    BoxWithConstraints(modifier) {
+    val tight = style.copy(letterSpacing = 0.sp)
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         val width = constraints.maxWidth
-        val size = remember(text, style, width, max, min, maxLines, step) { fittedSize(measurer, text, style, width, max, min, maxLines, step) }
+        val size = remember(text, tight, width, max, min, maxLines, step) { fittedSize(measurer, text, tight, width, max, min, maxLines, step) }
         Text(
             text,
             color = color,
-            style = style.copy(fontSize = size, lineHeight = (size.value * LINE_HEIGHT).sp, textAlign = TextAlign.Center),
+            style = tight.copy(fontSize = size, lineHeight = (size.value * LINE_HEIGHT).sp, textAlign = TextAlign.Center),
             maxLines = maxLines,
             minLines = minLines,
             overflow = TextOverflow.Ellipsis,

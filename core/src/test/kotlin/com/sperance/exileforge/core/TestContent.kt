@@ -3,6 +3,7 @@ package com.sperance.exileforge.core
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
@@ -11,6 +12,9 @@ import java.io.File
 object TestContent {
     private val root = listOf(File("../backend/src/main/resources"), File("backend/src/main/resources")).first { it.isDirectory }
     val index: ContentIndex by lazy { ContentLoader.load { File(root, "content/$it").readText() } }
+
+    /** Сырой файл контента [name] (0.14.0, META-TESTS): носители строк, как их пишет контент. */
+    fun json(name: String): JsonElement = Json.parseToJsonElement(File(root, "content/$name").readText())
 
     /** Server locale tables by language code, as `/locale/{code}.json` serves them. */
     fun serverLocales(): Map<String, Map<String, String>> = File(root, "locale").listFiles { f -> f.extension == "json" && f.name != "index.json" && f.name != "common.json" }

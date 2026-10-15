@@ -57,7 +57,7 @@ tasks.register<JavaExec>("mobBal") {
     val content = providers.gradleProperty("content").orElse(rootProject.layout.projectDirectory.dir("backend/src/main/resources/content").asFile.path)
     systemProperty("content", content.get())
     systemProperty("heroCache", providers.gradleProperty("heroCache").getOrElse(layout.buildDirectory.dir("mobbal-heroes").get().asFile.path))
-    listOf("mode", "fights", "rolls", "samples", "cap", "classes", "zones", "tiers", "mapRarities", "crossed", "mobs", "level", "band", "dummy", "levels", "variants", "force", "ladder", "countScales").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
+    listOf("mode", "fights", "rolls", "samples", "cap", "classes", "zones", "tiers", "mapRarities", "crossed", "mobs", "level", "band", "dummy", "levels", "variants", "force", "ladder", "countScales", "retune", "source").forEach { name -> providers.gradleProperty(name).orNull?.let { systemProperty(name, it) } }
     args(providers.gradleProperty("out").getOrElse(layout.buildDirectory.file("reports/mobbal.tsv").get().asFile.path))
     outputs.upToDateWhen { false }
 }

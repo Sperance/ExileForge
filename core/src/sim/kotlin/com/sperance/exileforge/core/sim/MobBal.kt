@@ -103,6 +103,7 @@ class MobKit(val index: ContentIndex) {
     private val factory = ItemFactory(index)
     private val calculator = SheetCalculator(index)
     private val skillRules = SkillRules(index.skills)
+    val tuner = LoadoutTuner(index)
     val rules = index.campaign.combat
     private val orders = ConcurrentHashMap<String, List<TakenNode>>()
     private val defenceTables = Guard.entries.mapNotNull { it.table }.toSet()
@@ -213,6 +214,24 @@ class MobKit(val index: ContentIndex) {
         return HeroSkills(learned = learned.associate { (skill, at) -> skill.code to at }, active = actives.map { ActiveSlot(it.code, it.condition) }, passive = passives.map { it.code })
     }
 
+    /**
+     * Пассивные слоты (0.14.0, SKILL-02): жадно по цене листа [worth] - на каждом шаге пассивное умение (бонус, аура, триггер), что сильнее
+     * всего растит цену; защитные идут в расчёт наравне с уроном. Без прироста слот остаётся пустым.
+     */
+    fun passives(heroClass: HeroClass, level: Int, tree: List<TakenNode>, items: List<ItemInstance>, skills: HeroSkills, penalty: Double): HeroSkills {
+        val pool = skills.learned.keys.mapNotNull { index.skills.byCode[it] }.filter { it.type.kind == SkillKind.PASSIVE }.map { it.code }
+        val chosen = mutableListOf<String>()
+        fun value(passive: List<String>) = worth(heroClass, level, tree, items, skills.copy(passive = passive), penalty)
+        var best = value(emptyList())
+        repeat(skillRules.passiveSlots(level)) {
+            val (pick, score) = pool.filter { it !in chosen }.map { it to value(chosen + it) }.maxByOrNull { it.second } ?: return@repeat
+            if (score <= best) return@repeat
+            chosen += pick
+            best = score
+        }
+        return skills.copy(passive = chosen)
+    }
+
     private fun skillLevel(skill: SkillDefinition, level: Int, stats: Map<String, Double>): Int? = (SkillRules.MAX_LEVEL downTo 1).firstOrNull { !skillRules.unmet(skill, it, level, stats) }
 
     /** Дерево: порядок узлов жадно по [worth] на уровне 70 со стилем; на уровне - сколько хватает очков. */
@@ -282,7 +301,9 @@ class MobKit(val index: ContentIndex) {
         val items = worn.filterNotNull()
         val flasks = flasks(level, if (band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE)
         val uniqueCount = items.count { index.template(it.template)?.unique == true }
-        return Hero(heroClass, level, archetype, SimBuild(items, tree, skills, flasks), "uniques=$uniqueCount skills=${skills.active.filterNotNull().joinToString("+") { it.skill }}")
+        val passives = passives(heroClass, level, tree, items, skills, penalty)
+        val tuned = tuner.tune(Hero(heroClass, level, archetype, SimBuild(items, tree, passives, flasks), ""))
+        return tuned.copy(note = "uniques=$uniqueCount skills=${tuned.build.skills.active.filterNotNull().joinToString("+") { it.skill }} passives=${tuned.build.skills.passive.filterNotNull().joinToString("+")}")
     }
 
     /**
@@ -293,7 +314,12 @@ class MobKit(val index: ContentIndex) {
         require(level >= hero.level) { "items of level ${hero.level} cannot be worn below it, at $level" }
         if (level == hero.level) return hero
         val tree = tree(hero.heroClass, index.classes.pointsTotal(level), hero.archetype.style)
-        val skills = skills(hero.heroClass.code, level, stats(hero.heroClass, level, tree, hero.build.items), hero.archetype.style)
+        val ruled = skills(hero.heroClass.code, level, stats(hero.heroClass, level, tree, hero.build.items), hero.archetype.style)
+        // Набор, подобранный боем на уровне вещей ([LoadoutTuner]), остаётся; новые слоты уровня - по правилу
+        val kept = hero.build.skills.active.filterNotNull().filter { it.skill in ruled.learned }
+        val actives = (kept + ruled.active.filterNotNull().filter { slot -> kept.none { it.skill == slot.skill } }).take(skillRules.activeSlots(level))
+        val passive = (hero.build.skills.passive.filterNotNull().filter { it in ruled.learned } + ruled.passive.filterNotNull()).distinct().take(skillRules.passiveSlots(level))
+        val skills = ruled.copy(active = actives, passive = passive)
         val build = SimBuild(hero.build.items, tree, skills, flasks(level, if (hero.archetype.band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE))
         return hero.copy(level = level, build = build, note = hero.note + " gear@${hero.level}")
     }
@@ -375,7 +401,9 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         val file = cache?.let { File(it, "$key.json") } ?: return@getOrPut kit.hero(heroClass, level, archetype, penalty)
         if (file.exists()) {
             val saved = CACHE_JSON.decodeFromString(SavedHero.serializer(), file.readText())
-            Hero(heroClass, level, archetype, SimBuild(saved.items, saved.tree, saved.skills, kit.flasks(level, if (archetype.band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE)), saved.note)
+            val hero = Hero(heroClass, level, archetype, SimBuild(saved.items, saved.tree, saved.skills, kit.flasks(level, if (archetype.band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE)), saved.note)
+            // Подбор чисел умений на тех же вещах (-Pretune=1): набор умений подбирается заново боем
+            if (System.getProperty("retune") == "1") kit.tuner.tune(hero) else hero
         } else {
             kit.hero(heroClass, level, archetype, penalty).also { hero ->
                 file.parentFile.mkdirs()
@@ -385,6 +413,22 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     fun classesOf(only: Set<String>) = classes.filter { only.isEmpty() || it.code in only }
+
+    /** Стражи кампании [count] ближайших зон не выше уровня [level] (первая - самая близкая). */
+    fun nearZones(level: Int, count: Int): List<Zone> {
+        val guarded = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
+        return guarded.filter { it.level <= level }.sortedWith(compareByDescending<Zone> { it.level }.thenBy { it.code.value }).take(count).ifEmpty { listOf(guarded.minBy { it.level }) }
+    }
+
+    /**
+     * Урон эталона класса [heroClass] уровня [level] в бою (выравнивание классов SKILL-02): вещи источника [source] полосы уровня
+     * ([heroBand]), штраф сопротивлений ближайшей зоны, набор умений подобран боем ([LoadoutTuner]).
+     */
+    fun classDamage(heroClass: HeroClass, level: Int, source: GearSource): Pair<Hero, LoadoutTuner.Damage> {
+        val zone = nearZones(level, 1).first()
+        val hero = hero(heroClass, level, Archetype(heroBand(level), source), index.campaign.resistPenalty(zone.code, false))
+        return hero to kit.tuner.damage(hero)
+    }
 
     /** Стиль, что класс умеет: чары только у тех, у кого есть чары с ударом; атаки - у кого есть атаки. */
     fun styles(heroClass: HeroClass): List<Style> {
@@ -945,6 +989,69 @@ fun main(args: Array<String>) {
             }
         }
 
+        // Выравнивание классов (0.14.0, SKILL-02): эталон каждого класса на уровнях [levels] - урон в бою (одна цель и стая из трёх,
+        // набор умений подобран боем) и доля побед над стражами ближайших зон не выше уровня героя
+        "classes" -> {
+            val levels = (System.getProperty("levels") ?: "10,20,40,60,72,80,88").split(',').map { it.trim().toInt() }
+            // Вещи эталона - редкие и смесь с уникалками (силы уникалок - свой разброс): урон - среднее геометрическое, победы - среднее
+            val sources = (System.getProperty("source") ?: "RARE,MIXED").split(',').map { GearSource.valueOf(it.trim()) }
+            levels.forEach { level ->
+                classes.forEach { c ->
+                    tasks += Task {
+                        val near = sim.nearZones(level, CLASS_BOSSES)
+                        val runs = sources.map { source ->
+                            val (hero, damage) = sim.classDamage(c, level, source)
+                            val bosses = near.map { sim.boss(it, hero, 0, Rarity.COMMON, cap) }
+                            Triple(hero, damage, bosses)
+                        }
+                        fun geo(f: (LoadoutTuner.Damage) -> Double) = kotlin.math.exp(runs.map { kotlin.math.ln(f(it.second).coerceAtLeast(1.0)) }.average())
+                        val bosses = runs.flatMap { it.third }
+                        val wins = bosses.map { it.values[10] as Double }.average()
+                        val times = bosses.map { it.values[11] as Double }.filter { it > 0 }
+                        val parts = HashMap<String, Double>()
+                        runs.forEach { (_, d, _) -> d.bySkill.forEach { (k, v) -> parts.merge(k, v / d.bySkill.values.sum().coerceAtLeast(1.0), Double::plus) } }
+                        listOf(
+                            Row(
+                                listOf(
+                                    "class", c.code, level, heroBand(level).name, geo { it.single }, geo { it.pack }, geo { it.score }, wins, if (times.isEmpty()) -1.0 else times.average(),
+                                    near.joinToString(",") { it.boss.value }, runs.joinToString(" | ") { it.first.note },
+                                    parts.entries.sortedByDescending { it.value }.joinToString(",") { "${it.key}:${(100 * it.value / runs.size).toInt()}" },
+                                ),
+                            ),
+                        )
+                    }
+                }
+            }
+        }
+
+        // MODES-BAL (0.14.0): босс-раш каждого акта эталоном его верхнего уровня и башня с первого этажа эталонами по уровням
+        "modes" -> {
+            val modes = ModesBal(index)
+            val seeds = (System.getProperty("rolls") ?: "2").toInt()
+            index.campaign.regions.forEachIndexed { act, region ->
+                val level = region.zones.maxOf { it.level }
+                classes.forEach { c ->
+                    tasks += Task {
+                        val hero = sim.hero(c, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(region.zones.last().code, false))
+                        (0 until seeds).map { s ->
+                            val r = modes.rush(hero, region, 0, SimKit.SEED + 101L * s + act)
+                            Row(listOf("rush", act + 1, level, c.code, r.killed, r.bosses, r.wall, r.fast))
+                        }
+                    }
+                }
+            }
+            (System.getProperty("levels") ?: "20,40,60,75,85").split(',').map { it.trim().toInt() }.forEach { level ->
+                classes.forEach { c ->
+                    tasks += Task {
+                        val zone = sim.nearZones(level, 1).first()
+                        val hero = sim.hero(c, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, false))
+                        val t = modes.tower(hero, SimKit.SEED + level, 100)
+                        listOf(Row(listOf("tower", c.code, level, t.floor, t.level, t.seconds)))
+                    }
+                }
+            }
+        }
+
         // Пакет 8: Мощь стражей зон правилом BossMight (без строк таблицы, сид 0) - для сторожа ASANA-08
         "bossmight" -> zones.forEach { zone -> tasks += Task { listOf(Row(listOf("bossmight", zone.code.value, zone.boss.value, zone.level, com.sperance.exileforge.rules.sheet.BossMight.of(index, zone)))) } }
 
@@ -984,6 +1091,9 @@ fun guard(index: ContentIndex, rows: List<Row>, band: ClosedFloatingPointRange<D
 }
 
 val GUARD_BAND = 0.5..2.0
+
+/** Стражей на уровень в режиме `classes`: ближайшие зоны не выше уровня героя. */
+const val CLASS_BOSSES = 4
 
 fun bandOf(tier: Int): GearBand = when {
     tier <= 5 -> GearBand.TYPICAL

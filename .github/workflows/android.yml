@@ -10,6 +10,12 @@ on:
       - 'RELEASE_NOTES.md'
   pull_request:
   workflow_dispatch:
+    inputs:
+      # Снимки экранов до релиза (0.14.0, UI-SHOTS): R8-сборка для UI-тестов и эмулятор на любой ветке (и wip), без публикации
+      shots:
+        description: 'Emulator UI tests and key screen shots, no release'
+        type: boolean
+        default: false
 
 # Каждый job проверок в своей группе: новый пуш отменяет устаревший прогон, а начатую публикацию (job `release`) - нет.
 jobs:
@@ -27,6 +33,7 @@ jobs:
       core: ${{ github.event_name == 'workflow_dispatch' || steps.filter.outputs.core == 'true' }}
       app: ${{ steps.filter.outputs.app == 'true' }}
       release: ${{ steps.release.outputs.pending }}
+      shots: ${{ github.event_name == 'workflow_dispatch' && inputs.shots == true }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -123,7 +130,7 @@ jobs:
   # (код приложения не ужат), без флага - строгий смоук R8 (4.3.1: единственная проверка R8).
   minified:
     needs: changes
-    if: ${{ needs.changes.outputs.release == 'true' }}
+    if: ${{ needs.changes.outputs.release == 'true' || needs.changes.outputs.shots == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     concurrency:
@@ -228,7 +235,7 @@ jobs:
   # UI-тесты и смоук R8 - только перед релизом: собранные APK приходят артефактами, Gradle здесь не нужен.
   emulator:
     needs: [ changes, minified ]
-    if: ${{ needs.changes.outputs.release == 'true' }}
+    if: ${{ needs.changes.outputs.release == 'true' || needs.changes.outputs.shots == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
     concurrency:

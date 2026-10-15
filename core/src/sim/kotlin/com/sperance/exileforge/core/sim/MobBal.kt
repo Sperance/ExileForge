@@ -467,7 +467,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
      * Босс зоны [zone] (на карте тира [tier], [rarity] - редкость карты): [rolls] бросков босса (каждый - своя карта при тире) ×
      * fights/rolls боёв. Время - секунды; урон по герою - доля пула в секунду.
      */
-    fun boss(zone: Zone, hero: Hero, tier: Int, rarity: Rarity, cap: Double): Row {
+    fun boss(zone: Zone, hero: Hero, tier: Int, rarity: Rarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
         var wins = 0
         var n = 0
         var winTime = 0.0
@@ -479,7 +479,8 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         var heroPool = 0.0
         var heroDmg = 0.0
         repeat(rolls) { r ->
-            val (effects, active) = mapEffects(zone, tier, rarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
+            val (rolled, active) = mapEffects(zone, tier, rarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
+            val effects = MapEffects.sum(rolled, extra)
             val run = run(zone, hero, SimKit.SEED + r, active)
             val arena = Arena(index, hero, heroEffects(zone, effects, active != null))
             val spawns = Spawns(index, run)
@@ -664,8 +665,9 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
      * Монстры зоны по редкости [rarity] 1 на 1: [monsterSamples] монстров (код и строки - кости), бой до смерти одной из сторон.
      * Время убийства, действий героя до убийства, урон по герою (доля пула в секунду), смерти героя.
      */
-    fun monsters(zone: Zone, hero: Hero, tier: Int, mapRarity: Rarity, rarity: MonsterRarity, cap: Double): Row {
-        val (effects, active) = mapEffects(zone, tier, mapRarity, SimKit.SEED + 104_729L + zone.level, hero.level)
+    fun monsters(zone: Zone, hero: Hero, tier: Int, mapRarity: Rarity, rarity: MonsterRarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
+        val (rolled, active) = mapEffects(zone, tier, mapRarity, SimKit.SEED + 104_729L + zone.level, hero.level)
+        val effects = MapEffects.sum(rolled, extra)
         val run = run(zone, hero, SimKit.SEED + 3, active)
         val arena = Arena(index, hero, heroEffects(zone, effects, active != null))
         val spawns = Spawns(index, run)
@@ -1040,6 +1042,21 @@ fun main(args: Array<String>) {
                     }
                 }
             }
+            // Стражи кристаллов и Бездна: по три зоны каждого акта (первая, средняя, последняя), эталон уровня зоны
+            index.campaign.regions.forEachIndexed { act, region ->
+                val picked = listOf(region.zones.first(), region.zones[region.zones.size / 2], region.zones.last()).distinct()
+                picked.forEach { zone ->
+                    classes.forEach { c ->
+                        tasks += Task {
+                            val hero = sim.hero(c, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
+                            val crystals = (0 until seeds * 2).map { p -> modes.crystal(hero, zone, p, SimKit.SEED + zone.level) }
+                            val crystalRows = crystals.map { f -> Row(listOf("crystal", act + 1, zone.code.value, zone.level, c.code, f.outcome == Outcome.WIN, f.time, f.lifeLost)) }
+                            val abyssRows = if (zone.level < (index.campaign.abyss?.minLevel ?: 0)) emptyList() else modes.abyss(hero, zone, SimKit.SEED + 7L * zone.level).mapIndexed { d, f -> Row(listOf("abyss", act + 1, zone.code.value, zone.level, c.code, d + 1, f.outcome == Outcome.WIN, f.time, f.lifeLost)) }
+                            crystalRows + abyssRows
+                        }
+                    }
+                }
+            }
             (System.getProperty("levels") ?: "20,40,60,75,85").split(',').map { it.trim().toInt() }.forEach { level ->
                 classes.forEach { c ->
                     tasks += Task {
@@ -1047,6 +1064,26 @@ fun main(args: Array<String>) {
                         val hero = sim.hero(c, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, false))
                         val t = modes.tower(hero, SimKit.SEED + level, 100)
                         listOf(Row(listOf("tower", c.code, level, t.floor, t.level, t.seconds)))
+                    }
+                }
+            }
+        }
+
+        // Алтари (0.14.0, ALTAR-01): каждая пара «минус → награда» на карте тира 1 (зоны 61-70) эталоном 72 - победы над стражем, секунды боя
+        // с ним и с редким монстром против той же карты без алтаря; строки алтаря - как их кладёт заход (строки карты)
+        "altars" -> {
+            val offers = index.campaign.features?.altar?.offers.orEmpty()
+            val mapZones = zones.filter { it.level in 61..70 }.take(4)
+            mapZones.forEach { zone ->
+                classes.forEach { c ->
+                    tasks += Task {
+                        val hero = sim.hero(c, heroLevelOf(GearBand.TYPICAL), Archetype(GearBand.TYPICAL), penalty(zone, true))
+                        (listOf(null) + offers).flatMap { offer ->
+                            val extra = offer?.let { o -> listOfNotNull(index.modifier(com.sperance.exileforge.rules.content.ModifierCode(o.curse)), index.modifier(com.sperance.exileforge.rules.content.ModifierCode(o.boon))).flatMap { m -> m.effects.zip(m.tiers.first().values) { e, v -> e.stat to v.first() } }.toMap() }.orEmpty()
+                            val boss = sim.boss(zone, hero, 1, Rarity.COMMON, cap, extra)
+                            val rare = sim.monsters(zone, hero, 1, Rarity.COMMON, MonsterRarity.RARE, 120.0, extra)
+                            listOf(Row(listOf("altar", offer?.code ?: "-", zone.code.value, c.code, boss.values[10], boss.values[11], boss.values[12], rare.values[10], rare.values[13])))
+                        }
                     }
                 }
             }

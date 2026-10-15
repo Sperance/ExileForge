@@ -184,15 +184,25 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
     }
 
     suspend fun browse() {
-        when (rnd.nextInt(6)) {
+        when (rnd.nextInt(7)) {
             0 -> api.hero.stats(heroId)
+
             1 -> api.hall.table(heroId, HallBoard.TOWER)
+
             2 -> if ((parts?.hero?.level ?: 1) >= auctionLevel) api.auction.search(heroId, AuctionFilter(), listOf("")) else api.hero.stats(heroId)
+
             3 -> api.mail.inbox(heroId)
+
             4 -> api.guild.search(heroId, "", 0)
+
+            // Торговец (0.14.0, LOAD-TEST): покупка сферы - пишущая команда с транзакцией; отказ «мало золота» - тоже ответ сервера
+            5 -> merchantOrb?.let { api.merchant.buyOrb(heroId, it) } ?: view()
+
             else -> view()
         }
     }
+
+    private val merchantOrb: String? = index.rules.merchant.orbs.codes.firstOrNull()
 
     suspend fun loop(until: Long, speedup: Double) {
         while (System.currentTimeMillis() < until) {

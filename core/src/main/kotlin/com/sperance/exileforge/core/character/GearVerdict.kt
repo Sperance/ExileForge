@@ -11,8 +11,9 @@ import com.sperance.exileforge.rules.sheet.MightReading
 import kotlin.math.abs
 
 /**
- * Лучше или хуже (3.89.0): что смена вещи даст герою. С 4.2.0 - два вида: [SheetVerdict] (урон и защита листа) для
- * снаряжения и [FlaskVerdict] (строки листа фляги) для фляг, что лист героя не меняют.
+ * Лучше или хуже (3.89.0): что смена вещи даст герою. С 4.2.0 - [SheetVerdict] (урон и защита листа) для снаряжения и
+ * [FlaskVerdict] (строки листа фляги) для фляг, что лист героя не меняют; с 0.15.0 (#34) - [ToolVerdict] (итог ремесла) для
+ * инструментов.
  */
 sealed interface GearVerdict {
     /** Насколько смена лучше в целом: по нему улучшения идут первыми. */
@@ -124,7 +125,7 @@ class GearVerdicts {
     private val known = HashMap<ItemInstance, List<WearPlace>>()
 
     /**
-     * Вердикт [item] для [hero] на лучшем месте, или null: вещь не надевается (карта, самоцвет, инструмент), уже надета или
+     * Вердикт [item] для [hero] на лучшем месте, или null: вещь не надевается (карта, самоцвет), уже надета или
      * вставлена, требования не выполнены, контента или героя ещё нет.
      */
     fun of(index: ContentIndex?, hero: HeroView?, item: ItemInstance): GearVerdict? = WearPlace.best(places(index, hero, item))?.verdict
@@ -149,7 +150,7 @@ class GearVerdicts {
     private fun weigh(index: ContentIndex, hero: HeroView, item: ItemInstance): List<WearPlace> {
         if (item.equipped || item.socketed) return emptyList()
         val slot = index.template(item.template)?.slot ?: return emptyList()
-        if (slot.isJewelLike || slot.isTool) return emptyList()
+        if (slot.isJewelLike) return emptyList()
         val wearable = Sheets.unmet(index, item.template, hero.level, hero.stats).isEmpty()
         val worn = hero.equipped
         return EquipSlots.places(slot).map { place ->
@@ -159,6 +160,9 @@ class GearVerdicts {
                 // Фляга листа героя не меняет (4.2.0): её меряют строками листа фляги против надетой в этом гнезде, а Мощь
                 // (0.14.0, ASANA-N04) - листом боя с ней: глоток фляги здоровья входит в стойкость.
                 slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])?.copy(might = flaskMight(index, hero, item, place))
+
+                // Инструмент (0.15.0, #34) листа героя не меняет: его меряет итог ремесла против инструмента в гнезде профессии
+                slot.isTool -> ToolVerdict.of(index, hero.stats, item, worn[place], hero.combat?.fate)
 
                 else -> hero.combat?.might?.let { might -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, might, place, hero.info.laws, hero.info.fate, hero.skills) }
             }

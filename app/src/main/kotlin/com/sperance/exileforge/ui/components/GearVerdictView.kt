@@ -11,6 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdict.Shift
 import com.sperance.exileforge.core.character.MightShift
+import com.sperance.exileforge.core.character.ToolVerdict
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
@@ -49,8 +50,17 @@ private fun Shift.tint(): Color = when (this) {
  */
 private fun MightShift.figure(): String = signedNumber(after - before) { compactNumber(it) }
 
-/** Значок строки списка (0.14.0, ASANA-N04): «⚜ +1.2k» - сумка, тайники, склад, добыча; у фляги тоже. */
+/**
+ * Значок строки списка (0.14.0, ASANA-N04): «⚜ +1.2k» - сумка, тайники, склад, добыча; у фляги тоже. У инструмента (0.15.0, #34)
+ * Мощи нет - «⚒ лучше» / «⚒ хуже» по итогу ремесла против инструмента его профессии, без разницы - ничего.
+ */
 @Composable fun GearVerdictBadge(verdict: GearVerdict, modifier: Modifier = Modifier) {
+    if (verdict is ToolVerdict) {
+        verdict.shift.takeIf { it != Shift.EVEN }?.let { shift ->
+            Text(ui("verdict.tool.${shift.name}"), modifier, color = shift.tint(), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall)
+        }
+        return
+    }
     val might = verdict.might?.takeIf { it.shown } ?: return
     Text(ui("might.short", might.figure()), modifier, color = might.shift.tint(), fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, style = MaterialTheme.typography.labelSmall)
 }

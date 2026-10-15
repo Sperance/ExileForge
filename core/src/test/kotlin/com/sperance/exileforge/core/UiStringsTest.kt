@@ -169,6 +169,8 @@ class UiStringsTest {
                 add("term.lore.${it.name}")
                 add("term.lore.${it.name}.text")
             }
+            // Значок инструмента в списках (0.15.0, #34): лучше и хуже
+            listOf(com.sperance.exileforge.core.character.GearVerdict.Shift.UP, com.sperance.exileforge.core.character.GearVerdict.Shift.DOWN).forEach { add("verdict.tool.${it.name}") }
             // Части чтения боя в разборе (0.15.0, #50)
             com.sperance.exileforge.core.campaign.ReadingPart.entries.forEach { add("stat.flow.${it.name}") }
             // Термины свёртки строк (0.15.0, #46: изранение и иссушение тоже): имя и правило

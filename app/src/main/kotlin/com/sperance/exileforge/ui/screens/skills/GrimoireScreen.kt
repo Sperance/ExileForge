@@ -273,13 +273,18 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
                         modifier = Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 4.dp).background(Gold, RoundedCornerShape(3.dp)).padding(horizontal = 3.dp),
                     )
                 }
-                Text(SkillText.title(skill.code), color = GoldBright, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                // Имя целиком (0.14.1): на четырёх слотах узко - две строки по словам и кегль меньше, а не «Тяжёлы…»
+                WordFitText(SkillText.title(skill.code), GoldBright, MaterialTheme.typography.labelSmall, NAME_MAX, NAME_MIN, minLines = 2)
                 line?.let { Text(it, color = Rune, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 onSwap?.let { Text(ui("skills.swap"), color = Muted, fontSize = 10.sp, modifier = Modifier.clickable(onClick = it)) }
             }
         }
     }
 }
+
+/** Кегль имени умения в слоте: обычный подписи и наименьший, до которого он сходит, чтобы длинное слово не рвалось. */
+private val NAME_MAX = 10.5.sp
+private val NAME_MIN = 8.sp
 
 /**
  * A page of the class's book: what the skill is, its level, where it stands, and what comes next. С 4.4.0 - иконка «Неон рун»

@@ -14,6 +14,7 @@ import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.network.HttpLink
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader
@@ -83,7 +84,7 @@ private fun metrics(ip: String) = Interceptor { chain ->
 }
 
 private class Player(val n: Int, val url: String, val index: ContentIndex, val profile: String, val fightSpeed: Int) {
-    val api = GameApi(url, client = ForgeHttp.client.newBuilder().addInterceptor(metrics("10.${n / 65536 % 256}.${n / 256 % 256}.${n % 256}")).build())
+    val api = GameApi(url, link = HttpLink(ForgeHttp.client.newBuilder().addInterceptor(metrics("10.${n / 65536 % 256}.${n / 256 % 256}.${n % 256}")).build()))
     lateinit var heroId: String
     var parts: HeroParts? = null
     val rnd = Random(n)

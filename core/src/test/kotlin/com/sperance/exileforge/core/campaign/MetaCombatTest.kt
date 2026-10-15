@@ -262,6 +262,8 @@ class MetaCombatTest {
             addAll(listOf("POWER_SUNS_BLESSING", "POWER_SUTURE_THIEF", "POWER_TAILWIND", "POWER_THICKET_GRACE"))
             addAll(listOf("POWER_TRUE_SWING", "POWER_UMBILICUS_DROUGHT", "POWER_UNDERTOW", "POWER_VEIN_BURST"))
             addAll(listOf("POWER_WARDEN_BASTION", "POWER_ZENITH_GLARE"))
+            // Силы «чистым» (0.14.2): обычные монстры +25% здоровья - стая эталона держит недуг на герое с первой секунды
+            addAll(listOf("POWER_STILL_POSTURE"))
         }
     }
 }

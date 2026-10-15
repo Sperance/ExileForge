@@ -2,10 +2,10 @@ package com.sperance.exileforge.core.feedback
 
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.IgnoredHero
+import com.sperance.exileforge.core.model.feedback.KnownReport
 import com.sperance.exileforge.core.model.feedback.Mail
 import com.sperance.exileforge.core.model.feedback.MailQuota
 import com.sperance.exileforge.core.model.feedback.OwnReport
-import com.sperance.exileforge.core.model.feedback.KnownReport
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update

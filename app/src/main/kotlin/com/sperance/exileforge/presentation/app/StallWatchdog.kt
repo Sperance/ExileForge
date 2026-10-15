@@ -103,7 +103,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         BugReportRequest(
             text = (listOf(ui("stall.title") + " ${head.getOrNull(1).orEmpty()} ms") + reason).joinToString("\n"),
             screen = SCREEN,
-            context = mapOf("version" to head.getOrNull(0).orEmpty(), "stalledMs" to head.getOrNull(1).orEmpty(), "at" to head.getOrNull(2).orEmpty()),
+            context = mapOf("version" to head.getOrNull(0).orEmpty(), "stalledMs" to head.getOrNull(1).orEmpty(), "at" to head.getOrNull(2).orEmpty(), "auto" to "true"),
         )
     }
 

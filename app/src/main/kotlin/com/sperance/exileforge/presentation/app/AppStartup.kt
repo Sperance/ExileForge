@@ -45,6 +45,7 @@ class AppStartup(
     private val connectionActions: ConnectionActions,
     private val trace: StartupTrace,
     private val watchdog: StallWatchdog,
+    private val crashes: CrashKeeper,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     /**
      * Запуск после сборки (3.80.12): отражения репозиториев и старт сессии. Из конструктора корутины не запускаются -
@@ -72,6 +73,7 @@ class AppStartup(
                 api = sessionActions.newApi(server)
                 sessionActions.apiReady.complete(Unit)
                 reportStall()
+                reportCrashes()
                 val known = store.languages(server).mapNotNull { Lang.byCode(it) }
                 sessions.update { it.copy(server = server) }
                 world.update { it.copy(languages = known.ifEmpty { it.languages }) }
@@ -111,6 +113,25 @@ class AppStartup(
                 withTimeoutOrNull(STALL_REPORT_WAIT_MS) { sessions.state.first { it.signedIn } }
                 api.reportBug(report)
                 watchdog.sent()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) { }
+        }
+    }
+
+    /**
+     * Прошлые запуски падали (0.14.2): каждое неотправленное падение уходит отчётом-падением в фоне, как зависание - после входа
+     * или без него через [STALL_REPORT_WAIT_MS]. Не ушло - останется до следующего запуска.
+     */
+    private fun reportCrashes() {
+        scope.launch {
+            try {
+                val pending = crashes.pending().ifEmpty { return@launch }
+                withTimeoutOrNull(STALL_REPORT_WAIT_MS) { sessions.state.first { it.signedIn } }
+                pending.forEach { (file, report) ->
+                    api.reportBug(report)
+                    crashes.sent(file)
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Exception) { }

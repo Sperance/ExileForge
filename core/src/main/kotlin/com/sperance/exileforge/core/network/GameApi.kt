@@ -144,13 +144,18 @@ class GameApi(
     /** Кто шлёт отчёты (3.88.0): устройство, версия и герой; null - отчёт уходит как собран. */
     var identity: ClientIdentity? = null
 
+    /** Переходы экранов игрока (0.14.2): с запросами журнала - последние действия отчёта; null - без них. */
+    var trail: com.sperance.exileforge.core.feedback.ReportTrail? = null
+
     /**
      * Отчёт [report], собранный к отправке (4.9.0): у ошибки - хвост [failures] неудачных запросов (4.3.1: по нему видно, какой
      * ответ сервера встретил игрок), подпись [identity] (3.88.0: устройство, версия клиента и активный герой). Собирается в
      * момент отчёта: из очереди на диске он уходит таким, каким был тогда.
      */
     fun bugReport(report: BugReportRequest, failures: Int = 0): BugReportRequest {
-        val traced = if (report.kind == FeedbackKind.BUG && failures > 0) report.copy(failures = journal.failures(failures)) else report
+        val failed = if (report.kind == FeedbackKind.BUG && failures > 0) report.copy(failures = journal.failures(failures)) else report
+        // Последние действия (0.14.2): к ошибке и падению, не к предложению
+        val traced = trail?.takeIf { report.kind == FeedbackKind.BUG || report.kind == FeedbackKind.CRASH }?.let { failed.copy(trail = it.lines(journal.entries.value)) } ?: failed
         return identity?.stamp(traced) ?: traced
     }
 

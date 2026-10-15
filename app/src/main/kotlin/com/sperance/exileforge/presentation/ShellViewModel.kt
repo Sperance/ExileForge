@@ -5,8 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.feedback.reportSheet
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
@@ -65,6 +67,8 @@ class ShellViewModel(
     /** Связь с сервером на старте (3.86.0): окно запуска уходит по её ответу. */
     val reach: ServerReach,
     private val foreground: Foreground,
+    /** Последние падения (0.14.2): их стеки прикладываются к отчёту об ошибке. */
+    private val crashes: com.sperance.exileforge.presentation.app.CrashKeeper,
 ) : ViewModel() {
     init {
         reach.start()
@@ -96,7 +100,13 @@ class ShellViewModel(
     fun reportBug(report: BugReportRequest, onQueued: suspend () -> Unit = {}) = bugs.file({
         // Без прочитанного контента (4.12.x: у правил нет значений по умолчанию) отчёт уходит без журнала сбоев
         val rules = game.value.index?.rules?.feedback
-        connection.current.value?.bugReport(report, rules?.failures ?: 0) ?: report
+        // К ошибке (0.14.2) - последние падения клиента и снимок героя
+        val evidence = if (report.kind == FeedbackKind.BUG) {
+            report.copy(traces = crashes.recent(), heroSheet = game.value.hero?.reportSheet().orEmpty())
+        } else {
+            report
+        }
+        connection.current.value?.bugReport(evidence, rules?.failures ?: 0) ?: evidence
     }, onQueued)
 
     /** Аккорд громкости (4.8.0): просьба открыть лист отчёта. */

@@ -11,6 +11,9 @@ import kotlinx.serialization.Serializable
     SUGGESTION,
     APPEAL,
     COMPLAINT,
+
+    /** Падение клиента (0.14.2, сервер API 86): стек шлёт сам клиент при следующем запуске; в списках игрока его нет. */
+    CRASH,
 }
 
 /**

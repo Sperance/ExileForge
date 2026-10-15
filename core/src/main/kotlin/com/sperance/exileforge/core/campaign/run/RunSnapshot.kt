@@ -163,3 +163,14 @@ internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed
 internal fun ExpeditionRun.fightLeader(): RolledMonster = members.maxBy { it.monster.rarity.ordinal }.monster
 
 internal fun ExpeditionRun.fightHud(battle: Battle): FightHud = battle.hud(members.map { it.monster }, fightLeader(), speed, started, paused, level = fightLevel, round = battle.round + 1, rounds = battle.rounds)
+
+/**
+ * Забег для отчёта об ошибке (0.14.2): ключи контекста, что сервер выносит в публичный Issue - зона, её уровень, фаза и семя
+ * карты (по нему карта строится заново).
+ */
+fun ExpeditionRun.reportContext(): Map<String, String> = mapOf(
+    "run.zone" to zone.code.value + if (vaal) " (Vaal)" else "",
+    "run.level" to zone.level.toString(),
+    "run.phase" to phase.name,
+    "run.seed" to seed.toString(),
+)

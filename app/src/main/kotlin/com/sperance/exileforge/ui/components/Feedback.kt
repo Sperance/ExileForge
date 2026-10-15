@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,11 +30,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
@@ -220,15 +229,117 @@ private fun knownList(all: List<Suggestion>, query: String, kind: FeedbackKind?)
         ideas.sortedByDescending { it.rating }
 }
 
-/** Карточка в две строки (макет A): вид, текст, судьба справа; номер Issue и голоса; ответ - третьей строкой, если он есть. */
-@Composable private fun ReportCardFrame(fate: ReportFate, dim: Boolean, content: @Composable ColumnScope.() -> Unit) {
-    val shape = RoundedCornerShape(8.dp)
-    Column(
-        Modifier.fillMaxWidth().alpha(if (dim) DIM else 1f).background(Panel, shape).border(1.dp, fate.tint.copy(alpha = .55f), shape).padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        content = content,
-    )
+/**
+ * Карточка отчёта - тикет (0.14.2, #23, макет A): вид, номер Issue, судьба и дата сверху; текст до трёх строк; путь отчёта шкалой
+ * из четырёх шагов ([StepPath]); ответ разработчика или модерации цитатой; подвал - голоса, ссылка на Issue, удаление. Закрытые
+ * свои приглушены. Свой отчёт и известная проблема - одна карточка, разное - в подвале.
+ */
+@Composable private fun ReportTicket(
+    kind: FeedbackKind,
+    text: String,
+    fate: ReportFate,
+    issue: IssueView?,
+    createdAt: String,
+    reply: Pair<String, String>?,
+    dim: Boolean,
+    fresh: Boolean = false,
+    footer: @Composable RowScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    val uri = LocalUriHandler.current
+    Column(Modifier.fillMaxWidth().alpha(if (dim) DIM else 1f).clip(shape).background(Panel).border(1.dp, Bronze, shape)) {
+        Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            KindMark(kind)
+            issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
+            FatePill(fate, kind, issue, fresh)
+            Spacer(Modifier.weight(1f))
+            Text(shortDate(createdAt), color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+        Text(text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+        FateSteps(StepPath.of(fate, kind, issue), Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp))
+        reply?.let { (who, words) ->
+            Column(
+                Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp).fillMaxWidth()
+                    .background(Rune.copy(alpha = .08f), RoundedCornerShape(topEnd = 8.dp, bottomEnd = 8.dp))
+                    .drawBehind { drawRect(Rune, size = Size(3.dp.toPx(), size.height)) }
+                    .padding(start = 11.dp, end = 10.dp, top = 6.dp, bottom = 6.dp),
+            ) {
+                Text(who, color = Rune, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                Text(words, color = Parchment, style = MaterialTheme.typography.bodySmall)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().background(PanelRaised).padding(horizontal = 12.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            footer()
+            Spacer(Modifier.weight(1f))
+            issue?.url?.takeIf { it.isNotBlank() }?.let { link ->
+                ForgeTextButton(onClick = { runCatching { uri.openUri(link) } }) { Text(ui("feedback.github"), color = Gold, style = MaterialTheme.typography.labelMedium) }
+            }
+        }
+    }
 }
+
+/**
+ * Путь отчёта для шкалы (0.14.2, #23): четыре шага - принят, отправлен, в работе, итог; [reached] - сколько пройдено (последний
+ * пройденный - «сейчас»), [tint] - цвет судьбы; последний шаг - итог: у отказа это сам отказ, у дубля - его номер.
+ */
+private data class StepPath(val labels: List<String>, val reached: Int, val tint: Color) {
+    companion object {
+        fun of(fate: ReportFate, kind: FeedbackKind, issue: IssueView?): StepPath {
+            val idea = kind == FeedbackKind.SUGGESTION
+            val work = ui(if (idea) "feedback.fate.doing" else "feedback.fate.fixing")
+            val done = ui(if (idea) "feedback.fate.done" else "feedback.fate.fixed")
+            val base = listOf(ui("feedback.step.accepted"), ui("feedback.fate.sent"), work)
+            return when (fate) {
+                ReportFate.MODERATION -> StepPath(base + done, 1, fate.tint)
+                ReportFate.REJECTED -> StepPath(listOf(base[0], fateTitle(fate, kind, issue, short = true)), 2, fate.tint)
+                ReportFate.SENT, ReportFate.OPEN -> StepPath(base + done, 2, fate.tint)
+                ReportFate.IN_PROGRESS -> StepPath(base + done, 3, fate.tint)
+                ReportFate.FIXED, ReportFate.DONE -> StepPath(base + fateTitle(fate, kind, issue), 4, fate.tint)
+                ReportFate.NOT_PLANNED, ReportFate.INVALID, ReportFate.DUPLICATE -> StepPath(base.take(2) + fateTitle(fate, kind, issue, short = true), 3, fate.tint)
+            }
+        }
+    }
+}
+
+/** Шкала шагов: пройденные залиты цветом судьбы, текущий - с ореолом, линии между ними - пройденные тоже цветом. */
+@Composable private fun FateSteps(steps: StepPath, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth()) {
+        steps.labels.forEachIndexed { i, label ->
+            val passed = i < steps.reached
+            val now = i == steps.reached - 1
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Canvas(Modifier.fillMaxWidth().height(14.dp)) {
+                    val centre = Offset(size.width / 2, size.height / 2)
+                    val line = 2.dp.toPx()
+                    if (i > 0) drawRect(if (passed) steps.tint else Bronze, Offset(0f, centre.y - line / 2), Size(centre.x, line))
+                    if (i < steps.labels.lastIndex) drawRect(if (i + 1 < steps.reached) steps.tint else Bronze, Offset(centre.x, centre.y - line / 2), Size(centre.x, line))
+                    if (now) drawCircle(steps.tint.copy(alpha = .25f), 7.dp.toPx(), centre)
+                    drawCircle(if (passed) steps.tint else Ink, 5.dp.toPx(), centre)
+                    drawCircle(if (passed) steps.tint else Bronze, 5.dp.toPx(), centre, style = Stroke(2.dp.toPx()))
+                }
+                Text(
+                    label,
+                    color = if (now) GoldBright else Muted,
+                    fontSize = 10.sp,
+                    fontWeight = if (now) FontWeight.SemiBold else FontWeight.Normal,
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                )
+            }
+        }
+    }
+}
+
+/** День и месяц отчёта из ISO-времени сервера («2026-10-15T13:06:30» → «15.10»); не разобралось - пусто. */
+private fun shortDate(createdAt: String): String = createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, month, day) -> "$day.$month" }.orEmpty()
+
+/** Кто ответил последним: слово разработчика в Issue главнее слова модерации; ответа нет - null. */
+private fun lastWord(issue: IssueView?, reason: String): Pair<String, String>? =
+    issue?.comment?.takeIf { it.isNotBlank() }?.let { ui("feedback.who.dev") to it } ?: reason.takeIf { it.isNotBlank() }?.let { ui("feedback.who.mod") to it }
 
 @Composable private fun KindMark(kind: FeedbackKind) {
     Icon(if (kind == FeedbackKind.SUGGESTION) Icons.Outlined.Lightbulb else Icons.Outlined.BugReport, kindTitle(kind), tint = Muted, modifier = Modifier.size(16.dp))
@@ -236,38 +347,17 @@ private fun knownList(all: List<Suggestion>, query: String, kind: FeedbackKind?)
 
 @Composable private fun OwnCard(own: OwnReport, fresh: Boolean, enabled: Boolean, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
-    ReportCardFrame(fate, fate.closed) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            KindMark(own.kind)
-            Text(own.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            FatePill(fate, own.kind, own.issue, fresh)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            own.issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelSmall) }
-            if (own.kind == FeedbackKind.SUGGESTION) Score(own.likes, own.dislikes)
-            Spacer(Modifier.weight(1f))
-            if (own.deletable) ReportDeleteButton(enabled, onDelete)
-        }
-        val word = own.issue?.comment?.takeIf { it.isNotBlank() }?.let { ui("feedback.dev_reply", it) } ?: own.reason.takeIf { it.isNotBlank() }?.let { ui("feedback.mod_reply", it) }
-        word?.let { Text(it, color = Rune, style = MaterialTheme.typography.labelMedium) }
+    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, lastWord(own.issue, own.reason), dim = fate.closed, fresh = fresh) {
+        if (own.kind == FeedbackKind.SUGGESTION) Score(own.likes, own.dislikes)
+        if (own.deletable) ReportDeleteButton(enabled, onDelete)
     }
 }
 
 @Composable private fun KnownCard(known: Suggestion, enabled: Boolean, onVote: (Vote) -> Unit) {
     val fate = ReportFate.of(known.status, known.issue)
-    ReportCardFrame(fate, dim = false) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            KindMark(known.kind)
-            Text(known.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            FatePill(fate, known.kind, known.issue)
-        }
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            known.issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelSmall) }
-            if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
-            Spacer(Modifier.weight(1f))
-            if (known.kind == FeedbackKind.SUGGESTION) VoteRow(known, enabled, onVote)
-        }
-        known.issue?.comment?.takeIf { it.isNotBlank() }?.let { Text(ui("feedback.dev_reply", it), color = Rune, style = MaterialTheme.typography.labelMedium) }
+    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, lastWord(known.issue, ""), dim = false) {
+        if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
+        if (known.kind == FeedbackKind.SUGGESTION) VoteRow(known, enabled, onVote)
     }
 }
 

@@ -141,6 +141,8 @@ val appModule = module {
     single { ContentLoader() }
     single { StartupTrace() }
     single { StallWatchdog(androidContext(), get(), get()) }
+    single { com.sperance.exileforge.presentation.app.CrashKeeper(androidContext()) }
+    single { com.sperance.exileforge.presentation.app.ReportEvidence(androidContext(), get(), get(named(APP_SCOPE))) }
     single { WorldLoader(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { LanguageRepository() }
     single { LinkRepository() }
@@ -152,12 +154,12 @@ val appModule = module {
     singleOf(::Actions)
     // Сервисы приложения (3.80.44, вместо `ForgeRuntime`): сессия, связь, герои аккаунта, прогрев, коды наград и запуск.
     // Сессия, связь и герои зовут друг друга, поэтому ссылаются лениво.
-    single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }, get(), get()) }
+    single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }, get(), get(), get()) }
     single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }, get()) }
     single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }, get()) }
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
-    single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
+    single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get()) }
     viewModelOf(::ShellViewModel)
     viewModelOf(::AdminViewModel)
     viewModelOf(::ModerationViewModel)

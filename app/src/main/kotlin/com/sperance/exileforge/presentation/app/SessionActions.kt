@@ -58,6 +58,8 @@ class SessionActions(
     /** HTTP-клиент процесса (3.80.45, из Koin): все серверы делят его пул и TLS-сессии. */
     private val http: HttpLink,
     private val trace: StartupTrace,
+    /** Среда устройства и переходы экранов для отчётов (0.14.2). */
+    private val evidence: ReportEvidence,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val connectionActions: ConnectionActions get() = lazyConnection.value
     private val characterActions: CharacterActions get() = lazyCharacters.value
@@ -454,8 +456,10 @@ class SessionActions(
                 ServerAlarm.FAILED, ServerAlarm.UNREACHED -> serverFailed.tryEmit(Unit)
             }
         }
-        // Отчёты подписаны устройством, версией и активным героем (3.88.0); заблокированный герой уводит к выбору (3.88.0).
-        created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint, { heroes.heroId }, android.os.Build.MODEL.orEmpty())
+        // Отчёты подписаны устройством, версией и активным героем (3.88.0), со средой устройства и последними действиями (0.14.2);
+        // заблокированный герой уводит к выбору (3.88.0).
+        created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint, { heroes.heroId }, android.os.Build.MODEL.orEmpty(), evidence::environment)
+        created.trail = evidence.trail
         created.onHeroBlocked = { heroId, failure -> if (api === created) characterActions.blocked(heroId, failure) }
         // Доступ закрыт санкцией (3.88.5): сессия гаснет, поверх всего - экран санкции с её id
         created.onSanctioned = { sanctionId, token -> if (api === created) sanctioned(server, sanctionId, token) }

@@ -107,6 +107,12 @@ data class ApiCapabilities(val routes: Set<String>) {
      * пока сервер не ответит; второй раз сервер его не запишет. Пусто - без защиты от повтора.
      */
     val key: String = "",
+    /** Стеки падений (0.14.2): у [FeedbackKind.CRASH] - его стек, у ошибки - последние падения клиента (не больше трёх). */
+    val traces: List<String> = emptyList(),
+    /** Последние действия игрока (0.14.2): переходы экранов и запросы со временем, старые первыми ([com.sperance.exileforge.core.feedback.ReportTrail]). */
+    val trail: List<String> = emptyList(),
+    /** Снимок героя строками «что - значение» (0.14.2): здоровье, сопротивления, Мощь, умения, надетое кодами. */
+    val heroSheet: List<String> = emptyList(),
 )
 
 /** Ответ на приём отчёта (4.10.0): [id] записанного отчёта. Снимков экрана нет (0.14.1, GH-ISSUES). */
@@ -116,7 +122,14 @@ data class ApiCapabilities(val routes: Set<String>) {
  * Кто шлёт отчёт (3.88.0): версия сборки и отпечаток устройства от приложения, активный герой - если он есть. Каждый
  * отчёт ([com.sperance.exileforge.core.network.GameApi.reportBug]) подписывается им, кто бы его ни собрал.
  */
-class ClientIdentity(val version: String, private val device: () -> String, private val heroId: () -> String?, val model: String = "") {
+class ClientIdentity(
+    val version: String,
+    private val device: () -> String,
+    private val heroId: () -> String?,
+    val model: String = "",
+    /** Среда отчёта (0.14.2): модель, система, экран, язык, сеть, память - ключами контекста; свои ключи отчёта главнее. */
+    private val environment: () -> Map<String, String> = { emptyMap() },
+) {
     /** Отпечаток устройства; не прочитался - пусто. */
     fun fingerprint(): String = runCatching(device).getOrDefault("")
 
@@ -124,5 +137,6 @@ class ClientIdentity(val version: String, private val device: () -> String, priv
         heroId = report.heroId ?: heroId()?.takeIf { it.isNotBlank() },
         device = report.device.ifBlank { runCatching(device).getOrDefault("") },
         clientVersion = report.clientVersion.ifBlank { version },
+        context = runCatching(environment).getOrDefault(emptyMap()) + report.context,
     )
 }

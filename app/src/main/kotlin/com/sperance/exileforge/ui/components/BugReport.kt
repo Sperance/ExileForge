@@ -37,6 +37,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.campaign.run.RunPhase
+import com.sperance.exileforge.core.campaign.run.reportContext
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -44,6 +46,7 @@ import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.VolumeChord
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.nav.Route
+import com.sperance.exileforge.presentation.nav.reportPlace
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.theme.*
@@ -150,7 +153,7 @@ fun BugSheet(
                 enabled = text.isNotBlank() && (kind == FeedbackKind.BUG || game.session.signedIn),
                 modifier = Modifier.fillMaxWidth(),
                 onClick = {
-                    onSend(BugReportRequest(text.trim().take(limit), screen, emptyMap(), kind))
+                    onSend(BugReportRequest(text.trim().take(limit), screen, bugContext(route, run), kind))
                     onDismiss()
                 },
             ) { Text(ui("bug.send")) }
@@ -172,6 +175,21 @@ fun BugSheet(
 
 /** Пауза после последней буквы, после которой ищется похожее. */
 private const val SIMILAR_PAUSE_MS = 700L
+
+/**
+ * Где игрок, ключами контекста (0.14.2): место для человека и раздел игры, в забеге - зона, уровень, фаза и семя карты. Сервер
+ * выносит их в публичный Issue строками.
+ */
+private fun bugContext(route: Route, run: ExpeditionRun?): Map<String, String> {
+    val place = reportPlace(route)
+    val facts = run?.reportContext().orEmpty()
+    val area = when {
+        run == null -> place.area
+        facts["run.phase"] == RunPhase.FIGHT.name -> "combat"
+        else -> "run"
+    }
+    return mapOf("place" to place.name, "area" to area) + facts
+}
 
 /** The place, as one line: the phase, the tab or the building, the open sheet of the game. */
 private fun bugScreen(route: Route, run: ExpeditionRun?): String = when {

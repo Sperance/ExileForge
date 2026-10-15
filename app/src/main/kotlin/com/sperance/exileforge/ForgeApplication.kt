@@ -13,6 +13,8 @@ class ForgeApplication : Application() {
             androidContext(this@ForgeApplication)
             modules(appModule)
         }.koin
+        // Падения (0.14.2) - на диск с первой секунды: следующий запуск пришлёт их отчётом
+        koin.get<com.sperance.exileforge.presentation.app.CrashKeeper>().install()
         // Сторож главного потока (3.82.0) - с первой секунды: зависание запуска тоже его.
         koin.get<StallWatchdog>().start()
     }

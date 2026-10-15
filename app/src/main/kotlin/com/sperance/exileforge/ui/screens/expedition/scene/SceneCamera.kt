@@ -55,8 +55,7 @@ internal object SceneCamera {
 /** Окрестность героя, что видна на экране: сдвиги клеток по x и y от его клетки ([SceneCamera.window]). */
 internal data class CellWindow(val xs: IntRange, val ys: IntRange) {
     /** Клетки карты [width]×[height] в этой окрестности героя на клетке ([hx], [hy]). */
-    fun around(hx: Int, hy: Int, width: Int, height: Int): Pair<IntRange, IntRange> =
-        (hx + xs.first).coerceAtLeast(0)..(hx + xs.last).coerceAtMost(width - 1) to (hy + ys.first).coerceAtLeast(0)..(hy + ys.last).coerceAtMost(height - 1)
+    fun around(hx: Int, hy: Int, width: Int, height: Int): Pair<IntRange, IntRange> = (hx + xs.first).coerceAtLeast(0)..(hx + xs.last).coerceAtMost(width - 1) to (hy + ys.first).coerceAtLeast(0)..(hy + ys.last).coerceAtMost(height - 1)
 }
 
 /**
@@ -78,8 +77,7 @@ internal class MapProjection(private val origin: Offset, val unit: Float) {
 
     companion object {
         /** Герой в ([hx], [hy]) - в середине холста [size]. */
-        fun centred(hx: Double, hy: Double, size: Size, unit: Float) =
-            MapProjection(Offset(size.width / 2 - SceneCamera.across(hx, hy, unit), size.height / 2 - SceneCamera.down(hx, hy, unit)), unit)
+        fun centred(hx: Double, hy: Double, size: Size, unit: Float) = MapProjection(Offset(size.width / 2 - SceneCamera.across(hx, hy, unit), size.height / 2 - SceneCamera.down(hx, hy, unit)), unit)
 
         /** Вся карта [width]×[height] клеток вписана в холст [size]: ромб карты вдвое шире своей высоты. */
         fun fitted(width: Int, height: Int, size: Size): MapProjection {

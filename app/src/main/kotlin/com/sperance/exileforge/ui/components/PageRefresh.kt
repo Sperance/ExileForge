@@ -36,7 +36,8 @@ private val LocalPageRefresh = staticCompositionLocalOf<PageRefresh?> { null }
 
 /** Прокрутка хозяина [content] под потягиванием [refresh]: индикатор - только у страницы, что объявила [Refreshable]. */
 @OptIn(ExperimentalMaterial3Api::class)
-@Composable fun RefreshHost(refresh: PageRefresh, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+@Composable
+fun RefreshHost(refresh: PageRefresh, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val state = rememberPullToRefreshState()
     val action = refresh.action
     CompositionLocalProvider(LocalPageRefresh provides refresh) {

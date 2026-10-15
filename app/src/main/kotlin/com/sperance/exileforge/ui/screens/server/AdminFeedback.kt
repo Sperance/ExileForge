@@ -68,16 +68,20 @@ import org.koin.compose.viewmodel.koinViewModel
         modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Queue.entries.forEach { q -> CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) {
-            queue = q
-            vm.loadReports(kind, null)
-        } }
+        Queue.entries.forEach { q ->
+            CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) {
+                queue = q
+                vm.loadReports(kind, null)
+            }
+        }
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        FeedbackKind.entries.forEach { k -> CountChip(kindTitle(k), null, kind == k) {
-            kind = k
-            vm.loadReports(k, null)
-        } }
+        FeedbackKind.entries.forEach { k ->
+            CountChip(kindTitle(k), null, kind == k) {
+                kind = k
+                vm.loadReports(k, null)
+            }
+        }
     }
     val shown = found.filter { queue.holds(it) }.sortedByDescending { it.report.createdAt }
     if (shown.isEmpty()) MutedText(ui("feedback.none"))

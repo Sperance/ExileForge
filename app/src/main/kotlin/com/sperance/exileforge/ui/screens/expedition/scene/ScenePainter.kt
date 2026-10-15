@@ -22,6 +22,7 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import com.sperance.exileforge.core.campaign.run.FeatureSpot
 import com.sperance.exileforge.core.campaign.run.Fountain
+import com.sperance.exileforge.core.campaign.run.IsoGrid
 import com.sperance.exileforge.core.campaign.run.MonsterAgent
 import com.sperance.exileforge.core.campaign.run.sealed
 import com.sperance.exileforge.core.campaign.run.waiting
@@ -98,8 +99,9 @@ internal class ScenePainter {
 
     // ==================== The map ====================
 
-    internal fun isoX(x: Double, y: Double) = ((x - y) * unit).toFloat()
-    internal fun isoY(x: Double, y: Double) = (-(x + y) * unit / 2).toFloat()
+    // Изометрия ядра (0.14.5, #49): художник - та же матрица, что камера и стик; y здесь растёт вверх
+    internal fun isoX(x: Double, y: Double) = (IsoGrid.across(x, y) * unit).toFloat()
+    internal fun isoY(x: Double, y: Double) = (-IsoGrid.down(x, y) * unit).toFloat()
 
     /** Высота стены у клетки в клетках сцены (0.14.0, ASANA-N10); до первой раскладки стен - обычная. */
     internal fun wallRise(x: Int, y: Int): Double = (walls?.height(x, y) ?: PLAIN_WALL).toDouble()

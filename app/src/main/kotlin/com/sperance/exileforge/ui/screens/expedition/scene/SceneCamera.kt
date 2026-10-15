@@ -2,13 +2,14 @@ package com.sperance.exileforge.ui.screens.expedition.scene
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import com.sperance.exileforge.core.campaign.run.IsoGrid
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.min
 
 /**
- * Камера сцены похода (0.14.4, #31/#18): одна изометрия карты на экран - x клеток бежит вниз-вправо, y вниз-влево, клетка
- * вдвое шире, чем выше, - и место героя чуть ниже середины экрана. По ней рисует художник ([ScenePainter]), касание находит
+ * Камера сцены похода (0.14.4, #31/#18): одна изометрия карты на экран ([IsoGrid] ядра, 0.14.5, #49 - её же читает стик) - x клеток
+ * бежит вниз-вправо, y вниз-влево, клетка вдвое шире, чем выше, - и место героя чуть ниже середины экрана. По ней рисует художник ([ScenePainter]), касание находит
  * клетку ([toWorld]), слои берут окрестность экрана ([window]), а мини-карта и полная карта кладут ту же изометрию своим
  * масштабом ([MapProjection]) - направление «вверх» на них то же, что на сцене.
  */
@@ -17,10 +18,10 @@ internal object SceneCamera {
     const val HERO_DOWN = .55f
 
     /** Сдвиг точки карты ([x], [y]) по экрану вправо, в пикселях при полуширине клетки [unit]. */
-    fun across(x: Double, y: Double, unit: Float): Float = ((x - y) * unit).toFloat()
+    fun across(x: Double, y: Double, unit: Float): Float = (IsoGrid.across(x, y) * unit).toFloat()
 
     /** Сдвиг точки карты ([x], [y]) по экрану вниз, в пикселях при полуширине клетки [unit]. */
-    fun down(x: Double, y: Double, unit: Float): Float = ((x + y) * unit / 2).toFloat()
+    fun down(x: Double, y: Double, unit: Float): Float = (IsoGrid.down(x, y) * unit).toFloat()
 
     /** Точка экрана [size], где стоит герой. */
     fun hero(size: Size, unit: Float): Offset = Offset(size.width / 2, size.height * HERO_DOWN + unit)
@@ -28,7 +29,7 @@ internal object SceneCamera {
     /** Точка экрана [at] сцены [size] - точка карты (обратная камера), когда герой стоит в ([hx], [hy]). */
     fun toWorld(hx: Double, hy: Double, at: Offset, size: Size, unit: Float): Pair<Double, Double> {
         val hero = hero(size, unit)
-        return inverse((at.x - hero.x) / unit, (at.y - hero.y) * 2 / unit).let { (dx, dy) -> hx + dx to hy + dy }
+        return inverse(at - hero, unit).let { (dx, dy) -> hx + dx to hy + dy }
     }
 
     /**
@@ -39,17 +40,15 @@ internal object SceneCamera {
     fun window(size: Size, unit: Float, rise: Int, slack: Int): CellWindow {
         val hero = hero(size, unit)
         val corners = listOf(Offset.Zero, Offset(size.width, 0f), Offset(0f, size.height), Offset(size.width, size.height))
-            .map { inverse((it.x - hero.x) / unit, (it.y - hero.y) * 2 / unit) }
+            .map { inverse(it - hero, unit) }
         // Герой стоит где угодно внутри своей клетки: сдвиги от её угла - на клетку шире
         val xs = floor(corners.minOf { it.first }).toInt() - rise - slack..ceil(corners.maxOf { it.first }).toInt() + slack + 1
         val ys = floor(corners.minOf { it.second }).toInt() - rise - slack..ceil(corners.maxOf { it.second }).toInt() + slack + 1
         return CellWindow(xs, ys)
     }
 
-    /** Сдвиг экрана [across] вправо и [down] вниз (в полуширинах и полувысотах клетки) - сдвиг по карте. */
-    internal fun inverse(across: Double, down: Double): Pair<Double, Double> = (across + down) / 2 to (down - across) / 2
-
-    private fun inverse(across: Float, down: Float): Pair<Double, Double> = inverse(across.toDouble(), down.toDouble())
+    /** Сдвиг экрана [shift] в пикселях при полуширине клетки [unit] - сдвиг по карте ([IsoGrid.inverse]). */
+    internal fun inverse(shift: Offset, unit: Float): Pair<Double, Double> = IsoGrid.inverse((shift.x / unit).toDouble(), (shift.y / unit).toDouble())
 }
 
 /** Окрестность героя, что видна на экране: сдвиги клеток по x и y от его клетки ([SceneCamera.window]). */
@@ -69,7 +68,7 @@ internal class MapProjection(private val origin: Offset, val unit: Float) {
     /** Клетки карты [width]×[height], чьи ромбы задевают холст [size]: рамка под его углами с клеткой запаса. */
     fun cells(size: Size, width: Int, height: Int): Pair<IntRange, IntRange> {
         val corners = listOf(Offset.Zero, Offset(size.width, 0f), Offset(0f, size.height), Offset(size.width, size.height))
-            .map { SceneCamera.inverse(((it.x - origin.x) / unit).toDouble(), ((it.y - origin.y) * 2 / unit).toDouble()) }
+            .map { SceneCamera.inverse(it - origin, unit) }
         val xs = (floor(corners.minOf { it.first }).toInt() - 1).coerceAtLeast(0)..(ceil(corners.maxOf { it.first }).toInt() + 1).coerceAtMost(width - 1)
         val ys = (floor(corners.minOf { it.second }).toInt() - 1).coerceAtLeast(0)..(ceil(corners.maxOf { it.second }).toInt() + 1).coerceAtMost(height - 1)
         return xs to ys

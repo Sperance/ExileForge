@@ -20,7 +20,7 @@ import kotlin.random.Random
  * The map in motion — positions in tile units, stepped by the scene every frame.
  *
  * It is pure so a test can walk it: the scene reads positions from here and draws them, and the
- * stick's direction comes in already in world axes (see [screenToWorld]). A fight starts on
+ * stick's direction comes in already in world axes (see [IsoGrid.pace]). A fight starts on
  * contact and the exit ends the map. None of this is a game rule the server knows — it is how a
  * run feels, and nothing of it travels except which monster was killed.
  *
@@ -339,13 +339,17 @@ class ExpeditionWorld(
     fun explored(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && explored[y * map.width + x]
     fun lit(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && lit[y * map.width + x]
 
-    fun step(dt: Double, stickX: Double, stickY: Double): WorldEvent? {
-        val length = hypot(stickX, stickY)
+    /**
+     * Шаг героя за [dt] секунд по шагу стика в осях карты ([paceX], [paceY] - доли скорости героя, [IsoGrid.pace]): длина шага
+     * больше 1 не срезается (0.14.5, #49) - вверх-вниз по экрану стик ведёт быстрее скорости героя в клетках.
+     */
+    fun step(dt: Double, paceX: Double, paceY: Double): WorldEvent? {
+        val length = hypot(paceX, paceY)
         moving = length > 0.1
         if (moving) {
-            val speed = heroSpeed * length.coerceAtMost(1.0)
-            facingX = stickX / length
-            facingY = stickY / length
+            val speed = heroSpeed * length
+            facingX = paceX / length
+            facingY = paceY / length
             val (nx, ny) = slide(heroX, heroY, facingX * speed * dt, facingY * speed * dt, rules.heroRadius)
             heroX = nx
             heroY = ny
@@ -412,22 +416,6 @@ class ExpeditionWorld(
         private const val SUMMON_STEPS = 3
         internal const val REPATH = 0.4
         internal val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1, 1 to 1, 1 to -1, -1 to 1, -1 to -1)
-
-        /**
-         * The stick's direction on screen, turned into world axes.
-         *
-         * The map is drawn as a diamond grid — a tile twice as wide as it is tall, `x` running down to
-         * the right and `y` down to the left — so a push straight up the screen is a step toward the
-         * top corner, which is minus both. [screenY] grows downward.
-         */
-        fun screenToWorld(screenX: Double, screenY: Double): Pair<Double, Double> {
-            val wx = screenX + 2 * screenY
-            val wy = 2 * screenY - screenX
-            val length = hypot(wx, wy)
-            if (length < 1e-9) return 0.0 to 0.0
-            val push = hypot(screenX, screenY).coerceAtMost(1.0)
-            return wx / length * push to wy / length * push
-        }
 
         /**
          * A new world of [zone]: the ground carved from [seed], one spawn per pack of [packs] (the run's own

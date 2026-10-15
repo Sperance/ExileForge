@@ -55,7 +55,7 @@ internal fun ExpeditionRun.walk(dt: Double) {
     ailing(dt)
     if (phase != RunPhase.MAP) return
     openArena()
-    val (x, y) = ExpeditionWorld.screenToWorld(stickX, stickY)
+    val (x, y) = IsoGrid.pace(stickX, stickY)
     when (val event = world.step(dt, x, y)) {
         // Страж вручную (3.92.0) - сперва экран-вызов
         // Печать стража (3.93.0) и ворота арены (4.12.8): запечатанный босс не встаёт

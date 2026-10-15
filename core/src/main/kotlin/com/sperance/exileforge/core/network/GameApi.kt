@@ -62,6 +62,7 @@ class GameApi(
 
     init {
         http.account = { account?.id }
+        http.clientVersion = { identity?.version.orEmpty() }
     }
 
     val files = StaticClient(http)

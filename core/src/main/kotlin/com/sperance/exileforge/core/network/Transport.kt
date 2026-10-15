@@ -103,6 +103,13 @@ class Transport(
     /** Whose session is signed in, so a kept command is never replayed for another account. */
     internal var account: () -> String? = { null }
 
+    /** Версия сборки (`versionName`, 0.15.0, #36) - заголовок [CLIENT_VERSION_HEADER] каждого запроса; пусто - не шлётся. */
+    internal var clientVersion: () -> String = { "" }
+
+    /** Заголовки сборки на запросе: ревизия API и версия клиента. */
+    private fun Request.Builder.stamped(): Request.Builder = header(API_REVISION_HEADER, API_REVISION.toString())
+        .apply { clientVersion().takeIf { it.isNotBlank() }?.let { header(CLIENT_VERSION_HEADER, it) } }
+
     /** The whole of a small, server-seeded collection. */
     internal suspend fun all(path: String): List<JsonObject> = request("GET", path, authenticated = true).jsonArray.map { it.jsonObject }
 
@@ -136,7 +143,7 @@ class Transport(
         var success = false
         try {
             val payload = client.newCall(
-                Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml").header(API_REVISION_HEADER, API_REVISION.toString())
+                Request.Builder().url(url).header("Accept", if (json) "application/json" else "image/svg+xml").stamped()
                     .apply { credential?.let { header("Authorization", "Bearer $it") } }
                     .apply { etag?.let { header("If-None-Match", it) } }.get().build(),
             ).awaitPayload()
@@ -214,8 +221,8 @@ class Transport(
         val request = Request.Builder().url(url).header("Accept", "application/json")
             // Язык игрока (3.88.7, сервер 1.80.9): по нему сервер пишет текст отказа, которого нет в словаре клиента.
             .header("Accept-Language", com.sperance.exileforge.core.i18n.uiLanguage.code)
-            // Ревизия API сборки (4.3.1): сервер новее отвечает 426 `CL_001`, и приложение сразу ищет обновление.
-            .header(API_REVISION_HEADER, API_REVISION.toString())
+            // Ревизия API сборки (4.3.1): сервер новее отвечает 426 `CL_001`, и приложение сразу ищет обновление; рядом - версия клиента
+            .stamped()
             .apply { credential?.let { header("Authorization", "Bearer $it") } }
             .apply { parts?.let { header(HeroParts.HEADER, it) } }
             .apply { key?.let { header(IDEMPOTENCY_HEADER, it) } }
@@ -355,6 +362,9 @@ private const val SERVER_FAILURE = 500
 
 /** Заголовок ревизии API сборки (4.3.1): по нему сервер отвечает [OUTDATED_CLIENT]. */
 internal const val API_REVISION_HEADER = "X-Api-Revision"
+
+/** Заголовок версии клиента (0.15.0, #36): сервер не проверяет её, а помнит в сессии - досье знает, на чём аккаунт играет сейчас. */
+internal const val CLIENT_VERSION_HEADER = "X-Client-Version"
 
 /** Что сказала ошибка сервера о сборке (4.3.1). */
 enum class ServerAlarm {

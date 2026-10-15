@@ -1,5 +1,6 @@
 package com.sperance.exileforge.core.network
 
+import com.sperance.exileforge.core.model.fate.FateView
 import kotlinx.serialization.Serializable
 
 private const val TESTERS = "api/v1/admin/testers"
@@ -35,4 +36,10 @@ class AdminClient internal constructor(private val http: Transport) {
 
     /** Переносит героя [heroId] на сервер [server] (3.91.0): он выходит из гильдии, его лоты возвращаются письмами. */
     suspend fun moveHero(heroId: String, server: String): HeroMove = http.post("$ADMIN/hero/server", mapOf("heroId" to heroId, "server" to server))
+
+    /**
+     * Предначертание [code] своему аккаунту (0.15.0, #35, сервер `POST admin/fate`): любой дар контента, цель - только сам
+     * администратор из сессии; счётчики прежнего дара у героев с нуля, начатый заход доигрывает со старым. Неизвестный дар - `FT_006`.
+     */
+    suspend fun redrawFate(code: String): FateView = http.post("$ADMIN/fate", mapOf("code" to code))
 }

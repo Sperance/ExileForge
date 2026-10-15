@@ -3,6 +3,7 @@ package com.sperance.exileforge.presentation.admin
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.Dossier
@@ -191,6 +192,21 @@ class ModerationViewModel(
             staff()
             val move = connection.api.admin.moveHero(heroId, server)
             notices.toast(ui("admin.hero_moved", move.name, serverName(move.server), move.lotsReturned) + if (move.leftGuild) " " + ui("admin.left_guild") else "")
+            reloadDossier()
+        }
+        if (!started) commands.refuse(phrase("runtime.busy_retry"))
+    }
+
+    /**
+     * Предначертание [code] своему аккаунту (0.15.0, #35): только администратор и только себе - сервер берёт цель из сессии. Дар
+     * ложится в профиль сессии, досье перечитывается, герои и список героев - при следующем чтении.
+     */
+    fun redrawFate(code: String) {
+        val started = commands.task(writing = true, touches = setOf(Reads.HERO, Reads.CHARACTERS)) {
+            check(sessions.state.value.isAdmin) { ui("moderation.staff_only") }
+            val view = connection.api.admin.redrawFate(code)
+            sessions.update { it.copy(fate = view, profile = it.profile?.let { p -> p.copy(fate = view.chosen?.code ?: code) }) }
+            notices.toast(ui("moderation.fate.changed", view.chosen?.title ?: FateCard(code).title))
             reloadDossier()
         }
         if (!started) commands.refuse(phrase("runtime.busy_retry"))

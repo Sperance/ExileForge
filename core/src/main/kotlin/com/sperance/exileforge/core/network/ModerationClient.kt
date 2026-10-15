@@ -170,6 +170,11 @@ sealed interface ModerationFate {
     val fate: String? = null,
     /** Когда выбрано Предначертание (4.6.3), мс эпохи; null - не выбрано или выбрано раньше, чем сервер это пишет. */
     val fateAt: Long? = null,
+    /**
+     * Когда аккаунт был в игре (0.15.0, #36): последнее использование его самой свежей сессии, метка сервера (UTC); null - живых
+     * сессий нет. Вход паролем - [lastLoginAt].
+     */
+    val lastSeenAt: String? = null,
 )
 
 @Serializable data class DossierHero(
@@ -188,6 +193,8 @@ sealed interface ModerationFate {
     val server: String = "MAIN",
     /** Герой - тестировщик (4.12.x, сервер ROLE-01): переключатель администратора в досье. */
     val tester: Boolean = false,
+    /** Последняя команда героя (0.15.0, #36), мс эпохи; 0 - неизвестно. */
+    val lastSeenAt: Long = 0,
 )
 
 @Serializable data class DossierEconomy(val gearValue: Long = 0, val uniques: Int = 0, val mythics: Int = 0, val tradesPerDay: Int = 0)
@@ -210,7 +217,11 @@ sealed interface ModerationFate {
     val rights: DossierRights = DossierRights(),
 )
 
-@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE }
+/**
+ * Действие журнала модерации; [FATE] (0.15.0, #35) - администратор сменил Предначертание своему аккаунту: номера санкции нет, в
+ * заметке - прежний и новый код дара через « → » ([ModerationEntryView.fateChange]).
+ */
+@Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE, FATE }
 
 @Serializable data class ModerationEntryView(
     val id: String,
@@ -224,7 +235,19 @@ sealed interface ModerationFate {
     val comment: String = "",
     val until: String? = null,
     val at: String,
-)
+) {
+    /**
+     * Смена дара строки [ModerationAction.FATE] (0.15.0, #35): прежний код (null - дара не было) и новый - из заметки сервера
+     * «прежний → новый» (`ModerationEntry.fate`); у прочих действий - null.
+     */
+    val fateChange: Pair<String?, String>? get() = comment.takeIf { action == ModerationAction.FATE }?.split(FATE_ARROW, limit = 2)
+        ?.takeIf { it.size == 2 }?.let { (from, to) -> from.ifBlank { null } to to }
+
+    private companion object {
+        /** Разделитель прежнего и нового дара в заметке строки [ModerationAction.FATE]. */
+        const val FATE_ARROW = " → "
+    }
+}
 
 /** Бан: цель - герой [heroId], аккаунт [userId] или устройство [hardware] аккаунта [userId]; [hours] null - бессрочно. */
 @Serializable data class SanctionRequest(

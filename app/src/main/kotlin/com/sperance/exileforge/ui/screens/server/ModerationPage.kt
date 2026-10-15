@@ -11,12 +11,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material.icons.outlined.Smartphone
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -37,16 +35,12 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
-import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.network.AccountRole
 import com.sperance.exileforge.core.network.DeletionRequest
 import com.sperance.exileforge.core.network.DeviceView
 import com.sperance.exileforge.core.network.Dossier
-import com.sperance.exileforge.core.network.DossierAccount
-import com.sperance.exileforge.core.network.DossierHero
-import com.sperance.exileforge.core.network.GameServer
 import com.sperance.exileforge.core.network.ModerationEntryView
 import com.sperance.exileforge.core.network.ModerationFate
 import com.sperance.exileforge.core.network.ModerationRow
@@ -237,8 +231,8 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
 /** Подпись раздела листа фильтров: мелко, заглавными, приглушённо. */
 @Composable private fun SheetLabel(text: String) = Text(text.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
 
-/** Плитка дара в сетке листа фильтров: выбранная - в нити и на подложке `Gold`, дар контента - со знаком ✦. */
-@Composable private fun FateOption(title: String, mark: Boolean, selected: Boolean, onClick: () -> Unit) {
+/** Плитка дара в сетке листа фильтров и смены дара (0.15.0, #35): выбранная - в нити и на подложке `Gold`, дар контента - со знаком ✦. */
+@Composable internal fun FateOption(title: String, mark: Boolean, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Text(
         if (mark) "✦ $title" else title,
@@ -256,8 +250,8 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
     )
 }
 
-/** Наибольшая высота сетки даров в листе фильтров: дальше - прокрутка внутри сетки. */
-private val FATE_GRID_HEIGHT = 228.dp
+/** Наибольшая высота сетки даров в листах фильтров и смены дара: дальше - прокрутка внутри сетки. */
+internal val FATE_GRID_HEIGHT = 228.dp
 
 @Composable private fun Pager(page: Int, pages: Int, busy: Boolean, onPage: (Int) -> Unit) {
     if (pages <= 1 && page == 0) return
@@ -328,263 +322,13 @@ private val FATE_GRID_HEIGHT = 228.dp
             color = Parchment,
             style = MaterialTheme.typography.bodyMedium,
         )
-        MutedText(listOfNotNull("#${entry.number}", categoryTitle(entry.category), entry.until?.let { ui("moderation.until", listedAt(it).orEmpty()) }, listedAt(entry.at)).joinToString(" · "))
-        if (entry.comment.isNotBlank()) MutedText("«${entry.comment}»")
-    }
-}
-
-// ==================== Досье ====================
-
-@Composable private fun DossierView(account: AccountUi, vm: ModerationViewModel, dossier: Dossier?) {
-    var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
-    var deleting by remember { mutableStateOf<SanctionTarget?>(null) }
-    var device by remember { mutableStateOf<DeviceView?>(null) }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = vm::close) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Parchment) }
-        Text(ui("moderation.dossier"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    }
-    if (dossier == null) {
-        CircularProgressIndicator(color = Gold, modifier = Modifier.size(28.dp))
-        return
-    }
-    val hero = dossier.hero
-    val focus = hero?.name ?: dossier.account.login
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        ClassPortrait(hero?.heroClass, account.world.portraits, Modifier.size(52.dp))
-        Column(Modifier.weight(1f)) {
-            Text(focus, color = GoldBright, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                MutedText(dossier.account.login)
-                RoleMark(dossier.account.role, 18.dp)
-                hero?.let { MutedText("${classTitle(it.heroClass)} ${it.level}") }
-            }
-        }
-    }
-    // Роль аккаунта (3.88.7): администратор меняет её здесь; администратора не меняет никто.
-    if (account.isAdmin && dossier.account.role != AccountRole.ADMIN) {
-        Section(ui("moderation.role_title")) {
-            Chips {
-                ASSIGNABLE.forEach { role ->
-                    Chip(ui("moderation.role.${role.name}"), dossier.account.role == role) {
-                        if (!account.busy && dossier.account.role != role) vm.setRole(dossier.account.userId, role)
-                    }
-                }
-            }
-        }
-    }
-    if (account.isAdmin && hero != null) ServerSection(account, vm, hero)
-    // Отметку тестировщика (4.12.x, сервер ROLE-02) ставят и снимают администратор и модератор
-    if (account.isModerator && hero != null) TesterSection(account, vm, hero)
-    FateSection(dossier.account)
-    dossier.sanctions.firstOrNull { it.active }?.let { active ->
-        Text(
-            sanctionLine(active),
-            color = LifeRed,
-            style = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth().background(LifeRed.copy(alpha = .1f), RoundedCornerShape(10.dp)).padding(10.dp),
-        )
-    }
-    val tiles = buildList {
-        hero?.let {
-            add(ui("moderation.gold") to number(it.gold.toDouble()))
-            add(ui("moderation.fights") to it.fights.toString())
-            add(ui("moderation.level_rate") to (it.levelsPerHour?.let { rate -> "%.2f".format(rate) } ?: "—"))
-        }
-        add(ui("moderation.registered") to (listedAt(dossier.account.registeredAt)?.take(DATE) ?: "—"))
-        // Дата и время входа - двумя строками: одной в треть ширины время не влезало (3.90.2)
-        add(ui("moderation.last_login") to (dossier.account.lastLoginAt?.let(::listedAt)?.replaceFirst(' ', '\n') ?: "—"))
-        add(ui("moderation.client") to dossier.account.clientVersion.ifBlank { "—" })
-    }
-    tiles.chunked(TILES).forEach { line ->
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            line.forEach { (label, value) -> StatTile(label, value, Modifier.weight(1f), flagged = dossier.flags.any { label == ui("moderation.level_rate") && it.code == "LEVEL_RATE" }) }
-            repeat(TILES - line.size) { Spacer(Modifier.weight(1f)) }
-        }
-    }
-    dossier.economy?.let { economy ->
-        Section(ui("moderation.economy")) {
-            Line(ui("moderation.gear_value"), "≈ ${number(economy.gearValue.toDouble())}")
-            Line(ui("moderation.uniques"), "${economy.uniques} / ${economy.mythics}")
-            Line(ui("moderation.trades"), economy.tradesPerDay.toString(), flagged = dossier.flags.any { it.code == "TRADES" })
-        }
-    }
-    Section(ui("moderation.links")) {
-        if (dossier.devices.isEmpty()) MutedText(ui("moderation.no_devices"))
-        dossier.devices.forEach { item ->
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Icon(Icons.Outlined.Smartphone, null, tint = Muted, modifier = Modifier.size(16.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(item.model.ifBlank { item.hardware.take(HARDWARE) }, color = Parchment, style = MaterialTheme.typography.bodySmall)
-                    MutedText(listOfNotNull(listedAt(item.firstAt)?.take(DATE), listedAt(item.lastAt), item.clientVersion.ifBlank { null }).joinToString(" · "))
-                    if (item.sharedWith.isNotEmpty()) Text(ui("moderation.shared", item.sharedWith.joinToString()), color = Ember, style = MaterialTheme.typography.labelSmall)
-                }
-                if (dossier.rights.banDevice) {
-                    ForgeTextButton(enabled = !account.busy, onClick = {
-                        device = item
-                        sanctioning = SanctionKind.BAN
-                    }) { Text(ui("moderation.ban_device"), color = LifeRed) }
-                }
-            }
-        }
-        hero?.guild?.let { Line(ui("moderation.guild"), it) }
-        dossier.heroes.forEach { other -> OtherHero(other) { vm.open(other.heroId, dossier.account.userId) } }
-    }
-    Section(ui("moderation.history")) {
-        if (dossier.sanctions.isEmpty()) MutedText(ui("moderation.clean"))
-        dossier.sanctions.forEach { sanction -> SanctionLine(sanction, account.busy) { vm.lift(sanction) } }
-        MutedText(ui("moderation.reports", dossier.appeals, dossier.reports))
-    }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        if (dossier.rights.ban) {
-            ForgeButton(enabled = !account.busy, onClick = {
-                device = null
-                sanctioning = SanctionKind.BAN
-            }, modifier = Modifier.weight(1f)) { Text(ui("moderation.ban")) }
-        }
-        // Немота (4.6.3): не пишет письма, играет как прежде
-        if (dossier.rights.mute) {
-            ForgeOutlinedButton(enabled = !account.busy, onClick = {
-                device = null
-                sanctioning = SanctionKind.MUTE
-            }) { Text(ui("moderation.mute"), color = Caution) }
-        }
-        if (dossier.rights.delete) {
-            ForgeOutlinedButton(enabled = !account.busy, onClick = { deleting = if (hero != null && !hero.deleted) SanctionTarget.HERO else SanctionTarget.ACCOUNT }) {
-                Text(ui("moderation.delete"), color = LifeRed)
-            }
-        }
-    }
-    if (!dossier.rights.ban) MutedText(ui("moderation.protected"))
-    sanctioning?.let { kind ->
-        BanSheet(account, dossier, device, kind, onDismiss = { sanctioning = null }) {
-            sanctioning = null
-            vm.ban(it)
-        }
-    }
-    deleting?.let { target ->
-        DeleteSheet(account, dossier, target, onTarget = { deleting = it }, onDismiss = { deleting = null }) {
-            deleting = null
-            vm.delete(it)
-        }
-    }
-}
-
-/**
- * Тестировщик (4.12.x, сервер ROLE-01, ROLE-02): отметка героя, не роль аккаунта - администратор и модератор ставят и снимают её здесь. Герою-тестировщику
- * открыты окно тестирования и замки прогресса, закрыты аукцион и склад гильдии.
- */
-@Composable private fun TesterSection(account: AccountUi, vm: ModerationViewModel, hero: DossierHero) {
-    Section(ui("moderation.tester_title")) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MutedText(ui("moderation.tester_note"), Modifier.weight(1f))
-            Switch(
-                checked = hero.tester,
-                enabled = !account.busy,
-                onCheckedChange = { vm.setTester(hero.heroId, it) },
-                colors = SwitchDefaults.colors(checkedTrackColor = Elder),
-            )
-        }
-    }
-}
-
-/**
- * Сервер героя (3.91.0): администратор видит, где он, и переносит на другой - с подтверждением, ведь перенос уводит из гильдии
- * и снимает лоты; «+» заводит новый сервер.
- */
-@Composable private fun ServerSection(account: AccountUi, vm: ModerationViewModel, hero: DossierHero) {
-    val state by vm.state.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { vm.loadServers() }
-    var moving by remember(hero.heroId) { mutableStateOf<GameServer?>(null) }
-    var founding by remember { mutableStateOf(false) }
-    Section(ui("admin.server_title")) {
-        Chips {
-            val known = state.servers.ifEmpty { listOf(GameServer(hero.server, hero.server)) }
-            known.forEach { server ->
-                Chip(server.name.ifBlank { server.code }, server.code == hero.server) {
-                    if (!account.busy && server.code != hero.server) moving = server
-                }
-            }
-            Chip("+", false) { if (!account.busy) founding = true }
-        }
-    }
-    moving?.let { target ->
-        ConfirmSheet(
-            title = ui("admin.move_q", hero.name),
-            confirm = ui("admin.move"),
-            danger = true,
-            subtitle = "${vm.serverName(hero.server)} → ${target.name.ifBlank { target.code }}",
-            note = ui("admin.move_note"),
-            onDismiss = { moving = null },
-        ) {
-            moving = null
-            vm.moveHero(hero.heroId, target.code)
-        }
-    }
-    if (founding) {
-        ServerSheet(account, onDismiss = { founding = false }) { code, name ->
-            founding = false
-            vm.createServer(code, name)
-        }
-    }
-}
-
-@Composable private fun ServerSheet(account: AccountUi, onDismiss: () -> Unit, onCreate: (String, String) -> Unit) {
-    var code by remember { mutableStateOf("") }
-    var name by remember { mutableStateOf("") }
-    ForgeSheet(onDismissRequest = onDismiss) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(ui("admin.server_new"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            OutlinedTextField(
-                code,
-                { value -> code = value.filter { it.isLetterOrDigit() || it == '_' }.uppercase().take(SERVER_CODE) },
-                label = { Text(ui("admin.server_code")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                name,
-                { name = it.take(SERVER_NAME) },
-                label = { Text(ui("admin.server_name")) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            ForgeButton(onClick = { onCreate(code, name) }, enabled = !account.busy && code.isNotBlank() && name.isNotBlank(), modifier = Modifier.fillMaxWidth()) {
-                Text(ui("admin.server_create"))
-            }
-        }
-    }
-}
-
-private const val SERVER_CODE = 16
-private const val SERVER_NAME = 32
-
-@Composable private fun OtherHero(hero: DossierHero, onOpen: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(hero.name, color = if (hero.deleted) Muted else Parchment, style = MaterialTheme.typography.bodySmall)
-        MutedText("${classTitle(hero.heroClass)} ${hero.level}${if (hero.deleted) " · " + ui("moderation.deleted_mark") else ""}")
-    }
-}
-
-@Composable private fun SanctionLine(sanction: SanctionView, busy: Boolean, onLift: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                "#${sanction.number} · ${ui("moderation.kind.${sanction.kind.name}")} · ${ui("moderation.target.${sanction.target.name}")} · ${categoryTitle(sanction.category)}",
-                color = Parchment,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            MutedText(
-                listOfNotNull(sanction.byLogin, listedAt(sanction.at), termText(sanction), sanction.liftedAt?.let { ui("moderation.lifted_by", sanction.liftedBy) }, if (sanction.appealed) ui("moderation.appealed") else null)
-                    .joinToString(" · "),
-            )
-            // Причина для игрока (4.12.x) и служебная заметка - модерация видит обе
-            if (sanction.reason.isNotBlank()) MutedText(ui("moderation.reason_shown", sanction.reason))
-            if (sanction.comment.isNotBlank()) MutedText("«${sanction.comment}»")
-        }
-        if (sanction.active) {
-            ForgeTextButton(enabled = !busy, onClick = onLift) { Text(ui(if (sanction.kind == SanctionKind.DELETION) "moderation.restore" else "moderation.lift"), color = Gold) }
-        } else {
-            Text(ui(if (sanction.purgedAt != null) "moderation.purged" else "moderation.inactive"), color = Muted, style = MaterialTheme.typography.labelSmall)
+        // Смена дара (0.15.0, #35): санкции нет - ни номера, ни категории; дары - именами, а не кодами
+        val fate = entry.fateChange
+        MutedText(listOfNotNull(entry.number.takeIf { it > 0 }?.let { "#$it" }, categoryTitle(entry.category).takeIf { fate == null }, entry.until?.let { ui("moderation.until", listedAt(it).orEmpty()) }, listedAt(entry.at)).joinToString(" · "))
+        if (fate != null) {
+            MutedText("${fate.first?.let { FateCard(it).title } ?: "—"} → ${FateCard(fate.second).title}")
+        } else if (entry.comment.isNotBlank()) {
+            MutedText("«${entry.comment}»")
         }
     }
 }
@@ -595,7 +339,7 @@ private const val SERVER_NAME = 32
  * Шторка санкции на срок - бана или (4.6.3) немоты [kind]: цель (герой, аккаунт; у бана - и устройство), срок - готовый из
  * контента или свой, категория, причина для игрока (4.12.x - её видит наказанный) и служебная заметка модерации.
  */
-@Composable private fun BanSheet(account: AccountUi, dossier: Dossier, device: DeviceView?, kind: SanctionKind, onDismiss: () -> Unit, onBan: (SanctionRequest) -> Unit) {
+@Composable internal fun BanSheet(account: AccountUi, dossier: Dossier, device: DeviceView?, kind: SanctionKind, onDismiss: () -> Unit, onBan: (SanctionRequest) -> Unit) {
     val presets = account.index?.rules?.moderation?.let { if (kind == SanctionKind.MUTE) it.muteHours else it.banHours }.orEmpty()
     var target by remember {
         mutableStateOf(
@@ -664,7 +408,7 @@ private const val SERVER_NAME = 32
  * Шторка удаления (только администратор): герой или аккаунт целиком, служебная заметка обязательна, причина для игрока (4.12.x) - нет;
  * удаление - удержанием кнопки.
  */
-@Composable private fun DeleteSheet(account: AccountUi, dossier: Dossier, target: SanctionTarget, onTarget: (SanctionTarget) -> Unit, onDismiss: () -> Unit, onDelete: (DeletionRequest) -> Unit) {
+@Composable internal fun DeleteSheet(account: AccountUi, dossier: Dossier, target: SanctionTarget, onTarget: (SanctionTarget) -> Unit, onDismiss: () -> Unit, onDelete: (DeletionRequest) -> Unit) {
     var category by remember { mutableStateOf(SanctionCategory.OTHER) }
     var comment by remember { mutableStateOf("") }
     var reason by remember { mutableStateOf("") }
@@ -694,47 +438,27 @@ private const val SERVER_NAME = 32
 
 // ==================== Мелочи ====================
 
-@Composable private fun StatTile(label: String, value: String, modifier: Modifier, flagged: Boolean = false) {
-    Column(modifier.depthPanel(RoundedCornerShape(12.dp)).padding(8.dp)) {
-        Text(label, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
-        // Перенос строки - только явный (вход: дата и время), длинное значение по-прежнему обрывается многоточием
-        Text(value, color = if (flagged) Ember else GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, maxLines = 2, softWrap = false, overflow = TextOverflow.Ellipsis)
-    }
-}
-
-/** Предначертание аккаунта в досье (4.6.3): лента дара с датой выбора в подписи; не выбрано - «—». */
-@Composable private fun FateSection(owner: DossierAccount) {
-    Section(ui("moderation.fate.title")) {
-        val fate = owner.fate
-        if (fate == null) {
-            MutedText("—")
-        } else {
-            FateRibbon(FateCard(fate), ui("moderation.fate.chosen", owner.fateAt?.let { stampText(it).take(DATE) } ?: "—"), Modifier.fillMaxWidth())
-        }
-    }
-}
-
-@Composable private fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     ForgePanel(accent = Rune) {
         Text(title, color = Rune, style = MaterialTheme.typography.labelLarge)
         content()
     }
 }
 
-@Composable private fun Line(label: String, value: String, flagged: Boolean = false) {
+@Composable internal fun Line(label: String, value: String, flagged: Boolean = false) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, color = Parchment, style = MaterialTheme.typography.bodySmall)
         Text(if (flagged) "$value ⚠" else value, color = if (flagged) Ember else Parchment, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Bold)
     }
 }
 
-@Composable private fun Label(text: String) = Text(text, color = Muted, style = MaterialTheme.typography.labelMedium)
+@Composable internal fun Label(text: String) = Text(text, color = Muted, style = MaterialTheme.typography.labelMedium)
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Chips(content: @Composable FlowRowScope.() -> Unit) = FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
+internal fun Chips(content: @Composable FlowRowScope.() -> Unit) = FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), content = content)
 
-@Composable private fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
+@Composable internal fun Chip(label: String, selected: Boolean, onClick: () -> Unit) {
     FilterChip(
         selected = selected,
         onClick = onClick,
@@ -819,9 +543,8 @@ private const val TRASH_DAYS = 30
 private const val COMMENT = 300
 private const val DIGITS = 4
 private const val HOURS_IN_DAY = 24
-private const val TILES = 3
-private const val DATE = 10
-private const val HARDWARE = 6
+internal const val DATE = 10
+internal const val HARDWARE = 6
 
 /** Журнал отдаёт страницу без счёта: полная страница - возможно, есть следующая. */
 private const val PAGE_GUESS = 30
@@ -830,7 +553,7 @@ private const val PAGE_GUESS = 30
 private val CREATABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
 
 /** Роли, что администратор выдаёт в досье. */
-private val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
+internal val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
 
 /**
  * Новый аккаунт (3.88.7, роль с 3.88.8): логин и роль - игрок или модератор, - и сервер создаёт аккаунт с паролем,

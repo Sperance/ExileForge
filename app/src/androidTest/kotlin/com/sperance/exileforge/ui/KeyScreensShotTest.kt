@@ -20,12 +20,16 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
+import com.sperance.exileforge.core.campaign.combat.FlaskView
 import com.sperance.exileforge.core.campaign.combat.HeroStance
+import com.sperance.exileforge.core.campaign.combat.SkillView
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FeatureView
+import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.character.Sheets
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
@@ -41,6 +45,7 @@ import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ActiveSlot
+import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierCode
@@ -49,20 +54,26 @@ import com.sperance.exileforge.rules.content.QuestCondition
 import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.content.QuestReward
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.content.TakenNode
+import com.sperance.exileforge.rules.roll.Dice
+import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.run.AltarPact
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.MapMechanic
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
+import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.screens.admin.AdminPanels
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
 import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen
 import com.sperance.exileforge.ui.screens.expedition.NodeSheet
+import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
+import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
@@ -82,7 +93,7 @@ import java.io.File
  * Снимки ключевых экранов (0.14.0, UI-SHOTS): каждый экран рисуется над контентом закреплённого сервера по-русски, без анимаций,
  * и ложится в `design/shots/<имя>.jpg` - CI выгружает их артефактом `exile-forge-shots`; что обрезано или наехало, видно там.
  * Экраны: задания и контракты (макет B), гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
- * карта со стенами и дверью комнаты, панель боя на 4 слота, окно сбора, админка.
+ * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка.
  */
 class KeyScreensShotTest {
     @get:Rule val compose = createComposeRule()
@@ -109,17 +120,17 @@ class KeyScreensShotTest {
         ).forEach { QuestRow(it) }
     }
 
+    /** Гримуар 4+3 (0.14.1): класс с самыми длинными именами активных умений - имена в слотах видны целиком, без «Тяжёлы…». */
     @Test fun grimoire() = shot("grimoire") {
         val level = 50
-        val own = index.skills.ofClass(heroClass.code).filter { it.unlock <= level }
-        val actives = own.filter { it.kind == SkillKind.ACTIVE }.take(4)
-        val passives = own.filter { it.kind == SkillKind.PASSIVE }.take(3)
+        val (owner, actives) = longestActives(level)
+        val passives = index.skills.ofClass(owner.code).filter { it.unlock <= level && it.kind == SkillKind.PASSIVE }.take(3)
         val skills = HeroSkills(
             learned = (actives + passives).associate { it.code to 5 },
             active = actives.map { ActiveSlot(it.code, SlotCondition.READY) },
             passive = passives.map { it.code },
         )
-        val stats = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList()).stats
+        val stats = Sheets.calculate(index, level, owner.code, listOf(TakenNode(owner.startNode)), emptyList()).stats
         Slots(index, skills, level, stats) {}
         (actives + passives).forEach { Page(game(level), index, it, skills, level, stats, null) {} }
     }
@@ -166,6 +177,29 @@ class KeyScreensShotTest {
         ExpeditionScene(expedition, mutableFloatStateOf(0f), heroClass.code, Modifier.fillMaxWidth().height(640.dp))
     }
 
+    /**
+     * Панель боя на 4 слота (SKILL-02, 0.14.1): снимок боя собран руками и стоит - живой арены нет, часы кадра стоят, тестовые часы
+     * Compose не идут сами (живой бой раша не давал эмулятору покоя). Слоты - готов, откат, нет маны, применяется; фляги - полная,
+     * пьётся, пустая.
+     */
+    @Test fun fightBar() = shot("fight", scroll = false, frozen = true) {
+        val level = 50
+        val (owner, actives) = longestActives(level)
+        val zone = index.campaign.zones.first { it.monsters.isNotEmpty() }
+        val leader = MonsterRoller(index).roll(zone, zone.monsters.first(), emptyList(), Dice(7L))
+        val states = listOf(SlotState(1f, true), SlotState(.35f, true, 4.2), SlotState(1f, false), SlotState(1f, true, casting = .6f))
+        val views = actives.zip(states).mapIndexed { slot, (skill, state) ->
+            SkillView(slot, skill.code, skill.icon, 5, 12 + 4 * slot, state.ready, state.affordable, SlotCondition.READY, state.seconds, casting = state.casting)
+        }
+        val flasks = listOf(
+            FlaskView(0, "life", FlaskKind.LIFE, 4, 4, 1, 0f, SlotCondition.READY),
+            FlaskView(1, "mana", FlaskKind.MANA, 2, 4, 1, .5f, SlotCondition.READY),
+            FlaskView(2, "utility", FlaskKind.UTILITY, 0, 3, 1, 0f, SlotCondition.READY),
+        )
+        val fight = FightHud(leader, emptyList(), 420, 0, emptyList(), 1, null, heroMana = 60, heroMaxMana = 120, skills = views, flasks = flasks)
+        ActionBar(game(level, owner.code), fight, FightFrame(mutableFloatStateOf(0f), null), {}) {}
+    }
+
     /** Окно сбора (ASANA-12, шаблон листа объекта карты): узел ремесла на карте, полоса сбора на 40%. */
     @Test fun gathering() = shot("gathering", scroll = false) {
         val level = 20
@@ -183,12 +217,21 @@ class KeyScreensShotTest {
         Box(Modifier.height(1400.dp)) { AdminPanels(game, vm) }
     }
 
+    /** Состояние слота умения на снимке панели боя. */
+    private data class SlotState(val ready: Float, val affordable: Boolean, val seconds: Double = 0.0, val casting: Float = 0f)
+
+    /** Класс, чьи четыре открытых к [level] активных умения с самыми длинными именами длиннее всех, и эти умения. */
+    private fun longestActives(level: Int): Pair<HeroClass, List<SkillDefinition>> = index.classes.classes.map { c ->
+        c to index.skills.ofClass(c.code).filter { it.unlock <= level && it.kind == SkillKind.ACTIVE }.sortedByDescending { SkillText.title(it.code).length }.take(SLOTS)
+    }.maxBy { (_, skills) -> skills.sumOf { SkillText.title(it.code).length } }
+
     /** Строка модификатора [code] серединой первого тира. */
     private fun line(code: String): Line? = index.modifier(ModifierCode(code))?.let { def -> Line(def.code, def.tiers.firstOrNull()?.values.orEmpty().map { it.average() }) }
 
-    private fun game(level: Int): GameUi {
-        val info = HeroInfo("hero", "owner", "Изгнанник", heroClass = heroClass.code, level = level)
-        val hero = HeroView(info, emptyList(), sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList()))
+    private fun game(level: Int, code: String = heroClass.code): GameUi {
+        val owner = index.classes.classes.first { it.code == code }
+        val info = HeroInfo("hero", "owner", "Изгнанник", heroClass = code, level = level)
+        val hero = HeroView(info, emptyList(), sheet = Sheets.calculate(index, level, code, listOf(TakenNode(owner.startNode)), emptyList()))
         return GameUi(
             activity = Activity(busy = false),
             session = Session(DEFAULT_SERVER, profile = UserProfile("owner"), signedIn = true),
@@ -197,8 +240,12 @@ class KeyScreensShotTest {
         )
     }
 
-    /** Экран [content] шириной 360 dp без анимаций; [open] - текст, по которому нажать перед снимком (свёрнутое раскрыть). */
-    private fun shot(name: String, scroll: Boolean = true, open: String? = null, content: @Composable ColumnScope.() -> Unit) {
+    /**
+     * Экран [content] шириной 360 dp без анимаций; [open] - текст, по которому нажать перед снимком (свёрнутое раскрыть); [frozen] -
+     * тестовые часы Compose стоят: снимок не ждёт покоя того, что движется кадрами.
+     */
+    private fun shot(name: String, scroll: Boolean = true, open: String? = null, frozen: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+        if (frozen) compose.mainClock.autoAdvance = false
         compose.setContent {
             CompositionLocalProvider(LocalMotion provides false) {
                 ForgeTheme {
@@ -211,6 +258,7 @@ class KeyScreensShotTest {
             }
         }
         open?.let { compose.onNodeWithText(it).performClick() }
+        if (frozen) compose.mainClock.advanceTimeByFrame()
         compose.waitForIdle()
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val directory = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "design/shots").apply { mkdirs() }
@@ -219,5 +267,8 @@ class KeyScreensShotTest {
 
     private companion object {
         const val SHOT_QUALITY = 75
+
+        /** Активных слотов умений (SKILL-02). */
+        const val SLOTS = 4
     }
 }

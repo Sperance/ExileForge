@@ -214,7 +214,7 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
     }
 }
 
-/** Вкладки ящика: подчёркнута выбранная, у каждой - счёт непрочитанного плашкой. */
+/** Вкладки ящика: подчёркнута выбранная, у каждой - счёт непрочитанного ([UnreadCount], 0.14.5, #37: число без плашки). */
 @Composable private fun MailTabs(mail: List<Mail>, chosen: MailBox, onChoose: (MailBox) -> Unit) {
     Row(
         Modifier.fillMaxWidth().drawBehind { drawLine(Bronze, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) },
@@ -231,15 +231,7 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(box.title(), color = if (on) GoldBright else Muted, style = MaterialTheme.typography.labelMedium)
-                if (unread > 0) {
-                    Text(
-                        unread.toString(),
-                        color = Ink,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.background(Gold, RoundedCornerShape(8.dp)).padding(horizontal = 5.dp),
-                    )
-                }
+                UnreadCount(unread)
             }
         }
     }

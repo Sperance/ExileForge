@@ -3600,6 +3600,7 @@
   "feedback.reason_field": "A word for the author",
   "feedback.status_saved": "Status saved, the author got a letter",
   "mail.title": "Mail",
+  "mail.unread": "Unread: {0}",
   "mail.keep": "Game letters keep for 30 days, heroes' letters for {0} days.",
   "mail.empty": "No letters.",
   "might.title": "Might",

@@ -5,9 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudSync
@@ -24,7 +24,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -38,6 +39,7 @@ import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.LocalMailOpen
+import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
@@ -131,30 +133,19 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Конверт почты в шапке (4.3.0): всегда под рукой, рядом со значком связи; непрочитанные - красным числом в углу (больше
- * девяти - «9+»). Открывает почту тот, кого дало приложение ([LocalMailOpen]); без него конверта нет.
+ * Конверт почты в шапке (4.3.0): всегда под рукой, рядом со значком связи. Непрочитанное (0.14.5, #37, макет «Метка почты»,
+ * вариант B «Изумрудная искра») - конверт залит [Gold] и искра [UnreadBadge] в углу, без числа: сколько - скажет ящик; без
+ * новых писем конверт приглушён. Открывает почту тот, кого дало приложение ([LocalMailOpen]); без него конверта нет.
  */
 @Composable internal fun MailBadge(unread: Int) {
     val open = LocalMailOpen.current ?: return
-    IconButton(onClick = open) {
-        Box {
-            Icon(Icons.Outlined.Mail, ui("mail.title"), tint = if (unread > 0) GoldBright else Gold, modifier = Modifier.size(22.dp))
-            if (unread > 0) {
-                Text(
-                    if (unread > MAIL_SHOWN) "$MAIL_SHOWN+" else unread.toString(),
-                    color = Ink,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                    modifier = Modifier.align(Alignment.TopEnd).offset(x = 7.dp, y = (-5).dp).background(LifeRed, CircleShape).padding(horizontal = 4.dp),
-                )
-            }
+    val fresh = unread > 0
+    IconButton(onClick = open, modifier = Modifier.semantics { stateDescription = ui("mail.unread", unread) }) {
+        UnreadBadge(fresh) {
+            Icon(if (fresh) Icons.Filled.Mail else Icons.Outlined.Mail, ui("mail.title"), tint = if (fresh) Gold else Muted, modifier = Modifier.size(22.dp))
         }
     }
 }
-
-/** Больше скольких непрочитанных конверт пишет «N+». */
-private const val MAIL_SHOWN = 9
 
 /**
  * The link to the server (3.30.0): nothing while the server answers and nothing waits. С 4.4.x - по [LinkState]: команды ждут -

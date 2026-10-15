@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.campaign.PassiveSource
+import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.factorChange
@@ -42,11 +43,17 @@ import kotlin.math.ln
  */
 enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE, APART }
 
-/** One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. */
-data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null)
+/**
+ * One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. [better] (0.15.0, #46) - к лучшему
+ * ли то, что строка даёт, по полярности характеристики ([StatPolarity]), а не по знаку: null - без оценки и без цвета.
+ */
+data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null, val better: Boolean? = null)
 
 /** A card of one kind of source: its rows and what they give together, one figure per operation; [title] - своё имя карточки (дар). */
-data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String, val title: String? = null)
+data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String, val title: String? = null) {
+    /** Итог карточки к лучшему или к худшему (#46): оценка её строк, если они согласны; разные или без оценки - null. */
+    val better: Boolean? get() = rows.mapNotNull { it.better }.distinct().singleOrNull()
+}
 
 /**
  * A figure's window as it is read: the cards, each kind's share of the total for the bar (positive
@@ -103,13 +110,13 @@ class StatExplainer(private val game: GameUi) {
         if (lowLife.isNotEmpty()) {
             cards += ShareCard(
                 ShareKind.LOW_LIFE,
-                lowLife.map { (passive, gain) -> ShareRow(skillTitle(passive.skill), passive.lines.filter { stat in StatSpread.targets(it.stat, it.op) }.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, lowLifeNote(stat, passive, gain, breakdown)) },
+                lowLife.map { (passive, gain) -> ShareRow(skillTitle(passive.skill), passive.lines.filter { stat in StatSpread.targets(it.stat, it.op) }.joinToString(", ") { line -> fmt(stat, line.value, line.op, breakdown.percent) }, lowLifeNote(stat, passive, gain, breakdown), better = judge(stat, gain)) },
                 "",
             )
         }
         // Силы добычи вне цифры (4.12.x, STAT-PW1-13): против кого или к какому шансу - строкой под силой
         if (apart.isNotEmpty()) {
-            cards += ShareCard(ShareKind.APART, apart.map { (part, kind) -> ShareRow(statTitle(part.stat), signedNumber(part.value) + "%", apartNote(part, kind)) }, "")
+            cards += ShareCard(ShareKind.APART, apart.map { (part, kind) -> ShareRow(statTitle(part.stat), signedNumber(part.value) + "%", apartNote(part, kind), better = judge(part.stat, part.value)) }, "")
         }
         return StatExplanation(
             stat,
@@ -117,7 +124,7 @@ class StatExplainer(private val game: GameUi) {
             cards,
             weights(breakdown),
             formula(breakdown),
-            grants.map { ShareRow(statTitle(it.stat), fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true), link = it.stat) },
+            grants.map { ShareRow(statTitle(it.stat), fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true), link = it.stat, better = judge(it.stat, it.value, it.op)) },
         )
     }
 
@@ -150,12 +157,19 @@ class StatExplainer(private val game: GameUi) {
     /** Строка сдвига: шаг дара - его правилом, чтение боя - характеристикой, откуда прибавка (касание открывает её). */
     private fun shiftRow(stat: String, shift: Shift, holders: (String) -> List<StatSource>, percent: Boolean): ShareRow {
         val value = signed(stat, shift.delta, percent)
+        val better = judge(stat, shift.delta)
         return when (shift.source.kind) {
-            SourceKind.FIGHT -> ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = shift.source.ref)
-            SourceKind.SKILL, SourceKind.RESHAPE -> ShareRow(sourceTitle(shift.source), value, skillNote(shift.source))
-            else -> ShareRow(shiftTitle(shift.source, holders), value, shift.from?.let { from -> ui("stat.from", statTitle(from)) })
+            SourceKind.FIGHT -> ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = shift.source.ref, better = better)
+            SourceKind.SKILL, SourceKind.RESHAPE -> ShareRow(sourceTitle(shift.source), value, skillNote(shift.source), better = better)
+            else -> ShareRow(shiftTitle(shift.source, holders), value, shift.from?.let { from -> ui("stat.from", statTitle(from)) }, better = better)
         }
     }
+
+    /**
+     * Что даёт строка разбора характеристике [stat] - к лучшему ли (0.15.0, #46): одна точка оценки [StatPolarity]; замена
+     * значения ([Op.SET]) - без оценки.
+     */
+    private fun judge(stat: String, value: Double, op: Op = Op.ADD): Boolean? = if (op == Op.SET) null else StatPolarity.better(index, stat, value)
 
     /** Пассивное умение с уровнем, на котором действует: «Решимость ур. 12». */
     private fun skillTitle(code: String): String = passives[code]?.let { ui("stat.src.skill", SkillText.title(code), it.level) } ?: SkillText.title(code)
@@ -178,10 +192,11 @@ class StatExplainer(private val game: GameUi) {
 
     private fun row(stat: String, share: Share, percent: Boolean): ShareRow {
         val value = fmt(stat, share.value, share.op, percent)
-        val per = share.perStat ?: return ShareRow(rowTitle(share.source), value, localNote(share.local) ?: skillNote(share.source))
+        val better = judge(stat, share.value, share.op)
+        val per = share.perStat ?: return ShareRow(rowTitle(share.source), value, localNote(share.local) ?: skillNote(share.source), better = better)
         val rule = ui("stat.per", fmt(stat, share.each, share.op, percent), statNumber(per, share.per), statTitle(per))
         val by = share.source?.takeIf { it.kind != SourceKind.CLASS }?.let { "${sourceTitle(it)}: " }.orEmpty()
-        return ShareRow("${statTitle(per)} ${statNumber(per, share.perValue)}", value, by + rule, link = per)
+        return ShareRow("${statTitle(per)} ${statNumber(per, share.perValue)}", value, by + rule, link = per, better = better)
     }
 
     /** Строка в карточке дара - его именем: карточка уже называется «Предначертание: …». */
@@ -289,15 +304,15 @@ class StatExplainer(private val game: GameUi) {
      */
     private fun baseRows(b: StatBreakdown): List<ShareRow> {
         val stat = b.stat
-        val whole = listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), fmt(stat, b.base, Op.ADD, b.percent, sign = false)))
+        val whole = listOf(ShareRow(hero?.let { ui("stat.src.base", classTitle(it.heroClass), it.level) } ?: ui("stat.kind.BASE"), fmt(stat, b.base, Op.ADD, b.percent, sign = false), better = judge(stat, b.base)))
         val owner = hero ?: return whole
         val heroClass = index?.heroClass(owner.heroClass) ?: return whole
         val start = heroClass.base[stat] ?: 0.0
         val grown = (heroClass.perLevel[stat] ?: 0.0) * (owner.level - 1).coerceAtLeast(0)
         if (grown == 0.0 || abs(start + grown - b.base) >= 0.05) return whole
         return listOfNotNull(
-            ShareRow(ui("stat.src.class", classTitle(owner.heroClass)), fmt(stat, start, Op.ADD, b.percent)).takeIf { start != 0.0 },
-            ShareRow(ui("stat.src.level", owner.level), fmt(stat, grown, Op.ADD, b.percent)),
+            ShareRow(ui("stat.src.class", classTitle(owner.heroClass)), fmt(stat, start, Op.ADD, b.percent), better = judge(stat, start)).takeIf { start != 0.0 },
+            ShareRow(ui("stat.src.level", owner.level), fmt(stat, grown, Op.ADD, b.percent), better = judge(stat, grown)),
         )
     }
 

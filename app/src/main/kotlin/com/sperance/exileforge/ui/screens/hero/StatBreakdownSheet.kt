@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.number
@@ -147,7 +148,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
             Text(value(limit.cap), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
         SourceLine(ShareRow(ui("stat.cap.base"), value(limit.base)), open)
-        limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, game.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat), open) }
+        limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, game.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat, better = StatPolarity.better(game.index, limit.stat, amount)), open) }
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
         limit.floor?.let { SourceLine(ShareRow(ui("stat.cap.floor"), value(it)), open) }
         Text(
@@ -167,7 +168,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(ui("stat.reserve.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
-        SourceLine(ShareRow(ui("stat.reserve.held", number(reserve.percent)), "−" + value(reserve.held))) {}
+        SourceLine(ShareRow(ui("stat.reserve.held", number(reserve.percent)), "−" + value(reserve.held), better = false)) {}
         SourceLine(ShareRow(ui("stat.reserve.free"), value(reserve.free))) {}
     }
 }
@@ -214,7 +215,7 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             KindTag(card.kind)
             Text(card.title ?: ui("stat.kind.${card.kind.name}"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Text(card.summary, color = if (card.summary.startsWith("−")) LifeRed else Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            Text(card.summary, color = shiftColor(card.better, Gold), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
         card.rows.forEach { SourceLine(it, open) }
     }
@@ -230,11 +231,14 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
                 modifier = Modifier.weight(1f),
                 textDecoration = if (row.link != null) TextDecoration.Underline else null,
             )
-            Text(row.value, color = if (row.value.startsWith("−")) LifeRed else Parchment, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+            Text(row.value, color = shiftColor(row.better, Parchment), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
         }
         row.note?.let { Text(it, color = Muted.copy(alpha = .8f), style = MaterialTheme.typography.labelSmall) }
     }
 }
+
+/** Цвет числа строки разбора (0.15.0, #46): к худшему по полярности - кровью, иначе - [plain]; знак числа цвета не решает. */
+private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == false) LifeRed else plain
 
 @Composable private fun Formula(text: String) {
     val shape = RoundedCornerShape(10.dp)
@@ -259,7 +263,7 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(row.title, color = ModBlue, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                Text(row.value, color = if (row.value.startsWith("−")) LifeRed else Gold, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                Text(row.value, color = shiftColor(row.better, Gold), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
                 Text("  ›", color = Muted)
             }
         }

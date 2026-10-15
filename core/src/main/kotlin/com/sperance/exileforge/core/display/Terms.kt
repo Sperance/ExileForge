@@ -25,6 +25,10 @@ enum class Term(vararg val marks: String) {
     POISON("POISON"),
     BLEED("BLEED"),
 
+    // Недуги восстановления (0.15.0, #46): режут регенерацию и вампиризм цели на свою силу; строка карты называет оба
+    WOUND("WOUND", "MONSTER_WITHER"),
+    PARCH("PARCH", "MONSTER_WITHER"),
+
     // Подавление восстановления (4.2.0): не путать с подавлением чар `STOCK_SPELL_SUPPRESSION`
     RECOVERY_SUPPRESSION("RECOVERY_SUPPRESSION", "SUPPRESSION_AVOID"),
     STUN("STUN"),

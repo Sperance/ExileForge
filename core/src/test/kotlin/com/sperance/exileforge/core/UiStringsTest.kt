@@ -169,6 +169,11 @@ class UiStringsTest {
                 add("term.lore.${it.name}")
                 add("term.lore.${it.name}.text")
             }
+            // Термины свёртки строк (0.15.0, #46: изранение и иссушение тоже): имя и правило
+            com.sperance.exileforge.core.display.Term.entries.forEach {
+                add("term.${it.name}")
+                add("term.${it.name}.text")
+            }
             MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
             // Причины санкций и роли гильдии (4.5.1): самоудаление и роли состава

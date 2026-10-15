@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.character.FlaskRow
 import com.sperance.exileforge.core.character.FlaskVerdict
 import com.sperance.exileforge.core.character.GearVerdict.Shift
 import com.sperance.exileforge.core.character.StatDelta
+import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.character.StatPriority
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -54,7 +55,8 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
         const val LEADING = 4
 
         /**
-         * Сравнение листа героя: каждая сдвинутая характеристика [delta]; рост - к лучшему. С контентом [index] (4.6.5) - только
+         * Сравнение листа героя: каждая сдвинутая характеристика [delta]; к лучшему ли сдвиг - полярность характеристики
+         * ([StatPolarity], 0.15.0, #46: меньше получаемого урона - лучше, нейтральная - без цвета). С контентом [index] (4.6.5) - только
          * строки сводки (часть строки и сила уникальной - внутри своей строки), множитель - «100% → 60%», разница - «−40%».
          * С листом героя [sheet] уровня [level] (0.14.0, ASANA-N07) уклонение и броня - процентом защиты, разница - в п.п.
          */
@@ -76,13 +78,14 @@ class Comparison(lines: List<ComparisonLine>, private val lossesFirst: Boolean =
 
                             else -> signed(it.change) { size -> statValue(it.stat, size, index) }
                         },
-                        it.change > 0,
+                        StatPolarity.better(index, it.stat, it.change),
                         StatPriority.rank(it.stat),
                         share(it.before, it.after),
                     )
                 } + (off - delta.map { it.stat }.toSet()).map { stat ->
-                    // Отключение (4.12.x, ASANA-02) видно и тогда, когда сейчас и так ноль: узел всё равно закроет характеристику
-                    ComparisonLine(statTitle(stat), statValue(stat, 0.0, index), ui("compare.off"), "", false, StatPriority.rank(stat), 1.0)
+                    // Отключение (4.12.x, ASANA-02) видно и тогда, когда сейчас и так ноль: узел всё равно закроет характеристику. Закрыть -
+                    // убавить: к худшему, у характеристики «меньше лучше» - к лучшему (#46)
+                    ComparisonLine(statTitle(stat), statValue(stat, 0.0, index), ui("compare.off"), "", StatPolarity.better(index, stat, -1.0), StatPriority.rank(stat), 1.0)
                 },
             )
         }

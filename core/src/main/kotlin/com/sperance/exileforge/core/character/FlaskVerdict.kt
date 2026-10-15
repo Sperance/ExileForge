@@ -3,44 +3,56 @@ package com.sperance.exileforge.core.character
 import com.sperance.exileforge.core.character.GearVerdict.Shift
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.StatGain
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.sheet.FlaskReadout
 import com.sperance.exileforge.rules.sheet.FlaskSheet
+import kotlin.math.abs
+import kotlin.math.sign
 
 /**
- * Мера сводки фляги ([FlaskReadout], 4.2.0), что сравнивает карточка: [read] - её число у сводки, [higherBetter] - больше ли
- * значит лучше (расход заряда - наоборот). Строки, что фляга кладёт на героя, - отдельные строки [FlaskRow.stat].
+ * Мера сводки фляги ([FlaskReadout], 4.2.0), что сравнивает карточка: [read] - её число у сводки, [gain] - полярность меры (расход
+ * заряда - «меньше лучше»). Строки, что фляга кладёт на героя, и механики фляги - отдельные строки [FlaskRow.stat] с полярностью
+ * своей характеристики ([StatPolarity], 0.15.0, #46).
  */
-enum class FlaskMeasure(val higherBetter: Boolean, val read: (FlaskReadout) -> Double) {
-    LIFE(true, FlaskReadout::life),
-    MANA(true, FlaskReadout::mana),
-    INSTANT(true, FlaskReadout::instant),
-    DURATION(true, FlaskReadout::duration),
-    CHARGES(true, FlaskReadout::maxCharges),
-    PER_USE(false, FlaskReadout::perUse),
-    USES(true, { it.uses.toDouble() }),
-    EFFECT(true, FlaskReadout::effect),
-    LINE(true, { 0.0 }),
+enum class FlaskMeasure(val gain: StatGain, val read: (FlaskReadout) -> Double) {
+    LIFE(StatGain.HIGHER, FlaskReadout::life),
+    MANA(StatGain.HIGHER, FlaskReadout::mana),
+    INSTANT(StatGain.HIGHER, FlaskReadout::instant),
+    DURATION(StatGain.HIGHER, FlaskReadout::duration),
+    CHARGES(StatGain.HIGHER, FlaskReadout::maxCharges),
+    PER_USE(StatGain.LOWER, FlaskReadout::perUse),
+    USES(StatGain.HIGHER, { it.uses.toDouble() }),
+    EFFECT(StatGain.HIGHER, FlaskReadout::effect),
+    LINE(StatGain.HIGHER, { 0.0 }),
 
     /** Своя механика фляги без меры (4.12.x, ASANA-05): заряды за крит, перелив, шанс не тратить заряд… - [FlaskRow.stat]. */
-    MECHANIC(true, { 0.0 }),
+    MECHANIC(StatGain.HIGHER, { 0.0 }),
 }
 
 /**
  * Строка «сейчас → станет» фляги: мера [measure] (у строки, что фляга кладёт на героя, - [stat] и [op]), у фляги в гнезде
- * [before] (0 - гнездо пусто) и у этой [after].
+ * [before] (0 - гнездо пусто) и у этой [after]; [polarity] - что у строки лучше (у меры - своя, у строки - её характеристики).
  */
-data class FlaskRow(val measure: FlaskMeasure, val before: Double, val after: Double, val stat: String = "", val op: Op = Op.ADD) {
-    /** Доля изменения в сторону «лучше»: рост меры, где больше - лучше, и падение расхода; новая мера - целиком. */
+data class FlaskRow(
+    val measure: FlaskMeasure,
+    val before: Double,
+    val after: Double,
+    val stat: String = "",
+    val op: Op = Op.ADD,
+    val polarity: StatGain = measure.gain,
+) {
+    /**
+     * Доля изменения в сторону «лучше» по полярности: рост меры, где больше - лучше, падение получаемого и расхода; новая строка -
+     * целиком, со знаком своего числа; нейтральная - ноль.
+     */
     val gain: Double get() {
-        val change = if (before != 0.0) {
-            (after - before) / kotlin.math.abs(before)
-        } else if (after != 0.0) {
-            1.0
-        } else {
-            0.0
+        val change = if (before != 0.0) (after - before) / abs(before) else after.sign
+        return when (polarity.better(change)) {
+            true -> abs(change)
+            false -> -abs(change)
+            null -> 0.0
         }
-        return if (measure.higherBetter) change else -change
     }
 
     val shift: Shift get() = Shift.of(gain)
@@ -71,19 +83,22 @@ data class FlaskVerdict(val rows: List<FlaskRow>, override val might: MightShift
         /** Фляга [item] против [replaced] в гнезде (null - гнездо пусто) при листе героя [stats]; null - шаблона нет. */
         fun of(index: ContentIndex, stats: Map<String, Double>, item: ItemInstance, replaced: ItemInstance?): FlaskVerdict? {
             val after = readout(index, stats, item) ?: return null
-            return of(replaced?.let { readout(index, stats, it) }, after)
+            return of(replaced?.let { readout(index, stats, it) }, after, index)
         }
 
-        /** Строки сводки [after] против [before]: мера, что у обеих ноль, не печатается; сила эффекта - только у фляг со строками. */
-        fun of(before: FlaskReadout?, after: FlaskReadout): FlaskVerdict {
+        /**
+         * Строки сводки [after] против [before]: мера, что у обеих ноль, не печатается; сила эффекта - только у фляг со строками.
+         * Строки и механики оценивает полярность их характеристик в контенте [index] ([StatPolarity]).
+         */
+        fun of(before: FlaskReadout?, after: FlaskReadout, index: ContentIndex?): FlaskVerdict {
             val lined = after.lines.isNotEmpty() || before?.lines.orEmpty().isNotEmpty()
             val measures = FlaskMeasure.entries.filter { it != FlaskMeasure.LINE && it != FlaskMeasure.MECHANIC && (lined || it != FlaskMeasure.EFFECT) }.map { FlaskRow(it, before?.let(it.read) ?: 0.0, it.read(after)) }
             val was = before?.lines.orEmpty().groupBy { it.stat to it.op }.mapValues { (_, ops) -> ops.sumOf { it.value } }
             val will = after.lines.groupBy { it.stat to it.op }.mapValues { (_, ops) -> ops.sumOf { it.value } }
-            val lines = (was.keys + will.keys).distinct().map { key -> FlaskRow(FlaskMeasure.LINE, was[key] ?: 0.0, will[key] ?: 0.0, key.first, key.second) }
+            val lines = (was.keys + will.keys).distinct().map { key -> FlaskRow(FlaskMeasure.LINE, was[key] ?: 0.0, will[key] ?: 0.0, key.first, key.second, StatPolarity.of(index, key.first)) }
             // Механики фляги (4.12.x, ASANA-05): и те, что пропадут с заменой
             val held = before?.mechanics.orEmpty()
-            val mechanics = (held.keys + after.mechanics.keys).distinct().map { stat -> FlaskRow(FlaskMeasure.MECHANIC, held[stat] ?: 0.0, after.mechanics[stat] ?: 0.0, stat) }
+            val mechanics = (held.keys + after.mechanics.keys).distinct().map { stat -> FlaskRow(FlaskMeasure.MECHANIC, held[stat] ?: 0.0, after.mechanics[stat] ?: 0.0, stat, polarity = StatPolarity.of(index, stat)) }
             return FlaskVerdict((measures + lines + mechanics).filter { it.before != 0.0 || it.after != 0.0 })
         }
     }

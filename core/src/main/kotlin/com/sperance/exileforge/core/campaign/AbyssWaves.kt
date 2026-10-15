@@ -90,8 +90,9 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
             spawns.skilled(spawns.buffed(spawns.sworn(monsters.build(monster, level, ruleOf, monsters.draw(pool, level, ruleOf, mods, dice), dice)), buffs), dice)
         }
         val leader = floor.leader?.takeIf { index.monster(it) != null }?.let { code ->
-            // Вождь башни (4.6.5) - своя кривая силы по этажу и число строк вместо кривой боссов по уровню
-            val view = leaderPower?.let { monsters.guardian(code, level, rule.modifiers, it.rolls, rule.tierReach, it.power) } ?: monsters.guardian(code, level, rule.modifiers, rule.rolls, rule.tierReach)
+            // Вождь башни (4.6.5) - своя кривая силы по этажу и число строк; вождь глубины (0.14.1) - кривая вождей Бездны по уровню
+            val power = leaderPower ?: LeaderPower(rule.leaderAt(level), rule.rolls)
+            val view = monsters.guardian(code, level, rule.modifiers, power.rolls, rule.tierReach, power.power)
             spawns.skilled(spawns.buffed(spawns.sworn(monsters.boss(view, dice, leaderBuffs(effects))), buffs), dice)
         }
         return foes + listOfNotNull(leader)

@@ -83,8 +83,9 @@ enum class Guard(val table: String?) { ANY(null), ARMOUR("local:armor"), EVASION
 /** Умения: любые, только атаки, только чары. */
 enum class Style { ANY, ATTACK, SPELL }
 
-data class Archetype(val band: GearBand, val source: GearSource = GearSource.MIXED, val guard: Guard = Guard.ANY, val style: Style = Style.ANY, val shield: Boolean = true) {
-    val name: String get() = listOf(band.name.lowercase(), source.name.lowercase(), guard.name.lowercase(), style.name.lowercase()).joinToString("/") + if (shield) "" else "/noshield"
+/** Архетип эталона; [seed] - номер набора вещей (0.14.1): другие кости поиска вещей того же архетипа, разброс выборки классов. */
+data class Archetype(val band: GearBand, val source: GearSource = GearSource.MIXED, val guard: Guard = Guard.ANY, val style: Style = Style.ANY, val shield: Boolean = true, val seed: Int = 0) {
+    val name: String get() = listOf(band.name.lowercase(), source.name.lowercase(), guard.name.lowercase(), style.name.lowercase()).joinToString("/") + (if (shield) "" else "/noshield") + if (seed == 0) "" else "/s$seed"
 }
 
 @kotlinx.serialization.Serializable
@@ -424,9 +425,9 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
      * Урон эталона класса [heroClass] уровня [level] в бою (выравнивание классов SKILL-02): вещи источника [source] полосы уровня
      * ([heroBand]), штраф сопротивлений ближайшей зоны, набор умений подобран боем ([LoadoutTuner]).
      */
-    fun classDamage(heroClass: HeroClass, level: Int, source: GearSource): Pair<Hero, LoadoutTuner.Damage> {
+    fun classDamage(heroClass: HeroClass, level: Int, source: GearSource, seed: Int = 0): Pair<Hero, LoadoutTuner.Damage> {
         val zone = nearZones(level, 1).first()
-        val hero = hero(heroClass, level, Archetype(heroBand(level), source), index.campaign.resistPenalty(zone.code, false))
+        val hero = hero(heroClass, level, Archetype(heroBand(level), source, seed = seed), index.campaign.resistPenalty(zone.code, false))
         return hero to kit.tuner.damage(hero)
     }
 
@@ -997,12 +998,14 @@ fun main(args: Array<String>) {
             val levels = (System.getProperty("levels") ?: "10,20,40,60,72,80,88").split(',').map { it.trim().toInt() }
             // Вещи эталона - редкие и смесь с уникалками (силы уникалок - свой разброс): урон - среднее геометрическое, победы - среднее
             val sources = (System.getProperty("source") ?: "RARE,MIXED").split(',').map { GearSource.valueOf(it.trim()) }
+            // Наборов вещей на источник (0.14.1): победы - среднее по всем, разброс одного набора вещей больше разницы классов
+            val gearSeeds = (System.getProperty("gearSeeds") ?: "1").toInt()
             levels.forEach { level ->
                 classes.forEach { c ->
                     tasks += Task {
                         val near = sim.nearZones(level, CLASS_BOSSES)
-                        val runs = sources.map { source ->
-                            val (hero, damage) = sim.classDamage(c, level, source)
+                        val runs = sources.flatMap { source -> (0 until gearSeeds).map { source to it } }.map { (source, seed) ->
+                            val (hero, damage) = sim.classDamage(c, level, source, seed)
                             val bosses = near.map { sim.boss(it, hero, 0, Rarity.COMMON, cap) }
                             Triple(hero, damage, bosses)
                         }
@@ -1012,7 +1015,11 @@ fun main(args: Array<String>) {
                         val times = bosses.map { it.values[11] as Double }.filter { it > 0 }
                         val parts = HashMap<String, Double>()
                         runs.forEach { (_, d, _) -> d.bySkill.forEach { (k, v) -> parts.merge(k, v / d.bySkill.values.sum().coerceAtLeast(1.0), Double::plus) } }
-                        listOf(
+                        // Разбор по стражам (0.14.1): доля побед, среднее время боя, тайм-ауты - смерть или потолок
+                        val perBoss = bosses.groupBy { it.values[2] as String }.map { (boss, rows) ->
+                            Row(listOf("classboss", c.code, level, boss, rows.map { it.values[10] as Double }.average(), rows.map { it.values[12] as Double }.average(), rows.sumOf { it.values[13] as Int }, rows.map { it.values[14] as Double }.average()))
+                        }
+                        perBoss + listOf(
                             Row(
                                 listOf(
                                     "class", c.code, level, heroBand(level).name, geo { it.single }, geo { it.pack }, geo { it.score }, wins, if (times.isEmpty()) -1.0 else times.average(),
@@ -1064,6 +1071,75 @@ fun main(args: Array<String>) {
                         val hero = sim.hero(c, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, false))
                         val t = modes.tower(hero, SimKit.SEED + level, 100)
                         listOf(Row(listOf("tower", c.code, level, t.floor, t.level, t.seconds)))
+                    }
+                }
+            }
+        }
+
+        // Бездна по глубинам (0.14.1): зоны [zones] (по умолчанию - первая зона с Бездной в каждом акте), эталон уровня зоны или [level],
+        // [rolls] трещин на класс; вождь - последний бой своей глубины
+        "abyss" -> {
+            val modes = ModesBal(index)
+            val rule = checkNotNull(index.campaign.abyss)
+            val seeds = (System.getProperty("rolls") ?: "6").toInt()
+            val picked = if (zonesOnly.isNotEmpty()) {
+                index.campaign.zones.filter { it.code.value in zonesOnly }
+            } else {
+                index.campaign.regions.mapNotNull { region -> region.zones.filter { it.level >= rule.minLevel }.minByOrNull { it.level } }
+            }
+            val levels = System.getProperty("levels")?.split(',')?.map { it.trim().toInt() }
+            picked.forEach { zone ->
+                (levels ?: listOf(zone.level)).forEach { level ->
+                    classes.forEach { c ->
+                        tasks += Task {
+                            val hero = sim.hero(c, level, Archetype(campaignBand(level)), penalty(zone, false))
+                            (0 until seeds).flatMap { s ->
+                                modes.abyss(hero, zone, SimKit.SEED + 7L * zone.level + 1009L * s).mapIndexed { d, f ->
+                                    Row(listOf("abyss", zone.code.value, zone.level, level, c.code, s, d + 1, rule.waves[d].leader?.value ?: "-", f.outcome == Outcome.WIN, f.time, f.lifeLost))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Разлом недели (0.14.1): эталон уровня [levels] каждого класса проходит [rolls] недель Разлома моделью игрока
+        "rift" -> {
+            val modes = ModesBal(index)
+            val weeks = (System.getProperty("rolls") ?: "3").toInt()
+            (System.getProperty("levels") ?: "20,30,40,60,72,80,88").split(',').map { it.trim().toInt() }.forEach { level ->
+                classes.forEach { c ->
+                    tasks += Task {
+                        val zone = sim.nearZones(level, 1).first()
+                        val hero = sim.hero(c, level, Archetype(campaignBand(level)), penalty(zone, false))
+                        (0 until weeks).flatMap { w ->
+                            val week = RIFT_WEEK + w
+                            val r = modes.rift(hero, week)
+                            listOf(Row(listOf("rift", level, c.code, week, r.guardians, r.acts, r.fights, r.fallen, r.fatal?.name ?: "-"))) +
+                                r.wardens.mapIndexed { act, (won, seconds) -> Row(listOf("riftward", level, c.code, week, act + 1, won, seconds)) }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Скверна (0.14.1): очаг целиком (все точки и Матерь) в первой, средней и последней зоне каждого акта эталоном уровня зоны
+        "blight" -> {
+            val modes = ModesBal(index)
+            val seeds = (System.getProperty("rolls") ?: "2").toInt()
+            index.campaign.regions.forEachIndexed { act, region ->
+                val picked = if (zonesOnly.isNotEmpty()) region.zones.filter { it.code.value in zonesOnly } else listOf(region.zones.first(), region.zones[region.zones.size / 2], region.zones.last()).distinct()
+                picked.forEach { zone ->
+                    classes.forEach { c ->
+                        tasks += Task {
+                            val hero = sim.hero(c, zone.level, Archetype(campaignBand(zone.level)), penalty(zone, false))
+                            (0 until seeds).flatMap { s ->
+                                modes.blight(hero, zone, SimKit.SEED + 13L * zone.level + 1009L * s).map { p ->
+                                    Row(listOf("blight", act + 1, zone.code.value, zone.level, c.code, s, p.point, p.won, p.seconds, p.lifeLost))
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1128,6 +1204,9 @@ fun guard(index: ContentIndex, rows: List<Row>, band: ClosedFloatingPointRange<D
 }
 
 val GUARD_BAND = 0.5..2.0
+
+/** Первая неделя Разлома режима `rift`: недели схем - подряд от неё. */
+const val RIFT_WEEK = 2_900L
 
 /** Стражей на уровень в режиме `classes`: ближайшие зоны не выше уровня героя. */
 const val CLASS_BOSSES = 4

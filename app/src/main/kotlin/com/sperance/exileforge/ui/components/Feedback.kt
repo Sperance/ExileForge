@@ -71,7 +71,6 @@ fun kindTitle(name: String): String = locOr("enum.FeedbackKind.$name", name)
 /** Цвет статуса модерации: созданный - пергамент, на рассмотрении - руна, отправленный - зелёный, отклонённый - кровь. */
 fun statusTint(status: ReportStatus): Color = when (status) {
     ReportStatus.CREATED -> Parchment
-    ReportStatus.REVIEW -> Rune
     ReportStatus.SENT -> Vital
     ReportStatus.REJECTED -> LifeRed
 }
@@ -168,6 +167,7 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
     var tab by rememberSaveable { mutableStateOf(start) }
     var deleting by remember { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
+    var searching by rememberSaveable { mutableStateOf(false) }
     val fresh = feedback.mine.filter { own -> own.replyPrint?.let { it != seen[own.id] } == true }.map { it.id }.toSet()
     // Открытая «Мои» гасит новые ответы - но точки этого показа остаются до следующего открытия
     val shownFresh = remember(tab, feedback.mine) { fresh }
@@ -176,8 +176,17 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             val mineTitle = ui("feedback.tab.mine") + if (tab != ReportsTab.MINE && fresh.isNotEmpty()) " · ${fresh.size}" else ""
-            PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] })
-            if (tab == ReportsTab.KNOWN) {
+            // Шапка (0.14.2, макет «Отчёты у модерации», вариант A для игрока): вкладки и значок поиска, поле - по нажатию
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.weight(1f)) { PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }) }
+                if (tab == ReportsTab.KNOWN) {
+                    IconButton(onClick = {
+                        searching = !searching
+                        if (!searching) query = ""
+                    }) { Icon(Icons.Outlined.Search, ui("feedback.search_open"), tint = if (searching) GoldBright else Muted) }
+                }
+            }
+            if (tab == ReportsTab.KNOWN && searching) {
                 OutlinedTextField(
                     query,
                     { query = it.take(SEARCH_MAX) },

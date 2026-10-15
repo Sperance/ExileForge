@@ -16,12 +16,12 @@ import kotlinx.serialization.Serializable
 }
 
 /**
- * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [REVIEW] - модерация рассматривает его (4.3.0: первый
- * комментарий модерации к созданному), [SENT] - отправлен Issue в GitHub (0.14.1), [REJECTED] - отклонён модерацией с причиной.
+ * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [SENT] - отправлен Issue в GitHub (0.14.1; с 0.14.2 «Рассмотрения»
+ * нет - первое слово модерации отправляет отчёт сразу), [REJECTED] - отклонён модерацией с причиной.
  * Куда отчёт может перейти и можно ли голосовать, решает машина состояний сервера: она приходит полями [AdminReport.moves] и
  * [KnownReport.votable].
  */
-@Serializable enum class ReportStatus { CREATED, REVIEW, SENT, REJECTED }
+@Serializable enum class ReportStatus { CREATED, SENT, REJECTED }
 
 /**
  * Судьба Issue отчёта (0.14.1, GH-ISSUES; сервер `IssueState`): открыт - [OPEN] («В работе») и [IN_PROGRESS] («Исправляется»);
@@ -131,6 +131,12 @@ import kotlinx.serialization.Serializable
     val heroLevel: Int = 0,
     /** Последние неудачные запросы автора (4.3.1, сервер 1.84), новые первыми. */
     val failures: List<com.sperance.exileforge.core.model.command.RequestFailure> = emptyList(),
+    /** Последние действия автора и снимок героя (0.14.2) - как их прислал клиент. */
+    val trail: List<String> = emptyList(),
+    val heroSheet: List<String> = emptyList(),
+    /** Повторы падения и версии, где оно было (0.14.2); у прочих отчётов - 1 и пусто. */
+    val occurrences: Int = 1,
+    val versions: List<String> = emptyList(),
 )
 
 /**

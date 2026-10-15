@@ -463,7 +463,7 @@ jobs:
           cat update.json
           gh release create "$tag" "$apk" update.json --target "$GITHUB_SHA" --title "ExileForge ${tag#v}" --notes-file RELEASE_NOTES.md --latest
       # Issues, что чинит релиз (0.14.1, GH-ISSUES): коммиты с прошлого релиза, что называют «Closes #N» (fixes, resolves), - Issue
-      # получает «Исправлено в X», метку версии и закрывается выполненным; игра увидит это синхронизацией сервера (0.14.2: вебхуком).
+      # получает «Закрыто в X», метку версии и закрывается выполненным; игра увидит это синхронизацией сервера (0.14.2: вебхуком).
       # Рабочая ветка - не основная, сам GitHub по таким словам Issues не закрывает.
       - if: steps.version.outputs.exists == 'false'
         name: Close the issues this release fixes
@@ -482,7 +482,7 @@ jobs:
           for n in $issues; do
             state=$(gh issue view "$n" --json state --jq .state 2>/dev/null) || { echo "::warning::issue #$n not found"; continue; }
             [ "$state" = OPEN ] || continue
-            word="Исправлено"
+            word="Закрыто"
             gh issue comment "$n" --body "$word в ${tag#v}"
             gh issue edit "$n" --add-label "$tag" --remove-label in-progress || gh issue edit "$n" --add-label "$tag"
             gh issue close "$n" --reason completed

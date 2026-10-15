@@ -1,17 +1,26 @@
 package com.sperance.exileforge.ui.screens.server
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -32,106 +41,179 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The administrator's reading of players' reports (3.73.0): by kind (0.14.2: ошибки, падения, апелляции, жалобы - без
- * предложений), filtered by status, each with its author and where it was written; a new status with a word for the author, who
- * gets a letter about it. С 4.3.0 - только допустимые переходы статуса и удаление; с 0.14.2 - переписка Issue и ведение Issue из
- * игры (ответ, «в работу», закрытие с причиной).
+ * Отчёты для модерации (3.73.0; 0.14.2 - макет «Отчёты у модерации», вариант A «список-строки»): поиск по тексту, «#номеру» и
+ * логину, чипы очереди со счётом ([Queue]) и вида; строка на отчёт - точка судьбы, текст, автор и метки; нажатие раскрывает
+ * отчёт в списке: контекст, ошибки сети, действия, герой, переписка Issue и действия одной строкой. «Рассмотрения» нет: слово
+ * модерации к новому отчёту отправляет его в GitHub сразу.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>()
     val feedback by vm.feedback.collectAsStateWithLifecycle()
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
-    var status by remember { mutableStateOf<ReportStatus?>(null) }
-    LaunchedEffect(kind, status) { vm.loadReports(kind, status) }
-    PillTabs(FeedbackKind.entries.map(::kindTitle), kind.ordinal, { kind = FeedbackKind.entries[it] }, segmented = true)
+    var queue by remember { mutableStateOf(Queue.NEW) }
+    var query by remember { mutableStateOf("") }
+    var open by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(kind) { vm.loadReports(kind, null) }
+    val found = feedback.reports.filter { it.matches(query) }
+    OutlinedTextField(
+        query,
+        { query = it.take(SEARCH) },
+        placeholder = { Text(ui("feedback.admin.search")) },
+        leadingIcon = { Icon(Icons.Outlined.Search, null, tint = Muted) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        FilterChip(selected = status == null, onClick = { status = null }, label = { Text(ui("feedback.all")) })
-        ReportStatus.entries.forEach { st -> FilterChip(selected = status == st, onClick = { status = st }, label = { Text(statusTitle(st)) }) }
+        Queue.entries.forEach { q -> CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) { queue = q } }
     }
-    if (feedback.reports.isEmpty()) MutedText(ui("feedback.none"))
-    feedback.reports.forEach { ReportCard(account, vm, it) }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FeedbackKind.entries.forEach { k -> CountChip(kindTitle(k), null, kind == k) { kind = k } }
+    }
+    val shown = found.filter { queue.holds(it) }.sortedByDescending { it.report.createdAt }
+    if (shown.isEmpty()) MutedText(ui("feedback.none"))
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Panel).border(1.dp, Bronze, RoundedCornerShape(12.dp))) {
+        shown.forEachIndexed { i, entry ->
+            if (i > 0) HorizontalDivider(color = Bronze)
+            ReportRow(account, vm, entry, entry.report.id == open) { open = if (open == entry.report.id) null else entry.report.id }
+        }
+    }
 }
 
-@Composable private fun ReportCard(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport) {
+/** Очередь модерации (0.14.2): новые ждут решения, в GitHub - Issue открыт или ещё выгружается, закрытые, отклонённые. */
+private enum class Queue(val key: String) {
+    NEW("feedback.queue.new"),
+    GITHUB("feedback.queue.github"),
+    CLOSED("feedback.queue.closed"),
+    REJECTED("feedback.queue.rejected"),
+    ;
+
+    fun holds(entry: AdminReport): Boolean {
+        val report = entry.report
+        return when (this) {
+            NEW -> report.status == ReportStatus.CREATED
+            GITHUB -> report.status == ReportStatus.SENT && report.issue?.state?.open != false
+            CLOSED -> report.status == ReportStatus.SENT && report.issue?.state?.open == false
+            REJECTED -> report.status == ReportStatus.REJECTED
+        }
+    }
+}
+
+/** Отчёт под поиском [query]: текст, «#номер» Issue или логин автора; пусто - любой. */
+private fun AdminReport.matches(query: String): Boolean {
+    val words = query.trim()
+    if (words.isEmpty()) return true
+    val number = words.removePrefix("#")
+    return report.text.contains(words, ignoreCase = true) || report.issue?.number?.toString() == number || login?.contains(words, ignoreCase = true) == true
+}
+
+/** Чип фильтра: подпись, счёт (null - без счёта), выбран ли. */
+@Composable private fun CountChip(title: String, count: Int?, chosen: Boolean, onClick: () -> Unit) {
+    FilterChip(selected = chosen, onClick = onClick, label = { Text(listOfNotNull(title, count?.toString()).joinToString(" ")) })
+}
+
+/** Строка отчёта: точка судьбы, текст и метки; раскрытая [open] - весь отчёт и действия. */
+@Composable private fun ReportRow(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport, open: Boolean, onToggle: () -> Unit) {
     val report = entry.report
-    var open by remember(report.id) { mutableStateOf(false) }
-    var reason by remember(report.id, report.reason) { mutableStateOf(report.reason) }
-    var chosen by remember(report.id, report.status) { mutableStateOf(report.status) }
+    val fate = ReportFate.of(report.status, report.issue)
     var deleting by remember(report.id) { mutableStateOf(false) }
-    ForgePanel(Modifier.clickable { open = !open }) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(entry.login ?: ui("feedback.anonymous"), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
-            RoleMark(entry.role, 14.dp)
-            Spacer(Modifier.weight(1f))
-            StatusBadge(report.status)
+    Column(
+        Modifier.fillMaxWidth().background(if (open) PanelRaised else Color.Transparent).clickable(onClick = onToggle).padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.size(8.dp).background(fate.tint, CircleShape))
+            Text(report.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = if (open) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(report.createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, m, d) -> "$d.$m" }.orEmpty(), color = Muted, style = MaterialTheme.typography.labelSmall)
         }
-        // Герой автора открывает карточку игрока (4.5.1)
-        report.heroId?.takeIf { it.isNotBlank() }?.let { hero ->
-            Text(ui("feedback.hero", report.heroName.ifBlank { "…" + hero.takeLast(6) }), color = Gold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.opensPlayer(hero))
-        }
-        Text(report.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = if (open) Int.MAX_VALUE else 3)
-        MutedText(
-            listOfNotNull(
-                report.createdAt.replace('T', ' ').take(16),
-                ui("feedback.votes", report.likes.size, report.dislikes.size).takeIf { report.kind == FeedbackKind.BUG },
-                report.screen.takeIf { it.isNotBlank() },
-            ).joinToString(" · "),
-        )
-        if (open) {
-            if (report.context.isNotEmpty()) {
-                Engraved(ui("bug.context"))
-                report.context.forEach { (key, value) -> MutedText("$key: $value", style = MaterialTheme.typography.labelSmall) }
-            }
-            if (report.failures.isNotEmpty()) {
-                Engraved(ui("bug.failures"))
-                report.failures.forEach { f ->
-                    MutedText(ui("bug.failure", f.at, f.method, f.path, f.status, f.code), style = MaterialTheme.typography.labelSmall)
-                }
-            }
-            Engraved(ui("feedback.set_status"))
-            // Только допустимые переходы машины состояний сервера (4.3.0): нынешний статус и [AdminReport.moves]
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                (listOf(report.status) + entry.moves).distinct().forEach { st -> FilterChip(selected = chosen == st, onClick = { chosen = st }, label = { Text(statusTitle(st)) }) }
-            }
-            if (report.status == ReportStatus.CREATED) MutedText(ui("feedback.review_hint", statusTitle(ReportStatus.REVIEW)))
-            OutlinedTextField(
-                reason,
-                { reason = it.take(REASON) },
-                label = { Text(ui("feedback.reason_field")) },
-                minLines = 2,
-                supportingText = { LengthCounter(reason, REASON) },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            ForgeButton(
-                enabled = !account.busy && (chosen != report.status || reason != report.reason),
-                onClick = { vm.setReportStatus(report.id, chosen, reason) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(ui("feedback.save_status")) }
-            // GitHub Issues (0.14.1, GH-ISSUES; сам с «Отправлено»): отказ GitHub - красной строкой с повтором, выгруженный - ссылкой
-            // на Issue и его судьбой в игре
-            if (report.issueError.isNotBlank() && report.issue == null) {
-                Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("feedback.issue_retry"))
-                }
-            }
-            report.issue?.let { issue ->
-                val uri = LocalUriHandler.current
-                FatePill(ReportFate.of(report.status, issue), report.kind, issue, short = false)
-                ForgeTextButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("feedback.in_issue", issue.number))
-                }
-                issue.notes.forEach { note -> MutedText("${ui("feedback.who.${note.author.name.lowercase()}")}: ${note.text}", style = MaterialTheme.typography.labelSmall) }
-                if (issue.state.open) IssueSteer(account, vm, report.id)
-            }
-            // Удаление (4.3.0): ошибку и предложение - с вопросом; Issue в GitHub остаётся
-            if (entry.deletable) ReportDeleteButton(!account.busy) { deleting = true }
-        }
+        MutedText(rowMeta(entry), style = MaterialTheme.typography.labelSmall)
+        if (open) ReportDetail(account, vm, entry) { deleting = true }
     }
     if (deleting) ReportDeleteConfirm(account.busy, onDismiss = { deleting = false }) { vm.deleteReport(report.id) }
 }
 
+/** Метки строки: автор и герой, Issue и его судьба, голоса, повторы падения. */
+private fun rowMeta(entry: AdminReport): String {
+    val report = entry.report
+    return listOfNotNull(
+        entry.login ?: ui("feedback.anonymous"),
+        report.heroClass.takeIf { it.isNotBlank() }?.let { "$it ${report.heroLevel}" },
+        report.issue?.let { "#${it.number} · ${fateTitle(ReportFate.of(report.status, it), report.kind, it, short = true)}" },
+        "▲${report.likes.size} ▼${report.dislikes.size}".takeIf { report.likes.size + report.dislikes.size > 0 },
+        "×${report.occurrences}".takeIf { report.occurrences > 1 },
+        report.reason.takeIf { report.status == ReportStatus.REJECTED && it.isNotBlank() }?.let { "«$it»" },
+    ).joinToString(" · ")
+}
+
+/** Раскрытый отчёт: контекст, ошибки сети, действия, герой, переписка - и что модерация может с ним сделать. */
+@Composable private fun ReportDetail(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport, onDelete: () -> Unit) {
+    val report = entry.report
+    report.heroId?.takeIf { it.isNotBlank() }?.let { hero ->
+        Text(ui("feedback.hero", report.heroName.ifBlank { "…" + hero.takeLast(6) }), color = Gold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.opensPlayer(hero))
+    }
+    Facts(ui("bug.context"), report.context.map { (key, value) -> "$key: $value" } + listOfNotNull(report.screen.takeIf { it.isNotBlank() }?.let { "screen: $it" }))
+    Facts(ui("bug.failures"), report.failures.map { f -> ui("bug.failure", f.at, f.method, f.path, f.status, f.code) })
+    Facts(ui("feedback.admin.trail"), report.trail)
+    Facts(ui("feedback.admin.hero_sheet"), report.heroSheet)
+    report.issue?.notes?.forEach { note -> MutedText("${ui("feedback.who.${note.author.name.lowercase()}")}: ${note.text}", style = MaterialTheme.typography.labelSmall) }
+    if (report.issueError.isNotBlank() && report.issue == null) {
+        Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+        ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }) { Text(ui("feedback.issue_retry")) }
+    }
+    when {
+        report.status == ReportStatus.CREATED -> NewReportActions(account, vm, entry, onDelete)
+        report.issue?.state?.open == true -> IssueSteer(account, vm, report.id)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        report.issue?.let { issue ->
+            val uri = LocalUriHandler.current
+            ForgeTextButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }) { Text(ui("feedback.in_issue", issue.number)) }
+        }
+        Spacer(Modifier.weight(1f))
+        if (entry.deletable && report.status != ReportStatus.CREATED) ReportDeleteButton(!account.busy, onDelete)
+    }
+}
+
+/** Блок фактов отчёта мелким шрифтом: заголовок и строки; пустой - ничего. */
+@Composable private fun Facts(title: String, lines: List<String>) {
+    if (lines.isEmpty()) return
+    Engraved(title)
+    lines.forEach { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+}
+
+/**
+ * Решение по новому отчёту (0.14.2): слово модерации и «В GitHub» (Issue со словом первым комментарием) или «Отклонить» (слово -
+ * причина автору); апелляция и жалоба не уходят наружу - у них «Принять» вместо «В GitHub».
+ */
+@Composable private fun NewReportActions(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport, onDelete: () -> Unit) {
+    val report = entry.report
+    var word by remember(report.id) { mutableStateOf(report.reason) }
+    OutlinedTextField(
+        word,
+        { word = it.take(REASON) },
+        placeholder = { Text(ui(if (report.kind.exported) "feedback.admin.word_github" else "feedback.reason_field")) },
+        minLines = 2,
+        modifier = Modifier.fillMaxWidth(),
+    )
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (ReportStatus.SENT in entry.moves) {
+            ForgeButton(enabled = !account.busy, onClick = { vm.setReportStatus(report.id, ReportStatus.SENT, word) }) {
+                Text(ui(if (report.kind.exported) "feedback.admin.to_github" else "feedback.admin.accept"))
+            }
+        }
+        if (ReportStatus.REJECTED in entry.moves) {
+            ForgeOutlinedButton(enabled = !account.busy && word.isNotBlank(), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }) {
+                Text(ui("feedback.admin.reject"), color = LifeRed)
+            }
+        }
+        if (entry.deletable) ReportDeleteButton(!account.busy, onDelete)
+    }
+}
+
+/** Виды, что уходят в GitHub (0.14.2, как на сервере): ошибка и падение. */
+private val FeedbackKind.exported: Boolean get() = this == FeedbackKind.BUG || this == FeedbackKind.CRASH
+
 private const val REASON = 400
+private const val SEARCH = 60
 
 /**
  * Ведение Issue из игры (0.14.2): слово модерации (уходит комментарием) и действие - ответить, взять в работу, закрыть

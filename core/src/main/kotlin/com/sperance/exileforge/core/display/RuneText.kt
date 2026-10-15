@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.display
 
 import com.sperance.exileforge.core.i18n.loc
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.RuneDefinition
 import com.sperance.exileforge.rules.content.RuneOp

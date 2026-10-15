@@ -20,7 +20,6 @@ import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.locFirst
-import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.ForgeTextButton

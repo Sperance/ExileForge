@@ -44,7 +44,7 @@ import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.skills.FlaskBottle
-import com.sperance.exileforge.ui.screens.skills.SkillFacts
+import com.sperance.exileforge.ui.screens.skills.SkillCard
 import com.sperance.exileforge.ui.theme.*
 
 /**
@@ -182,25 +182,13 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
         onDispose { onCommand(RunCommand.Hold(false)) }
     }
     val index = game.index
-    val skill = index?.skills?.byCode?.get(view.code)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                SkillGlyph(view.icon, Modifier.size(40.dp), GoldBright)
-                Column(Modifier.weight(1f)) {
-                    Text(SkillText.title(view.code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-                    skill?.let { Text(skillKindLine(it), color = Muted, style = MaterialTheme.typography.labelMedium) }
-                }
-                Text(ui("skills.level_short", view.level), color = Gold, style = MaterialTheme.typography.titleLarge)
-            }
-            if (index != null && skill != null) {
-                SkillFacts(index, skill, view.level, game.hero?.stats.orEmpty(), game.hero?.level ?: 1, condition = view.condition)
-            } else {
-                MutedText(ui("common.loading"))
-            }
+            // Та же карточка умения, что везде (0.14.4, #25): уровень и условие - ячейки боя
+            if (index != null) SkillCard(game, index, view.code, view.level, view.condition) else MutedText(ui("common.loading"))
         }
     }
 }

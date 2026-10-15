@@ -54,8 +54,8 @@ class FeedbackViewModel(
     /** Адресат из карточки игрока (4.5.1) для формы письма: отдаётся один раз и забывается. */
     fun takeMailTo(): String = feedback.value.mailTo.also { if (it.isNotEmpty()) feedback { f -> f.copy(mailTo = "") } }
 
-    /** Свои отчёты и известные проблемы (0.14.1, GH-ISSUES): обе вкладки листа отчётов. */
-    fun loadReports() = commands.read(Reads.FEEDBACK) {
+    /** Свои отчёты и известные проблемы (0.14.1, GH-ISSUES): обе вкладки листа отчётов; новый вызов (0.14.4, #33) сменяет идущий. */
+    fun loadReports() = commands.read(Reads.FEEDBACK, restart = true) {
         val mine = api.feedback.mine()
         val known = api.feedback.known()
         feedback { it.copy(known = known, mine = mine) }
@@ -64,23 +64,18 @@ class FeedbackViewModel(
     /** Ответы на свои отчёты [reports] видены (вкладка «Мои» открыта). */
     fun markSeen(reports: List<OwnReport>) = replies.mark(reports.mapNotNull { own -> own.replyPrint?.let { own.id to it } }.filter { (id, print) -> seen.value[id] != print }.toMap())
 
-    /** Похожее уже известно (0.14.1): тихо, по черновику [text]; короткий черновик - пусто. */
-    fun findSimilar(text: String) {
-        if (!sessions.state.value.signedIn || text.trim().length < SIMILAR_FROM) return feedback { it.copy(similar = emptyList()) }
-        commands.read(Reads.FEEDBACK, restart = true, silent = true) {
-            val similar = api.feedback.similar(text.trim())
-            feedback { it.copy(similar = similar) }
-        }
-    }
-
-    /** Тот же голос снова снимает его; голос за другую сторону переключает. Известное и похожее - одним ответом. */
+    /** Тот же голос снова снимает его; голос за другую сторону переключает. */
     fun vote(id: String, vote: Vote) = commands.task(writing = true) {
-        val current = (feedback.value.known + feedback.value.similar).firstOrNull { it.id == id } ?: return@task
+        val current = feedback.value.known.firstOrNull { it.id == id } ?: return@task
         val answered = api.feedback.vote(id, if (current.vote == vote) Vote.NONE else vote)
-        feedback { f -> f.copy(known = f.known.map { if (it.id == id) answered else it }, similar = f.similar.map { if (it.id == id) answered else it }) }
+        feedback { f -> f.copy(known = f.known.map { if (it.id == id) answered else it }) }
     }
 
-    fun loadReports(kind: FeedbackKind?, status: ReportStatus?) = commands.read(Reads.FEEDBACK) {
+    /**
+     * Отчёты у модерации вида [kind] и статуса [status]: своим ключом чтения, новый вызов сменяет идущий (0.14.4, #33) - последний
+     * выбранный фильтр не теряется за прежним чтением.
+     */
+    fun loadReports(kind: FeedbackKind?, status: ReportStatus?) = commands.read(Reads.FEEDBACK_ADMIN, restart = true) {
         check(sessions.state.value.isModerator) { ui("moderation.staff_only") }
         val reports = api.feedback.all(kind, status)
         feedback { it.copy(reports = reports) }
@@ -158,10 +153,5 @@ class FeedbackViewModel(
         check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
         val sent = api.mail.send(request)
         notices.toast(ui("mail.sent", sent))
-    }
-
-    private companion object {
-        /** Похожее ищется с черновика не короче стольких знаков. */
-        const val SIMILAR_FROM = 12
     }
 }

@@ -28,6 +28,7 @@ import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -45,6 +46,8 @@ import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.components.motionPhase
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.skills.SkillPeek
+import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.cos
@@ -131,14 +134,24 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
                     ui("levelup.active_slot", gains.active).takeIf { gains.active > 0 },
                     ui("levelup.passive_slot", gains.passive).takeIf { gains.passive > 0 },
                     ui("levelup.points", gains.points).takeIf { gains.points > 0 },
-                ) + gains.skills.map { ui("levelup.skill", SkillText.title(it)) }
-                if (unlocks.isNotEmpty() && shown > gains.stats.size) {
+                )
+                if ((unlocks.isNotEmpty() || gains.skills.isNotEmpty()) && shown > gains.stats.size) {
+                    val inspect = rememberSkillInspect()
                     Column(
                         Modifier.fillMaxWidth().padding(top = 8.dp).background(Gold.copy(alpha = .10f), RoundedCornerShape(8.dp))
                             .border(1.dp, Gold.copy(alpha = .5f), RoundedCornerShape(8.dp)).padding(12.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         unlocks.forEach { Text("✦ $it", color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
+                        // Открывшееся умение - строкой, что открывает его карточку (0.14.4, #25)
+                        gains.skills.forEach { code ->
+                            Text(
+                                "✦ " + ui("levelup.skill", SkillText.title(code)) + " ›",
+                                color = GoldBright,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.clickable(role = Role.Button) { inspect(SkillPeek(code, level = 1)) },
+                            )
+                        }
                     }
                 }
                 if (gains.opened.isNotEmpty() && shown > gains.stats.size) Opened(gains.opened)

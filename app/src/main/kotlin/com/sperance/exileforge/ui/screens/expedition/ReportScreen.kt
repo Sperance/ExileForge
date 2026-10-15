@@ -74,6 +74,7 @@ import java.util.Locale
     var looked by remember { mutableStateOf<ItemView?>(null) }
     val inspect = rememberInspect()
     var recipe by remember { mutableStateOf<String?>(null) }
+    var breakdown by remember { mutableStateOf(false) }
     // The spoils still on the way — a victory's, or the Abyss hoard a fall there keeps; the answers are asked for at once,
     // and the back gesture is held while they are on the way.
     val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
@@ -103,7 +104,7 @@ import java.util.Locale
                 }
             }
         }
-        FightFigures(report, logOpen) { logOpen = !logOpen }
+        FightFigures(report, logOpen, onBreakdown = { breakdown = true }) { logOpen = !logOpen }
         ForgeButton(
             enabled = !holding,
             onClick = onContinue,
@@ -118,6 +119,8 @@ import java.util.Locale
     line?.let { (event, name) -> CombatDetailSheet(game, event, name) { line = null } }
     // Compared and worn right here (3.24.0), as on the gear sheet.
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
+    // Разбор боя (0.14.4, #30): этот бой и весь заход
+    if (breakdown) FightStatsSheet(report.stats, hud.summary.fights) { breakdown = false }
     // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
     recipe?.let { code -> RecipeSheet(game, code, inRun = true) { recipe = null } }
     // The fight raised the hero's level (3.81.0): its own screen over the report until it is read.
@@ -268,8 +271,8 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     if (hud.awaiting > 0) Receiving()
 }
 
-/** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log. */
-@Composable private fun FightFigures(report: FightReport, logOpen: Boolean, onLog: () -> Unit) {
+/** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log; «Разбор» (0.14.4, #30) - лист разбора боя. */
+@Composable private fun FightFigures(report: FightReport, logOpen: Boolean, onBreakdown: () -> Unit, onLog: () -> Unit) {
     val expedition: ExpeditionViewModel = koinViewModel()
     Row(
         Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 7.dp),
@@ -280,6 +283,12 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         Figure(ForgeGlyphs.Helm, report.taken.toString())
         Figure(ForgeGlyphs.Portal, ui("expedition.log_time", String.format(Locale.ROOT, "%.1f", report.duration)))
         Figure(ForgeGlyphs.Sigil, report.crits.toString())
+        Text(
+            ui("breakdown.open"),
+            color = Rune,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.clickable(role = Role.Button, onClick = onBreakdown).padding(4.dp),
+        )
         Text(
             ui(if (logOpen) "expedition.log_less" else "expedition.log"),
             color = Rune,

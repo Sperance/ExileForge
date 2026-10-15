@@ -11,39 +11,27 @@ import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.roundToLong
 
 /**
- * A run's figures (3.47.0), gathered fight by fight from the combat's own events: what the hero dealt by damage
- * type and by skill, what was taken by type, and the seconds spent fighting. A hit carries its trace, which splits
- * it by type exactly; a tick or a line without one counts under the type that led it.
+ * A run's figures (3.47.0), gathered fight by fight from the combat's own events. С 0.14.4 (#30) - сумма разборов боёв
+ * ([FightStats]): урон по типам и умениям, полученное, защиты и восстановление; секунды - только боя.
  */
 class RunStats {
-    private val dealt = mutableMapOf<DamageType, Double>()
-    private val bySkill = mutableMapOf<String, Double>()
-    private val taken = mutableMapOf<DamageType, Double>()
-    private var seconds = 0.0
+    private var total = FightStats.NONE
 
     /** Последняя сводка ([summary]): та же, пока цифры и убийства не сдвинулись - снимок экрана не копирует их на кадр (4.9.0). */
     private var shown: RunSummary? = null
 
     fun add(pack: List<PackHit>, duration: Double) {
         shown = null
-        seconds += duration
-        pack.flatMap { it.events }.filter { it.damage > 0 && !it.onSelf }.forEach { event ->
-            val into = if (event.actor == Side.HERO) dealt else taken
-            split(event).forEach { (type, amount) -> into.merge(type, amount, Double::plus) }
-            if (event.actor == Side.HERO) bySkill.merge(skillKey(event), event.damage, Double::plus)
-        }
+        total += FightStats.of(pack, duration)
     }
 
     /** Another run's figures summed into these: a Vaal zone's, back on the map it was entered from. */
     fun add(other: RunSummary) {
         shown = null
-        seconds += other.seconds
-        other.dealt.forEach { (type, amount) -> dealt.merge(type, amount, Double::plus) }
-        other.bySkill.forEach { (skill, amount) -> bySkill.merge(skill, amount, Double::plus) }
-        other.taken.forEach { (type, amount) -> taken.merge(type, amount, Double::plus) }
+        total += other.fights
     }
 
-    fun summary(kills: Int): RunSummary = shown?.takeIf { it.kills == kills } ?: RunSummary(dealt.toMap(), bySkill.toMap(), taken.toMap(), seconds, kills).also { shown = it }
+    fun summary(kills: Int): RunSummary = shown?.takeIf { it.kills == kills } ?: RunSummary(total, kills).also { shown = it }
 
     companion object {
         /** A plain swing, an ailment's tick and a reflection have no skill of their own: they are named by what they are. */
@@ -57,7 +45,7 @@ class RunStats {
             .sortedBy { (event, _) -> event.time }.takeLast(count)
             .map { (event, monster) -> DeathHit(monster, event.damage, event.type, skillKey(event), event.kind == HitKind.CRIT, event.heroLife) }
 
-        private fun skillKey(event: CombatEvent): String = event.skill ?: when (event.action) {
+        internal fun skillKey(event: CombatEvent): String = event.skill ?: when (event.action) {
             Action.TICK -> TICK
             Action.REFLECT -> REFLECT
             else -> ATTACK
@@ -107,19 +95,23 @@ object FightFigures {
     }
 }
 
-/** The run so far, as the report reads it: damage dealt and taken by type, dealt by skill, the fighting time and the kills. */
+/**
+ * The run so far, as the report reads it: разбор всех боёв захода ([fights], 0.14.4) и убийства; урон по типам и умениям,
+ * полученное и секунды боя - из него.
+ */
 data class RunSummary(
-    val dealt: Map<DamageType, Double> = emptyMap(),
-    val bySkill: Map<String, Double> = emptyMap(),
-    val taken: Map<DamageType, Double> = emptyMap(),
-    val seconds: Double = 0.0,
+    val fights: FightStats = FightStats.NONE,
     val kills: Int = 0,
 ) {
-    val totalDealt: Double get() = dealt.values.sum()
-    val totalTaken: Double get() = taken.values.sum()
+    val dealt: Map<DamageType, Double> get() = fights.dealt.byType
+    val bySkill: Map<String, Double> get() = fights.dealt.bySkill
+    val taken: Map<DamageType, Double> get() = fights.taken.byType
+    val seconds: Double get() = fights.seconds
+    val totalDealt: Double get() = fights.dealt.total
+    val totalTaken: Double get() = fights.taken.total
 
     /** Damage a second of fighting — the walking between fights is not the hero's damage. */
-    val dps: Double get() = if (seconds > 0) totalDealt / seconds else 0.0
+    val dps: Double get() = fights.dps
     val killsPerMinute: Double get() = if (seconds > 0) kills / seconds * 60 else 0.0
 }
 

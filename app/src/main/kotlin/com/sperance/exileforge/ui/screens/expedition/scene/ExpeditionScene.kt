@@ -10,10 +10,8 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.platform.LocalGraphicsContext
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.NodeSpot
@@ -69,13 +67,3 @@ import com.sperance.exileforge.ui.icons.spriteVector
 
 /** Half a tile's width on screen; the tile is twice as wide as it is tall. */
 internal val SCENE_UNIT = 30.dp
-
-/**
- * Where a point of the scene of [size] falls on the map, in tiles, with the tile's half-width [unit] in pixels —
- * the inverse of the painter's camera, which keeps the hero a little below the middle (3.70.0).
- */
-internal fun sceneToWorld(run: ExpeditionRun, at: Offset, size: IntSize, unit: Float): Pair<Double, Double> {
-    val across = (at.x - size.width / 2f) / unit
-    val down = (at.y - size.height * .55f - unit) * 2 / unit
-    return run.world.heroX + (across + down) / 2 to run.world.heroY + (down - across) / 2
-}

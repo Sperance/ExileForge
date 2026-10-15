@@ -33,6 +33,7 @@ import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailEquipment
 import com.sperance.exileforge.core.model.feedback.MailRequest
 import com.sperance.exileforge.core.model.feedback.ReportStatus
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.rules.content.Rarity
@@ -44,16 +45,19 @@ import org.koin.compose.viewmodel.koinViewModel
  * Отчёты для модерации (3.73.0; 0.14.2 - макет «Отчёты у модерации», вариант A «список-строки»): поиск по тексту, «#номеру» и
  * логину, чипы очереди со счётом ([Queue]) и вида; строка на отчёт - точка судьбы, текст, автор и метки; нажатие раскрывает
  * отчёт в списке: контекст, ошибки сети, действия, герой, переписка Issue и действия одной строкой. «Рассмотрения» нет: слово
- * модерации к новому отчёту отправляет его в GitHub сразу.
+ * модерации к новому отчёту отправляет его в GitHub сразу. Любой чип, и уже выбранный, и потягивание страницы перечитывают
+ * список с сервера (0.14.4, #33).
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>()
     val feedback by vm.feedback.collectAsStateWithLifecycle()
+    val activity by vm.activity.collectAsStateWithLifecycle()
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
     var queue by remember { mutableStateOf(Queue.NEW) }
     var query by remember { mutableStateOf("") }
     var open by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(kind) { vm.loadReports(kind, null) }
+    LaunchedEffect(Unit) { vm.loadReports(kind, null) }
+    Refreshable(Reads.FEEDBACK_ADMIN in activity.loading) { vm.loadReports(kind, null) }
     val found = feedback.reports.filter { it.matches(query) }
     OutlinedTextField(
         query,
@@ -64,10 +68,16 @@ import org.koin.compose.viewmodel.koinViewModel
         modifier = Modifier.fillMaxWidth(),
     )
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Queue.entries.forEach { q -> CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) { queue = q } }
+        Queue.entries.forEach { q -> CountChip(ui(q.key), found.count { q.holds(it) }, queue == q) {
+            queue = q
+            vm.loadReports(kind, null)
+        } }
     }
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        FeedbackKind.entries.forEach { k -> CountChip(kindTitle(k), null, kind == k) { kind = k } }
+        FeedbackKind.entries.forEach { k -> CountChip(kindTitle(k), null, kind == k) {
+            kind = k
+            vm.loadReports(k, null)
+        } }
     }
     val shown = found.filter { queue.holds(it) }.sortedByDescending { it.report.createdAt }
     if (shown.isEmpty()) MutedText(ui("feedback.none"))

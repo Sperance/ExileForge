@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.atlas.AtlasEffects
 import com.sperance.exileforge.core.campaign.AbyssDepth
 import com.sperance.exileforge.core.campaign.ChargeView
 import com.sperance.exileforge.core.campaign.DeathHit
+import com.sperance.exileforge.core.campaign.FightStats
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunSummary
@@ -300,6 +301,9 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
     val crits: Int get() = mine().count { it.kind == HitKind.CRIT }
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()
+
+    /** Разбор этого боя (0.14.4, #30): лист «Разбор» итога боя, считается один раз. */
+    val stats: FightStats by lazy { FightStats.of(pack, duration) }
 }
 
 /** Everything the overlay draws, as one value: it changes only when something on it does. */

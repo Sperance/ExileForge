@@ -21,6 +21,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Вкладки экрана таблетками (3.88.3, «Мягкий»): открытая - на приподнятом фоне светлым текстом, зелёный остаётся главной
  * кнопке. [segmented] кладёт их долями одной капсулы-дорожки - два вида одной полки; [trailing] замыкает ряд («?» экрана).
+ * [onReselect] (0.14.4, #33) - нажатие на уже открытую вкладку (перечитать её); null - открытая вкладка не нажимается.
  */
 @Composable fun PillTabs(
     labels: List<String>,
@@ -30,6 +31,7 @@ import com.sperance.exileforge.ui.theme.*
     enabled: Boolean = true,
     segmented: Boolean = false,
     trailing: @Composable RowScope.() -> Unit = {},
+    onReselect: (() -> Unit)? = null,
 ) {
     val pill = RoundedCornerShape(50)
     // «Глубина» (3.88.7): дорожка вдавлена, открытая вкладка приподнята стеклом; отдельные таблетки - стекло, открытая - зелёная.
@@ -63,7 +65,7 @@ import com.sperance.exileforge.ui.theme.*
                     overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.Center,
                     modifier = (if (segmented) Modifier.weight(1f) else Modifier).then(fill).clip(pill)
-                        .selectable(selected = on, enabled = enabled, role = Role.Tab) { if (!on) onSelect(index) }
+                        .selectable(selected = on, enabled = enabled, role = Role.Tab) { if (!on) onSelect(index) else onReselect?.invoke() }
                         .padding(horizontal = 14.dp, vertical = 8.dp),
                 )
             }

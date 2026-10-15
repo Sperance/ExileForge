@@ -58,7 +58,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     if (kind == HitKind.EVADED || kind == HitKind.BLOCKED) {
         record(
             me.side, blow.action, kind, 0.0, null, 0.0, false, emptyList(), null, foe, blow.skill,
-            trace = HitTrace(striker, struck, emptyList(), emptyList(), null, origin), spell = blow.spell,
+            trace = HitTrace(striker, struck, emptyList(), emptyList(), null, origin, avoided(body, target, blow)), spell = blow.spell,
         )
         if (kind == HitKind.BLOCKED) blocked(target)
         if (kind == HitKind.EVADED) traitsEvaded(target)
@@ -109,15 +109,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         val heavied = if (heavy == 1.0) grown else grown * heavy
         val raw = if (stored > 0 && partsSum > 0) heavied + stored * base / partsSum else heavied
         val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
-        val armour = when (type) {
-            DamageType.PHYSICAL -> target.body.physicalMitigation(raw, rules.armour.factor)
-            else -> elementalArmour(target.body, type, raw)
-        }
-        val resist = if (type == DamageType.PHYSICAL) 0.0 else target.body.resistTo(type, pierce)
-        val defence = when (type) {
-            DamageType.PHYSICAL -> raw * (1 - armour)
-            else -> raw * (1 - armour) * (1 - resist)
-        }.coerceAtLeast(0.0)
+        val (armour, resist, defence) = defended(target.body, type, raw, pierce)
         val typeTaken = target.body.damageTaken(type) * (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0)
         val landed = defence * target.weakness() * typeTaken * eased * exposure(target, type)
         val sealedOff = if (seals == 1.0) landed else landed * seals
@@ -185,6 +177,37 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     // Отражение (MOB-BAL, В-5) - только от ударов: чары и недуги не отражаются
     if (me.alive && !blow.spell && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
     return true
+}
+
+/** Защита [target] от урона [raw] типа [type] при пробивании [pierce]: доли брони и сопротивления и что прошло сквозь них. */
+private data class Defended(val armour: Double, val resist: Double, val passed: Double)
+
+/** Броня и сопротивление цели [target] против урона [raw] типа [type] (0.14.4) - одна формула удара и оценки избежанного. */
+private fun Battle.defended(target: Combatant, type: DamageType, raw: Double, pierce: Double): Defended {
+    val armour = when (type) {
+        DamageType.PHYSICAL -> target.physicalMitigation(raw, rules.armour.factor)
+        else -> elementalArmour(target, type, raw)
+    }
+    val resist = if (type == DamageType.PHYSICAL) 0.0 else target.resistTo(type, pierce)
+    val passed = when (type) {
+        DamageType.PHYSICAL -> raw * (1 - armour)
+        else -> raw * (1 - armour) * (1 - resist)
+    }.coerceAtLeast(0.0)
+    return Defended(armour, resist, passed)
+}
+
+/**
+ * Урон, которого удар [blow] избежал уклонением или блоком цели [target] (0.14.4, #30): удар без разброса, крита и прочих
+ * бросков - урон по типам на множители урона ударившего [body], затем броня, сопротивления и «получаемый урон» цели. Костей не
+ * тратит: бой идёт так же, число - лишь оценка для разбора боя ([com.sperance.exileforge.core.campaign.FightStats]).
+ */
+private fun Battle.avoided(body: Combatant, target: Fighter, blow: Blow): Double = blow.damage.entries.sumOf { (type, base) ->
+    if (base <= 0) {
+        0.0
+    } else {
+        val passed = defended(target.body, type, base * body.nonCritMore * body.damageMore, body.penetration(type)).passed
+        (passed * target.body.damageTaken(type) * target.weakness()).takeIf { it.isFinite() } ?: 0.0
+    }
 }
 
 /** A critical roll of [body]'s chance — a spell's own (server 1.56.0); a lucky one (server 1.32.0) gets a second. */

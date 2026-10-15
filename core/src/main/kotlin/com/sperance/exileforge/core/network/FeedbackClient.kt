@@ -27,8 +27,6 @@ class FeedbackClient internal constructor(private val http: Transport) {
     /** Известные проблемы (0.14.1, GH-ISSUES): ошибки с открытым Issue, по рейтингу. */
     suspend fun known(): List<KnownReport> = http.get("$REPORTS/known", mapOf("size" to KNOWN_PAGE.toString()))
 
-    /** Похожее уже известно (0.14.1): открытые известные проблемы, близкие к черновику [text]. */
-    suspend fun similar(text: String): List<KnownReport> = http.get("$REPORTS/similar", mapOf("text" to text))
     suspend fun vote(id: String, vote: Vote): KnownReport = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
 
     /** Ответ автора в Issue своего отчёта (0.14.2, сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */

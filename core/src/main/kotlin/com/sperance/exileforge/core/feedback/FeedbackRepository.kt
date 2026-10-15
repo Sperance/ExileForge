@@ -15,11 +15,9 @@ import kotlinx.coroutines.flow.update
  * непрочитанные письма: приходит со снимком героя, а прочитанный ящик пересчитывает его сам ([withMail]).
  */
 data class Feedback(
-    /** Известные проблемы (0.14.1, GH-ISSUES): ошибки и предложения с открытым Issue. */
+    /** Известные проблемы (0.14.1, GH-ISSUES): ошибки с открытым Issue (0.14.2 - без предложений). */
     val known: List<KnownReport> = emptyList(),
     val mine: List<OwnReport> = emptyList(),
-    /** Похожее уже известно (0.14.1): известные проблемы, близкие к черновику отчёта. */
-    val similar: List<KnownReport> = emptyList(),
     val reports: List<AdminReport> = emptyList(),
     val mail: List<Mail> = emptyList(),
     val unread: Int = 0,

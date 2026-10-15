@@ -108,7 +108,7 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
 }
 
 /** Главная кнопка карточки: выполняет действие места и закрывает лист. */
-@Composable private fun InspectButton(action: InspectAction, onDone: () -> Unit) {
+@Composable internal fun InspectButton(action: InspectAction, onDone: () -> Unit) {
     val run = {
         action.run()
         onDone()

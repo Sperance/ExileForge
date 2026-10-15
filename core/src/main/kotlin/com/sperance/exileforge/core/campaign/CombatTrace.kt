@@ -73,7 +73,10 @@ data class Landing(
     val culled: Boolean,
 )
 
-/** A blow — a swing, a skill's hit, a spell, a reflection. [landing] is null for an evaded or blocked one. */
+/**
+ * A blow — a swing, a skill's hit, a spell, a reflection. [landing] is null for an evaded or blocked one; у такого [avoided]
+ * (0.14.4, #30) - оценка урона, которого он избежал: удар без бросков сквозь защиты цели, для разбора боя.
+ */
 data class HitTrace(
     val attacker: FighterShot,
     val target: FighterShot,
@@ -81,6 +84,7 @@ data class HitTrace(
     val types: List<TypeTrace>,
     val landing: Landing?,
     val origin: TraceOrigin,
+    val avoided: Double = 0.0,
 ) : Trace
 
 /** A second of an ailment's damage: how strong, how long, who laid it and what grew it. */

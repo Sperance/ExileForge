@@ -34,7 +34,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.campaign.run.reportContext
@@ -43,14 +42,11 @@ import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.VolumeChord
-import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.nav.reportPlace
 import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.theme.*
-import kotlinx.coroutines.delay
-import org.koin.compose.viewmodel.koinViewModel
 
 /** The beetle (3.48.0): a bug report from wherever the player is. */
 @Composable fun BugButton(modifier: Modifier = Modifier, tint: Color = Muted, onClick: () -> Unit) {
@@ -85,7 +81,7 @@ val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
 /**
  * The report sheet: where the player is, a field for the words, and the send. Since 3.76.0 nothing else goes with it —
  * no context of the device and the hero, no tail of the request journal; снимков экрана нет (0.14.1, GH-ISSUES). Под формой -
- * «Похожее уже известно» ([SimilarKnown]) по черновику, ниже - «Мои отчёты» и «Известные» ([onReports], макет A).
+ * «Мои отчёты» и «Известные» ([onReports], макет A); подсказки «Похожее уже известно» во время набора нет (0.14.4, #33).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,19 +95,11 @@ fun BugSheet(
     onSend: (BugReportRequest) -> Unit,
 ) {
     val screen = remember { bugScreen(route, run) }
-    val model = koinViewModel<FeedbackViewModel>()
-    val feedback by model.feedback.collectAsStateWithLifecycle()
-    val activity by model.activity.collectAsStateWithLifecycle()
     // Только отчёт об ошибке (0.14.2: предложений нет); черновик возвращается с устройства (3.75.0) и пишется по мере набора.
     val kind = FeedbackKind.BUG
     var text by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         if (text.isEmpty()) text = drafts.read().texts[kind].orEmpty()
-    }
-    // Похожее (0.14.1) ищется, когда игрок перестал печатать
-    LaunchedEffect(text) {
-        delay(SIMILAR_PAUSE_MS)
-        model.findSimilar(text)
     }
     val clipboard = LocalClipboardManager.current
     val limit = game.inputs.report
@@ -145,7 +133,6 @@ fun BugSheet(
                 },
             ) { Text(ui("bug.send")) }
             if (game.session.signedIn) {
-                SimilarKnown(feedback.similar, !activity.busy) { id, vote -> model.vote(id, vote) }
                 // Свои отчёты с их судьбой и известные проблемы с голосованием (0.14.1, макет A): две кнопки - на свою вкладку
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ReportsTab.entries.forEach { tab ->
@@ -159,9 +146,6 @@ fun BugSheet(
         }
     }
 }
-
-/** Пауза после последней буквы, после которой ищется похожее. */
-private const val SIMILAR_PAUSE_MS = 700L
 
 /**
  * Где игрок, ключами контекста (0.14.2): место для человека и раздел игры, в забеге - зона, уровень, фаза и семя карты. Сервер

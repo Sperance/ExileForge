@@ -91,31 +91,34 @@ internal enum class SettingsPage(val title: String) {
         BackRow(ui(if (open == null || opened != null) "common.back" else "settings.title")) {
             if (open == null || opened != null) onClose?.invoke() ?: shell.closeSettings() else page = null
         }
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            when (open) {
-                null -> SettingsList(account) { page = it }
+        // Страница, что умеет перечитываться (отчёты у модерации), объявляет это сама - потягивание экрана её перечитает (0.14.4)
+        RefreshHost(rememberPageRefresh(), Modifier.fillMaxSize()) {
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
+                when (open) {
+                    null -> SettingsList(account) { page = it }
 
-                SettingsPage.LANGUAGE -> ForgePanel {
-                    LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
+                    SettingsPage.LANGUAGE -> ForgePanel {
+                        LanguagePicker(account.lang, account.world.languages, enabled = !account.busy, onLanguage = sessionModel::language)
+                    }
+
+                    SettingsPage.SERVER -> ServerPage(account)
+
+                    SettingsPage.CLIENT -> ClientPage(account)
+
+                    SettingsPage.TESTING -> TestingPage(account)
+
+                    SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
+
+                    SettingsPage.MODERATION -> ModerationPage(account)
+
+                    SettingsPage.MAIL -> MailComposePage(account)
+
+                    SettingsPage.WHATS_NEW -> WhatsNewPage()
                 }
-
-                SettingsPage.SERVER -> ServerPage(account)
-
-                SettingsPage.CLIENT -> ClientPage(account)
-
-                SettingsPage.TESTING -> TestingPage(account)
-
-                SettingsPage.FEEDBACK -> FeedbackAdminPage(account)
-
-                SettingsPage.MODERATION -> ModerationPage(account)
-
-                SettingsPage.MAIL -> MailComposePage(account)
-
-                SettingsPage.WHATS_NEW -> WhatsNewPage()
             }
         }
     }

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.toSize
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
@@ -63,7 +64,7 @@ import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
-import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
+import com.sperance.exileforge.ui.screens.expedition.scene.SceneCamera
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.abs
@@ -170,7 +171,7 @@ private val ManaDeep = Color(0xFF3F86D6)
     val radius = with(LocalDensity.current) { 56.dp.toPx() }
     val unit = with(LocalDensity.current) { SCENE_UNIT.toPx() }
     val tap by rememberUpdatedState { at: Offset ->
-        val (x, y) = sceneToWorld(run, at, area, unit)
+        val (x, y) = SceneCamera.toWorld(run.world.heroX, run.world.heroY, at, area.toSize(), unit)
         run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }?.let { onFountain(it.id) }
     }
     // A fight can start under a thumb still on the glass; the hero must not walk off after it.

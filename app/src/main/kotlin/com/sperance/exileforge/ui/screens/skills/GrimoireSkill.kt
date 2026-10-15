@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -209,9 +210,12 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
                 style = MaterialTheme.typography.titleMedium,
             )
             if (offered.isEmpty()) MutedText(ui("skills.nothing_learned"))
+            // Касание ставит умение в ячейку, долгое нажатие - его карточка (0.14.4, #25)
+            val inspect = rememberSkillInspect()
             offered.forEach { skill ->
                 Row(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(PanelRaised).clickable(enabled = !game.busy) { onPick(skill.code) }
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(PanelRaised)
+                        .combinedClickable(enabled = !game.busy, onLongClick = { inspect(SkillPeek(skill.code)) }) { onPick(skill.code) }
                         .padding(10.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,

@@ -88,8 +88,10 @@ import kotlinx.serialization.json.JsonElement
  *      контекста отчёта; фонтан 40%, оборона классов без строки получаемого урона.
  *      Без предложений (`SUGGESTION`, `IssueState.DONE`, `inputs.suggestion`; `Suggestion` → `KnownReport`), голос - за ошибку;
  *      переписка `IssueView.notes`, ответ автора `POST bugreport/answer`, модерация Issue `POST admin/feedback/issue/move`.
+ * 87 - пакет 0.14.4: без «Похожее уже известно» (`bugreport/similar`, `feedback.similar`); захват выгрузки Issue
+ *      `feedback.exportHoldMinutes`.
  */
-const val API_REVISION = 86
+const val API_REVISION = 87
 
 /** `static/index.json` → `content`: the fingerprint of the whole world and of each of its chunks, by file name. */
 @Serializable data class ContentManifest(val hash: String = "", val chunks: Map<String, String> = emptyMap())

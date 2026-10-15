@@ -1,7 +1,11 @@
 package com.sperance.exileforge.ui.screens.quests
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -9,8 +13,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.lineText
@@ -23,6 +29,8 @@ import com.sperance.exileforge.rules.content.StoryChapter
 import com.sperance.exileforge.rules.content.ThroneLaw
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.skills.SkillPeek
+import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
 
 /*
@@ -89,16 +97,24 @@ private fun ledger(index: ContentIndex, law: ThroneLaw): List<LedgerLine> = law.
 
 /**
  * Книга за пройденную главу [chapter] (0.14.0, SKILL-02): варианты правил ([StoryBooks.options]) - умения своего класса или общие,
- * открытые к уровню главы; [onTake] - книга в сумку. Выбор один на главу.
+ * открытые к уровню главы; [onTake] - книга в сумку. Выбор один на главу. С 0.14.4 (#25, макет «Карточка умения», вариант A)
+ * строка варианта открывает карточку умения, а книгу берёт её главная кнопка: выбор - после того, как прочитано, что умение делает.
  */
 @Composable internal fun BookChoice(index: ContentIndex, chapter: Int, heroClass: String, skills: HeroSkills, busy: Boolean, onTake: (Int, String) -> Unit) {
     val region = index.quests.story.getOrNull(chapter)?.region ?: return
+    val inspect = rememberSkillInspect()
     ForgePanel(accent = GoldBright) {
         Engraved(ui("story.book.title"), accent = GoldBright)
         MutedText(ui("story.book.choose", loc(LocaleKey.chapterTitle(region))))
         StoryBooks(index).options(chapter, heroClass, skills).forEach { code ->
             val skill = index.skills.byCode[code] ?: return@forEach
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            val take = InspectAction(ui("story.book.take"), enabled = !busy) { onTake(chapter, code) }
+            Row(
+                Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) { inspect(SkillPeek(code, action = take)) }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 NeonSkillIcon(skill, HeroSkills.FIRST_TIER, 36.dp)
                 Column(Modifier.weight(1f)) {
                     Text(SkillText.title(code), color = Parchment, style = MaterialTheme.typography.bodyMedium)
@@ -110,7 +126,7 @@ private fun ledger(index: ContentIndex, law: ThroneLaw): List<LedgerLine> = law.
                         ).joinToString(" · "),
                     )
                 }
-                ForgeButton({ onTake(chapter, code) }, enabled = !busy) { Text(ui("story.book.take")) }
+                Icon(Icons.Outlined.Info, ui("story.book.about"), tint = Rune, modifier = Modifier.size(20.dp))
             }
         }
     }

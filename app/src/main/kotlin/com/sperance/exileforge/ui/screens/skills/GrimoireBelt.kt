@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -185,11 +186,14 @@ internal fun Exchange(
             Text(ui("skills.exchange_title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
             MutedText(ui("skills.exchange_rule", rule.books, number(price.toDouble())))
             Caption(ui("skills.exchange_give", chosen.size, rule.books))
+            // Касание отбирает книгу, долгое нажатие - карточка её умения (0.14.4, #25)
+            val inspect = rememberSkillInspect()
             owned.forEach { (code, amount) ->
                 val taken = chosen.count { it == code }
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (taken > 0) PanelRaised else Color.Transparent)
-                        .clickable { chosen = if (taken < amount && chosen.size < rule.books) chosen + code else chosen - code }.padding(8.dp),
+                        .combinedClickable(onLongClick = { inspect(SkillPeek(code)) }) { chosen = if (taken < amount && chosen.size < rule.books) chosen + code else chosen - code }
+                        .padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -205,7 +209,7 @@ internal fun Exchange(
                 val on = target == skill.code
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).background(if (on) PanelRaised else Color.Transparent)
-                        .clickable(enabled = refusal == null) { target = skill.code }.padding(8.dp),
+                        .combinedClickable(onLongClick = { inspect(SkillPeek(skill.code)) }) { if (refusal == null) target = skill.code }.padding(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {

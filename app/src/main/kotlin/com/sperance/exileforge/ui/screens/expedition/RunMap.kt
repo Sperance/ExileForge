@@ -21,9 +21,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -33,7 +33,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
@@ -57,14 +56,11 @@ import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.BlightTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
-import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
+import com.sperance.exileforge.ui.screens.expedition.scene.MapProjection
 import com.sperance.exileforge.ui.screens.expedition.scene.liquidTint
-import com.sperance.exileforge.ui.screens.expedition.scene.sceneToWorld
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.abs
-import kotlin.math.ceil
-import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -89,8 +85,8 @@ import kotlin.math.roundToInt
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Canvas(Modifier.size(150.dp).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
             if (tick < 0) return@Canvas
-            val cell = size.width / cells
-            drawExplored(world, Offset(size.width / 2 - world.heroX.toFloat() * cell, size.height / 2 - world.heroY.toFloat() * cell), cell, monsters = false)
+            // Изометрия сцены своим масштабом (0.14.4, #18): «вверх» на мини-карте - «вверх» на сцене
+            drawExplored(world, MapProjection.centred(world.heroX, world.heroY, size, size.width / cells), monsters = false)
             val centre = Offset(size.width / 2, size.height / 2)
             val radius = size.width / 2
             drawCircle(Brush.radialGradient(listOf(Color.Transparent, Color.Transparent, Color(0xB30A0D12)), centre, radius), radius, centre)
@@ -119,29 +115,30 @@ import kotlin.math.roundToInt
 }
 
 /**
- * The explored ground from [origin] at [cell] pixels a cell, only what falls on the canvas: floor
- * lighter where lit, rock dark, the chests, fountains, portal and exit, the hero — and, on the whole
- * map, the monsters standing in the hero's light, in their rarity's colour.
+ * The explored ground through [projection], only what falls on the canvas: floor lighter where lit, rock dark, the chests,
+ * fountains, portal and exit, the hero — and, on the whole map, the monsters standing in the hero's light, in their rarity's
+ * colour. С 0.14.4 (#18) - изометрией сцены ([MapProjection]): клетка - ромб, ромбы одного цвета - одним контуром.
  */
-internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell: Float, monsters: Boolean) {
+internal fun DrawScope.drawExplored(world: ExpeditionWorld, projection: MapProjection, monsters: Boolean) {
     val map = world.map
-    val square = Size(cell, cell)
-    val xs = (floor(-origin.x / cell).toInt() - 1).coerceAtLeast(0)..(ceil((size.width - origin.x) / cell).toInt() + 1).coerceAtMost(map.width - 1)
-    val ys = (floor(-origin.y / cell).toInt() - 1).coerceAtLeast(0)..(ceil((size.height - origin.y) / cell).toInt() + 1).coerceAtMost(map.height - 1)
+    val unit = projection.unit
+    val (xs, ys) = projection.cells(size, map.width, map.height)
+    val ground = HashMap<Color, Path>()
     for (y in ys) {
         for (x in xs) {
             if (!world.explored(x, y)) continue
-            val ground = when (map.tile(x, y)) {
+            val tint = when (map.tile(x, y)) {
                 Tile.FLOOR -> Parchment.copy(alpha = if (world.lit(x, y)) .55f else .3f)
                 Tile.CHASM -> ChasmTint
                 Tile.WATER -> map.liquid?.let(::liquidTint) ?: ChasmTint
                 Tile.WALL -> Color(0xFF2A2B33)
             }
-            drawRect(ground, Offset(origin.x + x * cell, origin.y + y * cell), square)
+            ground.getOrPut(tint) { Path() }.diamond(projection.at(x + .5, y + .5), unit)
         }
     }
-    val dot = (cell * .5f).coerceAtLeast(2.5f)
-    fun mark(x: Double, y: Double, color: Color, size: Float = dot) = drawCircle(color, size, Offset(origin.x + x.toFloat() * cell, origin.y + y.toFloat() * cell))
+    ground.forEach { (tint, path) -> drawPath(path, tint) }
+    val dot = (unit * .5f).coerceAtLeast(2.5f)
+    fun mark(x: Double, y: Double, color: Color, size: Float = dot) = drawCircle(color, size, projection.at(x, y))
     world.chests.filter { !it.opened && world.shows(it) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, GoldBright) }
     world.fountains.filter { !it.used && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, ShieldCyan) }
     world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
@@ -153,7 +150,7 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
     // Рычаг где-то здесь (4.9.0): найденная запертая дверь - размытое пятно вокруг неувиденного рычага, кольцами от края к середине
     world.features.forEach { spot ->
         val hint = (spot as? RoomSpot)?.takeIf { it.hinted(world) }?.hint ?: return@forEach
-        val radius = world.rules.lever.hint.toFloat() * cell
+        val radius = world.rules.lever.hint.toFloat() * unit
         for (k in 1..HINT_RINGS) mark(hint.first, hint.second, RoomMark.tint.copy(alpha = HINT_ALPHA), radius * k / HINT_RINGS)
     }
     if (world.explored(map.exit.x, map.exit.y)) mark(map.exit.x + .5, map.exit.y + .5, if (world.sealed) LifeRed else Vital, dot * 1.4f)
@@ -165,6 +162,15 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, origin: Offset, cell
     }
     mark(world.heroX, world.heroY, Gold, dot * 1.4f)
     mark(world.heroX, world.heroY, Ink, dot * .5f)
+}
+
+/** Ромб клетки с серединой [centre] при полуширине [unit] - в контур. */
+private fun Path.diamond(centre: Offset, unit: Float) {
+    moveTo(centre.x, centre.y - unit / 2)
+    lineTo(centre.x + unit, centre.y)
+    lineTo(centre.x, centre.y + unit / 2)
+    lineTo(centre.x - unit, centre.y)
+    close()
 }
 
 /**
@@ -189,11 +195,11 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
                 IconButton(onClick = onClose) { Icon(Icons.Outlined.Close, ui("common.close"), tint = Gold) }
             }
             Canvas(
-                Modifier.fillMaxWidth().aspectRatio(map.width / map.height.toFloat()).background(Color(0xFF07090C), RoundedCornerShape(8.dp))
+                Modifier.fillMaxWidth().aspectRatio(MapProjection.FITTED_ASPECT).background(Color(0xFF07090C), RoundedCornerShape(8.dp))
                     .border(1.dp, Bronze, RoundedCornerShape(8.dp)),
             ) {
                 if (tick < 0) return@Canvas
-                drawExplored(world, Offset.Zero, minOf(size.width / map.width, size.height / map.height), monsters = true)
+                drawExplored(world, MapProjection.fitted(map.width, map.height, size), monsters = true)
             }
             val explored = (0 until map.height).sumOf { y -> (0 until map.width).count { x -> map.walkable(x, y) && world.explored(x, y) } }
             val floorCells = (0 until map.height).sumOf { y -> (0 until map.width).count { x -> map.walkable(x, y) } }.coerceAtLeast(1)

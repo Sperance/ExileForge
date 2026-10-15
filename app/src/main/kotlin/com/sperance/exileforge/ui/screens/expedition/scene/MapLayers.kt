@@ -12,7 +12,6 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.floor
-import kotlin.math.max
 
 /**
  * Земля и скала карты слоями: кадр не рисует их заново, а переносит готовые записи. Пол с подложкой скалы ([drawUnder]),
@@ -54,7 +53,7 @@ internal class MapLayers {
     private var style: MapStyle? = null
     private var palette: Palette? = null
     private var light = -1.0
-    private var span = -1L
+    private var window: CellWindow? = null
     private var windows = 0L
 
     /** Запись устарела - пишется заново; кадр без перемен её только переносит. */
@@ -62,13 +61,12 @@ internal class MapLayers {
         val graphics = graphics ?: return
         val unit = painter.unit
         val width = scope.size.width
-        val height = scope.size.height
-        val reach = ceil(max(width, height) / unit).toInt() / 2 + 3
+        // Окрестность - под углами экрана камеры (0.14.4, #31), с запасом на высоту скалы и шаг героя внутри клетки
+        val seen = SceneCamera.window(scope.size, unit, RISE.toInt(), CELL_SLACK)
         // Камера ходит внутри клетки: ширина полосы - с запасом на клетку
         val across = (width / 2 / unit + 3).toDouble()
         val here = (hx.toLong() shl 32) or (hy.toLong() and 0xFFFFFFFFL)
-        val sized = (reach.toLong() shl 32) or across.toLong()
-        val ground = here != cell || shape !== relief || rock !== this.rock || style !== this.style || palette !== this.palette || world.lightRadius != light || sized != span
+        val ground = here != cell || shape !== relief || rock !== this.rock || style !== this.style || palette !== this.palette || world.lightRadius != light || seen != window
         val engaged = engaged(world)
         if (!ground && engaged == windows) return
         cell = here
@@ -77,11 +75,10 @@ internal class MapLayers {
         this.style = style
         this.palette = palette
         light = world.lightRadius
-        span = sized
+        window = seen
         windows = engaged
         val map = world.map
-        val xs = (hx - reach).coerceAtLeast(0)..(hx + reach).coerceAtMost(map.width - 1)
-        val ys = (hy - reach).coerceAtLeast(0)..(hy + reach).coerceAtMost(map.height - 1)
+        val (xs, ys) = seen.around(hx, hy, map.width, map.height)
         if (xs.isEmpty() || ys.isEmpty()) return
         // Рамка записи: изометрия углов окрестности и запас на высоту скалы и мелочи
         left = ((xs.first - ys.last) * unit) - unit * MARGIN
@@ -294,6 +291,9 @@ internal class MapLayers {
         /** Запас рамки записи по краям и над скалой, в полуширинах клетки. */
         const val MARGIN = 3f
         const val RISE = 4f
+
+        /** Запас окрестности в клетках (#31): шаг героя внутри клетки до перезаписи и округление углов экрана. */
+        const val CELL_SLACK = 2
         const val WALL_LAYERS = 64
         const val MIX = -7046029254386353131L
         val POOLS = listOf(Tile.CHASM, Tile.WATER)

@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.screens.session
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -22,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.ClassGuide
@@ -40,6 +42,8 @@ import com.sperance.exileforge.ui.components.ForgePanel
 import com.sperance.exileforge.ui.components.ModifierLine
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.SkillGlyph
+import com.sperance.exileforge.ui.screens.skills.SkillPeek
+import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.abs
 
@@ -148,10 +152,16 @@ import kotlin.math.abs
     }
 }
 
+/** Умения класса: строка открывает карточку умения на первом уровне (0.14.4, #25). */
 @Composable private fun ColumnScope.SkillsSection(guide: ClassGuide) {
     SectionLabel(ui("chars.class.skills"))
+    val inspect = rememberSkillInspect()
     guide.skills.forEach { skill ->
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth().clickable(role = Role.Button) { inspect(SkillPeek(skill.code, level = 1)) },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             SkillGlyph(skill.icon, Modifier.size(22.dp))
             Text(SkillText.title(skill.code), color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
             Text(ui("chars.class.skill_level", skill.unlock), color = Muted, style = MaterialTheme.typography.labelMedium)

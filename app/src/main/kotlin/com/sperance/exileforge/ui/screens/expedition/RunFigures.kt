@@ -39,7 +39,13 @@ import com.sperance.exileforge.ui.theme.*
         Figure(ui("run.taken"), number(summary.totalTaken))
         Figure(ui("run.kpm"), number(summary.killsPerMinute))
     }
-    ForgeTextButton(onClick = { open = !open }) { Text(ui(if (open) "run.less" else "run.more")) }
+    var breakdown by remember { mutableStateOf(false) }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ForgeTextButton(onClick = { open = !open }) { Text(ui(if (open) "run.less" else "run.more")) }
+        // Разбор всего захода (0.14.4, #30) - тот же лист, что у итога боя
+        ForgeTextButton(onClick = { breakdown = true }) { Text(ui("breakdown.open")) }
+    }
+    if (breakdown) FightStatsSheet(null, summary.fights) { breakdown = false }
     if (open) {
         Split(ui("run.dealt_by_type"), summary.dealt.mapKeys { typeTitle(it.key) }, summary.totalDealt)
         Split(ui("run.dealt_by_skill"), summary.bySkill.mapKeys { skillTitle(it.key) }, summary.totalDealt)
@@ -92,9 +98,9 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-private fun typeTitle(type: DamageType): String = ui("enum.damage.${type.name}")
+internal fun typeTitle(type: DamageType): String = ui("enum.damage.${type.name}")
 
-private fun skillTitle(code: String): String = when (code) {
+internal fun skillTitle(code: String): String = when (code) {
     RunStats.ATTACK, RunStats.TICK, RunStats.REFLECT -> ui("run.skill.$code")
     else -> locOr(LocaleKey.skillName(code), locOr(LocaleKey.traitName(code), code))
 }

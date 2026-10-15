@@ -19,6 +19,7 @@ import com.sperance.exileforge.core.display.ItemSource
 import com.sperance.exileforge.core.display.ItemUse
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.RuneText
+import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.chanceText
 import com.sperance.exileforge.core.display.essenceGuarantees
@@ -40,9 +41,12 @@ import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.LoreChip
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RaritySpine
 import com.sperance.exileforge.ui.icons.BagIcon
+import com.sperance.exileforge.ui.screens.skills.SkillPeek
+import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -263,6 +267,11 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
     }
     itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
     game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
+    // Книга умения (0.14.4, #25): чип открывает карточку её умения
+    game.index?.skills?.byBook(code)?.let { skill ->
+        val inspect = rememberSkillInspect()
+        LoreChip(ui("bag.book_skill", SkillText.title(skill.code)), Rune) { inspect(SkillPeek(skill.code)) }
+    }
     game.index?.let { StackLore(it, code, game.hero?.crafts?.professions.orEmpty().mapValues { (_, p) -> p.level }) }
 }
 

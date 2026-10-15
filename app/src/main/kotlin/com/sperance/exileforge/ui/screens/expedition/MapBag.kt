@@ -53,6 +53,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.expedition.scene.SceneCamera
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Brass
 import com.sperance.exileforge.ui.theme.Bronze
@@ -111,9 +112,9 @@ import kotlin.math.sin
     var origin by remember { mutableStateOf(Offset.Zero) }
     var bag by remember { mutableStateOf<Offset?>(null) }
     BoxWithConstraints(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-        // Герой стоит чуть ниже середины сцены (камера [sceneToWorld]): веер раскрывается над ним
+        // Герой стоит чуть ниже середины сцены ([SceneCamera]): веер раскрывается над ним
         val target = bag?.let { with(density) { (it.x - origin.x).toDp() to (it.y - origin.y).toDp() } }
-        if (target != null) flying?.let { drop -> Fan(drop, from = maxWidth / 2 to maxHeight * HERO_SCREEN_Y, to = target, progress = fan.value) }
+        if (target != null) flying?.let { drop -> Fan(drop, from = maxWidth / 2 to maxHeight * SceneCamera.HERO_DOWN, to = target, progress = fan.value) }
         Column(
             Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = TRAY_END, bottom = TRAY_BOTTOM),
             horizontalAlignment = Alignment.End,
@@ -212,9 +213,6 @@ private fun chipLook(chip: DropChip): Triple<String, Color, String?> = when (chi
 }
 
 private fun lerp(a: Dp, b: Dp, t: Float): Dp = a + (b - a) * t
-
-/** Где герой на экране сцены по высоте: доля от верха, как у камеры сцены. */
-private const val HERO_SCREEN_Y = .55f
 
 /** Веер: длительность полёта, доля раскрытия и конец виса; сколько фишек летит самое большее; радиус дуги. */
 private const val FAN_MS = 900

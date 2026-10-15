@@ -3,6 +3,7 @@ package com.sperance.exileforge.ui.screens.skills
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -183,9 +184,13 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
     }
 }
 
-/** The five slots: three active over two passive, each open from its level, a tap to fill, change or empty it. */
+/**
+ * The five slots: three active over two passive, each open from its level, a tap to fill, change or empty it; долгое нажатие на
+ * занятую ячейку - карточка её умения (0.14.4, #25).
+ */
 @Composable internal fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, stats: Map<String, Double>, onPick: (Pick) -> Unit) {
     val rules = index.skills.rules
+    val inspect = rememberSkillInspect()
     ForgePanel {
         val actives = rules.activeSlots.indices.map { skills.active.getOrNull(it) }
         Engraved(ui("skills.actives", actives.count { it != null }, index.skillRules.activeSlots(level)))
@@ -203,6 +208,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
                     Modifier.weight(1f),
                     onTap = { onPick(if (slot == null) Pick.Slot(SkillKind.ACTIVE, at) else Pick.Condition(at)) },
                     onSwap = { onPick(Pick.Slot(SkillKind.ACTIVE, at)) },
+                    onPeek = slot?.let { { inspect(SkillPeek(it.skill, condition = it.condition)) } },
                 )
             }
         }
@@ -220,6 +226,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
                     level,
                     Modifier.weight(1f),
                     onTap = { onPick(Pick.Slot(SkillKind.PASSIVE, at)) },
+                    onPeek = skill?.let { { inspect(SkillPeek(it.code)) } },
                 )
             }
         }
@@ -229,7 +236,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 /**
  * One slot: the skill's mark and level, its name and the line under it — a slot's condition, an aura's
  * reserve — or a plus while empty, or the level it opens at while locked. [onSwap] puts another in. С 4.4.0 знак умения -
- * «Неон рун» с тиром [tier].
+ * «Неон рун» с тиром [tier]; [onPeek] (0.14.4, #25) - долгое нажатие, карточка умения ячейки.
  */
 @Composable internal fun SlotTile(
     skill: SkillDefinition?,
@@ -241,13 +248,14 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
     modifier: Modifier,
     onTap: () -> Unit,
     onSwap: (() -> Unit)? = null,
+    onPeek: (() -> Unit)? = null,
 ) {
     val locked = heroLevel < opens
     val shape = RoundedCornerShape(8.dp)
     Column(
         modifier.clip(shape).background(if (skill != null) PanelRaised else Abyss, shape)
             .border(1.dp, if (skill != null) Gold.copy(alpha = .7f) else Bronze.copy(alpha = .5f), shape)
-            .clickable(enabled = !locked, onClick = onTap).padding(8.dp),
+            .combinedClickable(enabled = !locked, onLongClick = onPeek, onClick = onTap).padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(3.dp),
     ) {

@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.feedback.Feedback
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -53,6 +55,7 @@ import com.sperance.exileforge.core.model.feedback.NoteAuthor
 import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Vote
+import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
@@ -155,8 +158,10 @@ enum class ReportsTab { MINE, KNOWN }
 /**
  * Отчёты (0.14.1, GH-ISSUES, макет A; 0.14.2 - без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
  * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −», поиск
- * по тексту и номеру). Открытые выше закрытых; известные - сначала «Исправляется», затем по рейтингу и номеру.
+ * по тексту и номеру). Открытые выше закрытых; известные - сначала «Исправляется», затем по рейтингу и номеру. Списки
+ * перечитываются (0.14.4, #33) потягиванием вниз и нажатием на уже открытую вкладку.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
     val model = koinViewModel<FeedbackViewModel>()
@@ -178,7 +183,9 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
             val mineTitle = ui("feedback.tab.mine") + if (tab != ReportsTab.MINE && fresh.isNotEmpty()) " · ${fresh.size}" else ""
             // Шапка (0.14.2, макет «Отчёты у модерации», вариант A для игрока): вкладки и значок поиска, поле - по нажатию
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Box(Modifier.weight(1f)) { PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }) }
+                Box(Modifier.weight(1f)) {
+                    PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
+                }
                 if (tab == ReportsTab.KNOWN) {
                     IconButton(onClick = {
                         searching = !searching
@@ -196,22 +203,29 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
-                when (tab) {
-                    ReportsTab.MINE -> {
-                        val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
-                        if (mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
-                        items(mine, key = { it.id }) { own -> OwnCard(own, own.id in shownFresh, !activity.busy, onAnswer = { text -> model.answerReport(own.id, text) }) { deleting = own.id } }
-                    }
-
-                    ReportsTab.KNOWN -> {
-                        val known = knownList(feedback.known, query)
-                        if (known.isEmpty()) item { MutedText(ui("feedback.none_known")) }
-                        items(known, key = { it.id }) { KnownCard(it, enabled = !activity.busy) { v -> model.vote(it.id, v) } }
-                    }
-                }
+            PullToRefreshBox(isRefreshing = Reads.FEEDBACK in activity.loading, onRefresh = model::loadReports, modifier = Modifier.weight(1f)) {
+                ReportsList(tab, feedback, query, shownFresh, !activity.busy, model) { deleting = it }
             }
             deleting?.let { id -> ReportDeleteConfirm(activity.busy, onDismiss = { deleting = null }) { model.deleteReport(id) } }
+        }
+    }
+}
+
+/** Список открытой вкладки [tab]: свои отчёты ([fresh] - с новыми ответами) или известные проблемы по поиску [query]. */
+@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, enabled: Boolean, model: FeedbackViewModel, onDelete: (String) -> Unit) {
+    LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(bottom = 16.dp)) {
+        when (tab) {
+            ReportsTab.MINE -> {
+                val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
+                if (mine.isEmpty()) item { MutedText(ui("feedback.none_mine")) }
+                items(mine, key = { it.id }) { own -> OwnCard(own, own.id in fresh, enabled, onAnswer = { text -> model.answerReport(own.id, text) }) { onDelete(own.id) } }
+            }
+
+            ReportsTab.KNOWN -> {
+                val known = knownList(feedback.known, query)
+                if (known.isEmpty()) item { MutedText(ui("feedback.none_known")) }
+                items(known, key = { it.id }) { KnownCard(it, enabled) { v -> model.vote(it.id, v) } }
+            }
         }
     }
 }
@@ -381,18 +395,6 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
     ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, thread(known.issue, ""), dim = false) {
         if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
         VoteRow(known, enabled, onVote)
-    }
-}
-
-/**
- * Похожее уже известно (0.14.1, GH-ISSUES мелочи): под формой отчёта - до трёх открытых известных проблем, близких к черновику,
- * с голосованием «+ / −»: игрок видит, что об этом уже знают, и голосует, а не пишет дубль.
- */
-@Composable fun SimilarKnown(similar: List<KnownReport>, enabled: Boolean, onVote: (String, Vote) -> Unit) {
-    if (similar.isEmpty()) return
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Text(ui("feedback.similar"), color = Rune, style = MaterialTheme.typography.labelLarge)
-        similar.forEach { known -> KnownCard(known, enabled) { vote -> onVote(known.id, vote) } }
     }
 }
 

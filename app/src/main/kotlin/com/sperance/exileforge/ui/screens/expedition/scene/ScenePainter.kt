@@ -146,7 +146,7 @@ internal class ScenePainter {
         lightRadius = world.lightRadius
         // Земля и скала - слоями (T19): перезапись со сменой клетки героя, карты или «окон» в скале
         layers.refresh(this, scope, world, shape, rock, style, palette, biome, hx, hy)
-        scope.translate(width / 2 - cameraX, height * .55f + cameraY) {
+        scope.translate(width / 2 - cameraX, height * SceneCamera.HERO_DOWN + cameraY) {
             layers.drawUnder(this)
             // Гладь вод и пропастей течёт вживую по клеткам, что запомнил слой: под ней - пол, над ней - мелочь пола
             layers.drawPools(this@ScenePainter, frame, shape, style, palette, map.liquid)

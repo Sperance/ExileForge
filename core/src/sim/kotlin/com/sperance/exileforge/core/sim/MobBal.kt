@@ -111,25 +111,19 @@ class MobKit(val index: ContentIndex) {
 
     fun stats(heroClass: HeroClass, level: Int, tree: List<TakenNode>, items: List<ItemInstance>): Map<String, Double> = calculator.hero(level, heroClass, tree, items).stats
 
-    /** Типичный удар редкого монстра уровня [level] (физика), для цены брони: средний удар монстров кампании этого уровня ×1,7. */
-    private val refHits = ConcurrentHashMap<Int, Double>()
-    fun refHit(level: Int): Double = refHits.getOrPut(level) {
-        val roller = com.sperance.exileforge.rules.roll.MonsterRoller(index)
-        val zone = index.campaign.zones.minBy { kotlin.math.abs(it.level - level) }
-        zone.monsters.mapNotNull(index::monster).map { m -> roller.stats(m, level).filterKeys { it in com.sperance.exileforge.rules.roll.GuardianFloor.STRIKES }.values.sum() }.average() * 1.7
-    }
-
     /**
-     * Цена листа глазами игрока: эффективное здоровье против смеси ударов (физика 40% с бронёй, стихии и хаос по 15%; уклонение и блок
-     * против меткости монстра уровня) × урон (умения [SkillProfile] + замахи оружием).
+     * Цена листа глазами игрока: эффективное здоровье против смеси ударов (физика 40% с бронёй, стихии и хаос по 15%; уклонение и блок)
+     * × урон (умения [SkillProfile] + замахи оружием). Удар по броне и меткость - эталонного врага уровня ([com.sperance.exileforge.rules.sheet.ReferenceFoe]), того же,
+     * что меряет Мощь и сводка героя: подбор вещей и бой видят одну защиту.
      */
     fun worth(heroClass: HeroClass, level: Int, tree: List<TakenNode>, items: List<ItemInstance>, skills: HeroSkills, penalty: Double): Double {
         val body = HeroBody.of(index, HeroInputs(level, heroClass.code, tree, items, skills = skills))
         val stats = body.stats
         val c = Combatant(MapEffects.hero(stats, if (penalty > 0) mapOf(MapStat.HERO_RESIST.code to penalty) else emptyMap()), level, rules)
-        val evade = rules.accuracy.evaded(rules.accuracy.at(level), c.evasion).coerceAtMost(c.evasionCap)
+        val foe = index.referenceFoe
+        val evade = rules.accuracy.evaded(foe.accuracy(level), c.evasion).coerceAtMost(c.evasionCap)
         val avoid = (1 - evade) * (1 - c.block)
-        val phys = 1 - c.physicalMitigation(refHit(level), rules.armour.factor)
+        val phys = 1 - c.physicalMitigation(foe.hit(level), rules.armour.factor)
         val elem = DamageType.ELEMENTS.sumOf { 1 - c.resist(it) }
         val taken = (0.4 * phys + 0.15 * elem + 0.15 * (1 - c.resist(DamageType.CHAOS))) * avoid
         val ehp = (c.maxLife + c.maxShield) / taken.coerceAtLeast(0.03)
@@ -1165,7 +1159,7 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Пакет 8: Мощь стражей зон правилом BossMight (без строк таблицы, сид 0) - для сторожа ASANA-08
+        // Пакет 8: Мощь стражей зон правилом BossMight (без строк таблицы, сид 0) - отчёт; разброс стражей сторожит доля побед ([guard])
         "bossmight" -> zones.forEach { zone -> tasks += Task { listOf(Row(listOf("bossmight", zone.code.value, zone.boss.value, zone.level, com.sperance.exileforge.rules.sheet.BossMight.of(index, zone)))) } }
 
         else -> error("mode $mode")

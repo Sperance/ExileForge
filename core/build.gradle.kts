@@ -18,9 +18,8 @@ dependencies {
 
 kotlin { jvmToolchain(17) }
 
-// Баланс-сим «классы против боссов» (отчёт, не тест): свой набор исходников поверх main - вне test и ворот CI, новых
-// зависимостей не требует; видит internal main (прогон «Весов» OddsPlan). Запуск:
-// ./gradlew :core:simulateBosses [-Pcontent=<папка content>] [-Pfights=<K>] [-Prolls=<бросков босса>] [-Pzones=<коды через запятую>]
+// Симуляции баланса (отчёты, не тесты): свой набор исходников поверх main - вне test и ворот CI, новых зависимостей не требует;
+// видит internal main. Запуск - задача `mobBal` ниже.
 val sim: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
     runtimeClasspath += output + compileClasspath + sourceSets.main.get().runtimeClasspath
@@ -30,20 +29,6 @@ kotlin.target.compilations.getByName("sim").associateWith(kotlin.target.compilat
 sourceSets.test {
     compileClasspath += sim.output
     runtimeClasspath += sim.output
-}
-
-tasks.register<JavaExec>("simulateBosses") {
-    group = "reporting"
-    description = "Classes against zone bosses: build/reports/boss-sim.md"
-    classpath = sim.runtimeClasspath
-    mainClass.set("com.sperance.exileforge.core.sim.BossSimKt")
-    val content = providers.gradleProperty("content").orElse(rootProject.layout.projectDirectory.dir("backend/src/main/resources/content").asFile.path)
-    systemProperty("content", content.get())
-    providers.gradleProperty("fights").orNull?.let { systemProperty("fights", it) }
-    providers.gradleProperty("rolls").orNull?.let { systemProperty("rolls", it) }
-    providers.gradleProperty("zones").orNull?.let { systemProperty("zones", it) }
-    args(layout.buildDirectory.file("reports/boss-sim.md").get().asFile.path)
-    outputs.upToDateWhen { false }
 }
 
 // Баланс монстров MOB-BAL (отчёт, не тест): эталонные герои против монстров и боссов кампании и карт настоящим боем клиента.

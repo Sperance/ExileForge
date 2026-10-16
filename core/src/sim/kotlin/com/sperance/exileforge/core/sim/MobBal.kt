@@ -63,7 +63,7 @@ import kotlin.random.Random
 /*
  * Баланс монстров MOB-BAL (отчёт, не код игры): эталонные герои по архетипам против монстров и боссов кампании и карт - реальными
  * функциями правил ([com.sperance.exileforge.rules.roll.MonsterRoller], [Run], [LootRoller]) и настоящим боем клиента ([Battle]).
- * Вывод - TSV; цели: обычный 2-3 действия, редкий 10-20 с, босс 60-120 с и ~50% побед эталона своего акта/тира. Быстрый сторож
+ * Вывод - TSV; цели: обычный 2-3 действия, редкий 10-20 с, босс 50-150 с и 55-60% побед эталона над стражем своего уровня ([GuardianTarget]). Быстрый сторож
  * на выборке - `MobBalGuardTest`.
  */
 
@@ -1179,31 +1179,46 @@ fun main(args: Array<String>) {
 }
 
 /**
- * Сторож стражей (В-11/12, полный прогон): у каждого стража медиана времени победы эталонов всех классов - в 0,5-2× медианы стражей
- * своего акта ([band], по умолчанию [GUARD_BAND]); строка `guard` - зона, страж, акт, время, медиана акта, доля, в коридоре ли.
+ * Цель побед эталона над стражем своего уровня (0.15.0, решение 1, RULES «Общее»): [WINS] боёв, финал акта - у нижней границы ([FINALS]).
+ * Карты своего уровня, вожди Бездны, стражи Разлома и Матерь Скверны равняются на неё же (отчёты режимов).
  */
-fun guard(index: ContentIndex, rows: List<Row>, band: ClosedFloatingPointRange<Double> = GUARD_BAND): List<Row> {
-    val wins = rows.filter { it.values[0] == "boss" }.groupBy { it.values[1] as String }.mapValues { (_, list) ->
-        list.map { it.values[11] as Double }.filter { it > 0 }.sorted().let { if (it.isEmpty()) 0.0 else it[it.size / 2] }
-    }
+object GuardianTarget {
+    val WINS = 0.55..0.60
+    val FINALS = 0.55..0.575
+
+    /** Цель стража: финал акта ([final]) - нижняя половина коридора. */
+    fun of(final: Boolean): ClosedFloatingPointRange<Double> = if (final) FINALS else WINS
+}
+
+/**
+ * Сторож стражей (полный прогон `-Pmode=guard`; с 0.15.0 - доля побед эталонов вместо разброса Мощи, решение 25): у каждого стража доля
+ * побед эталонов всех классов - в цели [GuardianTarget] с допуском выборки [tolerance]. Строка `guard`: зона, страж, акт, финал ли, доля
+ * побед, среднее время победы (-1 - побед нет), в коридоре ли.
+ */
+fun guard(index: ContentIndex, rows: List<Row>, tolerance: Double = GUARD_TOLERANCE): List<Row> {
+    val finals = index.campaign.regions.mapNotNull { region -> region.zones.filter { it.boss.value.isNotBlank() }.maxByOrNull { it.level }?.code?.value }.toSet()
     val actOf = index.campaign.regions.withIndex().flatMap { (act, region) -> region.zones.map { it.code.value to act + 1 } }.toMap()
-    return wins.keys.groupBy { actOf[it] ?: 0 }.flatMap { (act, zones) ->
-        val median = zones.map { wins.getValue(it) }.filter { it > 0 }.sorted().let { if (it.isEmpty()) 0.0 else it[it.size / 2] }
-        zones.map { zone ->
-            val share = if (median > 0) wins.getValue(zone) / median else 0.0
-            val boss = index.campaign.zones.first { it.code.value == zone }.boss.value
-            Row(listOf("guard", zone, boss, act, wins.getValue(zone), median, share, share in band))
-        }
+    return rows.filter { it.values[0] == "boss" }.groupBy { it.values[1] as String }.map { (zone, list) ->
+        val wins = list.map { it.values[10] as Double }.average()
+        val times = list.map { it.values[11] as Double }.filter { it > 0 }
+        val final = zone in finals
+        val target = GuardianTarget.of(final)
+        val corridor = (target.start - tolerance)..(target.endInclusive + tolerance)
+        Row(listOf("guard", zone, list.first().values[2], actOf[zone] ?: 0, final, wins, if (times.isEmpty()) -1.0 else times.average(), wins in corridor))
     }
 }
 
-val GUARD_BAND = 0.5..2.0
+/** Допуск полного прогона: 8 боёв на класс, 56 на стража - разброс выборки ~7 п.п. */
+const val GUARD_TOLERANCE = 0.10
 
 /** Первая неделя Разлома режима `rift`: недели схем - подряд от неё. */
 const val RIFT_WEEK = 2_900L
 
-/** Стражей на уровень в режиме `classes`: ближайшие зоны не выше уровня героя. */
-const val CLASS_BOSSES = 4
+/**
+ * Стражей на уровень в режиме `classes` и в `ClassBalanceGuardTest`: ближайшие зоны не выше уровня героя. С 0.15.0 - восемь: четыре
+ * ближайших - стражи одного акта и часто одного вида урона (у 40-го все бьют физикой), их подбор решал победы класса больше его обороны.
+ */
+const val CLASS_BOSSES = 8
 
 fun bandOf(tier: Int): GearBand = when {
     tier <= 5 -> GearBand.TYPICAL

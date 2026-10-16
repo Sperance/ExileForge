@@ -36,40 +36,48 @@ class MobBalGuardTest {
     }
 
     /**
-     * Сторож каждого стража (MOB-BAL-GUARD, быстрый вариант полного прогона `:core:mobBal -Pmode=guard`): эталоны всех классов бьются
-     * с каждым стражем кампании - по бою на каждом из [ROLLS] бросков босса, кости детерминированы. Вещи эталона ищутся на сетке уровней
-     * [GEAR_GRID] (поиск вещей дороже боёв) и переносятся на уровень зоны ([MobKit.relevel]); полоса вещей и штраф сопротивлений - своей
-     * зоны. Медиана времени победы стража держится в коридоре своего акта с допуском выборки [TOLERANCE] (полный прогон - 0,5-2×).
+     * Сторож стражей (0.15.0, решения 1 и 25; быстрый вариант полного прогона `:core:mobBal -Pmode=guard`): эталон каждого класса - тот
+     * же, что в полном прогоне (вещи полосы и штраф сопротивлений своей зоны, её уровень), - бьётся с каждым стражем кампании по [FIGHTS]
+     * бою на каждом из [GUARD_ROLLS] бросков босса (строки броска решают бой сильнее костей боя), кости детерминированы. Доля побед
+     * эталонов над стражем своего уровня держит цель [GuardianTarget]: каждый страж - с допуском выборки [EACH], средняя акта - с
+     * допуском [ACT]. Разброс стражей сторожит бой, а не Мощь.
      */
     @Test
-    fun everyGuardianStaysInItsActCorridor() {
-        val sim = MobBal(index, fights = ROLLS, rolls = ROLLS, monsterSamples = 1, cache = null)
+    fun everyGuardianMeetsTheWinTarget() {
+        val sim = MobBal(index, fights = FIGHTS * GUARD_ROLLS, rolls = GUARD_ROLLS, monsterSamples = 1, cache = null)
         val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
         // Старшие уровни первыми: их постройки и бои дольше, параллельный поток так меньше ждёт хвоста
         val keys = zones.sortedByDescending { it.level }.flatMap { zone -> sim.classesOf(emptySet()).map { zone to it } }
-        fun penalty(zone: Zone) = index.campaign.resistPenalty(zone.code, false)
-        fun gear(zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, gearLevel(zone.level), Archetype(campaignBand(zone.level)), penalty(zone))
-        keys.distinctBy { (zone, heroClass) -> listOf(heroClass.code, gearLevel(zone.level), campaignBand(zone.level), penalty(zone)) }
-            .parallelStream().forEach { (zone, heroClass) -> gear(zone, heroClass) }
-        val rows = keys.parallelStream().map { (zone, heroClass) -> sim.boss(zone, sim.kit.relevel(gear(zone, heroClass), zone.level), 0, Rarity.COMMON, CAP) }.toList()
-        val verdicts = guard(index, rows, TOLERANCE)
+        fun hero(zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
+        val rows = keys.parallelStream().map { (zone, heroClass) -> sim.boss(zone, hero(zone, heroClass), 0, Rarity.COMMON, CAP) }.toList()
+        val verdicts = guard(index, rows, EACH)
         assertTrue(zones.size >= 100 && verdicts.size == zones.size, "the check proves nothing: ${verdicts.size} of ${zones.size} guardians")
+        val target = GuardianTarget.WINS
+        val acts = verdicts.groupBy { it.values[3] as Int }.mapValues { (_, list) -> list.map { it.values[5] as Double }.average() }
+        val off = acts.filterValues { it !in (target.start - ACT)..(target.endInclusive + ACT) }
         val out = verdicts.filter { it.values.last() == false }
-        assertTrue(out.isEmpty(), "стражи вне коридора акта ($TOLERANCE медианы): " + out.joinToString("; ") { it.tsv() })
+        assertTrue(
+            out.isEmpty() && off.isEmpty(),
+            "цель побед $target: стражи вне ±$EACH - " + out.joinToString("; ") { it.tsv() } +
+                "; акты вне ±$ACT - " + off.entries.joinToString { (act, wins) -> "акт $act ${"%.0f".format(100 * wins)}%" },
+        )
     }
-
-    /** Уровень поиска вещей для зоны уровня [level]: старший узел [GEAR_GRID] не выше него - вещи отстают от зоны не больше шага сетки. */
-    private fun gearLevel(level: Int): Int = GEAR_GRID.last { it <= level }
 
     private companion object {
         const val ROLLS = 2
+
+        /** Бросков стража в стороже побед: их строки решают бой сильнее костей боя. */
+        const val GUARD_ROLLS = 4
         const val SAMPLES = 3
         const val CAP = 300.0
 
-        /** Сетка уровней поиска вещей: шаг ~10% уровня (1, 2, ... 10, 12, 14, ... 84, 93). */
-        val GEAR_GRID: List<Int> = generateSequence(1) { (it * 1.1).toInt() + 1 }.takeWhile { it <= 100 }.toList()
+        /** Боёв на бросок стража в стороже побед. */
+        const val FIGHTS = 1
 
-        /** Допуск выборки (2 боя на класс, вещи сетки): на контенте 0.13.2 доли стражей 0,40-2,49 медианы акта. */
-        val TOLERANCE = 0.33..3.0
+        /** Допуск стража: 28 боёв на стража (4 на класс, по бою на бросок) - разброс выборки ~9 п.п. */
+        const val EACH = 0.15
+
+        /** Допуск средней акта: 15-20 стражей - разброс выборки ~2 п.п. */
+        const val ACT = 0.05
     }
 }

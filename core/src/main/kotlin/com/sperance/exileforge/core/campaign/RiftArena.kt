@@ -237,8 +237,11 @@ class RiftArena(
         return spawns.skilled(spawns.buffed(built.copy(traits = (built.traits + traits.map { it.code }).distinct()), buffs), dice)
     }
 
-    /** Рост узла: на столько процентов больше здоровья и урона у каждого врага. */
-    private fun growth(power: Double): List<MonsterEffect> = if (power <= 0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
+    /**
+     * Рост узла: на столько процентов больше здоровья и урона у каждого врага; меньше нуля - на столько меньше (0.15.0: рядовые бои и
+     * Элита слабее по виду узла, `rift.fights.kindPower`, и на первых шагах сила узла отрицательна).
+     */
+    private fun growth(power: Double): List<MonsterEffect> = if (power == 0.0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
 
     /** Механики стража акта и правила забега для боя. */
     private fun riftCombat(): RiftCombat {

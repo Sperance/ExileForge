@@ -36,6 +36,7 @@ import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
+import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
@@ -83,6 +84,7 @@ import com.sperance.exileforge.ui.theme.*
     }
     val picked = maps.firstOrNull { it.item.id == launch.picked }
     MapRibbon(maps, picked, enabled = !game.busy, onPick = vm::pickMap)
+    TierGate(index, game.hero?.level)
     Text(
         picked?.view?.title ?: ui("expedition.launch_no_map"),
         color = picked?.let { rarityColor(it.view.rarity.name) } ?: Muted,
@@ -124,8 +126,31 @@ import com.sperance.exileforge.ui.theme.*
     MutedText(ui("expedition.launch_spent"))
 }
 
+/**
+ * Ворота тиров (0.15.0): высший тир упавшей карты у героя уровня [level] - правило `MapTierRule.heroCap`; ниже предела тиров -
+ * строка «до T10; T12 - с 80 ур.», на пределе - ничего.
+ */
+@Composable private fun TierGate(index: ContentIndex, level: Int?) {
+    val tiers = index.campaign.maps.tiers ?: return
+    level ?: return
+    val cap = tiers.heroCap(level)
+    if (cap >= tiers.max) return
+    val next = tiers.heroTiers.filter { (from, tier) -> from > level && tier > cap }.minByOrNull { it.key } ?: return
+    MutedText(ui("expedition.launch_tier_gate", cap, next.value, next.key), style = MaterialTheme.typography.labelSmall)
+}
+
 /** The picked map's lines in the order it rolled them; a composite line is a harm if any of its stats is one. */
-internal fun lines(map: ItemView, index: ContentIndex, atlasEffect: Double = 1.0): List<MapLine> = map.lines.map { line ->
+internal fun lines(map: ItemView, index: ContentIndex, atlasEffect: Double = 1.0): List<MapLine> {
+    val roller = LootRoller(index)
+    // Действующие значения строки (4.12.8): Атлас усиливает только строки `scalable` - печать, флаги и счётные как есть
+    val bound = map.lines.map { line -> line.definition?.let { def -> def to roller.mapValues(def, line.values, atlasEffect) } }
+    // Все строки карты вместе (0.15.0): риск строки с условием платится, только если условие на карте есть
+    val all = bound.filterNotNull().flatMap { (def, values) -> def.bind(values) }.groupingBy { it.first.stat }.fold(0.0) { sum, (_, value) -> sum + value }
+    return map.lines.mapIndexed { i, line -> line(index, line, bound[i]?.second, all) }
+}
+
+/** Строка карты [line] со значениями [values] (null - как выпала) и меткой риска среди всех строк карты [all]. */
+private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all: Map<String, Double>): MapLine {
     val effects = line.definition?.effects.orEmpty()
     val kinds = effects.map { MapLineKind.of(index, it.stat) }
     val kind = when {
@@ -133,11 +158,10 @@ internal fun lines(map: ItemView, index: ContentIndex, atlasEffect: Double = 1.0
         MapLineKind.REWARD in kinds -> MapLineKind.REWARD
         else -> MapLineKind.CONTENT
     }
-    // Действующие значения строки (4.12.8): Атлас усиливает только строки `scalable` - печать, флаги и счётные как есть
     val def = line.definition
-    val values = def?.let { LootRoller(index).mapValues(it, line.values, atlasEffect) } ?: line.values
-    val risk = def?.bind(values).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value) }
-    MapLine(if (def != null && values != line.values) modifierLine(index, def, values) else line.text, kind, risk)
+    val shown = values ?: line.values
+    val risk = def?.bind(shown).orEmpty().sumOf { (effect, value) -> MapLineKind.risk(index, effect.stat, value, all) }
+    return MapLine(if (def != null && shown != line.values) modifierLine(index, def, shown) else line.text, kind, risk)
 }
 
 @Composable internal fun LineRow(line: MapLine) {

@@ -83,7 +83,8 @@ internal fun AtlasBranch.hue(): Color = when (this) {
     AtlasBranch.POWER -> Color(0xFFD24A43)
     AtlasBranch.INFLUENCE -> Color(0xFF9FD2F0)
     AtlasBranch.ALTAR -> Color(0xFFD03040)
-    AtlasBranch.MERCHANT -> Color(0xFFE8C060)
+    // Скверна (0.15.0) - жила своей палитры
+    AtlasBranch.BLIGHT -> Color(0xFFD81B60)
     AtlasBranch.TRAPS -> Color(0xFFB9C2CF)
     AtlasBranch.SECRETS -> Color(0xFFE8E0C8)
     AtlasBranch.GATHER -> Color(0xFF4FA048)

@@ -196,7 +196,12 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
         tone = GoldBright,
         name = ui("feature.merchant.title"),
         sub = ui("feature.merchant.note", number(money.toDouble())),
-        facts = listOf(FeatureFact(ui("feature.merchant.left", left)), FeatureFact(ui("feature.merchant.bought", bought.size), Vital).takeIf { bought.isNotEmpty() }).filterNotNull(),
+        facts = listOfNotNull(
+            FeatureFact(ui("feature.merchant.left", left)),
+            FeatureFact(ui("feature.merchant.bought", bought.size), Vital).takeIf { bought.isNotEmpty() },
+            // Скидка против витрины Города (0.15.0): множитель цены торговца из правил меньше единицы
+            game.index?.campaign?.features?.merchant?.markup?.takeIf { it < 1 }?.let { FeatureFact(ui("feature.merchant.discount", number((1 - it) * 100)), Vital) },
+        ),
         icon = { Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(28.dp)) },
         onDismiss = { onCommand(RunCommand.StepOff) },
         body = {

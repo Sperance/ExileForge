@@ -48,9 +48,9 @@ enum class AtlasBranch(val prefix: String) {
     POWER("POWER_"),
     INFLUENCE("INFLUENCE_"),
 
-    /** Ветви объектов карты (3.90.0, сервер 1.81.3): алтари, торговец, ловушки, тайники, узлы ремёсел. */
+    /** Ветви объектов карты (3.90.0, сервер 1.81.3): алтари, ловушки, тайники, узлы ремёсел и Скверна (0.15.0, на месте торговца). */
     ALTAR("ALTAR_"),
-    MERCHANT("MERCHANT_"),
+    BLIGHT("BLIGHT_"),
     TRAPS("TRAPS_"),
     SECRETS("SECRETS_"),
     GATHER("GATHER_"),

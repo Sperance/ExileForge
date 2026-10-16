@@ -39,8 +39,14 @@ enum class MapLineKind {
             else -> CONTENT
         }
 
-        /** How many percent one rolled value of [stat] pays, by the rules' weight; zero for what is not a risk. */
-        fun risk(index: ContentIndex, stat: String, value: Double): Double = value * (index.campaign.maps.risk[stat] ?: 0.0)
+        /**
+         * How many percent one rolled value of [stat] pays, by the rules' weight; zero for what is not a risk. Строка с условием риска
+         * (0.15.0, `MapRule.paid` правил: сила монстров Бездны - только с расщелинами) на карте со строками [effects] без него не платит.
+         */
+        fun risk(index: ContentIndex, stat: String, value: Double, effects: Map<String, Double>): Double {
+            val maps = index.campaign.maps
+            return if (maps.paid(stat, effects)) value * (maps.risk[stat] ?: 0.0) else 0.0
+        }
     }
 }
 

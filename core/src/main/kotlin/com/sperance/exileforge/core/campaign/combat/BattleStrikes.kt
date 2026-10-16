@@ -101,25 +101,39 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val stored = fateExtra(me)
     val partsSum = parts.values.sum()
     // Урон для недугов (4.12.x, COMBAT-03): после защит и «получаемого урона» цели, но без шока, подавления и Укрепления - шок
-    // ложится в тике недуга, Укрепление и подавление режут только удар
+    // ложится в тике недуга, Укрепление и подавление режут только удар. С 0.15.0 (реш. 36, 39) - и до защит цели без множителя крита
+    // ([unmitigated]: основа яда), урон ударами недуги не растит
     val ailing = mutableMapOf<DamageType, Double>()
+    val unmitigated = mutableMapOf<DamageType, Double>()
+    val hitMore = hitMore(me, body, blow, facing, versus)
+    // Разложение (0.15.0, реш. 38/41): урон своего вида, что прибавили стаки цели, - графа разбора
+    var exposed = 0.0
+    var exposedSum = 0.0
     val taken = parts.mapValues { (type, base) ->
         val spread = if (blow.spread) 1 + ((if (luckySpread) max(random.nextDouble(), random.nextDouble()) else random.nextDouble()) * 2 - 1) * rules.variance / 100 else 1.0
-        val grown = base * spread * multiplier * against * body.damageMore * doubled * versus * fateMore
+        val hurt = base * spread * against * body.damageMore * doubled * versus * fateMore
+        val grown = hurt * multiplier * hitMore
         val heavied = if (heavy == 1.0) grown else grown * heavy
-        val raw = if (stored > 0 && partsSum > 0) heavied + stored * base / partsSum else heavied
+        val share = if (stored > 0 && partsSum > 0) stored * base / partsSum else 0.0
+        val raw = heavied + share
         val pierce = body.penetration(type) + if (type == weakest) body.lowestResistPenetrate else 0.0
         val (armour, resist, defence) = defended(target.body, type, raw, pierce)
-        val typeTaken = target.body.damageTaken(type) * (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0)
+        val exposure = target.exposure(type)
+        val typeTaken = target.body.damageTaken(type) * (if (type == strongest) max(0.0, 1 + target.body.highestResistElementTaken / 100) else 1.0) * exposure
         val landed = defence * target.weakness() * typeTaken * eased * exposure(target, type)
         val sealedOff = if (seals == 1.0) landed else landed * seals
         unruled += sealedOff
         val ruled = lawTaken(target, type)
         // Удар конечен (4.12.x, COMBAT-02): NaN и бесконечность - не урон
         val dealt = (if (ruled == 1.0) sealedOff else sealedOff * ruled).takeIf { it.isFinite() } ?: 0.0
-        ailing[type] = (defence * typeTaken * seals * ruled).takeIf { it.isFinite() } ?: 0.0
+        ailing[type] = (defence * typeTaken * seals * ruled / hitMore).takeIf { it.isFinite() } ?: 0.0
+        unmitigated[type] = ((if (heavy == 1.0) hurt else hurt * heavy) + share).takeIf { it.isFinite() } ?: 0.0
+        if (exposure != 1.0) {
+            exposed += dealt * (1 - 1 / exposure)
+            exposedSum += dealt
+        }
         spreadSum += base * spread
-        takenSum += defence * typeTaken
+        takenSum += defence * typeTaken / exposure
         defended += defence
         types += TypeTrace(type, base, raw, armour, resist, pierce, dealt)
         dealt
@@ -150,6 +164,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
             add(FactorTrace(FactorKey.NON_CRIT, multiplier, listOf(CoreStat.NON_CRIT_DAMAGE.code)))
         }
         add(FactorTrace(FactorKey.DAMAGE, body.damageMore, listOf(StatLines.DAMAGE)))
+        if (hitMore != 1.0) add(FactorTrace(FactorKey.HIT, hitMore, listOf(CoreStat.HIT_DAMAGE.code)))
         if (against != 1.0) add(FactorTrace(FactorKey.AGAINST, against, listOf(CoreStat.DAMAGE_VS_AILED.code, CoreStat.DAMAGE_VS_CURSED.code) + Ailment.entries.map { it.against }))
         if (doubled != 1.0) add(FactorTrace(FactorKey.DOUBLE, doubled, listOf(CoreStat.DOUBLE_DAMAGE.code)))
         if (versus != 1.0) add(FactorTrace(FactorKey.VERSUS, versus))
@@ -166,17 +181,29 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         }
         if (target.weakness() != 1.0) add(FactorTrace(FactorKey.SHOCK, target.weakness(), listOf(CoreStat.SHOCK_EFFECT.code), listOf(CoreStat.SHOCK_TAKEN.code)))
         if (defended > 0 && takenSum != defended) add(FactorTrace(FactorKey.TAKEN, takenSum / defended, target = listOf(CoreStat.DAMAGE_TAKEN.code, CoreStat.PHYSICAL_TAKEN.code, CoreStat.ELEMENTAL_TAKEN.code, CoreStat.CHAOS_TAKEN.code)))
+        if (exposedSum > 0) add(FactorTrace(FactorKey.DECAY, exposedSum / (exposedSum - exposed)))
         if (eased != 1.0) add(FactorTrace(FactorKey.EASED, eased, target = listOf(CoreStat.SPELL_SUPPRESSION.code, CoreStat.DEFLECTION.code, CoreStat.HIT_TAKEN.code, CoreStat.BLIGHT_REDUCTION.code)))
         if (seals != 1.0) add(FactorTrace(FactorKey.SEALS, seals))
         val law = heavy * if (unruled > 0) taken.values.sum() / unruled else 1.0
         if (law != 1.0) add(FactorTrace(FactorKey.LAW, law))
         add(FactorTrace(FactorKey.TOTAL, taken.values.sum()))
     }
-    pendingHit = HitTrace(striker, struck, factors, types, null, origin)
-    land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw }, ailing)
+    pendingHit = HitTrace(striker, struck, factors, types, null, origin, exposed = exposed)
+    land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw }, AilingHit(ailing, unmitigated, if (kind == HitKind.CRIT) multiplier else 1.0))
     // Отражение (MOB-BAL, В-5) - только от ударов: чары и недуги не отражаются
     if (me.alive && !blow.spell && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
     return true
+}
+
+/**
+ * Урон ударами (0.15.0, реш. 39) удара [blow]: у героя - увеличение рядом с увеличениями удара (как строки «против состояний» [facing],
+ * [versus] - их рост), у прочих - множитель листа [body]. Недуги и урон во времени его не берут.
+ */
+private fun Battle.hitMore(me: Fighter, body: Combatant, blow: Blow, facing: Double, versus: Double): Double {
+    val hit = body[CoreStat.HIT_DAMAGE.code]
+    if (hit == 0.0) return 1.0
+    if (me !== heroFighter || versus <= 0) return body.hitMore
+    return versus(blow, facing + hit) / versus
 }
 
 /** Защита [target] от урона [raw] типа [type] при пробивании [pierce]: доли брони и сопротивления и что прошло сквозь них. */

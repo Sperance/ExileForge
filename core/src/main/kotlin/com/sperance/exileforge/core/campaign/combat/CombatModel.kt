@@ -84,9 +84,10 @@ enum class Buildup(val gain: String, val avoid: String?) {
  * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
  * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
  * [general] - шанс недуга поднимает общая строка карты «шанс наложить состояние» (`MAP_MONSTER_AILMENTS`); у холода своего шанса
- * нет, изранение и иссушение (4.11.0) поднимает своя строка карты.
+ * нет, изранение и иссушение (4.11.0) поднимает своя строка карты. [ailing] (0.15.0) - состояние считается недугом для строк «против
+ * состояний», условий «под недугом» и добивающих ударов: Разложение и урон во времени умения - не недуги.
  */
-enum class Ailment(val word: String, val damage: String? = null, val general: Boolean = true) {
+enum class Ailment(val word: String, val damage: String? = null, val general: Boolean = true, val ailing: Boolean = true) {
     BURNING("IGNITE", CoreStat.BURNING_DAMAGE.code),
     CHILLED("CHILL", general = false),
     FROZEN("FREEZE"),
@@ -99,17 +100,26 @@ enum class Ailment(val word: String, val damage: String? = null, val general: Bo
 
     /** Иссушение (4.11.0): режет регенерацию, вампиризм и ману при ударе - запас маны правила (`curbs`). */
     PARCHED("PARCH", general = false),
+
+    /**
+     * Разложение (0.15.0, реш. 38/41): хаос-удары кладут стаки, каждый действующий - +сила% получаемого урона хаосом цели (правило
+     * `exposes`, предел и обновление всех стаков - правило); ударов и тиков хаоса, яда тоже. Не недуг.
+     */
+    DECAYED("DECAY", general = false, ailing = false),
+
+    /** Урон во времени умения, что не яд (0.15.0, реш. 42, «Высасывание сути»): хаос каждый тик, один экземпляр на цель. Не недуг. */
+    DRAINED("DRAIN", general = false, ailing = false),
     ;
 
     /** Deals damage over time, as opposed to slowing, weakening or stopping. */
-    val hurts: Boolean get() = this == BURNING || this == POISONED || this == BLEEDING
+    val hurts: Boolean get() = this == BURNING || this == POISONED || this == BLEEDING || this == DRAINED
 
     /** The sheet's "increased damage against X enemies" stat for this ailment (server 0.66.0). */
     val against: String get() = "STOCK_DAMAGE_VS_$name"
     companion object {
         fun of(name: String) = entries.firstOrNull { it.name == name }
 
-        /** An ailment as a skill names it (server 0.69.0): `IGNITE`, `CHILL`, `FREEZE`, `SHOCK`, `POISON`, `BLEED`, `WOUND`, `PARCH`. */
+        /** An ailment as a skill names it (server 0.69.0): `IGNITE`, `CHILL`, `FREEZE`, `SHOCK`, `POISON`, `BLEED`, `WOUND`, `PARCH`, `DECAY`, `DRAIN`. */
         fun byWord(word: String) = entries.firstOrNull { it.word == word }
 
         /** The ailment a damage brings by nature: fire burns, cold chills, lightning shocks, chaos poisons, a blade bleeds. */

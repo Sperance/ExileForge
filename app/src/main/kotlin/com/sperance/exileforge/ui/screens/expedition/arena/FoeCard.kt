@@ -375,7 +375,7 @@ private fun hitLabel(hit: FloatingHit): AnnotatedString {
     return buildAnnotatedString {
         append("−")
         append(hitText(hit))
-        if (glyph != null) withStyle(SpanStyle(color = damageTint(hit.type), fontSize = 11.sp, fontWeight = FontWeight.Bold)) { append(" $glyph") }
+        if (glyph != null) withStyle(SpanStyle(color = tickTint(hit.ailment, hit.type), fontSize = 11.sp, fontWeight = FontWeight.Bold)) { append(" $glyph") }
     }
 }
 
@@ -397,5 +397,5 @@ private fun hitColour(hit: FloatingHit): Color = when {
     hit.kind == HitKind.EVADED || hit.kind == HitKind.BLOCKED -> Muted
     hit.onHero -> HeroHurt
     hit.kind == HitKind.CRIT -> Color(0xFFFFD34A)
-    else -> damageTint(hit.type)
+    else -> tickTint(hit.ailment, hit.type)
 }

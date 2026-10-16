@@ -37,7 +37,7 @@ data class FactorTrace(val key: FactorKey, val value: Double, val attacker: List
  * Множители удара по порядку; [SEALS] - печати Стража Врат, [LAW] - Закон Владыки Разлома (3.96.0), [FATE] (4.6.0) - множитель
  * Предначертания героя.
  */
-enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, AGAINST, DOUBLE, VERSUS, FATE, DEFENCE, SHOCK, TAKEN, EASED, SEALS, LAW, TOTAL }
+enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, HIT, AGAINST, DOUBLE, VERSUS, FATE, DEFENCE, SHOCK, TAKEN, DECAY, EASED, SEALS, LAW, TOTAL }
 
 /** One damage type of a hit: its [base], [raw] after the striker's multipliers, the [armour] and [resist] shares it lost, and what landed. */
 data class TypeTrace(val type: DamageType, val base: Double, val raw: Double, val armour: Double, val resist: Double, val penetration: Double, val dealt: Double)
@@ -85,6 +85,8 @@ data class HitTrace(
     val landing: Landing?,
     val origin: TraceOrigin,
     val avoided: Double = 0.0,
+    /** Урон удара, что прибавило Разложение цели (0.15.0, реш. 43) - графа разбора боя. */
+    val exposed: Double = 0.0,
 ) : Trace
 
 /** A second of an ailment's damage: how strong, how long, who laid it and what grew it. */
@@ -98,6 +100,8 @@ data class TickTrace(
     val factors: List<FactorTrace>,
     val origin: TraceOrigin,
     val striker: FighterShot? = null,
+    /** Урон тика, что прибавило Разложение цели (0.15.0, реш. 43) - графа разбора боя. */
+    val exposed: Double = 0.0,
 ) : Trace
 
 /** A draught, a buff, a curse, a heal: the lines it laid, for how long, what it healed and what made it stronger. */

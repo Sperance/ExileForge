@@ -432,7 +432,7 @@ private class KillSpread(effect: FateEffect, fate: FateEffects) : LeverReaction(
         val power = 1 + fate.add(FateKnob.SPREAD_POWER) / 100
         val moved = ailing.filter { it.until > battle.time }
         moved.forEach { active ->
-            battle.place(next, if (power == 1.0) active else active.copy(magnitude = active.magnitude * power), battle.ruleOf[active.ailment]?.first?.stacks == true)
+            battle.place(next, if (power == 1.0) active else active.copy(magnitude = active.magnitude * power), battle.ruleOf[active.ailment]?.first)
         }
         if (fate.has(FateKnob.SPREAD_MARK_DAMAGE)) battle.fateFight.marked += next.index
         battle.fateBeat(FateBeat.SPREAD, moved.size.toDouble())
@@ -459,14 +459,14 @@ private class EveryNthAilment(effect: FateEffect, fate: FateEffects) : LeverReac
         val share = taken.values.sum() * value / 100
         // Недуг без вида урона (4.11.0) несёт доля всего удара, по его видам
         val dealt = type?.let { mapOf(it to share) } ?: taken.mapValues { it.value * value / 100 }
-        if (share > 0 && battle.afflict(battle.heroFighter, target, ailment, dealt, weight = weight) != null) {
+        if (share > 0 && battle.afflict(battle.heroFighter, target, ailment, AilingHit.of(dealt), weight = weight) != null) {
             battle.fateBeat(FateBeat.AILMENT, effect.every.toDouble(), share, ref = ailment.name)
         }
     }
 
     override fun heavier(battle: Battle, blow: Blow, target: Fighter): Double {
         val knob = ailed ?: return 1.0
-        return if (target.ailments.mapTo(HashSet()) { it.ailment }.size >= knob.param) 1 + knob.value / 100 else 1.0
+        return if (target.ailments.filter { it.ailment.ailing }.mapTo(HashSet()) { it.ailment }.size >= knob.param) 1 + knob.value / 100 else 1.0
     }
 }
 
@@ -483,7 +483,7 @@ private class KillBurst(effect: FateEffect, fate: FateEffects) : LeverReaction(e
         val bleed = fate.has(FateKnob.BURST_BLEED)
         hit.forEach { foe ->
             val dealt = battle.fateHit(foe, mapOf(DamageType.PHYSICAL to amount))
-            if (bleed && foe.alive && dealt.isNotEmpty()) battle.afflict(battle.heroFighter, foe, Ailment.BLEEDING, dealt)
+            if (bleed && foe.alive && dealt.isNotEmpty()) battle.afflict(battle.heroFighter, foe, Ailment.BLEEDING, AilingHit.of(dealt))
         }
         fate.of(FateKnob.BURST_HEAL)?.let { battle.restore(battle.heroFighter.body.maxLife * it.value / 100) }
     }

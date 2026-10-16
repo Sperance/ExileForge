@@ -233,6 +233,9 @@ class MetaCombatTest {
             // раньше, чем на поле остаётся один враг, - стая ×1.0 против Ведьмы и стая ×0.8 против Мародёра держат эти силы
             Scenario("WITCH", SkillType.SPELL, 1.0, cleared = false, seed = 13),
             Scenario("MARAUDER", SkillType.ATTACK, 0.8, cleared = false, seed = 13),
+            // Яд и хаос 0.15.0 (обычные монстры +35% здоровья): стая держится дольше срока кровотечения между наложениями - ещё одна
+            // стая ×1.0, где длительность кровотечения меняет бой
+            Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = false, seed = 5),
         )
 
         /** Известные строки и силы, что эталонная схватка не меняет, - с причиной. */
@@ -255,6 +258,8 @@ class MetaCombatTest {
             addAll(listOf("STOCK_PARCH_TAKEN:ADD", "STOCK_RECOVERY_SUPPRESSION:ADD", "STOCK_SPELL_SUPPRESSION:ADD", "STOCK_SUPPRESSION_AVOID:ADD"))
             addAll(listOf("STOCK_WOUND_DURATION:ADD", "STOCK_WOUND_EFFECT:ADD", "STOCK_WOUND_TAKEN:ADD"))
             addAll(listOf("STOCK_DAMAGE_VS_PARCHED:ADD", "STOCK_DAMAGE_VS_WOUNDED:ADD"))
+            // Иссушение наверняка (0.15.0: шанс 100% броска не тратит) - стая без маны, срезать ему нечего
+            addAll(listOf("STOCK_PARCH_CHANCE:ADD"))
             // Характеристики - небоевые: добыча и объекты карты
             addAll(listOf("STOCK_BLIGHT_REDUCTION:ADD", "STOCK_FATE_ASH_LOOT:ADD", "STOCK_VEILED:ADD", "STOCK_VEILED_LOOT:ADD"))
             // Характеристики - пределы: в схватке значение не доходит до потолка
@@ -286,6 +291,9 @@ class MetaCombatTest {
             addAll(listOf("POWER_RED_RAMPAGE", "POWER_EMPTY_THRONE", "POWER_BLACKFLAME_PACT"))
             // Силы «чистым» (0.14.2): обычные монстры +25% здоровья - стая эталона держит недуг на герое с первой секунды
             addAll(listOf("POWER_STILL_POSTURE"))
+            // Силы на огненный удар по герою (0.15.0, реш. 38/41): огонь в стае эталона несёт только редкий со всеми стихиями и хаосом,
+            // Разложение на герое растит хаос-часть - удар ведёт хаос, а не огонь
+            addAll(listOf("POWER_CINDER_SKIN", "POWER_FORGE_TEMPER", "POWER_EMBER_DRINK", "POWER_WYRM_CRUST"))
         }
     }
 }

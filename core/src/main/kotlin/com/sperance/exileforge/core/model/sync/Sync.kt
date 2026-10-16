@@ -94,7 +94,8 @@ import kotlinx.serialization.json.JsonElement
  * 88 - пакет 0.15.0: книга за главу отвечает `StoryBookTaken` и учит умение сразу (#47); цена маны всех умений - по уровню умения,
  *      без `ManaPrice` (#40); полярность `StatDef.gain` (#46); порядок альбома уникалок `rules.album` (#51); пояснения
  *      `stat.desc.ATLAS_*` (#41); `POST admin/fate?code=` (#35); заголовок `X-Client-Version`, `DossierAccount.lastSeenAt`,
- *      `DossierHero.lastSeenAt` (#36).
+ *      `DossierHero.lastSeenAt` (#36). Яд и хаос (реш. 36-43): `combat.ailments` - `parts`, `raw`, `limit`, `refresh`, `exposes`,
+ *      недуги `DECAYED` и `DRAINED`; `SkillDot.ailment`; `combat.finisherLife`; снят `combat.ailmentShare`.
  */
 const val API_REVISION = 88
 

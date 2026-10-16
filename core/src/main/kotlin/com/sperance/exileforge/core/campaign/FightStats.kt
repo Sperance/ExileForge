@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.campaign.combat.Action
+import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.HitKind
@@ -18,7 +19,10 @@ data class FightStats(
     val taken: Taken = Taken(),
     val guard: Guard = Guard(),
 ) {
-    /** Урон героя по врагам: по типам и умениям, удары, криты, промахи, заблокированные, сильнейший удар и что срезали защиты врагов. */
+    /**
+     * Урон героя по врагам: по типам и умениям, удары, криты, промахи, заблокированные, сильнейший удар и что срезали защиты врагов.
+     * Яд (0.15.0, реш. 43) - своей графой [poison], не хаосом; [exposed] - что прибавило Разложение врагов (часть урона, не сверх него).
+     */
     data class Dealt(
         val byType: Map<DamageType, Double> = emptyMap(),
         val bySkill: Map<String, Double> = emptyMap(),
@@ -30,8 +34,10 @@ data class FightStats(
         /** Сколько урона героя по типам срезали броня ([armour]) и сопротивления врагов. */
         val armour: Double = 0.0,
         val resisted: Map<DamageType, Double> = emptyMap(),
+        val poison: Double = 0.0,
+        val exposed: Double = 0.0,
     ) {
-        val total: Double get() = byType.values.sum()
+        val total: Double get() = byType.values.sum() + poison
 
         operator fun plus(other: Dealt) = Dealt(
             byType.merged(other.byType),
@@ -43,12 +49,14 @@ data class FightStats(
             maxOf(strongest, other.strongest),
             armour + other.armour,
             resisted.merged(other.resisted),
+            poison + other.poison,
+            exposed + other.exposed,
         )
     }
 
     /**
      * Урон врагов по герою: по типам, удары и сильнейший; куда лёг урон ударов - барьер, щит, мана, отложенный, здоровье - и урон
-     * недугов отдельно (у тика нет разбора по запасам).
+     * недугов отдельно (у тика нет разбора по запасам). Яд (0.15.0) - своей графой [poison], [exposed] - что прибавило Разложение на герое.
      */
     data class Taken(
         val byType: Map<DamageType, Double> = emptyMap(),
@@ -60,8 +68,10 @@ data class FightStats(
         val delayed: Double = 0.0,
         val life: Double = 0.0,
         val ailments: Double = 0.0,
+        val poison: Double = 0.0,
+        val exposed: Double = 0.0,
     ) {
-        val total: Double get() = byType.values.sum()
+        val total: Double get() = byType.values.sum() + poison
 
         operator fun plus(other: Taken) = Taken(
             byType.merged(other.byType),
@@ -73,6 +83,8 @@ data class FightStats(
             delayed + other.delayed,
             life + other.life,
             ailments + other.ailments,
+            poison + other.poison,
+            exposed + other.exposed,
         )
     }
 
@@ -155,9 +167,12 @@ data class FightStats(
         } else {
             val landing = trace?.landing
             val tick = event.action == Action.TICK
+            val poisoned = poisonTick(event)
             copy(
                 taken = taken.copy(
-                    byType = taken.byType.merged(RunStats.split(event)),
+                    byType = if (poisoned) taken.byType else taken.byType.merged(RunStats.split(event)),
+                    poison = taken.poison + if (poisoned) event.damage else 0.0,
+                    exposed = taken.exposed + exposedBy(event),
                     hits = taken.hits + if (tick) 0 else 1,
                     strongest = if (tick) taken.strongest else maxOf(taken.strongest, event.damage),
                     barrier = taken.barrier + (landing?.barrier ?: 0.0),
@@ -183,8 +198,11 @@ private fun FightStats.Dealt.withBlow(event: CombatEvent, trace: HitTrace?): Fig
         this
     } else {
         val blow = event.action != Action.TICK && event.action != Action.REFLECT
+        val poisoned = poisonTick(event)
         copy(
-            byType = byType.merged(RunStats.split(event)),
+            byType = if (poisoned) byType else byType.merged(RunStats.split(event)),
+            poison = poison + if (poisoned) event.damage else 0.0,
+            exposed = exposed + exposedBy(event),
             bySkill = bySkill.merged(mapOf(RunStats.skillKey(event) to event.damage)),
             hits = hits + if (blow) 1 else 0,
             crits = crits + if (event.kind == HitKind.CRIT) 1 else 0,
@@ -193,6 +211,16 @@ private fun FightStats.Dealt.withBlow(event: CombatEvent, trace: HitTrace?): Fig
             resisted = resisted.merged(trace.resistCut()),
         )
     }
+}
+
+/** Тик яда (0.15.0, реш. 43): в разборе - своя графа «Яд», а не хаос. */
+private fun poisonTick(event: CombatEvent): Boolean = event.action == Action.TICK && event.ailment == Ailment.POISONED
+
+/** Что прибавило событию [event] Разложение цели (0.15.0): из следа удара или тика. */
+private fun exposedBy(event: CombatEvent): Double = when (val trace = event.trace) {
+    is HitTrace -> trace.exposed
+    is TickTrace -> trace.exposed
+    else -> 0.0
 }
 
 /** Сколько срезала броня цели удара: доля брони от урона типа до защит. */

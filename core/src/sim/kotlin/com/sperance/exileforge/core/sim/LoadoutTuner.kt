@@ -28,7 +28,7 @@ class LoadoutTuner(private val index: ContentIndex) {
     private val targetLife = targetLifePowers(index)
 
     /** Урон набора в бою: по одной цели и по стае из трёх, в секунду. */
-    data class Damage(val single: Double, val pack: Double, val bySkill: Map<String, Double> = emptyMap()) {
+    data class Damage(val single: Double, val pack: Double, val bySkill: Map<String, Double> = emptyMap(), val byType: Map<String, Double> = emptyMap()) {
         val score: Double get() = sqrt(single.coerceAtLeast(1.0) * pack.coerceAtLeast(1.0))
     }
 
@@ -77,6 +77,7 @@ class LoadoutTuner(private val index: ContentIndex) {
             spawns.skilled(run.monsters.roll(zone, zone.monsters[s % zone.monsters.size], run.pool, dice, 0, index.campaign.rarity(rarity), run.areaLevel), dice)
         }
         val parts = HashMap<String, Double>()
+        val types = HashMap<String, Double>()
 
         // Урон «от здоровья цели» (силы и метки, что копят его) на манекене растёт с его здоровьем: как у зонда [Prober], два манекена
         // (×[LOW] и ×[HIGH] здоровья), урон набора - плоская часть решения системы из двух
@@ -84,7 +85,10 @@ class LoadoutTuner(private val index: ContentIndex) {
             val battle = arena.battle(foes.map { arena.phases.foe(Prober.dummy(it, big), run.areaLevel) }, 7_300L, false)
             while (battle.time < SECONDS && battle.outcome == null) battle.advance(0.25)
             val hits = battle.events.filter { it.actor == Side.HERO && !it.onSelf && it.skill !in targetLife }
-            if (count) hits.forEach { parts.merge(it.skill ?: "-", it.damage, Double::plus) }
+            // Тики недугов - своей долей по недугу (`~POISONED`), чтобы отчёт классов видел урон яда отдельно от удара
+            if (count) hits.forEach { parts.merge(it.skill ?: it.ailment?.let { a -> "~${a.name}" } ?: "-", it.damage, Double::plus) }
+            // Вид урона: тик недуга - своим недугом, удар - сильнейшим видом
+            if (count) hits.forEach { types.merge(it.ailment?.name ?: it.type?.name ?: "-", it.damage, Double::plus) }
             val life = foes.sumOf { arena.phases.foe(Prober.dummy(it, big), run.areaLevel).body.let { b -> b.maxLife + b.maxShield } }
             return hits.sumOf { it.damage } / battle.time.coerceAtLeast(0.1) to life
         }
@@ -94,7 +98,7 @@ class LoadoutTuner(private val index: ContentIndex) {
             val share = ((r2 - r1) / (l2 - l1)).coerceAtLeast(0.0)
             return (r1 - share * l1).coerceAtLeast(0.0)
         }
-        return Damage(flat(listOf(mob(MonsterRarity.RARE, 0))), flat((0 until 3).map { mob(MonsterRarity.NORMAL, it) }), parts)
+        return Damage(flat(listOf(mob(MonsterRarity.RARE, 0))), flat((0 until 3).map { mob(MonsterRarity.NORMAL, it) }), parts, types)
     }
 
     private fun zoneOf(level: Int): Zone = index.campaign.zones.filter { it.monsters.isNotEmpty() }.minBy { abs(it.level - level) }

@@ -29,6 +29,10 @@ enum class Term(vararg val marks: String) {
     WOUND("WOUND", "MONSTER_WITHER"),
     PARCH("PARCH", "MONSTER_WITHER"),
 
+    // Урон во времени и урон ударами (0.15.0, реш. 39): что растит недуги и урон умений во времени, а что - только удары
+    DOT("DOT_DAMAGE"),
+    HIT("HIT_DAMAGE"),
+
     // Подавление восстановления (4.2.0): не путать с подавлением чар `STOCK_SPELL_SUPPRESSION`
     RECOVERY_SUPPRESSION("RECOVERY_SUPPRESSION", "SUPPRESSION_AVOID"),
     STUN("STUN"),

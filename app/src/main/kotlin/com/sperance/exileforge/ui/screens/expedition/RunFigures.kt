@@ -47,9 +47,10 @@ import com.sperance.exileforge.ui.theme.*
     }
     if (breakdown) FightStatsSheet(null, summary.fights) { breakdown = false }
     if (open) {
-        Split(ui("run.dealt_by_type"), summary.dealt.mapKeys { typeTitle(it.key) }, summary.totalDealt)
+        // Яд (0.15.0, реш. 43) - своей долей, не хаосом
+        Split(ui("run.dealt_by_type"), summary.dealt.mapKeys { typeTitle(it.key) } + poisonPart(summary.fights.dealt.poison), summary.totalDealt)
         Split(ui("run.dealt_by_skill"), summary.bySkill.mapKeys { skillTitle(it.key) }, summary.totalDealt)
-        Split(ui("run.taken_by_type"), summary.taken.mapKeys { typeTitle(it.key) }, summary.totalTaken)
+        Split(ui("run.taken_by_type"), summary.taken.mapKeys { typeTitle(it.key) } + poisonPart(summary.fights.taken.poison), summary.totalTaken)
     }
 }
 
@@ -86,6 +87,9 @@ import com.sperance.exileforge.ui.theme.*
         MutedText(label, style = MaterialTheme.typography.labelSmall)
     }
 }
+
+/** Доля яда в разбивке по типам (0.15.0): своей строкой, когда он был. */
+private fun poisonPart(amount: Double): Map<String, Double> = if (amount > 0) mapOf(ui("breakdown.poison") to amount) else emptyMap()
 
 @Composable private fun Split(title: String, parts: Map<String, Double>, total: Double) {
     if (parts.isEmpty() || total <= 0) return

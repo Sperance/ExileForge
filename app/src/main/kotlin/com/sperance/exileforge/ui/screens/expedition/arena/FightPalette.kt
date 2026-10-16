@@ -20,6 +20,12 @@ internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
     MonsterRarity.UNIQUE -> Color(0xFFAF6025)
 }
 
+/**
+ * Цвет урона тика недуга [ailment] (0.15.0, реш. 43): яд - цветом своей плитки (зелёным), а не хаосом, как удар; прочие - цветом
+ * вида урона [type].
+ */
+internal fun tickTint(ailment: Ailment?, type: DamageType?, onHero: Boolean = false): Color = if (ailment == Ailment.POISONED) ailmentTint(ailment) else damageTint(type, onHero)
+
 /** Each damage type's colour, on a number and in the log alike. */
 internal fun damageTint(type: DamageType?, onHero: Boolean = false): Color = when (type) {
     DamageType.FIRE -> Ember
@@ -48,6 +54,8 @@ internal fun ailmentTint(ailment: Ailment): Color = when (ailment) {
     Ailment.BLEEDING -> LifeRed
     Ailment.WOUNDED -> Color(0xFF8A3324)
     Ailment.PARCHED -> Color(0xFFC9A05A)
+    Ailment.DECAYED -> Elder
+    Ailment.DRAINED -> Color(0xFF8E5BC8)
 }
 
 internal fun Ailment.key() = "enum.ailment.$name"
@@ -70,8 +78,8 @@ internal fun ailmentTip(view: AilmentView) = Tip(
 
 /** Как окно недуга [ailment] пишет его силу [value] (4.11.0): урон в секунду, доля или срезанное восстановление запаса. */
 private fun strengthFact(ailment: Ailment, value: Double): String = when (ailment) {
-    Ailment.BURNING, Ailment.POISONED, Ailment.BLEEDING -> ui("fight.fact_dps", fineNumber(value))
-    Ailment.CHILLED, Ailment.FROZEN, Ailment.SHOCKED -> ui("fight.fact_percent", fineNumber(value))
+    Ailment.BURNING, Ailment.POISONED, Ailment.BLEEDING, Ailment.DRAINED -> ui("fight.fact_dps", fineNumber(value))
+    Ailment.CHILLED, Ailment.FROZEN, Ailment.SHOCKED, Ailment.DECAYED -> ui("fight.fact_percent", fineNumber(value))
     Ailment.WOUNDED -> ui("fight.fact_curb_life", fineNumber(value))
     Ailment.PARCHED -> ui("fight.fact_curb_mana", fineNumber(value))
 }
@@ -83,8 +91,8 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
     Ailment.FROZEN -> .55f
     Ailment.BURNING -> .35f
     Ailment.CHILLED, Ailment.POISONED, Ailment.SHOCKED -> .3f
-    Ailment.BLEEDING, Ailment.WOUNDED -> .25f
-    Ailment.PARCHED -> .2f
+    Ailment.BLEEDING, Ailment.WOUNDED, Ailment.DRAINED -> .25f
+    Ailment.PARCHED, Ailment.DECAYED -> .2f
 }
 
 /** A clock in seconds for the portraits' idle motion, ticking once a frame while the frame is on screen. */

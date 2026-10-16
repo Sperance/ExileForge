@@ -221,7 +221,8 @@ internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
     val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
     // Состояние ловушки (4.2.0) - из типа её урона, для всех ловушек
     val ailment = HazardAilment.of(trap, type, share)
-    ailment?.let { afflict(CarriedAilment(it.ailment, it.seconds, hero.maxLife * it.lifeShare / 100 * (1 - hero.resist(type)), it.seconds, chaos = type == DamageType.CHAOS)) }
+    // Основа до защит (0.15.0, яд) - сопротивление режет тик, а не наложение
+    ailment?.let { afflict(CarriedAilment(it.ailment, it.seconds, hero.maxLife * it.lifeShare / 100 * (if (law.raw(it.ailment)) 1.0 else 1 - hero.resist(type)), it.seconds, chaos = type == DamageType.CHAOS)) }
     val wound = hurt(dealt * hero.damageTaken(type), type == DamageType.CHAOS)
     showHazard(HazardView(nextHazard++, type, wound.life.roundToInt(), wound.shield.roundToInt(), ailment))
 }

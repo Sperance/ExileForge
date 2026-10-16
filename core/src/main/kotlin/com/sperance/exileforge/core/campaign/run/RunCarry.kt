@@ -24,7 +24,7 @@ internal fun ExpeditionRun.ailing(dt: Double) {
     val ailments = carry.ailments
     for (active in ailments) {
         if (!active.ailment.hurts) continue
-        val wound = hurt(law.perSecond(hero, ailments, active) * minOf(dt, active.left), AilmentLaw.piercing(active))
+        val wound = hurt(law.perSecond(hero, ailments, active) * minOf(dt, active.left), law.piercing(active))
         // Гибель от тика: несомое уже снято, заход кончен
         if (phase != RunPhase.MAP) return
         ticks.getOrPut(active.ailment) { AilmentTick() }.wound += wound
@@ -72,7 +72,7 @@ internal fun ExpeditionRun.stalling(): Ailment? = hurtingRates().maxByOrNull { i
 internal fun ExpeditionRun.roadFlow(): LifeFlow {
     val rates = hurtingRates()
     val total = rates.sumOf { it.second }
-    val piercing = rates.filter { AilmentLaw.piercing(it.first) }.sumOf { it.second }
+    val piercing = rates.filter { law.piercing(it.first) }.sumOf { it.second }
     return RoadLife.flow(hero, pace, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), rates.maxByOrNull { it.second }?.first?.ailment)
         .copy(ailments = total, shielded = EnergyShield.absorbed(shield, total, piercing))
 }

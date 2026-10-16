@@ -48,7 +48,7 @@ internal fun Battle.afflictSelf(ailment: Ailment, duration: Double) {
     val (rule, _) = ruleOf[ailment] ?: return
     if (duration <= 0 || hero.body.immune(ailment)) return
     val magnitude = if (ailment.hurts) hero.body.maxLife * rules.selfBurn else rule.magnitude
-    place(hero, ActiveAilment(ailment, time + duration, magnitude, duration, Side.MONSTER), rule.stacks)
+    place(hero, ActiveAilment(ailment, time + duration, magnitude, duration, Side.MONSTER), rule)
 }
 
 /** A foe finished off by a power: down at once, a kill as any other. */

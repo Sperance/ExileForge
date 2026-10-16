@@ -191,15 +191,18 @@ data class Combatant(
         return DamageTaken.of(this, own)
     }
 
-    /** How much harder this fighter hits a target under [ailments]: any ailment counts once, each named one on top. */
+    /** How much harder this fighter hits a target under [ailments]: any ailment counts once, each named one on top; не недуги ([Ailment.ailing]) - нет. */
     fun damageAgainst(ailments: Collection<Ailment>): Double {
-        if (ailments.isEmpty()) return 1.0
+        if (ailments.none { it.ailing }) return 1.0
         val named = ailments.toSet().sumOf { max(0.0, stat(it.against)) }
         return 1 + (max(0.0, stat(CoreStat.DAMAGE_VS_AILED.code)) + named) / 100
     }
 
-    /** How much longer the ailments this fighter inflicts last on its foes: общее и своё увеличение вместе - под потолком `caps.ailmentDuration` (0.15.0). */
-    fun ailmentDurationOnFoes(ailment: Ailment): Double = rules.caps.ailmentLasting(max(0.0, stat(CoreStat.AILMENT_DURATION.code)) + max(0.0, stat("STOCK_${ailment.word}_DURATION")))
+    /**
+     * How much longer the ailments this fighter inflicts last on its foes: общее и своё увеличение вместе - под потолком `caps.ailmentDuration`
+     * (0.15.0); общее - только недугам ([Ailment.ailing]), не Разложению и не урону во времени умения.
+     */
+    fun ailmentDurationOnFoes(ailment: Ailment): Double = rules.caps.ailmentLasting((if (ailment.ailing) max(0.0, stat(CoreStat.AILMENT_DURATION.code)) else 0.0) + max(0.0, stat("STOCK_${ailment.word}_DURATION")))
 
     /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill (server 0.66.0). */
     val recoveryRate = max(0.0, 1 + stat(CoreStat.RECOVERY_RATE.code) / 100)
@@ -258,8 +261,23 @@ data class Combatant(
     /** What gear adds to the rule's chance to inflict [ailment], in percent; chill has no such stat. */
     fun inflictChance(ailment: Ailment) = max(0.0, stat("STOCK_${ailment.word}_CHANCE"))
 
-    /** How much heavier [ailment]'s damage over time runs. */
-    fun ailmentDamage(ailment: Ailment) = 1 + max(0.0, ailment.damage?.let(::stat) ?: 0.0) / 100
+    /** How much heavier [ailment]'s damage over time runs: свой урон недуга и (0.15.0, реш. 39) урон во времени `STOCK_DOT_DAMAGE`. */
+    fun ailmentDamage(ailment: Ailment) = 1 + (max(0.0, ailment.damage?.let(::stat) ?: 0.0) + if (ailment.hurts) max(0.0, stat(CoreStat.DOT_DAMAGE.code)) else 0.0) / 100
+
+    /** «+N к пределу» недуга [ailment] (0.15.0, реш. 40: `STOCK_<слово>_LIMIT`): стаков этого бойца действует больше предела правила. */
+    fun ailmentLimit(ailment: Ailment): Double = max(0.0, stat("STOCK_${ailment.word}_LIMIT"))
+
+    /**
+     * Доля прибавки множителя крита, что ложится на недуг [ailment] с основой до защит (0.15.0, реш. 42, `STOCK_<слово>_CRITICAL`, в духе
+     * «Совершенной агонии»): без неё крит такой недуг не растит.
+     */
+    fun ailmentCritical(ailment: Ailment): Double = max(0.0, stat("STOCK_${ailment.word}_CRITICAL")) / 100
+
+    /**
+     * Урон ударами (0.15.0, реш. 39) бойца без своего роста урона (монстр): множитель удара; у героя бой кладёт его увеличением рядом с
+     * увеличениями удара. Недуги и урон во времени он не растит.
+     */
+    val hitMore = max(0.0, 1 + stat(CoreStat.HIT_DAMAGE.code) / 100)
     fun avoid(ailment: Ailment) = percent("STOCK_AVOID_${ailment.word}")
 
     /** What is left of [ailment]'s duration on this fighter, never less than the rule's cap allows. */

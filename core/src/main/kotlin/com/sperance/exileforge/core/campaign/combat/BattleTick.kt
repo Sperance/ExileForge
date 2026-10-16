@@ -363,78 +363,120 @@ private fun Battle.degenerate(me: Fighter, dt: Double) {
     if (!me.alive) fell(me)
 }
 
-/** Ailments run their course: damage over time is applied every slice and logged once a second. */
+/**
+ * Ailments run their course: damage over time is applied every slice and logged once a second. С 0.15.0 (реш. 36-43) тикают только
+ * действующие стаки ([Fighter.acting]: предел яда), основа до защит ([AilmentRule.raw]) встречает сопротивление и «получаемый урон»
+ * цели на каждом тике ([Fighter.dotTaken]), Разложение растит тик своего вида; строка журнала - на недуг и умение, что его наложило.
+ */
 private fun Battle.burn(me: Fighter, dt: Double) {
     if (me.ailments.isEmpty()) return
     val wasAlive = me.alive
     // The kill goes to the ailment that dealt the most this slice (3.71.0): a spell's burn beside an attack's bleed takes no one else's kill
     var heaviest: ActiveAilment? = null
     var heaviestSlice = 0.0
-    me.ailments.filter { it.ailment.hurts }.forEach { active ->
-        val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
-        // Whatever deals damage at all deals at least [CombatRules.minDot] a tick, however it is taken ([dotRate] - одна формула с картой).
-        val dealt = dotRate(active.ailment, active.magnitude, me.body, me.weakness(), rules.minDot) * span
-        // Разлом (3.96.0): печати Стража и «Одна стихия» Владыки
-        val rift = sealed(me) * lawTaken(me, if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.second)
-        val unruled = if (rift == 1.0) dealt else dealt * rift
-        if (unruled <= 0 || !me.alive || me.invulnerable) return@forEach
-        val chaos = active.ailment == Ailment.POISONED || active.chaos
-        if (chaos && me.body.chaosImmune) return@forEach
-        // Каменная кожа (4.9.0): секунда недугов по герою - под потолком удара
-        val slice = fateDot(me, foeFighters.getOrNull(active.foe)?.takeIf { active.source == Side.MONSTER }, unruled)
-        if (slice <= 0) return@forEach
-        wound(me, slice, chaos)
-        me.ticking.merge(active.ailment, slice, Double::plus)
-        if (slice > heaviestSlice) {
-            heaviest = active
-            heaviestSlice = slice
+    me.ailments.mapTo(LinkedHashSet()) { it.ailment }.filter { it.hurts }.forEach { kind ->
+        val taken = dotTaken(me, kind)
+        me.acting(kind).forEach { active ->
+            val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
+            // Whatever deals damage at all deals at least [CombatRules.minDot] a tick, however it is taken ([dotRate] - одна формула с картой).
+            val dealt = dotRate(active.ailment, active.magnitude, me.body, me.weakness(), rules.minDot, taken.of(active)) * span
+            // Разлом (3.96.0): печати Стража и «Одна стихия» Владыки
+            val rift = sealed(me) * lawTaken(me, tickType(active))
+            val unruled = if (rift == 1.0) dealt else dealt * rift
+            if (unruled <= 0 || !me.alive || me.invulnerable) return@forEach
+            val chaos = tickType(active) == DamageType.CHAOS
+            if (chaos && me.body.chaosImmune) return@forEach
+            // Каменная кожа (4.9.0): секунда недугов по герою - под потолком удара
+            val slice = fateDot(me, foeFighters.getOrNull(active.foe)?.takeIf { active.source == Side.MONSTER }, unruled)
+            if (slice <= 0) return@forEach
+            wound(me, slice, chaos)
+            me.ticking.merge(Ticking(active.ailment, active.skill), slice, Double::plus)
+            if (slice > heaviestSlice) {
+                heaviest = active
+                heaviestSlice = slice
+            }
         }
     }
     val expired = me.ailments.filter { it.until <= time }
     val bySpell = heaviest?.let { it.spell && it.source == Side.HERO } == true
     me.ailments.removeAll(expired)
-    me.ticking.keys.toList().forEach { ailment ->
+    val due = me.ticking.keys.mapTo(LinkedHashSet()) { it.ailment }.associateWith { ailment ->
         val since = me.tickedAt[ailment] ?: time.also { me.tickedAt[ailment] = it }
-        val due = time - since >= TICK - 1e-9
-        if (due || expired.any { it.ailment == ailment } || !me.alive) {
-            var amount = me.ticking.remove(ailment) ?: 0.0
-            me.tickedAt[ailment] = time
-            if (amount > 0) {
-                val active = (me.ailments + expired).firstOrNull { it.ailment == ailment }
-                // A tick cut short — the ailment ran out or the target fell mid-beat — still deals its [CombatRules.minDot].
-                if (amount < rules.minDot && me.alive && !me.invulnerable) {
-                    wound(me, rules.minDot - amount, ailment == Ailment.POISONED || active?.chaos == true)
-                    amount = rules.minDot
-                }
-                val source = active?.source ?: me.side.other
-                val type = if (active?.chaos == true) DamageType.CHAOS else ruleOf[ailment]?.second
-                // 3.37.0: the tick names its ailment and carries how strong it runs and what grows it.
-                val own = (me.ailments + expired).filter { it.ailment == ailment }
-                val base = own.filter { it.until > time - TICK }.sumOf { it.magnitude }
-                val seals = sealed(me)
-                val law = lawTaken(me, type)
-                val factors = listOfNotNull(
-                    FactorTrace(FactorKey.BASE, base, listOfNotNull(ailment.damage, CoreStat.FASTER_AILMENTS.code, CoreStat.AILMENT_DURATION.code, "STOCK_${ailment.word}_DURATION")),
-                    FactorTrace(FactorKey.SHOCK, me.weakness(), target = listOf(CoreStat.SHOCK_TAKEN.code)),
-                    FactorTrace(FactorKey.TAKEN, me.body.dotTaken * me.body.ailmentTaken(ailment), target = listOf(CoreStat.DOT_TAKEN.code, CoreStat.BLEED_TAKEN.code)),
-                    FactorTrace(FactorKey.SEALS, seals).takeIf { seals != 1.0 },
-                    FactorTrace(FactorKey.LAW, law).takeIf { law != 1.0 },
-                    FactorTrace(FactorKey.TOTAL, amount),
-                )
-                record(
-                    source, Action.TICK, HitKind.HIT, amount, type, 0.0, false, emptyList(), ailment,
-                    if (me.side == Side.MONSTER) me.index else active?.foe ?: 0,
-                    trace = TickTrace(
-                        ailment, base * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(ailment),
-                        (own.maxOfOrNull { it.until } ?: time) - time, own.maxOfOrNull { it.duration } ?: 0.0, own.size, shot(me), factors, origin,
-                        (if (source == Side.HERO) heroFighter else foeFighters.getOrNull(active?.foe ?: -1))?.let { shot(it) },
-                    ),
-                )
-                if (source == Side.HERO) sealStruck(me, crit = false)
-            }
+        time - since >= TICK - 1e-9 || expired.any { it.ailment == ailment } || !me.alive
+    }
+    me.ticking.keys.toList().forEach { key ->
+        val ailment = key.ailment
+        if (due[ailment] != true) return@forEach
+        var amount = me.ticking.remove(key) ?: 0.0
+        me.tickedAt[ailment] = time
+        if (amount <= 0) return@forEach
+        val own = (me.ailments + expired).filter { it.ailment == ailment && it.skill == key.skill }
+        val active = own.firstOrNull()
+        val chaos = active?.let { tickType(it) == DamageType.CHAOS } ?: (ruleOf[ailment]?.second == DamageType.CHAOS)
+        // A tick cut short — the ailment ran out or the target fell mid-beat — still deals its [CombatRules.minDot].
+        if (amount < rules.minDot && me.alive && !me.invulnerable) {
+            wound(me, rules.minDot - amount, chaos)
+            amount = rules.minDot
         }
+        val source = active?.source ?: me.side.other
+        val type = active?.let(::tickType) ?: ruleOf[ailment]?.second
+        // 3.37.0: the tick names its ailment and carries how strong it runs and what grows it.
+        val acting = me.acting(ailment).filter { it.skill == key.skill && it.until > time - TICK }.ifEmpty { own.filter { it.until > time - TICK } }
+        val base = acting.sumOf { it.magnitude }
+        val taken = dotTaken(me, ailment)
+        val seals = sealed(me)
+        val law = lawTaken(me, type)
+        val defence = active?.let { taken.defence(it) } ?: 1.0
+        val exposure = active?.let { taken.exposure(it) } ?: 1.0
+        val factors = listOfNotNull(
+            FactorTrace(FactorKey.BASE, base, listOfNotNull(ailment.damage, CoreStat.DOT_DAMAGE.code, CoreStat.FASTER_AILMENTS.code, CoreStat.AILMENT_DURATION.code, "STOCK_${ailment.word}_DURATION", "STOCK_${ailment.word}_LIMIT")),
+            FactorTrace(FactorKey.DEFENCE, defence, target = listOfNotNull(type?.resist)).takeIf { defence != 1.0 },
+            FactorTrace(FactorKey.SHOCK, me.weakness(), target = listOf(CoreStat.SHOCK_TAKEN.code)),
+            FactorTrace(FactorKey.TAKEN, me.body.dotTaken * me.body.ailmentTaken(ailment), target = listOf(CoreStat.DOT_TAKEN.code, CoreStat.BLEED_TAKEN.code)),
+            FactorTrace(FactorKey.DECAY, exposure).takeIf { exposure != 1.0 },
+            FactorTrace(FactorKey.SEALS, seals).takeIf { seals != 1.0 },
+            FactorTrace(FactorKey.LAW, law).takeIf { law != 1.0 },
+            FactorTrace(FactorKey.TOTAL, amount),
+        )
+        record(
+            source, Action.TICK, HitKind.HIT, amount, type, 0.0, false, emptyList(), ailment,
+            if (me.side == Side.MONSTER) me.index else active?.foe ?: 0,
+            key.skill,
+            trace = TickTrace(
+                ailment, base * defence * exposure * me.weakness() * me.body.dotTaken * me.body.ailmentTaken(ailment),
+                (own.maxOfOrNull { it.until } ?: time) - time, own.maxOfOrNull { it.duration } ?: 0.0, own.size, shot(me), factors, origin,
+                (if (source == Side.HERO) heroFighter else foeFighters.getOrNull(active?.foe ?: -1))?.let { shot(it) },
+                exposed = amount * (1 - 1 / exposure),
+            ),
+        )
+        if (source == Side.HERO) sealStruck(me, crit = false)
     }
     if (wasAlive && !me.alive) fell(me, bySpell)
+}
+
+/** Вид урона тика [active]: хаос, если горит хаосом, иначе - вид его правила. */
+private fun Battle.tickType(active: ActiveAilment): DamageType? = if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.second
+
+/**
+ * Что режет и растит тик недуга [ailment] на бойце [me] (0.15.0, реш. 36/41): основа до защит ([AilmentRule.raw]) - сопротивление вида
+ * тика (без пробивания) и «получаемый урон» вида; любой тик - уязвимость своего вида (Разложение). Снижение сопротивления позже
+ * усиливает и висящие стаки - тик читает лист цели в свой миг.
+ */
+private fun Battle.dotTaken(me: Fighter, ailment: Ailment): DotTaken = DotTaken(me, ruleOf[ailment]?.first?.raw == true) { tickType(it) }
+
+/** Защиты и уязвимость цели [fighter] к тику: [raw] - основа до защит, [typeOf] - вид урона тика. */
+internal class DotTaken(private val fighter: Fighter, private val raw: Boolean, private val typeOf: (ActiveAilment) -> DamageType?) {
+    /** Доля тика [active], что проходит сопротивление и «получаемый урон» вида: у основы после защит - целиком. */
+    fun defence(active: ActiveAilment): Double {
+        val type = typeOf(active) ?: return 1.0
+        return if (raw) (1 - fighter.body.resist(type)) * fighter.body.damageTaken(type) else 1.0
+    }
+
+    /** Уязвимость к виду тика [active] (Разложение). */
+    fun exposure(active: ActiveAilment): Double = typeOf(active)?.let(fighter::exposure) ?: 1.0
+
+    /** Множитель тика [active]: защиты и уязвимость. */
+    fun of(active: ActiveAilment): Double = defence(active) * exposure(active)
 }
 
 /** Damage over time on [me]: a barrier soaks it first, then the shield — unless it is [chaos] — then life. */

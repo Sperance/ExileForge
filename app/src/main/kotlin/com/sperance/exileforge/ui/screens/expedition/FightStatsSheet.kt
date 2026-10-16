@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.campaign.FightStats
+import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.number
@@ -26,6 +27,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.PillTabs
+import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.theme.*
 
@@ -75,8 +77,9 @@ private enum class BreakdownTab(val key: String) {
         number(dealt.strongest) to ui("breakdown.kpi.strongest"),
     )
     if (dealt.total <= 0) return MutedText(ui("breakdown.empty"))
-    Bars(ui("breakdown.by_type"), dealt.byType.typed(), dealt.total)
+    Bars(ui("breakdown.by_type"), dealt.byType.typed() + poisonBar(dealt.poison), dealt.total)
     Bars(ui("breakdown.by_skill"), dealt.bySkill.entries.map { Bar(skillTitle(it.key), it.value, Gold) }, dealt.total)
+    Bars(ui("breakdown.decay_title"), listOf(Bar(ui("breakdown.decay"), dealt.exposed, Elder)), dealt.total)
     val cut = dealt.armour + dealt.resisted.values.sum()
     if (cut > 0) Bars(ui("breakdown.foes_cut"), listOf(Bar(ui("breakdown.armour"), dealt.armour, Brass)) + dealt.resisted.typed(), cut)
     Chips(
@@ -97,7 +100,8 @@ private enum class BreakdownTab(val key: String) {
         taken.hits.toString() to ui("breakdown.kpi.hits"),
     )
     if (taken.total <= 0) return MutedText(ui("breakdown.untouched"))
-    Bars(ui("breakdown.by_type"), taken.byType.typed(onHero = true), taken.total)
+    Bars(ui("breakdown.by_type"), taken.byType.typed(onHero = true) + poisonBar(taken.poison), taken.total)
+    Bars(ui("breakdown.decay_title"), listOf(Bar(ui("breakdown.decay"), taken.exposed, Elder)), taken.total)
     val pools = listOf(
         Bar(ui("breakdown.pool.barrier"), taken.barrier, GoldBright),
         Bar(ui("breakdown.pool.shield"), taken.shield, ShieldCyan),
@@ -132,6 +136,9 @@ private enum class BreakdownTab(val key: String) {
 
 /** Полоса разбора: подпись, число и цвет. */
 private data class Bar(val name: String, val amount: Double, val tint: Color)
+
+/** Графа яда (0.15.0, реш. 43): своим цветом плитки яда, не хаосом. */
+private fun poisonBar(amount: Double): Bar = Bar(ui("breakdown.poison"), amount, ailmentTint(Ailment.POISONED))
 
 /** Урон по типам - полосами цвета своей стихии; по герою физический - кровью, как числа боя. */
 private fun Map<DamageType, Double>.typed(onHero: Boolean = false): List<Bar> = entries.map { (type, amount) -> Bar(typeTitle(type), amount, damageTint(type, onHero)) }

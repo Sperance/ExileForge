@@ -76,6 +76,8 @@ data class FloatingHit(
     val inflicted: List<Ailment>,
     val stunned: Boolean,
     val foe: Int = 0,
+    /** Недуг тика (0.15.0): яд рисуется цветом своей плитки, а не хаосом; у удара - null. */
+    val ailment: Ailment? = null,
 )
 
 /** The blow on screen right now, for the cards to act out. */

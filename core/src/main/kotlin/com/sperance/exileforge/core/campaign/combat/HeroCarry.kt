@@ -45,8 +45,11 @@ data class HeroCarry(
     }
 }
 
-/** Недуг на герое вне боя: [left] секунд из [duration], сила [magnitude] - как у [ActiveAilment]; [chaos] - горит хаосом. */
-data class CarriedAilment(val ailment: Ailment, val left: Double, val magnitude: Double, val duration: Double, val chaos: Boolean = false)
+/**
+ * Недуг на герое вне боя: [left] секунд из [duration], сила [magnitude] - как у [ActiveAilment]; [chaos] - горит хаосом; [limit] - сколько
+ * сильнейших стаков действуют (0.15.0, как [ActiveAilment.limit]).
+ */
+data class CarriedAilment(val ailment: Ailment, val left: Double, val magnitude: Double, val duration: Double, val chaos: Boolean = false, val limit: Int? = null)
 
 /** Временный бафф или проклятие вне боя: [left] секунд из [duration]; остальное - как у [TimedEffect]. */
 data class CarriedEffect(
@@ -74,12 +77,13 @@ internal fun heldStrength(ailment: Ailment, strongest: Double, body: Combatant, 
 }
 
 /**
- * Урон в секунду недуга силой [magnitude] на бойце [body] под шоком [weakness]: приём урона во времени и самого недуга; что
- * ранит вообще - не меньше [minDot] за тик. Одна формула боя и карты.
+ * Урон в секунду недуга силой [magnitude] на бойце [body] под шоком [weakness]: приём урона во времени и самого недуга, защиты и
+ * уязвимость цели к тику [taken] (0.15.0: сопротивление основы до защит и Разложение); что ранит вообще - не меньше [minDot] за тик.
+ * Одна формула боя и карты.
  */
-internal fun dotRate(ailment: Ailment, magnitude: Double, body: Combatant, weakness: Double, minDot: Double): Double {
-    val rate = magnitude * weakness * body.dotTaken * body.ailmentTaken(ailment)
-    return if (magnitude > 0) max(rate, minDot / Battle.TICK) else rate
+internal fun dotRate(ailment: Ailment, magnitude: Double, body: Combatant, weakness: Double, minDot: Double, taken: Double = 1.0): Double {
+    val rate = magnitude * taken * weakness * body.dotTaken * body.ailmentTaken(ailment)
+    return if (magnitude > 0 && taken > 0) max(rate, minDot / Battle.TICK) else rate
 }
 
 /**
@@ -92,8 +96,33 @@ class AilmentLaw(private val rules: CombatRules) {
     /** Сила недуга [ailment] среди [ailments] на [body]; нет - 0. */
     fun held(body: Combatant, ailments: List<CarriedAilment>, ailment: Ailment): Double = ailments.filter { it.ailment == ailment }.maxOfOrNull { it.magnitude }?.let { heldStrength(ailment, it, body, ruleOf[ailment]) } ?: 0.0
 
-    /** Урон в секунду недуга [active] на [body] под шоком из [ailments]. */
-    fun perSecond(body: Combatant, ailments: List<CarriedAilment>, active: CarriedAilment): Double = dotRate(active.ailment, active.magnitude, body, 1 + held(body, ailments, Ailment.SHOCKED) / 100, rules.minDot)
+    /**
+     * Урон в секунду недуга [active] на [body] под шоком из [ailments]; стак вне предела ([acting]) не ранит. Основа до защит (0.15.0) -
+     * под сопротивлением и «получаемым уроном» вида, тик своего вида - под Разложением, как в бою.
+     */
+    fun perSecond(body: Combatant, ailments: List<CarriedAilment>, active: CarriedAilment): Double {
+        if (acting(ailments, active.ailment).none { it === active }) return 0.0
+        val type = type(active)
+        val defence = if (ruleOf[active.ailment]?.raw == true && type != null) (1 - body.resist(type)) * body.damageTaken(type) else 1.0
+        return dotRate(active.ailment, active.magnitude, body, 1 + held(body, ailments, Ailment.SHOCKED) / 100, rules.minDot, defence * exposure(body, ailments, type))
+    }
+
+    /** Действующие стаки [ailment] среди [ailments] (0.15.0): сильнейшие под пределом, без предела - все - как `Battle.Fighter.acting`. */
+    fun acting(ailments: List<CarriedAilment>, ailment: Ailment): List<CarriedAilment> {
+        val own = ailments.filter { it.ailment == ailment }
+        val limit = own.maxOfOrNull { it.limit ?: Int.MAX_VALUE } ?: return own
+        return if (own.size <= limit) own else own.sortedByDescending { it.magnitude }.take(limit)
+    }
+
+    /** Уязвимость к урону [type] на [body] от недугов-уязвимостей среди [ailments] (Разложение), как в бою. */
+    private fun exposure(body: Combatant, ailments: List<CarriedAilment>, type: DamageType?): Double {
+        type ?: return 1.0
+        val more = ruleOf.filter { (_, rule) -> rule.exposes && rule.type == type.attack }.keys.sumOf { ailment -> acting(ailments, ailment).sumOf { it.magnitude } * body.ailmentTaken(ailment) }
+        return 1 + more / 100
+    }
+
+    /** Основа недуга [ailment] - до защит цели ([AilmentRule.raw], 0.15.0): сопротивление режет тик, а не наложение. */
+    fun raw(ailment: Ailment): Boolean = ruleOf[ailment]?.raw == true
 
     /** Сколько процентов запаса [pool] режут [ailments] на [body]. */
     fun curb(body: Combatant, ailments: List<CarriedAilment>, pool: RecoveryPool): Double {
@@ -102,12 +131,23 @@ class AilmentLaw(private val rules: CombatRules) {
         return Recovery.curb(rules.ailments, pool, active)
     }
 
-    /** Новый недуг [fresh] к [ailments]: копится, если правило стакает, иначе остаётся сильнейший с дальним концом. */
+    /**
+     * Новый недуг [fresh] к [ailments]: копится, если правило стакает (с обновлением - продлевает все и снимает слабейшие сверх предела,
+     * как `Battle.place`), иначе остаётся сильнейший с дальним концом.
+     */
     fun laid(ailments: List<CarriedAilment>, fresh: CarriedAilment): List<CarriedAilment> {
         val existing = ailments.filter { it.ailment == fresh.ailment }
+        val rule = ruleOf[fresh.ailment]
         return when {
-            ruleOf[fresh.ailment]?.stacks == true || existing.isEmpty() -> ailments + fresh
+            rule?.stacks == true && rule.refresh -> {
+                val kept = (existing.map { it.copy(left = max(it.left, fresh.left)) } + fresh).sortedByDescending { it.magnitude }
+                ailments - existing.toSet() + (fresh.limit?.let { kept.take(it) } ?: kept)
+            }
+
+            rule?.stacks == true || existing.isEmpty() -> ailments + fresh
+
             existing.maxOf { it.magnitude } <= fresh.magnitude -> ailments - existing.toSet() + fresh
+
             else -> existing.maxBy { it.magnitude }.let { kept -> ailments - existing.toSet() + kept.copy(left = max(kept.left, fresh.left)) }
         }
     }
@@ -115,8 +155,6 @@ class AilmentLaw(private val rules: CombatRules) {
     /** Вид урона недуга [active]: хаос, если он горит хаосом, иначе - вид его правила. */
     fun type(active: CarriedAilment): DamageType? = if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.type?.let(DamageType::of)
 
-    companion object {
-        /** Недуг [active] идёт мимо щита: яд и всё, что горит хаосом. */
-        fun piercing(active: CarriedAilment): Boolean = active.ailment == Ailment.POISONED || active.chaos
-    }
+    /** Недуг [active] идёт мимо щита: тик хаоса - яд, урон умения и всё, что горит хаосом. */
+    fun piercing(active: CarriedAilment): Boolean = type(active) == DamageType.CHAOS
 }

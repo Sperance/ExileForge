@@ -55,7 +55,7 @@ private fun Battle.holds(condition: SlotCondition, opened: Boolean): Boolean {
         SlotCondition.MANA_30 -> hero.mana < manaCap() * 0.3
         SlotCondition.SHIELD_BROKEN -> hero.body.maxShield > 0 && hero.shield <= 0.5
         SlotCondition.ENEMIES_3 -> enemies() >= 3
-        SlotCondition.AILING -> hero.ailments.isNotEmpty()
+        SlotCondition.AILING -> hero.ailed
         SlotCondition.MANUAL -> false
     }
 }
@@ -258,7 +258,7 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
     val skill = body[CoreStat.SKILL_DAMAGE.code]
     val growth = heroGrowth(own)
     hit.weapon?.let { weapon ->
-        val finisher = hit.finisher?.takeIf { target.ailments.isNotEmpty() || target.life < target.body.maxLife * 0.3 }
+        val finisher = hit.finisher?.takeIf { target.ailed || target.life < target.body.maxLife * rules.finisherLife / 100 }
         val share = (finisher ?: weapon).at(level) / 100
         body.damage.forEach { (type, value) ->
             val grown = growth.increased(type.attack)
@@ -295,41 +295,47 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
 internal fun Battle.resolve(ailment: SkillAilment, element: DamageType, level: Int): Pair<Ailment, Double>? = (if (ailment.ailment == ELEMENT) Ailment.of(element) else Ailment.byWord(ailment.ailment))?.let { it to ailment.chance.at(level) }
 
 /**
- * A spell of damage over time: its roll grown like a spell's, taken by the target's resistance at once
- * and laid on as the ailment of its element — a poison stacks — for its duration.
+ * A spell of damage over time: its roll grown like a spell's, laid on as the dot's own state ([SkillDot.ailment], 0.15.0, реш. 36/42):
+ * яд - стаком под пределом яда, свой урон умения («Высасывание сути») - одним экземпляром, что обновляется. Основа до защит
+ * ([AilmentRule.raw]) встречает сопротивление цели на каждом тике, без пробивания; иначе - сразу, как прежде. Длительность недугов на
+ * врагах прибавляет урон (больше тиков: сила - бросок за срок умения). Тики идут в разбор боя умением [code]; прочие недуги и
+ * Разложение - строками [SkillDot.ailments].
  */
 private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boolean, power: Double = 1.0) {
     val hero = heroFighter
     val type = DamageType.element(dot.element) ?: DamageType.CHAOS
-    val ailment = Ailment.of(type).takeIf { it.hurts } ?: Ailment.POISONED
+    val ailment = Ailment.byWord(dot.ailment)?.takeIf { it.hurts } ?: return
+    val rule = ruleOf[ailment]?.first
     val growth = heroGrowth()
     val increase = growth.increased(type.attack) + hero.body[CoreStat.SPELL_DAMAGE.code] + hero.body[CoreStat.SKILL_DAMAGE.code]
     targets(dot.targets).forEach { target ->
         val low = dot.min.at(level)
         // Урон во времени растёт и на «больше» своей стихии (0.15.0, реш. 4)
         val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * growth.more(type.attack) * hero.body.damageMore * power
-        val mitigated = total * (1 - target.body.resist(type, hero.body.penetration(type))) * target.body.damageTaken(type)
+        val laid = if (rule?.raw == true) total else total * (1 - target.body.resist(type, hero.body.penetration(type))) * target.body.damageTaken(type)
         val inflicted = mutableListOf<Ailment>()
-        if (mitigated > 0 && !target.body.immune(ailment)) {
+        if (laid > 0 && !target.body.immune(ailment)) {
             val duration = dot.duration * hero.body.ailmentDurationOnFoes(ailment)
             place(
                 target,
                 ActiveAilment(
                     ailment,
                     time + duration,
-                    mitigated / duration * hero.body.ailmentDamage(ailment),
+                    laid / dot.duration * hero.body.ailmentDamage(ailment),
                     duration,
                     Side.HERO,
                     0,
                     spell,
                     chaos = ailment == Ailment.BURNING && hero.body.igniteAsChaos,
+                    limit = rule?.active(hero.body.ailmentLimit(ailment)),
+                    skill = code,
                 ),
-                stacks = true,
+                rule,
             )
             inflicted += ailment
         }
         dot.ailments.mapNotNull { resolve(it, type, level) }.filter { it.first != ailment }.forEach { (other, chance) ->
-            if (random.nextDouble() * 100 < chance) afflict(hero, target, other, mapOf(type to mitigated), spell)?.let(inflicted::add)
+            if (random.nextDouble() * 100 < chance) afflict(hero, target, other, AilingHit.of(mapOf(type to total)), spell)?.let(inflicted::add)
         }
         record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, type, 0.0, false, inflicted, null, target.index, code)
     }
@@ -411,7 +417,7 @@ internal fun Battle.healedInto(me: Fighter, healed: Double, toMana: Double, toSh
  * [target] is the foe the event was about — the one struck, the one that struck — and [refund] the
  * mana a skill just cost.
  */
-internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: Double = 0.0, taken: Map<DamageType, Double> = emptyMap()) {
+internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: Double = 0.0, hit: AilingHit? = null) {
     if (depth >= MAX_DEPTH || !heroFighter.alive || outcome != null) return
     kit.passives.forEach { passive ->
         val answer = passive.skill.trigger?.takeIf { it.on == event } ?: return@forEach
@@ -422,7 +428,7 @@ internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: 
         if (answer.cooldown > 0) triggerReady[code] = time + answer.cooldown
         depth++
         try {
-            answer(code, answer, level, target, refund, taken)
+            answer(code, answer, level, target, refund, hit)
             // Дары рун (4.4.0) у срабатывания - при каждом срабатывании
             passive.skill.cast?.let { gifts(it, level) }
         } finally {
@@ -431,7 +437,7 @@ internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: 
     }
 }
 
-private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target: Fighter?, refund: Double, taken: Map<DamageType, Double>) {
+private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target: Fighter?, refund: Double, blow: AilingHit?) {
     val hero = heroFighter
     val healed = answer.heal?.let { heal(it, level) } ?: 0.0
     answer.shield?.let { hero.shield = min(hero.body.maxShield, hero.shield + hero.body.maxShield * it.at(level) / 100) }
@@ -448,9 +454,11 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     val struck = target?.takeIf { it.alive && it.side == Side.MONSTER }
     val word = answer.ailment
     if (word != null && struck != null) {
-        val element = taken.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
+        val element = blow?.landed?.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
         val ailment = (if (word == ELEMENT) Ailment.of(element) else Ailment.byWord(word)) ?: return
-        val inflicted = List(if (answer.twice) 2 else 1) { afflict(hero, struck, ailment, taken.ifEmpty { hero.body.damage }) }.filterNotNull().distinct()
+        // Основа недуга ответа (0.15.0, реш. 36) - удар, что его вызвал, иначе урон листа: одна функция правил с ударами
+        val laid = blow ?: AilingHit.of(hero.body.damage)
+        val inflicted = List(if (answer.twice) 2 else 1) { afflict(hero, struck, ailment, laid) }.filterNotNull().distinct()
         record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, inflicted, null, struck.index, code)
         return
     }

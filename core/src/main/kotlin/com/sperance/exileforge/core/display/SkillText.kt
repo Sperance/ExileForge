@@ -48,8 +48,10 @@ object SkillText {
         if (skill.reserve > 0) add(ui("skill.line.reserve", number(skill.reserve)))
         skill.hit?.let { addAll(hit(it, level)) }
         skill.dot?.let { dot ->
-            add(ui("skill.line.dot", number(dot.min.at(level)), number(dot.max.at(level)), element(dot.element), fineNumber(dot.duration)))
+            // Урон во времени называет своё состояние (0.15.0, реш. 42): яд или свой урон умения
+            add(ui("skill.line.dot", number(dot.min.at(level)), number(dot.max.at(level)), element(dot.element), fineNumber(dot.duration), ailment(dot.ailment)))
             if (dot.targets != 1) add(targets(dot.targets))
+            addAll(ailments(dot.ailments, level))
         }
         skill.curse?.let { curse ->
             add(ui("skill.line.curse", fineNumber(curse.duration), if (curse.targets <= 0) ui("skill.line.all_foes") else ui("skill.line.foes", curse.targets)))

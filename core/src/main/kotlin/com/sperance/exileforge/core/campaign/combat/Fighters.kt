@@ -24,7 +24,17 @@ data class ActiveAilment(
     val spell: Boolean = false,
     /** Burns as chaos (3.33.0): an ignite of a striker whose ignites deal chaos goes around the shield. */
     val chaos: Boolean = false,
+    /**
+     * Сколько сильнейших стаков этого недуга действуют (0.15.0, реш. 37/40: предел правила и «+N к пределу» наложившего); null - все.
+     * Висят все стаки - слабые вступают, когда сильные истекут.
+     */
+    val limit: Int? = null,
+    /** Умение, чей урон во времени это (0.15.0, реш. 43): тик идёт в разбор боя этим умением; null - недуг удара. */
+    val skill: String? = null,
 )
+
+/** Строка тика (0.15.0, реш. 43): недуг и умение, чей это урон во времени (null - недуг удара), - отдельной строкой журнала и разбора. */
+data class Ticking(val ailment: Ailment, val skill: String?)
 
 /**
  * One foe of the pack as the fight takes it (2.70.0): its sheet; every foe on screen strikes from the first

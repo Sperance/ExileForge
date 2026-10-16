@@ -203,6 +203,18 @@ internal fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
             drawLine(crack, Offset(7 * u, 9 * u), Offset(5 * u, 11 * u), u)
         }
 
+        // Разложение (0.15.0) - треснувший круг с тремя каплями распада; высасывание сути - капля, втянутая в воронку
+        Ailment.DECAYED -> {
+            drawCircle(tint, 5.5f * u, Offset(8 * u, 7 * u), style = androidx.compose.ui.graphics.drawscope.Stroke(1.6f * u))
+            listOf(8f to 7f, 6f to 9f, 9f to 11f).zipWithNext { (x1, y1), (x2, y2) -> drawLine(tint, Offset(x1 * u, y1 * u), Offset(x2 * u, y2 * u), u) }
+            listOf(4f to 14f, 8f to 15f, 12f to 14f).forEach { (x, y) -> drawCircle(tint, 0.9f * u, Offset(x * u, y * u)) }
+        }
+
+        Ailment.DRAINED -> {
+            drawPath(path(2f to 2f, 14f to 2f, 9f to 9f, 7f to 9f), tint)
+            drawPath(path(8f to 9f, 11f to 13f, 8f to 15f, 5f to 13f), tint)
+        }
+
         null -> drawPath(path(8f to 1f, 9.8f to 5.2f, 14.3f to 5.6f, 10.9f to 8.6f, 11.9f to 13f, 8f to 10.7f, 4.1f to 13f, 5.1f to 8.6f, 1.7f to 5.6f, 6.2f to 5.2f), tint)
     }
 }

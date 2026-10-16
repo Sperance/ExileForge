@@ -2,6 +2,7 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.ActiveAilment
+import com.sperance.exileforge.core.campaign.combat.AilingHit
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Blow
@@ -65,6 +66,8 @@ internal class PowerMoment(
     val cursed: Boolean = false,
     val slot: String? = null,
     val flask: Set<String>? = null,
+    /** Удар для недугов силы (0.15.0, реш. 36): до и после защит цели; null - удара нет, недуг берёт урон листа. */
+    val hit: AilingHit? = null,
 ) {
     val damage: Double get() = taken.values.sum()
 }
@@ -281,7 +284,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
         PowerScale.SECONDS -> floor(battle.time)
         PowerScale.KILLS -> kills.toDouble()
         PowerScale.CURSED_FOES -> battle.foeFighters.count { it.alive && it.cursed }.toDouble()
-        PowerScale.AILED_FOES -> battle.foeFighters.count { it.alive && it.ailments.isNotEmpty() }.toDouble()
+        PowerScale.AILED_FOES -> battle.foeFighters.count { it.alive && it.ailed }.toDouble()
         PowerScale.SHIELD -> if (hero.body.maxShield > 0) scale.steps(hero.shield / hero.body.maxShield) else 0.0
         PowerScale.MANA -> battle.manaCap().takeIf { it > 0 }?.let { scale.steps(hero.mana / it) } ?: 0.0
         PowerScale.CHARGES -> battle.flaskCharges()
@@ -310,15 +313,15 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
             PowerCheckKind.FOES_AT_MOST -> battle.enemies() <= check.value
             PowerCheckKind.TARGET_RARE -> target != null && battle.foes[target.index].rarity >= MonsterRarity.RARE
             PowerCheckKind.TARGET_BLIGHTED -> target != null && battle.foes[target.index].tainted
-            PowerCheckKind.TARGET_AILED -> target != null && (target.ailments.isNotEmpty() || moment.ailments.isNotEmpty())
+            PowerCheckKind.TARGET_AILED -> target != null && (target.ailed || moment.ailments.any { it.ailment.ailing })
             PowerCheckKind.TARGET_AILMENT -> target != null && (target.ailments + moment.ailments).any { it.ailment.word == check.word }
             PowerCheckKind.TARGET_CURSED -> target != null && (target.cursed || moment.cursed)
             PowerCheckKind.TARGET_LIFE_BELOW -> target != null && target.life < target.body.maxLife * share
             PowerCheckKind.TARGET_LIFE_ABOVE -> target != null && target.life > target.body.maxLife * share
             PowerCheckKind.FIGHT_BEFORE -> battle.time < check.value
             PowerCheckKind.FIGHT_AFTER -> battle.time >= check.value
-            PowerCheckKind.SELF_AILED -> hero.ailments.isNotEmpty()
-            PowerCheckKind.SELF_CLEAN -> hero.ailments.isEmpty()
+            PowerCheckKind.SELF_AILED -> hero.ailed
+            PowerCheckKind.SELF_CLEAN -> !hero.ailed
             PowerCheckKind.FLASK_RUNNING -> hero.effects.any { it.kind == EffectKind.FLASK && it.until > battle.time }
             PowerCheckKind.BARRIER_UP -> hero.barrier > 0
             PowerCheckKind.NTH -> true
@@ -410,7 +413,9 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
                     battle.afflictSelf(ailment, duration)
                     return 0.0
                 }
-                targets(effect.to, moment).forEach { foe -> battle.afflict(hero, foe, ailment, moment.taken.ifEmpty { body.damage }) }
+                // Основа недуга силы (0.15.0, реш. 36) - удар, что её вызвал, иначе урон листа: одна функция правил с ударами
+                val hit = moment.hit ?: AilingHit.of(moment.taken.ifEmpty { body.damage })
+                targets(effect.to, moment).forEach { foe -> battle.afflict(hero, foe, ailment, hit) }
             }
 
             PowerAct.CURSE -> targets(effect.to, moment).forEach(battle::hex)
@@ -444,7 +449,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
             PowerAct.UNCURSE -> if (hero.effects.removeAll { it.kind == EffectKind.CURSE }) battle.remake(hero)
 
             PowerAct.SPREAD -> targets(PowerTarget.OTHERS, moment).forEach { foe ->
-                moment.ailments.forEach { spread -> battle.place(foe, spread.copy(until = battle.time + spread.duration), stacks = spread.ailment.hurts) }
+                moment.ailments.forEach { spread -> battle.place(foe, spread.copy(until = battle.time + spread.duration), battle.ruleOf[spread.ailment]?.first) }
             }
 
             PowerAct.ECHO -> {

@@ -144,8 +144,8 @@ class Battle(
         }
         val ailments = mutableListOf<ActiveAilment>()
 
-        /** Damage over time gathered per ailment since its last tick was logged, and when that was. */
-        val ticking = mutableMapOf<Ailment, Double>()
+        /** Damage over time gathered per ailment (и умению, 0.15.0) since its last tick was logged, and when that was. */
+        val ticking = mutableMapOf<Ticking, Double>()
         val tickedAt = mutableMapOf<Ailment, Double>()
 
         /** Buffs, curses and draughts on it (2.78.0). */
@@ -246,6 +246,30 @@ class Battle(
             return RecoveryShare.curb(ailmentRules.keys, pool, active)
         }
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
+
+        /** Под недугом (0.15.0): висит хоть одно состояние-недуг ([Ailment.ailing]) - Разложение и урон умения не в счёт. */
+        val ailed: Boolean get() = ailments.any { it.ailment.ailing }
+
+        /**
+         * Стаки [ailment], что действуют (0.15.0, реш. 37/40): сильнейшие под пределом - наибольшим из висящих ([ActiveAilment.limit]);
+         * без предела - все. Висят все: слабые вступают, когда сильные истекут.
+         */
+        fun acting(ailment: Ailment): List<ActiveAilment> {
+            val own = ailments.filter { it.ailment == ailment }
+            val limit = own.maxOfOrNull { it.limit ?: Int.MAX_VALUE } ?: return own
+            return if (own.size <= limit) own else own.sortedByDescending { it.magnitude }.take(limit)
+        }
+
+        /**
+         * Уязвимость к урону [type] (0.15.0, реш. 38/41, Разложение): 1 + сила действующих стаков недугов-уязвимостей этого вида
+         * (правило `exposes`), %, усиленная приёмом недуга на бойце. Удар и тик урона во времени этого вида растут на неё.
+         */
+        fun exposure(type: DamageType): Double {
+            if (ailments.isEmpty()) return 1.0
+            var more = 0.0
+            exposing.forEach { (ailment, kind) -> if (kind == type) more += acting(ailment).sumOf { it.magnitude } * body.ailmentTaken(ailment) }
+            return 1 + more / 100
+        }
     }
 
     /** Выход врагов на поле (4.4.1 - раунды, 4.8.0 - подкрепления, [Muster]). */
@@ -365,6 +389,9 @@ class Battle(
 
     internal val ruleOf: Map<Ailment, Pair<AilmentRule, DamageType?>> = ailmentRules.entries.associate { (rule, what) -> what.first to (rule to what.second) }
 
+    /** Недуги-уязвимости (0.15.0, правило `exposes`: Разложение) и вид урона, что они растят. */
+    private val exposing: List<Pair<Ailment, DamageType>> = ruleOf.mapNotNull { (ailment, ruled) -> ruled.second?.takeIf { ruled.first.exposes }?.let { ailment to it } }
+
     var time = 0.0
         internal set
 
@@ -483,7 +510,7 @@ class Battle(
      */
     private fun carryIn(carry: HeroCarry) {
         carry.ailments.forEach { a ->
-            heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, chaos = a.chaos)
+            heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, chaos = a.chaos, limit = a.limit)
             if (a.ailment.hurts) heroFighter.tickedAt.putIfAbsent(a.ailment, 0.0)
         }
         carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks) }

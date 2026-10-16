@@ -344,7 +344,7 @@ private fun logColour(event: CombatEvent): Color = when {
     event.action == Action.NOTE -> Rune
     event.action == Action.FLASK -> Vital
     event.action == Action.SKILL && event.damage <= 0 && event.landed -> if (event.actor == Side.HERO) Gold else Color(0xFFE9A0A0)
-    event.action == Action.TICK || event.action == Action.REFLECT -> damageTint(event.type).copy(alpha = .85f)
+    event.action == Action.TICK || event.action == Action.REFLECT -> tickTint(event.ailment, event.type).copy(alpha = .85f)
     event.kind == HitKind.CRIT -> Color(0xFFFFD34A)
     event.kind == HitKind.HIT -> if (event.actor == Side.HERO) Parchment else Color(0xFFE9A0A0)
     else -> Muted

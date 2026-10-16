@@ -127,7 +127,8 @@ class MobKit(val index: ContentIndex) {
         val elem = DamageType.ELEMENTS.sumOf { 1 - c.resist(it) }
         val taken = (0.4 * phys + 0.15 * elem + 0.15 * (1 - c.resist(DamageType.CHAOS))) * avoid
         val ehp = (c.maxLife + c.maxShield) / taken.coerceAtLeast(0.03)
-        val dps = SkillProfile(index, stats, level, body.fold.growth(body.passiveLines)).dps(body.kit.actives) + CombatProfile.of(index, stats, level).attack
+        val growth = body.fold.growth(body.passiveLines)
+        val dps = SkillProfile(index, stats, level, growth).dps(body.kit.actives) + CombatProfile.of(index, stats, level, growth).total
         return ehp * dps.coerceAtLeast(1.0)
     }
 
@@ -355,7 +356,7 @@ class Arena(private val index: ContentIndex, private val hero: Hero, effects: Ma
         pools = HeroPools(body.maxLife, body.maxMana * (1 - loadout.reserved(body) / 100), loadout.flasks.map { it?.sheet?.maxCharges ?: 0.0 }, loadout.flasks.map { 0.0 }, loadout.flasks.map { DraughtRate() })
     }
 
-    val damage: Double get() = CombatProfile.of(index, body.stats, hero.level).best
+    val damage: Double get() = CombatProfile.of(index, body.stats, hero.level).total
 
     fun battle(foes: List<Foe>, seed: Long, retinue: Boolean): Battle {
         val all = if (retinue) phases.withRetinue(foes, Dice(seed)) else foes
@@ -1009,6 +1010,8 @@ fun main(args: Array<String>) {
                         val times = bosses.map { it.values[11] as Double }.filter { it > 0 }
                         val parts = HashMap<String, Double>()
                         runs.forEach { (_, d, _) -> d.bySkill.forEach { (k, v) -> parts.merge(k, v / d.bySkill.values.sum().coerceAtLeast(1.0), Double::plus) } }
+                        val types = HashMap<String, Double>()
+                        runs.forEach { (_, d, _) -> d.byType.forEach { (k, v) -> types.merge(k, v / d.byType.values.sum().coerceAtLeast(1.0), Double::plus) } }
                         // Разбор по стражам (0.14.1): доля побед, среднее время боя, тайм-ауты - смерть или потолок
                         val perBoss = bosses.groupBy { it.values[2] as String }.map { (boss, rows) ->
                             Row(listOf("classboss", c.code, level, boss, rows.map { it.values[10] as Double }.average(), rows.map { it.values[12] as Double }.average(), rows.sumOf { it.values[13] as Int }, rows.map { it.values[14] as Double }.average()))
@@ -1019,6 +1022,7 @@ fun main(args: Array<String>) {
                                     "class", c.code, level, heroBand(level).name, geo { it.single }, geo { it.pack }, geo { it.score }, wins, if (times.isEmpty()) -1.0 else times.average(),
                                     near.joinToString(",") { it.boss.value }, runs.joinToString(" | ") { it.first.note },
                                     parts.entries.sortedByDescending { it.value }.joinToString(",") { "${it.key}:${(100 * it.value / runs.size).toInt()}" },
+                                    types.entries.sortedByDescending { it.value }.joinToString(",") { "${it.key}:${(100 * it.value / runs.size).toInt()}" },
                                 ),
                             ),
                         )

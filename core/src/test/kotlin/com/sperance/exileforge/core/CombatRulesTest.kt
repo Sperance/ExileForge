@@ -62,7 +62,7 @@ class CombatRulesTest {
         val skill = index.skills.monsterSkills.first { it.hit != null }
         val b = battle(body(), Foe(body(mapOf("AURA_SLOW" to 50.0), life = 1e9), skills = listOf(skill)))
         val foe = b.foe(0)
-        b.place(foe, ActiveAilment(Ailment.CHILLED, 1e9, 30.0, 1e9, Side.HERO), false)
+        b.place(foe, ActiveAilment(Ailment.CHILLED, 1e9, 30.0, 1e9, Side.HERO), null)
         assertEquals(1.3, foe.slow(), 1e-9)
         assertEquals(1 / 0.5, b.heroFighter.slow(), 1e-9)
         foe.readyAt[skill.code] = 0.0

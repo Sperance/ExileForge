@@ -30,7 +30,7 @@ fun Battle.pools(): HeroPools = HeroPools(
  * заряды - остатком своего времени.
  */
 fun Battle.carry(): HeroCarry = HeroCarry(
-    heroFighter.ailments.filter { it.until > time }.map { CarriedAilment(it.ailment, it.until - time, it.magnitude, it.duration, it.chaos) },
+    heroFighter.ailments.filter { it.until > time }.map { CarriedAilment(it.ailment, it.until - time, it.magnitude, it.duration, it.chaos, it.limit) },
     carriedEffects(),
     heroFighter.shield,
     heroCharges.carried(time),

@@ -126,7 +126,7 @@ private fun Battle.recentHits(): List<FloatingHit> {
         if (event.damage > 0 || event.healed > 0 || event.kind == HitKind.EVADED || event.kind == HitKind.BLOCKED || event.action == Action.ATTACK) {
             hits += FloatingHit(
                 index, event.target, event.action, event.kind, event.damage.roundToInt(), time - event.time, event.healed.roundToInt(),
-                event.type, event.inflicted, event.stunned, event.foe,
+                event.type, event.inflicted, event.stunned, event.foe, event.ailment,
             )
         }
     }

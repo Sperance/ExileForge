@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.model.campaign
 
 import com.sperance.exileforge.rules.content.MapCode
+import com.sperance.exileforge.rules.content.SummonLog
 import com.sperance.exileforge.rules.content.TrialEventKind
 import com.sperance.exileforge.rules.content.TrialProgress
 import com.sperance.exileforge.rules.content.TrialRun
@@ -15,6 +16,7 @@ import com.sperance.exileforge.rules.roll.VaalZone
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.run.RunEventKind
+import com.sperance.exileforge.rules.run.RunTally
 import kotlinx.serialization.Serializable
 
 /**
@@ -38,6 +40,8 @@ import kotlinx.serialization.Serializable
     val trials: TrialProgress = TrialProgress(),
     /** How many times each zone was passed — its guardian slain (server 1.76.0), by zone code. */
     val completions: Map<String, Int> = emptyMap(),
+    /** Призывы стража героем в окне (0.15.0, реш. 22): от них растёт цена следующего ([SummonLog.price]). */
+    val summons: SummonLog = SummonLog(),
 ) {
     /** The boss of [mapCode] is slain and not yet back. */
     fun bossDown(mapCode: MapCode, now: Long): Boolean = (bosses[mapCode.value] ?: 0L) > now
@@ -53,6 +57,8 @@ import kotlinx.serialization.Serializable
     val applied: Int = 0,
     val killed: List<Int> = emptyList(),
     val vaalKilled: List<Int> = emptyList(),
+    /** Счёт наград захода (0.15.0: и призывов стража - их не больше `services.summonsPerRun`). */
+    val tally: RunTally = RunTally(),
 )
 
 /** Which zones the hero has passed — slain their boss — and which are open to them. */

@@ -287,6 +287,7 @@ class ExpeditionActions(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features, auto = autoPlan,
+            summoned = started.tally.summons,
             // Счёт Предначертания захода (4.6.1): павшие карты и её Ваал-зоны - как их считает сервер
             fateRun = FateRun(started.killed, started.vaalKilled),
         ).also { r ->

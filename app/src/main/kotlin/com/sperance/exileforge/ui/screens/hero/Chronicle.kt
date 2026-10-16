@@ -28,6 +28,7 @@ import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.Stat
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
+import com.sperance.exileforge.ui.theme.Vital
 
 /** A title as the dictionary names it; нет строки (0.15.0, #48) - заглушка и дыра словаря, не код. */
 fun titleName(code: String): String = loc("title.$code")
@@ -172,5 +173,10 @@ private fun clock(seconds: Long): String {
             color = Muted,
             style = MaterialTheme.typography.labelSmall,
         )
+        // Сферы золотой ступени (0.15.0, реш. 23): их выдаёт запись героя один раз - взятая ступень пишет «получено»
+        if (achievement.reward.isNotEmpty()) {
+            val goods = achievement.reward.entries.joinToString(", ") { (code, amount) -> ui("chronicle.reward_item", itemTitle(code), number(amount.toDouble())) }
+            Text(ui(if (next == null) "chronicle.reward_got" else "chronicle.reward", goods), color = if (next == null) Vital else Gold, style = MaterialTheme.typography.labelSmall)
+        }
     }
 }

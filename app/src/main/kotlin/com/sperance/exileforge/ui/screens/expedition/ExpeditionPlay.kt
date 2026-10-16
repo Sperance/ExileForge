@@ -286,7 +286,8 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
 /**
  * Life and shield, the map's name and whether its warden still lives, and the way out. Между боями здоровье восстанавливается само
  * (4.10.0, `offCombatRegen`). What the map still holds — foes, chests, fountains — is the walk's to find (2.56.1).
- * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian is not bought back (3.2.0) — it returns in its time.
+ * The journal's events the server has not taken for a while are counted under the name, a tap sends them now; a slain guardian returns in its time
+ * или призывается за золото (0.15.0, реш. 22: один призыв за заход, [GuardianSummon]).
  */
 @Composable internal fun MapBar(
     game: GameUi,
@@ -326,6 +327,8 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
                 )
                 val guardian = GuardianLine.of(hud, zone)
                 Text(guardian.text, color = guardian.color, style = MaterialTheme.typography.labelMedium)
+                // Призыв поверженного стража за золото (0.15.0, реш. 22) - в ручном заходе
+                if (hud.auto == null) hud.summon?.let { GuardianSummon(game, run, it, mapTitle(hud.mapCode), expedition::runCommand) }
                 // Босс карты пал (4.10.0): шаг быстрее - значок под стражем, след за героем рисует сцена
                 if (hud.swift) SwiftBadge(run.index.campaign.expedition.bossSlainSpeed)
                 // Печать стража (3.93.0): сколько редких пало из нужных

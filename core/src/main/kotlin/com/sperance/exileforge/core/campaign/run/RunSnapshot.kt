@@ -79,6 +79,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         crystalsLeft = world.standingCrystals.size,
         abyss = abyssView(), cracksLeft = world.standingCracks.size,
         bossDown = bossDown, swift = swift, guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
+        summon = summonView(),
         auto = autopilot?.let { AutoHud(it.wave, it.waves, it.chests, it.finishing, linkDown, it.resting != null) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits), questTally = questTallyShown,
         pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
         summary = figures, recap = recap,
@@ -174,3 +175,10 @@ fun ExpeditionRun.reportContext(): Map<String, String> = mapOf(
     "run.phase" to phase.name,
     "run.seed" to seed.toString(),
 )
+
+/** Призыв стража для полосы захода (0.15.0, реш. 22): только у поверженного стража карты, не в зоне Ваал. */
+private fun ExpeditionRun.summonView(): SummonView? {
+    if (vaal || !bossDown) return null
+    val perRun = index.campaign.services.summonsPerRun
+    return SummonView(summonPrice(), summoned >= perRun, perRun)
+}

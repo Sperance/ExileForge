@@ -117,6 +117,7 @@ private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Dou
     fateCast(skill.code)
     // Холод и замедление (4.12.x, CAST-02) растягивают перезарядку, как замах; она идёт с конца применения (SKILL-01)
     hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery * hero.slow()
+    hero.readyFloor[slotKey(slot)] = rules.caps.readyFloor(time, skill.cooldown)
     perform(kitSkill, level)
     // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }

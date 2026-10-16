@@ -187,20 +187,19 @@ class CombatRulesTest {
         assertEquals(plain - 6.0 * time, life(-6.0).first, 0.5)
     }
 
-    /** STAT-PW1-02: на смерти тратится одна сила возрождения - вторая поднимает на следующей смерти. */
+    /** Решение 7 (0.15.0): возрождение одно на бой на все силы смерти - поднимает сильнейшая по здоровью, вторая смерть - конец. */
     @Test
-    fun one_rebirth_per_death() {
+    fun one_revival_a_fight_by_the_strongest() {
         val kit = Loadout(powers = PowerBook(index.powers.powers.filter { it.stat == "POWER_PHOENIX_REBIRTH" || it.stat == "POWER_UNWILLING_DEATH" }))
         val b = battle(body(mapOf("POWER_PHOENIX_REBIRTH" to 30.0, "POWER_UNWILLING_DEATH" to 40.0)), Foe(body(life = 1e9)), kit = kit)
         val hero = b.heroFighter
-        repeat(2) {
-            hero.life = 0.0
-            b.powers.fire(PowerEvent.DEATH)
-            assertTrue(hero.alive, "death ${it + 1} found no power left")
-        }
         hero.life = 0.0
         b.powers.fire(PowerEvent.DEATH)
-        assertTrue(!hero.alive)
+        assertTrue(hero.alive, "the first death found no revival")
+        assertEquals(hero.body.maxLife * 0.4, hero.life, 1e-6, "the strongest revival raises the hero")
+        hero.life = 0.0
+        b.powers.fire(PowerEvent.DEATH)
+        assertTrue(!hero.alive, "a second revival in one fight")
     }
 
     /** STAT-DEF-05: спровоцированный бьёт героя слабее (до потолка правила) и не применяет умений - его перезарядки стоят. */

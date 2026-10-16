@@ -89,7 +89,7 @@ private fun Power.chance(value: Double): Double = chance ?: if (roll == com.sper
  * Силы героя в бою. [carried] (4.12.x, STAT-PW2-05) - счётчики «каждое N-е», принесённые из прошлых боёв захода или забега
  * испытания: счёт идёт дальше, а не с нуля ([tally] отдаёт его следующему бою).
  */
-internal class PowerRunner(private val battle: Battle, book: PowerBook, private val cleared: Boolean = false, carried: Map<String, Int> = emptyMap()) {
+internal class PowerRunner(private val battle: Battle, private val book: PowerBook, private val cleared: Boolean = false, carried: Map<String, Int> = emptyMap()) {
     private val byEvent: Map<PowerEvent, List<Power>> = book.powers.filter { it.on != null }.groupBy { it.on!! }
     private val standingPowers = byEvent[PowerEvent.STANDING].orEmpty()
     private val readyAt = mutableMapOf<String, Double>()
@@ -101,6 +101,12 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
     private val lastBeat = mutableMapOf<String, Double>()
     private var busy = false
     private var started = false
+
+    /** Возрождение этого боя потрачено (0.15.0, реш. 7): одно на бой на все силы смерти. */
+    private var revived = false
+
+    /** Сколько процентов удара уже вернули силы ответного урона на принятый сейчас удар (0.15.0, реш. 14: сумма - под `caps.retaliate`). */
+    private var retaliated = 0.0
     private val echoes = mutableListOf<Echo>()
 
     /** Whether a standing line grows with [momentum]: only then does a hit make the hero's body again. */
@@ -181,6 +187,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
     fun taken(moment: PowerMoment, crit: Boolean) {
         lastTaken = moment.damage
+        retaliated = 0.0
         fire(PowerEvent.HIT_TAKEN, moment)
         if (crit) fire(PowerEvent.CRIT_TAKEN, moment)
     }
@@ -202,11 +209,19 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
     fun fire(event: PowerEvent, moment: PowerMoment = PowerMoment()) {
         if (busy || battle.outcome != null || (!hero.alive && event != PowerEvent.DEATH)) return
-        byEvent[event]?.forEach { power ->
-            // Одна смерть - одна сила возрождения (4.12.x, STAT-PW1-02): поднятый герой прочие силы смерти бережёт до следующей
-            if (event == PowerEvent.DEATH && hero.alive) return@forEach
-            if (value(power) != 0.0) run(power, moment)
-        }
+        if (event == PowerEvent.DEATH) return revive(moment)
+        byEvent[event]?.forEach { power -> if (value(power) != 0.0) run(power, moment) }
+    }
+
+    /**
+     * Смерть героя (0.15.0, реш. 7): возрождение одно на бой на все силы смерти - срабатывает только сильнейшая по возвращаемому
+     * здоровью ([PowerBook.revival] правил); после неё до конца боя ни одна сила смерти не срабатывает.
+     */
+    private fun revive(moment: PowerMoment) {
+        if (revived) return
+        val power = book.revival { hero.body[it] } ?: return
+        revived = true
+        run(power, moment)
     }
 
     private fun run(power: Power, moment: PowerMoment) {
@@ -417,7 +432,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerAct.CHARGES -> battle.chargeFlasks(amount)
 
             // «Остальные» перезарядки (4.12.x, STAT-PW2-08) - кроме только что применённого умения
-            PowerAct.COOLDOWNS -> hero.readyAt.replaceAll { slot, at -> if (effect.to == PowerTarget.OTHERS && slot == moment.slot) at else at - amount }
+            PowerAct.COOLDOWNS -> hero.readyAt.replaceAll { slot, at -> if (effect.to == PowerTarget.OTHERS && slot == moment.slot) at else cooled(slot, at, effect, amount) }
 
             PowerAct.NEXT_CRIT -> battle.nextCrit = true
 
@@ -451,17 +466,26 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             // Мгновенность (4.12.x, SKILL-01: «Вечерня»): следующие применения умений героя - без времени применения
             PowerAct.QUICKEN -> battle.quickCasts += amount.roundToInt()
 
+            // Ответный урон (0.15.0, реш. 14) бьёт только атакующего; доли всех сил на один удар - под потолком `caps.retaliate`
             PowerAct.RETALIATE -> {
-                if (moment.target?.side != Side.MONSTER) return 0.0
-                val damage = share(moment.taken, amount, effect.type)
+                val attacker = moment.target?.takeIf { it.side == Side.MONSTER && it.alive } ?: return 0.0
+                val answer = battle.rules.caps.retaliated(amount, retaliated)
+                val damage = share(moment.taken, answer, effect.type)
                 if (damage.values.sum() <= 0) return 0.0
-                // A foe's blow comes back at every foe on screen: the fight has no rows.
-                battle.foeFighters.filter { it.alive }.forEach { foe ->
-                    battle.strike(hero, foe, Blow(damage, Action.SKILL, spell = true, skill = power.stat, spread = false))
-                }
+                retaliated += answer
+                battle.strike(hero, attacker, Blow(damage, Action.SKILL, spell = true, skill = power.stat, spread = false))
             }
         }
         return 0.0
+    }
+
+    /**
+     * Готовность умения в ячейке [slot] после силы перезарядок (0.15.0, реш. 7): минус [amount] секунд или, с базой
+     * [PowerBase.REMAINING], [amount]% оставшегося - но не раньше дна правил ([com.sperance.exileforge.rules.content.CombatCaps.readyFloor]).
+     */
+    private fun cooled(slot: String, at: Double, effect: PowerEffect, amount: Double): Double {
+        val cut = if (effect.of == PowerBase.REMAINING) max(0.0, at - battle.time) * amount / 100 else amount
+        return max(hero.readyFloor[slot] ?: Double.NEGATIVE_INFINITY, at - cut)
     }
 
     /** [amount] percent of a blow's damage, split as it was, or all of element [type] when one is named. */

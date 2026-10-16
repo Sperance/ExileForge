@@ -159,6 +159,9 @@ class Battle(
         /** When each of its skills is ready again, by code for a monster and by slot for the hero (2.78.0). */
         val readyAt = mutableMapOf<String, Double>()
 
+        /** Дно готовности умения героя по ячейке (0.15.0, реш. 7): раньше него силы перезарядок умение не готовят (`CombatCaps.readyFloor`). */
+        val readyFloor = mutableMapOf<String, Double>()
+
         /** Умение, что боец применяет сейчас (4.12.x, SKILL-01): удар и прочие умения ждут его конца; null - не применяет. */
         internal var casting: Casting? = null
 

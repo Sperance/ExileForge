@@ -14,6 +14,7 @@ import com.sperance.exileforge.rules.content.SkillNodeType
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.content.TreeAllocation
+import com.sperance.exileforge.rules.content.UniqueCopies
 import com.sperance.exileforge.rules.roll.ItemInstance
 import kotlinx.serialization.Serializable
 
@@ -145,6 +146,17 @@ data class HeroView(
         } catch (refused: RuleViolation) {
             false
         }
+    }
+
+    /**
+     * Надеть [item] на место [slot] - вторая копия уникалки (0.15.0, реш. 7): уникальную и мифическую вещь шаблона герой носит одну -
+     * правило [UniqueCopies], по нему сервер отказывает `EQ_002`. Вещь на самом месте [slot] уходит с него и не считается; null - место
+     * по слоту шаблона.
+     */
+    fun uniqueWorn(index: ContentIndex, item: ItemInstance, slot: Slot? = null): Boolean {
+        val template = index.template(item.template) ?: return false
+        val freed = slot ?: template.slot
+        return UniqueCopies.clash(template, equipped.filter { (place, worn) -> place != freed && worn.id != item.id }.values.map { it.template })
     }
     fun count(code: String): Long = bag[code] ?: 0L
 

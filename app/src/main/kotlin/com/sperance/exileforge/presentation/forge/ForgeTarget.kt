@@ -19,8 +19,8 @@ import com.sperance.exileforge.rules.roll.OrbTarget
 /** Верстак берёт модификатор только с волшебной редкости (2.51.0), как правила: у обычной нет мест аффиксов, у закреплённой они закрыты. */
 private val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
 
-/** Эссенция (2.78.0) делает обычную вещь редкой или перебрасывает редкую. */
-private val ESSENTIAL = setOf(Rarity.COMMON, Rarity.RARE)
+/** Эссенция (2.78.0) делает обычную вещь редкой; с 0.15.0 (реш. 12) - только обычную, редкую не перековывает (`OrbApplier`). */
+private val ESSENTIAL = setOf(Rarity.COMMON)
 
 /**
  * Над чем работает кузница (4.4.x) - зеркало правил [OrbTarget]: вещь. Наковальня, лоток сфер и полоса с удерживаемой кнопкой
@@ -48,6 +48,9 @@ sealed interface ForgeTarget {
     /** Ключ словаря: кнопка карточки цели, что открывает выбор другой. */
     val changeKey: String
 
+    /** Уровень предмета копии до действия: по нему сбор золотом за ремесло (0.15.0, реш. 22, `CraftFeeRules` правил). */
+    val itemLevel: Int
+
     /** Печати Атласа сумки, что лягут на цель (4.6.4): сами или со знамением сумки [omens]; лягут только на карту. */
     fun seals(index: ContentIndex, omens: List<Omen>, held: (String) -> Long): List<OrbChoice> = emptyList()
 
@@ -74,6 +77,7 @@ sealed interface ForgeTarget {
         override val noOrbsKey: String get() = "forge.no_orbs_fit"
         override val changeKey: String get() = "forge.change_target"
         override val socketKey: String get() = "forge.socket_item"
+        override val itemLevel: Int get() = view.item.level(view.template)
 
         override val sections: List<ForgeSection>
             get() {

@@ -87,6 +87,8 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     var replacing by remember(itemId) { mutableStateOf<BodyPlace?>(null) }
     // Место пары для «Если надеть» и «Надеть» (3.90.3): с каким из колец сравнивать и куда надевать.
     val wear = rememberWearChoice(game, instance)
+    // Вторая копия уникалки (0.15.0, реш. 7): уже надетую такую же не надеть - кнопка гаснет, под карточкой причина
+    val twin = remember(instance, game.hero, game.index, wear.target) { loose && game.index?.let { index -> game.hero?.uniqueWorn(index, instance, wear.target) } == true }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             val look = relicLook(view.rarity)
@@ -127,6 +129,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                 if (view.slot == Slot.JEWEL && !instance.socketed && game.index?.let { game.hero?.freeSocket(it) } == null) {
                     item { Text(ui("hero.to_tree_none"), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 }
+                if (twin) item { Text(ui("hero.unique_worn"), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 // Worn but not counting: the rules' reasons, as the slot cell prints them.
                 game.hero?.inactive?.get(instance.id)?.let { reasons ->
                     item {
@@ -172,7 +175,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         }
                     }
 
-                    else -> PrimaryPill(ui("hero.equip"), can && reachable, look) {
+                    else -> PrimaryPill(ui("hero.equip"), can && reachable && !twin, look) {
                         onDismiss()
                         model.equip(instance.id, wear.target)
                     }

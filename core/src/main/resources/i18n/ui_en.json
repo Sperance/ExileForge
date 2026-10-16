@@ -4018,6 +4018,7 @@
   "bag.uses_more": "…and {0} more",
   "hero.to_tree": "To the tree",
   "hero.to_tree_none": "A jewel goes into a socket of the passive tree. Take a socket node in the tree — or free a filled one.",
+  "hero.unique_worn": "This unique is already worn: only one can be worn",
   "forge.essence_refused": "This essence does not go on the chosen item",
   "trap.float": "−{0}",
   "trap.hit": "−{0} {1}",

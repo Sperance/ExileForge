@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.Cost
+import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.presentation.forge.EngraveLine
 import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.presentation.forge.OrbChoice
@@ -61,7 +62,9 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         gives?.let { Text(it, color = Elder, style = MaterialTheme.typography.bodySmall) }
-        HoldButton(ui("confirm.hold", ui("forge.apply_essence")), Elder, enabled = enabled && !view.item.corrupted, rearm = true) {
+        val fee = game.goldBill(index.rules.craftFee.essence(view.item.level(view.template)))
+        FeeChip(fee)
+        HoldButton(fee.paying(ui("confirm.hold", ui("forge.apply_essence"))), Elder, enabled = enabled && !view.item.corrupted && fee.covered, rearm = true) {
             onApply(view.item.id, code)
         }
     }
@@ -106,12 +109,15 @@ import com.sperance.exileforge.ui.theme.*
         if (code == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
             Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
         }
+        // Сбор золотом за сферу (0.15.0, реш. 22): по уровню предмета копии, одна функция правил
+        val fee = game.index?.let { index -> Orb.of(code)?.let { game.goldBill(index.rules.craftFee.orb(it, target.itemLevel)) } }
+        FeeChip(fee)
         // Сфера гравёра (4.11.x) ложится на одну строку: её выбирают в листе ([EngraveSheet]), там и тратится сфера
         if (code == Orb.ENGRAVERS_ORB.name) {
-            ForgeButton(onPickLine, Modifier.fillMaxWidth(), enabled = enabled && !target.corrupted) { Text(ui("forge.engrave_pick")) }
+            ForgeButton(onPickLine, Modifier.fillMaxWidth(), enabled = enabled && !target.corrupted && fee.covered) { Text(fee.paying(ui("forge.engrave_pick"))) }
             return@ForgeBar
         }
-        HoldButton(ui("confirm.hold", ui("forge.apply_orb")), Gold, enabled = enabled && !target.corrupted && !waiting, rearm = true) {
+        HoldButton(fee.paying(ui("confirm.hold", ui("forge.apply_orb"))), Gold, enabled = enabled && !target.corrupted && !waiting && fee.covered, rearm = true) {
             if (resets) confirming = true else onApply(code)
         }
     }
@@ -173,19 +179,37 @@ import com.sperance.exileforge.ui.theme.*
                 val scouring = index.rules.bench.uncraftOrb
                 val owned = game.bagAmount(scouring.name) ?: 0L
                 BarTitle(ForgeGlyphs.Anvil, Crafted, ui("bench.remove"), stock(scouring.name, owned, 1))
-                HoldButton(ui("confirm.hold", ui("forge.remove_bench")), Crafted, enabled = enabled && owned >= 1, rearm = true) { vm.uncraft(instance.id) }
+                val fee = game.goldBill(index.rules.craftFee.uncraft(instance.level(item.template)))
+                FeeChip(fee)
+                HoldButton(fee.paying(ui("confirm.hold", ui("forge.remove_bench"))), Crafted, enabled = enabled && owned >= 1 && fee.covered, rearm = true) { vm.uncraft(instance.id) }
             }
 
             recipe != null -> {
                 val owned = game.bagAmount(recipe.orb.name) ?: 0L
                 BarTitle(ForgeGlyphs.Anvil, Crafted, recipeText(index, recipe), stock(recipe.orb.name, owned, recipe.amount))
-                HoldButton(ui("confirm.hold", ui("forge.apply_bench")), Crafted, enabled = enabled && owned >= recipe.amount, rearm = true) { vm.craft(instance.id, recipe.code) }
+                val fee = game.goldBill(index.rules.craftFee.bench(instance.level(item.template)))
+                FeeChip(fee)
+                HoldButton(fee.paying(ui("confirm.hold", ui("forge.apply_bench"))), Crafted, enabled = enabled && owned >= recipe.amount && fee.covered, rearm = true) { vm.craft(instance.id, recipe.code) }
             }
 
             else -> Text(ui("forge.pick_line"), color = Muted)
         }
     }
 }
+
+/**
+ * Сбор золотом за действие кузницы (0.15.0, реш. 22): чип «цена / есть» ([GoldCost]) - цена считается функцией правил
+ * `CraftFeeRules` по уровню предмета копии; сбора нет (печати, нулевой вес) - чипа нет.
+ */
+@Composable private fun FeeChip(fee: GoldBill?) {
+    fee?.takeIf { it.price > 0 }?.let { GoldCost(it) }
+}
+
+/** Сбор покрыт: золота хватает или сбора нет. */
+private val GoldBill?.covered: Boolean get() = this == null || affordable
+
+/** Подпись удерживаемой кнопки со сбором: золота не хватает - недостача ([payLabel]), иначе [ready]. */
+private fun GoldBill?.paying(ready: String): String = this?.payLabel(ready) ?: ready
 
 /**
  * What the bag keeps after one use. It is printed only when the bag can pay; when it cannot, the

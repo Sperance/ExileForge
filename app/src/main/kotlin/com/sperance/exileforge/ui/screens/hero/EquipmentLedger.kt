@@ -180,8 +180,13 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
                     // Вердикт на это самое место (3.90.3): кольцо во вторую руку меряется со вторым кольцом.
                     verdict = rememberGearVerdict(game, piece.item, place.place),
                 ) {
-                    // Касание открывает карточку (4.3.2), надевает её кнопка
-                    val equip = InspectAction(ui("hero.equip"), enabled = !game.busy && (game.ownsCharacter || game.isAdmin) && unmet.isEmpty()) {
+                    // Касание открывает карточку (4.3.2), надевает её кнопка; вторую копию уникалки - нет (0.15.0, реш. 7)
+                    val twin = game.index?.let { hero.uniqueWorn(it, piece.item, place.place) } == true
+                    val equip = InspectAction(
+                        ui("hero.equip"),
+                        enabled = !game.busy && (game.ownsCharacter || game.isAdmin) && unmet.isEmpty() && !twin,
+                        reason = ui("hero.unique_worn").takeIf { twin },
+                    ) {
                         onDismiss()
                         onEquip(piece.id)
                     }

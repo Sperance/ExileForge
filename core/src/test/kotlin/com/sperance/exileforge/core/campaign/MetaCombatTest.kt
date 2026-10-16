@@ -53,8 +53,9 @@ class MetaCombatTest {
         assertTrue(pairs.size >= 150, "the check proves nothing: ${pairs.size} hero lines")
         val verdicts = pairs.entries.parallelStream().map { (pair, found) ->
             val (stat, op) = pair
-            val value = found.value.takeIf { it > 0 } ?: probe(stat)
-            Triple("$stat:$op", moves(listOf(StatOperation(stat, op, if (op == Op.MORE && index.stats[stat]?.unit == StatUnit.FLAG) 1.0 else value))), found.carriers)
+            val values = found.value.takeIf { it > 0 }?.let(::listOf) ?: probes(stat, op)
+            val moved = values.any { value -> moves(listOf(StatOperation(stat, op, if (op == Op.MORE && index.stats[stat]?.unit == StatUnit.FLAG) 1.0 else value))) }
+            Triple("$stat:$op", moved, found.carriers)
         }.toList()
         check(verdicts, "характеристики")
     }
@@ -182,8 +183,15 @@ class MetaCombatTest {
         return out
     }
 
-    /** Число пробы без числа в контенте: флаг - единица, остальное - заметная величина. */
-    private fun probe(stat: String): Double = if (index.stats[stat]?.unit == StatUnit.FLAG) 1.0 else 30.0
+    /**
+     * Числа пробы без числа в контенте: флаг - единица, остальное - заметная величина; замена `SET` (0.15.0: замены без числа - минусы
+     * ключевых узлов «нет X») - ещё и запрет: заметная величина может совпасть с числом эталона, запрет - с его нулём.
+     */
+    private fun probes(stat: String, op: Op): List<Double> = when {
+        index.stats[stat]?.unit == StatUnit.FLAG -> listOf(1.0)
+        op == Op.SET -> listOf(30.0, 0.0)
+        else -> listOf(30.0)
+    }
 
     private companion object {
         const val LEVEL = 60
@@ -218,6 +226,9 @@ class MetaCombatTest {
             // урона живое) и где горят поджоги
             Scenario("MARAUDER", SkillType.ATTACK, 1.75, cleared = false, seed = 13),
             Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 7),
+            // 0.15.0 (баланс монстров и защит): стаи ×1.75-1.8 убивают героя за 10-15 с, до оглушений и низкого здоровья под отхилом;
+            // стая ×1.5 держит бой ~20 с - герой оглушает, проседает и выигрывает
+            Scenario("MARAUDER", SkillType.ATTACK, 1.5, cleared = false, seed = 13),
         )
 
         /** Известные строки и силы, что эталонная схватка не меняет, - с причиной. */
@@ -231,18 +242,22 @@ class MetaCombatTest {
             addAll(listOf("STOCK_LIFE_DAMAGE_DELAY:ADD", "STOCK_LOW_LIFE_SPEED:ADD", "STOCK_MANA_ON_BLOCK:ADD", "STOCK_POISON_DAMAGE:INCREASED"))
             addAll(listOf("STOCK_SKILL_HEALING:INCREASED", "STOCK_SPELL_BLOCK:ADD", "STOCK_STUN_THRESHOLD:INCREASED", "STOCK_STUN_THRESHOLD:MORE"))
             addAll(listOf("STOCK_TAUNT:ADD"))
+            // Характеристики - меткость (0.15.0, реш. 11: ловкость +2 меткости за очко): эталон с ловкостью 150 попадает по стае 40 ур. наверняка
+            addAll(listOf("STOCK_ACCURACY:ADD", "STOCK_ACCURACY:INCREASED"))
             // Характеристики - недуги, которых нет у стаи эталона, и защита от них
             addAll(listOf("STOCK_AVOID_FREEZE:ADD", "STOCK_AVOID_PARCH:ADD", "STOCK_AVOID_WOUND:ADD", "STOCK_ELECTROCUTE_BUILDUP:ADD"))
             addAll(listOf("STOCK_FREEZE_CHANCE:ADD", "STOCK_FREEZE_DURATION:ADD", "STOCK_FREEZE_DURATION_ON_SELF:ADD", "STOCK_IMMUNE_CURSE:ADD"))
             addAll(listOf("STOCK_IMMUNE_PARCH:ADD", "STOCK_IMMUNE_WOUND:ADD", "STOCK_PARCH_DURATION:ADD", "STOCK_PARCH_EFFECT:ADD"))
             addAll(listOf("STOCK_PARCH_TAKEN:ADD", "STOCK_RECOVERY_SUPPRESSION:ADD", "STOCK_SPELL_SUPPRESSION:ADD", "STOCK_SUPPRESSION_AVOID:ADD"))
             addAll(listOf("STOCK_WOUND_DURATION:ADD", "STOCK_WOUND_EFFECT:ADD", "STOCK_WOUND_TAKEN:ADD"))
+            addAll(listOf("STOCK_DAMAGE_VS_PARCHED:ADD", "STOCK_DAMAGE_VS_WOUNDED:ADD"))
             // Характеристики - небоевые: добыча и объекты карты
             addAll(listOf("STOCK_BLIGHT_REDUCTION:ADD", "STOCK_FATE_ASH_LOOT:ADD", "STOCK_VEILED:ADD", "STOCK_VEILED_LOOT:ADD"))
             // Характеристики - пределы: в схватке значение не доходит до потолка
             addAll(listOf("STOCK_BLOCK_MAX:ADD", "STOCK_EVASION_MAX:ADD", "STOCK_MAX_ENDURANCE_CHARGES:ADD"))
             addAll(listOf("STOCK_MAX_FRENZY_CHARGES:ADD", "STOCK_MAX_POWER_CHARGES:ADD", "STOCK_RESIST_MAX_ALL:ADD", "STOCK_RESIST_MAX_CHAOS:ADD"))
             addAll(listOf("STOCK_RESIST_MAX_COLD:ADD", "STOCK_RESIST_MAX_FIRE:ADD", "STOCK_RESIST_MAX_LIGHTNING:ADD", "STOCK_SPELL_BLOCK_MAX:ADD"))
+            addAll(listOf("STOCK_PHYSICAL_REDUCTION_MAX:ADD"))
             // Силы - условие силы не наступает в эталонных схватках (аудит 19_STATS: stats-pw1/pw2, inject.tsv)
             addAll(listOf("POWER_ABSCESS_WARD", "POWER_ALTAR_VAAL_SIGHT", "POWER_ANCESTRAL_BRAND", "POWER_ANCESTRAL_VIGOUR"))
             addAll(listOf("POWER_ASCENDED_FURY", "POWER_AURORA_ECLIPSE", "POWER_BARON_LEGION", "POWER_BILE_TOUCH"))
@@ -262,6 +277,9 @@ class MetaCombatTest {
             addAll(listOf("POWER_SUNS_BLESSING", "POWER_SUTURE_THIEF", "POWER_TAILWIND", "POWER_THICKET_GRACE"))
             addAll(listOf("POWER_TRUE_SWING", "POWER_UMBILICUS_DROUGHT", "POWER_UNDERTOW", "POWER_VEIN_BURST"))
             addAll(listOf("POWER_WARDEN_BASTION", "POWER_ZENITH_GLARE"))
+            // Силы эндгейма 0.15.0: заряды ярости эталону не копятся, сопротивления хаосу у эталона нет, поджог хаосом по стае с равными
+            // сопротивлениями огню и хаосу бьёт тем же числом
+            addAll(listOf("POWER_RED_RAMPAGE", "POWER_EMPTY_THRONE", "POWER_BLACKFLAME_PACT"))
             // Силы «чистым» (0.14.2): обычные монстры +25% здоровья - стая эталона держит недуг на герое с первой секунды
             addAll(listOf("POWER_STILL_POSTURE"))
         }

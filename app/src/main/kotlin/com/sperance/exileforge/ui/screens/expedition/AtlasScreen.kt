@@ -69,7 +69,7 @@ internal object Sky {
     val take = Color(0xFF3B6FA8)
 }
 
-/** Each trunk's own light, so a player reads which direction a star belongs to before its name. */
+/** Each trunk's own light, so a player reads which direction a star belongs to before its name; Скверна (0.15.0) - жила своей палитры. */
 internal fun AtlasBranch.hue(): Color = when (this) {
     AtlasBranch.LOOT -> Color(0xFFE8CF94)
     AtlasBranch.MAPS -> Color(0xFF8EC5FF)
@@ -83,7 +83,6 @@ internal fun AtlasBranch.hue(): Color = when (this) {
     AtlasBranch.POWER -> Color(0xFFD24A43)
     AtlasBranch.INFLUENCE -> Color(0xFF9FD2F0)
     AtlasBranch.ALTAR -> Color(0xFFD03040)
-    // Скверна (0.15.0) - жила своей палитры
     AtlasBranch.BLIGHT -> Color(0xFFD81B60)
     AtlasBranch.TRAPS -> Color(0xFFB9C2CF)
     AtlasBranch.SECRETS -> Color(0xFFE8E0C8)

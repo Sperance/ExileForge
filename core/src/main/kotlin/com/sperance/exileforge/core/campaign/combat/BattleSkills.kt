@@ -271,6 +271,7 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
         val low = spell.min.at(level)
         val base = low + random.nextDouble() * (spell.max.at(level) - low).coerceAtLeast(0.0)
         val spells = body[CoreStat.SPELL_DAMAGE.code] + skill
+
         // «Больше» вида урона ложится и на чары (0.15.0, реш. 4): удар оружием несёт его в числе листа, чары - нет
         fun grow(of: DamageType, value: Double) {
             val grown = growth.increased(of.attack) + spells

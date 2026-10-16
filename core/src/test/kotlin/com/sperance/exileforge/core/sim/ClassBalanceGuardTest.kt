@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.sim
 
 import com.sperance.exileforge.core.TestContent
+import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Rarity
 import kotlin.math.abs
 import kotlin.math.exp
@@ -13,8 +14,9 @@ import kotlin.test.assertTrue
  * «накопитель + трата», поддержка), вещи редкие и смесь с уникалками - на уровнях [LEVELS]. Урон держится в ±35% среднего
  * геометрического классов (заменяет сторож ±20% по Мощи атак); с 0.14.1 - и доля побед над стражами ближайших зон ([CLASS_BOSSES])
  * в [WIN_BAND] от средней классов (оборона классов). С 0.15.0 оба допуска - цели баланса владельца (RULES «Общее», «Цели баланса»),
- * сторож держит их на выборке: один набор вещей и восемь боёв на стража - по бою на каждый из четырёх бросков. Эталоны строятся один раз на оба сторожа. Полный отчёт -
- * `:core:mobBal -Pmode=classes -PgearSeeds=3` (10-88 ур., три набора вещей).
+ * сторож держит их на широкой выборке (решение 47): [GEAR_SEEDS] набора вещей на источник и четыре боя на стража - по бою на каждый из
+ * четырёх бросков; один набор вещей решал класс своими костями сильнее его чисел. Эталоны строятся один раз на оба сторожа (общий пул
+ * [GuardHeroes]). Полный отчёт - `:core:mobBal -Pmode=classes -PgearSeeds=3` (10-88 ур.).
  */
 class ClassBalanceGuardTest {
     @Test
@@ -37,13 +39,19 @@ class ClassBalanceGuardTest {
         assertTrue(out.isEmpty(), "классы вне ±${(100 * WIN_BAND).toInt()} п.п. побед над стражами от среднего: $out")
     }
 
-    /** Эталон класса [code] уровня [level] одного источника вещей: урон в бою и доля побед над стражами. */
+    /** Эталон выборки: уровень, класс, источник вещей и набор вещей. */
+    private data class Key(val level: Int, val heroClass: HeroClass, val source: GearSource, val seed: Int)
+
+    /** Эталон класса [code] уровня [level] одного источника и набора вещей: урон в бою и доля побед над стражами. */
     private data class Sample(val level: Int, val code: String, val damage: Double, val wins: Double)
 
     private companion object {
         val LEVELS = listOf(20, 40, 60, 80)
         val SOURCES = listOf(GearSource.RARE, GearSource.MIXED)
         val BAND = 0.65..1.35
+
+        /** Наборов вещей на источник (решение 47): урон класса - среднее геометрическое, победы - среднее по всем наборам. */
+        const val GEAR_SEEDS = 3
 
         /** Допуск побед класса от средней классов уровня, доля: цель баланса (0.15.0). */
         const val WIN_BAND = 0.30
@@ -55,11 +63,11 @@ class ClassBalanceGuardTest {
 
         val SAMPLE: List<Sample> by lazy {
             val index = TestContent.index
-            val sim = MobBal(index, fights = FIGHTS, rolls = ROLLS, monsterSamples = 1, cache = null)
+            val sim = MobBal(index, fights = FIGHTS, rolls = ROLLS, monsterSamples = 1, heroes = GuardHeroes.pool)
             val classes = sim.classesOf(emptySet())
-            val keys = LEVELS.flatMap { level -> classes.flatMap { c -> SOURCES.map { Triple(level, c, it) } } }
-            val rows = keys.parallelStream().map { (level, c, source) ->
-                val (hero, damage) = sim.classDamage(c, level, source)
+            val keys = LEVELS.flatMap { level -> classes.flatMap { c -> SOURCES.flatMap { source -> (0 until GEAR_SEEDS).map { Key(level, c, source, it) } } } }
+            val rows = keys.parallelStream().map { (level, c, source, seed) ->
+                val (hero, damage) = sim.classDamage(c, level, source, seed)
                 val wins = sim.nearZones(level, CLASS_BOSSES).map { sim.boss(it, hero, 0, Rarity.COMMON, CAP).values[WINS] as Double }.average()
                 Sample(level, c.code, damage.score, wins)
             }.toList()

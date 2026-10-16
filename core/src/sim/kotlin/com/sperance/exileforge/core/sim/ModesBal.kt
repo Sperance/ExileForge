@@ -107,15 +107,18 @@ class ModesBal(private val index: ContentIndex) {
      */
     fun abyss(hero: Hero, zone: Zone, seed: Long): List<Fought> {
         val rule = index.campaign.abyss ?: return emptyList()
+        return rule.waves.indices.map { abyssDepth(hero, zone, seed, it + 1) }
+    }
+
+    /** Глубина [depth] Бездны зоны [zone] (с полным здоровьем, как её начинает герой): победа и секунды; глубины независимы. */
+    fun abyssDepth(hero: Hero, zone: Zone, seed: Long, depth: Int): Fought {
+        val rule = checkNotNull(index.campaign.abyss) { "campaign: no abyss" }
         val run = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level))
-        val waves = AbyssWaves(index, run)
         val arena = Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to index.campaign.resistPenalty(zone.code, false)))
-        return rule.waves.indices.map { d ->
-            val fights = waves.wave(rule, d + 1, 0, zone, emptyMap(), 0)
-            val level = run.levelOf(zone) + rule.waves[d].level
-            val battles = fights.mapIndexed { i, foes -> arena.fight(foes.map { arena.phases.foe(it, level) }, seed + 31L * d + i, CAP, retinue = false) }
-            Fought(if (battles.all { it.outcome == Outcome.WIN }) Outcome.WIN else Outcome.LOSS, battles.sumOf { it.time }, -1.0, 0, 0.0, battles.maxOfOrNull { it.lifeLost } ?: 0.0)
-        }
+        val fights = AbyssWaves(index, run).wave(rule, depth, 0, zone, emptyMap(), 0)
+        val level = run.levelOf(zone) + rule.waves[depth - 1].level
+        val battles = fights.mapIndexed { i, foes -> arena.fight(foes.map { arena.phases.foe(it, level) }, seed + 31L * (depth - 1) + i, CAP, retinue = false) }
+        return Fought(if (battles.all { it.outcome == Outcome.WIN }) Outcome.WIN else Outcome.LOSS, battles.sumOf { it.time }, -1.0, 0, 0.0, battles.maxOfOrNull { it.lifeLost } ?: 0.0)
     }
 
     /** Итог забега Разлома: павших стражей из [acts], выигранных боёв узлов, пал ли герой и на каком виде узла, бои стражей (победа, секунды). */
@@ -186,12 +189,20 @@ class ModesBal(private val index: ContentIndex) {
      * Очаг Скверны зоны [zone] целиком (0.14.1): механика поставлена насильно - все точки и Матерь; жетоны точки - монстры захода
      * ([Spawns.summoned]), бои по `fight.maxFoes` с полным здоровьем каждый (как глубины Бездны), Матерь - бой стража со свитой.
      */
-    fun blight(hero: Hero, zone: Zone, seed: Long): List<BlightPoint> {
+    fun blight(hero: Hero, zone: Zone, seed: Long): List<BlightPoint> = hearth(hero, zone, seed)?.let { h -> (0 until h.blight.choices).map(h::point) }.orEmpty()
+
+    /** Только бой Матери очага зоны [zone] (0.15.0, сторож Скверны): null - Матери нет. */
+    fun blightMother(hero: Hero, zone: Zone, seed: Long): BlightPoint? = hearth(hero, zone, seed)?.let { h -> h.point(h.blight.motherChoice).takeIf { h.blight.mother } }
+
+    private fun hearth(hero: Hero, zone: Zone, seed: Long): Hearth? {
         val run = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level, forced = setOf(MapMechanic.BLIGHT)))
-        val blight = run.features.all.filterIsInstance<MapFeature.Blight>().firstOrNull() ?: return emptyList()
-        val spawns = Spawns(index, run)
-        val arena = Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to index.campaign.resistPenalty(zone.code, false)))
-        return (0 until blight.choices).map { point ->
+        val blight = run.features.all.filterIsInstance<MapFeature.Blight>().firstOrNull() ?: return null
+        return Hearth(blight, Spawns(index, run), Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to index.campaign.resistPenalty(zone.code, false))), seed)
+    }
+
+    /** Очаг [blight] захода: бой каждой точки - своими костями от [seed]. */
+    private inner class Hearth(val blight: MapFeature.Blight, private val spawns: Spawns, private val arena: Arena, private val seed: Long) {
+        fun point(point: Int): BlightPoint {
             val foes = blight.tokens(point).flatMap { spawns.summoned(it, emptyList()) }
             val mother = point == blight.motherChoice && blight.mother
             val battles = if (mother) {
@@ -199,7 +210,7 @@ class ModesBal(private val index: ContentIndex) {
             } else {
                 index.rules.fight.fights(foes).mapIndexed { i, chunk -> arena.fight(chunk.map { arena.phases.foe(it, it.level) }, seed + 31L * point + i, CAP, retinue = false) }
             }
-            BlightPoint(point, battles.all { it.outcome == Outcome.WIN }, battles.sumOf { it.time }, battles.maxOfOrNull { it.lifeLost } ?: 0.0)
+            return BlightPoint(point, battles.all { it.outcome == Outcome.WIN }, battles.sumOf { it.time }, battles.maxOfOrNull { it.lifeLost } ?: 0.0)
         }
     }
 

@@ -386,10 +386,12 @@ data class Row(val values: List<Any>) {
     fun tsv(): String = values.joinToString("\t") { v -> if (v is Double) String.format(Locale.ROOT, "%.3f", v) else v.toString() }
 }
 
-/** Прогоны MOB-BAL; [cache] - папка готовых эталонных героев (null - строить каждый раз, ничего не писать). */
-class MobBal(val index: ContentIndex, private val fights: Int, private val rolls: Int, private val monsterSamples: Int, private val cache: File? = CACHE) {
-    val kit = MobKit(index)
-    private val classes = index.classes.classes.mapNotNull { index.heroClass(it.code) }
+/**
+ * Готовые эталоны MOB-BAL: постройка героя (поиск вещей, дерево, набор умений боем) - самая дорогая часть прогона, поэтому герой
+ * строится один раз на ключ «класс, уровень, архетип, штраф». [cache] - папка готовых героев (null - строить, ничего не писать);
+ * сторожа тестов делят один пул на прогон (эталон уровня зоны кампании - тот же на карте, в Бездне, Скверне и Разломе).
+ */
+class HeroPool(val kit: MobKit, private val cache: File? = CACHE) {
     private val heroes = ConcurrentHashMap<String, Hero>()
 
     fun hero(heroClass: HeroClass, level: Int, archetype: Archetype, penalty: Double): Hero = heroes.getOrPut("${heroClass.code}/$level/${archetype.name}/$penalty") {
@@ -407,6 +409,14 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
             }
         }
     }
+}
+
+/** Прогоны MOB-BAL: [fights] боёв на [rolls] бросков босса; эталоны - из пула [heroes]. */
+class MobBal(val index: ContentIndex, private val fights: Int, private val rolls: Int, private val monsterSamples: Int, private val heroes: HeroPool = HeroPool(MobKit(index))) {
+    val kit = heroes.kit
+    private val classes = index.classes.classes.mapNotNull { index.heroClass(it.code) }
+
+    fun hero(heroClass: HeroClass, level: Int, archetype: Archetype, penalty: Double): Hero = heroes.hero(heroClass, level, archetype, penalty)
 
     fun classesOf(only: Set<String>) = classes.filter { only.isEmpty() || it.code in only }
 
@@ -424,6 +434,21 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         val zone = nearZones(level, 1).first()
         val hero = hero(heroClass, level, Archetype(heroBand(level), source, seed = seed), index.campaign.resistPenalty(zone.code, false))
         return hero to kit.tuner.damage(hero)
+    }
+
+    /** Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня (0.15.0, решение 44). */
+    fun mapZones(): List<Zone> {
+        val from = index.campaign.maps.tiers?.fromLevel ?: return emptyList()
+        return index.campaign.zones.filter { it.level >= from && it.boss.value.isNotBlank() && index.monster(it.boss) != null }
+    }
+
+    /**
+     * Эталон своего уровня на карте тира [tier] зоны [zone] (0.15.0, решение 44): уровень героя - уровень района карты, вещи полосы
+     * этого уровня ([campaignBand]), штраф сопротивлений карты.
+     */
+    fun mapHero(heroClass: HeroClass, zone: Zone, tier: Int): Hero {
+        val level = index.campaign.maps.areaLevel(zone.level, tier)
+        return hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, true))
     }
 
     /** Стиль, что класс умеет: чары только у тех, у кого есть чары с ударом; атаки - у кого есть атаки. */
@@ -820,21 +845,17 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Карты: тиры 1..16 на зонах карт, герой полосы тира (T1-5 типичный ур. 72, T6-10 хороший ур. 80, T11-16 оптимизированный ур. 88)
+        // Карты (0.15.0, решение 44): стражи зон с тирами на тирах [tiers], эталон своего уровня - уровня района карты ([MobBal.mapHero])
         "maps" -> {
-            val tiers = (System.getProperty("tiers") ?: "1,3,5,6,8,10,11,13,16").split(',').map { it.trim().toInt() }
-            val mapRarities = (System.getProperty("mapRarities") ?: "COMMON,RARE").split(',').map { Rarity.valueOf(it.trim()) }
-            val crossed = System.getProperty("crossed") == "1"
-            zones.forEach { zone ->
+            val tiers = (System.getProperty("tiers") ?: "1,4,8,12,16").split(',').map { it.trim().toInt() }
+            val mapRarities = (System.getProperty("mapRarities") ?: "COMMON").split(',').map { Rarity.valueOf(it.trim()) }
+            sim.mapZones().filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
                 tiers.forEach { tier ->
-                    val bands = if (crossed) GearBand.entries else listOf(bandOf(tier))
-                    bands.forEach { band ->
-                        classes.forEach { c ->
-                            mapRarities.forEach { mr ->
-                                tasks += Task {
-                                    val hero = sim.hero(c, heroLevelOf(band), Archetype(band), penalty(zone, true))
-                                    listOf(sim.boss(zone, hero, tier, mr, cap)) + (if (mr == Rarity.COMMON || System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, tier, mr, r, 120.0) } else emptyList())
-                                }
+                    classes.forEach { c ->
+                        mapRarities.forEach { mr ->
+                            tasks += Task {
+                                val hero = sim.mapHero(c, zone, tier)
+                                listOf(sim.boss(zone, hero, tier, mr, cap)) + (if (System.getProperty("mobs") == "1") MonsterRarity.entries.filter { it != MonsterRarity.UNIQUE }.map { r -> sim.monsters(zone, hero, tier, mr, r, 120.0) } else emptyList())
                             }
                         }
                     }
@@ -1102,11 +1123,11 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Разлом недели (0.14.1): эталон уровня [levels] каждого класса проходит [rolls] недель Разлома моделью игрока
+        // Разлом недели (0.14.1): эталон уровня [levels] (по умолчанию - уровни зон кампании 21-88) каждого класса проходит [rolls] недель моделью игрока
         "rift" -> {
             val modes = ModesBal(index)
             val weeks = (System.getProperty("rolls") ?: "3").toInt()
-            (System.getProperty("levels") ?: "20,30,40,60,72,80,88").split(',').map { it.trim().toInt() }.forEach { level ->
+            (System.getProperty("levels") ?: "21,31,41,61,71,81,88").split(',').map { it.trim().toInt() }.forEach { level ->
                 classes.forEach { c ->
                     tasks += Task {
                         val zone = sim.nearZones(level, 1).first()
@@ -1184,7 +1205,7 @@ fun main(args: Array<String>) {
 
 /**
  * Цель побед эталона над стражем своего уровня (0.15.0, решение 1, RULES «Общее»): [WINS] боёв, финал акта - у нижней границы ([FINALS]).
- * Карты своего уровня, вожди Бездны, стражи Разлома и Матерь Скверны равняются на неё же (отчёты режимов).
+ * Карты своего уровня, вожди Бездны, Разлом недели и Матерь Скверны равняются на неё же (отчёты режимов, сторож `ModesBalanceGuardTest`).
  */
 object GuardianTarget {
     val WINS = 0.55..0.60

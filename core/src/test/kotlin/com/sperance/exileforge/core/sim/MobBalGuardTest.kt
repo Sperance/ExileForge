@@ -18,7 +18,7 @@ class MobBalGuardTest {
 
     @Test
     fun referenceHeroesMeetTheTempoOfActFinals() {
-        val sim = MobBal(index, fights = 1, rolls = ROLLS, monsterSamples = SAMPLES, cache = null)
+        val sim = MobBal(index, fights = 1, rolls = ROLLS, monsterSamples = SAMPLES, heroes = GuardHeroes.pool)
         val finals = index.campaign.regions.mapNotNull { region -> region.zones.filter { it.boss.value.isNotBlank() }.maxByOrNull { it.level } }
         val tempos = finals.parallelStream().flatMap { zone ->
             sim.classesOf(emptySet()).map { heroClass ->
@@ -44,7 +44,7 @@ class MobBalGuardTest {
      */
     @Test
     fun everyGuardianMeetsTheWinTarget() {
-        val sim = MobBal(index, fights = FIGHTS * GUARD_ROLLS, rolls = GUARD_ROLLS, monsterSamples = 1, cache = null)
+        val sim = MobBal(index, fights = FIGHTS * GUARD_ROLLS, rolls = GUARD_ROLLS, monsterSamples = 1, heroes = GuardHeroes.pool)
         val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
         // Старшие уровни первыми: их постройки и бои дольше, параллельный поток так меньше ждёт хвоста
         val keys = zones.sortedByDescending { it.level }.flatMap { zone -> sim.classesOf(emptySet()).map { zone to it } }

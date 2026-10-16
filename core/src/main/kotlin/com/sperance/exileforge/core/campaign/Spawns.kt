@@ -43,10 +43,10 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     /** The guardian of the Vaal zone behind the portal, sealing its exit. */
     fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = guardian(zone.corrupted, run.levelOf(zone), buffs, emptyList(), run.streams.of("corruptRoll"))
 
-    /** Страж [code]; [moreRolls] - сверх его строк (ступень раша, 3.96.0). */
+    /** Страж [code]; [moreRolls] - сверх его строк (ступень раша, 3.96.0); сила - захода ([Run.guardianPower]: на карте - своя по тиру). */
     private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice, moreRolls: Int = 0): RolledMonster? {
         if (code.value.isBlank() || index.monster(code) == null) return null
-        val view = monsters.guardian(code, level).let { if (moreRolls > 0) it.copy(rolls = it.rolls.map { n -> n + moreRolls }) else it }
+        val view = monsters.guardian(code, level, power = run.guardianPower(level)).let { if (moreRolls > 0) it.copy(rolls = it.rolls.map { n -> n + moreRolls }) else it }
         return skilled(buffed(sworn(monsters.boss(view, dice, extra)), buffs), dice)
     }
 

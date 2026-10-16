@@ -34,7 +34,7 @@ enum class StatPriority(stats: List<CoreStat>) {
             CoreStat.PHYSICAL_REDUCTION,
             CoreStat.SPELL_SUPPRESSION,
             CoreStat.ALL_RESISTANCES,
-            CoreStat.RESIST_ALL,
+            CoreStat.ALL_ELEMENTAL_RESISTANCES,
             CoreStat.RESIST_FIRE,
             CoreStat.RESIST_COLD,
             CoreStat.RESIST_LIGHTNING,

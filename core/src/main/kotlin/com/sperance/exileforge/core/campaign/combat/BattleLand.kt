@@ -55,7 +55,8 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
     // 3.35.0: recoup gives a share of the hit back over the rule's seconds - любому бойцу (0.14.0, STAT-ATK-02); a culling blow finishes a foe left low.
     val recouped = if (target.alive && target.body.recoup > 0 && dealt > 0) dealt * target.body.recoup else 0.0
     if (recouped > 0) Recovery(recouped / rules.defence.recoup, 0.0, time + rules.defence.recoup, -1).let { if (target === heroFighter) recoveries += it else target.recouping += it }
-    val culled = target.alive && !target.invulnerable && body.culling > 0 && target.life < target.body.maxLife * body.culling
+    val culling = body.culling(target.chief)
+    val culled = target.alive && !target.invulnerable && culling > 0 && target.life < target.body.maxLife * culling
     if (culled) target.life = 0.0
     val physical = taken[DamageType.PHYSICAL] ?: 0.0
     // Vampirism is capped per second (server 1.76.0): a share of the maximum life, whatever the blows.

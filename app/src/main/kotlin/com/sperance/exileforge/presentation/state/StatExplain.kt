@@ -26,6 +26,7 @@ import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.WorldPart
 import com.sperance.exileforge.rules.sheet.Grant
+import com.sperance.exileforge.rules.sheet.ModifierMath
 import com.sperance.exileforge.rules.sheet.Share
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.SourceKind
@@ -280,7 +281,8 @@ class StatExplainer(private val game: GameUi) {
         .toSortedMap().map { (op, group) ->
             when (op) {
                 Op.MORE -> fmt(stat, (group.fold(1.0) { acc, it -> acc * (1 + it.value / 100) } - 1) * 100, op, percent)
-                Op.SET -> fmt(stat, group.last().value, op, percent)
+                // Замена - та, что держит характеристику в своде (0.15.0): запрет сильнее прочих
+                Op.SET -> fmt(stat, ModifierMath.settled(group.map { it.value }) ?: 0.0, op, percent)
                 else -> fmt(stat, group.sumOf { it.value }, op, percent)
             }
         }.joinToString(" · ")

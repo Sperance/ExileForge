@@ -140,12 +140,13 @@ class CombatRulesTest {
         assertTrue(healed(mapOf(CoreStat.NO_LIFE_REGEN.code to 1.0)) <= 100.0, "a ban on recovery stops the power's healing")
     }
 
-    /** STAT-ATK-08: добивание, цена умений, двойной урон и возврат - под потолками правил. */
+    /** STAT-ATK-08: добивание (босса - под своим потолком, 0.15.0), цена умений, двойной урон и возврат - под потолками правил. */
     @Test
     fun combat_caps_hold() {
         val caps = rules.caps
         val capped = body(mapOf(CoreStat.CULLING.code to 60.0, CoreStat.SKILL_COST.code to 145.0, CoreStat.DOUBLE_DAMAGE.code to 90.0, CoreStat.LIFE_RECOUP.code to 90.0))
-        assertEquals(caps.culling / 100, capped.culling, 1e-9)
+        assertEquals(caps.culling / 100, capped.culling(boss = false), 1e-9)
+        assertEquals(caps.bossCulling / 100, capped.culling(boss = true), 1e-9)
         assertEquals(1 - caps.skillCost / 100, capped.skillCost, 1e-9)
         assertEquals(caps.doubleDamage / 100, capped.doubleDamage, 1e-9)
         assertEquals(caps.recoup / 100, capped.recoup, 1e-9)

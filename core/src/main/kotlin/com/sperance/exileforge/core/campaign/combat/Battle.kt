@@ -16,6 +16,7 @@ import com.sperance.exileforge.rules.content.Condition
 import com.sperance.exileforge.rules.content.EnrageRule
 import com.sperance.exileforge.rules.content.FightKind
 import com.sperance.exileforge.rules.content.FightRules
+import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.RecoveryPool
 import kotlin.math.max
 import kotlin.math.min
@@ -104,6 +105,9 @@ class Battle(
             body = next
             attackInterval = 1 / next.attackSpeed
         }
+
+        /** Босс боя (0.15.0): уникальный враг и выше - стражи, боссы карт, башни и Разлома; на нём свои потолки (добивание, провокация, силы). */
+        val chief: Boolean get() = side == Side.MONSTER && index >= 0 && foes[index].rarity >= MonsterRarity.UNIQUE
 
         /** Stunned until then: nothing is swung before it. A freeze holds by its own ailment (3.71.0), so lifting it frees at once. */
         var heldUntil = 0.0

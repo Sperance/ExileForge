@@ -160,7 +160,7 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
                     FactorKey.DEFENCE,
                     defended / rawSum,
                     DamageType.entries.map { "STOCK_PENETRATE_${it.name}" } + CoreStat.PENETRATE_ELEMENTAL.code,
-                    listOf(CoreStat.ARMOR.code, CoreStat.PHYSICAL_REDUCTION.code, CoreStat.ARMOUR_ELEMENTAL.code, CoreStat.RESIST_ALL.code, CoreStat.RESIST_MAX_ALL.code) + DamageType.entries.mapNotNull { it.resist },
+                    listOf(CoreStat.ARMOR.code, CoreStat.PHYSICAL_REDUCTION.code, CoreStat.ARMOUR_ELEMENTAL.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, CoreStat.RESIST_MAX_ALL.code) + DamageType.entries.mapNotNull { it.resist },
                 ),
             )
         }
@@ -305,7 +305,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
                 FactorTrace(
                     FactorKey.DEFENCE,
                     defendedSum / rawSum,
-                    target = listOf(CoreStat.ARMOR.code, CoreStat.PHYSICAL_REDUCTION.code, CoreStat.RESIST_ALL.code, CoreStat.RESIST_MAX_ALL.code) + DamageType.entries.mapNotNull { it.resist },
+                    target = listOf(CoreStat.ARMOR.code, CoreStat.PHYSICAL_REDUCTION.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, CoreStat.RESIST_MAX_ALL.code) + DamageType.entries.mapNotNull { it.resist },
                 ),
             )
         }

@@ -401,7 +401,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
             PowerAct.CURSE -> targets(effect.to, moment).forEach(battle::hex)
 
             PowerAct.EXECUTE ->
-                targets(effect.to, moment).filter { battle.foes[it.index].rarity < MonsterRarity.UNIQUE && it.life < it.body.maxLife * amount / 100 }
+                targets(effect.to, moment).filter { !it.chief && it.life < it.body.maxLife * amount / 100 }
                     .forEach(battle::slay)
 
             PowerAct.STUN -> targets(effect.to, moment).forEach { it.heldUntil = max(it.heldUntil, battle.time + duration) }
@@ -497,7 +497,7 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
             // Здоровье врага момента - ударенного или павшего; у босса и уникального - доля `combat.bossTargetLife` (MOB-BAL, В-7: прежняя пятая часть ×0,25)
             PowerBase.TARGET_LIFE -> (moment.target?.takeIf { it.side == Side.MONSTER } ?: foe).let { of ->
-                of.body.maxLife * if (battle.foes[of.index].rarity >= MonsterRarity.UNIQUE) battle.rules.bossTargetLife else 1.0
+                of.body.maxLife * if (of.chief) battle.rules.bossTargetLife else 1.0
             }
 
             PowerBase.STRENGTH -> body[CoreStat.STRENGTH.code]
@@ -506,7 +506,8 @@ internal class PowerRunner(private val battle: Battle, book: PowerBook, private 
 
             PowerBase.INTELLECT -> body[CoreStat.INTELLECT.code]
 
-            PowerBase.WEAPON -> 0.0
+            // Доля оставшейся перезарядки (0.15.0) - база только `COOLDOWNS` (проверка контента), урона не даёт
+            PowerBase.WEAPON, PowerBase.REMAINING -> 0.0
         }
         return mapOf((type ?: DamageType.PHYSICAL) to base * share)
     }

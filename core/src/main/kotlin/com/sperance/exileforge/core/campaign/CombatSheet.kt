@@ -42,9 +42,9 @@ data class PassiveSource(val skill: String, val level: Int, val reserve: Double,
  * (`StatDef.partOf`) читается здесь же - так строка и её разбор сходятся с боем.
  */
 enum class FightReading(val stat: String, val from: String, val creates: Boolean) {
-    FIRE(CoreStat.RESIST_FIRE.code, CoreStat.RESIST_ALL.code, true),
-    COLD(CoreStat.RESIST_COLD.code, CoreStat.RESIST_ALL.code, true),
-    LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.RESIST_ALL.code, true),
+    FIRE(CoreStat.RESIST_FIRE.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
+    COLD(CoreStat.RESIST_COLD.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
+    LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
 
     /**
      * Регенерация здоровья (#50): строка сводки - итог потока здоровья в секунду, как его читает бой ([Recovery.lifeFlow]): плоская,

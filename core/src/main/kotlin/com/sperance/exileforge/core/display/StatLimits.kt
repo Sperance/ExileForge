@@ -40,19 +40,19 @@ object StatLimits {
         return StatLimit(stat, cap.gathered(stat, read), cap.effective(stat, read), cap.base, raises, cap.at(read), cap.hard, cap.floor)
     }
 
-    /** Шанс уклонения героя уровня [level] (4.12.x, R3): от меткости врага его уровня, под пределом правил. */
-    fun evasion(stats: Map<String, Double>, level: Int, campaign: CampaignFile): StatReading = StatCaps.evasion({ stats[it] ?: 0.0 }, level, campaign.combat)
+    /** Шанс уклонения героя уровня [level] (4.12.x, R3): от меткости эталонного врага его уровня (0.15.0, `ReferenceFoe`), под пределом правил. */
+    fun evasion(stats: Map<String, Double>, level: Int, index: ContentIndex): StatReading = StatCaps.evasion({ stats[it] ?: 0.0 }, level, index)
 
     /**
      * Защита процентом (0.14.0, ASANA-N07): уклонение - шанс против меткости врага уровня героя [level], броня - снижение
-     * физического урона от удара эталонного врага Мощи (`StatCaps.physical`, `MightRule.reference`). Сводка печатает его главным
+     * физического урона от удара эталонного врага уровня героя (`StatCaps.physical`, 0.15.0 - `ReferenceFoe.hit`). Сводка печатает его главным
      * числом, сравнение - разницей в п.п.; прочие характеристики - null.
      */
     fun defence(stat: String, stats: Map<String, Double>, level: Int, index: ContentIndex): StatReading? {
         val read = { code: String -> stats[code] ?: 0.0 }
         return when (stat) {
-            EVASION -> evasion(stats, level, index.campaign)
-            ARMOUR -> StatCaps.physical(read, index.rules.might.reference(read), index.campaign.combat)
+            EVASION -> evasion(stats, level, index)
+            ARMOUR -> StatCaps.physical(read, index.referenceFoe.hit(level), index.campaign.combat)
             else -> null
         }
     }

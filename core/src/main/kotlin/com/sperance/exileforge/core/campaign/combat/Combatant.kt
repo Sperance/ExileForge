@@ -108,9 +108,11 @@ data class Combatant(
         .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
     val attackSpeed = stat(CoreStat.ATTACK_SPEED.code).takeIf { it > 0 }?.coerceIn(rules.attackSpeedMin, rules.attackSpeedMax) ?: rules.unarmed.speed
 
-    /** A limit raised by the sheet's own lines (3.13.0): block, evasion, physical reduction and critical chance, each as the resistances are. */
+    /** A limit raised by the sheet's own lines (3.13.0): block, evasion and physical reduction, each as the resistances are. */
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
-    val critChance = (stats[CRIT_CHANCE] ?: rules.critical.chance).coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100
+
+    /** Шанс крита атак (0.15.0): под потолком правил `critical.chanceCap`, без поднятий. */
+    val critChance = rules.critical.chanceOf(stats[CRIT_CHANCE] ?: rules.critical.chance) / 100
 
     /** Чем бьёт крит (0.14.0, ASANA-N05): один множитель, без отдельного урона крита, не ниже удара и не выше потолка правил. */
     val critMultiplier = rules.critical.effective(stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier) / 100
@@ -119,7 +121,7 @@ data class Combatant(
      * A spell's own critical chance and multiplier (server 1.56.0): the attacks' lines do nothing to it. The hero's sheet
      * always holds both from the rule's base; a fighter without them — a monster — casts with its attacks' figures.
      */
-    val spellCritChance = stats[SPELL_CRIT_CHANCE]?.let { it.coerceIn(0.0, ceiling(rules.ceilings.critical)) / 100 } ?: critChance
+    val spellCritChance = stats[SPELL_CRIT_CHANCE]?.let { rules.critical.chanceOf(it) / 100 } ?: critChance
     val spellCritMultiplier = stats[SPELL_CRIT_MULTIPLIER]?.let { rules.critical.effective(it) / 100 } ?: critMultiplier
     val armour = max(0.0, stat(CoreStat.ARMOR.code))
     val evasion = max(0.0, stat(CoreStat.EVASION.code))
@@ -159,7 +161,7 @@ data class Combatant(
     fun overcap(type: DamageType): Double = type.resist?.let { max(0.0, rawResist(it) - resistCeiling(type)) } ?: 0.0
 
     /** Своё сопротивление [name] листа: стихии - и с общим. */
-    private fun rawResist(name: String): Double = stat(name) + if (name == CoreStat.RESIST_CHAOS.code) 0.0 else stat(CoreStat.RESIST_ALL.code)
+    private fun rawResist(name: String): Double = stat(name) + if (name == CoreStat.RESIST_CHAOS.code) 0.0 else stat(CoreStat.ALL_ELEMENTAL_RESISTANCES.code)
 
     /** Потолок сопротивления [type]: правило боя, свой максимум и, у стихий, общий - не выше жёсткого. */
     private fun resistCeiling(type: DamageType): Double {
@@ -196,8 +198,8 @@ data class Combatant(
         return 1 + (max(0.0, stat(CoreStat.DAMAGE_VS_AILED.code)) + named) / 100
     }
 
-    /** How much longer the ailments this fighter inflicts last on its foes. */
-    fun ailmentDurationOnFoes(ailment: Ailment): Double = 1 + (max(0.0, stat(CoreStat.AILMENT_DURATION.code)) + max(0.0, stat("STOCK_${ailment.word}_DURATION"))) / 100
+    /** How much longer the ailments this fighter inflicts last on its foes: общее и своё увеличение вместе - под потолком `caps.ailmentDuration` (0.15.0). */
+    fun ailmentDurationOnFoes(ailment: Ailment): Double = rules.caps.ailmentLasting(max(0.0, stat(CoreStat.AILMENT_DURATION.code)) + max(0.0, stat("STOCK_${ailment.word}_DURATION")))
 
     /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill (server 0.66.0). */
     val recoveryRate = max(0.0, 1 + stat(CoreStat.RECOVERY_RATE.code) / 100)
@@ -233,7 +235,7 @@ data class Combatant(
         }
         auras["AURA_COOLDOWN"]?.let { v -> sheet[CoreStat.COOLDOWN_RECOVERY.code] = (stats[CoreStat.COOLDOWN_RECOVERY.code] ?: 0.0) - v }
         auras["AURA_RESIST"]?.let { v ->
-            sheet[CoreStat.RESIST_ALL.code] = (stats[CoreStat.RESIST_ALL.code] ?: 0.0) - v
+            sheet[CoreStat.ALL_ELEMENTAL_RESISTANCES.code] = (stats[CoreStat.ALL_ELEMENTAL_RESISTANCES.code] ?: 0.0) - v
             sheet[CoreStat.RESIST_CHAOS.code] = (stats[CoreStat.RESIST_CHAOS.code] ?: 0.0) - v
         }
         auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet[CoreStat.DAMAGE_TAKEN.code] = (stats[CoreStat.DAMAGE_TAKEN.code] ?: 0.0) + v }
@@ -342,8 +344,8 @@ data class Combatant(
     fun critMultiplier(spell: Boolean): Double = if (spell) spellCritMultiplier else critMultiplier
     val doubleDamage = percent(CoreStat.DOUBLE_DAMAGE.code, rules.caps.doubleDamage)
 
-    /** A foe it hits left under this share of its life dies - a boss too, under the rules' cap (4.12.x, STAT-ATK-08). */
-    val culling = percent(CoreStat.CULLING.code, rules.caps.culling)
+    /** Доля здоровья, ниже которой удар этого бойца добивает цель (4.12.x, STAT-ATK-08); босса и уникального - под своим потолком (0.15.0, `caps.bossCulling`). */
+    fun culling(boss: Boolean): Double = rules.caps.cull(stat(CoreStat.CULLING.code), boss)
 
     /** Increased damage for each charge of [kind] it holds. */
     fun perCharge(kind: ChargeKind): Double = stat("STOCK_DAMAGE_PER_${kind.name}")

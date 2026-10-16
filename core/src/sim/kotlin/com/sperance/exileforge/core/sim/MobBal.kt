@@ -133,7 +133,7 @@ class MobKit(val index: ContentIndex) {
         val elem = DamageType.ELEMENTS.sumOf { 1 - c.resist(it) }
         val taken = (0.4 * phys + 0.15 * elem + 0.15 * (1 - c.resist(DamageType.CHAOS))) * avoid
         val ehp = (c.maxLife + c.maxShield) / taken.coerceAtLeast(0.03)
-        val dps = SkillProfile(index, stats, level) { body.fold.increased(it, body.passiveLines) }.dps(body.kit.actives) + CombatProfile.of(index, stats, level).attack
+        val dps = SkillProfile(index, stats, level, body.fold.growth(body.passiveLines)).dps(body.kit.actives) + CombatProfile.of(index, stats, level).attack
         return ehp * dps.coerceAtLeast(1.0)
     }
 

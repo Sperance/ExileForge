@@ -129,7 +129,7 @@ object MapEffects {
         effects[MapStat.HERO_FLASK_EFFECT.code]?.let { add(CoreStat.FLASK_EFFECT.code, -it) }
         effects[MapStat.HERO_BUFF_DURATION.code]?.let { add(BuffKind.DURATION, -it) }
         // The alchemist's potion of the run (3.79.0, server 1.74.0): resistances added, damage and life «more».
-        effects[BrewStat.RESIST]?.let { add(CoreStat.RESIST_ALL.code, it) }
+        effects[BrewStat.RESIST]?.let { add(CoreStat.ALL_ELEMENTAL_RESISTANCES.code, it) }
         effects[BrewStat.DAMAGE]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (sheet[CoreStat.DAMAGE.code] ?: 0.0)) * (1 + v / 100) - 100 }
         effects[BrewStat.LIFE]?.let { scale(CoreStat.HEALTH.code, it) }
         // Дар алтаря сделки (3.90.0, сервер 1.81.3): «больше» урона героя до конца карты.

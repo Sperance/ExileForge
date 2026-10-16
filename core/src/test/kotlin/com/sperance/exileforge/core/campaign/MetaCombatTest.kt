@@ -200,7 +200,7 @@ class MetaCombatTest {
         val BASE = mapOf(
             "STOCK_ATTACK_PHYSICAL" to 120.0, "STOCK_ATTACK_FIRE" to 30.0, "STOCK_ATTACK_COLD" to 30.0, "STOCK_ATTACK_LIGHTNING" to 30.0, "STOCK_ATTACK_CHAOS" to 20.0,
             "STOCK_ATTACK_SPEED" to 1.4, "STOCK_HEALTH" to 3000.0, "STOCK_MANA" to 300.0, "STOCK_ENERGY_SHIELD" to 300.0, "STOCK_ARMOR" to 800.0,
-            "STOCK_EVASION" to 600.0, "STOCK_BLOCK_CHANCE" to 15.0, "STOCK_RESIST_ALL" to 30.0, "STOCK_CRITICAL_CHANCE" to 20.0, "STOCK_SPELL_CRITICAL_CHANCE" to 20.0,
+            "STOCK_EVASION" to 600.0, "STOCK_BLOCK_CHANCE" to 15.0, "STOCK_ALL_ELEMENTAL_RESISTANCES" to 30.0, "STOCK_CRITICAL_CHANCE" to 20.0, "STOCK_SPELL_CRITICAL_CHANCE" to 20.0,
             "STOCK_IGNITE_CHANCE" to 20.0, "STOCK_SHOCK_CHANCE" to 20.0, "STOCK_POISON_CHANCE" to 20.0, "STOCK_BLEED_CHANCE" to 20.0, "STOCK_FREEZE_CHANCE" to 10.0,
             "STOCK_HEALTH_REGEN" to 10.0, "STOCK_MANA_REGEN_FLAT" to 8.0, "STOCK_STRENGTH" to 150.0, "STOCK_AGILITY" to 150.0, "STOCK_INTELLECT" to 150.0,
         )
@@ -240,7 +240,7 @@ class MetaCombatTest {
             // Характеристики - небоевые: добыча и объекты карты
             addAll(listOf("STOCK_BLIGHT_REDUCTION:ADD", "STOCK_FATE_ASH_LOOT:ADD", "STOCK_VEILED:ADD", "STOCK_VEILED_LOOT:ADD"))
             // Характеристики - пределы: в схватке значение не доходит до потолка
-            addAll(listOf("STOCK_BLOCK_MAX:ADD", "STOCK_CRITICAL_MAX:ADD", "STOCK_EVASION_MAX:ADD", "STOCK_MAX_ENDURANCE_CHARGES:ADD"))
+            addAll(listOf("STOCK_BLOCK_MAX:ADD", "STOCK_EVASION_MAX:ADD", "STOCK_MAX_ENDURANCE_CHARGES:ADD"))
             addAll(listOf("STOCK_MAX_FRENZY_CHARGES:ADD", "STOCK_MAX_POWER_CHARGES:ADD", "STOCK_RESIST_MAX_ALL:ADD", "STOCK_RESIST_MAX_CHAOS:ADD"))
             addAll(listOf("STOCK_RESIST_MAX_COLD:ADD", "STOCK_RESIST_MAX_FIRE:ADD", "STOCK_RESIST_MAX_LIGHTNING:ADD", "STOCK_SPELL_BLOCK_MAX:ADD"))
             // Силы - условие силы не наступает в эталонных схватках (аудит 19_STATS: stats-pw1/pw2, inject.tsv)

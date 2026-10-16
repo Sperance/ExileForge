@@ -145,8 +145,8 @@ private class SourceIndex(private val index: ContentIndex) {
         index.campaign.zones.forEach { zone -> (zone.monsters + zone.boss + zone.corrupted).forEach { levels.getOrPut(it) { ArrayList() } += zone.level } }
         index.campaign.monsters.forEach { monster ->
             val kind = when {
-                monster.boss -> SourceKind.BOSSES
                 monster.corrupted -> SourceKind.CORRUPTED
+                monster.boss -> SourceKind.BOSSES
                 else -> SourceKind.MONSTERS
             }
             val range = levels[monster.code]?.let { it.min()..it.max() } ?: return@forEach

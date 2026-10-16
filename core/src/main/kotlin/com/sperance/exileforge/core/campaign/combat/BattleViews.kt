@@ -29,13 +29,17 @@ fun Battle.pools(): HeroPools = HeroPools(
  * Что герой уносит из боя на карту ([HeroCarry]): недуги, временные баффы и проклятия (не глотки и не носимое весь бой), щит и
  * заряды - остатком своего времени.
  */
-fun Battle.carry(): HeroCarry = HeroCarry(
-    heroFighter.ailments.filter { it.until > time }.map { CarriedAilment(it.ailment, it.until - time, it.magnitude, it.duration, it.chaos, it.limit) },
-    carriedEffects(),
-    heroFighter.shield,
-    heroCharges.carried(time),
-    powers.tally,
-)
+fun Battle.carry(): HeroCarry {
+    val held = heroFighter.ailments.filter { it.until > time }
+    val brought = held.filter { it.foe < 0 }.maxOfOrNull { CarriedAilment.origin(it.foe, 0) } ?: 0
+    return HeroCarry(
+        held.map { CarriedAilment(it.ailment, it.until - time, it.magnitude, it.duration, it.chaos, it.limit, CarriedAilment.origin(it.foe, brought)) },
+        carriedEffects(),
+        heroFighter.shield,
+        heroCharges.carried(time),
+        powers.tally,
+    )
+}
 
 /** Временные баффы и проклятия героя остатком времени: не глотки, не носимое весь бой и не Разлома. */
 private fun Battle.carriedEffects(): List<CarriedEffect> = heroFighter.effects.filter { it.kind != EffectKind.FLASK && it.until > time && it.until - time < Battle.FOREVER / 2 && !riftSourced(it.source) }.map {

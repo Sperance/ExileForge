@@ -80,6 +80,6 @@ class PhaseFoes(private val index: ContentIndex, private val combat: CombatRules
     /** Обычный монстр свиты [code] на [level] с печатями свиты [seals] (4.0.0) - на тех же костях. */
     private fun normal(code: MonsterCode, level: Int, seals: List<ModifierCode>, dice: Dice): RolledMonster? {
         val monster = index.monster(code) ?: return null
-        return roller.sealed(roller.build(monster, level, index.campaign.rarity(MonsterRarity.NORMAL), emptyList(), dice), seals, level, dice)
+        return roller.sealed(roller.build(monster, level, index.campaign.rarity(MonsterRarity.NORMAL), emptyList()), seals, level, dice)
     }
 }

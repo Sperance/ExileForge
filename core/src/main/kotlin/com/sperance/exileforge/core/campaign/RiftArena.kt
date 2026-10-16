@@ -225,15 +225,15 @@ class RiftArena(
         return HeroPools(hero.maxLife * run.life.coerceIn(0.0, 1.0), mana, charges, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
     }
 
-    /** Враг узла: страж - со своими строками босса, Вождь - редкий со свойствами сверх своих, прочие - по редкости. */
+    /** Враг узла: страж - босс без своих строк, Вождь - редкий со свойствами сверх своих, прочие - по редкости. */
     private fun rolled(foe: RiftFoe, dice: Dice): RolledMonster? {
         val monster = index.monster(foe.monster) ?: return null
         val buffs = MapEffects.buffs(effects) + growth(fight.power) + touch.foes.map { MonsterEffect(it.stat, it.op, it.value) }
-        if (foe.rarity == MonsterRarity.UNIQUE) return spawns.skilled(spawns.buffed(roller.boss(roller.guardian(monster.code, fight.level), dice), buffs), dice)
+        if (foe.rarity == MonsterRarity.UNIQUE) return spawns.skilled(spawns.buffed(roller.boss(roller.guardian(monster.code, fight.level)), buffs), dice)
         val rule = index.campaign.rarity(foe.rarity)
         val traits = foe.traits.mapNotNull(index.campaign.traits.byCode::get)
         val mods = roller.draw(roller.pool(zone.tables, fight.level), fight.level, rule, dice.between(rule.modifiers), dice)
-        val built = roller.build(monster, fight.level, rule, mods, dice, roller.traitEffects(traits, foe.rarity))
+        val built = roller.build(monster, fight.level, rule, mods, roller.traitEffects(traits, foe.rarity))
         return spawns.skilled(spawns.buffed(built.copy(traits = (built.traits + traits.map { it.code }).distinct()), buffs), dice)
     }
 
@@ -268,7 +268,7 @@ class RiftArena(
         val devourer = rules.guardians.devourer.takeIf { fight.guardian == 1 }
         if (devourer != null) {
             index.monster(devourer.shade)?.let { shade ->
-                val rolledShade = roller.build(shade, fight.level, index.campaign.rarity(MonsterRarity.NORMAL), emptyList(), dice)
+                val rolledShade = roller.build(shade, fight.level, index.campaign.rarity(MonsterRarity.NORMAL), emptyList())
                 foes = phases.withShades(foes, phases.foe(rolledShade, fight.level), devourer.shades)
             }
         }

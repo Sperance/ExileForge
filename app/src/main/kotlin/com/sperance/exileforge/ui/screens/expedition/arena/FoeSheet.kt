@@ -46,8 +46,13 @@ import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Вкладки листа врага: характеристики, навыки, фазы и тотемы (только у босса с ними), модификаторы. */
-private enum class FoeTab(val key: String) { STATS("fight.tab_stats"), SKILLS("fight.tab_skills"), PHASES("fight.tab_phases"), MODS("fight.tab_mods") }
+/** Вкладки листа врага: характеристики, навыки, фазы и тотемы (только у босса с ними), модификаторы - у босса влияние карты. */
+private enum class FoeTab(val key: String, val bossKey: String = key) {
+    STATS("fight.tab_stats"),
+    SKILLS("fight.tab_skills"),
+    PHASES("fight.tab_phases"),
+    MODS("fight.tab_mods", "fight.tab_influence"),
+}
 
 /**
  * Лист врага на паузе (3.93.0): босс или приспешник целиком - защита с тем, что от неё остаётся против героя, урон, умения и
@@ -79,7 +84,7 @@ private enum class FoeTab(val key: String) { STATS("fight.tab_stats"), SKILLS("f
                 FoeSheetMight(foe)
             }
             ScrollableTabRow(selectedTabIndex = tabs.indexOf(tab).coerceAtLeast(0), containerColor = PanelRaised, contentColor = Gold, edgePadding = 12.dp) {
-                tabs.forEach { t -> Tab(selected = t == tab, onClick = { tab = t }, text = { Text(ui(t.key)) }) }
+                tabs.forEach { t -> Tab(selected = t == tab, onClick = { tab = t }, text = { Text(ui(if (foe.monster.power != null) t.bossKey else t.key)) }) }
             }
             Column(
                 Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp),
@@ -216,10 +221,10 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
     }
 }
 
-/** Модификаторы: каждая строка суммой и из чего она сложена - монстр, карта, атлас, сделки. */
+/** Модификаторы: каждая строка суммой и из чего она сложена - монстр, карта, атлас, сделки; у босса своих нет, только влияние карты. */
 @Composable private fun ModsTab(foe: FoeView, shares: List<BuffShare>, index: ContentIndex?) {
     val lines = remember(foe.monster) { monsterLines(foe.monster) }
-    if (lines.isEmpty()) MutedText(ui("fight.sheet_no_mods"))
+    if (lines.isEmpty()) MutedText(ui(if (foe.monster.power != null) "fight.sheet_no_influence" else "fight.sheet_no_mods"))
     lines.forEach { line ->
         Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
             Text(monsterLineText(line, index), color = ModBlue, style = MaterialTheme.typography.bodySmall)

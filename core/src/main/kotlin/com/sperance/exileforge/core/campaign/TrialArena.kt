@@ -146,6 +146,9 @@ class TrialArena(
     private var floor: TowerFloor? = null
 
     private var level = trial.heroLevel
+
+    /** На сколько секунд раньше ярость идущего боя: ступень раша, вождь башни. */
+    private var sooner = 0.0
     private var battle: Battle? = null
     private var monsters: List<RolledMonster> = emptyList()
     private var started = false
@@ -265,8 +268,8 @@ class TrialArena(
             TrialKind.RUSH -> {
                 val zone = plan?.zones?.getOrNull(step) ?: return finish(fallen = false)
                 level = trial.heroLevel
-                // Ступень раша (3.96.0): боссы сильнее и с лишними строками
-                listOfNotNull(spawns.boss(zone.copy(level = level), growth(tier.power), emptyList(), tier.mods))
+                sooner = tier.enrage
+                listOfNotNull(spawns.boss(zone.copy(level = level), growth(tier.power), emptyList()))
             }
 
             TrialKind.TOWER -> {
@@ -284,6 +287,7 @@ class TrialArena(
                 }
                 floor = next
                 level = next.level
+                sooner = if (next.wave.leader != null) next.leader.enrage else 0.0
                 waves.foes(abyss, next.wave, next.level, run.streams.of("towerFloor", next.floor), effects(), run.context.extraRareMods, growth(next.power), next.leader)
             }
         }
@@ -302,7 +306,7 @@ class TrialArena(
             // Фазы и свита боссов (3.92.0): свита - на своём потоке
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
-            percent = gear.percent, cleared = wonLast, kind = trial.kind.fight,
+            percent = gear.percent, cleared = wonLast, kind = trial.kind.fight, rage = rules.enrage(trial.kind.fight).sooner(sooner),
             fateRun = fateRun, muster = Muster.Reinforcements,
         )
     }

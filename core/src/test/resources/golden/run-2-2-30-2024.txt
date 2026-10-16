@@ -29,7 +29,7 @@ phase=DEAD life=0.0000 seconds=111.7000 kills=21 bosses=0 deaths=1 events=54
 26 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/1 taken=49 healed=0 max=88 dealt={FIRE=166, PHYSICAL=5}
 27 ENGAGE 7 0 0 0 false false
 28 KILL 7 0 0 0 false false
-29 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=27 healed=0 max=110 dealt={FIRE=184, PHYSICAL=4}
+29 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/0 taken=25 healed=0 max=110 dealt={FIRE=184, PHYSICAL=4}
 30 ENGAGE 8 0 0 0 false false
 31 KILL 8 0 0 0 false false
 32 FIGHT 0 0 0 0 false false fight=2/0/0/0/0/1 taken=11 healed=0 max=74 dealt={FIRE=78, PHYSICAL=2}
@@ -39,7 +39,7 @@ phase=DEAD life=0.0000 seconds=111.7000 kills=21 bosses=0 deaths=1 events=54
 36 ENGAGE 10 0 0 0 false false
 37 KILL 10 0 0 0 false false
 38 KILL 10 1 0 0 false false
-39 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/1 taken=89 healed=0 max=95 dealt={FIRE=174, PHYSICAL=5}
+39 FIGHT 0 0 0 0 false false fight=4/0/0/0/0/1 taken=88 healed=0 max=95 dealt={FIRE=174, PHYSICAL=5}
 40 ENGAGE 11 0 0 0 false false
 41 KILL 11 0 0 0 false false
 42 FIGHT 0 0 0 0 false false fight=1/0/0/0/0/0 taken=10 healed=0 max=69 dealt={FIRE=69}
@@ -52,5 +52,5 @@ phase=DEAD life=0.0000 seconds=111.7000 kills=21 bosses=0 deaths=1 events=54
 49 KILL 13 2 0 0 false false
 50 FIGHT 0 0 0 0 false false fight=7/0/0/0/0/0 taken=127 healed=0 max=82 dealt={FIRE=234, PHYSICAL=11}
 51 ENGAGE 14 0 0 0 false false
-52 FIGHT 0 0 0 0 false false fight=7/0/0/0/0/0 taken=358 healed=0 max=95 dealt={FIRE=95, PHYSICAL=8}
+52 FIGHT 0 0 0 0 false false fight=7/0/0/0/0/0 taken=357 healed=0 max=95 dealt={FIRE=95, PHYSICAL=8}
 53 FALL 0 0 0 0 false false

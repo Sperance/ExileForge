@@ -9,11 +9,12 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Сторожа режимов (0.15.0, решение 44; быстрые варианты отчётов `:core:mobBal -Pmode=maps|abyss|rift|blight`): эталон своего уровня
- * в каждом режиме держит цель побед стража [GuardianTarget.WINS] - страж карты своего уровня (уровень героя - уровень района) на
- * каждом тире, вожди глубин Бездны, Разлом недели (дойти до конца) на каждом уровне и Матерь Скверны на каждом акте. Сводная доля
- * режима - в цели с допуском [MEAN], доля каждой части выборки (тир, вождь, уровень, акт) - со своим допуском по её числу боёв;
- * кости детерминированы. Время: эталоны общие со сторожем стражей, сам сторож режимов - бои (~3-4 мин на 4 ядрах). Эталоны - общий пул сторожей ([GuardHeroes]): уровни выборки - уровни зон кампании, герои те же.
+ * Сторожа режимов (быстрые варианты отчётов `:core:mobBal -Pmode=maps|abyss|rift|blight|vaal`): эталон своего уровня в каждом режиме
+ * держит свою цель побед - страж карты своего уровня (уровень героя - уровень района) по тиру и Разлом недели (дойти до конца) по
+ * уровню - падающую цель [FallingTarget], вожди глубин Бездны, Матерь Скверны на каждом акте и стражи Ваал - цель стража
+ * [GuardianTarget.WINS]; Матерь с уровня [MotherHit.FROM] не убивает эталон одним ударом. Промах каждой части выборки (тир, вождь,
+ * уровень, акт, страж) - в её допуске по числу боёв, средний промах режима - в допуске [MEAN]; кости детерминированы. Эталоны - общий
+ * пул сторожей ([GuardHeroes]): уровни выборки - уровни зон кампании, герои те же.
  */
 class ModesBalanceGuardTest {
     private val index = TestContent.index
@@ -25,9 +26,10 @@ class ModesBalanceGuardTest {
         val sim = MobBal(index, fights = MAP_ROLLS, rolls = MAP_ROLLS, monsterSamples = 1, heroes = GuardHeroes.pool)
         val zones = sim.mapZones()
         val keys = MAP_TIERS.flatMap { tier -> zones.flatMap { zone -> classes.map { Triple(tier, zone, it) } } }
-        val wins = keys.parallelStream().map { (tier, zone, c) -> tier to (sim.boss(zone, sim.mapHero(c, zone, tier), tier, Rarity.COMMON, CAP).values[WINS] as Double) }.toList()
+        val top = MAP_TIERS.last().toDouble()
+        val wins = keys.parallelStream().map { (tier, zone, c) -> Part("T$tier", sim.boss(zone, sim.mapHero(c, zone, tier), tier, Rarity.COMMON, CAP).values[WINS] as Double, FallingTarget.at(tier.toDouble(), 1.0, top)) }.toList()
         assertTrue(zones.size >= 50 && wins.size == keys.size, "the check proves nothing: ${zones.size} map guardians")
-        verdict("стражи карт своего уровня", wins.map { (tier, w) -> "T$tier" to w }, MAP_PART)
+        verdict("стражи карт своего уровня", wins, MAP_PART)
     }
 
     /** Вожди глубин Бездны: эталон уровня зоны в первой зоне Бездны каждого акта, [ABYSS_SEEDS] расщелины на класс. */
@@ -41,7 +43,7 @@ class ModesBalanceGuardTest {
         val keys = zones.flatMap { zone -> classes.flatMap { c -> depths.flatMap { d -> (0 until ABYSS_SEEDS).map { s -> Key(zone, c, d, s) } } } }
         val wins = keys.parallelStream().map { k ->
             val won = modes.abyssDepth(campaignHero(sim, k.zone, k.heroClass), k.zone, SimKit.SEED + 7L * k.zone.level + 1009L * k.seed, k.part).outcome == Outcome.WIN
-            "${rule.waves[k.part - 1].leader?.value}" to if (won) 1.0 else 0.0
+            Part("${rule.waves[k.part - 1].leader?.value}", if (won) 1.0 else 0.0)
         }.toList()
         assertTrue(zones.size >= 9 && depths.size >= 3 && wins.size == keys.size, "the check proves nothing: ${zones.size} zones, ${depths.size} leaders")
         verdict("вожди Бездны", wins, ABYSS_PART)
@@ -57,13 +59,16 @@ class ModesBalanceGuardTest {
             val zone = sim.nearZones(level, 1).first()
             val hero = sim.hero(c, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, false))
             val run = modes.rift(hero, RIFT_WEEK + w)
-            "ур. $level" to if (!run.fallen && run.guardians == run.acts) 1.0 else 0.0
+            Part("ур. $level", if (!run.fallen && run.guardians == run.acts) 1.0 else 0.0, FallingTarget.at(level.toDouble(), RIFT_LEVELS.first().toDouble(), RIFT_LEVELS.last().toDouble()))
         }.toList()
         assertTrue(finished.size == keys.size && keys.isNotEmpty(), "the check proves nothing")
         verdict("Разлом (дошли до конца)", finished, PART)
     }
 
-    /** Матерь Скверны: эталон уровня зоны в первой, средней и последней зоне каждого акта с очагом. */
+    /**
+     * Матерь Скверны: эталон уровня зоны в первой, средней и последней зоне каждого акта с очагом; с уровня [MotherHit.FROM] её
+     * сильнейший удар - не больше [MotherHit.SHARE] запаса эталона в середине выборки и меньше всего запаса в любом бою.
+     */
     @Test
     fun blightMotherMeetsTheWinTarget() {
         val sim = MobBal(index, 1, 1, 1, GuardHeroes.pool)
@@ -74,25 +79,41 @@ class ModesBalanceGuardTest {
             listOf(guarded.first(), guarded[guarded.size / 2], guarded.last()).distinct().map { act + 1 to it }
         }
         val keys = zones.flatMap { (act, zone) -> classes.map { Key(zone, it, act, 0) } }
-        val wins = keys.parallelStream().map { k ->
-            val mother = modes.blightMother(campaignHero(sim, k.zone, k.heroClass), k.zone, SimKit.SEED + 13L * k.zone.level)
-            "акт ${k.part}" to if (mother?.won == true) 1.0 else 0.0
-        }.toList()
+        val fights = keys.parallelStream().map { k -> k to modes.blightMother(campaignHero(sim, k.zone, k.heroClass), k.zone, SimKit.SEED + 13L * k.zone.level) }.toList()
+        val wins = fights.map { (k, mother) -> Part("акт ${k.part}", if (mother?.won == true) 1.0 else 0.0) }
         assertTrue(zones.size >= 15 && wins.size == keys.size, "the check proves nothing: ${zones.size} zones")
+        val hits = fights.filter { (k, _) -> k.zone.level >= MotherHit.FROM }.mapNotNull { it.second?.maxHit }.sorted()
+        assertTrue(hits.isNotEmpty() && hits[hits.size / 2] <= MotherHit.SHARE && hits.last() < 1.0, "Матерь с ${MotherHit.FROM}-го: сильнейший удар долей запаса - медиана ${"%.2f".format(hits.getOrElse(hits.size / 2) { 0.0 })} (≤ ${MotherHit.SHARE}), наибольший ${"%.2f".format(hits.lastOrNull() ?: 0.0)} (< 1)")
         verdict("Матерь Скверны", wins, PART)
+    }
+
+    /** Стражи Ваал: каждый страж порчи в своих зонах (низшая, средняя, высшая), эталон уровня зоны, [VAAL_FIGHTS] боя на класс. */
+    @Test
+    fun vaalGuardiansMeetTheWinTarget() {
+        val sim = MobBal(index, fights = VAAL_FIGHTS, rolls = VAAL_FIGHTS, monsterSamples = 1, heroes = GuardHeroes.pool)
+        val zones = sim.vaalZones()
+        val keys = zones.flatMap { zone -> classes.map { zone to it } }
+        val wins = keys.parallelStream().map { (zone, c) -> Part(zone.boss.value, sim.boss(zone, campaignHero(sim, zone, c), 0, Rarity.COMMON, CAP).values[WINS] as Double) }.toList()
+        assertTrue(zones.map { it.boss }.toSet().size >= 9 && wins.size == keys.size, "the check proves nothing: ${zones.size} Vaal zones")
+        verdict("стражи Ваал", wins, VAAL_PART)
     }
 
     /** Эталон уровня зоны [zone] кампании - тот же, что у сторожа стражей ([MobBalGuardTest]). */
     private fun campaignHero(sim: MobBal, zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
 
-    /** Сводная доля режима [mode] - в цели ±[MEAN], доля каждой части выборки - ±[part]. */
-    private fun verdict(mode: String, wins: List<Pair<String, Double>>, part: Double) {
-        val target = GuardianTarget.WINS
-        val mean = wins.map { it.second }.average()
-        val parts = wins.groupBy({ it.first }, { it.second }).mapValues { (_, v) -> v.average() }
-        val off = parts.filterValues { it !in (target.start - part)..(target.endInclusive + part) }
-        val report = parts.entries.joinToString { (name, w) -> "$name ${"%.0f".format(100 * w)}%" }
-        assertTrue(mean in (target.start - MEAN)..(target.endInclusive + MEAN) && off.isEmpty(), "$mode: цель $target, средняя ${"%.1f".format(100 * mean)}% (±$MEAN), части (±$part): $report")
+    /** Промах каждой части выборки режима [mode] мимо её цели - не больше [part], средний промах частей - не больше [MEAN]. */
+    private fun verdict(mode: String, wins: List<Part>, part: Double) {
+        val parts = wins.groupBy { it.name }.mapValues { (_, list) -> list.map { it.win }.average() to list.first().target }
+        val misses = parts.mapValues { (_, it) -> it.first - it.first.coerceIn(it.second) }
+        val off = misses.filterValues { kotlin.math.abs(it) > part }
+        val mean = misses.values.average()
+        val report = parts.entries.joinToString { (name, it) -> "$name ${"%.0f".format(100 * it.first)}% (цель ${"%.0f".format(100 * it.second.start)}-${"%.0f".format(100 * it.second.endInclusive)})" }
+        assertTrue(kotlin.math.abs(mean) <= MEAN && off.isEmpty(), "$mode: средний промах ${"%.1f".format(100 * mean)} п.п. (±$MEAN), части (±$part): $report")
+    }
+
+    /** Исход части выборки [name]: доля побед [win] и её цель [target]. */
+    private data class Part(val name: String, val win: Double, val target: ClosedFloatingPointRange<Double> = GuardianTarget.WINS) {
+        constructor(name: String, win: Double, target: Double) : this(name, win, target..target)
     }
 
     /** Ключ выборки: зона, класс, часть (глубина или акт), кости. */
@@ -116,11 +137,17 @@ class ModesBalanceGuardTest {
         /** Столбец доли побед в строке [MobBal.boss]. */
         const val WINS = 10
 
-        /** Допуск сводной доли режима: сотни боёв - разброс выборки ~3 п.п. */
+        /** Допуск среднего промаха режима: сотни боёв - разброс выборки ~3 п.п. */
         const val MEAN = 0.06
 
         /** Допуск тира карт: ~900 боёв на тир - разброс выборки ~2 п.п., остальное - разница стражей тира. */
-        const val MAP_PART = 0.08
+        const val MAP_PART = 0.07
+
+        /** Боёв стража Ваал на класс в зоне. */
+        const val VAAL_FIGHTS = 2
+
+        /** Допуск стража Ваал: 42 боя - разброс выборки ~8 п.п. */
+        const val VAAL_PART = 0.15
 
         /** Допуск вождя Бездны: ~130 боёв - разброс ~4 п.п., сила вождя по уровням неровна (вождь - одна кривая на все уровни). */
         const val ABYSS_PART = 0.15

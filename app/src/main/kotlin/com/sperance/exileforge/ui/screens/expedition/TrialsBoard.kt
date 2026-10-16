@@ -33,7 +33,6 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.regionTitle
-import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
@@ -242,10 +241,10 @@ private fun Modifier.dashedBorder(color: Color, shape: RoundedCornerShape): Modi
 
 private val TagShape = RoundedCornerShape(6.dp)
 
-/** Чем ступень раша тяжелее и щедрее (4.2.0), из её записи в контенте: «Боссы +X% здоровья и урона · +N строк · Сферы ×R». */
+/** Чем ступень раша тяжелее и щедрее, из её записи в контенте: «Боссы +X% здоровья и урона · Ярость на N с раньше · Сферы ×R». */
 private fun rushTierText(tier: RushTier): String = listOfNotNull(
     ui("trials.rush_tier_power", number(tier.power)).takeIf { tier.power > 0 },
-    ui("trials.rush_tier_mods", tier.mods, plural("trials.rush_tier_line", tier.mods)).takeIf { tier.mods > 0 },
+    ui("trials.rush_tier_enrage", number(tier.enrage)).takeIf { tier.enrage > 0 },
 ).ifEmpty { listOf(ui("trials.rush_tier_plain")) }.plus(ui("trials.rush_tier_reward", number(tier.reward))).joinToString(" · ")
 
 /** The keys at hand as a compact grid: an icon and its count, [KEYS_PER_ROW] to a row, a tap opens the key's sheet. */

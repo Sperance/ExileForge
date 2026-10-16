@@ -123,7 +123,7 @@ internal fun ScoutPanel(
         }
         Hint(if (fight.focus == foe.index) ui("fight.focus_on") else ui("fight.focus_off", ui("fight.rule.${stance.rule.name}")), GoldBright)
         monsterLines(foe.monster).takeIf { it.isNotEmpty() }?.let { lines ->
-            Caption(ui("fight.modifiers", lines.size))
+            Caption(ui(if (foe.monster.power != null) "fight.influence" else "fight.modifiers", lines.size))
             lines.forEach { line ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     Rhombus(if (line.fromMap) LifeRed else ModBlue, 4.dp)

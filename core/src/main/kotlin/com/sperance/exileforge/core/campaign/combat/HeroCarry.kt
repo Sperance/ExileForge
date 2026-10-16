@@ -47,9 +47,26 @@ data class HeroCarry(
 
 /**
  * Недуг на герое вне боя: [left] секунд из [duration], сила [magnitude] - как у [ActiveAilment]; [chaos] - горит хаосом; [limit] - сколько
- * сильнейших стаков действуют (0.15.0, как [ActiveAilment.limit]).
+ * сильнейших стаков его источника действуют, как [ActiveAilment.limit]; [origin] - источник стака: 0 - карта, прочие - враги прежних боёв.
  */
-data class CarriedAilment(val ailment: Ailment, val left: Double, val magnitude: Double, val duration: Double, val chaos: Boolean = false, val limit: Int? = null)
+data class CarriedAilment(val ailment: Ailment, val left: Double, val magnitude: Double, val duration: Double, val chaos: Boolean = false, val limit: Int? = null, val origin: Int = 0) {
+    companion object {
+        /** Место в бою стака источника [origin], принесённого с карты: вне номеров врагов боя. */
+        fun foe(origin: Int): Int = -1 - origin
+
+        /** Источник вне боя стака с места [foe] в бою, где принесённые с карты стоят до [brought] включительно. */
+        fun origin(foe: Int, brought: Int): Int = if (foe < 0) -1 - foe else brought + 1 + foe
+    }
+}
+
+/**
+ * Действующие стаки недуга среди [stacks]: у каждого источника ([source]) - его сильнейшие ([magnitude]) под его пределом ([limit],
+ * наибольшим из его стаков), без предела - все. Висят все: слабые вступают, когда сильные истекут. Одно правило боя и карты.
+ */
+internal fun <T> actingStacks(stacks: List<T>, source: (T) -> Any, limit: (T) -> Int?, magnitude: (T) -> Double): List<T> = stacks.groupBy(source).values.flatMap { own ->
+    val most = own.maxOf { limit(it) ?: Int.MAX_VALUE }
+    if (own.size <= most) own else own.sortedByDescending(magnitude).take(most)
+}
 
 /** Временный бафф или проклятие вне боя: [left] секунд из [duration]; остальное - как у [TimedEffect]. */
 data class CarriedEffect(
@@ -107,12 +124,8 @@ class AilmentLaw(private val rules: CombatRules) {
         return dotRate(active.ailment, active.magnitude, body, 1 + held(body, ailments, Ailment.SHOCKED) / 100, rules.minDot, defence * exposure(body, ailments, type))
     }
 
-    /** Действующие стаки [ailment] среди [ailments] (0.15.0): сильнейшие под пределом, без предела - все - как `Battle.Fighter.acting`. */
-    fun acting(ailments: List<CarriedAilment>, ailment: Ailment): List<CarriedAilment> {
-        val own = ailments.filter { it.ailment == ailment }
-        val limit = own.maxOfOrNull { it.limit ?: Int.MAX_VALUE } ?: return own
-        return if (own.size <= limit) own else own.sortedByDescending { it.magnitude }.take(limit)
-    }
+    /** Действующие стаки [ailment] среди [ailments]: у каждого источника - свои сильнейшие под его пределом, как `Battle.Fighter.acting`. */
+    fun acting(ailments: List<CarriedAilment>, ailment: Ailment): List<CarriedAilment> = actingStacks(ailments.filter { it.ailment == ailment }, { it.origin }, { it.limit }, { it.magnitude })
 
     /** Уязвимость к урону [type] на [body] от недугов-уязвимостей среди [ailments] (Разложение), как в бою. */
     private fun exposure(body: Combatant, ailments: List<CarriedAilment>, type: DamageType?): Double {

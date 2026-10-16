@@ -37,17 +37,16 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         return run.spawn(token).pack.map { skilled(buffed(sworn(it), buffs), casting) }
     }
 
-    /** The zone's boss at this encounter: its signature lines and a few of its table, [extra] what the map does to it alone. */
-    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, moreRolls: Int = 0): RolledMonster? = guardian(zone.boss, run.levelOf(zone), buffs, extra, run.streams.of("bossRoll"), moreRolls)
+    /** Босс зоны при встрече: без своих строк; [buffs] - строки карты на всех монстрах, [extra] - что карта и режим делают с ним одним. */
+    fun boss(zone: Zone, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? = guardian(zone.boss, run.levelOf(zone), buffs, extra, run.streams.of("bossRoll"))
 
     /** The guardian of the Vaal zone behind the portal, sealing its exit. */
     fun corrupted(zone: Zone, buffs: List<MonsterEffect>): RolledMonster? = guardian(zone.corrupted, run.levelOf(zone), buffs, emptyList(), run.streams.of("corruptRoll"))
 
-    /** Страж [code]; [moreRolls] - сверх его строк (ступень раша, 3.96.0); сила - захода ([Run.guardianPower]: на карте - своя по тиру). */
-    private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice, moreRolls: Int = 0): RolledMonster? {
+    /** Босс [code] с силой захода ([Run.guardianPower]: на карте - своя по тиру); [dice] - кости его умений. */
+    private fun guardian(code: MonsterCode, level: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>, dice: Dice): RolledMonster? {
         if (code.value.isBlank() || index.monster(code) == null) return null
-        val view = monsters.guardian(code, level, power = run.guardianPower(level)).let { if (moreRolls > 0) it.copy(rolls = it.rolls.map { n -> n + moreRolls }) else it }
-        return skilled(buffed(sworn(monsters.boss(view, dice, extra)), buffs), dice)
+        return skilled(buffed(sworn(monsters.boss(monsters.guardian(code, level, run.guardianPower(level)), extra)), buffs), dice)
     }
 
     /**

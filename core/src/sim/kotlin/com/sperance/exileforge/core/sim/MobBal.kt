@@ -375,11 +375,13 @@ class Arena(private val index: ContentIndex, private val hero: Hero, effects: Ma
         val death = events.indexOfFirst { it.actor == Side.HERO && it.foe == 0 && it.monsterLife <= 0.0 && it.damage > 0 }.let { if (it < 0) events.size else it + 1 }
         val actions = events.subList(0, death).count { it.actor == Side.HERO && !it.onSelf && it.foe == 0 && (it.action == Action.ATTACK || it.action == Action.SKILL) }
         val taken = events.filter { it.actor == Side.MONSTER && it.damage > 0 && !it.onSelf }.sumOf { it.damage }
-        return Fought(battle.outcome, battle.time, firstKill, actions, taken, 1 - battle.heroLife / body.maxLife.coerceAtLeast(1.0))
+        val strongest = events.filter { it.actor == Side.MONSTER && it.ailment == null && !it.onSelf }.maxOfOrNull { it.damage } ?: 0.0
+        return Fought(battle.outcome, battle.time, firstKill, actions, taken, 1 - battle.heroLife / body.maxLife.coerceAtLeast(1.0), strongest / (body.maxLife + body.maxShield).coerceAtLeast(1.0))
     }
 }
 
-data class Fought(val outcome: Outcome?, val time: Double, val firstKill: Double, val actions: Int, val taken: Double, val lifeLost: Double)
+/** Итог боя; [maxHit] - сильнейший удар врага долей запаса героя (здоровье и щит). */
+data class Fought(val outcome: Outcome?, val time: Double, val firstKill: Double, val actions: Int, val taken: Double, val lifeLost: Double, val maxHit: Double = 0.0)
 
 /** Одна строка результата. */
 data class Row(val values: List<Any>) {
@@ -435,6 +437,12 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         val hero = hero(heroClass, level, Archetype(heroBand(level), source, seed = seed), index.campaign.resistPenalty(zone.code, false))
         return hero to kit.tuner.damage(hero)
     }
+
+    /** Ваал-зоны стражей порчи: у каждого стража - его зоны низшего, среднего и высшего уровня. */
+    fun vaalZones(): List<Zone> = index.campaign.zones.filter { it.corrupted.value.isNotBlank() }.groupBy { it.corrupted }.values.flatMap { own ->
+        val sorted = own.sortedBy { it.level }
+        listOf(sorted.first(), sorted[sorted.size / 2], sorted.last()).distinct()
+    }.mapNotNull { com.sperance.exileforge.core.campaign.VaalZones.zone(it, index.campaign.vaal) }
 
     /** Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня (0.15.0, решение 44). */
     fun mapZones(): List<Zone> {
@@ -845,6 +853,13 @@ fun main(args: Array<String>) {
             }
         }
 
+        // Стражи Ваал: каждый страж порчи в своих зонах (низшая, средняя, высшая), эталон уровня зоны
+        "vaal" -> sim.vaalZones().filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
+            classes.forEach { c ->
+                tasks += Task { listOf(sim.boss(zone, sim.hero(c, zone.level, Archetype(campaignBand(zone.level)), penalty(zone, false)), 0, Rarity.COMMON, cap)) }
+            }
+        }
+
         // Карты (0.15.0, решение 44): стражи зон с тирами на тирах [tiers], эталон своего уровня - уровня района карты ([MobBal.mapHero])
         "maps" -> {
             val tiers = (System.getProperty("tiers") ?: "1,4,8,12,16").split(',').map { it.trim().toInt() }
@@ -879,7 +894,7 @@ fun main(args: Array<String>) {
                             "might", zone.code.value, zone.boss.value, zone.level, ms.map { it.first.value }.average(), ms.map { it.first.offense }.average(), ms.map { it.first.defense }.average(),
                             ms.map { it.second["STOCK_HEALTH"] ?: 0.0 }.average(), ms.map { t -> com.sperance.exileforge.rules.roll.GuardianFloor.STRIKES.sumOf { t.second[it] ?: 0.0 } }.average(),
                             ms.map { it.second["STOCK_ATTACK_SPEED"] ?: 0.0 }.average(), base["STOCK_HEALTH"] ?: 0.0, com.sperance.exileforge.rules.roll.GuardianFloor.STRIKES.sumOf { base[it] ?: 0.0 },
-                            index.monster(zone.boss)!!.fixed.joinToString("+") { it.value },
+                            index.monster(zone.boss)!!.power,
                         ),
                     ),
                 )
@@ -1155,7 +1170,7 @@ fun main(args: Array<String>) {
                             val hero = sim.hero(c, zone.level, Archetype(campaignBand(zone.level)), penalty(zone, false))
                             (0 until seeds).flatMap { s ->
                                 modes.blight(hero, zone, SimKit.SEED + 13L * zone.level + 1009L * s).map { p ->
-                                    Row(listOf("blight", act + 1, zone.code.value, zone.level, c.code, s, p.point, p.won, p.seconds, p.lifeLost))
+                                    Row(listOf("blight", act + 1, zone.code.value, zone.level, c.code, s, p.point, p.won, p.seconds, p.lifeLost, p.maxHit))
                                 }
                             }
                         }
@@ -1213,6 +1228,27 @@ object GuardianTarget {
 
     /** Цель стража: финал акта ([final]) - нижняя половина коридора. */
     fun of(final: Boolean): ClosedFloatingPointRange<Double> = if (final) FINALS else WINS
+}
+
+/**
+ * Цель режимов, что тяжелеют с ростом (RULES «Общее», цели баланса): доля побед эталона своего уровня падает линейно от [EASY] в начале
+ * отрезка до [HARD] в его конце - карты по тиру, Разлом недели по уровню героя.
+ */
+object FallingTarget {
+    const val EASY = 0.60
+    const val HARD = 0.30
+
+    /** Цель на месте [at] отрезка [from]..[to]: вне отрезка - как на его краю. */
+    fun at(at: Double, from: Double, to: Double): Double = EASY + (HARD - EASY) * ((at - from) / (to - from)).coerceIn(0.0, 1.0)
+}
+
+/**
+ * Матерь Скверны не убивает эталон одним ударом: с уровня [FROM] её сильнейший удар в бою - не больше доли [SHARE] запаса эталона
+ * (здоровье и щит) в середине выборки и меньше всего запаса в любом бою.
+ */
+object MotherHit {
+    const val FROM = 81
+    const val SHARE = 0.35
 }
 
 /**

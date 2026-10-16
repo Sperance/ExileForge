@@ -21,7 +21,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Карта между боями (4.10.0): здоровье по чистой скорости (ранящий недуг глушит восстановление, 0.14.5), несомое из боя тает, шаг после босса, счёт заданий от снимка доски. */
+/** Карта между боями (4.10.0): здоровье по чистой скорости (ранящий недуг глушит восстановление, 0.14.5), несомое из боя тает, стаки каждого источника - под его пределом, шаг после босса, счёт заданий от снимка доски. */
 class RoadLifeTest {
     @Test
     fun regeneration_fills_up_to_the_maximum() {
@@ -47,6 +47,13 @@ class RoadLifeTest {
         assertEquals(1.0, later.ailments.single().left, 1e-9)
         assertEquals(emptyList(), later.charges)
         assertEquals(true, later.ailments.any { it.ailment.hurts })
+    }
+
+    @Test
+    fun every_source_keeps_its_own_strongest_poisons() {
+        val law = AilmentLaw(TestContent.index.campaign.combat)
+        val stacks = listOf(4.0, 7.0).flatMap { magnitude -> listOf(1, 2).map { origin -> CarriedAilment(Ailment.POISONED, 3.0, magnitude * origin, 3.0, limit = 1, origin = origin) } }
+        assertEquals(setOf(7.0, 14.0), law.acting(stacks, Ailment.POISONED).map { it.magnitude }.toSet())
     }
 
     @Test

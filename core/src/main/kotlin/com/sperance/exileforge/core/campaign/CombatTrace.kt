@@ -212,7 +212,8 @@ class TraceOrigin(val hero: HeroModel, val foes: List<Foe>)
 /** One source of a monster's stat, as the card prints it: what, the operation and the value. */
 data class MonsterShare(val kind: MonsterShareKind, val ref: String, val op: Op, val value: Double)
 
-enum class MonsterShareKind { BASE, RARITY, MODIFIER, MAP }
+/** Источник доли стата монстра: шаблон, редкость, строка модификатора, сила стража ([MonsterShare.ref] - её множитель), карта. */
+enum class MonsterShareKind { BASE, RARITY, MODIFIER, POWER, MAP }
 
 /**
  * A monster's stat taken apart by the roller's own fold (3.37.0): the template grown to the level, the rarity's lines,
@@ -230,6 +231,10 @@ object MonsterBreakdown {
         template?.let { roller.stats(it, level)[stat] }?.takeIf { it != 0.0 }?.let { add(MonsterShare(MonsterShareKind.BASE, monster.code.value, Op.ADD, it)) }
         rarityLines(monster.rarity).filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.RARITY, monster.rarity.name, it.op, it.value)) }
         monster.modifiers.forEach { mod -> mod.effects.filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.MODIFIER, mod.code.value, it.op, it.value)) } }
+        val power = monster.power
+        if (template != null && power != null) {
+            roller.powerEffects(template, power).filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.POWER, (1 + it.value / 100).toString(), it.op, it.value)) }
+        }
         monster.mapBuffs.filter { it.stat == stat }.forEach { add(MonsterShare(MonsterShareKind.MAP, "", it.op, it.value)) }
     }
 }

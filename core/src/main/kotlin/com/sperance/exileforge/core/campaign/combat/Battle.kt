@@ -75,6 +75,8 @@ class Battle(
     val cleared: Boolean = false,
     /** Вид боя (4.3.0): по нему правила ярости `combat.enrage`; без него - бой похода, со стражем или со стаей. */
     val kind: FightKind = FightKinds.expedition(foes),
+    /** Ярость этого боя: по умолчанию - правило его вида, у ступени раша и вождя башни - раньше. */
+    rage: EnrageRule = rules.enrage(kind),
     /** Счёт Предначертания на заход (4.6.0): бои захода делят его; без захода - свой. */
     val fateRun: FateRun = FateRun(),
     /** Как враги выходят на поле (4.8.0): раундами собранных стай или подкреплением по очереди. */
@@ -250,15 +252,8 @@ class Battle(
         /** Под недугом (0.15.0): висит хоть одно состояние-недуг ([Ailment.ailing]) - Разложение и урон умения не в счёт. */
         val ailed: Boolean get() = ailments.any { it.ailment.ailing }
 
-        /**
-         * Стаки [ailment], что действуют (0.15.0, реш. 37/40): сильнейшие под пределом - наибольшим из висящих ([ActiveAilment.limit]);
-         * без предела - все. Висят все: слабые вступают, когда сильные истекут.
-         */
-        fun acting(ailment: Ailment): List<ActiveAilment> {
-            val own = ailments.filter { it.ailment == ailment }
-            val limit = own.maxOfOrNull { it.limit ?: Int.MAX_VALUE } ?: return own
-            return if (own.size <= limit) own else own.sortedByDescending { it.magnitude }.take(limit)
-        }
+        /** Стаки [ailment], что действуют: у каждого источника - свои сильнейшие под его пределом ([actingStacks]). */
+        fun acting(ailment: Ailment): List<ActiveAilment> = actingStacks(ailments.filter { it.ailment == ailment }, { it.source to it.foe }, { it.limit }, { it.magnitude })
 
         /**
          * Уязвимость к урону [type] (0.15.0, реш. 38/41, Разложение): 1 + сила действующих стаков недугов-уязвимостей этого вида
@@ -510,7 +505,7 @@ class Battle(
      */
     private fun carryIn(carry: HeroCarry) {
         carry.ailments.forEach { a ->
-            heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, chaos = a.chaos, limit = a.limit)
+            heroFighter.ailments += ActiveAilment(a.ailment, a.left, a.magnitude, a.duration, Side.MONSTER, CarriedAilment.foe(a.origin), chaos = a.chaos, limit = a.limit)
             if (a.ailment.hurts) heroFighter.tickedAt.putIfAbsent(a.ailment, 0.0)
         }
         carry.effects.forEach { e -> heroFighter.effects += TimedEffect(e.kind, e.source, e.lines, e.left, e.duration, e.counter, conditional = e.conditional, stacks = e.stacks) }
@@ -673,8 +668,8 @@ class Battle(
     /** Сколько раз сложилось свойство врага (4.4.1, [com.sperance.exileforge.rules.content.TraitAct.STACK]): номер врага и код - число. */
     internal val stacked = mutableMapOf<Pair<Int, String>, Int>()
 
-    /** Правило ярости этого боя (4.3.0): по его виду [kind]. */
-    internal val rageRule: EnrageRule get() = rules.enrage(kind)
+    /** Правило ярости этого боя. */
+    internal val rageRule: EnrageRule = rage
 
     /** Ступень ярости (3.95.0; 4.3.0 - любого боя): сколько ступеней [rageRule] уже прошло. */
     internal var enrage = 0

@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.campaign.TraceOrigin
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
+import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.statTitle
@@ -71,6 +72,8 @@ class TraceExplainer(private val game: GameUi) {
                 MonsterShareKind.MODIFIER -> index.modifier(ModifierCode(share.ref))?.let { def ->
                     monster.modifiers.firstOrNull { it.code.value == share.ref }?.let { mod -> modifierLine(index, def, def.lineValues(mod.effects.map { it.value })) }
                 } ?: share.ref
+
+                MonsterShareKind.POWER -> ui("trace.src.guardian_power", fineNumber(share.ref.toDouble()))
 
                 MonsterShareKind.MAP -> ui("stat.src.map")
             }

@@ -242,6 +242,7 @@ data class Combatant(
             sheet[CoreStat.RESIST_CHAOS.code] = (stats[CoreStat.RESIST_CHAOS.code] ?: 0.0) - v
         }
         auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet[CoreStat.DAMAGE_TAKEN.code] = (stats[CoreStat.DAMAGE_TAKEN.code] ?: 0.0) + v }
+        auras["AURA_DOT_TAKEN"]?.let { v -> sheet[CoreStat.DOT_TAKEN.code] = (stats[CoreStat.DOT_TAKEN.code] ?: 0.0) + v }
         auras["AURA_RECOVERY"]?.let { v -> sheet[CoreStat.RECOVERY_RATE.code] = (stats[CoreStat.RECOVERY_RATE.code] ?: 0.0) - v }
         // Замедление (4.12.x, CAST-02) - темп всех действий, а не только скорость атаки: его читает `Battle.Fighter.slow`
         val slowed = auras["AURA_SLOW"]?.let { v -> max(rules.floors.slow, 1 - v / 100) } ?: 1.0
@@ -271,7 +272,7 @@ data class Combatant(
      * Доля прибавки множителя крита, что ложится на недуг [ailment] с основой до защит (0.15.0, реш. 42, `STOCK_<слово>_CRITICAL`, в духе
      * «Совершенной агонии»): без неё крит такой недуг не растит.
      */
-    fun ailmentCritical(ailment: Ailment): Double = max(0.0, stat("STOCK_${ailment.word}_CRITICAL")) / 100
+    fun ailmentCritical(ailment: Ailment): Double = rules.caps.ailmentCrit(stat("STOCK_${ailment.word}_CRITICAL"))
 
     /**
      * Урон ударами (0.15.0, реш. 39) бойца без своего роста урона (монстр): множитель удара; у героя бой кладёт его увеличением рядом с

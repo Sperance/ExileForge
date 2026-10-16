@@ -182,8 +182,8 @@ class ModesBal(private val index: ContentIndex) {
         else -> RiftAct.Leave
     }
 
-    /** Точка очага Скверны: номер ([MapFeature.Blight.points] - Матерь), победа, секунды, наибольшая доля потерянного здоровья. */
-    data class BlightPoint(val point: Int, val won: Boolean, val seconds: Double, val lifeLost: Double)
+    /** Точка очага Скверны: номер ([MapFeature.Blight.points] - Матерь), победа, секунды, наибольшая доля потерянного здоровья и сильнейший удар долей запаса. */
+    data class BlightPoint(val point: Int, val won: Boolean, val seconds: Double, val lifeLost: Double, val maxHit: Double = 0.0)
 
     /**
      * Очаг Скверны зоны [zone] целиком (0.14.1): механика поставлена насильно - все точки и Матерь; жетоны точки - монстры захода
@@ -210,7 +210,7 @@ class ModesBal(private val index: ContentIndex) {
             } else {
                 index.rules.fight.fights(foes).mapIndexed { i, chunk -> arena.fight(chunk.map { arena.phases.foe(it, it.level) }, seed + 31L * point + i, CAP, retinue = false) }
             }
-            return BlightPoint(point, battles.all { it.outcome == Outcome.WIN }, battles.sumOf { it.time }, battles.maxOfOrNull { it.lifeLost } ?: 0.0)
+            return BlightPoint(point, battles.all { it.outcome == Outcome.WIN }, battles.sumOf { it.time }, battles.maxOfOrNull { it.lifeLost } ?: 0.0, battles.maxOfOrNull { it.maxHit } ?: 0.0)
         }
     }
 

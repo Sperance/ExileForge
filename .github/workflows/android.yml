@@ -69,7 +69,8 @@ jobs:
     # Перед релизом - всегда (TEST-01): релиз не выходит без словарей и тестов core
     if: ${{ needs.changes.outputs.core == 'true' || needs.changes.outputs.app == 'true' || needs.changes.outputs.release == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Сторожа баланса (0.15.0: стражи, классы на трёх наборах вещей, режимы) - ~25 мин боёв эталонов на 4 ядрах
+    timeout-minutes: 35
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-core
       cancel-in-progress: true

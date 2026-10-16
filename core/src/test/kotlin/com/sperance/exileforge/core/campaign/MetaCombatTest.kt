@@ -79,7 +79,8 @@ class MetaCombatTest {
     /** Меняет ли [extra] хоть одну из эталонных схваток. */
     private fun moves(extra: List<StatOperation>): Boolean = SCENARIOS.any { scenario -> fight(scenario, emptyList()) != fight(scenario, extra) }
 
-    private data class Scenario(val heroClass: String, val style: SkillType, val foesPower: Double, val cleared: Boolean, val seed: Int)
+    /** Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]. */
+    private data class Scenario(val heroClass: String, val style: SkillType, val foesPower: Double, val cleared: Boolean, val seed: Int, val pack: Long = PACK)
 
     private val prints = java.util.concurrent.ConcurrentHashMap<Scenario, Int>()
 
@@ -132,7 +133,7 @@ class MetaCombatTest {
         val spawns = Spawns(index, run)
         val phases = PhaseFoes(index, rules)
         return listOf(MonsterRarity.NORMAL, MonsterRarity.NORMAL, MonsterRarity.NORMAL, MonsterRarity.RARE).mapIndexed { n, rarity ->
-            val dice = Dice(Streams.mix(77L, n.toLong(), rarity.ordinal.toLong()))
+            val dice = Dice(Streams.mix(scenario.pack, n.toLong(), rarity.ordinal.toLong()))
             val m = spawns.skilled(run.monsters.roll(zone, zone.monsters[n % zone.monsters.size], run.pool, dice, 0, index.campaign.rarity(rarity), run.areaLevel), dice)
             phases.foe(m.copy(stats = m.stats.mapValues { (stat, v) -> if (stat in GuardianFloor.STRIKES) v * scenario.foesPower else v }), run.areaLevel)
         }
@@ -236,7 +237,26 @@ class MetaCombatTest {
             // Яд и хаос 0.15.0 (обычные монстры +35% здоровья): стая держится дольше срока кровотечения между наложениями - ещё одна
             // стая ×1.0, где длительность кровотечения меняет бой
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = false, seed = 5),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.5, cleared = false, seed = 13, pack = ELEMENTAL_PACK),
+            Scenario("WITCH", SkillType.SPELL, 1.3, cleared = false, seed = 11, pack = ELEMENTAL_PACK),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.9, cleared = false, seed = 7, pack = ELEMENTAL_PACK),
+            Scenario("WITCH", SkillType.SPELL, 0.9, cleared = true, seed = 17, pack = ELEMENTAL_PACK),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.2, cleared = true, seed = 3),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.6, cleared = false, seed = 5, pack = ELEMENTAL_PACK),
+            Scenario("WITCH", SkillType.SPELL, 1.6, cleared = false, seed = 5, pack = ELEMENTAL_PACK),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.35, cleared = false, seed = 13),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.65, cleared = false, seed = 3),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.25, cleared = false, seed = 7, pack = ELEMENTAL_PACK),
         )
+
+        /** Кости стаи схваток. */
+        const val PACK = 77L
+
+        /** Кости стаи, чей редкий бьёт огнём, холодом и молнией: в ней работают стихийные защиты и силы низкого здоровья. */
+        const val ELEMENTAL_PACK = 78L
+
+        /** Строки и силы Высасывания сути: умение без удара схватка не берёт, своего урона во времени на стае нет. */
+        val DRAIN = listOf("STOCK_DRAIN_DURATION:ADD", "POWER_DRAIN_CONTAGION", "POWER_HOLLOW_HARVEST")
 
         /** Известные строки и силы, что эталонная схватка не меняет, - с причиной. */
         val INERT: Set<String> = buildSet {
@@ -294,6 +314,7 @@ class MetaCombatTest {
             // Силы на огненный удар по герою (0.15.0, реш. 38/41): огонь в стае эталона несёт только редкий со всеми стихиями и хаосом,
             // Разложение на герое растит хаос-часть - удар ведёт хаос, а не огонь
             addAll(listOf("POWER_CINDER_SKIN", "POWER_FORGE_TEMPER", "POWER_EMBER_DRINK", "POWER_WYRM_CRUST"))
+            addAll(DRAIN)
         }
     }
 }

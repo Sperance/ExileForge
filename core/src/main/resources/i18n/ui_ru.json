@@ -1693,6 +1693,7 @@
   "skill.line.ailment": "{0}% шанс: {1}",
   "skill.line.charge_gain": "Даёт {1}: {0}",
   "skill.line.charge_consume": "{0} тратятся все: +{1}% урона за каждый заряд",
+  "skill.line.charge_most": "Урон растёт не больше чем за {0} зар.",
   "skill.element.FIRE": "огонь",
   "skill.element.COLD": "холод",
   "skill.element.LIGHTNING": "молния",

@@ -19,6 +19,7 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.RecoveryPool
 import com.sperance.exileforge.rules.content.SkillEvent
+import com.sperance.exileforge.rules.sheet.DamageGrowth
 import kotlin.math.max
 import kotlin.math.min
 import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
@@ -252,7 +253,13 @@ private fun Battle.heroLines(): List<StatLine> = (if (heroFighter.low) model.low
  * The increases of [type] a hero's blow is grown by now, in percent (server 1.57.0): the sheet's own, the damage in
  * general among them, and those of the lines on the hero and [extra] — the conditions', the charges', a flask's.
  */
-internal fun Battle.heroIncrease(type: DamageType, extra: List<StatLine> = emptyList()): Double = model.increased(type.attack, heroLines() + extra)
+internal fun Battle.heroIncrease(type: DamageType, extra: List<StatLine> = emptyList()): Double = heroGrowth(extra).increased(type.attack)
+
+/**
+ * Рост урона героя сейчас (0.15.0, реш. 4): увеличения и «больше» каждого вида листа со строками на герое и [extra]. Удар оружием несёт
+ * «больше» в числе листа; чары и урон во времени растут на него отдельно.
+ */
+internal fun Battle.heroGrowth(extra: List<StatLine> = emptyList()): DamageGrowth = model.growth(heroLines() + extra)
 
 /** How much a hero's [blow] grows by [facing] percent increased beside its own increases, over all its damage. */
 internal fun Battle.versus(blow: Blow, facing: Double): Double {
@@ -281,7 +288,8 @@ internal fun Battle.heroConditions(): Set<Condition> {
         if (recent(hero.lastHit)) add(Condition.RECENT_HIT_TAKEN)
         if (recent(blockedAt)) add(Condition.RECENT_BLOCK)
         if (recent(critAt)) add(Condition.RECENT_CRIT)
-        BuffKind.entries.forEach { kind -> kind.condition?.let { if (hero.effects.any { e -> e.source == kind.source }) add(it) } }
+        // Вечный бафф (0.15.0, реш. 33) держит своё условие весь бой: строки героя «пока под баффом» - целиком
+        BuffKind.entries.forEach { kind -> kind.condition?.let { if (body.wears(kind) || hero.effects.any { e -> e.source == kind.source }) add(it) } }
         if (heroCharges.count(ChargeKind.FRENZY) > 0) add(Condition.FRENZY_CHARGE)
         if (heroCharges.count(ChargeKind.POWER) > 0) add(Condition.POWER_CHARGE)
         if (heroCharges.count(ChargeKind.ENDURANCE) > 0) add(Condition.ENDURANCE_CHARGE)
@@ -314,9 +322,14 @@ internal fun Battle.chanceBuff(kind: BuffKind) {
     if (chance > 0 && random.nextDouble() < chance) gainBuff(heroFighter, kind)
 }
 
-/** The buffs [fighter] wears for the whole fight (3.35.0). */
+/**
+ * The buffs [fighter] wears for the whole fight (3.35.0). Вечный бафф героя (0.15.0, реш. 33) ложится долей `combat.buffs.<вид>.always`
+ * ([com.sperance.exileforge.rules.content.BuffRule.standing]), монстра - целиком.
+ */
 internal fun Battle.wear(fighter: Fighter) = BuffKind.entries.filter { fighter.body.wears(it) }.forEach { kind ->
-    lay(fighter, TimedEffect(EffectKind.BUFF, kind.source, rules.buffs[kind].lines.map { StatLine(it.stat, it.op, it.value) }, FOREVER, FOREVER))
+    val rule = rules.buffs[kind]
+    val lines = if (fighter === heroFighter) rule.standing else rule.lines
+    lay(fighter, TimedEffect(EffectKind.BUFF, kind.source, lines.map { StatLine(it.stat, it.op, it.value) }, FOREVER, FOREVER))
 }
 
 /** What of a hit on [target] its spell suppression or deflection lets through (3.35.0); drawn only for a target with a chance. */

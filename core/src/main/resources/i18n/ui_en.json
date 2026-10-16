@@ -1693,6 +1693,7 @@
   "skill.line.ailment": "{0}% chance: {1}",
   "skill.line.charge_gain": "Grants {1}: {0}",
   "skill.line.charge_consume": "All {0} are spent: +{1}% damage per charge",
+  "skill.line.charge_most": "Damage grows for at most {0} charges",
   "skill.element.FIRE": "fire",
   "skill.element.COLD": "cold",
   "skill.element.LIGHTNING": "lightning",

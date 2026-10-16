@@ -82,6 +82,8 @@ object SkillText {
         val kind = ui("fight.charge.${charges.kind.name}")
         charges.gain?.let { add(ui("skill.line.charge_gain", it.at(level).roundToInt(), kind)) }
         if (charges.consume) add(ui("skill.line.charge_consume", kind, number(charges.perCharge?.at(level) ?: 0.0)))
+        // Предел зарядов траты (0.15.0, `charges.most`): рост урона идёт не больше чем за столько зарядов
+        if (charges.consume && charges.most > 0) add(ui("skill.line.charge_most", charges.most))
     }
 
     /**

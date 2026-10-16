@@ -20,6 +20,7 @@ import com.sperance.exileforge.rules.content.PowerBook
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.DamageGrowth
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.rules.sheet.FlaskSheet
 import com.sperance.exileforge.rules.sheet.HeroKit
@@ -219,8 +220,8 @@ class HeroBuild(
     /** The passives' lines that wait for low life; the fight lays them on while it lasts. */
     override val lowLife: List<StatLine> by lazy { gear.kit.lowLifeLines(bare) }
 
-    /** The increases of [stat] on the sheet, [lines] among them: a spell of that element is multiplied by them. */
-    override fun increased(stat: String, lines: List<StatLine>): Double = gear.model?.increased(stat, passives + lines) ?: 0.0
+    /** Рост урона листа с пассивами и [lines] (0.15.0): увеличения и «больше» вида, на них растут чары и урон во времени. */
+    override fun growth(lines: List<StatLine>): DamageGrowth = gear.model?.growth(passives + lines) ?: DamageGrowth.NONE
 
     override fun conditional(active: Set<Condition>): List<StatLine> = gear.model?.conditional(active).orEmpty()
     override fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = gear.model?.conditionalSourced(active).orEmpty()
@@ -232,11 +233,13 @@ class HeroBuild(
 
 /**
  * The hero's [BodyModel] (2.78.0): the lines low life lays on and, for a spell of an element, the
- * increases of that element on the sheet — a monster has neither.
+ * increases of that element on the sheet — a monster has neither. С 0.15.0 (реш. 4) - рост урона [growth]: увеличения и «больше» вида.
  */
 interface HeroModel : BodyModel {
     val lowLife: List<StatLine>
-    fun increased(stat: String, lines: List<StatLine>): Double
+
+    /** Рост урона вида листа со строками [lines]: увеличения и «больше» ([DamageGrowth] правил). */
+    fun growth(lines: List<StatLine>): DamageGrowth
 
     /** The conditional lines of the sheet (3.35.0) that hold under [active]. */
     fun conditional(active: Set<Condition>): List<StatLine> = emptyList()
@@ -261,7 +264,7 @@ interface HeroModel : BodyModel {
             private val model = BodyModel.of(body)
             override fun body(lines: List<StatLine>): Combatant = model.body(lines)
             override val lowLife: List<StatLine> = emptyList()
-            override fun increased(stat: String, lines: List<StatLine>): Double = 0.0
+            override fun growth(lines: List<StatLine>): DamageGrowth = DamageGrowth.NONE
         }
     }
 }

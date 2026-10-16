@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.sheet.DamageGrowth
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.Requirements
 import com.sperance.exileforge.rules.sheet.SheetCalculator
@@ -82,10 +83,10 @@ class SheetModel(
     fun against(states: Set<Condition>): Double = conditional.filter { it.condition in states && it.condition?.target == true }.sumOf { it.value }
 
     /**
-     * The increases of [stat] summed, [lines] among them: what a spell of that element is multiplied by. The damage in
-     * general (server 1.57.0) is an increase of every type of damage, as the sheet adds it up.
+     * Рост урона умений по виду со строками [lines]: увеличения (урон вообще - увеличение каждого вида, server 1.57.0) и, с 0.15.0
+     * (реш. 4), «больше» вида - на них растут чары и урон во времени.
      */
-    fun increased(stat: String, lines: List<StatLine> = emptyList()): Double = fold.increased(stat, lines)
+    fun growth(lines: List<StatLine> = emptyList()): DamageGrowth = fold.growth(lines)
 
     override fun equals(other: Any?): Boolean = other is SheetModel && other.plain == plain
     override fun hashCode(): Int = plain.hashCode()

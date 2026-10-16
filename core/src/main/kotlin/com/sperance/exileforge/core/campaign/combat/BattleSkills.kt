@@ -147,10 +147,11 @@ internal fun Battle.echoCast(kitSkill: KitSkill, level: Int, power: Double) {
 private fun Battle.perform(kitSkill: KitSkill, level: Int, power: Double = 1.0) {
     val hero = heroFighter
     val skill = kitSkill.skill
-    // Charges (3.33.0, server 1.32.0): a spender takes every charge of its kind as it is used, and its blow grows by each.
+    // Charges (3.33.0, server 1.32.0): a spender takes every charge of its kind as it is used, and its blow grows by each -
+    // не больше чем за `charges.most` зарядов (0.15.0, `SkillCharges.bonus`)
     val charged = skill.charges
     val spent = if (charged?.consume == true) consumeCharges(charged.kind) else 0
-    val bonus = (1 + (charged?.perCharge?.at(level) ?: 0.0) * spent / 100) * power
+    val bonus = (charged?.bonus(level, spent) ?: 1.0) * power
     val landed = skill.hit?.let { heroHit(it, level, skill.code, skill.spell, skill.type == SkillType.ATTACK, bonus = bonus) } ?: false
     skill.dot?.let { heroDot(it, level, skill.code, skill.spell, power) }
     skill.curse?.let { curse(kitSkill, targets(it.targets), level) }
@@ -255,11 +256,12 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
     val damage = mutableMapOf<DamageType, Double>()
     val increase = mutableMapOf<DamageType, Double>()
     val skill = body[CoreStat.SKILL_DAMAGE.code]
+    val growth = heroGrowth(own)
     hit.weapon?.let { weapon ->
         val finisher = hit.finisher?.takeIf { target.ailments.isNotEmpty() || target.life < target.body.maxLife * 0.3 }
         val share = (finisher ?: weapon).at(level) / 100
         body.damage.forEach { (type, value) ->
-            val grown = heroIncrease(type, own)
+            val grown = growth.increased(type.attack)
             damage.merge(type, regrow(value, grown, skill) * share, Double::plus)
             increase[type] = grown + skill
         }
@@ -269,9 +271,10 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
         val low = spell.min.at(level)
         val base = low + random.nextDouble() * (spell.max.at(level) - low).coerceAtLeast(0.0)
         val spells = body[CoreStat.SPELL_DAMAGE.code] + skill
+        // «Больше» вида урона ложится и на чары (0.15.0, реш. 4): удар оружием несёт его в числе листа, чары - нет
         fun grow(of: DamageType, value: Double) {
-            val grown = heroIncrease(of, own) + spells
-            damage.merge(of, value * max(0.0, 1 + grown / 100), Double::plus)
+            val grown = growth.increased(of.attack) + spells
+            damage.merge(of, value * max(0.0, 1 + grown / 100) * growth.more(of.attack), Double::plus)
             increase[of] = grown
         }
         grow(type, base)
@@ -298,10 +301,12 @@ private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boole
     val hero = heroFighter
     val type = DamageType.element(dot.element) ?: DamageType.CHAOS
     val ailment = Ailment.of(type).takeIf { it.hurts } ?: Ailment.POISONED
-    val increase = heroIncrease(type) + hero.body[CoreStat.SPELL_DAMAGE.code] + hero.body[CoreStat.SKILL_DAMAGE.code]
+    val growth = heroGrowth()
+    val increase = growth.increased(type.attack) + hero.body[CoreStat.SPELL_DAMAGE.code] + hero.body[CoreStat.SKILL_DAMAGE.code]
     targets(dot.targets).forEach { target ->
         val low = dot.min.at(level)
-        val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * hero.body.damageMore * power
+        // Урон во времени растёт и на «больше» своей стихии (0.15.0, реш. 4)
+        val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * growth.more(type.attack) * hero.body.damageMore * power
         val mitigated = total * (1 - target.body.resist(type, hero.body.penetration(type))) * target.body.damageTaken(type)
         val inflicted = mutableListOf<Ailment>()
         if (mitigated > 0 && !target.body.immune(ailment)) {

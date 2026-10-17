@@ -1,5 +1,10 @@
 {
-  "boss.cast_in": "через {0} с",
+  "boss.cast.CASTING": "применяет · {0} с",
+  "boss.cast.COUNTDOWN": "через {0} с",
+  "boss.cast.STUNNED": "оглушён",
+  "boss.cast.FROZEN": "заморожен",
+  "boss.cast.SILENCED": "спровоцирован",
+  "boss.cast.WAITING": "ждёт условия",
   "boss.phase_banner": "⚑ Фаза «{0}» · {1}%",
   "challenge.fight": "В бой",
   "challenge.gear": "Снаряжение",

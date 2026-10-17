@@ -60,6 +60,7 @@ import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.RiftGuard
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.run.BossHud
+import com.sperance.exileforge.core.campaign.run.CastState
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.SlotView
@@ -85,9 +86,6 @@ import kotlin.math.sin
 
 /** Сколько секунд над портретом держится титул новой фазы. */
 private const val PHASE_TITLE_SECONDS = 2.6
-
-/** За сколько секунд до готовности умения вокруг портрета загорается круг-предупреждение. */
-private const val TELEGRAPH_SECONDS = 1.6
 
 /** Палитра боя с боссом «Кино»: золото рамки, кровь полосы, фиолет каста и свиты. */
 internal val FrameGold = Color(0xFFD9B46A)
@@ -218,21 +216,26 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val near = cast.left < TELEGRAPH_SECONDS
+                val casting = cast.state == CastState.CASTING
                 Box(
                     Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFF2A1840))
                         .drawWithContent {
                             drawContent()
-                            roundEdge(5.dp, 1.dp, if (near) CastTint.copy(alpha = .6f + .4f * sin(frame.time * 9f)) else CastTint.copy(alpha = .5f))
+                            roundEdge(5.dp, 1.dp, if (casting) CastTint.copy(alpha = .6f + .4f * sin(frame.time * 9f)) else CastTint.copy(alpha = .5f))
                         },
                     contentAlignment = Alignment.Center,
-                ) { Text("✦", color = Color(0xFFD4B6FF), fontSize = 11.sp) }
+                ) { Text("✦", color = Color(0xFFD4B6FF).copy(alpha = if (cast.state.held) .5f else 1f), fontSize = 11.sp) }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Row {
-                        Text(SkillText.title(cast.code), color = Color(0xFFD4B6FF), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
-                        Text(ui("boss.cast_in", fineNumber(cast.left)), color = if (near) Color(0xFFFFB0B0) else Muted, style = MaterialTheme.typography.labelSmall)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(SkillText.title(cast.code), color = Color(0xFFD4B6FF), style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            if (cast.state.held) ui("boss.cast.${cast.state.name}") else ui("boss.cast.${cast.state.name}", fineNumber(cast.left)),
+                            color = if (casting) Color(0xFFFFB0B0) else Muted,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                        )
                     }
-                    ThinBar(cast.progress, CastTint, 4.dp)
+                    ThinBar(cast.progress, if (cast.state.held) CastTint.copy(alpha = .35f) else CastTint, 4.dp)
                 }
             }
         }
@@ -701,7 +704,7 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
             }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
-        boss.cast?.takeIf { foe.alive && it.left < TELEGRAPH_SECONDS }?.let { cast -> Telegraph((1 - cast.left / TELEGRAPH_SECONDS).toFloat(), frame) }
+        boss.cast?.takeIf { foe.alive && it.state == CastState.CASTING }?.let { cast -> Telegraph(cast.progress, frame) }
         if (gone > 0f && gone < 1f) Sparks(gone, FrameGoldBright)
         PhaseTitle(fight, boss)
     }
@@ -714,7 +717,7 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
     else -> Color(0xFFA040E0)
 }
 
-/** Круг-предупреждение: сжимается к портрету и пульсирует, пока умение не готово. */
+/** Круг-предупреждение: сжимается к портрету и пульсирует, пока босс применяет умение ([progress] - доля применения). */
 @Composable private fun Telegraph(progress: Float, frame: FightFrame) {
     Canvas(Modifier.fillMaxSize()) {
         val time = frame.time

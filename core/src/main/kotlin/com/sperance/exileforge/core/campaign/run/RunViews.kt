@@ -199,9 +199,24 @@ data class HeroCastView(
     val progress: Float,
 )
 
-/** Умение врага на подходе: [left] секунд до готовности из [total]. */
-data class CastView(val code: String, val left: Double, val total: Double) {
+/**
+ * Умение врага на полосе босса в состоянии [state]: применяется - [left] секунд до конца применения из [total], отсчёт - до
+ * готовности; готово, но босс применить его не может ([CastState.held]) - [left] ноль.
+ */
+data class CastView(val code: String, val left: Double, val total: Double, val state: CastState) {
     val progress: Float get() = if (total <= 0) 1f else (1 - left / total).toFloat().coerceIn(0f, 1f)
+}
+
+/** Что умение босса делает сейчас; [held] - готово, но не применяется (подпись - словом, без отсчёта и телеграфа). */
+enum class CastState(val held: Boolean) {
+    CASTING(false),
+    COUNTDOWN(false),
+    STUNNED(true),
+    FROZEN(true),
+    SILENCED(true),
+
+    /** Повода нет: лечиться не с чего, благо или проклятие уже лежит, у героя нет маны. */
+    WAITING(true),
 }
 
 /**

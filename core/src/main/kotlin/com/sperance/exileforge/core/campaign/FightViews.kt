@@ -1,6 +1,7 @@
 package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.core.campaign.combat.Action
+import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.HitKind
@@ -14,9 +15,11 @@ import com.sperance.exileforge.core.campaign.combat.passiveViews
 import com.sperance.exileforge.core.campaign.combat.provokeView
 import com.sperance.exileforge.core.campaign.combat.skillViews
 import com.sperance.exileforge.core.campaign.combat.strikes
+import com.sperance.exileforge.core.campaign.combat.wanted
 import com.sperance.exileforge.core.campaign.run.AilmentView
 import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.BuildupView
+import com.sperance.exileforge.core.campaign.run.CastState
 import com.sperance.exileforge.core.campaign.run.CastView
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FightHud
@@ -28,6 +31,7 @@ import com.sperance.exileforge.core.campaign.run.RageView
 import com.sperance.exileforge.core.campaign.run.SlotView
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
+import com.sperance.exileforge.rules.content.MonsterSkill
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.roundToInt
@@ -179,18 +183,22 @@ private fun Battle.heroCast(): HeroCastView? {
 /**
  * Босс боя: первый враг редкости босса или с фазами - его пороги и умение на подходе.
  *
- * Умение, что босс применяет сейчас, стоит на подходе первым.
+ * На подходе первым - умение, что босс применяет сейчас; затем готовое, что держит оглушение, заморозка или провокация;
+ * затем ближайшее по отсчёту; готовое без повода - последним.
  */
 private fun Battle.bossHud(): BossHud? {
     val i = guardian ?: return null
     val foe = foes[i]
     val fighter = foeFighters[i]
-    val casting = fighter.casting?.let { c -> CastView(c.code, (c.until - time).coerceAtLeast(0.0), c.until - c.from) }
-    val coming = (foe.skills + learned[i].orEmpty()).mapNotNull { skill ->
-        val ready = fighter.readyAt[skill.code] ?: return@mapNotNull null
-        CastView(skill.code, (ready - time).coerceAtLeast(0.0), skill.cooldown / fighter.body.recovery)
+    val casting = fighter.casting?.let { c -> CastView(c.code, (c.until - time).coerceAtLeast(0.0), c.until - c.from, CastState.CASTING) }
+    val timed = (foe.skills + learned[i].orEmpty()).mapNotNull { skill -> fighter.readyAt[skill.code]?.let { skill to it } }
+    val coming = timed.filter { it.second > time }.minByOrNull { it.second }?.let { (skill, ready) ->
+        CastView(skill.code, ready - time, skill.cooldown / fighter.body.recovery, CastState.COUNTDOWN)
     }
-    val cast = (casting ?: coming.minByOrNull { it.left })?.takeIf { fighter.alive }
+    val ready = timed.firstOrNull { it.second <= time }?.first?.let { skill ->
+        CastView(skill.code, 0.0, skill.cooldown / fighter.body.recovery, readiness(fighter, skill))
+    }
+    val cast = (casting ?: ready?.takeIf { it.state != CastState.WAITING } ?: coming ?: ready)?.takeIf { fighter.alive }
     val slots = slotHolders.map { holder ->
         when (holder) {
             null -> null
@@ -200,6 +208,15 @@ private fun Battle.bossHud(): BossHud? {
     }
     val hud = BossHud(i, foe.phase, foe.phases.map { it.step.at }, foe.phases.indices.map { (i to it) in phased }, cast, slots, tainted = foe.tainted)
     return riftHud(hud)
+}
+
+/** Почему готовое умение [skill] бойца [me] не применяется: те же условия, что у хода умений монстра ([monsterCast]). */
+private fun Battle.readiness(me: Battle.Fighter, skill: MonsterSkill): CastState = when {
+    me.ailments.any { it.ailment == Ailment.FROZEN && it.until > time } -> CastState.FROZEN
+    me.held -> CastState.STUNNED
+    me.provoked && !me.chief -> CastState.SILENCED
+    !wanted(me, skill) -> CastState.WAITING
+    else -> CastState.COUNTDOWN
 }
 
 /** Полоса стража Разлома: печати, Законы, украденное - поверх полосы босса. */

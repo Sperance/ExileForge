@@ -213,6 +213,7 @@ class UiStringsTest {
                 section.empty?.let(::add)
             }
             Outcome.entries.forEach { add("expedition.outcome_${it.name.lowercase()}") }
+            com.sperance.exileforge.core.campaign.run.CastState.entries.forEach { add("boss.cast.${it.name}") }
             AtlasNodeKind.entries.forEach { add("atlas.kind.${it.name}") }
             AtlasBranch.entries.forEach { add("atlas.branch.${it.name}") }
             AtlasPoints.KINDS.forEach { add("expedition.key_$it") }

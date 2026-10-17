@@ -69,7 +69,8 @@ private fun Battle.monsterApplied(me: Fighter, skill: MonsterSkill) {
     monsterSkill(me, skill)
 }
 
-private fun Battle.wanted(me: Fighter, skill: MonsterSkill): Boolean = when {
+/** Есть ли у монстра [me] повод применить готовое умение [skill]: лечение - раненым, благо и проклятие - если ещё не лежат. */
+internal fun Battle.wanted(me: Fighter, skill: MonsterSkill): Boolean = when {
     skill.heal != null -> me.life < me.body.maxLife * 0.6
     skill.buff != null -> me.effects.none { it.source == skill.code }
     skill.curse != null -> !heroFighter.body.immuneCurse && heroFighter.effects.none { it.source == skill.code }

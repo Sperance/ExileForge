@@ -1,5 +1,10 @@
 {
-  "boss.cast_in": "in {0} s",
+  "boss.cast.CASTING": "casting · {0} s",
+  "boss.cast.COUNTDOWN": "in {0} s",
+  "boss.cast.STUNNED": "stunned",
+  "boss.cast.FROZEN": "frozen",
+  "boss.cast.SILENCED": "provoked",
+  "boss.cast.WAITING": "condition unmet",
   "boss.phase_banner": "⚑ Phase “{0}” · {1}%",
   "challenge.fight": "Fight",
   "challenge.gear": "Gear",

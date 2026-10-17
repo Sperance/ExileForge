@@ -235,6 +235,7 @@ class MetaCombatTest {
             Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 7),
             Scenario("MARAUDER", SkillType.ATTACK, 1.5, cleared = false, seed = 13),
             Scenario("WITCH", SkillType.SPELL, 1.0, cleared = false, seed = 13),
+            Scenario("WITCH", SkillType.SPELL, 1.1, cleared = false, seed = 13),
             Scenario("MARAUDER", SkillType.ATTACK, 0.8, cleared = false, seed = 13),
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = false, seed = 5),
             Scenario("MARAUDER", SkillType.ATTACK, 1.5, cleared = false, seed = 13, pack = ELEMENTAL_PACK),

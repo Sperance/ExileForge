@@ -237,15 +237,16 @@ internal fun ExpeditionRun.closeCrystal() {
 /**
  * A draught on the map: what it gives back comes at once, and what it lays on runs as the hero walks.
  *
- * Глоток щита - и на карте, как в бою; доли лечения в ману и щит - от вылеченного.
+ * Глоток щита - и на карте, как в бою; доли лечения в ману и щит - от вылеченного. Глоток впустую ([Draught.wasted]) не пьётся.
  */
 internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     val flask = kit.flasks.getOrNull(slot)?.sheet ?: return
     if ((flaskLeft.getOrNull(slot) ?: 0.0) > 0 || (charges.getOrNull(slot) ?: 0.0) + 1e-9 < flask.perUse(hero::get)) return
     val draught = flask.draught(hero, life, manaCap())
+    if (draught.wasted(life, hero.maxLife)) return
     charges = charges.toMutableList().also { it[slot] = if (flask.usesAll) 0.0 else (it[slot] - flask.perUse(hero::get)).coerceAtLeast(0.0) }
     flaskLeft = flaskLeft.toMutableList().also { it[slot] = draught.duration }
-    rates = rates.toMutableList().also { it[slot] = DraughtRate(draught.lifeRate, draught.manaRate, draught.toMana, draught.toShield) }
+    rates = rates.toMutableList().also { it[slot] = DraughtRate(draught.lifeRate, draught.manaRate, draught.toMana, draught.toShield, draught.lifeOnly) }
     rebody()
     val before = life
     life = (life + draught.life).coerceAtMost(hero.maxLife)

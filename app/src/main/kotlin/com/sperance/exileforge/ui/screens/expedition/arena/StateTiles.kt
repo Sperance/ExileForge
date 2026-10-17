@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -100,7 +101,8 @@ private const val FATE_GLYPH = "✦"
 }
 
 /**
- * A buff or a curse as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off.
+ * A buff or a curse as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off. Глоток, прерванный
+ * полным здоровьем, - погасшая бутыль под знаком «стоп».
  *
  * Бафф правил (Натиск, Укрепление) назван и нарисован по виду, умения - по умению, глоток - бутылью; бафф Предначертания называется даром.
  * Проклятие открывает лист.
@@ -117,7 +119,7 @@ private const val FATE_GLYPH = "✦"
     ) {
         val flask = view.flask
         if (flask != null) {
-            FlaskBottle(flask, 1f, true, Modifier.fillMaxSize().padding(horizontal = side / 4, vertical = side / 8))
+            FlaskBottle(flask, if (view.halted) 0f else 1f, true, Modifier.fillMaxSize().padding(horizontal = side / 4, vertical = side / 8))
         } else if (buff != null) {
             com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
         } else if (view.source == PROVOKED) {
@@ -126,7 +128,15 @@ private const val FATE_GLYPH = "✦"
             SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
         }
         Box(Modifier.fillMaxWidth().fillMaxHeight((1 - view.left).coerceIn(0f, 1f)).background(Color.Black.copy(alpha = .55f)))
+        if (view.halted) Canvas(Modifier.fillMaxSize().padding(side / 3)) { haltGlyph(Parchment) }
     }
+}
+
+/** Знак прерванного глотка: две вертикальные черты «стоп» поверх погасшей бутыли. */
+private fun DrawScope.haltGlyph(tint: Color) {
+    val bar = size.width * .3f
+    drawRect(tint, Offset(0f, 0f), Size(bar, size.height))
+    drawRect(tint, Offset(size.width - bar, 0f), Size(bar, size.height))
 }
 
 @Composable internal fun StateTile(ailment: Ailment?, tint: Color, left: Float, stacks: Int, label: String, bearing: Bearing, side: Dp = 30.dp, tip: () -> Tip) {

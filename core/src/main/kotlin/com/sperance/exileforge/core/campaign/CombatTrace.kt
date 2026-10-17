@@ -175,6 +175,9 @@ enum class NoteKind {
     RECOVER_RECOUP,
     RECOVER_WASTE,
 
+    /** Глоток, что только лечит, погас на полном здоровье, как в PoE: ref - флакон, value - сколько секунд ему оставалось. */
+    RECOVER_HALT,
+
     /**
      * Итог здоровья героя за секунду (вместо строки регенерации): value - здоровья в секунду со знаком,
      * разбор - [NoteTrace.flow]. Недуги пишутся своими строками.
@@ -198,7 +201,7 @@ enum class NoteKind {
 
     val recovery: Boolean get() = this in RECOVERY
     private companion object {
-        val RECOVERY = setOf(RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, LIFE_FLOW)
+        val RECOVERY = setOf(RECOVER_FLASK, RECOVER_RECOUP, RECOVER_WASTE, RECOVER_HALT, LIFE_FLOW)
     }
 }
 

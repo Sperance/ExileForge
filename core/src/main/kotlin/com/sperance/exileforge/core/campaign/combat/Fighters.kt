@@ -134,6 +134,8 @@ data class DraughtRate(
     /** Доли вылеченного глотком здоровья в ману и энергощит. */
     val toMana: Double = 0.0,
     val toShield: Double = 0.0,
+    /** Глоток только лечит: гаснет на полном здоровье - в бою и на карте. */
+    val stopsAtFull: Boolean = false,
 ) {
     val flows: Boolean get() = life > 0 || mana > 0
 }
@@ -186,6 +188,8 @@ data class EffectView(
     val passive: Boolean = false,
     /** Глоток флакона: вид флакона - плитка рисует его бутыль; null - не флакон. */
     val flask: FlaskKind? = null,
+    /** Глоток погас на полном здоровье: плитка «прервано: здоровье полное», срока у неё нет. */
+    val halted: Boolean = false,
 ) {
     /** Лежит весь бой: носимый с начала бафф ([Battle.wear]) или пассивное умение - полка «на весь бой», не таймер. */
     val lasting: Boolean get() = passive || seconds >= Battle.FOREVER / 2

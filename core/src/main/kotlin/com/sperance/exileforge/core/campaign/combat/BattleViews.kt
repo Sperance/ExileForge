@@ -19,7 +19,7 @@ fun Battle.pools(): HeroPools = HeroPools(
     heroFighter.mana,
     charges.toList(),
     kit.flasks.indices.map { i -> draughtOf(i)?.let { (it.until - time).coerceAtLeast(0.0) } ?: 0.0 },
-    kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana, it.toMana, it.toShield) } ?: DraughtRate() },
+    kit.flasks.indices.map { i -> recoveries.firstOrNull { it.slot == i && it.until > time }?.let { DraughtRate(it.life, it.mana, it.toMana, it.toShield, it.stopsAtFull) } ?: DraughtRate() },
     HeroCarry(effects = carriedEffects().filter { it.source in kit.powers.byStat }, counts = powers.tally),
 )
 
@@ -80,7 +80,8 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
 
 /**
  * What lies on [fighter], for its tiles; и глотки флаконов - плиткой бутыли на полке с таймером. Стопки Крови вожака
- * ([FATE_STACKS]) - значок ✦ дара ([fateGlows]), не плитка эффекта.
+ * ([FATE_STACKS]) - значок ✦ дара ([fateGlows]), не плитка эффекта. У героя - ещё глотки, прерванные полным здоровьем
+ * ([Battle.halts]): плитка «прервано» без срока.
  */
 fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) && it.source != FATE_STACKS }.map {
     EffectView(
@@ -93,6 +94,11 @@ fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter 
         it.lines,
         flask = if (it.kind == EffectKind.FLASK) kit.flasks.getOrNull(it.slot)?.sheet?.kind else null,
     )
+} + if (fighter === heroFighter) haltViews() else emptyList()
+
+/** Плитки глотков, что погасли на полном здоровье за последние [Halt.SHOWN] секунд. */
+private fun Battle.haltViews(): List<EffectView> = halts.filter { time - it.at < Halt.SHOWN }.map {
+    EffectView(it.code, EffectKind.FLASK, 0f, 0.0, flask = kit.flasks.getOrNull(it.slot)?.sheet?.kind, halted = true)
 }
 
 /** Пассивные умения героя на весь бой: одни и те же плитки, пока идёт бой. */

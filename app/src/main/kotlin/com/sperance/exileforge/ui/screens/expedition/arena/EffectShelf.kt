@@ -101,8 +101,11 @@ internal sealed interface Shelved {
     }
 }
 
-/** Строка листа эффектов: имя цветом эффекта, откуда он, что делает и сколько ему осталось ([seconds] null - весь бой). */
-internal data class ShelfRow(val title: String, val tint: Color, val source: String, val lines: List<String>, val seconds: Double?)
+/**
+ * Строка листа эффектов: имя цветом эффекта, откуда он, что делает и сколько ему осталось ([seconds] null - весь бой); [state] - что
+ * писать вместо срока (глоток прерван).
+ */
+internal data class ShelfRow(val title: String, val tint: Color, val source: String, val lines: List<String>, val seconds: Double?, val state: String? = null)
 
 /** Оглушение героя или врага: держится и это не заморозка. */
 internal fun stunned(held: Boolean, ailments: List<AilmentView>): Boolean = held && ailments.none { it.ailment == Ailment.FROZEN }
@@ -174,11 +177,13 @@ internal fun Shelved.row(): ShelfRow = when (this) {
             },
         ),
         when {
+            view.halted -> listOf(ui("fight.flask_halted"))
             view.source == PROVOKED -> listOf(ui("fight.provoked_hint"))
             view.kind == EffectKind.MARK -> listOf(ui("fight.mark_hint"))
             else -> view.lines.map { SkillText.statLine(it.stat, it.op, it.value) }
         },
-        view.seconds.takeUnless { view.lasting },
+        view.seconds.takeUnless { view.lasting || view.halted },
+        ui("fight.flask_halted_short").takeIf { view.halted },
     )
 
     is Shelved.Charge -> ShelfRow(ui("fight.charge.${view.kind.name}"), Gold, ui("fight.src.charge"), listOf(ui("fight.charge_count", view.count, view.max)), view.seconds)
@@ -435,7 +440,7 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
 
 @Composable private fun SheetRow(item: Shelved) {
     val row = item.row()
-    EffectRow({ ShelfTile(item, 30.dp) }, row, row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"))
+    EffectRow({ ShelfTile(item, 30.dp) }, row, row.state ?: row.seconds?.let { ui("fight.fact_seconds", fineNumber(it)) } ?: ui("fight.shelf.whole"))
 }
 
 @Composable private fun EffectRow(tile: @Composable () -> Unit, row: ShelfRow, time: String) {

@@ -87,7 +87,10 @@ class MarketActions(
     /** Фильтр, как его читает сервер: свои лоты убраны, если не просили, названия на языке экрана. */
     private fun showcaseFilter(): AuctionFilter = market.filter.copy(excludeSellerId = if (market.showOwnLots) "" else heroes.heroId, lang = uiLanguage.code)
 
-    /** [glance] - площадь Города: без полосы, а герой ниже уровня аукциона узнаёт это с карточки, не отказом. */
+    /**
+     * [glance] - площадь Города: без полосы. Ниже уровня аукциона площадь не спрашивает свои лоты вовсе - замок на плитке здания;
+     * отказ сервера по уровню здесь молчит.
+     */
     fun loadMyLots(glance: Boolean = false, fresh: Boolean = false) = trade(key = Reads.LOTS, glance = glance, maxAgeMs = freshness(fresh)) {
         val mine = api.auction.mine(heroes.heroId)
         market { it.copy(myLots = mine.lots, slots = mine.slots, history = mine.history) }

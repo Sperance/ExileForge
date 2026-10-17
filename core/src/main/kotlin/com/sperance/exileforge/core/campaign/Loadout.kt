@@ -290,6 +290,9 @@ data class Draught(
 ) {
     /** Gives nothing but life: such a draught stops at full life and is not drunk on a full bar. */
     val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && toMana <= 0 && toShield <= 0 && lines.isEmpty() && conditional.isEmpty() && invulnerable <= 0
+
+    /** Глоток впустую: он только лечит, а здоровье [life] уже полное ([maxLife]) - как в PoE, его не пьют ни касанием, ни сами. */
+    fun wasted(life: Double, maxLife: Double): Boolean = lifeOnly && life >= maxLife
 }
 
 /**

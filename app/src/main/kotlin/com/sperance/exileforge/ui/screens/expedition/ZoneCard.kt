@@ -19,6 +19,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -46,6 +47,7 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
@@ -65,6 +67,7 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
+import kotlinx.coroutines.delay
 
 /** One stash map of a zone, with the view its square and its lines are drawn from. */
 internal data class StashMap(val item: ItemInstance, val view: ItemView)
@@ -91,7 +94,8 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
  * «Войти в портал». A «???» zone says only whose guardian opens it. The rules and the content are the
  * index's; the windows of the zone — its guardian's return — are the hero's own campaign.
  *
- * Запертая карта хранится нарочно: трата на заход спрашивается. Тестировщик начинает заход сразу боем со стражем.
+ * Запертая карта хранится нарочно: трата на заход спрашивается. Тестировщик начинает заход сразу боем со стражем. Новое семя раньше
+ * правил не даётся: кнопка погашена и считает секунды.
  */
 @Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, forced: Set<MapMechanic>, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
@@ -137,19 +141,20 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             AtlasKeys(game.atlasState?.earned.orEmpty(), zone.code.value)
             Maps(game, vm, index, zone, launch)
             Brews(game, vm, launch)
+            val wait = seedWait(seedReadyAt(game, zone.code, launch, forced))
             ForgeButton(
-                enabled = game.hero != null && !game.busy,
+                enabled = game.hero != null && !game.busy && wait == 0L,
                 onClick = { launchGuarded { vm.startRun(zone.code.value) } },
                 modifier = Modifier.fillMaxWidth().height(44.dp),
             ) {
                 Icon(ForgeGlyphs.Portal, null, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(10.dp))
-                Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
+                Text(if (wait > 0) ui("expedition.launch_wait", wait) else ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
             if (game.isTester) TesterMechanics(vm, forced)
             if (game.isTester) {
                 ForgeOutlinedButton(
-                    enabled = game.hero != null && !game.busy,
+                    enabled = game.hero != null && !game.busy && wait == 0L,
                     onClick = { launchGuarded { vm.startRun(zone.code.value, toBoss = true) } },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(ui("expedition.launch_boss")) }
@@ -157,6 +162,34 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
         }
     }
 }
+
+/**
+ * Когда портал зоны [zone] даст новое семя, мс эпохи сервера: вход без карты в зону открытого захода с теми же механиками [forced]
+ * продолжает его - ждать нечего (0); иначе - правило `run.newSeedSeconds` от прошлого семени героя (`RunRules.seedReadyAt`).
+ */
+private fun seedReadyAt(game: GameUi, zone: MapCode, launch: MapLaunch, forced: Set<MapMechanic>): Long {
+    val campaign = game.hero?.campaign ?: return 0
+    val rules = game.index?.rules?.run ?: return 0
+    val run = campaign.run
+    if (run != null && launch.picked == null && run.zone == zone.value && run.context.forced == forced) return 0
+    return rules.seedReadyAt(campaign.seededAt)
+}
+
+/** Сколько целых секунд до [readyAt] по часам сервера, вживую раз в секунду; 0 - можно сейчас. */
+@Composable private fun seedWait(readyAt: Long): Long {
+    val now by produceState(serverNow(), readyAt) {
+        while (readyAt > value) {
+            delay(SEED_TICK_MS)
+            value = serverNow()
+        }
+    }
+    return ((readyAt - now + SEED_TICK_MS - 1) / SEED_TICK_MS).coerceAtLeast(0)
+}
+
+private fun serverNow(): Long = System.currentTimeMillis() + ServerClock.offset
+
+/** Шаг отсчёта до нового семени: секунда. */
+private const val SEED_TICK_MS = 1000L
 
 /**
  * Механики тестировщика: что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится

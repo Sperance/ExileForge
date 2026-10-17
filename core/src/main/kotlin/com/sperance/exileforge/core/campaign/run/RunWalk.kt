@@ -115,7 +115,7 @@ internal fun ExpeditionRun.exit() {
  * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], регенерация и основа против дегена; под ранящим
  * недугом - ни того, ни другого), мана (поток маны [Recovery.manaFlow] - под долей восстановления листа; недуги на
  * герое режут и её), энергощит
- * и идущие флаконы.
+ * и идущие флаконы; глоток, что только лечит, гаснет на полном здоровье, как в бою.
  */
 internal fun ExpeditionRun.recover(dt: Double) {
     life = RoadLife.of(hero, pace, curb(RecoveryPool.LIFE), curb(RecoveryPool.MANA), stalling()).after(life, hero.maxLife, dt)
@@ -123,6 +123,7 @@ internal fun ExpeditionRun.recover(dt: Double) {
     shield = EnergyShield.recovered(hero, rules, shield, seconds - hitAt, dt)
     if (flaskLeft.any { it > 0 }) {
         val before = flaskLeft.map { it > 0 }
+        val halted = HashSet<Int>()
         flaskLeft.forEachIndexed { i, left ->
             val rate = rates.getOrNull(i) ?: return@forEachIndexed
             val slice = min(dt, left)
@@ -131,8 +132,9 @@ internal fun ExpeditionRun.recover(dt: Double) {
             life = (life + rate.life * slice).coerceAtMost(hero.maxLife)
             mana = (mana + rate.mana * slice).coerceAtMost(manaCap())
             healedInto(life - before, rate.toMana, rate.toShield)
+            if (rate.stopsAtFull && life >= hero.maxLife) halted += i
         }
-        flaskLeft = flaskLeft.map { (it - dt).coerceAtLeast(0.0) }
+        flaskLeft = flaskLeft.mapIndexed { i, left -> if (i in halted) 0.0 else (left - dt).coerceAtLeast(0.0) }
         if (flaskLeft.map { it > 0 } != before) rebody()
     }
 }

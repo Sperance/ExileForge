@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
@@ -55,7 +56,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * the board or given up. Pulling down reads the board again.
  *
  * Текущая глава сюжета - та же карточка, что над картой Похода, с плашкой выбора закона или книги над ней; вкладки - сегментами с
- * числом готовых к сдаче; «Сдать» - низкая пилюля, отказ и сброс - значки.
+ * числом готовых к сдаче, под ними - подпись, что ежедневные засчитываются сами; «Сдать» - низкая пилюля, отказ и сброс - значки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +82,7 @@ fun QuestsScreen() {
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
             onPick = vm::tab,
         )
+        CountingNote(Modifier.padding(horizontal = 18.dp))
         PullToRefreshBox(isRefreshing = Reads.QUESTS in activity.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (board == null) {
@@ -94,6 +96,14 @@ fun QuestsScreen() {
                 }
             }
         }
+    }
+}
+
+/** Подпись под вкладками: ежедневные засчитываются сами, контракты берут с доски. */
+@Composable private fun CountingNote(modifier: Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(Icons.Outlined.Info, null, tint = Rune, modifier = Modifier.size(14.dp))
+        Text(ui("quest.counting_note"), color = Muted, style = MaterialTheme.typography.labelSmall)
     }
 }
 

@@ -92,14 +92,15 @@ private val Building.titleKey: String
     val board by quests.quests.collectAsStateWithLifecycle()
     val trade by market.market.collectAsStateWithLifecycle()
     val guilds by guild.guilds.collectAsStateWithLifecycle()
+    val auction = game.unlocked(Feature.AUCTION)
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         if (game.heroId.isNotBlank()) {
             heroModel.ensure()
-            market.glanceLots()
             guild.open()
             quests.open()
         }
     }
+    LaunchedEffect(game.heroId, game.sessionEpoch, auction) { if (game.heroId.isNotBlank() && auction) market.glanceLots() }
     val scroll = rememberScrollState()
     OnReselect(TAB_CITY) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {

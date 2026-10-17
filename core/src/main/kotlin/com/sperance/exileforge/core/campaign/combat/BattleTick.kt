@@ -9,6 +9,7 @@ import com.sperance.exileforge.core.campaign.TickTrace
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.FOREVER
 import com.sperance.exileforge.core.campaign.combat.Battle.Companion.TICK
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
+import com.sperance.exileforge.core.campaign.draught
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ChargeKind
@@ -53,7 +54,7 @@ internal fun Battle.step(dt: Double) {
             autoDrunk = true
             if (hero.body.flasksAuto) {
                 kit.flasks.forEachIndexed { i, flask ->
-                    if (flask != null && draughtOf(i) == null) {
+                    if (flask != null && draughtOf(i) == null && !flask.sheet.draught(hero.body, hero.life, manaCap()).wasted(hero.life, hero.body.maxLife)) {
                         flaskOpened[i] = true
                         drink(i, flask, free = true)
                     }
@@ -150,8 +151,17 @@ private fun Battle.lifeFlowLine() {
     if (flow.flowing) note(hero, NoteKind.LIFE_FLOW, "", flow.net, flow)
 }
 
-/** A pure life draught ends at full life: its buff goes with it, so the belt may drink it again when life falls. */
+/**
+ * A pure life draught ends at full life: its buff goes with it, so the belt may drink it again when life falls. Журнал пишет
+ * «прервано: здоровье полное» с оставшимися секундами, полка держит плитку прерванного глотка [Halt.SHOWN] секунд ([Battle.halts]).
+ */
 private fun Battle.stopDraught(draught: Recovery) {
+    val code = kit.flasks.getOrNull(draught.slot)?.sheet?.code
+    if (code != null) {
+        note(heroFighter, NoteKind.RECOVER_HALT, code, (draught.until - time).coerceAtLeast(0.0))
+        halts.removeAll { it.slot == draught.slot || time - it.at >= Halt.SHOWN }
+        halts += Halt(draught.slot, code, time)
+    }
     draught.until = time
     draughtOf(draught.slot)?.let { running -> heroFighter.effects[heroFighter.effects.indexOf(running)] = running.copy(until = time) }
 }

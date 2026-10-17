@@ -486,13 +486,16 @@ internal fun Battle.useFlasks() {
         val auto = flask.sheet.own(FlaskStat.AUTO_LOW_LIFE.code).let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
         if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
         if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) return@forEachIndexed
-        if (hero.life >= hero.body.maxLife && flask.sheet.draught(hero.body, hero.life, manaCap()).lifeOnly) return@forEachIndexed
+        if (flask.sheet.draught(hero.body, hero.life, manaCap()).wasted(hero.life, hero.body.maxLife)) return@forEachIndexed
         flaskOpened[i] = true
         drink(i, flask)
     }
 }
 
-/** Невосприимчивость глотка сразу снимает то, от чего бережёт. Сила глотка на уникальной фляге отвечает только на свою флягу. */
+/**
+ * Невосприимчивость глотка сразу снимает то, от чего бережёт. Сила глотка на уникальной фляге отвечает только на свою флягу. Новый глоток
+ * снимает с полки плитку прерванного прежнего ([Battle.halts]).
+ */
 internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
     val flask = belt.sheet
     val hero = heroFighter
@@ -505,6 +508,7 @@ internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
         else -> (charges[slot] - flask.perUse(hero.body::get)).coerceAtLeast(0.0)
     }
     lay(hero, TimedEffect(EffectKind.FLASK, flask.code, draught.lines, time + draught.duration, draught.duration, slot = slot, conditional = draught.conditional))
+    halts.removeAll { it.slot == slot }
     hero.ailments.removeAll { hero.body.immune(it.ailment) }
     manaBack(hero, draught.mana)
     hero.shield = min(hero.body.maxShield, hero.shield + draught.shield)

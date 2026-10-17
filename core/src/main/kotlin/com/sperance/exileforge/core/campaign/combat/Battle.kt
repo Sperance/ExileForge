@@ -431,6 +431,9 @@ class Battle(
     internal val triggerReady = mutableMapOf<String, Double>()
     internal val recoveries = mutableListOf<Recovery>()
 
+    /** Глотки, что погасли на полном здоровье: плитка «прервано» на полке героя, пока не прошло [Halt.SHOWN] секунд. */
+    internal val halts = mutableListOf<Halt>()
+
     /** Регенерация, деген и отложенный урон героя с прошлой строки итога: одна строка журнала в секунду. */
     internal val lifeMeter = LifeMeter()
 

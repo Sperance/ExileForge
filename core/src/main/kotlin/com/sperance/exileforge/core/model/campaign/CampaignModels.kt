@@ -42,6 +42,8 @@ import kotlinx.serialization.Serializable
     val completions: Map<String, Int> = emptyMap(),
     /** Призывы стража героем в окне: от них растёт цена следующего ([SummonLog.price]). */
     val summons: SummonLog = SummonLog(),
+    /** Когда герой последний раз получил новое семя захода, мс эпохи сервера: следующее - по `RunRules.seedReadyAt`. */
+    val seededAt: Long = 0,
 ) {
     /** The boss of [mapCode] is slain and not yet back. */
     fun bossDown(mapCode: MapCode, now: Long): Boolean = (bosses[mapCode.value] ?: 0L) > now

@@ -83,6 +83,16 @@ internal class Blow(
     val weapon: Boolean get() = !spell && (action == Action.ATTACK || action == Action.SKILL)
 }
 
+/**
+ * Глоток места [slot] пояса (флакон [code]), что погас на полном здоровье в [at] секунд боя: полка показывает его плиткой «прервано».
+ */
+internal class Halt(val slot: Int, val code: String, val at: Double) {
+    companion object {
+        /** Сколько секунд боя плитка прерванного глотка стоит на полке: отображение, не баланс. */
+        const val SHOWN = 2.5
+    }
+}
+
 /** Life damage the hero takes a second until [until]: the delayed share of a hit. */
 internal class Delayed(val rate: Double, val until: Double)
 

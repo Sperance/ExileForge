@@ -328,7 +328,7 @@ data class Combatant(
     /** Its hits that are not critical strikes, as a multiplier (−40 — 40% less). */
     val nonCritMore: Double get() = max(0.0, 1 + stat(CoreStat.NON_CRIT_DAMAGE.code) / 100)
 
-    /** Every flask of the belt is drunk as a fight opens, for no charges. */
+    /** Every flask of the belt is drunk as a fight opens, for no charges - кроме глотка впустую ([com.sperance.exileforge.core.campaign.Draught.wasted]). */
     val flasksAuto: Boolean get() = stat(CoreStat.FLASKS_AUTO.code) > 0
 
     /** Its resistance to a blow of [type]: the highest elemental one for an element when it takes elements so. */

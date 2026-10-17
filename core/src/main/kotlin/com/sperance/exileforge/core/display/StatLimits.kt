@@ -29,6 +29,9 @@ data class StatLimit(
 
     /** Бой читает не набранное: оно выше предела или ниже дна - сводка печатает «предел; набрано N». */
     val clamped: Boolean get() = effective != gathered
+
+    /** Набранное дошло до предела: строка «упёрлась» - её считает свёрнутая строка «Пределы» раздела сводки. */
+    val reached: Boolean get() = gathered >= cap
 }
 
 /** The ceilings of the hero's figures, read from the rules' one registry (`StatCaps`) - exactly as the fight applies them. */
@@ -39,6 +42,9 @@ object StatLimits {
         val raises = cap.raises.map { it to read(it) }.filter { it.second != 0.0 }
         return StatLimit(stat, cap.gathered(stat, read), cap.effective(stat, read), cap.base, raises, cap.at(read), cap.hard, cap.floor)
     }
+
+    /** Характеристики, что поднимают пределы реестра (`StatCap.raises`): сводка складывает их в строку «Пределы» своего раздела. */
+    fun raisers(index: ContentIndex): Set<String> = index.stats.stats.flatMapTo(HashSet()) { StatCaps.of(it.code, index.campaign)?.raises.orEmpty() }
 
     /** Шанс уклонения героя уровня [level]: от меткости эталонного врага его уровня (`ReferenceFoe`), под пределом правил. */
     fun evasion(stats: Map<String, Double>, level: Int, index: ContentIndex): StatReading = StatCaps.evasion({ stats[it] ?: 0.0 }, level, index)

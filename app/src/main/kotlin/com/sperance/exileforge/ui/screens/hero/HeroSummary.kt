@@ -4,12 +4,17 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -25,6 +30,7 @@ import com.sperance.exileforge.core.display.partFigure
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
+import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.state.GameUi
@@ -109,10 +115,17 @@ private val StatSection.glyph: Glyph get() = when (this) {
     StatSection.OUTSIDE, StatSection.NONE -> Glyph.CURRENCY
 }
 
-/** A section: a card headed by its icon and name in its colour, then its figures one to a row, a thin line between. */
+/**
+ * A section: a card headed by its icon and name in its colour, then its figures one to a row, a thin line between. Строки, что поднимают
+ * пределы ([StatLimits.raisers]), свёрнуты внизу одной строкой «Пределы · N упёрлись» ([LimitsFold]); касание раскрывает их.
+ */
 @Composable private fun StatGroupCard(group: StatSection, stats: List<Pair<String, Double>>, figures: StatFigures, game: GameUi, before: Map<String, Double>?, open: (String) -> Unit) {
     val accent = group.accent()
     val shape = RoundedCornerShape(10.dp)
+    val raisers = remember(game.index) { game.index?.let(StatLimits::raisers).orEmpty() }
+    val (limits, plain) = stats.partition { it.first in raisers }
+    val reached = remember(plain, figures, game.index) { game.index?.campaign?.let { campaign -> plain.count { (key) -> StatLimits.of(key, figures.stats, campaign)?.reached == true } } ?: 0 }
+    var unfolded by rememberSaveable(group) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().clip(shape).background(Panel)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -122,10 +135,38 @@ private val StatSection.glyph: Glyph get() = when (this) {
             GlyphIcon(group.glyph, accent, Modifier.size(18.dp))
             Text(group.title(game.lang), color = accent, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         }
-        stats.forEach { (key, value) ->
+        plain.forEach { (key, value) ->
             HorizontalDivider(thickness = 1.dp, color = PanelRaised)
             StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, before, accent, figures, game, Modifier.fillMaxWidth().clickable { open(key) })
         }
+        if (limits.isNotEmpty()) {
+            HorizontalDivider(thickness = 1.dp, color = PanelRaised)
+            LimitsFold(reached, unfolded, accent) { unfolded = !unfolded }
+            if (unfolded) {
+                limits.forEach { (key, value) ->
+                    HorizontalDivider(thickness = 1.dp, color = PanelRaised)
+                    StatCell(key, value, before?.let { it[key] ?: 0.0 }?.takeIf { it != value }, before, accent, figures, game, Modifier.fillMaxWidth().clickable { open(key) })
+                }
+            }
+        }
+    }
+}
+
+/** Свёрнутая строка пределов раздела: «Пределы · N упёрлись» ([reached] строк раздела дошли до предела) и стрелка; касание - [onToggle]. */
+@Composable private fun LimitsFold(reached: Int, unfolded: Boolean, accent: Color, onToggle: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onToggle).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        GlyphIcon(Glyph.DEFENCE, accent.copy(alpha = .7f), Modifier.size(16.dp))
+        Text(
+            if (reached > 0) ui(pluralKey("stat.limits_reached", reached), reached) else ui("stat.limits"),
+            color = if (reached > 0) Caution else Muted,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(if (unfolded) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
     }
 }
 

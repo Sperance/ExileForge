@@ -28,6 +28,7 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.FullReport
 import com.sperance.exileforge.core.model.feedback.IssueMove
 import com.sperance.exileforge.core.model.feedback.MailAttachment
 import com.sperance.exileforge.core.model.feedback.MailEquipment
@@ -169,6 +170,7 @@ private fun rowMeta(entry: AdminReport): String {
     Facts(ui("feedback.admin.trail"), report.trail)
     Facts(ui("feedback.admin.hero_sheet"), report.heroSheet)
     report.issue?.notes?.forEach { note -> MutedText("${ui("feedback.who.${note.author.name.lowercase()}")}: ${note.text}", style = MaterialTheme.typography.labelSmall) }
+    ModerationNote(account, vm, report)
     if (report.issueError.isNotBlank() && report.issue == null) {
         Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
         ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }) { Text(ui("feedback.issue_retry")) }
@@ -185,6 +187,17 @@ private fun rowMeta(entry: AdminReport): String {
         Spacer(Modifier.weight(1f))
         if (entry.deletable && report.status != ReportStatus.CREATED) ReportDeleteButton(!account.busy, onDelete)
     }
+}
+
+/**
+ * Дополнение модерации: его пишут и правят модератор и администратор, оно уходит разделом в тело Issue; автору в игре не видно,
+ * письма нет. «Сохранить» горит, когда текст разошёлся с сохранённым; пустой текст стирает дополнение.
+ */
+@Composable private fun ModerationNote(account: AccountUi, vm: FeedbackViewModel, report: FullReport) {
+    var note by remember(report.id, report.moderationNote) { mutableStateOf(report.moderationNote) }
+    Engraved(ui("feedback.note.title"))
+    OutlinedTextField(note, { note = it.take(NOTE) }, placeholder = { Text(ui("feedback.note.hint")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+    ForgeOutlinedButton(enabled = !account.busy && note.trim() != report.moderationNote, onClick = { vm.noteReport(report.id, note) }) { Text(ui("feedback.note.save")) }
 }
 
 /** Блок фактов отчёта мелким шрифтом: заголовок и строки; пустой - ничего. */
@@ -227,6 +240,9 @@ private fun rowMeta(entry: AdminReport): String {
 private val FeedbackKind.exported: Boolean get() = this == FeedbackKind.BUG || this == FeedbackKind.CRASH
 
 private const val REASON = 400
+
+/** Длина дополнения модерации: сервер всё равно режет по `inputs.report`. */
+private const val NOTE = 2000
 private const val SEARCH = 60
 
 /**

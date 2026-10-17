@@ -136,6 +136,8 @@ import kotlinx.serialization.Serializable
     /** Повторы падения и версии, где оно было; у прочих отчётов - 1 и пусто. */
     val occurrences: Int = 1,
     val versions: List<String> = emptyList(),
+    /** Дополнение модерации: раздел тела Issue, автору в игре не отдаётся; пусто - его нет. */
+    val moderationNote: String = "",
 )
 
 /**

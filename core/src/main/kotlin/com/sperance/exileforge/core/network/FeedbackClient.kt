@@ -50,6 +50,9 @@ class FeedbackClient internal constructor(private val http: Transport) {
     /** Issue в GitHub: из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
     suspend fun toIssue(id: String): AdminReport = http.post("$ADMIN/feedback/issue", mapOf("id" to id))
 
+    /** Дополнение модерации к отчёту [id]: раздел тела Issue, автору не видно, письма нет; пустой [text] стирает его. */
+    suspend fun note(id: String, text: String): AdminReport = http.post("$ADMIN/feedback/note", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
+
     /** Issue из игры: ответ модерации, закрытие с причиной; [duplicate] - номер оригинала у дубля. */
     suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int = 0): AdminReport = http.post(
         "$ADMIN/feedback/issue/move",

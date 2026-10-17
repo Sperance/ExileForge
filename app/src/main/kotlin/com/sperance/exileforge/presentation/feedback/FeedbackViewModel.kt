@@ -93,6 +93,9 @@ class FeedbackViewModel(
     /** Модерация ведёт Issue отчёта из игры: ответ или закрытие с причиной; судьба приходит из GitHub сразу. */
     fun steerIssue(id: String, move: IssueMove, text: String, duplicate: Int = 0) = answer(ui("feedback.issue_moved")) { api.feedback.steer(id, move, text, duplicate) }
 
+    /** Дополнение модерации к отчёту: сервер кладёт его разделом в тело Issue и отвечает отчётом как он теперь стоит. */
+    fun noteReport(id: String, text: String) = answer(ui("feedback.note.saved")) { api.feedback.note(id, text) }
+
     /** Отчёт в GitHub Issues: сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
     fun reportToIssue(id: String) = answer(ui("feedback.issue_done")) { api.feedback.toIssue(id) }
 

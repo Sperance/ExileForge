@@ -95,7 +95,7 @@ jobs:
           cache-read-only: false
           # Неиспользуемые файлы кэша удаляются перед сохранением: кэш не копится до лимита GitHub
           cache-cleanup: on-success
-      - run: bash gradlew :core:ktlintCheck :core:test
+      - run: bash gradlew :core:ktlintCheck commentStyle :core:test
 
   app:
     needs: changes

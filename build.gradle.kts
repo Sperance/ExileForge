@@ -6,10 +6,11 @@ plugins {
     id("org.jlleitschuh.gradle.ktlint") version "14.2.0" apply false
 }
 
-// Стиль кода - ktlint, настройки в .editorconfig; CI падает на нарушениях.
 subprojects {
     apply(plugin = "org.jlleitschuh.gradle.ktlint")
     extensions.configure<org.jlleitschuh.gradle.ktlint.KtlintExtension> {
         version.set("1.8.0")
     }
 }
+
+apply(from = "backend/gradle/comment-style.gradle.kts")

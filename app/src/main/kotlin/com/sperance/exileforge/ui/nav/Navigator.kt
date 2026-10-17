@@ -80,6 +80,9 @@ class Navigator(
         mutable.value = route
     }
 
+    /** Экран под верхним: над ним открыт аккаунт или настройки; в стеке один экран - null. */
+    val below: Route? get() = stack.getOrNull(stack.lastIndex - 1)
+
     /** Назад: верх снимается, последний экран остаётся. */
     fun back() {
         if (stack.size <= 1) return

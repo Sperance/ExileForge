@@ -15,21 +15,27 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Rune
 
 /** Высота строки цепочки. */
 private val TRAIL_HEIGHT = 40.dp
 
-/** Звено цепочки: подпись уровня (вложенный уровень может её уточнить - [TrailTitle]) и как с него уйти на уровень выше. */
+/**
+ * Звено цепочки: подпись уровня (вложенный уровень может её уточнить - [TrailTitle]), данные экрана справа в строке ([TrailData]) и как
+ * с него уйти на уровень выше.
+ */
 @Stable
 private class TrailEntry(label: String, val back: State<() -> Unit>) {
     var label by mutableStateOf(label)
     var title by mutableStateOf<String?>(null)
+    var data by mutableStateOf<String?>(null)
     val shown: String get() = title ?: label
 }
 
@@ -94,7 +100,21 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 }
 
 /**
- * Строка цепочки: стрелка на уровень вверх, корень и звенья через «›»; последнее - где игрок сейчас, не нажимается.
+ * Данные экрана справа в строке цепочки, пока вызов на экране: Гримуар - «Ур. 25 · ✦ 215 · ⛓ 30%», уникальные - «34 / 210». Своей
+ * строки-шапки у экрана нет - имя ему дают цепочка и панель, а данные встают сюда.
+ */
+@Composable fun TrailData(data: String) {
+    val scope = LocalTrail.current ?: return
+    val entry = scope.state.levels[scope.depth] ?: return
+    DisposableEffect(entry, data) {
+        entry.data = data
+        onDispose { if (entry.data == data) entry.data = null }
+    }
+}
+
+/**
+ * Строка цепочки: стрелка на уровень вверх, корень и звенья через «›»; последнее - где игрок сейчас, не нажимается. Справа - данные
+ * последнего уровня ([TrailData]): звенья меряются первыми, данные берут остаток и на длинной цепочке сокращаются первыми.
  *
  * Прыжок к звену (0 - корень): уровни глубже закрываются, начиная с самого глубокого.
  */
@@ -104,7 +124,8 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
         IconButton(onClick = { levels.last().back.value() }, modifier = Modifier.size(TRAIL_HEIGHT)) {
             Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold, modifier = Modifier.size(20.dp))
         }
-        Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+        val data = levels.last().data
+        Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             val names = listOf(root) + levels.map { it.shown }
             names.forEachIndexed { i, name ->
                 if (i > 0) Text(" › ", color = Muted, style = MaterialTheme.typography.labelLarge)
@@ -118,6 +139,17 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
                     modifier = if (here) Modifier else Modifier.clickable(role = Role.Button) { jump(i) },
                 )
             }
+        }
+        data?.let {
+            Text(
+                it,
+                color = Rune,
+                style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f).padding(start = 8.dp),
+            )
         }
     }
 }

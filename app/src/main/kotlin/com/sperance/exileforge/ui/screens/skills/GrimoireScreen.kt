@@ -91,23 +91,20 @@ internal sealed interface Pick {
     val level = hero?.level ?: 1
     val body = remember(hero?.sheet, index) { index?.let { i -> hero?.let { Combatant(it.stats, it.level, i.campaign.combat) } } }
     val pages = remember(book, classCode) { book?.ofClass(classCode).orEmpty() }
+    if (hero != null && body != null && index != null) {
+        val loadout = remember(skills, index, classCode, hero.stats) { Loadout.of(skills, index, classCode, emptyList(), hero.stats) }
+        val reserved = loadout.reserve(ReservePool.MANA, body).percent
+        val lifeReserved = loadout.reserve(ReservePool.LIFE, body).percent
+        TrailData(
+            listOfNotNull(
+                ui("skills.data_level", level),
+                ui("skills.data_mana", number(body.maxMana)),
+                ui("skills.data_reserve", number(reserved)).takeIf { reserved > 0 },
+                ui("skills.data_life", number(lifeReserved)).takeIf { lifeReserved > 0 },
+            ).joinToString(" · "),
+        )
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            val mana = body?.maxMana ?: 0.0
-            val loadout = if (body != null && index != null) Loadout.of(skills, index, classCode, emptyList(), hero?.stats.orEmpty()) else null
-            val reserved = body?.let { loadout?.reserve(ReservePool.MANA, it)?.percent } ?: 0.0
-            val lifeReserved = body?.let { loadout?.reserve(ReservePool.LIFE, it)?.percent } ?: 0.0
-            ScreenHeader(
-                ui("skills.title"),
-                listOfNotNull(
-                    classCode.takeIf { it.isNotBlank() }?.let(::classTitle),
-                    ui("skills.level", level),
-                    ui("skills.mana", number(mana)) + if (reserved > 0) " " + ui("skills.reserved", number(reserved)) else "",
-                    ui("skills.life_reserved", number(lifeReserved)).takeIf { lifeReserved > 0 },
-                ).joinToString(" · "),
-                ForgeGlyphs.Grimoire,
-            )
-        }
         item { Tabs(section) { section = it } }
         if (hero == null || body == null || index == null) {
             item { InfoCard(ui("common.loading"), ui("skills.loading_hint")) }

@@ -107,7 +107,7 @@ internal enum class SettingsPage(val title: String) {
     }
 }
 
-/** Тело уровня настроек: список ([open] null) или страница; заголовок - имя уровня. */
+/** Тело уровня настроек: список ([open] null) или страница; своего заголовка нет - уровень называет цепочка. */
 @Composable private fun SettingsBody(account: AccountUi, open: SettingsPage?, onPage: (SettingsPage) -> Unit) {
     val sessionModel: SessionViewModel = koinViewModel()
     RefreshHost(rememberPageRefresh(), Modifier.fillMaxSize()) {
@@ -115,7 +115,6 @@ internal enum class SettingsPage(val title: String) {
             Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(ui(open?.title ?: "settings.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             when (open) {
                 null -> SettingsList(account, onPage)
 

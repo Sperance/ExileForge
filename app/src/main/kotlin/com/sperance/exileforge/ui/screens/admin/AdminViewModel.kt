@@ -32,6 +32,9 @@ class AdminViewModel(
 
     /** Коды наград - экран над инструментами администратора. */
     fun openRedemptions() = navigator.open(Route.Redemption)
+
+    /** С кодов наград - назад к инструментам: звено «Администратор» цепочки. */
+    fun back() = navigator.back()
     fun mode(mode: AppMode) = session.mode(mode)
 
     /** Случайная вещь: редкость и слот с панели, пусто - любые. */

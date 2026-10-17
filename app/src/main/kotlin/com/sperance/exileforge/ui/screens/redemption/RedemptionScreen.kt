@@ -53,15 +53,17 @@ import org.koin.compose.viewmodel.koinViewModel
     val admin by vm.admin.collectAsStateWithLifecycle()
     var pendingDelete by remember { mutableStateOf<RedemptionCode?>(null) }
 
-    PullToRefreshBox(isRefreshing = game.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
-        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                ScreenHeader(ui("redemption.title"), ui("redemption.count", admin.redemptions.size), ForgeGlyphs.Scroll)
-            }
-            item { NewCodePanel(game, vm) }
-            if (admin.redemptions.isEmpty()) item { InfoCard(ui("redemption.empty"), ui("redemption.empty_hint")) }
-            items(admin.redemptions, key = { it.id }) { code ->
-                CodeCard(game, code, onDelete = { pendingDelete = code })
+    BackTrailHost(ui("account.administrator")) {
+        TrailLevel(ui("redemption.title"), onBack = vm::back) {
+            TrailData(ui("redemption.count", admin.redemptions.size))
+            PullToRefreshBox(isRefreshing = game.refreshing(Reads.REDEMPTIONS), onRefresh = vm::loadRedemptions, modifier = Modifier.fillMaxSize()) {
+                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    item { NewCodePanel(game, vm) }
+                    if (admin.redemptions.isEmpty()) item { InfoCard(ui("redemption.empty"), ui("redemption.empty_hint")) }
+                    items(admin.redemptions, key = { it.id }) { code ->
+                        CodeCard(game, code, onDelete = { pendingDelete = code })
+                    }
+                }
             }
         }
     }

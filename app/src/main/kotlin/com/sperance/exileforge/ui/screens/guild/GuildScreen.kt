@@ -87,12 +87,10 @@ import org.koin.compose.viewmodel.koinViewModel
             }
 
             mine != null -> {
-                ScreenHeader(ui("guild.title"), ui("guild.outside_subtitle"), ForgeGlyphs.Banner)
                 GuildOutside(game, vm, mine)
             }
 
             else -> {
-                ScreenHeader(ui("guild.title"), null, ForgeGlyphs.Banner)
                 if (Reads.GUILD in game.loading) {
                     MutedText(ui("guild.loading"))
                 } else {

@@ -4,6 +4,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
@@ -12,6 +14,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
@@ -115,13 +118,6 @@ import org.koin.compose.viewmodel.koinViewModel
 ) {
     PullToRefreshBox(isRefreshing = game.refreshing(Reads.CHARACTERS), onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item {
-                ScreenHeader(
-                    ui("chars.title"),
-                    ui("chars.slots", game.characterSlotsLeft, game.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
-                    ForgeGlyphs.Exile,
-                )
-            }
             accountFate(game)?.let { fate -> item(key = "fate") { FateRibbon(fate, ui("fate.ribbon.account"), Modifier.fillMaxWidth()) } }
             items(game.session.characters, key = { it.id }) { character ->
                 CharacterCard(
@@ -135,7 +131,17 @@ import org.koin.compose.viewmodel.koinViewModel
             }
             item {
                 ForgeButton(enabled = !game.busy && game.characterSlotsLeft > 0, onClick = onCreate, modifier = Modifier.fillMaxWidth()) {
-                    Text(ui("editor.create_character"))
+                    Icon(Icons.Outlined.Add, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(ui("editor.create_character"), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        ui("chars.slots_short", game.characterSlotsLeft, game.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        softWrap = false,
+                        modifier = Modifier.alpha(.75f),
+                    )
                 }
                 if (game.characterSlotsLeft == 0) MutedText(ui("chars.slots_full"))
             }
@@ -164,7 +170,6 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
 /** Форма создания героя: «⋮» с отчётом - в углу экрана, как у списка героев. */
 @Composable private fun ColumnScope.CreatingList(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) }
         item { CreateCharacterPanel(game, vm, canGoBack = game.session.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
 }

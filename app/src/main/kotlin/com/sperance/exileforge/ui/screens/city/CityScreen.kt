@@ -105,7 +105,6 @@ private val Building.titleKey: String
     OnReselect(TAB_CITY) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
-        ScreenHeader(ui("nav.city"), ui("city.subtitle"), ForgeGlyphs.Keep)
         HubGrid(cityTiles(game, board, trade, guilds) { shell.building(it) })
         Spacer(Modifier.height(12.dp))
     }

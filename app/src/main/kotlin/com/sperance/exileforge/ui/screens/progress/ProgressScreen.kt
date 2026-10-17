@@ -94,9 +94,8 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     val scroll = rememberScrollState()
     OnReselect(TAB_PROGRESS) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader(ui("progress.title"), ui("progress.subtitle"), ForgeGlyphs.Sigil)
         HubGrid(tiles)
-        InfoCard(ui("progress.title"), ui("progress.hint"))
+        MutedText(ui("progress.hint"), style = MaterialTheme.typography.labelMedium)
     }
 }
 

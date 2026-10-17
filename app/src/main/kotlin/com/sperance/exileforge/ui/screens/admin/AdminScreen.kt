@@ -50,12 +50,6 @@ import org.koin.compose.viewmodel.koinViewModel
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        ScreenHeader(
-            ui(if (game.isAdmin) "account.administrator" else "account.moderator"),
-            ui("admin.subtitle"),
-            ForgeGlyphs.Scroll,
-        )
-
         if (game.isAdmin) {
             ForgePanel {
                 Engraved(ui("admin.screens"))

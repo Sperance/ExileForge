@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.platform.BugDelivery
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
+import com.sperance.exileforge.ui.nav.routeTitle
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -155,6 +156,12 @@ class ShellViewModel(
     fun takeTreeNode(): String? = shell.takeTreeNode()
 
     fun closeSettings() = navigator.back()
+
+    /** Имя экрана под открытым поверх (аккаунт, настройки) - корень их цепочки «назад»; под ним ничего - «Герой». */
+    val belowTitle: String get() = routeTitle(navigator.below ?: Route.Hero)
+
+    /** Закрыть открытый поверх экран (аккаунт): назад на экран под ним. */
+    fun back() = navigator.back()
 
     /** Проба связи сразу: нажата иконка «не в сети». */
     fun retryLink() = link.wake(now = true)

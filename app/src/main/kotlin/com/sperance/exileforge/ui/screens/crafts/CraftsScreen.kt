@@ -132,26 +132,23 @@ fun CraftsScreen() {
         return
     }
     PullToRefreshBox(isRefreshing = activity.busy || Reads.CRAFTS in activity.loading, onRefresh = vm::load, modifier = Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
-            Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("crafts.title"), ui("crafts.subtitle"), ForgeGlyphs.Anvil) { CraftsGlossaryButton(crafts?.rules) } } }
-            LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (crafts == null) {
-                    item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
-                    return@LazyColumn
-                }
-                item { WorkPlaque(game, vm, held, offset) }
-                sections.forEachIndexed { index, (title, rows) ->
-                    if (index > 0) item { FlowMark() }
-                    item { SectionRule(ui(title)) }
-                    items(rows, key = { it.first().code }) { row ->
-                        Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
-                            repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
-                        }
+        LazyColumn(Modifier.fillMaxSize(), state = list, contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (crafts == null) {
+                item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
+                return@LazyColumn
+            }
+            item { WorkPlaque(game, vm, held, offset) }
+            sections.forEachIndexed { index, (title, rows) ->
+                if (index > 0) item { FlowMark() }
+                item { SectionRule(ui(title)) }
+                items(rows, key = { it.first().code }) { row ->
+                    Row(Modifier.height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { ProfessionTile(game, it, working = crafts.work?.profession == it.code, Modifier.weight(1f).fillMaxHeight()) { vm.openProfession(it.code) } }
+                        repeat(TILES - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
-                crafts.rules?.let { rules -> item { MutedText(ui("crafts.note", number(rules.offlineHours))) } }
             }
+            crafts.rules?.let { rules -> item { MutedText(ui("crafts.note", number(rules.offlineHours))) } }
         }
     }
 }
@@ -169,6 +166,10 @@ fun CraftsScreen() {
 internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offset: Long) {
     val work = crafts.state?.work
     ForgePanel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Engraved(ui("crafts.now_label"), modifier = Modifier.weight(1f))
+            CraftsGlossaryButton(crafts.state?.rules)
+        }
         if (work == null) {
             MutedText(ui("crafts.idle"), style = MaterialTheme.typography.bodyMedium)
             return@ForgePanel

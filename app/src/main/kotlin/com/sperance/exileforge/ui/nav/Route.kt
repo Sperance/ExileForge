@@ -199,32 +199,44 @@ sealed interface Route : NavKey {
  */
 data class ReportPlace(val name: String, val area: String)
 
+/** Ключ имени вкладки нижней панели [tab]; не вкладка панели - null. */
+private fun barKey(tab: Int): String? = when (tab) {
+    TAB_HERO -> "nav.hero"
+    TAB_PROGRESS -> "nav.progress"
+    TAB_EXPEDITION -> "nav.expedition"
+    TAB_CITY -> "nav.city"
+    TAB_CRAFTS -> "nav.crafts"
+    TAB_ADMIN -> "nav.admin"
+    else -> null
+}
+
+/** Имя, каким экран [route] называет корень цепочки «назад» над ним: вкладка панели под ним, настройки или «Врата мира». */
+fun routeTitle(route: Route): String = barKey((route.root ?: route).tab)?.let(::ui) ?: ui(if (route.tab == TAB_SETTINGS) "settings.title" else "account.title")
+
 /** Место экрана [route]: вне игры - фаза запуска, в игре - вкладка нижней панели и экран под ней. */
 fun reportPlace(route: Route): ReportPlace {
     if (route.phase != AppPhase.GAME) return ReportPlace(route.phase.name.lowercase(), "start")
     val screen = route::class.simpleName.orEmpty()
     val root = route.root ?: route
-    val (tab, area) = when (root.tab) {
-        TAB_HERO -> "nav.hero" to "hero"
+    val area = when (root.tab) {
+        TAB_PROGRESS -> "progress"
 
-        TAB_PROGRESS -> "nav.progress" to "progress"
+        TAB_EXPEDITION -> if (route == Route.Atlas) "atlas" else "run"
 
-        TAB_EXPEDITION -> "nav.expedition" to if (route == Route.Atlas) "atlas" else "run"
-
-        TAB_CITY -> "nav.city" to when (route) {
+        TAB_CITY -> when (route) {
             Route.Guild -> "guild"
             Route.Auction -> "auction"
             else -> "city"
         }
 
-        TAB_CRAFTS -> "nav.crafts" to "crafts"
+        TAB_CRAFTS -> "crafts"
 
-        TAB_ADMIN -> "nav.admin" to "admin"
+        TAB_ADMIN -> "admin"
 
-        TAB_SETTINGS -> null to "settings"
+        TAB_SETTINGS -> "settings"
 
-        else -> null to "hero"
+        else -> "hero"
     }
-    val title = tab?.let(::ui)
+    val title = barKey(root.tab)?.let(::ui)
     return ReportPlace(listOfNotNull(title, screen.takeIf { it.isNotBlank() && (title == null || it != root::class.simpleName) }).joinToString(" › "), area)
 }

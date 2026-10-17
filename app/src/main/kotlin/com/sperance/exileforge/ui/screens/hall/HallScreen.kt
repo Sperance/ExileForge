@@ -58,9 +58,6 @@ fun HallScreen() {
     }
     val pick = hall.pick
     Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            CollapsibleHeader { ScreenHeader(ui("hall.title"), ui("hall.subtitle"), ForgeGlyphs.Gem) }
-        }
         if (index == null || pick == null) {
             MutedText(ui("common.loading"), Modifier.padding(16.dp))
             return

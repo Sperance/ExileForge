@@ -70,7 +70,6 @@ fun QuestsScreen() {
     val busy = activity.busy
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
-            CollapsibleHeader { ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll) }
             StoryCard(game, board, vm, Modifier.padding(bottom = 8.dp))
         }
         Segments(

@@ -62,7 +62,6 @@ import org.koin.compose.viewmodel.koinViewModel
     val finds by produceState<Map<String, UniqueFind>?>(null, game.heroId) { value = game.heroId.takeIf { it.isNotBlank() }?.let { vm.uniques(it) } }
     val album = remember(index) { index?.let { UniqueAlbum(it) } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        ScreenHeader(ui("history.title"), ui("history.subtitle"), ForgeGlyphs.Tome)
         val known = finds
         HistoryTile(ForgeGlyphs.Gem, rarityColor("UNIQUE"), ui("history.uniques"), if (known != null && album != null) ui("history.found", album.count(known), album.all.size) else ui("history.uniques_hint"), onOpen = vm::openUniques)
         val chronicle = Feature.CHRONICLE.takeUnless { game.unlocked(it) }?.level(index?.rules)
@@ -140,15 +139,13 @@ private sealed interface AlbumPick {
             TrailLevel(ui("history.uniques"), onBack = vm::back) {
                 Column(Modifier.fillMaxSize()) {
                     val known = finds
+                    if (album != null && known != null) TrailData(ui("history.count", album.count(known), album.all.size))
                     if (album == null || known == null) {
                         Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = Gold) }
                         return@Column
                     }
                     val bosses = album.bossesFound(known)
                     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        item {
-                            ScreenHeader(ui("history.uniques"), ui("history.found", album.count(known), album.all.size), ForgeGlyphs.Gem)
-                        }
                         item {
                             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 PoolChip(ui("common.all"), pick == AlbumPick.All) { pick = AlbumPick.All }

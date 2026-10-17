@@ -63,25 +63,30 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
 /**
  * «Врата мира» (variant A, «Списки и плитки»): who is playing, then the hero's and the account's rows. It
  * opens from the game's sigil in the banner, and the language, the guides and the developers' tools live in «Настройки».
+ *
+ * Путь назад - цепочка от экрана под ним («← Город › Врата мира»), страница аккаунта - её следующий уровень; своих шапок нет.
  */
 @Composable internal fun ServerScreen() {
     val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
     val heroModel: HeroViewModel = koinViewModel()
+    val shell: ShellViewModel = koinViewModel()
     var page by rememberSaveable { mutableStateOf<AccountPage?>(null) }
     var promoOpen by remember { mutableStateOf(false) }
     val open = page
-    if (open == null) {
-        AccountHome(account, onPage = { page = it }, onPromo = { promoOpen = true })
-    } else {
-        Column(Modifier.fillMaxSize()) {
-            BackRow(ui("account.title")) { page = null }
-            Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                Text(ui(open.title), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-                when (open) {
-                    AccountPage.SIGN_IN -> SignInPage(account)
+    BackTrailHost(remember { shell.belowTitle }) {
+        TrailLevel(ui("account.title"), onBack = shell::back) {
+            if (open == null) {
+                AccountHome(account, onPage = { page = it }, onPromo = { promoOpen = true })
+            } else {
+                TrailLevel(ui(open.title), onBack = { page = null }) {
+                    Column(
+                        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        when (open) {
+                            AccountPage.SIGN_IN -> SignInPage(account)
+                        }
+                    }
                 }
             }
         }
@@ -99,7 +104,6 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        ScreenHeader(ui("account.title"), icon = ForgeGlyphs.Portal)
         ProfileCard(account)
         RowGroup(ui("account.group_game")) {
             AccountRow(Icons.Outlined.SwapHoriz, ui("account.change_character"), enabled = !account.busy, onClick = sessionModel::leaveGame)

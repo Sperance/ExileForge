@@ -15,7 +15,7 @@ object VaalZones {
     fun isZone(zone: Zone) = zone.biome == BIOME
 
     /**
-     * The zone's map, cut from [location] by the rule [vaal] (4.12.x: доля и наименьший размер - контент `vaal.zoneShare|zoneMinSize`):
+     * The zone's map, cut from [location] by the rule [vaal] (доля и наименьший размер - контент `vaal.zoneShare|zoneMinSize`):
      * or null for a location with no guardian to stand at its end.
      */
     fun zone(location: Zone, vaal: VaalRule): Zone? {

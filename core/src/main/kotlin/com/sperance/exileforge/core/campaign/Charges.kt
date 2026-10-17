@@ -9,16 +9,16 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
 
-/** A kind of the hero's charges as the fight's counter draws it (3.33.0): how many, the most, and the seconds left. */
+/** A kind of the hero's charges as the fight's counter draws it: how many, the most, and the seconds left. */
 data class ChargeView(val kind: ChargeKind, val count: Int, val max: Int, val seconds: Double) {
     /** The stat whose drawing the kind borrows: its maximum's. */
     val stat: String get() = "STOCK_MAX_${kind.name}_CHARGES"
 }
 
 /**
- * The hero's frenzy, power and endurance charges in one fight (3.33.0, server 1.32.0) under the rules' [rules]: at most
+ * The hero's frenzy, power and endurance charges in one fight under the rules' [rules]: at most
  * [ChargeRules.max] of a kind, all of a kind living as long as the last one gained — a gain refreshes every charge of it —
- * each laying its kind's lines on the hero. A fight starts with none. Без правил зарядов (null, 4.12.x: у правил нет значений по
+ * each laying its kind's lines on the hero. A fight starts with none. Без правил зарядов (null, у правил нет значений по
  * умолчанию) зарядов у героя нет.
  */
 internal class HeroCharges(private val rules: ChargeRules?) {

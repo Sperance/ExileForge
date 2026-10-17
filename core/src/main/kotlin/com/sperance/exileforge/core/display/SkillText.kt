@@ -26,29 +26,33 @@ import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /**
- * A skill in the player's words (2.78.0, server 0.69.0). The server names a skill and nothing more; what it
+ * A skill in the player's words. The server names a skill and nothing more; what it
  * does is read off its numbers at a level, line by line, so a book's next level shows what it will change.
  */
 object SkillText {
 
-    /** A skill's name; a unique item's power (2.79.0) is named by its stat. */
+    /**
+     * A skill's name; a unique item's power is named by its stat.
+     *
+     * Удар фазы босса - источник `<шаблон>#<шаг>`, назван фазой; свойство монстра - источник помехи и проклятия на герое, названо
+     * свойством.
+     */
     fun title(code: String): String = if ('#' in code) {
-        // Удар фазы босса (3.92.0) - источник `<шаблон>#<шаг>`: назван фазой
         phaseTitle(code.substringBefore('#'))
     } else {
-        // Свойство монстра (4.4.1) - источник помехи и проклятия на герое: названо свойством
         locFirst("skill.$code.name", LocaleKey.traitName(code), "enum.EnumStatStock.$code")
     }
 
     /**
      * What [skill] does at [level]: its blow, its poison, its buff or curse, its healing, its lines or its answer. Пороги низкого
-     * здоровья строк - из правил боя [rules] (MOB-BAL, хвост пакета 10), не из словаря.
+     * здоровья строк - из правил боя [rules] (хвост пакета 10), не из словаря.
+     *
+     * Урон во времени называет своё состояние (яд или свой урон умения); руны - эхо и дары применения.
      */
     fun lines(skill: SkillDefinition, level: Int, rules: CombatRules): List<String> = buildList {
         if (skill.reserve > 0) add(ui("skill.line.reserve", number(skill.reserve)))
         skill.hit?.let { addAll(hit(it, level)) }
         skill.dot?.let { dot ->
-            // Урон во времени называет своё состояние (0.15.0, реш. 42): яд или свой урон умения
             add(ui("skill.line.dot", number(dot.min.at(level)), number(dot.max.at(level)), element(dot.element), fineNumber(dot.duration), ailment(dot.ailment)))
             if (dot.targets != 1) add(targets(dot.targets))
             addAll(ailments(dot.ailments, level))
@@ -68,29 +72,30 @@ object SkillText {
         }
         skill.trigger?.let { addAll(trigger(it, level, rules)) }
         skill.charges?.let { addAll(charges(it, level)) }
-        // Руны (4.4.0): эхо и дары применения
         skill.echo?.let { add(ui("skill.line.echo", number(it.chance), number(it.power))) }
         skill.cast?.let { addAll(cast(it, level)) }
     }
 
-    /** Дары применения (4.4.0, руны): барьер и заряды. */
+    /** Дары применения (руны): барьер и заряды. */
     private fun cast(cast: SkillCast, level: Int): List<String> = buildList {
         cast.barrier?.let { add(ui("skill.line.cast_barrier", number(it.life.at(level)), fineNumber(it.duration))) }
         cast.charge?.takeIf { cast.charges > 0 }?.let { add(ui("skill.line.cast_charges", cast.charges, ui("fight.charge.${it.name}"))) }
     }
 
-    /** What a skill does with the hero's charges (3.33.0, server 1.32.0): gives some of a kind, or spends all for a heavier blow. */
+    /**
+     * What a skill does with the hero's charges: gives some of a kind, or spends all for a heavier blow.
+     *
+     * Предел зарядов траты (`charges.most`): рост урона идёт не больше чем за столько зарядов.
+     */
     private fun charges(charges: SkillCharges, level: Int): List<String> = buildList {
         val kind = ui("fight.charge.${charges.kind.name}")
         charges.gain?.let { add(ui("skill.line.charge_gain", it.at(level).roundToInt(), kind)) }
         if (charges.consume) add(ui("skill.line.charge_consume", kind, number(charges.perCharge?.at(level) ?: 0.0)))
-        // Предел зарядов траты (0.15.0, `charges.most`): рост урона идёт не больше чем за столько зарядов
         if (charges.consume && charges.most > 0) add(ui("skill.line.charge_most", charges.most))
     }
 
     /**
-     * Темп активного умения у героя [hero] (4.12.x, SKILL-01, BUILD-01): цена маны умения уровня [level] (0.15.0, #40:
-     * [SkillDefinition.manaAt], у всех видов - по уровню умения) со снижением цены листа, время применения ([CastTime]) и перезарядка
+     * Темп активного умения у героя [hero]: цена маны умения уровня [level] ([SkillDefinition.manaAt], у всех видов - по уровню умения) со снижением цены листа, время применения ([CastTime]) и перезарядка
      * на его листе, регенерация маны; у пассивного - null. Им гримуар и лист боя печатают «применение · перезарядка» и «цена в секунду
      * / ваша регенерация».
      */
@@ -100,7 +105,7 @@ object SkillText {
         return SkillPace(mana, CastTime.of(skill, hero, hero.rules), skill.cooldown / hero.recovery, Recovery.manaRegen(hero, hero.rules.mana))
     }
 
-    /** Строка цены маны в секунду цикла против регенерации героя (BUILD-01). */
+    /** Строка цены маны в секунду цикла против регенерации героя. */
     fun manaRate(pace: SkillPace): String = ui("skill.line.mana_rate", fineNumber(pace.manaRate), fineNumber(pace.regen))
 
     /** What a monster's skill does, for the scouting panel and the log: one sentence. */
@@ -152,8 +157,10 @@ object SkillText {
     private fun barrier(barrier: SkillBarrier, level: Int) = ui("skill.line.barrier", number(barrier.life.at(level)), fineNumber(barrier.duration))
 
     /**
-     * Срабатывание (3.94.0): условие и шанс одной фразой, и первое следствие в той же строке - «С шансом 20%, убив врага: +1 заряд
-     * всем флягам»; прочие следствия и перезарядка - строками ниже. Строка без следствия больше не висит на двоеточии.
+     * Срабатывание: условие и шанс одной фразой, и первое следствие в той же строке - «С шансом 20%, убив врага: +1 заряд
+     * всем флягам»; прочие следствия и перезарядка - строками ниже. Строка без следствия не висит на двоеточии.
+     *
+     * Событие низкого здоровья называет свой порог правил `combat.lowLife`; прочим числа не нужны.
      */
     private fun trigger(trigger: SkillTrigger, level: Int, rules: CombatRules): List<String> {
         val effects = buildList {
@@ -166,7 +173,6 @@ object SkillText {
             trigger.ailment?.let { add(ui(if (trigger.twice) "skill.line.inflict_twice" else "skill.line.inflict", ailment(it))) }
             if (trigger.refund) add(ui("skill.line.refund"))
         }
-        // Событие низкого здоровья называет свой порог правил `combat.lowLife`; прочим числа не нужны
         val event = ui("skill.on.${trigger.on.name}", number(rules.lowLife * 100))
         val head = trigger.chance?.let { ui("skill.line.chance_on", number(it.at(level)), event.replaceFirstChar { c -> c.lowercase() }) } ?: event
         return buildList {
@@ -191,13 +197,14 @@ object SkillText {
     /**
      * One stat line, a skill's or a flask's: the server's own sentence for the stat and operation — its
      * `.negative` one for a minus — or the stat's title and the number where the server has none.
+     *
+     * Шаблон «+{v}» с отрицательным числом печатается «−5»: знак ставит fillTemplate.
      */
     fun statLine(stat: String, operation: Op, value: Double): String {
         val key = "stat.template.$stat.${operation.name}"
         val negative = locOr("$key.negative", "").takeIf { value < 0 && it.isNotBlank() }
         val template = negative ?: locOr(key, "")
         val shown = if (negative != null) abs(value) else value
-        // Шаблон «+{v}» с отрицательным числом печатается «−5» (3.90.0): знак ставит fillTemplate.
         if (template.isNotBlank()) return fillTemplate(template.replace("{v}", "{0}"), listOf(if (operation == Op.INCREASED) shareNumber(stat, shown) else statNumber(stat, shown)))
         val size = statNumber(stat, abs(value))
         return when (operation) {
@@ -209,17 +216,15 @@ object SkillText {
     }
 
     /**
-     * Строка, что фляга кладёт на героя на время глотка (4.8.0): [statLine] и хвост словаря сервера [ModifierText.DRAUGHT]
+     * Строка, что фляга кладёт на героя на время глотка: [statLine] и хвост словаря сервера [ModifierText.DRAUGHT]
      * («во время действия») - тот же, что печатает строку фляги на карточке.
      */
     fun draughtLine(stat: String, operation: Op, value: Double): String = listOf(statLine(stat, operation, value), locOr(ModifierText.DRAUGHT, ""))
         .filter(String::isNotBlank).joinToString(" ")
-
-    /** A skill's price in mana at [level], as the book prints it. */
 }
 
 /**
- * Темп активного умения у героя (4.12.x, SKILL-01, BUILD-01): [mana] - цена применения, [cast] - секунды применения, [cooldown] -
+ * Темп активного умения у героя: [mana] - цена применения, [cast] - секунды применения, [cooldown] -
  * перезарядка после него, [regen] - регенерация маны героя в секунду.
  */
 data class SkillPace(val mana: Double, val cast: Double, val cooldown: Double, val regen: Double) {

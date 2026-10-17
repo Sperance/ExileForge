@@ -32,12 +32,10 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
-// ==================== Skills, flasks and answers (2.78.0) ====================
-
 /** How deep a passive's answer may set off another's. */
 private const val MAX_DEPTH = 2
 
-/** A skill's element picked at random, and its ailment named by the element that struck (server 0.69.0). */
+/** A skill's element picked at random, and its ailment named by the element that struck. */
 private const val RANDOM = "RANDOM"
 
 private const val ELEMENT = "ELEMENT"
@@ -62,7 +60,7 @@ private fun Battle.holds(condition: SlotCondition, opened: Boolean): Boolean {
 
 /**
  * The active slots in order: a ready one whose condition holds, or that was tapped, is used; one short of
- * mana is passed over (3.17.0), so a cheaper heal or guard further down still answers. С 4.12.x (SKILL-01) подготовки нет - слоты
+ * mana is passed over, so a cheaper heal or guard further down still answers. Подготовки нет - слоты
  * готовы с начала боя; умение применяется своё время ([CastTime]), и пока идёт применение, прочие слоты и удар ждут.
  */
 internal fun Battle.useSkills() {
@@ -94,7 +92,7 @@ private fun Battle.castSeconds(kitSkill: KitSkill): Double {
 
 /**
  * Применение слота [slot] закончено: умение срабатывает, если на него ещё хватает маны, иначе пропадает без перезарядки - со строкой
- * журнала (0.14.0, ASANA-N01).
+ * журнала.
  */
 private fun Battle.applied(slot: Int, kitSkill: KitSkill, level: Int) {
     if (foeFighters.none { it.alive }) return
@@ -106,27 +104,28 @@ private fun Battle.applied(slot: Int, kitSkill: KitSkill, level: Int) {
     castSlot(slot, kitSkill, level, cost)
 }
 
+/**
+ * Цена - сперва из перелива маны (Переполнение), у Обета крови - здоровьем. Резонанс слышит применение до удара и до перезарядки, что он
+ * укорачивает. Холод и замедление растягивают перезарядку, как замах; она идёт с конца применения. Кость эха руны тянется лишь у умения с
+ * эхом.
+ */
 private fun Battle.castSlot(slot: Int, kitSkill: KitSkill, level: Int, cost: Double) {
     val hero = heroFighter
     val skill = kitSkill.skill
     val chance = hero.body[CoreStat.FREE_SKILL_CHANCE.code]
     val free = skillsFree() || chance > 0 && random.nextDouble() * 100 < chance
-    // Переполнение (4.6.1): цена - сперва из перелива маны; Обет крови (4.6.2) - здоровьем
     if (!free) payFor(cost, skill.code)
-    // Резонанс (4.6.1): применение слышат до самого удара - и до перезарядки, что он укорачивает (4.6.2)
     fateCast(skill.code)
-    // Холод и замедление (4.12.x, CAST-02) растягивают перезарядку, как замах; она идёт с конца применения (SKILL-01)
     hero.readyAt[slotKey(slot)] = time + skill.cooldown * fateCooldown(skill.code) / hero.body.recovery * hero.slow()
     hero.readyFloor[slotKey(slot)] = rules.caps.readyFloor(time, skill.cooldown)
     perform(kitSkill, level)
-    // Эхо руны (4.4.0): кость тянется лишь у умения с эхом, бой без рун идёт своим сидом как прежде
     skill.echo?.let { echo -> if (random.nextDouble() * 100 < echo.chance) echoCast(kitSkill, level, echo.power / 100) }
     trigger(SkillEvent.SKILL_USE, refund = if (free) 0.0 else cost)
     powers.fire(PowerEvent.SKILL_USE, PowerMoment(target(), spell = skill.spell, cast = kitSkill, level = level, slot = slotKey(slot)))
 }
 
 /**
- * Эхо применения (4.4.0): умение [kitSkill] ещё раз на доле [power] своей силы - руной эха или силой `RECAST`. Строки лога
+ * Эхо применения: умение [kitSkill] ещё раз на доле [power] своей силы - руной эха или силой `RECAST`. Строки лога
  * помечены эхом; применением оно не считается: ни мана, ни перезарядка, ни отклики пассивных и сил на `SKILL_USE`.
  */
 internal fun Battle.echoCast(kitSkill: KitSkill, level: Int, power: Double) {
@@ -141,14 +140,15 @@ internal fun Battle.echoCast(kitSkill: KitSkill, level: Int, power: Double) {
 }
 
 /**
- * What a class skill does at [level]: strike, poison, curse, buff, heal, shield or ward — or several. [power] (4.4.0, эхо) -
+ * What a class skill does at [level]: strike, poison, curse, buff, heal, shield or ward — or several. [power] (эхо) -
  * доля силы: урона, лечения, щита и барьера; благо и проклятие ложатся как есть.
+ *
+ * Трата забирает все заряды своего вида при применении, и удар растёт на каждый - не больше чем за `charges.most` зарядов
+ * (`SkillCharges.bonus`). Накопитель даёт заряды, когда его удар лёг на врага, а без удара (клич) - при применении.
  */
 private fun Battle.perform(kitSkill: KitSkill, level: Int, power: Double = 1.0) {
     val hero = heroFighter
     val skill = kitSkill.skill
-    // Charges (3.33.0, server 1.32.0): a spender takes every charge of its kind as it is used, and its blow grows by each -
-    // не больше чем за `charges.most` зарядов (0.15.0, `SkillCharges.bonus`)
     val charged = skill.charges
     val spent = if (charged?.consume == true) consumeCharges(charged.kind) else 0
     val bonus = (charged?.bonus(level, spent) ?: 1.0) * power
@@ -156,7 +156,6 @@ private fun Battle.perform(kitSkill: KitSkill, level: Int, power: Double = 1.0) 
     skill.dot?.let { heroDot(it, level, skill.code, skill.spell, power) }
     skill.curse?.let { curse(kitSkill, targets(it.targets), level) }
     skill.mark?.let { mark(kitSkill, it, level, power) }
-    // A generator gives its charges once its blow lands on a foe — or, with no blow, a warcry's, on use.
     charged?.gain?.let { gain -> if (skill.hit == null || landed) gainCharges(charged.kind, gain.at(level).roundToInt()) }
     skill.cast?.let { gifts(it, level) }
     if (skill.hit != null || skill.dot != null || skill.curse != null || skill.mark != null) return
@@ -181,7 +180,7 @@ private fun Battle.perform(kitSkill: KitSkill, level: Int, power: Double = 1.0) 
 }
 
 /**
- * Лечение клича (4.12.x, STAT-ATK-06): [total] здоровья - восстановлением за время действия баффа клича [seconds], здоровья в секунду;
+ * Лечение клича: [total] здоровья - восстановлением за время действия баффа клича [seconds], здоровья в секунду;
  * клич с полного здоровья лечит урон, что придёт за это время. Без баффа - сразу. Ответ - что вернулось сразу.
  */
 private fun Battle.warcryHeal(total: Double, seconds: Double): Double {
@@ -190,19 +189,22 @@ private fun Battle.warcryHeal(total: Double, seconds: Double): Double {
     return 0.0
 }
 
-/** Дары применения (4.4.0, руны): барьер не ниже того, что уже стоит, и заряды своего вида. */
+/** Дары применения (руны): барьер не ниже того, что уже стоит, и заряды своего вида. */
 private fun Battle.gifts(cast: SkillCast, level: Int) {
     cast.barrier?.let { ward(it, level, keep = true) }
     val kind = cast.charge ?: return
     if (cast.charges > 0) gainCharges(kind, cast.charges)
 }
 
-/** A class skill's blow at its targets — a passive's answer at [only] — each struck [SkillHit.hits] times. */
+/**
+ * A class skill's blow at its targets — a passive's answer at [only] — each struck [SkillHit.hits] times.
+ *
+ * Доп. цели атакам и заклинаниям - каждым своя характеристика, одна функция с Мощью.
+ */
 private fun Battle.heroHit(hit: SkillHit, level: Int, code: String, spell: Boolean, attack: Boolean, only: Fighter? = null, bonus: Double = 1.0): Boolean {
     val hero = heroFighter
     val own = hit.stats.lines(level)
     val body = if (own.isEmpty()) hero.body else heroBody(own)
-    // Доп. цели (4.12.x, STAT-PW2-07): атакам и заклинаниям - каждым своя характеристика, одна функция с Мощью
     val more = if (hit.targets > 0) extraTargets(attack, spell) { body[it.code] } else 0
     val struck = only?.let { listOf(it) } ?: targets(if (hit.targets <= 0) 0 else hit.targets + more)
     val element = hit.element?.let { if (it == RANDOM) DamageType.ELEMENTS.random(random) else DamageType.element(it) }
@@ -232,7 +234,7 @@ private fun Battle.heroHit(hit: SkillHit, level: Int, code: String, spell: Boole
 }
 
 /**
- * Цели удара с долей урона (4.4.0): [struck] - целиком, затем цепь руны - ещё [SkillHit.chain] врагов в досягаемости, каждый
+ * Цели удара с долей урона: [struck] - целиком, затем цепь руны - ещё [SkillHit.chain] врагов в досягаемости, каждый
  * прыжок теряет [SkillHit.falloff]% урона прежнего.
  */
 private fun Battle.chained(hit: SkillHit, struck: List<Fighter>): List<Pair<Fighter, Double>> {
@@ -243,14 +245,17 @@ private fun Battle.chained(hit: SkillHit, struck: List<Fighter>): List<Pair<Figh
     return direct + jumps.mapIndexed { i, foe -> foe to keep.pow(i + 1) }
 }
 
-/** A hero skill's damage by type, and the increases in percent each type was grown by (server 1.57.0). */
+/** A hero skill's damage by type, and the increases in percent each type was grown by. */
 private class Grown(val damage: Map<DamageType, Double>, val increase: Map<DamageType, Double>)
 
 /**
  * A class skill's damage before defences: a share of the weapon — a finisher's larger one on a target ailing or nearly
- * dead — or a spell's own; and a share of all of it turned to the skill's element. Since server 1.57.0 every increase
+ * dead — or a spell's own; and a share of all of it turned to the skill's element. Every increase
  * adds up before it multiplies, as in PoE: the skill damage joins the weapon's increases of each type, a spell grows
  * by the increases of its element — the damage in general, the conditions' and the charges' among them — of spells and of skills.
+ *
+ * «Больше» вида урона ложится и на чары: удар оружием несёт его в числе листа, чары - нет. Плоский урон листа к чарам растёт на увеличения
+ * своего вида.
  */
 private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target: Fighter, element: DamageType?, own: List<StatLine>): Grown {
     val damage = mutableMapOf<DamageType, Double>()
@@ -272,14 +277,12 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
         val base = low + random.nextDouble() * (spell.max.at(level) - low).coerceAtLeast(0.0)
         val spells = body[CoreStat.SPELL_DAMAGE.code] + skill
 
-        // «Больше» вида урона ложится и на чары (0.15.0, реш. 4): удар оружием несёт его в числе листа, чары - нет
         fun grow(of: DamageType, value: Double) {
             val grown = growth.increased(of.attack) + spells
             damage.merge(of, value * max(0.0, 1 + grown / 100) * growth.more(of.attack), Double::plus)
             increase[of] = grown
         }
         grow(type, base)
-        // 3.35.0: the flat damage the sheet adds to spells, each type grown by its own increases.
         DamageType.ELEMENTS.forEach { added -> body.spellAdded(added).takeIf { it > 0 }?.let { grow(added, it) } }
     }
     val convert = (hit.convert?.at(level) ?: 0.0).coerceIn(0.0, 100.0) / 100
@@ -295,11 +298,13 @@ private fun Battle.heroDamage(hit: SkillHit, level: Int, body: Combatant, target
 internal fun Battle.resolve(ailment: SkillAilment, element: DamageType, level: Int): Pair<Ailment, Double>? = (if (ailment.ailment == ELEMENT) Ailment.of(element) else Ailment.byWord(ailment.ailment))?.let { it to ailment.chance.at(level) }
 
 /**
- * A spell of damage over time: its roll grown like a spell's, laid on as the dot's own state ([SkillDot.ailment], 0.15.0, реш. 36/42):
+ * A spell of damage over time: its roll grown like a spell's, laid on as the dot's own state ([SkillDot.ailment]):
  * яд - стаком под пределом яда, свой урон умения («Высасывание сути») - одним экземпляром, что обновляется. Основа до защит
- * ([AilmentRule.raw]) встречает сопротивление цели на каждом тике, без пробивания; иначе - сразу, как прежде. Длительность недугов на
+ * ([AilmentRule.raw]) встречает сопротивление цели на каждом тике, без пробивания; иначе - сразу. Длительность недугов на
  * врагах прибавляет урон (больше тиков: сила - бросок за срок умения). Тики идут в разбор боя умением [code]; прочие недуги и
  * Разложение - строками [SkillDot.ailments].
+ *
+ * Урон во времени растёт и на «больше» своей стихии.
  */
 private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boolean, power: Double = 1.0) {
     val hero = heroFighter
@@ -310,7 +315,6 @@ private fun Battle.heroDot(dot: SkillDot, level: Int, code: String, spell: Boole
     val increase = growth.increased(type.attack) + hero.body[CoreStat.SPELL_DAMAGE.code] + hero.body[CoreStat.SKILL_DAMAGE.code]
     targets(dot.targets).forEach { target ->
         val low = dot.min.at(level)
-        // Урон во времени растёт и на «больше» своей стихии (0.15.0, реш. 4)
         val total = (low + random.nextDouble() * (dot.max.at(level) - low).coerceAtLeast(0.0)) * max(0.0, 1 + increase / 100) * growth.more(type.attack) * hero.body.damageMore * power
         val laid = if (rule?.raw == true) total else total * (1 - target.body.resist(type, hero.body.penetration(type))) * target.body.damageTaken(type)
         val inflicted = mutableListOf<Ailment>()
@@ -388,7 +392,7 @@ internal fun Battle.restore(amount: Double): Double {
     return healed
 }
 
-/** Барьер умения в доле [scale]; [keep] (4.4.0: руна, эхо) - не ниже и не короче того, что уже стоит, иначе - заново. */
+/** Барьер умения в доле [scale]; [keep] (руна, эхо) - не ниже и не короче того, что уже стоит, иначе - заново. */
 private fun Battle.ward(barrier: SkillBarrier, level: Int, scale: Double = 1.0, keep: Boolean = false) {
     val hero = heroFighter
     val value = hero.body.maxLife * barrier.life.at(level) / 100 * scale
@@ -405,7 +409,7 @@ internal fun Battle.flaskCharge(stat: String) = kit.flasks.forEachIndexed { i, f
     if (chance > 0 && random.nextDouble() * 100 < chance) chargeFlask(i, 1.0)
 }
 
-/** Доли вылеченного глотком здоровья [healed] в ману и энергощит [me] (4.12.x, STAT-MISC-09): от фактически вылеченного. */
+/** Доли вылеченного глотком здоровья [healed] в ману и энергощит [me]: от фактически вылеченного. */
 internal fun Battle.healedInto(me: Fighter, healed: Double, toMana: Double, toShield: Double) {
     if (healed <= 0) return
     if (toMana > 0) manaBack(me, healed * toMana)
@@ -416,6 +420,8 @@ internal fun Battle.healedInto(me: Fighter, healed: Double, toMana: Double, toSh
  * The passives answering [event]: each by its chance at its level, at most once per its cooldown.
  * [target] is the foe the event was about — the one struck, the one that struck — and [refund] the
  * mana a skill just cost.
+ *
+ * Дары рун у срабатывания - при каждом срабатывании.
  */
 internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: Double = 0.0, hit: AilingHit? = null) {
     if (depth >= MAX_DEPTH || !heroFighter.alive || outcome != null) return
@@ -429,7 +435,6 @@ internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: 
         depth++
         try {
             answer(code, answer, level, target, refund, hit)
-            // Дары рун (4.4.0) у срабатывания - при каждом срабатывании
             passive.skill.cast?.let { gifts(it, level) }
         } finally {
             depth--
@@ -437,6 +442,10 @@ internal fun Battle.trigger(event: SkillEvent, target: Fighter? = null, refund: 
     }
 }
 
+/**
+ * Возврат цены - не избыток восстановления: перелив Предначертания его не копит. Основа недуга ответа - удар, что его вызвал, иначе урон
+ * листа.
+ */
 private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target: Fighter?, refund: Double, blow: AilingHit?) {
     val hero = heroFighter
     val healed = answer.heal?.let { heal(it, level) } ?: 0.0
@@ -444,7 +453,6 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     answer.barrier?.let { ward(it, level) }
     answer.buff?.let { buff(hero, code, it.stats.lines(level), it.duration, it.counter?.at(level) ?: 0.0) }
     if (answer.flaskCharges > 0) chargeFlasks(answer.flaskCharges.toDouble())
-    // Возврат цены - не избыток восстановления (4.6.3): перелив Предначертания его не копит
     if (answer.refund && refund > 0) manaBack(hero, refund, spill = false)
     val hit = answer.hit
     if (hit != null) {
@@ -456,7 +464,6 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     if (word != null && struck != null) {
         val element = blow?.landed?.maxByOrNull { it.value }?.key ?: DamageType.PHYSICAL
         val ailment = (if (word == ELEMENT) Ailment.of(element) else Ailment.byWord(word)) ?: return
-        // Основа недуга ответа (0.15.0, реш. 36) - удар, что его вызвал, иначе урон листа: одна функция правил с ударами
         val laid = blow ?: AilingHit.of(hero.body.damage)
         val inflicted = List(if (answer.twice) 2 else 1) { afflict(hero, struck, ailment, laid) }.filterNotNull().distinct()
         record(Side.HERO, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, inflicted, null, struck.index, code)
@@ -465,7 +472,11 @@ private fun Battle.answer(code: String, answer: SkillTrigger, level: Int, target
     self(code, healed)
 }
 
-/** The belt in order: a flask whose condition holds, that was tapped, or that drinks itself at low life, is drunk if it has the charges and is not running. */
+/**
+ * The belt in order: a flask whose condition holds, that was tapped, or that drinks itself at low life, is drunk if it has the charges and is not running.
+ *
+ * Как в PoE: глоток, что только лечит, не тратится на полной полосе.
+ */
 internal fun Battle.useFlasks() {
     val hero = heroFighter
     kit.flasks.forEachIndexed { i, flask ->
@@ -474,13 +485,13 @@ internal fun Battle.useFlasks() {
         val auto = flask.sheet.own("FLASK_AUTO_LOW_LIFE").let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
         if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
         if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) return@forEachIndexed
-        // As in PoE (3.79.0): a draught that only gives life back is not wasted on a full bar.
         if (hero.life >= hero.body.maxLife && flask.sheet.draught(hero.body, hero.life, manaCap()).lifeOnly) return@forEachIndexed
         flaskOpened[i] = true
         drink(i, flask)
     }
 }
 
+/** Невосприимчивость глотка сразу снимает то, от чего бережёт. Сила глотка на уникальной фляге отвечает только на свою флягу. */
 internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
     val flask = belt.sheet
     val hero = heroFighter
@@ -493,7 +504,6 @@ internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
         else -> (charges[slot] - flask.perUse(hero.body::get)).coerceAtLeast(0.0)
     }
     lay(hero, TimedEffect(EffectKind.FLASK, flask.code, draught.lines, time + draught.duration, draught.duration, slot = slot, conditional = draught.conditional))
-    // An immunity drunk lifts what it guards against at once.
     hero.ailments.removeAll { hero.body.immune(it.ailment) }
     manaBack(hero, draught.mana)
     hero.shield = min(hero.body.maxShield, hero.shield + draught.shield)
@@ -507,6 +517,5 @@ internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
         trace = EffectTrace(EffectKind.FLASK, flask.code, draught.lines, draught.duration, healed, flask.effect(hero.body::get), shot(hero), origin),
     )
     if (healed > 0 || draught.lifeRate > 0) trigger(SkillEvent.HEALED)
-    // Сила глотка на уникальной фляге отвечает только на свою флягу (4.12.x, STAT-PW2-11)
     powers.fire(PowerEvent.FLASK, PowerMoment(flask = draught.lines.mapTo(HashSet()) { it.stat }))
 }

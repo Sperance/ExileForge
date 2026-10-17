@@ -18,8 +18,8 @@ enum class Side {
 }
 
 /**
- * What a fighter did: swung a weapon, let an ailment burn on, gave a blow back (thorns and reflect, 2.75.0),
- * used a skill — a class's, a passive's answer or a monster's — or drank a flask (2.78.0).
+ * What a fighter did: swung a weapon, let an ailment burn on, gave a blow back (thorns and reflect),
+ * used a skill — a class's, a passive's answer or a monster's — or drank a flask.
  */
 enum class Action {
     ATTACK,
@@ -28,14 +28,14 @@ enum class Action {
     SKILL,
     FLASK,
 
-    /** Something that happened without a blow (3.37.0): a buff, a charge, a power, a condition, a kill's reward. */
+    /** Something that happened without a blow: a buff, a charge, a power, a condition, a kill's reward. */
     NOTE,
 }
 
 /** How a blow ended: it landed, landed hard, or never reached. */
 enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
 
-/** Чем кончился бой (3.88.8): из боя не уходят - он идёт до победы или поражения. */
+/** Чем кончился бой: из боя не уходят - он идёт до победы или поражения. */
 enum class Outcome { WIN, LOSS }
 
 /** Damage by type, as the sheet names it. */
@@ -47,20 +47,20 @@ enum class DamageType(val attack: String, val resist: String?) {
     CHAOS(CoreStat.ATTACK_CHAOS.code, CoreStat.RESIST_CHAOS.code),
     ;
 
-    /** The stat that lifts this resistance's ceiling (since server 0.36.0). */
+    /** The stat that lifts this resistance's ceiling. */
     val maxResist: String? get() = resist?.replace("STOCK_RESIST_", "STOCK_RESIST_MAX_")
 
     companion object {
         fun of(stat: String) = entries.firstOrNull { it.attack == stat }
 
-        /** A skill's element by its name (server 0.69.0): `FIRE`, `COLD`, `LIGHTNING`, `CHAOS` or `PHYSICAL`. */
+        /** A skill's element by its name: `FIRE`, `COLD`, `LIGHTNING`, `CHAOS` or `PHYSICAL`. */
         fun element(name: String?) = entries.firstOrNull { it.name == name }
         val ELEMENTS = listOf(FIRE, COLD, LIGHTNING)
     }
 }
 
 /**
- * [value] that [increase] percent increased made, grown by [extra] percent more of increase beside it (server 1.57.0):
+ * [value] that [increase] percent increased made, grown by [extra] percent more of increase beside it:
  * increases add up before they multiply, as in PoE — `(100 + increase + extra) / (100 + increase)`.
  */
 internal fun regrow(value: Double, increase: Double, extra: Double): Double {
@@ -69,8 +69,8 @@ internal fun regrow(value: Double, increase: Double, extra: Double): Double {
 }
 
 /**
- * The buildups of server 1.73.0 (3.78.0, as in PoE2): a blow fills a bar on the struck one and a full bar sets it off.
- * [gain] is the striker's line that fills it faster — the old «chance to freeze» fills the freeze — and [avoid] the struck
+ * The buildups (as in PoE2): a blow fills a bar on the struck one and a full bar sets it off.
+ * [gain] is the striker's line that fills it faster — «chance to freeze» fills the freeze — and [avoid] the struck
  * one's that fills it slower.
  */
 enum class Buildup(val gain: String, val avoid: String?) {
@@ -81,10 +81,10 @@ enum class Buildup(val gain: String, val avoid: String?) {
 
 /**
  * The six ailments the server rules (its `EnumStatBool` without the prefix). Which damage brings which is the rule's, not ours.
- * [word] is how the sheet's stats name it since server 0.36.0 — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
+ * [word] is how the sheet's stats name it — `STOCK_IGNITE_CHANCE`, `STOCK_AVOID_IGNITE`,
  * `STOCK_IGNITE_DURATION_ON_SELF` — and [damage] the stat that makes its damage over time heavier.
  * [general] - шанс недуга поднимает общая строка карты «шанс наложить состояние» (`MAP_MONSTER_AILMENTS`); у холода своего шанса
- * нет, изранение и иссушение (4.11.0) поднимает своя строка карты. [ailing] (0.15.0) - состояние считается недугом для строк «против
+ * нет, изранение и иссушение поднимает своя строка карты. [ailing] - состояние считается недугом для строк «против
  * состояний», условий «под недугом» и добивающих ударов: Разложение и урон во времени умения - не недуги.
  */
 enum class Ailment(val word: String, val damage: String? = null, val general: Boolean = true, val ailing: Boolean = true) {
@@ -95,31 +95,31 @@ enum class Ailment(val word: String, val damage: String? = null, val general: Bo
     POISONED("POISON", CoreStat.POISON_DAMAGE.code),
     BLEEDING("BLEED", CoreStat.BLEED_DAMAGE.code),
 
-    /** Изранение (4.11.0): режет регенерацию и вампиризм здоровья на свою силу - что именно режет, решает правило (`curbs`). */
+    /** Изранение: режет регенерацию и вампиризм здоровья на свою силу - что именно режет, решает правило (`curbs`). */
     WOUNDED("WOUND", general = false),
 
-    /** Иссушение (4.11.0): режет регенерацию, вампиризм и ману при ударе - запас маны правила (`curbs`). */
+    /** Иссушение: режет регенерацию, вампиризм и ману при ударе - запас маны правила (`curbs`). */
     PARCHED("PARCH", general = false),
 
     /**
-     * Разложение (0.15.0, реш. 38/41): хаос-удары кладут стаки, каждый действующий - +сила% получаемого урона хаосом цели (правило
+     * Разложение: хаос-удары кладут стаки, каждый действующий - +сила% получаемого урона хаосом цели (правило
      * `exposes`, предел и обновление всех стаков - правило); ударов и тиков хаоса, яда тоже. Не недуг.
      */
     DECAYED("DECAY", general = false, ailing = false),
 
-    /** Урон во времени умения, что не яд (0.15.0, реш. 42, «Высасывание сути»): хаос каждый тик, один экземпляр на цель. Не недуг. */
+    /** Урон во времени умения, что не яд («Высасывание сути»): хаос каждый тик, один экземпляр на цель. Не недуг. */
     DRAINED("DRAIN", general = false, ailing = false),
     ;
 
     /** Deals damage over time, as opposed to slowing, weakening or stopping. */
     val hurts: Boolean get() = this == BURNING || this == POISONED || this == BLEEDING || this == DRAINED
 
-    /** The sheet's "increased damage against X enemies" stat for this ailment (server 0.66.0). */
+    /** The sheet's "increased damage against X enemies" stat for this ailment. */
     val against: String get() = "STOCK_DAMAGE_VS_$name"
     companion object {
         fun of(name: String) = entries.firstOrNull { it.name == name }
 
-        /** An ailment as a skill names it (server 0.69.0): `IGNITE`, `CHILL`, `FREEZE`, `SHOCK`, `POISON`, `BLEED`, `WOUND`, `PARCH`, `DECAY`, `DRAIN`. */
+        /** An ailment as a skill names it: `IGNITE`, `CHILL`, `FREEZE`, `SHOCK`, `POISON`, `BLEED`, `WOUND`, `PARCH`, `DECAY`, `DRAIN`. */
         fun byWord(word: String) = entries.firstOrNull { it.word == word }
 
         /** The ailment a damage brings by nature: fire burns, cold chills, lightning shocks, chaos poisons, a blade bleeds. */

@@ -27,10 +27,10 @@ import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
  * The fight, alive: stepped in fixed slices of time so that the same seed is the same fight on any
  * screen, and open to the player while it runs — a retreat can be begun, a foe can be singled out.
  *
- * Since 2.70.0 it is the hero against the whole pack at once: every foe swings at the hero at its own
+ * It is the hero against the whole pack at once: every foe swings at the hero at its own
  * speed from the first second, and the hero at any one foe on screen, whatever the weapon. Whom is the
  * player's [focus] when given, the class's [TargetRule] otherwise, chosen afresh at every swing; a taunter
- * comes first. Вся стая на поле сразу (4.2.0): бой не больше `fight.maxFoes` врагов, свита босса встаёт по зову фаз ([field]).
+ * comes first. Вся стая на поле сразу: бой не больше `fight.maxFoes` врагов, свита босса встаёт по зову фаз ([field]).
  *
  * Each swing can be evaded (evasion against the attacker's level), blocked, or land; a landing hit
  * rolls the rule's variance per damage type, may be a critical strike, and is reduced by armour
@@ -42,7 +42,7 @@ import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
  * deal a share of the hit over time, chill slows the target's actions, shock makes it take more, a
  * freeze stops it. Life and shield regenerate as they go.
  *
- * Since 2.78.0 (server 0.69.0) mana is back, and the hero brings a [Loadout]: the active skills are
+ * Mana is back, and the hero brings a [Loadout]: the active skills are
  * tried in their slots' order whenever one is ready and its condition holds — a ready one short of
  * mana holds back the ones after it — or at a tap; the passives lie on the sheet or answer the fight's
  * events; the flasks are drunk by their conditions or a tap. Bosses and casters cast for their own
@@ -50,50 +50,56 @@ import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
  * from its sheet with their lines whenever one comes or goes.
  *
  * The client fights by the owner's decision (rule 23); every constant here is the server's [rules].
+ *
+ * Глоток, что ещё идёт с карты, входит в бой вместе со своим восстановлением, начальные глотки пояса считаются выпитыми. Принесённое с
+ * карты (недуги, баффы, проклятия, заряды) - остатком времени ([HeroCarry]); баффы с начала боя - от модификаторов монстра и карты. Щит к
+ * бою не полнится: каким его оставили бой и карта, таким он и входит.
+ *
+ * Предначертание: что несёт заход, - до засады Разлома, она сдвигает их ходы.
  */
 class Battle(
     val hero: Combatant,
     val foes: List<Foe>,
     val rules: CombatRules,
-    /** Правила боя движка (4.2.0, `rules.json` → `fight`): потолок восстановления монстра и подавление восстановления. */
+    /** Правила боя движка (`rules.json` → `fight`): потолок восстановления монстра и подавление восстановления. */
     val fight: FightRules,
     heroLife: Double,
     internal val random: Random,
     val stance: HeroStance = HeroStance(),
-    /** How many fight on the hero's side (2.71.0); alone, the hero is a lone wolf. */
+    /** How many fight on the hero's side; alone, the hero is a lone wolf. */
     val party: Int = 1,
-    /** What the hero brings beyond the sheet (2.78.0), and how their sheet takes the lines of the moment. */
+    /** What the hero brings beyond the sheet, and how their sheet takes the lines of the moment. */
     val kit: Loadout = Loadout(),
     internal val model: HeroModel = HeroModel.of(hero),
-    /** What the hero walks in with (2.78.0): mana, the flasks' charges and draughts still running; null brings them full. */
+    /** What the hero walks in with: mana, the flasks' charges and draughts still running; null brings them full. */
     pools: HeroPools? = null,
     /** The stats that are a percent already: the lines laid on a monster fold by them. */
     private val percent: Set<String> = emptySet(),
-    /** Бой Разлома недели (3.96.0): механики стража и правила забега; null - обычный бой, ни одного лишнего броска. */
+    /** Бой Разлома недели: механики стража и правила забега; null - обычный бой, ни одного лишнего броска. */
     val rift: RiftCombat? = null,
-    /** Прошлый бой героя выигран (4.2.0): силы [com.sperance.exileforge.rules.content.PowerEvent.FIGHT_CLEAR] ложатся в начале этого. */
+    /** Прошлый бой героя выигран: силы [com.sperance.exileforge.rules.content.PowerEvent.FIGHT_CLEAR] ложатся в начале этого. */
     val cleared: Boolean = false,
-    /** Вид боя (4.3.0): по нему правила ярости `combat.enrage`; без него - бой похода, со стражем или со стаей. */
+    /** Вид боя: по нему правила ярости `combat.enrage`; без него - бой похода, со стражем или со стаей. */
     val kind: FightKind = FightKinds.expedition(foes),
     /** Ярость этого боя: по умолчанию - правило его вида, у ступени раша и вождя башни - раньше. */
     rage: EnrageRule = rules.enrage(kind),
-    /** Счёт Предначертания на заход (4.6.0): бои захода делят его; без захода - свой. */
+    /** Счёт Предначертания на заход: бои захода делят его; без захода - свой. */
     val fateRun: FateRun = FateRun(),
-    /** Как враги выходят на поле (4.8.0): раундами собранных стай или подкреплением по очереди. */
+    /** Как враги выходят на поле: раундами собранных стай или подкреплением по очереди. */
     muster: Muster = Muster.Rounds,
 ) {
     /** One side in motion: its pools, its clocks and what is on it; [index] is its place in the pack, -1 for the hero. */
     inner class Fighter(val side: Side, body: Combatant, life: Double, val index: Int = -1) {
-        /** The sheet as it stands: the hero's changes under the auras of the foes still standing (2.75.0) and with what lies on them (2.78.0). */
+        /** The sheet as it stands: the hero's changes under the auras of the foes still standing and with what lies on them. */
         var body: Combatant = body
             private set
 
-        /** A monster's sheet taking the lines laid on it (2.78.0). */
+        /** A monster's sheet taking the lines laid on it. */
         val model: BodyModel = BodyModel.of(body, percent)
         var life = life.coerceIn(0.0, body.maxLife)
         var shield = body.maxShield
 
-        /** Mana (2.78.0): the hero's comes in from the fight before, a monster's is full. */
+        /** Mana: the hero's comes in from the fight before, a monster's is full. */
         var mana = body.maxMana
         var nextAttack = if (side == Side.HERO) 0.35 else rules.entry + index * rules.stagger
         var attackInterval = 1 / body.attackSpeed
@@ -108,18 +114,18 @@ class Battle(
             attackInterval = 1 / next.attackSpeed
         }
 
-        /** Босс боя (0.15.0): уникальный враг и выше - стражи, боссы карт, башни и Разлома; на нём свои потолки (добивание, провокация, силы). */
+        /** Босс боя: уникальный враг и выше - стражи, боссы карт, башни и Разлома; на нём свои потолки (добивание, провокация, силы). */
         val chief: Boolean get() = side == Side.MONSTER && index >= 0 && foes[index].rarity >= MonsterRarity.UNIQUE
 
-        /** Stunned until then: nothing is swung before it. A freeze holds by its own ailment (3.71.0), so lifting it frees at once. */
+        /** Stunned until then: nothing is swung before it. A freeze holds by its own ailment, so lifting it frees at once. */
         var heldUntil = 0.0
         var lastHit = -1e9
 
-        /** Vampirism within the current second (server 1.76.0): [leechStart] opens it, [leeched] is what it has given back so far. */
+        /** Vampirism within the current second: [leechStart] opens it, [leeched] is what it has given back so far. */
         var leechStart = -1e9
         var leeched = 0.0
 
-        /** Восстановление монстра в текущей секунде (4.2.0): [recoveryStart] открывает её, [recovered] - сколько вернули реген и вампиризм. */
+        /** Восстановление монстра в текущей секунде: [recoveryStart] открывает её, [recovered] - сколько вернули реген и вампиризм. */
         var recoveryStart = -1e9
         var recovered = 0.0
 
@@ -146,39 +152,39 @@ class Battle(
         }
         val ailments = mutableListOf<ActiveAilment>()
 
-        /** Damage over time gathered per ailment (и умению, 0.15.0) since its last tick was logged, and when that was. */
+        /** Damage over time gathered per ailment (и умению) since its last tick was logged, and when that was. */
         val ticking = mutableMapOf<Ticking, Double>()
         val tickedAt = mutableMapOf<Ailment, Double>()
 
-        /** Buffs, curses and draughts on it (2.78.0). */
+        /** Buffs, curses and draughts on it. */
         val effects = mutableListOf<TimedEffect>()
 
-        /** What a barrier still soaks, and until when (2.78.0). */
+        /** What a barrier still soaks, and until when. */
         var barrier = 0.0
         var barrierUntil = 0.0
         var invulnerableUntil = -1.0
 
-        /** When each of its skills is ready again, by code for a monster and by slot for the hero (2.78.0). */
+        /** When each of its skills is ready again, by code for a monster and by slot for the hero. */
         val readyAt = mutableMapOf<String, Double>()
 
-        /** Дно готовности умения героя по ячейке (0.15.0, реш. 7): раньше него силы перезарядок умение не готовят (`CombatCaps.readyFloor`). */
+        /** Дно готовности умения героя по ячейке: раньше него силы перезарядок умение не готовят (`CombatCaps.readyFloor`). */
         val readyFloor = mutableMapOf<String, Double>()
 
-        /** Умение, что боец применяет сейчас (4.12.x, SKILL-01): удар и прочие умения ждут его конца; null - не применяет. */
+        /** Умение, что боец применяет сейчас: удар и прочие умения ждут его конца; null - не применяет. */
         internal var casting: Casting? = null
 
-        /** Рывок силы (4.12.x, STAT-PW1-01) в этом замахе: следующий удар - сразу, а не через интервал. */
+        /** Рывок силы в этом замахе: следующий удар - сразу, а не через интервал. */
         internal var rushed = false
 
-        /** Выжигание маны на монстре (0.14.0, ASANA-N01): до [burnUntil] его перезарядки идут в [burnFactor] раз медленнее. */
+        /** Выжигание маны на монстре: до [burnUntil] его перезарядки идут в [burnFactor] раз медленнее. */
         internal var burnUntil = -1.0
         internal var burnFactor = 1.0
 
-        /** Возврат здоровья бойца-монстра (0.14.0, STAT-ATK-02): у героя - общий [recoveries] с журналом. */
+        /** Возврат здоровья бойца-монстра: у героя - общий [recoveries] с журналом. */
         internal val recouping = mutableListOf<Recovery>()
 
         /**
-         * Провокация героя на этом враге (4.12.x, STAT-DEF-05): до [provokedUntil] спровоцирован силой [provoke], повторно - не
+         * Провокация героя на этом враге: до [provokedUntil] спровоцирован силой [provoke], повторно - не
          * раньше [provokeFree].
          */
         internal var provokedUntil = -1.0
@@ -186,10 +192,10 @@ class Battle(
         internal var provoke = 0.0
         val provoked: Boolean get() = provokedUntil > time
 
-        /** Its low-life lines are on (2.78.0). */
+        /** Its low-life lines are on. */
         var low = false
 
-        /** The buildups (3.78.0): each bar's fill from 0 to 1, when a blow last filled one, and how long each is shut after going off. */
+        /** The buildups: each bar's fill from 0 to 1, when a blow last filled one, and how long each is shut after going off. */
         val buildup = DoubleArray(Buildup.entries.size)
         var builtAt = -1e9
         val buildupShutUntil = DoubleArray(Buildup.entries.size)
@@ -218,16 +224,16 @@ class Battle(
         fun frozen() = ailments.any { it.ailment == Ailment.FROZEN }
 
         /**
-         * Chill slows every action; the strongest chill counts. С 4.12.x (CAST-02) - единая скорость действий: холод и замедление аур
+         * Chill slows every action; the strongest chill counts. Единая скорость действий: холод и замедление аур
          * врагов ([Combatant.pace]) одним множителем растягивают и замах, и перезарядку всех умений.
          */
         fun slow() = (1 + (ailments.filter { it.ailment == Ailment.CHILLED }.maxOfOrNull { it.magnitude } ?: 0.0) / 100) / body.pace
 
-        /** Shock makes every hit heavier; a curse can make it heavier still (2.78.0). */
+        /** Shock makes every hit heavier; a curse can make it heavier still. */
         fun weakness() = 1 + held(Ailment.SHOCKED) / 100
 
         /**
-         * Сила недуга [ailment] на бойце (4.11.0): сильнейший экземпляр, усиленный приёмом недуга на нём (`STOCK_<слово>_TAKEN`),
+         * Сила недуга [ailment] на бойце: сильнейший экземпляр, усиленный приёмом недуга на нём (`STOCK_<слово>_TAKEN`),
          * под потолком правила (`ceiling`); нет недуга - 0. Её читают шок, восстановление и плитка недуга.
          */
         fun held(ailment: Ailment): Double {
@@ -236,12 +242,12 @@ class Battle(
         }
 
         /**
-         * Доля восстановления запаса [pool] бойца в этот миг (4.11.0) - одна функция правил [RecoveryShare.share]: лист («меньше
+         * Доля восстановления запаса [pool] бойца в этот миг - одна функция правил [RecoveryShare.share]: лист («меньше
          * регенерации», запрет, дно) и недуги, что режут этот запас по `curbs` своего правила.
          */
         fun share(pool: RecoveryPool): Double = RecoveryShare.share(body, pool, curb(pool))
 
-        /** Сколько процентов запаса [pool] режут недуги на бойце (4.11.0, [RecoveryShare.curb]) - по их силе [held]. */
+        /** Сколько процентов запаса [pool] режут недуги на бойце ([RecoveryShare.curb]) - по их силе [held]. */
         fun curb(pool: RecoveryPool): Double {
             if (ailments.isEmpty()) return 0.0
             val active = ailments.mapTo(HashSet()) { it.ailment }.associate { it.name to held(it) }
@@ -249,14 +255,14 @@ class Battle(
         }
         fun stacks(ailment: Ailment) = ailments.count { it.ailment == ailment }
 
-        /** Под недугом (0.15.0): висит хоть одно состояние-недуг ([Ailment.ailing]) - Разложение и урон умения не в счёт. */
+        /** Под недугом: висит хоть одно состояние-недуг ([Ailment.ailing]) - Разложение и урон умения не в счёт. */
         val ailed: Boolean get() = ailments.any { it.ailment.ailing }
 
         /** Стаки [ailment], что действуют: у каждого источника - свои сильнейшие под его пределом ([actingStacks]). */
         fun acting(ailment: Ailment): List<ActiveAilment> = actingStacks(ailments.filter { it.ailment == ailment }, { it.source to it.foe }, { it.limit }, { it.magnitude })
 
         /**
-         * Уязвимость к урону [type] (0.15.0, реш. 38/41, Разложение): 1 + сила действующих стаков недугов-уязвимостей этого вида
+         * Уязвимость к урону [type] (Разложение): 1 + сила действующих стаков недугов-уязвимостей этого вида
          * (правило `exposes`), %, усиленная приёмом недуга на бойце. Удар и тик урона во времени этого вида растут на неё.
          */
         fun exposure(type: DamageType): Double {
@@ -267,7 +273,7 @@ class Battle(
         }
     }
 
-    /** Выход врагов на поле (4.4.1 - раунды, 4.8.0 - подкрепления, [Muster]). */
+    /** Выход врагов на поле (раунды, подкрепления, [Muster]). */
     private val mustered: Muster.Field = muster.field(foes, fight)
 
     /** Смены поля боя: раунды собранных стай или смены подкреплений; [round] - идущая, с 0, из [rounds]. */
@@ -281,17 +287,19 @@ class Battle(
     internal val rageClock: Double get() = time - roundAt
 
     /**
-     * Кто на поле, по местам (4.2.0): первые сразу, сильнейший первым; свита босса встаёт по зову фаз на следующее место
+     * Кто на поле, по местам: первые сразу, сильнейший первым; свита босса встаёт по зову фаз на следующее место
      * ([enterField]). Павший держит своё место до конца раунда или до подкрепления, что встаёт на него.
      */
     private val places: MutableList<Int> = mustered.opening().toMutableList()
 
-    /** Враг [index] ещё ждёт своего выхода (4.4.1): не на поле, цел и не свита. */
+    /** Враг [index] ещё ждёт своего выхода: не на поле, цел и не свита. */
     fun waits(index: Int): Boolean = mustered.waits(index)
 
     /**
-     * Враги выходят на поле, если пора (4.4.1 - следующий раунд, 4.8.0 - подкрепление): новые подходят к герою, новый раунд
+     * Враги выходят на поле, если пора (следующий раунд, подкрепление): новые подходят к герою, новый раунд
      * уводит павших с поля, новая смена начинает ярость заново. Герой остаётся каким был. False - никто не вышел.
+     *
+     * Ауры вставших врагов ложатся на героя.
      */
     internal fun muster(): Boolean {
         val join = mustered.join(foeFighters.count { it.alive }) ?: return false
@@ -306,7 +314,6 @@ class Battle(
             val place = if (fallen >= 0) fallen.also { places[it] = index } else places.size.also { places += index }
             foeFighters[index].enter(place, time)
         }
-        // Ауры вставших ложатся на героя
         remake(heroFighter)
         return join.entering.isNotEmpty()
     }
@@ -322,35 +329,34 @@ class Battle(
     }
 
     /**
-     * Слоты вокруг босса (3.93.0): их делят свита и тотемы; пустые - null. Свита при полных слотах не встаёт, тотем вытесняет
+     * Слоты вокруг босса: их делят свита и тотемы; пустые - null. Свита при полных слотах не встаёт, тотем вытесняет
      * самый старый тотем. У боя без босса с фазами или тотемами слотов нет.
      */
     val slotHolders: Array<SlotHolder?> = arrayOfNulls(max(foes.maxOfOrNull { it.slots } ?: 0, rift?.slots ?: 0))
 
-    /** Тотемы, что стоят сейчас (3.93.0), по порядку, в котором встали. */
+    /** Тотемы, что стоят сейчас, по порядку, в котором встали. */
     val totems: List<StandingTotem> get() = standingTotems
     internal val standingTotems = mutableListOf<StandingTotem>()
     internal var totemSerial = 0
 
-    /** Когда босс со своими тотемами ставит следующий (3.93.0), по номеру врага. */
+    /** Когда босс со своими тотемами ставит следующий, по номеру врага. */
     internal val totemAt = mutableMapOf<Int, Double>()
     val foeFighters: List<Fighter> = foes.mapIndexed { i, foe -> Fighter(Side.MONSTER, foe.body, foe.body.maxLife, i) }
         .also { all -> places.forEachIndexed { place, i -> all[i].enter(place, 0.0) } }
     val heroFighter = Fighter(Side.HERO, hero.under(auras()), heroLife)
 
-    /** Все бойцы боя: герой, затем враги; состав за бой не меняется - список один (4.9.0). */
+    /** Все бойцы боя: герой, затем враги; состав за бой не меняется - список один. */
     internal val everyone: List<Fighter> = listOf(heroFighter) + foeFighters
 
-    /** Очередь хода шага ([everyone] по `nextAttack`): один буфер на бой, без новой копии и сортировки на каждый шаг (4.9.0). */
+    /** Очередь хода шага ([everyone] по `nextAttack`): один буфер на бой, без новой копии и сортировки на каждый шаг. */
     internal val turnOrder = ArrayList<Fighter>(everyone.size)
 
-    /** Отклики Предначертания героя в бою (4.6.0; 4.6.2 - и судьбоносных строк) и их состояние в этом бою. */
+    /** Отклики Предначертания героя в бою (и судьбоносных строк) и их состояние в этом бою. */
     internal val fated: List<FateReaction> = FateReaction.of(kit)
     internal val fateFight = FateFight()
 
     /**
-     * The auras of the foes still standing (server 0.66.0): одинаковые ауры не складываются - действует сильнейшая, разные - вместе
-     * (4.12.x, STAT-MISC-07).
+     * The auras of the foes still standing: одинаковые ауры не складываются - действует сильнейшая, разные - вместе.
      */
     internal fun auras(): Map<String, Double> {
         val strongest = mutableMapOf<String, Double>()
@@ -359,7 +365,7 @@ class Battle(
     }
 
     /**
-     * Правила недугов, что знает клиент, с видом урона, что их несёт; без вида (4.11.0, изранение и иссушение) - null: недуг несёт
+     * Правила недугов, что знает клиент, с видом урона, что их несёт; без вида (изранение и иссушение) - null: недуг несёт
      * любой урон удара. Вид, которого клиент не знает, выкидывает правило.
      */
     internal val ailmentRules: Map<AilmentRule, Pair<Ailment, DamageType?>> = rules.ailments.mapNotNull { rule ->
@@ -368,11 +374,11 @@ class Battle(
         rule to (ailment to type)
     }.toMap()
 
-    /** Недуги, что подавляют восстановление цели (4.2.0): поджог, яд, кровотечение по правилу. */
+    /** Недуги, что подавляют восстановление цели: поджог, яд, кровотечение по правилу. */
     private val suppressing: Set<Ailment> = fight.suppression.ailments.mapNotNull { code: String -> Ailment.of(code) }.toSet()
 
     /**
-     * Восстановление врага героя [amount] здоровья за этот миг (4.2.0): урезано подавлением, пока на нём недуг героя
+     * Восстановление врага героя [amount] здоровья за этот миг: урезано подавлением, пока на нём недуг героя
      * из [suppressing], затем - потолком в секунду. Герою - как есть.
      */
     internal fun recovery(me: Fighter, amount: Double): Double {
@@ -384,7 +390,7 @@ class Battle(
 
     internal val ruleOf: Map<Ailment, Pair<AilmentRule, DamageType?>> = ailmentRules.entries.associate { (rule, what) -> what.first to (rule to what.second) }
 
-    /** Недуги-уязвимости (0.15.0, правило `exposes`: Разложение) и вид урона, что они растят. */
+    /** Недуги-уязвимости (правило `exposes`: Разложение) и вид урона, что они растят. */
     private val exposing: List<Pair<Ailment, DamageType>> = ruleOf.mapNotNull { (ailment, ruled) -> ruled.second?.takeIf { ruled.first.exposes }?.let { ailment to it } }
 
     var time = 0.0
@@ -409,14 +415,12 @@ class Battle(
     /** Последнее окно журнала новыми сверху ([newestFirst]): то же, пока журнал не вырос. */
     private var newest: NewestFirst? = null
 
-    /** Журнал новыми сверху (4.9.0): окно без копии, одно и то же, пока не пришла новая строка. */
+    /** Журнал новыми сверху: окно без копии, одно и то же, пока не пришла новая строка. */
     fun newestFirst(): List<CombatEvent> = newest?.takeIf { it.size == log.size } ?: NewestFirst(log, log.size).also { newest = it }
     internal val fallenOrder = mutableListOf<Int>()
 
     /** The foes that fell, in the order they fell: each is a kill to report the moment it happens. */
     val fallen: List<Int> get() = fallenOrder
-
-    // ==================== The hero's skills and flasks (2.78.0) ====================
 
     /** A slot whose opening condition has fired this fight, and the slots tapped since the last slice. */
     internal val opened = BooleanArray(kit.actives.size)
@@ -427,74 +431,69 @@ class Battle(
     internal val triggerReady = mutableMapOf<String, Double>()
     internal val recoveries = mutableListOf<Recovery>()
 
-    /** Регенерация, деген и отложенный урон героя с прошлой строки итога (4.9.3): одна строка журнала в секунду. */
+    /** Регенерация, деген и отложенный урон героя с прошлой строки итога: одна строка журнала в секунду. */
     internal val lifeMeter = LifeMeter()
 
-    /** Итог здоровья героя за последнюю секунду (4.9.3): плитка «−12/с» у портрета и её разбор. */
+    /** Итог здоровья героя за последнюю секунду: плитка «−12/с» у портрета и её разбор. */
     var lifeFlow: LifeFlow = LifeFlow.NONE
         internal set
 
-    /** Метки героя на врагах (0.14.0, SKILL-02): по месту врага - одна на цель. */
+    /** Метки героя на врагах: по месту врага - одна на цель. */
     internal val marks = mutableMapOf<Int, BattleMark>()
 
     /** The next blow of the hero is a critical strike (a cloak of shadows). */
     internal var nextCrit = false
 
-    /** Сколько ещё применений умений героя в этом бою мгновенны (4.12.x, SKILL-01: «Вечерня», `PowerAct.QUICKEN`). */
+    /** Сколько ещё применений умений героя в этом бою мгновенны («Вечерня», `PowerAct.QUICKEN`). */
     internal var quickCasts = 0
 
     /** How deep in answers the fight is: an answer may set off one more, never a chain. */
     internal var depth = 0
 
-    /** Идёт эхо применения (4.4.0, руна эха или сила `RECAST`): строки лога, что оно оставит, помечены [CombatEvent.echo]. */
+    /** Идёт эхо применения (руна эха или сила `RECAST`): строки лога, что оно оставит, помечены [CombatEvent.echo]. */
     internal var echoing = false
     internal var belowLow = false
     internal var shieldUp = true
 
-    /** The hero's powers (2.79.0): the unique items' answers to what happens here. */
+    /** The hero's powers: the unique items' answers to what happens here. */
     internal val powers = PowerRunner(this, kit.powers, cleared, pools?.carry?.counts.orEmpty())
 
-    /** The hero's frenzy, power and endurance charges (3.33.0, server 1.32.0): none as a fight opens. */
+    /** The hero's frenzy, power and endurance charges: none as a fight opens. */
     internal val heroCharges = HeroCharges(kit.charges)
 
-    /** The delayed life damage still to come (3.33.0). */
+    /** The delayed life damage still to come. */
     internal val delayed = mutableListOf<Delayed>()
 
-    /** The flasks a hero drinks all at once as the fight opens (3.33.0) are behind them. */
+    /** The flasks a hero drinks all at once as the fight opens are behind them. */
     internal var autoDrunk = false
 
-    /** When the hero last killed, blocked and struck critically (3.35.0): what «recently» of a conditional line reads. */
+    /** When the hero last killed, blocked and struck critically: what «recently» of a conditional line reads. */
     internal var killedAt = NEVER
     internal var blockedAt = NEVER
     internal var critAt = NEVER
 
-    /** Отражённый урон по герою (MOB-BAL, В-5): секунда боя [reflectSecond] и сколько уже снято в ней - под `caps.reflected`. */
+    /** Отражённый урон по герою (В-5): секунда боя [reflectSecond] и сколько уже снято в ней - под `caps.reflected`. */
     internal var reflectSecond = -1L
     internal var reflectTaken = 0.0
 
-    /** Whether the sheet or a flask of the belt (4.9.x) has conditional lines at all, and the hero's conditions at the last look (3.35.0). */
+    /** Whether the sheet or a flask of the belt has conditional lines at all, and the hero's conditions at the last look. */
     internal val conditioned = model.conditional(Condition.entries.toSet()).isNotEmpty() || kit.flasks.any { flask -> flask?.sheet?.lines?.any { it.condition != null } == true }
     internal var conditions: Set<Condition> = emptySet()
 
     init {
-        // A draught still running from the map comes into the fight, and the belt's opening ones count as drunk.
         pools?.flaskLeft?.forEachIndexed { i, left ->
             val flask = kit.flasks.getOrNull(i) ?: return@forEachIndexed
             if (left <= 0) return@forEachIndexed
             val draught = flask.sheet.draught(heroFighter.body, heroFighter.life, 0.0)
             heroFighter.effects += TimedEffect(EffectKind.FLASK, flask.sheet.code, draught.lines, left, draught.duration, slot = i, conditional = draught.conditional)
-            // Its recovery comes along with it (2.81.0): before, the draught's buff ran on but its healing stopped.
             pools?.rates?.getOrNull(i)?.takeIf { it.flows }?.let { recoveries += Recovery(it.life, it.mana, left, i, draught.lifeOnly, it.toMana, it.toShield) }
             flaskOpened[i] = true
         }
-        // Принесённое с карты: недуги, баффы и проклятия, заряды - остатком своего времени ([HeroCarry])
         val carried = pools?.carry?.takeIf { !it.bare }?.also(::carryIn) != null
-        // Buffs worn from the start (3.35.0): a monster's modifier or the map's.
         everyone.forEach(::wear)
         if (conditioned) conditions = heroConditions()
         if (heroFighter.effects.isNotEmpty() || conditions.isNotEmpty() || carried) remake(heroFighter)
         heroFighter.mana = (pools?.mana ?: Double.MAX_VALUE).coerceIn(0.0, manaCap())
-        // Щит не полнится к бою: каким его оставили бой и карта, таким он и входит
         pools?.carry?.shield?.let { heroFighter.shield = it.coerceIn(0.0, heroFighter.body.maxShield) }
         shieldUp = heroFighter.shield > 0
     }
@@ -516,7 +515,7 @@ class Battle(
     val heroLife: Double get() = heroFighter.life
     val heroMana: Double get() = heroFighter.mana
 
-    /** The hero's mana the auras leave free (2.78.0). */
+    /** The hero's mana the auras leave free. */
     fun manaCap(): Double = heroFighter.body.maxMana * (1 - kit.reserved(heroFighter.body) / 100)
 
     /** The hero's mana the auras hold: the rest of the pool past [manaCap]. */
@@ -538,7 +537,7 @@ class Battle(
         foes.flatMap { it.skills + it.phases.mapNotNull(FoePhase::skill) }.associate { it.code to it.icon }
 
     /**
-     * Пассивные умения героя (4.9.3) - ауры, бонусы - плитками полки «на весь бой»: что кладут по листу начала боя. Только
+     * Пассивные умения героя - ауры, бонусы - плитками полки «на весь бой»: что кладут по листу начала боя. Только
      * показ: лист боя их строки уже несёт.
      */
     internal val passiveViews: List<EffectView> by lazy {
@@ -552,9 +551,12 @@ class Battle(
     internal fun slotKey(slot: Int) = "#$slot"
     internal fun cost(kitSkill: KitSkill, level: Int): Double = kitSkill.mana(level) * heroFighter.body.skillCost
 
-    /** Moves the fight on by [dt] seconds in fixed slices, so a frame's length never changes what happens. */
+    /**
+     * Moves the fight on by [dt] seconds in fixed slices, so a frame's length never changes what happens.
+     *
+     * Когда бой кончен, часы ещё идут: выпад и затухание последнего удара доигрывают.
+     */
     fun advance(dt: Double) {
-        // Once it is over the clock still runs, so the last blow's lunge and fade can play out.
         if (outcome != null) {
             time += dt
             return
@@ -577,7 +579,7 @@ class Battle(
     private fun taunters() = foeFighters.filter { it.alive && it.body.taunt }
 
     /**
-     * Whether the hero can strike foe [index] right now: any foe on screen, by any weapon; a taunter (2.71.0)
+     * Whether the hero can strike foe [index] right now: any foe on screen, by any weapon; a taunter
      * always, and while one stands nobody else.
      */
     fun reachable(index: Int): Boolean {
@@ -614,9 +616,12 @@ class Battle(
         return if (count <= 0) order else order.take(count)
     }
 
-    /** The blow whose lunge is on screen right now, and how far into it the scene is (0..1). */
+    /**
+     * The blow whose lunge is on screen right now, and how far into it the scene is (0..1).
+     *
+     * Журнал идёт по времени: с конца читаются только строки последнего выпада.
+     */
     fun lunge(): Pair<CombatEvent, Double>? {
-        // Журнал идёт по времени: с конца - только строки последнего выпада, а не весь бой (4.9.0)
         var i = log.size - 1
         while (i >= 0) {
             val event = log[i--]
@@ -646,53 +651,52 @@ class Battle(
     /** The foes that have swung once already: an ambusher's first blow is the heavier one. */
     internal val swung = mutableSetOf<Int>()
 
-    /** Сработавшие шаги фаз (3.92.0): номер врага и шага - каждый срабатывает раз за бой. */
+    /** Сработавшие шаги фаз: номер врага и шага - каждый срабатывает раз за бой. */
     internal val phased = mutableSetOf<Pair<Int, Int>>()
 
-    /** Умения, что фазы дали врагам (3.92.0), по номеру врага: он применяет их вслед за своими. */
+    /** Умения, что фазы дали врагам, по номеру врага: он применяет их вслед за своими. */
     internal val learned = mutableMapOf<Int, MutableList<com.sperance.exileforge.rules.content.MonsterSkill>>()
 
-    /** Свита, что уже звана (3.92.0), и павшая: её смерть не убийство, о ней не сообщают. */
+    /** Свита, что уже звана, и павшая: её смерть не убийство, о ней не сообщают. */
     internal val called = mutableSetOf<Int>()
     internal val retinueDown = mutableSetOf<Int>()
 
     /** Foes whose rage has been lit, and by which trait: it lights once and holds to the end of the fight. */
     internal val enraged = mutableSetOf<Pair<Int, String>>()
 
-    /** Отклики свойств каждого врага (4.4.1), по его номеру: свойства с откликом на силе его редкости. */
+    /** Отклики свойств каждого врага, по его номеру: свойства с откликом на силе его редкости. */
     internal val traitsAt: List<List<TraitAt>> = foes.map { foe -> foe.traits.mapNotNull { trait -> trait.trigger?.let { TraitAt(trait, it, foe.traitPower) } } }
 
-    /** Свойства, что ответят следующим замахом (4.4.1, [com.sperance.exileforge.rules.content.TraitAct.RIPOSTE]): номер врага и код. */
+    /** Свойства, что ответят следующим замахом ([com.sperance.exileforge.rules.content.TraitAct.RIPOSTE]): номер врага и код. */
     internal val riposting = mutableSetOf<Pair<Int, String>>()
 
-    /** Сколько раз сложилось свойство врага (4.4.1, [com.sperance.exileforge.rules.content.TraitAct.STACK]): номер врага и код - число. */
+    /** Сколько раз сложилось свойство врага ([com.sperance.exileforge.rules.content.TraitAct.STACK]): номер врага и код - число. */
     internal val stacked = mutableMapOf<Pair<Int, String>, Int>()
 
     /** Правило ярости этого боя. */
     internal val rageRule: EnrageRule = rage
 
-    /** Ступень ярости (3.95.0; 4.3.0 - любого боя): сколько ступеней [rageRule] уже прошло. */
+    /** Ступень ярости (любого боя): сколько ступеней [rageRule] уже прошло. */
     internal var enrage = 0
 
-    /** Ступень ярости, что уже лежит на каждом враге (4.3.0): вставший позже догоняет её. */
+    /** Ступень ярости, что уже лежит на каждом враге: вставший позже догоняет её. */
     internal val raged = mutableMapOf<Int, Int>()
 
-    /** Враги уже в ярости (4.2.0): хоть одна ступень прошла. */
+    /** Враги уже в ярости: хоть одна ступень прошла. */
     val furious: Boolean get() = enrage > 0
 
-    /** Страж боя (3.92.0): первый враг редкости босса, с фазами или тотемами; null - бой без стража. */
+    /** Страж боя: первый враг редкости босса, с фазами или тотемами; null - бой без стража. */
     internal val guardian: Int? by lazy {
         foes.indices.firstOrNull { foes[it].guards }
     }
 
-    /** След боя для Испытания чемпиона (3.96.0): флаконы, низшая доля здоровья, смены цели. */
+    /** След боя для Испытания чемпиона: флаконы, низшая доля здоровья, смены цели. */
     val trial = RiftTrace()
 
-    /** Механики Разлома (3.96.0); null вне Разлома. */
+    /** Механики Разлома; null вне Разлома. */
     internal val riftFight: RiftFight? = rift?.let { RiftFight(it, kit.actives.size, kit.flasks.size) }
 
     init {
-        // Предначертание (4.6.0): что несёт заход - до засады Разлома, она сдвигает их ходы
         fateOpens()
         riftFight?.let { riftOpen(it) }
     }
@@ -704,14 +708,10 @@ class Battle(
         /** How often an ailment's damage is written into the log. */
         const val TICK = 1.0
 
-        /** The least a tick of damage over time deals — a bleeding, a poison, a burning, the ground's degeneration — once it deals any. */
-
-        /** How long a foe that stepped onto the field closes in before its first swing, and how much later each further place. */
-
-        /** A time long gone (3.35.0): nothing happened «recently» at the fight's start. */
+        /** A time long gone: nothing happened «recently» at the fight's start. */
         const val NEVER = -1e9
 
-        /** A buff worn the whole fight (3.35.0). */
+        /** A buff worn the whole fight. */
         const val FOREVER = 1e9
     }
 }

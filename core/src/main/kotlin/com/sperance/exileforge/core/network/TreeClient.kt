@@ -6,14 +6,14 @@ import com.sperance.exileforge.rules.content.TakenNode
 
 private const val TREE = "api/v1/hero/skilltree"
 
-/** Команды пассивного дерева героя; правила у сервера, ответ - только снимок героя (3.94.1), состояние дерева - его часть. */
+/** Команды пассивного дерева героя; правила у сервера, ответ - только снимок героя, состояние дерева - его часть. */
 class TreeClient internal constructor(private val http: Transport) {
     /** [choice] is the picked option of a MASTERY or ATTRIBUTE node; every other node takes none. */
     suspend fun allocate(heroId: String, nodeCode: String, choice: Int? = null): Unit = node("allocate", heroId, nodeCode, choice)
 
     suspend fun refund(heroId: String, nodeCode: String): Unit = node("refund", heroId, nodeCode)
 
-    /** The node and everything that hangs on it (server 1.52.0), an Orb of Regret each. */
+    /** The node and everything that hangs on it, an Orb of Regret each. */
     suspend fun refundBranch(heroId: String, nodeCode: String): Unit = node("refundBranch", heroId, nodeCode)
 
     /** Another option of a taken ATTRIBUTE node, paid with one Chaos Orb; the node stays taken. */

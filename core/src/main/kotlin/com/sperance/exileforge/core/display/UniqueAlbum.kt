@@ -10,7 +10,7 @@ import com.sperance.exileforge.rules.content.ItemTemplate
 /** Найденный уникальный шаблон: он сам и его находка. */
 data class FoundUnique(val template: ItemTemplate, val find: UniqueFind)
 
-/** Пул уникалок «Истории» (3.90.2): тег таблицы шаблонов, её уникальные и мифические шаблоны и название. */
+/** Пул уникалок «Истории»: тег таблицы шаблонов, её уникальные и мифические шаблоны и название. */
 data class UniquePool(val tag: String, val title: String, val templates: List<ItemTemplate>) {
     /** Найденные из пула, свежие первыми. */
     fun found(finds: Map<String, UniqueFind>): List<FoundUnique> = templates.mapNotNull { t -> finds[t.code]?.let { FoundUnique(t, it) } }.sortedByDescending { it.find.at }
@@ -20,7 +20,7 @@ data class UniquePool(val tag: String, val title: String, val templates: List<It
 }
 
 /**
- * Альбом уникальных вещей (3.90.2): что вообще бывает и откуда. С 0.15.0 (#51) - категории правил ([ContentIndex.album],
+ * Альбом уникальных вещей: что вообще бывает и откуда. Категории правил ([ContentIndex.album],
  * `rules.json` → `album`): каждая уникальная и мифическая вещь лежит ровно в одной категории - первой по порядку старшинства
  * контента (боссы, мифические, механики, мир), пустая категория не показывается, пул Сферы удачи - способ получить вещь, а не её
  * источник, - в альбом не входит. Категории группы (`boss:*`) - отдельная группа, по пулу на босса; прочие - пулы в порядке
@@ -41,7 +41,7 @@ class UniqueAlbum(index: ContentIndex, lang: Lang = uiLanguage) {
     /** Сколько шаблонов контента найдено: шаблон, которого контент больше не знает, не в счёт. */
     fun count(finds: Map<String, UniqueFind>): Int = all.count { it.code in finds }
 
-    /** Боссы, с которых найдена хоть одна вещь (4.6.5): без находок босс в Истории не показывается. */
+    /** Боссы, с которых найдена хоть одна вещь: без находок босс в Истории не показывается. */
     fun bossesFound(finds: Map<String, UniqueFind>): List<UniquePool> = bosses.filter { it.count(finds) > 0 }
 
     /** Все найденные, свежие первыми; шаблон, которого контент больше не знает, пропускается. */

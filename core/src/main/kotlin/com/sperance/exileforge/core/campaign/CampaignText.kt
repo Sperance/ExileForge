@@ -28,19 +28,19 @@ fun monsterLines(monster: RolledMonster): List<MonsterLine> = (monster.modifiers
         MonsterLine(key.first, key.second, own.sumOf { it.first.value }, map.sumOf { it.first.value }, map.isNotEmpty())
     }
 
+/** Провокация либо есть, либо нет: сколько строк её дали, не говорит ничего. */
 fun monsterLineText(line: MonsterLine, index: ContentIndex? = null): String {
-    // A taunt is there or not: how many modifiers gave it says nothing.
     if (line.stat == CoreStat.TAUNT.code) return statTitle(line.stat)
     return effectText(line.stat, line.op, line.value, index)
 }
 
-/** «монстр +20% · карта −15%» (знак - из числа, 3.90.0): where a summed line comes from, when both sources give it. */
+/** «монстр +20% · карта −15%» (знак - из числа): where a summed line comes from, when both sources give it. */
 fun monsterLineSources(line: MonsterLine, index: ContentIndex? = null): String? = line.takeIf { it.split && it.stat != CoreStat.TAUNT.code }?.let {
     val unit = effectUnit(it.stat, it.op, index)
     ui("fight.line_sources", signedNumber(it.own) { v -> modNumber(it.stat, v) } + unit, signedNumber(it.map) { v -> modNumber(it.stat, v) } + unit)
 }
 
-/** A monster's trait as the scout panel reads it (3.73.0): its drawing, name, what it does and its lines, at the roll's strength. */
+/** A monster's trait as the scout panel reads it: its drawing, name, what it does and its lines, at the roll's strength. */
 data class TraitView(val code: String, val icon: String, val title: String, val text: String, val lines: List<String>)
 
 fun traitViews(monster: RolledMonster, index: ContentIndex): List<TraitView> {

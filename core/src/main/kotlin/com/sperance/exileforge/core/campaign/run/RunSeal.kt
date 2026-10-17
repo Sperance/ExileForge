@@ -3,7 +3,7 @@ package com.sperance.exileforge.core.campaign.run
 import com.sperance.exileforge.rules.run.Run
 
 /**
- * Печать стража захода (3.93.0): пало [killed] редких из [need] нужных, всего на карте [total]. Пока она не снята, босс
+ * Печать стража захода: пало [killed] редких из [need] нужных, всего на карте [total]. Пока она не снята, босс
  * не встаёт - сервер не примет его убийство.
  */
 data class SealView(val killed: Int, val need: Int, val total: Int) {
@@ -11,7 +11,7 @@ data class SealView(val killed: Int, val need: Int, val total: Int) {
 }
 
 /**
- * Ворота арены кольца (4.12.8, ASANA-10): зачищено [cleared] стай из [need] нужных. Пока они закрыты, проход к арене - скала и
+ * Ворота арены кольца: зачищено [cleared] стай из [need] нужных. Пока они закрыты, проход к арене - скала и
  * босс не встаёт: сервер не примет его раньше (`Run.bossOpen`).
  */
 data class GateView(val cleared: Int, val need: Int) {

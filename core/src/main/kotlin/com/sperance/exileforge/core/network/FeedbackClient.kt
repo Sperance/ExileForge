@@ -20,19 +20,19 @@ private const val REPORTS = "api/v1/bugreport"
 private const val MAIL = "api/v1/mail"
 private const val ADMIN = "api/v1/admin"
 
-/** Known reports and one's own (3.73.0, server 1.69.0; 0.14.2 - без предложений); the administrator's view of them all. */
+/** Known reports and one's own (без предложений); the administrator's view of them all. */
 class FeedbackClient internal constructor(private val http: Transport) {
     suspend fun mine(): List<OwnReport> = http.get("$REPORTS/mine")
 
-    /** Известные проблемы (0.14.1, GH-ISSUES): ошибки с открытым Issue, по рейтингу. */
+    /** Известные проблемы: ошибки с открытым Issue, по рейтингу. */
     suspend fun known(): List<KnownReport> = http.get("$REPORTS/known", mapOf("size" to KNOWN_PAGE.toString()))
 
     suspend fun vote(id: String, vote: Vote): KnownReport = http.post("$REPORTS/vote", mapOf("id" to id, "vote" to vote.name))
 
-    /** Ответ автора в Issue своего отчёта (0.14.2, сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */
+    /** Ответ автора в Issue своего отчёта (сервер API 86): пока Issue открыт; уходит комментарием, сразу в переписке. */
     suspend fun answer(id: String, text: String): OwnReport = http.post("$REPORTS/answer", mapOf("id" to id), WireJson.encodeToJsonElement(ReportAnswer(text)))
 
-    /** Удаление отчёта (4.3.0, сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
+    /** Удаление отчёта (сервер API 63): автор - своего, модерация - любого; апелляцию - никто. */
     suspend fun delete(id: String) {
         http.request("POST", "$REPORTS/delete", mapOf("id" to id), authenticated = true)
     }
@@ -47,10 +47,10 @@ class FeedbackClient internal constructor(private val http: Transport) {
 
     suspend fun setStatus(id: String, status: ReportStatus, reason: String): AdminReport = http.post("$ADMIN/feedback/status", mapOf("id" to id, "status" to status.name, "reason" to reason))
 
-    /** Issue в GitHub (0.14.1, GH-ISSUES): из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
+    /** Issue в GitHub: из неотправленного отчёта - отправленный с Issue; неудачная выгрузка - ещё раз. */
     suspend fun toIssue(id: String): AdminReport = http.post("$ADMIN/feedback/issue", mapOf("id" to id))
 
-    /** Issue из игры (0.14.2): ответ модерации, закрытие с причиной; [duplicate] - номер оригинала у дубля. */
+    /** Issue из игры: ответ модерации, закрытие с причиной; [duplicate] - номер оригинала у дубля. */
     suspend fun steer(id: String, move: IssueMove, text: String, duplicate: Int = 0): AdminReport = http.post(
         "$ADMIN/feedback/issue/move",
         mapOf("id" to id, "move" to move.name, "duplicate" to duplicate.toString()),
@@ -64,27 +64,27 @@ class FeedbackClient internal constructor(private val http: Transport) {
 }
 
 /**
- * The account's mail (3.73.0, server 1.69.0): the inbox, reading, taking an attachment with a hero, deleting; the administrator's
- * sending. С 4.6.3 ящик - глазами героя [heroId] (письма героев видны лишь адресату), и почта между героями: письмо, квота,
+ * The account's mail: the inbox, reading, taking an attachment with a hero, deleting; the administrator's
+ * sending. Ящик - глазами героя [heroId] (письма героев видны лишь адресату), и почта между героями: письмо, квота,
  * игнор, жалоба.
  */
 class MailClient internal constructor(private val http: Transport) {
     suspend fun inbox(heroId: String): List<Mail> = http.get("$MAIL/inbox", heroOf(heroId))
     suspend fun read(id: String): Mail = http.post("$MAIL/read", mapOf("id" to id))
 
-    /** Все письма прочитаны (3.94.0, server 1.81.14); сколько стало прочитанными. Письма героев - только героя [heroId]. */
+    /** Все письма прочитаны; сколько стало прочитанными. Письма героев - только героя [heroId]. */
     suspend fun readAll(heroId: String): Long = http.post("$MAIL/read/all", heroOf(heroId))
 
-    /** Прочитанные удалены, кроме писем с незабранным вложением (3.94.0); сколько удалено. */
+    /** Прочитанные удалены, кроме писем с незабранным вложением; сколько удалено. */
     suspend fun deleteRead(heroId: String): Long = http.post("$MAIL/delete/read", heroOf(heroId))
 
-    /** Письмо героя [heroId] (4.6.3): личное, ответ или рассылка гильдии; ответ - почта героя после письма. */
+    /** Письмо героя [heroId]: личное, ответ или рассылка гильдии; ответ - почта героя после письма. */
     suspend fun letter(heroId: String, request: LetterRequest): MailQuota = http.post("$MAIL/letter", heroQuery(heroId), WireJson.encodeToJsonElement(request))
 
-    /** Почта героя [heroId] сейчас (4.6.3): можно ли писать адресату [to] (пусто - без адресата) и сколько осталось. */
+    /** Почта героя [heroId] сейчас: можно ли писать адресату [to] (пусто - без адресата) и сколько осталось. */
     suspend fun quota(heroId: String, to: String): MailQuota = http.get("$MAIL/quota", heroQuery(heroId, "to" to to.takeIf { it.isNotBlank() }))
 
-    /** Список игнора героя [heroId] (4.6.3), новые сверху. */
+    /** Список игнора героя [heroId], новые сверху. */
     suspend fun ignores(heroId: String): List<IgnoredHero> = http.get("$MAIL/ignores", heroQuery(heroId))
 
     /** Не принимать письма героя [target]; ответ - список игнора. */
@@ -93,7 +93,7 @@ class MailClient internal constructor(private val http: Transport) {
     /** Снова принимать письма героя [target]; ответ - список игнора. */
     suspend fun unignore(heroId: String, target: String): List<IgnoredHero> = http.post("$MAIL/unignore", heroQuery(heroId, "target" to target))
 
-    /** Жалоба на письмо [id] (4.6.3): уходит модерации с текстом письма; ответ - письмо с отметкой жалобы. */
+    /** Жалоба на письмо [id]: уходит модерации с текстом письма; ответ - письмо с отметкой жалобы. */
     suspend fun report(heroId: String, id: String): Mail = http.post("$MAIL/report", heroQuery(heroId, "id" to id))
     suspend fun claim(id: String, heroId: String): Mail = http.post("$MAIL/claim", heroQuery(heroId, "id" to id))
     suspend fun delete(id: String) {

@@ -19,16 +19,18 @@ const val AUCTION_PAGE_SIZE = 20
     val role: String = "USER",
     val isActive: Boolean = true,
     val countCharacters: Int = 0,
-    /** Предначертание аккаунта (4.6.0, код `fates.json`); null - не выбрано: до списка героев - выбор (`GET fate`). */
+    /** Предначертание аккаунта (код `fates.json`); null - не выбрано: до списка героев - выбор (`GET fate`). */
     val fate: String? = null,
 )
 
-/** What every sign-in answers: the account and the token that stands for it. */
-
-/** The answer to a sign-in; a device registration (server 1.46.0) also brings the secret of the device, once. */
+/**
+ * The answer to a sign-in; a device registration also brings the secret of the device, once.
+ *
+ * Ответ любого входа: аккаунт и токен, что его представляет.
+ */
 @Serializable data class SignedIn(val user: UserProfile, val token: String, val deviceSecret: String? = null)
 
-/** Вход по логину (3.88.5: с устройством и версией клиента - сервер ведёт устройства аккаунта и баны устройств). */
+/** Вход по логину (с устройством и версией клиента - сервер ведёт устройства аккаунта и баны устройств). */
 @Serializable data class LoginCredentials(val login: String, val password: String, val hardwareId: String = "", val model: String = "", val clientVersion: String = "")
 
 @Serializable data class DeviceCredentials(val deviceId: String, val hardwareId: String = "", val model: String = "", val clientVersion: String = "")
@@ -84,42 +86,42 @@ data class ApiCapabilities(val routes: Set<String>) {
 }
 
 /**
- * Неудачный запрос в отчёте об ошибке (4.3.1, server 1.84): метод и путь без запроса, статус HTTP (0 - ответа не было),
+ * Неудачный запрос в отчёте об ошибке: метод и путь без запроса, статус HTTP (0 - ответа не было),
  * код отказа сервера и время ISO-8601.
  */
 @Serializable data class RequestFailure(val method: String, val path: String, val status: Int, val code: String = "", val at: String = "")
 
-/** A bug report (server 1.46.0): the words of the player and where they were; [failures] (4.3.1) - хвост неудачных запросов. */
+/** A bug report: the words of the player and where they were; [failures] - хвост неудачных запросов. */
 @Serializable data class BugReportRequest(
     val text: String,
     val screen: String,
     val context: Map<String, String>,
-    /** A bug or a player's suggestion (3.73.0, server 1.69.0). */
+    /** A bug or a player's suggestion. */
     val kind: FeedbackKind = FeedbackKind.BUG,
-    /** Герой отправителя, отпечаток устройства и версия клиента (3.88.0, server 1.80.0): ставит [ClientIdentity]. */
+    /** Герой отправителя, отпечаток устройства и версия клиента: ставит [ClientIdentity]. */
     val heroId: String? = null,
     val device: String = "",
     val clientVersion: String = "",
-    /** Последние неудачные запросы (4.3.1), не больше `rules.feedback.failures`: только у отчёта об ошибке. */
+    /** Последние неудачные запросы, не больше `rules.feedback.failures`: только у отчёта об ошибке. */
     val failures: List<RequestFailure> = emptyList(),
     /**
-     * Ключ отчёта (4.9.0): один на отчёт, с ним отчёт повторяется из очереди на диске ([com.sperance.exileforge.core.feedback.BugOutbox]),
+     * Ключ отчёта: один на отчёт, с ним отчёт повторяется из очереди на диске ([com.sperance.exileforge.core.feedback.BugOutbox]),
      * пока сервер не ответит; второй раз сервер его не запишет. Пусто - без защиты от повтора.
      */
     val key: String = "",
-    /** Стеки падений (0.14.2): у [FeedbackKind.CRASH] - его стек, у ошибки - последние падения клиента (не больше трёх). */
+    /** Стеки падений: у [FeedbackKind.CRASH] - его стек, у ошибки - последние падения клиента (не больше трёх). */
     val traces: List<String> = emptyList(),
-    /** Последние действия игрока (0.14.2): переходы экранов и запросы со временем, старые первыми ([com.sperance.exileforge.core.feedback.ReportTrail]). */
+    /** Последние действия игрока: переходы экранов и запросы со временем, старые первыми ([com.sperance.exileforge.core.feedback.ReportTrail]). */
     val trail: List<String> = emptyList(),
-    /** Снимок героя строками «что - значение» (0.14.2): здоровье, сопротивления, Мощь, умения, надетое кодами. */
+    /** Снимок героя строками «что - значение»: здоровье, сопротивления, Мощь, умения, надетое кодами. */
     val heroSheet: List<String> = emptyList(),
 )
 
-/** Ответ на приём отчёта (4.10.0): [id] записанного отчёта. Снимков экрана нет (0.14.1, GH-ISSUES). */
+/** Ответ на приём отчёта: [id] записанного отчёта. Снимков экрана нет. */
 @Serializable data class FiledReport(val id: String)
 
 /**
- * Кто шлёт отчёт (3.88.0): версия сборки и отпечаток устройства от приложения, активный герой - если он есть. Каждый
+ * Кто шлёт отчёт: версия сборки и отпечаток устройства от приложения, активный герой - если он есть. Каждый
  * отчёт ([com.sperance.exileforge.core.network.GameApi.reportBug]) подписывается им, кто бы его ни собрал.
  */
 class ClientIdentity(
@@ -127,7 +129,7 @@ class ClientIdentity(
     private val device: () -> String,
     private val heroId: () -> String?,
     val model: String = "",
-    /** Среда отчёта (0.14.2): модель, система, экран, язык, сеть, память - ключами контекста; свои ключи отчёта главнее. */
+    /** Среда отчёта: модель, система, экран, язык, сеть, память - ключами контекста; свои ключи отчёта главнее. */
     private val environment: () -> Map<String, String> = { emptyMap() },
 ) {
     /** Отпечаток устройства; не прочитался - пусто. */

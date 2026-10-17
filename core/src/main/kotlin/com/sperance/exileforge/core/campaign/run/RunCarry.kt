@@ -12,12 +12,12 @@ import com.sperance.exileforge.rules.content.RecoveryPool
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-// ==================== Несомое между боями ====================
-
 /**
  * Недуги, баффы, проклятия и заряды на герое вне боя за [dt] секунд дороги - и вручную, и в автопробеге: урон недугов каждый кадр
  * по законам боя ([AilmentLaw]: сила, шок, приём урона во времени) - в щит, затем в здоровье (яд и хаос мимо щита); ноль здоровья -
  * гибель на карте. На экран - тиком недуга раз в [TICK_SECONDS]. Затем всё несомое тает ([com.sperance.exileforge.core.campaign.combat.HeroCarry.after]).
+ *
+ * Гибель от тика: несомое уже снято, заход кончен.
  */
 internal fun ExpeditionRun.ailing(dt: Double) {
     if (carry.bare) return
@@ -25,7 +25,6 @@ internal fun ExpeditionRun.ailing(dt: Double) {
     for (active in ailments) {
         if (!active.ailment.hurts) continue
         val wound = hurt(law.perSecond(hero, ailments, active) * minOf(dt, active.left), law.piercing(active))
-        // Гибель от тика: несомое уже снято, заход кончен
         if (phase != RunPhase.MAP) return
         ticks.getOrPut(active.ailment) { AilmentTick() }.wound += wound
     }
@@ -57,16 +56,16 @@ internal fun ExpeditionRun.curb(pool: RecoveryPool): Double = law.curb(hero, car
 
 /**
  * Ранящие недуги на герое вне боя с уроном в секунду каждого ([AilmentLaw.perSecond]); сильнейший из них глушит восстановление
- * на карте (0.14.5, #52, [stalling]).
+ * на карте ([stalling]).
  */
 private fun ExpeditionRun.hurtingRates(): List<Pair<CarriedAilment, Double>> = carry.ailments.filter { it.ailment.hurts }.map { it to law.perSecond(hero, carry.ailments, it) }
 
-/** Ранящий недуг, что глушит регенерацию и отдых на карте (0.14.5, #52): сильнейший по урону в секунду; нет - null. */
+/** Ранящий недуг, что глушит регенерацию и отдых на карте: сильнейший по урону в секунду; нет - null. */
 internal fun ExpeditionRun.stalling(): Ailment? = hurtingRates().maxByOrNull { it.second }?.first?.ailment
 
 /**
  * Итог здоровья на карте в секунду: регенерация листа (под долей восстановления и недугами) и отдых вне боя - только без ранящего
- * недуга ([RoadLife], 0.14.5, #52), деген листа и урон недугов; что из него принимает энергощит (яд и хаос - мимо), здоровья не
+ * недуга ([RoadLife]), деген листа и урон недугов; что из него принимает энергощит (яд и хаос - мимо), здоровья не
  * трогает ([LifeFlow.shielded]). Метка на полосе жизни и лист эффектов карты.
  */
 internal fun ExpeditionRun.roadFlow(): LifeFlow {

@@ -7,14 +7,12 @@ import com.sperance.exileforge.rules.content.BuffKind
 import kotlin.math.ceil
 import kotlin.math.roundToInt
 
-// ==================== What the screen reads (2.78.0) ====================
-
-/** The hero's charges as their counters draw them (3.33.0). */
+/** The hero's charges as their counters draw them. */
 fun Battle.chargeViews(): List<ChargeView> = heroCharges.views(time, heroFighter.body.stats)
 
 /**
  * What the hero walks out with: life, mana, the flasks' charges and the seconds each draught still runs. Следующему бою забега
- * испытания и Разлома (4.12.x, STAT-PW2-05) - и силы: счёт «каждое N-е» и их баффы остатком времени; прочего несомого они не несут.
+ * испытания и Разлома - и силы: счёт «каждое N-е» и их баффы остатком времени; прочего несомого они не несут.
  */
 fun Battle.pools(): HeroPools = HeroPools(
     heroFighter.life,
@@ -81,8 +79,8 @@ fun Battle.flaskViews(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
 }
 
 /**
- * What lies on [fighter], for its tiles; с 4.9.3 и глотки флаконов - плиткой бутыли на полке с таймером. Стопки Крови вожака
- * ([FATE_STACKS], 4.11.x) - значок ✦ дара ([fateGlows]), не плитка эффекта.
+ * What lies on [fighter], for its tiles; и глотки флаконов - плиткой бутыли на полке с таймером. Стопки Крови вожака
+ * ([FATE_STACKS]) - значок ✦ дара ([fateGlows]), не плитка эффекта.
  */
 fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter { (it.kind != EffectKind.FLASK || it.until > time) && !riftSourced(it.source) && it.source != FATE_STACKS }.map {
     EffectView(
@@ -97,12 +95,14 @@ fun Battle.effects(fighter: Fighter): List<EffectView> = fighter.effects.filter 
     )
 }
 
-/** Пассивные умения героя на весь бой (4.9.3): одни и те же плитки, пока идёт бой. */
+/** Пассивные умения героя на весь бой: одни и те же плитки, пока идёт бой. */
 fun Battle.passiveViews(): List<EffectView> = passiveViews
 
 /**
- * Удары на экране (4.9.3): каждая строка удара журнала моложе [window] секунд боя - все разом, а не последняя ([Battle.lunge]);
+ * Удары на экране: каждая строка удара журнала моложе [window] секунд боя - все разом, а не последняя ([Battle.lunge]);
  * [StrikeView.progress] - доля пройденной сцены. С конца журнала, он идёт по времени: обход - только строки окна.
+ *
+ * Умение без удара (проклятие, помеха) - не выпад: удар умения несёт разбор удара.
  */
 fun Battle.strikes(window: Double): List<StrikeView> {
     var from = log.size
@@ -112,7 +112,6 @@ fun Battle.strikes(window: Double): List<StrikeView> {
     for (i in from until log.size) {
         val event = log[i]
         if (event.time > time || (event.action != Action.ATTACK && event.action != Action.SKILL) || event.onSelf) continue
-        // Умение без удара (проклятие, помеха) - не выпад: удар умения несёт разбор удара
         if (event.action == Action.SKILL && event.trace !is HitTrace) continue
         strikes += StrikeView(
             i,
@@ -129,7 +128,7 @@ fun Battle.strikes(window: Double): List<StrikeView> {
 }
 
 /**
- * Удар на экране (4.9.3): строка журнала [serial], кто бил ([actor]; у врага - [foe]), чем кончилось ([kind]), чары ли ([spell]),
+ * Удар на экране: строка журнала [serial], кто бил ([actor]; у врага - [foe]), чем кончилось ([kind]), чары ли ([spell]),
  * ведущая стихия [type] и урон [damage]; [progress] - доля сцены удара.
  */
 data class StrikeView(

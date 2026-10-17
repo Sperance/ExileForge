@@ -15,15 +15,15 @@ import java.util.UUID
 private const val TRIALS = "api/v1/hero/trials"
 
 /**
- * The trials (server 1.47.0): the boss rush of a cleared region and the endless tower. Entering spends the key and
+ * The trials: the boss rush of a cleared region and the endless tower. Entering spends the key and
  * answers the trial and the frozen context; its journal — a boss down, a floor cleared, the end — is played back by
  * the server, each number once, and the answer names what each event brought.
  */
 class TrialClient internal constructor(private val http: Transport) {
-    /** Enters the rush of [region] at [tier] (server 1.83.0, from 0): a rush key is spent. Never retried: a repeat spends another key. */
+    /** Enters the rush of [region] at [tier] (from 0): a rush key is spent. Never retried: a repeat spends another key. */
     suspend fun rush(heroId: String, region: String, tier: Int = 0): TrialStart = http.post("$TRIALS/rush", heroQuery(heroId, "region" to region, "tier" to tier.toString()))
 
-    /** Доска Разлома недели (сервер 1.83.0). */
+    /** Доска Разлома недели. */
     suspend fun riftBoard(heroId: String): RiftBoard = http.get("$TRIALS/rift/board", heroQuery(heroId))
 
     /** Забег в Разлом: сверх бесплатных тратит ключ; открытый забег возвращается как есть. [styles] - стиль героя для даров. */
@@ -42,7 +42,7 @@ class TrialClient internal constructor(private val http: Transport) {
         ),
     )
 
-    /** Forges a rush key from five crest fragments (server 1.48.0); the hero's bag comes back with it. */
+    /** Forges a rush key from five crest fragments; the hero's bag comes back with it. */
     suspend fun forgeKey(heroId: String): Map<String, Long> = http.post("$TRIALS/key", heroQuery(heroId))
 
     /** Enters the tower from its last checkpoint: a tower seal is spent. */

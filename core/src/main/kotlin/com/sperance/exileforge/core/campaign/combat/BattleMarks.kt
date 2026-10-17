@@ -6,8 +6,6 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.SkillMark
 
-// ==================== Метки с подрывом (0.14.0, SKILL-02) ====================
-
 /**
  * Метка героя на враге: умение [code] копит [share] (доля, не проценты) урона ударов героя по цели в [pool] до [until], затем
  * взрывается по цели и ещё [neighbours] врагам рядом уроном вида [element].

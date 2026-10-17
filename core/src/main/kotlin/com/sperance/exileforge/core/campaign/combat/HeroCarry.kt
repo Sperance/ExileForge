@@ -14,7 +14,7 @@ import kotlin.math.max
  * каждый своей строкой), временные баффы и проклятия, энергощит и заряды. Время - «сколько осталось», как у глотков флаконов
  * ([HeroPools.flaskLeft]): в бою - до его конца, на карте тает по часам дороги ([after]), в следующий бой входит остатком.
  * Не несёт: оглушение и удержание, перезарядки, барьер, неуязвимость, отложенный урон, полосы накопления и носимое весь бой.
- * Несёт и счёт сил «каждое N-е» ([counts]); бафф скорости передвижения силы на карте ускоряет шаг (4.12.x, пакет 7).
+ * Несёт и счёт сил «каждое N-е» ([counts]); бафф скорости передвижения силы на карте ускоряет шаг.
  * Горение и яд ловушек карты - те же недуги ([AilmentLaw.laid]): одна система, и они тоже входят в следующий бой.
  */
 data class HeroCarry(
@@ -23,7 +23,7 @@ data class HeroCarry(
     /** Энергощит на конце боя; null - полный (заход только начат). */
     val shield: Double? = null,
     val charges: List<CarriedCharge> = emptyList(),
-    /** Счётчики сил «каждое N-е» (4.12.x, STAT-PW2-05): следующий бой захода считает дальше; со временем не тают. */
+    /** Счётчики сил «каждое N-е»: следующий бой захода считает дальше; со временем не тают. */
     val counts: Map<String, Int> = emptyMap(),
 ) {
     /** Нечего нести, кроме щита. */
@@ -85,7 +85,7 @@ data class CarriedEffect(
 data class CarriedCharge(val kind: ChargeKind, val count: Int, val left: Double)
 
 /**
- * Сила недуга [ailment] (4.11.0): сильнейший экземпляр [strongest], усиленный приёмом недуга на бойце [body]
+ * Сила недуга [ailment]: сильнейший экземпляр [strongest], усиленный приёмом недуга на бойце [body]
  * (`STOCK_<слово>_TAKEN`), под потолком правила [rule]. Одна формула боя ([Battle.Fighter.held]) и карты ([AilmentLaw]).
  */
 internal fun heldStrength(ailment: Ailment, strongest: Double, body: Combatant, rule: AilmentRule?): Double {
@@ -95,7 +95,7 @@ internal fun heldStrength(ailment: Ailment, strongest: Double, body: Combatant, 
 
 /**
  * Урон в секунду недуга силой [magnitude] на бойце [body] под шоком [weakness]: приём урона во времени и самого недуга, защиты и
- * уязвимость цели к тику [taken] (0.15.0: сопротивление основы до защит и Разложение); что ранит вообще - не меньше [minDot] за тик.
+ * уязвимость цели к тику [taken] (сопротивление основы до защит и Разложение); что ранит вообще - не меньше [minDot] за тик.
  * Одна формула боя и карты.
  */
 internal fun dotRate(ailment: Ailment, magnitude: Double, body: Combatant, weakness: Double, minDot: Double, taken: Double = 1.0): Double {
@@ -114,7 +114,7 @@ class AilmentLaw(private val rules: CombatRules) {
     fun held(body: Combatant, ailments: List<CarriedAilment>, ailment: Ailment): Double = ailments.filter { it.ailment == ailment }.maxOfOrNull { it.magnitude }?.let { heldStrength(ailment, it, body, ruleOf[ailment]) } ?: 0.0
 
     /**
-     * Урон в секунду недуга [active] на [body] под шоком из [ailments]; стак вне предела ([acting]) не ранит. Основа до защит (0.15.0) -
+     * Урон в секунду недуга [active] на [body] под шоком из [ailments]; стак вне предела ([acting]) не ранит. Основа до защит -
      * под сопротивлением и «получаемым уроном» вида, тик своего вида - под Разложением, как в бою.
      */
     fun perSecond(body: Combatant, ailments: List<CarriedAilment>, active: CarriedAilment): Double {
@@ -134,7 +134,7 @@ class AilmentLaw(private val rules: CombatRules) {
         return 1 + more / 100
     }
 
-    /** Основа недуга [ailment] - до защит цели ([AilmentRule.raw], 0.15.0): сопротивление режет тик, а не наложение. */
+    /** Основа недуга [ailment] - до защит цели ([AilmentRule.raw]): сопротивление режет тик, а не наложение. */
     fun raw(ailment: Ailment): Boolean = ruleOf[ailment]?.raw == true
 
     /** Сколько процентов запаса [pool] режут [ailments] на [body]. */

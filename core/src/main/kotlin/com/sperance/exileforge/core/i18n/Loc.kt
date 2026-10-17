@@ -90,11 +90,11 @@ fun ui(lang: Lang, key: String, vararg args: Any?): String = args.foldIndexed(Ui
  * A label, or a fallback when the table has no such key.
  *
  * Used where a key the client cannot know might be asked for: a stat or a slot the server added
- * since this build, which is better shown as a humanised code than as `enum.slot.FOO`.
+ * after this build, which is better shown as a humanised code than as `enum.slot.FOO`.
  */
 fun uiOr(lang: Lang, key: String, fallback: String): String = UiStrings.table(lang)[key] ?: fallback
 
-/** A label, or what [fallback] gives when the table has no such key - спрошенное, только если подписи нет (0.14.5, #48). */
+/** A label, or what [fallback] gives when the table has no such key - спрошенное, только если подписи нет. */
 inline fun uiOr(lang: Lang, key: String, fallback: () -> String): String = UiStrings.table(lang)[key] ?: fallback()
 
 /**

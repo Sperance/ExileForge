@@ -15,7 +15,7 @@ import com.sperance.exileforge.rules.trade.LotKind
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** Where a lot stands. A closed lot never returns to the showcase; it stays as trading history. [EXPIRED] (server 1.30.0): its time ran out, the goods went back to the seller. */
+/** Where a lot stands. A closed lot never returns to the showcase; it stays as trading history. [EXPIRED]: its time ran out, the goods went back to the seller. */
 @Serializable enum class LotStatus { ACTIVE, SOLD, CANCELLED, EXPIRED }
 
 /**
@@ -27,13 +27,13 @@ import kotlinx.serialization.Serializable
     @SerialName("_id") val id: String = "",
     val sellerId: String = "",
     val sellerName: String = "",
-    /** What is on offer (server 1.75.0): a copy of an item or a stack of the bag, each with its own fields. */
+    /** What is on offer: a copy of an item or a stack of the bag, each with its own fields. */
     val goods: LotGoods? = null,
     /** The kind of [goods] as a snapshot the showcase filters by. */
     val kind: LotKind = LotKind.EQUIPMENT,
     val priceOrb: String = "",
     val price: Long = 0,
-    /** The buyer's fee in gold, on top of the orbs (3.15.0, server 1.13.0): it burns, the seller gets none. */
+    /** The buyer's fee in gold, on top of the orbs: it burns, the seller gets none. */
     val fee: Long = 0,
     val itemCode: String = "",
     val slot: Slot? = null,
@@ -44,20 +44,20 @@ import kotlinx.serialization.Serializable
     /** When the lot was listed, as the server wrote it: an ISO date and time in UTC. */
     val createdAt: String = "",
     val closedAt: String? = null,
-    /** When the lot leaves the showcase (server 1.30.0), epoch millis UTC; 0 on a lot listed before lots expired. */
+    /** When the lot leaves the showcase, epoch millis UTC; 0 on a lot listed before lots expired. */
     val expiresAt: Long = 0,
-    /** The deal (3.73.0, server 1.69.0): who bought, when (epoch millis UTC) and the copy as it was sold — the history's. */
+    /** The deal: who bought, when (epoch millis UTC) and the copy as it was sold — the history's. */
     val buyerName: String = "",
     val soldAt: Long = 0,
     val sold: ItemInstance? = null,
-    /** Сколько раз лот продлён (сервер, ECON-05): не больше `auction.extendMax`. */
+    /** Сколько раз лот продлён (сервер): не больше `auction.extendMax`. */
     val extended: Int = 0,
     val version: Long = 0,
 ) {
     /** The deal as the history shows it: the copy that was sold in place of the one the lot no longer holds. */
     val deal: AuctionLot get() = if (sold != null && equipment == null) copy(goods = LotGoods.Equipment(sold)) else this
 
-    /** Цена покупки (3.89.0): сферы цены и сбор золотом. */
+    /** Цена покупки: сферы цены и сбор золотом. */
     val cost: Cost get() = Cost.item(priceOrb, price) + Cost.gold(fee)
 
     /** The copy on offer, or null for a stack. */
@@ -73,10 +73,10 @@ import kotlinx.serialization.Serializable
     /** Milliseconds the lot still stands, or null when it names no end. */
     fun timeLeft(now: Long = System.currentTimeMillis()): Long? = expiresAt.takeIf { it > 0 }?.let { (it - now).coerceAtLeast(0) }
 
-    /** Whether its author may extend it now (3.79.0, server 1.74.0): on sale, with no more than [window] ms left. */
+    /** Whether its author may extend it now: on sale, with no more than [window] ms left. */
     fun extendable(window: Long, now: Long = System.currentTimeMillis()): Boolean = onSale && timeLeft(now)?.let { it in 1..window } == true
 
-    /** Продлевается ли лот сейчас по правилам аукциона [rules] (ECON-05): в окне продления и не сверх `extendMax` раз. */
+    /** Продлевается ли лот сейчас по правилам аукциона [rules]: в окне продления и не сверх `extendMax` раз. */
     fun extendable(rules: com.sperance.exileforge.rules.content.AuctionRules, now: Long = System.currentTimeMillis()): Boolean = extended < rules.extendMax && extendable(rules.extendWindowMillis, now)
     fun belongsTo(heroId: String): Boolean = sellerId == heroId
 
@@ -99,7 +99,7 @@ import kotlinx.serialization.Serializable
     val priceOrb: String = "",
     val maxPrice: String = "",
     val sellerId: String = "",
-    /** Имя продавца [sellerId] для плашки фильтра (4.5.1, «Лоты игрока» из карточки); серверу не уходит. */
+    /** Имя продавца [sellerId] для плашки фильтра («Лоты игрока» из карточки); серверу не уходит. */
     val sellerName: String = "",
     /** Hide one hero's own lots; they cannot be bought anyway, so the showcase drops them. */
     val excludeSellerId: String = "",
@@ -155,7 +155,7 @@ import kotlinx.serialization.Serializable
 enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRICE, SELLER }
 
 /**
- * The showcase by cursor (server 1.62.0): [next] opens the following page, `null` — nothing further. [page] and [cursors] are the
+ * The showcase by cursor: [next] opens the following page, `null` — nothing further. [page] and [cursors] are the
  * client's own: the cursor each page read began at (the first — ""). «Показать ещё» adds each next page under the lots shown.
  */
 @Serializable data class AuctionPage(
@@ -180,16 +180,16 @@ enum class FilterField { KIND, SLOT, RARITY, MIN_LEVEL, MAX_LEVEL, ORB, MAX_PRIC
 
 fun lotKindTitle(kind: LotKind, lang: Lang = uiLanguage): String = ui(lang, "enum.lot.${kind.name}")
 
-/** The hero's lot places: [used] of [limit] taken — the same for every hero (3.47.0). */
+/** The hero's lot places: [used] of [limit] taken — the same for every hero. */
 @Serializable data class AuctionSlots(val used: Int = 0, val limit: Int = 12) {
     val full: Boolean get() = used >= limit
 }
 
 /**
- * Свой аукцион героя (3.94.1, сервер 1.81.15): [lots] - его лоты, [slots] - места, [history] - сделки; [lot] - лот только что
+ * Свой аукцион героя: [lots] - его лоты, [slots] - места, [history] - сделки; [lot] - лот только что
  * прошедшей команды (выставлен, снят, продлён).
  */
 @Serializable data class AuctionMine(val lots: List<AuctionLot> = emptyList(), val slots: AuctionSlots = AuctionSlots(), val history: List<AuctionLot> = emptyList(), val lot: AuctionLot? = null)
 
-/** The price hint (3.79.0, server 1.74.0): the median [price] a piece in [priceOrb] over [sales] recent deals of the like. */
+/** The price hint: the median [price] a piece in [priceOrb] over [sales] recent deals of the like. */
 @kotlinx.serialization.Serializable data class PriceHint(val priceOrb: String = "", val price: Long = 0, val sales: Int = 0)

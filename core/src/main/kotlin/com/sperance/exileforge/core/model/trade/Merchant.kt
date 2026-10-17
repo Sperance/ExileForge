@@ -7,8 +7,8 @@ import kotlinx.serialization.Serializable
 @Serializable data class MerchantOffer(val id: String, val item: ItemInstance, val price: Long = 0)
 
 /**
- * A lesser orb for gold (3.15.0): the price of the next one, dearer with each bought this window.
- * Since 3.24.0 (server 1.22.0) the shelf holds only [left] more of it this window; null from an older server, which did not count.
+ * A lesser orb for gold: the price of the next one, dearer with each bought this window.
+ * The shelf holds only [left] more of it this window; null from an older server, which did not count.
  */
 @Serializable data class MerchantOrb(val code: String, val price: Long = 0, val bought: Int = 0, val left: Int? = null) {
     val soldOut: Boolean get() = left != null && left <= 0

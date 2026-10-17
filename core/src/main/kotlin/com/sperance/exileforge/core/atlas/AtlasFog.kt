@@ -8,14 +8,14 @@ import com.sperance.exileforge.rules.content.FountainRule
 import com.sperance.exileforge.rules.content.MapStat
 
 /**
- * The atlas as the screen reads it: which nodes a tap could take or give back. The whole sky is shown (3.54.0: no fog);
+ * The atlas as the screen reads it: which nodes a tap could take or give back. The whole sky is shown (no fog);
  * the server decides every command, this only draws the same rule in advance.
  */
 object AtlasFog {
-    /** Взять можно соседний свободный узел, если его не исключает уже взятый (0.14.0, ASANA-N09: «только Зодчий» / «только Пустота»). */
+    /** Взять можно соседний свободный узел, если его не исключает уже взятый («только Зодчий» / «только Пустота»). */
     fun canTake(graph: AtlasGraph, code: String, taken: Set<String>): Boolean = code !in taken && code != graph.start && graph.isAdjacentTo(code, taken) && !graph.excluded(code, taken)
 
-    /** Взятый узел, что не даёт взять [code] (0.14.0, ASANA-N09), - его имя называет причина. */
+    /** Взятый узел, что не даёт взять [code], - его имя называет причина. */
     fun excludedBy(graph: AtlasGraph, code: String, taken: Set<String>): String? = graph.node(code)?.excludes?.firstOrNull { it in taken }
 
     fun canRefund(graph: AtlasGraph, code: String, taken: Set<String>): Boolean = code in taken && code != graph.start && graph.isConnected(taken - code)
@@ -24,7 +24,7 @@ object AtlasFog {
     fun branch(code: String): AtlasBranch = AtlasBranch.entries.firstOrNull { code.startsWith("ATLAS_${it.prefix}") } ?: AtlasBranch.ROOT
 
     /**
-     * The constellation a node belongs to (3.53.0, server 1.51.0): `ATLAS_<mechanic>_<tier letter><n>` — the mechanic and the tier;
+     * The constellation a node belongs to: `ATLAS_<mechanic>_<tier letter><n>` — the mechanic and the tier;
      * a starlane's node (`P<n>`) and the start belong to none.
      */
     fun constellation(code: String): String? {
@@ -34,7 +34,7 @@ object AtlasFog {
     }
 }
 
-/** The branches of the tree (3.43.0, server 1.41.0: ten, each in its own wedge); [ROOT] is the start alone. */
+/** The branches of the tree (ten, each in its own wedge); [ROOT] is the start alone. */
 enum class AtlasBranch(val prefix: String) {
     LOOT("LOOT_"),
     MAPS("MAPS_"),
@@ -48,7 +48,7 @@ enum class AtlasBranch(val prefix: String) {
     POWER("POWER_"),
     INFLUENCE("INFLUENCE_"),
 
-    /** Ветви объектов карты (3.90.0, сервер 1.81.3): алтари, ловушки, тайники, узлы ремёсел и Скверна (0.15.0, на месте торговца). */
+    /** Ветви объектов карты: алтари, ловушки, тайники, узлы ремёсел и Скверна (на месте торговца). */
     ALTAR("ALTAR_"),
     BLIGHT("BLIGHT_"),
     TRAPS("TRAPS_"),
@@ -93,7 +93,7 @@ object AtlasEffects {
         ).filterValues { it != 0.0 }
 
     /**
-     * Основа строки Атласа в правилах (0.14.0, ASANA-N08): узлы прибавляют к ней свои числа, итог - основа плюс сумма узлов.
+     * Основа строки Атласа в правилах: узлы прибавляют к ней свои числа, итог - основа плюс сумма узлов.
      * `null` - у строки основы нет (итог - сама сумма узлов).
      */
     fun base(index: ContentIndex, stat: String): Double? = index.campaign.maps.influence.let { rule ->

@@ -3,11 +3,7 @@ package com.sperance.exileforge.core.model.guild
 import com.sperance.exileforge.rules.content.GuildRank
 import com.sperance.exileforge.rules.content.GuildRules
 
-/*
- * What the screens read off `guilds.json` beyond what the server computes with it (3.22.0): the form's lengths, the
- * level bar and the way to the next rank.
- */
-
+/** Что экраны читают из `guilds.json` сверх посчитанного сервером: длины формы, полосу уровня и путь к следующему рангу. */
 val GuildRules.nameLength: IntRange get() = (name.getOrNull(0) ?: 3)..(name.getOrNull(1) ?: 24)
 val GuildRules.tagLength: IntRange get() = (tag.getOrNull(0) ?: 2)..(tag.getOrNull(1) ?: 4)
 

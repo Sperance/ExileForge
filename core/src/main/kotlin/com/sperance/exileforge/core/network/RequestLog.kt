@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.model.command.RequestFailure
 import java.time.Instant
 
 /**
- * Один обмен с сервером в журнале. [code] (4.3.1) - код отказа сервера, если был; [queued] - команда не ушла, а встала в
+ * Один обмен с сервером в журнале. [code] - код отказа сервера, если был; [queued] - команда не ушла, а встала в
  * очередь; [at] - когда запрос завершился (мс).
  */
 data class RequestLog(
@@ -19,6 +19,6 @@ data class RequestLog(
     val queued: Boolean = false,
     val at: Long = System.currentTimeMillis(),
 ) {
-    /** Неудача для отчёта об ошибке (4.3.1): без запроса и тела; статус 0 - ответа не было. Удача и очередь - null. */
+    /** Неудача для отчёта об ошибке: без запроса и тела; статус 0 - ответа не было. Удача и очередь - null. */
     fun failure(): RequestFailure? = if (ok || queued) null else RequestFailure(method, path.substringBefore('?'), status ?: 0, code.orEmpty(), Instant.ofEpochMilli(at).toString())
 }

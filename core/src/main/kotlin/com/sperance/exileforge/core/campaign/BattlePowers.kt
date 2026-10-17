@@ -49,11 +49,10 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 /**
- * What a power's event was about (2.79.0): the foe struck or striking, what the blow did, whether a
- * spell's, the ailment laid, and a fallen foe's ailments before they were cleared. С 4.4.0 у `SKILL_USE` - умение [cast]
- * на уровне [level], что сила `RECAST` повторяет. С 4.12.x (пакет 7): [cursed] - павший был проклят до снятия эффектов
- * (STAT-PW2-02), [slot] - слот только что применённого умения (STAT-PW2-08), [flask] - характеристики, что кладёт выпитая
- * фляга (STAT-PW2-11).
+ * What a power's event was about: the foe struck or striking, what the blow did, whether a
+ * spell's, the ailment laid, and a fallen foe's ailments before they were cleared. У `SKILL_USE` - умение [cast]
+ * на уровне [level], что сила `RECAST` повторяет. [cursed] - павший был проклят до снятия эффектов, [slot] - слот только что применённого умения, [flask] - характеристики, что кладёт выпитая
+ * фляга.
  */
 internal class PowerMoment(
     val target: Battle.Fighter? = null,
@@ -66,22 +65,14 @@ internal class PowerMoment(
     val cursed: Boolean = false,
     val slot: String? = null,
     val flask: Set<String>? = null,
-    /** Удар для недугов силы (0.15.0, реш. 36): до и после защит цели; null - удара нет, недуг берёт урон листа. */
+    /** Удар для недугов силы: до и после защит цели; null - удара нет, недуг берёт урон листа. */
     val hit: AilingHit? = null,
 ) {
     val damage: Double get() = taken.values.sum()
 }
 
-/** A hit to strike again (3.32.0): its foe, the damage, at [at]; dropped if the foe or the fight is gone by then. */
+/** A hit to strike again: its foe, the damage, at [at]; dropped if the foe or the fight is gone by then. */
 private class Echo(val at: Double, val foe: Battle.Fighter, val damage: Map<DamageType, Double>, val spell: Boolean, val skill: String)
-
-/**
- * The hero's powers in a fight (2.79.0, server 0.70.0): the book's answers to the fight's events, read
- * off the hero's body as it stands, so a flask's power works while its draught runs and no longer.
- *
- * A power never answers a power: what one strikes or lays sets off no other. Chances are drawn only
- * for a power the hero carries, so a fight without any plays its seed as before.
- */
 
 /** The roll [value] where a power puts it, or the effect's own number. */
 private fun Power.amount(own: Double?, value: Double): Double = own ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.AMOUNT) value else 0.0
@@ -89,8 +80,12 @@ private fun Power.duration(own: Double?, value: Double): Double = own ?: if (rol
 private fun Power.chance(value: Double): Double = chance ?: if (roll == com.sperance.exileforge.rules.content.PowerRoll.CHANCE) value else 100.0
 
 /**
- * Силы героя в бою. [carried] (4.12.x, STAT-PW2-05) - счётчики «каждое N-е», принесённые из прошлых боёв захода или забега
+ * Силы героя в бою. [carried] - счётчики «каждое N-е», принесённые из прошлых боёв захода или забега
  * испытания: счёт идёт дальше, а не с нуля ([tally] отдаёт его следующему бою).
+ *
+ * Силы героя в бою: ответы книги на события боя, читаемые с тела героя как оно есть, - сила фляги работает, пока идёт глоток. Сила не
+ * отвечает на силу: что одна ударила или наложила, другой не запускает. Шансы тянутся только у сил, что герой несёт, - бой без них катит
+ * своё семя без лишних костей.
  */
 internal class PowerRunner(private val battle: Battle, private val book: PowerBook, private val cleared: Boolean = false, carried: Map<String, Int> = emptyMap()) {
     private val byEvent: Map<PowerEvent, List<Power>> = book.powers.filter { it.on != null }.groupBy { it.on!! }
@@ -105,17 +100,17 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
     private var busy = false
     private var started = false
 
-    /** Возрождение этого боя потрачено (0.15.0, реш. 7): одно на бой на все силы смерти. */
+    /** Возрождение этого боя потрачено: одно на бой на все силы смерти. */
     private var revived = false
 
-    /** Сколько процентов удара уже вернули силы ответного урона на принятый сейчас удар (0.15.0, реш. 14: сумма - под `caps.retaliate`). */
+    /** Сколько процентов удара уже вернули силы ответного урона на принятый сейчас удар (сумма - под `caps.retaliate`). */
     private var retaliated = 0.0
     private val echoes = mutableListOf<Echo>()
 
     /** Whether a standing line grows with [momentum]: only then does a hit make the hero's body again. */
     private val momentous = standingPowers.any { power -> power.effects.any { effect -> effect.lines.any { it.scale == PowerScale.MOMENTUM } } }
 
-    /** The hero's hits in a row on one foe (3.32.0): another foe starts it over. */
+    /** The hero's hits in a row on one foe: another foe starts it over. */
     var momentum = 0
         private set
     private var momentumOn: Battle.Fighter? = null
@@ -217,7 +212,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
     }
 
     /**
-     * Смерть героя (0.15.0, реш. 7): возрождение одно на бой на все силы смерти - срабатывает только сильнейшая по возвращаемому
+     * Смерть героя: возрождение одно на бой на все силы смерти - срабатывает только сильнейшая по возвращаемому
      * здоровью ([PowerBook.revival] правил); после неё до конца боя ни одна сила смерти не срабатывает.
      */
     private fun revive(moment: PowerMoment) {
@@ -227,6 +222,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
         run(power, moment)
     }
 
+    /** Сила, что сработала без своей строки, - заметка в «событиях» журнала. */
     private fun run(power: Power, moment: PowerMoment) {
         val value = value(power)
         if (battle.time < (readyAt[power.stat] ?: -1.0)) return
@@ -250,8 +246,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
             }
             if (shown && power.on !in QUIET) {
                 battle.powerShown(power.stat, healed)
-            } // 3.37.0: a power that fired without a line of its own is a note the log's «events» show.
-            else {
+            } else {
                 battle.note(battle.heroFighter, NoteKind.POWER, power.stat, value)
             }
         } finally {
@@ -260,7 +255,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
     }
 
     /**
-     * Сила глотка на уникальной фляге (4.12.x, STAT-PW2-11) отвечает только на глоток своей фляги: пока её строки лежат на герое,
+     * Сила глотка на уникальной фляге отвечает только на глоток своей фляги: пока её строки лежат на герое,
      * глоток другой фляги её не будит. Та же сила с прочих вещей отвечает на любой глоток.
      */
     private fun ownSip(power: Power, moment: PowerMoment): Boolean {
@@ -269,8 +264,8 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
         return hero.effects.none { it.kind == EffectKind.FLASK && it.until > battle.time && it.lines.any { line -> line.stat == power.stat } }
     }
 
+    /** Строка с разбросом тянет значение между `value` и `upto`, когда ложится; постоянная держит нижний край. */
     private fun line(power: Power, line: PowerLine, times: Int = 1, draw: Boolean = true): StatLine {
-        // A spread line (server 1.32.0) draws its value between `value` and `upto` as it is laid; a standing one keeps its low end.
         val base = line.value?.let { low -> line.upto?.takeIf { draw }?.let { high -> low + battle.random.nextDouble() * (high - low).coerceAtLeast(0.0) } ?: low }
             ?: power.amount(null, value(power))
         val count = line.scale?.let(::count)?.let { if (line.cap > 0) min(it, line.cap) else it } ?: 1.0
@@ -295,7 +290,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
         PowerScale.TOTEMS -> battle.totems.size.toDouble()
     }
 
-    /** What an effect's number is multiplied by (server 1.32.0): its scale's count at this moment, under its cap; one without a scale. */
+    /** What an effect's number is multiplied by: its scale's count at this moment, under its cap; one without a scale. */
     private fun scaled(effect: PowerEffect): Double = effect.scale?.let(::count)?.let { if (effect.cap > 0) min(it, effect.cap) else it } ?: 1.0
 
     private fun holds(check: PowerCheck, power: Power, moment: PowerMoment): Boolean {
@@ -346,13 +341,26 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
         }
     }
 
-    /** What [effect] does; the life it gave back, for the log. */
+    /**
+     * What [effect] does; the life it gave back, for the log.
+     *
+     * Правила действий:
+     * - бафф скорости передвижения несёт остаток времени на карту, в бою ничего не меняет;
+     * - лечение сил читает `Recovery`: здоровье - долей здоровья (запрет, Изранение) без потолка вампиризма, мана - долей маны (Иссушение),
+     * щит не режется;
+     * - самоподжог героя жжёт долю правила от его здоровья в секунду;
+     * - основа недуга силы - удар, что её вызвал, иначе урон листа: одна функция правил с ударами;
+     * - рывок переживает замах, в котором сработал; «остальные» перезарядки - кроме только что применённого умения;
+     * - снятие проклятий собирает лист героя без их строк; повтор - только что применённое умение ещё раз на amount% силы эхом, без нового
+     * `SKILL_USE`;
+     * - мгновенность («Вечерня») - следующие применения без времени применения; ответный урон бьёт только атакующего, доли всех сил на удар
+     * - под `caps.retaliate`.
+     */
     private fun act(power: Power, effect: PowerEffect, value: Double, moment: PowerMoment): Double {
         val amount = power.amount(effect.amount, value) * scaled(effect)
         val duration = power.duration(effect.duration, value)
         val body = hero.body
         when (effect.act) {
-            // Скорость передвижения бафф несёт на карту остатком времени (4.12.x, STAT-PW1-04): в бою она ничего не меняет
             PowerAct.BUFF -> {
                 if (effect.lines.isEmpty()) return 0.0
                 val stacks = stacksOf(hero, power.stat, EffectKind.BUFF, effect.stacks)
@@ -364,8 +372,6 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
                 battle.lay(foe, TimedEffect(EffectKind.CURSE, power.stat, effect.lines.map { line(power, it, stacks) }, battle.time + duration, duration, stacks = stacks))
             }
 
-            // Лечение сил (4.12.x, COMBAT-01, STAT-PW1-10) читает `Recovery`: здоровье - долей здоровья (запрет, Изранение), без потолка
-            // вампиризма; мана - долей маны (Иссушение); щит не режется
             PowerAct.HEAL -> return when (effect.of) {
                 PowerBase.MANA -> {
                     hero.mana = min(battle.manaCap(), hero.mana + battle.manaCap() * amount / 100 * hero.share(RecoveryPool.MANA))
@@ -408,12 +414,10 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
             PowerAct.AILMENT -> {
                 val ailment = Ailment.byWord(effect.ailment.orEmpty()) ?: Ailment.of(effect.ailment.orEmpty()) ?: return 0.0
-                // On the hero themselves (server 1.32.0): a self-ignition burns the rule's share of their life a second.
                 if (effect.to == PowerTarget.SELF) {
                     battle.afflictSelf(ailment, duration)
                     return 0.0
                 }
-                // Основа недуга силы (0.15.0, реш. 36) - удар, что её вызвал, иначе урон листа: одна функция правил с ударами
                 val hit = moment.hit ?: AilingHit.of(moment.taken.ifEmpty { body.damage })
                 targets(effect.to, moment).forEach { foe -> battle.afflict(hero, foe, ailment, hit) }
             }
@@ -428,7 +432,6 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
             PowerAct.DELAY -> targets(effect.to, moment).forEach { it.nextAttack += duration }
 
-            // Рывок (4.12.x, STAT-PW1-01) переживает замах, в котором сработал: следующий удар - сразу
             PowerAct.RUSH -> {
                 hero.nextAttack = min(hero.nextAttack, battle.time)
                 hero.rushed = true
@@ -436,7 +439,6 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
             PowerAct.CHARGES -> battle.chargeFlasks(amount)
 
-            // «Остальные» перезарядки (4.12.x, STAT-PW2-08) - кроме только что применённого умения
             PowerAct.COOLDOWNS -> hero.readyAt.replaceAll { slot, at -> if (effect.to == PowerTarget.OTHERS && slot == moment.slot) at else cooled(slot, at, effect, amount) }
 
             PowerAct.NEXT_CRIT -> battle.nextCrit = true
@@ -445,7 +447,6 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
             PowerAct.CLEANSE -> hero.ailments.clear()
 
-            // Снятие проклятий (4.12.x, STAT-PW2-09): лист героя - без их строк
             PowerAct.UNCURSE -> if (hero.effects.removeAll { it.kind == EffectKind.CURSE }) battle.remake(hero)
 
             PowerAct.SPREAD -> targets(PowerTarget.OTHERS, moment).forEach { foe ->
@@ -465,13 +466,10 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
             PowerAct.ONE_OF -> if (effect.options.isNotEmpty()) return act(power, effect.options[battle.random.nextInt(effect.options.size)], value, moment)
 
-            // Повтор (4.4.0): только что применённое умение ещё раз на amount% силы - эхом, без нового SKILL_USE
             PowerAct.RECAST -> moment.cast?.let { battle.echoCast(it, moment.level, amount / 100) }
 
-            // Мгновенность (4.12.x, SKILL-01: «Вечерня»): следующие применения умений героя - без времени применения
             PowerAct.QUICKEN -> battle.quickCasts += amount.roundToInt()
 
-            // Ответный урон (0.15.0, реш. 14) бьёт только атакующего; доли всех сил на один удар - под потолком `caps.retaliate`
             PowerAct.RETALIATE -> {
                 val attacker = moment.target?.takeIf { it.side == Side.MONSTER && it.alive } ?: return 0.0
                 val answer = battle.rules.caps.retaliated(amount, retaliated)
@@ -485,7 +483,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
     }
 
     /**
-     * Готовность умения в ячейке [slot] после силы перезарядок (0.15.0, реш. 7): минус [amount] секунд или, с базой
+     * Готовность умения в ячейке [slot] после силы перезарядок: минус [amount] секунд или, с базой
      * [PowerBase.REMAINING], [amount]% оставшегося - но не раньше дна правил ([com.sperance.exileforge.rules.content.CombatCaps.readyFloor]).
      */
     private fun cooled(slot: String, at: Double, effect: PowerEffect, amount: Double): Double {
@@ -500,7 +498,12 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
         return mapOf(element to part.values.sum())
     }
 
-    /** A blow's damage before defences: a share of the weapon, of a pool or defence, of the last blow, or of the foe's own life. */
+    /**
+     * A blow's damage before defences: a share of the weapon, of a pool or defence, of the last blow, or of the foe's own life.
+     *
+     * Здоровье врага момента - ударенного или павшего; у босса и уникального - доля `combat.bossTargetLife`. Доля оставшейся перезарядки -
+     * база только `COOLDOWNS`, урона не даёт.
+     */
     private fun damage(effect: PowerEffect, amount: Double, moment: PowerMoment, foe: Battle.Fighter): Map<DamageType, Double> {
         val body = hero.body
         val share = amount / 100
@@ -524,7 +527,6 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
             PowerBase.DEALT -> moment.damage
 
-            // Здоровье врага момента - ударенного или павшего; у босса и уникального - доля `combat.bossTargetLife` (MOB-BAL, В-7: прежняя пятая часть ×0,25)
             PowerBase.TARGET_LIFE -> (moment.target?.takeIf { it.side == Side.MONSTER } ?: foe).let { of ->
                 of.body.maxLife * if (of.chief) battle.rules.bossTargetLife else 1.0
             }
@@ -535,7 +537,6 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
             PowerBase.INTELLECT -> body[CoreStat.INTELLECT.code]
 
-            // Доля оставшейся перезарядки (0.15.0) - база только `COOLDOWNS` (проверка контента), урона не даёт
             PowerBase.WEAPON, PowerBase.REMAINING -> 0.0
         }
         return mapOf((type ?: DamageType.PHYSICAL) to base * share)
@@ -543,7 +544,7 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
     /**
      * How many times a power's effect lies on [fighter] with this one: one more while it still lies, up to [most]. Лежащий эффект
-     * помнит свои стопки (4.12.x, STAT-PW2-15): бафф, перенесённый из прошлого боя захода, растёт дальше, а не начинает с одной.
+     * помнит свои стопки: бафф, перенесённый из прошлого боя захода, растёт дальше, а не начинает с одной.
      */
     private fun stacksOf(fighter: Battle.Fighter, source: String, kind: EffectKind, most: Int): Int {
         val key = "$source#${fighter.index}"

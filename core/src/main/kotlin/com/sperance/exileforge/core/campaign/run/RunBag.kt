@@ -4,7 +4,7 @@ import com.sperance.exileforge.rules.content.MonsterCode
 import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.rules.run.RunEvent
 
-/** Откуда порция добычи захода (4.10.x): вид события; подпись - `expedition.bag.from.<вид>`. */
+/** Откуда порция добычи захода: вид события; подпись - `expedition.bag.from.<вид>`. */
 enum class LootKind { MONSTER, BOSS, CHEST, FEATURE, CRYSTAL, ABYSS, VAAL, OTHER }
 
 /** Источник порции: вид и у монстра - его код (имя - словарём сервера). */
@@ -24,7 +24,7 @@ data class LootFrom(val kind: LootKind, val monster: MonsterCode? = null) {
 }
 
 /**
- * Порция добычи захода для «Сумки захода» (4.10.x, макет «Сумка захода», вариант A): событие [n], откуда [from], когда записано
+ * Порция добычи захода для «Сумки захода»: событие [n], откуда [from], когда записано
  * ([at], мс часов захода) и что сервер за него дал; null - ответа ещё нет. Добычу катит только сервер: здесь она лишь раскладывается.
  */
 data class BagEntry(val n: Int, val from: LootFrom, val at: Long, val reward: Reward?) {

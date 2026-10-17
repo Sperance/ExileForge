@@ -25,7 +25,7 @@ class StaticClient internal constructor(private val http: Transport) {
         return http.fetchText("icons/$file", validate = false)
     }
 
-    /** Все портреты сервера одним документом (3.94.1, сервер 1.81.15): ключ - SVG. */
+    /** Все портреты сервера одним документом: ключ - SVG. */
     suspend fun portraits(): Map<String, String> = http.fetch("portraits/all.json")
 
     /** One chunk of the world's content (`content/<file>`), as served: parsed by the rules and stored verbatim under its fingerprint. */

@@ -4,7 +4,7 @@ import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MonsterSkill
 
 /**
- * Удар умения монстра для листа умения (3.92.0): [raw] - урон по типам его листом, как его считает бой без разброса и
+ * Удар умения монстра для листа умения: [raw] - урон по типам его листом, как его считает бой без разброса и
  * крита; [taken] - сколько из него дойдёт до героя после брони и сопротивлений; null - героя для счёта нет.
  */
 data class SkillDamage(val raw: Map<DamageType, Double>, val taken: Double?) {

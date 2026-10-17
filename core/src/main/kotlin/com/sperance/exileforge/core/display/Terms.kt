@@ -6,7 +6,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 
 /**
- * A word of the game's own that a line uses without saying what it is (3.81.0): a buff, a kind of charges, an ailment, a stun
+ * A word of the game's own that a line uses without saying what it is: a buff, a kind of charges, an ailment, a stun
  * or a condition. Each is told by its name and a short rule; a line names one when a stat of its effects carries one of the
  * term's [marks].
  */
@@ -25,25 +25,25 @@ enum class Term(vararg val marks: String) {
     POISON("POISON"),
     BLEED("BLEED"),
 
-    // Недуги восстановления (0.15.0, #46): режут регенерацию и вампиризм цели на свою силу; строка карты называет оба
+    // Недуги восстановления: режут регенерацию и вампиризм цели на свою силу; строка карты называет оба
     WOUND("WOUND", "MONSTER_WITHER"),
     PARCH("PARCH", "MONSTER_WITHER"),
 
-    // Урон во времени и урон ударами (0.15.0, реш. 39): что растит недуги и урон умений во времени, а что - только удары
+    // Урон во времени и урон ударами: что растит недуги и урон умений во времени, а что - только удары
     DOT("DOT_DAMAGE"),
     HIT("HIT_DAMAGE"),
 
-    // Подавление восстановления (4.2.0): не путать с подавлением чар `STOCK_SPELL_SUPPRESSION`
+    // Подавление восстановления: не путать с подавлением чар `STOCK_SPELL_SUPPRESSION`
     RECOVERY_SUPPRESSION("RECOVERY_SUPPRESSION", "SUPPRESSION_AVOID"),
     STUN("STUN"),
     LOW_LIFE("LOW_LIFE"),
     CURSE("CURSE"),
 
-    // Защита и урон, что её обходит (3.95.2): щит принимает удары первым, хаос и яд идут мимо него
+    // Защита и урон, что её обходит: щит принимает удары первым, хаос и яд идут мимо него
     ENERGY_SHIELD("ENERGY_SHIELD", "SHIELD_RECHARGE", "ENERGY_REGEN", "SHIELD_OF_LIFE"),
     CHAOS("CHAOS"),
 
-    // Правило знамений-катализаторов (4.2.0) - одно на все: описание каждого называет лишь свой вид модификаторов
+    // Правило знамений-катализаторов - одно на все: описание каждого называет лишь свой вид модификаторов
     CATALYST,
     ;
 
@@ -56,7 +56,7 @@ enum class Term(vararg val marks: String) {
         /** The terms the stats name, in the order of this list. */
         fun ofStats(stats: Collection<String>): List<Term> = entries.filter { term -> stats.any { stat -> term.marks.any { it in stat } } }
 
-        /** Термины копии (4.2.0): что называют её строки, и катализатор, если её качество - катализатора. */
+        /** Термины копии: что называют её строки, и катализатор, если её качество - катализатора. */
         fun ofItem(item: ItemView): List<Term> = ofStats(item.lines.flatMap { line -> line.definition?.effects.orEmpty().map { it.stat } }) +
             listOfNotNull(CATALYST.takeIf { item.item.catalyst != null })
 

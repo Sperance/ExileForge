@@ -4,7 +4,7 @@ import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.sheet.StatTotal
 import kotlinx.serialization.Serializable
 
-/** The state of one hero's tree, as the server reports it: the point balance and what the taken nodes give, by stat and operation. 4.9.2: строкой на характеристику с частями ([StatTotal]). */
+/** The state of one hero's tree, as the server reports it: the point balance and what the taken nodes give, by stat and operation. Строкой на характеристику с частями ([StatTotal]). */
 @Serializable data class TreeState(
     val total: Int = 0,
     val spent: Int = 0,

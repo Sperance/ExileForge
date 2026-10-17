@@ -5,10 +5,6 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.rules.content.ChargeKind
 import kotlin.math.min
 
-// ==================== What the powers reach (2.79.0) ====================
-
-/** The share of the hero's life a self-inflicted burning takes a second (server 1.32.0). */
-
 /** A power that did something of its own, for the log and the number over the hero's card. */
 internal fun Battle.powerShown(code: String, healed: Double) = self(code, healed)
 
@@ -19,7 +15,7 @@ internal fun Battle.flaskCharges(): Double = charges.sum()
 internal fun Battle.chargeFlasks(amount: Double) = kit.flasks.indices.forEach { chargeFlask(it, amount) }
 
 /**
- * [amount] зарядов фляге места [slot], не выше её ёмкости - одна точка начисления зарядов в бою (4.12.x, STAT-MISC-03): фляги героя,
+ * [amount] зарядов фляге места [slot], не выше её ёмкости - одна точка начисления зарядов в бою: фляги героя,
  * что не получают зарядов ([com.sperance.exileforge.rules.sheet.FlaskSheet.starved]), не получают их ни одним путём.
  */
 internal fun Battle.chargeFlask(slot: Int, amount: Double) {
@@ -28,7 +24,7 @@ internal fun Battle.chargeFlask(slot: Int, amount: Double) {
     charges[slot] = min(flask.sheet.maxCharges, charges[slot] + amount)
 }
 
-/** [amount] charges of [kind] for the hero (3.33.0): the body is made again with them. */
+/** [amount] charges of [kind] for the hero: the body is made again with them. */
 internal fun Battle.gainCharges(kind: ChargeKind, amount: Int) {
     if (heroCharges.gain(kind, amount, time, heroFighter.body.stats, random)) {
         remake(heroFighter)
@@ -36,11 +32,11 @@ internal fun Battle.gainCharges(kind: ChargeKind, amount: Int) {
     }
 }
 
-/** Every charge of [kind] taken (3.33.0); how many there were. */
+/** Every charge of [kind] taken; how many there were. */
 internal fun Battle.consumeCharges(kind: ChargeKind): Int = heroCharges.consume(kind).also { if (it > 0) remake(heroFighter) }
 
 /**
- * [ailment] on the hero by their own power for [duration] seconds (3.33.0, server 1.32.0): a damage over time burns
+ * [ailment] on the hero by their own power for [duration] seconds: a damage over time burns
  * [CombatRules.selfBurn] of their life a second, the rest are the rule's magnitude.
  */
 internal fun Battle.afflictSelf(ailment: Ailment, duration: Double) {

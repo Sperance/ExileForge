@@ -5,7 +5,7 @@ import com.sperance.exileforge.core.character.FlaskRow
 import com.sperance.exileforge.core.i18n.ui
 import kotlin.math.roundToInt
 
-/** Имя строки сравнения фляг (4.2.0): мера листа фляги или характеристика, что фляга кладёт на героя. */
+/** Имя строки сравнения фляг: мера листа фляги или характеристика, что фляга кладёт на героя. */
 fun flaskRowTitle(row: FlaskRow): String = if (row.measure == FlaskMeasure.LINE || row.measure == FlaskMeasure.MECHANIC) statTitle(row.stat) else ui("flask.measure.${row.measure.name}")
 
 /** Число строки сравнения фляг [value] в единицах её меры: доли - процентами, длительность - секундами. */

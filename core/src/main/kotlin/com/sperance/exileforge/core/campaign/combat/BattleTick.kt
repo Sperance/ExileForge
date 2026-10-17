@@ -24,8 +24,12 @@ import kotlin.math.max
 import kotlin.math.min
 import com.sperance.exileforge.rules.sheet.Recovery as RecoveryShare
 
-// ==================== One slice of time ====================
-
+/**
+ * Глоток идёт и в оглушении, умение ждёт, пока герой может двигаться (засада Разлома - и то и другое позже). Применение прерывают оглушение
+ * и заморозка, его конец - срабатывание; спровоцированный умений не применяет, босс - с медленной перезарядкой, выжигание маны - тоже
+ * медленная перезарядка. Первым ходит тот, чей срок раньше, в одном срезе могут несколько; рывок силы этого замаха не стирается интервалом.
+ * Без предела времени и без отступления: бой идёт, пока не падёт одна из сторон.
+ */
 internal fun Battle.step(dt: Double) {
     time += dt
     lookLife()
@@ -44,7 +48,6 @@ internal fun Battle.step(dt: Double) {
     powers.tick()
     if (finished()) return
     val hero = heroFighter
-    // A draught goes down even stunned; a skill waits until the hero can move again. Засада Разлома (3.96.0) - и то и другое позже.
     if (hero.alive && joined()) {
         if (!autoDrunk) {
             autoDrunk = true
@@ -58,7 +61,6 @@ internal fun Battle.step(dt: Double) {
             }
         }
         useFlasks()
-        // Применение (4.12.x, SKILL-01): оглушение и заморозка его прерывают, конец - срабатывание
         castTick(hero)
         if (!hero.held && outcome == null) useSkills()
     }
@@ -67,14 +69,11 @@ internal fun Battle.step(dt: Double) {
     foeFighters.forEach { foe ->
         if (!foe.alive || outcome != null) return@forEach
         castTick(foe)
-        // Спровоцированный (4.12.x, STAT-DEF-05) умений не применяет, босс - с медленной перезарядкой
         val silenced = provokedSkills(foe, dt)
-        // Выжигание маны (0.14.0, ASANA-N01) - медленная перезарядка
         burnedSkills(foe, dt)
         if (!foe.held && !silenced) monsterCast(foe)
     }
     if (finished()) return
-    // Whoever is due first acts first; several may be due in one slice.
     val order = dueOrder()
     for (k in order.indices) {
         val me = order[k]
@@ -82,17 +81,15 @@ internal fun Battle.step(dt: Double) {
         val target = if (me.side == Side.HERO) target() else heroFighter
         me.rushed = false
         if (target != null) strike(me, target, swingOf(me))
-        // Рывок силы в этом замахе (4.12.x, STAT-PW1-01) не стирается интервалом: следующий удар - сразу
         me.nextAttack = if (me.rushed) time else time + me.attackInterval * me.slow() * cadence(me)
         me.rushed = false
         if (finished()) return
     }
     watch()
-    // Без предела времени (2.74.0) и без отступления (3.88.8): бой идёт, пока не падёт одна из сторон.
 }
 
 /**
- * Очередь хода шага (4.9.0): [Battle.everyone], устойчиво упорядоченные по `nextAttack` - тот же порядок, что `sortedBy`,
+ * Очередь хода шага: [Battle.everyone], устойчиво упорядоченные по `nextAttack` - тот же порядок, что `sortedBy`,
  * в буфере боя вставками, без новых списков на шаг. Порядок равных - исходный (герой, враги): буфер каждый шаг
  * заполняется заново, а не досортировывается от прошлого шага.
  */
@@ -112,21 +109,21 @@ private fun Battle.dueOrder(): List<Fighter> {
     return order
 }
 
+/**
+ * Шкалы тают, когда удар не наполнял их дольше задержки правила. Доля восстановления ([Fighter.share]) - «меньше регенерации», запрет листа
+ * и изранение, иссушение - мане. Поток здоровья - одна функция правил со сводкой, картой и Мощью: пополнение - регенерация листа и из маны
+ * под долей и недугами, потери и деген - в [degenerate]. Регенерация не переливается (Переполнение копит только избыток восстановления); у
+ * возврата здоровья монстра своей полки журнала нет.
+ */
 private fun Battle.regenerate(me: Fighter, dt: Double) {
     if (!me.alive) return
-    // The bars melt once no blow has filled them for the rule's delay (3.78.0).
     rules.buildup?.let { rule -> if (time - me.builtAt >= rule.decayDelay) for (i in me.buildup.indices) me.buildup[i] = max(0.0, me.buildup[i] - rule.decayPerSecond * dt) }
-    // Доля восстановления (4.11.0, [Fighter.share]): «меньше регенерации», запрет листа и изранение; иссушение - мане.
     val manaCurb = me.curb(RecoveryPool.MANA)
-    // Поток здоровья (#50) - одна функция правил со сводкой, картой и Мощью: пополнение - регенерация листа и из маны под долей и
-    // недугами на скорость восстановления; потери и деген - в [degenerate] (у дегена боя своё дно урона во времени)
     val life = RecoveryShare.lifeFlow(me.body, rules, me.curb(RecoveryPool.LIFE), manaCurb)
     val regenerated = lifeBack(me, recovery(me, life.gain * dt))
     if (me === heroFighter) lifeMeter.regen(regenerated)
     if (!shieldless(me)) me.shield = EnergyShield.recovered(me.body, rules, me.shield, time - me.lastHit, dt)
-    // Регенерация не переливается (4.6.3, Переполнение): перелив копит только избыток восстановления
     if (!manaless(me)) manaBack(me, RecoveryShare.manaFlow(me.body, rules.mana, manaCurb).total * dt, spill = false)
-    // Возврат здоровья монстра (0.14.0, STAT-ATK-02): своей полки журнала у него нет
     me.recouping.forEach { recoup -> lifeBack(me, recoup.life * min(dt, recoup.until - (time - dt)).coerceAtLeast(0.0)) }
     if (me === heroFighter) {
         recoveries.forEach { draught ->
@@ -143,8 +140,8 @@ private fun Battle.regenerate(me: Fighter, dt: Double) {
 }
 
 /**
- * Итог здоровья героя раз в секунду (4.9.3): одна строка «регенерация минус деген и отложенный урон» вместо прежней строки
- * регенерации и молчащего дегена; секунда, где ничего не текло, строки не пишет. Итог секунды виден экрану ([Battle.lifeFlow]).
+ * Итог здоровья героя раз в секунду: одна строка «регенерация минус деген и отложенный урон»: деген не
+ * молчит; секунда, где ничего не текло, строки не пишет. Итог секунды виден экрану ([Battle.lifeFlow]).
  */
 private fun Battle.lifeFlowLine() {
     val hero = heroFighter
@@ -153,7 +150,7 @@ private fun Battle.lifeFlowLine() {
     if (flow.flowing) note(hero, NoteKind.LIFE_FLOW, "", flow.net, flow)
 }
 
-/** A pure life draught ends at full life (3.79.0): its buff goes with it, so the belt may drink it again when life falls. */
+/** A pure life draught ends at full life: its buff goes with it, so the belt may drink it again when life falls. */
 private fun Battle.stopDraught(draught: Recovery) {
     draught.until = time
     draughtOf(draught.slot)?.let { running -> heroFighter.effects[heroFighter.effects.indexOf(running)] = running.copy(until = time) }
@@ -177,7 +174,11 @@ private fun Battle.expire() {
     if (heroCharges.expire(time)) remake(heroFighter)
 }
 
-/** Edges the hero's passives answer — low life, a broken shield — and the low-life lines of either side. */
+/**
+ * Edges the hero's passives answer — low life, a broken shield — and the low-life lines of either side.
+ *
+ * Бонусы низкого здоровья пассивных - ниже своей доли правил. Каждое пришедшее и ушедшее условие - заметка журнала.
+ */
 internal fun Battle.watch() {
     val hero = heroFighter
     if (hero.alive) {
@@ -195,7 +196,6 @@ internal fun Battle.watch() {
             }
             shieldUp = up
         }
-        // Бонусы низкого здоровья пассивных - ниже своей доли правил (4.12.x, ARCH-02: прежде половина в коде)
         val low = hero.life < hero.body.maxLife * rules.passiveLowLife
         if (low != hero.low && model.lowLife.isNotEmpty()) {
             hero.low = low
@@ -205,7 +205,6 @@ internal fun Battle.watch() {
         if (conditioned) {
             heroConditions().let { now ->
                 if (now != conditions) {
-                    // 3.37.0: each condition that came or went is a note of the log.
                     val was = conditions
                     conditions = now
                     remake(hero)
@@ -250,13 +249,13 @@ private fun Battle.heroLines(): List<StatLine> = (if (heroFighter.low) model.low
     powers.standing + heroCharges.lines() + chargeLines() + model.conditional(conditions) + heroFighter.effects.flatMap { it.holding(conditions) }
 
 /**
- * The increases of [type] a hero's blow is grown by now, in percent (server 1.57.0): the sheet's own, the damage in
+ * The increases of [type] a hero's blow is grown by now, in percent: the sheet's own, the damage in
  * general among them, and those of the lines on the hero and [extra] — the conditions', the charges', a flask's.
  */
 internal fun Battle.heroIncrease(type: DamageType, extra: List<StatLine> = emptyList()): Double = heroGrowth(extra).increased(type.attack)
 
 /**
- * Рост урона героя сейчас (0.15.0, реш. 4): увеличения и «больше» каждого вида листа со строками на герое и [extra]. Удар оружием несёт
+ * Рост урона героя сейчас: увеличения и «больше» каждого вида листа со строками на герое и [extra]. Удар оружием несёт
  * «больше» в числе листа; чары и урон во времени растут на него отдельно.
  */
 internal fun Battle.heroGrowth(extra: List<StatLine> = emptyList()): DamageGrowth = model.growth(heroLines() + extra)
@@ -268,14 +267,18 @@ internal fun Battle.versus(blow: Blow, facing: Double): Double {
     return blow.damage.entries.sumOf { (type, value) -> regrow(value, blow.increase?.get(type) ?: heroIncrease(type), facing) } / total
 }
 
-/** The hero's damage for the charges held (3.35.0): so many percent increased for each of a kind, by the sheet — beside the other increases (server 1.57.0). */
+/** The hero's damage for the charges held: so many percent increased for each of a kind, by the sheet — beside the other increases. */
 internal fun Battle.chargeLines(): List<StatLine> = ChargeKind.REAL.mapNotNull { kind ->
     val per = heroFighter.body.perCharge(kind)
     val count = heroCharges.count(kind)
     if (per == 0.0 || count == 0) null else StatLine(StatLines.DAMAGE, Op.INCREASED, per * count)
 }
 
-/** What holds for the hero now (3.35.0): the states their conditional lines wait for. */
+/**
+ * What holds for the hero now: the states their conditional lines wait for.
+ *
+ * Вечный бафф держит своё условие весь бой: строки героя «пока под баффом» - целиком.
+ */
 internal fun Battle.heroConditions(): Set<Condition> {
     val hero = heroFighter
     val body = hero.body
@@ -288,7 +291,6 @@ internal fun Battle.heroConditions(): Set<Condition> {
         if (recent(hero.lastHit)) add(Condition.RECENT_HIT_TAKEN)
         if (recent(blockedAt)) add(Condition.RECENT_BLOCK)
         if (recent(critAt)) add(Condition.RECENT_CRIT)
-        // Вечный бафф (0.15.0, реш. 33) держит своё условие весь бой: строки героя «пока под баффом» - целиком
         BuffKind.entries.forEach { kind -> kind.condition?.let { if (body.wears(kind) || hero.effects.any { e -> e.source == kind.source }) add(it) } }
         if (heroCharges.count(ChargeKind.FRENZY) > 0) add(Condition.FRENZY_CHARGE)
         if (heroCharges.count(ChargeKind.POWER) > 0) add(Condition.POWER_CHARGE)
@@ -297,7 +299,7 @@ internal fun Battle.heroConditions(): Set<Condition> {
     }
 }
 
-/** How the hero's lines waiting for a target's state see [target] (3.35.0). */
+/** How the hero's lines waiting for a target's state see [target]. */
 internal fun Battle.states(target: Fighter): Set<Condition> {
     if (target.side != Side.MONSTER) return emptySet()
     val rarity = foes[target.index].rarity
@@ -309,7 +311,7 @@ internal fun Battle.states(target: Fighter): Set<Condition> {
     }
 }
 
-/** [kind] laid on [fighter] for the rule's time, longer by its buff duration (3.35.0). */
+/** [kind] laid on [fighter] for the rule's time, longer by its buff duration. */
 private fun Battle.gainBuff(fighter: Fighter, kind: BuffKind) {
     val rule = rules.buffs[kind]
     buff(fighter, kind.source, rule.lines.map { StatLine(it.stat, it.op, it.value) }, rule.duration * fighter.body.buffDuration)
@@ -323,7 +325,7 @@ internal fun Battle.chanceBuff(kind: BuffKind) {
 }
 
 /**
- * The buffs [fighter] wears for the whole fight (3.35.0). Вечный бафф героя (0.15.0, реш. 33) ложится долей `combat.buffs.<вид>.always`
+ * The buffs [fighter] wears for the whole fight. Вечный бафф героя ложится долей `combat.buffs.<вид>.always`
  * ([com.sperance.exileforge.rules.content.BuffRule.standing]), монстра - целиком.
  */
 internal fun Battle.wear(fighter: Fighter) = BuffKind.entries.filter { fighter.body.wears(it) }.forEach { kind ->
@@ -332,7 +334,7 @@ internal fun Battle.wear(fighter: Fighter) = BuffKind.entries.filter { fighter.b
     lay(fighter, TimedEffect(EffectKind.BUFF, kind.source, lines.map { StatLine(it.stat, it.op, it.value) }, FOREVER, FOREVER))
 }
 
-/** What of a hit on [target] its spell suppression or deflection lets through (3.35.0); drawn only for a target with a chance. */
+/** What of a hit on [target] its spell suppression or deflection lets through; drawn only for a target with a chance. */
 internal fun Battle.eased(target: Fighter, blow: Blow): Double {
     val rule = rules.defence
     val chance = if (blow.spell) target.body.suppression else target.body.deflection
@@ -340,10 +342,14 @@ internal fun Battle.eased(target: Fighter, blow: Blow): Double {
     return rule.eased(blow.spell)
 }
 
-/** Degeneration eats life (3.4.0): a share of the maximum a second, past the shield, and it can kill. */
+/**
+ * Degeneration eats life: a share of the maximum a second, past the shield, and it can kill.
+ *
+ * Щит тает, отложенная доля ударов по герою приходит в срок. Отрицательная регенерация листа - потеря здоровья в секунду, как деген
+ * ([RecoveryShare.lifeLoss]).
+ */
 private fun Battle.degenerate(me: Fighter, dt: Double) {
     if (!me.alive || me.invulnerable) return
-    // The shield wastes away (3.33.0), and the delayed share of the hero's hits comes due.
     if (me.body.shieldDegenShare > 0) me.shield = max(0.0, me.shield - me.body.maxShield * me.body.shieldDegenShare * dt)
     val hero = me === heroFighter
     if (hero && delayed.isNotEmpty()) {
@@ -353,7 +359,6 @@ private fun Battle.degenerate(me: Fighter, dt: Double) {
         lifeMeter.delayed(before - me.life)
     }
     val share = me.body.lifeDegenShare
-    // Отрицательная регенерация листа (4.12.x, STAT-ATK-04) - потеря здоровья в секунду, как деген: часть потока [RecoveryShare.lifeLoss]
     val loss = RecoveryShare.lifeLoss(me.body)
     if (share > 0 || loss > 0) {
         val before = me.life
@@ -364,29 +369,29 @@ private fun Battle.degenerate(me: Fighter, dt: Double) {
 }
 
 /**
- * Ailments run their course: damage over time is applied every slice and logged once a second. С 0.15.0 (реш. 36-43) тикают только
+ * Ailments run their course: damage over time is applied every slice and logged once a second. Тикают только
  * действующие стаки ([Fighter.acting]: предел яда), основа до защит ([AilmentRule.raw]) встречает сопротивление и «получаемый урон»
  * цели на каждом тике ([Fighter.dotTaken]), Разложение растит тик своего вида; строка журнала - на недуг и умение, что его наложило.
+ *
+ * Убийство - за недугом, что нанёс больше всех в этом срезе. Всё, что наносит урон, наносит не меньше [CombatRules.minDot] за тик
+ * ([dotRate] - одна формула с картой), и оборванный тик тоже. Печати Стража и «Одна стихия» Владыки - и здесь; «Каменная кожа» держит
+ * секунду недугов по герою под потолком удара. Тик называет свой недуг, его силу и что её растит.
  */
 private fun Battle.burn(me: Fighter, dt: Double) {
     if (me.ailments.isEmpty()) return
     val wasAlive = me.alive
-    // The kill goes to the ailment that dealt the most this slice (3.71.0): a spell's burn beside an attack's bleed takes no one else's kill
     var heaviest: ActiveAilment? = null
     var heaviestSlice = 0.0
     me.ailments.mapTo(LinkedHashSet()) { it.ailment }.filter { it.hurts }.forEach { kind ->
         val taken = dotTaken(me, kind)
         me.acting(kind).forEach { active ->
             val span = min(dt, active.until - (time - dt)).coerceAtLeast(0.0)
-            // Whatever deals damage at all deals at least [CombatRules.minDot] a tick, however it is taken ([dotRate] - одна формула с картой).
             val dealt = dotRate(active.ailment, active.magnitude, me.body, me.weakness(), rules.minDot, taken.of(active)) * span
-            // Разлом (3.96.0): печати Стража и «Одна стихия» Владыки
             val rift = sealed(me) * lawTaken(me, tickType(active))
             val unruled = if (rift == 1.0) dealt else dealt * rift
             if (unruled <= 0 || !me.alive || me.invulnerable) return@forEach
             val chaos = tickType(active) == DamageType.CHAOS
             if (chaos && me.body.chaosImmune) return@forEach
-            // Каменная кожа (4.9.0): секунда недугов по герою - под потолком удара
             val slice = fateDot(me, foeFighters.getOrNull(active.foe)?.takeIf { active.source == Side.MONSTER }, unruled)
             if (slice <= 0) return@forEach
             wound(me, slice, chaos)
@@ -413,14 +418,12 @@ private fun Battle.burn(me: Fighter, dt: Double) {
         val own = (me.ailments + expired).filter { it.ailment == ailment && it.skill == key.skill }
         val active = own.firstOrNull()
         val chaos = active?.let { tickType(it) == DamageType.CHAOS } ?: (ruleOf[ailment]?.second == DamageType.CHAOS)
-        // A tick cut short — the ailment ran out or the target fell mid-beat — still deals its [CombatRules.minDot].
         if (amount < rules.minDot && me.alive && !me.invulnerable) {
             wound(me, rules.minDot - amount, chaos)
             amount = rules.minDot
         }
         val source = active?.source ?: me.side.other
         val type = active?.let(::tickType) ?: ruleOf[ailment]?.second
-        // 3.37.0: the tick names its ailment and carries how strong it runs and what grows it.
         val acting = me.acting(ailment).filter { it.skill == key.skill && it.until > time - TICK }.ifEmpty { own.filter { it.until > time - TICK } }
         val base = acting.sumOf { it.magnitude }
         val taken = dotTaken(me, ailment)
@@ -458,7 +461,7 @@ private fun Battle.burn(me: Fighter, dt: Double) {
 private fun Battle.tickType(active: ActiveAilment): DamageType? = if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.second
 
 /**
- * Что режет и растит тик недуга [ailment] на бойце [me] (0.15.0, реш. 36/41): основа до защит ([AilmentRule.raw]) - сопротивление вида
+ * Что режет и растит тик недуга [ailment] на бойце [me]: основа до защит ([AilmentRule.raw]) - сопротивление вида
  * тика (без пробивания) и «получаемый урон» вида; любой тик - уязвимость своего вида (Разложение). Снижение сопротивления позже
  * усиливает и висящие стаки - тик читает лист цели в свой миг.
  */
@@ -492,14 +495,13 @@ internal fun Battle.wound(me: Fighter, amount: Double, chaos: Boolean) {
     me.life = max(0.0, me.life - (rest - absorbed))
 }
 
-/** Accuracy against evasion (3.35.0, server 1.34.0), as in PoE, under the target's ceiling. */
+/** Accuracy against evasion, as in PoE, under the target's ceiling. */
 internal fun Battle.evasion(me: Fighter, target: Fighter): Double = rules.accuracy.evaded(me.body.accuracy(rules.accuracy), target.body.evasion).coerceAtMost(target.body.evasionCap)
 
+/** Сила может ответить на гибель героя и поднять его. Подкрепления встают, едва на поле освободилось место, раунд - едва пал последний. */
 private fun Battle.finished(): Boolean {
     if (outcome != null) return true
-    // A power may answer the hero's fall (2.79.0) and stand them back up.
     if (!heroFighter.alive) powers.fire(PowerEvent.DEATH)
-    // Подкрепления (4.8.0) встают, едва на поле освободилось место; раунд (4.4.1) - едва пал последний
     if (heroFighter.alive) muster()
     when {
         !heroFighter.alive -> end(Outcome.LOSS)
@@ -510,7 +512,7 @@ private fun Battle.finished(): Boolean {
 }
 
 /**
- * Герой сдаётся (3.95.0): бой кончается поражением, как гибель, - с её ценой в заходе. Выход из боя, что сам не кончается.
+ * Герой сдаётся: бой кончается поражением, как гибель, - с её ценой в заходе. Выход из боя, что сам не кончается.
  */
 fun Battle.surrender() {
     if (outcome != null) return
@@ -525,7 +527,7 @@ private fun Battle.end(how: Outcome) {
     fateEnds()
 }
 
-/** Низшая доля здоровья героя за бой (3.96.0) - для Испытания чемпиона. */
+/** Низшая доля здоровья героя за бой - для Испытания чемпиона. */
 private fun Battle.lookLife() {
     val max = heroFighter.body.maxLife
     if (max > 0) trial.lowestLife = min(trial.lowestLife, (heroFighter.life / max).coerceIn(0.0, 1.0))

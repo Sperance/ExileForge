@@ -34,7 +34,7 @@ data class PortraitShape(
 )
 
 /**
- * A portrait (since 2.31.0, server 0.29.0): a class's or a monster's bust, three by four, drawn
+ * A portrait: a class's or a monster's bust, three by four, drawn
  * from the server's SVG by the client itself — rule 17 still holds, it is outlines, not a picture.
  * The face sits in the circle [TOKEN_X], [TOKEN_Y], [TOKEN_R] (shares of the width), which is what
  * the map cuts out as the fighter's round token.

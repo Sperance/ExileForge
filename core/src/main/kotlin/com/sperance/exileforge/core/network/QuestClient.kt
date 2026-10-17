@@ -7,17 +7,17 @@ import com.sperance.exileforge.rules.content.QuestClaimAll
 import com.sperance.exileforge.rules.content.StoryBookTaken
 
 /**
- * Quests (3.23.0, server 1.21.0): the hero's board — dailies, weeklies, contracts and the story — and the guild's quests.
+ * Quests: the hero's board — dailies, weeklies, contracts and the story — and the guild's quests.
  * The server rolls, counts and pays; the client names a quest and draws the board it answers. Commands are never retried:
  * a repeat would be refused at best and paid twice at worst.
  */
 class QuestClient internal constructor(private val http: Transport) {
-    /** Доска с выдачей суток, недели и пустых мест (4.9.0, сервер `POST hero/quests/refresh`): чтение доски сервер больше не пишет. */
+    /** Доска с выдачей суток, недели и пустых мест (сервер `POST hero/quests/refresh`): чтение доски сервер не пишет. */
     suspend fun board(heroId: String): QuestBoard = http.post("$HERO_QUESTS/refresh", heroQuery(heroId))
 
     suspend fun claim(heroId: String, questId: String): QuestBoard = onQuest("claim", heroId, questId)
 
-    /** Everything done handed in at once (server 1.22.0): the personal quests and the hero's share of the guild's. */
+    /** Everything done handed in at once: the personal quests and the hero's share of the guild's. */
     suspend fun claimAll(heroId: String): QuestClaimAll = http.post("$HERO_QUESTS/claimAll", heroQuery(heroId))
     suspend fun abandon(heroId: String, questId: String): QuestBoard = onQuest("abandon", heroId, questId)
 
@@ -27,7 +27,7 @@ class QuestClient internal constructor(private val http: Transport) {
     }
 
     /**
-     * Сбросить невзятый контракт [offerId] (4.2.0, сервер 1.84.0): место на доске пустеет и само заполнится по своему
+     * Сбросить невзятый контракт [offerId]: место на доске пустеет и само заполнится по своему
      * таймеру `QuestBoard.refills`. Отказ `QU_007` - предложения нет или оно уже взято.
      */
     suspend fun reset(heroId: String, offerId: String): QuestBoard {
@@ -42,13 +42,13 @@ class QuestClient internal constructor(private val http: Transport) {
     suspend fun law(heroId: String, code: String): QuestBoard = http.post("$HERO_QUESTS/law", heroQuery(heroId, "code" to code))
 
     /**
-     * Книга умения [code] за пройденную главу [chapter] (0.14.0, SKILL-02): одна на главу, из вариантов `StoryBooks.options`. С
-     * `API_REVISION` 88 (0.15.0, #47) неизученное умение, что герой тянет, учится сразу - ответ говорит, что стало с книгой
+     * Книга умения [code] за пройденную главу [chapter]: одна на главу, из вариантов `StoryBooks.options`.
+     * Неизученное умение, что герой тянет, учится сразу - ответ говорит, что стало с книгой
      * ([StoryBookTaken.outcome]). Отказы - `QU_011` (книги нет среди вариантов), `QU_012` (глава не пройдена или книга уже взята).
      */
     suspend fun book(heroId: String, chapter: Int, code: String): StoryBookTaken = http.post("$HERO_QUESTS/book", heroQuery(heroId, "chapter" to chapter.toString(), "code" to code))
 
-    /** Задания гильдии с выдачей суток (4.9.0, сервер `POST guild/quests/refresh`). */
+    /** Задания гильдии с выдачей суток (сервер `POST guild/quests/refresh`). */
     suspend fun guild(heroId: String): GuildQuests = http.post("$GUILD_QUESTS/refresh", heroQuery(heroId))
 
     /** The guild's reward: a personal quest by [questId], or a share of a common goal by its [goal] key. */

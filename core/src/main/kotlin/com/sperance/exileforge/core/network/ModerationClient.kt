@@ -7,7 +7,7 @@ import kotlinx.serialization.json.encodeToJsonElement
 private const val MODERATION = "api/v1/admin/moderation"
 private const val NOTICE = "api/v1/notice"
 
-/** Вид санкции (3.88.5, server 1.80.8): бан на срок или удаление в корзину; немота (4.6.3) - запрет писать письма, игру не закрывает. */
+/** Вид санкции: бан на срок или удаление в корзину; немота - запрет писать письма, игру не закрывает. */
 @Serializable enum class SanctionKind { BAN, DELETION, MUTE }
 
 /** На что санкция: герой, аккаунт целиком или устройство. */
@@ -16,7 +16,7 @@ private const val NOTICE = "api/v1/notice"
 /**
  * Категория причины - её название из словаря на языке игрока.
  *
- * @property voluntary удаление по воле владельца (сервер 4.5.1, [SELF]): место аккаунта свободно сразу, вернуть героя может
+ * @property voluntary удаление по воле владельца ([SELF]): место аккаунта свободно сразу, вернуть героя может
  * сам владелец; модерация такую причину не ставит
  */
 @Serializable
@@ -38,18 +38,18 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
     }
 }
 
-/** Роли аккаунта, как их называет сервер. Тестировщик (4.12.x, сервер ROLE-01) - не роль аккаунта, а отметка героя ([DossierHero.tester]). */
+/** Роли аккаунта, как их называет сервер. Тестировщик - не роль аккаунта, а отметка героя ([DossierHero.tester]). */
 @Serializable enum class AccountRole { USER, MODERATOR, ADMIN }
 
-/** Новая роль аккаунта [user]: игрок или модератор (3.88.7). */
+/** Новая роль аккаунта [user]: игрок или модератор. */
 @Serializable data class RoleRequest(val user: String, val role: AccountRole)
 
-/** Отметка тестировщика героя [hero] (4.12.x, сервер ROLE-01): ставит и снимает администратор в досье героя. */
+/** Отметка тестировщика героя [hero]: ставит и снимает администратор в досье героя. */
 @Serializable data class TesterRequest(val hero: String, val tester: Boolean)
 
 /**
  * Санкция, как её видит модерация: [until] - конец бана или очистки корзины (null - бессрочно), [liftedAt] - снята досрочно,
- * [purgedAt] - удалённое стёрто, [appealed] - апелляция уже подана; [comment] - служебная заметка, [reason] (4.12.x) - причина для
+ * [purgedAt] - удалённое стёрто, [appealed] - апелляция уже подана; [comment] - служебная заметка, [reason] - причина для
  * игрока. Игрок видит [SanctionNotice].
  */
 @Serializable data class SanctionView(
@@ -72,7 +72,7 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
 ) {
     val active: Boolean get() = liftedAt == null && purgedAt == null
 
-    /** Самоудаление (4.5.1): герой в корзине по воле владельца - он сам вернёт или сотрёт его. */
+    /** Самоудаление: герой в корзине по воле владельца - он сам вернёт или сотрёт его. */
     val voluntary: Boolean get() = kind == SanctionKind.DELETION && category.voluntary
 
     /** Сколько полных или начатых дней до [until] (конец бана или очистка корзины); null - бессрочно или не прочитать. */
@@ -80,7 +80,7 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
 }
 
 /**
- * Санкция глазами наказанного (4.12.x, сервер `SanctionNotice`, SEC-02): экран санкции, апелляция, свои герои под санкцией. Вид, срок,
+ * Санкция глазами наказанного (сервер `SanctionNotice`): экран санкции, апелляция, свои герои под санкцией. Вид, срок,
  * категория и [reason] - причина для игрока; заметка модератора, кто наказал и номер санкции - только модерации.
  */
 @Serializable data class SanctionNotice(
@@ -95,7 +95,7 @@ enum class SanctionCategory(val voluntary: Boolean = false) {
     val purgedAt: String? = null,
     val appealed: Boolean = false,
 ) {
-    /** Самоудаление (4.5.1): герой в корзине по воле владельца - он сам вернёт или сотрёт его. */
+    /** Самоудаление: герой в корзине по воле владельца - он сам вернёт или сотрёт его. */
     val voluntary: Boolean get() = kind == SanctionKind.DELETION && category.voluntary
 
     /** Сколько полных или начатых дней до [until] (конец бана или очистка корзины); null - бессрочно или не прочитать. */
@@ -122,14 +122,14 @@ private const val DAY_MS = 86_400_000L
     val role: AccountRole = AccountRole.USER,
     val sanction: SanctionView? = null,
     val protected: Boolean = false,
-    /** Последняя команда героя (3.94.0, server 1.81.14), мс эпохи; 0 - неизвестно. */
+    /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
-    /** Предначертание аккаунта (4.6.3) - код дара `fates.json`; null - не выбрано или сервер старее. */
+    /** Предначертание аккаунта - код дара `fates.json`; null - не выбрано или сервер старее. */
     val fate: String? = null,
 )
 
 /**
- * Отбор списка модерации по Предначертанию (4.6.3), параметр `fate` маршрута `rows`: [param] - его значение, пусто - отбора нет.
+ * Отбор списка модерации по Предначертанию, параметр `fate` маршрута `rows`: [param] - его значение, пусто - отбора нет.
  */
 sealed interface ModerationFate {
     val param: String
@@ -150,7 +150,7 @@ sealed interface ModerationFate {
     }
 }
 
-/** Порядок списка модерации (3.94.0): последняя активность, уровень, дата создания, имя. */
+/** Порядок списка модерации: последняя активность, уровень, дата создания, имя. */
 @Serializable enum class ModerationSort { ACTIVITY, LEVEL, CREATED, NAME }
 
 @Serializable data class ModerationPage(val total: Long = 0, val page: Int = 0, val size: Int = 0, val rows: List<ModerationRow> = emptyList())
@@ -166,12 +166,12 @@ sealed interface ModerationFate {
     val clientVersion: String = "",
     val heroes: Int = 0,
     val deleted: Boolean = false,
-    /** Предначертание аккаунта (4.6.3) - код дара `fates.json`; null - не выбрано. */
+    /** Предначертание аккаунта - код дара `fates.json`; null - не выбрано. */
     val fate: String? = null,
-    /** Когда выбрано Предначертание (4.6.3), мс эпохи; null - не выбрано или выбрано раньше, чем сервер это пишет. */
+    /** Когда выбрано Предначертание, мс эпохи; null - не выбрано или выбрано раньше, чем сервер это пишет. */
     val fateAt: Long? = null,
     /**
-     * Когда аккаунт был в игре (0.15.0, #36): последнее использование его самой свежей сессии, метка сервера (UTC); null - живых
+     * Когда аккаунт был в игре: последнее использование его самой свежей сессии, метка сервера (UTC); null - живых
      * сессий нет. Вход паролем - [lastLoginAt].
      */
     val lastSeenAt: String? = null,
@@ -189,11 +189,11 @@ sealed interface ModerationFate {
     val levelsPerHour: Double? = null,
     val guild: String? = null,
     val deleted: Boolean = false,
-    /** Игровой сервер героя (3.91.0, сервер 1.81.10) - код. */
+    /** Игровой сервер героя - код. */
     val server: String = "MAIN",
-    /** Герой - тестировщик (4.12.x, сервер ROLE-01): переключатель администратора в досье. */
+    /** Герой - тестировщик: переключатель администратора в досье. */
     val tester: Boolean = false,
-    /** Последняя команда героя (0.15.0, #36), мс эпохи; 0 - неизвестно. */
+    /** Последняя команда героя, мс эпохи; 0 - неизвестно. */
     val lastSeenAt: Long = 0,
 )
 
@@ -218,7 +218,7 @@ sealed interface ModerationFate {
 )
 
 /**
- * Действие журнала модерации; [FATE] (0.15.0, #35) - администратор сменил Предначертание своему аккаунту: номера санкции нет, в
+ * Действие журнала модерации; [FATE] - администратор сменил Предначертание своему аккаунту: номера санкции нет, в
  * заметке - прежний и новый код дара через « → » ([ModerationEntryView.fateChange]).
  */
 @Serializable enum class ModerationAction { BAN, UNBAN, DELETE, RESTORE, PURGE, MUTE, UNMUTE, FATE }
@@ -237,7 +237,7 @@ sealed interface ModerationFate {
     val at: String,
 ) {
     /**
-     * Смена дара строки [ModerationAction.FATE] (0.15.0, #35): прежний код (null - дара не было) и новый - из заметки сервера
+     * Смена дара строки [ModerationAction.FATE]: прежний код (null - дара не было) и новый - из заметки сервера
      * «прежний → новый» (`ModerationEntry.fate`); у прочих действий - null.
      */
     val fateChange: Pair<String?, String>? get() = comment.takeIf { action == ModerationAction.FATE }?.split(FATE_ARROW, limit = 2)
@@ -259,7 +259,7 @@ sealed interface ModerationFate {
     val hours: Int? = null,
     val category: SanctionCategory = SanctionCategory.OTHER,
     val comment: String = "",
-    /** Причина для игрока (4.12.x, сервер SEC-02): её видит наказанный; [comment] - служебная заметка модерации. */
+    /** Причина для игрока: её видит наказанный; [comment] - служебная заметка модерации. */
     val reason: String = "",
 )
 
@@ -267,15 +267,15 @@ sealed interface ModerationFate {
 
 @Serializable private data class AppealBody(val text: String, val token: String)
 
-/** Токен апелляции своей санкции (4.9.0, сервер `POST notice/token`). */
+/** Токен апелляции своей санкции (сервер `POST notice/token`). */
 @Serializable private data class AppealToken(val token: String)
 
 /**
- * Модерация (3.88.5, server 1.80.8): список, досье, бан и его снятие, удаление в корзину и восстановление, журнал - модераторам
+ * Модерация: список, досье, бан и его снятие, удаление в корзину и восстановление, журнал - модераторам
  * и администратору. Экран санкции и апелляция ([notice], [appeal]) - без входа: забаненный уже без сессии.
  */
 class ModerationClient internal constructor(private val http: Transport) {
-    /** Страница [page] раздела [segment]: поиск [query], порядок [sort] и отбор по Предначертанию [fate] (4.6.3). */
+    /** Страница [page] раздела [segment]: поиск [query], порядок [sort] и отбор по Предначертанию [fate]. */
     suspend fun rows(
         query: String,
         segment: ModerationSegment,
@@ -292,10 +292,10 @@ class ModerationClient internal constructor(private val http: Transport) {
     /** Снимает бан или восстанавливает удалённое. */
     suspend fun lift(sanctionId: String): SanctionView = http.post("$MODERATION/lift", mapOf("id" to sanctionId))
 
-    /** Новая роль аккаунта (3.88.7, сервер 1.80.9): только администратор, ответ - роль, что теперь у аккаунта. */
+    /** Новая роль аккаунта: только администратор, ответ - роль, что теперь у аккаунта. */
     suspend fun setRole(userId: String, role: AccountRole): AccountRole = http.post("$MODERATION/role", body = WireJson.encodeToJsonElement(RoleRequest(userId, role)))
 
-    /** Отметка тестировщика героя [heroId] (4.12.x, сервер ROLE-01): только администратор, ответ - отметка, что теперь у героя. */
+    /** Отметка тестировщика героя [heroId]: только администратор, ответ - отметка, что теперь у героя. */
     suspend fun setTester(heroId: String, tester: Boolean): Boolean = http.post("$MODERATION/tester", body = WireJson.encodeToJsonElement(TesterRequest(heroId, tester)))
 
     suspend fun delete(request: DeletionRequest): SanctionView = http.post("$MODERATION/delete", body = WireJson.encodeToJsonElement(request))
@@ -305,7 +305,7 @@ class ModerationClient internal constructor(private val http: Transport) {
     suspend fun notice(id: String): SanctionNotice = decode(http.request("GET", NOTICE, mapOf("id" to id)))
 
     /**
-     * Апелляция на санкцию [id] (4.9.0) - с секретным токеном наказанного: [token] из отказа входа, а без него (герой под санкцией
+     * Апелляция на санкцию [id] - с секретным токеном наказанного: [token] из отказа входа, а без него (герой под санкцией
      * в списке героев - вход есть) токен своей санкции берётся у сервера первым.
      */
     suspend fun appeal(id: String, text: String, token: String? = null): SanctionNotice {

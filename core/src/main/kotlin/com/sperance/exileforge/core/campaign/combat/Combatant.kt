@@ -16,7 +16,7 @@ import kotlin.math.max
  *
  * Every number here is one the server sent; the fight only decides what they do to each other. A
  * hero with no weapon still swings — unarmed, as in PoE — and a missing critical chance is the one
- * every attack has. Mana came back in 2.78.0 (server 0.69.0) with the class skills and the monsters'
+ * every attack has. Mana goes with the class skills and the monsters'
  * spells: it is what a skill is paid with, and it comes back by the rule's share a second.
  */
 data class Combatant(
@@ -24,7 +24,7 @@ data class Combatant(
     val level: Int,
     val rules: CombatRules,
     /**
-     * Темп действий под замедлением аур врагов (4.12.x, CAST-02), доля 0..1: замах и перезарядка всех умений идут медленнее одним
+     * Темп действий под замедлением аур врагов, доля 0..1: замах и перезарядка всех умений идут медленнее одним
      * множителем вместе с холодом (`Battle.Fighter.slow`); 1 - не замедлен.
      */
     val pace: Double = 1.0,
@@ -37,32 +37,31 @@ data class Combatant(
 
     val maxLife = max(1.0, stat(CoreStat.HEALTH.code))
 
-    /** A monster's «shield of life» (an essence, server 0.69.0) adds a share of its life to its shield. */
+    /** A monster's «shield of life» (an essence) adds a share of its life to its shield. */
     val maxShield = max(0.0, stat(CoreStat.ENERGY_SHIELD.code)) + maxLife * max(0.0, stat(CoreStat.SHIELD_OF_LIFE.code)) / 100
     val maxMana = max(0.0, stat(CoreStat.MANA.code))
 
-    /** Immune to chaos (3.17.0, server 1.15.0): its hits and poison do nothing. */
+    /** Immune to chaos: its hits and poison do nothing. */
     val chaosImmune = stat(CoreStat.CHAOS_IMMUNE.code) > 0
 
-    /** Every damage it deals, as a multiplier: the sheet's "damage" (server 0.69.0), a monster's "deals more damage". */
+    /** Every damage it deals, as a multiplier: the sheet's "damage", a monster's "deals more damage". */
     val damageMore = max(0.0, 1 + stat(CoreStat.DAMAGE.code) / 100)
 
     /**
-     * How fast its skills recover: the cooldown recovery, no faster than the rules' shortest cooldown (server 1.76.0). С 4.12.x
-     * (SKILL-01) скорость чар перезарядку не ускоряет - только применение (`CastTime`).
+     * How fast its skills recover: the cooldown recovery, no faster than the rules' shortest cooldown. Скорость чар перезарядку не ускоряет - только применение (`CastTime`).
      */
     val recovery: Double = (1 + stat(CoreStat.COOLDOWN_RECOVERY.code) / 100).coerceIn(rules.floors.recovery, rules.caps.recoveryMax)
 
-    /** What is left of a skill's price in mana: the reduction under the rules' cap (4.12.x, STAT-ATK-08). */
+    /** What is left of a skill's price in mana: the reduction under the rules' cap. */
     val skillCost = rules.caps.skillPrice(stat(CoreStat.SKILL_COST.code))
     val skillHealing = max(0.0, 1 + stat(CoreStat.SKILL_HEALING.code) / 100)
 
-    /** Immune to [ailment] (a flask's suffix, server 0.69.0); an immunity to freezing keeps the cold's chill off too. */
+    /** Immune to [ailment] (a flask's suffix); an immunity to freezing keeps the cold's chill off too. */
     fun immune(ailment: Ailment): Boolean = stat("STOCK_IMMUNE_${ailment.word}") > 0 || (ailment == Ailment.CHILLED && stat(CoreStat.IMMUNE_FREEZE.code) > 0)
     val immuneCurse: Boolean get() = stat(CoreStat.IMMUNE_CURSE.code) > 0
     val immuneStun: Boolean get() = stat(CoreStat.IMMUNE_STUN.code) > 0
 
-    /** How much faster this striker fills [kind] on others (3.78.0). */
+    /** How much faster this striker fills [kind] on others. */
     fun buildupGain(kind: Buildup) = max(0.0, 1 + stat(kind.gain) / 100)
 
     /** How much of [kind] reaches this fighter's bar: its avoidance takes a share off. */
@@ -78,13 +77,13 @@ data class Combatant(
         Buildup.ELECTROCUTE -> stat(CoreStat.IMMUNE_ELECTROCUTE.code) > 0
     }
 
-    /** Life back a second as a share of the maximum (server 0.69.0), beside the flat regeneration. */
+    /** Life back a second as a share of the maximum, beside the flat regeneration. */
     val lifeRegenShare = max(0.0, stat(CoreStat.LIFE_REGEN_PERCENT.code)) / 100
 
-    /** Energy shield back a second as a share of the maximum (server 1.58.0), beside the flat regeneration. */
+    /** Energy shield back a second as a share of the maximum, beside the flat regeneration. */
     val shieldRegenShare = max(0.0, stat(CoreStat.ENERGY_REGEN_PERCENT.code)) / 100
 
-    /** Life lost a second as a share of the maximum (3.4.0). */
+    /** Life lost a second as a share of the maximum. */
     val lifeDegenShare = max(0.0, stat(CoreStat.LIFE_DEGEN_PERCENT.code)) / 100
     val leechMana = max(0.0, stat(CoreStat.LEECH_MANA.code)) / 100
     val manaOnHit = max(0.0, stat(CoreStat.MANA_ON_HIT.code))
@@ -97,28 +96,28 @@ data class Combatant(
     val dotTaken = max(0.0, 1 + stat(CoreStat.DOT_TAKEN.code) / 100)
 
     /**
-     * Доля дополнительного урона критов, что доходит до бойца (4.12.x, STAT-ATK-05): сверх обычного удара крит бьёт на долю
+     * Доля дополнительного урона критов, что доходит до бойца: сверх обычного удара крит бьёт на долю
      * `1 + v/100` своего прибавка; снижение - не больше потолка правил `caps.criticalTaken`.
      */
     val critTaken = max(0.0, 1 + stat(CoreStat.CRITICAL_TAKEN.code).coerceAtLeast(-rules.caps.criticalTaken) / 100)
 
-    /** Насколько сильнее недуг [ailment] на этом бойце (`STOCK_<слово>_TAKEN`; 4.11.0 - по слову недуга, ниже нуля - слабее). */
+    /** Насколько сильнее недуг [ailment] на этом бойце (`STOCK_<слово>_TAKEN`; по слову недуга, ниже нуля - слабее). */
     fun ailmentTaken(ailment: Ailment): Double = max(0.0, 1 + stat("STOCK_${ailment.word}_TAKEN") / 100)
     val damage: Map<DamageType, Double> = DamageType.entries.associateWith { max(0.0, stat(it.attack)) }
         .let { rolled -> if (rolled.values.sum() > 0) rolled else rolled + (DamageType.PHYSICAL to rules.unarmed.damage) }
     val attackSpeed = stat(CoreStat.ATTACK_SPEED.code).takeIf { it > 0 }?.coerceIn(rules.attackSpeedMin, rules.attackSpeedMax) ?: rules.unarmed.speed
 
-    /** A limit raised by the sheet's own lines (3.13.0): block, evasion and physical reduction, each as the resistances are. */
+    /** A limit raised by the sheet's own lines: block, evasion and physical reduction, each as the resistances are. */
     fun ceiling(limit: Ceiling): Double = limit.at(stat(limit.raise))
 
-    /** Шанс крита атак (0.15.0): под потолком правил `critical.chanceCap`, без поднятий. */
+    /** Шанс крита атак: под потолком правил `critical.chanceCap`, без поднятий. */
     val critChance = rules.critical.chanceOf(stats[CRIT_CHANCE] ?: rules.critical.chance) / 100
 
-    /** Чем бьёт крит (0.14.0, ASANA-N05): один множитель, без отдельного урона крита, не ниже удара и не выше потолка правил. */
+    /** Чем бьёт крит: один множитель, без отдельного урона крита, не ниже удара и не выше потолка правил. */
     val critMultiplier = rules.critical.effective(stats[CRIT_MULTIPLIER] ?: rules.critical.multiplier) / 100
 
     /**
-     * A spell's own critical chance and multiplier (server 1.56.0): the attacks' lines do nothing to it. The hero's sheet
+     * A spell's own critical chance and multiplier: the attacks' lines do nothing to it. The hero's sheet
      * always holds both from the rule's base; a fighter without them — a monster — casts with its attacks' figures.
      */
     val spellCritChance = stats[SPELL_CRIT_CHANCE]?.let { rules.critical.chanceOf(it) / 100 } ?: critChance
@@ -136,28 +135,30 @@ data class Combatant(
 
     /**
      * The share of a physical blow of [raw] that armour and then the flat reduction take, together under the physical
-     * ceiling (3.71.0): the ceiling is the whole of physical mitigation, not each half's, so the two never stack past it.
+     * ceiling: the ceiling is the whole of physical mitigation, not each half's, so the two never stack past it.
+     *
+     * Пустой удар: броне нечего снимать - не 0/0.
      */
     fun physicalMitigation(raw: Double, factor: Double): Double {
-        // Пустой удар (4.12.x, COMBAT-02): броне нечего снимать - не 0/0
         val byArmour = if (raw > 0) (armour / (armour + factor * raw)).coerceAtMost(armourCap) else 0.0
         return (1 - (1 - byArmour) * (1 - physicalReduction)).coerceAtMost(armourCap)
     }
 
     /**
      * Chaos stands alone, as in PoE; "all resistances" and "all maximum resistances" cover the three elements.
-     * [penetration] (server 0.66.0) is the striker's: it is taken off the resistance, and can push it below
+     * [penetration] is the striker's: it is taken off the resistance, and can push it below
      * zero down to minus the cap, so a monster without resistance is still hurt more by a penetrating blow.
+     *
+     * Сопротивление может уйти ниже нуля (штраф акта, проклятие карты), как в PoE.
      */
     fun resist(type: DamageType, penetration: Double = 0.0): Double {
         val name = type.resist ?: return 0.0
         val ceiling = resistCeiling(type)
-        // Below zero since 3.18.0: the act's penalty and the map's curse can leave a resistance negative, as in PoE.
         val own = rawResist(name).coerceIn(-rules.resistFloor, ceiling)
         return (own - penetration).coerceIn(-rules.resistFloor, ceiling) / 100
     }
 
-    /** Сопротивление [type] сверх своего потолка (4.6.2, «Равновесие»), в процентах; не выше потолка - ноль. */
+    /** Сопротивление [type] сверх своего потолка («Равновесие»), в процентах; не выше потолка - ноль. */
     fun overcap(type: DamageType): Double = type.resist?.let { max(0.0, rawResist(it) - resistCeiling(type)) } ?: 0.0
 
     /** Своё сопротивление [name] листа: стихии - и с общим. */
@@ -169,7 +170,7 @@ data class Combatant(
         return (rules.resistCap + stat(type.maxResist.orEmpty()) + (if (chaos) 0.0 else stat(CoreStat.RESIST_MAX_ALL.code))).coerceIn(0.0, rules.resistHardCap)
     }
 
-    /** How much of the target's [type] resistance this fighter's blows ignore, in percent (server 0.66.0). */
+    /** How much of the target's [type] resistance this fighter's blows ignore, in percent. */
     fun penetration(type: DamageType): Double = when (type) {
         DamageType.PHYSICAL -> 0.0
         DamageType.CHAOS -> max(0.0, stat(CoreStat.PENETRATE_CHAOS.code))
@@ -177,9 +178,9 @@ data class Combatant(
     }
 
     /**
-     * What a blow of [type] does to this fighter after its defences (server 0.66.0): "damage taken" of every
+     * What a blow of [type] does to this fighter after its defences: "damage taken" of every
      * kind and of that kind together, never below a tenth so no stack of it makes a fighter untouchable.
-     * Chaos is the one exception: a keystone's immunity (3.17.0, server 1.15.0) takes none of it.
+     * Chaos is the one exception: a keystone's immunity takes none of it.
      */
     fun damageTaken(type: DamageType): Double {
         if (type == DamageType.CHAOS && chaosImmune) return 0.0
@@ -199,18 +200,17 @@ data class Combatant(
     }
 
     /**
-     * How much longer the ailments this fighter inflicts last on its foes: общее и своё увеличение вместе - под потолком `caps.ailmentDuration`
-     * (0.15.0); общее - только недугам ([Ailment.ailing]), не Разложению и не урону во времени умения.
+     * How much longer the ailments this fighter inflicts last on its foes: общее и своё увеличение вместе - под потолком `caps.ailmentDuration`; общее - только недугам ([Ailment.ailing]), не Разложению и не урону во времени умения.
      */
     fun ailmentDurationOnFoes(ailment: Ailment): Double = rules.caps.ailmentLasting((if (ailment.ailing) max(0.0, stat(CoreStat.AILMENT_DURATION.code)) else 0.0) + max(0.0, stat("STOCK_${ailment.word}_DURATION")))
 
-    /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill (server 0.66.0). */
+    /** The pace of everything that gives life or shield back: regeneration, leech, on hit and on kill. */
     val recoveryRate = max(0.0, 1 + stat(CoreStat.RECOVERY_RATE.code) / 100)
 
-    /** Подавление восстановления (4.2.0): насколько недуги этого бойца сверх базы правила режут регенерацию и вампиризм цели, %. */
+    /** Подавление восстановления: насколько недуги этого бойца сверх базы правила режут регенерацию и вампиризм цели, %. */
     val recoverySuppression = stat(CoreStat.RECOVERY_SUPPRESSION.code)
 
-    /** Стойкость к подавлению восстановления (4.2.0), %: на столько слабее подавление на нём. */
+    /** Стойкость к подавлению восстановления, %: на столько слабее подавление на нём. */
     val suppressionAvoid = stat(CoreStat.SUPPRESSION_AVOID.code)
 
     /** The pace of the shield's recharge after the rule's delay. */
@@ -220,17 +220,19 @@ data class Combatant(
     val thorns = max(0.0, stat(CoreStat.THORNS.code))
     val reflect = max(0.0, stat(CoreStat.REFLECT.code)) / 100
 
-    /** What this fighter's presence does to its foes while it stands (server 0.66.0): the `AURA_*` stats, if any. */
+    /** What this fighter's presence does to its foes while it stands: the `AURA_*` stats, if any. */
     val auras: Map<String, Double> = stats.filterKeys { it.startsWith("AURA_") }.filterValues { it > 0 }
 
     /**
      * This fighter under the [auras] of the foes still standing: fewer resistances, more damage taken, slower
      * swings and slower recovery. The same sheet with the auras written into it, so every reading stays one.
+     *
+     * Эссенции ослабляют удары, криты и скорость умений рядом со своим стражем. Замедление - темп всех действий, а не только скорость атаки
+     * (его читает `Battle.Fighter.slow`).
      */
     fun under(auras: Map<String, Double>): Combatant {
         if (auras.isEmpty()) return this
         val sheet = stats.toMutableMap()
-        // Server 0.69.0, the essences: weaker blows, fewer criticals and slower skills near their guardian.
         auras["AURA_WEAKEN"]?.let { v -> sheet[CoreStat.DAMAGE.code] = (100 + (stats[CoreStat.DAMAGE.code] ?: 0.0)) * max(0.0, 1 - v / 100) - 100 }
         auras["AURA_CRIT"]?.let { v ->
             sheet[CRIT_CHANCE] = critChance * 100 * max(0.0, 1 - v / 100)
@@ -244,14 +246,13 @@ data class Combatant(
         auras["AURA_DAMAGE_TAKEN"]?.let { v -> sheet[CoreStat.DAMAGE_TAKEN.code] = (stats[CoreStat.DAMAGE_TAKEN.code] ?: 0.0) + v }
         auras["AURA_DOT_TAKEN"]?.let { v -> sheet[CoreStat.DOT_TAKEN.code] = (stats[CoreStat.DOT_TAKEN.code] ?: 0.0) + v }
         auras["AURA_RECOVERY"]?.let { v -> sheet[CoreStat.RECOVERY_RATE.code] = (stats[CoreStat.RECOVERY_RATE.code] ?: 0.0) - v }
-        // Замедление (4.12.x, CAST-02) - темп всех действий, а не только скорость атаки: его читает `Battle.Fighter.slow`
         val slowed = auras["AURA_SLOW"]?.let { v -> max(rules.floors.slow, 1 - v / 100) } ?: 1.0
         return Combatant(sheet, level, rules, pace * slowed)
     }
     val lifeRegen = max(0.0, stat(CoreStat.HEALTH_REGEN.code))
     val shieldRegen = max(0.0, stat(CoreStat.ENERGY_REGEN.code))
 
-    /** Восстановление запаса [pool] в секунду (4.6.4): плоское и доля максимума - одно чтение боя и сводки героя. */
+    /** Восстановление запаса [pool] в секунду: плоское и доля максимума - одно чтение боя и сводки героя. */
     fun regen(pool: RegenPool): Double = pool.flat(this) + pool.fromShare(this)
     val leechPhysical = max(0.0, stat(CoreStat.LEECH_PHYSICAL.code)) / 100
     val leechAll = max(0.0, stat(CoreStat.LEECH_ALL.code)) / 100
@@ -262,20 +263,20 @@ data class Combatant(
     /** What gear adds to the rule's chance to inflict [ailment], in percent; chill has no such stat. */
     fun inflictChance(ailment: Ailment) = max(0.0, stat("STOCK_${ailment.word}_CHANCE"))
 
-    /** How much heavier [ailment]'s damage over time runs: свой урон недуга и (0.15.0, реш. 39) урон во времени `STOCK_DOT_DAMAGE`. */
+    /** How much heavier [ailment]'s damage over time runs: свой урон недуга и урон во времени `STOCK_DOT_DAMAGE`. */
     fun ailmentDamage(ailment: Ailment) = 1 + (max(0.0, ailment.damage?.let(::stat) ?: 0.0) + if (ailment.hurts) max(0.0, stat(CoreStat.DOT_DAMAGE.code)) else 0.0) / 100
 
-    /** «+N к пределу» недуга [ailment] (0.15.0, реш. 40: `STOCK_<слово>_LIMIT`): стаков этого бойца действует больше предела правила. */
+    /** «+N к пределу» недуга [ailment] (`STOCK_<слово>_LIMIT`): стаков этого бойца действует больше предела правила. */
     fun ailmentLimit(ailment: Ailment): Double = max(0.0, stat("STOCK_${ailment.word}_LIMIT"))
 
     /**
-     * Доля прибавки множителя крита, что ложится на недуг [ailment] с основой до защит (0.15.0, реш. 42, `STOCK_<слово>_CRITICAL`, в духе
+     * Доля прибавки множителя крита, что ложится на недуг [ailment] с основой до защит (`STOCK_<слово>_CRITICAL`, в духе
      * «Совершенной агонии»): без неё крит такой недуг не растит.
      */
     fun ailmentCritical(ailment: Ailment): Double = rules.caps.ailmentCrit(stat("STOCK_${ailment.word}_CRITICAL"))
 
     /**
-     * Урон ударами (0.15.0, реш. 39) бойца без своего роста урона (монстр): множитель удара; у героя бой кладёт его увеличением рядом с
+     * Урон ударами бойца без своего роста урона (монстр): множитель удара; у героя бой кладёт его увеличением рядом с
      * увеличениями удара. Недуги и урон во времени он не растит.
      */
     val hitMore = max(0.0, 1 + stat(CoreStat.HIT_DAMAGE.code) / 100)
@@ -284,8 +285,6 @@ data class Combatant(
     /** What is left of [ailment]'s duration on this fighter, never less than the rule's cap allows. */
     fun ailmentDuration(ailment: Ailment) = 1 - percent("STOCK_${ailment.word}_DURATION_ON_SELF", rules.ailmentDurationCap)
     val lifeOnHit = max(0.0, stat(CoreStat.HEALTH_ON_HIT.code))
-
-    // ==================== Keystones and uniques of server 1.32.0 (3.33.0) ====================
 
     /** The share of the damage bound for life that mana takes first. */
     val manaBeforeLife = percent(CoreStat.MANA_BEFORE_LIFE.code)
@@ -343,11 +342,9 @@ data class Combatant(
     }
     val lifeOnKill = max(0.0, stat(CoreStat.HEALTH_ON_KILL.code))
 
-    // ==================== Server 1.34.0 (3.35.0): accuracy, buffs, defences of PoE ====================
-
     /**
-     * Its accuracy against an evasive target. С 4.12.x (STAT-ATK-03) база правила по уровню и ловкость - в листе героя и характеристиках
-     * монстра, и «увеличение» меткости растит их; боец без меткости в листе - по правилу, как прежде.
+     * Its accuracy against an evasive target. База правила по уровню и ловкость - в листе героя и характеристиках
+     * монстра, и «увеличение» меткости растит их; боец без меткости в листе - по правилу.
      */
     fun accuracy(rule: AccuracyRule): Double = max(0.0, stats[CoreStat.ACCURACY.code] ?: (rule.at(level) + rule.perDexterity * stat(CoreStat.AGILITY.code)))
 
@@ -358,12 +355,12 @@ data class Combatant(
     /** Flat damage of [type] its spells add. */
     fun spellAdded(type: DamageType): Double = max(0.0, stat("STOCK_SPELL_ADD_${type.name}"))
 
-    /** Its critical chance and multiplier for a blow: a spell's are its own (server 1.56.0), an attack's the rest. */
+    /** Its critical chance and multiplier for a blow: a spell's are its own, an attack's the rest. */
     fun critChance(spell: Boolean): Double = if (spell) spellCritChance else critChance
     fun critMultiplier(spell: Boolean): Double = if (spell) spellCritMultiplier else critMultiplier
     val doubleDamage = percent(CoreStat.DOUBLE_DAMAGE.code, rules.caps.doubleDamage)
 
-    /** Доля здоровья, ниже которой удар этого бойца добивает цель (4.12.x, STAT-ATK-08); босса и уникального - под своим потолком (0.15.0, `caps.bossCulling`). */
+    /** Доля здоровья, ниже которой удар этого бойца добивает цель; босса и уникального - под своим потолком (`caps.bossCulling`). */
     fun culling(boss: Boolean): Double = rules.caps.cull(stat(CoreStat.CULLING.code), boss)
 
     /** Increased damage for each charge of [kind] it holds. */
@@ -383,13 +380,13 @@ data class Combatant(
     /** Damage taken from hits, not over time: Fortify's work. */
     val hitTaken = DamageTaken.hits(this)
 
-    /** Доля удара осквернённого монстра, что снимает Скверна (4.0.0): «% меньше урона от монстров Скверны», не больше 100%. */
+    /** Доля удара осквернённого монстра, что снимает Скверна: «% меньше урона от монстров Скверны», не больше 100%. */
     val blightReduction = percent(CoreStat.BLIGHT_REDUCTION.code)
     val suppression = rules.defence.chance(spell = true, stat(CoreStat.SPELL_SUPPRESSION.code))
     val deflection = rules.defence.chance(spell = false, stat(CoreStat.DEFLECTION.code))
 
     /**
-     * Шанс блока чар (4.6.2, как в PoE - отдельно от блока): свой блок чар под своим потолком `ceilings.spellBlock`; у монстра
+     * Шанс блока чар (как в PoE - отдельно от блока): свой блок чар под своим потолком `ceilings.spellBlock`; у монстра
      * ([monster]) сверх него - `combat.monsterSpellBlock`% его шанса блока атак.
      */
     fun spellBlock(monster: Boolean): Double = if (monster) monsterSpellBlock else ownSpellBlock
@@ -412,7 +409,7 @@ data class Combatant(
     /** How much sooner its shield starts to recharge after a hit. */
     val rechargeStart = max(rules.floors.shieldRecharge, 1 + stat(CoreStat.SHIELD_RECHARGE_START.code) / 100)
 
-    /** Taunts (since server 0.62.0): while it stands, its foes must strike it first. */
+    /** Taunts: while it stands, its foes must strike it first. */
     val taunt: Boolean get() = stat(CoreStat.TAUNT.code) > 0
 
     /** How hard it presses, before anyone's defences: its damage per swing times its swings per second. */
@@ -423,7 +420,7 @@ data class Combatant(
 }
 
 /**
- * Запас, что восстанавливается сам (4.6.4): плоская регенерация листа [flatStat] и доля максимума в секунду [shareStat] - как их
+ * Запас, что восстанавливается сам: плоская регенерация листа [flatStat] и доля максимума в секунду [shareStat] - как их
  * читает бой ([Combatant.regen]); сводка героя показывает ту же сумму.
  */
 enum class RegenPool(val flatStat: String, val shareStat: String) {

@@ -24,17 +24,17 @@ import kotlin.random.Random
  * contact and the exit ends the map. None of this is a game rule the server knows — it is how a
  * run feels, and nothing of it travels except which monster was killed.
  *
- * Since 2.32.0 (server 0.30.0) the map is lit and remembered: the hero sees [lightRadius] cells —
+ * The map is lit and remembered: the hero sees [lightRadius] cells —
  * the sheet's `STOCK_LIGHT_RADIUS` times the biome's `light` — along lines rock does not block
  * ([lit]); what was ever seen stays [explored], dim. Monsters walk by their [BehaviourRule]: they
  * notice a hero they can see, chase along a path round the rock, hunt the spot they lost them at
  * and go home after `giveUp` seconds; an ambusher waits until the hero is close, a sleeper wakes.
  */
 class ExpeditionWorld(
-    /** Шаг, радиусы и дистанции карты - из контента (3.80.31). */
+    /** Шаг, радиусы и дистанции карты - из контента. */
     val rules: ExpeditionRules,
     val map: ExpeditionMap,
-    /** One entry per spawn, usually of one monster — a pack (since 2.54.0) is more than one. */
+    /** One entry per spawn, usually of one monster — a pack is more than one. */
     packs: List<List<RolledMonster>>,
     heroSpeed: Double,
     internal val seed: Long,
@@ -42,7 +42,7 @@ class ExpeditionWorld(
     bossMonster: RolledMonster? = null,
     hasPortal: Boolean = false,
 ) {
-    /** The hero's pace and sight; both follow the gear when it is changed on the map (since 2.40.0). */
+    /** The hero's pace and sight; both follow the gear when it is changed on the map. */
     internal var heroSpeed = heroSpeed
     var lightRadius = lightRadius
         internal set
@@ -60,11 +60,11 @@ class ExpeditionWorld(
 
     internal val random = Random(seed)
 
-    /** The map's boss (since 2.34.0): the guardian of the exit, standing beside it; none from an older server. */
+    /** The map's boss: the guardian of the exit, standing beside it; none from an older server. */
     val boss: MonsterAgent? = bossMonster?.let { monster -> guardPost()?.let { cell -> MonsterAgent(packs.size, listOf(monster), cell.x + 0.5, cell.y + 0.5, joinsBrawl = false) } }
 
     /**
-     * The Vaal portal (since 2.65.0), if this run rolled one — away from the everyday spawns and the
+     * The Vaal portal, if this run rolled one — away from the everyday spawns and the
      * exit. Touching it opens the gate; it is gone once the zone was entered or refused.
      */
     var portal: Cell? = if (hasPortal) portalPost() else null
@@ -89,7 +89,7 @@ class ExpeditionWorld(
     val agents: List<MonsterAgent> get() = roster
 
     /**
-     * Стая жетона [token] встаёт рядом с [near] (3.90.0): в паре шагов от клетки, на полу. Один
+     * Стая жетона [token] встаёт рядом с [near]: в паре шагов от клетки, на полу. Один
      * жетон встаёт один раз.
      */
     fun summon(token: Int, pack: List<RolledMonster>, near: Cell) {
@@ -97,19 +97,19 @@ class ExpeditionWorld(
         summonAt(token, pack, distances(near, SUMMON_STEPS).entries.filter { it.value >= 2 }.maxByOrNull { it.value }?.key ?: near)
     }
 
-    /** Пак жетона [token] встаёт ровно на клетке [cell] (4.0.0, кольцо очага Скверны). Один жетон встаёт один раз. */
+    /** Пак жетона [token] встаёт ровно на клетке [cell] (кольцо очага Скверны). Один жетон встаёт один раз. */
     fun summonAt(token: Int, pack: List<RolledMonster>, cell: Cell) {
         if (pack.isEmpty() || roster.any { it.id == token }) return
         roster += MonsterAgent(token, pack, cell.x + 0.5, cell.y + 0.5)
     }
 
-    /** Жетон [token] стоит на карте и пал - весь его пак (4.0.0). */
+    /** Жетон [token] стоит на карте и пал - весь его пак. */
     fun fell(token: Int): Boolean = roster.firstOrNull { it.id == token }?.let { it.standing.isEmpty() } == true
 
-    /** Стражи сокровищ объекта [feature] (4.9.0, жетон `Run.GUARD + объект`) ещё стоят: сундук комнаты и сбор узла ждут их гибели. */
+    /** Стражи сокровищ объекта [feature] (жетон `Run.GUARD + объект`) ещё стоят: сундук комнаты и сбор узла ждут их гибели. */
     fun guarded(feature: Int): Boolean = roster.any { it.id == Run.GUARD + feature && it.standing.isNotEmpty() }
 
-    /** Павшие члены паков карты ключами `жетон × [slots] + член` (4.0.0): что объект видит, решая о выборе. */
+    /** Павшие члены паков карты ключами `жетон × [slots] + член`: что объект видит, решая о выборе. */
     fun killed(slots: Int): Set<Int> = roster.flatMapTo(HashSet()) { agent -> agent.fallen.map { agent.id * slots + it } }
 
     /** The exit does not open while its guardian lives. */
@@ -120,7 +120,7 @@ class ExpeditionWorld(
         boss?.alive = false
     }
 
-    /** Отдых стража кончился посреди захода (3.95.2): он встаёт на свой пост целым. */
+    /** Отдых стража кончился посреди захода: он встаёт на свой пост целым. */
     fun bossReturns() {
         val guardian = boss ?: return
         guardian.fallen.clear()
@@ -142,19 +142,22 @@ class ExpeditionWorld(
     }
 
     /**
-     * The cells of these with floor on all four sides (3.79.0): a fountain, a chest, a crystal or a portal set against a wall
+     * The cells of these with floor on all four sides: a fountain, a chest, a crystal or a portal set against a wall
      * hid behind it in the scene's perspective. Should none be roomy, all of them.
+     *
+     * Скала перед местом по ходу камеры закрыла бы объект: такие места - только когда других нет.
      */
     internal fun Set<Cell>.roomy(): Set<Cell> {
         val open = filter { (x, y) -> map.walkable(x - 1, y) && map.walkable(x + 1, y) && map.walkable(x, y - 1) && map.walkable(x, y + 1) }.toSet().ifEmpty { this }
-        // Скала перед местом по ходу камеры закрыла бы объект (3.95.3): такие места - только когда других нет
         return open.filter { (x, y) -> SceneSight.inView(x, y) { cx, cy -> !map.clear(cx, cy) } }.toSet().ifEmpty { open }
     }
 
     /**
-     * Ориентиры, что скала закрывает от камеры (3.95.3, 4.2.0): выход, портал Ваал, сундуки, фонтаны, кристаллы, трещины и
+     * Ориентиры, что скала закрывает от камеры: выход, портал Ваал, сундуки, фонтаны, кристаллы, трещины и
      * объекты карты, уже увиденные, со скалой перед ними. Сцена открывает вокруг каждого «окно» в скале - так виден и сундук
      * комнаты, что стоит за её каменным краем.
+     *
+     * Середина каждой пропасти - ориентир, скала перед ней прозрачна.
      */
     fun screened(): List<Cell> {
         val landmarks = buildList {
@@ -165,20 +168,19 @@ class ExpeditionWorld(
             crystals.mapTo(this) { it.cell }
             cracks.mapTo(this) { it.cell }
             features.forEach { spot -> addAll(spot.landmarks) }
-            // Пропасти (4.7.0): середина каждой - ориентир, скала перед ней прозрачна
             addAll(chasmMarks)
         }
         return landmarks.filter { explored(it.x, it.y) && !SceneSight.inView(it.x, it.y) { x, y -> !map.clear(x, y) } }
     }
 
-    /** Береговые контуры пропастей и вод (4.9.0): одни для сцены и тел; пересобираются только с правкой карты. */
+    /** Береговые контуры пропастей и вод: одни для сцены и тел; пересобираются только с правкой карты. */
     val shoreline: Shoreline get() = Shoreline.of(map, rules.shore, shore).also { shore = it }
     private var shore: Shoreline? = null
 
-    /** Тела в скале (4.7.0): круг против клеток со скруглёнными углами и (4.9.0) против контура глади, как их рисует сцена. */
+    /** Тела в скале: круг против клеток со скруглёнными углами и против контура глади, как их рисует сцена. */
     internal val body = WallBody(map, rules.cornerRadius) { shoreline }
 
-    /** Середины пропастей карты (4.7.0): по клетке на связную пропасть - ближайшая к её центру; считаются раз на карту. */
+    /** Середины пропастей карты: по клетке на связную пропасть - ближайшая к её центру; считаются раз на карту. */
     private val chasmMarks: List<Cell> by lazy {
         val seen = HashSet<Cell>()
         buildList {
@@ -239,19 +241,19 @@ class ExpeditionWorld(
     /** The fountain the hero stands at, until they step off it: one turned down is not offered again underfoot. */
     internal var atFountain: Fountain? = null
 
-    /** The crystals of essences (2.78.0), placed by [placeCrystals]. */
+    /** The crystals of essences, placed by [placeCrystals]. */
     val crystals = mutableListOf<CrystalSpot>()
 
     /** The crystal the hero stands at, until they step off it: it does not open again underfoot. */
     internal var atCrystal: CrystalSpot? = null
 
-    /** The cracks of the Abyss (2.82.0), placed by [placeCracks]. */
+    /** The cracks of the Abyss, placed by [placeCracks]. */
     val cracks = mutableListOf<AbyssSpot>()
 
     /** The crack the hero stands at, until they step off it. */
     internal var atCrack: AbyssSpot? = null
 
-    /** Объекты карты (3.90.0): алтари, торговец, ловушки, комнаты, узлы - ставит [placeFeatures]. */
+    /** Объекты карты: алтари, торговец, ловушки, комнаты, узлы - ставит [placeFeatures]. */
     val features = mutableListOf<FeatureSpot>()
 
     init {
@@ -261,7 +263,7 @@ class ExpeditionWorld(
     /**
      * Puts [count] chests on the map, once: far from the start, off the exit and the monsters'
      * places, a few steps apart, nooks first — a chest is found by walking, not by standing still.
-     * Where they stand is the seed's; how many, the server's. [opened] (3.89.0) are those a run entered again already opened:
+     * Where they stand is the seed's; how many, the server's. [opened] are those a run entered again already opened:
      * they stand where they stood, open, so the closed ones keep their places too.
      */
     fun placeChests(count: Int, opened: Collection<Int> = emptyList()) {
@@ -279,7 +281,7 @@ class ExpeditionWorld(
     }
 
     /**
-     * Puts the map's fountains down, once (since 2.48.0): how many, between the rule's low and high,
+     * Puts the map's fountains down, once: how many, between the rule's low and high,
      * and where, both by the seed — away from the start, the exit, the monsters' places and each other.
      * Each gives back [heal] percent of life, once.
      */
@@ -297,7 +299,7 @@ class ExpeditionWorld(
     }
 
     /**
-     * Puts the zone's crystals down, once (2.78.0): what they hold is the server's, where they stand the
+     * Puts the zone's crystals down, once: what they hold is the server's, where they stand the
      * seed's — away from the start, the exit, the monsters' places, the chests and fountains, and apart.
      */
     fun placeCrystals(held: List<Crystal>) {
@@ -315,7 +317,7 @@ class ExpeditionWorld(
     val standingCrystals: List<CrystalSpot> get() = crystals.filterNot { it.freed }
 
     /**
-     * Puts the zone's cracks of the Abyss down, once (2.82.0): how deep each leads is the server's, where it
+     * Puts the zone's cracks of the Abyss down, once: how deep each leads is the server's, where it
      * gapes the seed's — away from everything else on the map, the crystals too, and apart.
      */
     fun placeCracks(depths: List<Int>) {
@@ -341,7 +343,9 @@ class ExpeditionWorld(
 
     /**
      * Шаг героя за [dt] секунд по шагу стика в осях карты ([paceX], [paceY] - доли скорости героя, [IsoGrid.pace]): длина шага
-     * больше 1 не срезается (0.14.5, #49) - вверх-вниз по экрану стик ведёт быстрее скорости героя в клетках.
+     * больше 1 не срезается - вверх-вниз по экрану стик ведёт быстрее скорости героя в клетках.
+     *
+     * Каждый объект карты слышит шаг (ловушка замечается светом, трещина считает простой); отвечает первый, кому есть что сказать.
      */
     fun step(dt: Double, paceX: Double, paceY: Double): WorldEvent? {
         val length = hypot(paceX, paceY)
@@ -380,7 +384,6 @@ class ExpeditionWorld(
             atCrack = crack
             return WorldEvent.Abyss(crack)
         }
-        // Каждый объект карты слышит шаг (ловушка замечается светом, трещина считает простой); отвечает первый, кому есть что сказать.
         features.map { it.touch(this, dt) }.firstOrNull { it != null }?.let { return WorldEvent.Feature(it) }
         portal?.let { cell ->
             val near = hypot(cell.x + 0.5 - heroX, cell.y + 0.5 - heroY) < rules.chestReach
@@ -405,11 +408,7 @@ class ExpeditionWorld(
 
     companion object {
 
-        /** A chest stands at least this many steps from the start and this far from another chest. */
-
-        /** A fountain stands at least this many steps from the start and this far from another one. */
-
-        /** What a hero sees by when the server has not said: the level-1 base since server 0.30.0. */
+        /** What a hero sees by when the server has not said: the level-1 base. */
         internal const val MIN_WALK = 0.8
 
         /** Как далеко от объекта встаёт стая стражей, в шагах. */
@@ -435,14 +434,14 @@ class ExpeditionWorld(
         }
 
         /**
-         * The hero's pace, sped up by movement speed from the sheet; [bossSlain] (4.10.0) - босс основной карты убит в этом заходе:
+         * The hero's pace, sped up by movement speed from the sheet; [bossSlain] - босс основной карты убит в этом заходе:
          * шаг ещё × `bossSlainSpeed`, поверх предела скорости листа.
          */
         fun heroSpeed(rules: ExpeditionRules, stats: Map<String, Double>, bossSlain: Boolean = false): Double = rules.heroSpeed * (1 + (stats[CoreStat.MOVEMENT_SPEED.code] ?: 0.0) / 100).coerceIn(rules.minSpeed, rules.maxSpeed) * (if (bossSlain) rules.bossSlainSpeed else 1.0)
 
         /**
          * How far the hero sees: the sheet's light radius — the base, if the sheet has none — times the biome's light. Свет листа ноль и
-         * ниже (0.14.0, STAT-MISC-12: «−100% света» и сильнее) - наименьший радиус правил, а не база: база - только без строки в листе.
+         * ниже («−100% света» и сильнее) - наименьший радиус правил, а не база: база - только без строки в листе.
          */
         fun lightRadius(rules: ExpeditionRules, stats: Map<String, Double>, biomeLight: Double): Double = ((stats[CoreStat.LIGHT_RADIUS.code]?.coerceAtLeast(0.0) ?: rules.defaultLight) * biomeLight).coerceIn(rules.minLight, rules.maxLight)
     }

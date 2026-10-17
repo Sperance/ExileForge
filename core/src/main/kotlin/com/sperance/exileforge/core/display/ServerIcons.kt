@@ -13,7 +13,7 @@ import kotlinx.serialization.json.jsonObject
 )
 
 /**
- * One outline of a sprite. A mono sprite shades by [alpha] alone; a glass one (3.6.0) also gives each
+ * One outline of a sprite. A mono sprite shades by [alpha] alone; a glass one also gives each
  * outline its [color] (`#rrggbb`), draws it as a lead [line] of that width instead of a filled piece
  * when [line] is set, and cuts holes by the even-odd rule when [evenOdd] is.
  */
@@ -49,7 +49,7 @@ import kotlinx.serialization.json.jsonObject
  * single item can be given its own drawing later by changing one line of the table.
  *
  * A mono sprite carries no colour, only alpha, and the client tints it by the item's rarity. Item
- * sprites are stained glass since 3.6.0: their colours are the materials', and rarity is the halo.
+ * sprites are stained glass: their colours are the materials', and rarity is the halo.
  */
 class IconBundle(
     val hash: String = "",
@@ -63,7 +63,7 @@ class IconBundle(
     /** The drawing for one key, or null — and null means "draw your own", never "draw nothing". */
     operator fun get(key: String): IconSprite? = icons[key]?.let { sprites[it] }
 
-    /** A drawing by its own name (2.78.0): a skill names the sprite it is drawn with. */
+    /** A drawing by its own name: a skill names the sprite it is drawn with. */
     fun sprite(name: String): IconSprite? = sprites[name]
     fun contains(key: String): Boolean = get(key) != null
 
@@ -73,14 +73,14 @@ class IconBundle(
          *
          * The document is kept as text on the way in so it can be stored verbatim and parsed again
          * on the next start: the manifest's [hash] is what decides whether it is still current.
+         *
+         * Код, что указывает на ненарисованный спрайт, отбрасывается здесь, а не на экране: карточка берёт встроенную эмблему, а не дыру.
          */
         fun parse(hash: String, document: String): IconBundle {
             val parsed = WireJson.decodeFromJsonElement(
                 IconDocument.serializer(),
                 WireJson.parseToJsonElement(document).jsonObject,
             )
-            // A code pointing at a sprite nobody drew is dropped here rather than on screen: the
-            // card then falls back to the bundled emblem instead of leaving a hole where art was.
             return IconBundle(hash, parsed.sprites, parsed.icons.filterValues { it in parsed.sprites })
         }
     }
@@ -104,7 +104,7 @@ object IconKey {
     fun stat(stat: String) = "$STAT.$stat"
     fun slot(slot: String) = "$SLOT.$slot"
 
-    /** A guild faction's sign (3.27.0), the key its rules name by default. */
+    /** A guild faction's sign, the key its rules name by default. */
     fun guildFaction(code: String) = "$GUILD_FACTION.$code"
 }
 
@@ -119,13 +119,13 @@ object IconKey {
 /** The drawing for a key, or null when the client should fall back to its own emblem. */
 fun icon(key: String): IconSprite? = serverIcons[key]
 
-/** The drawing a skill names (2.78.0, server 0.69.0), or null for the client's own emblem. */
+/** The drawing a skill names, or null for the client's own emblem. */
 fun skillIcon(name: String): IconSprite? = name.takeIf { it.isNotBlank() }?.let(serverIcons::sprite)
 
 /** The drawing of an equipment template, or null for the client's own emblem. */
 fun equipmentIcon(code: String): IconSprite? = code.takeIf { it.isNotBlank() }?.let { serverIcons[IconKey.equipment(it)] }
 
-/** An empty place of the body (3.7.0): its shadow glass, or null for the client's own emblem. */
+/** An empty place of the body: its shadow glass, or null for the client's own emblem. */
 fun slotIcon(slot: String): IconSprite? = serverIcons[IconKey.slot(slot)]
 
 /** The drawing of a stacking item — an orb, a material, a book, an essence — or null for the client's own emblem. */

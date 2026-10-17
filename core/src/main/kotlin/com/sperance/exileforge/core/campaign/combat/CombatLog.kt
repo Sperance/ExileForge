@@ -6,7 +6,7 @@ import com.sperance.exileforge.core.campaign.Trace
  * One thing that happened, and where both sides stood after it.
  *
  * [actor] is who did it; what it did was done to the other side. A [Action.TICK] is an ailment's damage gathered over the last second, so the
- * log is not a flood; [type] is the damage that led — the biggest share of a hit, or the ailment's. [foe] (2.70.0) is the
+ * log is not a flood; [type] is the damage that led — the biggest share of a hit, or the ailment's. [foe] is the
  * foe of the pack the event was about — the one that struck, or was struck — and [monsterLife], [monsterShield] are its.
  */
 data class CombatEvent(
@@ -27,18 +27,18 @@ data class CombatEvent(
     val monsterLife: Double,
     val monsterShield: Double,
     val foe: Int = 0,
-    /** The skill used or the flask drunk (2.78.0), by its code; null for a swing, a tick, a reflection or a retreat. */
+    /** The skill used or the flask drunk, by its code; null for a swing, a tick, a reflection or a retreat. */
     val skill: String? = null,
-    /** The actor did it to themselves (2.78.0): a buff, a heal, a draught. */
+    /** The actor did it to themselves: a buff, a heal, a draught. */
     val onSelf: Boolean = false,
-    /** The hero's mana after it (2.78.0). */
+    /** The hero's mana after it. */
     val heroMana: Double = 0.0,
-    /** Строка эха применения (4.4.0): умение повторилось само - руной эха или силой `RECAST`; бой рисует его бледнее. */
+    /** Строка эха применения: умение повторилось само - руной эха или силой `RECAST`; бой рисует его бледнее. */
     val echo: Boolean = false,
-    /** Удар - чары (4.9.3, [Blow.spell]): бой рисует его снарядом цвета стихии, а не выпадом карты. */
+    /** Удар - чары ([Blow.spell]): бой рисует его снарядом цвета стихии, а не выпадом карты. */
     val spell: Boolean = false,
 ) {
-    /** How this line came about (3.37.0), for its card; outside the event's identity, so two fights of one seed still compare equal. */
+    /** How this line came about, for its card; outside the event's identity, so two fights of one seed still compare equal. */
     var trace: Trace? = null
         internal set
 
@@ -52,7 +52,7 @@ data class CombatEvent(
 data class CombatLog(val events: List<CombatEvent>, val outcome: Outcome, val heroLife: Double, val duration: Double)
 
 /**
- * One blow of a fighter (2.78.0): a weapon's swing, a skill's hit or a spell — its damage by type before
+ * One blow of a fighter: a weapon's swing, a skill's hit or a spell — its damage by type before
  * anyone's defences, and what the skill adds. A [spell] and [secondary] damage are not evaded ([evadable]); its damage was rolled already
  * unless it [spread]s by the rule's variance as a weapon's does. [body] is the striker's sheet for this
  * blow with the skill's own lines laid on; [stun] and [ailments] are chances in percent beyond the rules.
@@ -69,28 +69,26 @@ internal class Blow(
     /** Whether [Battle.strike]'s target is the blow's primary one: an area skill's other foes neither build nor break momentum. */
     val primary: Boolean = true,
     /**
-     * The increases in percent the hero's [damage] was grown by, by type (server 1.57.0): an increase the blow meets later —
+     * The increases in percent the hero's [damage] was grown by, by type: an increase the blow meets later —
      * against the target's state — adds to them instead of multiplying. Null: the sheet's own increases of each type.
      */
     val increase: Map<DamageType, Double>? = null,
-    /** Вторичный урон (4.7.0): взрыв фазы и прочее, что не удар и не чары, - как в PoE, от него не уклониться. */
+    /** Вторичный урон: взрыв фазы и прочее, что не удар и не чары, - как в PoE, от него не уклониться. */
     val secondary: Boolean = false,
 ) {
-    /** От удара уклоняются (4.7.0, как в PoE): только атаки - удар оружием и атакующий навык; чары и вторичный урон - нет. */
+    /** От удара уклоняются (как в PoE): только атаки - удар оружием и атакующий навык; чары и вторичный урон - нет. */
     val evadable: Boolean get() = !spell && !secondary
 
     /** A weapon's blow: attacks, not spells, bring life on hit. */
     val weapon: Boolean get() = !spell && (action == Action.ATTACK || action == Action.SKILL)
 }
 
-/** Life damage the hero takes a second until [until] (3.33.0): the delayed share of a hit. */
+/** Life damage the hero takes a second until [until]: the delayed share of a hit. */
 internal class Delayed(val rate: Double, val until: Double)
-
-/** Life and mana a draught gives a second until [until] (2.78.0). */
 
 /**
  * A recovery running over time: a draught's (its belt [slot]) or a recoup's (slot -1). A pure life draught
- * stops once life is full, as in PoE (3.79.0); [restored] and [wasted] go to the log's recovery shelf.
+ * stops once life is full, as in PoE; [restored] and [wasted] go to the log's recovery shelf.
  */
 internal class Recovery(
     val life: Double,
@@ -98,7 +96,7 @@ internal class Recovery(
     var until: Double,
     val slot: Int,
     val stopsAtFull: Boolean = false,
-    /** Доли вылеченного здоровья в ману и энергощит (4.12.x, STAT-MISC-09). */
+    /** Доли вылеченного здоровья в ману и энергощит. */
     val toMana: Double = 0.0,
     val toShield: Double = 0.0,
 ) {

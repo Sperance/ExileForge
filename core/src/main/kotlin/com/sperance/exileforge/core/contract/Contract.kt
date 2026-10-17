@@ -12,8 +12,6 @@ val WireJson: Json = RulesJson
 
 fun JsonObject.text(key: String): String = (get(key) as? JsonPrimitive)?.contentOrNull.orEmpty()
 
-// Сервер, против которого собран клиент (SERVER_COMMIT, SERVER_BRANCH, SERVER_VERSION), - в сгенерированном ServerPin.kt (3.88.2).
-
 /** A Mongo id: 24 hex digits. Content is named by codes, only players' things carry ids. */
 fun requireId(id: String) {
     require(Regex("[0-9a-fA-F]{24}").matches(id)) { ui("contract.bad_id") }
@@ -21,7 +19,7 @@ fun requireId(id: String) {
 
 /**
  * The id of an item copy: an ObjectId for what the server made, but a run's loot keeps the id its seed
- * rolled on both sides (`r<seed>-k0-1`) — a 24-digit check refused to wear what a map dropped (3.2.0).
+ * rolled on both sides (`r<seed>-k0-1`) — a 24-digit check refused to wear what a map dropped.
  */
 fun requireItemId(id: String) {
     require(ITEM_ID.matches(id)) { ui("contract.bad_id") }

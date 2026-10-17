@@ -7,8 +7,8 @@ import com.sperance.exileforge.rules.sheet.StatCaps
 import com.sperance.exileforge.rules.sheet.StatReading
 
 /**
- * A figure a fight counts only up to a ceiling (3.12.0): a resistance under its maximum; block, critical chance and
- * physical reduction under their own (3.13.0). С 4.12.x (R3) - каждый предел реестра правил `StatCaps`: потолки боя, подавление и
+ * A figure a fight counts only up to a ceiling: a resistance under its maximum; block, critical chance and
+ * physical reduction under their own. Каждый предел реестра правил `StatCaps`: потолки боя, подавление и
  * отклонение, длительности на себе, доли, скорость атаки и чар, свет и шаг карты.
  * [gathered] - сколько набрано (у стихии - с «всеми сопротивлениями», у скорости чар - со скоростью применения умений),
  * [effective] - что бой читает на самом деле, [base] - предел правил без поднятий, [raises] - что его поднимает и сколько,
@@ -27,7 +27,7 @@ data class StatLimit(
     /** What lies above the cap and does nothing in a fight. */
     val over: Double get() = (gathered - cap).coerceAtLeast(0.0)
 
-    /** Бой читает не набранное (4.12.x, R3): оно выше предела или ниже дна - сводка печатает «предел; набрано N». */
+    /** Бой читает не набранное: оно выше предела или ниже дна - сводка печатает «предел; набрано N». */
     val clamped: Boolean get() = effective != gathered
 }
 
@@ -40,12 +40,12 @@ object StatLimits {
         return StatLimit(stat, cap.gathered(stat, read), cap.effective(stat, read), cap.base, raises, cap.at(read), cap.hard, cap.floor)
     }
 
-    /** Шанс уклонения героя уровня [level] (4.12.x, R3): от меткости эталонного врага его уровня (0.15.0, `ReferenceFoe`), под пределом правил. */
+    /** Шанс уклонения героя уровня [level]: от меткости эталонного врага его уровня (`ReferenceFoe`), под пределом правил. */
     fun evasion(stats: Map<String, Double>, level: Int, index: ContentIndex): StatReading = StatCaps.evasion({ stats[it] ?: 0.0 }, level, index)
 
     /**
-     * Защита процентом (0.14.0, ASANA-N07): уклонение - шанс против меткости врага уровня героя [level], броня - снижение
-     * физического урона от удара эталонного врага уровня героя (`StatCaps.physical`, 0.15.0 - `ReferenceFoe.hit`). Сводка печатает его главным
+     * Защита процентом: уклонение - шанс против меткости врага уровня героя [level], броня - снижение
+     * физического урона от удара эталонного врага уровня героя (`StatCaps.physical`, `ReferenceFoe.hit`). Сводка печатает его главным
      * числом, сравнение - разницей в п.п.; прочие характеристики - null.
      */
     fun defence(stat: String, stats: Map<String, Double>, level: Int, index: ContentIndex): StatReading? {

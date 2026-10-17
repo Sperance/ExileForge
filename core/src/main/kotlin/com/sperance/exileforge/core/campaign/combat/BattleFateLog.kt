@@ -3,13 +3,11 @@ package com.sperance.exileforge.core.campaign.combat
 import com.sperance.exileforge.core.campaign.FateTrace
 import com.sperance.exileforge.rules.content.FateLever
 
-// ==================== Предначертание в журнале и у героя (4.9.0) ====================
-
 /** Чем назван предмет срабатывания [FateBeat]: ничем, недугом (`Ailment`) или умением героя (код). */
 enum class FateRef { NONE, AILMENT, SKILL }
 
 /**
- * Срабатывание рычага или правила строки дара в журнале боя (4.9.0): строка словаря клиента `expedition.fate_beat.<имя>`, её числа
+ * Срабатывание рычага или правила строки дара в журнале боя: строка словаря клиента `expedition.fate_beat.<имя>`, её числа
  * - [FateTrace.args] по порядку `{0}`, `{1}`…, предмет [ref] - последним после чисел. [folds] - частое срабатывание: в журнал
  * ложится первое за бой, прочие копятся и в конце боя встают одной строкой свёртки (`expedition.log_fate_fold`): первые [kept]
  * чисел - как у последнего (доля, порог), прочие - сумма. Каждый отклик пишет своё срабатывание сам, через [Battle.fateBeat].
@@ -42,7 +40,7 @@ enum class FateBeat(val folds: Boolean = false, val kept: Int = 0, val ref: Fate
     /** Палач: враг добит ниже `{0}`% здоровья. */
     EXECUTE(folds = true, kept = 1),
 
-    /** Кровь вожака (4.11.x): убийство - стопок `{0}`: +`{1}`% к скорости атаки и сотворения, +`{2}`% к вампиризму здоровья. */
+    /** Кровь вожака: убийство - стопок `{0}`: +`{1}`% к скорости атаки и сотворения, +`{2}`% к вампиризму здоровья. */
     KILL_STACKS(folds = true, kept = 3),
 
     /** Ледяное сердце: заморозка стала замедлением `{0}`% на `{1}` с. */
@@ -123,7 +121,7 @@ internal class FateTally(private val beat: FateBeat) {
 }
 
 /**
- * Значок действующего рычага у героя в бою (4.9.0): ✦ среди состояний, пока рычаг [lever] дара [fate] активен; [value] и [count] -
+ * Значок действующего рычага у героя в бою: ✦ среди состояний, пока рычаг [lever] дара [fate] активен; [value] и [count] -
  * числа подсказки `fight.fate_state.<рычаг>` (доля, запас, стаки), [left] - доля оставшегося срока, если он есть.
  */
 data class FateGlow(val fate: String, val lever: FateLever, val value: Double, val count: Int = 0, val left: Float = 1f)
@@ -157,7 +155,7 @@ private fun Battle.fateLine(fate: String, beat: FateBeat, args: List<Double>, re
     trace = FateTrace(fate, beat, args, ref, repeats, shot(heroFighter), origin),
 )
 
-/** Действующие рычаги героя (4.9.0) - значками среди его состояний. */
+/** Действующие рычаги героя - значками среди его состояний. */
 fun Battle.fateGlows(): List<FateGlow> {
     val fate = kit.fate.effects.fate?.code ?: return emptyList()
     return if (fated.isEmpty()) emptyList() else fated.mapNotNull { it.glow(this, fate) }

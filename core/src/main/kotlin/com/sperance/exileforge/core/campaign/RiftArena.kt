@@ -59,7 +59,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 /**
- * Бой узла Разлома, как его рисует экран (3.96.0): карточки арены, смена поля из скольких (4.8.0), уровень врагов, секунды боя, вскрытое
+ * Бой узла Разлома, как его рисует экран: карточки арены, смена поля из скольких, уровень врагов, секунды боя, вскрытое
  * условие Чемпиона и выполнено ли оно пока; [phase] - идёт, пал, окончен победой.
  */
 data class RiftFightHud(
@@ -76,7 +76,7 @@ data class RiftFightHud(
 )
 
 /**
- * Бой узла Разлома (3.96.0, сервер 1.83.0): все враги узла [fight] - один бой (4.8.0), на поле не больше `fight.maxFoes`,
+ * Бой узла Разлома: все враги узла [fight] - один бой, на поле не больше `fight.maxFoes`,
  * павших сменяет подкрепление ([Muster.Reinforcements], очередь [RiftFight.queue]); герой - со
  * своим снаряжением, дарами и проклятиями забега [run] и мутаторами недели, здоровье и заряды фляг - из забега. Стражи - со
  * своими механиками ([RiftCombat]). Конец боя - [RiftAct.Fight] в [onEnd]: его шлёт на сервер владелец арены.
@@ -89,7 +89,7 @@ class RiftArena(
     private val fight: RiftFight,
     context: RunContext,
     private val gear: HeroGear,
-    /** Счёт Предначертания забега (4.6.0): перелив маны живёт на весь забег, арены забега делят его. */
+    /** Счёт Предначертания забега: перелив маны живёт на весь забег, арены забега делят его. */
     private val fateRun: com.sperance.exileforge.core.campaign.combat.FateRun = com.sperance.exileforge.core.campaign.combat.FateRun(),
     private val onEnd: (RiftAct.Fight) -> Unit,
 ) {
@@ -100,7 +100,7 @@ class RiftArena(
     private val spawns = Spawns(index, arenaRun)
     private val roller = MonsterRoller(index)
 
-    /** Воздействия забега и, у чемпиона, его испытания (4.11.x, [com.sperance.exileforge.rules.content.RiftChampion.touch]: «Без восстановления» запрещает регенерацию). */
+    /** Воздействия забега и, у чемпиона, его испытания ([com.sperance.exileforge.rules.content.RiftChampion.touch]: «Без восстановления» запрещает регенерацию). */
     private val touch: RiftTouch = RiftTouch.sum(listOfNotNull(engine.touch(run), node.trial?.let { rules.champion.touch[it] }))
     private val altar = run.hero.altar
 
@@ -115,7 +115,7 @@ class RiftArena(
 
     private var phase = TrialPhase.FIGHT
 
-    /** Все враги узла по порядку очереди сервера (4.8.0): каждый на своём потоке по месту в составе. */
+    /** Все враги узла по порядку очереди сервера: каждый на своём потоке по месту в составе. */
     private val monsters: List<RolledMonster> = fight.foes.mapIndexedNotNull { i, foe -> rolled(foe, arenaRun.streams.of("riftFoe", i)) }
     private var battle: Battle? = null
 
@@ -123,13 +123,13 @@ class RiftArena(
     private var round = 1
     private var rounds = 1
 
-    /** Журнал последнего боя узла (4.8.0): все вступившие враги; null - бой ещё не кончился. */
+    /** Журнал последнего боя узла: все вступившие враги; null - бой ещё не кончился. */
     var report: FightReport? = null
         private set
     private var started = false
     private var paused = false
 
-    /** Листы поверх боя, что его держат (4.7.0: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
+    /** Листы поверх боя, что его держат (меню забега, настройки, жук): пока хоть один открыт, время стоит. */
     private var holds = 0
     private var speed = 1
     private var elapsed = 0.0
@@ -238,7 +238,7 @@ class RiftArena(
     }
 
     /**
-     * Рост узла: на столько процентов больше здоровья и урона у каждого врага; меньше нуля - на столько меньше (0.15.0: рядовые бои и
+     * Рост узла: на столько процентов больше здоровья и урона у каждого врага; меньше нуля - на столько меньше (рядовые бои и
      * Элита слабее по виду узла, `rift.fights.kindPower`, и на первых шагах сила узла отрицательна).
      */
     private fun growth(power: Double): List<MonsterEffect> = if (power == 0.0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
@@ -259,7 +259,7 @@ class RiftArena(
         )
     }
 
-    /** Бой узла встаёт и ждёт «В бой»: один бой, враги сверх `fight.maxFoes` вступают подкреплением (4.8.0). */
+    /** Бой узла встаёт и ждёт «В бой»: один бой, враги сверх `fight.maxFoes` вступают подкреплением. */
     private fun stand() {
         if (monsters.isEmpty()) return
         val phases = PhaseFoes(index, combat)
@@ -284,6 +284,7 @@ class RiftArena(
         paused = false
     }
 
+    /** Выигранный узел идёт в счёт Разгона забега. */
     private fun play(dt: Double) {
         val fight = battle ?: return
         if (!started || paused || holds > 0) return
@@ -299,7 +300,6 @@ class RiftArena(
         lowest = minOf(lowest, fight.trial.lowestLife)
         pools = fight.pools()
         report = fight.report(monsters)
-        // Разгон (4.9.0): выигранный узел - в счёт забега
         if (outcome == Outcome.WIN) fateRun.victory()
         end(won = outcome == Outcome.WIN)
     }
@@ -322,6 +322,7 @@ class RiftArena(
         onEnd(RiftAct.Fight(won, life, pools.charges, hurt, won && met()))
     }
 
+    /** Условие Чемпиона вскрывается, когда бой начался. */
     private fun snapshot(): RiftFightHud {
         val fight = battle
         val manaCap = hero.maxMana * (1 - kit.reserved(hero) / 100)
@@ -341,7 +342,6 @@ class RiftArena(
         } else {
             null
         }
-        // Условие Чемпиона вскрывается, когда бой начался
         val trial = node.trial?.takeIf { started || phase != TrialPhase.FIGHT }
         return RiftFightHud(phase, runHud, fightHud, node.kind, round, rounds, this.fight.level, elapsed, trial, trial != null && met())
     }
@@ -355,7 +355,7 @@ class RiftArena(
     }
 }
 
-/** Стиль героя для веса даров Разлома (3.96.0): чары или атаки по умениям, ведущий урон - по листу. */
+/** Стиль героя для веса даров Разлома: чары или атаки по умениям, ведущий урон - по листу. */
 object RiftStyles {
     fun of(gear: HeroGear): List<RiftStyle> {
         val types = gear.kit.actives.mapNotNull { it?.skill?.type }

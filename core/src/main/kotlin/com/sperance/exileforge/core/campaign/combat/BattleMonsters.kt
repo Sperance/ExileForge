@@ -12,13 +12,11 @@ import com.sperance.exileforge.rules.sheet.lines
 import kotlin.math.max
 import kotlin.math.min
 
-// ==================== Ярость и умения монстров ====================
-
 /**
- * Ярость (3.95.0 - стража; 4.3.0 - любого боя): каждые `every` секунд правила вида боя [Battle.rageRule] урон всех живых врагов -
+ * Ярость (стража; любого боя): каждые `every` секунд правила вида боя [Battle.rageRule] урон всех живых врагов -
  * стража, стаи, свиты, позже вставших - больше ещё на `damage` процентов; ступени складываются до `limit`. Вставший позже
- * догоняет ступень, что уже идёт; раунд боя (4.4.1) и смена подкреплений (4.8.0) начинают её заново, а ступень, что уже
- * лежит на враге, тоже снимают ([calm], 4.12.x). Без бросков: бой остаётся тем же на тех же костях.
+ * догоняет ступень, что уже идёт; раунд боя и смена подкреплений начинают её заново, а ступень, что уже
+ * лежит на враге, тоже снимают ([calm]). Без бросков: бой остаётся тем же на тех же костях.
  */
 internal fun Battle.rage() {
     val stacks = rageRule.stacks(rageClock)
@@ -36,7 +34,7 @@ internal fun Battle.rage() {
 }
 
 /**
- * Смена поля (4.12.x, COMBAT-06) начинает ярость заново и для выживших: их ступень снимается вместе с баффом, следующие ступени
+ * Смена поля начинает ярость заново и для выживших: их ступень снимается вместе с баффом, следующие ступени
  * они копят с новыми врагами.
  */
 internal fun Battle.calm() {
@@ -49,8 +47,8 @@ private const val RAGE = "GUARDIAN_RAGE"
 
 /**
  * A monster's skills, the first ready one it has a reason to use: a heal when hurt, a buff or a curse not already on.
- * С 4.12.x (SKILL-01) умение применяется своё время ([CastTime]): удар ждёт, оглушение и заморозка прерывают; перезарядка - в конце.
- * Маны умения монстров не тратят (0.14.0, ASANA-N01): их держит только перезарядка.
+ * Умение применяется своё время ([CastTime]): удар ждёт, оглушение и заморозка прерывают; перезарядка - в конце.
+ * Маны умения монстров не тратят: их держит только перезарядка.
  */
 internal fun Battle.monsterCast(me: Fighter) {
     if (me.casting != null) return
@@ -64,7 +62,7 @@ internal fun Battle.monsterCast(me: Fighter) {
     }
 }
 
-/** Применение монстра [me] закончено: перезарядка (холод и замедление её растягивают, CAST-02) и действие. */
+/** Применение монстра [me] закончено: перезарядка (холод и замедление её растягивают) и действие. */
 private fun Battle.monsterApplied(me: Fighter, skill: MonsterSkill) {
     if (!heroFighter.alive) return
     me.readyAt[skill.code] = time + skill.cooldown / me.body.recovery * me.slow()
@@ -79,14 +77,17 @@ private fun Battle.wanted(me: Fighter, skill: MonsterSkill): Boolean = when {
     else -> true
 }
 
-/** What a monster's skill does: a share of its own swing in the skill's element, a buff, a curse, a heal, a burn of the hero's mana. */
+/**
+ * What a monster's skill does: a share of its own swing in the skill's element, a buff, a curse, a heal, a burn of the hero's mana.
+ *
+ * Чары заклинателя несут его урон заклинаний в стихии умения. «Эффект кличей» монстра растит только клич, не всякое благо.
+ */
 private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
     val hero = heroFighter
     skill.hit?.let { hit ->
         val element = DamageType.element(hit.element)
         val share = (hit.weapon?.at(1) ?: 100.0) / 100
         val damage = me.body.damage.mapValues { it.value * share }.toMutableMap()
-        // A caster's spell carries its spell damage in the skill's element.
         val magical = me.body[CoreStat.ATTACK_MAGICAL.code]
         if (skill.spell && magical > 0) damage.merge(element ?: me.body.leading, magical * share, Double::plus)
         val convert = (hit.convert?.at(1) ?: 0.0).coerceIn(0.0, 100.0) / 100
@@ -111,7 +112,6 @@ private fun Battle.monsterSkill(me: Fighter, skill: MonsterSkill) {
         )
     }
     skill.buff?.let { buff ->
-        // «Эффект кличей» монстра растит только клич (0.14.0, STAT-ATK-11), не всякое благо
         val effect = if (skill.warcry) 1 + me.body[CoreStat.WARCRY_EFFECT.code] / 100 else 1.0
         buff(me, skill.code, buff.stats.lines(1, effect), buff.duration)
         record(Side.MONSTER, Action.SKILL, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, me.index, skill.code, onSelf = true)

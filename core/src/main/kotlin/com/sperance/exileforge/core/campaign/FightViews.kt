@@ -34,7 +34,9 @@ import kotlin.math.roundToInt
 
 /**
  * The fight as the overlay prints it: the [monsters] of the fight as cards in the battle's order, the hero's pools and states,
- * what just landed, and the blows so far, newest first. Shared by the map's runs and the trials (3.49.0).
+ * what just landed, and the blows so far, newest first. Shared by the map's runs and the trials.
+ *
+ * Недуг без урона показан силой, как её читает бой ([Battle.Fighter.held], приём цели и потолок правила).
  */
 internal fun Battle.hud(
     monsters: List<RolledMonster>,
@@ -56,7 +58,6 @@ internal fun Battle.hud(
             ((until - battle.time) / active.first().duration).toFloat().coerceIn(0f, 1f),
             active.size,
             (until - battle.time).coerceAtLeast(0.0),
-            // Недуг без урона - сила, как её читает бой ([Battle.Fighter.held], 4.11.0: приём цели и потолок правила)
             if (ailment.hurts) active.sumOf { it.magnitude } else f.held(ailment),
         )
     }
@@ -107,11 +108,11 @@ internal fun Battle.hud(
     )
 }
 
-/** Сцена удара на экране (4.9.3) длится столько выпадов ([CombatRules.lunge]): выпад, вспышка или полёт снаряда, тряска цели. */
+/** Сцена удара на экране длится столько выпадов ([CombatRules.lunge]): выпад, вспышка или полёт снаряда, тряска цели. */
 internal const val STRIKE_LUNGES = 3
 
 /**
- * Удары последней секунды ([ExpeditionRun.HIT_LIFETIME]) - числа над карточками (4.9.0: с конца журнала, он идёт по времени,
+ * Удары последней секунды ([ExpeditionRun.HIT_LIFETIME]) - числа над карточками (с конца журнала, он идёт по времени,
  * а не фильтром всего боя на каждый кадр), по порядку журнала.
  */
 private fun Battle.recentHits(): List<FloatingHit> {
@@ -133,16 +134,17 @@ private fun Battle.recentHits(): List<FloatingHit> {
     return hits
 }
 
-/** Сцена применения умения (4.4.0) длится столько выпадов удара ([CombatRules.lunge]): 0,5-0,9 с макета «Жилы энергии». */
+/** Сцена применения умения длится столько выпадов удара ([CombatRules.lunge]): 0,5-0,9 с «Жил энергии». */
 internal const val CAST_LUNGES = 4
 
 /**
- * Последнее применение умения героя (4.4.0), пока его сцена идёт ([CAST_LUNGES] выпадов): умение из набора героя, все строки
+ * Последнее применение умения героя, пока его сцена идёт ([CAST_LUNGES] выпадов): умение из набора героя, все строки
  * того же мига - по кому оно легло. Умение на себя - без целей.
+ *
+ * Журнал читается с конца, пока строки моложе сцены: он идёт по времени.
  */
 private fun Battle.heroCast(): HeroCastView? {
     val window = CAST_LUNGES * rules.lunge
-    // С конца журнала, пока строки моложе сцены (4.9.0): журнал идёт по времени, весь бой обходить незачем
     var last = log.size - 1
     while (last >= 0) {
         val it = log[last]
@@ -173,12 +175,15 @@ private fun Battle.heroCast(): HeroCastView? {
     )
 }
 
-/** Босс боя (3.92.0): первый враг редкости босса или с фазами - его пороги и умение на подходе. */
+/**
+ * Босс боя: первый враг редкости босса или с фазами - его пороги и умение на подходе.
+ *
+ * Умение, что босс применяет сейчас, стоит на подходе первым.
+ */
 private fun Battle.bossHud(): BossHud? {
     val i = guardian ?: return null
     val foe = foes[i]
     val fighter = foeFighters[i]
-    // Умение, что босс применяет сейчас (SKILL-01), - на подходе первым: осталось его применения
     val casting = fighter.casting?.let { c -> CastView(c.code, (c.until - time).coerceAtLeast(0.0), c.until - c.from) }
     val coming = (foe.skills + learned[i].orEmpty()).mapNotNull { skill ->
         val ready = fighter.readyAt[skill.code] ?: return@mapNotNull null
@@ -196,7 +201,7 @@ private fun Battle.bossHud(): BossHud? {
     return riftHud(hud)
 }
 
-/** Полоса стража Разлома (3.96.0): печати, Законы, украденное - поверх полосы босса. */
+/** Полоса стража Разлома: печати, Законы, украденное - поверх полосы босса. */
 private fun Battle.riftHud(hud: BossHud): BossHud {
     val fight = riftFight ?: return hud
     return hud.copy(
@@ -216,12 +221,12 @@ private fun Battle.riftHud(hud: BossHud): BossHud {
 }
 
 /**
- * Здоровье на экране (3.88.8): у живого - вверх до целого и не меньше 1, у павшего - 0. «0» у живого противника читалось
- * как смерть, хотя у него оставалась доля единицы. 4.10.x: не выше показанного максимума [max] ([shownMax]) - полный запас
+ * Здоровье на экране: у живого - вверх до целого и не меньше 1, у павшего - 0. «0» у живого противника читалось
+ * как смерть, хотя у него оставалась доля единицы. Не выше показанного максимума [max] ([shownMax]) - полный запас
  * с дробным максимумом читался «776 / 775»; журнал боя максимума не знает и его не ставит. [falling] - здоровье тает (на карте
  * под недугом или дегеном): вниз до целого, число не обещает того, чего уже нет.
  */
 fun shownLife(life: Double, alive: Boolean, max: Double = Double.POSITIVE_INFINITY, falling: Boolean = false): Int = if (alive) (if (falling) kotlin.math.floor(life) else kotlin.math.ceil(life)).toInt().coerceAtMost(shownMax(max)).coerceAtLeast(1) else 0
 
-/** Максимум запаса на экране (4.10.x): одно округление для всех полос, с ним сверяется [shownLife]. */
+/** Максимум запаса на экране: одно округление для всех полос, с ним сверяется [shownLife]. */
 fun shownMax(max: Double): Int = max.roundToInt()

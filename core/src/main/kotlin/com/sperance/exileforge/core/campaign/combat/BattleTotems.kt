@@ -9,11 +9,11 @@ import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.TotemKind
 import com.sperance.exileforge.rules.sheet.lines
 
-/** Тотем правил в бою (3.93.0): сам тотем и его проклятие, уже найденное среди умений монстров. */
+/** Тотем правил в бою: сам тотем и его проклятие, уже найденное среди умений монстров. */
 data class FoeTotem(val totem: BossTotem, val curse: MonsterSkill? = null)
 
 /**
- * Тотем, что стоит (3.93.0): поставлен боссом [owner] в слот [slot] в [raised] и рассыпается в [until] - или раньше, со смертью
+ * Тотем, что стоит: поставлен боссом [owner] в слот [slot] в [raised] и рассыпается в [until] - или раньше, со смертью
  * босса или вытесненный новым. [serial] - его номер в бою: источник его строк на босе, свите и герое.
  */
 class StandingTotem internal constructor(val serial: Int, val totem: FoeTotem, val owner: Int, val slot: Int, val raised: Double, val until: Double) {
@@ -21,7 +21,7 @@ class StandingTotem internal constructor(val serial: Int, val totem: FoeTotem, v
     val source: String get() = "$TOTEM_SOURCE$serial"
 }
 
-/** Кто занял слот вокруг босса (3.93.0): приспешник свиты или тотем. */
+/** Кто занял слот вокруг босса: приспешник свиты или тотем. */
 sealed interface SlotHolder {
     data class Minion(val index: Int) : SlotHolder
 
@@ -34,11 +34,11 @@ internal const val TOTEM_SOURCE = "totem#"
 /** Свободный слот вокруг босса или null - все заняты. */
 internal fun Battle.freeSlot(): Int? = slotHolders.indices.firstOrNull { slotHolders[it] == null }
 
-/** Враги на поле для условий героя (3.93.0): стоящие враги и тотемы - тотем бить нельзя, но он враг. */
+/** Враги на поле для условий героя: стоящие враги и тотемы - тотем бить нельзя, но он враг. */
 internal fun Battle.enemies(): Int = foeFighters.count { it.alive } + standingTotems.size
 
 /**
- * Босс [boss] ставит тотем (3.93.0): один из [choices] наугад. Свободный слот берёт сразу, иначе вытесняет самый старый тотем;
+ * Босс [boss] ставит тотем: один из [choices] наугад. Свободный слот берёт сразу, иначе вытесняет самый старый тотем;
  * все слоты у свиты - тотема нет.
  */
 internal fun Battle.raiseTotem(boss: Fighter, choices: List<FoeTotem>) {
@@ -86,7 +86,7 @@ internal fun Battle.bannerFor(minion: Fighter) {
 private fun Battle.retinueOf(boss: Int): List<Fighter> = foes.indices.filter { foes[it].summonOf == boss && foeFighters[it].alive }.map { foeFighters[it] }
 
 /**
- * Тотемы за срез (3.93.0): стихийный бьёт героя раз в свой период, отстоявший рассыпается; босс со своими тотемами ставит
+ * Тотемы за срез: стихийный бьёт героя раз в свой период, отстоявший рассыпается; босс со своими тотемами ставит
  * новый раз в свой срок.
  */
 internal fun Battle.totemTick() {

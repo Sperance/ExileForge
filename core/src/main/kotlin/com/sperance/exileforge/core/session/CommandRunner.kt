@@ -45,12 +45,6 @@ interface ConnectionEvents {
     fun queued()
 }
 
-/**
- * Шина команд и чтений (3.80.8, прежде внутри ForgeRuntime): команда - одна за раз, только она гасит
- * кнопки; чтение - одно на ключ, никогда не ждёт команду и не держит её. Беда превращается в
- * [Activity.failure] и строку для игрока; ушедшая в очередь команда - не беда вовсе.
- */
-
 /** Вести о связи уходят тому, кто слушает сейчас: модель связи подключается после старта. */
 class ConnectionEventsHub : ConnectionEvents {
     var delegate: ConnectionEvents? = null
@@ -72,17 +66,21 @@ fun interface StallSink {
     fun stalled(stall: Stall)
 }
 
-/**
- * Сторож раннера: старт, задача и видимое чтение держат полосу не дольше [limitMs]. Дольше - работа отменяется, её
- * занятость снимается, игроку - «Сервер долго отвечает», разработчику - [Stall] с журналом [CommandRunner.describe].
- */
-
-/** Сколько ответ чтения считается свежим для экрана, открытого снова (3.94.1). */
+/** Сколько ответ чтения считается свежим для экрана, открытого снова. */
 const val READ_FRESH_MS = 30_000L
 
 /** Срок свежести чтения: [fresh] - экран открылся и примет недавний ответ, иначе - читать сейчас. */
 fun freshness(fresh: Boolean): Long = if (fresh) READ_FRESH_MS else 0L
 
+/**
+ * Шина команд и чтений: команда - одна за раз, только она гасит кнопки; чтение - одно на ключ, никогда не ждёт команду и не держит её. Беда
+ * превращается в [Activity.failure] и строку для игрока; ушедшая в очередь команда - не беда вовсе.
+ *
+ * Сторож раннера: старт, задача и видимое чтение держат полосу не дольше [limitMs]; дольше - работа отменяется, её занятость снимается,
+ * игроку - «Сервер долго отвечает», разработчику - [Stall] с журналом [CommandRunner.describe]. Старт тоже под пределом; сторож запускается
+ * последней строкой конструктора, когда все поля уже записаны. Задача, снятая сторожем, уже не своя: её конец не трогает следующую; тихое
+ * чтение полосу не держит.
+ */
 class CommandRunner(
     private val scope: CoroutineScope,
     private val connection: ConnectionEvents,
@@ -96,12 +94,12 @@ class CommandRunner(
     private var touching: Set<String> = emptySet()
     private val quiet = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
-    /** Последнее удачное чтение ключа (3.94.1): чей ответ ([Read.tag], обычно герой) и когда - для срока свежести. */
+    /** Последнее удачное чтение ключа: чей ответ ([Read.tag], обычно герой) и когда - для срока свежести. */
     private val done = java.util.concurrent.ConcurrentHashMap<String, Read>()
 
     private data class Read(val tag: String, val at: Long)
 
-    /** Откуда пришли идущие задача и чтения (3.84.2): журнал запуска показывает, кто держит `busy` или `loading`. */
+    /** Откуда пришли идущие задача и чтения: журнал запуска показывает, кто держит `busy` или `loading`. */
     @Volatile private var taskOrigin: String? = null
     private val readOrigins = java.util.concurrent.ConcurrentHashMap<String, String>()
 
@@ -134,7 +132,6 @@ class CommandRunner(
             } catch (e: Exception) {
                 report(e, writing)
             } finally {
-                // Задача, снятая сторожем, уже не своя: её конец не трогает следующую.
                 if (running === coroutineContext[Job]) endTask()
             }
         }
@@ -152,7 +149,7 @@ class CommandRunner(
     }
 
     /**
-     * Чтение под ключом [key]: одно за раз. С [tag] (3.94.1; обычно id героя) удачное чтение запоминается, и вызов с
+     * Чтение под ключом [key]: одно за раз. С [tag] (обычно id героя) удачное чтение запоминается, и вызов с
      * [maxAgeMs] пропускается, пока прошлый ответ для того же [tag] моложе - экран, открытый снова, не спрашивает сервер.
      * Команда, что трогает ключ, срок сбрасывает.
      */
@@ -183,7 +180,6 @@ class CommandRunner(
         }
         reads[key] = job
         mutable.update { it.copy(loading = loading()) }
-        // Тихое чтение полосу не держит: сторож следит только за видимыми.
         if (!silent) {
             guard(job, READ + key) {
                 if (reads[key] === job) {
@@ -218,8 +214,6 @@ class CommandRunner(
         runCatching { stalls.stalled(Stall(key, details)) }
     }
 
-    // Старт тоже под пределом: [ready] не позван вовремя - полоса снимается, разработчик узнаёт, где встало.
-    // Запуск - последней строкой конструктора: все поля уже записаны, тело ждёт [limitMs] прежде, чем их читать.
     init {
         scope.launch {
             delay(limitMs)

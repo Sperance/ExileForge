@@ -14,8 +14,6 @@ import com.sperance.exileforge.rules.content.WardenRule
 import kotlin.math.max
 import kotlin.math.min
 
-// ==================== Стражи Разлома (3.96.0) ====================
-
 /** Источник строк украденного дара [code] - на герое (снятые) и на его тени (данные). */
 internal fun stolenSource(code: String) = "$STOLEN$code"
 
@@ -34,7 +32,7 @@ private fun Battle.riftBoss(): Fighter? = guardian?.let(foeFighters::get)
 private fun Battle.isGuardian(target: Fighter): Boolean = target.side == Side.MONSTER && target.index == guardian
 
 /**
- * Начало боя (3.96.0): Засада откладывает первые удары героя, Поглотитель встаёт сильнее на сытое им Эхо. Бросков
+ * Начало боя: Засада откладывает первые удары героя, Поглотитель встаёт сильнее на сытое им Эхо. Бросков
  * здесь нет: идолы встают на первом срезе.
  */
 internal fun Battle.riftOpen(fight: RiftFight) {
@@ -65,8 +63,6 @@ internal fun Battle.riftTick() {
     fight.rules.devourer?.let { devour(fight, it, boss) }
     fight.rules.lord?.let { lord(fight, it, boss) }
 }
-
-// ==================== Страж Врат ====================
 
 private fun Battle.warden(fight: RiftFight, rule: WardenRule, boss: Fighter) {
     if (!fight.wardenPhased && boss.life < boss.body.maxLife * rule.phaseAt / 100) {
@@ -145,8 +141,6 @@ internal fun Battle.skillLock(slot: Int): Double = riftFight?.let { (it.skillLoc
 /** Сколько ещё секунд заперт флакон [slot]; 0 - свободен. */
 internal fun Battle.flaskLock(slot: Int): Double = riftFight?.let { (it.flaskLocks.getOrElse(slot) { 0.0 } - time).coerceAtLeast(0.0) } ?: 0.0
 
-// ==================== Поглотитель эха ====================
-
 /** Раз в [DevourerRule.stealEvery] секунд (ниже порога - чаще) крадёт дар, и тень встаёт с ним, пока теней хватает. */
 private fun Battle.devour(fight: RiftFight, rule: DevourerRule, boss: Fighter) {
     val rate = if (boss.life < boss.body.maxLife * rule.phaseAt / 100) rule.phaseRate else 1.0
@@ -161,8 +155,6 @@ private fun Battle.devour(fight: RiftFight, rule: DevourerRule, boss: Fighter) {
     if (fight.stolen.size > rule.shades) return
     summon(boss, 1).forEach { shade -> buff(foeFighters[shade], stolenSource(boon.code), boon.lines, FOREVER) }
 }
-
-// ==================== Владыка Разлома ====================
 
 private fun Battle.lord(fight: RiftFight, rule: LordRule, boss: Fighter) {
     val lost = fight.lastLife - boss.life
@@ -238,8 +230,8 @@ internal fun Battle.bloodPrice(me: Fighter) {
 }
 
 /**
- * Жизнь [amount], данная [me] (3.96.0): все пути лечения героя идут через неё. Под «Лечение ранит» герой теряет её, но не
- * последнюю единицу; вне Закона - прежняя формула. Сколько вылечено. [overheal] (4.6.1) - лечение, излишек которого сверх
+ * Жизнь [amount], данная [me]: все пути лечения героя идут через неё. Под «Лечение ранит» герой теряет её, но не
+ * последнюю единицу; вне Закона - обычная формула. Сколько вылечено. [overheal] - лечение, излишек которого сверх
  * полного здоровья героя берёт Предначертание (похищение, за удар и убийство, фляги).
  */
 internal fun Battle.lifeBack(me: Fighter, amount: Double, overheal: Boolean = false): Double {

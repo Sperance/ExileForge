@@ -29,7 +29,7 @@ import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.StatFold
 
 /**
- * Фляга на поясе (4.2.0): её лист из правил ([FlaskSheet] - ёмкость, расход, длительность, лечение, эффект с качеством, аффиксами
+ * Фляга на поясе: её лист из правил ([FlaskSheet] - ёмкость, расход, длительность, лечение, эффект с качеством, аффиксами
  * и бонусами героя) и когда её пьют сами - условие пояса, а без него - вида фляги. Бой и карточка читают одно и то же правило.
  */
 data class BeltFlask(val sheet: FlaskSheet, val condition: SlotCondition) {
@@ -59,13 +59,13 @@ val FlaskSheet.skillsFree: Boolean get() = own(FlaskStat.SKILLS_FREE.code) > 0
 val FlaskSheet.hexes: Boolean get() = own(FlaskStat.HITS_CURSE.code) > 0
 
 /**
- * Умение в бою (4.9.0: одно с правилами, [com.sperance.exileforge.rules.sheet.KitSkill]) - что оно, изученный уровень и когда
+ * Умение в бою (одно с правилами, [com.sperance.exileforge.rules.sheet.KitSkill]) - что оно, изученный уровень и когда
  * срабатывает его слот; уровень в бою - по телу героя ([Combatant] читает лист как [com.sperance.exileforge.rules.sheet.StatReader]).
  */
 typealias KitSkill = com.sperance.exileforge.rules.sheet.KitSkill
 
 /**
- * What the hero brings to a fight beyond the sheet (2.78.0): the three active slots in the order they
+ * What the hero brings to a fight beyond the sheet: the three active slots in the order they
  * are tried, the passive skills, the three flasks of the belt — null where a place is empty — and the
  * class's curses, for a flask that hexes with them. The level of every skill is read off the sheet of
  * the moment, so gear, the atlas and the map count.
@@ -75,20 +75,20 @@ data class Loadout(
     val passives: List<KitSkill> = emptyList(),
     val flasks: List<BeltFlask?> = emptyList(),
     val curses: List<KitSkill> = emptyList(),
-    /** The book of the unique items' powers (2.79.0): which of them the hero has, their sheet says. */
+    /** The book of the unique items' powers: which of them the hero has, their sheet says. */
     val powers: PowerBook = PowerBook(),
-    /** The rules of the hero's frenzy, power and endurance charges (3.33.0, server 1.32.0); null - зарядов нет (4.12.x). */
+    /** The rules of the hero's frenzy, power and endurance charges; null - зарядов нет. */
     val charges: ChargeRules? = null,
-    /** Предначертание аккаунта (4.6.0): рычаги боя ([FateKit]). */
+    /** Предначертание аккаунта: рычаги боя ([FateKit]). */
     val fate: FateKit = FateKit.NONE,
 ) {
-    /** Умения героя правилами (4.9.0): резерв аур и строки пассивных считает [HeroKit], тот же, что у Мощи сервера. */
+    /** Умения героя правилами: резерв аур и строки пассивных считает [HeroKit], тот же, что у Мощи сервера. */
     val heroKit: HeroKit by lazy { HeroKit(actives, passives, curses) }
 
     /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
     fun reserved(hero: Combatant): Double = heroKit.reserved(hero, hero.rules.floors.reserve)
 
-    /** Сколько процентов максимума маны держит пассивное умение [passive] (4.6.4): аура - свою долю на эффективности резерва листа. */
+    /** Сколько процентов максимума маны держит пассивное умение [passive]: аура - свою долю на эффективности резерва листа. */
     fun reserve(passive: KitSkill, hero: Combatant): Double = heroKit.reserve(passive, hero, hero.rules.floors.reserve)
 
     /**
@@ -106,7 +106,7 @@ data class Loadout(
     companion object {
         /**
          * The hero's loadout from the character's [skills] as the server keeps them, the world's [index] and
-         * the flasks worn on the belt, in its order — [flasks] null where a place is empty. С 4.4.0 каждое умение -
+         * the flasks worn on the belt, in its order — [flasks] null where a place is empty. Каждое умение -
          * умение героя в бою (`SkillForge`: тир и руны) по листу героя [stats].
          */
         fun of(
@@ -134,14 +134,14 @@ data class Loadout(
 }
 
 /**
- * Предначертание в бою (4.6.0): рычаги дара на его силе ([effects], один резолвер правил). Без дара - [NONE]: бой идёт, как шёл.
+ * Предначертание в бою: рычаги дара на его силе ([effects], один резолвер правил). Без дара - [NONE]: бой идёт, как шёл.
  */
 class FateKit(val effects: FateEffects) {
     companion object {
         val NONE = FateKit(FateEffects.NONE)
 
         /**
-         * Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`) с судьбоносными строками надетого [equipped] (4.6.2). В
+         * Дар героя [fate] на силе его листа [stats] (`STOCK_FATE_EFFECT`) с судьбоносными строками надетого [equipped]. В
          * заходе бой берёт замороженный дар захода ([of] от `Run.fate`).
          */
         fun of(index: ContentIndex, fate: String?, stats: Map<String, Double>, equipped: Collection<ItemInstance> = emptyList()): FateKit = of(index.fates.effects(fate, stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, equipped)))
@@ -152,7 +152,7 @@ class FateKit(val effects: FateEffects) {
 }
 
 /**
- * How a fighter's sheet takes the lines laid on it mid-fight (2.78.0) — a buff, a curse, a flask — and
+ * How a fighter's sheet takes the lines laid on it mid-fight — a buff, a curse, a flask — and
  * becomes a body again. The hero's goes back to the sheet's own operations; a monster's folds the lines
  * over its rolled stats as its modifiers were.
  */
@@ -166,10 +166,10 @@ fun interface BodyModel {
     }
 }
 
-/** Lines over a finished stat table (2.78.0), for a fighter with no sheet behind it. */
+/** Lines over a finished stat table, for a fighter with no sheet behind it. */
 object StatLines {
     /**
-     * Строки поверх готовых характеристик - свод правил [StatFold] (4.12.x, R1): как у монстра и листа героя, процент-стат [percent]
+     * Строки поверх готовых характеристик - свод правил [StatFold]: как у монстра и листа героя, процент-стат [percent]
      * складывает увеличение прибавкой и берёт «больше» на весь множитель, общие характеристики раскладываются, увеличение урона
      * вообще ложится на каждый удар монстра ([GuardianFloor.STRIKES]). Своей формулы клиент не держит.
      */
@@ -180,7 +180,7 @@ object StatLines {
 }
 
 /**
- * The hero as a run takes them (2.78.0): the sheet and what it was added up from, their level, whom
+ * The hero as a run takes them: the sheet and what it was added up from, their level, whom
  * they pick and how far they reach, and what they bring beyond the sheet.
  */
 data class HeroGear(
@@ -194,16 +194,16 @@ data class HeroGear(
 )
 
 /**
- * How the hero's body is made in a run (2.78.0): the sheet with the passives and the lines of the
+ * How the hero's body is made in a run: the sheet with the passives and the lines of the
  * moment laid among its operations, then the map's and the atlas's share over it.
  */
 class HeroBuild(
     val gear: HeroGear,
     private val mapEffects: Map<String, Double>,
     private val rules: CombatRules,
-    /** Строки поверх листа на весь заход (3.96.0): дары и проклятия Разлома. */
+    /** Строки поверх листа на весь заход: дары и проклятия Разлома. */
     private val extra: List<StatLine> = emptyList(),
-    /** Источники долей [mapEffects] (4.10.x): древо гильдии и зелье подписывают свои сдвиги листа. */
+    /** Источники долей [mapEffects]: древо гильдии и зелье подписывают свои сдвиги листа. */
     private val origins: EffectOrigins = EffectOrigins.NONE,
 ) : HeroModel {
     private fun sheet(lines: List<StatLine>): Map<String, Double> = (extra + lines).let { all -> gear.model?.with(all) ?: StatLines.fold(gear.stats, all, gear.percent) }
@@ -220,7 +220,7 @@ class HeroBuild(
     /** The passives' lines that wait for low life; the fight lays them on while it lasts. */
     override val lowLife: List<StatLine> by lazy { gear.kit.lowLifeLines(bare) }
 
-    /** Рост урона листа с пассивами и [lines] (0.15.0): увеличения и «больше» вида, на них растут чары и урон во времени. */
+    /** Рост урона листа с пассивами и [lines]: увеличения и «больше» вида, на них растут чары и урон во времени. */
     override fun growth(lines: List<StatLine>): DamageGrowth = gear.model?.growth(passives + lines) ?: DamageGrowth.NONE
 
     override fun conditional(active: Set<Condition>): List<StatLine> = gear.model?.conditional(active).orEmpty()
@@ -232,8 +232,8 @@ class HeroBuild(
 }
 
 /**
- * The hero's [BodyModel] (2.78.0): the lines low life lays on and, for a spell of an element, the
- * increases of that element on the sheet — a monster has neither. С 0.15.0 (реш. 4) - рост урона [growth]: увеличения и «больше» вида.
+ * The hero's [BodyModel]: the lines low life lays on and, for a spell of an element, the
+ * increases of that element on the sheet — a monster has neither. Рост урона [growth]: увеличения и «больше» вида.
  */
 interface HeroModel : BodyModel {
     val lowLife: List<StatLine>
@@ -241,19 +241,19 @@ interface HeroModel : BodyModel {
     /** Рост урона вида листа со строками [lines]: увеличения и «больше» ([DamageGrowth] правил). */
     fun growth(lines: List<StatLine>): DamageGrowth
 
-    /** The conditional lines of the sheet (3.35.0) that hold under [active]. */
+    /** The conditional lines of the sheet that hold under [active]. */
     fun conditional(active: Set<Condition>): List<StatLine> = emptyList()
 
-    /** The same lines with the condition each waits for (3.37.0). */
+    /** The same lines with the condition each waits for. */
     fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = emptyList()
 
-    /** The sheet taken apart by source (3.37.0): what the log's card lays a hero's stat out with; null for a bare body. */
+    /** The sheet taken apart by source: what the log's card lays a hero's stat out with; null for a bare body. */
     val explainer: SheetExplainer? get() = null
 
-    /** The passives' lines laid over the sheet in a run (3.37.0). */
+    /** The passives' lines laid over the sheet in a run. */
     val passiveLines: List<StatLine> get() = emptyList()
 
-    /** What the map and the atlas moved on the sheet, by stat (3.37.0). */
+    /** What the map and the atlas moved on the sheet, by stat. */
     fun shifts(): Map<String, List<Shift>> = emptyMap()
 
     /** The increased damage the sheet's lines give against a target in [states]. */
@@ -270,9 +270,9 @@ interface HeroModel : BodyModel {
 }
 
 /**
- * What one draught gives (2.78.0): life, mana and shield at once, life and mana a second while it
+ * What one draught gives: life, mana and shield at once, life and mana a second while it
  * runs, the lines it lays on for [duration] seconds, and the seconds nothing touches the hero.
- * [conditional] (4.9.x) - строки фляги с условием: держатся во время глотка, лишь пока держится их условие.
+ * [conditional] - строки фляги с условием: держатся во время глотка, лишь пока держится их условие.
  */
 data class Draught(
     val life: Double,
@@ -284,11 +284,11 @@ data class Draught(
     val duration: Double,
     val invulnerable: Double,
     val conditional: List<ConditionalLine> = emptyList(),
-    /** Доли вылеченного здоровья, что глоток отдаёт мане и энергощиту (4.12.x, STAT-MISC-09): от фактически вылеченного, сразу и за время. */
+    /** Доли вылеченного здоровья, что глоток отдаёт мане и энергощиту: от фактически вылеченного, сразу и за время. */
     val toMana: Double = 0.0,
     val toShield: Double = 0.0,
 ) {
-    /** Gives nothing but life (3.79.0): such a draught stops at full life and is not drunk on a full bar. */
+    /** Gives nothing but life: such a draught stops at full life and is not drunk on a full bar. */
     val lifeOnly: Boolean get() = (life > 0 || lifeRate > 0) && mana <= 0 && manaRate <= 0 && shield <= 0 && toMana <= 0 && toShield <= 0 && lines.isEmpty() && conditional.isEmpty() && invulnerable <= 0
 }
 
@@ -296,6 +296,8 @@ data class Draught(
  * A draught of this flask by [hero] at [life], mana up to [manaCap]: the recovery grows at low life by
  * its own line, the instant share comes now and the rest runs over the duration; a life flask may also
  * give mana or shield back, and any flask a sip of either.
+ *
+ * Условная строка фляги не ложится на героя без своего условия. Глоток маны - тоже восстановление фляги: «фляги не лечат» гасит и его.
  */
 fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught {
     val duration = duration(hero::get)
@@ -304,11 +306,9 @@ fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught 
     val lifeAmount = own(FlaskStat.LIFE.code) * recover
     val manaAmount = own(FlaskStat.MANA.code) * recover
     val scale = effect(hero::get)
-    // Условие строки (4.9.x) остаётся при ней: условная строка фляги не ложится на героя без условия
     val (steady, conditioned) = lines.partition { it.condition == null }
     return Draught(
         life = lifeAmount * instant,
-        // Глоток маны - тоже восстановление фляги (4.12.x, STAT-MISC-02): «фляги не лечат» гасит и его
         mana = manaAmount * instant + if (FlaskSheet.banned(CoreStat.FLASK_RECOVERY.code, hero::get)) 0.0 else manaCap * own("FLASK_SIP_MANA") / 100,
         shield = hero.maxShield * own("FLASK_SIP_SHIELD") / 100,
         lifeRate = lifeAmount * (1 - instant) / duration,

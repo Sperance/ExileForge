@@ -7,11 +7,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-/** Разделы доски квестов Города; сюжет (4.2.0) - не раздел доски, а свой экран «Похода», открытый с первого уровня. */
+/** Разделы доски квестов Города; сюжет - не раздел доски, а свой экран «Похода», открытый с первого уровня. */
 enum class QuestTab { DAILY, WEEKLY, CONTRACTS }
 
 /**
- * Квесты героя, как сервер ответил последним (3.23.0): [board] - ежедневные, недельные, контракты и шаг истории
+ * Квесты героя, как сервер ответил последним: [board] - ежедневные, недельные, контракты и шаг истории
  * на доске Города; [guild] - личные и общие квесты гильдии. Оба null, пока не прочитаны.
  */
 data class Quests(val board: QuestBoard? = null, val guild: GuildQuests? = null) {
@@ -25,10 +25,10 @@ data class Quests(val board: QuestBoard? = null, val guild: GuildQuests? = null)
     }
 }
 
-/** Задание, сданное разом после карты (4.10.0): его заголовок с целью и награда - строкой в итогах карты. */
+/** Задание, сданное разом после карты: его заголовок с целью и награда - строкой в итогах карты. */
 data class QuestTurnIn(val title: String, val rewards: QuestReward)
 
-/** Единственный источник правды о квестах (3.80.10). */
+/** Единственный источник правды о квестах. */
 class QuestRepository {
     private val mutable = MutableStateFlow(Quests())
     val state: StateFlow<Quests> = mutable

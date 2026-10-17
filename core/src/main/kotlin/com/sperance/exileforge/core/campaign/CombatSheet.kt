@@ -28,14 +28,14 @@ import com.sperance.exileforge.rules.sheet.StatSource
 import kotlin.math.abs
 
 /**
- * Пассивное умение героя в бою (4.6.4): код [skill], уровень [level], на котором оно действует, доля маны [reserve], что держит аура,
+ * Пассивное умение героя в бою: код [skill], уровень [level], на котором оно действует, доля маны [reserve], что держит аура,
  * его строки [lines] на листе (аура - на силе `STOCK_AURA_EFFECT`) и ждёт ли оно низкого здоровья ([lowLife]).
  */
 data class PassiveSource(val skill: String, val level: Int, val reserve: Double, val lines: List<StatLine>, val lowLife: Boolean)
 
 /**
- * Что бой читает вместе с характеристикой (4.6.4, как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] - общее
- * сопротивление стихиям к каждой стихии. Восстановление (0.15.0, #50) - потоком правил по шагам ([steps]): регенерация здоровья и
+ * Что бой читает вместе с характеристикой (как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] - общее
+ * сопротивление стихиям к каждой стихии. Восстановление - потоком правил по шагам ([steps]): регенерация здоровья и
  * маны (`Recovery.lifeFlow`/`manaFlow`), щита и здоровье за убийство - так строка сводки равна тому, что даёт бой, а разбор
  * называет каждую часть. [creates] - строка сводки появляется и без своей характеристики (общее сопротивление даёт строки стихий,
  * доля максимума - строку регенерации); иначе прибавка ложится лишь на уже бывшую строку. Часть строки сводки из контента
@@ -47,15 +47,15 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
     LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
 
     /**
-     * Регенерация здоровья (#50): строка сводки - итог потока здоровья в секунду, как его читает бой ([Recovery.lifeFlow]): плоская,
+     * Регенерация здоровья: строка сводки - итог потока здоровья в секунду, как его читает бой ([Recovery.lifeFlow]): плоская,
      * доля максимума, общий множитель правил и доля восстановления, регенерация из маны, скорость восстановления, потери и деген.
      */
     LIFE_REGEN(RegenPool.LIFE.flatStat, RegenPool.LIFE.shareStat, true) {
+        /** Отрицательная сумма - потеря: множитель и доля её не режут. */
         override fun steps(body: Combatant): List<ReadingStep> {
             val flow = Recovery.lifeFlow(body, body.rules)
             return ReadingSteps(body[stat]).apply {
                 to(ReadingPart.LIFE_OF_MAX, flow.raw)
-                // Отрицательная сумма - потеря: множитель и доля её не режут
                 if (flow.raw > 0) {
                     to(ReadingPart.LIFE_RULE, flow.raw * flow.rule, flow.rule)
                     to(ReadingPart.LIFE_SHARE, flow.regen, flow.share)
@@ -67,7 +67,7 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
         }
     },
 
-    /** Регенерация щита (#50): плоская и доля максимума на скорость восстановления - как в бою (`EnergyShield.recovered`). */
+    /** Регенерация щита: плоская и доля максимума на скорость восстановления - как в бою (`EnergyShield.recovered`). */
     SHIELD_REGEN(RegenPool.SHIELD.flatStat, RegenPool.SHIELD.shareStat, true) {
         override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
             val raw = RegenPool.SHIELD.flat(body) + RegenPool.SHIELD.fromShare(body)
@@ -77,7 +77,7 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
     },
 
     /**
-     * Регенерация маны (4.11.x; #50): строка сводки - итог потока маны в секунду ([Recovery.manaFlow]): к плоской - доля максимума по
+     * Регенерация маны: строка сводки - итог потока маны в секунду ([Recovery.manaFlow]): к плоской - доля максимума по
      * правилу боя, её «увеличение» `STOCK_MANA_REGEN` и доля восстановления.
      */
     MANA_REGEN(CoreStat.MANA_REGEN_FLAT.code, CoreStat.MANA_REGEN.code, true) {
@@ -92,7 +92,7 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
         }
     },
 
-    /** Здоровье за убийство (#50): плоское и доля максимума на скорость восстановления - как в бою (`Battle.slain`). */
+    /** Здоровье за убийство: плоское и доля максимума на скорость восстановления - как в бою (`Battle.slain`). */
     LIFE_ON_KILL(CoreStat.HEALTH_ON_KILL.code, CoreStat.HEALTH_ON_KILL_PERCENT.code, true) {
         override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply {
             val raw = body.lifeOnKill + body.maxLife * body.lifeOnKillShare
@@ -102,7 +102,7 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
     },
     ;
 
-    /** Шаги чтения тела [body] поверх цифры [stat] (#50); null - чтение одной прибавкой характеристики [from]. */
+    /** Шаги чтения тела [body] поверх цифры [stat]; null - чтение одной прибавкой характеристики [from]. */
     open fun steps(body: Combatant): List<ReadingStep>? = null
 
     /** Что бой прибавляет к цифре [stat] тела [body]: сумма шагов или сама характеристика [from]. */
@@ -114,7 +114,7 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
 }
 
 /**
- * Часть чтения боя (0.15.0, #50) - строка разбора восстановления со своим именем (`stat.flow.<часть>`) и характеристикой [stat],
+ * Часть чтения боя - строка разбора восстановления со своим именем (`stat.flow.<часть>`) и характеристикой [stat],
  * что её задаёт (касание открывает её разбор; у правила боя её нет). В разборе часть - сдвиг чтения боя с источником [ref].
  */
 enum class ReadingPart(val stat: String?) {
@@ -143,7 +143,7 @@ enum class ReadingPart(val stat: String?) {
 }
 
 /**
- * Шаг чтения боя (#50): часть [part], что она меняет в цифре ([delta]), и множитель [factor] прежнего итога, если шаг - множитель
+ * Шаг чтения боя: часть [part], что она меняет в цифре ([delta]), и множитель [factor] прежнего итога, если шаг - множитель
  * (правило боя, доля, скорость восстановления); прибавка - null.
  */
 data class ReadingStep(val part: ReadingPart, val delta: Double, val factor: Double? = null)
@@ -166,7 +166,7 @@ private class ReadingSteps(start: Double) {
 }
 
 /**
- * Цифры сводки героя (4.6.4): [values] - что показывает строка (с частями, что бой читает вместе с ней, [FightReading]),
+ * Цифры сводки героя: [values] - что показывает строка (с частями, что бой читает вместе с ней, [FightReading]),
  * [skilled] - строки, что сдвинули пассивные умения (значок ауры), [fated] - Предначертание (✦).
  */
 data class StatFigures(
@@ -178,12 +178,12 @@ data class StatFigures(
 )
 
 /**
- * Лист героя, как его читает бой (4.6.4): лист правил с пассивными умениями (ауры - на силе `STOCK_AURA_EFFECT`, с резервом маны) и
- * преобразованиями Предначертания - боевым листом правил ([HeroBody], 4.9.0: тот же свод, что у тела героя в заходе без карты и у Мощи сервера). Одна точка для сводки, разбора
+ * Лист героя, как его читает бой: лист правил с пассивными умениями (ауры - на силе `STOCK_AURA_EFFECT`, с резервом маны) и
+ * преобразованиями Предначертания - боевым листом правил ([HeroBody], тот же свод, что у тела героя в заходе без карты и у Мощи сервера). Одна точка для сводки, разбора
  * характеристики и сравнений вещи и узла дерева: их цифры не расходятся с боем и между собой.
  */
 class CombatSheet(private val index: ContentIndex, private val model: SheetModel, level: Int, val kit: Loadout) {
-    /** Боевой лист героя правилами (4.9.0): свод листа с пассивными умениями - тот же, из которого сервер считает Мощь. */
+    /** Боевой лист героя правилами: свод листа с пассивными умениями - тот же, из которого сервер считает Мощь. */
     private val hero = HeroBody(index, model.fold, level, kit.heroKit, kit.flasks.mapNotNull { it?.sheet })
 
     /** Тело героя без пассивных умений: с него читаются их уровни и сила аур. */
@@ -229,15 +229,15 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     }
 
     /**
-     * Мощь героя (4.8.0) по телу боя без карты: печать листа героя и «было» сравнения вещи. С 4.9.0 - [Might.hero] правил: натиск с
+     * Мощь героя по телу боя без карты: печать листа героя и «было» сравнения вещи - [Might.hero] правил: натиск с
      * умениями, одна функция с сервером.
      */
     val might: MightReading by lazy { Might.hero(index, hero) }
 
-    /** Что Мощь берёт сверх листа (4.9.x): урон умений, резерв маны аурами, фляги - с ним бой меряет Мощь героя под эффектами карты. */
+    /** Что Мощь берёт сверх листа: урон умений, резерв маны аурами, фляги - с ним бой меряет Мощь героя под эффектами карты. */
     val mightExtras: MightExtras get() = hero.extras
 
-    /** Разбор стойкости Мощи героя (4.9.x) для листа героя: запас, мана перед здоровьем, уклонение, получаемый урон, пополнение. */
+    /** Разбор стойкости Мощи героя для листа героя: запас, мана перед здоровьем, уклонение, получаемый урон, пополнение. */
     val mightDefense: MightDefense by lazy { Might.defense(index, hero) }
 
     /** Цифры сводки без отметок: что сравнивают вещь и узел дерева. */
@@ -256,13 +256,13 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         return StatFigures(values, marked(skilled, values.keys), marked(fated, values.keys), stats)
     }
 
+    /** Прибавки к добыче - характеристика листа и силы уникалок против всех монстров: тот же `Powers.loot`, что катит сервер. */
     private fun read(fighter: Combatant): Map<String, Double> {
         val values = fighter.stats.toMutableMap()
         FightReading.entries.forEach { reading ->
             val add = reading.adds(fighter)
             if (reading.stat in fighter.stats || (reading.creates && add != 0.0)) values[reading.stat] = (fighter.stats[reading.stat] ?: 0.0) + add
         }
-        // Прибавки к добыче (4.10.x): характеристика листа и силы уникалок против всех монстров - тот же `Powers.loot`, что катит сервер
         LOOT.forEach { kind ->
             val stat = kind.stock!!.code
             index.powers.loot(fighter.stats, kind).takeIf { it != 0.0 || stat in fighter.stats }?.let { values[stat] = it }
@@ -270,16 +270,16 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         return values
     }
 
-    /** Шаги чтения боя цифры [stat] на теле героя (#50): части восстановления с множителями - для строк и формулы разбора. */
+    /** Шаги чтения боя цифры [stat] на теле героя: части восстановления с множителями - для строк и формулы разбора. */
     fun steps(stat: String): List<ReadingStep> = FightReading.entries.filter { it.stat == stat }.flatMap { it.steps(body).orEmpty() }
 
-    /** Силы уникалок в прибавке добычи [stat] (4.10.x): каждая сила против всех монстров - своим сдвигом, как её считает [read]. */
+    /** Силы уникалок в прибавке добычи [stat]: каждая сила против всех монстров - своим сдвигом, как её считает [read]. */
     private fun lootPowers(stat: String): List<Shift> = LOOT.filter { it.stock?.code == stat }.flatMap { kind ->
         index.powers.worldParts(stats, kind).filter { it.on(null) }.map { Shift(StatSource(SourceKind.POWER, it.stat), it.value) }
     }
 
     /**
-     * Силы добычи у строки сводки [stat], что в её цифру не входят (4.12.x, STAT-PW1-13): против отдельных редкостей монстров - у своей
+     * Силы добычи у строки сводки [stat], что в её цифру не входят: против отдельных редкостей монстров - у своей
      * характеристики, шансы уникальных предметов - у редкости, карт и книг - у количества. Сервер катит их все; сводка называет их
      * отдельно, как бонусы низкого здоровья.
      */
@@ -306,7 +306,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
      * Из чего сложилась цифра сводки [stat]: лист по источникам с пассивными умениями и шагами Предначертания, «больше» процент-стата
      * от умений и что бой читает вместе с ней ([FightReading], источник [SourceKind.FIGHT]) - итог равен [figures].
      *
-     * 4.10.x: [layer] - сдвиги листа эффектами карты, атласа, гильдии и зелья по характеристике (`MapEffects.heroShifts`): свои
+     * [layer] - сдвиги листа эффектами карты, атласа, гильдии и зелья по характеристике (`MapEffects.heroShifts`): свои
      * сдвиги цифры ложатся как есть, а сдвиги того, что бой читает вместе с ней (общее сопротивление стихиям, доля регенерации,
      * максимум здоровья), - на её чтение: каждый источник своим сдвигом, так итог равен цифре [figures] листа под картой.
      */
@@ -317,14 +317,15 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /**
      * Что сдвиги [layer] сделали с чтением [reading]: каждый источник положен на лист один, а что они делают только вместе -
-     * последнему, как в `MapEffects.heroShifts`; сумма равна чтению листа под всеми сдвигами, и своей цифры тоже (#50).
+     * последнему, как в `MapEffects.heroShifts`; сумма равна чтению листа под всеми сдвигами, и своей цифры тоже.
+     *
+     * Сдвиг самой цифры тоже двигает чтение (плоскую регенерацию режут множитель и доля) - сверх своего сдвига.
      */
     private fun read(reading: FightReading, layer: Map<String, List<Shift>>): List<Shift> {
         if (layer.isEmpty()) return emptyList()
         val own = reading.adds(body)
         fun under(moves: List<Pair<String, Double>>): Double = reading.adds(Combatant(moves.fold(stats) { sheet, (key, delta) -> sheet + (key to (sheet[key] ?: 0.0) + delta) }, body.level, body.rules)) - own
         val bySource = LinkedHashMap<StatSource, MutableList<Pair<String, Double>>>()
-        // Сдвиг самой цифры тоже двигает чтение (#50: плоскую регенерацию режут множитель и доля) - сверх своего сдвига
         layer.forEach { (key, shifts) -> shifts.forEach { bySource.getOrPut(it.source) { mutableListOf() } += key to it.delta } }
         val parts = bySource.mapNotNull { (source, moves) -> under(moves).takeIf { abs(it) >= MOVED }?.let { Shift(source, it, reading.from) } }.toMutableList()
         val rest = under(bySource.values.flatten()) - parts.sumOf { it.delta }

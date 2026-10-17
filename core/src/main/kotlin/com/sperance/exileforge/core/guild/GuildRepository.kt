@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Разделы гильдии, каждый - плитка её зала. [requires] (4.4.x) - право таблицы [GuildPolicy], без которого раздела нет:
+ * Разделы гильдии, каждый - плитка её зала. [requires] - право таблицы [GuildPolicy], без которого раздела нет:
  * заявки - тем, кто вправе отвечать на них, настройки - главе; null - раздел открыт всем участникам.
  */
 enum class GuildTab(val requires: GuildAction? = null) {
@@ -35,20 +35,20 @@ data class Guilds(
     val mine: GuildMine? = null,
     val query: String = "",
     val search: GuildPage = GuildPage(),
-    /** Фракция, до которой сужен список (3.28.0); пусто - все. */
+    /** Фракция, до которой сужен список; пусто - все. */
     val faction: String = "",
     /** Раздел, открытый над залом гильдии; null - сам зал. */
     val tab: GuildTab? = null,
     val log: List<GuildLogEntry> = emptyList(),
     val logPage: Int = 0,
     val logEnd: Boolean = false,
-    /** Хранилище гильдии (3.79.0), читается при входе в раздел. */
+    /** Хранилище гильдии, читается при входе в раздел. */
     val stash: GuildStashView? = null,
-    /** Превью приглашения (4.7.0): кого позовёт введённый номер или имя; null - не искали или поле сменилось. */
+    /** Превью приглашения: кого позовёт введённый номер или имя; null - не искали или поле сменилось. */
     val recruit: com.sperance.exileforge.core.model.guild.GuildRecruit? = null,
 )
 
-/** Единственный источник правды о гильдии (3.80.13). */
+/** Единственный источник правды о гильдии. */
 class GuildRepository {
     private val mutable = MutableStateFlow(Guilds())
     val state: StateFlow<Guilds> = mutable

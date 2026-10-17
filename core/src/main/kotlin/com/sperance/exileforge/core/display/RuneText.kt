@@ -7,11 +7,11 @@ import com.sperance.exileforge.rules.content.RuneOp
 import com.sperance.exileforge.rules.text.LocaleKey
 import kotlin.math.floor
 
-/** Тир умения римской цифрой (4.4.0) - из словаря: «I», «II», «III». */
+/** Тир умения римской цифрой - из словаря: «I», «II», «III». */
 fun roman(tier: Int): String = ui("skills.tier_mark.$tier")
 
 /**
- * Руна умения словами игрока (4.4.0): семейство и действие - словарь сервера (`EnumRuneFamily`, `rune.op.*`), виды умений и
+ * Руна умения словами игрока: семейство и действие - словарь сервера (`EnumRuneFamily`, `rune.op.*`), виды умений и
  * стихийное действие - словарь клиента. Числа руны растут на её силу [power] (`1 + STOCK_RUNE_EFFECT / 100`), как в бою.
  */
 object RuneText {

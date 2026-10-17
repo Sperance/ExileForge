@@ -9,7 +9,7 @@ import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.run.PackHit
 
 /**
- * Разбор боя (0.14.4, #30, макет «Разбор боя», вариант A «Три вкладки»): что нанёс герой ([dealt]), что получил ([taken]) и что
+ * Разбор боя: что нанёс герой ([dealt]), что получил ([taken]) и что
  * сделали защиты ([guard]) - из следов ударов боя ([HitTrace], [TickTrace], [NoteTrace]); бой ничего не считает заново. Бой и весь
  * заход - одна мера: разбор захода - сумма разборов его боёв ([plus]).
  */
@@ -21,7 +21,7 @@ data class FightStats(
 ) {
     /**
      * Урон героя по врагам: по типам и умениям, удары, криты, промахи, заблокированные, сильнейший удар и что срезали защиты врагов.
-     * Яд (0.15.0, реш. 43) - своей графой [poison], не хаосом; [exposed] - что прибавило Разложение врагов (часть урона, не сверх него).
+     * Яд - своей графой [poison], не хаосом; [exposed] - что прибавило Разложение врагов (часть урона, не сверх него).
      */
     data class Dealt(
         val byType: Map<DamageType, Double> = emptyMap(),
@@ -56,7 +56,7 @@ data class FightStats(
 
     /**
      * Урон врагов по герою: по типам, удары и сильнейший; куда лёг урон ударов - барьер, щит, мана, отложенный, здоровье - и урон
-     * недугов отдельно (у тика нет разбора по запасам). Яд (0.15.0) - своей графой [poison], [exposed] - что прибавило Разложение на герое.
+     * недугов отдельно (у тика нет разбора по запасам). Яд - своей графой [poison], [exposed] - что прибавило Разложение на герое.
      */
     data class Taken(
         val byType: Map<DamageType, Double> = emptyMap(),
@@ -213,10 +213,10 @@ private fun FightStats.Dealt.withBlow(event: CombatEvent, trace: HitTrace?): Fig
     }
 }
 
-/** Тик яда (0.15.0, реш. 43): в разборе - своя графа «Яд», а не хаос. */
+/** Тик яда: в разборе - своя графа «Яд», а не хаос. */
 private fun poisonTick(event: CombatEvent): Boolean = event.action == Action.TICK && event.ailment == Ailment.POISONED
 
-/** Что прибавило событию [event] Разложение цели (0.15.0): из следа удара или тика. */
+/** Что прибавило событию [event] Разложение цели: из следа удара или тика. */
 private fun exposedBy(event: CombatEvent): Double = when (val trace = event.trace) {
     is HitTrace -> trace.exposed
     is TickTrace -> trace.exposed

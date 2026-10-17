@@ -26,7 +26,7 @@ import kotlinx.serialization.json.jsonObject
 /**
  * The server's dictionary for one language — a flat table of key to string.
  *
- * Since 0.14.0 no document in Mongo carries text: an entity stores a code and the string lives
+ * No document in Mongo carries text: an entity stores a code and the string lives
  * here, under a key built from the entity's section and that code. [LocaleKey] builds those keys
  * the same way the server does, so the two cannot drift.
  *
@@ -77,7 +77,7 @@ class LocaleBundle(val language: String = "", val hash: String = "", private val
 @Volatile var serverLocale: LocaleBundle = LocaleBundle()
 
 /**
- * A server string by key. Без ключа в словаре (0.14.5, #48) - не сам ключ, а нейтральная заглушка, и дыра уходит в
+ * A server string by key. Без ключа в словаре - не сам ключ, а нейтральная заглушка, и дыра уходит в
  * [LocaleHoles]: словарь перечитывается, след ложится в отчёт.
  */
 fun loc(key: String): String = serverLocale.string(key) ?: LocaleHoles.missing(key)
@@ -86,7 +86,7 @@ fun loc(key: String): String = serverLocale.string(key) ?: LocaleHoles.missing(k
 fun loc(key: String, args: List<String>): String = if (serverLocale.contains(key)) serverLocale.format(key, args) else LocaleHoles.missing(key)
 
 /**
- * Имя из словаря сервера по первому ключу [keys], что в нём есть (0.15.0, #48): вещь, работа ремесла, умение - у кода бывает
+ * Имя из словаря сервера по первому ключу [keys], что в нём есть: вещь, работа ремесла, умение - у кода бывает
  * несколько мест в словаре. Нет ни одного - заглушка и дыра словаря по первому ключу, как у [loc], а не код.
  */
 fun locFirst(vararg keys: String): String = keys.firstOrNull(serverLocale::contains)?.let { serverLocale[it] } ?: LocaleHoles.missing(keys.first())
@@ -106,21 +106,20 @@ fun locOr(key: String, fallback: String): String = if (serverLocale.contains(key
  * finished sentence and the code — never the arguments that filled the template. So a template with
  * holes in it cannot be rebuilt here and the server's own sentence stands; a template without holes
  * is already a whole sentence and is shown in the chosen language.
+ *
+ * Id в отказе игроку ничего не говорит: аргумент-id не подставляется, код ошибки остаётся отчёту. Незаполненная дыра шаблона значит, что
+ * сервер прислал меньше аргументов, чем шаблон ждёт, - полфразы хуже его собственного текста.
  */
 fun locError(code: String?, message: String, args: List<String> = emptyList()): String {
     if (code.isNullOrBlank()) return withoutIds(message)
     val key = LocaleKey.error(code)
     if (!serverLocale.contains(key)) return withoutIds(message)
-    // Id в отказе игроку ничего не говорит (4.12.x, ASANA-03): аргумент-id не подставляется, код ошибки остаётся отчёту
     val shown = args.map { if (ID.matches(it.trim())) "" else it }
     val text = serverLocale.format(key, shown).let { if (shown != args) tidy(it) else withoutIds(it) }
-    // A hole left unfilled means the server sent fewer arguments than the template wants, and half
-    // a sentence is worse than the server's own. This is now rare: since 0.17.0 the envelope
-    // carries what it interpolated.
     return if (HOLE.containsMatchIn(text)) withoutIds(message) else text
 }
 
-/** [text] без id-подобных слов (ASANA-03): id записей (24 hex), UUID и длинные hex-ключи; пустые скобки и кавычки убраны. */
+/** [text] без id-подобных слов: id записей (24 hex), UUID и длинные hex-ключи; пустые скобки и кавычки убраны. */
 fun withoutIds(text: String): String = if (ID_WORD.containsMatchIn(text)) tidy(text.replace(ID_WORD, "")) else text
 
 /** Строка, из которой вынули слово: без пустых скобок и кавычек, двойных пробелов и пробела перед знаком. */
@@ -132,7 +131,7 @@ private val ID_WORD = Regex("(?i)(?<![0-9a-z])(?:[0-9a-f]{24}|[0-9a-f]{8}-[0-9a-
 private val EMPTY_WRAP = Regex("\\(\\s*\\)|«\\s*»|'\\s*'|\"\\s*\"")
 
 /**
- * Правило, спрошенное до команды (3.94.1): [check] из общих правил бросает [RuleViolation] - его отказ словами игрока, как
+ * Правило, спрошенное до команды: [check] из общих правил бросает [RuleViolation] - его отказ словами игрока, как
  * сказал бы сервер (ключи словаря в аргументах раскрыты); null - правило пропускает. Кнопка гаснет, причина - рядом.
  */
 fun ruleRefusal(check: () -> Unit): String? = try {
@@ -143,7 +142,7 @@ fun ruleRefusal(check: () -> Unit): String? = try {
 }
 
 /**
- * Отказ правил значением (4.2.0, [Refusal]) словами игрока: `error.<code>` с раскрытыми ключами в аргументах. Нет шаблона -
+ * Отказ правил значением ([Refusal]) словами игрока: `error.<code>` с раскрытыми ключами в аргументах. Нет шаблона -
  * [fallback], по умолчанию сам код.
  */
 fun refusalText(refusal: Refusal, fallback: String = refusal.code): String = locError(refusal.code, fallback, refusal.args.map { if (serverLocale.contains(it)) serverLocale[it] else it })

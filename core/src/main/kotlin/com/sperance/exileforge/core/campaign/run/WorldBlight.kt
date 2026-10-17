@@ -11,9 +11,7 @@ import kotlin.math.hypot
 import kotlin.math.sin
 import kotlin.random.Random
 
-// ==================== Скверна (4.0.0, сервер: MapFeature.Blight) ====================
-
-/** Что Скверна только что сделала - для строки над картой (4.0.0). */
+/** Что Скверна только что сделала - для строки над картой. */
 enum class BlightNews {
     /** Герой наступил на очаг: вокруг встали монстры Скверны. */
     AWAKE,
@@ -29,7 +27,7 @@ enum class BlightNews {
 }
 
 /**
- * Очаг Скверны на карте (4.0.0) как его видит полоса карты: точка [point] (с нуля; Матерь - номер [points]) из не больше чем
+ * Очаг Скверны на карте как его видит полоса карты: точка [point] (с нуля; Матерь - номер [points]) из не больше чем
  * [limit] точек правила; [raised] - её монстры уже встали, [left] из них ещё стоят; [chest] - качество сундука, что ждёт на
  * зачищенной точке (null - сундука нет); [news] - последнее, что сделала Скверна, под своим номером [told]: полоса объявляет
  * новость, только когда номер сменился. [over] - очаг исчерпан; [seen] - герой уже видел раскрытую точку.
@@ -49,7 +47,7 @@ data class BlightView(
 )
 
 /**
- * Очаг Скверны (4.0.0) - цепь точек [cells] по порядку: где каждая встанет, решило семя при расстановке, а видна точка, лишь
+ * Очаг Скверны - цепь точек [cells] по порядку: где каждая встанет, решило семя при расстановке, а видна точка, лишь
  * когда до неё дошла Скверна (сундук прежней открыт). Касание активной точки поднимает её жетоны кольцом вокруг неё
  * ([FeatureAction.Rouse]); когда пали все - на точке стоит сундук, касание открывает его выбором с номером точки. Сундук
  * последней точки будит Матерь (жетон точки [MapFeature.Blight.motherChoice]) на той же клетке, её сундук - после её смерти.
@@ -104,16 +102,14 @@ class BlightSpot(feature: MapFeature.Blight, val cells: List<Cell>) : FeatureSpo
 
     override val focus: Cell get() = at(active ?: (blight.choices - 1))
 
+    /** Матерь будит сундук последней точки, а не шаг героя. */
     override fun touch(world: ExpeditionWorld, dt: Double): FeatureAction? {
         clock += dt
         val point = active ?: return null
         val cell = at(point)
         return when {
-            // Матерь будит сундук последней точки, а не шаг героя
             !raised(point) -> if (point < blight.points && near(world, cell, world.rules.chestReach)) FeatureAction.Rouse(this, point) else null
-
             cleared(world, point) && near(world, cell, world.rules.chestReach) -> FeatureAction.Trigger(this, point)
-
             else -> null
         }
     }
@@ -177,7 +173,7 @@ class BlightSpot(feature: MapFeature.Blight, val cells: List<Cell>) : FeatureSpo
 }
 
 /**
- * Клетки точек очага Скверны (4.0.0): первая - из [pool] вдали от прочих объектов, каждая следующая - на пути в
+ * Клетки точек очага Скверны: первая - из [pool] вдали от прочих объектов, каждая следующая - на пути в
  * `chestSteps`..2×`chestSteps` шагов от прежней (иначе - дальняя доступная), все на полу и врозь. Броски - [random] расстановки.
  */
 internal fun ExpeditionWorld.blightCells(points: Int, first: Cell, pool: List<Cell>, taken: MutableSet<Cell>, random: Random): List<Cell> {
@@ -195,7 +191,7 @@ internal fun ExpeditionWorld.blightCells(points: Int, first: Cell, pool: List<Ce
 }
 
 /**
- * Кольцо из [count] клеток вокруг [center] (4.0.0): по кругу радиуса [RING_RADIUS] клеток, каждая - ближайший к своему месту
+ * Кольцо из [count] клеток вокруг [center]: по кругу радиуса [RING_RADIUS] клеток, каждая - ближайший к своему месту
  * на круге пол, куда от центра можно дойти, сам центр и занятое кольцом - мимо.
  */
 internal fun ExpeditionWorld.ring(center: Cell, count: Int): List<Cell> {

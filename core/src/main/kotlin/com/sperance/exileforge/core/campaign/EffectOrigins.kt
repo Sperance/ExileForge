@@ -7,7 +7,7 @@ import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.rules.sheet.StatSource
 
 /**
- * Откуда эффекты захода (4.10.x): сервер складывает строки атласа, древа гильдии и выпитого зелья в один `RunContext.atlas`, а
+ * Откуда эффекты захода: сервер складывает строки атласа, древа гильдии и выпитого зелья в один `RunContext.atlas`, а
  * их доли называет отдельно (`RunContext.guild`, `RunContext.potion`). По ним сдвиг листа подписан своим источником -
  * «Древо гильдии», «Зелье», а не строка карты; остаток строки - атлас или карта по коду ([fallback]).
  */

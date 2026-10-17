@@ -15,14 +15,26 @@ import com.sperance.exileforge.rules.content.SkillEvent
 import kotlin.math.max
 import kotlin.math.min
 
-// ==================== The strike (2.78.0) ====================
-
-/** Доля удара [attacker] по [target], что проходит (4.0.0): осквернённый монстр бьёт героя слабее на его снижение от Скверны. */
+/** Доля удара [attacker] по [target], что проходит: осквернённый монстр бьёт героя слабее на его снижение от Скверны. */
 internal fun Battle.blightTaken(attacker: Fighter, target: Fighter): Double = if (target === heroFighter && attacker.side == Side.MONSTER && foes[attacker.index].tainted) 1 - target.body.blightReduction else 1.0
 
 /**
  * One blow of [me] at [target] — a weapon's swing, a skill's hit, a spell: evaded unless a spell,
  * blocked, or landed and maybe critical; then armour, resistance and shock.
+ *
+ * Порядок удара:
+ * - месть Предначертания - крит наверняка, заряд «из-под плаща» цел, множитель крита - до траты заряда; броски берутся до любых перемен;
+ * Удача рода - уклонение, блок и крит героя лучшим из двух бросков;
+ * - крит не легче удара; доп. урон крита по цели - доля `critTaken` от прибавки крита сверх удара; двойной удар, строки героя против
+ * состояния цели (увеличения рядом с увеличениями удара) и что пропускают подавление и отклонение;
+ * - пробивание снимает часть сопротивления, «получаемый урон» и проклятие цели растят прошедшее; слабее всего сопротивляемая стихия
+ * пробивается глубже;
+ * - Разлом («Тяжкие удары», печати Стража, «Одна стихия» Владыки) и Предначертание (рычаги героя тяжелее, враг легче); разброс урона героя
+ * - больший из двух бросков;
+ * - зеркало урона - запас сверх удара теми же типами по долям, до защит цели;
+ * - урон для недугов - после защит и «получаемого урона» цели, без шока, подавления и Укрепления; основа яда - до защит без множителя крита
+ * ([unmitigated]), урон ударами недуги не растит; Разложение - урон своего вида, что прибавили стаки цели, графа разбора;
+ * - удар конечен: NaN и бесконечность - не урон; отражение - только от ударов, чары и недуги не отражаются.
  */
 internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     val body = blow.body ?: me.body
@@ -32,24 +44,17 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         return false
     }
     val sure = me === heroFighter && nextCrit
-    // Предначертание (4.6.0): месть - крит наверняка; заряд «из-под плаща» при этом цел. Её множитель крита (4.6.2) - до траты заряда
     val fatedSure = !sure && fateSure(me)
     val keener = fateKeener(me)
-    // 3.37.0: the shots are taken before anything changes.
     val striker = shot(me, blow)
     val struck = shot(target)
     val evade = evasion(me, target)
     val blockChance = if (blow.spell) target.body.spellBlock(target.side == Side.MONSTER) else target.body.block
     val kind = when {
         target.frozen() -> if (sure || fatedSure || crit(me, body, blow.spell)) HitKind.CRIT else HitKind.HIT
-
-        // Удача рода (4.6.1): уклонение и блок героя, крит героя - лучший из двух бросков
         blow.evadable && checkDraw(target, RollKey.EVADE) < evade -> HitKind.EVADED
-
         checkDraw(target, RollKey.BLOCK) < blockChance -> HitKind.BLOCKED
-
         sure || fatedSure || crit(me, body, blow.spell) -> HitKind.CRIT
-
         else -> HitKind.HIT
     }.let { if (it == HitKind.CRIT && (critBanned(me) || fateWarded(target))) HitKind.HIT else it }
     if (sure && kind == HitKind.CRIT) nextCrit = false
@@ -69,26 +74,16 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         }
         return false
     }
-    // Server 1.32.0: a critical strike no heavier than a hit, and the non-critical ones more or less. Доп. урон крита (4.12.x,
-    // STAT-ATK-05) - доля цели `critTaken` от прибавки крита сверх удара
     val multiplier = if (kind == HitKind.CRIT) max(1.0, 1 + (body.critMultiplier(blow.spell) * keener - 1) * target.body.critTaken) else body.nonCritMore
-    // 3.35.0: a double blow, the hero's lines against the target's state, and what suppression or deflection lets through.
     val doubled = if (body.doubleDamage > 0 && draw() < body.doubleDamage) 2.0 else 1.0
-    // Server 1.57.0: the lines against the target's state are increases beside the blow's own, not a multiplier of their own.
     val facing = if (me === heroFighter) states(target).let { states -> max(0.0, model.against(states) + me.effects.sumOf { it.against(states) }) } else 0.0
     val versus = versus(blow, facing)
     val eased = eased(target, blow) * target.body.hitTaken * blightTaken(me, target) * provokedTaken(me, target)
-    // Server 0.66.0: a penetrating blow ignores part of the resistance, an ailed target takes more, and
-    // "damage taken" of the target scales what got through; server 0.69.0: so does a curse on it.
     val against = body.damageAgainst(target.ailments.map { it.ailment }) * (if (target.cursed) 1 + max(0.0, body[CoreStat.DAMAGE_VS_CURSED.code]) / 100 else 1.0)
-    // Server 1.32.0: the element the target resists least is pierced deeper, the one it resists most may hurt it less.
     val weakest = if (body.lowestResistPenetrate > 0) DamageType.ELEMENTS.minBy { target.body.resistTo(it) } else null
     val strongest = if (target.body.highestResistElementTaken != 0.0) DamageType.ELEMENTS.maxBy { target.body.resistTo(it) } else null
-    // Разлом (3.96.0): «Тяжкие удары» героя, печати Стража, «Одна стихия» Владыки
     val heavy = heavy(me, blow)
-    // Предначертание (4.6.0): удар героя тяжелее по его рычагам и строкам, удар врага - легче
     val fateMore = fateHeavier(me, target, blow)
-    // Удача рода (4.6.2): разброс урона героя - больший из двух бросков
     val luckySpread = blow.spread && fateLuckySpread(me)
     val seals = sealed(target)
     var unruled = 0.0
@@ -97,16 +92,11 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     var takenSum = 0.0
     var defended = 0.0
     val parts = converted(body, target.body, blow.damage.filterValues { it > 0 })
-    // Зеркало урона (4.6.1): запас сверх удара - теми же типами по их долям, до защит цели
     val stored = fateExtra(me)
     val partsSum = parts.values.sum()
-    // Урон для недугов (4.12.x, COMBAT-03): после защит и «получаемого урона» цели, но без шока, подавления и Укрепления - шок
-    // ложится в тике недуга, Укрепление и подавление режут только удар. С 0.15.0 (реш. 36, 39) - и до защит цели без множителя крита
-    // ([unmitigated]: основа яда), урон ударами недуги не растит
     val ailing = mutableMapOf<DamageType, Double>()
     val unmitigated = mutableMapOf<DamageType, Double>()
     val hitMore = hitMore(me, body, blow, facing, versus)
-    // Разложение (0.15.0, реш. 38/41): урон своего вида, что прибавили стаки цели, - графа разбора
     var exposed = 0.0
     var exposedSum = 0.0
     val taken = parts.mapValues { (type, base) ->
@@ -124,7 +114,6 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
         val sealedOff = if (seals == 1.0) landed else landed * seals
         unruled += sealedOff
         val ruled = lawTaken(target, type)
-        // Удар конечен (4.12.x, COMBAT-02): NaN и бесконечность - не урон
         val dealt = (if (ruled == 1.0) sealedOff else sealedOff * ruled).takeIf { it.isFinite() } ?: 0.0
         ailing[type] = (defence * typeTaken * seals * ruled / hitMore).takeIf { it.isFinite() } ?: 0.0
         unmitigated[type] = ((if (heavy == 1.0) hurt else hurt * heavy) + share).takeIf { it.isFinite() } ?: 0.0
@@ -190,13 +179,12 @@ internal fun Battle.strike(me: Fighter, target: Fighter, blow: Blow): Boolean {
     }
     pendingHit = HitTrace(striker, struck, factors, types, null, origin, exposed = exposed)
     land(me, target, kind, taken, foe, blow, body, types.associate { it.type to it.raw }, AilingHit(ailing, unmitigated, if (kind == HitKind.CRIT) multiplier else 1.0))
-    // Отражение (MOB-BAL, В-5) - только от ударов: чары и недуги не отражаются
     if (me.alive && !blow.spell && target.body.thorns + target.body.reflect > 0) reflect(target, me, taken, foe)
     return true
 }
 
 /**
- * Урон ударами (0.15.0, реш. 39) удара [blow]: у героя - увеличение рядом с увеличениями удара (как строки «против состояний» [facing],
+ * Урон ударами удара [blow]: у героя - увеличение рядом с увеличениями удара (как строки «против состояний» [facing],
  * [versus] - их рост), у прочих - множитель листа [body]. Недуги и урон во времени его не берут.
  */
 private fun Battle.hitMore(me: Fighter, body: Combatant, blow: Blow, facing: Double, versus: Double): Double {
@@ -209,7 +197,7 @@ private fun Battle.hitMore(me: Fighter, body: Combatant, blow: Blow, facing: Dou
 /** Защита [target] от урона [raw] типа [type] при пробивании [pierce]: доли брони и сопротивления и что прошло сквозь них. */
 private data class Defended(val armour: Double, val resist: Double, val passed: Double)
 
-/** Броня и сопротивление цели [target] против урона [raw] типа [type] (0.14.4) - одна формула удара и оценки избежанного. */
+/** Броня и сопротивление цели [target] против урона [raw] типа [type] - одна формула удара и оценки избежанного. */
 private fun Battle.defended(target: Combatant, type: DamageType, raw: Double, pierce: Double): Defended {
     val armour = when (type) {
         DamageType.PHYSICAL -> target.physicalMitigation(raw, rules.armour.factor)
@@ -224,7 +212,7 @@ private fun Battle.defended(target: Combatant, type: DamageType, raw: Double, pi
 }
 
 /**
- * Урон, которого удар [blow] избежал уклонением или блоком цели [target] (0.14.4, #30): удар без разброса, крита и прочих
+ * Урон, которого удар [blow] избежал уклонением или блоком цели [target]: удар без разброса, крита и прочих
  * бросков - урон по типам на множители урона ударившего [body], затем броня, сопротивления и «получаемый урон» цели. Костей не
  * тратит: бой идёт так же, число - лишь оценка для разбора боя ([com.sperance.exileforge.core.campaign.FightStats]).
  */
@@ -237,19 +225,19 @@ private fun Battle.avoided(body: Combatant, target: Fighter, blow: Blow): Double
     }
 }
 
-/** A critical roll of [body]'s chance — a spell's own (server 1.56.0); a lucky one (server 1.32.0) gets a second. */
+/** A critical roll of [body]'s chance — a spell's own; a lucky one gets a second. */
 private fun Battle.crit(me: Fighter, body: Combatant, spell: Boolean = false): Boolean {
     val chance = body.critChance(spell)
     return checkDraw(me, RollKey.CRIT) < chance || body.luckyCrit && draw() < chance
 }
 
-/** The share of an elemental hit of [raw] the armour turns aside where some of it applies to elements (3.35.0). */
+/** The share of an elemental hit of [raw] the armour turns aside where some of it applies to elements. */
 private fun Battle.elementalArmour(target: Combatant, type: DamageType, raw: Double): Double {
     if (target.armourElemental <= 0 || type !in DamageType.ELEMENTS || raw <= 0) return 0.0
     return (target.armour / (target.armour + rules.armour.factor * raw)).coerceAtMost(target.armourCap) * target.armourElemental
 }
 
-/** A block by [target] (3.35.0): life, mana and shield on block, and the hero's «blocked recently». */
+/** A block by [target]: life, mana and shield on block, and the hero's «blocked recently». */
 private fun Battle.blocked(target: Fighter) {
     val body = target.body
     lifeBack(target, body.lifeOnBlock * body.recoveryRate)
@@ -260,13 +248,14 @@ private fun Battle.blocked(target: Fighter) {
 }
 
 /**
- * A blow's damage by type as it meets the target (server 1.32.0): the striker's whole hit turned to one random element,
+ * A blow's damage by type as it meets the target: the striker's whole hit turned to one random element,
  * then the target's physical damage taken as elements.
+ *
+ * Доля физического урона ударившего - ещё раз другими видами.
  */
 private fun Battle.converted(body: Combatant, target: Combatant, damage: Map<DamageType, Double>): Map<DamageType, Double> {
     var out = damage
     if (body.randomElementHits && out.isNotEmpty()) out = mapOf(DamageType.ELEMENTS[random.nextInt(DamageType.ELEMENTS.size)] to out.values.sum())
-    // 3.35.0: a share of the striker's physical damage dealt again as other types.
     val own = out[DamageType.PHYSICAL] ?: 0.0
     if (own > 0 && body.extraAs.isNotEmpty()) out = out.toMutableMap().also { extra -> body.extraAs.forEach { (type, share) -> extra.merge(type, own * share, Double::plus) } }
     val physical = out[DamageType.PHYSICAL] ?: 0.0
@@ -278,7 +267,7 @@ private fun Battle.converted(body: Combatant, target: Combatant, damage: Map<Dam
     return moved.filterValues { it > 0 }
 }
 
-/** A block under a riposte (2.78.0): the hero strikes the attacker back with that share of the weapon. */
+/** A block under a riposte: the hero strikes the attacker back with that share of the weapon. */
 private fun Battle.counter(attacker: Fighter) {
     val riposte = heroFighter.effects.firstOrNull { it.counter > 0 } ?: return
     if (!attacker.alive) return
@@ -286,17 +275,18 @@ private fun Battle.counter(attacker: Fighter) {
 }
 
 /**
- * Thorns and reflect (server 0.66.0): the struck fighter gives a flat physical blow and a share of
- * what it took back to the attacker, each part reduced by the attacker's own armour or resistance. По герою (MOB-BAL, В-5)
+ * Thorns and reflect: the struck fighter gives a flat physical blow and a share of
+ * what it took back to the attacker, each part reduced by the attacker's own armour or resistance. По герою (В-5)
  * отражённое за секунду боя - не больше `caps.reflected`% его максимума здоровья ([reflectCap]): длинный бой со стражем-зеркалом
  * не убивает героя его же уроном.
+ *
+ * По видам: что вернулось, доли брони и сопротивления, что потерялись на атакующем, и что легло.
  */
 private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType, Double>, foe: Int) {
     if (attacker.invulnerable) return
     val back = mutableMapOf<DamageType, Double>()
     if (me.body.thorns > 0) back[DamageType.PHYSICAL] = me.body.thorns
     if (me.body.reflect > 0) taken.forEach { (type, amount) -> back.merge(type, amount * me.body.reflect, Double::plus) }
-    // Per type (3.70.0): what came back, the armour's and the resistance's shares it lost on the attacker, and what landed.
     val types = back.map { (type, raw) ->
         val armour = if (type == DamageType.PHYSICAL) {
             attacker.body.physicalMitigation(raw, rules.armour.factor)
@@ -356,7 +346,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
 }
 
 /**
- * Отражённое [dealt] по [attacker] под потолком (MOB-BAL, В-5): по герою за секунду боя - не больше `caps.reflected`% его
+ * Отражённое [dealt] по [attacker] под потолком (В-5): по герою за секунду боя - не больше `caps.reflected`% его
  * максимума здоровья, части по видам урона - одной долей; по монстру - как есть.
  */
 private fun Battle.reflectCap(attacker: Fighter, dealt: Map<DamageType, Double>): Map<DamageType, Double> {
@@ -373,7 +363,7 @@ private fun Battle.reflectCap(attacker: Fighter, dealt: Map<DamageType, Double>)
     return if (share == 1.0) dealt else dealt.mapValues { it.value * share }.filterValues { it > 0 }
 }
 
-/** What a buildup gone off adds to a blow of [type] on [target] (3.78.0): stunned - all, frozen - the ice-breaker, electrocuted - lightning. */
+/** What a buildup gone off adds to a blow of [type] on [target]: stunned - all, frozen - the ice-breaker, electrocuted - lightning. */
 internal fun Battle.exposure(target: Fighter, type: DamageType): Double {
     val rule = rules.buildup ?: return 1.0
     var more = 0.0

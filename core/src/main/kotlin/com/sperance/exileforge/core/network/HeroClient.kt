@@ -40,7 +40,7 @@ private const val DELETION = "$HERO/deletion"
 class HeroClient internal constructor(private val http: Transport) {
     /**
      * The hero in one read: only the parts whose fingerprints [parts] does not hold, or `null` on a 304. В ETag и счёт
-     * непрочитанной почты [unread] (3.94.1, сервер 1.81.15): новое письмо не прячется за 304.
+     * непрочитанной почты [unread]: новое письмо не прячется за 304.
      */
     suspend fun view(heroId: String, parts: HeroParts, unread: Int = 0): HeroSnapshot? {
         val headers = buildMap {
@@ -51,13 +51,13 @@ class HeroClient internal constructor(private val http: Transport) {
         return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)
     }
 
-    /** Every figure of the hero's statistics (server 1.49.0): only what is not zero. */
+    /** Every figure of the hero's statistics: only what is not zero. */
     suspend fun stats(heroId: String): com.sperance.exileforge.core.model.hero.HeroStatsView = http.get("$HERO/stats", heroQuery(heroId))
 
-    /** The unique templates the hero has found (server 1.81.7), each with its first find and count. */
+    /** The unique templates the hero has found, each with its first find and count. */
     suspend fun uniques(heroId: String): com.sperance.exileforge.core.model.hero.UniquesView = http.get("$HERO/uniques", heroQuery(heroId))
 
-    /** Герои аккаунта и их действующие санкции одним запросом (3.94.1, server 1.81.15) - что предлагает меню героев. */
+    /** Герои аккаунта и их действующие санкции одним запросом - что предлагает меню героев. */
     suspend fun rosterOf(userId: String): HeroRoster {
         requireId(userId)
         return http.get("$HERO/byUser", mapOf("userId" to userId))
@@ -71,15 +71,17 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.request("POST", HERO, body = body, authenticated = true).jsonArray.single().let { WireJson.decodeFromJsonElement(it) }
     }
 
-    /** Стирание героя администратором (общий `DELETE hero`, с сервера 4.5.1 - только ему); игрок удаляет своего через [markDeletion]. */
+    /** Стирание героя администратором (общий `DELETE hero` - только ему); игрок удаляет своего через [markDeletion]. */
     suspend fun delete(heroId: String) {
         requireId(heroId)
         http.request("DELETE", HERO, mapOf("id" to heroId), authenticated = true)
     }
 
-    // ---- самоудаление (сервер 4.5.1): корзина на `selfDeleteDays` дней; героя запрос называет `hero` ----
-
-    /** Что случится при удалении своего героя [heroId]: гильдия, лоты и срок, пока его можно вернуть. */
+    /**
+     * Что случится при удалении своего героя [heroId]: гильдия, лоты и срок, пока его можно вернуть.
+     *
+     * Самоудаление: корзина на `selfDeleteDays` дней; героя запрос называет `hero`.
+     */
     suspend fun deletionPreview(heroId: String): DeletionPreview = http.get("$DELETION/preview", deletionQuery(heroId))
 
     /** Свой герой [heroId] - в корзину; [name] - его имя, введённое для подтверждения (`CH_040`). Ответ - герои аккаунта. */
@@ -101,13 +103,11 @@ class HeroClient internal constructor(private val http: Transport) {
         return WireJson.encodeToJsonElement(DeletionConfirm.serializer(), DeletionConfirm(name.trim()))
     }
 
-    /** Карточка игрока (сервер 4.5.1): герой [target] глазами своего героя [heroId], только на его игровом сервере. */
+    /** Карточка игрока: герой [target] глазами своего героя [heroId], только на его игровом сервере. */
     suspend fun card(heroId: String, target: String): PlayerCard {
         requireId(target)
         return http.get("$HERO/card", heroQuery(heroId, "target" to target))
     }
-
-    // ---- an administrator grants out of nothing ----
 
     suspend fun grantExperience(heroId: String, amount: Double): Int {
         require(amount > 0 && amount.isFinite()) { ui("api.xp_positive") }
@@ -125,14 +125,12 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     /**
-     * The testing window (3.73.0, server 1.69.0): one grant [what] of `/hero/grant/` — gold, level, points, zones, rares, a map,
+     * The testing window: one grant [what] of `/hero/grant/` — gold, level, points, zones, rares, a map,
      * professions, recipes, a reset — for a tester's own hero or by an administrator; the server answers with the hero's level.
      */
     suspend fun grant(heroId: String, what: String, vararg params: Pair<String, String?>) {
         http.request("POST", "$HERO/grant/$what", heroQuery(heroId, *params), authenticated = true)
     }
-
-    // ---- wearing ----
 
     /** Puts an item on; [slot] names which ring or flask place to take, the server picks a free one without it. */
     suspend fun equip(heroId: String, itemId: String, slot: Slot? = null): ItemInstance {
@@ -154,7 +152,7 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     /**
-     * Продажа пачкой (3.90.3, сервер 1.81.8): вещи тайника телом запроса. Сервер отказывает всей пачке, если хоть одна
+     * Продажа пачкой: вещи тайника телом запроса. Сервер отказывает всей пачке, если хоть одна
      * надета, заперта или не уходит пачкой.
      */
     suspend fun sellMany(heroId: String, itemIds: List<String>): SellBatch {
@@ -164,7 +162,7 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 
     /**
-     * Locks or unlocks one item, in the stash or worn (server 1.28.0): a locked item is never sold, listed or
+     * Locks or unlocks one item, in the stash or worn: a locked item is never sold, listed or
      * auto-sold from the overflow; orbs and the bench still work on it.
      */
     suspend fun lock(heroId: String, itemId: String, locked: Boolean) {
@@ -172,16 +170,14 @@ class HeroClient internal constructor(private val http: Transport) {
         http.request("POST", "$HERO/item/lock", heroQuery(heroId, "itemId" to itemId, "locked" to locked.toString()), authenticated = true)
     }
 
-    /** One row of the loot filter (server 1.45.0): the slot groups of [rarity] the merchant takes at once; none clears it. */
+    /** One row of the loot filter: the slot groups of [rarity] the merchant takes at once; none clears it. */
     suspend fun autoSell(heroId: String, rarity: Rarity, groups: Set<SlotGroup>): AutoSell = http.post("$HERO/autosell", heroQuery(heroId, "rarity" to rarity.name, "groups" to groups.joinToString(",") { it.name }))
 
-    /** Правило фильтра добычи «всё, что герой не может носить» (3.90.3, сервер 1.81.8). */
+    /** Правило фильтра добычи «всё, что герой не может носить». */
     suspend fun autoSellUnwearable(heroId: String, on: Boolean): AutoSell = http.post("$HERO/autosell/unwearable", heroQuery(heroId, "on" to on.toString()))
 
-    /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank (server 1.3.0). */
+    /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank. */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))
-
-    // ---- the stash's places and its overflow (server 1.1.0) ----
 
     /** One more pack of stash places, for the rules' gold; never retried — a repeat would buy twice. */
     suspend fun expandStash(heroId: String): StashState = http.post("$HERO/stash/expand", heroQuery(heroId))
@@ -195,17 +191,15 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/stash/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
-    // ---- orbs, essences, the bench ----
-
-    /** Tempers a weapon or armour with the smith's ore (server 1.74.0): quality and item level up, once per item. Never retried. */
+    /** Tempers a weapon or armour with the smith's ore: quality and item level up, once per item. Never retried. */
     suspend fun temper(heroId: String, itemId: String): CurrencyApplyResponse {
         requireItemId(itemId)
         return http.post("$HERO/temper", heroQuery(heroId, "itemId" to itemId))
     }
 
     /**
-     * Spends one orb of the bag on one item; [orb] is the orb's item code, with an [omen] (3.36.0) spent along with it when given.
-     * [line] (4.11.x) - номер строки в `item.rolls`, что гравирует Сфера гравёра; прочим сферам - null.
+     * Spends one orb of the bag on one item; [orb] is the orb's item code, with an [omen] spent along with it when given.
+     * [line] - номер строки в `item.rolls`, что гравирует Сфера гравёра; прочим сферам - null.
      */
     suspend fun applyOrb(heroId: String, itemId: String, orb: String, omen: String? = null, line: Int? = null): CurrencyApplyResponse {
         requireItemId(itemId)
@@ -213,20 +207,20 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/orb", heroQuery(heroId, "itemId" to itemId, "orb" to orb, "omen" to omen?.takeIf { it.isNotBlank() }, "line" to line?.toString()))
     }
 
-    /** Печать Атласа [seal] на карту [itemId] (сервер 4.6.4) со знамением [omen], если печать его берёт; ответ - как у сферы. */
+    /** Печать Атласа [seal] на карту [itemId] со знамением [omen], если печать его берёт; ответ - как у сферы. */
     suspend fun applySeal(heroId: String, itemId: String, seal: String, omen: String? = null): CurrencyApplyResponse {
         requireItemId(itemId)
         require(seal.isNotBlank()) { ui("api.choose_seal") }
         return http.post("$HERO/seal", heroQuery(heroId, "itemId" to itemId, "seal" to seal, "omen" to omen?.takeIf { it.isNotBlank() }))
     }
 
-    /** The unveiling's choice (3.36.0): which of the offered modifiers takes the veiled one's place. */
+    /** The unveiling's choice: which of the offered modifiers takes the veiled one's place. */
     suspend fun unveil(heroId: String, itemId: String, choice: Int): CurrencyApplyResponse {
         requireItemId(itemId)
         return http.post("$HERO/unveil", heroQuery(heroId, "itemId" to itemId, "choice" to choice.toString()))
     }
 
-    /** The Omen of Choice's line kept (server 1.65.0): [choice] of the ones an Orb of Alchemy or an Exalted Orb offered. */
+    /** The Omen of Choice's line kept: [choice] of the ones an Orb of Alchemy or an Exalted Orb offered. */
     suspend fun choose(heroId: String, itemId: String, choice: Int): CurrencyApplyResponse {
         requireItemId(itemId)
         return http.post("$HERO/choose", heroQuery(heroId, "itemId" to itemId, "choice" to choice.toString()))
@@ -237,8 +231,6 @@ class HeroClient internal constructor(private val http: Transport) {
         require(essence.isNotBlank()) { ui("api.choose_orb") }
         return http.post("$HERO/essence", heroQuery(heroId, "itemId" to itemId, "essence" to essence))
     }
-
-    /** The bench lines the hero has found on maps; the rest stay hidden. */
 
     suspend fun craft(heroId: String, itemId: String, recipe: String): CurrencyApplyResponse {
         requireItemId(itemId)
@@ -251,14 +243,12 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/uncraft", heroQuery(heroId, "itemId" to itemId))
     }
 
-    // ---- the class skills ----
-
     suspend fun learnSkill(heroId: String, skill: String): HeroSkills = http.post("$HERO/skills/learn", heroQuery(heroId, "skill" to skill))
 
-    /** Руна [rune] в гнездо [socket] умения [skill] (4.4.0): прежняя руна гнезда пропадает; без руны гнездо пустеет, снятая руна тоже пропадает. */
+    /** Руна [rune] в гнездо [socket] умения [skill]: прежняя руна гнезда пропадает; без руны гнездо пустеет, снятая руна тоже пропадает. */
     suspend fun socketRune(heroId: String, skill: String, socket: Int, rune: String?): HeroSkills = http.post("$HERO/skills/rune", heroQuery(heroId, "skill" to skill, "socket" to socket.toString(), "rune" to rune))
 
-    /** Opens one loot chest of the bag (3.76.0, server 1.71.0): the server rolls what is inside. */
+    /** Opens one loot chest of the bag: the server rolls what is inside. */
     suspend fun openChest(heroId: String, code: String): com.sperance.exileforge.core.model.hero.ChestOpening = http.post("$HERO/chest/open", heroQuery(heroId, "code" to code))
 
     /** Puts a learned skill into slot [index] of [kind] — `ACTIVE` or `PASSIVE` — or empties it without [skill]. */
@@ -283,6 +273,6 @@ class HeroClient internal constructor(private val http: Transport) {
     }
 }
 
-/** Герои аккаунта (3.94.1, server 1.81.15) и санкции по id героя: бан или удаление. */
+/** Герои аккаунта и санкции по id героя: бан или удаление. */
 @kotlinx.serialization.Serializable
 data class HeroRoster(val heroes: List<HeroSummary> = emptyList(), val sanctions: Map<String, SanctionNotice> = emptyMap())

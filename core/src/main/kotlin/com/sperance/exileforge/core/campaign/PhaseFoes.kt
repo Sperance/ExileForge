@@ -16,9 +16,9 @@ import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 
 /**
- * Враги боя с фазами боссов (3.92.0): кто как встаёт в бой - на карте, в Испытании, в прогоне экрана-вызова. Босс несёт шаги
+ * Враги боя с фазами боссов: кто как встаёт в бой - на карте, в Испытании, в прогоне экрана-вызова. Босс несёт шаги
  * своего шаблона с найденными умениями; к стае добавляется его свита - столько обычных монстров, сколько зовут все шаги, - она
- * ждёт зова вне поля и добычи не даёт. Кого звать - решает шаблон босса (`Monster.summons`, 4.0.0): своя свита с её печатями,
+ * ждёт зова вне поля и добычи не даёт. Кого звать - решает шаблон босса (`Monster.summons`): своя свита с её печатями,
  * без неё - монстры его зоны.
  */
 class PhaseFoes(private val index: ContentIndex, private val combat: CombatRules) {
@@ -52,7 +52,7 @@ class PhaseFoes(private val index: ContentIndex, private val combat: CombatRules
 
     private val rules get() = index.campaign.totems
 
-    /** Тотемы правил по кодам [codes] (3.93.0), с проклятием-умением монстров. */
+    /** Тотемы правил по кодам [codes], с проклятием-умением монстров. */
     private fun totems(codes: List<String>): List<FoeTotem> = codes.mapNotNull(rules.byCode::get).map { totem -> FoeTotem(totem, totem.curse?.let(index.skills.monsterByCode::get)) }
 
     /** Стая [foes] со свитой каждого босса с фазами в конце - на костях [dice], чтобы бой без фаз не менял своих. */
@@ -69,7 +69,7 @@ class PhaseFoes(private val index: ContentIndex, private val combat: CombatRules
     }
 
     /**
-     * Кого зовёт босс [boss] (4.0.0): `Monster.summons` его зоны - своя свита шаблона, без неё монстры зоны, где он страж или
+     * Кого зовёт босс [boss]: `Monster.summons` его зоны - своя свита шаблона, без неё монстры зоны, где он страж или
      * порченый страж; босс без зоны и без свиты (пусто) не зовёт никого.
      */
     private fun pool(boss: Monster): List<MonsterCode> {
@@ -77,7 +77,7 @@ class PhaseFoes(private val index: ContentIndex, private val combat: CombatRules
         return home?.let(boss::summons) ?: boss.retinue?.monsters.orEmpty()
     }
 
-    /** Обычный монстр свиты [code] на [level] с печатями свиты [seals] (4.0.0) - на тех же костях. */
+    /** Обычный монстр свиты [code] на [level] с печатями свиты [seals] - на тех же костях. */
     private fun normal(code: MonsterCode, level: Int, seals: List<ModifierCode>, dice: Dice): RolledMonster? {
         val monster = index.monster(code) ?: return null
         return roller.sealed(roller.build(monster, level, index.campaign.rarity(MonsterRarity.NORMAL), emptyList()), seals, level, dice)

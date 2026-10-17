@@ -13,9 +13,9 @@ import java.util.concurrent.TimeUnit
  * connection pool, its dispatcher threads and the TLS sessions already negotiated. It is built on
  * first use rather than at start-up. Commands are never retried on a dropped connection (a repeat
  * could pay twice) and redirects are not followed, so a token never travels to a host it was not
- * issued for. OkHttp asks for gzip on its own and unpacks it transparently. Since 3.95.2 a read (GET) that lost its
+ * issued for. OkHttp asks for gzip on its own and unpacks it transparently. A read (GET) that lost its
  * connection is asked once more ([ReadRetry]) and a connection gets [CONNECT_S] seconds: after the app returns from the
- * background the first request no longer sits out ten seconds on a socket that went dead while it was away.
+ * background the first request does not sit out ten seconds on a socket that went dead while it was away.
  */
 object ForgeHttp {
     private const val CONNECT_S = 5L
@@ -30,7 +30,7 @@ object ForgeHttp {
     }
     internal val client: OkHttpClient by built
 
-    /** Сеть процесса для приложения (4.12.x, ARCH-03): `:app` держит её, не зная OkHttp. */
+    /** Сеть процесса для приложения: `:app` держит её, не зная OkHttp. */
     val link: HttpLink by lazy { HttpLink(client) }
 
     /** Back from the background or a locked screen: the pooled sockets may be dead on the far side, and a command is never retried on one. */
@@ -40,7 +40,7 @@ object ForgeHttp {
 }
 
 /**
- * Сетевой клиент ядра (4.12.x, ARCH-03): своя обёртка вокруг клиента OkHttp - `:app` передаёт её [GameApi] и
+ * Сетевой клиент ядра: своя обёртка вокруг клиента OkHttp - `:app` передаёт её [GameApi] и
  * [com.sperance.exileforge.core.update.Updates], а OkHttp остаётся деталью ядра (`implementation`).
  */
 class HttpLink internal constructor(internal val client: OkHttpClient) {
@@ -49,7 +49,7 @@ class HttpLink internal constructor(internal val client: OkHttpClient) {
 }
 
 /**
- * Чтение (GET) на оборванном соединении повторяется один раз (3.95.2): оно ничего не меняет на сервере, а мёртвый сокет пула
+ * Чтение (GET) на оборванном соединении повторяется один раз: оно ничего не меняет на сервере, а мёртвый сокет пула
  * после фона - не причина показывать «сервер недоступен». Команды не повторяются никогда: повтор мог бы заплатить дважды.
  */
 private object ReadRetry : Interceptor {

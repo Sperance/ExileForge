@@ -30,7 +30,7 @@ import com.sperance.exileforge.rules.text.ModifierText
 fun displayName(value: String, lang: Lang = uiLanguage): String = value.substringAfterLast('/').substringAfterLast('.').replace('_', ' ')
     .replace(CAMEL_GAP, "$1 $2").ifBlank { ui(lang, "item.unnamed") }
 
-/** Имена из кодов (4.6.5) - только из словаря, без кода на месте имени: полноту держит `UiStringsTest`. */
+/** Имена из кодов - только из словаря, без кода на месте имени: полноту держит `UiStringsTest`. */
 fun slotTitle(slot: Slot, lang: Lang = uiLanguage): String = ui(lang, "enum.slot.${slot.name}")
 fun slotTitle(slot: String, lang: Lang = uiLanguage): String = ui(lang, "enum.slot.$slot")
 fun rarityTitle(rarity: Rarity, lang: Lang = uiLanguage): String = ui(lang, "enum.rarity.${rarity.name}")
@@ -39,7 +39,7 @@ fun weaponTitle(value: WeaponType, lang: Lang = uiLanguage): String = ui(lang, "
 fun nodeTypeTitle(type: SkillNodeType, lang: Lang = uiLanguage): String = ui(lang, "enum.node.${type.name}")
 
 /**
- * Имена из словаря сервера (0.15.0, #48): шаблон снаряжения, вещь, монстр, свойство, фаза, тотем, карта, регион, класс, узел Атласа,
+ * Имена из словаря сервера: шаблон снаряжения, вещь, монстр, свойство, фаза, тотем, карта, регион, класс, узел Атласа,
  * профессия, работа - нет строки в словаре на устройстве - заглушка «…» и дыра словаря ([loc], `LocaleHoles`), не код.
  */
 fun equipmentTitle(code: String): String = if (code.isBlank()) ui("item.equipment") else loc(LocaleKey.equipmentName(code))
@@ -55,15 +55,15 @@ fun tradeName(code: String, equipment: Boolean): String? = locOr(if (equipment) 
 fun monsterTitle(code: String): String = loc(LocaleKey.monsterName(code))
 fun monsterTitle(code: MonsterCode): String = monsterTitle(code.value)
 
-/** A monster's trait (3.73.0): its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds, `{3}` - потолок складываний (4.4.1). */
+/** A monster's trait: its name, and what it does with `{0}` its strength, `{1}` the life threshold, `{2}` the seconds, `{3}` - потолок складываний. */
 fun traitTitle(code: String): String = loc(LocaleKey.traitName(code))
 fun traitText(code: String, value: Double = 0.0, threshold: Double = 0.0, seconds: Double = 0.0, stacks: Int = 0): String = loc(LocaleKey.traitDescription(code), listOf(fineNumber(value), fineNumber(threshold), fineNumber(seconds), stacks.toString()))
 
-/** Фаза босса (3.92.0): название шаблона и что он делает. */
+/** Фаза босса: название шаблона и что он делает. */
 fun phaseTitle(code: String): String = loc("phase.$code.name")
 fun phaseText(code: String): String = locOr("phase.$code.description", "")
 
-/** Тотем босса (3.93.0): название и что делает, пока стоит. */
+/** Тотем босса: название и что делает, пока стоит. */
 fun totemTitle(code: String): String = loc("totem.$code.name")
 fun totemText(code: String): String = locOr("totem.$code.description", "")
 
@@ -76,7 +76,7 @@ fun mapDescription(code: String): String = locOr(LocaleKey.mapDescription(code),
 fun regionTitle(code: String): String = loc(LocaleKey.regionName(code))
 fun classTitle(code: String): String = loc(LocaleKey.className(code))
 
-/** Имя узла дерева - только словарём (0.14.5, #48): нет строки - заглушка и дыра словаря ([loc]), не код. */
+/** Имя узла дерева - только словарём: нет строки - заглушка и дыра словаря ([loc]), не код. */
 fun nodeTitle(code: String): String = loc(LocaleKey.skillNodeName(code))
 
 fun atlasNodeTitle(code: String): String = loc(LocaleKey.atlasNodeName(code))
@@ -84,28 +84,28 @@ fun professionTitle(code: String): String = loc(LocaleKey.professionName(code))
 fun professionDescription(code: String): String = locOr(LocaleKey.professionDescription(code), "")
 fun jobTitle(code: String): String = loc(LocaleKey.jobName(code))
 
-/** What a choosing work was told to make: the item, the smith's group and attribute (3.46.0), the tool base (server 4.3.0) or the skill of a tier ritual (4.4.0). */
+/** What a choosing work was told to make: the item, the smith's group and attribute, the tool base or the skill of a tier ritual. */
 fun choiceTitle(choice: String): String = locFirst(LocaleKey.itemName(choice), LocaleKey.choiceName(choice), LocaleKey.equipmentName(choice), LocaleKey.skillName(choice))
 
-/** A work with its choice (3.45.0): «Condense Essence · Weeping Essence of Greed». */
+/** A work with its choice: «Condense Essence · Weeping Essence of Greed». */
 fun workTitle(code: String, choice: String): String = if (choice.isEmpty()) jobTitle(code) else "${jobTitle(code)} · ${choiceTitle(choice)}"
 
 /**
  * Title of a stat: the client's own table first (it takes an explicit language), then the server's label
- * for the stat's group. Нет и его (0.14.5, #48) - заглушка и дыра словаря ([loc]), кода игрок не видит.
+ * for the stat's group. Нет и его - заглушка и дыра словаря ([loc]), кода игрок не видит.
  */
 fun statTitle(stat: String, lang: Lang = uiLanguage): String = rawStatTitle(stat, lang).replace(PERCENT_MARK, "")
 
 private fun rawStatTitle(stat: String, lang: Lang): String = uiOr(lang, "enum.stat.$stat") { loc("enum.EnumStatStock.$stat") }
 
-/** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure (3.2.0). */
+/** «Шанс крита, %»: the dictionaries mark a stat counted in percent at the end of its name; the mark moves to the figure. */
 private val PERCENT_MARK = Regex("""[,\s]*%\s*$""")
 
-/** Единица отображения характеристики (4.8.0, `StatDef.unit`); без контента или вне реестра - null. */
+/** Единица отображения характеристики (`StatDef.unit`); без контента или вне реестра - null. */
 fun statUnit(stat: String, index: ContentIndex?): StatUnit? = index?.stats?.get(stat)?.unit
 
 /**
- * Читается ли характеристика в процентах (4.8.0): решает её единица ([StatUnit]). Метка «%» в имени словаря - только для
+ * Читается ли характеристика в процентах: решает её единица ([StatUnit]). Метка «%» в имени словаря - только для
  * строк вне реестра, у которых единицы нет.
  */
 fun statPercent(stat: String, index: ContentIndex? = null): Boolean = when (statUnit(stat, index)) {
@@ -115,7 +115,7 @@ fun statPercent(stat: String, index: ContentIndex? = null): Boolean = when (stat
 }
 
 /**
- * Часть [part] строки сводки [row] (`partOf`) словами (4.11.x), её число - [figure]: «увеличение» (вид `PERCENT` реестра, как
+ * Часть [part] строки сводки [row] (`partOf`) словами, её число - [figure]: «увеличение» (вид `PERCENT` реестра, как
  * `STOCK_MANA_REGEN` у плоской регенерации маны) - «увеличение …», процентная доля числовой строки (`STOCK_LIFE_REGEN_PERCENT`) -
  * «… от максимума»; своя характеристика строки и прочее - число как есть.
  */
@@ -126,10 +126,10 @@ fun partFigure(row: String, part: String, figure: String, index: ContentIndex?):
     else -> figure
 }
 
-/** Характеристика-флаг (4.8.0, [StatUnit.FLAG]): игрок видит отметку, а не число. */
+/** Характеристика-флаг ([StatUnit.FLAG]): игрок видит отметку, а не число. */
 fun statFlag(stat: String, index: ContentIndex?): Boolean = statUnit(stat, index) == StatUnit.FLAG
 
-/** Отметка флага (4.8.0): действует - ✓, нет - тире. */
+/** Отметка флага: действует - ✓, нет - тире. */
 fun flagMark(value: Double): String = if (value > 0) FLAG_ON else FLAG_OFF
 
 private const val FLAG_ON = "✓"
@@ -137,7 +137,7 @@ private const val FLAG_OFF = "—"
 
 /**
  * A stat's figure as a sheet shows it, the percent sign at the number rather than in the name: «Шанс крита 5%». Множитель
- * (4.6.5, `StatDef.multiplier`) читается долей «60%» - «урон 60% от полного», а не «−40%». Флаг (4.8.0) - отметкой без числа.
+ * (`StatDef.multiplier`) читается долей «60%» - «урон 60% от полного», а не «−40%». Флаг - отметкой без числа.
  */
 fun statValue(stat: String, value: Double, index: ContentIndex? = null): String = when {
     index?.stats?.get(stat)?.multiplier == true -> multiplierText(value)
@@ -165,8 +165,8 @@ private fun shareText(value: Double): String {
 fun modifierText(index: ContentIndex): ModifierText = ModifierText(index, serverLocale::string)
 
 /**
- * A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. [carrier] (0.14.0,
- * STAT-MISC-01) - слот вещи со строкой: «этой фляги» и «во время действия» - только на самой фляге.
+ * A modifier's sentence with its values in; a definition the dictionary cannot word prints its numbers and stats. [carrier]
+ * - слот вещи со строкой: «этой фляги» и «во время действия» - только на самой фляге.
  */
 fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>, carrier: Slot? = null): String = modifierText(index).template(def, values, carrier)?.let { fillTemplate(it, values.mapIndexed { i, v -> effectNumber(def.effectOf(i), v) }) }
     ?: values.mapIndexed { i, v -> def.effectOf(i)?.let { "${modNumber(it.stat, v)} ${statTitle(it.stat)}" } ?: number(v) }.joinToString(" · ").ifBlank { displayName(def.code.value) }
@@ -175,7 +175,7 @@ fun modifierLine(index: ContentIndex, def: ModifierDef, values: List<Double>, ca
 fun lineText(index: ContentIndex, line: Line): String = index.modifier(line.code)?.let { modifierLine(index, it, line.values) } ?: displayName(line.code.value)
 
 /**
- * Пояснение строки узла Атласа (0.15.0, #41): что делает её характеристика, словами сервера (`stat.desc.<код>` - есть у каждой
+ * Пояснение строки узла Атласа: что делает её характеристика, словами сервера (`stat.desc.<код>` - есть у каждой
  * характеристики Атласа) - серой строкой под строкой узла; строка не Атласа - null.
  */
 fun atlasLineNote(index: ContentIndex, line: Line): String? = index.modifier(line.code)?.effectOf(0)?.stat
@@ -184,7 +184,7 @@ fun atlasLineNote(index: ContentIndex, line: Line): String? = index.modifier(lin
 
 /**
  * A template with its numbers in: `{0}` takes the value as printed, `{|0|}` its size without the sign. Плюс шаблона перед
- * плейсхолдером (`+{0}`) - лишь место знака (3.90.0): знак даёт само число, отрицательное печатается «−51», а не «+-51».
+ * плейсхолдером (`+{0}`) - лишь место знака: знак даёт само число, отрицательное печатается «−51», а не «+-51».
  */
 fun fillTemplate(template: String, values: List<String>): String = values.foldIndexed(template) { index, text, value ->
     val size = value.removePrefix("-").removePrefix(ModifierText.MINUS)
@@ -194,32 +194,32 @@ fun fillTemplate(template: String, values: List<String>): String = values.foldIn
 }
 
 /**
- * Число со знаком (3.90.0) - единственный путь знака в строки эффектов, монстров, карт и атласа: «+12», «−51» (типографский
+ * Число со знаком - единственный путь знака в строки эффектов, монстров, карт и атласа: «+12», «−51» (типографский
  * минус). Знак берётся из числа, шаблоны словаря его не пишут; [format] печатает модуль. Ноль - с плюсом.
  */
 fun signedNumber(value: Double, format: (Double) -> String = ::number): String = (if (value < 0) ModifierText.MINUS else "+") + format(kotlin.math.abs(value))
 
-/** Characteristics whose meaning lives in the fraction: rounding them destroys them. Скорость передвижения - целые проценты (4.12.x, STAT-MISC-10). */
+/** Characteristics whose meaning lives in the fraction: rounding them destroys them. Скорость передвижения - целые проценты. */
 val preciseStats = setOf(
     CoreStat.ATTACK_SPEED.code, CoreStat.CAST_SPEED.code, CoreStat.CRITICAL_CHANCE.code, CoreStat.CRITICAL_MULTIPLIER.code,
     CoreStat.LEECH_PHYSICAL.code, CoreStat.LEECH_ALL.code, CoreStat.CRITICAL_VAMPIRE.code, CoreStat.SPELL_CRITICAL_CHANCE.code, CoreStat.SPELL_CRITICAL_MULTIPLIER.code,
 )
 
 /**
- * A number as every screen prints it (3.28.0): a stat that lives in its fraction keeps two places; any other keeps its
+ * A number as every screen prints it: a stat that lives in its fraction keeps two places; any other keeps its
  * tenth below ten — 7.4, 1.8, 0.4, but «5», not «5.0» — and is whole from ten up. The value itself is never rounded.
  */
 fun statNumber(stat: String, value: Double): String = if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else fineNumber(value)
 
 fun number(value: Double): String = statNumber("", value)
 
-/** Целое с разрядами через неразрывный пробел (3.90.0): «1 240», «2 950» - крупные счётчики вроде опыта. */
+/** Целое с разрядами через неразрывный пробел: «1 240», «2 950» - крупные счётчики вроде опыта. */
 fun groupedNumber(value: Long): String = String.format(java.util.Locale.ROOT, "%,d", value).replace(',', '\u00A0')
 
 /** Число строки модификатора: увеличение - доля без хвостовых нулей, прочее - как бросок. */
 private fun effectNumber(effect: Effect?, value: Double): String = if (effect?.op == Op.INCREASED) shareNumber(effect.stat, value) else modNumber(effect?.stat.orEmpty(), value)
 
-/** Доля в процентах (увеличение, «больше») точной характеристики - без хвостовых нулей: «0.5%», а не «0.50%» (3.88.9). */
+/** Доля в процентах (увеличение, «больше») точной характеристики - без хвостовых нулей: «0.5%», а не «0.50%». */
 fun shareNumber(stat: String, value: Double): String = statNumber(stat, value).let { if ('.' in it) it.trimEnd('0').removeSuffix(".") else it }
 
 /** A modifier's figure, whatever its size, with the tenth it was rolled to: «+12.3», «+1.8», «+5» — a precise stat keeps its hundredths. */
@@ -230,10 +230,11 @@ fun fineNumber(value: Double): String = if (kotlin.math.abs(value) >= 10) Math.r
 
 /**
  * Why an equipped item does not count, from the rules' own words — "strength: need 30, have 14" reads «Требуется 30 силы»:
- * the hero's own figure is on the hero screen already (4.0.0), so only the need is told.
+ * the hero's own figure is on the hero screen already, so only the need is told.
+ *
+ * Вторая копия уникального самоцвета: лист называет самоцвет кодом.
  */
 fun requirementReason(reason: String, lang: Lang = uiLanguage): String {
-    // A second copy of a unique jewel (server 1.31.0): the sheet names the jewel by its code.
     UNIQUE_JEWEL.find(reason)?.let { return ui(lang, "req.unique_jewel", equipmentTitle(it.groupValues[1])) }
     val name = reason.substringBefore(':').trim()
     val rest = reason.substringAfter(':', "").trim()
@@ -247,5 +248,5 @@ private val CAMEL_GAP = Regex("([a-z])([A-Z])")
 private val UNIQUE_JEWEL = Regex("^unique jewel: one (\\S+) per hero")
 private val NEED = Regex("need\\s+(-?\\d+)")
 
-/** Доля древа гильдии (4.10.x): «Древо гильдии: Обереги» - узлы [nodes] (коды через запятую, `EffectOrigins`) своими именами. */
+/** Доля древа гильдии: «Древо гильдии: Обереги» - узлы [nodes] (коды через запятую, `EffectOrigins`) своими именами. */
 fun guildLineTitle(nodes: String): String = ui("stat.src.guild", nodes.split(",").joinToString(", ") { loc("guild.node.$it.name") })

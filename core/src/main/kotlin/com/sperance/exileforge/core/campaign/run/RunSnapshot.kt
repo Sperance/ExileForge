@@ -49,6 +49,7 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 // ==================== What the screen reads ====================
+/** Здоровье, что тает на карте (недуги, деген), округляется вниз: число не обещает того, чего уже нет. */
 internal fun ExpeditionRun.snapshot(): RunHud {
     val battle = fight
     val flow = if (battle == null && phase == RunPhase.MAP) roadFlow() else null
@@ -56,7 +57,6 @@ internal fun ExpeditionRun.snapshot(): RunHud {
     val awaiting = mine.count(::awaits)
     return RunHud(
         phase = phase, mapCode = zone.code,
-        // Здоровье, что тает на карте (недуги, деген), - вниз: число не обещает того, чего уже нет
         heroLife = shownLife(battle?.heroLife ?: life, (battle?.heroLife ?: life) > 0, hero.maxLife, falling = battle == null && flow?.let { it.net < 0 } == true),
         heroMaxLife = shownMax(hero.maxLife),
         heroShield = (battle?.heroFighter?.shield ?: shield).roundToInt(), heroMaxShield = (battle?.heroFighter?.body?.maxShield ?: hero.maxShield).roundToInt(),
@@ -97,7 +97,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
 }
 
 /**
- * Секунды захода для снимка (4.9.0): пока заход идёт - целыми, иначе снимок менялся бы каждый кадр и экран похода
+ * Секунды захода для снимка: пока заход идёт - целыми, иначе снимок менялся бы каждый кадр и экран похода
  * перекомпоновывался бы без нужды; их показывают только итоги, а там часы уже стоят и секунды точные.
  */
 private fun ExpeditionRun.shownSeconds(): Double = if (phase == RunPhase.DEAD || phase == RunPhase.CLEARED || phase == RunPhase.LEFT) seconds else kotlin.math.floor(seconds)
@@ -141,7 +141,7 @@ internal fun ExpeditionRun.adopt(zone: ZoneShare) {
 /** Event [n] is not answered yet. */
 internal fun ExpeditionRun.awaits(n: Int): Boolean = n >= answered
 
-/** Сундук [chest] открыт в этом заходе, а ответа на него ещё нет (4.10.0): он приоткрыт и ждёт. */
+/** Сундук [chest] открыт в этом заходе, а ответа на него ещё нет: он приоткрыт и ждёт. */
 fun ExpeditionRun.waiting(chest: Chest): Boolean = chest.event?.let(::awaits) == true
 
 internal fun ExpeditionRun.mapFlasks(): List<FlaskView?> = kit.flasks.mapIndexed { i, flask ->
@@ -166,7 +166,7 @@ internal fun ExpeditionRun.fightLeader(): RolledMonster = members.maxBy { it.mon
 internal fun ExpeditionRun.fightHud(battle: Battle): FightHud = battle.hud(members.map { it.monster }, fightLeader(), speed, started, paused, level = fightLevel, round = battle.round + 1, rounds = battle.rounds)
 
 /**
- * Забег для отчёта об ошибке (0.14.2): ключи контекста, что сервер выносит в публичный Issue - зона, её уровень, фаза и семя
+ * Забег для отчёта об ошибке: ключи контекста, что сервер выносит в публичный Issue - зона, её уровень, фаза и семя
  * карты (по нему карта строится заново).
  */
 fun ExpeditionRun.reportContext(): Map<String, String> = mapOf(
@@ -176,7 +176,7 @@ fun ExpeditionRun.reportContext(): Map<String, String> = mapOf(
     "run.seed" to seed.toString(),
 )
 
-/** Призыв стража для полосы захода (0.15.0, реш. 22): только у поверженного стража карты, не в зоне Ваал. */
+/** Призыв стража для полосы захода: только у поверженного стража карты, не в зоне Ваал. */
 private fun ExpeditionRun.summonView(): SummonView? {
     if (vaal || !bossDown) return null
     val perRun = index.campaign.services.summonsPerRun

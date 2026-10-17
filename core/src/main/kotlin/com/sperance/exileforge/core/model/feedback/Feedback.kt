@@ -5,18 +5,18 @@ import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/** What a report is (3.73.0, server 1.69.0): a bug or a player's suggestion; жалоба на письмо героя (4.6.3) - [COMPLAINT]. */
+/** What a report is: a bug or a player's suggestion; жалоба на письмо героя - [COMPLAINT]. */
 @Serializable enum class FeedbackKind {
     BUG,
     APPEAL,
     COMPLAINT,
 
-    /** Падение клиента (0.14.2, сервер API 86): стек шлёт сам клиент при следующем запуске; в списках игрока его нет. */
+    /** Падение клиента (сервер API 86): стек шлёт сам клиент при следующем запуске; в списках игрока его нет. */
     CRASH,
 }
 
 /**
- * Где отчёт (4.0.1, сервер 1.83): [CREATED] - создан игроком, [SENT] - отправлен Issue в GitHub (0.14.1; с 0.14.2 «Рассмотрения»
+ * Где отчёт: [CREATED] - создан игроком, [SENT] - отправлен Issue в GitHub («Рассмотрения»
  * нет - первое слово модерации отправляет отчёт сразу), [REJECTED] - отклонён модерацией с причиной.
  * Куда отчёт может перейти и можно ли голосовать, решает машина состояний сервера: она приходит полями [AdminReport.moves] и
  * [KnownReport.votable].
@@ -24,7 +24,7 @@ import kotlinx.serialization.Serializable
 @Serializable enum class ReportStatus { CREATED, SENT, REJECTED }
 
 /**
- * Судьба Issue отчёта (0.14.1, GH-ISSUES; сервер `IssueState`): открыт - [OPEN] («В работе»; 0.14.4 - метки «в работе» нет);
+ * Судьба Issue отчёта (сервер `IssueState`): открыт - [OPEN] («В работе»; метки «в работе» нет);
  * закрыт выполненным - [FIXED] (с версией), отказом - [NOT_PLANNED], [DUPLICATE], [INVALID].
  */
 @Serializable enum class IssueState(val open: Boolean) {
@@ -36,8 +36,8 @@ import kotlinx.serialization.Serializable
 }
 
 /**
- * Issue отчёта (0.14.1): номер и ссылка в публичном репозитории, судьба, версия исправления, слово разработчика, дубль чего; с
- * 0.14.2 (сервер API 86) - вся переписка [notes].
+ * Issue отчёта: номер и ссылка в публичном репозитории, судьба, версия исправления, слово разработчика, дубль чего; с
+ * вся переписка [notes].
  */
 @Serializable data class IssueView(
     val number: Int,
@@ -49,22 +49,22 @@ import kotlinx.serialization.Serializable
     val notes: List<IssueNote> = emptyList(),
 )
 
-/** Кто написал в Issue (0.14.2): разработчик в GitHub, модерация из игры или автор отчёта из игры. */
+/** Кто написал в Issue: разработчик в GitHub, модерация из игры или автор отчёта из игры. */
 @Serializable enum class NoteAuthor { DEVELOPER, MODERATION, AUTHOR }
 
-/** Запись переписки Issue (0.14.2): кто, что и когда (ISO-8601). */
+/** Запись переписки Issue: кто, что и когда (ISO-8601). */
 @Serializable data class IssueNote(val author: NoteAuthor, val text: String, val at: String = "")
 
-/** Что модерация делает с Issue отчёта из игры (0.14.2, сервер `IssueMove`): ответить или закрыть с причиной. */
+/** Что модерация делает с Issue отчёта из игры (сервер `IssueMove`): ответить или закрыть с причиной. */
 @Serializable enum class IssueMove { REPLY, FIXED, NOT_PLANNED, INVALID, DUPLICATE }
 
-/** Текст ответа в Issue из игры (0.14.2): автора отчёта или модерации. */
+/** Текст ответа в Issue из игры: автора отчёта или модерации. */
 @Serializable data class ReportAnswer(val text: String)
 
-/** A player's vote on a report (0.14.2: «+ / −» у ошибок): one per account, switched by tapping again. */
+/** A player's vote on a report («+ / −» у ошибок): one per account, switched by tapping again. */
 @Serializable enum class Vote { LIKE, DISLIKE, NONE }
 
-/** A known report in the public list (0.14.2: ошибки, без предложений): no author — only the administrator sees who wrote it; [mine] marks the viewer's own. */
+/** A known report in the public list (ошибки, без предложений): no author — only the administrator sees who wrote it; [mine] marks the viewer's own. */
 @Serializable data class KnownReport(
     val id: String,
     val text: String,
@@ -74,9 +74,9 @@ import kotlinx.serialization.Serializable
     val vote: Vote,
     val mine: Boolean,
     val createdAt: String = "",
-    /** Можно ли зрителю голосовать (4.3.0): не своё и ещё ждёт решения (0.14.1: и пока Issue открыт) - решает сервер. */
+    /** Можно ли зрителю голосовать: не своё и ещё ждёт решения (и пока Issue открыт) - решает сервер. */
     val votable: Boolean = false,
-    /** Ошибка или предложение (0.14.1: известные проблемы - и ошибки). */
+    /** Ошибка или предложение (известные проблемы - и ошибки). */
     val kind: FeedbackKind = FeedbackKind.BUG,
     val issue: IssueView? = null,
 ) {
@@ -93,12 +93,12 @@ import kotlinx.serialization.Serializable
     val likes: Int = 0,
     val dislikes: Int = 0,
     val createdAt: String = "",
-    /** Автор может удалить его (4.3.0): ошибку и предложение - да, апелляцию - нет. */
+    /** Автор может удалить его: ошибку и предложение - да, апелляцию - нет. */
     val deletable: Boolean = false,
-    /** Issue отчёта (0.14.1); null - ещё не отправлен. */
+    /** Issue отчёта; null - ещё не отправлен. */
     val issue: IssueView? = null,
 ) {
-    /** Последний ответ автору (0.14.1; 0.14.2 - последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
+    /** Последний ответ автору (последняя запись переписки не от автора): слово разработчика или модерации; пусто - ответа нет. */
     val reply: String get() = issue?.notes?.lastOrNull { it.author != NoteAuthor.AUTHOR }?.text ?: issue?.comment?.takeIf { it.isNotBlank() } ?: reason
 
     /** Отпечаток последнего ответа: сменился - ответ новый; null - ответа нет. */
@@ -112,7 +112,7 @@ import kotlinx.serialization.Serializable
     val screen: String = "",
     val context: Map<String, String> = emptyMap(),
     val userId: String? = null,
-    /** Герой автора (сервер 1.80.0): свой герой его аккаунта и имя на момент отчёта; null - без героя. */
+    /** Герой автора: свой герой его аккаунта и имя на момент отчёта; null - без героя. */
     val heroId: String? = null,
     val heroName: String = "",
     val status: ReportStatus = ReportStatus.CREATED,
@@ -121,26 +121,26 @@ import kotlinx.serialization.Serializable
     val dislikes: List<String> = emptyList(),
     val reason: String = "",
     val createdAt: String = "",
-    /** Issue отчёта (0.14.1, GH-ISSUES); null - не выгружен. */
+    /** Issue отчёта; null - не выгружен. */
     val issue: IssueView? = null,
-    /** Код последнего отказа GitHub (0.14.1): выгрузка не удалась; пусто - всё ушло. */
+    /** Код последнего отказа GitHub: выгрузка не удалась; пусто - всё ушло. */
     val issueError: String = "",
-    /** Класс и уровень героя автора (0.14.1) - то, что о герое есть в Issue. */
+    /** Класс и уровень героя автора - то, что о герое есть в Issue. */
     val heroClass: String = "",
     val heroLevel: Int = 0,
-    /** Последние неудачные запросы автора (4.3.1, сервер 1.84), новые первыми. */
+    /** Последние неудачные запросы автора, новые первыми. */
     val failures: List<com.sperance.exileforge.core.model.command.RequestFailure> = emptyList(),
-    /** Последние действия автора и снимок героя (0.14.2) - как их прислал клиент. */
+    /** Последние действия автора и снимок героя - как их прислал клиент. */
     val trail: List<String> = emptyList(),
     val heroSheet: List<String> = emptyList(),
-    /** Повторы падения и версии, где оно было (0.14.2); у прочих отчётов - 1 и пусто. */
+    /** Повторы падения и версии, где оно было; у прочих отчётов - 1 и пусто. */
     val occurrences: Int = 1,
     val versions: List<String> = emptyList(),
 )
 
 /**
- * Отчёт для модерации: с логином и ролью автора (3.88.7); [moves] - куда его можно перевести по машине состояний сервера,
- * [deletable] - может ли смотрящий его удалить (4.3.0).
+ * Отчёт для модерации: с логином и ролью автора; [moves] - куда его можно перевести по машине состояний сервера,
+ * [deletable] - может ли смотрящий его удалить.
  */
 @Serializable data class AdminReport(
     val report: FullReport,
@@ -150,7 +150,7 @@ import kotlinx.serialization.Serializable
     val deletable: Boolean = false,
 )
 
-/** A letter's thing to take (3.73.0): a template and its rarity, rolled at the hero's level when taken. */
+/** A letter's thing to take: a template and its rarity, rolled at the hero's level when taken. */
 @Serializable data class MailEquipment(val template: String, val rarity: Rarity? = null)
 
 /** What a letter carries: gold, stacks of the bag by code, things; one hero of the account takes it, once. */
@@ -158,14 +158,14 @@ import kotlinx.serialization.Serializable
     val gold: Long = 0,
     val items: Map<String, Long> = emptyMap(),
     val equipment: List<MailEquipment> = emptyList(),
-    /** Items as they are (server 1.74.0): an expired lot's goods come back by mail with their rolls. */
+    /** Items as they are: an expired lot's goods come back by mail with their rolls. */
     val instances: List<com.sperance.exileforge.rules.roll.ItemInstance> = emptyList(),
 ) {
     val empty: Boolean get() = gold <= 0 && items.isEmpty() && equipment.isEmpty() && instances.isEmpty()
 }
 
 /**
- * Чьё письмо: игры, администратора; с 4.6.3 (сервер 1.84) - героя герою ([PLAYER]) и рассылка гильдии ([GUILD]).
+ * Чьё письмо: игры, администратора; героя герою ([PLAYER]) и рассылка гильдии ([GUILD]).
  *
  * @property written письмо пишет герой: на него отвечают, жалуются и по нему игнорируют автора
  * @property answerable на него отвечают и до уровня права писать - на рассылку гильдии отвечают сразу (как сервер)
@@ -177,16 +177,15 @@ import kotlinx.serialization.Serializable
     GUILD(written = true, answerable = true),
 }
 
-/** Гильдия рассылки (4.6.3) - снимок на момент письма. */
+/** Гильдия рассылки - снимок на момент письма. */
 @Serializable data class MailGuild(val id: String, val name: String, val tag: String, val emblem: String = "", val color: String = "")
 
-/** Автор письма героя (4.6.3) - снимок на момент письма; у рассылки - и гильдия. Ответ уходит лично ему, [heroId]. */
+/** Автор письма героя - снимок на момент письма; у рассылки - и гильдия. Ответ уходит лично ему, [heroId]. */
 @Serializable data class MailSender(val heroId: String, val name: String, val heroClass: String = "", val level: Int = 1, val guild: MailGuild? = null)
 
 /**
- * A letter of the account (3.73.0): a system one names a dictionary [key] with its [args], the administrator's one its
- * [subject] and [body] as written. [claimedBy] — the hero that took the attachment; [expiresAt] — epoch millis. Письмо героя
- * (4.6.3): [from] - автор, [quote] - начало письма, на которое это ответ, [reported] - жалоба уже подана.
+ * A letter of the account: a system one names a dictionary [key] with its [args], the administrator's one its
+ * [subject] and [body] as written. [claimedBy] — the hero that took the attachment; [expiresAt] — epoch millis. Письмо героя: [from] - автор, [quote] - начало письма, на которое это ответ, [reported] - жалоба уже подана.
  */
 @Serializable data class Mail(
     @SerialName("_id") val id: String,
@@ -212,19 +211,19 @@ import kotlinx.serialization.Serializable
 }
 
 /**
- * Письмо героя (4.6.3, сервер `POST mail/letter`): личное герою [to], ответ на письмо [replyTo] (адресат - его автор) или
+ * Письмо героя (сервер `POST mail/letter`): личное герою [to], ответ на письмо [replyTo] (адресат - его автор) или
  * рассылка гильдии ([MailKind.GUILD]).
  */
 @Serializable data class LetterRequest(val kind: MailKind = MailKind.PLAYER, val to: String = "", val replyTo: String = "", val subject: String, val body: String)
 
-/** Немота глазами немого (4.6.3): категория, причина для игрока (4.12.x, сервер SEC-02 - без номера и заметки модератора) и срок. */
+/** Немота глазами немого: категория, причина для игрока (без номера и заметки модератора) и срок. */
 @Serializable data class MailMute(val category: String, val reason: String = "", val until: String? = null)
 
-/** Рассылка гильдии главе или офицеру (4.6.3): кому уйдёт и сколько рассылок гильдии за сутки. */
+/** Рассылка гильдии главе или офицеру: кому уйдёт и сколько рассылок гильдии за сутки. */
 @Serializable data class GuildMailQuota(val tag: String, val name: String, val emblem: String = "", val color: String = "", val members: Int = 0, val sent: Int = 0, val perDay: Int = 0)
 
 /**
- * Почта героя сейчас (4.6.3, сервер `GET mail/quota`): [gate] - можно ли писать (адресату, если назван) или почему нет;
+ * Почта героя сейчас (сервер `GET mail/quota`): [gate] - можно ли писать (адресату, если назван) или почему нет;
  * письма за сутки [sent] из [perDay], этому герою [toRecipient] из [perRecipient]; [readyAt] - конец паузы между письмами (мс
  * эпохи); [level] - с какого уровня пишут; [mute] - немота; [guild] - рассылка, если роль её допускает.
  */
@@ -240,7 +239,7 @@ import kotlinx.serialization.Serializable
     val guild: GuildMailQuota? = null,
 )
 
-/** Строка списка игнора (4.6.3): чьи письма герой не принимает и с какого времени (мс эпохи). */
+/** Строка списка игнора: чьи письма герой не принимает и с какого времени (мс эпохи). */
 @Serializable data class IgnoredHero(val heroId: String, val name: String, val heroClass: String = "", val at: Long = 0)
 
 /** The administrator's letter: [login] one account, blank every account. */

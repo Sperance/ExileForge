@@ -105,12 +105,12 @@ data class ItemLine(
     val text: String,
     val marks: AffixMarks,
     val itemLevel: Int = 0,
-    /** Строка, усиленная усилителями своей вещи (AMP-01): [values] и [text] - уже итог, ролл и процент - здесь; null - как есть. */
+    /** Строка, усиленная усилителями своей вещи: [values] и [text] - уже итог, ролл и процент - здесь; null - как есть. */
     val amplified: AmplifiedLine? = null,
 ) {
     val code: ModifierCode get() = roll.code
 
-    /** Разбор усиленной строки (AMP-01): «ролл 134 · ▲ +15% = 154», значения через « / »; null - строка не усилена. */
+    /** Разбор усиленной строки: «ролл 134 · ▲ +15% = 154», значения через « / »; null - строка не усилена. */
     val amplifiedText: String? get() = amplified?.let { amp ->
         val stats = amp.rolled.indices.map { definition?.effectOf(it)?.stat.orEmpty() }
         val rolled = amp.rolled.mapIndexed { i, v -> modNumber(stats[i], v) }.joinToString(" / ")
@@ -163,7 +163,7 @@ data class BaseProperty(val code: String, val template: String, val values: List
 /**
  * An item as the screen reads it: the copy, its template and the index that explains both. Everything a
  * card, a row or a tooltip prints is derived here once, so no screen reads a roll on its own.
- * [ranged] (3.90.2) - витрина шаблона ([showcase]): строка печатает вилку своего тира, а не выпавшее число.
+ * [ranged] - витрина шаблона ([showcase]): строка печатает вилку своего тира, а не выпавшее число.
  */
 class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: ContentIndex, private val ranged: Boolean = false) {
     val id: String get() = item.id
@@ -180,19 +180,19 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val influence: Influence? get() = item.influence
     val quality: Int get() = item.quality
 
-    /** The kind of quality (3.36.0): a catalyst's, or the base's when null. */
+    /** The kind of quality: a catalyst's, or the base's when null. */
     val catalyst: com.sperance.exileforge.rules.content.Catalyst? get() = item.catalyst
     val weaponType: WeaponType? get() = template.weaponType
     val level: Int get() = item.level(template)
 
     /**
-     * A map names its zone (3.45.0: one template for every zone), and its tier rides the name with the area level it lifts the
-     * zone to (4.3.0): «Rotten Heart Map · tier 8 · lv 85».
+     * A map names its zone (one template for every zone), and its tier rides the name with the area level it lifts the
+     * zone to: «Rotten Heart Map · tier 8 · lv 85».
      */
     val title: String get() = (if (item.mapZone.isNotEmpty()) mapItemTitle(item.mapZone) else equipmentTitle(code))
         .let { name -> if (item.mapTier > 0) ui("card.map_tier_title", name, item.mapTier, areaLevel ?: level) else name }
 
-    /** Уровень района карты (4.3.0): уровень её зоны, поднятый тиром (`MapRule.areaLevel` правил); у не-карты - null. */
+    /** Уровень района карты: уровень её зоны, поднятый тиром (`MapRule.areaLevel` правил); у не-карты - null. */
     val areaLevel: Int? get() = index.zone(item.mapZone)?.let { index.campaign.maps.areaLevel(it.level, item.mapTier) }
 
     /** A unique's or mythic's lore; a base carries no description. */
@@ -203,12 +203,15 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 
     private val text by lazy { modifierText(index) }
 
-    /** Every roll on the copy as a line, in the order they lie on the copy. */
+    /**
+     * Every roll on the copy as a line, in the order they lie on the copy.
+     *
+     * Усилители своей вещи - правилом `Amplify`: строка печатает итог, ролл и процент - в разборе.
+     */
     val lines: List<ItemLine> by lazy {
         item.rolls.map { roll ->
             val def = index.modifier(roll.code)
             val tier = def?.tier(roll.tier)?.takeIf { ranged }
-            // Усилители своей вещи (AMP-01) - правилом `Amplify`: строка печатает итог, ролл и процент - в разборе
             val amplified = if (ranged) null else Amplify.line(index, roll, item.rolls)
             val values = amplified?.shown ?: def?.let(roll::values).orEmpty()
             val words = def?.let { tier?.let { rangedLine(index, roll.code, it.values, template.slot) } ?: modifierLine(index, it, values, template.slot) } ?: displayName(roll.code.value)
@@ -220,18 +223,19 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     val affixes: List<ItemLine> get() = lines.filter { it.affix }
 
     /**
-     * The base of the item with every local line and its quality folded into it, by the rules' own fold (server 1.57.0) — the
+     * The base of the item with every local line and its quality folded into it, by the rules' own fold — the
      * one the sheet and the fight wear: a helmet of 100 armour with «+20 armour» and «20% increased armour» wears 144.
+     *
+     * Своя база копии: её качество базы и уровень вещи растят строки шаблона прежде всего. Фляга печатает лечение, длительность, заряды и
+     * эффект по своему листу - со своими строками и качеством, без бонусов героя.
      */
     val base: List<BaseProperty> by lazy {
         if (template.base.isEmpty()) {
             emptyList()
         } else {
             val calc = SheetCalculator(index)
-            // The copy's own base (server 1.67.0): its base quality and item level scale the template's lines before anything else.
             val baseTotals = calc.compute(emptyMap(), calc.expand(index.rules.loot.baseVariance.base(template, calc.baseScale(template, item))))
             val totals = calc.itemBase(template, item)
-            // Фляга (4.9.x): лечение, длительность, заряды и эффект - по её листу, с её строками и качеством, без бонусов героя
             val flask = if (template.slot.isFlask) FlaskSheet.of(item, template, index) else null
             template.base.mapNotNull { line ->
                 val def = index.modifier(line.code) ?: return@mapNotNull null
@@ -245,7 +249,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         }
     }
 
-    /** Качество роллов (4.6.5): только строки с вилкой - фиксированная строка не «идеальна», ей некуда было выпасть. */
+    /** Качество роллов: только строки с вилкой - фиксированная строка не «идеальна», ей некуда было выпасть. */
     val summary: RollSummary by lazy {
         val qualities = lines.filterNot { it.fixed }.mapNotNull { it.quality }
         RollSummary(
@@ -255,7 +259,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
     }
 
     /**
-     * Стороны аффиксов (4.2.0) по правилу [AffixRoller.sides] - то же, что держат сферы и верстак; null - у редкости в этом
+     * Стороны аффиксов по правилу [AffixRoller.sides] - то же, что держат сферы и верстак; null - у редкости в этом
      * слоте мест нет (обычная, уникальная).
      */
     val sides: AffixSides? by lazy { AffixRoller(index).sides(item, template).takeIf { it.prefixLimit + it.suffixLimit > 0 } }
@@ -299,7 +303,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
         private const val SHOWCASE_SEED = 1L
 
         /**
-         * Шаблон как витрина (3.90.2, «История»): копия правил с закреплёнными строками шаблона на нейтральной базе, каждая
+         * Шаблон как витрина («История»): копия правил с закреплёнными строками шаблона на нейтральной базе, каждая
          * строка - вилкой тира. Своего ролла, номера и владельца у неё нет; кости с постоянным семенем - вид не мигает.
          */
         fun showcase(template: ItemTemplate, index: ContentIndex): ItemView {
@@ -310,7 +314,7 @@ class ItemView(val item: ItemInstance, val template: ItemTemplate, val index: Co
 }
 
 /**
- * Вид требования вещи (4.6.5): [word] - как его называют правила в причине отказа (`Requirements.unmet`: «strength: need 130…»);
+ * Вид требования вещи: [word] - как его называют правила в причине отказа (`Requirements.unmet`: «strength: need 130…»);
  * у класса слова нет - правила его не называют, класс сверяет [unmetNeeds].
  */
 enum class NeedKind(val word: String?) {
@@ -330,13 +334,16 @@ enum class NeedKind(val word: String?) {
 /** Требование вещи: вид и короткая подпись «130 сил». */
 data class ItemNeed(val kind: NeedKind, val text: String)
 
-/** What a hero must reach before an item counts, shortened for a line; level 1 is not a requirement at all. */
+/**
+ * What a hero must reach before an item counts, shortened for a line; level 1 is not a requirement at all.
+ *
+ * Классовую уникалку носит только свой класс.
+ */
 fun itemRequirements(template: ItemTemplate, lang: Lang = uiLanguage): List<ItemNeed> = listOfNotNull(
     template.requiredLevel.takeIf { it > 1 }?.let { ItemNeed(NeedKind.LEVEL, "$it ${ui(lang, "req.short.requiredLevel")}") },
     template.requiredStrength.takeIf { it > 0 }?.let { ItemNeed(NeedKind.STRENGTH, "$it ${ui(lang, "req.short.requiredStrength")}") },
     template.requiredDexterity.takeIf { it > 0 }?.let { ItemNeed(NeedKind.DEXTERITY, "$it ${ui(lang, "req.short.requiredDexterity")}") },
     template.requiredIntelligence.takeIf { it > 0 }?.let { ItemNeed(NeedKind.INTELLIGENCE, "$it ${ui(lang, "req.short.requiredIntelligence")}") },
-    // A class's unique (3.76.0, server 1.71.0): only that class wears it.
     template.heroClass?.let { ItemNeed(NeedKind.CLASS, ui(lang, "req.short.heroClass", classTitle(it))) },
 )
 
@@ -389,11 +396,10 @@ fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNot
     if (from == to) from else "$from–$to"
 }.joinToString(" / ").ifBlank { null }
 
-/** A bench line as the sentence it would add, with the tier's range where the roll will land: "+(70–79) to maximum Life". */
-
-/** Стороны аффиксов одной строкой (4.2.0): «Преф. 2/3 · Суф. 1/3». */
+/** Стороны аффиксов одной строкой: «Преф. 2/3 · Суф. 1/3». */
 fun sidesText(sides: AffixSides): String = ui("card.sides", sides.prefixes, sides.prefixLimit, sides.suffixes, sides.suffixLimit)
 
+/** Строка верстака как фраза, что она добавит, с вилкой тира, куда ляжет ролл: «+(70–79) к максимуму здоровья». */
 fun recipeText(index: ContentIndex, recipe: BenchRecipe): String = rangedLine(index, recipe.modifier, recipe.values)
 
 /** A modifier's sentence with each value as its range: "+(70–79) to maximum Life" — a bench line, an essence's guarantee. */
@@ -409,18 +415,18 @@ fun rangedLine(index: ContentIndex, modifier: ModifierCode, values: List<Range>,
     return fillTemplate(template, ranges)
 }
 
-/** A monster's or a map's summed effect as a short line: «Здоровье: +40%», by operation; знак - из числа (3.90.0), «−51%», не «+-51%». */
+/**
+ * A monster's or a map's summed effect as a short line: «Здоровье: +40%», by operation; знак - из числа, «−51%», не «+-51%».
+ *
+ * SET заменяет значение, а не прибавляет: знака у него нет.
+ */
 fun effectText(stat: String, op: Op, value: Double, index: ContentIndex? = null): String {
     val title = statTitle(stat)
     val size = signedNumber(value) { modNumber(stat, it) }
     return when (op) {
         Op.ADD -> ui("fight.line_add", size + effectUnit(stat, op, index), title)
-
         Op.INCREASED -> ui("fight.line_increased", size, title)
-
         Op.MORE -> ui("fight.line_more", size, title)
-
-        // SET заменяет значение, а не прибавляет: знака у него нет.
         Op.SET -> ui("fight.line_set", modNumber(stat, value), title)
     }
 }

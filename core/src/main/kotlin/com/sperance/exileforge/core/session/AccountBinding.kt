@@ -3,7 +3,7 @@ package com.sperance.exileforge.core.session
 import com.sperance.exileforge.rules.content.InputLimits
 
 /**
- * Проверка формы «Создать аккаунт» (3.88.0, server 1.80.0) до запроса: те же пределы, что держит сервер (`rules.inputs`
+ * Проверка формы «Создать аккаунт» до запроса: те же пределы, что держит сервер (`rules.inputs`
  * `loginMin`..`accountLogin`, пароль `passwordMin`..`password`, логин - латиница, цифры и `_`). Сервер всё равно проверяет
  * сам; форма лишь не шлёт заведомый отказ.
  */

@@ -4,7 +4,7 @@ import com.sperance.exileforge.rules.content.FightQueue
 import com.sperance.exileforge.rules.content.FightRules
 
 /**
- * Как враги боя выходят на поле (4.8.0): раундами собранных стай ([Rounds]) или подкреплением по очереди ([Reinforcements]).
+ * Как враги боя выходят на поле: раундами собранных стай ([Rounds]) или подкреплением по очереди ([Reinforcements]).
  * Свита (`summonOf`) встаёт только по зову фаз и в выходе не участвует. Выход детерминирован: он зависит лишь от состава
  * боя и того, сколько врагов живо, - тот же сид даёт тот же бой.
  */
@@ -13,7 +13,7 @@ sealed interface Muster {
     fun field(foes: List<Foe>, fight: FightRules): Field
 
     /**
-     * Раунды (4.4.1): стаи, что бой собрал вокруг вступившей, выходят по [Foe.round]; следующий раунд встаёт, едва пал
+     * Раунды: стаи, что бой собрал вокруг вступившей, выходят по [Foe.round]; следующий раунд встаёт, едва пал
      * последний враг на поле, и начинает ярость заново.
      */
     data object Rounds : Muster {
@@ -21,9 +21,9 @@ sealed interface Muster {
     }
 
     /**
-     * Подкрепления (4.8.0, узел Разлома, этаж башни): все враги боя по порядку - одна очередь [FightQueue] правил боя, на
+     * Подкрепления (узел Разлома, этаж башни): все враги боя по порядку - одна очередь [FightQueue] правил боя, на
      * поле не больше `fight.maxFoes`; павшего сразу сменяет следующий, на его место. Каждая смена поля
-     * ([FightQueue.waves]) начинает ярость заново, как раньше новая волна.
+     * ([FightQueue.waves]) начинает ярость заново.
      */
     data object Reinforcements : Muster {
         override fun field(foes: List<Foe>, fight: FightRules): Field = QueueField(foes, fight)

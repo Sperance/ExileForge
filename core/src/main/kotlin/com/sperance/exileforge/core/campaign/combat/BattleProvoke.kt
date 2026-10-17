@@ -5,8 +5,6 @@ import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import com.sperance.exileforge.core.campaign.run.ProvokeView
 import com.sperance.exileforge.rules.content.CoreStat
 
-// ==================== Провокация героя (4.12.x, STAT-DEF-05) ====================
-
 /** Провокация героя для подсказки боя; null - героя без провокации. */
 fun Battle.provokeView(): ProvokeView? = heroProvoke().takeIf { it > 0 }?.let { chance ->
     val rule = rules.provoke
@@ -21,7 +19,7 @@ internal fun Battle.heroProvoke(): Double = heroFighter.body[CoreStat.PROVOKE.co
 
 /**
  * Удар героя по своей основной цели [target] с шансом силы провокации провоцирует её на `combat.provoke.duration` секунд; повторно -
- * не раньше невосприимчивости после конца. Кость тянется только у героя с провокацией: бой без неё катится как прежде.
+ * не раньше невосприимчивости после конца. Кость тянется только у героя с провокацией: бой без неё лишних костей не тянет.
  */
 internal fun Battle.provoke(target: Fighter) {
     if (target.side != Side.MONSTER || target.provoked || time < target.provokeFree) return

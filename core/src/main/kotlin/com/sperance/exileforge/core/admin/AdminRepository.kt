@@ -7,12 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-/** Инструменты администратора: коды наград. Тестовые учётки - в окне модерации (3.94.0). */
+/** Инструменты администратора: коды наград. Тестовые учётки - в окне модерации. */
 data class Admin(
     val redemptions: List<RedemptionCode> = emptyList(),
 )
 
-/** Единственный источник данных администратора (3.80.32); выход из аккаунта их забывает. */
+/** Единственный источник данных администратора; выход из аккаунта их забывает. */
 class AdminRepository {
     private val mutable = MutableStateFlow(Admin())
     val state: StateFlow<Admin> = mutable.asStateFlow()

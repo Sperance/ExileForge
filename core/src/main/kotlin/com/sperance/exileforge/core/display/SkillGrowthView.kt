@@ -10,13 +10,13 @@ import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.TierRule
 
 /**
- * Ритуал следующего тира умения (4.4.0): правило тира [rule], работа чар [job] в профессии [profession], вся цена [cost] (вход работы,
+ * Ритуал следующего тира умения: правило тира [rule], работа чар [job] в профессии [profession], вся цена [cost] (вход работы,
  * книги умения и примесь его стихии) и отказ правил [refusal] - тот же, что бросит сервер.
  */
 data class RitualView(val rule: TierRule, val profession: String, val job: Job.Evolve, val cost: List<JobInput>, val refusal: Refusal?)
 
 /**
- * Рост умения, как его показывает гримуар (4.4.0) - всё из правил ([com.sperance.exileforge.rules.content.SkillGrowth]), клиент
+ * Рост умения, как его показывает гримуар - всё из правил ([com.sperance.exileforge.rules.content.SkillGrowth]), клиент
  * своего не считает: уровень и опыт к следующему ([toNext], null - дальше уровней нет), потолок тира [cap], полна ли полоса в
  * ожидании требования ([waiting]), сколько опыта даст книга ([bookXp]), тир в бою [tier] и свой [owned], гнёзда открытые
  * [sockets] из всех [maxSockets], руны по гнёздам и ритуал следующего тира.

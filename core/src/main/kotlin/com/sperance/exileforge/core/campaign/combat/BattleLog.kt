@@ -12,8 +12,6 @@ import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.sheet.lines
 
-// ==================== The log's traces (3.37.0) ====================
-
 /** One number off the fight's dice. */
 internal fun Battle.draw(): Double = random.nextDouble()
 
@@ -48,7 +46,7 @@ internal fun Battle.shot(fighter: Fighter, blow: Blow? = null): FighterShot {
     )
 }
 
-/** A note in the log (3.37.0): something that happened to [fighter] without a blow; [flow] - разбор итога здоровья (4.9.3). */
+/** A note in the log: something that happened to [fighter] without a blow; [flow] - разбор итога здоровья. */
 internal fun Battle.note(fighter: Fighter, kind: NoteKind, ref: String, value: Double = 0.0, flow: LifeFlow? = null) {
     record(
         fighter.side, Action.NOTE, HitKind.HIT, 0.0, null, 0.0, false, emptyList(), null, if (fighter.side == Side.MONSTER) fighter.index else target()?.index ?: 0,
@@ -81,7 +79,7 @@ internal fun Battle.record(
 }
 
 /**
- * A skill's line without a blow (3.37.0): the buff or curse it laid, read off the fighter that holds it now — the user
+ * A skill's line without a blow: the buff or curse it laid, read off the fighter that holds it now — the user
  * for one on themselves, the target for a curse.
  */
 private fun Battle.skillTrace(actor: Side, action: Action, foe: Int, skill: String?, onSelf: Boolean, healed: Double): Trace? {

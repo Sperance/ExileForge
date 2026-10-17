@@ -9,15 +9,17 @@ import com.sperance.exileforge.rules.content.PhaseStep
 import kotlin.math.max
 import kotlin.math.min
 
-/** Шаг фазы босса в бою (3.92.0): шаг правил и умение, которое он даёт, уже найденное среди умений монстров. */
+/** Шаг фазы босса в бою: шаг правил и умение, которое он даёт, уже найденное среди умений монстров. */
 data class FoePhase(val step: PhaseStep, val skill: MonsterSkill? = null, val totems: List<FoeTotem> = emptyList())
 
 /** Источник строк шага [step] фазы [code] на боссе: у каждого шага свой, так что два шага одного порога не заменяют друг друга. */
 internal fun phaseSource(code: String, step: Int) = "$code#$step"
 
 /**
- * Фазы босса (3.92.0): каждый шаг, до чьего порога опустилось здоровье [foe], срабатывает раз за бой - строки, умение, свита,
+ * Фазы босса: каждый шаг, до чьего порога опустилось здоровье [foe], срабатывает раз за бой - строки, умение, свита,
  * удар, лечение, барьер, неуязвимость - и пишется в журнал заметкой фазы.
+ *
+ * Взрыв фазы - вторичный урон: от него не уклониться.
  */
 internal fun Battle.phase(foe: Fighter) {
     val plan = foes[foe.index]
@@ -44,7 +46,6 @@ internal fun Battle.phase(foe: Fighter) {
             val element = DamageType.element(step.element)
             val total = foe.body.damage.values.sum() * step.burst / 100
             val damage = if (element != null) mapOf(element to total) else foe.body.damage.mapValues { it.value * step.burst / 100 }
-            // Взрыв фазы - вторичный урон (4.7.0): от него не уклониться
             strike(foe, heroFighter, Blow(damage, Action.SKILL, spell = false, skill = phaseSource(code, i), spread = false, secondary = true))
         }
     }
@@ -52,12 +53,13 @@ internal fun Battle.phase(foe: Fighter) {
 
 /**
  * Свита [count] босса [boss] встаёт на поле сразу; без свободного слота - не встаёт.
- * Кто встал - номера в стае (3.96.0: тень Поглотителя получает украденный дар).
+ * Кто встал - номера в стае (тень Поглотителя получает украденный дар).
+ *
+ * Слоты вокруг босса заняты - приспешник не встаёт.
  */
 internal fun Battle.summon(boss: Fighter, count: Int): List<Int> {
     val risen = mutableListOf<Int>()
     foes.indices.filter { foes[it].summonOf == boss.index && it !in called }.take(count).forEach { index ->
-        // Слоты вокруг босса (3.93.0): все заняты - приспешник не встаёт
         val slot = freeSlot() ?: return@forEach
         slotHolders[slot] = SlotHolder.Minion(index)
         called += index
@@ -69,7 +71,7 @@ internal fun Battle.summon(boss: Fighter, count: Int): List<Int> {
     return risen
 }
 
-/** Босс пал (3.92.0): его свита падает с ним; добычи она не даёт и убийством не считается. */
+/** Босс пал: его свита падает с ним; добычи она не даёт и убийством не считается. */
 internal fun Battle.dismissRetinue(boss: Fighter) {
     fellTotems(boss)
     foes.indices.filter { foes[it].summonOf == boss.index }.forEach { index ->
@@ -85,7 +87,7 @@ internal fun Battle.dismissRetinue(boss: Fighter) {
     }
 }
 
-/** Приспешник пал (3.93.0): его слот свободен для новой свиты или тотема. */
+/** Приспешник пал: его слот свободен для новой свиты или тотема. */
 internal fun Battle.freeMinionSlot(index: Int) {
     slotHolders.indices.firstOrNull { (slotHolders[it] as? SlotHolder.Minion)?.index == index }?.let { slotHolders[it] = null }
 }

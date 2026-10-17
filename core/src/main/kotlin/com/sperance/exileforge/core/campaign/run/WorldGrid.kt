@@ -7,8 +7,6 @@ import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.sign
 
-// ==================== The grid ====================
-
 /**
  * The shortest way from [from] to [to] over floor, eight ways, never cutting a corner of rock;
  * empty when there is none. Both ends are included.
@@ -67,7 +65,7 @@ internal fun ExpeditionWorld.distances(from: Cell, limit: Int): Map<Cell, Int> {
 }
 
 /**
- * Whether a straight line from one point to another crosses no rock (3.89.0; chasms are seen across, 3.91.0): an exact walk over every cell
+ * Whether a straight line from one point to another crosses no rock (chasms are seen across): an exact walk over every cell
  * the line enters (Amanatides–Woo), not samples along it - a sample could step over the tip of a rock corner.
  * The cells of both ends are not checked: a rock face is seen, what is behind it is not.
  * A line squeezing through the corner between two rocks touching by corners is blocked; past a single rock corner it goes on.
@@ -75,7 +73,7 @@ internal fun ExpeditionWorld.distances(from: Cell, limit: Int): Map<Cell, Int> {
 fun ExpeditionWorld.sight(ax: Double, ay: Double, bx: Double, by: Double): Boolean = line(ax, ay, bx, by) { cx, cy -> map.clear(cx, cy) }
 
 /**
- * Прямая проходима ногами (3.95.0): та же проверка клеток, что у [sight], но пропасть и вода её рвут - монстр, видящий
+ * Прямая проходима ногами: та же проверка клеток, что у [sight], но пропасть и вода её рвут - монстр, видящий
  * героя через яму, идёт в обход, а не скользит по её краю.
  */
 fun ExpeditionWorld.passable(ax: Double, ay: Double, bx: Double, by: Double): Boolean = line(ax, ay, bx, by) { cx, cy -> map.walkable(cx, cy) }
@@ -138,9 +136,11 @@ private const val CORNER = 1e-9
 
 /**
  * What the hero sees from the cell they stand in, worked out again only when they leave it. Сначала открытые клетки по прямой
- * [sight]; затем скала (4.3.1): видна, если до её центра дошла прямая или рядом (8 соседей) лежит видимая открытая клетка - так
+ * [sight]; затем скала: видна, если до её центра дошла прямая или рядом (8 соседей) лежит видимая открытая клетка - так
  * в туннеле в одну клетку стены видны вдоль всего освещённого пола, а не лишь у ног: прямая к центру дальней боковой стены
  * режет соседнюю скалу под скользящим углом.
+ *
+ * Грань скалы видна, когда до неё доходит луч или она граничит с освещённой землёй; что за ней - нет.
  */
 internal fun ExpeditionWorld.light() {
     val here = Cell(floor(heroX).toInt(), floor(heroY).toInt())
@@ -160,7 +160,6 @@ internal fun ExpeditionWorld.light() {
             if (sight(heroX, heroY, x + 0.5, y + 0.5)) see(x, y)
         }
     }
-    // A rock face is seen when the line reaches it or it borders lit open ground; what is behind it is not.
     rocks.forEach { (x, y) -> if (bordersLit(x, y) || sight(heroX, heroY, x + 0.5, y + 0.5)) see(x, y) }
 }
 
@@ -172,7 +171,7 @@ private fun ExpeditionWorld.see(x: Int, y: Int) {
 /** Лежит ли рядом со скалой (8 соседей) видимая открытая клетка. */
 private fun ExpeditionWorld.bordersLit(x: Int, y: Int): Boolean = ExpeditionWorld.STEPS.any { (dx, dy) -> map.clear(x + dx, y + dy) && lit(x + dx, y + dy) }
 
-/** A move that slides along walls (4.7.0 - по скруглённым углам, [WallBody]). */
+/** A move that slides along walls (по скруглённым углам, [WallBody]). */
 internal fun ExpeditionWorld.slide(x: Double, y: Double, dx: Double, dy: Double, radius: Double): Pair<Double, Double> = body.slide(x, y, dx, dy, radius)
 
 internal fun ExpeditionWorld.free(x: Double, y: Double, radius: Double): Boolean = body.free(x, y, radius)

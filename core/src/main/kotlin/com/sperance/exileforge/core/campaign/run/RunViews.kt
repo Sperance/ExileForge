@@ -76,7 +76,7 @@ data class FloatingHit(
     val inflicted: List<Ailment>,
     val stunned: Boolean,
     val foe: Int = 0,
-    /** Недуг тика (0.15.0): яд рисуется цветом своей плитки, а не хаосом; у удара - null. */
+    /** Недуг тика: яд рисуется цветом своей плитки, а не хаосом; у удара - null. */
     val ailment: Ailment? = null,
 )
 
@@ -112,11 +112,11 @@ data class FoeView(
     val maxMana: Int = 0,
     /** Its place on the field; -1 - свита босса, что ещё не звана. */
     val place: Int = index,
-    /** Its buildups (3.78.0), null while the rules have none. */
+    /** Its buildups, null while the rules have none. */
     val buildup: BuildupView? = null,
-    /** Барьер (3.93.0): что ещё поглотит барьер фазы босса. */
+    /** Барьер: что ещё поглотит барьер фазы босса. */
     val barrier: Int = 0,
-    /** Ждёт своего раунда (4.4.1): ещё не на поле, но его ещё бить. */
+    /** Ждёт своего раунда: ещё не на поле, но его ещё бить. */
     val waiting: Boolean = false,
 ) {
     /** Its card is on the field: it fights there, or fell there. */
@@ -124,13 +124,13 @@ data class FoeView(
 }
 
 /**
- * Ярость боя (3.95.0 - в полосе стража; 4.3.0 - любого боя): [stage] ступеней уже прошло, урон врагов больше на [damage]
+ * Ярость боя (в полосе стража; любого боя): [stage] ступеней уже прошло, урон врагов больше на [damage]
  * процентов, до следующей ступени [next] секунд; null - ступеней больше не будет.
  */
 data class RageView(val stage: Int, val damage: Double, val next: Double?)
 
 /**
- * Босс в бою (3.92.0): [index] - его место в стае, [phase] - шаблон фаз, [marks] - пороги шагов в процентах здоровья и
+ * Босс в бою: [index] - его место в стае, [phase] - шаблон фаз, [marks] - пороги шагов в процентах здоровья и
  * [passed] - какие уже сработали, [cast] - умение, что он готовит, и через сколько секунд из скольких.
  */
 data class BossHud(
@@ -139,9 +139,9 @@ data class BossHud(
     val marks: List<Double>,
     val passed: List<Boolean>,
     val cast: CastView?,
-    /** Слоты вокруг босса (3.93.0): по порядку, null - пустой; первая половина слева, вторая справа. */
+    /** Слоты вокруг босса: по порядку, null - пустой; первая половина слева, вторая справа. */
     val slots: List<SlotView?> = emptyList(),
-    /** Страж Разлома (3.96.0): кто он; null - обычный босс, поля ниже пусты. */
+    /** Страж Разлома: кто он; null - обычный босс, поля ниже пусты. */
     val rift: RiftGuard? = null,
     /** Печати брони Стража Врат: стоят [seals] из [sealsMax], к следующей снятой - [sealHits] попаданий из [sealEvery]. */
     val seals: Int = 0,
@@ -160,7 +160,7 @@ data class BossHud(
     /** Поглотитель эха: коды украденных даров по порядку и его сила от Эха, «больше» в процентах. */
     val stolen: List<String> = emptyList(),
     val devoured: Double = 0.0,
-    /** Босс Скверны (4.0.0, Матерь): осквернён - его шаги фаз рвут пуповины «Сердца Скверны». */
+    /** Босс Скверны (Матерь): осквернён - его шаги фаз рвут пуповины «Сердца Скверны». */
     val tainted: Boolean = false,
 ) {
     /** Сработавших шагов фаз - у Матери столько пуповин уже порвано (портрет и полоса гасят их по одной). */
@@ -170,7 +170,7 @@ data class BossHud(
     val cords: Int get() = marks.size + 1
 }
 
-/** Кто в слоте вокруг босса (3.93.0): приспешник свиты или тотем. */
+/** Кто в слоте вокруг босса: приспешник свиты или тотем. */
 sealed interface SlotView {
     /** Приспешник: [index] - его место в стае. */
     data class Minion(val index: Int) : SlotView
@@ -182,7 +182,7 @@ sealed interface SlotView {
 }
 
 /**
- * Применение умения героя на экране (4.4.0, «Жилы энергии»): умение [code] вида [type], его стихия [element] (null - без стихии),
+ * Применение умения героя на экране («Жилы энергии»): умение [code] вида [type], его стихия [element] (null - без стихии),
  * тир в бою [tier], по кому оно легло ([foes]), на себя ли ([self]), эхо ли это ([echo]) и как далеко сцена ([progress], 0..1).
  * [serial] - номер строки лога: новая строка - новая сцена.
  */
@@ -198,21 +198,19 @@ data class HeroCastView(
     val progress: Float,
 )
 
-/** Умение врага на подходе (3.92.0): [left] секунд до готовности из [total]. */
+/** Умение врага на подходе: [left] секунд до готовности из [total]. */
 data class CastView(val code: String, val left: Double, val total: Double) {
     val progress: Float get() = if (total <= 0) 1f else (1 - left / total).toFloat().coerceIn(0f, 1f)
 }
 
-/** The fight as the overlay prints it: the pack as cards, the hero's pools and states, what just landed, and the blows so far, newest first. */
-
 /**
- * A fighter's buildups as its card shows them (3.78.0): the fullest bar and its share, every bar's share by [Buildup] order
+ * A fighter's buildups as its card shows them: the fullest bar and its share, every bar's share by [Buildup] order
  * for its window, and which went off and holds it now.
  */
 data class BuildupView(val leading: Buildup?, val share: Float, val bars: List<Float>, val stunned: Boolean, val frozen: Boolean, val electrocuted: Boolean)
 
 /**
- * Провокация героя для подсказки (4.12.x, STAT-DEF-05): шанс [chance]%, на [seconds] секунд, урон спровоцированного по герою
+ * Провокация героя для подсказки: шанс [chance]%, на [seconds] секунд, урон спровоцированного по герою
  * меньше на [cut]% (боссов - [bossCut]%), повторно - через [immunity] секунд (боссов - [bossImmunity]).
  */
 data class ProvokeView(val chance: Double, val seconds: Double, val cut: Double, val bossCut: Double, val immunity: Double, val bossImmunity: Double)
@@ -228,7 +226,7 @@ data class FightHud(
     val heroSwing: Float = 0f,
     val heroAilments: List<AilmentView> = emptyList(),
     val heroHeld: Boolean = false,
-    /** The hero's buildups (3.78.0). */
+    /** The hero's buildups. */
     val heroBuildup: BuildupView? = null,
     val lunge: LungeView? = null,
     val events: List<CombatEvent> = emptyList(),
@@ -236,7 +234,7 @@ data class FightHud(
     val paused: Boolean = false,
     val target: Int? = null,
     val focus: Int? = null,
-    /** Провокация героя (4.12.x, STAT-DEF-05): её числа для подсказки; null - героя без провокации. */
+    /** Провокация героя: её числа для подсказки; null - героя без провокации. */
     val heroProvoke: ProvokeView? = null,
     /** [heroMaxMana] is the mana the auras leave free; [heroReserved] what they hold past it. */
     val heroMana: Int = 0,
@@ -245,29 +243,29 @@ data class FightHud(
     val skills: List<SkillView?> = emptyList(),
     val flasks: List<FlaskView?> = emptyList(),
     val heroEffects: List<EffectView> = emptyList(),
-    /** The hero's frenzy, power and endurance charges (3.33.0), a counter per kind held. */
+    /** The hero's frenzy, power and endurance charges, a counter per kind held. */
     val heroCharges: List<ChargeView> = emptyList(),
-    /** Действующие рычаги Предначертания героя (4.9.0): значок ✦ среди его состояний. */
+    /** Действующие рычаги Предначертания героя: значок ✦ среди его состояний. */
     val heroFate: List<FateGlow> = emptyList(),
     val heroBarrier: Int = 0,
     /** The level the foes stand at: a depth of the Abyss stands deeper than its zone. */
     val level: Int = 0,
-    /** Бой цепочки (4.2.0), с 1, из [rounds]: босс раша, бой этажа Башни, волна Разлома, раунд собранных стай (4.4.1); у одиночного боя - 1 из 1. */
+    /** Бой цепочки, с 1, из [rounds]: босс раша, бой этажа Башни, волна Разлома, раунд собранных стай; у одиночного боя - 1 из 1. */
     val round: Int = 1,
     val rounds: Int = 1,
-    /** Лист героя сейчас (3.92.0): по нему лист умения врага считает, сколько оно снимет. */
+    /** Лист героя сейчас: по нему лист умения врага считает, сколько оно снимет. */
     val heroBody: com.sperance.exileforge.core.campaign.combat.Combatant? = null,
-    /** Босс боя (3.92.0): его фазы и что он готовит; null - босса нет. */
+    /** Босс боя: его фазы и что он готовит; null - босса нет. */
     val boss: BossHud? = null,
-    /** Ярость боя (4.3.0): ступень, прибавка урона врагов и отсчёт до следующей; null - бой кончен. */
+    /** Ярость боя: ступень, прибавка урона врагов и отсчёт до следующей; null - бой кончен. */
     val rage: RageView? = null,
-    /** Последнее применение умения героя (4.4.0), пока его сцена на экране; null - сцены нет. */
+    /** Последнее применение умения героя, пока его сцена на экране; null - сцены нет. */
     val heroCast: HeroCastView? = null,
-    /** Все удары на экране (4.9.3): одновременные - каждый своей сценой, не только последний ([lunge]). */
+    /** Все удары на экране: одновременные - каждый своей сценой, не только последний ([lunge]). */
     val strikes: List<StrikeView> = emptyList(),
-    /** Итог здоровья героя за последнюю секунду (4.9.3): плитка «−12/с» и её разбор. */
+    /** Итог здоровья героя за последнюю секунду: плитка «−12/с» и её разбор. */
     val heroFlow: LifeFlow = LifeFlow.NONE,
-    /** Пассивные умения героя на весь бой (4.9.3): ауры и бонусы на полке «на весь бой». */
+    /** Пассивные умения героя на весь бой: ауры и бонусы на полке «на весь бой». */
     val heroPassives: List<EffectView> = emptyList(),
     /** Секунды боя, когда снят этот снимок: кадр двигает от них сцены ударов ([com.sperance.exileforge.core.campaign.FightPulse]). */
     val time: Double = 0.0,
@@ -279,7 +277,7 @@ data class FightHud(
     /** The foes on the field, by their places. */
     val field: List<FoeView> get() = foes.filter { it.onField }.sortedBy { it.place }
 
-    /** How many of the whole pack are still to be beaten: those on the field and (4.4.1) those waiting for their round. */
+    /** How many of the whole pack are still to be beaten: those on the field and those waiting for their round. */
     val standing: Int get() = foes.count { it.alive || it.waiting }
 }
 
@@ -288,7 +286,7 @@ data class PackHit(
     val monster: RolledMonster,
     val events: List<CombatEvent>,
     val duration: Double,
-    /** Когда начался его бой (3.91.1), секунд от начала шага испытания (этажа башни): время событий боя считается с нуля. */
+    /** Когда начался его бой, секунд от начала шага испытания (этажа башни): время событий боя считается с нуля. */
     val start: Double = 0.0,
 )
 
@@ -304,7 +302,7 @@ data class FightReport(val monster: RolledMonster, val outcome: Outcome, val pac
     val blocked: Int get() = mine().count { it.kind == HitKind.BLOCKED }
     val inflicted: List<Ailment> get() = mine().flatMap { it.inflicted }.distinct()
 
-    /** Разбор этого боя (0.14.4, #30): лист «Разбор» итога боя, считается один раз. */
+    /** Разбор этого боя: лист «Разбор» итога боя, считается один раз. */
     val stats: FightStats by lazy { FightStats.of(pack, duration) }
 }
 
@@ -322,38 +320,38 @@ data class RunHud(
     val sealed: Boolean = false,
     val fight: FightHud? = null,
     /**
-     * What the fight just won brought, as the server's answers bring it (server 1.30.0): nothing is rolled here,
+     * What the fight just won brought, as the server's answers bring it: nothing is rolled here,
      * and [rewardAwaiting] of its events are still to be answered — the report opens at once and fills in.
      */
     val reward: Reward? = null,
     val rewardAwaiting: Int = 0,
-    /** A first win over this guardian (3.81.0): the hero's place among all who beat it. */
+    /** A first win over this guardian: the hero's place among all who beat it. */
     val rank: Long? = null,
-    /** The levels the answered experience raised the hero by and the report has not told of yet (3.81.0). */
+    /** The levels the answered experience raised the hero by and the report has not told of yet. */
     val levelUp: LevelUp? = null,
     val slain: RolledMonster? = null,
     val report: FightReport? = null,
-    /** Журнал последнего боя захода (4.8.0) - пункт «Журнал боя» меню забега; null - боя ещё не было. */
+    /** Журнал последнего боя захода - пункт «Журнал боя» меню забега; null - боя ещё не было. */
     val lastFight: FightReport? = null,
     /** What the death cost, by the rules' price until the server's answer replaces it. */
     val fall: Double? = null,
-    /** Уровень героя, с которого гибель стоит опыта (4.4.1), пока герой ниже него; null - цена уже действует. */
+    /** Уровень героя, с которого гибель стоит опыта, пока герой ниже него; null - цена уже действует. */
     val fallFrom: Int? = null,
     /** The run's gold and experience as the server's answers granted them; [awaiting] of its rewarding events are not answered yet. */
     val gold: Long = 0,
     val experience: Double = 0.0,
     val kills: Int = 0,
-    /** The run's figures (3.47.0) and the blows that ended it. */
+    /** The run's figures and the blows that ended it. */
     val summary: RunSummary = RunSummary(),
     val recap: List<DeathHit> = emptyList(),
     val awaiting: Int = 0,
     val chestsLeft: Int = 0,
-    /** Добыча сундуков и объектов захода по порядку (4.10.0): ответ на каждый - в сумку, ждущие - с «…». */
+    /** Добыча сундуков и объектов захода по порядку: ответ на каждый - в сумку, ждущие - с «…». */
     val drops: List<MapDrop> = emptyList(),
-    /** Вся добыча захода по событиям, новая сверху (4.10.x, «Сумка захода»): бои, сундуки, объекты, Ваал-зона. */
+    /** Вся добыча захода по событиям, новая сверху («Сумка захода»): бои, сундуки, объекты, Ваал-зона. */
     val bag: List<BagEntry> = emptyList(),
     val fountainsLeft: Int = 0,
-    /** The fountain offered (3.70.0): the map waits for the player's word — drink, or step away and leave it standing. */
+    /** The fountain offered: the map waits for the player's word — drink, or step away and leave it standing. */
     val fountain: FountainView? = null,
     /** The Vaal zone behind the portal the hero stands at. */
     val gate: VaalZone? = null,
@@ -370,17 +368,17 @@ data class RunHud(
     val cracksLeft: Int = 0,
     /** The guardian is slain and not yet back. */
     val bossDown: Boolean = false,
-    /** Секунды до возвращения отдыхающего стража (3.95.2); null - он не отдыхает: стоит или повержен в этом заходе. */
+    /** Секунды до возвращения отдыхающего стража; null - он не отдыхает: стоит или повержен в этом заходе. */
     val guardianRest: Int? = null,
-    /** Призыв поверженного стража (0.15.0, реш. 22); null - звать некого: страж на посту или это зона Ваал. */
+    /** Призыв поверженного стража; null - звать некого: страж на посту или это зона Ваал. */
     val summon: SummonView? = null,
-    /** Босс карты убит в этом заходе (4.10.0): герой идёт быстрее - след и значок над ним. */
+    /** Босс карты убит в этом заходе: герой идёт быстрее - след и значок над ним. */
     val swift: Boolean = false,
-    /** The autorun under way, and what it has gathered (3.2.0). */
+    /** The autorun under way, and what it has gathered. */
     val auto: AutoHud? = null,
     val autoReward: Reward? = null,
     val autoAwaiting: Int = 0,
-    /** Счёт боевых заданий за этот заход (3.95.0): счётчик летописи - сколько прибавит. */
+    /** Счёт боевых заданий за этот заход: счётчик летописи - сколько прибавит. */
     val questTally: Map<String, Long> = emptyMap(),
     /** Events of the journal the server has not taken yet, the number of the oldest of them, and the ones it refused. */
     val pending: Int = 0,
@@ -388,35 +386,35 @@ data class RunHud(
     val rejected: Int = 0,
     /** What the map came to so far: its summary before the camp. */
     val tally: MapTally = MapTally(),
-    /** Лист объекта карты (3.90.0): алтарь, торговец или узел, к которому подошёл герой. */
+    /** Лист объекта карты: алтарь, торговец или узел, к которому подошёл герой. */
     val feature: FeatureView? = null,
-    /** Последний удар ловушки (3.90.0), пока он висит на полосе карты. */
-    /** Числа урона карты над героем (3.95.3): удары ловушек и тики их эффектов. */
+    /** Последний удар ловушки, пока он висит на полосе карты. */
+    /** Числа урона карты над героем: удары ловушек и тики их эффектов. */
     val hazards: List<HazardView> = emptyList(),
     /**
      * Что герой несёт вне боя ([com.sperance.exileforge.core.campaign.combat.HeroCarry]): недуги (из боя и от ловушек), баффы и
-     * проклятия, заряды - плитками полки под полосами героя, как в бою (макет «Эффекты героя на карте», вариант C).
+     * проклятия, заряды - плитками полки под полосами героя, как в бою.
      */
     val heroAilments: List<AilmentView> = emptyList(),
     val heroEffects: List<EffectView> = emptyList(),
     val heroCharges: List<ChargeView> = emptyList(),
     /** Итог здоровья на карте в секунду: регенерация и отдых против дегена и недугов; null - в бою и не на карте. */
     val lifeFlow: LifeFlow? = null,
-    /** Герой у входа в комнату (4.9.0): трещина и её простой или запертая дверь; null - он не у входа. */
+    /** Герой у входа в комнату: трещина и её простой или запертая дверь; null - он не у входа. */
     val entrance: EntranceCue? = null,
-    /** Экран-вызов перед стражем (3.92.0); null - его нет. */
+    /** Экран-вызов перед стражем; null - его нет. */
     val challenge: ChallengeView? = null,
-    /** Очаг Скверны карты (4.0.0); null - очага нет. */
+    /** Очаг Скверны карты; null - очага нет. */
     val blight: BlightView? = null,
 ) {
     /**
-     * Итог ведёт обратно на карту под зоной (3.95.2): зона Ваал, из которой вышли живыми. Гибель в зоне заканчивает весь заход -
+     * Итог ведёт обратно на карту под зоной: зона Ваал, из которой вышли живыми. Гибель в зоне заканчивает весь заход -
      * по фазе этого не понять: отчёт о гибели уже закрыт («Дальше» переводит DEAD в LEFT), а конец захода остаётся `FELL`.
      */
     val returnsToMap: Boolean get() = vaal && tally.end != MapEnd.FELL
 }
 
-/** Страж на экране-вызове (3.92.0): его ролл, уровень, полное здоровье, шаблон фаз с порогами; [vaal] - страж Ваал-зоны. */
+/** Страж на экране-вызове: его ролл, уровень, полное здоровье, шаблон фаз с порогами; [vaal] - страж Ваал-зоны. */
 data class ChallengeView(
     val boss: RolledMonster,
     val level: Int,
@@ -441,8 +439,8 @@ data class AbyssView(
 }
 
 /**
- * Объект карты, чей лист открыт (3.90.0, сервер 1.81.3): объект правил - что в нём, - выборы, уже сделанные на нём, доля
- * идущего сбора узла (null - сбор не идёт) и (4.9.0) стоят ли его стражи сокровищ.
+ * Объект карты, чей лист открыт: объект правил - что в нём, - выборы, уже сделанные на нём, доля
+ * идущего сбора узла (null - сбор не идёт) и стоят ли его стражи сокровищ.
  */
 data class FeatureView(val feature: MapFeature, val taken: List<Int>, val gathering: Float? = null, val guarded: Boolean = false)
 
@@ -450,7 +448,7 @@ data class FeatureView(val feature: MapFeature, val taken: List<Int>, val gather
 data class FountainView(val id: Int, val heal: Double)
 
 /**
- * Призыв стража (0.15.0, реш. 22): [price] - цена сейчас (`SummonLog.price` правил по району захода), [spent] - заход исчерпал
+ * Призыв стража: [price] - цена сейчас (`SummonLog.price` правил по району захода), [spent] - заход исчерпал
  * свои [perRun] призывов. Хватает ли золота, решает счёт кнопки.
  */
 data class SummonView(val price: Long, val spent: Boolean, val perRun: Int)
@@ -466,13 +464,13 @@ data class CrystalView(
     val awaiting: Boolean = false,
 )
 
-/** A rise from level [from] to [to] (3.81.0): one screen even for several levels at once. */
+/** A rise from level [from] to [to]: one screen even for several levels at once. */
 data class LevelUp(val from: Int, val to: Int) {
     val levels: Int get() = to - from
 }
 
 /**
- * Что над героем у входа в комнату (4.9.0, макет «Ломание трещины», вариант B): у трещины - кольцо простоя вокруг жетона и
+ * Что над героем у входа в комнату: у трещины - кольцо простоя вокруг жетона и
  * «Трещина поддаётся · N%», при нуле - «стой рядом»; у запертой двери - «Заперто. Найди рычаг поблизости».
  */
 sealed interface EntranceCue {

@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
 )
 
 /**
- * A batch sent and not yet answered (server 1.30.0): its idempotency [key] and the number past its last event.
+ * A batch sent and not yet answered: its idempotency [key] and the number past its last event.
  * The answer carries the batch's rewards, so a lost one is asked for again with the same key and the same
  * events — the server repeats what it stored — and only an answer frees the key.
  */
@@ -28,7 +28,7 @@ import kotlinx.serialization.Serializable
  * death, in the background — and the server's `applied` moves the mark. A journal outlives the process:
  * what was not sent is sent on the next launch, as long as the hero's run is still this one.
  *
- * A run entered again (server 1.1.0) goes on where the server stopped: [base] is the number its first
+ * A run entered again goes on where the server stopped: [base] is the number its first
  * event here bears, so the numbers stay the server's; [applied] counts from the run's start, not from [base].
  */
 class RunJournal(
@@ -95,7 +95,7 @@ class RunJournal(
     fun encode(): String = WireJson.encodeToString(JournalState.serializer(), snapshot())
 
     companion object {
-        /** The most events one batch carries: the server refuses a longer journal whole (CP_022, server 1.53.0). */
+        /** The most events one batch carries: the server refuses a longer journal whole (CP_022). */
         const val MAX_BATCH = 64
 
         fun of(state: JournalState): RunJournal = RunJournal(state.runId, state.heroId, state.zone, state.events, state.applied, state.base, state.batch)

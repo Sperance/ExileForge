@@ -12,7 +12,7 @@ import com.sperance.exileforge.rules.text.ClassText
 import com.sperance.exileforge.rules.text.LocaleKey
 
 /**
- * A class as the choosing screen shows it (3.13.0): who it is in the dictionary's words, what a level-one hero of it
+ * A class as the choosing screen shows it: who it is in the dictionary's words, what a level-one hero of it
  * starts with by the rules' own sheet, the skills it learns and where on the tree it stands.
  */
 data class ClassGuide(

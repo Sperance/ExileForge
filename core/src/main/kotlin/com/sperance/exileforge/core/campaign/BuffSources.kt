@@ -9,14 +9,14 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.Op
 
-/** Откуда строка карты на монстре (3.93.0): строки карты-предмета, силы атласа героя, сделки алтаря. */
+/** Откуда строка карты на монстре: строки карты-предмета, силы атласа героя, сделки алтаря. */
 enum class BuffSource { MAP, ATLAS, PACT }
 
 /** Доля источника [source] в строке монстра [stat] с операцией [op]. */
 data class BuffShare(val source: BuffSource, val stat: String, val op: Op, val value: Double)
 
 /**
- * Источники строк карты на монстрах захода (3.93.0). Сервер складывает силы атласа в строки карты (`MAP_MONSTER_*`), поэтому доля
+ * Источники строк карты на монстрах захода. Сервер складывает силы атласа в строки карты (`MAP_MONSTER_*`), поэтому доля
  * атласа - его собственные числа, а доля карты - остаток; сделки алтаря лежат отдельно. [boss] - боссу ещё и сила босса карты.
  */
 object BuffSources {
@@ -35,7 +35,7 @@ object BuffSources {
 }
 
 /**
- * «монстр +20% · карта +15% · атлас +5% · сделка +10%» (3.93.0): из чего сложена строка монстра - его свои строки и каждая
+ * «монстр +20% · карта +15% · атлас +5% · сделка +10%»: из чего сложена строка монстра - его свои строки и каждая
  * доля [shares] той же характеристики; null - у строки один источник.
  */
 fun monsterLineParts(line: MonsterLine, shares: List<BuffShare>, index: ContentIndex? = null): String? {

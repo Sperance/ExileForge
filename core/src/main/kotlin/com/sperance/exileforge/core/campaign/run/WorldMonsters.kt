@@ -10,11 +10,9 @@ import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.random.Random
 
-// ==================== Monsters ====================
-
 /**
- * Стаи боя с [agent] (4.4.1, решение владельца; прежде - 3.26.0): она и каждая живая стая свалки ([MonsterAgent.joinsBrawl],
- * 4.8.0 - и призванные), ближние первыми. Расстояние - путь ногами от клетки [agent] ([distances]), не прямая: стая
+ * Стаи боя с [agent]: она и каждая живая стая свалки ([MonsterAgent.joinsBrawl],
+ * и призванные), ближние первыми. Расстояние - путь ногами от клетки [agent] ([distances]), не прямая: стая
  * вступает в пути `expedition.gatherRadius` или когда видит героя сейчас ([AgentMode.sees]) и путь к бою не длиннее её взгляда
  * (`sight` её формы). Потерявшая героя ([AgentMode.HUNTING]) и дальняя стоят на карте в своём режиме. Кто в свалку не
  * вступает, бьётся один.
@@ -28,13 +26,12 @@ internal fun ExpeditionWorld.gathered(agent: MonsterAgent): List<MonsterAgent> {
     return listOf(agent) + near.mapNotNull { other -> steps[other.cell]?.takeIf { it <= reach(other) }?.let { other to it } }.sortedBy { it.second }.map { it.first }
 }
 
+/** Спящий и засадный шевелятся, только когда герой рядом. */
 internal fun ExpeditionWorld.think(agent: MonsterAgent, toHero: Double, dt: Double) {
     val rule = agent.rule
     val sees = toHero <= rule.sight && sight(agent.x, agent.y, heroX, heroY)
     when (agent.mode) {
-        // A sleeper and an ambusher only stir when the hero is right there.
         AgentMode.ASLEEP, AgentMode.LURKING -> if (sees && toHero <= rule.wake) agent.mode = AgentMode.CHASING
-
         else -> if (sees) agent.mode = AgentMode.CHASING
     }
     when (agent.mode) {
@@ -90,14 +87,14 @@ internal fun ExpeditionWorld.roam(agent: MonsterAgent, rule: BehaviourRule, dt: 
 /**
  * Heads for ([tx], [ty]): straight when nothing is in the way, along a path round the rock, the chasm and the
  * water otherwise. False once it has arrived or has no way there.
+ *
+ * Напрямую - лишь когда дорога проходима ногами (через яму видно, но не пройти); угол может зацепить тело шире линии - тогда ведёт путь.
  */
 internal fun ExpeditionWorld.go(agent: MonsterAgent, tx: Double, ty: Double, speed: Double, dt: Double): Boolean {
     if (hypot(tx - agent.x, ty - agent.y) < 0.1) return false
-    // Напрямую - лишь когда дорога проходима ногами (3.95.0): через яму виден, но не пройти
     if (passable(agent.x, agent.y, tx, ty)) {
         agent.targetX = tx
         agent.targetY = ty
-        // A corner can still catch a body wider than the line: then the path takes over.
         if (walk(agent, speed, dt)) {
             agent.path = emptyList()
             return true

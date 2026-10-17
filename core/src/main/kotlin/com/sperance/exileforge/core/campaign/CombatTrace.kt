@@ -18,7 +18,7 @@ import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.RolledMonster
 
 /**
- * How a line of the fight's log came about (3.37.0): the formula step by step, what each side stood on
+ * How a line of the fight's log came about: the formula step by step, what each side stood on
  * at that moment and where the damage went. Every number is the fight's own, taken as it was computed — the card that
  * explains a line reads it, nothing is worked out again.
  */
@@ -34,7 +34,7 @@ enum class RollKey { EVADE, BLOCK, CRIT, AILMENT, AVOID }
 data class FactorTrace(val key: FactorKey, val value: Double, val attacker: List<String> = emptyList(), val target: List<String> = emptyList())
 
 /**
- * Множители удара по порядку; [SEALS] - печати Стража Врат, [LAW] - Закон Владыки Разлома (3.96.0), [FATE] (4.6.0) - множитель
+ * Множители удара по порядку; [SEALS] - печати Стража Врат, [LAW] - Закон Владыки Разлома, [FATE] - множитель
  * Предначертания героя.
  */
 enum class FactorKey { BASE, SPREAD, CRIT, NON_CRIT, DAMAGE, HIT, AGAINST, DOUBLE, VERSUS, FATE, DEFENCE, SHOCK, TAKEN, DECAY, EASED, SEALS, LAW, TOTAL }
@@ -74,8 +74,7 @@ data class Landing(
 )
 
 /**
- * A blow — a swing, a skill's hit, a spell, a reflection. [landing] is null for an evaded or blocked one; у такого [avoided]
- * (0.14.4, #30) - оценка урона, которого он избежал: удар без бросков сквозь защиты цели, для разбора боя.
+ * A blow — a swing, a skill's hit, a spell, a reflection. [landing] is null for an evaded or blocked one; у такого [avoided] - оценка урона, которого он избежал: удар без бросков сквозь защиты цели, для разбора боя.
  */
 data class HitTrace(
     val attacker: FighterShot,
@@ -85,7 +84,7 @@ data class HitTrace(
     val landing: Landing?,
     val origin: TraceOrigin,
     val avoided: Double = 0.0,
-    /** Урон удара, что прибавило Разложение цели (0.15.0, реш. 43) - графа разбора боя. */
+    /** Урон удара, что прибавило Разложение цели - графа разбора боя. */
     val exposed: Double = 0.0,
 ) : Trace
 
@@ -100,7 +99,7 @@ data class TickTrace(
     val factors: List<FactorTrace>,
     val origin: TraceOrigin,
     val striker: FighterShot? = null,
-    /** Урон тика, что прибавило Разложение цели (0.15.0, реш. 43) - графа разбора боя. */
+    /** Урон тика, что прибавило Разложение цели - графа разбора боя. */
     val exposed: Double = 0.0,
 ) : Trace
 
@@ -118,12 +117,12 @@ data class EffectTrace(
 
 /**
  * Something that happened without a blow: a buff or a charge gained, a power, a condition, what a kill brought. [flow] - разбор
- * итога здоровья за секунду у [NoteKind.LIFE_FLOW] (4.9.3), у прочих null.
+ * итога здоровья за секунду у [NoteKind.LIFE_FLOW], у прочих null.
  */
 data class NoteTrace(val kind: NoteKind, val ref: String, val value: Double, val actor: FighterShot, val origin: TraceOrigin, val flow: LifeFlow? = null) : Trace
 
 /**
- * Срабатывание Предначертания героя (4.9.0): рычаг или правило строки дара [fate] сделал [beat] с числами [args] (порядок - KDoc
+ * Срабатывание Предначертания героя: рычаг или правило строки дара [fate] сделал [beat] с числами [args] (порядок - KDoc
  * [FateBeat]) и предметом [ref] (недуг, умение - по [FateBeat.ref]).
  * [repeats] больше нуля - свёртка частого срабатывания за бой: сколько раз ещё оно было после первого, [args] - их итог.
  */
@@ -146,54 +145,54 @@ enum class NoteKind {
     KILL,
     TRAIT,
 
-    /** Шаг фазы босса (3.92.0): ref - шаблон, value - порог здоровья в процентах. */
+    /** Шаг фазы босса: ref - шаблон, value - порог здоровья в процентах. */
     PHASE,
 
-    /** Тотем босса (3.93.0): ref - код тотема; встал и рассыпался. */
+    /** Тотем босса: ref - код тотема; встал и рассыпался. */
     TOTEM,
     TOTEM_FALL,
 
-    /** Ярость стража (3.95.0): ref - ступень. */
+    /** Ярость стража: ref - ступень. */
     RAGE,
 
-    /** Страж Врат (3.96.0): печать снята и печати вернулись - value - сколько стоит теперь. */
+    /** Страж Врат: печать снята и печати вернулись - value - сколько стоит теперь. */
     SEAL_BROKEN,
     SEALS_RETURNED,
 
-    /** «Запечатывание» Стража Врат (3.96.0): ref - код умения или флакона, value - на сколько секунд заперт. */
+    /** «Запечатывание» Стража Врат: ref - код умения или флакона, value - на сколько секунд заперт. */
     SEAL_LOCK_SKILL,
     SEAL_LOCK_FLASK,
 
-    /** Поглотитель эха украл дар (3.96.0): ref - код дара. */
+    /** Поглотитель эха украл дар: ref - код дара. */
     BOON_STOLEN,
 
-    /** Закон Владыки Разлома вступил (3.96.0): ref - Закон. «Время вспять» вернуло урон: value - сколько здоровья. */
+    /** Закон Владыки Разлома вступил: ref - Закон. «Время вспять» вернуло урон: value - сколько здоровья. */
     LAW,
     LAW_REWOUND,
 
-    /** The recovery shelf (3.79.0): a draught's total, a recoup's, healing spilled over a full bar. */
+    /** The recovery shelf: a draught's total, a recoup's, healing spilled over a full bar. */
     RECOVER_FLASK,
     RECOVER_RECOUP,
     RECOVER_WASTE,
 
     /**
-     * Итог здоровья героя за секунду (4.9.3, вместо строки регенерации): value - здоровья в секунду со знаком,
+     * Итог здоровья героя за секунду (вместо строки регенерации): value - здоровья в секунду со знаком,
      * разбор - [NoteTrace.flow]. Недуги пишутся своими строками.
      */
     LIFE_FLOW,
 
     /**
-     * Применение умения (4.12.x, SKILL-01): ref - умение, value - секунды; прервано оглушением или заморозкой - [CAST_BROKEN] (value -
-     * пауза до повтора, 0.14.0); к концу применения у героя не хватило маны - [CAST_NO_MANA] (value - цена, 0.14.0, ASANA-N01).
+     * Применение умения: ref - умение, value - секунды; прервано оглушением или заморозкой - [CAST_BROKEN] (value -
+     * пауза до повтора); к концу применения у героя не хватило маны - [CAST_NO_MANA] (value - цена).
      */
     CAST,
     CAST_BROKEN,
     CAST_NO_MANA,
 
-    /** Провокация героя (4.12.x, STAT-DEF-05): враг спровоцирован на value секунд. */
+    /** Провокация героя: враг спровоцирован на value секунд. */
     PROVOKED,
 
-    /** Подрыв метки героя (0.14.0, SKILL-02): ref - умение, value - урон подрыва по каждой цели. */
+    /** Подрыв метки героя: ref - умение, value - урон подрыва по каждой цели. */
     MARK_BURST,
     ;
 
@@ -216,7 +215,7 @@ data class MonsterShare(val kind: MonsterShareKind, val ref: String, val op: Op,
 enum class MonsterShareKind { BASE, RARITY, MODIFIER, POWER, MAP }
 
 /**
- * A monster's stat taken apart by the roller's own fold (3.37.0): the template grown to the level, the rarity's lines,
+ * A monster's stat taken apart by the roller's own fold: the template grown to the level, the rarity's lines,
  * each modifier, and the map's buffs over it.
  */
 object MonsterBreakdown {
@@ -239,16 +238,16 @@ object MonsterBreakdown {
     }
 }
 
-/** The log's shelves (3.37.0): blows, the ticks of ailments, and the notes of what happened without a blow. */
+/** The log's shelves: blows, the ticks of ailments, and the notes of what happened without a blow. */
 enum class LogKind {
     HITS,
     AILMENTS,
     EVENTS,
 
-    /** Recovery (3.79.0): draughts, life on kill, recoup, spilled healing and regeneration. */
+    /** Recovery: draughts, life on kill, recoup, spilled healing and regeneration. */
     RECOVERY,
 
-    /** Предначертание героя (4.9.0): срабатывания рычагов и строк дара ([FateTrace]). */
+    /** Предначертание героя: срабатывания рычагов и строк дара ([FateTrace]). */
     FATE,
 
     ;
@@ -265,7 +264,7 @@ enum class LogKind {
         }
 
         /**
-         * The saved shelves: the shown ones, and after a `;` every shelf the save knew of (3.70.0) — a shelf added since
+         * The saved shelves: the shown ones, and after a `;` every shelf the save knew of — a shelf added since
          * opens as [DEFAULT] has it, so a player who once changed the filter still sees a new default-on shelf.
          */
         fun parse(value: String?): Set<LogKind> {

@@ -23,7 +23,7 @@ import com.sperance.exileforge.rules.sheet.StatOperation
 import com.sperance.exileforge.rules.sheet.WornCount
 import kotlin.math.abs
 
-/** Строка на листе на время - благо, проклятие, фляга, пассивное умение (4.9.0: одна с правилами, [com.sperance.exileforge.rules.sheet.StatLine]). */
+/** Строка на листе на время - благо, проклятие, фляга, пассивное умение (одна с правилами, [com.sperance.exileforge.rules.sheet.StatLine]). */
 typealias StatLine = com.sperance.exileforge.rules.sheet.StatLine
 
 /** What wearing an item changes: the characteristic, what it is now and what it would be. */
@@ -40,29 +40,29 @@ class SheetModel(
     private val base: Map<String, Double>,
     private val ops: List<StatOperation>,
     private val index: ContentIndex,
-    /** Предначертание листа (4.6.1): его преобразования готового листа (рычаги и, 4.6.2, правила строк) - и после строк боя. */
+    /** Предначертание листа: его преобразования готового листа (рычаги и, правила строк) - и после строк боя. */
     val fate: FateEffects = FateEffects.NONE,
 ) {
     private val calculator = SheetCalculator(index)
 
-    /** Свод листа правил (4.9.0): лист со строками боя складывает он - тот же, что у Мощи сервера ([com.sperance.exileforge.rules.sheet.HeroBody]). */
+    /** Свод листа правил: лист со строками боя складывает он - тот же, что у Мощи сервера ([com.sperance.exileforge.rules.sheet.HeroBody]). */
     val fold: SheetFold = SheetFold(base, ops, index, fate)
 
     val plain: Map<String, Double> get() = fold.plain
 
-    /** Операции листа с их источниками (4.6.4): чьи строки легли на какую характеристику. */
+    /** Операции листа с их источниками: чьи строки легли на какую характеристику. */
     val operations: List<StatOperation> get() = ops
 
-    /** The sheet taken apart by source, for a figure's own window; преобразования дара - его последним шагом (4.6.4). */
+    /** The sheet taken apart by source, for a figure's own window; преобразования дара - его последним шагом. */
     val explainer: SheetExplainer by lazy { explainer(emptyList()) }
 
     /**
-     * Разбивка листа с операциями [extra] среди его собственных (4.6.4): строки боя, что [with] складывает сводом ([folds]), со
+     * Разбивка листа с операциями [extra] среди его собственных: строки боя, что [with] складывает сводом ([folds]), со
      * своими источниками - итог разбивки равен [with] от них.
      */
     fun explainer(extra: List<StatOperation>): SheetExplainer = SheetExplainer(index, base, ops + extra, fate)
 
-    /** Что преобразования дара сдвинули на листе со строками боя [lines] (4.6.4), по характеристике: те же шаги, что в [explainer]. */
+    /** Что преобразования дара сдвинули на листе со строками боя [lines], по характеристике: те же шаги, что в [explainer]. */
     fun reshapes(lines: List<StatLine>): Map<String, List<Shift>> = fate.shifts(calculator.compute(base, ops + lines.filter(::folds).map { StatOperation(it.stat, it.op, it.value) }), index)
 
     /** Строка боя ложится сводом листа; «больше» процент-стата [with] берёт на весь его множитель, поверх свода. */
@@ -70,21 +70,20 @@ class SheetModel(
 
     fun with(lines: List<StatLine>): Map<String, Double> = fold.with(lines)
 
-    /** The sheet's conditional lines (3.35.0, server 1.34.0): kept out of the sheet, laid on by a fight while they hold. */
+    /** The sheet's conditional lines: kept out of the sheet, laid on by a fight while they hold. */
     private val conditional: List<StatOperation> = ops.filter { it.condition != null }
 
     /** The hero's own conditional lines that hold under [active], as lines a fight lays on. */
     fun conditional(active: Set<Condition>): List<StatLine> = conditionalSourced(active).map { it.second }
 
-    /** The same lines with the condition each waits for (3.37.0), for the log's card. */
+    /** The same lines with the condition each waits for, for the log's card. */
     fun conditionalSourced(active: Set<Condition>): List<Pair<Condition, StatLine>> = conditional.filter { it.condition in active && it.condition?.target == false }.map { it.condition!! to StatLine(it.stat, it.op, it.value) }
 
     /** How much more damage the lines waiting for a target's state give against a target in [states], in percent increased. */
     fun against(states: Set<Condition>): Double = conditional.filter { it.condition in states && it.condition?.target == true }.sumOf { it.value }
 
     /**
-     * Рост урона умений по виду со строками [lines]: увеличения (урон вообще - увеличение каждого вида, server 1.57.0) и, с 0.15.0
-     * (реш. 4), «больше» вида - на них растут чары и урон во времени.
+     * Рост урона умений по виду со строками [lines]: увеличения (урон вообще - увеличение каждого вида) и «больше» вида - на них растут чары и урон во времени.
      */
     fun growth(lines: List<StatLine> = emptyList()): DamageGrowth = fold.growth(lines)
 
@@ -93,7 +92,7 @@ class SheetModel(
 }
 
 /**
- * Что даст надеть вещь (4.8.0): сдвинутые цифры сводки [delta] и Мощь героя с вещью [might] (null - листа боя нет).
+ * Что даст надеть вещь: сдвинутые цифры сводки [delta] и Мощь героя с вещью [might] (null - листа боя нет).
  */
 data class WearOutcome(val delta: List<StatDelta>, val might: MightReading?) {
     companion object {
@@ -114,12 +113,13 @@ class HeroSheet(val stats: Map<String, Double>, val active: List<String>, val in
  */
 object Sheets {
     /**
-     * Наименьший сдвиг, что сравнение «было → стало» показывает (4.12.x, R6: лист точный, округляет показ): у характеристик с сотыми
+     * Наименьший сдвиг, что сравнение «было → стало» показывает (лист точный, округляет показ): у характеристик с сотыми
      * ([preciseStats]) - сотая, у прочих - половина десятой. Константы показа, не баланс.
      */
     private const val PRECISE_STEP = 0.005
     private const val SHOWN_STEP = 0.05
 
+    /** Предначертание аккаунта и законы тронов кладут строки и преобразования листа тем же правилом, что у сервера. */
     fun calculate(
         index: ContentIndex,
         level: Int,
@@ -127,10 +127,8 @@ object Sheets {
         tree: List<TakenNode>,
         items: List<ItemInstance>,
         laws: List<String> = emptyList(),
-        /** Предначертание аккаунта (4.6.0): его строки листа и преобразования листа (4.6.1), как у сервера. */
         fate: String? = null,
     ): HeroSheet {
-        // Законы тронов героя - строки листа тем же правилом, что у сервера.
         val result = SheetCalculator(index).hero(level, index.heroClass(heroClass), tree, items.filter { it.equipped }, laws, fate)
         return HeroSheet(result.stats, result.active, result.inactive.associate { it.id to it.reasons }, SheetModel(result.base, result.operations, index, index.fates.effects(fate, result.stats[CoreStat.FATE_EFFECT.code] ?: 0.0, index.fates.worn(index, fate, items.filter { it.equipped }))))
     }
@@ -141,9 +139,9 @@ object Sheets {
     /**
      * What wearing [item] would change, by the rules' own placement: a ring takes a free one of two, a
      * two-handed weapon frees both hands, a bow pairs with a quiver. Only the characteristics that move are returned.
-     * [place] (3.90.3) - место из нескольких (второе кольцо, третья фляга), куда вещь надевают; null - решают правила.
-     * 4.6.4: цифры сводки - лист боя ([figures]) с умениями героя [skills]; [before] - цифры сводки героя сейчас.
-     * 4.8.0: вместе со сдвигами - Мощь героя с вещью ([WearOutcome.might]) из того же листа боя, без второго подсчёта.
+     * [place] - место из нескольких (второе кольцо, третья фляга), куда вещь надевают; null - решают правила.
+     * Цифры сводки - лист боя ([figures]) с умениями героя [skills]; [before] - цифры сводки героя сейчас.
+     * Вместе со сдвигами - Мощь героя с вещью ([WearOutcome.might]) из того же листа боя, без второго подсчёта.
      */
     fun wearing(
         index: ContentIndex,
@@ -182,7 +180,7 @@ object Sheets {
     ): List<StatDelta> = changes(index, before, figures(index, calculate(index, level, heroClass, tree + node, items, laws, fate), level, heroClass, skills, fate, items))
 
     /**
-     * Цифры сводки героя с листом [sheet] (4.6.4): лист боя ([CombatSheet]) с умениями [skills] и Предначертанием [fate] надетого
+     * Цифры сводки героя с листом [sheet]: лист боя ([CombatSheet]) с умениями [skills] и Предначертанием [fate] надетого
      * из [items] - одно правило сводки, сравнения вещи и узла дерева; без модели листа - сам лист.
      */
     fun figures(index: ContentIndex, sheet: HeroSheet, level: Int, heroClass: String, skills: HeroSkills, fate: String?, items: List<ItemInstance>): Map<String, Double> = CombatSheet.of(index, sheet, level, heroClass, skills, fate, items.filter { it.equipped })?.values ?: sheet.stats
@@ -196,8 +194,8 @@ object Sheets {
         .filter { abs(it.change) >= if (it.stat in preciseStats) PRECISE_STEP else SHOWN_STEP }
 
     /**
-     * Лучше или хуже (3.89.0): урон и защита героя с [item] против листа [before] - на место [place] (3.90.3) или, без него,
-     * на то, что выберут правила. Урон (4.12.x, COMBAT-04) - натиск Мощи: нынешняя Мощь [might] против листа боя с вещью и умениями
+     * Лучше или хуже: урон и защита героя с [item] против листа [before] - на место [place] или, без него,
+     * на то, что выберут правила. Урон - натиск Мощи: нынешняя Мощь [might] против листа боя с вещью и умениями
      * [skills]. Null, когда шаблона вещи нет в контенте или листа боя нет.
      */
     fun verdict(
@@ -223,6 +221,8 @@ object Sheets {
     /**
      * The hero's items with [item] put on as the server would place it — a ring on a free one of two (или на место [place]),
      * a two-handed weapon freeing both hands, a bow pairing with a quiver; null when the content does not know the item.
+     *
+     * Вещь, что ещё не у героя (товар, лот), взвешивается как лежащая в тайнике.
      */
     private fun worn(index: ContentIndex, item: ItemInstance, items: List<ItemInstance>, place: Slot?): List<ItemInstance>? {
         val template = index.template(item.template) ?: return null
@@ -230,7 +230,6 @@ object Sheets {
         val target = EquipSlots.target(template.slot, place, worn.mapNotNull { it.slot })
         val wornWeapon = worn.firstOrNull { it.slot == Slot.WEAPON_1H }?.let { index.template(it.template)?.weaponType }
         val freed = EquipSlots.displaced(template.slot, template.weaponType, wornWeapon) + target
-        // An item not yet the hero's — a merchant's offer, a lot — is weighed as if it were in the stash.
         return (if (items.none { it.id == item.id }) items + item else items).map {
             when {
                 it.id == item.id -> it.copy(slot = target, socket = null)

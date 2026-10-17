@@ -11,13 +11,13 @@ import com.sperance.exileforge.rules.roll.RolledMonster
 import kotlin.math.roundToLong
 
 /**
- * A run's figures (3.47.0), gathered fight by fight from the combat's own events. С 0.14.4 (#30) - сумма разборов боёв
+ * A run's figures, gathered fight by fight from the combat's own events. Сумма разборов боёв
  * ([FightStats]): урон по типам и умениям, полученное, защиты и восстановление; секунды - только боя.
  */
 class RunStats {
     private var total = FightStats.NONE
 
-    /** Последняя сводка ([summary]): та же, пока цифры и убийства не сдвинулись - снимок экрана не копирует их на кадр (4.9.0). */
+    /** Последняя сводка ([summary]): та же, пока цифры и убийства не сдвинулись - снимок экрана не копирует их на кадр. */
     private var shown: RunSummary? = null
 
     fun add(pack: List<PackHit>, duration: Double) {
@@ -57,7 +57,7 @@ class RunStats {
 }
 
 /**
- * One fight as the hero's statistics count it (3.51.0, server 1.49.0): damage by type dealt, taken and leeched, the
+ * One fight as the hero's statistics count it: damage by type dealt, taken and leeched, the
  * outcomes of the hero's blows and of the foes', ailments laid, the seconds and the hardest blow. Sent with the journal's
  * `FIGHT` event; the server only adds it up.
  */
@@ -65,6 +65,7 @@ object FightFigures {
     /** The damage types in the order the chronicle lists them. */
     val types: List<String> = DamageType.entries.map { it.name }
 
+    /** Враг, чей удар кончил проигранный бой, - убийца: статистика героя считает смерти по убийцам. */
     fun of(pack: List<PackHit>, duration: Double, boss: Boolean, won: Boolean): FightTally {
         val events = pack.flatMap { it.events }.filter { !it.onSelf }
         val mine = events.filter { it.actor == Side.HERO && (it.action == Action.ATTACK || it.action == Action.SKILL || it.action == Action.TICK || it.action == Action.REFLECT) }
@@ -84,7 +85,6 @@ object FightFigures {
             millis = (duration * 1000).roundToLong(),
             maxHit = mine.maxOfOrNull { it.damage }?.roundToLong() ?: 0,
             boss = boss, won = won,
-            // The foe whose blow ended a lost fight (3.54.0, server 1.52.0): the hero's statistics count deaths by who dealt them.
             killer = if (won) {
                 null
             } else {
@@ -96,7 +96,7 @@ object FightFigures {
 }
 
 /**
- * The run so far, as the report reads it: разбор всех боёв захода ([fights], 0.14.4) и убийства; урон по типам и умениям,
+ * The run so far, as the report reads it: разбор всех боёв захода ([fights]) и убийства; урон по типам и умениям,
  * полученное и секунды боя - из него.
  */
 data class RunSummary(

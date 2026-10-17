@@ -22,7 +22,7 @@ class AuctionClient internal constructor(private val http: Transport) {
         return page.copy(page = cursors.size - 1, cursors = cursors.ifEmpty { listOf("") })
     }
 
-    /** Свой аукцион героя одним запросом (3.94.1, сервер 1.81.15): лоты, места и сделки последних дней. */
+    /** Свой аукцион героя одним запросом: лоты, места и сделки последних дней. */
     suspend fun mine(heroId: String): AuctionMine = http.get("$AUCTION/mine", heroQuery(heroId))
 
     /** Lists a copy; the price is in orbs, [priceOrb] the currency's item code. The copy has to be off the hero first. */
@@ -37,7 +37,7 @@ class AuctionClient internal constructor(private val http: Transport) {
         return sell("item", heroId, priceOrb, price, mapOf("code" to code, "amount" to amount.toString()))
     }
 
-    /** Выставление отвечает своим аукционом с новым лотом и снимком героя (3.94.1). */
+    /** Выставление отвечает своим аукционом с новым лотом и снимком героя. */
     private suspend fun sell(what: String, heroId: String, priceOrb: String, price: Long, extra: Map<String, String>): AuctionMine {
         require(priceOrb.isNotBlank()) { ui("api.choose_orb") }
         require(price > 0) { ui("api.price_positive") }
@@ -47,13 +47,13 @@ class AuctionClient internal constructor(private val http: Transport) {
     /** Payment, delivery and closing the lot are one server transaction. Never retried. */
     suspend fun buy(heroId: String, lotId: String): AuctionLot = lot("buy", heroId, lotId)
 
-    /** Снятие отвечает своим аукционом (3.94.1). */
+    /** Снятие отвечает своим аукционом. */
     suspend fun cancel(heroId: String, lotId: String): AuctionMine = lot("cancel", heroId, lotId)
 
-    /** Another week on the showcase (server 1.74.0): only the author, only on the lot's last day. Never retried. */
+    /** Another week on the showcase: only the author, only on the lot's last day. Never retried. */
     suspend fun extend(heroId: String, lotId: String): AuctionMine = lot("extend", heroId, lotId)
 
-    /** What the like of a lot sold for lately (server 1.74.0): null with fewer deals than the rules ask. */
+    /** What the like of a lot sold for lately: null with fewer deals than the rules ask. */
     suspend fun priceHint(heroId: String, itemCode: String, rarity: com.sperance.exileforge.rules.content.Rarity?, itemLevel: Int): com.sperance.exileforge.core.model.auction.PriceHint? = http.get("$AUCTION/price", heroQuery(heroId, "itemCode" to itemCode, "rarity" to rarity?.name, "itemLevel" to itemLevel.toString()))
 
     private suspend inline fun <reified T> lot(operation: String, heroId: String, lotId: String): T {

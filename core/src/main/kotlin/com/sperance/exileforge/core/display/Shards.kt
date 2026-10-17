@@ -6,7 +6,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ShardYield
 
 /**
- * Осколки продажи словами (3.95.3): по виду - «+3 Осколок хаоса (7/10)», склеенные из них сферы - «+1 Сфера хаоса». Одна строка
+ * Осколки продажи словами: по виду - «+3 Осколок хаоса (7/10)», склеенные из них сферы - «+1 Сфера хаоса». Одна строка
  * на тост продажи, кнопку продажи и лист вещи; ничего не дала - null.
  */
 fun shardsText(yields: List<ShardYield>, perOrb: Int): String? = yields.flatMap { gain ->
@@ -19,8 +19,8 @@ fun shardsText(yields: List<ShardYield>, perOrb: Int): String? = yields.flatMap 
 /** Тост продажи [sold] с её осколками отдельной строкой, если они были. */
 fun withShards(sold: String, yields: List<ShardYield>, perOrb: Int): String = shardsText(yields, perOrb)?.let { "$sold\n$it" } ?: sold
 
-/** Сколько осколков склеиваются в сферу по правилам контента; контента ещё нет - 0 (4.12.x: у правил нет значений по умолчанию). */
+/** Сколько осколков склеиваются в сферу по правилам контента; контента ещё нет - 0 (у правил нет значений по умолчанию). */
 val ContentIndex?.shardsPerOrb: Int get() = this?.rules?.sell?.shardsPerOrb ?: 0
 
-/** Тост добычи, не легшей в тайник (1.81.4), - с осколками того, что продано торговцу (3.95.3). */
+/** Тост добычи, не легшей в тайник, - с осколками того, что продано торговцу. */
 fun receivedText(received: Received, perOrb: Int): String = withShards(ui("stash.received", received.overflowed, received.sold, received.gold), received.shards, perOrb)

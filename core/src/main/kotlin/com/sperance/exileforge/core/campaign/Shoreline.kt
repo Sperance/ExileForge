@@ -5,7 +5,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * Береговые контуры карты (4.9.0) - один источник и для сцены, и для тел: соседние клетки пропасти или воды - одна гладь со
+ * Береговые контуры карты - один источник и для сцены, и для тел: соседние клетки пропасти или воды - одна гладь со
  * скруглёнными углами. Marching squares по центрам клеток (седло - вода по диагонали - связно), контур отступает от суши на
  * [shore] клетки (`expedition.shore` правил), затем сглаживание квадратичными кривыми через середины соседних точек, разбитыми
  * на [STEPS] отрезков. Сцена заливает эти петли, тела упираются в них ([nearest], [inside]) - как нарисовано, так и упирается.
@@ -58,10 +58,13 @@ class Shoreline private constructor(private val map: ExpeditionMap, private val 
     /**
      * Петли границы клеток [tile] в клетках карты (пары x, y). Квадрат marching squares - между центрами четырёх соседних клеток;
      * его отрезки границы ориентированы одинаково (внутри - слева), так что петли собираются по концам отрезков.
+     *
+     * Отрезок идёт из точки на ребре в точку на ребре; ребро - пара соседних центров, ключ - удвоенная середина. Многоугольник квадрата -
+     * по ходу углов: угол внутри - сам угол, смена на ребре - точка ребра на [shore] от центра клетки внутри к центру снаружи; соседние в
+     * кольце точки рёбер - отрезок границы.
      */
     private fun trace(tile: Tile): List<DoubleArray> {
         fun inside(x: Int, y: Int) = x in 0 until map.width && y in 0 until map.height && map.tile(x, y) == tile
-        // Отрезок: из точки на ребре в точку на ребре. Ребро - пара соседних центров, ключ - удвоенная середина
         val next = HashMap<Long, Long>()
         val points = HashMap<Long, Pair<Double, Double>>()
         for (j in -1 until map.height) {
@@ -69,7 +72,6 @@ class Shoreline private constructor(private val map: ExpeditionMap, private val 
                 val corners = listOf(i to j, i + 1 to j, i + 1 to j + 1, i to j + 1)
                 val ins = corners.map { (x, y) -> inside(x, y) }
                 if (ins.none { it } || ins.all { it }) continue
-                // Многоугольник квадрата по ходу углов: угол внутри - сам угол, смена на ребре - точка ребра
                 val ring = mutableListOf<Long?>()
                 for (k in 0 until 4) {
                     if (ins[k]) ring += null
@@ -77,12 +79,10 @@ class Shoreline private constructor(private val map: ExpeditionMap, private val 
                     if (ins[k] != ins[n]) {
                         val (a, b) = if (ins[k]) corners[k] to corners[n] else corners[n] to corners[k]
                         val key = edgeKey(a, b)
-                        // Точка ребра - на [shore] от центра клетки внутри к центру клетки снаружи
                         points[key] = (a.first + .5 + (b.first - a.first) * shore) to (a.second + .5 + (b.second - a.second) * shore)
                         ring += key
                     }
                 }
-                // Соседние в кольце точки рёбер - отрезок границы
                 for (k in ring.indices) {
                     val from = ring[k] ?: continue
                     val to = ring[(k + 1) % ring.size] ?: continue

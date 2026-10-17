@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.AtlasPoints
 
 /**
- * За что очко Атласа (4.10.0): ключ `<вид>:<место>` ([AtlasPoints.key]) - «босс Склепа изгнанников», «башня, рубеж 10»,
+ * За что очко Атласа: ключ `<вид>:<место>` ([AtlasPoints.key]) - «босс Склепа изгнанников», «башня, рубеж 10»,
  * «раш: Пустоши». Место карты и региона - их имя, у башни - этаж.
  */
 fun atlasPointSource(key: String): String {
@@ -18,5 +18,5 @@ fun atlasPointSource(key: String): String {
     return if (kind in AtlasPoints.ALL) ui("atlas.earned.$kind", named) else named
 }
 
-/** Тост о новом очке Атласа (4.10.0): «+1 очко атласа — босс Склепа изгнанников». */
+/** Тост о новом очке Атласа: «+1 очко атласа — босс Склепа изгнанников». */
 fun atlasPointToast(key: String): String = ui("atlas.earned.toast", atlasPointSource(key))

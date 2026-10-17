@@ -51,7 +51,7 @@ class Transport(
     private val base = normalizeServer(server).toHttpUrlOrNull()!!
     internal var token: String? = null
 
-    /** Когда сервер последний раз ответил по существу (3.94.1): свежий ответ заменяет проверку связи. */
+    /** Когда сервер последний раз ответил по существу: свежий ответ заменяет проверку связи. */
     @Volatile var answeredAt: Long = 0L
         private set
 
@@ -61,20 +61,20 @@ class Transport(
     /** A command's snapshot of the hero, or `null` when the answer came without one. */
     internal var onHero: (String, HeroSnapshot?) -> Unit = { _, _ -> }
 
-    /** Where commands wait for the network (3.30.0); none sends every command once, as before. */
+    /** Where commands wait for the network; none sends every command once, as before. */
     internal var queue: CommandQueue? = null
 
     /** A session taken from the device but not yet confirmed by the server: every command that may wait, waits. */
     internal var holding = false
 
-    /** Доступ закрыт санкцией (`AUTH_006`, 3.88.5): id санкции из отказа и токен апелляции (4.9.0, пусто - нет). */
+    /** Доступ закрыт санкцией (`AUTH_006`): id санкции из отказа и токен апелляции (пусто - нет). */
     internal var onSanctioned: (String, String) -> Unit = { _, _ -> }
 
-    /** Сервер отказал герою запроса как заблокированному (`CH_034`, 3.88.0): id героя из запроса и сам отказ. */
+    /** Сервер отказал герою запроса как заблокированному (`CH_034`): id героя из запроса и сам отказ. */
     internal var onHeroBlocked: (String, ApiFailure) -> Unit = { _, _ -> }
 
     /**
-     * Сервер ответил сбоем (4.3.1; NET-3 4.x - не всякой ошибкой): 5xx, 426 или битое тело - и у команд, и у файлов. Приложение
+     * Сервер ответил сбоем (не всякой ошибкой): 5xx, 426 или битое тело - и у команд, и у файлов. Приложение
      * проверяет обновление: [ServerAlarm.OUTDATED] - сервер прямо назвал сборку устаревшей (426 `CL_001`), проверка сразу; 5xx и
      * битое тело - [ServerAlarm.FAILED], проверка в очередь с порогом. Отказ правила (прочие 4xx с конвертом игры) - слово сервера,
      * не сбой: обновления не ищет. Обрыв сети без ответа - [ServerAlarm.UNREACHED], с тем же порогом: сервер мог лечь на деплой,
@@ -103,7 +103,7 @@ class Transport(
     /** Whose session is signed in, so a kept command is never replayed for another account. */
     internal var account: () -> String? = { null }
 
-    /** Версия сборки (`versionName`, 0.15.0, #36) - заголовок [CLIENT_VERSION_HEADER] каждого запроса; пусто - не шлётся. */
+    /** Версия сборки (`versionName`) - заголовок [CLIENT_VERSION_HEADER] каждого запроса; пусто - не шлётся. */
     internal var clientVersion: () -> String = { "" }
 
     /** Заголовки сборки на запросе: ревизия API и версия клиента. */
@@ -123,13 +123,10 @@ class Transport(
     internal suspend fun fetchText(path: String, json: Boolean = true, authenticated: Boolean = false, validate: Boolean = json): String = fetchPayload(path, json, authenticated, validate).body
 
     /**
-     * Файл с отпечатком (3.94.1): [etag] уходит в `If-None-Match`, на 304 ответ - с пустым телом и тем же статусом; отпечаток
-     * нового тела - в [HttpPayload.etag].
-     */
-
-    /**
-     * Открытый файл с ETag; сессия, если она есть, идёт с ним (4.12.x, сервер SEC-09): манифест маршрутов показывает вошедшему его
+     * Открытый файл с ETag; сессия, если она есть, идёт с ним: манифест маршрутов показывает вошедшему его
      * маршруты, а без входа - только открытые.
+     *
+     * [etag] уходит в `If-None-Match`, на 304 ответ - с пустым телом и тем же статусом; отпечаток нового тела - в [HttpPayload.etag].
      */
     internal suspend fun fetchTagged(path: String, etag: String?): HttpPayload = fetchPayload(path, etag = etag, signed = true)
 
@@ -182,9 +179,15 @@ class Transport(
      * it speaks for a session that has already been dropped here
      * @param replay the queued command this is a send of — it keeps its key and never queues again
      *
-     * Every signed-in command carries an [IDEMPOTENCY_HEADER] (3.30.0). One that may wait lines up behind
+     * Every signed-in command carries an [IDEMPOTENCY_HEADER]. One that may wait lines up behind
      * the commands already waiting, or joins them when the network fails under it: either way the caller
      * gets [CommandQueued] instead of an answer, and the answer comes with the replay.
+     *
+     * Команды-POST с аргументами в строке запроса всё равно шлют тело - OkHttp его требует. Каждая команда над показанным героем просит
+     * героя назад: заголовок называет, что уже есть; чтение просит снимок, когда сервер досчитывает на нём героя ([withHero]). Язык игрока
+     * - для текста отказа, которого нет в словаре клиента; ревизия API сборки - сервер новее отвечает 426 `CL_001`, рядом версия клиента.
+     * Принятая команда с нечитаемым снимком лишь перечитывает героя, как и повторённый ответ. Нет ответа или «ещё нет» - команда ждёт со
+     * своим ключом; дубль, что сервер ещё выполняет (`IDEM_001`), в очередь не встаёт - «Это действие уже выполняется».
      */
     internal suspend fun request(
         method: String,
@@ -211,17 +214,12 @@ class Transport(
         val key = queued?.key ?: if (command) java.util.UUID.randomUUID().toString() else null
         val url = base.newBuilder().addPathSegments(path).apply { query.forEach { (k, v) -> addQueryParameter(k, v) } }.build()
         val bodyText = body?.toString().orEmpty()
-        // Several commands are POSTs carrying their arguments in the query string; OkHttp still demands a body for those methods.
         val payload = body?.toString()?.toRequestBody(JsonMedia)
             ?: if (method in setOf("POST", "PUT", "PATCH")) "".toRequestBody(JsonMedia) else null
-        // Every command on a hero the client shows asks for the hero back: the header names what it already holds. Чтение
-        // просит снимок, когда сервер досчитывает героя на нём [withHero] (3.94.1: сбор ремёсел).
         val heroOf = query["heroId"]?.takeIf { (method == "POST" || withHero) && authenticated }
         val parts = heroOf?.let(heroParts)
         val request = Request.Builder().url(url).header("Accept", "application/json")
-            // Язык игрока (3.88.7, сервер 1.80.9): по нему сервер пишет текст отказа, которого нет в словаре клиента.
             .header("Accept-Language", com.sperance.exileforge.core.i18n.uiLanguage.code)
-            // Ревизия API сборки (4.3.1): сервер новее отвечает 426 `CL_001`, и приложение сразу ищет обновление; рядом - версия клиента
             .stamped()
             .apply { credential?.let { header("Authorization", "Bearer $it") } }
             .apply { parts?.let { header(HeroParts.HEADER, it) } }
@@ -279,8 +277,6 @@ class Transport(
             }
             success = true
             answeredAt = System.currentTimeMillis()
-            // The command has landed: a snapshot that cannot be read only means the hero is read again — and so
-            // does a replayed answer, whose snapshot is the hero as the first run left them.
             if (heroOf != null && parts != null) {
                 runCatching {
                     onHero(
@@ -301,9 +297,6 @@ class Transport(
             }
             unreached(e)
             if (responseText.isBlank()) responseText = e.message.orEmpty()
-            // The answer never came, or the server said "not yet": the command waits with its key, and the replay is the same command.
-            // Дубль, что сервер ещё выполняет (`IDEM_001`, 4.12.x NET-8), в очередь не встаёт: игрок видит «Это действие уже
-            // выполняется», а ответ первой команды приносит героя сам.
             val later = if (e is ApiFailure) CommandQueue.transient(e.status) && e.code != CommandQueue.BUSY else e is java.io.IOException
             if (waits != null && queued != null && later) {
                 waits.add(queued)
@@ -345,13 +338,13 @@ internal fun heroQuery(heroId: String, vararg more: Pair<String, String?>): Map<
     }
 }
 
-/** Отказ заблокированному герою (server 1.80.0): аргумент - причина блокировки. */
+/** Отказ заблокированному герою: аргумент - причина блокировки. */
 const val HERO_BLOCKED = "CH_034"
 
-/** Доступ закрыт санкцией модерации (3.88.5, server 1.80.8): первый аргумент - id санкции. */
+/** Доступ закрыт санкцией модерации: первый аргумент - id санкции. */
 const val SANCTIONED = "AUTH_006"
 
-/** Сборка устарела для сервера (4.3.1, server 1.84): 426 на любой маршрут API. */
+/** Сборка устарела для сервера: 426 на любой маршрут API. */
 const val OUTDATED_CLIENT = "CL_001"
 
 /** Статус «сборка устарела» (426): по нему обновление ищется сразу. */
@@ -360,13 +353,13 @@ private const val OUTDATED_STATUS = 426
 /** С этого статуса ответ - сбой сервера, а не отказ правила. */
 private const val SERVER_FAILURE = 500
 
-/** Заголовок ревизии API сборки (4.3.1): по нему сервер отвечает [OUTDATED_CLIENT]. */
+/** Заголовок ревизии API сборки: по нему сервер отвечает [OUTDATED_CLIENT]. */
 internal const val API_REVISION_HEADER = "X-Api-Revision"
 
-/** Заголовок версии клиента (0.15.0, #36): сервер не проверяет её, а помнит в сессии - досье знает, на чём аккаунт играет сейчас. */
+/** Заголовок версии клиента: сервер не проверяет её, а помнит в сессии - досье знает, на чём аккаунт играет сейчас. */
 internal const val CLIENT_VERSION_HEADER = "X-Client-Version"
 
-/** Что сказала ошибка сервера о сборке (4.3.1). */
+/** Что сказала ошибка сервера о сборке. */
 enum class ServerAlarm {
     /** Сервер прямо назвал сборку устаревшей: обновление ищется сразу. */
     OUTDATED,

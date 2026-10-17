@@ -5,12 +5,12 @@ import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRole
 import kotlinx.serialization.Serializable
 
-/*
- * The guild routes' answers (3.22.0, server 1.20.0). The rules — `guilds.json`, the modes, roles and factions
- * ([com.sperance.exileforge.rules.content.GuildFaction], 3.27.0) — are the shared module's; these are only the wire.
+/**
+ * One row of the guild list: enough to choose and to knock.
+ *
+ * Ответы маршрутов гильдии; правила (`guilds.json`, режимы, роли, фракции [com.sperance.exileforge.rules.content.GuildFaction]) - у общего
+ * модуля, здесь только провод.
  */
-
-/** One row of the guild list: enough to choose and to knock. */
 @Serializable data class GuildCard(
     val id: String,
     val name: String = "",
@@ -42,16 +42,16 @@ import kotlinx.serialization.Serializable
     val rank: String = "",
     val joinedAt: Long = 0,
     val lastSeenAt: Long = 0,
-    /** Суточный потолок вклада с бонусом древа и остаток на сегодня (4.3.0, сервер по `GuildRules.dailyLimit`). */
+    /** Суточный потолок вклада с бонусом древа и остаток на сегодня (сервер по `GuildRules.dailyLimit`). */
     val dayLimit: Long = 0,
     val dayLeft: Long = 0,
-    /** В сети ли герой (4.5.1, сервер по `rules.onlineMinutes`); [lastSeenAt] с 4.5.1 - позднее из захода в гильдию и последней команды. */
+    /** В сети ли герой (сервер по `rules.onlineMinutes`); [lastSeenAt] - позднее из захода в гильдию и последней команды. */
     val online: Boolean = false,
-    /** Код титула летописи (4.6.3); пусто - без титула. */
+    /** Код титула летописи; пусто - без титула. */
     val title: String = "",
-    /** Предначертание аккаунта героя (4.6.3); null - не выбрано. */
+    /** Предначертание аккаунта героя; null - не выбрано. */
     val fate: FateCard? = null,
-    /** Мощь героя (4.8.0, сервер по `Might` правил); 0 - ещё не посчитана. Не прогноз боя. */
+    /** Мощь героя (сервер по `Might` правил); 0 - ещё не посчитана. Не прогноз боя. */
     val might: Double = 0.0,
 )
 
@@ -83,11 +83,11 @@ import kotlinx.serialization.Serializable
     val members: List<GuildMember> = emptyList(),
     val applications: List<GuildApplicant> = emptyList(),
     val weekly: Map<String, Long> = emptyMap(),
-    /** The bonus tree (3.79.0, server 1.74.0): ranks by node, points left and from when a reset is free (epoch millis). */
+    /** The bonus tree: ranks by node, points left and from when a reset is free (epoch millis). */
     val tree: Map<String, Int> = emptyMap(),
     val treePoints: Int = 0,
     val respecAt: Long = 0,
-    /** Код вступления (4.7.0): шесть цифр - кто их знает, вступает сразу; приходит только ролям с правом приёма. */
+    /** Код вступления: шесть цифр - кто их знает, вступает сразу; приходит только ролям с правом приёма. */
     val code: String? = null,
 ) {
     val leader: GuildMember? get() = members.firstOrNull { it.role == GuildRole.LEADER }
@@ -95,7 +95,7 @@ import kotlinx.serialization.Serializable
     fun member(heroId: String): GuildMember? = members.firstOrNull { it.heroId == heroId }
 }
 
-/** Превью приглашения (4.7.0, `guild/lookup`): кого позовёт номер или имя; [guild] - его нынешняя гильдия. */
+/** Превью приглашения (`guild/lookup`): кого позовёт номер или имя; [guild] - его нынешняя гильдия. */
 @Serializable data class GuildRecruit(val heroId: String, val name: String, val heroClass: String = "", val level: Int = 1, val number: String = "", val guild: String? = null)
 
 /** `guild/mine`: the guild or none, the hero in it, the invitations waiting, and when a leaver may join again (epoch millis). */
@@ -106,7 +106,7 @@ import kotlinx.serialization.Serializable
     val rejoinAt: Long? = null,
 )
 
-/** One thing in the guild stash (3.79.0, server 1.74.0): an item as it is, or a stack by its code; who put it and when. */
+/** One thing in the guild stash: an item as it is, or a stack by its code; who put it and when. */
 @Serializable data class GuildStashEntry(
     val id: String,
     val tab: Int = 0,
@@ -122,7 +122,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * The guild stash as a member sees it: its things, its tabs, places a tab and the takes left today (-1 — no count);
- * [takesPerDay] (4.2.0) - дневной лимит взятий роли героя (`guilds.json` → `stash.roles`), -1 - без лимита (глава).
+ * [takesPerDay] - дневной лимит взятий роли героя (`guilds.json` → `stash.roles`), -1 - без лимита (глава).
  */
 @Serializable data class GuildStashView(
     val entries: List<GuildStashEntry> = emptyList(),

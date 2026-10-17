@@ -24,78 +24,8 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonElement
 
 /**
- * The API revision this client is written against (server 1.30.0: run rewards rolled by the server alone and answered per event
- * by `campaign/events`, auction lots that expire; 23 - server 1.31.0: the powers' `STAGE_CLEAR`, `MOMENTUM`, `ECHO` and `RETALIATE`,
- * unique jewels refused twice with `ST_022`, `atlasNodes` in the run context; 24 - server 1.32.0: frenzy, power and endurance charges,
- * the pet's power events, slot powers and the sheet's worn counts, rules version 4); 30 - server 1.47.0: the trials; 31 - server 1.48.0: the rush key; 32 - server 1.49.0: fight tallies and the hero's statistics; 33 - server 1.50.0: influenced maps and the fanned atlas; 34 - server 1.52.0: quests without zones, the branch refund; 35 - server 1.53.0: replayed commands answer without `data`, journals of at most 64 events, 503 when the database is away, the crafting seed withheld, the tower's last floor; 36 - server 1.62.0: the auction showcase by cursor, `rules` in the manifest, the merchant's resale cap; 42 - server 1.69.0: monster traits, the tester role and grants, suggestions, mail, the auction history.; 43 - server 1.75.0: sealed run and trial events, lot goods, profession jobs and redemption rewards with the `kind` discriminator; 44 - server 1.77.0: без Пути изгнанника, сборки приложения с сервера `/app/latest.json`; 45 - server 1.78.0: веса размеров стаи `rules.run.packWeights`, отпечаток устройства `hardwareId` во входе; 46 - server 1.79.0: без раздачи сборок `/app`, сборки с GitHub Releases.; 47 - server 1.80.0: блок героя `CH_034`, привязка логина `user/bind`, отчёты с устройством и версией, лут боя по `ENGAGE`; 48 - server 1.80.8: санкции модерации - `AUTH_006`/`CH_034` с id санкции, экран `notice` и апелляция, устройство во входе, окно `admin/moderation`, `hero/sanctions`; 49 - server 1.80.11: без плана дерева `hero/plan`, бой без отступления, уровни разделов `rules.unlocks`.; 50 - server 1.81.0: незаконченный заход `campaign/abandon`, открытые сундуки захода, простой захода `rules.run.idleMinutes`, алфавит имён `CH_035`/`GU_039`.; 51 - server 1.81.3: объекты карты `FEATURE` (алтари, торговец, ловушки, тайники, узлы ремёсел), общее значение эффекта модификатора.; 52 - server 1.81.7: находки уникальных вещей `hero/uniques`, без пути дерева `skilltree/path`, питомцы в заходе не меняются (`CH_036`).; 53 - server 1.81.8: продажа пачкой `hero/sell/batch`, автопродажа «не может носить», питомцы без качества.; 54 - server 1.81.10: игровые серверы `gameserver` и `admin/servers`, `admin/hero/server`, редкость яиц, продажа питомца `hero/pets/sell` и лот-питомец `auctionlot/sell/pet`, мастер вещи, две фляги, без журнала запросов в отчётах.; 55 - server 1.81.13: тотемы боссов `totems` и `Monster.totems`, шаг фазы `totems`, события сил `TOTEM_RAISED`/`TOTEM_FALLS`, счёт `TOTEMS`, печать стража `MAP_SEALED_GUARDIAN`.; 56 - server 1.81.14: перегонка `Refine.share`/`work`, почта `mail/read/all` и `mail/delete/read`, сортировка модерации и `lastSeenAt`.; 57 - server 1.81.15: меньше запросов - `auctionlot/mine`, команды аукциона и `mail/claim` со снимком, `hero/byUser` с санкциями, `HeroSnapshot.unread`, ремёсла со снимком, дерево и атлас только снимком, портреты `portraits/all.json`, ETag манифеста; сняты чтения торговца, верстака, прогресса, дерева, атласа и старые манифесты.; 58 - server 1.82.0: `campaign/start?auto`, выход закрывает заход, осколки сфер `SHARD_*` за продажу, база у уникалок, ярость стража `combat.bossEnrage`.
- * 59 - server 1.83.0: Разлом недели `trials/rift/board|start|act`, таблицы испытаний `trials/table`, ступени раша, выбор строк башни, алтари сняты с карт.
- * 60 - Скверна: объект карты `BLIGHT` (жетоны очага, сундук точки выбором `FEATURE`), `MapFeature.accepts` с убитыми, доля добычи автозабега `expedition.autoYield`.
- * 61 - статусы отчётов `CREATED`/`SENT`, обзор Разлома (правило `SIGHT`, правила у даров), `campaign/start?forced=` механики тестировщика.
- * 63 - статус отчёта `REVIEW` и переходы `AdminReport.moves`, удаление `bugreport/delete`, без служебного журнала в отчёте,
- *      суточный вклад `GuildMember.dayLimit`/`dayLeft`, права гильдии `GuildPolicy` (офицер повышает участника), работа кузнеца
- *      `JobKind.TOOL` (инструменты профессий), законы тронов: `quests/law` (`QU_008`-`QU_010`), `HeroInfo.laws`, `RunContext.laws`.
- * 64 - рост умений: руны в гнёздах `hero/skills/rune` (`SK_013`-`SK_018`), книга изученного умения читается в опыт, поля
- *      `HeroSkills.xp`/`tiers`/`runes`, работы чар `JobKind.EVOLVE`/`CARVE` (`Job.once`, `WorkGains.done`), предметы `RUNE`,
- *      `PowerAct.RECAST`, поля умения `echo`/`cast`/`hit.chain`.
- * 65 - `hero/pets/orb` отвечает `PetOrbResponse` (строка итога и зверинец), `OrbApplier.refusal` цели-питомца, отклики свойств
- *      `HINDER`/`HEX`/`RIPOSTE`/`STACK`, недуг `BURST`, строки `FIRST_STRIKE`, `LootRoller.deathLoss(heroLevel, experience)`.
- * 66 - самоудаление героя `hero/deletion/preview|mark|restore|erase` (`CH_040`, `CH_041`, причина санкции `SELF`, `MOD_010`),
- *      общий `DELETE hero` - только администратору, карточка игрока `GET hero/card`, `GuildMember.online`.
- * 67 - Предначертание аккаунта: `GET fate`, `POST fate/choose?code=` (`FT_001`, `FT_002`), без дара герой не создаётся (`CH_042`),
- *      `UserProfile.fate`, `HeroInfo.fate|trophies`, `PlayerCard.fate` - `FateCard`, `RunContext.fate`, `RunStart.mapKept`,
- *      `CurrencyApplyResponse.kept`, обмен трофеев `POST hero/merchant/trophy?boss=` (`FT_003`-`FT_005`), чанк `fates.json`.
- * 68 - Предначертания без тем: `FateCard` - код, имя и описание; новые рычаги, `HeroView.fateFights`, сопротивления по
- *      максимумам стихий, без родовых строк (`Source.LINEAGE`).
- * 69 - Осквернение Предначертания: `ItemInstance.desecration` (`FateBoon`), работа `DESECRATE` с вещью в `ActiveWork.held` (выбор -
- *      id вещи, `CR_040`-`CR_044`), Сфера прозрения через `hero/orb` и выбор через `hero/unveil`; без `RunStart.mapKept`;
- *      `Ceilings.spellBlock`.
- * 70 - почта героев (`MailKind.PLAYER|GUILD`, `mail/letter|quota|ignore|report`, немота `SanctionKind.MUTE`), валюта аукциона -
- *      любая сфера, расширенный `GuildMember`, дар в модерации, рост даров от силы и призрачный волк.
- * 71 - Печати Атласа `hero/seal`, питомцы без опыта и сферы роста, Разлом без лиг (`unlocks.RIFT`, `RiftProgress.level`),
- *      `GuildMember` без лиги и профессии, шаги перестройки дара в разборе листа.
- * 72 - башня по этажам (`tower.firstLevel|maxLevel|leaders`), разделы сводки `StatDef.section|partOf`, без `STOCK_INVENTORY_SIZE`.
- * 73 - номер героя (`HeroView.number`, `PlayerCard.number`), код гильдии (`GuildView.code`, `guild/code`, `guild/join-code`,
- *      `guild/lookup`), обмен книг сразу учит умение, взятие из хранилища гильдии платное, `fight.speeds|minWaveSeconds` (4.7.0).
- * 74 - Мощь (`GuildMember.might`, `PlayerCard.might`, `rules.might`), отчёт об ошибке сразу `SENT` и снимок экрана
- *      (`BugReportRequest.screenshot`, `feedback.shotSide|shotBytes|shotsPerHour`), враги узла Разлома одним списком
- *      (`RiftFight.foes`), вклад в гильдию только золотом (`guild/contribute` без `item`, без `GuildView.treasuryOrbs`) (4.8.0).
- * 75 - пакет 4.9.0: ENGAGE без добычи и LEAVE посреди боя - поражение, журнал пачками (`run.journalSeconds`), апелляция с
- *      токеном (`notice/token`, `AUTH_006` с токеном), GET без записей (`hero/crafts/settle`, `hero/quests/refresh`,
- *      `guild/visit`, `guild/quests/refresh`), выданное (`granted`, `GR_001`), лимит промокодов, доска `MIGHT`, ключ отчёта.
- * 76 - вклад дерева строками сводки: `TreeState.totals` - `StatTotal(stat, parts)` с частями `StatPart(stat, op, value, condition)`
- *      вместо `StatContribution`; «за каждые N» - от листа героя, условные строки - частями с условием (4.9.2).
- * 77 - новые ключи Атласа в награде события (`EventReward.atlas`, `TrialReward.atlas`), ответ отчёта об ошибке
- *      `FiledReport(id, shotDropped)` (4.10.0).
- * 78 - доска `UNIQUES`, наименьший номер находки (`UniqueSeen.lowest`), доли гильдии и зелья в контексте захода
- *      (`RunContext.guild`, `RunContext.potion`) (4.10.x).
- * 79 - недуги Изранение и Иссушение (`AilmentRule.type` необязателен, `ceiling`, `curbs`), строки «меньше регенерации»/«без
- *      регенерации здоровья», `MAP_MONSTER_WITHER` (4.11.0).
- * 80 - без питомцев: сняты маршруты `hero/pets` и `auction/sell/pet`, часть снимка `pets` (часы сервера - `HeroSnapshot.now`), лот и
- *      вложение письма с питомцем, место `COLLAR`; рычаг дара `KILL_STACKS`, испытание Разлома `NO_RECOVERY`, плоская регенерация
- *      маны, Сфера гравёра (`hero/orb?line`), сдача заданий в закрывающем заход `campaign/events` (`RunReport.turnIns`) (4.11.x).
- * 81 - безопасность и данные (4.12.x): тестировщик - отметка героя (`HeroInfo.tester`, `DossierHero.tester`, `admin/moderation/tester`),
- *      роли аккаунта `TESTER` нет; экран санкции - `SanctionNotice` с причиной для игрока, немота без номера и заметки, причина в
- *      бане и удалении; `US_021`, `AUTH_007`; `BRY_002` - 409; маршруты манифеста - по сессии.
- * 82 - формы карт по биому (`expedition.shapes`), босс кольца - за воротами арены после доли зачищенных стай, Атлас - только в
- *      заходе по карте-предмету (4.12.8).
- * 83 - тексты из контента: числа сил и пороги правил в шаблонах - плейсхолдеры `{p:…}`/`{r:…}`, их подставляет `ModifierText`
- *      (`TextNumbers`); флаги фляги - единица `FLAG`, тексты отказов без id (0.13.0).
- * 84 - пакет 0.14.0: без урона крита, заёмной маны и маны умений монстров; применение и пауза после прерывания (`combat.cast`),
- *      общие умения, метки, алтари с вариантами, исключения узлов Атласа; книга за главу `POST hero/quests/book`, `QuestBoard.books`.
- * 85 - пакет 0.14.1: отчёты в GitHub Issues (`OwnReport.issue`, `Suggestion.kind|issue`, `REJECTED`, `bugreport/known|similar`,
- *      `admin/feedback/issue`), без снимков экрана; кривая вождей Бездны `abyss.leaderPower`, оборона классов строками.
- * 86 - пакет 0.14.2: вид отчёта `CRASH` (падения - сразу Issue), `BugReportRequest.traces|trail|heroSheet`, открытые ключи
- *      контекста отчёта; фонтан 40%, оборона классов без строки получаемого урона.
- *      Без предложений (`SUGGESTION`, `IssueState.DONE`, `inputs.suggestion`; `Suggestion` → `KnownReport`), голос - за ошибку;
- *      переписка `IssueView.notes`, ответ автора `POST bugreport/answer`, модерация Issue `POST admin/feedback/issue/move`.
- * 87 - пакет 0.14.4: без «Похожее уже известно» (`bugreport/similar`, `feedback.similar`); захват выгрузки Issue
- *      `feedback.exportHoldMinutes`; без метки «в работе» (`IssueState.IN_PROGRESS`, `IssueMove.PROGRESS`); руна умения
- *      `SkillDefinition.sigil`.
- * 88 - пакет 0.15.0: книга за главу отвечает `StoryBookTaken` и учит умение сразу (#47); цена маны всех умений - по уровню умения,
- *      без `ManaPrice` (#40); полярность `StatDef.gain` (#46); порядок альбома уникалок `rules.album` (#51); пояснения
- *      `stat.desc.ATLAS_*` (#41); `POST admin/fate?code=` (#35); заголовок `X-Client-Version`, `DossierAccount.lastSeenAt`,
- *      `DossierHero.lastSeenAt` (#36). Яд и хаос (реш. 36-43): `combat.ailments` - `parts`, `raw`, `limit`, `refresh`, `exposes`,
- *      недуги `DECAYED` и `DRAINED`; `SkillDot.ailment`; `combat.finisherLife`; снят `combat.ailmentShare`.
+ * Ревизия API, против которой написан клиент: совпадает с `API_REVISION` закреплённого сервера (сабмодуль `backend/`) и меняется
+ * вместе с ним. История ревизий - `audit/versions.md`.
  */
 const val API_REVISION = 88
 
@@ -104,7 +34,7 @@ const val API_REVISION = 88
 
 /**
  * `static/index.json`: everything the client checks at start — the routes it decides features by and every fingerprint it keeps.
- * Маршруты (4.12.x, сервер SEC-09) - только те, что вызывающий может звать: без входа - открытые.
+ * Маршруты - только те, что вызывающий может звать: без входа - открытые.
  */
 @Serializable data class StaticManifest(
     val version: String = "",
@@ -114,9 +44,9 @@ const val API_REVISION = 88
     val icons: IconManifest = IconManifest(),
     val portraits: PortraitManifest = PortraitManifest(),
     val content: ContentManifest = ContentManifest(),
-    /** The server's rules version (server 1.62.0): other rules roll runs differently, so the client needs a new build, not new content. */
+    /** The server's rules version: other rules roll runs differently, so the client needs a new build, not new content. */
     val rules: Int = 0,
-    /** Коммит работающего сервера (server 1.80.5): экран «Контракт сервера» показывает его рядом с закреплённым. */
+    /** Коммит работающего сервера: экран «Контракт сервера» показывает его рядом с закреплённым. */
     val commit: String = "",
 ) {
     val capabilities: ApiCapabilities get() = ApiCapabilities.of(routes)
@@ -126,7 +56,7 @@ const val API_REVISION = 88
 
     /**
      * A server of another revision speaks another wire: the client refuses it rather than misreading it. Маршруты - после входа
-     * (4.12.x, сервер SEC-09): без сессии манифест несёт только открытые ([com.sperance.exileforge.core.network.GameApi.requireRoutes]).
+     * : без сессии манифест несёт только открытые ([com.sperance.exileforge.core.network.GameApi.requireRoutes]).
      */
     fun requireWorkbench() {
         require(revision == API_REVISION) { ui("cmd.stale_revision", revision, API_REVISION) }
@@ -143,8 +73,7 @@ const val API_REVISION = 88
 /**
  * The parts of one hero the client holds. Their fingerprints travel back in `X-Hero-Parts` with every
  * command and every read, so the server sends only what moved; [version] is the document's own and
- * answers `If-None-Match`. The items come in [ItemBuckets] by id and their order as a part of its own
- * (1.1.0): a new drop moves one bucket and the order, not the whole stash.
+ * answers `If-None-Match`. The items come in [ItemBuckets] by id and their order as a part of its own: a new drop moves one bucket and the order, not the whole stash.
  */
 class HeroParts(val heroId: String, val version: String = "", private val parts: Map<String, HeroPart> = emptyMap(), private val memo: PartMemo = PartMemo()) {
     val complete: Boolean get() = NAMES.all { it in parts }
@@ -152,18 +81,21 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     /** `hero=<hash>,items=<hash>,…`, or `none`: the header is how a client asks for a snapshot at all. */
     fun header(): String = parts.entries.joinToString(",") { "${it.key}=${it.value.version}" }.ifEmpty { "none" }
 
-    /** [fresh] - the snapshot is the server's answer just now, not the copy kept on the device. */
+    /**
+     * [fresh] - the snapshot is the server's answer just now, not the copy kept on the device.
+     *
+     * Свежий ответ несёт часы сервера ([HeroSnapshot.now]) - единственный миг, когда можно измерить их сдвиг.
+     */
     fun merge(snapshot: HeroSnapshot, fresh: Boolean = true): HeroParts {
-        // A fresh answer brings the server's clock (4.11.x, [HeroSnapshot.now]): the one moment its offset can be measured.
         if (fresh) ServerClock.heard(snapshot.now)
         return HeroParts(heroId, snapshot.version, parts + snapshot.parts, memo)
     }
 
-    /** Every part held, as one snapshot: what the device keeps of the hero for the next launch (3.30.0). */
+    /** Every part held, as one snapshot: what the device keeps of the hero for the next launch. */
     fun snapshot(): HeroSnapshot = HeroSnapshot(version, parts)
 
     /**
-     * Отпечаток листа героя (4.12.x, PERF-02): части, из которых он складывается, - герой, дерево, вещи и их порядок. Совпал с
+     * Отпечаток листа героя: части, из которых он складывается, - герой, дерево, вещи и их порядок. Совпал с
      * прошлым - лист не пересчитывается (пришли только сумка, заход, ремёсла или торговец).
      */
     fun sheetKey(): String = (listOf(HERO, TREE, ItemBuckets.ORDER) + ItemBuckets.names).joinToString(",") { parts[it]?.version.orEmpty() }
@@ -180,7 +112,7 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
     val crafts: WorkState get() = decode(CRAFTS, WorkState.serializer())
     val merchant: MerchantStock get() = decode(MERCHANT, MerchantStock.serializer())
 
-    /** Часть [name] разобранной: та же часть (отпечаток) разбирается один раз на героя (4.12.x, PERF-02). */
+    /** Часть [name] разобранной: та же часть (отпечаток) разбирается один раз на героя. */
     private fun <T> decode(name: String, serializer: KSerializer<T>): T {
         val part = parts.getValue(name)
         return memo.derived(name, part.version) { WireJson.decodeFromJsonElement(serializer, part.data) }
@@ -203,7 +135,7 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
 }
 
 /**
- * Память разобранных частей героя (4.12.x, PERF-02): по имени - отпечаток и значение. Слияние снимка несёт её дальше, так что
+ * Память разобранных частей героя: по имени - отпечаток и значение. Слияние снимка несёт её дальше, так что
  * часть, чей отпечаток не сдвинулся, не разбирается заново; сдвинулась - разбирается и заменяет прежнее.
  */
 class PartMemo {

@@ -27,7 +27,7 @@ class FightPulse {
     private var swings = FloatArray(SWINGS)
 
     /**
-     * Доля идущего сбора узла карты (4.12.x, ASANA-06) этого кадра; сбора нет - null. Полоса сбора читает её в рисовании, а не
+     * Доля идущего сбора узла карты этого кадра; сбора нет - null. Полоса сбора читает её в рисовании, а не
      * из снимка (не чаще 20 раз в секунду): идёт ровно, без рывков.
      */
     var gather: Float? = null
@@ -105,11 +105,11 @@ class HudCadence {
         return true
     }
 
+    /** В ключ входят строки журнала, что уже легли, и те, чей выпад уже идёт: журнал пишет удар наперёд. */
     private fun keyOf(state: Long, battle: Battle?): Long {
         var key = state
         battle ?: return key
         val log = battle.events
-        // Строки журнала, что уже легли, и те, чей выпад уже идёт (журнал пишет удар наперёд)
         var landed = log.size
         while (landed > 0 && log[landed - 1].time > battle.time) landed--
         var lunging = log.size

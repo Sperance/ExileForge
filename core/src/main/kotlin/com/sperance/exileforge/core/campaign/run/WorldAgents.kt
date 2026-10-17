@@ -19,8 +19,8 @@ enum class AgentMode(val sees: Boolean = false) { IDLE, ASLEEP, LURKING, CHASING
 /**
  * A monster walking the map: where it lives, where it is going, and whether it is still there.
  *
- * [pack] is one or more (2.54.0): a jetton is usually a single foe, sometimes a pack of up to
- * three, fought all at once since 2.70.0. [monster] — the map token, its walking behaviour and its
+ * [pack] is one or more: a jetton is usually a single foe, sometimes a pack of up to
+ * three, fought all at once. [monster] — the map token, its walking behaviour and its
  * portrait on the ground — is always the strongest of the pack; [fallen] are those already killed.
  */
 class MonsterAgent(
@@ -31,7 +31,7 @@ class MonsterAgent(
     /** The guardian of a crystal of essences: which one of the map's, by its place; null for everyone else. */
     val crystal: Int? = null,
     /**
-     * Стая вступает в общую свалку (4.4.1; 4.8.0 - и призванные стаи объектов карты): её бой собирает соседние такие же, и
+     * Стая вступает в общую свалку (и призванные стаи объектов карты): её бой собирает соседние такие же, и
      * она идёт в чужой. Босс, страж кристалла и Бездна - false: у их боя своя механика, они бьются одни.
      */
     val joinsBrawl: Boolean = true,
@@ -39,7 +39,7 @@ class MonsterAgent(
     val monster: RolledMonster = pack.maxBy { it.rarity.ordinal }
     val rule: BehaviourRule get() = monster.behaviour
 
-    /** Members of [pack] already killed (2.70.0): a pack the hero walked away from keeps its dead dead. */
+    /** Members of [pack] already killed: a pack the hero walked away from keeps its dead dead. */
     val fallen = mutableSetOf<Int>()
 
     /** Members still standing, by their place in [pack]. */
@@ -76,7 +76,7 @@ class MonsterAgent(
 }
 
 /**
- * A chest on the map (since 2.33.0): where it stands and whether the hero has opened it; [event] (4.10.0) - его событие журнала в
+ * A chest on the map: where it stands and whether the hero has opened it; [event] - его событие журнала в
  * этом заходе: пока сервер его не ответил, сундук приоткрыт и ждёт.
  */
 class Chest(val id: Int, val cell: Cell) {
@@ -84,13 +84,13 @@ class Chest(val id: Int, val cell: Cell) {
     internal var event: Int? = null
 }
 
-/** A fountain on the map (since 2.48.0): where it stands, how much life it gives back, and whether it was drunk dry. */
+/** A fountain on the map: where it stands, how much life it gives back, and whether it was drunk dry. */
 class Fountain(val id: Int, val cell: Cell, val heal: Double) {
     var used = false
 }
 
 /**
- * A crystal of essences on the map (2.78.0, server 0.69.0): where it stands, what it holds as the server
+ * A crystal of essences on the map: where it stands, what it holds as the server
  * last said, and whether its guardian was slain. [id] is its place among the zone's crystals at the entry.
  */
 class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) {
@@ -98,7 +98,7 @@ class CrystalSpot(val id: Int, val cell: Cell, var crystal: Crystal) {
 }
 
 /**
- * A crack of the Abyss on the map (2.82.0, server 0.72.0): where it gapes, how many depths it leads down with
+ * A crack of the Abyss on the map: where it gapes, how many depths it leads down with
  * the map entered, and whether it was opened. [id] is its place among the zone's cracks at the entry.
  */
 class AbyssSpot(val id: Int, val cell: Cell, val depth: Int) {
@@ -110,19 +110,19 @@ sealed interface WorldEvent {
     data class Encounter(val agent: MonsterAgent) : WorldEvent
     data class Opened(val chest: Chest) : WorldEvent
 
-    /** The hero stepped up to a fountain still full (3.70.0): it is offered, not drunk underfoot. */
+    /** The hero stepped up to a fountain still full: it is offered, not drunk underfoot. */
     data class AtFountain(val fountain: Fountain) : WorldEvent
 
-    /** The hero stepped up to a crystal of essences (2.78.0). */
+    /** The hero stepped up to a crystal of essences. */
     data class Crystal(val spot: CrystalSpot) : WorldEvent
 
-    /** The hero stepped up to a crack of the Abyss (2.82.0). */
+    /** The hero stepped up to a crack of the Abyss. */
     data class Abyss(val spot: AbyssSpot) : WorldEvent
 
-    /** Шаг героя сделал что-то с объектом карты (3.90.0): лист к выбору или сработавший объект. */
+    /** Шаг героя сделал что-то с объектом карты: лист к выбору или сработавший объект. */
     data class Feature(val action: FeatureAction) : WorldEvent
 
-    /** The hero reached the Vaal portal (since 2.65.0). */
+    /** The hero reached the Vaal portal. */
     data object Portal : WorldEvent
     data object Exit : WorldEvent
 }

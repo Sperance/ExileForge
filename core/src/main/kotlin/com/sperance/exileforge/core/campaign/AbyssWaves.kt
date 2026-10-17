@@ -27,7 +27,7 @@ data class AbyssDepth(val level: Int, val count: List<Int>, val magic: Double, v
 /**
  * The waves of the Abyss: the dice of a depth are the client's, as every fight's. A wave is the rule's own
  * monsters, as many as its count and the map's swarm say, magic and rare by the depth's shares, with the map's
- * and the Abyss's buffs on them, and the depth's leader last. Волна режется на бои по `fight.maxFoes` врагов (4.2.0).
+ * and the Abyss's buffs on them, and the depth's leader last. Волна режется на бои по `fight.maxFoes` врагов.
  */
 class AbyssWaves(private val index: ContentIndex, private val run: Run) {
     private val monsters = MonsterRoller(index)
@@ -47,7 +47,7 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
         return fights(rule, floor, floor.levelAt(run.levelOf(zone)), run.streams.of("abyssWave", place * 64 + depth), effects, extraRareMods)
     }
 
-    /** The fights of [floor]: its [foes] cut by `fight.maxFoes` (4.2.0) - a depth's wave on a map. */
+    /** The fights of [floor]: its [foes] cut by `fight.maxFoes` - a depth's wave on a map. */
     fun fights(
         rule: AbyssRule,
         floor: AbyssWave,
@@ -58,9 +58,8 @@ class AbyssWaves(private val index: ContentIndex, private val run: Run) {
     ): List<List<RolledMonster>> = index.rules.fight.fights(foes(rule, floor, level, dice, effects, extraRareMods))
 
     /**
-     * The monsters of [floor] at [level] on [dice] in order, the leader last: a depth's wave, or a floor of the tower (3.49.0;
-     * 4.8.0 - one fight with reinforcements) with [extra] — the floor's growth — on every monster, its leader included;
-     * [leaderPower] - the tower leader's own strength (4.6.5).
+     * The monsters of [floor] at [level] on [dice] in order, the leader last: a depth's wave, or a floor of the tower (one fight with reinforcements) with [extra] — the floor's growth — on every monster, its leader included;
+     * [leaderPower] - the tower leader's own strength.
      */
     fun foes(
         rule: AbyssRule,

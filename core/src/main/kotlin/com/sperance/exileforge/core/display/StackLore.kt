@@ -12,11 +12,6 @@ import com.sperance.exileforge.rules.table.Ref
 import com.sperance.exileforge.rules.table.TableKind
 import java.util.WeakHashMap
 
-/**
- * What a stack's card can say from the content alone, under the server's description: an essence's guaranteed
- * line per kind of item at its own tier, and where the stack comes from. Nothing here asks the server.
- */
-
 /** An essence's guaranteed line on one kind of item: which slots take it, and the sentence with the range its tier rolls in. */
 data class EssenceGuarantee(val slots: String, val line: String)
 
@@ -82,14 +77,14 @@ fun ItemSource.title(): String = when (kind) {
 
 fun ItemSource.chanceText(): String? = chance?.takeIf { it > 0 }?.let { ui("source.chance", number(it)) }
 
-/** Куда идёт стопка (3.94.1): работа [job] профессии [profession] с её уровня [level] берёт [amount] за цикл. */
+/** Куда идёт стопка: работа [job] профессии [profession] с её уровня [level] берёт [amount] за цикл. */
 data class ItemUse(val profession: String, val job: String, val level: Int, val amount: Long)
 
 /** Строка «Идёт в»: профессия, работа и уровень, как у источника-работы. */
 fun ItemUse.title(): String = ui("use.WORK", professionTitle(profession), jobTitle(job), level, amount)
 
 /**
- * Где тратится каждая стопка (3.94.1): входы всех работ профессий, у перегонки - каждой её пары; по уровню работы. Как и
+ * Где тратится каждая стопка: входы всех работ профессий, у перегонки - каждой её пары; по уровню работы. Как и
  * [itemSourceIndex], считается раз на контент и вне главного потока.
  */
 fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized(useCache) {
@@ -110,25 +105,29 @@ fun itemUseIndex(index: ContentIndex): Map<String, List<ItemUse>> = synchronized
 
 private val useCache = WeakHashMap<ContentIndex, Map<String, List<ItemUse>>>()
 
-/** The reverse of the content: every table, monster, zone, work and shelf, read once into stack → sources. */
+/**
+ * The reverse of the content: every table, monster, zone, work and shelf, read once into stack → sources.
+ *
+ * Что карточка стопки говорит из одного контента, под описанием сервера: гарантированную строку эссенции по роду вещи на её тире и откуда
+ * стопка берётся; сервера ничто не спрашивает.
+ */
 private class SourceIndex(private val index: ContentIndex) {
     private val found = HashMap<String, MutableList<ItemSource>>()
 
     /** Each table's stacks, read once: a zone's table is shared by many monsters and chests. */
     private val tables = HashMap<String, Map<String, Double?>>()
 
+    /** Печати Атласа - любая награда захода по карте-предмету; осколки - продажа вещей этих редкостей торговцу. */
     fun build(): Map<String, List<ItemSource>> {
         monsters()
         chests()
         crystals()
         works()
         trials()
-        // Печати Атласа (4.6.4): любая награда захода по карте-предмету
         stacks(index.campaign.maps.seals.table).keys.forEach { add(it, ItemSource(SourceKind.MAPS)) }
         index.campaign.abyss?.let { abyss -> stacks(abyss.orbs).keys.forEach { add(it, ItemSource(SourceKind.ABYSS)) } }
         index.campaign.trials?.let { trials -> stacks(trials.rush.orbTable).keys.forEach { add(it, ItemSource(SourceKind.RUSH)) } }
         index.rules.merchant.orbs.codes.forEach { add(it, ItemSource(SourceKind.MERCHANT)) }
-        // Осколки (3.95.0): продажа вещей этих редкостей торговцу, столько-то за вещь
         index.rules.sell.shards.entries.groupBy { it.value.shard }.forEach { (shard, grants) ->
             add(shard, ItemSource(SourceKind.SALE, ref = grants.joinToString(",") { it.key.name }, level = grants.first().value.amount.toInt()))
         }
@@ -172,7 +171,11 @@ private class SourceIndex(private val index: ContentIndex) {
         }
     }
 
-    /** What the professions make: a work's product, what a work finds on the side, the condensed essences and the copied books. */
+    /**
+     * What the professions make: a work's product, what a work finds on the side, the condensed essences and the copied books.
+     *
+     * Резьба руны - каждая руна, что падает не выше потолка работы.
+     */
     private fun works() {
         val book = index.essences
         val recipes = JobRecipes(index)
@@ -190,7 +193,6 @@ private class SourceIndex(private val index: ContentIndex) {
 
                     is Job.Refine -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
 
-                    // Резьба руны (4.4.0): каждая руна, что падает не выше потолка работы
                     is Job.Carve -> recipes.options(job, heroClass = "").forEach { work(it.job.output, it.job.level) }
 
                     else -> Unit

@@ -26,7 +26,7 @@ data class Wire(val api: Int, val rules: Int) {
 }
 
 /**
- * Сборка из релиза GitHub (3.86.0): `update.json` релиза - версия, провод, имя APK, размер, SHA-256 и заметки.
+ * Сборка из релиза GitHub: `update.json` релиза - версия, провод, имя APK, размер, SHA-256 и заметки.
  */
 @Serializable data class AppBuild(
     val versionCode: Int,
@@ -41,7 +41,7 @@ data class Wire(val api: Int, val rules: Int) {
     val wire: Wire get() = Wire(apiRevision, rules)
 }
 
-/** Заметки релиза (3.93.0): версия, дата публикации (ISO) и текст `RELEASE_NOTES.md` той версии. */
+/** Заметки релиза: версия, дата публикации (ISO) и текст `RELEASE_NOTES.md` той версии. */
 @Serializable data class ReleaseNotes(
     @kotlinx.serialization.SerialName("tag_name") val tag: String,
     @kotlinx.serialization.SerialName("published_at") val published: String? = null,
@@ -64,7 +64,7 @@ object UpdatePolicy {
 }
 
 /**
- * Обновления только с GitHub Releases (3.86.0): последний релиз отдаёт `update.json` и APK по постоянным адресам,
+ * Обновления только с GitHub Releases: последний релиз отдаёт `update.json` и APK по постоянным адресам,
  * GitHub уводит их редиректом на свой CDN. Нет релиза (404) - обновлений нет.
  */
 class Updates(link: HttpLink = ForgeHttp.link) {
@@ -90,7 +90,7 @@ class Updates(link: HttpLink = ForgeHttp.link) {
         info.takeIf { UpdatePolicy.required(it, versionCode, Wire.OWN, server, outdated) }?.available()
     }
 
-    /** Заметки [count] последних релизов (3.93.0), новые первыми; GitHub не ответил - ошибка. */
+    /** Заметки [count] последних релизов, новые первыми; GitHub не ответил - ошибка. */
     suspend fun recent(count: Int = RECENT): List<ReleaseNotes> = withContext(Dispatchers.IO) {
         val text = small.newCall(Request.Builder().url("$API_RELEASES?per_page=$count").header("Accept", "application/vnd.github+json").build()).execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
@@ -104,6 +104,8 @@ class Updates(link: HttpLink = ForgeHttp.link) {
     /**
      * APK [update] в [target], [progress] - прочитано байт из всех. Начатый файл докачивается с места обрыва (`Range`);
      * SHA-256 целого файла обязан совпасть с объявленным, иначе файл удаляется и загрузка падает.
+     *
+     * Докачки нет (200 вместо 206) - файл пишется заново.
      */
     suspend fun download(update: AvailableUpdate, target: File, progress: (Long, Long) -> Unit) = withContext(Dispatchers.IO) {
         target.parentFile?.mkdirs()
@@ -112,7 +114,6 @@ class Updates(link: HttpLink = ForgeHttp.link) {
         val request = Request.Builder().url(update.apkUrl).apply { if (have > 0) header("Range", "bytes=$have-") }.build()
         http.newCall(request).execute().use { response ->
             if (!response.isSuccessful) throw IOException("HTTP ${response.code}")
-            // Докачки нет (200 вместо 206) - файл пишется заново.
             val resumed = response.code == 206
             val start = if (resumed) have else 0L
             val total = update.info.size.takeIf { it > 0 } ?: (start + response.body.contentLength())
@@ -154,10 +155,10 @@ class Updates(link: HttpLink = ForgeHttp.link) {
         /** Релизы приложения. */
         const val RELEASES = "https://github.com/Sperance/ExileForge/releases"
 
-        /** Релизы через API GitHub (3.93.0): заметки последних версий. */
+        /** Релизы через API GitHub: заметки последних версий. */
         const val API_RELEASES = "https://api.github.com/repos/Sperance/ExileForge/releases"
 
-        /** Сколько последних версий показывает «Что нового» (4.0.0 - пять). */
+        /** Сколько последних версий показывает «Что нового» (пять). */
         const val RECENT = 5
 
         private val NOTES_JSON = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }

@@ -3,7 +3,7 @@ package com.sperance.exileforge.core.market
 import com.sperance.exileforge.core.model.auction.AuctionLot
 import com.sperance.exileforge.rules.trade.LotGoods
 
-/** Строка таблички истории аукциона (4.3.0): что пришло или ушло - стопка, золото или товар лота. */
+/** Строка таблички истории аукциона: что пришло или ушло - стопка, золото или товар лота. */
 sealed interface DealEntry {
     /** Стопка сумки или сфера [code]: одинаковые суммируются в [amount]. */
     data class Stack(val code: String, val amount: Long) : DealEntry
@@ -16,7 +16,7 @@ sealed interface DealEntry {
 }
 
 /**
- * Итог сделок героя (4.3.0) двумя табличками. [received] - сферы за свои проданные лоты и купленные товары; [spent] - сферы за
+ * Итог сделок героя двумя табличками. [received] - сферы за свои проданные лоты и купленные товары; [spent] - сферы за
  * покупки, золото сборов и свои проданные товары. Стопки и валюта одного кода суммируются, вещи и питомцы идут по одной.
  */
 class DealLedger(val received: List<DealEntry>, val spent: List<DealEntry>) {

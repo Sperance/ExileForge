@@ -11,7 +11,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.ListSerializer
 import java.util.UUID
 
-/** The header a command's key travels in: the server answers a repeated key with the answer it stored (server 1.28.0). */
+/** The header a command's key travels in: the server answers a repeated key with the answer it stored. */
 const val IDEMPOTENCY_HEADER = "Idempotency-Key"
 
 /**
@@ -46,7 +46,7 @@ class CommandQueued(val command: QueuedCommand, cause: Throwable? = null) : Exce
 enum class FlushOutcome { EMPTY, OFFLINE, SIGNED_OUT }
 
 /**
- * The commands of one server waiting for an answer, in the order they were given (3.30.0).
+ * The commands of one server waiting for an answer, in the order they were given.
  *
  * A command joins it when the network fails under it, or when others already wait — so the server always
  * sees them in order. Each keeps the key it was first sent with, and [TTL_MS] after it was given it is
@@ -124,20 +124,19 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
     }
 
     companion object {
-        /** How long a key is honoured by the server (server 1.53.0: an hour), and so how long a command may wait. */
+        /** How long a key is honoured by the server (an hour), and so how long a command may wait. */
         const val TTL_MS = 60 * 60 * 1000L
         private val Codec = ListSerializer(QueuedCommand.serializer())
 
         /**
          * The commands that never wait here: the session's own, and the run's journal, which keeps its own retry. Выбор
-         * Предначертания (4.6.0) - тоже: он навсегда, экран выбора ждёт ответа сам, а не очереди. Письмо герою (4.6.3): окно
-         * письма ждёт ответа - отказ (немота, пределы, полный ящик) виден сразу, а не письмом, ушедшим вслепую потом. Испытания
-         * (4.8.x): журнал и шаг Разлома повторяются сами под своим ключом - очередь слала бы их копию вторым, чужим ключом.
+         * Предначертания - тоже: он навсегда, экран выбора ждёт ответа сам, а не очереди. Письмо герою: окно
+         * письма ждёт ответа - отказ (немота, пределы, полный ящик) виден сразу, а не письмом, ушедшим вслепую потом. Испытания: журнал и шаг Разлома повторяются сами под своим ключом - очередь слала бы их копию вторым, чужим ключом.
          */
         private val OWN_RETRY = listOf("api/v1/user/", "api/v1/hero/campaign/", "api/v1/hero/trials/", "api/v1/fate/", "api/v1/mail/letter")
 
         /**
-         * Commands whose outcome is rolled (3.55.0): an orb, an Atlas seal (4.6.4), an essence, an unveiling or a chosen line, a bench craft,
+         * Commands whose outcome is rolled: an orb, an Atlas seal, an essence, an unveiling or a chosen line, a bench craft,
          * a job started. Offline they are refused rather than kept: a second press would act on an item
          * the player has not yet seen, and the whole row would land blind once the link is back.
          */
@@ -147,14 +146,14 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
             "api/v1/hero/chest/open", "api/v1/hero/merchant/trophy",
         )
 
-        /** Команды администратора (3.88.0) не ждут сети: уходят сразу или падают видимой ошибкой - блок героя не ложится вслепую. */
+        /** Команды администратора не ждут сети: уходят сразу или падают видимой ошибкой - блок героя не ложится вслепую. */
         private const val ADMIN = "api/v1/admin/"
 
-        /** Отчёт об ошибке (4.9.0) повторяется из своей очереди на диске под своим ключом - очередь команд его не держит. */
+        /** Отчёт об ошибке повторяется из своей очереди на диске под своим ключом - очередь команд его не держит. */
         const val BUG_REPORT = "api/v1/bugreport"
 
         /**
-         * Команды-чтения (4.9.0, сервер SEC-13): досчёт ремёсел, выдача заданий, заход в гильдию и токен апелляции - их ответ ждёт
+         * Команды-чтения: досчёт ремёсел, выдача заданий, заход в гильдию и токен апелляции - их ответ ждёт
          * экран, а не очередь; без сети они падают, как чтение.
          */
         private val READS = listOf("api/v1/hero/crafts/settle", "api/v1/hero/quests/refresh", "api/v1/guild/quests/refresh", "api/v1/guild/visit", "api/v1/notice/token")
@@ -167,7 +166,7 @@ class CommandQueue(private val store: CommandStore?, private val clock: () -> Lo
          */
         fun transient(status: Int?): Boolean = status == 409 || status == 429 || status in 502..504
 
-        /** Код сервера «эта же команда ещё выполняется» (409): новая команда с ним не ждёт в очереди (4.12.x, NET-8). */
+        /** Код сервера «эта же команда ещё выполняется» (409): новая команда с ним не ждёт в очереди. */
         const val BUSY = "IDEM_001"
     }
 }

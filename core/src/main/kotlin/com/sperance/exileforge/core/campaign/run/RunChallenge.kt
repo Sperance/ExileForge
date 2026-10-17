@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.campaign.PhaseFoes
 import com.sperance.exileforge.core.campaign.combat.Foe
 
 /**
- * Экран-вызов (3.92.0, макет B «Досье»): страж зоны или Ваал-зоны встречен вручную - мир ждёт слова игрока «В бой». Автозабег
+ * Экран-вызов («Досье»): страж зоны или Ваал-зоны встречен вручную - мир ждёт слова игрока «В бой». Автозабег
  * идёт в бой сразу, без экрана.
  */
 internal fun ExpeditionRun.challenge(agent: MonsterAgent) {

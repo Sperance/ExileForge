@@ -30,7 +30,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     }
 
     /**
-     * Стая, что встаёт посреди захода (3.90.0, сервер 1.81.3): страж сокровищ (`Run.GUARD + номер объекта`) - жетон [token], вожак редкий; [buffs] карты на каждом, навыки - на своём потоке.
+     * Стая, что встаёт посреди захода: страж сокровищ (`Run.GUARD + номер объекта`) - жетон [token], вожак редкий; [buffs] карты на каждом, навыки - на своём потоке.
      */
     fun summoned(token: Int, buffs: List<MonsterEffect>): List<RolledMonster> {
         val casting = run.streams.of("summonedCasting", token)
@@ -52,7 +52,7 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     /**
      * A crystal's guardian: the zone's monster standing up rare — its rule's lines drawn as any rare's — with
      * the line of every kind of essence it guards, and [extra], what a Vaal orb and the atlas add to it. Сам страж - функция правил
-     * [Run.crystalGuardian] (4.12.x, сервер RUN-06: по ней же сервер мерит темп боя), здесь - законы, баффы карты и навыки.
+     * [Run.crystalGuardian] (по ней же сервер мерит темп боя), здесь - законы, баффы карты и навыки.
      */
     fun crystalGuardian(crystal: Crystal, place: Int, buffs: List<MonsterEffect>, extra: List<MonsterEffect>): RolledMonster? {
         val dice = run.crystalDice(place)
@@ -71,6 +71,8 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
     /**
      * What a monster casts: a boss its own skills; a monster with mana and none of its own, the casters' spell
      * of its leading element; one with a mad essence, one more of any monster's.
+     *
+     * Маны на чужое умение не нужно: умения монстров её не тратят.
      */
     fun skilled(monster: RolledMonster, dice: Dice): RolledMonster {
         val mana = monster.stats[CoreStat.MANA.code] ?: 0.0
@@ -80,7 +82,6 @@ class Spawns(private val index: ContentIndex, private val run: Run) {
         val borrows = (monster.stats[CoreStat.BORROW_SKILLS.code] ?: 0.0) > 0 && book.monsterSkills.isNotEmpty()
         val skills = (own + if (borrows) listOf(dice.pick(book.monsterSkills).code) else emptyList()).distinct()
         if (skills == monster.skills) return monster
-        // Маны на чужое умение не нужно (0.14.0, ASANA-N01): умения монстров её не тратят
         return monster.copy(skills = skills)
     }
 }

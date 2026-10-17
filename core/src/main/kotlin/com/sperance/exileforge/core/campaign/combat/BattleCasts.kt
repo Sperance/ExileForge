@@ -4,8 +4,6 @@ import com.sperance.exileforge.core.campaign.NoteKind
 import com.sperance.exileforge.core.campaign.combat.Battle.Fighter
 import kotlin.math.max
 
-// ==================== Применение умений (4.12.x, SKILL-01) ====================
-
 /**
  * Применение умения бойцом: [key] - слот героя или код умения монстра, [code] - умение, с секунды [from] до [until]; [finish] -
  * что умение делает, когда применено (мана, перезарядка, действие).
@@ -31,7 +29,7 @@ internal fun Battle.beginCast(me: Fighter, key: String, code: String, seconds: D
 
 /**
  * Ход применения бойца [me]: оглушение и заморозка прерывают его - умение не срабатывает, маны не тратит, перезарядка не
- * начинается, замах идёт дальше; заново его не начать раньше паузы `combat.cast.interruptPause` (0.14.0, ASANA-N01: без вечного
+ * начинается, замах идёт дальше; заново его не начать раньше паузы `combat.cast.interruptPause` (без вечного
  * круга «начал - прерван»), журнал пишет прерывание с паузой. Применённое срабатывает.
  */
 internal fun Battle.castTick(me: Fighter) {
@@ -54,7 +52,7 @@ internal fun Battle.castTick(me: Fighter) {
 }
 
 /**
- * Выжигание маны по монстру (0.14.0, ASANA-N01): маны у умений монстров нет - удар с выжиганием [burn] процентов замедляет перезарядку
+ * Выжигание маны по монстру: маны у умений монстров нет - удар с выжиганием [burn] процентов замедляет перезарядку
  * умений цели (`combat.cast`: сильнейшее замедление, срок - от последнего удара).
  */
 internal fun Battle.burnSkills(target: Fighter, burn: Double) {

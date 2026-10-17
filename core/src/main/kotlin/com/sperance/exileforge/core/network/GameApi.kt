@@ -29,15 +29,15 @@ import kotlinx.serialization.json.encodeToJsonElement
 private const val REVISION_RETRIES = 2
 private const val REVISION_RETRY_DELAY_MS = 1_500L
 
-/** Сколько ответ манифеста общий для всех, кто его спрашивает (3.94.1): волна старта - один запрос. */
+/** Сколько ответ манифеста общий для всех, кто его спрашивает: волна старта - один запрос. */
 private const val SHARED_MS = 10_000L
 private const val MANIFEST = "static/index.json"
 private const val DEVICE_UNKNOWN = "US_015"
 
-/** Ответ лимита запросов (3.94.0). */
+/** Ответ лимита запросов. */
 private const val TOO_MANY = 429
 
-/** Паузы перед повтором входа, упёршегося в лимит, мс (3.94.0). */
+/** Паузы перед повтором входа, упёршегося в лимит, мс. */
 private val RATE_WAITS = listOf(2_000L, 5_000L, 12_000L)
 
 /**
@@ -83,13 +83,16 @@ class GameApi(
     val feedback = FeedbackClient(http)
     val mail = MailClient(http)
 
-    /** Предначертание аккаунта (4.6.0). */
+    /** Предначертание аккаунта. */
     val fate = FateClient(http)
 
-    /** Credentials travel in the body: a query string settles in every proxy log on the way. */
+    /**
+     * Credentials travel in the body: a query string settles in every proxy log on the way.
+     *
+     * Логин на сервере без регистра; пробелы по краям - опечатка, а не часть логина.
+     */
     suspend fun login(login: String, password: String): UserProfile {
         logout()
-        // Логин без регистра на сервере (1.80.0); пробелы по краям - опечатка, а не часть логина.
         val name = login.trim()
         require(name.isNotBlank() && password.isNotEmpty()) { ui("api.credentials") }
         val device = identity
@@ -98,7 +101,7 @@ class GameApi(
     }
 
     /**
-     * Гостевой аккаунт (вход по устройству) получает логин и пароль (server 1.80.0): ответ - аккаунт, как `/me`; вход по
+     * Гостевой аккаунт (вход по устройству) получает логин и пароль: ответ - аккаунт, как `/me`; вход по
      * устройству остаётся. Отказы: `US_017` логин уже есть, `US_016`/`US_019` длина, `US_018` символы, `US_006` занят.
      */
     suspend fun bind(login: String, password: String): UserProfile {
@@ -107,14 +110,14 @@ class GameApi(
     }
 
     /**
-     * Sign in with the secret of the device (server 1.46.0), or register when there is none or the server no longer
+     * Sign in with the secret of the device, or register when there is none or the server no longer
      * knows it (`US_015`): the server issues a fresh secret, and [deviceSecret] holds it until the caller keeps it.
      * The [fingerprint] lets the server hand back the account this device already has after its data was wiped.
      */
     suspend fun loginByDevice(secret: String?, fingerprint: String = ""): UserProfile = patiently { deviceSignIn(secret, fingerprint) }
 
     /**
-     * Вход, переживший лимит (3.94.0): сервер ответил 429 - ждём и пробуем снова, всё дольше, не больше [RATE_WAITS] раз;
+     * Вход, переживший лимит: сервер ответил 429 - ждём и пробуем снова, всё дольше, не больше [RATE_WAITS] раз;
      * игрок не видит «слишком много запросов» от того, что за одним адресом вошли сразу несколько устройств.
      */
     private suspend fun <T> patiently(block: suspend () -> T): T {
@@ -142,27 +145,28 @@ class GameApi(
         return signedIn(answer)
     }
 
-    /** Кто шлёт отчёты (3.88.0): устройство, версия и герой; null - отчёт уходит как собран. */
+    /** Кто шлёт отчёты: устройство, версия и герой; null - отчёт уходит как собран. */
     var identity: ClientIdentity? = null
 
-    /** Переходы экранов игрока (0.14.2): с запросами журнала - последние действия отчёта; null - без них. */
+    /** Переходы экранов игрока: с запросами журнала - последние действия отчёта; null - без них. */
     var trail: com.sperance.exileforge.core.feedback.ReportTrail? = null
 
     /**
-     * Отчёт [report], собранный к отправке (4.9.0): у ошибки - хвост [failures] неудачных запросов (4.3.1: по нему видно, какой
-     * ответ сервера встретил игрок), подпись [identity] (3.88.0: устройство, версия клиента и активный герой). Собирается в
+     * Отчёт [report], собранный к отправке: у ошибки - хвост [failures] неудачных запросов (по нему видно, какой
+     * ответ сервера встретил игрок), подпись [identity] (устройство, версия клиента и активный герой). Собирается в
      * момент отчёта: из очереди на диске он уходит таким, каким был тогда.
+     *
+     * Последние действия прикладываются к ошибке и падению.
      */
     fun bugReport(report: BugReportRequest, failures: Int = 0): BugReportRequest {
         val failed = if (report.kind == FeedbackKind.BUG && failures > 0) report.copy(failures = journal.failures(failures)) else report
-        // Последние действия (0.14.2): к ошибке и падению, не к предложению
         val traced = trail?.takeIf { report.kind == FeedbackKind.BUG || report.kind == FeedbackKind.CRASH }?.let { failed.copy(trail = it.lines(journal.entries.value)) } ?: failed
         return identity?.stamp(traced) ?: traced
     }
 
     /**
-     * Отправка собранного отчёта (server 1.46.0): открыта и до входа, подписана сессией, если она есть. Повтор с тем же
-     * [BugReportRequest.key] сервер второй раз не записывает (4.9.0). Ответ (4.10.0) - записанный отчёт и сброшен ли снимок.
+     * Отправка собранного отчёта: открыта и до входа, подписана сессией, если она есть. Повтор с тем же
+     * [BugReportRequest.key] сервер второй раз не записывает. Ответ - записанный отчёт и сброшен ли снимок.
      */
     suspend fun sendBug(report: BugReportRequest): FiledReport = WireJson.decodeFromJsonElement(FiledReport.serializer(), http.request("POST", CommandQueue.BUG_REPORT, body = WireJson.encodeToJsonElement(report), authenticated = http.token != null))
 
@@ -199,7 +203,7 @@ class GameApi(
     }
 
     /**
-     * Takes a kept token as the session before the server has confirmed it (3.30.0): the fast start draws
+     * Takes a kept token as the session before the server has confirmed it: the fast start draws
      * the last hero from the device, and its commands line up in the queue until [resume] answers.
      */
     fun adopt(saved: String, profile: UserProfile) {
@@ -252,16 +256,16 @@ class GameApi(
     private val manifestLock = Mutex()
     private var manifest: StaticManifest? = null
 
-    /** Последний ответ сервера на манифест (3.94.1): текст, его ETag и когда спрошен - один запрос на волну старта. */
+    /** Последний ответ сервера на манифест: текст, его ETag и когда спрошен - один запрос на волну старта. */
     private var served: Served? = null
 
-    /** [token] (4.12.x) - сессия, с которой спрошен ответ: маршруты манифеста у вошедшего свои, чужой ответ не годится. */
+    /** [token] - сессия, с которой спрошен ответ: маршруты манифеста у вошедшего свои, чужой ответ не годится. */
     private class Served(val text: String, val etag: String?, val at: Long, val token: String?) {
         val manifest: StaticManifest by lazy { WireJson.decodeFromString(StaticManifest.serializer(), text) }
     }
 
     /**
-     * Манифест с сервера (3.94.1): спрошенный не раньше [maxAgeMs] назад отдаётся из памяти - старт, вход и проверка
+     * Манифест с сервера: спрошенный не раньше [maxAgeMs] назад отдаётся из памяти - старт, вход и проверка
      * связи берут один ответ; иначе запрос с `If-None-Match`, и на 304 тело не качается.
      */
     private suspend fun ask(maxAgeMs: Long = SHARED_MS): Served {
@@ -273,12 +277,12 @@ class GameApi(
         return (if (answer.status == 304 && known != null) Served(known.text, known.etag, now, signed) else Served(answer.body, answer.etag, now, signed)).also { served = it }
     }
 
-    /** Where the last manifest this server served is kept on the device (3.1.0); none keeps nothing. */
+    /** Where the last manifest this server served is kept on the device; none keeps nothing. */
     var manifestCache: ManifestCache? = null
 
     /**
      * `static/index.json`, read once for this server; [fresh] asks again. Out of reach, the manifest the
-     * device kept stands in (3.1.0): the content chunks it names are on the device too, so a cold start
+     * device kept stands in: the content chunks it names are on the device too, so a cold start
      * without the network still has its world. A refusal of the server is not "out of reach" and is thrown.
      */
     suspend fun manifest(fresh: Boolean = false): StaticManifest = manifestLock.withLock {
@@ -312,19 +316,19 @@ class GameApi(
     }
 
     /**
-     * Маршруты, что зовёт клиент, у вошедшего (4.12.x, сервер SEC-09: без входа манифест несёт только открытые): после входа
+     * Маршруты, что зовёт клиент, у вошедшего (без входа манифест несёт только открытые): после входа
      * свежий манифест с сессией обязан их назвать, иначе сервер устарел.
      */
     suspend fun requireRoutes() {
         served(0L).capabilities.requireWorkbench()
     }
 
-    /** The server speaks a newer wire than this build (3.74.0): the app looks for the build that speaks it at once. */
+    /** The server speaks a newer wire than this build: the app looks for the build that speaks it at once. */
     var onNewerServer: () -> Unit = {}
 
     /**
-     * Доступ закрыт санкцией (`AUTH_006`, 3.88.5, server 1.80.8): бан аккаунта или устройства, удаление аккаунта. Id санкции -
-     * для экрана санкции; пустой - аккаунт удалён и уже стирается. Токен апелляции (4.9.0, сервер SEC-7) - секрет наказанного: с ним
+     * Доступ закрыт санкцией (`AUTH_006`): бан аккаунта или устройства, удаление аккаунта. Id санкции -
+     * для экрана санкции; пустой - аккаунт удалён и уже стирается. Токен апелляции - секрет наказанного: с ним
      * экран санкции подаёт апелляцию; пусто - апеллировать не на что.
      */
     var onSanctioned: (sanctionId: String, appealToken: String) -> Unit
@@ -333,14 +337,14 @@ class GameApi(
             http.onSanctioned = value
         }
 
-    /** Сервер ответил ошибкой (4.3.1): приложение проверяет обновление - сразу, если сервер назвал сборку устаревшей. */
+    /** Сервер ответил ошибкой: приложение проверяет обновление - сразу, если сервер назвал сборку устаревшей. */
     var onServerError: (ServerAlarm) -> Unit
         get() = http.onServerError
         set(value) {
             http.onServerError = value
         }
 
-    /** Герой запроса под санкцией (`CH_034`, 3.88.0; id санкции - 3.88.5): приложение уводит к выбору героя. */
+    /** Герой запроса под санкцией (`CH_034` с id санкции): приложение уводит к выбору героя. */
     var onHeroBlocked: (heroId: String, failure: ApiFailure) -> Unit
         get() = http.onHeroBlocked
         set(value) {
@@ -348,7 +352,7 @@ class GameApi(
         }
 
     /**
-     * `static/index.json` as served right now (3.74.0): never the device's copy - what the update check compares against. С 3.94.1
+     * `static/index.json` as served right now: never the device's copy - what the update check compares against.
      * ответ последних секунд общий, а без перемен сервер отвечает 304.
      */
     suspend fun liveManifest(): StaticManifest = manifestLock.withLock { ask().manifest }
@@ -364,7 +368,7 @@ class GameApi(
         }
     }
 
-    /** The commands waiting for this server (3.30.0); none until the app gives them a place on the device. */
+    /** The commands waiting for this server; none until the app gives them a place on the device. */
     val commands: CommandQueue? get() = http.queue
 
     fun commandStore(store: CommandStore) {
@@ -375,6 +379,8 @@ class GameApi(
      * Sends what waits, in order, each with its own key. A refusal drops that command and goes on to the
      * next — [refused] says it; "not yet" (the network, a duplicate still running) stops the pass and keeps
      * the rest; [delivered] names each command the server has answered. Another account's commands are dropped, and [foreign] names each.
+     *
+     * Нет сессии или сервер её ещё не подтвердил - команды ждут.
      */
     suspend fun flushCommands(
         expired: (List<QueuedCommand>) -> Unit,
@@ -384,7 +390,6 @@ class GameApi(
     ): FlushOutcome {
         val queue = http.queue ?: return FlushOutcome.EMPTY
         while (true) {
-            // No session, or one the server has not confirmed yet: the commands wait for it.
             if (http.token == null || http.holding) return FlushOutcome.SIGNED_OUT
             val next = queue.head(expired) ?: return FlushOutcome.EMPTY
             val owner = account?.id
@@ -423,6 +428,6 @@ class GameApi(
     }
     suspend fun health(): JsonElement = http.request("GET", "system/health")
 
-    /** Когда сервер последний раз ответил на запрос API (3.94.1). */
+    /** Когда сервер последний раз ответил на запрос API. */
     val answeredAt: Long get() = http.answeredAt
 }

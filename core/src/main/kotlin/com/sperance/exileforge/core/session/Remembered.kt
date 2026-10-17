@@ -4,7 +4,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Ответ чтения на срок (3.94.1): для того же [tag] (обычно id героя) моложе [maxAgeMs] он отдаётся из памяти, иначе читается
+ * Ответ чтения на срок: для того же [tag] (обычно id героя) моложе [maxAgeMs] он отдаётся из памяти, иначе читается
  * заново; неудача не запоминается. Два экрана с одними данными и повторное открытие спрашивают сервер раз в срок.
  */
 class Remembered<T : Any>(private val maxAgeMs: Long = READ_FRESH_MS) {

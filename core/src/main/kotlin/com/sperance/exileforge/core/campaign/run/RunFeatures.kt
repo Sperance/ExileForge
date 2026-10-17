@@ -21,13 +21,11 @@ import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 import kotlin.math.roundToInt
 
-// ==================== Объекты карты (3.90.0, сервер 1.81.3) ====================
-
 /** Сбор узла [spot]: прошло [elapsed] секунд из его [MapFeature.Node.seconds]. */
 internal class Channel(val spot: NodeSpot, var elapsed: Double = 0.0)
 
 /**
- * Тик недуга на герое вне боя: урон идёт каждый кадр, а на экран - тиками по [TICK_SECONDS] (3.95.3): сколько набралось со щита и
+ * Тик недуга на герое вне боя: урон идёт каждый кадр, а на экран - тиками по [TICK_SECONDS]: сколько набралось со щита и
  * здоровья.
  */
 internal class AilmentTick {
@@ -42,7 +40,7 @@ internal data class Wound(val shield: Double = 0.0, val life: Double = 0.0) {
 }
 
 /**
- * Урон карты над героем (3.95.3): удар ловушки или тик недуга на герое - стихией [type], [shield] со щита и [life] со здоровья. Удар
+ * Урон карты над героем: удар ловушки или тик недуга на герое - стихией [type], [shield] со щита и [life] со здоровья. Удар
  * ещё и называет своё состояние [ailment]; тик - недуг, что тикнул ([of]: и принесённый из боя, и от ловушки - одна система).
  * [id] свой у каждого: два одинаковых подряд - два числа, а не одно.
  */
@@ -62,7 +60,7 @@ data class HazardView(
 }
 
 /**
- * Состояние, что ловушка оставляет на герое (4.2.0): выводится из типа её урона ([Ailment.of]: огонь - горение, хаос - яд,
+ * Состояние, что ловушка оставляет на герое: выводится из типа её урона ([Ailment.of]: огонь - горение, хаос - яд,
  * физический - кровотечение), если оно тикает уроном; [lifeShare] - процент максимума здоровья героя в секунду до сопротивления,
  * [seconds] - сколько длится.
  */
@@ -82,24 +80,27 @@ internal const val TICK_SECONDS = 1.0
 /** Правила ловушек контента. */
 private val ExpeditionRun.traps get() = index.campaign.features?.traps
 
-/** Шаг героя сделал что-то с объектом карты: лист к выбору или сработавший объект. */
+/**
+ * Шаг героя сделал что-то с объектом карты: лист к выбору или сработавший объект.
+ *
+ * Автопроход обходит алтари: сделку выбирает только игрок.
+ */
 internal fun ExpeditionRun.feature(action: FeatureAction) {
     when (action) {
-        // Автопроход обходит алтари (0.14.0, ALTAR-01): сделку выбирает только игрок
         is FeatureAction.Offer -> if (autopilot == null || action.spot !is AltarSpot) offer = action.spot
-
         is FeatureAction.Trigger -> action.spot.resolve(this, action.choice)
-
         is FeatureAction.Spring -> spring(action.spot.feature as MapFeature.Trap)
-
         is FeatureAction.Rouse -> action.spot.rouse(this, action.group)
     }
 }
 
-/** Выбор [choice] объекта [spot] - в журнал (объект помнит его сразу, даже если журнал уже закрыт); событие или null. */
+/**
+ * Выбор [choice] объекта [spot] - в журнал (объект помнит его сразу, даже если журнал уже закрыт); событие или null.
+ *
+ * Строки выбора (сделка, редкость за ловушку, скорость за комнату, сила за узел) ложатся на героя и бои сразу.
+ */
 internal fun ExpeditionRun.recordFeature(spot: FeatureSpot, choice: Int): RunEvent? {
     spot.take(choice)
-    // Строки выбора (сделка, редкость за ловушку, скорость за комнату, сила за узел) - на героя и бои сразу
     rebargain()
     return record { RunEvent.Feature(it, spot.id, choice) }?.also { featureEvents[it.n] = spot to choice }
 }
@@ -118,7 +119,7 @@ internal fun ExpeditionRun.choose(choice: Int) {
 
 /**
  * «Собрать» на листе узла: сбор идёт [MapFeature.Node.seconds], забег стоит. Инструмент проверяет лист и сервер; узел под стражами
- * сокровищ (4.9.0) ждёт их гибели.
+ * сокровищ ждёт их гибели.
  */
 internal fun ExpeditionRun.startGather() {
     val spot = (offer as? NodeSpot)?.takeIf { phase == RunPhase.MAP && !it.spent && !world.guarded(it.id) } ?: return
@@ -134,7 +135,7 @@ internal fun ExpeditionRun.gather(channel: Channel, dt: Double) {
     channel.spot.resolve(this, MapFeature.TRIGGER)
 }
 
-/** Лист объекта закрыт без выбора; мимо алтаря (0.14.0, ALTAR-01) тоже можно пройти - он ждёт нетронутым. */
+/** Лист объекта закрыт без выбора; мимо алтаря тоже можно пройти - он ждёт нетронутым. */
 internal fun ExpeditionRun.leaveOffer(): Boolean {
     offer ?: return false
     offer = null
@@ -169,7 +170,7 @@ internal fun ExpeditionRun.bargain(pacts: Map<String, Double>) {
 }
 
 /**
- * Стаи подкрепления (возвращены в 0.14.0, ALTAR-01): по жетону `Run.REINFORCEMENT + k` на каждую стаю сделок каждого заключённого
+ * Стаи подкрепления: по жетону `Run.REINFORCEMENT + k` на каждую стаю сделок каждого заключённого
  * алтаря, рядом с ним, по порядку алтарей. Встающий жетон встаёт один раз.
  */
 private fun ExpeditionRun.reinforce() {
@@ -192,10 +193,11 @@ internal fun ExpeditionRun.guard() {
 
 /**
  * Член боя со сделками алтаря: строки карты сделок - поверх его статов, босс - ещё и «сила босса», волшебный и редкий - лишние
- * строки на своём потоке (`MAP_MONSTER_MODS`, 0.14.0). Без сделок - как стоит.
+ * строки на своём потоке (`MAP_MONSTER_MODS`). Без сделок - как стоит.
+ *
+ * Ловушки ранят монстров (сила уникалки): на карте с ловушками стая встаёт в бой с меньшим здоровьем.
  */
 internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
-    // Ловушки ранят монстров (3.90.0, сила уникалки): на карте с ловушками стая встаёт в бой с меньшим здоровьем
     val strike = run.context.feature(FeatureStat.TRAP_STRIKE).takeIf { it > 0 && world.features.any { spot -> spot is TrapSpot } }
     if (pacts.isEmpty() && strike == null) return member.monster
     val buffs = MapEffects.buffs(pacts) + (if (member.agent === world.boss) MapEffects.bossBuffs(pacts) else emptyList()) +
@@ -210,18 +212,18 @@ internal fun ExpeditionRun.pactFoe(member: FightMember): RolledMonster {
  * Ловушка сработала: удар - доля максимума здоровья её стихией, броня режет физический, сопротивление - стихийный; горение, яд и
  * кровотечение ложатся недугом на героя ([HeroCarry], та же система, что недуги из боя) - тикают на карте и входят в следующий
  * бой. Ловушка может убить.
+ *
+ * Сила ловушек карты и защита героя от её стихии: 100% защиты - ловушка не ранит. Состояние ловушки - из типа её урона; основа до защит
+ * (яд) - сопротивление режет тик, а не наложение.
  */
 internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
     val trap = feature.trap
     val type = DamageType.element(trap.element) ?: DamageType.PHYSICAL
-    // Сила ловушек карты и защита героя от её стихии (3.90.0): 100% защиты - ловушка не ранит
     val ward = FeatureStat.ward(trap.element)?.let { run.context.feature(it) } ?: 0.0
     val share = feature.power * (1 - ward / 100).coerceAtLeast(0.0)
     val raw = hero.maxLife * trap.hit / 100 * share
     val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
-    // Состояние ловушки (4.2.0) - из типа её урона, для всех ловушек
     val ailment = HazardAilment.of(trap, type, share)
-    // Основа до защит (0.15.0, яд) - сопротивление режет тик, а не наложение
     ailment?.let { afflict(CarriedAilment(it.ailment, it.seconds, hero.maxLife * it.lifeShare / 100 * (if (law.raw(it.ailment)) 1.0 else 1 - hero.resist(type)), it.seconds, chaos = type == DamageType.CHAOS)) }
     val wound = hurt(dealt * hero.damageTaken(type), type == DamageType.CHAOS)
     showHazard(HazardView(nextHazard++, type, wound.life.roundToInt(), wound.shield.roundToInt(), ailment))
@@ -232,7 +234,7 @@ internal fun ExpeditionRun.showHazard(view: HazardView) {
     hazards += ShownHazard(view, if (view.tick) TICK_SECONDS * 1.5 else traps?.shown ?: 0.0)
 }
 
-/** Урон вне боя (3.95.2 - через щит, как в бою; [chaos] мимо него): ноль здоровья - гибель на карте. Сколько принял щит и здоровье. */
+/** Урон вне боя (через щит, как в бою; [chaos] мимо него): ноль здоровья - гибель на карте. Сколько принял щит и здоровье. */
 internal fun ExpeditionRun.hurt(damage: Double, chaos: Boolean): Wound {
     if (damage <= 0 || phase != RunPhase.MAP) return Wound()
     val absorbed = EnergyShield.absorbed(shield, damage, chaos = if (chaos) damage else 0.0)

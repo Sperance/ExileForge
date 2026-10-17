@@ -11,8 +11,8 @@ import com.sperance.exileforge.rules.sheet.MightReading
 import kotlin.math.abs
 
 /**
- * Лучше или хуже (3.89.0): что смена вещи даст герою. С 4.2.0 - [SheetVerdict] (урон и защита листа) для снаряжения и
- * [FlaskVerdict] (строки листа фляги) для фляг, что лист героя не меняют; с 0.15.0 (#34) - [ToolVerdict] (итог ремесла) для
+ * Лучше или хуже: что смена вещи даст герою: [SheetVerdict] (урон и защита листа) для снаряжения и
+ * [FlaskVerdict] (строки листа фляги) для фляг, что лист героя не меняют; [ToolVerdict] (итог ремесла) для
  * инструментов.
  */
 sealed interface GearVerdict {
@@ -20,7 +20,7 @@ sealed interface GearVerdict {
     val score: Double
 
     /**
-     * Мощь героя сейчас и с вещью (0.14.0, ASANA-N04) - одна мера для снаряжения и фляг: значок «⚜ +N / −N» списков и
+     * Мощь героя сейчас и с вещью - одна мера для снаряжения и фляг: значок «⚜ +N / −N» списков и
      * карточки; null - Мощь ещё не посчитана.
      */
     val might: MightShift?
@@ -46,8 +46,8 @@ sealed interface GearVerdict {
 }
 
 /**
- * Вердикт снаряжения (3.89.0): [offence] и [defence] - доли изменения урона в секунду и эффективного запаса здоровья
- * (0.12 - на 12% больше). Считается правилами: лист с вещью против листа без неё. Урон (4.12.x, COMBAT-04) - натиск Мощи героя
+ * Вердикт снаряжения: [offence] и [defence] - доли изменения урона в секунду и эффективного запаса здоровья
+ * (на 12% больше). Считается правилами: лист с вещью против листа без неё. Урон - натиск Мощи героя
  * (`Might.offense`: удар листа и умения) - та же формула, что Мощь и темп сервера.
  */
 data class SheetVerdict(val offence: Double, val defence: Double, override val might: MightShift? = null) : GearVerdict {
@@ -74,7 +74,7 @@ data class SheetVerdict(val offence: Double, val defence: Double, override val m
 }
 
 /**
- * Эффективный запас здоровья (3.89.0): здоровье и щит, делённые на долю удара, что до них доходит. Удар - атака монстра
+ * Эффективный запас здоровья: здоровье и щит, делённые на долю удара, что до них доходит. Удар - атака монстра
  * уровня героя, поровну каждого типа урона: уклонение по меткости правил, блок, затем броня и снижение для физического и
  * сопротивления для прочих, с «получаемым уроном» поверх - теми же формулами, что бой.
  */
@@ -103,7 +103,7 @@ internal object Toughness {
 }
 
 /**
- * Место, куда можно надеть вещь (3.90.3): [slot] - место на теле (у колец и фляг их несколько), [replaced] - что там
+ * Место, куда можно надеть вещь: [slot] - место на теле (у колец и фляг их несколько), [replaced] - что там
  * надето сейчас, [verdict] - урон и защита, если надеть вещь именно сюда (null - не по требованиям).
  */
 data class WearPlace(val slot: Slot, val replaced: ItemInstance?, val verdict: GearVerdict?) {
@@ -114,9 +114,9 @@ data class WearPlace(val slot: Slot, val replaced: ItemInstance?, val verdict: G
 }
 
 /**
- * Вердикты вещей одного героя (3.89.0): лист с вещью складывается один раз на вещь и место, пока герой и контент те же, -
+ * Вердикты вещей одного героя: лист с вещью складывается один раз на вещь и место, пока герой и контент те же, -
  * длинный тайник и лут не пересчитывают его при каждой прокрутке. Новый герой (новый лист) или контент сбрасывают память.
- * Потокобезопасна: считают её вне главного потока. С 3.90.3 вещь слота с несколькими местами (кольцо, фляга) меряется
+ * Потокобезопасна: считают её вне главного потока. Вещь слота с несколькими местами (кольцо, фляга) меряется
  * на каждом, и её вердикт - вердикт лучшего места ([WearPlace.best]).
  */
 class GearVerdicts {
@@ -147,6 +147,10 @@ class GearVerdicts {
         return places
     }
 
+    /**
+     * Фляга листа героя не меняет: её меряют строками листа фляги против надетой в этом гнезде, а Мощь - листом боя с ней. Инструмент
+     * меряет итог ремесла против инструмента в гнезде профессии.
+     */
     private fun weigh(index: ContentIndex, hero: HeroView, item: ItemInstance): List<WearPlace> {
         if (item.equipped || item.socketed) return emptyList()
         val slot = index.template(item.template)?.slot ?: return emptyList()
@@ -156,14 +160,8 @@ class GearVerdicts {
         return EquipSlots.places(slot).map { place ->
             val verdict = when {
                 !wearable -> null
-
-                // Фляга листа героя не меняет (4.2.0): её меряют строками листа фляги против надетой в этом гнезде, а Мощь
-                // (0.14.0, ASANA-N04) - листом боя с ней: глоток фляги здоровья входит в стойкость.
                 slot.isFlask -> FlaskVerdict.of(index, hero.stats, item, worn[place])?.copy(might = flaskMight(index, hero, item, place))
-
-                // Инструмент (0.15.0, #34) листа героя не меняет: его меряет итог ремесла против инструмента в гнезде профессии
                 slot.isTool -> ToolVerdict.of(index, hero.stats, item, worn[place], hero.combat?.fate)
-
                 else -> hero.combat?.might?.let { might -> Sheets.verdict(index, item, hero.level, hero.heroClass, hero.tree, hero.items, hero.stats, might, place, hero.info.laws, hero.info.fate, hero.skills) }
             }
             WearPlace(place, worn[place], verdict)

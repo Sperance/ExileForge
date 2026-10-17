@@ -4,7 +4,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.run.Reward
 
 /**
- * Добыча сундука или объекта карты (4.10.0, макет «Сундук на карте», вариант B): событие [n] и что сервер за него дал; null - ответа
+ * Добыча сундука или объекта карты: событие [n] и что сервер за него дал; null - ответа
  * ещё нет, сундук ждёт. Добычу катит только сервер: здесь она лишь раскладывается для показа.
  */
 data class MapDrop(val n: Int, val reward: Reward?) {
@@ -37,5 +37,5 @@ sealed interface DropChip {
     data class Gold(val amount: Long) : DropChip
 }
 
-/** Сколько штук добычи легло в сумку (4.10.0): вещи экипировки и штуки стопок; золото и опыт не в счёт. */
+/** Сколько штук добычи легло в сумку: вещи экипировки и штуки стопок; золото и опыт не в счёт. */
 fun Reward.pieces(): Long = equipment.size + items.values.sum()

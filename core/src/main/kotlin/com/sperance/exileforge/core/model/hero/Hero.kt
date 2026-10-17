@@ -38,27 +38,27 @@ import kotlinx.serialization.Serializable
     /** Bench recipes found on maps; the rest of the bench stays hidden. */
     val recipes: List<String> = emptyList(),
     val version: Long = 0,
-    /** Packs of stash places bought beyond the rules' base (1.1.0). */
+    /** Packs of stash places bought beyond the rules' base. */
     val stashSlots: Int = 0,
-    /** The chronicle's counters as the server keeps them (1.3.0); the derived ones are added here. */
+    /** The chronicle's counters as the server keeps them; the derived ones are added here. */
     val counters: Map<String, Long> = emptyMap(),
     /** The title worn beside the name, or blank. */
     val title: String = "",
-    /** The loot filter (3.47.0): which rarities of which slot groups the merchant takes from a run's loot at once. */
+    /** The loot filter: which rarities of which slot groups the merchant takes from a run's loot at once. */
     val autoSell: com.sperance.exileforge.rules.content.AutoSell = com.sperance.exileforge.rules.content.AutoSell(),
-    /** Tree points beyond the level (3.73.0, server 1.69.0): only the testing window gives them. */
+    /** Tree points beyond the level: only the testing window gives them. */
     val bonusPoints: Int = 0,
     /** Взятые законы тронов (сюжет): строки листа героя, по одному закону на пройденный трон и навсегда. */
     val laws: List<String> = emptyList(),
-    /** Предначертание аккаунта (4.6.0, код `fates.json`): строки листа и рычаги боя, забега и Атласа; null - не выбрано. */
+    /** Предначертание аккаунта (код `fates.json`): строки листа и рычаги боя, забега и Атласа; null - не выбрано. */
     val fate: String? = null,
-    /** Трофеи боссов (4.6.0, Предначертание «Трофейщик»): код босса - сколько; торговец меняет их на его уникалку. */
+    /** Трофеи боссов (Предначертание «Трофейщик»): код босса - сколько; торговец меняет их на его уникалку. */
     val trophies: Map<String, Int> = emptyMap(),
-    /** Выигранных в заходах боёв (4.6.1, Предначертание «Щедрость судьбы»): каждый `every`-й приносит сферу; копится навсегда. */
+    /** Выигранных в заходах боёв (Предначертание «Щедрость судьбы»): каждый `every`-й приносит сферу; копится навсегда. */
     val fateFights: Long = 0,
-    /** Номер героя (4.7.0, сервер 4.7.0): шесть цифр - по ним зовут в гильдию; пусто - сервер старше. */
+    /** Номер героя: шесть цифр - по ним зовут в гильдию; пусто - сервер старше. */
     val number: String = "",
-    /** Тестировщик (4.12.x, сервер ROLE-01): окно тестирования и замки прогресса - по герою, а не по аккаунту. */
+    /** Тестировщик: окно тестирования и замки прогресса - по герою, а не по аккаунту. */
     val tester: Boolean = false,
 )
 
@@ -77,7 +77,7 @@ import kotlinx.serialization.Serializable
 /** What a merchant paid for an item: the copy is gone by the time this arrives. */
 @Serializable data class SellOutcome(val itemId: String = "", val code: String = "", val gold: Long = 0, val money: Long = 0, val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList())
 
-/** Продажа пачкой (3.90.3, сервер 1.81.8): проданные id, золото за них и золото героя после. */
+/** Продажа пачкой: проданные id, золото за них и золото героя после. */
 @Serializable data class SellBatch(val itemIds: List<String> = emptyList(), val gold: Long = 0, val money: Long = 0, val shards: List<com.sperance.exileforge.rules.content.ShardYield> = emptyList())
 
 /**
@@ -89,7 +89,7 @@ import kotlinx.serialization.Serializable
     val messageArgs: List<String> = emptyList(),
     val item: ItemInstance,
     val created: ItemInstance? = null,
-    /** Сфера осталась в сумке (4.6.0, Предначертание «Бережливый кузнец»). */
+    /** Сфера осталась в сумке (Предначертание «Бережливый кузнец»). */
     val kept: Boolean = false,
 ) {
     val message: String get() = loc(messageKey, messageArgs)
@@ -102,7 +102,7 @@ import kotlinx.serialization.Serializable
 data class HeroView(
     val info: HeroInfo,
     val items: List<ItemInstance> = emptyList(),
-    /** Items the stash had no place for: they wait here to be taken in or sold (1.1.0). */
+    /** Items the stash had no place for: they wait here to be taken in or sold. */
     val overflow: List<ItemInstance> = emptyList(),
     val bag: Map<String, Long> = emptyMap(),
     val tree: List<TakenNode> = emptyList(),
@@ -110,7 +110,7 @@ data class HeroView(
     val crafts: WorkState = WorkState(),
     val merchant: MerchantStock = MerchantStock(),
     val sheet: HeroSheet = HeroSheet.EMPTY,
-    /** Лист боя (4.6.4): цифры сводки, разбор и сравнения - с пассивными умениями и Предначертанием; null - листа ещё нет. */
+    /** Лист боя: цифры сводки, разбор и сравнения - с пассивными умениями и Предначертанием; null - листа ещё нет. */
     val combat: CombatSheet? = null,
 ) {
     val id: String get() = info.id
@@ -135,7 +135,7 @@ data class HeroView(
     fun item(id: String): ItemInstance? = items.firstOrNull { it.id == id }
 
     /**
-     * Whether [item] may go into a socket (3.32.0, server 1.31.0): a unique jewel is one of its kind per hero - the
+     * Whether [item] may go into a socket: a unique jewel is one of its kind per hero - the
      * server's rule, asked before the command so the tree can say why rather than send a refusal (`ST_022`).
      */
     fun jewelFree(index: ContentIndex, item: ItemInstance): Boolean {
@@ -149,7 +149,7 @@ data class HeroView(
     }
 
     /**
-     * Надеть [item] на место [slot] - вторая копия уникалки (0.15.0, реш. 7): уникальную и мифическую вещь шаблона герой носит одну -
+     * Надеть [item] на место [slot] - вторая копия уникалки: уникальную и мифическую вещь шаблона герой носит одну -
      * правило [UniqueCopies], по нему сервер отказывает `EQ_002`. Вещь на самом месте [slot] уходит с него и не считается; null - место
      * по слоту шаблона.
      */
@@ -160,7 +160,7 @@ data class HeroView(
     }
     fun count(code: String): Long = bag[code] ?: 0L
 
-    /** Первое взятое гнездо самоцвета дерева, где ничего не стоит (3.94.1); null - такого нет. */
+    /** Первое взятое гнездо самоцвета дерева, где ничего не стоит; null - такого нет. */
     fun freeSocket(index: ContentIndex): String? = tree.map { it.code }.firstOrNull { code -> index.tree.node(code)?.type == SkillNodeType.JEWEL_SOCKET && code !in jewels }
 
     /** The chronicle whole: the kept counters, and the level, zones, atlas and tree nodes at their record. */
@@ -168,8 +168,8 @@ data class HeroView(
 }
 
 /**
- * The server's clock against the local one (3.81.0): measured when a fresh snapshot arrives with the server's
- * [com.sperance.exileforge.core.model.sync.HeroSnapshot.now] (4.11.x), not when a kept one is read again.
+ * The server's clock against the local one: measured when a fresh snapshot arrives with the server's
+ * [com.sperance.exileforge.core.model.sync.HeroSnapshot.now], not when a kept one is read again.
  */
 object ServerClock {
     @Volatile var offset: Long = 0L
@@ -192,30 +192,30 @@ object ServerClock {
     val experience: Double = 0.0,
     val money: Long = 0,
     val title: String = "",
-    /** Удалён модерацией в корзину (3.88.5, server 1.80.8): виден до очистки, играть им нельзя - санкция в [com.sperance.exileforge.core.session.Session.sanctions]. */
+    /** Удалён модерацией в корзину: виден до очистки, играть им нельзя - санкция в [com.sperance.exileforge.core.session.Session.sanctions]. */
     val deleted: Boolean = false,
-    /** Когда герой создан (4.2.0): время сервера в UTC, как документ его хранит; пусто - сервер не прислал. */
+    /** Когда герой создан: время сервера в UTC, как документ его хранит; пусто - сервер не прислал. */
     val createdAt: String = "",
-    /** Тестировщик (4.12.x, сервер ROLE-01): окно тестирования - по герою. */
+    /** Тестировщик: окно тестирования - по герою. */
     val tester: Boolean = false,
 ) {
     /** [createdAt] в мс эпохи; null - не прочитать. */
     val createdAtMs: Long? get() = runCatching { java.time.LocalDateTime.parse(createdAt).toInstant(java.time.ZoneOffset.UTC).toEpochMilli() }.getOrNull()
 }
 
-/** The hero's statistics (server 1.49.0): key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
+/** The hero's statistics: key — value, only what is not zero; the keys are [com.sperance.exileforge.rules.content.Stat]'s. */
 @kotlinx.serialization.Serializable data class HeroStatsView(val values: Map<String, Long> = emptyMap())
 
 /**
- * A unique template's find (3.90.2, server 1.81.7): the first one, in epoch milliseconds, and how many copies came in all.
- * [lowest] (4.10.x) - наименьший номер копии в мире героя, 0 - номера не было (копия продана при получении).
+ * A unique template's find: the first one, in epoch milliseconds, and how many copies came in all.
+ * [lowest] - наименьший номер копии в мире героя, 0 - номера не было (копия продана при получении).
  */
 @kotlinx.serialization.Serializable data class UniqueFind(val at: Long, val count: Long, val lowest: Long = 0)
 
-/** The hero's unique finds as `GET hero/uniques` answers them (server 1.81.7): template code — its find. */
+/** The hero's unique finds as `GET hero/uniques` answers them: template code — its find. */
 @kotlinx.serialization.Serializable data class UniquesView(val finds: Map<String, UniqueFind> = emptyMap())
 
-/** A loot chest opened (3.76.0, server 1.71.0): what it gave — gold, stacks, things (already in the stash or its overflow). */
+/** A loot chest opened: what it gave — gold, stacks, things (already in the stash or its overflow). */
 @kotlinx.serialization.Serializable
 data class ChestOpening(
     val code: String,

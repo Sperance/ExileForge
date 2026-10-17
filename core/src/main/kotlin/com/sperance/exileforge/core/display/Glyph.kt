@@ -6,9 +6,9 @@ import com.sperance.exileforge.rules.content.ModifierCode
 /**
  * What a small icon stands for, apart from how it is drawn.
  *
- * Icons used to be picked by searching the text beside them for Russian and English fragments —
- * "брон", "armor", "сил" — which broke the moment a label was reworded or shown in another
- * language, and could not be tested without Compose. Now a caller names a meaning, the domain
+ * Icons are not picked by searching the text beside them for Russian and English fragments — that
+ * breaks the moment a label is reworded or shown in another language, and cannot be tested without
+ * Compose. A caller names a meaning, the domain
  * codes the server sends are mapped to one here, and `:app` holds a single exhaustive table from a
  * meaning to its drawing: a new glyph does not compile until it has one.
  */
@@ -46,7 +46,7 @@ enum class Glyph {
     INFO,
     ALERT,
 
-    /** Аура и пассивное умение в бою (4.6.4): строка сводки, что они сдвинули. */
+    /** Аура и пассивное умение в бою: строка сводки, что они сдвинули. */
     AURA,
     ;
 

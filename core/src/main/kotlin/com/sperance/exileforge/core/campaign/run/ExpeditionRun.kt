@@ -75,10 +75,10 @@ import kotlin.random.Random
  *
  * The scene calls [update] once a frame and draws [world] and [fight]; the overlay reads [hud] and sends
  * [RunCommand]s. Nothing here talks to the server: every kill, chest, boss and descent is an event of the
- * [journal]. Its reward is the server's alone (1.30.0): it comes back with the answer as [RunCommand.Settled],
+ * [journal]. Its reward is the server's alone: it comes back with the answer as [RunCommand.Settled],
  * and until then the screens say it is on its way — as do the Vaal zone behind a portal and a crystal's Vaal
  * orb, read from the campaign the answer brings ([RunCommand.Campaign]). The hero's life carries from fight to
- * fight; на карте она восстанавливается по [RoadLife] (4.10.0), mana comes back on the road, flasks fill with kills.
+ * fight; на карте она восстанавливается по [RoadLife], mana comes back on the road, flasks fill with kills.
  */
 class ExpeditionRun(
     val index: ContentIndex,
@@ -90,7 +90,7 @@ class ExpeditionRun(
     build: HeroBuild,
     val rules: CombatRules,
     internal val seed: Long,
-    /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. Без сделок алтаря (3.90.0): с ними встали стаи на входе. */
+    /** The map's summed effects, the atlas's share in them; a Vaal zone adds its own lines. Без сделок алтаря: с ними встали стаи на входе. */
     val baseEffects: Map<String, Double>,
     /** This run is the Vaal zone behind the portal. */
     val vaal: Boolean,
@@ -105,10 +105,10 @@ class ExpeditionRun(
     internal val onRecorded: (RunEvent) -> Unit,
     internal val onCleared: () -> Unit,
     internal val onFallen: () -> Unit,
-    /** The autorun that drives this run instead of the stick (3.2.0); null walks by hand. */
+    /** The autorun that drives this run instead of the stick; null walks by hand. */
     internal var autopilot: AutoPilot? = null,
     /**
-     * Счёт Предначертания захода (4.6.0): бои захода и его Ваал-зоны делят его - перелив маны, выигранные бои Разгона
+     * Счёт Предначертания захода: бои захода и его Ваал-зоны делят его - перелив маны, выигранные бои Разгона
      * ([tallyWins]).
      */
     val fateRun: FateRun = FateRun(),
@@ -118,32 +118,32 @@ class ExpeditionRun(
         internal set
 
     /**
-     * Когда отдыхающий страж вернётся на пост (3.95.2), мс часов сервера; null - он не отдыхает. Отдых, что кончился посреди
+     * Когда отдыхающий страж вернётся на пост, мс часов сервера; null - он не отдыхает. Отдых, что кончился посреди
      * захода, ставит стража на пост: выход снова запечатан, автопроход берёт его своим последним боем.
      */
     internal var guardianBack: Long? = null
 
-    /** Призывы стража героем в окне (0.15.0, реш. 22): с призывом этого захода - от них цена следующего. */
+    /** Призывы стража героем в окне: с призывом этого захода - от них цена следующего. */
     internal var summons: SummonLog = SummonLog()
 
     /** Сколько раз стража призвали в этом заходе: не больше `services.summonsPerRun`. */
     internal var summoned: Int = 0
 
-    /** Часы сервера (3.95.2): по ним отдых стража сверяется с тем, что примет сервер. */
+    /** Часы сервера: по ним отдых стража сверяется с тем, что примет сервер. */
     internal var clock: () -> Long = { System.currentTimeMillis() + ServerClock.offset }
 
-    /** Сейчас по часам захода (4.10.x): от них считается «N мин назад» порций «Сумки захода» ([BagEntry.at]). */
+    /** Сейчас по часам захода: от них считается «N мин назад» порций «Сумки захода» ([BagEntry.at]). */
     fun now(): Long = clock()
 
-    /** Сделки алтарей захода (3.90.0, сервер 1.81.3), сложенные по характеристике: герой и бои несут их до конца карты. */
+    /** Сделки алтарей захода, сложенные по характеристике: герой и бои несут их до конца карты. */
     var pacts: Map<String, Double> = emptyMap()
         internal set
 
-    /** The map's summed effects with the altars' bargains (3.90.0): the hero's sheet and the map's window read these. */
+    /** The map's summed effects with the altars' bargains: the hero's sheet and the map's window read these. */
     var mapEffects: Map<String, Double> = baseEffects
         internal set
 
-    /** Источники долей [mapEffects] (4.10.x): древо гильдии и зелье захода - свои подписи в листе, разборе и полке боя. */
+    /** Источники долей [mapEffects]: древо гильдии и зелье захода - свои подписи в листе, разборе и полке боя. */
     val origins: EffectOrigins = EffectOrigins.of(run.context, index)
     internal val spawns get() = Spawns(index, run)
     var build: HeroBuild = build
@@ -158,13 +158,13 @@ class ExpeditionRun(
     internal val commands = ConcurrentLinkedQueue<RunCommand>()
     internal var phase = RunPhase.MAP
 
-    /** Страж на экране-вызове (3.92.0): мир ждёт «В бой»; null - вызова нет. */
+    /** Страж на экране-вызове: мир ждёт «В бой»; null - вызова нет. */
     internal var challenge: MonsterAgent? = null
     internal var life = startPools?.life?.coerceIn(0.0, hero.maxLife) ?: hero.maxLife
     val heroLife: Double get() = life
 
     /**
-     * Энергощит на карте (3.95.2): ловушки и недуги бьют сначала в него, как удары в бою, - яд и хаос мимо; он перезаряжается по
+     * Энергощит на карте: ловушки и недуги бьют сначала в него, как удары в бою, - яд и хаос мимо; он перезаряжается по
      * тем же правилам. Бой его наследует в обе стороны ([HeroCarry.shield]): каким бой его оставил, таким он и на карте, и в
      * следующем бою.
      */
@@ -186,7 +186,7 @@ class ExpeditionRun(
     internal var hitAt = Double.NEGATIVE_INFINITY
     internal val kit: Loadout get() = build.gear.kit
 
-    /** Темп похода из контента (3.80.31): паузы боя, шаг автозабега. */
+    /** Темп похода из контента: паузы боя, шаг автозабега. */
     internal val pace: ExpeditionRules get() = index.campaign.expedition
     internal var mana = startPools?.mana?.coerceIn(0.0, manaCap()) ?: manaCap()
     internal var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.sheet?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
@@ -196,20 +196,20 @@ class ExpeditionRun(
     internal var gate: VaalZone? = null
     internal var crystal: CrystalSpot? = null
 
-    /** The fountain offered (3.70.0), until it is drunk or turned down. */
+    /** The fountain offered, until it is drunk or turned down. */
     internal var fountain: Fountain? = null
 
-    /** Объект карты, чей лист открыт (3.90.0): забег ждёт ответа игрока, как у фонтана. */
+    /** Объект карты, чей лист открыт: забег ждёт ответа игрока, как у фонтана. */
     internal var offer: FeatureSpot? = null
 
-    /** Сбор узла ремесла (3.90.0): какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
+    /** Сбор узла ремесла: какой узел и сколько секунд уже прошло; забег стоит, пока сбор идёт. */
     internal var channel: Channel? = null
 
-    /** Числа урона карты на экране (3.90.0; с 3.95.3 - удары и тики эффектов, каждое своё) и номер следующего. */
+    /** Числа урона карты на экране (удары и тики эффектов, каждое своё) и номер следующего. */
     internal val hazards = mutableListOf<ShownHazard>()
     internal var nextHazard = 0
 
-    /** Выборы объектов карты по номеру события (3.90.0): отклонённый сервером объект становится прежним. */
+    /** Выборы объектов карты по номеру события: отклонённый сервером объект становится прежним. */
     internal val featureEvents = HashMap<Int, Pair<FeatureSpot, Int>>()
     internal var crystalOutcome: String? = null
     internal var rift: AbyssSpot? = null
@@ -219,7 +219,7 @@ class ExpeditionRun(
     internal var started = false
     internal var paused = false
 
-    /** Связь с сервером пропала ([RunCommand.Link], 4.0.0): автопробег стоит. */
+    /** Связь с сервером пропала ([RunCommand.Link]): автопробег стоит. */
     internal var linkDown = false
 
     /** Автопробег ждёт связи. */
@@ -228,7 +228,7 @@ class ExpeditionRun(
     internal var fights = 0
     internal var speed = 1
 
-    /** How far the server has answered the journal, what it granted by event number, and what it refused (server 1.30.0). */
+    /** How far the server has answered the journal, what it granted by event number, and what it refused. */
     internal var answered = 0
     internal val earned = HashMap<Int, Reward>()
     internal val refused = HashSet<Int>()
@@ -237,14 +237,14 @@ class ExpeditionRun(
     internal val mine = HashSet<Int>()
     internal var granted = Reward.NONE
 
-    /** Начатые бои (3.88.0, server 1.80.0): бой - по номеру его ENGAGE; одно ENGAGE на бой. */
+    /** Начатые бои: бой - по номеру его ENGAGE; одно ENGAGE на бой. */
     internal val engaged = HashMap<Int, FightKey>()
 
     /** The events of the fight on the report, and what they brought so far; null before the fight's first kill. */
     internal val fightEvents = mutableListOf<Int>()
     internal var reward: Reward? = null
 
-    /** Every bonus of the hero's atlas on this run (3.81.0), for the map's window: the ones the fight wears and the ones the rolls do. */
+    /** Every bonus of the hero's atlas on this run, for the map's window: the ones the fight wears and the ones the rolls do. */
     var atlas: Map<String, Double> = emptyMap()
         internal set
 
@@ -263,7 +263,7 @@ class ExpeditionRun(
         }
 
     /**
-     * Босс основной карты убит в этом заходе (4.10.0): шаг героя по карте × `bossSlainSpeed` ([ExpeditionWorld.heroSpeed]). Не у зоны
+     * Босс основной карты убит в этом заходе: шаг героя по карте × `bossSlainSpeed` ([ExpeditionWorld.heroSpeed]). Не у зоны
      * Ваал - её страж не босс карты; Бездна по карте не ходит.
      */
     var swift = false
@@ -276,26 +276,26 @@ class ExpeditionRun(
         rebody()
     }
 
-    /** The fight's guardian fell to this hero for the first time (3.81.0): their place among all who beat it. */
+    /** The fight's guardian fell to this hero for the first time: their place among all who beat it. */
     internal var rank: Long? = null
 
-    /** The last level the level-up screen told of (3.81.0); the hero's level at the run's start until then. */
+    /** The last level the level-up screen told of; the hero's level at the run's start until then. */
     internal var levelShown: Int = heroLevel
 
     /**
-     * Счёт боевых заданий по ходу захода (3.95.0): что записанные события прибавят счётчикам летописи, когда сервер их примет, -
+     * Счёт боевых заданий по ходу захода: что записанные события прибавят счётчикам летописи, когда сервер их примет, -
      * для листа «Задания» на карте. Сам заход уже сосчитан входом.
      */
     internal val questTally = hashMapOf(com.sperance.exileforge.rules.content.Counter.RUNS to 1L)
 
-    /** Копия [questTally] для снимка экрана (4.9.0): одна и та же, пока счёт не сдвинулся, - не новая карта на кадр. */
+    /** Копия [questTally] для снимка экрана: одна и та же, пока счёт не сдвинулся, - не новая карта на кадр. */
     internal var questTallyShown: Map<String, Long> = questTally.toMap()
 
     /** What an autorun has gathered, fight by fight: its report at the end. */
     internal val autoEvents = HashSet<Int>()
     internal var autoReward: Reward? = null
 
-    /** Добыча, что вылетает на карте (4.10.0): события сундуков и объектов захода по порядку. */
+    /** Добыча, что вылетает на карте: события сундуков и объектов захода по порядку. */
     internal val drops = mutableListOf<Int>()
 
     /** Копия [drops] с их добычей для снимка: меняется только с новым сундуком или ответом, не на кадр. */
@@ -312,7 +312,7 @@ class ExpeditionRun(
         bagShown = bag.map { (n, tag) -> BagEntry(n, tag.first, tag.second, earned[n] ?: Reward.NONE.takeIf { n < answered }) }.filter { it.shown }.asReversed()
     }
 
-    /** Все события захода с добычей (4.10.x): источник и когда записано - для «Сумки захода»; ответы - [earned]. */
+    /** Все события захода с добычей: источник и когда записано - для «Сумки захода»; ответы - [earned]. */
     internal val bag = LinkedHashMap<Int, Pair<LootFrom, Long>>()
 
     /** Порции [bag] с ответами, новые сверху: меняется только с ответом сервера, не на кадр. */
@@ -334,10 +334,10 @@ class ExpeditionRun(
     internal var slain: RolledMonster? = null
     internal var report: FightReport? = null
 
-    /** Журнал последнего боя захода (4.8.0), любого - и автопробега, и Бездны: его открывает «Журнал боя» меню забега. */
+    /** Журнал последнего боя захода, любого - и автопробега, и Бездны: его открывает «Журнал боя» меню забега. */
     internal var lastFight: FightReport? = null
 
-    /** Прошлый бой захода выигран (4.2.0): следующий бой открывается силами `FIGHT_CLEAR`. */
+    /** Прошлый бой захода выигран: следующий бой открывается силами `FIGHT_CLEAR`. */
     internal var wonLast = false
 
     /** The foes of the fight in the battle's order, each with the pack it walked with. */
@@ -355,12 +355,12 @@ class ExpeditionRun(
     internal var bosses = 0
     internal var deaths = 0
 
-    /** The run's figures (3.47.0) and, after a fall, its last blows. */
+    /** The run's figures and, after a fall, its last blows. */
     internal val stats = RunStats()
     internal var recap: List<DeathHit> = emptyList()
     internal var fightAgent: MonsterAgent? = null
 
-    /** Все стаи боя (4.4.1): вступившая первой, затем собранные ею по раундам. */
+    /** Все стаи боя: вступившая первой, затем собранные ею по раундам. */
     internal var fightAgents: List<MonsterAgent> = emptyList()
     internal val waves get() = AbyssWaves(index, run)
     internal val abyssRule get() = index.campaign.abyss
@@ -406,6 +406,7 @@ class ExpeditionRun(
         commands.add(command)
     }
 
+    /** Предложенный фонтан, лист объекта карты и сбор узла держат шаг, пока игрок не ответит. */
     fun update(dt: Double) {
         var commanded = false
         while (true) {
@@ -418,7 +419,6 @@ class ExpeditionRun(
         hazards.removeAll { it.left <= 0 }
         if (holds == 0) {
             when (phase) {
-                // A fountain offered holds the walk until the player answers; так же лист объекта карты и сбор узла (3.90.0).
                 RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run {
                     channel?.let { gather(it, dt) }
                     if (fountain == null && offer == null && channel == null) walk(dt)
@@ -441,7 +441,7 @@ class ExpeditionRun(
     )
 
     /**
-     * Призыв стража до конца его отдыха (0.15.0, реш. 22): страж повержен (раньше или в этом заходе), не в зоне Ваал и не больше
+     * Призыв стража до конца его отдыха: страж повержен (раньше или в этом заходе), не в зоне Ваал и не больше
      * `services.summonsPerRun` за заход; цену ([summonPrice]) спишет сервер, событие журнала - [RunEvent.Summon]. Хватает ли золота,
      * решает кнопка: правило клиента - мелкая проверка доступа.
      */
@@ -459,7 +459,7 @@ class ExpeditionRun(
     /** Цена призыва стража сейчас: одна функция правил по уровню района захода и призывам окна ([SummonLog.price]). */
     internal fun summonPrice(): Long = summons.price(index.campaign.services, run.areaLevel, clock())
 
-    /** Отдых стража кончился (3.95.2): он снова на посту. */
+    /** Отдых стража кончился: он снова на посту. */
     private fun guardianReturns() {
         guardianBack = null
         bossDown = false
@@ -514,8 +514,6 @@ class ExpeditionRun(
         fightEvents.clear()
     }
 
-    /** The server's answer: every reward of this run's events lands where it was waited for. */
-
     /** What this run hands the map it was entered from, a Vaal zone over: its rewarding events and its own counts. */
     fun share(): ZoneShare = ZoneShare(mine.associateWith { earned[it] }, seconds, kills, bosses, deaths, stats.summary(kills))
 
@@ -527,7 +525,7 @@ class ExpeditionRun(
         internal const val ABYSS_AGENT = -10_000
         internal val FIGHT_STREAM = "fight".hashCode().toLong()
 
-        /** Поток свиты фаз боссов (3.92.0): свой, чтобы бой без фаз катился на прежних костях. */
+        /** Поток свиты фаз боссов: свой, чтобы бой без фаз катился на своих костях. */
         internal val RETINUE_STREAM = "retinue".hashCode().toLong()
 
         /**
@@ -535,6 +533,12 @@ class ExpeditionRun(
          * the pools the map left. [campaign] is the hero's campaign as the server holds it after the entry: the
          * windows of chests, crystals and cracks, the boss's return, the map and the Vaal zone rolled; [killed],
          * what of it the server already counted when the run is entered again.
+         *
+         * Заход, войденный снова, держит павших павшими, открытые сундуки открытыми на своих местах, объекты карты использованными, сделки
+         * алтарей действующими (и в Ваал-зоне); призывы стража - счётом сервера. Автопробег - вместо стика. Штраф сопротивлений акта едет с
+         * «меньше сопротивлений» карты. Порядок расстановки: объекты карты - после прочих (их места не сдвигают сундуков и кристаллов);
+         * сделки алтарей, стражи сокровищ, стаи Следопыта и монстры стоявших объектов - до павших. Принесённое из основной карты в
+         * Ваал-зону - на листе героя сразу.
          */
         fun start(
             index: ContentIndex,
@@ -552,28 +556,17 @@ class ExpeditionRun(
             startPools: HeroPools? = null,
             onCleared: () -> Unit = {},
             onFallen: () -> Unit = {},
-            /** Tokens `i*[Run.PACK_SLOTS]+m` the server already counts as killed: a run entered again keeps its dead dead. */
             killed: Collection<Int> = emptyList(),
-            /** Chests of the run the server already counts as opened (3.89.0): a run entered again shows them open in their places. */
             opened: Collection<Int> = emptyList(),
-            /** Журнал объектов карты (3.90.0): вернувшийся герой видит их использованными, сделки алтарей действуют. */
             features: Collection<FeatureUse> = emptyList(),
-            /** Сделки алтарей карты, из которой вошли в Ваал-зону (3.90.0): действуют до конца карты и там. */
             inherited: Map<String, Double> = emptyMap(),
-            /** An autorun instead of the stick (3.2.0). */
             auto: AutoPlan? = null,
-            /** Призывы стража, что сервер уже сосчитал в этом заходе (0.15.0, `RunTally.summons`). */
             summoned: Int = 0,
-            /**
-             * Счёт Предначертания захода (4.6.1): Ваал-зона берёт счёт карты, из которой вошли; по умолчанию - павшие [killed] этой
-             * зоны.
-             */
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
         ): ExpeditionRun {
             val zone = if (vaal) VaalZones.zone(location, index.campaign.vaal) ?: location else location
             val context = run.context
             val base = AtlasEffects.map(context.active?.effects.orEmpty(), context.atlas)
-            // The act's resistance penalty (3.18.0, server 1.16.0) rides with the map's own "less resistances".
             val penalty = index.campaign.resistPenalty(location.code, onMap = context.active != null)
             val acted = if (penalty > 0) MapEffects.sum(base, mapOf(MapStat.HERO_RESIST.code to penalty)) else base
             val effects = if (vaal) MapEffects.sum(acted, context.vaal?.effects.orEmpty()) else acted
@@ -587,17 +580,14 @@ class ExpeditionRun(
             val bossDown = !vaal && campaign.bossDown(location.code, now)
             val vaalZone = campaign.vaalZone?.takeIf { it.mapCode == location.code }
             val portal = !vaal && !campaign.corruptionOpened && (vaalZone != null || run.portal)
-            // Обзор Предначертания (4.6.0) - дар, замороженный на заход
             val world = ExpeditionWorld.create(index.campaign.expedition, zone, packs, stats, if (vaal) run.seed xor VAAL_SALT else run.seed, boss, portal)
             if (bossDown) world.bossAbsent()
             val fountains = AtlasEffects.fountains(index.campaign.fountains, context.atlas)
             world.placeFountains(fountains.count.getOrElse(0) { 0 }, fountains.count.getOrElse(1) { fountains.count.getOrElse(0) { 0 } }, fountains.heal)
             if (!vaal) {
-                // Открытые сундуки (3.89.0) стоят на своих местах: всего их столько, сколько осталось, и открытые
                 world.placeChests((campaign.chests[location.code.value]?.left ?: 0) + opened.size, opened)
                 world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
-                // Объекты карты (3.90.0) - после прочих: их места не сдвигают ни сундуков, ни кристаллов
                 world.placeFeatures(run.features.all, features, index.campaign.features?.traps)
             }
             val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, if (vaal) run.seed xor VAAL_SALT else run.seed) }
@@ -605,17 +595,12 @@ class ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
                 campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, fateRun,
             ).also {
-                // Принесённое из основной карты (зона Ваал): баффы, проклятия и заряды - на листе героя сразу
                 if (!it.carry.bare) it.rebody()
                 it.tallyWins()
                 it.atlas = context.atlas.filterValues { value -> value != 0.0 }
-                // Сделки алтарей - до павших: стаи подкрепления встают, и уже убитые из них остаются лежать
                 it.bargain(if (vaal) inherited else run.features.bonuses(features))
-                // Стражи сокровищ (3.90.0, строка карты) - у комнат и узлов, тоже до павших
                 if (!vaal) it.guard()
-                // Стаи Следопыта (4.6.0, Предначертание) - на карте Атласа, тоже до павших
                 if (!vaal) it.track()
-                // Монстры объектов, что уже стояли (4.0.0, кольцо очага Скверны, Матерь), - тоже до павших
                 if (!vaal) world.features.forEach { spot -> spot.resume(it, killed) }
                 world.restore(killed, Run.PACK_SLOTS)
                 if (bossDown) it.guardianBack = campaign.bosses[location.code.value]
@@ -631,9 +616,11 @@ class ExpeditionRun(
     }
 }
 
-/** One foe of a fight: the pack it walked with and its place there. */
-
-/** Член [index] стаи [agent] в бою; [round] (4.4.1) - раунд, в котором он выходит на поле. */
+/**
+ * Член [index] стаи [agent] в бою; [round] - раунд, в котором он выходит на поле.
+ *
+ * Враг боя: стая, с которой он шёл, и его место в ней.
+ */
 internal class FightMember(val agent: MonsterAgent, val index: Int, val round: Int = 0) {
     val monster: RolledMonster get() = agent.pack[index]
 }
@@ -641,7 +628,7 @@ internal class FightMember(val agent: MonsterAgent, val index: Int, val round: I
 /** A Vaal orb on a crystal whose outcome is still the server's to tell: the spot and its place among the standing ones. */
 internal class Vaaling(val spot: CrystalSpot, val place: Int)
 
-/** Бой, как его называет сервер (3.88.0): пак жетона [pack] ([vaal] - в Ваал-зоне) или босс зоны. */
+/** Бой, как его называет сервер: пак жетона [pack] ([vaal] - в Ваал-зоне) или босс зоны. */
 internal data class FightKey(val pack: Int, val vaal: Boolean, val boss: Boolean) {
     companion object {
         val BOSS = FightKey(0, vaal = false, boss = true)

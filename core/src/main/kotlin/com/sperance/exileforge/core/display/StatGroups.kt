@@ -10,7 +10,7 @@ import com.sperance.exileforge.rules.content.StatSection
 fun StatSection.title(lang: Lang = uiLanguage): String = ui(lang, "enum.stat_group.$name")
 
 /**
- * Сводка, разложенная по разделам (4.6.5): раздел строки - `section` характеристики в контенте ([StatRegistry.section]), разделы
+ * Сводка, разложенная по разделам: раздел строки - `section` характеристики в контенте ([StatRegistry.section]), разделы
  * по своему порядку, пустые пропущены, внутри - порядок реестра. Без раздела строки нет: часть строки (`partOf`) читается в ней,
  * счётчики надетого (`NONE`) не показываются.
  */

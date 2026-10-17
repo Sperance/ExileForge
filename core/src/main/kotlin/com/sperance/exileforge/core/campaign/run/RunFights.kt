@@ -53,9 +53,11 @@ import kotlin.random.Random
 
 // ==================== Fights ====================
 /**
- * A fight with [agent]'s pack still standing, at [level] — the zone's, or a depth's of the Abyss. На карте (4.4.1, решение
- * владельца) бой собирает обычные стаи вокруг ([gathered]) и идёт раундами ([FightRounds]) не больше `fight.maxFoes` врагов:
+ * A fight with [agent]'s pack still standing, at [level] — the zone's, or a depth's of the Abyss. На карте
+ * бой собирает обычные стаи вокруг ([gathered]) и идёт раундами ([FightRounds]) не больше `fight.maxFoes` врагов:
  * герой переходит из раунда в раунд как есть, гибель в любом - гибель в бою. Каждой стае - своё ENGAGE.
+ *
+ * «В бой» игрока или автопробега начинает бой.
  */
 internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(zone), abyssal: Boolean = false) {
     fightAgent = agent
@@ -69,14 +71,13 @@ internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(
     reported = 0
     fightStream = (fights++).toLong()
     fight = battle()
-    // «В бой» игрока или автозабега начинает его.
     started = false
     paused = false
     phase = RunPhase.FIGHT
 }
 
 /**
- * Бой начат (3.88.0, server 1.80.0): каждому паку - событие ENGAGE. С 4.9.0 сервер добычи по нему не катит и не показывает - она
+ * Бой начат: каждому паку - событие ENGAGE. Сервер добычи по нему не катит и не показывает - она
  * приходит ответом на убийство; ENGAGE лишь отмечает бой начатым, и выход посреди него - поражение. Страж кристалла и Бездна -
  * не паки жетонов, босс Ваал-зоны - порча, а не убийство босса: им ENGAGE нет.
  */
@@ -92,19 +93,19 @@ internal fun ExpeditionRun.announce(pack: MonsterAgent) {
 
 /**
  * The fight's battle on the hero's pools now, at the fight's level, on its own dice. Предначертание - замороженное захода
- * (4.6.2: сила, судьбоносные строки и счёт Разгона на входе, как их видит сервер).
+ * (сила, судьбоносные строки и счёт Разгона на входе, как их видит сервер).
+ *
+ * Сделки алтаря ложатся на каждый бой (строки карты, сила босса, лишние строки монстров); уровень боя - свой уровень на карте. Свита фаз
+ * босса - в конце стаи, на своём потоке.
  */
 internal fun ExpeditionRun.battle(): Battle {
     val phases = PhaseFoes(this.index, rules)
     val foes = members.map { member ->
-        // Сделки алтаря (3.90.0) ложатся на каждый бой: строки карты, сила босса, лишние строки монстров
         val monster = pactFoe(member)
-        // Its own level on a map (3.73.0), the fight's otherwise.
         phases.foe(monster, monster.level.takeIf { it > 0 } ?: fightLevel).copy(round = member.round)
     }
     return Battle(
         hero,
-        // Свита фаз босса (3.92.0) - в конце стаи, на своём потоке: бой без фаз катится как прежде
         phases.withRetinue(foes, Dice(Streams.mix(seed, ExpeditionRun.RETINUE_STREAM, fightStream))),
         rules, index.rules.fight, life, Random(Streams.mix(seed, ExpeditionRun.FIGHT_STREAM, fightStream)), stance, kit = kit.copy(fate = FateKit.of(run.fate)), model = build, pools = pools,
         percent = build.gear.percent, cleared = wonLast, fateRun = fateRun,
@@ -119,10 +120,13 @@ internal fun ExpeditionRun.endFight() {
     members = emptyList()
 }
 
-/** «Освободить»: the crystal's guardian stands up — the zone's monster, rare, with the lines of the essences it guards — and the fight begins. */
+/**
+ * «Освободить»: the crystal's guardian stands up — the zone's monster, rare, with the lines of the essences it guards — and the fight begins.
+ *
+ * Строки карты - без сделок алтаря: сделки ложатся в самом бою ([pactFoe]).
+ */
 internal fun ExpeditionRun.release() {
     val spot = crystal ?: return
-    // Строки карты без сделок алтаря (3.90.0): сделки ложатся в самом бою ([pactFoe])
     val extra = MapEffects.guardianBuffs(spot.crystal.stronger, index.essences.crystals.stronger, baseEffects)
     val guardian = spawns.crystalGuardian(spot.crystal, spot.id, MapEffects.buffs(baseEffects), extra) ?: return
     crystal = null
@@ -156,23 +160,28 @@ internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
 }
 
 /**
- * Выигранные бои захода (4.6.1, Разгон [FateLever.WIN_STREAK]) - тем же правилом, что считает сервер ([Run.fightsWon]); без
+ * Выигранные бои захода (Разгон [FateLever.WIN_STREAK]) - тем же правилом, что считает сервер ([Run.fightsWon]); без
  * рычага паки не перебираются.
  */
 internal fun ExpeditionRun.tallyWins() {
     if (run.fate.has(FateLever.WIN_STREAK)) fateRun.recount(run)
 }
 
+/**
+ * Каждый враг - своё убийство, записанное, когда он пал, пока бой идёт; стая раунда, павшая целиком, уходит с карты сразу. Щит, недуги,
+ * баффы, проклятия и заряды уходят на карту остатком ([HeroCarry]), перезарядка щита - от последнего удара боя. Свита фаз - в журнале вслед
+ * за стаей. Цифры боя идут в статистику героя до того, как гибель закроет журнал; автопробег идёт дальше без отчёта. Гибель в Бездне
+ * сжигает копилку (кроме доли атласа), в Ваал-зоне - обычная смерть, весь заход кончен. Бездна сцепляет бои: следующий бой волны или
+ * следующая глубина, когда игрок спустится.
+ */
 internal fun ExpeditionRun.play(dt: Double) {
     val battle = fight ?: return
     val agent = fightAgent ?: return
     if (!started || paused || waitingLink) return
     battle.advance(dt * speed)
-    // Every foe is a kill of its own, recorded the moment it falls, the fight still going.
     while (reported < battle.fallen.size) {
         val member = members[battle.fallen[reported++]]
         member.agent.fallen += member.index
-        // Стая раунда, павшая целиком, уходит с карты сразу (4.4.1): гибель в следующем раунде её не поднимет
         if (member.agent.standing.isEmpty()) member.agent.alive = false
         fell(member.agent, member.index)
     }
@@ -180,7 +189,6 @@ internal fun ExpeditionRun.play(dt: Double) {
     if (battle.time < battle.duration + pace.aftermath) return
     val out = battle.pools()
     life = out.life
-    // Щит, недуги, баффы, проклятия и заряды уходят на карту остатком ([HeroCarry]); перезарядка щита - от последнего удара боя
     val carried = battle.carry()
     shield = carried.shield ?: hero.maxShield
     carry = carried.copy(shield = null)
@@ -190,12 +198,10 @@ internal fun ExpeditionRun.play(dt: Double) {
     flaskLeft = out.flaskLeft
     rates = out.rates
     rebody()
-    // Свита фаз (3.92.0) - в журнале боя вслед за стаей
     val retinue = battle.foes.withIndex().drop(members.size).mapNotNull { (index, foe) -> foe.origin?.let { PackHit(it, battle.events.filter { e -> e.foe == index }, battle.duration) } }
     val pack = members.mapIndexed { index, member -> PackHit(member.monster, battle.events.filter { it.foe == index }, battle.duration) } + retinue
     val duration = battle.duration
     stats.add(pack, duration)
-    // The fight's figures (3.51.0): only the hero's statistics, before a fall closes the journal.
     record { n -> RunEvent.Fight(n, FightFigures.of(pack, duration, boss = agent === world.boss, won = outcome == Outcome.WIN)) }
     val leader = fightLeader()
     lastFight = FightReport(leader, outcome, pack, duration)
@@ -207,9 +213,7 @@ internal fun ExpeditionRun.play(dt: Double) {
             if (down != null) {
                 report = null
                 phase = RunPhase.ABYSS
-            }
-            // An autorun goes on without the report: what the fight brought is in its tally already
-            else if (autopilot != null) {
+            } else if (autopilot != null) {
                 clearSpoils()
                 slain = null
                 report = null
@@ -229,9 +233,7 @@ internal fun ExpeditionRun.play(dt: Double) {
             phase = RunPhase.DEAD
             deaths++
             end = MapEnd.FELL
-            // A fall in the Abyss burns its hoard, but for the atlas's share; then the zone's own price.
             down?.let { take(it, fallen = true) }
-            // A fall in the Vaal zone is a death as any (3.71.0, server 1.68.0): the same price, and the whole run is over
             record { RunEvent.Fall(it, vaal) }?.let {
                 fallEvent = it.n
                 fall = deathLoss()
@@ -241,17 +243,16 @@ internal fun ExpeditionRun.play(dt: Double) {
     }
     endFight()
     abyssFight = false
-    // The Abyss chains its fights (3.32.0): the next fight of the wave, or the next depth once the player descends.
     if (outcome == Outcome.WIN && down != null) {
         if (down.fights.isNotEmpty()) nextFight(down) else down.cleared++
     }
 }
 
-/** The hero's level on the experience the answers granted so far (3.81.0); never below the level they set out with. */
+/** The hero's level on the experience the answers granted so far; never below the level they set out with. */
 internal fun ExpeditionRun.levelNow(): Int = index.classes.levelOf(heroExperience + granted.experience).coerceAtLeast(heroLevel)
 
 /**
  * What the death costs by the rules: a share of the level's experience, never the level — on what the answers granted so far.
- * С уровня героя `combat.death.fromLevel` (4.4.1; прежде - уровня зоны), ниже - даром.
+ * С уровня героя `combat.death.fromLevel` (прежде - уровня зоны), ниже - даром.
  */
 internal fun ExpeditionRun.deathLoss(): Double = LootRoller(index).deathLoss(levelNow(), heroExperience + granted.experience)

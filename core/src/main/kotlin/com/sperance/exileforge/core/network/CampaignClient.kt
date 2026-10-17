@@ -14,7 +14,7 @@ import java.util.UUID
 
 private const val CAMPAIGN = "api/v1/hero/campaign"
 
-/** Босс на сервере (3.92.0): сколько героев с ним дралось и сколько победили; [share] - доля победивших. */
+/** Босс на сервере: сколько героев с ним дралось и сколько победили; [share] - доля победивших. */
 @kotlinx.serialization.Serializable
 data class BossRecord(val fought: Int = 0, val won: Int = 0) {
     val share: Double? get() = if (fought > 0) won.toDouble() / fought else null
@@ -29,13 +29,13 @@ data class BossRecords(val records: Map<String, BossRecord> = emptyMap())
  */
 class CampaignClient internal constructor(private val http: Transport) {
 
-    /** Боссы игрового сервера героя (3.92.0, сервер 1.81.12): сколько героев с каждым дрались и сколько победили. */
+    /** Боссы игрового сервера героя: сколько героев с каждым дрались и сколько победили. */
     suspend fun bosses(heroId: String): BossRecords = http.get("$CAMPAIGN/bosses", heroQuery(heroId))
 
     /**
      * Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. A [potion]
-     * goes into the run and [scarabs] with the map (server 1.74.0), both spent there. [auto] (3.95.0, server 1.82.0) - автопробег:
-     * карт он не роняет. [forced] (4.0.1, сервер `API_REVISION` 61) - механики, что тестировщик ставит на заход насильно.
+     * goes into the run and [scarabs] with the map, both spent there. [auto] - автопробег:
+     * карт он не роняет. [forced] (сервер `API_REVISION` 61) - механики, что тестировщик ставит на заход насильно.
      */
     suspend fun start(
         heroId: String,
@@ -62,14 +62,14 @@ class CampaignClient internal constructor(private val http: Transport) {
     }
 
     /**
-     * Abandons the open run [runId] (3.89.0, server 1.81.0): it is closed as a leave is, the loot it gave stays. Safe to repeat — a run
+     * Abandons the open run [runId]: it is closed as a leave is, the loot it gave stays. Safe to repeat — a run
      * already closed or replaced is left alone.
      */
     suspend fun abandon(heroId: String, runId: String): CampaignProgress = http.post("$CAMPAIGN/abandon", heroQuery(heroId, "runId" to runId))
 
     /**
      * A batch of the journal of run [runId], in order; safe to repeat — numbers already applied are skipped, and a batch
-     * of another run is refused (CP_026, server 1.68.0). The answer carries every event's reward (server 1.30.0), so a
+     * of another run is refused (CP_026). The answer carries every event's reward, so a
      * batch whose answer was lost is sent again with the same [key]: the server repeats its stored report. Null - the
      * batch landed, but its report was not kept: the hero is read again, and the batch's loot is in it.
      */

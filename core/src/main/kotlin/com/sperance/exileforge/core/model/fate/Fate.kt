@@ -6,7 +6,7 @@ import com.sperance.exileforge.rules.content.Fate
 import kotlinx.serialization.Serializable
 
 /**
- * Предначертание в ответе сервера (4.6.0, `FateCard`; без тем с `API_REVISION` 68): код дара `fates.json` и ключи словаря
+ * Предначертание в ответе сервера (`FateCard`; без тем с `API_REVISION` 68): код дара `fates.json` и ключи словаря
  * сервера - имя [name] и описание [description]. Рычаги клиент читает из своего чанка тем же резолвером правил (`FateEffects`).
  */
 @Serializable
@@ -15,7 +15,7 @@ data class FateCard(
     val name: String = "fate.$code.name",
     val description: String = "fate.$code.description",
 ) {
-    /** Имя дара на языке игрока; нет ключа (0.15.0, #48) - заглушка и дыра словаря, не код. */
+    /** Имя дара на языке игрока; нет ключа - заглушка и дыра словаря, не код. */
     val title: String get() = loc(name)
 
     /** Что дар делает, словами сервера. */
@@ -28,7 +28,7 @@ data class FateCard(
 }
 
 /**
- * Предначертание аккаунта (4.6.0, `GET fate`): [chosen] - выбранный дар (тогда [offers] пусто), иначе три разных дара на выбор -
+ * Предначертание аккаунта (`GET fate`): [chosen] - выбранный дар (тогда [offers] пусто), иначе три разных дара на выбор -
  * одни и те же при каждом чтении.
  */
 @Serializable

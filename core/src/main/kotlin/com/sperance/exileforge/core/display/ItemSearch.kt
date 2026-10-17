@@ -2,7 +2,7 @@ package com.sperance.exileforge.core.display
 
 /**
  * The stash's search: a query finds an item by its name in the current language and by its English
- * trade name alike, whatever the case — «кинжал», «КИНЖАЛ» and «dagger» find the same dagger. Since 3.30.0 it
+ * trade name alike, whatever the case — «кинжал», «КИНЖАЛ» and «dagger» find the same dagger. It
  * reads the copy's modifier lines too, as the current language words them: «сопротивление» finds every resist.
  */
 object ItemSearch {

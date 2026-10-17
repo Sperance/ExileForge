@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.SharedFlow
 /** За что телефон вибрирует, каждое включается отдельно. */
 enum class Buzz { DANGER, BUTTON }
 
-/** Вибрации (3.77.0): экран с видом слушает [flow]; выключенный в настройках вид отбрасывается здесь по [allowed]. */
+/** Вибрации: экран с видом слушает [flow]; выключенный в настройках вид отбрасывается здесь по [allowed]. */
 class Buzzes {
     private val mutable = MutableSharedFlow<Buzz>(extraBufferCapacity = 4)
     val flow: SharedFlow<Buzz> = mutable

@@ -5,13 +5,13 @@ import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.MailGate
 import kotlinx.serialization.Serializable
 
-/** Гильдия на карточке игрока (сервер 4.5.1): кто она и кем в ней герой. */
+/** Гильдия на карточке игрока: кто она и кем в ней герой. */
 @Serializable
 data class CardGuild(val id: String, val name: String, val tag: String, val emblem: String = "", val color: String = "", val role: GuildRole = GuildRole.MEMBER)
 
 /**
- * Что модератор может сделать с героем карточки (сервер 4.5.1, по `ModerationPolicy` сервера): бан героя, аккаунта, устройства,
- * удаление и (4.6.3) немота. [userId] и [login] - аккаунт владельца: досье, письмо администратора.
+ * Что модератор может сделать с героем карточки (по `ModerationPolicy` сервера): бан героя, аккаунта, устройства,
+ * удаление и немота. [userId] и [login] - аккаунт владельца: досье, письмо администратора.
  */
 @Serializable
 data class CardModeration(
@@ -28,8 +28,8 @@ data class CardModeration(
 }
 
 /**
- * Что смотрящий может сделать с героем карточки (сервер 4.5.1): [mail] - письмо администратора аккаунту (по логину из
- * [moderation]), [invite] - позвать в свою гильдию, [moderation] - только модератору и администратору. С 4.6.3 [letter] - письмо
+ * Что смотрящий может сделать с героем карточки: [mail] - письмо администратора аккаунту (по логину из
+ * [moderation]), [invite] - позвать в свою гильдию, [moderation] - только модератору и администратору. [letter] - письмо
  * герою: null - своя карточка, иначе можно ли писать или почему нет; [ignored] - смотрящий не принимает писем героя. Права
  * считает сервер, клиент лишь прячет недоступное и называет причину.
  */
@@ -37,12 +37,12 @@ data class CardModeration(
 data class CardRights(val mail: Boolean = false, val invite: Boolean = false, val moderation: CardModeration? = null, val letter: MailGate? = null, val ignored: Boolean = false)
 
 /**
- * Карточка игрока (сервер 4.5.1, `GET hero/card`): открытый профиль героя глазами героя смотрящего, на его игровом сервере.
+ * Карточка игрока (`GET hero/card`): открытый профиль героя глазами героя смотрящего, на его игровом сервере.
  *
  * @property title код титула летописи; пусто - без титула
  * @property online последняя команда героя свежая; [lastSeenAt] - её время (мс эпохи, 0 - неизвестно)
  * @property lots сколько лотов героя на витрине аукциона
- * @property fate Предначертание аккаунта героя (4.6.0); null - аккаунт его ещё не выбрал
+ * @property fate Предначертание аккаунта героя; null - аккаунт его ещё не выбрал
  */
 @Serializable
 data class PlayerCard(
@@ -57,18 +57,18 @@ data class PlayerCard(
     val lots: Int = 0,
     val rights: CardRights = CardRights(),
     val fate: FateCard? = null,
-    /** Номер героя (4.7.0): шесть цифр для приглашения в гильдию. */
+    /** Номер героя: шесть цифр для приглашения в гильдию. */
     val number: String = "",
-    /** Мощь героя (4.8.0): сервер считает её из листа при выдаче карточки; 0 - ещё не посчитана. Не прогноз боя. */
+    /** Мощь героя: сервер считает её из листа при выдаче карточки; 0 - ещё не посчитана. Не прогноз боя. */
     val might: Double = 0.0,
 )
 
-/** Что станет с гильдией после ухода героя (сервер 4.5.1): он просто выходит, главенство переходит наследнику или гильдия распускается. */
+/** Что станет с гильдией после ухода героя: он просто выходит, главенство переходит наследнику или гильдия распускается. */
 @Serializable
 enum class GuildOutcome { LEAVE, TRANSFER, DISBAND }
 
 /**
- * Гильдия героя перед его уходом (сервер 4.5.1): [role] - его роль, [outcome] - что станет с гильдией; при
+ * Гильдия героя перед его уходом: [role] - его роль, [outcome] - что станет с гильдией; при
  * [GuildOutcome.TRANSFER] - наследник главенства [heirId]/[heirName] и его нынешняя роль [heirRole].
  */
 @Serializable
@@ -84,7 +84,7 @@ data class GuildDeparture(
 )
 
 /**
- * Последствия самоудаления героя (сервер 4.5.1, `GET hero/deletion/preview`) до подтверждения: [purgeDays] - сколько дней его
+ * Последствия самоудаления героя (`GET hero/deletion/preview`) до подтверждения: [purgeDays] - сколько дней его
  * можно вернуть, [guild] - что станет с его гильдией (null - вне гильдии), [lots] - сколько лотов снимется и вернётся письмом.
  */
 @Serializable

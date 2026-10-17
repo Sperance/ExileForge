@@ -7,12 +7,12 @@ import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.sheet.Recovery
 
 /**
- * Здоровье героя на карте между боями (4.10.0): одна чистая скорость [net] - здоровья в секунду. Прибывает пополнение потока здоровья,
- * как в бою ([Recovery.lifeFlow], #50), и основа вне боя `offCombatRegen` - процент максимума; убывают потери и деген героя. Без
+ * Здоровье героя на карте между боями: одна чистая скорость [net] - здоровья в секунду. Прибывает пополнение потока здоровья,
+ * как в бою ([Recovery.lifeFlow]), и основа вне боя `offCombatRegen` - процент максимума; убывают потери и деген героя. Без
  * задержки после урона. Вне боя здоровье не выше максимума и деген листа не опускает его ниже 1; урон недугов идёт мимо этой
- * скорости ([ailing]) и может убить. Регенерацию героя (4.11.0) режет доля восстановления [Recovery.share] - «меньше регенерации»,
+ * скорости ([ailing]) и может убить. Регенерацию героя режет доля восстановления [Recovery.share] - «меньше регенерации»,
  * запрет и дно строк карты - и недуги, принесённые из боя или от ловушек, на свою силу (`curb`). Основа `offCombatRegen` - не
- * регенерация листа, а отдых между боями: её доля не режет. Пока на герое ранящий недуг (0.14.5, #52: кровотечение, яд, поджог -
+ * регенерация листа, а отдых между боями: её доля не режет. Пока на герое ранящий недуг (кровотечение, яд, поджог -
  * [flow] с `stalledBy`), нет ни регенерации, ни отдыха; фляги идут своим путём. В бою так не бывает - там регенерация идёт.
  */
 @JvmInline
@@ -35,10 +35,12 @@ internal value class RoadLife(val net: Double) {
         fun of(body: Combatant, pace: ExpeditionRules, curb: Double = 0.0, manaCurb: Double = 0.0, stalledBy: Ailment? = null): RoadLife = RoadLife(flow(body, pace, curb, manaCurb, stalledBy).net)
 
         /**
-         * Из чего скорость: пополнение потока здоровья правил ([Recovery.lifeFlow], #50 - регенерация листа и доля регенерации маны под
+         * Из чего скорость: пополнение потока здоровья правил ([Recovery.lifeFlow]: регенерация листа и доля регенерации маны под
          * долей восстановления и срезом недугов [curb] ([manaCurb] - маны) на скорость восстановления) плюс отдых `offCombatRegen`
-         * против потерь и дегена потока. Под ранящим недугом [stalledBy] (0.14.5, #52) регенерации и отдыха нет: их несбывшийся
+         * против потерь и дегена потока. Под ранящим недугом [stalledBy] регенерации и отдыха нет: их несбывшийся
          * итог - [LifeFlow.stalled], для разбора.
+         *
+         * Отрицательная регенерация - потеря здоровья в секунду, как деген.
          */
         fun flow(body: Combatant, pace: ExpeditionRules, curb: Double = 0.0, manaCurb: Double = 0.0, stalledBy: Ailment? = null): LifeFlow {
             val flow = Recovery.lifeFlow(body, body.rules, curb, manaCurb)
@@ -47,7 +49,6 @@ internal value class RoadLife(val net: Double) {
             val stalled = stalledBy?.takeIf { it.hurts }
             return LifeFlow(
                 regen = if (stalled == null) recovery else 0.0,
-                // Отрицательная регенерация (4.12.x, STAT-ATK-04) - потеря здоровья в секунду, как деген
                 degen = flow.drain,
                 degenShare = body.lifeDegenShare * 100,
                 rest = if (stalled == null) rest else 0.0,

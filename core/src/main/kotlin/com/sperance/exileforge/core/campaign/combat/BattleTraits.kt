@@ -11,13 +11,11 @@ import com.sperance.exileforge.rules.content.TraitLine
 import com.sperance.exileforge.rules.content.TraitTrigger
 import kotlin.math.min
 
-// ==================== Отклики свойств монстров (3.73.0; стратегии - 4.4.1) ====================
-
 /** Строки свойства на силе [power]: всё, кроме [Op.SET], растёт с ней. */
 internal fun List<TraitLine>.lines(power: Double): List<StatLine> = map { StatLine(it.stat, it.op, if (it.op == Op.SET) it.value else it.value * power) }
 
 /**
- * Свойство [trait] монстра с откликом [trigger] на силе редкости [power] (4.4.1): число отклика [value] и строки [lines] уже на
+ * Свойство [trait] монстра с откликом [trigger] на силе редкости [power]: число отклика [value] и строки [lines] уже на
  * этой силе, [reaction] - что отклик делает в бою.
  */
 internal class TraitAt(val trait: MonsterTrait, val trigger: TraitTrigger, val power: Double) {
@@ -27,7 +25,7 @@ internal class TraitAt(val trait: MonsterTrait, val trigger: TraitTrigger, val p
     val reaction: TraitReaction = TraitReaction.of(trigger.act)
 }
 
-/** Что замах монстра несёт сверх своего урона (4.4.1): [more] процентов урона и строки [lines] только на этот удар. */
+/** Что замах монстра несёт сверх своего урона: [more] процентов урона и строки [lines] только на этот удар. */
 internal data class SwingBoost(val more: Double = 0.0, val lines: List<StatLine> = emptyList()) {
     operator fun plus(other: SwingBoost) = SwingBoost(more + other.more, lines + other.lines)
 
@@ -37,7 +35,7 @@ internal data class SwingBoost(val more: Double = 0.0, val lines: List<StatLine>
 }
 
 /**
- * Отклик свойства монстра (4.4.1): что вид [TraitAct] делает в каждый момент боя - замах, попадание, уклонение, шаг боя,
+ * Отклик свойства монстра: что вид [TraitAct] делает в каждый момент боя - замах, попадание, уклонение, шаг боя,
  * гибель. Момент, в который отклику нечего делать, - ничего. Новый вид - новая реализация и ветка [of], бой не проверяет виды.
  */
 internal sealed interface TraitReaction {
@@ -71,7 +69,7 @@ internal sealed interface TraitReaction {
     }
 }
 
-/** Первый удар сильнее на число отклика и несёт его строки (4.4.1) - только он. */
+/** Первый удар сильнее на число отклика и несёт его строки - только он. */
 private data object FirstStrike : TraitReaction {
     override fun swing(battle: Battle, me: Fighter, at: TraitAt, first: Boolean): SwingBoost {
         if (!first) return SwingBoost.NONE
@@ -107,7 +105,7 @@ private data object Mend : TraitReaction {
 }
 
 /**
- * Павший взрывается долей своего здоровья: ударом стихии отклика или (4.4.1) недугом отклика на герое - тот же вес ложится
+ * Павший взрывается долей своего здоровья: ударом стихии отклика или недугом отклика на герое - тот же вес ложится
  * недугом, а не мгновенным ударом. Взрыв никого не лечит: что бы ни вернул вампиризм, павший остаётся лежать.
  */
 private data object Burst : TraitReaction {
@@ -128,7 +126,7 @@ private data object Burst : TraitReaction {
     }
 }
 
-/** Попавший по герою удар вешает строки отклика на его срок (4.4.1) - не проклятие; повтор обновляет срок, не складывается. */
+/** Попавший по герою удар вешает строки отклика на его срок - не проклятие; повтор обновляет срок, не складывается. */
 private data object Hinder : TraitReaction {
     override fun landed(battle: Battle, me: Fighter, target: Fighter, at: TraitAt) {
         if (target !== battle.heroFighter) return
@@ -139,7 +137,7 @@ private data object Hinder : TraitReaction {
     }
 }
 
-/** Попавший по герою удар с шансом отклика проклинает его строками отклика на срок (4.4.1); иммунитет к проклятиям снимает. */
+/** Попавший по герою удар с шансом отклика проклинает его строками отклика на срок; иммунитет к проклятиям снимает. */
 private data object Hex : TraitReaction {
     override fun landed(battle: Battle, me: Fighter, target: Fighter, at: TraitAt) {
         if (target !== battle.heroFighter || target.body.immuneCurse) return
@@ -150,7 +148,7 @@ private data object Hex : TraitReaction {
     }
 }
 
-/** Уклонившись, монстр бьёт следующим замахом сильнее на число отклика (4.4.1), затем снова как обычно. */
+/** Уклонившись, монстр бьёт следующим замахом сильнее на число отклика, затем снова как обычно. */
 private data object Riposte : TraitReaction {
     override fun evaded(battle: Battle, me: Fighter, at: TraitAt) {
         battle.riposting += me.index to at.code
@@ -163,7 +161,7 @@ private data object Riposte : TraitReaction {
     }
 }
 
-/** Каждый свой попавший удар даёт строки отклика ещё раз (4.4.1), до потолка складываний за бой. */
+/** Каждый свой попавший удар даёт строки отклика ещё раз, до потолка складываний за бой. */
 private data object Stack : TraitReaction {
     override fun landed(battle: Battle, me: Fighter, target: Fighter, at: TraitAt) {
         val key = me.index to at.code
@@ -174,8 +172,6 @@ private data object Stack : TraitReaction {
         if (count == at.trigger.stacks) battle.note(me, NoteKind.TRAIT, at.code, count.toDouble())
     }
 }
-
-// ==================== Моменты боя ====================
 
 /** Отклики свойств [fighter]; у героя - ни одного. */
 private fun Battle.traitsOf(fighter: Fighter): List<TraitAt> = if (fighter.side == Side.MONSTER) traitsAt[fighter.index] else emptyList()

@@ -10,12 +10,12 @@ import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.WardenRule
 
-/** Дар героя, как его видит бой (3.96.0): код и строки листа, уже выросшие по ступени. */
+/** Дар героя, как его видит бой: код и строки листа, уже выросшие по ступени. */
 data class RiftBoonLines(val code: String, val lines: List<StatLine>)
 
 /**
- * Бой Разлома недели (3.96.0): механики стража акта - [warden], [devourer] или [lord] (числа - их правил) - и правила забега.
- * Без него ([Battle.rift] = null) бой тот же, что был, на тех же костях.
+ * Бой Разлома недели: механики стража акта - [warden], [devourer] или [lord] (числа - их правил) - и правила забега.
+ * Без него ([Battle.rift] = null) бой обычный, на тех же костях.
  */
 data class RiftCombat(
     val warden: WardenRule? = null,
@@ -37,7 +37,7 @@ data class RiftCombat(
 }
 
 /**
- * След боя для Испытания чемпиона (3.96.0): сколько флаконов выпито (кроме выпитых самими собой в начале боя), самая низкая
+ * След боя для Испытания чемпиона: сколько флаконов выпито (кроме выпитых самими собой в начале боя), самая низкая
  * доля здоровья героя (0..1) и сколько раз игрок переводил цель на другого живого врага, пока прежняя цель ещё стояла.
  */
 class RiftTrace internal constructor() {
@@ -52,7 +52,7 @@ class RiftTrace internal constructor() {
 /** Кого Разлом зовёт в HUD: страж с печатями, с дарами или с Законами. */
 enum class RiftGuard { WARDEN, DEVOURER, LORD }
 
-/** Состояние механик Разлома в бою (3.96.0): печати, замки, украденное, Законы. */
+/** Состояние механик Разлома в бою: печати, замки, украденное, Законы. */
 internal class RiftFight(val rules: RiftCombat, actives: Int, flasks: Int) {
     var opened = false
 
@@ -98,7 +98,7 @@ internal class RiftFight(val rules: RiftCombat, actives: Int, flasks: Int) {
 internal val Foe.guards: Boolean get() = phases.isNotEmpty() || totems.isNotEmpty() || rarity == MonsterRarity.UNIQUE
 
 /**
- * Тени Поглотителя (3.96.0): к стае [foes] добавлены [count] копий [shade] - свита стража, что ждёт зова вне поля; бой не
+ * Тени Поглотителя: к стае [foes] добавлены [count] копий [shade] - свита стража, что ждёт зова вне поля; бой не
  * добавляет врагов посреди себя, так что украденный дар зовёт уже лежащую тень. Страж получает слоты под них.
  */
 fun PhaseFoes.withShades(foes: List<Foe>, shade: Foe, count: Int): List<Foe> {

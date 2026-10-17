@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.i18n.locError
 import com.sperance.exileforge.core.i18n.ui
 
 /**
- * Why the server cannot be reached (3.79.0), as a player can act on it: no network on the device, a server too slow
+ * Why the server cannot be reached, as a player can act on it: no network on the device, a server too slow
  * to answer, a server restarting or down for maintenance (the proxy answers in its place, or the port is closed),
  * or an answer that is not the game's. The technical text stays for administrators: see [transportDetail].
  */
@@ -56,9 +56,10 @@ sealed interface FailureState {
          * It carries an HTTP status and the server's own message, so it is classified on its own
          * before the transport branches — it extends IOException, and letting it fall through would
          * report every 4xx as "offline" and hide what the server actually said.
+         *
+         * Нечитаемый ответ на прошедшую запись мог её выполнить: это неизвестность, а не «нет связи».
          */
         fun from(error: Exception, writing: Boolean): FailureState = when {
-            // An unreadable answer to a write that went through may still have done it: that is uncertain, not offline.
             writing && error is ApiFailure && error.malformed && error.status in 200..299 -> UncertainWrite
 
             error is ApiFailure && Outage.of(error) != null -> Offline(Outage.of(error)!!)
@@ -86,17 +87,17 @@ sealed interface FailureState {
  * "No connection" sends the reader to look at their Wi-Fi, and that is almost never where the
  * problem is on a developer machine: the exception already names it — a blocked cleartext socket,
  * a refused port, a name that does not resolve — so it is shown instead of being swallowed.
+ *
+ * Android блокирует открытый HTTP, если манифест его не разрешает. OkHttp бросает одно исключение и на мёртвое рукопожатие, и на молчащий
+ * сервер; различает их только текст, а смысл у них противоположный: потерянный SYN - это файрвол, а не медленный сервер.
  */
 fun transportDetail(error: Throwable): String = when {
-    // Android blocks plain HTTP unless the manifest allows it; only the debug build does.
     error is java.net.UnknownServiceException || error.message?.contains("CLEARTEXT", ignoreCase = true) == true ->
         ui("net.cleartext")
 
     error is java.net.UnknownHostException ->
         ui("net.unknown_host", error.message)
 
-    // OkHttp raises the same exception for a dead handshake and a silent server; only the text tells
-    // them apart, and they point at opposite things: a dropped SYN is a firewall, not a slow server.
     error is java.net.SocketTimeoutException && error.message?.startsWith("failed to connect") == true ->
         ui("net.no_route", error.message)
 

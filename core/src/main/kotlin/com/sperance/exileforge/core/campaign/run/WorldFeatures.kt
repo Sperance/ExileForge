@@ -13,7 +13,7 @@ import com.sperance.exileforge.rules.run.Run
 import kotlin.math.hypot
 import kotlin.random.Random
 
-/** Что шаг героя сделал с объектом карты (3.90.0, сервер 1.81.3). */
+/** Что шаг героя сделал с объектом карты. */
 sealed interface FeatureAction {
     val spot: FeatureSpot
 
@@ -23,15 +23,15 @@ sealed interface FeatureAction {
     /** Объект сработал сам - ловушка, открытая стена, рычаг, сундук: выбор [choice] уходит в журнал сразу. */
     data class Trigger(override val spot: FeatureSpot, val choice: Int) : FeatureAction
 
-    /** Взведённая снова ловушка ударила (3.95.2): только урон - журнал её не пишет, награда была за первый раз. */
+    /** Взведённая снова ловушка ударила: только урон - журнал её не пишет, награда была за первый раз. */
     data class Spring(override val spot: TrapSpot) : FeatureAction
 
-    /** Объект поднял своих монстров - группу [group] (4.0.0, точка очага Скверны): журнал молчит, жетоны встают на карте. */
+    /** Объект поднял своих монстров - группу [group] (точка очага Скверны): журнал молчит, жетоны встают на карте. */
     data class Rouse(override val spot: FeatureSpot, val group: Int) : FeatureAction
 }
 
 /**
- * Объект карты на земле (3.90.0, сервер 1.81.3) - общая абстракция всего, что стоит на карте и ждёт героя: объект правил
+ * Объект карты на земле - общая абстракция всего, что стоит на карте и ждёт героя: объект правил
  * [feature] (что он и что в нём - бросок семени, тот же, что проверяет сервер) и клетка [cell], где его поставило семя. Мир
  * спрашивает каждый объект, что с ним сделал шаг героя ([touch]); выборы, уже записанные в журнал, - [taken], по ним объект
  * исчерпан ([spent]). Новый объект - подкласс, а не ветка в шаге мира.
@@ -44,16 +44,16 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     val taken = mutableListOf<Int>()
     val spent: Boolean get() = feature.spent(taken)
 
-    /** Клетки, где объект стоит и должен быть виден (3.95.3): ловушка лежит вровень с полом, её скала не закрывает. */
+    /** Клетки, где объект стоит и должен быть виден: ловушка лежит вровень с полом, её скала не закрывает. */
     open val landmarks: List<Cell> get() = listOf(cell)
 
-    /** Клетка, где объект ждёт героя сейчас (4.0.0): её отмечает миникарта; у очага Скверны - активная точка. */
+    /** Клетка, где объект ждёт героя сейчас: её отмечает миникарта; у очага Скверны - активная точка. */
     open val focus: Cell get() = cell
 
     /** Доля простоя, что открывает объект (трещина тайной комнаты), 0..1; у прочих - ноль. */
     open val progress: Double get() = 0.0
 
-    /** Что сказать над героем, стоящим у объекта (4.9.0: трещина поддаётся, дверь заперта); null - нечего. */
+    /** Что сказать над героем, стоящим у объекта (трещина поддаётся, дверь заперта); null - нечего. */
     open fun cue(world: ExpeditionWorld): EntranceCue? = null
 
     /** Клетки, где объект можно увидеть: хоть одна исследована - объект на карте ([shown]). */
@@ -63,7 +63,7 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     protected open fun noticed(world: ExpeditionWorld): Boolean = true
 
     /**
-     * Виден ли объект герою (4.3.0) - одно правило для всех объектов карты: только на исследованной клетке ([sites]) и только
+     * Виден ли объект герою - одно правило для всех объектов карты: только на исследованной клетке ([sites]) и только
      * замеченный ([noticed]). Восстановленный из журнала забег не рисует сработавшую ловушку в неувиденной пустоте.
      */
     fun shown(world: ExpeditionWorld): Boolean = sites.any { world.explored(it.x, it.y) } && noticed(world)
@@ -90,23 +90,23 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
         undo(choice)
     }
 
-    /** Объект поднимает своих монстров группы [group] (4.0.0); у объектов без монстров - ничего. */
+    /** Объект поднимает своих монстров группы [group]; у объектов без монстров - ничего. */
     internal open fun rouse(run: ExpeditionRun, group: Int) = Unit
 
     /**
-     * Вход в заход снова (4.0.0): объект поднимает монстров, что уже стояли, по своему журналу и павшим жетонам [killed] - до
+     * Вход в заход снова: объект поднимает монстров, что уже стояли, по своему журналу и павшим жетонам [killed] - до
      * того, как мир уложит павших.
      */
     internal open fun resume(run: ExpeditionRun, killed: Collection<Int>) = Unit
 
-    /** Что объект видит, решая о выборе (4.0.0): свои выборы, павшие жетоны карты [world] и (4.9.0) стоят ли его стражи сокровищ. */
+    /** Что объект видит, решая о выборе: свои выборы, павшие жетоны карты [world] и стоят ли его стражи сокровищ. */
     fun state(world: ExpeditionWorld): FeatureState = FeatureState(taken.toList(), world.killed(Run.PACK_SLOTS), world.guarded(id))
 
     internal fun near(world: ExpeditionWorld, at: Cell, reach: Double) = hypot(at.x + 0.5 - world.heroX, at.y + 0.5 - world.heroY) < reach
 }
 
 /**
- * Объект с выбором на листе (3.90.0) - алтарь, торговец, узел ремесла: шагнувший к нему герой видит его лист, отошедший - может
+ * Объект с выбором на листе - алтарь, торговец, узел ремесла: шагнувший к нему герой видит его лист, отошедший - может
  * вернуться; отказ под ногами не открывает лист снова, пока герой не сошёл с клетки.
  */
 sealed class OfferSpot(feature: MapFeature, cell: Cell) : FeatureSpot(feature, cell) {
@@ -123,19 +123,19 @@ sealed class OfferSpot(feature: MapFeature, cell: Cell) : FeatureSpot(feature, c
 }
 
 /**
- * Алтарь (3.90.0; 0.14.0, ALTAR-01): выбранный вариант ложится на героя и бои сразу; мимо можно пройти - алтарь ждёт нетронутым,
+ * Алтарь: выбранный вариант ложится на героя и бои сразу; мимо можно пройти - алтарь ждёт нетронутым,
  * автопроход его обходит.
  */
 class AltarSpot(feature: MapFeature.Altar, cell: Cell) : OfferSpot(feature, cell) {
     val altar: MapFeature.Altar get() = feature as MapFeature.Altar
 }
 
-/** Странствующий торговец (3.90.0): лист открыт, пока игрок покупает; купленное помечено, золото спишет сервер. */
+/** Странствующий торговец: лист открыт, пока игрок покупает; купленное помечено, золото спишет сервер. */
 class MerchantSpot(feature: MapFeature.Merchant, cell: Cell) : OfferSpot(feature, cell) {
     val merchant: MapFeature.Merchant get() = feature as MapFeature.Merchant
 }
 
-/** Узел ремесла (3.90.0): собранное сырьё приходит ответом сервера, как добыча сундука. */
+/** Узел ремесла: собранное сырьё приходит ответом сервера, как добыча сундука. */
 class NodeSpot(feature: MapFeature.Node, cell: Cell) : OfferSpot(feature, cell) {
     val node: MapFeature.Node get() = feature as MapFeature.Node
 
@@ -145,9 +145,9 @@ class NodeSpot(feature: MapFeature.Node, cell: Cell) : OfferSpot(feature, cell) 
 }
 
 /**
- * Ловушка (3.90.0): видна только в свете героя - больший радиус света замечает её раньше; однажды замеченная или сработавшая
+ * Ловушка: видна только в свете героя - больший радиус света замечает её раньше; однажды замеченная или сработавшая
  * остаётся на карте. Срабатывает, когда герой наступил ближе [reach] к центру клетки; первый раз - в журнал (награда за
- * ловушку), затем (3.95.2) взводится снова через [rearm] секунд и бьёт опять - только уроном. [rearm] 0 - срабатывает раз.
+ * ловушку), затем взводится снова через [rearm] секунд и бьёт опять - только уроном. [rearm] 0 - срабатывает раз.
  */
 class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, val rearm: Double = 0.0) : FeatureSpot(feature, cell) {
     val trap: TrapKind get() = (feature as MapFeature.Trap).trap
@@ -173,8 +173,8 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
         return if (spent) FeatureAction.Spring(this) else FeatureAction.Trigger(this, MapFeature.TRIGGER)
     }
 
+    /** Уникалка ловушек приходит ответом сервера - в итог карты, без панели сундука. */
     override fun resolve(run: ExpeditionRun, choice: Int) {
-        // Уникалка ловушек приходит ответом сервера - в итог карты, без панели сундука
         run.rewarding(run.recordFeature(this, choice))
         run.spring(feature as MapFeature.Trap)
     }
@@ -184,12 +184,12 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
 }
 
 /**
- * Комната за стеной (3.90.0): тайная - трещина [entrance], у которой стоят [seconds] секунд; запертая - дверь [entrance], что
- * открывает рычаг [lever] неподалёку (4.9.0: в `expedition.lever` шагах от двери). Открытая - сундук сокровищницы [chest] внутри.
- * [hint] - середина размытой метки «рычаг где-то здесь» миникарты (4.9.0), в клетках карты; у тайной - null.
+ * Комната за стеной: тайная - трещина [entrance], у которой стоят [seconds] секунд; запертая - дверь [entrance], что
+ * открывает рычаг [lever] неподалёку (в `expedition.lever` шагах от двери). Открытая - сундук сокровищницы [chest] внутри.
+ * [hint] - середина размытой метки «рычаг где-то здесь» миникарты, в клетках карты; у тайной - null.
  */
 class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, val lever: Cell?, private val seconds: Double, val hint: Pair<Double, Double>? = null) : FeatureSpot(feature, entrance) {
-    /** Сундук открытой комнаты - за её каменным краем: край над ним рисуется полупрозрачным (3.95.3). */
+    /** Сундук открытой комнаты - за её каменным краем: край над ним рисуется полупрозрачным. */
     override val landmarks: List<Cell> get() = if (opened) listOf(chest) else emptyList()
 
     val opened: Boolean get() = MapFeature.OPEN in taken
@@ -201,11 +201,13 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
 
     override val sites: List<Cell> get() = listOf(entrance)
 
+    /**
+     * Сундук под стражами сокровищ - только когда они пали, как его примет сервер. Трещина открывается простоем рядом: шаг прочь начинает
+     * отсчёт заново.
+     */
     override fun touch(world: ExpeditionWorld, dt: Double): FeatureAction? {
-        // Сундук под стражами сокровищ (4.9.0) - только когда они пали, как его примет сервер
         if (opened) return if (!looted && !world.guarded(id) && near(world, chest, world.rules.chestReach)) FeatureAction.Trigger(this, MapFeature.LOOT) else null
         lever?.let { return if (near(world, it, world.rules.chestReach)) FeatureAction.Trigger(this, MapFeature.OPEN) else null }
-        // Трещина открывается простоем рядом: шаг прочь начинает отсчёт заново.
         if (!near(world, entrance, ADJACENT) || world.moving) {
             progress = 0.0
             return null
@@ -219,14 +221,14 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
         progress = 0.0
     }
 
-    /** Герой у входа (4.9.0): у двери - «заперто, найди рычаг», у трещины - её простой (0 - подошёл, ещё не стоит). */
+    /** Герой у входа: у двери - «заперто, найди рычаг», у трещины - её простой (0 - подошёл, ещё не стоит). */
     override fun cue(world: ExpeditionWorld): EntranceCue? = when {
         opened || !near(world, entrance, ADJACENT) -> null
         lever != null -> EntranceCue.Locked
         else -> EntranceCue.Crack(progress.toFloat())
     }
 
-    /** Размытая метка рычага видна (4.9.0): дверь найдена, заперта, а сам рычаг ещё не увиден. */
+    /** Размытая метка рычага видна: дверь найдена, заперта, а сам рычаг ещё не увиден. */
     fun hinted(world: ExpeditionWorld): Boolean = !opened && lever?.let { !world.explored(it.x, it.y) } == true && shown(world)
 
     override fun resolve(run: ExpeditionRun, choice: Int) {
@@ -247,9 +249,12 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
 }
 
 /**
- * Ставит объекты карты, один раз (3.90.0): где - по семени (точки очага Скверны - цепью, 4.0.0), вдали от входа, выхода, монстров и прочих объектов; комнаты
+ * Ставит объекты карты, один раз: где - по семени (точки очага Скверны - цепью), вдали от входа, выхода, монстров и прочих объектов; комнаты
  * вырезаются в скале за стеной, касаясь пола только входом, так что карта остаётся связной, а комната закрыта до открытия.
  * [log] - журнал объектов, с которым герой вернулся в заход: использованное стоит использованным, открытые комнаты открыты.
+ *
+ * Рычаг запертой комнаты - рядом с дверью, в `expedition.lever` шагах от клетки перед ней; нет такого места - следующая дверь: комната
+ * вырезается, только когда место рычага есть.
  */
 fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<FeatureUse>, traps: TrapRules?) {
     if (features.isEmpty() || this.features.isNotEmpty()) return
@@ -266,8 +271,6 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
             is MapFeature.Trap -> claim(anywhere, TRAP_SPACING)?.let { TrapSpot(feature, it, traps?.reach ?: 0.0, traps?.rearm ?: 0.0) }
 
             is MapFeature.Room -> {
-                // Рычаг запертой (4.9.0) - рядом с дверью, в `expedition.lever` шагах от клетки перед ней; нет такого места у
-                // этой двери - следующая: комната вырезается, только когда место рычага уже есть, пустых карманов в скале нет
                 val vault = feature.kind == FeatureKind.VAULT
                 RoomCarver.plans(map, reach.keys, feature.room.size, placing).firstNotNullOfOrNull { plan ->
                     val lever = if (vault) leverFor(plan.front, roomy, taken, ::apart) ?: return@firstNotNullOfOrNull null else null
@@ -292,7 +295,7 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
 }
 
 /**
- * Место рычага двери с клеткой [front] перед ней (4.9.0): первая из [pool], что не занята ([taken]), стоит поодаль от прочих
+ * Место рычага двери с клеткой [front] перед ней: первая из [pool], что не занята ([taken]), стоит поодаль от прочих
  * объектов ([apart]) и лежит в `expedition.lever` шагах по полу от двери; null - такого места нет.
  */
 private fun ExpeditionWorld.leverFor(front: Cell, pool: List<Cell>, taken: Set<Cell>, apart: (Cell, Double) -> Boolean): Cell? {
@@ -301,7 +304,7 @@ private fun ExpeditionWorld.leverFor(front: Cell, pool: List<Cell>, taken: Set<C
 }
 
 /**
- * Середина размытой метки рычага [lever] на миникарте (4.9.0): сдвинута от него по семени не дальше половины `lever.hint`, так
+ * Середина размытой метки рычага [lever] на миникарте: сдвинута от него по семени не дальше половины `lever.hint`, так
  * что рычаг всегда внутри пятна, но не в его центре.
  */
 private fun ExpeditionWorld.leverHint(lever: Cell, random: Random): Pair<Double, Double> {
@@ -321,14 +324,14 @@ fun ExpeditionWorld.openRoom(spot: RoomSpot) {
 private const val TRAP_SPACING = 3.0
 
 /**
- * Комната в скале (3.90.0): вход - стена рядом с достижимым полом, за ней квадрат [size]×[size] пола; всё вокруг квадрата,
+ * Комната в скале: вход - стена рядом с достижимым полом, за ней квадрат [size]×[size] пола; всё вокруг квадрата,
  * кроме входа, - скала, так что до открытия комната отрезана от карты, а после - связана с ней одной клеткой.
  */
 internal object RoomCarver {
     private val SIDES = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
 
     /**
-     * Где комната может встать (4.9.0: план отдельно от выреза - вырезается только принятый, [cut]): по очереди семени,
+     * Где комната может встать (план отдельно от выреза - вырезается только принятый, [cut]): по очереди семени,
      * лениво. План - вход, клетка перед ним, сундук и пол комнаты.
      */
     fun plans(map: ExpeditionMap, reachable: Set<Cell>, size: Int, random: Random): Sequence<Plan> {

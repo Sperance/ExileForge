@@ -44,8 +44,6 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-// ==================== The Abyss ====================
-
 /** A descent under way: its crack, how many depths it leads down, how many are cleared, and the fights of the wave left. */
 internal class Descent(val spot: AbyssSpot, val depth: Int) {
     var cleared = 0
@@ -89,9 +87,12 @@ internal fun ExpeditionRun.nextFight(current: Descent) {
     engage(MonsterAgent(ExpeditionRun.ABYSS_AGENT - current.spot.id, group, current.spot.cell.x + 0.5, current.spot.cell.y + 0.5, joinsBrawl = false), current.level, abyssal = true)
 }
 
-/** The descent is over: the hoard of the depths cleared — whole, or what a fall leaves of it. */
+/**
+ * The descent is over: the hoard of the depths cleared — whole, or what a fall leaves of it.
+ *
+ * Гибель в Бездне сжигает всю копилку; копилка всё равно считается, как её считает сервер.
+ */
 internal fun ExpeditionRun.take(current: Descent, fallen: Boolean) {
     current.fallen = fallen
-    // A fall in the Abyss burns the whole hoard (server 1.2.0); the hoard is still counted, as the server counts it
     current.claim = rewarding(record { RunEvent.AbyssClaim(it, current.cleared, fallen) })?.n
 }

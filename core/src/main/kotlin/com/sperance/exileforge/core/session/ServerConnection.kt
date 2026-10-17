@@ -4,7 +4,7 @@ import com.sperance.exileforge.core.network.GameApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/** Текущий [GameApi] (3.80.9): один на сервер, подменяется при смене сервера; модели экранов берут его отсюда. */
+/** Текущий [GameApi]: один на сервер, подменяется при смене сервера; модели экранов берут его отсюда. */
 class ServerConnection {
     private val mutable = MutableStateFlow<GameApi?>(null)
     val current: StateFlow<GameApi?> = mutable
@@ -23,7 +23,7 @@ class ServerConnection {
 object Reads {
     const val FEEDBACK = "feedback"
 
-    /** Отчёты у модерации (0.14.4, #33): своё чтение - не гасит и не теряет чтение листа отчётов игрока. */
+    /** Отчёты у модерации: своё чтение - не гасит и не теряет чтение листа отчётов игрока. */
     const val FEEDBACK_ADMIN = "feedback_admin"
     const val MODERATION = "moderation"
     const val DOSSIER = "dossier"
@@ -31,7 +31,7 @@ object Reads {
     const val NOTICE = "notice"
     const val MAIL = "mail"
 
-    /** Квота окна письма и список игнора (4.6.3): читаются рядом с ящиком, но не вместо него. */
+    /** Квота окна письма и список игнора: читаются рядом с ящиком, но не вместо него. */
     const val MAIL_QUOTA = "mail_quota"
     const val MAIL_IGNORES = "mail_ignores"
     const val HERO = "hero"
@@ -49,19 +49,19 @@ object Reads {
     const val GUILD_QUESTS = "guild_quests"
     const val HALL = "hall"
 
-    /** Карточка игрока (4.5.1). */
+    /** Карточка игрока. */
     const val PLAYER_CARD = "player_card"
 
-    /** Последствия самоудаления героя (4.5.1). */
+    /** Последствия самоудаления героя. */
     const val DELETION = "deletion"
 }
 
-/** Что сообщить сразу: вид выбирает цвет, [at] отличает два одинаковых текста; [FAILED] (4.9.0) - не вышло то, что шло само, без команды. */
+/** Что сообщить сразу: вид выбирает цвет, [at] отличает два одинаковых текста; [FAILED] - не вышло то, что шло само, без команды. */
 enum class NoticeKind { DONE, LOOT, CRAFT, ATLAS, FAILED }
 
 data class Notice(val text: String, val kind: NoticeKind = NoticeKind.DONE, val at: Long = System.nanoTime())
 
-/** Тосты (3.80.9): успех, достойный строки; новая заменяет показанную и уходит сама. */
+/** Тосты: успех, достойный строки; новая заменяет показанную и уходит сама. */
 class Notices {
     private val mutable = MutableStateFlow<Notice?>(null)
     val state: StateFlow<Notice?> = mutable
@@ -76,7 +76,7 @@ class Notices {
 }
 
 /**
- * События игры между моделями (3.80.9): герой изменился на сервере - кто его держит, перечитывает. Снаряжение в
+ * События игры между моделями: герой изменился на сервере - кто его держит, перечитывает. Снаряжение в
  * заходе не меняется, поэтому поход свой лист не перечитывает.
  */
 class GameEvents {

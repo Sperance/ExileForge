@@ -13,7 +13,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-/** Что курьер отчётов говорит игроку (0.14.5, #43): владелец решает, каким тостом. */
+/** Что курьер отчётов говорит игроку: владелец решает, каким тостом. */
 sealed interface BugNews {
     /** За проход ушло [count] отчётов - один тост на проход, а не на отчёт. */
     data class Sent(val count: Int) : BugNews
@@ -26,7 +26,7 @@ sealed interface BugNews {
 }
 
 /**
- * Курьер очереди отчётов (0.14.5, #43): один долгоживущий работник над [outbox] - запрос в полёте никогда не отменяется. Проход
+ * Курьер очереди отчётов: один долгоживущий работник над [outbox] - запрос в полёте никогда не отменяется. Проход
  * шлёт очередь от старых к новым, пока она не опустеет или сервер не ответит «не сейчас» ([CommandQueue.transient], сеть): тогда
  * курьер ждёт отступа, удваивая его до [RETRY_FIRST] × 2^[RETRY_DOUBLINGS]. Новый отчёт и возврат связи ([wake]) будят его раньше
  * и сбрасывают отступ - но только между запросами. Принятый или отклонённый отчёт сперва уходит из очереди, затем о нём говорится
@@ -72,7 +72,11 @@ class BugCourier(
         }
     }
 
-    /** Один проход по очереди: сколько ушло и встал ли он на ответе «не сейчас». */
+    /**
+     * Один проход по очереди: сколько ушло и встал ли он на ответе «не сейчас».
+     *
+     * Сеть - тот же ключ позже; ответ сервера получен - отчёт уходит из очереди прежде любой вести, и отмена этого не прервёт.
+     */
     private suspend fun pass(): Pass {
         var sent = 0
         while (true) {
@@ -86,10 +90,8 @@ class BugCourier(
                 if (CommandQueue.transient(e.status)) return Pass(sent, stuck = true)
                 e.message.orEmpty()
             } catch (_: Exception) {
-                // Сеть: тот же ключ позже
                 return Pass(sent, stuck = true)
             }
-            // Ответ сервера получен - отчёт уходит из очереди прежде любой вести, и отмена этого не прервёт
             withContext(NonCancellable) { onDisk { outbox.remove(next.key) } }
             if (refused == null) sent++ else news(BugNews.Refused(refused))
         }

@@ -11,30 +11,30 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Голоса игроков и почта аккаунта (3.73.0): предложения, свои отчёты, чтение администратора, ящик. [unread] (3.94.1) -
+ * Голоса игроков и почта аккаунта: предложения, свои отчёты, чтение администратора, ящик. [unread] -
  * непрочитанные письма: приходит со снимком героя, а прочитанный ящик пересчитывает его сам ([withMail]).
  */
 data class Feedback(
-    /** Известные проблемы (0.14.1, GH-ISSUES): ошибки с открытым Issue (0.14.2 - без предложений). */
+    /** Известные проблемы: ошибки с открытым Issue (без предложений). */
     val known: List<KnownReport> = emptyList(),
     val mine: List<OwnReport> = emptyList(),
     val reports: List<AdminReport> = emptyList(),
     val mail: List<Mail> = emptyList(),
     val unread: Int = 0,
-    /** Кому администратор пишет письмо (4.5.1): логин из карточки игрока, его берёт форма письма; пусто - не задан. */
+    /** Кому администратор пишет письмо: логин из карточки игрока, его берёт форма письма; пусто - не задан. */
     val mailTo: String = "",
-    /** Письмо, что пишет герой (4.6.3): открыто окно письма; null - закрыто. */
+    /** Письмо, что пишет герой: открыто окно письма; null - закрыто. */
     val letter: LetterDraft? = null,
-    /** Почта героя сейчас (4.6.3): квота окна письма; null - ещё не прочитана. */
+    /** Почта героя сейчас: квота окна письма; null - ещё не прочитана. */
     val quota: MailQuota? = null,
-    /** Список игнора героя в игре (4.6.3). */
+    /** Список игнора героя в игре. */
     val ignored: List<IgnoredHero> = emptyList(),
 ) {
     /** Ящик, каким его теперь знает клиент, и счёт непрочитанного по нему. */
     fun withMail(mail: List<Mail>): Feedback = copy(mail = mail, unread = mail.count { !it.read })
 }
 
-/** Единственный источник правды об отзывах и почте (3.80.9). */
+/** Единственный источник правды об отзывах и почте. */
 class FeedbackRepository {
     private val mutable = MutableStateFlow(Feedback())
     val state: StateFlow<Feedback> = mutable

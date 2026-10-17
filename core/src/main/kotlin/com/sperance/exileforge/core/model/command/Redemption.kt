@@ -6,8 +6,8 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 /**
- * A promo code as the server stores it; the reward is one list of lines of any kind (server 1.75.0: each kind with its own fields).
- * [limit] (сервер 4.9.0) - общий лимит активаций кода, больше нуля; код гасится раз на аккаунт и раз на устройство.
+ * A promo code as the server stores it; the reward is one list of lines of any kind (each kind with its own fields).
+ * [limit] - общий лимит активаций кода, больше нуля; код гасится раз на аккаунт и раз на устройство.
  */
 @Serializable data class RedemptionCode(
     @SerialName("_id") val id: String = "",

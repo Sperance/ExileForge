@@ -13,12 +13,12 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * A cell on the grid: rock, ground a hero can stand on, or a chasm (3.91.0) - a pit, a crack or a sinkhole the hero sees across
- * but never steps into; с 3.95.0 и вода (реки и озёра, у иных биомов - лава, лёд, смола, тьма): через неё видно, пройти нельзя.
+ * A cell on the grid: rock, ground a hero can stand on, or a chasm - a pit, a crack or a sinkhole the hero sees across
+ * but never steps into; и вода (реки и озёра, у иных биомов - лава, лёд, смола, тьма): через неё видно, пройти нельзя.
  */
 enum class Tile { WALL, FLOOR, CHASM, WATER }
 
-/** Чем полны низины биома (3.95.0): от этого - только вид воды на карте. */
+/** Чем полны низины биома: от этого - только вид воды на карте. */
 enum class Liquid { WATER, SWAMP, LAVA, ICE, TAR, VOID }
 
 data class Cell(val x: Int, val y: Int)
@@ -26,7 +26,7 @@ data class Cell(val x: Int, val y: Int)
 /** Узор стен (облик скалы): живая скала пещер или обточенный камень залов - формы комнат ([MapShape.ROOMS]). */
 enum class MapStyle { CAVERN, HALLS }
 
-/** How a biome's chasms look (3.91.0): round pits and sinkholes, or long narrow cracks. */
+/** How a biome's chasms look: round pits and sinkholes, or long narrow cracks. */
 enum class ChasmShape { PIT, CRACK }
 
 /**
@@ -43,10 +43,10 @@ class ExpeditionMap(
     val start: Cell,
     val exit: Cell,
     val spawns: List<Cell>,
-    /** Чем полна вода карты (3.95.0); null - воды нет. */
+    /** Чем полна вода карты; null - воды нет. */
     val liquid: Liquid? = null,
     /**
-     * Ворота арены кольца (4.12.8, ASANA-10): клетки скалы между кольцом и ареной босса; пока доля стай не зачищена, они стоят
+     * Ворота арены кольца: клетки скалы между кольцом и ареной босса; пока доля стай не зачищена, они стоят
      * скалой, затем [openGate] делает их полом. Пусто - ворот нет.
      */
     gate: List<Cell> = emptyList(),
@@ -64,16 +64,16 @@ class ExpeditionMap(
     fun tile(x: Int, y: Int): Tile = if (x in 0 until width && y in 0 until height) tiles[y * width + x] else Tile.WALL
     fun walkable(x: Int, y: Int) = tile(x, y) == Tile.FLOOR
 
-    /** Whether sight passes over the cell (3.91.0): ground, chasms and water do, rock does not. */
+    /** Whether sight passes over the cell: ground, chasms and water do, rock does not. */
     fun clear(x: Int, y: Int) = tile(x, y) != Tile.WALL
     fun decorAt(x: Int, y: Int): Int = if (x in 0 until width && y in 0 until height) decor[y * width + x] else 0
     val floor: Int get() = tiles.count { it == Tile.FLOOR }
 
-    /** Правка карты (4.2.0): растёт с каждой вырезанной клеткой - по ней сцена пересчитывает то, что держит на карту. */
+    /** Правка карты: растёт с каждой вырезанной клеткой - по ней сцена пересчитывает то, что держит на карту. */
     var revision: Int = 0
         private set
 
-    /** Клетка становится [tile] (3.90.0): объекты карты вырезают комнату за стеной, а открытая стена или дверь - пол. */
+    /** Клетка становится [tile]: объекты карты вырезают комнату за стеной, а открытая стена или дверь - пол. */
     internal fun carve(cell: Cell, tile: Tile) {
         if (cell.x in 0 until width && cell.y in 0 until height && tiles[cell.y * width + cell.x] != tile) {
             tiles[cell.y * width + cell.x] = tile
@@ -88,7 +88,7 @@ class ExpeditionMap(
  * The biome decides the carving — a crypt, a temple, ruins, mines and a citadel are halls joined by
  * corridors, everything else a cavern dug by wandering walkers — and the map is then trimmed to
  * the one region the start can reach, so an exit or a monster is never sealed in rock. The exit is
- * the farthest reachable cell from the start; monsters stand away from both. Chasms (3.91.0) are cut last, away from the start,
+ * the farthest reachable cell from the start; monsters stand away from both. Chasms are cut last, away from the start,
  * the exit and the monsters, and only where every piece of ground stays reachable.
  */
 object MapGenerator {
@@ -101,7 +101,7 @@ object MapGenerator {
 
     fun chasmOf(biome: String): ChasmShape = if (biome in cracked) ChasmShape.CRACK else ChasmShape.PIT
 
-    /** Вода биома (3.95.0): водные и болотные - чаще ям, у огня - лава, у холода - лёд, у бездны - тьма; прочие сухи. */
+    /** Вода биома: водные и болотные - чаще ям, у огня - лава, у холода - лёд, у бездны - тьма; прочие сухи. */
     private val liquids = mapOf(
         "SHORE" to Liquid.WATER, "FOREST" to Liquid.WATER, "CAVE" to Liquid.WATER, "CORAL" to Liquid.WATER, "SUNKEN" to Liquid.WATER,
         "TIDEVAULT" to Liquid.WATER, "DESERT" to Liquid.WATER, "CANYON" to Liquid.WATER,
@@ -118,9 +118,13 @@ object MapGenerator {
     fun liquidOf(biome: String): Liquid? = liquids[biome]
 
     /**
-     * Карта зоны; [terrain] (4.12.x, ARCH-02) - доли пропастей и воды из контента (`expedition.terrain`); [shape] (4.12.8, ASANA-10) -
+     * Карта зоны; [terrain] - доли пропастей и воды из контента (`expedition.terrain`); [shape] -
      * форма по биому (`expedition.shapes`): пещера, комнаты и коридоры, кольцо вокруг арены, острова с мостами. Форма сама ставит вход
      * и место босса; каждая из [monsters] стай встаёт на карту - шаг между стаями сужается, пока не встанут все.
+     *
+     * Старт - у дальнего от середины края, путь ведёт через карту; что от старта недостижимо, засыпается. Выход - на открытом месте, где
+     * его не закрывает скала перед ним по ходу камеры; у формы - её место босса. Вода - после ям и стай, их места она не сдвигает; ворота
+     * арены встают скалой последними.
      */
     fun generate(
         seed: Long,
@@ -141,18 +145,14 @@ object MapGenerator {
             MapShape.ISLANDS -> islands(grid, size, random)
         }
         val start = plan.start?.takeIf { grid[it.y * size + it.x] == Tile.FLOOR } ?: (0 until size * size).filter { grid[it] == Tile.FLOOR }.let { floor ->
-            // The start is the far end of the map from its middle: the walk leads across it.
             val middle = distances(grid, size, Cell(size / 2, size / 2).let { nearest(grid, size, it) })
             floor.maxBy { middle[it] }.let { Cell(it % size, it / size) }
         }
         val fromStart = distances(grid, size, start)
-        // Whatever the start cannot reach is filled back in: nothing may stand where no one can walk.
         for (i in grid.indices) if (fromStart[i] < 0 && grid[i] == Tile.FLOOR) grid[i] = Tile.WALL
-        // The exit stands in the open (3.79.0): off the walls, where the perspective of the scene does not hide it.
         fun roomy(i: Int) = grid[i] == Tile.FLOOR && i % size in 1 until size - 1 && i / size in 1 until size - 1 &&
             grid[i - 1] == Tile.FLOOR && grid[i + 1] == Tile.FLOOR && grid[i - size] == Tile.FLOOR && grid[i + size] == Tile.FLOOR
         fun rock(x: Int, y: Int) = x !in 0 until size || y !in 0 until size || grid[y * size + x] == Tile.WALL
-        // ...и так, чтобы скала перед ним по ходу камеры не закрыла его овал (3.95.3); у формы - её место босса (ASANA-10)
         val roomyCells = grid.indices.filter(::roomy)
         val exitIndex = plan.exit?.let { it.y * size + it.x }?.takeIf(::roomy)
             ?: roomyCells.filter { SceneSight.inView(it % size, it / size, ::rock) }.ifEmpty { roomyCells }.ifEmpty { grid.indices.filter { grid[it] == Tile.FLOOR } }
@@ -172,16 +172,14 @@ object MapGenerator {
         val keep = setOf(start, exit) + spawns + plan.gate
         val liquid = liquidOf(biome)
         chasms(grid, size, random, chasmOf(biome), keep, share = if (biome in wet) terrain.wetChasmShare else terrain.chasmShare, minimum = minChasm, swerve = terrain.crackSwerve)
-        // Вода (3.95.0) - после ям и стай: их места она не сдвигает
         liquid?.let { waters(grid, size, random, keep, share = if (biome in wet) terrain.wetWaterShare else terrain.waterShare, terrain = terrain) }
         fillPuddles(grid, size, start, minPool)
-        // Ворота арены (ASANA-10) встают скалой последними: до них арена считалась частью карты
         val gate = plan.gate.filter { grid[it.y * size + it.x] == Tile.FLOOR }.onEach { grid[it.y * size + it.x] = Tile.WALL }
         return ExpeditionMap(size, size, grid, decor, start, exit, spawns, liquid ?: Liquid.WATER.takeIf { Tile.WATER in grid }, gate)
     }
 
     /**
-     * Что форма карты решила сама (ASANA-10): вход [start], место босса [exit], ворота арены [gate] и клетки, где стаи не встают
+     * Что форма карты решила сама: вход [start], место босса [exit], ворота арены [gate] и клетки, где стаи не встают
      * ([reserved]: арена и проход к ней). null - как у пещеры: вход - дальний край от середины, босс - дальше всего от входа.
      */
     private class Plan(val start: Cell? = null, val exit: Cell? = null, val gate: List<Cell> = emptyList(), val reserved: Set<Int> = emptySet())
@@ -205,9 +203,11 @@ object MapGenerator {
     }
 
     /**
-     * A - комнаты и коридоры (ASANA-10, макет «Формы карт»): комнаты по площади карты, коридоры шириной 2 - остов-дерево по ближним
+     * A - комнаты и коридоры: комнаты по площади карты, коридоры шириной 2 - остов-дерево по ближним
      * комнатам и пара петель, чтобы не ходить назад; в больших залах - колонны. Вход - комната у нижнего края, босс - в самой дальней
      * по пути комнате.
+     *
+     * Остов-дерево: каждая новая комната - к ближайшей из связанных; тупик ведёт ещё и ко второй ближней комнате.
      */
     private fun rooms(grid: Array<Tile>, size: Int, random: Random): Plan {
         val target = (size * size / ROOM_AREA).coerceIn(ROOMS_MIN, ROOMS_MAX)
@@ -229,7 +229,6 @@ object MapGenerator {
             degree[a]++
             degree[b]++
         }
-        // Остов-дерево: каждая новая комната - к ближайшей из уже связанных
         val joined = mutableListOf(0)
         val waiting = (1 until rooms.size).toMutableList()
         while (waiting.isNotEmpty()) {
@@ -238,7 +237,6 @@ object MapGenerator {
             joined += b
             waiting.remove(b)
         }
-        // Петли: тупик - ещё и ко второй ближней комнате
         rooms.indices.filter { degree[it] == 1 }.shuffled(random).take(LOOPS).forEach { a ->
             rooms.indices.filter { it != a }.sortedBy { rooms[a].distance(rooms[it]) }.getOrNull(1)?.let { join(a, it) }
         }
@@ -278,8 +276,10 @@ object MapGenerator {
     }
 
     /**
-     * B - кольцо вокруг арены босса (ASANA-10): неровное кольцо, круглая арена в скальном поясе, проход к ней сверху - за воротами;
+     * B - кольцо вокруг арены босса: неровное кольцо, круглая арена в скальном поясе, проход к ней сверху - за воротами;
      * снаружи кольца - ниши-тупики для сундуков. Вход - снизу на кольце, до ворот - пол-кольца в любую сторону.
+     *
+     * Проход к арене - сверху, ворота - его средний ряд.
      */
     private fun ring(grid: Array<Tile>, size: Int, random: Random): Plan {
         val scale = size / RING_BASE
@@ -297,7 +297,6 @@ object MapGenerator {
                 if (r <= inner(a)) reserved += y * size + x
             }
         }
-        // Проход к арене сверху; ворота - его средний ряд
         val cx = c.roundToInt()
         val top = (c - inner(-PI / 2)).roundToInt() - 1
         val bottom = (c - arena).roundToInt() + 1
@@ -329,7 +328,7 @@ object MapGenerator {
     }
 
     /**
-     * C - острова через воду (ASANA-10): цепь островов от угла к углу и два боковых, мосты шириной 2 - пол поверх воды. Вход - на
+     * C - острова через воду: цепь островов от угла к углу и два боковых, мосты шириной 2 - пол поверх воды. Вход - на
      * первом острове, босс - на последнем, самом большом; цепь наугад отражена, чтобы карты не повторялись.
      */
     private fun islands(grid: Array<Tile>, size: Int, random: Random): Plan {
@@ -410,10 +409,12 @@ object MapGenerator {
     private const val SIDE_ISLE = 4.6
 
     /**
-     * Chasms (3.91.0): shapes of the biome are tried until about [share] of the ground is gone (трещина виляет с шансом [swerve]); a lone shape smaller than
-     * [minimum] cells is not cut (4.7.0). A shape is cut only on
+     * Chasms: shapes of the biome are tried until about [share] of the ground is gone (трещина виляет с шансом [swerve]); a lone shape smaller than
+     * [minimum] cells is not cut. A shape is cut only on
      * open ground two steps or more from [keep] and only if every remaining piece of ground is still reachable from the
      * first kept cell, so a map never splits; a shape that would split it is put back.
+     *
+     * Меньше [minimum] клеток - не пропасть, а пятно: режется, только если прирастает к уже вырезанной.
      */
     private fun chasms(grid: Array<Tile>, size: Int, random: Random, shape: ChasmShape, keep: Set<Cell>, share: Double, minimum: Int, swerve: Double) {
         val target = (grid.count { it == Tile.FLOOR } * share).toInt()
@@ -427,7 +428,6 @@ object MapGenerator {
                 ChasmShape.CRACK -> crack(seed, random.nextInt(4, 10), random, swerve)
             }.filter { it.x in 1 until size - 1 && it.y in 1 until size - 1 && grid[it.y * size + it.x] == Tile.FLOOR }
             if (cells.isEmpty() || cells.any { cell -> keep.any { abs(it.x - cell.x) + abs(it.y - cell.y) < 2 } }) return@repeat
-            // Меньше [minimum] клеток - не пропасть, а пятно (4.7.0): режется, только если прирастает к уже вырезанной
             if (cells.size < minimum && cells.none { cell -> STEPS.any { (dx, dy) -> grid.getOrNull((cell.y + dy) * size + cell.x + dx) == Tile.CHASM } }) return@repeat
             cells.forEach { grid[it.y * size + it.x] = Tile.CHASM }
             val reach = distances(grid, size, from)
@@ -440,7 +440,7 @@ object MapGenerator {
     }
 
     /**
-     * Вода (3.95.0): реки и озёра, пока не займут около [share] пола. Озеро - пятно, вырезается целиком или никак, как яма; река -
+     * Вода: реки и озёра, пока не займут около [share] пола. Озеро - пятно, вырезается целиком или никак, как яма; река -
      * извилистая полоса через полкарты, и каждая её клетка, что разорвала бы карту, остаётся сушей: так у реки появляются броды.
      * Ни вода, ни брод не встают ближе двух шагов к старту, выходу и стаям.
      */
@@ -469,7 +469,7 @@ object MapGenerator {
     }
 
     /**
-     * Последний проход (4.9.0): пятно пропасти или воды (связное по сторонам и диагоналям) меньше [minimum] клеток засыпается -
+     * Последний проход: пятно пропасти или воды (связное по сторонам и диагоналям) меньше [minimum] клеток засыпается -
      * одиночных луж и дыр нет. Засыпанное становится полом там, куда дойдёт герой от [start], иначе скалой: ничто не стоит там,
      * куда не дойти.
      */
@@ -503,7 +503,11 @@ object MapGenerator {
         filled.forEach { if (reach[it] < 0) grid[it] = Tile.WALL }
     }
 
-    /** Река: полоса шириной в клетку-две, что держит курс и петляет; [length] - шагов. */
+    /**
+     * Река: полоса шириной в клетку-две, что держит курс и петляет; [length] - шагов.
+     *
+     * В половине мест полоса шире: читается рекой, а не трещиной.
+     */
     private fun river(seed: Cell, length: Int, random: Random, bend: Double): List<Cell> {
         val horizontal = random.nextBoolean()
         var x = seed.x
@@ -511,7 +515,6 @@ object MapGenerator {
         val cells = LinkedHashSet<Cell>()
         repeat(length) {
             cells += Cell(x, y)
-            // Шире в половине мест: полоса читается рекой, а не трещиной
             if (random.nextBoolean()) cells += if (horizontal) Cell(x, y + 1) else Cell(x + 1, y)
             if (horizontal) x++ else y++
             if (random.nextDouble() < bend) if (horizontal) y += if (random.nextBoolean()) 1 else -1 else x += if (random.nextBoolean()) 1 else -1
@@ -552,7 +555,11 @@ object MapGenerator {
     /** Четыре соседа клетки: пропасть прирастает к пропасти по стороне. */
     private val STEPS = listOf(1 to 0, -1 to 0, 0 to 1, 0 to -1)
 
-    /** Walkers dig from the middle until about two fifths of the map is open, then the edges are smoothed. */
+    /**
+     * Walkers dig from the middle until about two fifths of the map is open, then the edges are smoothed.
+     *
+     * Проход клеточного правила: стена, почти окружённая землёй, осыпается, и одиночные выступы не читаются шумом.
+     */
     private fun cavern(grid: Array<Tile>, size: Int, random: Random) {
         val target = size * size * 2 / 5
         var open = 0
@@ -574,8 +581,6 @@ object MapGenerator {
                 }
             }
         }
-        // One pass of the cellular rule: a wall mostly surrounded by ground crumbles, and the
-        // single-cell stubs a walker leaves behind stop reading as noise.
         val copy = grid.copyOf()
         for (y in 1 until size - 1) {
             for (x in 1 until size - 1) {

@@ -8,8 +8,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /**
- * [replayed]: the server answered a repeated `Idempotency-Key` with its stored answer (server 1.28.0); [etag] - отпечаток
- * ответа для `If-None-Match` (3.94.1).
+ * [replayed]: the server answered a repeated `Idempotency-Key` with its stored answer; [etag] - отпечаток
+ * ответа для `If-None-Match`.
  */
 internal data class HttpPayload(val status: Int, val body: String, val replayed: Boolean = false, val etag: String? = null)
 

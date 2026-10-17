@@ -49,16 +49,17 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 
 // ==================== The map between fights ====================
+/**
+ * Недуги из боя и ловушек тикают на дороге и убивают. Страж вручную - сперва экран-вызов; запечатанный босс не встаёт. Крышка сундука
+ * открывается сразу, герой идёт дальше: добыча вылетит с ответом сервера.
+ */
 internal fun ExpeditionRun.walk(dt: Double) {
     recover(dt)
-    // Недуги - из боя и ловушек (3.90.0) - тикают на дороге, и они убивают
     ailing(dt)
     if (phase != RunPhase.MAP) return
     openArena()
     val (x, y) = IsoGrid.pace(stickX, stickY)
     when (val event = world.step(dt, x, y)) {
-        // Страж вручную (3.92.0) - сперва экран-вызов
-        // Печать стража (3.93.0) и ворота арены (4.12.8): запечатанный босс не встаёт
         is WorldEvent.Encounter -> if (event.agent !== world.boss) {
             engage(event.agent)
         } else if (!sealed) {
@@ -67,7 +68,6 @@ internal fun ExpeditionRun.walk(dt: Double) {
 
         WorldEvent.Exit -> exit()
 
-        // Крышка открыта сразу (4.10.0), герой идёт дальше: добыча вылетит, когда придёт ответ сервера
         is WorldEvent.Opened -> rewarding(record { RunEvent.Chest(it, event.chest.id) })?.let { opened ->
             event.chest.event = opened.n
             dropped(opened.n)
@@ -113,16 +113,16 @@ internal fun ExpeditionRun.exit() {
 }
 
 /**
- * Шаг автопрохода (3.2.0): мана и флаконы идут как в пути, и после короткой паузы берётся следующий шаг - бой начинается сразу,
- * сундук открывается, выход заканчивает заход. Перед волной и стражем - отдых (MOB-BAL, В-15): на скорости автопрохода, пока
+ * Шаг автопрохода: мана и флаконы идут как в пути, и после короткой паузы берётся следующий шаг - бой начинается сразу,
+ * сундук открывается, выход заканчивает заход. Перед волной и стражем - отдых (В-15): на скорости автопрохода, пока
  * здоровья меньше `autoRest.life`% и не дольше `autoRest.seconds`.
+ *
+ * Нет связи - шаг не берётся, пока сервер не ответит; недуги тикают и в автопробеге.
  */
 internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
-    // Нет связи (4.0.0): шаг не берётся, пока сервер не ответит - события не копятся без подтверждения
     if (waitingLink) return
     val clock = if (pilot.resting != null) dt * speed else dt
     recover(clock)
-    // Недуги тикают и в автопробеге: тот же путь, что вручную
     ailing(clock)
     if (phase != RunPhase.MAP) return
     pilot.resting?.let { rested ->
@@ -180,7 +180,7 @@ internal fun ExpeditionRun.drive(pilot: AutoPilot, dt: Double) {
 }
 
 /**
- * Отдых автопрохода (MOB-BAL, В-15): фляги здоровья, чьё лечение целиком ляжет в недостающее здоровье, - сразу, как выпил бы
+ * Отдых автопрохода (В-15): фляги здоровья, чьё лечение целиком ляжет в недостающее здоровье, - сразу, как выпил бы
  * игрок; затем герой стоит, пока [drive] не решит, что хватит.
  */
 private fun ExpeditionRun.rest(pilot: AutoPilot) {
@@ -193,8 +193,8 @@ private fun ExpeditionRun.rest(pilot: AutoPilot) {
 }
 
 /**
- * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], 4.10.0: регенерация и основа против дегена; под ранящим
- * недугом - ни того, ни другого, 0.14.5, #52), мана (поток маны [Recovery.manaFlow], #50 - под долей восстановления листа; недуги на
+ * Вне боя за [dt] секунд: здоровье по чистой скорости карты ([RoadLife], регенерация и основа против дегена; под ранящим
+ * недугом - ни того, ни другого), мана (поток маны [Recovery.manaFlow] - под долей восстановления листа; недуги на
  * герое режут и её), энергощит
  * и идущие флаконы.
  */
@@ -220,7 +220,7 @@ internal fun ExpeditionRun.recover(dt: Double) {
 
 /**
  * The portal opens its gate: the first time, the opening is recorded and the server rolls the Vaal zone behind
- * it (1.30.0) — the gate waits for it, and the run takes its context when the answer brings it.
+ * it — the gate waits for it, and the run takes its context when the answer brings it.
  */
 internal fun ExpeditionRun.openGate() {
     if (vaalZone == null) {
@@ -238,7 +238,7 @@ internal fun ExpeditionRun.openGate() {
     phase = RunPhase.GATE
 }
 
-/** Доли вылеченного глотком здоровья [healed] в ману и энергощит вне боя (4.12.x, STAT-MISC-09) - как в бою, от вылеченного. */
+/** Доли вылеченного глотком здоровья [healed] в ману и энергощит вне боя - как в бою, от вылеченного. */
 internal fun ExpeditionRun.healedInto(healed: Double, toMana: Double, toShield: Double) {
     if (healed <= 0) return
     mana = (mana + healed * toMana).coerceAtMost(manaCap())

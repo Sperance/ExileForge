@@ -53,30 +53,30 @@ sealed interface RunCommand {
     /** The fight begins: until then the pack is laid open to be studied. Mid-fight it ends a [Pause]. */
     data object Begin : RunCommand
 
-    /** «В бой» с экрана-вызова стража (3.92.0). */
+    /** «В бой» с экрана-вызова стража. */
     data object Accept : RunCommand
 
-    /** Призыв поверженного стража за золото (0.15.0, реш. 22): `ExpeditionRun.summon`. */
+    /** Призыв поверженного стража за золото: `ExpeditionRun.summon`. */
     data object Summon : RunCommand
 
-    /** Тестировщик (3.92.0): заход начинается сразу боем со стражем, без пути к нему. */
+    /** Тестировщик: заход начинается сразу боем со стражем, без пути к нему. */
     data object ToBoss : RunCommand
     data object Pause : RunCommand
 
     /**
-     * Связь с сервером (4.0.0): `false` - журнал не уходит, автопробег встаёт на месте и ждёт, бой его тоже; `true` - идёт дальше.
+     * Связь с сервером: `false` - журнал не уходит, автопробег встаёт на месте и ждёт, бой его тоже; `true` - идёт дальше.
      * Ручной заход не стоит: его события копятся и уходят, когда связь вернётся.
      */
     data class Link(val up: Boolean) : RunCommand
 
-    /** «Сдаться» с паузы боя (3.95.0): поражение, как гибель. */
+    /** «Сдаться» с паузы боя: поражение, как гибель. */
     data object Surrender : RunCommand
 
     /** A window over the map stops the world while it is open: `true` takes a hold, `false` gives one back. */
     data class Hold(val on: Boolean) : RunCommand
     data class Focus(val index: Int) : RunCommand
 
-    /** The level-up screen read (3.81.0): the levels it told of are not told again. */
+    /** The level-up screen read: the levels it told of are not told again. */
     data object LevelSeen : RunCommand
 
     /** Stepping back from the gate undecided: the portal stays, and opens again when walked onto. */
@@ -88,7 +88,7 @@ sealed interface RunCommand {
     /** Back from the Vaal zone with [life] left, and the mana and flasks it left. */
     data class Returned(val life: Double, val pools: HeroPools? = null, val zone: ZoneShare? = null) : RunCommand
 
-    /** Строка угрозы десятка башни выбрана (3.96.0): вариант [option]. */
+    /** Строка угрозы десятка башни выбрана: вариант [option]. */
     data class PickLine(val option: Int) : RunCommand
 
     data class Cast(val slot: Int) : RunCommand
@@ -103,16 +103,16 @@ sealed interface RunCommand {
     /** Steps away from a crystal or a crack undecided. */
     data object StepOff : RunCommand
 
-    /** A fountain tapped on the map (3.70.0): offered as if the hero stood at it. */
+    /** A fountain tapped on the map: offered as if the hero stood at it. */
     data class OfferFountain(val id: Int) : RunCommand
 
     /** The fountain offered is drunk: life and mana back by its share, the flasks full. */
     data object TakeFountain : RunCommand
 
-    /** Выбор на листе объекта карты (3.90.0): пара алтаря или вещь торговца по номеру. */
+    /** Выбор на листе объекта карты: пара алтаря или вещь торговца по номеру. */
     data class Choose(val choice: Int) : RunCommand
 
-    /** «Собрать» у узла ремесла (3.90.0): сбор идёт его секунды, забег стоит. */
+    /** «Собрать» у узла ремесла: сбор идёт его секунды, забег стоит. */
     data object Gather : RunCommand
 
     /** At a crack of the Abyss: opens it, or goes a depth deeper from the sheet between depths. */
@@ -122,15 +122,15 @@ sealed interface RunCommand {
     data object TakeHoard : RunCommand
 
     /**
-     * «Завершить» автопроход (3.95.2): идущий бой доигрывается, затем заход кончается, как уходом порталом, - с тем, что уже
+     * «Завершить» автопроход: идущий бой доигрывается, затем заход кончается, как уходом порталом, - с тем, что уже
      * собрано. Ручной зачистки после автопрохода нет.
      */
     data object FinishAuto : RunCommand
 
     /**
-     * The server answered the journal up to [applied] (server 1.30.0): what each accepted event brought, by its
+     * The server answered the journal up to [applied]: what each accepted event brought, by its
      * number, the numbers it [rejected], the experience a fall in the batch [lost], and the crystals Vaal orbs
-     * changed, by event number (server 1.30.2).
+     * changed, by event number.
      */
     data class Settled(
         val applied: Int,
@@ -138,7 +138,7 @@ sealed interface RunCommand {
         val rejected: List<Int> = emptyList(),
         val lost: Double? = null,
         val crystals: Map<Int, Crystal> = emptyMap(),
-        /** First wins over a guardian (server 1.76.0): the event and the hero's place among all who won it. */
+        /** First wins over a guardian: the event and the hero's place among all who won it. */
         val ranks: Map<Int, Long> = emptyMap(),
     ) : RunCommand
 

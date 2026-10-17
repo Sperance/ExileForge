@@ -13,13 +13,14 @@ import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunEvent
 
 // ==================== Commands and the server's answers ====================
+/**
+ * Отклонённый выбор объекта карты возвращает объект как был: золото не списано, сделки нет. Добыча - только из ответа на само убийство:
+ * выданные копии, уникалки уже с номером экземпляра.
+ */
 internal fun ExpeditionRun.settle(answer: RunCommand.Settled) {
     answered = maxOf(answered, answer.applied)
     refused += answer.rejected
-    // Отклонённый выбор объекта карты (3.90.0) - объект снова прежний: золото не списано, сделки нет
     answer.rejected.forEach(::refuseFeature)
-    // Добыча - только из ответа на само убийство (4.9.0, сервер не показывает её по ENGAGE): выданные копии, уникалки уже с номером
-    // экземпляра.
     answer.rewards.forEach { (n, gained) ->
         if (n !in mine || n in earned) return@forEach
         earned[n] = gained
@@ -80,13 +81,19 @@ internal fun ExpeditionRun.vaalOutcome(before: Crystal, after: Crystal): String 
     else -> EssenceBook.VAAL_STRONGER
 }
 
+/**
+ * Строка башни - команда арены испытания, у похода её нет. Тестировщик идёт к стражу тоже через экран-вызов, печать его не держит.
+ * Ваал-зона закрывается со своим стражем (или с гибелью героя): её оставшиеся стаи сервер уже не оплачивает, несомое зоны уходит на
+ * основную карту. Портал, отклонённый, пока зона в пути, всё равно открыт: сервер её бросил. Страж кристалла ждёт исхода сферы и встаёт тем
+ * кристаллом, что держит сервер. Лист объекта закрывается без выбора - мимо алтаря можно пройти. Трещина остаётся неоткрытой или кончается
+ * с копилкой, но не посреди спуска.
+ */
 internal fun ExpeditionRun.handle(command: RunCommand) {
     when (command) {
         RunCommand.Speed -> speed = index.rules.fight.next(speed)
 
         RunCommand.FinishAuto -> autopilot?.finish()
 
-        // Строка башни (3.96.0) - команда арены испытания, у похода её нет
         is RunCommand.PickLine -> Unit
 
         RunCommand.Leave -> leave()
@@ -100,7 +107,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.Summon -> summon()
 
-        // Тестировщик сразу к стражу (3.93.0) - тоже через экран-вызов; печать его не держит, сервер ему доверяет
         RunCommand.ToBoss -> if (phase == RunPhase.MAP && autopilot == null) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { challenge(it) }
 
         RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
@@ -122,7 +128,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
                 clearSpoils()
                 slain = null
                 report = null
-                // The Vaal zone closes with its guardian (server 1.76.0): its packs left standing are no longer the server's to pay.
                 if (vaal && bossDown) exit()
             }
 
@@ -139,7 +144,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         RunCommand.StepBack -> if (phase == RunPhase.GATE) closeGate()
 
         is RunCommand.ShutGate -> {
-            // Refused while its zone is still on the way, the portal is as good as opened: the server rolled the zone, and it is left.
             if (!command.entered && (vaalZone != null || gateEvent != null)) {
                 record(RunEvent::VaalLeave)
                 vaalZone = null
@@ -155,7 +159,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
             life = command.life.coerceIn(0.0, hero.maxLife)
             command.pools?.let {
                 mana = it.mana.coerceIn(0.0, manaCap())
-                // Несомое зоны Ваал - на основную карту
                 shield = it.carry.shield ?: shield
                 carry = it.carry.copy(shield = null)
                 ticks.clear()
@@ -164,7 +167,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
                 rates = it.rates.ifEmpty { rates }
                 rebody()
             }
-            // The zone is closed either way: its guardian fell, or the hero did.
             vaalZone = null
             gateEvent = null
             corruptionOpened = true
@@ -179,7 +181,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
             drinkOnMap(command.slot)
         }
 
-        // The guardian waits for the orb's outcome: it stands up as the crystal the server holds.
         RunCommand.Release -> if (phase == RunPhase.CRYSTAL && crystal?.let(::vaaling) != true) release()
 
         RunCommand.VaalCrystal -> crystal?.takeIf { phase == RunPhase.CRYSTAL && !it.crystal.vaal && !vaaling(it) && vaalOrbs() >= 1 }?.let { spot ->
@@ -196,13 +197,8 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.StepOff -> when {
             fountain != null -> fountain = null
-
-            // Лист объекта карты (3.90.0): закрыт без выбора, мимо алтаря тоже можно пройти (0.14.0, ALTAR-01)
             leaveOffer() -> Unit
-
             phase == RunPhase.CRYSTAL -> closeCrystal()
-
-            // A crack is left unopened, or once its hoard is in — never mid-descent with the hoard at stake.
             phase == RunPhase.ABYSS && (descent == null || descent?.claim != null) -> closeRift()
         }
 
@@ -243,7 +239,11 @@ internal fun ExpeditionRun.closeCrystal() {
     if (phase == RunPhase.CRYSTAL) phase = RunPhase.MAP
 }
 
-/** A draught on the map: what it gives back comes at once, and what it lays on runs as the hero walks. */
+/**
+ * A draught on the map: what it gives back comes at once, and what it lays on runs as the hero walks.
+ *
+ * Глоток щита - и на карте, как в бою; доли лечения в ману и щит - от вылеченного.
+ */
 internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     val flask = kit.flasks.getOrNull(slot)?.sheet ?: return
     if ((flaskLeft.getOrNull(slot) ?: 0.0) > 0 || (charges.getOrNull(slot) ?: 0.0) + 1e-9 < flask.perUse(hero::get)) return
@@ -255,12 +255,11 @@ internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     val before = life
     life = (life + draught.life).coerceAtMost(hero.maxLife)
     mana = (mana + draught.mana).coerceAtMost(manaCap())
-    // Щит глотка (4.9.x): глоток щита - и на карте, как в бою; доли лечения в ману и щит (4.12.x) - от вылеченного
     shield = (shield + draught.shield).coerceAtMost(hero.maxShield)
     healedInto(life - before, draught.toMana, draught.toShield)
 }
 
-/** Уход с карты (3.88.9): вне боя - всегда; бой идёт до конца, а карта - нет. С карты - концом `LEFT`, с итога - просто закрыть его. */
+/** Уход с карты: вне боя - всегда; бой идёт до конца, а карта - нет. С карты - концом `LEFT`, с итога - просто закрыть его. */
 internal fun ExpeditionRun.leave() {
     if (phase != RunPhase.MAP && phase != RunPhase.DEAD && phase != RunPhase.CLEARED) return
     if (phase == RunPhase.MAP) end = MapEnd.LEFT

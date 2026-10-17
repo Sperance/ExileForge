@@ -47,7 +47,7 @@ enum class TrialPhase { FIGHT, DEAD, DONE }
 
 /**
  * The trial as its screen prints it: the fight for the arena's cards, which boss of how many or which floor, the level
- * the foes stand at, the seconds of fighting so far (4.2.0) and the rush's limit for its bonus, the floor's lines, and what the
+ * the foes stand at, the seconds of fighting so far and the rush's limit for its bonus, the floor's lines, and what the
  * server's answers brought — the tower's hoards as they come, the rush's chest at the end.
  */
 data class TrialHud(
@@ -66,17 +66,17 @@ data class TrialHud(
     val awaiting: Int = 0,
     val lastHoard: Reward? = null,
     val summary: RunSummary = RunSummary(),
-    /** Варианты строки десятка башни, пока герой выбирает (3.96.0); null - выбора нет. */
+    /** Варианты строки десятка башни, пока герой выбирает; null - выбора нет. */
     val choice: List<TowerMod>? = null,
-    /** Ступень раша (3.96.0), с 0. */
+    /** Ступень раша, с 0. */
     val tier: Int = 0,
-    /** Журнал последнего боя (4.8.0): босса раша или этажа башни; null - боя ещё не было. */
+    /** Журнал последнего боя: босса раша или этажа башни; null - боя ещё не было. */
     val report: FightReport? = null,
 )
 
 /**
- * One trial (3.49.0, server 1.47.0) — an arena with no map: the boss rush of a cleared region, its bosses one after
- * another at the hero's level, or the endless tower, its floor one fight with reinforcements (4.8.0), a level higher each floor. The screen calls
+ * One trial — an arena with no map: the boss rush of a cleared region, its bosses one after
+ * another at the hero's level, or the endless tower, its floor one fight with reinforcements, a level higher each floor. The screen calls
  * [update] once a frame and sends [RunCommand]s, the arena's own; nothing here talks to the server: a boss down, a floor
  * cleared and the end are events for [onEvent], and the server's answers come back as [settle].
  *
@@ -88,10 +88,10 @@ class TrialArena(
     val trial: TrialRun,
     context: RunContext,
     gear: HeroGear,
-    /** Строки башни, выбранные героем по десяткам (3.96.0). */
+    /** Строки башни, выбранные героем по десяткам. */
     picks: List<Int>,
     private val onEvent: (TrialEvent) -> Unit,
-    /** Часы устройства, мс эпохи (4.9.0): по ним идут часы раша - стена с входа, как её мерит сервер. */
+    /** Часы устройства, мс эпохи: по ним идут часы раша - стена с входа, как её мерит сервер. */
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     val rules = index.campaign.combat
@@ -106,7 +106,7 @@ class TrialArena(
     private val picks = picks.toMutableList()
     private var choice: List<TowerMod>? = null
 
-    /** Счёт Предначертания испытания (4.6.0): перелив маны живёт до конца испытания. */
+    /** Счёт Предначертания испытания: перелив маны живёт до конца испытания. */
     private val fateRun = com.sperance.exileforge.core.campaign.combat.FateRun()
     private val commands = ConcurrentLinkedQueue<RunCommand>()
 
@@ -121,16 +121,16 @@ class TrialArena(
     private var phase = TrialPhase.FIGHT
 
     /**
-     * Время боёв испытания (4.2.0), секунд ([TrialRun.fought]): часы башни; вход в начатое испытание продолжает с его счёта.
-     * Часы раша с 4.9.0 - стена ([elapsed]).
+     * Время боёв испытания, секунд ([TrialRun.fought]): часы башни; вход в начатое испытание продолжает с его счёта.
+     * Часы раша - стена ([elapsed]).
      */
     private var fightSeconds = trial.fought / 1000.0
 
-    /** Когда испытание кончилось (4.9.0), мс эпохи: часы раша стоят на нём; null - ещё идёт. */
+    /** Когда испытание кончилось, мс эпохи: часы раша стоят на нём; null - ещё идёт. */
     private var endedAt: Long? = null
 
     /**
-     * Часы испытания на экране (4.9.0): раш - реальная стена с входа, как его время считает сервер; башня - секунды её боёв.
+     * Часы испытания на экране: раш - реальная стена с входа, как его время считает сервер; башня - секунды её боёв.
      */
     private fun elapsed(fight: Battle?): Double = if (trial.kind == TrialKind.RUSH) {
         (((endedAt ?: clock()) - trial.startedAt) / 1000.0).coerceAtLeast(0.0)
@@ -138,7 +138,7 @@ class TrialArena(
         fightSeconds + (fight?.takeIf { started }?.let { it.outcome?.let { _ -> it.duration } ?: it.time } ?: 0.0)
     }
 
-    /** Прошлый бой испытания выигран (4.2.0): следующий открывается силами `FIGHT_CLEAR`. */
+    /** Прошлый бой испытания выигран: следующий открывается силами `FIGHT_CLEAR`. */
     private var wonLast = false
 
     /** The rush's boss under way (from 0), or the tower's floor. */
@@ -154,14 +154,14 @@ class TrialArena(
     private var started = false
     private var paused = false
 
-    /** Листы поверх боя, что его держат (4.7.0: меню забега, настройки, жук): пока хоть один открыт, время стоит. */
+    /** Листы поверх боя, что его держат (меню забега, настройки, жук): пока хоть один открыт, время стоит. */
     private var holds = 0
     private var speed = 1
     private var reported = 0
     private var fought = 0L
     private var cleared = 0
 
-    /** Журнал последнего боя (4.8.0): босса раша или этажа башни со всеми вступившими врагами; null - боя ещё не было. */
+    /** Журнал последнего боя: босса раша или этажа башни со всеми вступившими врагами; null - боя ещё не было. */
     var report: FightReport? = null
         private set
     private val stats = RunStats()
@@ -219,6 +219,7 @@ class TrialArena(
         return n
     }
 
+    /** Уйти можно только между боями: испытание кончается, принесённое остаётся. */
     private fun apply(command: RunCommand) {
         val fight = battle
         when (command) {
@@ -252,7 +253,6 @@ class TrialArena(
                 stand()
             }
 
-            // Walking away is only between two fights: the trial ends there, what it brought kept.
             RunCommand.Leave -> if (phase == TrialPhase.FIGHT && !started) finish(fallen = false)
 
             else -> Unit
@@ -260,8 +260,10 @@ class TrialArena(
     }
 
     /**
-     * The next fight stands up, laid open: the rush's next boss, or the next floor - one fight (4.8.0), its foes beyond
+     * The next fight stands up, laid open: the rush's next boss, or the next floor - one fight, its foes beyond
      * `fight.maxFoes` stepping in as reinforcements.
+     *
+     * Новый десяток: сначала герой выбирает его строку угрозы.
      */
     private fun stand() {
         monsters = when (trial.kind) {
@@ -274,7 +276,6 @@ class TrialArena(
 
             TrialKind.TOWER -> {
                 val abyss = index.campaign.abyss ?: return finish(fallen = false)
-                // Новый десяток (3.96.0): сначала герой выбирает его строку угрозы
                 if (!trials.tower.ready(step, picks)) {
                     choice = trials.tower.options(picks.size + 1)
                     battle = null
@@ -298,12 +299,12 @@ class TrialArena(
         paused = false
     }
 
+    /** Свита фаз боссов - на своём потоке. */
     private fun battle(foes: List<RolledMonster>): Battle {
         val phases = PhaseFoes(index, rules)
         val stream = fought++
         return Battle(
             hero,
-            // Фазы и свита боссов (3.92.0): свита - на своём потоке
             phases.withRetinue(foes.map { phases.foe(it, level) }, Dice(Streams.mix(trial.seed, RETINUE_STREAM, stream))),
             rules, index.rules.fight, pools.life, Random(Streams.mix(trial.seed, FIGHT_STREAM, stream)), gear.stance, kit = kit, model = build, pools = pools,
             percent = gear.percent, cleared = wonLast, kind = trial.kind.fight, rage = rules.enrage(trial.kind.fight).sooner(sooner),
@@ -323,9 +324,10 @@ class TrialArena(
 
     private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
 
-    /** The floor's growth: so many percent more life and damage on every monster of it (0.14.0: ступень раша ниже нуля - меньше). */
+    /** The floor's growth: so many percent more life and damage on every monster of it (ступень раша ниже нуля - меньше). */
     private fun growth(power: Double): List<MonsterEffect> = if (power == 0.0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
 
+    /** Победа испытания идёт в счёт Разгона захода. */
     private fun play(dt: Double) {
         val fight = battle ?: return
         if (!started || paused || holds > 0) return
@@ -341,7 +343,6 @@ class TrialArena(
         report = last
         fightSeconds += fight.duration
         wonLast = outcome == Outcome.WIN
-        // Разгон (4.9.0): победа испытания - в счёт захода
         if (wonLast) fateRun.victory()
         stats.add(last.pack, last.duration)
         record { TrialEvent.Fight(it, FightFigures.of(last.pack, last.duration, trial.kind == TrialKind.RUSH, won = wonLast)) }
@@ -354,7 +355,11 @@ class TrialArena(
         if (phase == TrialPhase.FIGHT) stand()
     }
 
-    /** A boss or a whole floor won: its event, the rush's breath between bosses, and the next one — or the end of the rush. */
+    /**
+     * A boss or a whole floor won: its event, the rush's breath between bosses, and the next one — or the end of the rush.
+     *
+     * Между этажами - передышка, как между боссами раша. Последний этаж башни сервер закрывает сам, конец после него не шлётся.
+     */
     private fun won() {
         cleared++
         when (trial.kind) {
@@ -369,9 +374,7 @@ class TrialArena(
                 val n = record { TrialEvent.Floor(it, step) }
                 if (floor?.hoard == true) hoards += n
                 step++
-                // Передышка между этажами (4.2.0), как между боссами раша
                 breathe(trials.tower.life, trials.tower.flaskCharges)
-                // The tower's last floor won (3.71.0): the server closes the trial with it, so no end is sent after it
                 if (step > trials.tower.maxFloor) finish(fallen = false, ended = true)
             }
         }
@@ -432,7 +435,7 @@ class TrialArena(
     companion object {
         private val FIGHT_STREAM = "trial".hashCode().toLong()
 
-        /** Поток свиты фаз боссов (3.92.0). */
+        /** Поток свиты фаз боссов. */
         private val RETINUE_STREAM = "trialRetinue".hashCode().toLong()
     }
 }

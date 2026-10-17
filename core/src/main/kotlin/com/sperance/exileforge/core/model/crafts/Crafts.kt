@@ -17,13 +17,13 @@ import kotlinx.serialization.Serializable
 
 /**
  * The crafts part of the hero snapshot: each profession's progress, the work under way and the last catch-up of an
- * absence of five minutes or more (3.69.0, server 1.66.0), shown once as «Пока вас не было».
+ * absence of five minutes or more, shown once as «Пока вас не было».
  */
 @Serializable data class WorkState(val professions: Map<String, ProfessionProgress> = emptyMap(), val work: ActiveWork? = null)
 
 /** One work of a profession as the hero has it now: the rules' seconds, and the cycle and the «nothing» chance their gear makes of it. */
 @Serializable data class JobView(
-    /** The work itself (server 1.75.0): each kind with its own fields — a stack's output, a smith's band, a chart's region. */
+    /** The work itself: each kind with its own fields — a stack's output, a smith's band, a chart's region. */
     val job: Job,
     val cycleMillis: Long = 0,
     /** The hero's own odds: the empty cycle's and each find's, after level and gear. */
@@ -31,11 +31,11 @@ import kotlinx.serialization.Serializable
     val extra: List<JobExtra> = emptyList(),
     /** Whether the hero may take it: a chart needs an open zone of its region, a choosing work a variant. */
     val open: Boolean = true,
-    /** A variant of a choosing work (3.45.0): what was chosen — the item it makes; blank on the work itself. */
+    /** A variant of a choosing work: what was chosen — the item it makes; blank on the work itself. */
     val choice: String = "",
     /** The variants of a choosing work — a condensed essence, a skill book of the hero's class — each a plain work of its own. */
     val options: List<JobView> = emptyList(),
-    /** Опыт профессии за цикл (4.2.0) - присылает сервер по кривой опыта ремесла. */
+    /** Опыт профессии за цикл - присылает сервер по кривой опыта ремесла. */
     val experience: Double = 0.0,
 ) {
     val code: String get() = job.code
@@ -46,7 +46,7 @@ import kotlinx.serialization.Serializable
     val inputs: List<JobInput> get() = job.inputs
     val additives: Boolean get() = job.additives
 
-    /** Расход цикла с добавками [chosen] (3.89.0) - тот же, что проверяет сервер при запуске. */
+    /** Расход цикла с добавками [chosen] - тот же, что проверяет сервер при запуске. */
     fun cycleCost(chosen: List<String> = emptyList()): Cost = Cost(Work.perCycle(job, chosen))
 }
 
@@ -72,16 +72,16 @@ import kotlinx.serialization.Serializable
     val additives: List<String> = emptyList(),
     val startedAt: Long = 0,
     val totals: WorkTally = WorkTally(),
-    /** The variant chosen (3.45.0), blank for a work without a choice. */
+    /** The variant chosen, blank for a work without a choice. */
     val choice: String = "",
 ) {
     /**
-     * Сколько прошло текущего цикла на часах сервера [now] (3.90.0): по кругу от [settledAt], так что полоса идёт
+     * Сколько прошло текущего цикла на часах сервера [now]: по кругу от [settledAt], так что полоса идёт
      * дальше, даже пока сервер не пересчитал работу, а не стоит на 100%. До [settledAt] - ноль.
      */
     fun phase(now: Long): Long = if (cycleMillis > 0) (now - settledAt).coerceAtLeast(0L) % cycleMillis else 0L
 
-    /** Ближайшая граница цикла позже [now] на часах сервера (3.90.0): на ней работа пересчитывается с сервера. */
+    /** Ближайшая граница цикла позже [now] на часах сервера: на ней работа пересчитывается с сервера. */
     fun nextBoundary(now: Long): Long = maxOf(now, settledAt) - phase(now) + cycleMillis
 }
 

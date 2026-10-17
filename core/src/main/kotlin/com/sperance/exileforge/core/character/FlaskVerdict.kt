@@ -11,9 +11,9 @@ import kotlin.math.abs
 import kotlin.math.sign
 
 /**
- * Мера сводки фляги ([FlaskReadout], 4.2.0), что сравнивает карточка: [read] - её число у сводки, [gain] - полярность меры (расход
+ * Мера сводки фляги ([FlaskReadout]), что сравнивает карточка: [read] - её число у сводки, [gain] - полярность меры (расход
  * заряда - «меньше лучше»). Строки, что фляга кладёт на героя, и механики фляги - отдельные строки [FlaskRow.stat] с полярностью
- * своей характеристики ([StatPolarity], 0.15.0, #46).
+ * своей характеристики ([StatPolarity]).
  */
 enum class FlaskMeasure(val gain: StatGain, val read: (FlaskReadout) -> Double) {
     LIFE(StatGain.HIGHER, FlaskReadout::life),
@@ -26,7 +26,7 @@ enum class FlaskMeasure(val gain: StatGain, val read: (FlaskReadout) -> Double) 
     EFFECT(StatGain.HIGHER, FlaskReadout::effect),
     LINE(StatGain.HIGHER, { 0.0 }),
 
-    /** Своя механика фляги без меры (4.12.x, ASANA-05): заряды за крит, перелив, шанс не тратить заряд… - [FlaskRow.stat]. */
+    /** Своя механика фляги без меры: заряды за крит, перелив, шанс не тратить заряд… - [FlaskRow.stat]. */
     MECHANIC(StatGain.HIGHER, { 0.0 }),
 }
 
@@ -59,7 +59,7 @@ data class FlaskRow(
 }
 
 /**
- * Вердикт фляги (4.2.0): строки её листа против фляги в том же гнезде при бонусах героя к флягам. Лист героя фляга не меняет,
+ * Вердикт фляги: строки её листа против фляги в том же гнезде при бонусах героя к флягам. Лист героя фляга не меняет,
  * поэтому урон и защита ей не мера - карточка сравнивает лечение, длительность, заряды, эффект и строки.
  */
 data class FlaskVerdict(val rows: List<FlaskRow>, override val might: MightShift? = null) : GearVerdict {
@@ -89,6 +89,8 @@ data class FlaskVerdict(val rows: List<FlaskRow>, override val might: MightShift
         /**
          * Строки сводки [after] против [before]: мера, что у обеих ноль, не печатается; сила эффекта - только у фляг со строками.
          * Строки и механики оценивает полярность их характеристик в контенте [index] ([StatPolarity]).
+         *
+         * Механики фляги - и те, что пропадут с заменой.
          */
         fun of(before: FlaskReadout?, after: FlaskReadout, index: ContentIndex?): FlaskVerdict {
             val lined = after.lines.isNotEmpty() || before?.lines.orEmpty().isNotEmpty()
@@ -96,7 +98,6 @@ data class FlaskVerdict(val rows: List<FlaskRow>, override val might: MightShift
             val was = before?.lines.orEmpty().groupBy { it.stat to it.op }.mapValues { (_, ops) -> ops.sumOf { it.value } }
             val will = after.lines.groupBy { it.stat to it.op }.mapValues { (_, ops) -> ops.sumOf { it.value } }
             val lines = (was.keys + will.keys).distinct().map { key -> FlaskRow(FlaskMeasure.LINE, was[key] ?: 0.0, will[key] ?: 0.0, key.first, key.second, StatPolarity.of(index, key.first)) }
-            // Механики фляги (4.12.x, ASANA-05): и те, что пропадут с заменой
             val held = before?.mechanics.orEmpty()
             val mechanics = (held.keys + after.mechanics.keys).distinct().map { stat -> FlaskRow(FlaskMeasure.MECHANIC, held[stat] ?: 0.0, after.mechanics[stat] ?: 0.0, stat, polarity = StatPolarity.of(index, stat)) }
             return FlaskVerdict((measures + lines + mechanics).filter { it.before != 0.0 || it.after != 0.0 })

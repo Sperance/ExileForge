@@ -17,7 +17,7 @@ data class Market(
     val filter: AuctionFilter = AuctionFilter(),
     val showOwnLots: Boolean = false,
     val myLots: List<AuctionLot> = emptyList(),
-    /** Сделки героя за последние дни (3.73.0), новые сверху. */
+    /** Сделки героя за последние дни, новые сверху. */
     val history: List<AuctionLot> = emptyList(),
     /** Почему аукцион закрыт для героя, словами сервера; null - открыт. */
     val locked: String? = null,
@@ -29,7 +29,7 @@ data class Market(
     val ownLots: List<AuctionLot> get() = myLots.filter { it.onSale || it.returning }
 }
 
-/** Единственный источник правды о рынке (3.80.11). */
+/** Единственный источник правды о рынке. */
 class MarketRepository {
     private val mutable = MutableStateFlow(Market())
     val state: StateFlow<Market> = mutable

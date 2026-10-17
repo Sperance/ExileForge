@@ -21,10 +21,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -38,6 +40,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
@@ -47,9 +50,12 @@ import androidx.compose.ui.unit.toSize
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
+import com.sperance.exileforge.core.display.FlowLine
+import com.sperance.exileforge.core.display.FlowSubject
+import com.sperance.exileforge.core.display.FlowTone
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.flowLabel
+import com.sperance.exileforge.core.display.flowLine
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.number
@@ -77,8 +83,9 @@ import kotlin.math.roundToInt
  * Литые полосы: объёмная полоса жизни с числами внутри, щит - светящаяся кромка по её верху со своим числом,
  * мана - тонкая полоса под ней с числами внутри; удержанная аурами часть ([reserved] сверх [maxMana]) - штриховкой.
  *
- * [flow] - итог здоровья в секунду на полосе жизни, только пока здоровье меняется ([LifeFlow.moves]); null - не писать. [onFlow] - касание
- * полосы - разбор итога; null - полоса не нажимается. Запас, что ауры держат целиком, рисуется полной штрихованной полосой;
+ * Цифры полос - одной ширины: тик их не дёргает. [onFlow] не null (карта) - под полосами строка итога [flow] фиксированной высоты,
+ * место под неё есть всегда, и низ не прыгает: «Здоровье −14/с» цветом убыли или прибыли, «Щит −8/с» цветом щита, когда недуги едят
+ * только щит ([flowLine]); покой - пусто; подчёркнута пунктиром, касание - разбор итога. Запас, что ауры держат целиком, рисуется полной штрихованной полосой;
  * [lifeReserved] - здоровье, что держат ауры сверх [maxLife], - штрихованный хвост полосы здоровья.
  */
 @Composable internal fun Vitals(
@@ -98,11 +105,9 @@ import kotlin.math.roundToInt
     val lifeWhole = maxLife + lifeReserved.coerceAtLeast(0)
     val lifeShare by animateFloatAsState(if (lifeWhole > 0) life / lifeWhole.toFloat() else 0f, label = "life")
     val shieldShare by animateFloatAsState(if (maxShield > 0) shield / maxShield.toFloat() else 0f, label = "shield")
-    val moving = flow?.takeIf { it.moves(life.toDouble(), maxLife.toDouble()) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
-            Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).reservedTail(reservedShare(maxLife, lifeReserved), LifeRed).border(1.dp, LifeRim, shape)
-                .then(if (moving != null && onFlow != null) Modifier.clickable(onClickLabel = ui("fight.flow.title"), onClick = onFlow) else Modifier),
+            Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).reservedTail(reservedShare(maxLife, lifeReserved), LifeRed).border(1.dp, LifeRim, shape),
         ) {
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.verticalGradient(listOf(LifeTop, LifeRed, LifeDeep))))
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight(.4f).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent))))
@@ -116,9 +121,6 @@ import kotlin.math.roundToInt
                 buildAnnotatedString {
                     append(ui("expedition.vitals_figure", number(life.toDouble()), number(maxLife.toDouble())))
                     if (maxShield > 0) withStyle(SpanStyle(color = ShieldBright, fontWeight = FontWeight.SemiBold)) { append("  ◈ " + number(shield.toDouble())) }
-                    moving?.let { f ->
-                        withStyle(SpanStyle(color = if (f.net < 0 || f.stalledBy != null) FlowLoss else Vital, fontWeight = FontWeight.SemiBold)) { append(" · " + flowLabel(f)) }
-                    }
                 },
                 11.sp,
             )
@@ -136,8 +138,34 @@ import kotlin.math.roundToInt
                 VitalsFigure(AnnotatedString(ui("expedition.vitals_figure", number(mana.toDouble()), number(maxMana.toDouble()))), 9.sp)
             }
         }
+        if (onFlow != null) FlowLineRow(flow?.let { flowLine(it, life.toDouble(), maxLife.toDouble()) }, onFlow)
     }
 }
+
+/** Строка итога под полосами: высота [FLOW_LINE] стоит и пустой; текст подчёркнут пунктиром его цвета, касание - [onFlow]. */
+@Composable private fun FlowLineRow(line: FlowLine?, onFlow: () -> Unit) {
+    Box(Modifier.fillMaxWidth().height(FLOW_LINE), contentAlignment = Alignment.CenterStart) {
+        line ?: return@Box
+        val tint = when {
+            line.subject == FlowSubject.SHIELD -> ShieldBright
+            line.tone == FlowTone.GAIN -> Vital
+            else -> FlowLoss
+        }
+        val dash = with(LocalDensity.current) { floatArrayOf(3.dp.toPx(), 2.dp.toPx()) }
+        Text(
+            line.text,
+            color = tint,
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.clickable(onClickLabel = ui("fight.flow.title"), onClick = onFlow)
+                .drawBehind { drawLine(tint.copy(alpha = .7f), Offset(0f, size.height - 1f), Offset(size.width, size.height - 1f), strokeWidth = 1f, pathEffect = PathEffect.dashPathEffect(dash)) },
+        )
+    }
+}
+
+/** Высота строки итога под полосами героя на карте. */
+private val FLOW_LINE = 16.dp
 
 /** Числа поверх литой полосы: по центру, с тенью - читаются и на пустой, и на полной. */
 @Composable private fun BoxScope.VitalsFigure(text: AnnotatedString, size: TextUnit) {
@@ -147,13 +175,13 @@ import kotlin.math.roundToInt
         fontSize = size,
         fontWeight = FontWeight.Bold,
         letterSpacing = .4.sp,
-        style = MaterialTheme.typography.labelSmall.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f)),
+        style = MaterialTheme.typography.labelSmall.copy(shadow = Shadow(Color.Black, Offset(0f, 1f), 3f), fontFeatureSettings = "tnum"),
         modifier = Modifier.align(Alignment.Center),
         maxLines = 1,
     )
 }
 
-/** Убыль здоровья в секунду на литой красной полосе: светлый розовый, чтобы читалась. */
+/** Убыль здоровья в секунду в строке итога: светлый красный, чтобы читался на тёмной карте. */
 private val FlowLoss = Color(0xFFFFB3AD)
 
 private val VitalsWell = Color(0xCC0A0D12)

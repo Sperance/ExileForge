@@ -30,7 +30,8 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
 /**
  * Что герой несёт на карте: недуги - из боя и от ловушек, баффы и проклятия, заряды -
  * плитками той же полки, что в бою ([EffectShelf]: стаки и секунды, касание плитки - её выноска). Слева «≡ N» - лист всех
- * эффектов ([EffectsSheet]) с итогом здоровья в секунду; его же открывает «+N». Ничего не несёт - полки нет.
+ * эффектов ([EffectsSheet]) с итогом здоровья в секунду; его же открывает «+N». Ничего не несёт - полки нет, а её высота стоит: низ
+ * панели карты не прыгает, когда недуг лёг или сошёл.
  *
  * Полка читает живой снимок (тело экрана несомого не видит) и перекомпонуется сама, когда несомое сменилось.
  */
@@ -38,8 +39,8 @@ import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
     val hud by remember(live) { derivedStateOf { live.value.let { RoadView(it.heroAilments, it.heroEffects, it.heroCharges, it.lifeFlow) } } }
     val timed = remember(hud) { timedShelf(false, hud.ailments, hud.effects, hud.charges) }
     var open by remember { mutableStateOf(false) }
-    if (timed.isNotEmpty()) {
-        Row(Modifier.fillMaxWidth().height(TILE), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().height(TILE), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (timed.isNotEmpty()) {
             AllEffects(timed.size, Modifier.width(TILE).fillMaxHeight()) { open = true }
             EffectShelf(timed, TILE, { open = true }, Modifier.weight(1f))
         }

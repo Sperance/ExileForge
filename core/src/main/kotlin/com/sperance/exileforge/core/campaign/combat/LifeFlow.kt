@@ -31,15 +31,18 @@ data class LifeFlow(
     val net: Double get() = regen - degen - delayed - ailments + shielded
 
     /**
-     * Здоровье [life] из [max] на карте и правда меняется: метка «±N/с» на полосе жизни - только тогда. Ранящий недуг
-     * пишется всегда (он и глушит восстановление); итог, что округлился в ноль ([Rate.still] - то же правило, что у числа),
-     * прибыль на полном здоровье и убыль на дне дегена - покой.
+     * Здоровье [life] из [max] на карте и правда меняется: строка итога под полосами пишет его только тогда. Итог, что округлился
+     * в ноль ([Rate.still] - то же правило, что у числа), прибыль на полном здоровье и убыль на дне дегена - покой, и под ранящим
+     * недугом тоже.
      */
-    fun moves(life: Double, max: Double): Boolean = stalledBy != null || when {
+    fun moves(life: Double, max: Double): Boolean = when {
         Rate.still(net) -> false
         net > 0 -> life < max
         else -> life > FLOOR
     }
+
+    /** Здоровье стоит ([moves] - нет), а недуги едят щит: строка итога пишет убыль щита [shielded] в секунду. */
+    fun drainsShieldOnly(life: Double, max: Double): Boolean = !moves(life, max) && !Rate.still(shielded)
 
     /** Течёт хоть что-то: заметная регенерация, деген или отложенный урон - секунда стоит строки журнала. */
     val flowing: Boolean get() = regen >= 1 || degen > 0 || delayed > 0

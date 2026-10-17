@@ -93,7 +93,9 @@ class RoadLifeTest {
         assertFalse(LifeFlow(regen = 10.0).moves(100.0, 100.0), "full life gains nothing")
         assertTrue(LifeFlow(regen = 10.0).moves(50.0, 100.0))
         assertFalse(LifeFlow(degen = 10.0).moves(1.0, 100.0), "the degeneration floor holds")
-        assertTrue(LifeFlow(stalledBy = Ailment.BURNING).moves(100.0, 100.0), "an ailment that stalls recovery is always named")
+        assertFalse(LifeFlow(stalledBy = Ailment.BURNING).moves(100.0, 100.0), "rest is rest under a stalling ailment too")
+        assertTrue(LifeFlow(ailments = 8.0, shielded = 8.0).drainsShieldOnly(100.0, 100.0), "an ailment eating only the shield names the shield")
+        assertFalse(LifeFlow(ailments = 8.0, shielded = 2.0).drainsShieldOnly(100.0, 100.0), "a moving life is named, not the shield")
         assertEquals(-4.0, LifeFlow(ailments = 10.0, shielded = 6.0).net, 1e-9, "what the shield takes leaves life alone")
     }
 

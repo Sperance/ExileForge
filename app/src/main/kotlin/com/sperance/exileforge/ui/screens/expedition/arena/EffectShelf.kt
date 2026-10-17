@@ -455,8 +455,7 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
  * Рамка плитки эффекта: тёмная подложка, заливка цветом эффекта [tint], рамка 1dp и уголок знака [bearing] - кровью у вреда,
  * золотом у пользы.
  */
-internal fun Modifier.shelfTile(tint: Color, bearing: Bearing, side: Dp, shape: Shape = RoundedCornerShape(4.dp)): Modifier =
-    size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, bearing.tint, shape).bearingCorner(bearing, side)
+internal fun Modifier.shelfTile(tint: Color, bearing: Bearing, side: Dp, shape: Shape = RoundedCornerShape(4.dp)): Modifier = size(side).clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .16f)).border(1.dp, bearing.tint, shape).bearingCorner(bearing, side)
 
 /** Уголок знака плитки стороной [side]: треугольник цвета [bearing] в левом верхнем углу, поверх затемнения срока. */
 internal fun Modifier.bearingCorner(bearing: Bearing, side: Dp): Modifier = drawWithCache {

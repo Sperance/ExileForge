@@ -118,7 +118,7 @@ internal class SummaryTile(
     }
 }
 
-/** Разбор: полоса долей (сток и источники), строки «Сток», «Источник +N%» с долей и «Итого». */
+/** Разбор: полоса долей (сток и источники), строки «Без бонусов», «Источник +N%» с долей и «Итого». */
 @Composable internal fun BreakdownParts(breakdown: LootBreakdown, tone: Color) {
     val positive = breakdown.parts.filter { it.percent > 0 }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

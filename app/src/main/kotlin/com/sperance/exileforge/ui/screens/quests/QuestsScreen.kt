@@ -1,17 +1,40 @@
 package com.sperance.exileforge.ui.screens.quests
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
@@ -31,7 +54,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * expedition's own screen; its chapter card heads the board) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
  * the board or given up. Pulling down reads the board again.
  *
- * Текущая глава сюжета - та же карточка, что над картой Похода; вкладки - сегментами с числом готовых к сдаче.
+ * Текущая глава сюжета - та же карточка, что над картой Похода, с плашкой выбора закона или книги над ней; вкладки - сегментами с
+ * числом готовых к сдаче; «Сдать» - низкая пилюля, отказ и сброс - значки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -66,7 +90,7 @@ fun QuestsScreen() {
                 when (current) {
                     QuestTab.DAILY -> daily(vm, busy, board)
                     QuestTab.WEEKLY -> weekly(vm, busy, board)
-                    QuestTab.CONTRACTS -> contracts(vm, busy, board)
+                    QuestTab.CONTRACTS -> contracts(vm, busy, board, game.index?.quests?.board?.refillHours ?: 0)
                 }
             }
         }
@@ -93,50 +117,190 @@ private fun LazyListScope.weekly(vm: QuestViewModel, busy: Boolean, board: Quest
     items(board.weekly, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(vm, busy, quest) } }
 }
 
-/** Невзятый листок не истекает: срок у него появится со взятия; каждое пустое место - со своим таймером пополнения. */
-private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
-    item { Engraved(ui("quest.contracts_taken", board.contracts.size, board.activeLimit)) }
+/**
+ * Контракты: «Мои контракты» с гнёздами взятых в заголовке (готовое к сдаче светится) и доска контрактов - рамка с кромкой и заклёпками,
+ * листки приколоты, пустое место - пунктир с кольцом до нового листка. Руки заняты - вместо «Взять» у листков одна строка-замок в
+ * шапке доски. Невзятый листок не истекает: срок у него появится со взятия.
+ */
+private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: QuestBoard, refillHours: Int) {
+    item(key = "taken-head") {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Engraved(ui("quest.contracts_mine"), Muted, Modifier.weight(1f))
+            Sockets(board.contracts, board.activeLimit)
+        }
+    }
     if (board.contracts.isEmpty()) item { MutedText(ui("quest.contracts_none")) }
     items(board.contracts, key = { it.id }) { quest ->
         QuestRow(quest) {
-            ClaimButton(vm, busy, quest)
-            if (!quest.done) ForgeTextButton({ vm.abandon(quest.id) }, enabled = !busy) { Text(ui("quest.abandon"), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
+            if (quest.done) ClaimButton(vm, busy, quest) else BoardIcon(Icons.Outlined.Close, ui("quest.abandon"), ABANDON_TINT, !busy) { vm.abandon(quest.id) }
         }
     }
-    item {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Engraved(ui("quest.board"), modifier = Modifier.weight(1f))
-            if (board.nextOfferAt > 0) MutedText(ui("quest.next_offer", untilText(board.nextOfferAt)))
-        }
-    }
-    if (board.offers.isEmpty() && board.refills.isEmpty()) item { MutedText(ui("quest.board_empty")) }
-    val full = board.contracts.size >= board.activeLimit
-    items(board.offers, key = { it.id }) { offer ->
-        QuestRow(offer) {
-            ForgeButton({ vm.take(offer.id) }, enabled = !busy && !full) { Text(ui("quest.take")) }
-            ForgeTextButton({ vm.reset(offer.id) }, enabled = !busy) { Text(ui("quest.reset"), color = Muted, style = MaterialTheme.typography.labelSmall) }
-        }
-    }
-    if (full && board.offers.isNotEmpty()) item { MutedText(ui("quest.take_full", board.activeLimit)) }
-    items(board.refills.withIndex().toList(), key = { "refill-${it.index}" }) { (_, at) -> EmptySlot(at) }
+    item(key = "board") { ContractBoard(vm, busy, board, refillHours) }
 }
 
-/** Пустое место доски: когда сюда ляжет новый листок. */
-@Composable private fun EmptySlot(at: Long) {
+/**
+ * Доска контрактов: базальтовая рамка с латунной кромкой и заклёпками по углам; шапка - «Доска контрактов», занятые места из всех и
+ * фишка до нового листка; листки - строки с гвоздиком, у каждого «Сбросить» и, пока есть свободные руки, «Взять».
+ */
+@Composable private fun ContractBoard(vm: QuestViewModel, busy: Boolean, board: QuestBoard, refillHours: Int) {
+    val shape = RoundedCornerShape(14.dp)
+    val full = board.contracts.size >= board.activeLimit
+    Column(
+        Modifier.fillMaxWidth().padding(top = 4.dp).clip(shape).background(Brush.verticalGradient(listOf(BOARD_TOP, BOARD_BOTTOM)), shape)
+            .border(1.dp, BOARD_EDGE, shape).boardRim().padding(horizontal = 8.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+    ) {
+        Row(Modifier.padding(start = 10.dp, end = 10.dp, top = 2.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Engraved(ui("quest.board"), accent = Brass)
+            MutedText(ui("quest.progress", board.offers.size, board.offers.size + board.refills.size), style = MaterialTheme.typography.labelSmall)
+            Spacer(Modifier.weight(1f))
+            if (board.nextOfferAt > 0) TimerChip(untilText(board.nextOfferAt))
+        }
+        if (full && board.offers.isNotEmpty()) LockLine(ui("quest.take_full", board.contracts.size, board.activeLimit))
+        if (board.offers.isEmpty() && board.refills.isEmpty()) MutedText(ui("quest.board_empty"), Modifier.padding(horizontal = 10.dp))
+        board.offers.forEach { offer ->
+            QuestRow(offer, Modifier.pinned()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    BoardIcon(Icons.Outlined.Refresh, ui("quest.reset"), Muted, !busy) { vm.reset(offer.id) }
+                    if (!full) BoardPill(ui("quest.take"), null, TAKE_BRUSH, !busy) { vm.take(offer.id) }
+                }
+            }
+        }
+        board.refills.forEach { at -> EmptySlot(at, refillHours) }
+    }
+}
+
+/** Гнёзда взятых контрактов в заголовке: по месту на каждый предел, взятое - точкой цвета редкости, готовое к сдаче - светится. */
+@Composable private fun Sockets(taken: List<Quest>, limit: Int) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        repeat(limit.coerceAtLeast(taken.size)) { i ->
+            val quest = taken.getOrNull(i)
+            val ready = quest?.let { it.done && !it.claimed } == true
+            val shape = RoundedCornerShape(6.dp)
+            Box(
+                Modifier.size(22.dp).glow(Vital, on = ready, radius = 6.dp, shape = shape).background(Abyss, shape).border(1.dp, if (ready) Vital else Bronze, shape),
+                contentAlignment = Alignment.Center,
+            ) { quest?.let { Box(Modifier.size(8.dp).clip(CircleShape).background(rarityColor(it.rarity.name))) } }
+        }
+    }
+}
+
+/** Строка-замок шапки доски: почему у листков нет «Взять». */
+@Composable private fun LockLine(text: String) {
     val shape = RoundedCornerShape(8.dp)
     Row(
-        Modifier.fillMaxWidth().border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 2.dp).background(Abyss.copy(alpha = .65f), shape).border(1.dp, Brass.copy(alpha = .25f), shape).padding(horizontal = 10.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(ForgeGlyphs.Scroll, null, tint = Muted, modifier = Modifier.size(16.dp))
-        MutedText(ui("quest.slot_refill", untilText(at)), Modifier.weight(1f))
+        Icon(Icons.Outlined.Lock, null, tint = LOCK_TINT, modifier = Modifier.size(14.dp))
+        Text(text, color = LOCK_TINT, style = MaterialTheme.typography.labelSmall)
     }
 }
 
-@Composable internal fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
-    if (quest.done && !quest.claimed) ForgeButton({ vm.claim(quest.id) }, enabled = !busy) { Text(ui("quest.claim")) }
+/** Фишка времени до нового листка: ↻ и срок. */
+@Composable private fun TimerChip(text: String) {
+    Row(
+        Modifier.clip(RoundedCornerShape(10.dp)).background(PanelRaised).padding(horizontal = 8.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Icon(Icons.Outlined.Refresh, null, tint = Parchment, modifier = Modifier.size(12.dp))
+        Text(text, color = Parchment, style = MaterialTheme.typography.labelSmall)
+    }
 }
+
+/** Пустое место доски: пунктир, кольцо - сколько прошло из [refillHours] до нового листка, и когда он ляжет. */
+@Composable private fun EmptySlot(at: Long, refillHours: Int) {
+    val shape = RoundedCornerShape(8.dp)
+    val span = refillHours * HOUR_MS
+    val share = if (span <= 0) 0f else (1f - (at - System.currentTimeMillis()).toFloat() / span).coerceIn(0f, 1f)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 44.dp).dashedBorder(BOARD_EDGE, shape).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(progress = { share }, Modifier.fillMaxSize(), color = Gold, trackColor = Bronze, strokeWidth = 3.dp)
+            Icon(ForgeGlyphs.Scroll, null, tint = Muted, modifier = Modifier.size(12.dp))
+        }
+        Text(ui("quest.slot_refill", untilText(at)), color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+    }
+}
+
+/** «Сдать»: низкая мятная пилюля 32dp с галочкой (касание - 40dp), справа в строке задания. */
+@Composable internal fun ClaimButton(vm: QuestViewModel, busy: Boolean, quest: Quest) {
+    if (quest.done && !quest.claimed) BoardPill(ui("quest.claim"), Icons.Outlined.Check, CLAIM_BRUSH, !busy) { vm.claim(quest.id) }
+}
+
+/** Низкая пилюля действия строки задания: 32dp, заливка [brush], тёмные слова; выключенная - вполсилы. */
+@Composable private fun BoardPill(text: String, icon: ImageVector?, brush: Brush, enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(8.dp)
+    Row(
+        Modifier.sizeIn(minHeight = 40.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick).alpha(if (enabled) 1f else .45f)
+            .padding(vertical = 4.dp).height(32.dp).clip(shape).background(brush, shape).padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp),
+    ) {
+        icon?.let { Icon(it, null, tint = Ink, modifier = Modifier.size(14.dp)) }
+        Text(text, color = Ink, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1)
+    }
+}
+
+/** Значок действия строки задания 36dp: отказаться, сбросить листок. */
+@Composable private fun BoardIcon(icon: ImageVector, label: String, tint: Color, enabled: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick, enabled = enabled, modifier = Modifier.size(36.dp)) { Icon(icon, label, tint = if (enabled) tint else Muted, modifier = Modifier.size(18.dp)) }
+}
+
+/** Внутренняя латунная кромка доски и заклёпки по углам. */
+private fun Modifier.boardRim(): Modifier = drawBehind {
+    val inset = 4.dp.toPx()
+    drawRoundRect(Brass.copy(alpha = .25f), Offset(inset, inset), Size(size.width - inset * 2, size.height - inset * 2), CornerRadius(11.dp.toPx()), style = Stroke(1.dp.toPx()))
+    val r = 3.5.dp.toPx()
+    val at = 7.dp.toPx() + r
+    listOf(Offset(at, at), Offset(size.width - at, at), Offset(at, size.height - at), Offset(size.width - at, size.height - at)).forEach { c ->
+        drawCircle(Brush.radialGradient(listOf(RIVET_LIGHT, Brass, RIVET_DARK), center = c - Offset(r * .3f, r * .4f), radius = r * 1.4f), r, c)
+    }
+}
+
+/** Гвоздик листка доски - латунная точка в правом верхнем углу. */
+private fun Modifier.pinned(): Modifier = drawWithContent {
+    drawContent()
+    val r = 2.5.dp.toPx()
+    val c = Offset(size.width - 5.dp.toPx() - r, 5.dp.toPx() + r)
+    drawCircle(Brush.radialGradient(listOf(RIVET_LIGHT, Brass), center = c - Offset(r * .3f, r * .4f), radius = r * 1.4f), r, c, alpha = .7f)
+}
+
+/** Пунктирная рамка пустого места доски. */
+private fun Modifier.dashedBorder(color: Color, shape: RoundedCornerShape): Modifier = drawBehind {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    drawOutline(outline, color, style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))))
+}
+
+/** Базальт доски: сверху светлее. */
+private val BOARD_TOP = Color(0xFF141C22)
+private val BOARD_BOTTOM = Color(0xFF0C1216)
+
+/** Тёмная латунь внешней кромки доски и пунктира пустого места. */
+private val BOARD_EDGE = Color(0xFF3A3326)
+
+/** Свет и тень латунной заклёпки. */
+private val RIVET_LIGHT = Color(0xFFF3D9A8)
+private val RIVET_DARK = Color(0xFF3A2C18)
+
+/** Песочный текст строки-замка. */
+private val LOCK_TINT = Color(0xFFCDB98A)
+
+/** Приглушённый красный «Отказаться». */
+private val ABANDON_TINT = Color(0xFFB06A66)
+
+/** Заливка «Сдать»: светлая мята. */
+private val CLAIM_BRUSH = Brush.verticalGradient(listOf(Color(0xFF8FF0B9), Color(0xFF46B979)))
+
+/** Заливка «Взять»: изумруд. */
+private val TAKE_BRUSH = Brush.verticalGradient(listOf(Color(0xFF4CC888), Color(0xFF2F9561)))
+
+private const val HOUR_MS = 3_600_000L
 
 /** Days and hours to a week's end — a week does not fit in the merchant's hours and minutes. */
 internal fun weekText(at: Long): String {

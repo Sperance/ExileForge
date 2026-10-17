@@ -108,16 +108,16 @@ internal fun RewardChips(reward: QuestReward) {
  * Описание шага сюжета - по касанию.
  *
  * Части задания - облик «книги учёта»: строка с кромкой и пилюлей редкости, цель, где она считается, условия синим, полоса, награда и
- * действия; прогресс - кромкой по низу.
+ * действия; прогресс - кромкой по низу. [modifier] - облик места, где строка лежит (гвоздик листка доски).
  */
-@Composable internal fun QuestRow(quest: Quest, actions: @Composable ColumnScope.() -> Unit = {}) {
+@Composable internal fun QuestRow(quest: Quest, modifier: Modifier = Modifier, actions: @Composable ColumnScope.() -> Unit = {}) {
     val color = if (quest.claimed) Muted else rarityColor(quest.rarity.name)
     val shape = RoundedCornerShape(8.dp)
     val story = quest.kind == QuestKind.STORY
     var told by remember(quest.id) { mutableStateOf(false) }
     val share = if (quest.target <= 0) 1f else (quest.progress.toFloat() / quest.target).coerceIn(0f, 1f)
     Row(
-        Modifier.fillMaxWidth().greyed(quest.claimed).clip(shape).depthPanel(shape).raritySpine(color, 3.dp)
+        modifier.fillMaxWidth().greyed(quest.claimed).clip(shape).depthPanel(shape).raritySpine(color, 3.dp)
             .border(1.dp, if (quest.done && !quest.claimed) Vital.copy(alpha = .55f) else Bronze, shape)
             .drawBehind {
                 val edge = QUEST_EDGE.toPx()

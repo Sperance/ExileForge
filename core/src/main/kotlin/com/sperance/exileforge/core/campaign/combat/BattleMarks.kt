@@ -53,7 +53,7 @@ internal fun Battle.detonate(target: Fighter, mark: BattleMark) {
     note(heroFighter, NoteKind.MARK_BURST, mark.code, mark.pool)
     struck.filter { !it.invulnerable }.forEach { foe ->
         val alive = foe.alive
-        wound(foe, mark.pool, chaos = mark.element == DamageType.CHAOS)
+        wound(foe, mark.pool, mark.element)
         record(Side.HERO, Action.SKILL, HitKind.HIT, mark.pool, mark.element, 0.0, false, emptyList(), null, foe.index, mark.code)
         if (alive && !foe.alive) fell(foe, spell = true)
     }

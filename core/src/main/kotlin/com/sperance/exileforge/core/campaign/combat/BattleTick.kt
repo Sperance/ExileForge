@@ -400,11 +400,11 @@ private fun Battle.burn(me: Fighter, dt: Double) {
             val rift = sealed(me) * lawTaken(me, tickType(active))
             val unruled = if (rift == 1.0) dealt else dealt * rift
             if (unruled <= 0 || !me.alive || me.invulnerable) return@forEach
-            val chaos = tickType(active) == DamageType.CHAOS
-            if (chaos && me.body.chaosImmune) return@forEach
+            val type = tickType(active)
+            if (type == DamageType.CHAOS && me.body.chaosImmune) return@forEach
             val slice = fateDot(me, foeFighters.getOrNull(active.foe)?.takeIf { active.source == Side.MONSTER }, unruled)
             if (slice <= 0) return@forEach
-            wound(me, slice, chaos)
+            wound(me, slice, type)
             me.ticking.merge(Ticking(active.ailment, active.skill), slice, Double::plus)
             if (slice > heaviestSlice) {
                 heaviest = active
@@ -427,13 +427,12 @@ private fun Battle.burn(me: Fighter, dt: Double) {
         if (amount <= 0) return@forEach
         val own = (me.ailments + expired).filter { it.ailment == ailment && it.skill == key.skill }
         val active = own.firstOrNull()
-        val chaos = active?.let { tickType(it) == DamageType.CHAOS } ?: (ruleOf[ailment]?.second == DamageType.CHAOS)
+        val type = active?.let { tickType(it) } ?: ruleOf[ailment]?.second
         if (amount < rules.minDot && me.alive && !me.invulnerable) {
-            wound(me, rules.minDot - amount, chaos)
+            wound(me, rules.minDot - amount, type)
             amount = rules.minDot
         }
         val source = active?.source ?: me.side.other
-        val type = active?.let(::tickType) ?: ruleOf[ailment]?.second
         val acting = me.acting(ailment).filter { it.skill == key.skill && it.until > time - TICK }.ifEmpty { own.filter { it.until > time - TICK } }
         val base = acting.sumOf { it.magnitude }
         val taken = dotTaken(me, ailment)
@@ -492,15 +491,15 @@ internal class DotTaken(private val fighter: Fighter, private val raw: Boolean, 
     fun of(active: ActiveAilment): Double = defence(active) * exposure(active)
 }
 
-/** Damage over time on [me]: a barrier soaks it first, then the shield — unless it is [chaos] — then life. */
-internal fun Battle.wound(me: Fighter, amount: Double, chaos: Boolean) {
+/** Урон [amount] вида [type] по [me] мимо удара (тик, подрыв метки): сперва барьер, затем щит ([EnergyShield]), затем здоровье. */
+internal fun Battle.wound(me: Fighter, amount: Double, type: DamageType?) {
     var rest = amount
     if (me.barrier > 0) {
         val soaked = min(me.barrier, rest)
         me.barrier -= soaked
         rest -= soaked
     }
-    val absorbed = if (shieldless(me)) 0.0 else EnergyShield.absorbed(me.shield, rest, chaos = if (chaos) rest else 0.0)
+    val absorbed = if (shieldless(me)) 0.0 else EnergyShield.absorbed(me.shield, rest, type)
     me.shield -= absorbed
     me.life = max(0.0, me.life - (rest - absorbed))
 }

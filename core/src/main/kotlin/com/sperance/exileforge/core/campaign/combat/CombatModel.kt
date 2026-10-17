@@ -38,13 +38,16 @@ enum class HitKind { HIT, CRIT, EVADED, BLOCKED }
 /** Чем кончился бой: из боя не уходят - он идёт до победы или поражения. */
 enum class Outcome { WIN, LOSS }
 
-/** Damage by type, as the sheet names it. */
-enum class DamageType(val attack: String, val resist: String?) {
+/**
+ * Damage by type, as the sheet names it. [shielded] - энергощит принимает урон этого вида раньше здоровья (как в PoE1: всё, кроме
+ * хаоса); одно правило удара, урона во времени, Предначертания и карты - [EnergyShield].
+ */
+enum class DamageType(val attack: String, val resist: String?, val shielded: Boolean = true) {
     PHYSICAL(CoreStat.ATTACK_PHYSICAL.code, null),
     FIRE(CoreStat.ATTACK_FIRE.code, CoreStat.RESIST_FIRE.code),
     COLD(CoreStat.ATTACK_COLD.code, CoreStat.RESIST_COLD.code),
     LIGHTNING(CoreStat.ATTACK_LIGHTNING.code, CoreStat.RESIST_LIGHTNING.code),
-    CHAOS(CoreStat.ATTACK_CHAOS.code, CoreStat.RESIST_CHAOS.code),
+    CHAOS(CoreStat.ATTACK_CHAOS.code, CoreStat.RESIST_CHAOS.code, shielded = false),
     ;
 
     /** The stat that lifts this resistance's ceiling. */

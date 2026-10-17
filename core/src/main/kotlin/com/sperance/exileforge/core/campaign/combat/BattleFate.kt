@@ -1104,7 +1104,7 @@ internal fun Battle.fateOverheal(excess: Double) {
 
 /**
  * Удар Предначертания по [target] (взрыв павшего, призрак, отражение): урон [damage] по типам режут защиты цели - физический
- * броня, прочие сопротивления - урон, что она получает, и печати и законы Разлома; затем барьер, щит (хаос мимо) и здоровье. Ответ - что дошло, по типам;
+ * броня, прочие сопротивления - урон, что она получает, и печати и законы Разлома; затем барьер, щит ([EnergyShield]) и здоровье. Ответ - что дошло, по типам;
  * пусто - ничего.
  *
  * Печати и законы Разлома - как у удара и отражения.
@@ -1123,8 +1123,7 @@ internal fun Battle.fateHit(target: Fighter, damage: Map<DamageType, Double>): M
         target.barrier -= soaked
         rest -= soaked
     }
-    val chaos = (dealt[DamageType.CHAOS] ?: 0.0) * rest / total
-    val absorbed = if (shieldless(target)) 0.0 else EnergyShield.absorbed(target.shield, rest, chaos)
+    val absorbed = if (shieldless(target)) 0.0 else EnergyShield.absorbed(target.shield, dealt.mapValues { it.value * rest / total })
     target.shield -= absorbed
     target.life = max(0.0, target.life - (rest - absorbed))
     target.lastHit = time

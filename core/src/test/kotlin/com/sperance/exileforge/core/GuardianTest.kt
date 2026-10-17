@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.combat.Combatant
+import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
@@ -55,8 +56,9 @@ class GuardianTest {
 
     @Test
     fun energy_shield_takes_all_but_chaos_and_recharges_after_its_delay() {
-        assertEquals(30.0, EnergyShield.absorbed(50.0, 40.0, chaos = 10.0))
-        assertEquals(0.0, EnergyShield.absorbed(50.0, 40.0, chaos = 40.0))
+        assertEquals(30.0, EnergyShield.absorbed(50.0, mapOf(DamageType.PHYSICAL to 20.0, DamageType.FIRE to 10.0, DamageType.CHAOS to 10.0)))
+        assertEquals(0.0, EnergyShield.absorbed(50.0, 40.0, DamageType.CHAOS))
+        assertEquals(40.0, EnergyShield.absorbed(50.0, 40.0, DamageType.PHYSICAL))
         val rules = index.campaign.combat
         val body = Combatant(mapOf("STOCK_ENERGY_SHIELD" to 100.0), 10, rules)
         if (body.maxShield <= 0) return

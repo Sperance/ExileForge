@@ -306,11 +306,9 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
     if (mitigated.isEmpty()) return
     val striker = shot(me)
     val struck = shot(attacker)
-    val chaos = mitigated[DamageType.CHAOS] ?: 0.0
-    val shielded = mitigated.values.sum() - chaos
-    val absorbed = if (shieldless(attacker)) 0.0 else min(attacker.shield, shielded)
+    val absorbed = if (shieldless(attacker)) 0.0 else EnergyShield.absorbed(attacker.shield, mitigated)
     attacker.shield -= absorbed
-    attacker.life = max(0.0, attacker.life - (shielded - absorbed) - chaos)
+    attacker.life = max(0.0, attacker.life - (mitigated.values.sum() - absorbed))
     attacker.lastHit = time
     val rawSum = back.values.sum()
     val defendedSum = types.sumOf { it.second }
@@ -337,7 +335,7 @@ private fun Battle.reflect(me: Fighter, attacker: Fighter, taken: Map<DamageType
         }
         add(FactorTrace(FactorKey.TOTAL, total))
     }
-    val landing = Landing(0.0, absorbed, 0.0, 0.0, shielded - absorbed + chaos, 0.0, 0.0, 0.0, false)
+    val landing = Landing(0.0, absorbed, 0.0, 0.0, total - absorbed, 0.0, 0.0, 0.0, false)
     record(
         me.side, Action.REFLECT, HitKind.HIT, total, mitigated.maxBy { it.value }.key, 0.0, false, emptyList(), null, foe,
         trace = HitTrace(striker, struck, factors, types.map { it.first }, landing, origin),

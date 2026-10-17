@@ -229,7 +229,7 @@ internal fun ExpeditionRun.spring(feature: MapFeature.Trap) {
     val dealt = if (type == DamageType.PHYSICAL) raw * (1 - hero.physicalMitigation(raw, rules.armour.factor)) else raw * (1 - hero.resist(type))
     val ailment = HazardAilment.of(trap, type, share)
     ailment?.let { afflict(CarriedAilment(it.ailment, it.seconds, hero.maxLife * it.lifeShare / 100 * (if (law.raw(it.ailment)) 1.0 else 1 - hero.resist(type)), it.seconds, chaos = type == DamageType.CHAOS)) }
-    val wound = hurt(dealt * hero.damageTaken(type), type == DamageType.CHAOS)
+    val wound = hurt(dealt * hero.damageTaken(type), type)
     showHazard(HazardView(nextHazard++, type, wound.life.roundToInt(), wound.shield.roundToInt(), ailment))
 }
 
@@ -238,10 +238,10 @@ internal fun ExpeditionRun.showHazard(view: HazardView) {
     hazards += ShownHazard(view, if (view.tick) TICK_SECONDS * 1.5 else traps?.shown ?: 0.0)
 }
 
-/** Урон вне боя (через щит, как в бою; [chaos] мимо него): ноль здоровья - гибель на карте. Сколько принял щит и здоровье. */
-internal fun ExpeditionRun.hurt(damage: Double, chaos: Boolean): Wound {
+/** Урон вне боя вида [type] (через щит, как в бою, - [EnergyShield]): ноль здоровья - гибель на карте. Сколько принял щит и здоровье. */
+internal fun ExpeditionRun.hurt(damage: Double, type: DamageType?): Wound {
     if (damage <= 0 || phase != RunPhase.MAP) return Wound()
-    val absorbed = EnergyShield.absorbed(shield, damage, chaos = if (chaos) damage else 0.0)
+    val absorbed = EnergyShield.absorbed(shield, damage, type)
     shield -= absorbed
     hitAt = seconds
     val taken = minOf(life, damage - absorbed)

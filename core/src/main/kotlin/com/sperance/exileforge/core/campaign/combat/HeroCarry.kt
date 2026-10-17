@@ -167,7 +167,4 @@ class AilmentLaw(private val rules: CombatRules) {
 
     /** Вид урона недуга [active]: хаос, если он горит хаосом, иначе - вид его правила. */
     fun type(active: CarriedAilment): DamageType? = if (active.chaos) DamageType.CHAOS else ruleOf[active.ailment]?.type?.let(DamageType::of)
-
-    /** Недуг [active] идёт мимо щита: тик хаоса - яд, урон умения и всё, что горит хаосом. */
-    fun piercing(active: CarriedAilment): Boolean = type(active) == DamageType.CHAOS
 }

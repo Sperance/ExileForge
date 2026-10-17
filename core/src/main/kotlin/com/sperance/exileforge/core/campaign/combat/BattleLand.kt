@@ -46,12 +46,10 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         rest -= soaked
         soakedBarrier = soaked
     }
-    val chaos = if (dealt > 0) (taken[DamageType.CHAOS] ?: 0.0) * rest / dealt else 0.0
-    val shielded = rest - chaos
-    val absorbed = if (shieldless(target)) 0.0 else EnergyShield.absorbed(target.shield, rest, chaos)
+    val absorbed = if (shieldless(target) || dealt <= 0) 0.0 else EnergyShield.absorbed(target.shield, taken.mapValues { it.value * rest / dealt })
     target.shield -= absorbed
     val manaBefore = target.mana
-    val bound = shielded - absorbed + chaos
+    val bound = rest - absorbed
     val toLifeNow = toLife(target, bound)
     val manaPaid = manaBefore - target.mana
     target.life = max(0.0, target.life - toLifeNow)

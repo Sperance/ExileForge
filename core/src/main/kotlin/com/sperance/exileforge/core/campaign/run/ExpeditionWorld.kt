@@ -211,11 +211,20 @@ class ExpeditionWorld(
         return near.entries.filter { it.value in 1..2 && it.key !in map.spawns }.maxByOrNull { it.value }?.key
     }
 
-    /** Where the Vaal portal stands: far from the start, off the exit and the spawns, by the seed. */
+    /**
+     * Земля под объекты карты - одна точка расстановки всех объектов и портала Ваал: пол, куда дойти от входа, не на местах стай и вне
+     * чистой зоны - ближе `expedition.clearSteps` шагов по полу от входа, выхода и портала Ваал (пока он стоит) ничего не встаёт.
+     */
+    internal fun ground(): Set<Cell> {
+        val clear = listOfNotNull(map.start, map.exit, portal).flatMapTo(HashSet()) { distances(it, rules.clearSteps - 1).keys }
+        val spawns = map.spawns.toSet()
+        return distances(map.start, Int.MAX_VALUE).keys.filterTo(LinkedHashSet()) { it !in clear && it !in spawns }
+    }
+
+    /** Where the Vaal portal stands: on the [ground], by the seed. */
     internal fun portalPost(): Cell? {
         val placing = Random(seed * 15485863 + 53)
-        val taken = map.spawns.toSet() + map.exit + map.start
-        return distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy().shuffled(placing).firstOrNull()
+        return ground().roomy().shuffled(placing).firstOrNull()
     }
     var heroX = map.start.x + 0.5
     var heroY = map.start.y + 0.5
@@ -261,18 +270,16 @@ class ExpeditionWorld(
     }
 
     /**
-     * Puts [count] chests on the map, once: far from the start, off the exit and the monsters'
-     * places, a few steps apart, nooks first — a chest is found by walking, not by standing still.
+     * Puts [count] chests on the map, once: on the [ground], a few steps apart, nooks first — a chest is found by walking, not by standing still.
      * Where they stand is the seed's; how many, the server's. [opened] are those a run entered again already opened:
      * they stand where they stood, open, so the closed ones keep their places too.
      */
     fun placeChests(count: Int, opened: Collection<Int> = emptyList()) {
         if (count <= 0 || chests.isNotEmpty()) return
         val placing = Random(seed * 7919 + 17)
-        val taken = map.spawns.toSet() + map.exit + map.start + fountains.map { it.cell }
+        val taken = fountains.map { it.cell }.toSet() + listOfNotNull(portal)
         fun nook(cell: Cell) = STEPS.count { (dx, dy) -> !map.walkable(cell.x + dx, cell.y + dy) }
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy()
-            .shuffled(placing).sortedByDescending(::nook)
+        val candidates = ground().filterTo(LinkedHashSet()) { it !in taken }.roomy().shuffled(placing).sortedByDescending(::nook)
         for (cell in candidates) {
             if (chests.size >= count) break
             if (chests.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.chestSpacing }) chests += Chest(chests.size, cell)
@@ -282,7 +289,7 @@ class ExpeditionWorld(
 
     /**
      * Puts the map's fountains down, once: how many, between the rule's low and high,
-     * and where, both by the seed — away from the start, the exit, the monsters' places and each other.
+     * and where, both by the seed — on the [ground], off the chests and apart.
      * Each gives back [heal] percent of life, once.
      */
     fun placeFountains(low: Int, high: Int, heal: Double) {
@@ -290,8 +297,8 @@ class ExpeditionWorld(
         val placing = Random(seed * 104729 + 31)
         val count = low + placing.nextInt(high - low + 1)
         if (count <= 0) return
-        val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell }
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.fountainSteps && cell !in taken }.keys.roomy().shuffled(placing)
+        val taken = chests.map { it.cell }.toSet() + listOfNotNull(portal)
+        val candidates = ground().filterTo(LinkedHashSet()) { it !in taken }.roomy().shuffled(placing)
         for (cell in candidates) {
             if (fountains.size >= count) break
             if (fountains.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.fountainSpacing }) fountains += Fountain(fountains.size, cell, heal)
@@ -300,13 +307,13 @@ class ExpeditionWorld(
 
     /**
      * Puts the zone's crystals down, once: what they hold is the server's, where they stand the
-     * seed's — away from the start, the exit, the monsters' places, the chests and fountains, and apart.
+     * seed's — on the [ground], off the chests and fountains, and apart.
      */
     fun placeCrystals(held: List<Crystal>) {
         if (held.isEmpty() || crystals.isNotEmpty()) return
         val placing = Random(seed * 7727 + 97)
-        val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + listOfNotNull(portal)
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy().shuffled(placing)
+        val taken = chests.map { it.cell }.toSet() + fountains.map { it.cell } + listOfNotNull(portal)
+        val candidates = ground().filterTo(LinkedHashSet()) { it !in taken }.roomy().shuffled(placing)
         for (cell in candidates) {
             if (crystals.size >= held.size) break
             if (crystals.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= rules.chestSpacing }) crystals += CrystalSpot(crystals.size, cell, held[crystals.size])
@@ -318,13 +325,13 @@ class ExpeditionWorld(
 
     /**
      * Puts the zone's cracks of the Abyss down, once: how deep each leads is the server's, where it
-     * gapes the seed's — away from everything else on the map, the crystals too, and apart.
+     * gapes the seed's — on the [ground], away from everything else on the map, the crystals too, and apart.
      */
     fun placeCracks(depths: List<Int>) {
         if (depths.isEmpty() || cracks.isNotEmpty()) return
         val placing = Random(seed * 6151 + 53)
-        val taken = map.spawns.toSet() + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + crystals.map { it.cell } + listOfNotNull(portal)
-        val candidates = distances(map.start, Int.MAX_VALUE).filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys.roomy().shuffled(placing)
+        val taken = chests.map { it.cell }.toSet() + fountains.map { it.cell } + crystals.map { it.cell } + listOfNotNull(portal)
+        val candidates = ground().filterTo(LinkedHashSet()) { it !in taken }.roomy().shuffled(placing)
         for (cell in candidates) {
             if (cracks.size >= depths.size) break
             val apart = (cracks.map { it.cell } + crystals.map { it.cell }).all { hypot((it.x - cell.x).toDouble(), (it.y - cell.y).toDouble()) >= rules.chestSpacing }

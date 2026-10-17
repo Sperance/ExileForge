@@ -3,8 +3,8 @@ package com.sperance.exileforge.core.campaign.run
 import com.sperance.exileforge.core.campaign.Cell
 import com.sperance.exileforge.core.campaign.ExpeditionMap
 import com.sperance.exileforge.core.campaign.Tile
+import com.sperance.exileforge.rules.content.FeatureRules
 import com.sperance.exileforge.rules.content.TrapKind
-import com.sperance.exileforge.rules.content.TrapRules
 import com.sperance.exileforge.rules.run.FeatureKind
 import com.sperance.exileforge.rules.run.FeatureState
 import com.sperance.exileforge.rules.run.FeatureUse
@@ -248,19 +248,20 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
 }
 
 /**
- * Ставит объекты карты, один раз: где - по семени (точки очага Скверны - цепью), вдали от входа, выхода, монстров и прочих объектов; комнаты
- * вырезаются в скале за стеной, касаясь пола только входом, так что карта остаётся связной, а комната закрыта до открытия.
+ * Ставит объекты карты, один раз: где - по семени (точки очага Скверны - цепью), на земле под объекты ([ExpeditionWorld.ground]) вдали
+ * от прочих объектов; комнаты вырезаются в скале за стеной, касаясь пола только входом (клетка перед дверью - тоже на этой земле), так что карта остаётся связной, а комната закрыта до открытия.
  * [log] - журнал объектов, с которым герой вернулся в заход: использованное стоит использованным, открытые комнаты открыты.
  *
  * Рычаг запертой комнаты - рядом с дверью, в `expedition.lever` шагах от клетки перед ней; нет такого места - следующая дверь: комната
  * вырезается, только когда место рычага есть.
  */
-fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<FeatureUse>, traps: TrapRules?) {
+fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<FeatureUse>, featureRules: FeatureRules?) {
+    val traps = featureRules?.traps
     if (features.isEmpty() || this.features.isNotEmpty()) return
     val placing = Random(seed * 2_750_159 + 71)
-    val taken = (map.spawns + map.exit + map.start + chests.map { it.cell } + fountains.map { it.cell } + crystals.map { it.cell } + cracks.map { it.cell } + listOfNotNull(portal)).toMutableSet()
-    val reach = distances(map.start, Int.MAX_VALUE)
-    val open = reach.filter { (cell, steps) -> steps >= rules.chestSteps && cell !in taken }.keys
+    val taken = (chests.map { it.cell } + fountains.map { it.cell } + crystals.map { it.cell } + cracks.map { it.cell } + listOfNotNull(portal)).toMutableSet()
+    val ground = ground()
+    val open = ground.filterTo(LinkedHashSet()) { it !in taken }
     val roomy = open.roomy().shuffled(placing).toMutableList()
     val anywhere = open.shuffled(placing).toMutableList()
     fun apart(cell: Cell, spacing: Double) = this.features.all { hypot((it.cell.x - cell.x).toDouble(), (it.cell.y - cell.y).toDouble()) >= spacing }
@@ -271,7 +272,7 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
 
             is MapFeature.Room -> {
                 val vault = feature.kind == FeatureKind.VAULT
-                RoomCarver.plans(map, reach.keys, feature.room.size, placing).firstNotNullOfOrNull { plan ->
+                RoomCarver.plans(map, ground, feature.room.size, placing).firstNotNullOfOrNull { plan ->
                     val lever = if (vault) leverFor(plan.front, roomy, taken, ::apart) ?: return@firstNotNullOfOrNull null else null
                     lever?.let { taken += it }
                     RoomCarver.cut(map, plan)
@@ -285,7 +286,7 @@ fun ExpeditionWorld.placeFeatures(features: List<MapFeature>, log: Collection<Fe
 
             is MapFeature.Node -> claim(roomy, rules.chestSpacing)?.let { NodeSpot(feature, it) }
 
-            is MapFeature.Blight -> claim(roomy, rules.chestSpacing)?.let { first -> BlightSpot(feature, blightCells(feature.points, first, roomy, taken, placing)) }
+            is MapFeature.Blight -> claim(roomy, rules.chestSpacing)?.let { first -> BlightSpot(feature, blightCells(feature.points, featureRules?.blight?.spacing ?: 1, first, roomy, taken, placing)) }
         } ?: return@forEach
         log.filter { it.id == feature.id }.forEach { spot.take(it.choice) }
         this.features += spot

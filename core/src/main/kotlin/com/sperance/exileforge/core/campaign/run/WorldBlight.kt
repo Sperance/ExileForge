@@ -174,15 +174,15 @@ class BlightSpot(feature: MapFeature.Blight, val cells: List<Cell>) : FeatureSpo
 
 /**
  * Клетки точек очага Скверны: первая - из [pool] вдали от прочих объектов, каждая следующая - на пути в
- * `chestSteps`..2×`chestSteps` шагов от прежней (иначе - дальняя доступная), все на полу и врозь. Броски - [random] расстановки.
+ * [spacing]..2×[spacing] шагов от прежней (`blight.spacing`) (иначе - дальняя доступная), все на полу и врозь. Броски - [random] расстановки.
  */
-internal fun ExpeditionWorld.blightCells(points: Int, first: Cell, pool: List<Cell>, taken: MutableSet<Cell>, random: Random): List<Cell> {
+internal fun ExpeditionWorld.blightCells(points: Int, spacing: Int, first: Cell, pool: List<Cell>, taken: MutableSet<Cell>, random: Random): List<Cell> {
     val cells = mutableListOf(first)
     val roomy = pool.toSet()
     repeat(points - 1) {
         val from = cells.last()
-        val reach = distances(from, rules.chestSteps * 2).filterKeys { it !in taken && it in roomy }
-        val near = reach.filterValues { it >= rules.chestSteps }.keys.shuffled(random)
+        val reach = distances(from, spacing * 2).filterKeys { it !in taken && it in roomy }
+        val near = reach.filterValues { it >= spacing }.keys.shuffled(random)
         val cell = near.firstOrNull() ?: reach.maxByOrNull { it.value }?.key ?: from
         taken += cell
         cells += cell

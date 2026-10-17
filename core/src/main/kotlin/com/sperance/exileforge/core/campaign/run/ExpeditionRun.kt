@@ -590,7 +590,7 @@ class ExpeditionRun(
                 world.placeChests((campaign.chests[location.code.value]?.left ?: 0) + opened.size, opened)
                 world.placeCrystals(campaign.crystals[location.code.value]?.crystals.orEmpty())
                 world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
-                world.placeFeatures(run.features.all, features, index.campaign.features?.traps)
+                world.placeFeatures(run.features.all, features, index.campaign.features)
             }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,

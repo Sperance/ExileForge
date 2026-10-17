@@ -172,11 +172,12 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
 /**
  * Лист «Фильтры»: «Сбросить» в заголовке, порядок сегментами, дары - поиск и
  * сетка в два столбца («Все дары», «Без дара», дары контента по имени). Выбор - черновик листа: в список он уходит по
- * «Показать» ([onApply]), «Сбросить» возвращает обычный отбор.
+ * «Показать» ([onApply]); «Сбросить» (и в заголовке, и внизу) сразу применяет обычный отбор и закрывает лист.
  */
 @Composable private fun FiltersSheet(account: AccountUi, current: ModerationFilters, onDismiss: () -> Unit, onApply: (ModerationFilters) -> Unit) {
     var draft by remember(current) { mutableStateOf(current) }
     var query by remember { mutableStateOf("") }
+    val resettable = draft != ModerationFilters.DEFAULT || current != ModerationFilters.DEFAULT
     val fates = remember(account.index) { account.index?.fates?.all.orEmpty().map(FateCard::of).sortedBy { it.title } }
     val options = remember(fates, query) {
         val found = fates.filter { query.isBlank() || it.title.contains(query.trim(), ignoreCase = true) }.map { it.title to ModerationFate.Chosen(it.code) }
@@ -187,7 +188,7 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(ui("moderation.filters"), color = GoldBright, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                ForgeTextButton(onClick = { draft = ModerationFilters.DEFAULT }, enabled = draft != ModerationFilters.DEFAULT) {
+                ForgeTextButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable) {
                     Text(ui("moderation.filters.reset"), color = Gold)
                 }
             }
@@ -219,7 +220,7 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
             }
             if (options.isEmpty()) MutedText(ui("moderation.none"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ForgeOutlinedButton(onClick = { onApply(ModerationFilters.DEFAULT) }, modifier = Modifier.weight(1f)) { Text(ui("moderation.filters.reset")) }
+                ForgeOutlinedButton(onClick = { onApply(ModerationFilters.DEFAULT) }, enabled = resettable, modifier = Modifier.weight(1f)) { Text(ui("moderation.filters.reset")) }
                 ForgeButton(onClick = { onApply(draft) }, modifier = Modifier.weight(2f)) { Text(ui("common.show")) }
             }
         }

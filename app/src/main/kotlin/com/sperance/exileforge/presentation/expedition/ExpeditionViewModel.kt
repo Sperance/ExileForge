@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.campaign.Expedition
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.campaign.TrialArena
-import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.session.Activity
@@ -71,7 +70,6 @@ class ExpeditionViewModel(
 
     /** Заход в зону; [toBoss] (тестировщик и выше) - сразу бой со стражем. */
     fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.start(MapCode(mapCode), toBoss = toBoss && game.value.isTester)
-    fun startAutoRun(mapCode: String) = expedition.start(MapCode(mapCode), AutoPlan)
     fun continueUnfinished() = expedition.continueUnfinished()
     fun abandonUnfinished() = expedition.abandonUnfinished()
     fun runCommand(command: RunCommand) = expedition.send(command)

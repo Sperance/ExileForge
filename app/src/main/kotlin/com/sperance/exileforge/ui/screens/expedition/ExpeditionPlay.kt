@@ -67,8 +67,8 @@ import kotlin.math.roundToInt
  *
  * Снимок захода живьём - для арены; тело экрана видит его без полей кадра боя ([screenOnly]), тикающее на карте читают листовые элементы из
  * [live]. Уход с карты отдаёт оставшееся, поэтому спрашивается; зона Ваал выхода не имеет, кроме стража или гибели. Конец карты - итоги
- * перед лагерем, их закрытие закрывает заход один раз; «Продать и вернуться» продаёт отмеченную добычу уже после захода. Часы захода идут и
- * без сцены: автопробег - лента боёв без карты и стика. Сундук не останавливает героя: добыча летит в сумку, её лист - по плашке. Бой
+ * перед лагерем, их закрытие закрывает заход один раз; «Продать и вернуться» продаёт отмеченную добычу уже после захода. Сундук не
+ * останавливает героя: добыча летит в сумку, её лист - по плашке. Бой
  * кончен - его отчёт; гибель - сперва отчёт, затем итоги. Перед стражем - экран-вызов. Отказ снаряжения читается здесь: у захода нет плашки
  * и шапки.
  */
@@ -108,17 +108,14 @@ import kotlin.math.roundToInt
     val clock = rememberSimClock(run)
     CompositionLocalProvider(LocalFightReport provides hud.lastFight) {
         Box(Modifier.fillMaxSize().background(Ink)) {
-            val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
-            if (ribbon == null) ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
+            ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
             BlightWatch(hud.blight, shell::announce)
-            if (hud.phase == RunPhase.MAP && ribbon == null) LiveHazards(live)
-            if (hud.phase == RunPhase.MAP && ribbon == null) LiveEntrance(live)
+            if (hud.phase == RunPhase.MAP) LiveHazards(live)
+            if (hud.phase == RunPhase.MAP) LiveEntrance(live)
             when (hud.phase) {
-                RunPhase.MAP -> if (ribbon != null) {
-                    AutoRibbon(run, hud, ribbon, live) { model.runCommand(RunCommand.FinishAuto) }
-                } else {
+                RunPhase.MAP -> {
                     MapDockHost { dock ->
-                        if (hud.auto == null) Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
+                        Stick(run) { model.runCommand(RunCommand.OfferFountain(it)) }
                         MapBar(
                             game,
                             run,
@@ -144,7 +141,7 @@ import kotlin.math.roundToInt
                             StatsSheet(game, run.mapEffects, run.origins) { sheet = false }
                         }
                         hud.fountain?.let { DockPanel { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } } }
-                        if (hud.auto == null && !dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
+                        if (!dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
                         if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
                         hud.feature?.let {
                             FeatureSheet(game, it, {
@@ -303,7 +300,7 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
                 )
                 val guardian = GuardianLine.of(hud, zone)
                 Text(guardian.text, color = guardian.color, style = MaterialTheme.typography.labelMedium)
-                if (hud.auto == null) hud.summon?.let { GuardianSummon(game, run, it, mapTitle(hud.mapCode), expedition::runCommand) }
+                hud.summon?.let { GuardianSummon(game, run, it, mapTitle(hud.mapCode), expedition::runCommand) }
                 if (hud.swift) SwiftBadge(run.index.campaign.expedition.bossSlainSpeed)
                 run.seal?.takeIf { !it.open }?.let { seal ->
                     Text(ui("expedition.seal_progress", seal.killed, seal.need), color = Color(0xFFC9A0FF), style = MaterialTheme.typography.labelSmall)
@@ -411,67 +408,6 @@ internal const val FOUNTAIN_TAP = .9
                 ForgeButton(onClick = onTake, modifier = Modifier.weight(1f)) { Text(ui("fountain.take")) }
             }
         }
-    }
-}
-
-/**
- * Лента боёв автопрохода - между боями вместо карты: зона, волна из скольких полосой, открытые сундуки и павшие,
- * жизнь героя (между боями она восстанавливается) и «Завершить» - уход с собранным, после вопроса.
- *
- * Нет связи - автопробег стоит и пойдёт сам; отдых перед волной - фляги и восстановление вне боя, как в ручном заходе.
- */
-@Composable internal fun AutoRibbon(run: ExpeditionRun, hud: RunHud, auto: AutoHud, live: State<RunHud>, onFinish: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Panel, Ink))).systemBarsPadding().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(ui("auto.title"), color = Muted, style = MaterialTheme.typography.labelMedium, letterSpacing = 2.sp)
-            Text(mapTitle(hud.mapCode), color = GoldBright, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            Text(ui("auto.wave_short", auto.wave, auto.waves), color = Parchment, style = MaterialTheme.typography.titleMedium)
-            LinearProgressIndicator(
-                progress = { if (auto.waves > 0) auto.wave.toFloat() / auto.waves else 0f },
-                modifier = Modifier.fillMaxWidth(.8f).height(6.dp).clip(RoundedCornerShape(50)),
-                color = Gold,
-                trackColor = Bronze.copy(alpha = .3f),
-            )
-            Text(ui("auto.tally", auto.chests, hud.kills), color = Muted, style = MaterialTheme.typography.bodyMedium)
-            if (auto.offline) Text(ui("auto.offline"), color = LifeRed, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-            if (auto.resting) Text(ui("auto.resting"), color = Vital, style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center)
-            val life by remember(live) { derivedStateOf { live.value.heroLife } }
-            Text(ui("auto.life", life, hud.heroMaxLife), color = LifeRed, style = MaterialTheme.typography.bodyMedium)
-            AutoFinish(hud, auto, hold = run, onFinish = onFinish) { enabled, label, onClick ->
-                ForgeTextButton(onClick = onClick, enabled = enabled) { Text(label, color = LifeRed) }
-            }
-        }
-    }
-}
-
-/**
- * «Завершить» автопробег с вопросом: карта потрачена, и уход оставляет непройденные волны и стража - лист называет
- * их. Завершённый доигрывает идущий бой, кнопка гаснет с причиной. [hold] - заход, что стоит, пока лист открыт.
- */
-@Composable internal fun AutoFinish(
-    hud: RunHud,
-    auto: AutoHud,
-    hold: ExpeditionRun? = null,
-    onFinish: () -> Unit,
-    trigger: @Composable (enabled: Boolean, label: String, onClick: () -> Unit) -> Unit,
-) {
-    var asking by remember { mutableStateOf(false) }
-    trigger(!auto.finishing, ui(if (auto.finishing) "auto.finishing" else "auto.finish")) { asking = true }
-    if (!asking) return
-    hold?.let { HoldsRun(it) }
-    ConfirmSheet(
-        title = ui("auto.finish_q"),
-        confirm = ui("auto.finish"),
-        danger = true,
-        ledger = listOf(
-            LedgerLine(ui("auto.finish_waves"), ui("auto.wave_short", auto.wave, auto.waves)),
-            LedgerLine(ui("auto.finish_guardian"), GuardianLine.of(hud).text, if (hud.sealed) Tone.SPEND else Tone.PLAIN),
-        ),
-        note = ui("auto.finish_note"),
-        onDismiss = { asking = false },
-    ) {
-        asking = false
-        onFinish()
     }
 }
 

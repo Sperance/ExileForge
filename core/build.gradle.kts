@@ -52,13 +52,17 @@ tasks.register<JavaExec>("mobBal") {
  * Нагрузочный прогон аудита (отчёт, не тест): виртуальные игроки на настоящем клиенте против ЛОКАЛЬНОГО сервера, вне test и ворот CI.
  * Запуск: ./gradlew :core:loadRun -Purl=http://localhost:8081/ -Pplayers=50 -Pseconds=120 -Pprofile=mixed
  *
- * Задача `probeRun` - пробы эксплойтов против локального сервера (отчёт, не тест): `./gradlew :core:probeRun -Padmin=<пароль> -Pdb=<база>`.
+ * Нагрузке виден набор sim: заход без игрока `Walkthrough`. Задача `probeRun` - пробы эксплойтов против локального сервера (отчёт, не тест): `./gradlew :core:probeRun -Padmin=<пароль> -Pdb=<база>`.
  */
 val load: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
     runtimeClasspath += output + compileClasspath + sourceSets.main.get().runtimeClasspath
 }
 kotlin.target.compilations.getByName("load").associateWith(kotlin.target.compilations.getByName("main"))
+sourceSets.named("load") {
+    compileClasspath += sim.output
+    runtimeClasspath += sim.output
+}
 
 tasks.register<JavaExec>("loadRun") {
     group = "reporting"

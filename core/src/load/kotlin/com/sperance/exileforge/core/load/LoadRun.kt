@@ -4,10 +4,8 @@ import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.combat.HeroStance
-import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
-import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.model.sync.HeroParts
@@ -15,6 +13,7 @@ import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.HttpLink
+import com.sperance.exileforge.core.sim.Walkthrough
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ContentLoader
@@ -42,7 +41,7 @@ import kotlin.random.Random
 
 /**
  * Нагрузочный прогон аудита (не тест, не CI): виртуальные игроки на настоящем клиенте [GameApi] и настоящем
- * автозабеге правил против ЛОКАЛЬНОГО сервера. Каждый игрок - свой аккаунт по устройству (адрес - свой
+ * заходе ядра ([Walkthrough]) против ЛОКАЛЬНОГО сервера. Каждый игрок - свой аккаунт по устройству (адрес - свой
  * `X-Forwarded-For`, сервер запускается с `TRUSTED_PROXIES=127.0.0.1`), Предначертание, герой, затем цикл
  * действий профиля. Итог - задержки по маршрутам (p50/p95/p99), ошибки по коду, отклонённые события журнала.
  *
@@ -105,7 +104,7 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
     }
 
     /**
-     * Заход как у клиента: автозабег правил, журнал пачками по 6 событий или на контрольной точке, темп - реальное время боя / [speedup].
+     * Заход как у клиента: проход без игрока ([Walkthrough]), журнал пачками по 6 событий или на контрольной точке, темп - реальное время боя / [speedup].
      *
      * Окна сундуков и кристаллов - как их отдал сервер; возобновлённый заход - как у клиента. Скорость боя - кнопкой, как у игрока, ходьба
      * и время - реальные. Временный отказ (503, 409) и обрыв - повтор той же пачкой и ключом; журнал шлётся по мере боя, время сжато в
@@ -126,7 +125,7 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
         val campaign = p.campaign
         val expedition = ExpeditionRun.start(
             index, zone, run, journal, gear, campaign, 0L, 0.0, hero.level, { 0L },
-            killed = start.killed, opened = start.chests, features = start.features, auto = AutoPlan,
+            killed = start.killed, opened = start.chests, features = start.features,
         )
         generateSequence(1) { index.rules.fight.next(it).takeIf { next -> next > it } }.takeWhile { it < fightSpeed }.forEach { _ -> expedition.send(RunCommand.Speed) }
         var guard = 0
@@ -161,10 +160,10 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
                 sentAt = journal.all.size
             }
         }
+        val walk = Walkthrough(expedition)
         while (guard++ < 200_000) {
-            expedition.update(STEP)
+            val going = walk.step(STEP)
             gameSeconds += STEP
-            val hud = expedition.hud.value
             val pending = journal.all.size - sentAt
             val checkpoint = journal.all.drop(sentAt).any { it is RunEvent.Boss || it is RunEvent.Leave || it is RunEvent.Fall }
             if (pending >= 6 || checkpoint || (pending > 0 && gameSeconds - lastFlush > 20.0)) {
@@ -172,12 +171,7 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
                 lastFlush = gameSeconds
                 flush()
             }
-            when (hud.phase) {
-                RunPhase.DEAD, RunPhase.CLEARED, RunPhase.LEFT -> break
-                RunPhase.GATE -> expedition.send(RunCommand.ShutGate(false))
-                RunPhase.MAP -> if (hud.auto == null) expedition.send(RunCommand.Leave)
-                else -> Unit
-            }
+            if (!going) break
         }
         flush()
         runsDone.incrementAndGet()

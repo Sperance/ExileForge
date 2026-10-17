@@ -154,7 +154,6 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(ui("expedition.launch_boss")) }
             }
-            AutoLaunch(game, vm, zone.code.value, launch, launchGuarded)
         }
     }
 }
@@ -173,25 +172,6 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
             MapMechanic.entries.forEach { mechanic ->
                 FilterChip(selected = mechanic in forced, onClick = { vm.toggleForced(mechanic) }, label = { Text(ui("tester.mechanic.${mechanic.name}")) })
             }
-        }
-    }
-}
-
-/**
- * Автопроход (лента боёв): когда страж зоны пал, её карту можно пройти самой - стаи волнами, сундуки между
- * ними, страж последним. Алтари, Бездна, Ваал и торговец пропускаются; лечения между боями нет.
- */
-@Composable internal fun AutoLaunch(game: GameUi, vm: ExpeditionViewModel, zone: String, launch: MapLaunch, guarded: (() -> Unit) -> Unit) {
-    if (game.progress?.cleared?.contains(MapCode(zone)) != true) return
-    ForgePanel {
-        Engraved(ui("auto.title"))
-        MutedText(ui("auto.hint"))
-        ForgeOutlinedButton(
-            enabled = game.hero != null && !game.busy && launch.picked != null,
-            modifier = Modifier.fillMaxWidth(),
-            onClick = { guarded { vm.startAutoRun(zone) } },
-        ) {
-            Text(ui(if (launch.picked == null) "auto.needs_map" else "auto.go"))
         }
     }
 }

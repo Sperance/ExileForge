@@ -57,7 +57,7 @@ import kotlin.random.Random
  * бой собирает обычные стаи вокруг ([gathered]) и идёт раундами ([FightRounds]) не больше `fight.maxFoes` врагов:
  * герой переходит из раунда в раунд как есть, гибель в любом - гибель в бою. Каждой стае - своё ENGAGE.
  *
- * «В бой» игрока или автопробега начинает бой.
+ * «В бой» игрока начинает бой.
  */
 internal fun ExpeditionRun.engage(agent: MonsterAgent, level: Int = run.levelOf(zone), abyssal: Boolean = false) {
     fightAgent = agent
@@ -170,14 +170,14 @@ internal fun ExpeditionRun.tallyWins() {
 /**
  * Каждый враг - своё убийство, записанное, когда он пал, пока бой идёт; стая раунда, павшая целиком, уходит с карты сразу. Щит, недуги,
  * баффы, проклятия и заряды уходят на карту остатком ([HeroCarry]), перезарядка щита - от последнего удара боя. Свита фаз - в журнале вслед
- * за стаей. Цифры боя идут в статистику героя до того, как гибель закроет журнал; автопробег идёт дальше без отчёта. Гибель в Бездне
+ * за стаей. Цифры боя идут в статистику героя до того, как гибель закроет журнал. Гибель в Бездне
  * сжигает копилку (кроме доли атласа), в Ваал-зоне - обычная смерть, весь заход кончен. Бездна сцепляет бои: следующий бой волны или
  * следующая глубина, когда игрок спустится.
  */
 internal fun ExpeditionRun.play(dt: Double) {
     val battle = fight ?: return
     val agent = fightAgent ?: return
-    if (!started || paused || waitingLink) return
+    if (!started || paused) return
     battle.advance(dt * speed)
     while (reported < battle.fallen.size) {
         val member = members[battle.fallen[reported++]]
@@ -213,11 +213,6 @@ internal fun ExpeditionRun.play(dt: Double) {
             if (down != null) {
                 report = null
                 phase = RunPhase.ABYSS
-            } else if (autopilot != null) {
-                clearSpoils()
-                slain = null
-                report = null
-                phase = RunPhase.MAP
             } else {
                 slain = leader
                 report = FightReport(leader, Outcome.WIN, pack, duration)
@@ -229,7 +224,6 @@ internal fun ExpeditionRun.play(dt: Double) {
             report = FightReport(leader, Outcome.LOSS, pack, duration)
             recap = RunStats.recap(pack)
             life = 0.0
-            autopilot = null
             phase = RunPhase.DEAD
             deaths++
             end = MapEnd.FELL

@@ -2,15 +2,11 @@ package com.sperance.exileforge.core
 
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
-import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.EnergyShield
 import com.sperance.exileforge.core.campaign.combat.HeroStance
-import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
-import com.sperance.exileforge.core.campaign.run.RunCommand
-import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -25,19 +21,19 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Страж, что отдыхает и возвращается посреди захода, «Завершить» автопробега и общее правило энергощита. */
-class GuardianAndAutoTest {
+/** Страж, что отдыхает и возвращается посреди захода, и общее правило энергощита. */
+class GuardianTest {
     private val index get() = TestContent.index
     private val zone get() = index.campaign.zones.first()
 
-    private fun expedition(campaign: CampaignState, auto: Boolean = false): ExpeditionRun {
+    private fun expedition(campaign: CampaignState): ExpeditionRun {
         val heroClass = index.classes.classes.first()
         val level = 12
         val sheet = Sheets.calculate(index, level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
         val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(HeroSkills(), index, heroClass.code, emptyList(), sheet.stats, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, 7L, RunContext(heroClass.code, level))
         val journal = RunJournal("run-7", "hero", zone.code.value)
-        return ExpeditionRun.start(index, zone, run, journal, gear, campaign, NOW, 0.0, level, { 0L }, auto = AutoPlan.takeIf { auto })
+        return ExpeditionRun.start(index, zone, run, journal, gear, campaign, NOW, 0.0, level, { 0L })
     }
 
     private val chests get() = mapOf(zone.code.value to ChestWindow(Long.MAX_VALUE, 0))
@@ -55,16 +51,6 @@ class GuardianAndAutoTest {
         run.update(0.0)
         assertTrue(run.hud.value.sealed, "the guardian is back on its post")
         assertNull(run.hud.value.guardianRest)
-    }
-
-    @Test
-    fun finishing_an_autorun_leaves_the_map_with_what_it_gathered() {
-        val run = expedition(CampaignState(chests = chests), auto = true)
-        run.send(RunCommand.FinishAuto)
-        var guard = 0
-        while (run.hud.value.phase != RunPhase.LEFT && guard++ < 50_000) run.update(0.1)
-        assertEquals(RunPhase.LEFT, run.hud.value.phase)
-        assertEquals(MapEnd.LEFT, run.hud.value.tally.end)
     }
 
     @Test

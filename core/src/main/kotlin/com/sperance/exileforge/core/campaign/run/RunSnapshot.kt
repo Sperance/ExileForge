@@ -80,7 +80,7 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         abyss = abyssView(), cracksLeft = world.standingCracks.size,
         bossDown = bossDown, swift = swift, guardianRest = guardianBack?.let { ((it + ExpeditionRun.GUARDIAN_GRACE_MS - clock()) / 1000).coerceAtLeast(0L).toInt() },
         summon = summonView(),
-        auto = autopilot?.let { AutoHud(it.wave, it.waves, it.chests, it.finishing, linkDown, it.resting != null) }, autoReward = autoReward, autoAwaiting = autoEvents.count(::awaits), questTally = questTallyShown,
+        questTally = questTallyShown,
         pending = journal.pending.size, applied = journal.applied, rejected = journal.rejected.size,
         summary = figures, recap = recap,
         tally = MapTally(end, shownSeconds(), kills, bosses, deaths, granted, figures, awaiting),

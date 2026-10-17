@@ -374,10 +374,6 @@ data class RunHud(
     val summon: SummonView? = null,
     /** Босс карты убит в этом заходе: герой идёт быстрее - след и значок над ним. */
     val swift: Boolean = false,
-    /** The autorun under way, and what it has gathered. */
-    val auto: AutoHud? = null,
-    val autoReward: Reward? = null,
-    val autoAwaiting: Int = 0,
     /** Счёт боевых заданий за этот заход: счётчик летописи - сколько прибавит. */
     val questTally: Map<String, Long> = emptyMap(),
     /** Events of the journal the server has not taken yet, the number of the oldest of them, and the ones it refused. */

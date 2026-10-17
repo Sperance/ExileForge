@@ -561,7 +561,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     /**
-     * Заход целиком: автопроход клиента (`ExpeditionRun` + `AutoPlan`, бои настоящими стаями и стражем, паузы между волнами)
+     * Заход целиком: проход клиента без игрока (`ExpeditionRun` + [Walkthrough], бои настоящими стаями и стражем)
      * даёт секунды боёв; ходьба - жадный маршрут по проходимым клеткам карты `MapGenerator` (вход → ближайшая стая → … → выход/босс)
      * со скоростью героя; опыт - `LootRoller.experience` всех монстров стай и стража зоны.
      */
@@ -573,20 +573,11 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         val run = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level))
         val journal = com.sperance.exileforge.core.campaign.RunJournal("run-$seed", "hero", zone.code.value)
         val state = com.sperance.exileforge.core.model.campaign.CampaignState(chests = mapOf(zone.code.value to com.sperance.exileforge.rules.roll.ChestWindow(Long.MAX_VALUE, 2)))
-        val expedition = com.sperance.exileforge.core.campaign.run.ExpeditionRun.start(index, zone, run, journal, gear, state, 0L, 0.0, hero.level, { 0L }, auto = com.sperance.exileforge.core.campaign.run.AutoPlan)
+        val expedition = com.sperance.exileforge.core.campaign.run.ExpeditionRun.start(index, zone, run, journal, gear, state, 0L, 0.0, hero.level, { 0L })
+        val walk = Walkthrough(expedition)
         var guard = 0
-        var phase = ""
-        while (guard++ < 400_000) {
-            expedition.update(0.1)
-            val hud = expedition.hud.value
-            phase = hud.phase.name
-            when (hud.phase) {
-                com.sperance.exileforge.core.campaign.run.RunPhase.DEAD, com.sperance.exileforge.core.campaign.run.RunPhase.CLEARED, com.sperance.exileforge.core.campaign.run.RunPhase.LEFT -> break
-                com.sperance.exileforge.core.campaign.run.RunPhase.GATE -> expedition.send(com.sperance.exileforge.core.campaign.run.RunCommand.ShutGate(false))
-                com.sperance.exileforge.core.campaign.run.RunPhase.MAP -> if (hud.auto == null) expedition.send(com.sperance.exileforge.core.campaign.run.RunCommand.Leave)
-                else -> Unit
-            }
-        }
+        while (guard++ < 400_000 && walk.step(0.1)) Unit
+        val phase = expedition.hud.value.phase.name
         val share = expedition.share()
         val rules = index.campaign.expedition
         val layout = com.sperance.exileforge.core.campaign.MapGenerator.generate(seed, zone.biome, run.count, rules.terrain, zone.size, rules.minChasm, rules.minPool, rules.shapeOf(zone.biome).shape)

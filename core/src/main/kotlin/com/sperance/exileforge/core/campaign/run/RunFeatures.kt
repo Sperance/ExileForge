@@ -82,12 +82,10 @@ private val ExpeditionRun.traps get() = index.campaign.features?.traps
 
 /**
  * Шаг героя сделал что-то с объектом карты: лист к выбору или сработавший объект.
- *
- * Автопроход обходит алтари: сделку выбирает только игрок.
  */
 internal fun ExpeditionRun.feature(action: FeatureAction) {
     when (action) {
-        is FeatureAction.Offer -> if (autopilot == null || action.spot !is AltarSpot) offer = action.spot
+        is FeatureAction.Offer -> offer = action.spot
         is FeatureAction.Trigger -> action.spot.resolve(this, action.choice)
         is FeatureAction.Spring -> spring(action.spot.feature as MapFeature.Trap)
         is FeatureAction.Rouse -> action.spot.rouse(this, action.group)
@@ -248,7 +246,6 @@ internal fun ExpeditionRun.hurt(damage: Double, chaos: Boolean): Wound {
 
 /** Гибель на карте вне боя (ловушкой): та же смерть, что в бою, - цена, событие гибели и итог карты. */
 internal fun ExpeditionRun.fallOnMap() {
-    autopilot = null
     offer = null
     channel = null
     carry = HeroCarry.NONE

@@ -139,7 +139,7 @@ private const val HERO_CARD = -1
                 }
                 HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD), large, mods, onCommand)
                 if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand) { info = it }
-                Controls(fight, hud, onCommand)
+                Controls(fight, onCommand)
             }
             StrikeFx(fight, frame, { foe -> bounds[foe ?: HERO_CARD] }, origin)
             HitVignette(fight, frame)

@@ -123,8 +123,7 @@ sealed class OfferSpot(feature: MapFeature, cell: Cell) : FeatureSpot(feature, c
 }
 
 /**
- * Алтарь: выбранный вариант ложится на героя и бои сразу; мимо можно пройти - алтарь ждёт нетронутым,
- * автопроход его обходит.
+ * Алтарь: выбранный вариант ложится на героя и бои сразу; мимо можно пройти - алтарь ждёт нетронутым.
  */
 class AltarSpot(feature: MapFeature.Altar, cell: Cell) : OfferSpot(feature, cell) {
     val altar: MapFeature.Altar get() = feature as MapFeature.Altar

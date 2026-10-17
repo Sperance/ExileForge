@@ -63,12 +63,6 @@ sealed interface RunCommand {
     data object ToBoss : RunCommand
     data object Pause : RunCommand
 
-    /**
-     * Связь с сервером: `false` - журнал не уходит, автопробег встаёт на месте и ждёт, бой его тоже; `true` - идёт дальше.
-     * Ручной заход не стоит: его события копятся и уходят, когда связь вернётся.
-     */
-    data class Link(val up: Boolean) : RunCommand
-
     /** «Сдаться» с паузы боя: поражение, как гибель. */
     data object Surrender : RunCommand
 
@@ -120,12 +114,6 @@ sealed interface RunCommand {
 
     /** Takes the hoard of the depths cleared and leaves the Abyss. */
     data object TakeHoard : RunCommand
-
-    /**
-     * «Завершить» автопроход: идущий бой доигрывается, затем заход кончается, как уходом порталом, - с тем, что уже
-     * собрано. Ручной зачистки после автопрохода нет.
-     */
-    data object FinishAuto : RunCommand
 
     /**
      * The server answered the journal up to [applied]: what each accepted event brought, by its

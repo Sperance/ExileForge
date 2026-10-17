@@ -74,7 +74,6 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 
                 MapEnd.CLEARED -> when {
                     hud.vaal -> SummaryHead(ui("vaal.done"), ui("vaal.done_hint"), Vital, ForgeGlyphs.Banner, back)
-                    hud.autoReward != null -> SummaryHead(ui("auto.done"), ui("expedition.map_done_hint"), Vital, ForgeGlyphs.Banner, back)
                     else -> SummaryHead(ui("expedition.map_done"), ui("expedition.map_done_hint"), Vital, ForgeGlyphs.Banner, back)
                 }
 

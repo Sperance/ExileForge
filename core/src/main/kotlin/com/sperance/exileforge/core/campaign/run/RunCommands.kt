@@ -26,7 +26,6 @@ internal fun ExpeditionRun.settle(answer: RunCommand.Settled) {
         earned[n] = gained
         granted += gained
         if (n in fightEvents) reward = (reward ?: Reward.NONE) + gained
-        if (n in autoEvents) autoReward = (autoReward ?: Reward.NONE) + gained
     }
     if (fallEvent != null) answer.lost?.let { fall = it }
     answer.crystals.forEach { (n, changed) -> if (n in vaalings) vaaled[n] = changed }
@@ -92,8 +91,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
     when (command) {
         RunCommand.Speed -> speed = index.rules.fight.next(speed)
 
-        RunCommand.FinishAuto -> autopilot?.finish()
-
         is RunCommand.PickLine -> Unit
 
         RunCommand.Leave -> leave()
@@ -107,7 +104,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
 
         RunCommand.Summon -> summon()
 
-        RunCommand.ToBoss -> if (phase == RunPhase.MAP && autopilot == null) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { challenge(it) }
+        RunCommand.ToBoss -> if (phase == RunPhase.MAP) world.boss?.takeIf { it.alive && it.standing.isNotEmpty() }?.let { challenge(it) }
 
         RunCommand.Pause -> if (fight != null && started && fight?.outcome == null) paused = !paused
 
@@ -117,8 +114,6 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
         }
 
         is RunCommand.Focus -> fight?.focus(command.index)
-
-        is RunCommand.Link -> linkDown = !command.up
 
         is RunCommand.Hold -> holds = (holds + if (command.on) 1 else -1).coerceAtLeast(0)
 
@@ -191,7 +186,7 @@ internal fun ExpeditionRun.handle(command: RunCommand) {
             }
         }
 
-        is RunCommand.OfferFountain -> if (phase == RunPhase.MAP && autopilot == null) world.fountainInSight(command.id)?.let { fountain = it }
+        is RunCommand.OfferFountain -> if (phase == RunPhase.MAP) world.fountainInSight(command.id)?.let { fountain = it }
 
         RunCommand.TakeFountain -> fountain?.takeIf { phase == RunPhase.MAP && !it.used }?.let(::drink)
 

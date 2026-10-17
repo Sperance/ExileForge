@@ -5,12 +5,10 @@ import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.combat.HeroStance
-import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
-import com.sperance.exileforge.core.campaign.run.RunCommand
-import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.model.campaign.CampaignState
+import com.sperance.exileforge.core.sim.Walkthrough
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Rarity
@@ -29,7 +27,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Golden-тест забега: несколько автозабегов (класс, зона, уровень, seed) на фиксированном шаге против
+ * Golden-тест забега: несколько проходов захода без игрока ([Walkthrough]: класс, зона, уровень, seed) на фиксированном шаге против
  * записанного журнала. Распил `ExpeditionRun`/`ExpeditionWorld` не должен сдвинуть ни одно событие;
  * осознанная смена правил или контента перезаписывает снимки: `GOLDEN_UPDATE=1 ./gradlew :core:test`.
  */
@@ -42,7 +40,7 @@ class ExpeditionGoldenTest {
     private val cases = listOf(Case(0, 0, 12, 3L), Case(1, 1, 20, 11L), Case(2, 2, 30, 2024L))
 
     @Test
-    fun a_fixed_autorun_plays_the_recorded_journal() {
+    fun a_fixed_walkthrough_plays_the_recorded_journal() {
         val update = System.getenv("GOLDEN_UPDATE") == "1"
         golden.mkdirs()
         cases.forEach { case ->
@@ -59,7 +57,7 @@ class ExpeditionGoldenTest {
     }
 
     /**
-     * A whole autorun on fixed dice and a fixed step: the journal line by line, then the run's figures.
+     * A whole walkthrough on fixed dice and a fixed step: the journal line by line, then the run's figures.
      *
      * Первое активное умение класса, две простые фляги здоровья; ворота портала ждут игрока - золотой заход не входит в Ваал-зону.
      */
@@ -77,18 +75,10 @@ class ExpeditionGoldenTest {
         val run = Run(index, zone, case.seed, RunContext(heroClass.code, case.level))
         val journal = RunJournal("run-${case.seed}", "hero", zone.code.value)
         val campaign = CampaignState(chests = mapOf(zone.code.value to ChestWindow(Long.MAX_VALUE, 2)))
-        val expedition = ExpeditionRun.start(index, zone, run, journal, gear, campaign, 0L, 0.0, case.level, { 0L }, auto = AutoPlan)
+        val expedition = ExpeditionRun.start(index, zone, run, journal, gear, campaign, 0L, 0.0, case.level, { 0L })
+        val walk = Walkthrough(expedition)
         var guard = 0
-        while (guard++ < 200_000) {
-            expedition.update(STEP)
-            val hud = expedition.hud.value
-            when (hud.phase) {
-                RunPhase.DEAD, RunPhase.CLEARED, RunPhase.LEFT -> break
-                RunPhase.GATE -> expedition.send(RunCommand.ShutGate(false))
-                RunPhase.MAP -> if (hud.auto == null) expedition.send(RunCommand.Leave)
-                else -> Unit
-            }
-        }
+        while (guard++ < 200_000 && walk.step(STEP)) Unit
         val hud = expedition.hud.value
         val share = expedition.share()
         return buildString {

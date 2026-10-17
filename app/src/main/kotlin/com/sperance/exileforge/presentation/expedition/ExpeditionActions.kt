@@ -13,7 +13,6 @@ import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.UnfinishedRun
 import com.sperance.exileforge.core.campaign.combat.FateRun
 import com.sperance.exileforge.core.campaign.combat.HeroStance
-import com.sperance.exileforge.core.campaign.run.AutoPlan
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
@@ -134,9 +133,6 @@ class ExpeditionActions(
     /** Отправок подряд не дошло: каждая ждёт вдвое дольше прошлой. */
     private var failures = 0
 
-    /** Автопоход, с которым начат поход; его зона Ваал тоже идёт сама. */
-    private var autoPlan: AutoPlan? = null
-
     /** Жетоны зоны Ваал, которые сервер уже сосчитал, когда в поход вошли снова. */
     private var vaalKilled: List<Int> = emptyList()
 
@@ -200,7 +196,7 @@ class ExpeditionActions(
      * «В путь»: зона входится на сервере - с выбранной картой, потраченной там, или без неё, - и семя с замороженным
      * контекстом приходят с героем; поход строится здесь и идёт.
      */
-    fun start(mapCode: MapCode, auto: AutoPlan? = null, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, auto, toBoss)
+    fun start(mapCode: MapCode, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, toBoss)
 
     /**
      * «Продолжить» незаконченный заход: вход в ту же зону без карты - сервер отдаёт тот же заход, его павших и открытые
@@ -210,7 +206,7 @@ class ExpeditionActions(
         val offer = repository.state.value.unfinished ?: return
         if (commands.state.value.busy) return
         expedition { it.copy(unfinished = null) }
-        enter(offer.zone, launch = null, auto = null)
+        enter(offer.zone, launch = null)
     }
 
     /**
@@ -228,17 +224,14 @@ class ExpeditionActions(
     }
 
     /**
-     * Автопоход тратит карту зоны, чей страж уже пал однажды. Журнал, которого сервер ещё не взял, не бросается ради нового похода. Новое
-     * семя не раньше правил - ожидание, не ошибка.
+     * Журнал, которого сервер ещё не взял, не бросается ради нового похода. Новое семя не раньше правил - ожидание, не ошибка.
      */
-    private fun enter(mapCode: MapCode, launch: MapLaunch?, auto: AutoPlan?, toBoss: Boolean = false) {
+    private fun enter(mapCode: MapCode, launch: MapLaunch?, toBoss: Boolean = false) {
         if (mutableRun.value != null || commands.state.value.busy) return
         val i = index ?: return
         val progress = progress()
         if (i.zone(mapCode) == null || progress?.unlocked?.contains(mapCode) != true) return
         val picked = launch?.picked
-        if (auto != null && (picked == null || progress.cleared.contains(mapCode) != true)) return
-        autoPlan = auto
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroes.heroId
             runJournal?.let { j ->
@@ -254,7 +247,6 @@ class ExpeditionActions(
                     picked,
                     launch?.potion,
                     launch?.scarabs.orEmpty().takeIf { picked != null }.orEmpty(),
-                    auto = auto != null,
                     forced = repository.state.value.forced,
                 )
             } catch (e: ApiFailure) {
@@ -269,7 +261,7 @@ class ExpeditionActions(
     }
 
     /**
-     * Войдя снова, поход продолжается со своими числами и павшими, начатый автопробегом - им же. Лист «Задания» считает от доски на входе;
+     * Войдя снова, поход продолжается со своими числами и павшими. Лист «Задания» считает от доски на входе;
      * счёт Предначертания - павшие карты и её Ваал-зоны, как у сервера. Тестировщик идёт сразу в бой со стражем.
      */
     private fun begin(id: String, started: RunStart, toBoss: Boolean = false, potion: String? = null) {
@@ -278,7 +270,6 @@ class ExpeditionActions(
         val zone = i.zone(started.zone) ?: return
         val gear = gear() ?: return
         val run = Run(i, zone, started.seed, started.context)
-        if (started.context.auto) autoPlan = AutoPlan
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied).also { runJournal = it }
         val board = quests.board().takeIf { it.board != null }
         expedition {
@@ -290,7 +281,7 @@ class ExpeditionActions(
         mutableRun.value = ExpeditionRun.start(
             i, zone, run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features, auto = autoPlan,
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features,
             summoned = started.tally.summons,
             fateRun = FateRun(started.killed, started.vaalKilled),
         ).also { r ->
@@ -317,7 +308,7 @@ class ExpeditionActions(
         when {
             failures > 0 -> Unit
             event.kind in CHECKPOINTS || j.pending.size >= RunJournal.MAX_BATCH -> flushes.trySend(Unit)
-            event is RunEvent.Fight && event.fight.won && mutableRun.value?.hud?.value?.auto == null -> flushes.trySend(Unit)
+            event is RunEvent.Fight && event.fight.won -> flushes.trySend(Unit)
             else -> sendBatch()
         }
     }
@@ -342,19 +333,16 @@ class ExpeditionActions(
     }
 
     /**
-     * Отправка не дошла: следующая после удвоенной паузы, не дольше [FLUSH_EVERY]. Первая неудача ставит автопробег на
-     * паузу ([RunCommand.Link]); ответ сервера снимает её ([linkBack]).
+     * Отправка не дошла: следующая после удвоенной паузы, не дольше [FLUSH_EVERY]; ответ сервера сбрасывает счёт ([linkBack]).
      */
     private fun retryLater() {
-        if (failures++ == 0) runs().forEach { it.send(RunCommand.Link(up = false)) }
+        failures++
         sendIn((RETRY_FIRST shl (failures - 1).coerceAtMost(RETRY_DOUBLINGS)).coerceAtMost(FLUSH_EVERY))
     }
 
-    /** Сервер снова ответил: счёт неудач сброшен, автопробег идёт дальше. */
+    /** Сервер снова ответил: счёт неудач сброшен. */
     private fun linkBack() {
-        if (failures == 0) return
         failures = 0
-        runs().forEach { it.send(RunCommand.Link(up = true)) }
     }
 
     /** Журнал на диск через миг после последнего события: залп убийств - одна запись. */
@@ -560,7 +548,7 @@ class ExpeditionActions(
         val inner = ExpeditionRun.start(
             i, outer.run.zone, outer.run, journal, gear, h.campaign, System.currentTimeMillis(), h.info.experience, h.level,
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded, vaal = true, startPools = outer.pools,
-            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts, auto = autoPlan.takeIf { outer.hud.value.auto != null },
+            onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = vaalKilled, inherited = outer.pacts,
             fateRun = outer.fateRun,
         ).also { r -> repeat(speedSteps) { r.send(RunCommand.Speed) } }
         parent = outer

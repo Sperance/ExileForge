@@ -107,8 +107,6 @@ class ExpeditionRun(
     internal val onRecorded: (RunEvent) -> Unit,
     internal val onCleared: () -> Unit,
     internal val onFallen: () -> Unit,
-    /** The autorun that drives this run instead of the stick; null walks by hand. */
-    internal var autopilot: AutoPilot? = null,
     /**
      * Счёт Предначертания захода: бои захода и его Ваал-зоны делят его - перелив маны, выигранные бои Разгона
      * ([tallyWins]).
@@ -121,7 +119,7 @@ class ExpeditionRun(
 
     /**
      * Когда отдыхающий страж вернётся на пост, мс часов сервера; null - он не отдыхает. Отдых, что кончился посреди
-     * захода, ставит стража на пост: выход снова запечатан, автопроход берёт его своим последним боем.
+     * захода, ставит стража на пост: выход снова запечатан.
      */
     internal var guardianBack: Long? = null
 
@@ -188,7 +186,7 @@ class ExpeditionRun(
     internal var hitAt = Double.NEGATIVE_INFINITY
     internal val kit: Loadout get() = build.gear.kit
 
-    /** Темп похода из контента: паузы боя, шаг автозабега. */
+    /** Темп похода из контента: паузы боя. */
     internal val pace: ExpeditionRules get() = index.campaign.expedition
     internal var mana = startPools?.mana?.coerceIn(0.0, manaCap()) ?: manaCap()
     internal var charges: List<Double> = kit.flasks.mapIndexed { i, flask -> flask?.sheet?.let { startPools?.charges?.getOrNull(i)?.coerceIn(0.0, it.maxCharges) ?: it.maxCharges } ?: 0.0 }
@@ -221,11 +219,6 @@ class ExpeditionRun(
     internal var started = false
     internal var paused = false
 
-    /** Связь с сервером пропала ([RunCommand.Link]): автопробег стоит. */
-    internal var linkDown = false
-
-    /** Автопробег ждёт связи. */
-    internal val waitingLink: Boolean get() = linkDown && autopilot != null
     internal var holds = 0
     internal var fights = 0
     internal var speed = 1
@@ -293,10 +286,6 @@ class ExpeditionRun(
     /** Копия [questTally] для снимка экрана: одна и та же, пока счёт не сдвинулся, - не новая карта на кадр. */
     internal var questTallyShown: Map<String, Long> = questTally.toMap()
 
-    /** What an autorun has gathered, fight by fight: its report at the end. */
-    internal val autoEvents = HashSet<Int>()
-    internal var autoReward: Reward? = null
-
     /** Добыча, что вылетает на карте: события сундуков и объектов захода по порядку. */
     internal val drops = mutableListOf<Int>()
 
@@ -336,7 +325,7 @@ class ExpeditionRun(
     internal var slain: RolledMonster? = null
     internal var report: FightReport? = null
 
-    /** Журнал последнего боя захода, любого - и автопробега, и Бездны: его открывает «Журнал боя» меню забега. */
+    /** Журнал последнего боя захода, любого - и Бездны: его открывает «Журнал боя» меню забега. */
     internal var lastFight: FightReport? = null
 
     /** Прошлый бой захода выигран: следующий бой открывается силами `FIGHT_CLEAR`. */
@@ -430,7 +419,7 @@ class ExpeditionRun(
         hazards.removeAll { it.left <= 0 }
         if (holds == 0) {
             when (phase) {
-                RunPhase.MAP -> autopilot?.let { drive(it, dt) } ?: run {
+                RunPhase.MAP -> {
                     channel?.let { gather(it, dt) }
                     if (fountain == null && offer == null && channel == null) walk(dt)
                 }
@@ -506,14 +495,10 @@ class ExpeditionRun(
         }
     }
 
-    /** A rewarding event recorded: what it brings comes with the server's answer, into the run's count, the autorun's and, [fought], the fight's report. */
+    /** A rewarding event recorded: what it brings comes with the server's answer, into the run's count and, [fought], the fight's report. */
     internal fun rewarding(event: RunEvent?, fought: Boolean = false): RunEvent? = event?.also {
         mine += it.n
         bag[it.n] = LootFrom.of(it, run) to clock()
-        if (autopilot != null) {
-            autoEvents += it.n
-            autoReward = autoReward ?: Reward.NONE
-        }
         if (fought) {
             fightEvents += it.n
             reward = reward ?: Reward.NONE
@@ -575,7 +560,6 @@ class ExpeditionRun(
             opened: Collection<Int> = emptyList(),
             features: Collection<FeatureUse> = emptyList(),
             inherited: Map<String, Double> = emptyMap(),
-            auto: AutoPlan? = null,
             summoned: Int = 0,
             fateRun: FateRun = if (vaal) FateRun(vaalKilled = killed) else FateRun(killed),
         ): ExpeditionRun {
@@ -605,10 +589,9 @@ class ExpeditionRun(
                 world.placeCracks(campaign.abyss[location.code.value]?.cracks.orEmpty())
                 world.placeFeatures(run.features.all, features, index.campaign.features?.traps)
             }
-            val pilot = auto?.let { AutoPilot.of(index.campaign.expedition, world, if (vaal) run.seed xor VAAL_SALT else run.seed) }
             return ExpeditionRun(
                 index, zone, run, journal, world, build, rules, run.seed, effects, vaal, startPools, heroExperience, heroLevel, vaalOrbs,
-                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, pilot, fateRun,
+                campaign.corruptionOpened, vaalZone, bossDown, onRecorded, onCleared, onFallen, fateRun,
             ).also {
                 if (!it.carry.bare) it.rebody()
                 it.tallyWins()

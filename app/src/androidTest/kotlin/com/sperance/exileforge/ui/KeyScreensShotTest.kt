@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.LevelUp
+import com.sperance.exileforge.core.campaign.run.ObjectAction
 import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.SkillText
@@ -73,6 +74,7 @@ import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
 import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen
 import com.sperance.exileforge.ui.screens.expedition.NodeSheet
+import com.sperance.exileforge.ui.screens.expedition.ObjectActionPanel
 import com.sperance.exileforge.ui.screens.expedition.arena.ActionBar
 import com.sperance.exileforge.ui.screens.expedition.arena.FightFrame
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
@@ -201,13 +203,16 @@ class KeyScreensShotTest {
         ActionBar(game(level, owner.code), fight, FightFrame(mutableFloatStateOf(0f), null), {}) {}
     }
 
-    /** Окно сбора (шаблон листа объекта карты): узел ремесла на карте, полоса сбора на 40%. */
+    /** Сбор на карте: лист узла ремесла и нижняя панель действия у объекта с полосой сбора на 40%. */
     @Test fun gathering() = shot("gathering", scroll = false) {
         val level = 20
         val zone = index.campaign.zones.first { it.level >= level }
         val run = Run(index, zone, 7L, RunContext(heroClass.code, level, forced = setOf(MapMechanic.NODES)))
         val node = run.features.all.filterIsInstance<MapFeature.Node>().first()
-        Box(Modifier.height(640.dp)) { FeatureSheet(game(level), FeatureView(node, emptyList(), gathering = .4f)) {} }
+        Box(Modifier.height(640.dp)) {
+            FeatureSheet(game(level), FeatureView(node, emptyList())) {}
+            ObjectActionPanel(ObjectAction(node, .4f), { null }, { .4f })
+        }
     }
 
     /** Админка с ролью администратора: промокоды, выдачи, режим. */

@@ -24,9 +24,12 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Вклад в гильдию (4.8.0) - только золото: целиком идёт в казну, в опыт гильдии и в личный вклад героя, то есть в его ранг;
+ * Вклад в гильдию - только золото: целиком идёт в казну, в опыт гильдии и в личный вклад героя, то есть в его ранг;
  * у дня свой предел по уровню героя и дереву гильдии, остаток на сегодня говорит сервер.
  * Ниже - казна, путь героя к следующему рангу и вкладчики недели.
+ *
+ * Суточный лимит и остаток считает сервер одной формулой `GuildRules.dailyLimit` (с бонусом древа). «Макс.» - сколько влезает в остаток и в
+ * кошелёк. Кнопка снова взводится после удержания, поле чистится только принятым вкладом.
  */
 @Composable internal fun ContributeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var amount by remember { mutableStateOf("") }
@@ -45,24 +48,20 @@ import com.sperance.exileforge.ui.theme.*
                     modifier = Modifier.fillMaxWidth(),
                     supportingText = { have?.let { Text(ui("guild.give_have", number(it.toDouble()))) } },
                 )
-                // Суточный лимит и остаток считает сервер по одной формуле `GuildRules.dailyLimit` (с бонусом древа)
                 val left = me?.dayLeft
                 me?.let {
                     PropertyRow(ui("guild.daily_limit"), number(it.dayLimit.toDouble()), Glyph.LEVEL)
                     MutedText(ui("guild.daily_left", number(it.dayLeft.toDouble())))
                 }
-                // «Макс.»: сколько золота влезает в сегодняшний остаток и в кошелёк героя
                 val most = listOfNotNull(left, have).minOrNull()
                 if (most != null && most > 0) {
                     ForgeTextButton(enabled = !game.busy, onClick = { amount = most.toString() }) { Text(ui("guild.give_max", number(most.toDouble()))) }
                 }
                 val over = left != null && count > left
-                // Сумма против кошелька (0.14.5, #42): тот же счёт, что у всех оплат золотом
                 val bill = game.goldBill(count)
                 val short = bill?.affordable == false
                 if (short) bill?.let { Text(it.shortText(), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 if (over) Text(ui("guild.give_over_limit", number((left ?: 0L).toDouble())), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-                // Кнопка остаётся на экране: после каждого удержания она снова взводится, поле чистится только принятым вкладом
                 HoldButton(
                     ui("guild.give_do"),
                     Gold,

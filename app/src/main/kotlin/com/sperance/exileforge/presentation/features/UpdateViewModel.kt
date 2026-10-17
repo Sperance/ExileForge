@@ -38,7 +38,7 @@ import kotlinx.coroutines.sync.withLock
 import java.io.File
 
 /**
- * Where the update stands (3.86.0). [checking]/[failure] - the check under way or why it failed. [update] - the build found:
+ * Where the update stands. [checking]/[failure] - the check under way or why it failed. [update] - the build found:
  * every one locks the game until it is installed. [progress] - its download, 0..1; [installing] - in the system installer.
  * [askSources] - «install unknown apps» is not allowed yet: the game asks for it until it is, so an update installs at once.
  */
@@ -57,14 +57,18 @@ data class UpdateState(
 }
 
 /**
- * Updates from GitHub Releases (3.86.0): at start, when the server answers (its wire decides whether a build is required),
+ * Updates from GitHub Releases: at start, when the server answers (its wire decides whether a build is required),
  * by hand and every hour. A failed check is quietly tried again a minute later and never holds the start.
  *
- * С 3.90.3 сами проверки идут одной очередью ([pending]): на холодном старте - только когда ресурсы игры ([resources])
+ * Сами проверки идут одной очередью ([pending]): на холодном старте - только когда ресурсы игры ([resources])
  * дочитаны, а не бок о бок с ними. Возвращение в игру (не чаще [RESUME_GAP_MS]) и каждая ошибка сервера (426 - сразу, прочие ошибки и обрыв
  * без ответа - не чаще [FAILED_GAP_MS]) проверяют сборку тут же, и во время похода или испытания ([playing]): найденная
  * сборка закрывает игру по их концу (окно обновления это знает), а сверка ресурсов ([resourcesDue]) ждёт их конца - она
  * перечитывает мир под идущим боем. Провод сервера каждая проверка спрашивает заново ([ServerReach.freshWire]).
+ *
+ * Ответ сервера может сделать сборку обязательной - проверка идёт снова. Сервер новее сборки - окно запуска ждёт новую, она ищется каждые
+ * [AWAIT_POLL_MS]; отказ входа сервером новее - сборка ищется сразу, мимо очереди. Ошибка сервера или молчание - сверка ресурсов и сборки
+ * не чаще раза в [FAILED_GAP_MS].
  */
 class UpdateViewModel(
     app: Application,
@@ -83,7 +87,7 @@ class UpdateViewModel(
     val state: StateFlow<UpdateState> = mutable.asStateFlow()
     private val checks = Mutex()
 
-    /** «Что нового» (3.93.0): заметки последних релизов; null - ещё не загружены, пусто - GitHub не ответил. */
+    /** «Что нового»: заметки последних релизов; null - ещё не загружены, пусто - GitHub не ответил. */
     private val notesFlow = MutableStateFlow<List<com.sperance.exileforge.core.update.ReleaseNotes>?>(null)
     val notes: StateFlow<List<com.sperance.exileforge.core.update.ReleaseNotes>?> = notesFlow.asStateFlow()
 
@@ -115,9 +119,7 @@ class UpdateViewModel(
         if (BuildConfig.UPDATES) {
             viewModelScope.launch { serve() }
             viewModelScope.launch { refreshResources() }
-            // The server answered: its wire may make a build required, so the check runs again with it.
             viewModelScope.launch { reach.state.map { it.wire }.filterNotNull().distinctUntilChanged().collect { ask(Request.CHECK) } }
-            // Сервер новее сборки (0.14.4): окно запуска ждёт новую сборку - она ищется каждые [AWAIT_POLL_MS], пока не найдётся
             viewModelScope.launch {
                 reach.window.map { it.fit == WireFit.GAME_BEHIND }.distinctUntilChanged().collectLatest { behind ->
                     while (behind && state.value.update == null) {
@@ -126,11 +128,7 @@ class UpdateViewModel(
                     }
                 }
             }
-            // A server newer than this build refused the sign-in (3.74.0): its build is looked for now, not in an hour -
-            // мимо очереди: без новой сборки игра дальше входа не пойдёт, и ресурсов ей ждать незачем.
             viewModelScope.launch { newerServer.collect { check(outdated = true) } }
-            // Сервер ответил ошибкой (4.3.1) или не ответил вовсе: сверка ресурсов и сборки в очередь, не чаще раза в
-            // [FAILED_GAP_MS] - на поток одинаковых отказов одна проверка.
             viewModelScope.launch {
                 var last = 0L
                 serverFailed.collect {
@@ -155,7 +153,7 @@ class UpdateViewModel(
     }
 
     /**
-     * Очередь проверок: первая ждёт провода сервера (не дольше [WIRE_WAIT_MS] - без связи он может и не прийти; 0.14.4 - не
+     * Очередь проверок: первая ждёт провода сервера (не дольше [WIRE_WAIT_MS] - без связи он может и не прийти; не
      * ресурсов: окно запуска держит игру до конца проверки, она идёт сразу), каждая следующая идёт сразу, и в походе тоже; сверка
      * ресурсов просьбы [Request.RECHECK] - своим чередом ([refreshResources]). После каждой проверки следующая плановая встаёт
      * через час, после отказа GitHub - через минуту.
@@ -189,8 +187,8 @@ class UpdateViewModel(
     private fun ask(request: Request) = pending.update { maxOf(it ?: request, request) }
 
     /**
-     * Игрок вернулся в игру (3.90.3): проверка сборки - сразу, в походе тоже; сверка ресурсов - по концу похода и испытания.
-     * До конца холодного старта возвращение ничего не добавляет: его проверка и так впереди. С 4.9.0 - не чаще
+     * Игрок вернулся в игру: проверка сборки - сразу, в походе тоже; сверка ресурсов - по концу похода и испытания.
+     * До конца холодного старта возвращение ничего не добавляет: его проверка и так впереди. Не чаще
      * [RESUME_GAP_MS] после последнего ответа GitHub: короткие отлучки из игры запросов не добавляют.
      */
     fun resumed() {
@@ -223,6 +221,8 @@ class UpdateViewModel(
      * One check; whether GitHub answered. Провод сервера - свежий ([ServerReach.freshWire]): провод старта мог устареть, пока
      * игра лежала в фоне, и тогда сборка под новый сервер отвергалась бы как «не на его проводе». [outdated] - сервер сам
      * назвал сборку устаревшей.
+     *
+     * Скачиваемое обновление сохраняется: новое ждёт следующей проверки.
      */
     private suspend fun check(outdated: Boolean = false): Boolean = checks.withLock {
         mutable.update { it.copy(checking = true) }
@@ -230,7 +230,6 @@ class UpdateViewModel(
             val wire: Wire? = reach.freshWire()
             val found = trace.step(StartStage.VERSION, "start.step.latest") { updates.check(BuildConfig.VERSION_CODE, wire, outdated) }
             mutable.update { s ->
-                // The update being downloaded is kept: a newer one waits for the next check after it.
                 val next = if (s.progress != null || s.installing) s.update else found
                 s.copy(
                     checking = false,
@@ -248,12 +247,16 @@ class UpdateViewModel(
         }
     }
 
-    /** «Проверить сейчас» окна запуска (0.14.4): сервер новее сборки - новая ищется тут же, а не через [AWAIT_POLL_MS]. */
+    /** «Проверить сейчас» окна запуска: сервер новее сборки - новая ищется тут же, а не через [AWAIT_POLL_MS]. */
     fun checkNow() {
         if (BuildConfig.UPDATES) viewModelScope.launch { check(outdated = true) }
     }
 
-    /** «Обновить»: the APK is downloaded from GitHub (resumed where it broke off), its SHA-256 checked, the installer asked. */
+    /**
+     * «Обновить»: the APK is downloaded from GitHub (resumed where it broke off), its SHA-256 checked, the installer asked.
+     *
+     * Другие сборки - мусор; начатая эта остаётся и докачивается.
+     */
     fun install() {
         val update = state.value.update ?: return
         if (download?.isActive == true) return
@@ -266,7 +269,6 @@ class UpdateViewModel(
             mutable.update { it.copy(needsPermission = false, error = null, progress = 0f) }
             try {
                 val name = "ExileForge-${update.info.versionName}.apk"
-                // Другие сборки - мусор; начатая эта остаётся и докачивается.
                 val dir = File(context.cacheDir, DIR).apply { listFiles()?.filter { it.name != name }?.forEach { it.delete() } }
                 val apk = File(dir, name)
                 updates.download(update, apk) { read, total -> if (total > 0) mutable.update { it.copy(progress = (read.toFloat() / total).coerceIn(0f, 1f)) } }
@@ -283,7 +285,7 @@ class UpdateViewModel(
     /** The permission screen was left: the player tries again. */
     fun permissionAsked() = mutable.update { it.copy(needsPermission = false) }
 
-    /** Отложенная проверка (3.90.3): просто проверка или, по возвращении в игру, сперва сверка ресурсов; вторая полнее. */
+    /** Отложенная проверка: просто проверка или, по возвращении в игру, сперва сверка ресурсов; вторая полнее. */
     private enum class Request { CHECK, RECHECK }
 
     private companion object {
@@ -292,16 +294,16 @@ class UpdateViewModel(
         /** A failed check is tried again this soon, unseen. */
         const val RETRY_MS = 60_000L
 
-        /** Не чаще одной проверки обновления на ошибки ответов сервера (4.3.1) и обрывы без ответа. */
+        /** Не чаще одной проверки обновления на ошибки ответов сервера и обрывы без ответа. */
         const val FAILED_GAP_MS = 5 * 60_000L
 
-        /** Возвращение в игру проверяет сборку, только если GitHub отвечал не позже этого (4.9.0). */
+        /** Возвращение в игру проверяет сборку, только если GitHub отвечал не позже этого. */
         const val RESUME_GAP_MS = 10 * 60_000L
 
         /** Дольше этого первая проверка не ждёт провода сервера: без связи он не придёт, а сборку искать надо. */
         const val WIRE_WAIT_MS = 20_000L
 
-        /** Как часто ищется новая сборка, пока сервер новее этой (0.14.4). */
+        /** Как часто ищется новая сборка, пока сервер новее этой. */
         const val AWAIT_POLL_MS = 30_000L
 
         /** Back in the game while installing: the installer's answer is waited for this long before the retry is offered. */

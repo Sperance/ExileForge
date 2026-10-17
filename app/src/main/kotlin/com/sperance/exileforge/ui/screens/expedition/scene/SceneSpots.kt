@@ -31,8 +31,6 @@ import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.sin
 
-// ==================== What stands on the map ====================
-
 /** A fountain: a stone basin on the ground, its water glowing while it can still heal, dark once drunk. */
 internal fun ScenePainter.drawFountain(x: Double, y: Double, used: Boolean, light: Float) {
     val cx = isoX(x, y)
@@ -61,7 +59,7 @@ internal fun ScenePainter.drawFountain(x: Double, y: Double, used: Boolean, ligh
 }
 
 /**
- * A crystal of essences (2.78.0): a tall prism of violet glass on the ground, humming while its guardian
+ * A crystal of essences: a tall prism of violet glass on the ground, humming while its guardian
  * waits — red once a Vaal orb made the guardian stronger — and dull glass once it is freed.
  */
 internal fun ScenePainter.drawCrystal(x: Double, y: Double, freed: Boolean, stronger: Boolean, light: Float) {
@@ -92,7 +90,7 @@ internal fun ScenePainter.drawCrystal(x: Double, y: Double, freed: Boolean, stro
 }
 
 /**
- * A crack of the Abyss (2.82.0): a black rift torn in the ground, its lips lit violet and breathing, a
+ * A crack of the Abyss: a black rift torn in the ground, its lips lit violet and breathing, a
  * haze rising from it — until it was opened, when it is only a dark scar.
  */
 internal fun ScenePainter.drawCrack(x: Double, y: Double, opened: Boolean, seed: Int, light: Float) {
@@ -113,7 +111,6 @@ internal fun ScenePainter.drawCrack(x: Double, y: Double, opened: Boolean, seed:
     if (opened) return
     pen.color = violet.copy(alpha = .9f * light)
     pen.polyline(cx - w * .7f, cy + d * .05f, cx - w * .2f, cy - d * .25f, cx + w * .25f, cy + d * .1f, cx + w * .7f, cy - d * .05f, width = unit * .025f)
-    // A haze of the deep rising: three motes drifting up and fading.
     for (i in 0 until 3) {
         val t = ((time * .35f + i / 3f + seed * .13f) % 1f)
         pen.color = violet.copy(alpha = (1 - t) * .55f * light)
@@ -122,8 +119,10 @@ internal fun ScenePainter.drawCrack(x: Double, y: Double, opened: Boolean, seed:
 }
 
 /**
- * A chest: an iron-bound box on the ground, its lid shut and gleaming, or thrown back on an empty one. [waiting] (4.10.0, макет
- * «Сундук на карте», вариант B) - открыт, а ответа сервера нет: крышка приоткрыта, внутри тлеет, над ним «…».
+ * A chest: an iron-bound box on the ground, its lid shut and gleaming, or thrown back on an empty one. [waiting]
+ * - открыт, а ответа сервера нет: крышка приоткрыта, внутри тлеет, над ним «…».
+ *
+ * «…» ожидания мигают на часах декора, без `LocalMotion` стоят.
  */
 internal fun ScenePainter.drawChest(x: Double, y: Double, opened: Boolean, light: Float, waiting: Boolean = false) {
     val cx = isoX(x, y)
@@ -135,7 +134,6 @@ internal fun ScenePainter.drawChest(x: Double, y: Double, opened: Boolean, light
     val iron = Color(0xFF3A3A40)
     pen.color = Color.Black.copy(alpha = .35f)
     pen.ellipse(cx - w * 1.2f, cy - d * .8f, w * 2.4f, d * 1.6f)
-    // Two faces seen at a slant, and the top.
     pen.color = tone(wood, .85f * light)
     pen.quad(cx - w, cy, cx, cy - d, cx, cy - d + h, cx - w, cy + h)
     pen.color = tone(wood, .65f * light)
@@ -154,7 +152,6 @@ internal fun ScenePainter.drawChest(x: Double, y: Double, opened: Boolean, light
         pen.color = tone(wood, .95f * light)
         pen.quad(cx - w, cy + h, cx, cy + h + d, cx, cy + h + d + h * lift, cx - w, cy + h + h * lift)
         if (waiting) {
-            // «…» ожидания: мигают на часах декора, без `LocalMotion` стоят
             for (i in 0 until 3) {
                 val beat = if (motion) .35f + .65f * (.5f + .5f * sin(time * 5f - i * 1.2f)) else 1f
                 pen.color = Color(0xFFD5E0E6).copy(alpha = beat * light.coerceAtLeast(.6f))
@@ -171,7 +168,7 @@ internal fun ScenePainter.drawChest(x: Double, y: Double, opened: Boolean, light
     }
 }
 
-/** The Vaal portal (2.65.0): a black mouth in scarlet rings, beating like the zone behind it. */
+/** The Vaal portal: a black mouth in scarlet rings, beating like the zone behind it. */
 internal fun ScenePainter.vaalPortal(x: Double, y: Double, light: Float) {
     val cx = isoX(x, y)
     val cy = isoY(x, y)
@@ -189,7 +186,7 @@ internal fun ScenePainter.vaalPortal(x: Double, y: Double, light: Float) {
     pen.ring(cx - unit * .3f, cy + unit * .7f, unit * .6f, unit * 1f, unit * .06f)
 }
 
-/** The exit: a pale gate, or — while its guardian lives (since 2.34.0) — a dim red one crossed by chains. */
+/** The exit: a pale gate, or — while its guardian lives — a dim red one crossed by chains. */
 internal fun ScenePainter.portal(x: Double, y: Double, sealed: Boolean) {
     val cx = isoX(x, y)
     val cy = isoY(x, y)
@@ -209,6 +206,6 @@ internal fun ScenePainter.portal(x: Double, y: Double, sealed: Boolean) {
     }
 }
 
-/** Крышка сундука, поднятая на долю высоты ящика: откинута у открытого, приоткрыта у ждущего ответа (4.10.0). */
+/** Крышка сундука, поднятая на долю высоты ящика: откинута у открытого, приоткрыта у ждущего ответа. */
 private const val CHEST_LID_OPEN = .8f
 private const val CHEST_LID_AJAR = .4f

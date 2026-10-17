@@ -103,7 +103,7 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * One line of a reward, read by an administrator rather than by a player.
  *
- * A stack and a template are named by code (3.0.0), and the code has a name in the server's
+ * A stack and a template are named by code, and the code has a name in the server's
  * dictionary — so the line reads as the player will see the gift, kind first: «Предмет · Сфера хаоса · 3 шт.».
  */
 private fun rewardLine(reward: RedemptionReward): String {
@@ -180,7 +180,6 @@ private fun rewardOptions(game: GameUi, kind: RedemptionKind): Map<String, Strin
             kind = RedemptionKind.valueOf(it)
             item = ""
         }
-        // The goods are picked from the content the hero reads (3.0.0): a stack of the bag or a template, by code.
         if (needsCode) Spinner(ui("enum.reward.${kind.name}"), item, rewardOptions(game, kind), !game.busy, glyph = Glyph.ITEM) { item = it }
         OutlinedTextField(
             amount,

@@ -52,7 +52,7 @@ import com.sperance.exileforge.ui.theme.*
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Части разбора удара (3.80.24): цепочка, броски, стороны, статы и состояния. */
+/** Части разбора удара: цепочка, броски, стороны, статы и состояния. */
 /** The formula as chips; the one tapped lays out every stat it reads, of the striker and of the target, by source. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -88,8 +88,6 @@ internal fun Chain(factors: List<FactorTrace>, attacker: FighterShot, target: Fi
 }
 
 internal fun sideLabel(shot: FighterShot, attacker: FighterShot): String = if (shot === attacker) ui("trace.side.attacker") else ui("trace.side.target")
-
-// ==================== The sides ====================
 
 /** The striker, the target and what lay on both, as tabs; a stat tapped opens its sources. */
 @Composable internal fun Sides(attacker: FighterShot, target: FighterShot, origin: TraceOrigin, explainer: TraceExplainer, game: GameUi, factors: List<FactorTrace>) {
@@ -165,8 +163,6 @@ internal val TARGET_STATS = listOf(CoreStat.HEALTH.code, CoreStat.ENERGY_SHIELD.
         }
     }
 }
-
-// ==================== Pieces ====================
 
 @Composable internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     val shape = RoundedCornerShape(10.dp)

@@ -20,7 +20,7 @@ import com.sperance.exileforge.rules.run.MapMechanic
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** Экраны похода (3.80.21): карта мира, карточка зоны, бег похода, испытания и атлас - над общими действиями. */
+/** Экраны похода: карта мира, карточка зоны, бег похода, испытания и атлас - над общими действиями. */
 class ExpeditionViewModel(
     private val expedition: ExpeditionActions,
     private val trial: TrialActions,
@@ -31,26 +31,26 @@ class ExpeditionViewModel(
     slice: GameSlice,
     private val prefs: PreferencesRepository,
 ) : ViewModel() {
-    /** Где стояла камера карты у героя [heroId] (4.6.5); не стояла - null, карта откроется на фронтире. */
+    /** Где стояла камера карты у героя [heroId]; не стояла - null, карта откроется на фронтире. */
     fun worldView(heroId: String): WorldView? = prefs.settings.value.worldViews[heroId]
 
-    /** Запомнить камеру карты героя [heroId] на устройстве (4.6.5): только настройки, сервер не знает. */
+    /** Запомнить камеру карты героя [heroId] на устройстве: только настройки, сервер не знает. */
     fun keepWorldView(heroId: String, view: WorldView) {
         if (heroId.isBlank()) return
         viewModelScope.launch { prefs.editSettings { copy(worldViews = worldViews + (heroId to view)) } }
     }
 
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val state: StateFlow<Expedition> = repository.state
     val run: StateFlow<ExpeditionRun?> = expedition.run
 
-    /** Добыча основной карты под зоной Ваал (3.94.0). */
+    /** Добыча основной карты под зоной Ваал. */
     fun outerLoot(): List<String> = expedition.outerLoot()
     val arena: StateFlow<TrialArena?> = trial.arena
     val activity: StateFlow<Activity> = commands.state
 
-    /** Босс на сервере героя (3.92.0): сколько героев с ним дрались и сколько победили. */
+    /** Босс на сервере героя: сколько героев с ним дрались и сколько победили. */
     suspend fun bossRecord(code: String) = expedition.bossRecord(code)
 
     fun loadCampaign() = expedition.loadCampaign()
@@ -60,7 +60,7 @@ class ExpeditionViewModel(
     fun pickPotion(code: String?) = expedition.pickPotion(code)
     fun toggleScarab(code: String, add: Boolean) = expedition.toggleScarab(code, add)
 
-    /** Насильные механики захода (4.0.1) - только тестировщику и выше. */
+    /** Насильные механики захода - только тестировщику и выше. */
     fun toggleForced(mechanic: MapMechanic) {
         if (game.value.isTester) expedition.toggleForced(mechanic)
     }
@@ -69,7 +69,7 @@ class ExpeditionViewModel(
         if (game.value.isTester) expedition.forceAll(on)
     }
 
-    /** Заход в зону; [toBoss] (3.92.0, тестировщик и выше) - сразу бой со стражем. */
+    /** Заход в зону; [toBoss] (тестировщик и выше) - сразу бой со стражем. */
     fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.start(MapCode(mapCode), toBoss = toBoss && game.value.isTester)
     fun startAutoRun(mapCode: String) = expedition.start(MapCode(mapCode), AutoPlan)
     fun continueUnfinished() = expedition.continueUnfinished()
@@ -80,7 +80,7 @@ class ExpeditionViewModel(
     fun enterVaal() = expedition.enterVaal()
     fun closeRun() = expedition.close()
 
-    /** «Продать и вернуться» (3.90.4): заход закрывается и на сервере, затем отмеченная добыча продаётся пачкой. */
+    /** «Продать и вернуться»: заход закрывается и на сервере, затем отмеченная добыча продаётся пачкой. */
     fun closeRunSelling(itemIds: Collection<String>) = expedition.close { id -> hero.sellBatch(id, itemIds) }
     fun openAtlas() = expedition.openAtlas()
     fun openPage(route: com.sperance.exileforge.presentation.nav.Route) = expedition.openPage(route)
@@ -95,7 +95,7 @@ class ExpeditionViewModel(
     fun trialCommand(command: RunCommand) = trial.send(command)
     fun closeTrial() = trial.close()
 
-    /** Разлом недели (3.96.0). */
+    /** Разлом недели. */
     val riftState: StateFlow<RiftState> = rift.state
     fun openRift() = rift.open()
     fun closeRift() = rift.close()
@@ -106,6 +106,4 @@ class ExpeditionViewModel(
     fun dismissRiftResult() = rift.dismissResult()
 
     fun leaveRiftRefused() = rift.leaveRefused()
-
-    /** Таблица испытаний (3.96.0); null - закрыть. */
 }

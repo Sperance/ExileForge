@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Меню героев (3.80.22): список, вход, создание и удаление; логика - у `CharacterActions` (3.80.44). */
+/** Меню героев: список, вход, создание и удаление; логика - у `CharacterActions`. */
 class CharactersViewModel(
     slice: GameSlice,
     sessions: SessionRepository,
@@ -27,7 +27,7 @@ class CharactersViewModel(
     private val sessionActions: SessionActions,
     private val characters: CharacterActions,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val session: StateFlow<Session> = sessions.state
     val activity: StateFlow<Activity> = commands.state
@@ -41,7 +41,7 @@ class CharactersViewModel(
 
     private val mutablePreview = MutableStateFlow<DeletionPreview?>(null)
 
-    /** Последствия удаления героя, чей лист подтверждения открыт (4.5.1); null - читаются или лист закрыт. */
+    /** Последствия удаления героя, чей лист подтверждения открыт; null - читаются или лист закрыт. */
     val deletionPreview: StateFlow<DeletionPreview?> = mutablePreview.asStateFlow()
 
     /** Лист удаления героя [id] открылся: прежний ответ про другого героя не показывается. */
@@ -61,7 +61,7 @@ class CharactersViewModel(
 
     private val mutableDraft = MutableStateFlow("")
 
-    /** Класс, с которым создаётся новый герой (3.80.32: черновик экрана, не общего состояния); пусто - первый из контента. */
+    /** Класс, с которым создаётся новый герой (черновик экрана, не общего состояния); пусто - первый из контента. */
     val draftClass: StateFlow<String> = mutableDraft.asStateFlow()
 
     fun draftClass(value: String) {

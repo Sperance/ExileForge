@@ -43,8 +43,10 @@ import org.koin.compose.viewmodel.koinViewModel
  * Two doors, side by side: the device's own account, which needs nothing typed, and a login for
  * whoever has one. The first is the game; the second is how an administrator reaches the tools.
  *
- * The server is fixed since 3.75.0; only the way back to it lives here, so an administrator's wrong address never
+ * The server is fixed; only the way back to it lives here, so an administrator's wrong address never
  * locks the app behind a gate that needs a session.
+ *
+ * Беда - по причине: нет сети, медленный сервер, перезапуск, чужой ответ; сервер спрашивается снова сам.
  */
 @Composable fun AuthScreen() {
     val game by koinViewModel<SessionViewModel>().game.collectAsStateWithLifecycle()
@@ -69,7 +71,6 @@ import org.koin.compose.viewmodel.koinViewModel
             if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
 
             if (game.session.resumable) {
-                // By its cause (3.79.0): no network, a slow server, a restart, an answer not the game's; the server is asked again by itself.
                 val outage = game.link.outage
                 InfoCard(outage?.title ?: ui("auth.offline_title"), listOfNotNull(outage?.hint, ui("auth.offline_note"), game.link.detail?.takeIf { game.isAdmin }).joinToString("\n"), failure = true)
                 ForgeButton(enabled = !game.busy, onClick = vm::retryResume, modifier = Modifier.fillMaxWidth()) { Text(ui("auth.retry")) }
@@ -86,7 +87,6 @@ import org.koin.compose.viewmodel.koinViewModel
             ServerReset(game, vm)
 
             game.refusal?.let { InfoCard(ui("auth.failed"), it.read(), failure = true) }
-            // The build, dim at the foot of the way in (3.72.0).
             VersionLabel()
         }
     }
@@ -141,7 +141,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * The way back to the one server (3.75.0): there is no address to type before the gate, but an administrator who pointed
+ * The way back to the one server: there is no address to type before the gate, but an administrator who pointed
  * the device elsewhere from the Server page must not be locked out by a wrong one. Nothing while the device is on it.
  */
 @Composable private fun ServerReset(game: GameUi, vm: SessionViewModel) {

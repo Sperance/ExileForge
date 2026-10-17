@@ -11,7 +11,7 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * Живые портреты стражей Разлома (3.96.1): поверх статичного портрета сервера - слои анимации по утверждённому макету
+ * Живые портреты стражей Разлома: поверх статичного портрета сервера - слои анимации по облику
  * (RULES.md, «Стражи Разлома»): печати Стража пульсируют и раскалываются, эхо затягивает в пасть Поглотителя и его глаза
  * моргают, нимбы Владыки вращаются и скрижаль сбоит перед Законом, тень мерцает. Слои рисуются в поле портрета 300 на 400;
  * [time] - секунды; при выключенных анимациях вызывающий держит его неподвижным, и портрет стоит в покое.
@@ -29,7 +29,7 @@ internal object RiftPortraits : FieldPortraitMotion() {
         "RIFT_SHADE" to { t, _ -> shade(t) },
     )
 
-    /** Точка макета (поле 400 в ширину) в поле портрета: так её перенёс генератор портретов сервера. */
+    /** Точка рисунка (поле 400 в ширину) в поле портрета: так её перенёс генератор портретов сервера. */
     private fun mock(x: Float, y: Float, dy: Float) = Offset(.8f * (x - 200) + 150, .8f * y + dy)
 
     private fun wave(t: Float, period: Float, phase: Float = 0f) = portraitWave(t, period, phase)
@@ -37,8 +37,6 @@ internal object RiftPortraits : FieldPortraitMotion() {
     private fun DrawScope.glow(center: Offset, radius: Float, color: Color, alpha: Float) = portraitGlow(center, radius, color, alpha)
 
     private fun DrawScope.sparks(t: Float, count: Int, color: Color) = portraitSparks(t, count, color)
-
-    // ---------------------------------------------------------------------------------- Страж Врат
 
     private const val WARDEN_DY = 56f
     private val seals = listOf(118f to 204f, 282f to 204f, 200f to 262f, 100f to 340f, 300f to 340f).map { (x, y) -> mock(x, y, WARDEN_DY) }
@@ -50,7 +48,6 @@ internal object RiftPortraits : FieldPortraitMotion() {
     private const val SEAL_CYCLE = 3f
 
     private fun DrawScope.warden(t: Float) {
-        // портал за аркой кружит
         repeat(3) { i ->
             val r = 46f + i * 14f
             drawArc(
@@ -63,7 +60,6 @@ internal object RiftPortraits : FieldPortraitMotion() {
                 style = Stroke(2.2f),
             )
         }
-        // лучи идолов к печатям
         idols.forEachIndexed { side, idol ->
             val target = seals[side]
             val a = .15f + .2f * wave(t, 1.1f, side * .5f)
@@ -76,7 +72,6 @@ internal object RiftPortraits : FieldPortraitMotion() {
         seals.forEachIndexed { i, seal ->
             val pulse = wave(t, 2.4f, i * .2f)
             if (i == broken && f < .55f) {
-                // треснувшая печать: вспышка, осколки и пустое место, пока не отрастёт
                 val k = f / .55f
                 if (k < .3f) glow(seal, 26f, Color.White, (1 - k / .3f) * .8f)
                 repeat(6) { s ->
@@ -90,13 +85,10 @@ internal object RiftPortraits : FieldPortraitMotion() {
                 drawCircle(soft.copy(alpha = .35f * regrow), 6f + 2f * pulse, seal, style = Stroke(1.2f))
             }
         }
-        // глаза за забралом вспыхивают
         val flicker = .55f + .45f * wave(t, .7f) * wave(t, 2.9f, .3f)
         wardenEyes.forEach { glow(it, 9f, hot, flicker * .7f) }
         sparks(t, 14, soft)
     }
-
-    // ---------------------------------------------------------------------------------- Поглотитель эха
 
     private const val DEVOURER_DY = -7f
     private val maw = mock(200f, 215f, DEVOURER_DY)
@@ -106,7 +98,6 @@ internal object RiftPortraits : FieldPortraitMotion() {
     ).map { (x, y) -> mock(x, y, DEVOURER_DY) }
 
     private fun DrawScope.devourer(t: Float) {
-        // огоньки эха по спирали в пасть
         repeat(14) { i ->
             val u = (t * .22f + i / 14f) % 1f
             val angle = i * 2.4f + u * 4 * PI.toFloat()
@@ -116,10 +107,8 @@ internal object RiftPortraits : FieldPortraitMotion() {
             glow(p, 7f, soft, a * .6f)
             drawCircle(Color.White.copy(alpha = a * .8f), 1.3f, p)
         }
-        // ядро дышит
         val pulse = wave(t, 1.8f)
         glow(maw, 30f + 10f * pulse, hot, .25f + .3f * pulse)
-        // глаза моргают по очереди: веко - тёмный овал на миг
         devourerEyes.forEachIndexed { i, eye ->
             val phase = (t / (3.5f + i % 4) + i * .37f) % 1f
             if (phase < .06f) {
@@ -132,8 +121,6 @@ internal object RiftPortraits : FieldPortraitMotion() {
         sparks(t, 10, rift)
     }
 
-    // ---------------------------------------------------------------------------------- Владыка Разлома
-
     private const val LORD_DY = 45f
     private val halo = mock(200f, 135f, LORD_DY)
     private val lordEyes = listOf(mock(200f, 122f, LORD_DY), mock(200f, 152f, LORD_DY), mock(200f, 182f, LORD_DY))
@@ -145,7 +132,6 @@ internal object RiftPortraits : FieldPortraitMotion() {
     private const val LAW_OMEN = 3f
 
     private fun DrawScope.lord(t: Float) {
-        // нимбы рун кружат в разные стороны
         listOf(105.6f to .12f, 83.2f to -.18f).forEachIndexed { ring, (r, speed) ->
             val n = if (ring == 0) 24 else 16
             repeat(n) { i ->
@@ -154,9 +140,7 @@ internal object RiftPortraits : FieldPortraitMotion() {
                 drawCircle((if (ring == 0) rift else hot).copy(alpha = .35f + .25f * wave(t, 3f, i / n.toFloat())), if (ring == 0) 1.6f else 2.2f, p)
             }
         }
-        // три глаза разлома горят по очереди
         lordEyes.forEachIndexed { i, eye -> glow(eye, 12f, hot, .25f + .5f * wave(t, 2.1f, i / 3f)) }
-        // скрижаль: в знамение дрожит и вспыхивает полосами
         val inCycle = t % (LAW_HOLD + LAW_OMEN)
         val omen = inCycle >= LAW_HOLD
         val width = tabletBottom.x - tabletTop.x
@@ -175,14 +159,11 @@ internal object RiftPortraits : FieldPortraitMotion() {
         sparks(t, 12, soft)
     }
 
-    // ---------------------------------------------------------------------------------- Тень украденного
-
     private val shadeEyes = listOf(Offset(141f, 128f), Offset(159f, 128f))
 
     private fun DrawScope.shade(t: Float) {
         val flicker = .5f + .5f * wave(t, .9f) * wave(t, 2.3f, .4f)
         shadeEyes.forEach { glow(it, 8f, hot, .3f + .5f * flicker) }
-        // туман клубится по подолу
         repeat(5) { i ->
             val x = 60f + i * 45f + sin(t * .6f + i) * 10f
             glow(Offset(x, 360f + sin(t * .8f + i * 1.3f) * 8f), 40f, rift, .08f + .06f * wave(t, 3f, i * .2f))

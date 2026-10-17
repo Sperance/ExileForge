@@ -37,7 +37,7 @@ private val TauntCrimson = Color(0xFFB8373A)
 private val TauntGold = Color(0xFFE8B06A)
 
 /**
- * A taunter's aura (2.72.0): a soft crimson glow breathing round its card, under the border, so a
+ * A taunter's aura: a soft crimson glow breathing round its card, under the border, so a
  * taunter is found at a glance without a word on it.
  */
 internal fun DrawScope.tauntAura(outline: Outline, time: Float) {
@@ -47,7 +47,7 @@ internal fun DrawScope.tauntAura(outline: Outline, time: Float) {
 }
 
 /**
- * The taunt's seal (2.72.0): a heraldic shield in crimson with a gold rim and a gold chevron,
+ * The taunt's seal: a heraldic shield in crimson with a gold rim and a gold chevron,
  * glowing faintly — the mark a taunter carries on its portrait; a tap opens its window.
  */
 @Composable internal fun TauntSeal(frame: FightFrame, modifier: Modifier, tip: (() -> Tip)?) = Tipped(tip, modifier) {

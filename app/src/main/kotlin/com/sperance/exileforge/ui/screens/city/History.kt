@@ -38,7 +38,7 @@ import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** «История» (3.90.2): здание Города со списком разделов прошлого героя; пока раздел один - найденные уникалки. */
+/** «История»: здание Города со списком разделов прошлого героя; пока раздел один - найденные уникалки. */
 @Composable internal fun HistoryScreen() {
     val vm = koinViewModel<HistoryViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
@@ -72,10 +72,12 @@ private sealed interface AlbumPick {
 }
 
 /**
- * Найденные уникалки (3.90.2, макет А2): сверху общий счёт «найдено из всех», ниже чипы пулов со счётом; выбранный пул -
+ * Найденные уникалки: сверху общий счёт «найдено из всех», ниже чипы пулов со счётом; выбранный пул -
  * плашка с прогрессом и числом ненайденных, под ней найденные с датой первой находки, свежие первыми. Ненайденные не
- * называются - только числом. Чип «Боссы» - список боссов со счётом, только с находками (4.6.5), раскрытый босс показывает свои находки. Нажатие на
+ * называются - только числом. Чип «Боссы» - список боссов со счётом, только с находками, раскрытый босс показывает свои находки. Нажатие на
  * находку - полная карточка шаблона со вилками строк.
+ *
+ * Печать - наименьший номер копии в мире героя; номера не было - печати нет.
  */
 @Composable fun UniquesScreen() {
     val vm = koinViewModel<HistoryViewModel>()
@@ -86,7 +88,6 @@ private sealed interface AlbumPick {
     var pick by remember { mutableStateOf<AlbumPick>(AlbumPick.All) }
     var opened by remember { mutableStateOf<FoundUnique?>(null) }
     var boss by remember { mutableStateOf<String?>(null) }
-    // Цепочка «назад» (4.4.x): «← Город › История › Уникалки»
     BackTrailHost(ui("nav.city")) {
         TrailLevel(ui("history.title"), onBack = vm::city) {
             TrailLevel(ui("history.uniques"), onBack = vm::back) {
@@ -134,7 +135,6 @@ private sealed interface AlbumPick {
                     ForgeSheet(onDismissRequest = { opened = null }) {
                         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             Text(ui("history.first_find", stampText(found.find.at), found.find.count), color = Muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                            // Наименьший номер копии в мире героя (4.10.x): печать, как на карточке; номера не было - печати нет
                             found.find.lowest.takeIf { it > 0 }?.let { Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { SerialSeal(it, relicLook(found.template.rarity)) } }
                             view?.let { ItemCard(it, enabled = false, detailed = true, action = false) }
                         }
@@ -163,7 +163,7 @@ private sealed interface AlbumPick {
     }
 }
 
-/** Одна находка: иконка шаблона, имя в цвете редкости, место, сколько всего и наименьший номер (4.10.x), справа дата первой находки. */
+/** Одна находка: иконка шаблона, имя в цвете редкости, место, сколько всего и наименьший номер, справа дата первой находки. */
 @Composable private fun FoundRow(found: FoundUnique, onClick: () -> Unit) {
     val template = found.template
     val tint = rarityColor(template.rarity.name)

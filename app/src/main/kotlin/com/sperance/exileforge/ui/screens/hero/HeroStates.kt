@@ -14,13 +14,12 @@ import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.accountRole
 
-/*
- * The Hero tab's parts, each cut from the state on its own (3.66.0). The screen as a whole is handed the state whenever
- * the hero moves; its parts are handed only what they draw, so gold that changed redraws the header and not the ledger
- * or a thousand lines of the stash.
+/**
+ * Who the hero is, as the header draws it: the purse and the experience move here and nowhere else.
+ *
+ * Части вкладки «Герой», каждая вырезана из состояния отдельно: часть получает только то, что рисует, - золото перерисовывает шапку, а не
+ * тайник.
  */
-
-/** Who the hero is, as the header draws it: the purse and the experience move here and nowhere else. */
 @Immutable data class HeroHeaderState(
     val name: String,
     val heroClass: String,
@@ -32,7 +31,7 @@ import com.sperance.exileforge.ui.components.accountRole
     val tree: TreePoints?,
     /** The experience table the bar is scaled by; null until the content is read. */
     val classes: ClassesFile?,
-    /** Роль аккаунта (3.88.7): значок рядом с именем, у игрока - нет. */
+    /** Роль аккаунта: значок рядом с именем, у игрока - нет. */
     val role: com.sperance.exileforge.core.network.AccountRole? = null,
 )
 
@@ -69,12 +68,15 @@ import com.sperance.exileforge.ui.components.accountRole
     }
 }
 
-/** The ledger's cut, or null until the hero and the content are read; the purse is not part of it. */
+/**
+ * The ledger's cut, or null until the hero and the content are read; the purse is not part of it.
+ *
+ * Сколько свободных вещей каждого слота лежит в тайнике: место говорит, что могло бы взять.
+ */
 @Composable fun rememberEquipment(game: GameUi): EquipmentState? {
     val hero = game.hero ?: return null
     val index = game.index ?: return null
     return remember(hero.items, hero.inactive, index, game.lang, game.session.signedIn) {
-        // How many loose items of each slot lie in the stash (2.48.0): each place says what it could take.
         val loose = hero.stash.filter { !it.socketed }.mapNotNull { index.template(it.template)?.slot }.groupingBy { it }.eachCount()
         val equipped = hero.equipped
         val places = bodyPlaces.map { place ->
@@ -92,14 +94,17 @@ import com.sperance.exileforge.ui.components.accountRole
     }
 }
 
-/** The stash's lines over [visible], read again only when the shelf, the sheet or the queue of waiting commands moves. */
+/**
+ * The stash's lines over [visible], read again only when the shelf, the sheet or the queue of waiting commands moves.
+ *
+ * Лист, сложенный здесь, говорит, что нужно шаблону, правило торговца - сколько стоит.
+ */
 @Composable fun rememberStashLines(game: GameUi, visible: List<ItemView>): List<StashLine> {
     val hero = game.hero
     val waiting = game.link.waitingItems
     return remember(visible, hero?.level, hero?.stats, game.index, waiting) {
         visible.map { piece ->
             val worn = piece.equipped || piece.socketed
-            // The sheet added up here (2.46.0) says what the template needs, and the merchant's rule what it fetches.
             StashLine(piece, worn, game.unmetFor(piece.code), game.sellPrice(piece.item).takeUnless { worn }, piece.id in waiting)
         }
     }

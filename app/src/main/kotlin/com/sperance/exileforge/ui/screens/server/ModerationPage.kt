@@ -62,9 +62,11 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Окно модерации (3.88.5, server 1.80.8; вариант B «Досье-карточки» из трёх макетов): поиск, разделы «Все / Баны / Корзина /
+ * Окно модерации («Досье-карточки»): поиск, разделы «Все / Баны / Корзина /
  * Журнал», карточки героев с кромкой статуса; тап открывает досье. Бан и удаление - нижними шторками, удаление - удержанием.
  * Что смотрящему нельзя (админ, модератор для модератора), сервер не пропустит, а карточка показывает замком.
+ *
+ * Порядок и отбор по дару - за кнопкой с числом активных, у корзины их нет. Над списком - что отобрано и сколько найдено.
  */
 @Composable internal fun ModerationPage(account: AccountUi) {
     val vm = koinViewModel<ModerationViewModel>()
@@ -87,11 +89,9 @@ import org.koin.compose.viewmodel.koinViewModel
             keyboardActions = KeyboardActions(onSearch = { vm.load(0) }),
             modifier = Modifier.weight(1f),
         )
-        // Порядок и отбор по дару - за кнопкой с числом активных (макет «Фильтры модерации», вариант B); у корзины их нет.
         if (state.tab != ModerationTab.TRASH && state.tab != ModerationTab.JOURNAL) {
             FilterButton(state.filters.active, enabled = !account.busy) { filtering = true }
         }
-        // «+» администратора (3.88.7): новый аккаунт тестировщика.
         if (account.isAdmin) {
             ForgeButton(onClick = { creating = true }, enabled = !account.busy, contentPadding = PaddingValues(horizontal = 12.dp)) {
                 Icon(Icons.Outlined.PersonAdd, ui("moderation.new_tester"), modifier = Modifier.size(20.dp))
@@ -124,7 +124,6 @@ import org.koin.compose.viewmodel.koinViewModel
             vm.filter(it)
         }
     }
-    // Над списком - что отобрано и сколько найдено: «По уровню · ✦ Кровь за кровь - Найдено: 27». Корзина идёт по номеру удаления
     val chosen = if (state.tab == ModerationTab.TRASH) emptyList() else filterLabels(account, state.filters)
     MutedText((chosen + ui("moderation.total", page.total)).joinToString(" · "), style = MaterialTheme.typography.labelSmall)
     if (page.rows.isEmpty()) MutedText(ui("moderation.none"))
@@ -172,7 +171,7 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
 }
 
 /**
- * Лист «Фильтры» (макет «Фильтры модерации», вариант B): «Сбросить» в заголовке, порядок сегментами, дары - поиск и
+ * Лист «Фильтры»: «Сбросить» в заголовке, порядок сегментами, дары - поиск и
  * сетка в два столбца («Все дары», «Без дара», дары контента по имени). Выбор - черновик листа: в список он уходит по
  * «Показать» ([onApply]), «Сбросить» возвращает обычный отбор.
  */
@@ -231,7 +230,7 @@ private fun filterLabels(account: AccountUi, filters: ModerationFilters): List<S
 /** Подпись раздела листа фильтров: мелко, заглавными, приглушённо. */
 @Composable private fun SheetLabel(text: String) = Text(text.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
 
-/** Плитка дара в сетке листа фильтров и смены дара (0.15.0, #35): выбранная - в нити и на подложке `Gold`, дар контента - со знаком ✦. */
+/** Плитка дара в сетке листа фильтров и смены дара: выбранная - в нити и на подложке `Gold`, дар контента - со знаком ✦. */
 @Composable internal fun FateOption(title: String, mark: Boolean, selected: Boolean, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     Text(
@@ -282,7 +281,6 @@ internal val FATE_GRID_HEIGHT = 228.dp
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MutedText(listOf(classTitle(row.heroClass), ui("common.level_short", row.level), row.login).filter { it.isNotBlank() }.joinToString(" · "), Modifier.weight(1f, fill = false))
-                // Предначертание аккаунта (4.6.3): печать и имя дара рядом с классом
                 row.fate?.let { FateMark(FateCard(it)) }
             }
             MutedText(seenText(row.lastSeenAt), style = MaterialTheme.typography.labelSmall)
@@ -315,6 +313,7 @@ internal val FATE_GRID_HEIGHT = 228.dp
     }
 }
 
+/** Смена дара - без санкции: ни номера, ни категории; дары - именами. */
 @Composable private fun JournalRow(entry: ModerationEntryView) {
     ForgePanel {
         Text(
@@ -322,7 +321,6 @@ internal val FATE_GRID_HEIGHT = 228.dp
             color = Parchment,
             style = MaterialTheme.typography.bodyMedium,
         )
-        // Смена дара (0.15.0, #35): санкции нет - ни номера, ни категории; дары - именами, а не кодами
         val fate = entry.fateChange
         MutedText(listOfNotNull(entry.number.takeIf { it > 0 }?.let { "#$it" }, categoryTitle(entry.category).takeIf { fate == null }, entry.until?.let { ui("moderation.until", listedAt(it).orEmpty()) }, listedAt(entry.at)).joinToString(" · "))
         if (fate != null) {
@@ -333,11 +331,9 @@ internal val FATE_GRID_HEIGHT = 228.dp
     }
 }
 
-// ==================== Шторки ====================
-
 /**
- * Шторка санкции на срок - бана или (4.6.3) немоты [kind]: цель (герой, аккаунт; у бана - и устройство), срок - готовый из
- * контента или свой, категория, причина для игрока (4.12.x - её видит наказанный) и служебная заметка модерации.
+ * Шторка санкции на срок - бана или немоты [kind]: цель (герой, аккаунт; у бана - и устройство), срок - готовый из
+ * контента или свой, категория, причина для игрока (её видит наказанный) и служебная заметка модерации.
  */
 @Composable internal fun BanSheet(account: AccountUi, dossier: Dossier, device: DeviceView?, kind: SanctionKind, onDismiss: () -> Unit, onBan: (SanctionRequest) -> Unit) {
     val presets = account.index?.rules?.moderation?.let { if (kind == SanctionKind.MUTE) it.muteHours else it.banHours }.orEmpty()
@@ -405,7 +401,7 @@ internal val FATE_GRID_HEIGHT = 228.dp
 }
 
 /**
- * Шторка удаления (только администратор): герой или аккаунт целиком, служебная заметка обязательна, причина для игрока (4.12.x) - нет;
+ * Шторка удаления (только администратор): герой или аккаунт целиком, служебная заметка обязательна, причина для игрока - нет;
  * удаление - удержанием кнопки.
  */
 @Composable internal fun DeleteSheet(account: AccountUi, dossier: Dossier, target: SanctionTarget, onTarget: (SanctionTarget) -> Unit, onDismiss: () -> Unit, onDelete: (DeletionRequest) -> Unit) {
@@ -435,8 +431,6 @@ internal val FATE_GRID_HEIGHT = 228.dp
         }
     }
 }
-
-// ==================== Мелочи ====================
 
 @Composable internal fun Section(title: String, content: @Composable ColumnScope.() -> Unit) {
     ForgePanel(accent = Rune) {
@@ -491,7 +485,7 @@ internal fun sanctionLine(sanction: SanctionView): String = listOfNotNull(
     "#${sanction.number}",
 ).joinToString(" · ")
 
-/** Последняя активность героя (3.94.0): «был 5 мин назад», «был 07.10 18:24», «нет данных». */
+/** Последняя активность героя: «был 5 мин назад», «был 07.10 18:24», «нет данных». */
 internal fun seenText(at: Long, now: Long = System.currentTimeMillis()): String {
     if (at <= 0) return ui("moderation.seen_unknown")
     val minutes = (now - at) / 60_000
@@ -508,7 +502,7 @@ internal fun categoryTitle(category: SanctionCategory): String = ui("moderation.
 /** Срок санкции словами: «до 11.10 18:02», «навсегда» или «очистка через N дн.». */
 internal fun termText(sanction: SanctionView): String? = termText(sanction.kind, sanction.until, sanction.daysLeft())
 
-/** Срок санкции глазами наказанного (4.12.x) - теми же словами. */
+/** Срок санкции глазами наказанного - теми же словами. */
 internal fun termText(notice: SanctionNotice): String? = termText(notice.kind, notice.until, notice.daysLeft())
 
 private fun termText(kind: SanctionKind, until: String?, daysLeft: Long?): String? = when {
@@ -517,7 +511,7 @@ private fun termText(kind: SanctionKind, until: String?, daysLeft: Long?): Strin
     else -> listedAt(until)?.let { ui("moderation.until", it) }
 }
 
-/** Санкция своего героя одной фразой (4.12.x): что, на сколько и за что - без номера и того, кто наказал. */
+/** Санкция своего героя одной фразой: что, на сколько и за что - без номера и того, кто наказал. */
 internal fun noticeLine(notice: SanctionNotice): String = listOfNotNull(
     ui("moderation.kind.${notice.kind.name}") + " · " + ui("moderation.target.${notice.target.name}"),
     termText(notice),
@@ -549,14 +543,14 @@ internal const val HARDWARE = 6
 /** Журнал отдаёт страницу без счёта: полная страница - возможно, есть следующая. */
 private const val PAGE_GUESS = 30
 
-/** Роли, что администратор создаёт формой «+»; тестировщик (4.12.x) - отметка героя в досье, не роль аккаунта. */
+/** Роли, что администратор создаёт формой «+»; тестировщик - отметка героя в досье, не роль аккаунта. */
 private val CREATABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
 
 /** Роли, что администратор выдаёт в досье. */
 internal val ASSIGNABLE = listOf(AccountRole.USER, AccountRole.MODERATOR)
 
 /**
- * Новый аккаунт (3.88.7, роль с 3.88.8): логин и роль - игрок или модератор, - и сервер создаёт аккаунт с паролем,
+ * Новый аккаунт: логин и роль - игрок или модератор, - и сервер создаёт аккаунт с паролем,
  * который показывается один раз, с кнопками скопировать логин и пароль.
  */
 @Composable private fun AccountSheet(account: AccountUi, created: TesterAccount?, onCreate: (String, AccountRole) -> Unit, onDismiss: () -> Unit) {

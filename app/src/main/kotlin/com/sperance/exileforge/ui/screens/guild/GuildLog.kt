@@ -15,12 +15,15 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
-/** The guild's journal, newest first, a page at a time. */
+/**
+ * The guild's journal, newest first, a page at a time.
+ *
+ * Ключи по содержимому: свежие строки сверху не сдвигают ключи прежних.
+ */
 @Composable internal fun LogTab(game: GameUi, vm: GuildViewModel) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId) { vm.loadLog() }
     val log = guilds.log
-    // Ключи по содержимому (4.9.0): свежие строки сверху не сдвигают ключи прежних
     val keys = remember(log) { contentKeys(log) { "${it.at}|${it.kind}|${it.heroName}|${it.value}" } }
     LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
         if (log.isEmpty() && Reads.GUILD_LOG !in game.loading) item { InfoCard(ui("guild.log_empty"), ui("guild.log_empty_hint")) }

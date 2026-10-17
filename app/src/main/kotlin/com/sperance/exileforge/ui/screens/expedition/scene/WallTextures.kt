@@ -6,7 +6,7 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * Узор контурной стены (утверждён владельцем по макетам «Стены v2»): шум края массива [edge] и метки куска - на гранях, на
+ * Узор контурной стены: шум края массива [edge] и метки куска - на гранях, на
  * крышке и у подножия. Узор лишь рисует в набросок ([WallSketch]); цвета даёт стиль карты ([WallTones]), так что один узор
  * в разных биомах - в своих красках. Всё детерминированно: от клетки, поля и соли карты.
  */
@@ -22,7 +22,6 @@ internal abstract class WallTexture(val edge: EdgeNoise) {
         if (a == b) return
         val lo = floor(minOf(a, b)).toInt() + 1
         val hi = floor(maxOf(a, b)).toInt()
-        // По ходу отрезка: доли растут
         val order = if (a < b) lo..hi else hi downTo lo
         for (m in order) at((m - a) / (b - a), m)
     }
@@ -45,7 +44,6 @@ internal object Ashlar : WallTexture(EdgeNoise(amplitude = .06f, scale = 1.6f, r
             for (r in 0 until COURSES) {
                 val z0 = height * r / COURSES
                 val z1 = height * (r + 1) / COURSES
-                // Камни ряда: швы вразбежку по экрану, иной камень темнее
                 var from = 0f
                 var block = floor(edge.u0 / JOINT + r * .5f).toInt()
                 fun stone(to: Float) {
@@ -67,7 +65,6 @@ internal object Ashlar : WallTexture(EdgeNoise(amplitude = .06f, scale = 1.6f, r
     }
 
     override fun WallSketch.cap() {
-        // Плиты по полклетки рядами со сдвигом; шов рисуется, где обе его стороны - на крышке
         val step = 1f / 8
         for (r in 0 until 2) {
             val my = y + r * SLAB
@@ -82,14 +79,12 @@ internal object Ashlar : WallTexture(EdgeNoise(amplitude = .06f, scale = 1.6f, r
                 val jx = x + shift + k * SLAB
                 if (jx >= x + 1) continue
                 if (inside(jx, my, .1f) && inside(jx, my + SLAB, .1f)) capLine(WallInk.SHADOW, jx, my, jx, my + SLAB, unit * .03f)
-                // Плита: темнее или светлее соседей, если целиком на крышке
                 val x1 = minOf(jx + SLAB, x + 1f)
                 val tint = cellNoise(floor(jx * 2).toInt(), row, 223)
                 val whole = inside(jx, my, .08f) && inside(x1, my, .08f) && inside(jx, my + SLAB, .08f) && inside(x1, my + SLAB, .08f)
                 if (whole && (tint < .3f || tint > .8f)) slab(if (tint < .3f) WallInk.DIM else WallInk.SHEEN, jx + .03f, my + .03f, x1 - .03f, my + SLAB - .03f)
             }
         }
-        // Сколы у швов и трещина
         repeat(2) { k ->
             val cx = x + .15f + hash(301, k) * .7f
             val cy = y + .15f + hash(302, k) * .7f
@@ -142,7 +137,6 @@ internal object LiveRock : WallTexture(EdgeNoise(amplitude = .2f, scale = 2.4f, 
                     faceLine(WallInk.SHEEN, edge, 0f, z0, 1f, z1, unit * .02f)
                 }
             }
-            // Прожилка: светлая жила наискось через пласты
             if (hash(401, i) < .2f) {
                 val sway = hash(402, i)
                 val points = floatArrayOf(.25f + sway * .3f, .9f, .6f, .66f, .35f + sway * .2f, .42f, .7f, .16f)
@@ -210,13 +204,11 @@ internal object Thicket : WallTexture(EdgeNoise(amplitude = .17f, scale = 1.7f, 
     }
 
     override fun WallSketch.cap() {
-        // Листва свисает с кромки над гранями
         edges.forEach { edge ->
             val mx = (edge.ax + edge.bx) / 2
             val my = (edge.ay + edge.by) / 2
             blob(WallLayer.CAP, WallInk.GROWTH, mx - edge.nx * .03f, my - edge.ny * .03f, .13f)
         }
-        // Кроны: тень под листвой, лист, блик сверху
         for (a in 0 until 3) {
             for (b in 0 until 3) {
                 val k = a * 3 + b

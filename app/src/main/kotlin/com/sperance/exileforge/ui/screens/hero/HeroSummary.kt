@@ -48,11 +48,11 @@ import com.sperance.exileforge.ui.theme.*
  * card per section, one figure to a full-width row so each reads at a glance.
  *
  * The first of the Hero tab's three sections. Nothing here is a command — it is the sheet a player
- * reads before deciding what to wear, whole and in place rather than behind another tap. Раздел строки (4.6.5) - `section`
+ * reads before deciding what to wear, whole and in place rather than behind another tap. Раздел строки - `section`
  * характеристики в контенте, «Прочего» нет.
  *
- * 4.6.4 (макет «Сводка характеристик», вариант A): цифры - лист боя ([com.sperance.exileforge.core.campaign.CombatSheet]) с аурами и
- * Предначертанием. Дар и его текст - лента над сводкой, своей карточки дара в сводке нет (4.6.5).
+ * Цифры - лист боя ([com.sperance.exileforge.core.campaign.CombatSheet]) с аурами и
+ * Предначертанием. Дар и его текст - лента над сводкой, своей карточки дара в сводке нет.
  */
 @Composable fun HeroSummary(game: GameUi) {
     val hero = game.hero ?: return
@@ -60,8 +60,8 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Строка над сводкой (4.9.0, макет A «Строка с номером героя»): слева свой номер героя (4.7.0, касание копирует; сервер старше - нет),
- * справа Мощь - чип «⚜ 12.5k» (4.x, вариант A) из того же листа боя без карты, что и цифры сводки, с разбором стойкости; ещё не
+ * Строка над сводкой: слева свой номер героя (касание копирует; сервер старше - нет),
+ * справа Мощь - чип «⚜ 12.5k» из того же листа боя без карты, что и цифры сводки, с разбором стойкости; ещё не
  * сложен - «…».
  */
 @Composable fun NumberAndMight(hero: HeroView) {
@@ -73,16 +73,16 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * A sheet of figures (2.75.0: apart from the hero, so the map's window draws the same one). Given
+ * A sheet of figures (apart from the hero, so the map's window draws the same one). Given
  * [before], a figure that differs from it is lit and says what it was — the sheet under a map's
- * effects held against the hero's own. 4.6.4: [figures] - цифры сводки с отметками ауры и Предначертания.
+ * effects held against the hero's own. [figures] - цифры сводки с отметками ауры и Предначертания.
+ *
+ * Цифра открывает своё окно. Разделы и порядок - реестр контента.
  */
 @Composable fun StatSheet(game: GameUi, figures: StatFigures, before: Map<String, Double>? = null, shifts: Map<String, List<Shift>> = emptyMap()) {
-    // A figure opens its own window (3.11.0): what it is and what it is made of.
     var open by remember { mutableStateOf<String?>(null) }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
-        // Разделы и порядок - реестр контента (4.6.5); без контента сводке нечего раскладывать.
         game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before) { open = it } } }
     }
     open?.let { StatBreakdownSheet(game, it, shifts) { open = null } }
@@ -131,8 +131,11 @@ private val StatSection.glyph: Glyph get() = when (this) {
 
 /**
  * One figure on one full-width row: its icon, the stat's name, and the number on the right — lit, with the old one, when [was] differs.
- * 4.6.4: за числом - значок ауры и ✦ Предначертания, если они её сдвинули. 4.6.5: строка с частями (`partOf`) - итог боя, под
+ * За числом - значок ауры и ✦ Предначертания, если они её сдвинули. Строка с частями (`partOf`) - итог боя, под
  * именем - из чего он: «12 + 1.5% от максимума».
+ *
+ * Доля маны, что держат ауры, - под именем, справа - весь запас. Пределы: сводка печатает действующее число, набранное сверх - под именем
+ * «предел; набрано N». Уклонение и броня - главным шанс уклонения и снижение физического урона.
  */
 @Composable private fun StatCell(key: String, value: Double, was: Double?, before: Map<String, Double>?, accent: Color, figures: StatFigures, game: GameUi, modifier: Modifier) {
     Row(
@@ -141,12 +144,9 @@ private val StatSection.glyph: Glyph get() = when (this) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Tipped({ Tip(statTitle(key, game.lang), tint = accent, facts = listOf(ui("tip.value") to statValue(key, value, game.index))) }) { StatIcon(key, accent, Modifier.size(18.dp)) }
-        // The mana's share the auras hold reads under its name: the figure on the right is the whole pool.
         val reserve = if (key == MANA_STAT) remember(game.hero, game.index) { game.manaReserve() }?.takeIf { it.percent > 0 } else null
         val parts = remember(key, figures, game.index) { game.index?.let { partsText(key, figures.stats, it) } }
-        // Пределы (4.12.x, R3): сводка печатает действующее число, а набранное сверх предела - под именем «предел; набрано N»
         val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
-        // Уклонение и броня (0.14.0, ASANA-N07): главным - шанс уклонения и снижение физического урона, сырое число - мелко под именем
         val level = game.hero?.level
         val defence = remember(key, figures, game.index, level) { game.index?.let { index -> level?.let { StatLimits.defence(key, figures.stats, it, index) } } }
         val defenceWas = remember(key, before, game.index, level) { if (was == null) null else game.index?.let { index -> level?.let { before?.let { sheet -> StatLimits.defence(key, sheet, it, index) } } } }
@@ -161,7 +161,6 @@ private val StatSection.glyph: Glyph get() = when (this) {
             }
         }
         was?.let { Text(defenceWas?.let { old -> ui("stat.defence_percent", number(old.effective)) } ?: statValue(key, it, game.index), color = Muted, style = MaterialTheme.typography.bodyMedium, textDecoration = TextDecoration.LineThrough) }
-        // A capped figure (3.12.0) reads as the fight reads it (4.12.x, R3: действующее число); the ceiling is in the figure's window.
         Text(
             defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: statValue(key, limit?.effective ?: value, game.index),
             color = when {
@@ -179,8 +178,8 @@ private val StatSection.glyph: Glyph get() = when (this) {
 }
 
 /**
- * Из чего строка с частями (4.6.5): своя характеристика и каждая часть (`partOf`) листа боя [stats], словами [partFigure] - доля
- * максимума или «увеличение» (4.11.x). Без частей - null.
+ * Из чего строка с частями: своя характеристика и каждая часть (`partOf`) листа боя [stats], словами [partFigure] - доля
+ * максимума или «увеличение». Без частей - null.
  */
 private fun partsText(key: String, stats: Map<String, Double>, index: ContentIndex): String? {
     val registry = index.stats

@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
-/** Экраны «Аккаунт» и «Настройки» (3.80.33): их срез [AccountUi] из репозиториев :core; команды - у моделей сессии и героя. */
+/** Экраны «Аккаунт» и «Настройки»: их срез [AccountUi] из репозиториев :core; команды - у моделей сессии и героя. */
 class ServerViewModel(
     sessions: SessionRepository,
     worlds: WorldRepository,

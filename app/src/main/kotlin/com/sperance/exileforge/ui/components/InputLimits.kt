@@ -9,12 +9,12 @@ import com.sperance.exileforge.rules.content.InputLimits
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 
-/** The rules' input limits (3.73.0): every field cuts what is typed to them; until the content is read - [DefaultInputs]. */
+/** The rules' input limits: every field cuts what is typed to them; until the content is read - [DefaultInputs]. */
 val GameUi.inputs: InputLimits get() = index?.rules?.inputs ?: DefaultInputs
 val AccountUi.inputs: InputLimits get() = index?.rules?.inputs ?: DefaultInputs
 
 /**
- * Пределы, пока контент не прочитан (4.12.x: у правил нет значений по умолчанию): поля не режутся и не требуют длины - пределы
+ * Пределы, пока контент не прочитан (у правил нет значений по умолчанию): поля не режутся и не требуют длины - пределы
  * контента проверит сервер. Где контент под рукой, поле берёт его пределы ([GameUi.inputs], [AccountUi.inputs]).
  */
 val DefaultInputs = Int.MAX_VALUE.let { open ->

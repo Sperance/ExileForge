@@ -37,11 +37,13 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Герой одной строкой (3.90.3, макет «Тайник» В): портрет, «имя · ур.», класс мелко, [trailing] справа и под ними полоса
- * опыта (3.94.0), без нажатия. С 3.90.5 это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
- * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - связь, конверт почты (4.3.0) и меню. Золото (макет
- * «Золото в баннере», вариант A) - справа под полосой опыта, в строке её подписи: длинное имя сокращается многоточием и не
+ * Герой одной строкой: портрет, «имя · ур.», класс мелко, [trailing] справа и под ними полоса
+ * опыта, без нажатия. Это и шапка игры на вкладке «Герой» ([com.sperance.exileforge.ui.ForgeBanner]):
+ * [onPortrait] - портрет открывает аккаунт, как сигил, а справа - связь, конверт почты и меню. Золото
+ * - справа под полосой опыта, в строке её подписи: длинное имя сокращается многоточием и не
  * выталкивает ни значки, ни число золота.
+ *
+ * Класс - база, от которой считается каждый процент; опыт - полоса во всю ширину, шапка игры не сворачивается.
  */
 @Composable fun HeroLine(
     hero: HeroHeaderState,
@@ -62,7 +64,6 @@ import com.sperance.exileforge.ui.theme.*
                     RoleMark(hero.role, 14.dp)
                     Text("· " + ui("hero.line_level", hero.level), color = Parchment, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
                 }
-                // Класс - база, от которой считается каждый процент; его решает сервер.
                 Text(
                     hero.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle) ?: ui("hero.unknown_class"),
                     color = Muted,
@@ -73,7 +74,6 @@ import com.sperance.exileforge.ui.theme.*
             }
             trailing()
         }
-        // Опыт (3.94.0): полоса во всю ширину, под ней подпись и золото справа - шапка игры не сворачивается
         if (hero.classes != null) {
             Box(Modifier.fillMaxWidth().height(4.dp).background(PanelRaised, RoundedCornerShape(2.dp)).semantics { contentDescription = xp.label }) {
                 Box(Modifier.fillMaxWidth(xp.fraction).fillMaxHeight().background(Brush.horizontalGradient(listOf(Gold, GoldBright)), RoundedCornerShape(2.dp)))
@@ -92,7 +92,7 @@ private class Experience(val fraction: Float, val label: String)
 /**
  * Сколько пройдено в этом уровне. Таблица опыта классов говорит, сколько стоит следующий уровень, - клиент читает её, чтобы
  * показать, что впереди, а не чтобы считать уровень: уровень решает сервер. На последнем уровне полоса полна и говорит это;
- * без контента масштаба нет, и печатается только итог. Подпись (3.90.0) - «1 240 / 2 950 · 42%».
+ * без контента масштаба нет, и печатается только итог. Подпись - «1 240 / 2 950 · 42%».
  */
 private fun experienceOf(classes: ClassesFile?, level: Int, experience: Double): Experience {
     val floor = classes?.threshold(level) ?: 0.0

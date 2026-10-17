@@ -13,7 +13,11 @@ import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.theme.Gold
 
-/** Parchment note pinned to the stash wall; turns blood-red when it reports a failure. */
+/**
+ * Parchment note pinned to the stash wall; turns blood-red when it reports a failure.
+ *
+ * Заголовок - чип цвета акцента: обычный, ошибка, Бездна различаются им, а не рамкой.
+ */
 @Composable internal fun InfoCard(
     title: String,
     body: String,
@@ -22,7 +26,6 @@ import com.sperance.exileforge.ui.theme.Gold
 ) {
     val accent = if (failure) MaterialTheme.colorScheme.error else Gold
     ForgePanel(accent = accent) {
-        // Заголовок - чип цвета акцента (3.88.3): обычный, ошибка, Бездна различаются им, а не рамкой.
         Row(
             Modifier.background(accent.copy(alpha = .14f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,

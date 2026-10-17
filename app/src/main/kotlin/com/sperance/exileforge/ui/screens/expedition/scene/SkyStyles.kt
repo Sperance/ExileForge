@@ -9,7 +9,7 @@ import kotlin.math.max
 import kotlin.math.sin
 import com.sperance.exileforge.core.campaign.MapStyle as Layout
 
-/** VI · Sky glass (3.43.0): ground fused to glass with the sky in it, pillars of crystal, a pale glow of sky overhead (без дождя с 4.2.0). */
+/** VI · Sky glass: ground fused to glass with the sky in it, pillars of crystal, a pale glow of sky overhead (без дождя). */
 internal class SkyGlass : MapStyle() {
     private val sky = PaletteBrush { unitFade(it.accent.copy(alpha = .08f), Color.Transparent) }
 
@@ -19,13 +19,11 @@ internal class SkyGlass : MapStyle() {
         val u = unit
         pen.color = tone(palette.floor, (.85f + noise(spot.x, spot.y) * .3f) * light)
         pen.diamond(cx, cy, u, u / 2)
-        // The sky caught in the glass: one pale streak across the tile, drifting with the clouds.
         val glint = .25f + .2f * sin(time * .8f + spot.x * .7f + spot.y * .3f)
         pen.color = tone(palette.accent, light, alpha = glint * .35f)
         pen.line(cx - u * .5f, cy - u * .05f, cx + u * .1f, cy + u * .25f, u * .06f)
         pen.color = Color.Black.copy(alpha = .25f)
         pen.polyline(cx - u, cy, cx, cy + u / 2, cx + u, cy, width = u * .02f)
-        // Now and then a crack full of light.
         if (noise(spot.x, spot.y, 50) < .08f) {
             pen.color = palette.accent.copy(alpha = (.4f + .3f * sin(time * 2.5f + spot.x)) * max(.3f, light))
             pen.polyline(cx - u * .4f, cy - u * .1f, cx - u * .1f, cy + u * .05f, cx + u * .05f, cy - u * .12f, cx + u * .4f, cy + u * .08f, width = u * .03f)
@@ -44,7 +42,7 @@ internal class SkyGlass : MapStyle() {
     }
 }
 
-/** VII · Drowned (3.43.0): mosaic under water with light rippling over it, columns grown over with coral, bubbles rising. */
+/** VII · Drowned: mosaic under water with light rippling over it, columns grown over with coral, bubbles rising. */
 internal class Drowned : MapStyle() {
     private val deep = PaletteBrush { unitFade(Color.Transparent, it.accent.copy(alpha = .07f)) }
 
@@ -54,12 +52,10 @@ internal class Drowned : MapStyle() {
         val u = unit
         pen.color = tone(palette.floor, (.85f + noise(spot.x, spot.y) * .25f) * light)
         pen.diamond(cx, cy, u, u / 2)
-        // The empire's mosaic: a smaller tile set in every other one.
         if ((spot.x + spot.y) % 2 == 0) {
             pen.color = tone(palette.decor, .8f * light, alpha = .35f)
             pen.diamond(cx, cy, u * .45f, u * .22f)
         }
-        // Light through the water, swaying.
         val sway = sin(time * 1.3f + spot.x * .9f + spot.y * .6f)
         pen.color = tone(palette.accent, light, alpha = .1f + .08f * sway)
         pen.ellipse(cx - u * .45f + sway * u * .1f, cy - u * .12f, u * .7f, u * .2f)
@@ -86,7 +82,7 @@ internal class Drowned : MapStyle() {
     }
 }
 
-/** VIII · Divine (3.43.0): marble with gold set in it, fluted pillars capped in gold, motes of starlight drifting. */
+/** VIII · Divine: marble with gold set in it, fluted pillars capped in gold, motes of starlight drifting. */
 internal class Divine : MapStyle() {
     private val gold = Color(0xFFE8C860)
 
@@ -96,10 +92,8 @@ internal class Divine : MapStyle() {
         val u = unit
         pen.color = tone(palette.floor, (.9f + noise(spot.x, spot.y) * .2f) * light)
         pen.diamond(cx, cy, u, u / 2)
-        // Veins of the marble.
         pen.color = tone(palette.wallTop, 1.2f * light, alpha = .25f)
         pen.line(cx - u * .6f, cy + u * (noise(spot.x, spot.y, 54) - .5f) * .3f, cx + u * .5f, cy + u * (noise(spot.x, spot.y, 55) - .5f) * .3f, u * .02f)
-        // Gold inlay: a star on some tiles, the seams on all.
         pen.color = gold.copy(alpha = .25f * light)
         pen.polyline(cx - u, cy, cx, cy + u / 2, cx + u, cy, width = u * .025f)
         if (noise(spot.x, spot.y, 56) < .07f) {

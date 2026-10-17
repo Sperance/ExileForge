@@ -48,12 +48,12 @@ import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.theme.*
 
-/** The beetle (3.48.0): a bug report from wherever the player is. */
+/** The beetle: a bug report from wherever the player is. */
 @Composable fun BugButton(modifier: Modifier = Modifier, tint: Color = Muted, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = modifier) { Icon(Icons.Outlined.BugReport, ui("bug.open"), tint = tint, modifier = Modifier.size(22.dp)) }
 }
 
-/** Who opens the report sheet (3.57.0): the app hands it down, so a screen's own header carries the beetle instead of a button floating over it. */
+/** Who opens the report sheet: the app hands it down, so a screen's own header carries the beetle instead of a button floating over it. */
 val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
 
 /** The beetle in a screen's header; nothing where no report can be opened. */
@@ -61,11 +61,11 @@ val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
     LocalBugReport.current?.let { BugButton(modifier, tint, it) }
 }
 
-/** Аккорд громкости приложения (4.9.0): его держит Activity; окна диалогов цепляются к нему сами ([ChordOverDialog]). */
+/** Аккорд громкости приложения: его держит Activity; окна диалогов цепляются к нему сами ([ChordOverDialog]). */
 val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
 
 /**
- * Аккорд громкости поверх окна диалога (4.9.0): композиция внутри `ForgeSheet`, `Dialog` или `AlertDialog` оборачивает callback
+ * Аккорд громкости поверх окна диалога: композиция внутри `ForgeSheet`, `Dialog` или `AlertDialog` оборачивает callback
  * своего окна ([VolumeChord.attach]) - Громкость↑+↓ открывает отчёт и поверх диалога. Вне окна диалога ничего не делает.
  */
 @Composable fun ChordOverDialog() {
@@ -79,9 +79,11 @@ val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
 }
 
 /**
- * The report sheet: where the player is, a field for the words, and the send. Since 3.76.0 nothing else goes with it —
- * no context of the device and the hero, no tail of the request journal; снимков экрана нет (0.14.1, GH-ISSUES). Под формой -
- * «Мои отчёты» и «Известные» ([onReports], макет A); подсказки «Похожее уже известно» во время набора нет (0.14.4, #33).
+ * The report sheet: where the player is, a field for the words, and the send. Nothing else goes with it —
+ * no context of the device and the hero, no tail of the request journal; снимков экрана нет. Под формой -
+ * «Мои отчёты» и «Известные» ([onReports]); подсказки «Похожее уже известно» во время набора нет.
+ *
+ * Только отчёт об ошибке; черновик возвращается с устройства и пишется по мере набора.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,7 +97,6 @@ fun BugSheet(
     onSend: (BugReportRequest) -> Unit,
 ) {
     val screen = remember { bugScreen(route, run) }
-    // Только отчёт об ошибке (0.14.2: предложений нет); черновик возвращается с устройства (3.75.0) и пишется по мере набора.
     val kind = FeedbackKind.BUG
     var text by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
@@ -116,7 +117,6 @@ fun BugSheet(
                 label = { Text(ui("bug.text")) },
                 minLines = 4,
                 supportingText = { Text(ui("bug.count", text.length, limit)) },
-                // The words alone to the clipboard (3.75.0), to keep or pass on elsewhere.
                 trailingIcon = {
                     IconButton(onClick = { clipboard.setText(AnnotatedString(text)) }, enabled = text.isNotBlank()) {
                         Icon(Icons.Outlined.ContentCopy, ui("bug.copy"), tint = if (text.isNotBlank()) Gold else Muted, modifier = Modifier.size(20.dp))
@@ -133,7 +133,6 @@ fun BugSheet(
                 },
             ) { Text(ui("bug.send")) }
             if (game.session.signedIn) {
-                // Свои отчёты с их судьбой и известные проблемы с голосованием (0.14.1, макет A): две кнопки - на свою вкладку
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ReportsTab.entries.forEach { tab ->
                         ForgeOutlinedButton(onClick = {
@@ -148,7 +147,7 @@ fun BugSheet(
 }
 
 /**
- * Где игрок, ключами контекста (0.14.2): место для человека и раздел игры, в забеге - зона, уровень, фаза и семя карты. Сервер
+ * Где игрок, ключами контекста: место для человека и раздел игры, в забеге - зона, уровень, фаза и семя карты. Сервер
  * выносит их в публичный Issue строками.
  */
 private fun bugContext(route: Route, run: ExpeditionRun?): Map<String, String> {

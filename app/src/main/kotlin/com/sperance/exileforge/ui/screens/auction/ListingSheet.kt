@@ -24,9 +24,12 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * Listing something on the auction: one item from its card or the sell tab, or part of a stack.
  *
- * The price is counted in any orb (`AU_007`; server 1.84.36), so the orb is picked from the auction's currencies
- * by the orb grid ([OrbGrid], 4.6.3) and the amount typed; whether the listing stands is the server's to say. [owned] is given for a
+ * The price is counted in any orb (`AU_007`), so the orb is picked from the auction's currencies
+ * by the orb grid ([OrbGrid]) and the amount typed; whether the listing stands is the server's to say. [owned] is given for a
  * stack, and then the sheet also asks how many of them — how many there are is said, not enforced.
+ *
+ * Медиана недавних сделок - только при достаточном их числе, касание берёт её. Плата за место - правилом `AuctionFees`, та же, что спишет
+ * сервер, не возвращается; не хватает - кнопка гаснет с недостачей. Аукцион ещё закрыт - кнопка неактивна, рядом сказано, когда откроется.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -44,7 +47,6 @@ fun ListingSheet(
     val cost = price.toLongOrNull() ?: 0L
     val count = if (owned == null) 1L else amount.toLongOrNull() ?: 0L
     val digits = KeyboardOptions(keyboardType = KeyboardType.Number)
-    // What the like sold for lately (3.79.0): the median of recent deals, shown only with enough of them; a tap takes it.
     val recent by produceState<PriceHint?>(null, hint) { value = hint?.invoke() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().padding(16.dp).navigationBarsPadding(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -81,9 +83,7 @@ fun ListingSheet(
                     Text(ui("sell.price_hint", h.price, itemTitle(h.priceOrb), h.sales), color = Gold, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            // Плата за место (ECON-05) - правилом `AuctionFees`, та же, что спишет сервер; не возвращается
             val fee = game.index?.takeIf { orb.isNotBlank() && cost > 0 }?.let { AuctionFees.listing(it, game.heroLevel, orb, cost) } ?: 0L
-            // Плата против кошелька (0.14.5, #42): чип «цена / есть», не хватает - кнопка гаснет с недостачей
             val bill = game.goldBill(fee).takeIf { fee > 0 }
             bill?.let {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -92,7 +92,6 @@ fun ListingSheet(
                 }
             }
             MutedText(ui("sell.note"))
-            // Аукцион ещё закрыт (3.94.0): кнопка неактивна, и рядом сказано, когда он откроется
             val closed = auctionClosed(game)
             ForgeButton(enabled = closed == null && bill?.affordable != false && !game.busy && orb.isNotBlank() && cost > 0 && count > 0, onClick = { onList(orb, cost, count) }, modifier = Modifier.fillMaxWidth()) {
                 Text(bill?.payLabel(ui("sell.list")) ?: ui("sell.list"))
@@ -102,5 +101,5 @@ fun ListingSheet(
     }
 }
 
-/** Почему выставить лот нельзя (3.94.0): аукцион откроется с уровня из правил; null - можно. */
+/** Почему выставить лот нельзя: аукцион откроется с уровня из правил; null - можно. */
 fun auctionClosed(game: GameUi): String? = Feature.AUCTION.takeUnless { game.unlocked(it) }?.let { ui("auction.closed_until", it.level(game.index?.rules), game.heroLevel) }

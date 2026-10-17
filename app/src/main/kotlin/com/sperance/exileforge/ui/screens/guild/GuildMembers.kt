@@ -40,10 +40,12 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
 }
 
 /**
- * Состав таблицей (4.6.3, утверждён макет «Плотная таблица», вариант A; таблица - с 4.5.1): над ней поиск по имени и чипы отбора
+ * Состав таблицей («Плотная таблица»): над ней поиск по имени и чипы отбора
  * ([RosterFilter]), порядок - кнопкой «⇅» у поиска: «Ур.», «Неделя», «Всего» (повтор - обратный порядок), без выбора - глава,
- * офицеры, участники, внутри по вкладу. Нажатие строки открывает карточку игрока; у кого есть права, тот находит в ней прежний
+ * офицеры, участники, внутри по вкладу. Нажатие строки открывает карточку игрока; у кого есть права, тот находит в ней
  * лист званий. Офицер и глава зовут по имени.
+ *
+ * Места офицеров - из `guilds.json`: без прочитанного контента повышение не предлагается. Рассылка гильдии - главе и офицерам.
  */
 @Composable internal fun MembersTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     var chosen by remember { mutableStateOf<GuildMember?>(null) }
@@ -52,7 +54,6 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     var filter by remember { mutableStateOf(RosterFilter.ALL) }
     var query by remember { mutableStateOf("") }
     val openPlayer = rememberPlayerCard()
-    // Места офицеров - из `guilds.json`; без прочитанного контента повышение не предлагается
     val officerSeat = game.index?.guilds?.officerSeat(guild.officers) == true
     val scope = rememberRosterScope(game, guild.members) ?: return
     val roll = remember(guild.members, order) { order?.sort(guild.members) ?: RosterOrder.byRole(guild.members) }
@@ -64,7 +65,6 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
                 Spacer(Modifier.height(8.dp))
             }
         }
-        // Рассылка гильдии (4.6.3): главе и офицерам - окно письма всей гильдии
         if (me != null && GuildPolicy.can(me.role, GuildAction.MAIL)) {
             item {
                 BroadcastButton(game)
@@ -105,7 +105,7 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
     }
 }
 
-/** «Рассылка гильдии» (4.6.3): окно письма всей гильдии; пределы и право решает сервер. */
+/** «Рассылка гильдии»: окно письма всей гильдии; пределы и право решает сервер. */
 @Composable private fun BroadcastButton(game: GameUi) {
     val letters = koinInject<LetterActions>()
     ForgeOutlinedButton(onClick = { letters.compose(LetterDraft.guild()) }, enabled = !game.busy, modifier = Modifier.fillMaxWidth()) {
@@ -114,8 +114,10 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
 }
 
 /**
- * Приглашение (4.7.0): номер героя из шести цифр или имя; «Найти» - одно чтение превью, в нём имя, класс, уровень и номер, и
+ * Приглашение: номер героя из шести цифр или имя; «Найти» - одно чтение превью, в нём имя, класс, уровень и номер, и
  * лишь потом «Пригласить». Над полем - код вступления гильдии с копированием и «Новый код» (только у ролей с приёмом).
+ *
+ * Ниже открытия гильдий и порога гильдии кнопка погашена, причина под ней.
  */
 @Composable private fun InviteField(game: GameUi, vm: GuildViewModel, guild: GuildView) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
@@ -144,7 +146,6 @@ private fun commandsOn(me: GuildMember?, target: GuildMember): List<MemberComman
             ForgeOutlinedButton(enabled = !game.busy && target.isNotBlank(), onClick = { vm.lookup(target) }) { Text(ui("guild.find")) }
         }
         recruit?.let { found ->
-            // Уровень вступления (0.14.0, ASANA-N13): ниже открытия гильдий и порога гильдии - кнопка погашена, причина под ней
             val need = guildEntryLevel(game.index?.rules, guild.minLevel)
             val low = found.level < need
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

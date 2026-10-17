@@ -22,7 +22,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Кодекс сюжета (0.13.3, LORE-01): девять тронов - по одному абзацу на главу, уже открытую героем ([reached] - число открытых
+ * Кодекс сюжета: девять тронов - по одному абзацу на главу, уже открытую героем ([reached] - число открытых
  * глав, чтобы кодекс не забегал вперёд сюжета), и «слова мира» [LoreTerm]. Свёрнут, пока его не раскроют.
  */
 @Composable internal fun StoryCodex(chapters: List<StoryChapter>, reached: Int) {

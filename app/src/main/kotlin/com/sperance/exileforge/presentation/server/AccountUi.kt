@@ -12,7 +12,7 @@ import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.rules.content.ContentIndex
 
 /**
- * Что читают экраны аккаунта и настроек (3.80.33): сессия, команда в полёте, язык, мир, связь, данные администратора,
+ * Что читают экраны аккаунта и настроек: сессия, команда в полёте, язык, мир, связь, данные администратора,
  * герой на экране и режим. Срез источников вместо общего состояния целиком.
  */
 data class AccountUi(
@@ -28,16 +28,16 @@ data class AccountUi(
     val busy: Boolean get() = activity.held
     val isAdmin: Boolean get() = session.isAdmin
 
-    /** Выбранный герой - тестировщик (4.12.x, сервер ROLE-01): окно тестирования - ему. */
+    /** Выбранный герой - тестировщик: окно тестирования - ему. */
     val isTester: Boolean get() = session.tester(hero)
 
-    /** Окно тестирования (4.12.x, сервер ROLE-01): герою-тестировщику и любому герою администратора. */
+    /** Окно тестирования: герою-тестировщику и любому герою администратора. */
     val grants: Boolean get() = session.grants(hero)
 
-    /** Модерация и отчёты (3.88.5): модератор и администратор. */
+    /** Модерация и отчёты: модератор и администратор. */
     val isModerator: Boolean get() = session.isModerator
 
-    /** Инструменты администратора (4.12.x, ADMIN-UI): роль модерации аккаунта и режим вместе; права проверяет сервер. */
+    /** Инструменты администратора: роль модерации аккаунта и режим вместе; права проверяет сервер. */
     val adminTools: Boolean get() = isModerator && mode == AppMode.ADMIN
     val index: ContentIndex? get() = world.content
     val heroId: String get() = hero.heroId

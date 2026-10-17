@@ -18,7 +18,7 @@ import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * «Термины» (3.81.0): the game's own words the lines above use — a buff, charges, an ailment, a condition — each a chip whose tap
+ * «Термины»: the game's own words the lines above use — a buff, charges, an ailment, a condition — each a chip whose tap
  * opens its rule. Nothing is drawn when the lines name none.
  */
 @OptIn(ExperimentalLayoutApi::class)

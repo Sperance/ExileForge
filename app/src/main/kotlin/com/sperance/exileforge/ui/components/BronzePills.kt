@@ -23,7 +23,7 @@ import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Muted
 
 /**
- * Бронзовые плашки выбора раздела (4.4.x, Доска славы: регион и ступень раша, профессия): ряд с прокруткой вбок, выбранная -
+ * Бронзовые плашки выбора раздела (Доска славы: регион и ступень раша, профессия): ряд с прокруткой вбок, выбранная -
  * залита бронзой [Brass] светлым текстом, остальные - бронзовая нить.
  */
 @Composable fun BronzePills(labels: List<String>, selected: Int, onSelect: (Int) -> Unit, modifier: Modifier = Modifier) {

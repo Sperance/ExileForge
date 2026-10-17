@@ -99,7 +99,7 @@ private const val ONE_ROW = 6
 }
 
 /**
- * One stack of the tray: its drawing, the count in the corner, and a gold frame when it lies on the anvil. [marked] (4.4.x) -
+ * One stack of the tray: its drawing, the count in the corner, and a gold frame when it lies on the anvil. [marked] -
  * знак знамения в нижнем углу: стопка ляжет только с ним.
  */
 @Composable private fun TrayCell(name: String, count: Long, selected: Boolean, marked: Boolean, accent: Color, onClick: () -> Unit, glyph: @Composable () -> Unit) {
@@ -137,7 +137,7 @@ private const val ONE_ROW = 6
 }
 
 /**
- * The orbs of the tray (4.4.x): только [choices] - сферы сумки, что лягут на вещь сами или со знамением сумки,
+ * The orbs of the tray: только [choices] - сферы сумки, что лягут на вещь сами или со знамением сумки,
  * в порядке полки; сферы, что не лягут, спрятаны. Сфера, что ждёт знамения, помечена знаком, а выбранная говорит, что его нужно.
  */
 @Composable internal fun OrbTray(
@@ -165,7 +165,7 @@ private const val ONE_ROW = 6
     }
 }
 
-/** Печати Атласа лотка (4.6.4): только [choices] - печати сумки, что лягут на карту сами или со знамением сумки; ждущая знамения помечена. */
+/** Печати Атласа лотка: только [choices] - печати сумки, что лягут на карту сами или со знамением сумки; ждущая знамения помечена. */
 @Composable internal fun SealTray(game: GameUi, smithy: Smithy, choices: List<OrbChoice>, onSelect: (String) -> Unit) {
     val waiting = remember(choices) { choices.filter { it.needsOmen }.map { it.code }.toSet() }
     ForgeTray(
@@ -184,7 +184,7 @@ private const val ONE_ROW = 6
 }
 
 /**
- * Подсказка сферы качества (4.3.0): что она поднимет на этой вещи с выбранным знамением и что сбросит; не ляжет (4.8.0) -
+ * Подсказка сферы качества: что она поднимет на этой вещи с выбранным знамением и что сбросит; не ляжет -
  * отказ правил с причиной.
  */
 private fun qualityNote(orb: String, quality: QualityForecast?): String? = quality?.takeIf { orb == Orb.QUALITY_ORB.name }?.let { forecast ->
@@ -192,7 +192,7 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
 }
 
 /**
- * The essences of the tray (2.78.0): the bag's, the special ones last and the higher tiers first. С 3.94.1 и те, что вещь не
+ * The essences of the tray: the bag's, the special ones last and the higher tiers first. И те, что вещь не
  * примет ([refusals] - отказ правил по коду): серыми в конце, выбранная говорит почему.
  */
 @Composable internal fun EssenceTray(game: GameUi, chosen: String, refusals: Map<String, String>, onSelect: (String) -> Unit) {
@@ -217,7 +217,7 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
 }
 
 /**
- * The omens the bag holds for the chosen orb (3.36.0). Описание знамени раскрывается нажатием ([ExpandableText], 4.2.0): one may be laid on the next use, the one that goes on the [target] -
+ * The omens the bag holds for the chosen orb. Описание знамени раскрывается нажатием ([ExpandableText]): one may be laid on the next use, the one that goes on the [target] -
  * an item. Chosen again, it is taken off. Each is the orb's pair on the anvil (mockup B).
  */
 @Composable fun OmenLedger(game: GameUi, orbCode: String, chosenOmen: String, target: OrbTarget, held: List<Omen>, onSelect: (String) -> Unit) {
@@ -228,7 +228,11 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
     OmenList(game, omens, chosenOmen, onSelect)
 }
 
-/** Знамения [omens], что лягут рядом с валютой на наковальне (сфера или печать Атласа, 4.6.4): выбранное снова - снимается. */
+/**
+ * Знамения [omens], что лягут рядом с валютой на наковальне (сфера или печать Атласа): выбранное снова - снимается.
+ *
+ * Общее правило катализаторов - термином, один раз: описание каждого называет лишь свой вид.
+ */
 @Composable fun OmenList(game: GameUi, omens: List<Omen>, chosenOmen: String, onSelect: (String) -> Unit) {
     val hero = game.hero ?: return
     val index = game.index ?: return
@@ -258,7 +262,6 @@ private fun qualityNote(orb: String, quality: QualityForecast?): String? = quali
                 Text("×${hero.count(omen.code)}", color = GoldBright, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
             }
         }
-        // Общее правило катализаторов (4.2.0) - термином, один раз: описание каждого называет лишь свой вид.
         if (omens.any { it.catalyst != null }) TermsBlock(listOf(Term.CATALYST), index.campaign.combat)
     }
 }

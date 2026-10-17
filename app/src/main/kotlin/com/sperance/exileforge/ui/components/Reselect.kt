@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.filter
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Вкладка [tab] нажата снова, пока открыта (3.95.0): экран возвращается на свою главную - закрывает вложенное, что держит
+ * Вкладка [tab] нажата снова, пока открыта: экран возвращается на свою главную - закрывает вложенное, что держит
  * сам, и прокручивается наверх ([onReselect]).
  */
 @Composable fun OnReselect(tab: Int, onReselect: suspend () -> Unit) {

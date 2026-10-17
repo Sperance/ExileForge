@@ -155,15 +155,16 @@ private object PortraitRasters {
 }
 
 /**
- * A round token cut from a portrait's face (since 2.31.0): the three-by-four box is placed so that
+ * A round token cut from a portrait's face: the three-by-four box is placed so that
  * its face circle (`Portrait.TOKEN_*`) lands on [centre] with [radius], and everything outside it
  * is clipped. [draw] paints the box: the server's portrait.
+ *
+ * Круг единичного радиуса, растянутый переносом: ни пути, ни прямоугольника на кадр.
  */
 inline fun DrawScope.drawToken(centre: Offset, radius: Float, ring: Color, draw: DrawScope.() -> Unit) {
     val width = radius / Portrait.TOKEN_R
     val left = centre.x - width * Portrait.TOKEN_X
     val top = centre.y - width * Portrait.TOKEN_Y
-    // Круг единичного радиуса, растянутый переносом: ни пути, ни прямоугольника на кадр
     withTransform({
         translate(centre.x, centre.y)
         scale(radius, radius, Offset.Zero)

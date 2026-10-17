@@ -51,11 +51,11 @@ import kotlin.math.PI
 import kotlin.math.cos
 
 /**
- * The guild's bonus tree (3.79.0, server 1.74.0): three branches, each node with its ranks; a point for every guild level,
+ * The guild's bonus tree: three branches, each node with its ranks; a point for every guild level,
  * spent by the leader, the second row open once the branch holds the rules' points. Combat and loot ride on every member's
  * runs, economy on the guild itself. A reset gives every point back, free once a week.
  *
- * 4.8.0 (макет «Дерево гильдии», вариант A «Созвездие»): ветви - столбцы, узлы - круги с медалью и полосками рангов, связи
+ * Ветви - столбцы, узлы - круги с медалью и полосками рангов, связи
  * светятся по взятым рангам, второй ряд - под «воротами» с числом очков из правил; нажатие на узел - лист с эффектом и «+1 ранг».
  */
 @Composable internal fun TreeTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
@@ -72,7 +72,7 @@ import kotlin.math.cos
 }
 
 /**
- * Шапка древа: «свободно / всего» крупно, уровень гильдии и подсказка с числами правил. Сброс (0.14.0, ASANA-N03) - у главы
+ * Шапка древа: «свободно / всего» крупно, уровень гильдии и подсказка с числами правил. Сброс - у главы
  * удержанием; срок «раз в N дней» и живой таймер до следующего сброса видят все участники (первый сброс гильдии - сразу).
  */
 @Composable private fun TreePoints(game: GameUi, vm: GuildViewModel, guild: GuildView, rule: GuildTreeRule, leader: Boolean) {
@@ -299,7 +299,7 @@ private fun GuildTreeRule.bar(taken: Map<String, Int>, level: Int, node: GuildNo
 }
 
 /**
- * Медали узлов древа по коду узла (4.8.0): новый узел контента - строка здесь; без строки узел рисуется знаком своей строки
+ * Медали узлов древа по коду узла: новый узел контента - строка здесь; без строки узел рисуется знаком своей строки
  * ([Glyph.ofStat] по `effect`).
  */
 private val NodeMedals: Map<String, ImageVector> = mapOf(

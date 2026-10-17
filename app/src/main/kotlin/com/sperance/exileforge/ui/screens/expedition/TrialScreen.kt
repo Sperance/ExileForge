@@ -33,9 +33,11 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * A trial over the whole screen (3.49.0): the arena's cards as in any fight, a plate on top with the boss or the floor, the
+ * A trial over the whole screen: the arena's cards as in any fight, a plate on top with the boss or the floor, the
  * foes' level, the clock and the floor's lines, and — once it is over — what it came to. The arena is stepped here, a frame
  * at a time; back walks away between two fights, and closes the screen once the trial is over.
+ *
+ * Строка угрозы десятка башни - выбор до первого боя десятка; досье босса перед его боем, как у стража карты.
  */
 @Composable fun TrialScreen(arena: TrialArena) {
     val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
@@ -52,7 +54,6 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Leave) else model.closeTrial() }
-    // «Журнал боя» меню забега (4.8.0) - последний бой испытания
     CompositionLocalProvider(LocalFightReport provides hud.report) {
         Box(Modifier.fillMaxSize().background(Ink)) {
             hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
@@ -63,9 +64,7 @@ import org.koin.compose.viewmodel.koinViewModel
             } else {
                 TrialEnding(game, model, hud)
             }
-            // Строка угрозы десятка башни (3.96.0): выбор до первого боя десятка
             hud.choice?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { options -> TowerChoice(hud.step, options) { model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.PickLine(it)) } }
-            // Досье босса (3.92.0) перед его боем, как у стража карты: «В бой» начинает бой; без босса - кнопка «В бой» под героем
             val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
             val boss = fight?.boss
             val stage = hud.step to fight?.round
@@ -93,7 +92,7 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Выбор строки угрозы десятка башни (3.96.0): варианты по силе, у каждого - прибавка к кладу. */
+/** Выбор строки угрозы десятка башни: варианты по силе, у каждого - прибавка к кладу. */
 @Composable private fun TowerChoice(floor: Int, options: List<com.sperance.exileforge.rules.content.TowerMod>, onPick: (Int) -> Unit) {
     Column(
         Modifier.fillMaxSize().background(Ink.copy(alpha = .94f)).statusBarsPadding().navigationBarsPadding().padding(14.dp),
@@ -159,10 +158,8 @@ import org.koin.compose.viewmodel.koinViewModel
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             RunFigures(hud.summary)
             RewardLines(game, hud.gained, { looked = it }, awaiting = hud.awaiting > 0)
-            // Рубеж башни, первая зачистка раша (4.10.0): новые очки Атласа
             AtlasBlock(model.state.collectAsStateWithLifecycle().value.atlasPoints)
         }
-        // Журнал последнего боя (4.8.0): боя, что кончил испытание
         hud.report?.let { ForgeOutlinedButton(onClick = { journal = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("run.menu.log")) } }
         ForgeButton(onClick = model::closeTrial, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(ui("expedition.back_to_camp")) }
     }

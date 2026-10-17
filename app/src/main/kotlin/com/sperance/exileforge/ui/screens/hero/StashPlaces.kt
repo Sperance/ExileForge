@@ -30,13 +30,15 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The stash's places (3.1.0, server 1.1.0): how many items it holds of how many, the next pack of places
+ * The stash's places: how many items it holds of how many, the next pack of places
  * for gold up to the rules' ceiling, and the overflow — what came when the stash was full, waiting to be
  * taken in or sold. Past the overflow the merchant buys a drop himself; the rules say how far each goes.
  * Only items count against the places: orbs and the rest of the bag stack without a limit.
  *
- * The fill is a thin bar under the shelf's switch (3.69.0), across the width, in the error colour once full; its «+»
+ * The fill is a thin bar under the shelf's switch, across the width, in the error colour once full; its «+»
  * asks for the next pack with its price. The overflow stays in the list, since it is items to act on.
+ *
+ * Пилюля «24/60 +»: места тайника и следующая пачка за золото.
  */
 @Composable fun StashFill(game: GameUi, vm: HeroViewModel, modifier: Modifier = Modifier) {
     val hero = game.hero ?: return
@@ -48,7 +50,6 @@ import com.sperance.exileforge.ui.theme.*
     val price = rules.price(hero.info.stashSlots)
     val label = ui("stash.places", held, capacity)
     var buying by remember { mutableStateOf(false) }
-    // Пилюля «24/60 +» (3.88.6): места тайника и следующая пачка за золото.
     Row(
         modifier.height(32.dp).depthRaised(RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)),
         verticalAlignment = Alignment.CenterVertically,
@@ -85,7 +86,11 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** What came when the stash was full: each piece taken in once a place frees, or sold. */
+/**
+ * What came when the stash was full: each piece taken in once a place frees, or sold.
+ *
+ * Запертая вещь ждёт в переполнении: её не продают ни руками, ни сервер.
+ */
 @Composable fun StashOverflow(game: GameUi, vm: HeroViewModel) {
     val hero = game.hero ?: return
     val rules = game.index?.rules?.stash ?: return
@@ -104,7 +109,6 @@ import com.sperance.exileforge.ui.theme.*
                 ItemRow(piece, price = game.sellPrice(item), verdict = rememberGearVerdict(game, item), footer = {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ForgeTextButton(onClick = { vm.claimOverflow(item.id) }, enabled = !full && !game.busy) { Text(ui("stash.claim")) }
-                        // A locked piece (3.30.0) waits in the overflow: it is never sold, by hand or by the server.
                         ForgeTextButton(onClick = { vm.sellOverflow(item.id) }, enabled = !game.busy && !item.locked) { Text(ui("hero.sell_do")) }
                     }
                 }) { inspect(Inspect.Copy(item)) }

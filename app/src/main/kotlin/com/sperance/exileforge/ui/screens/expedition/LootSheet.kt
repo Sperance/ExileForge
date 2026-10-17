@@ -35,11 +35,14 @@ import com.sperance.exileforge.ui.theme.Panel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * A piece the run dropped, opened where it dropped (3.24.0) — a chest's lid, a fight's spoils, the run's reports:
+ * A piece the run dropped, opened where it dropped — a chest's lid, a fight's spoils, the run's reports:
  * its card and what wearing it would change against what is worn. Снаряжение в заходе не меняется и не продаётся: надеть
  * или продать вещь можно только после захода. The drop is the server's roll and reaches the stash with the journal's
  * answer, so opening the sheet sends the journal at once; one sold for want of room says so.
  * [extra] is what the caller adds under the card.
+ *
+ * Копия героя берётся по id: выданная сервером несёт номер экземпляра. В заходе торговцу не продают (проверяет только клиент): вещь
+ * помечают к продаже, в итогах карты она уже отмечена.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,7 +59,6 @@ internal fun LootSheet(
     LaunchedEffect(item.id, stand) { if (stand == LootPresence.ARRIVING) vm.flushRun() }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            // Копия героя по id (4.9.0): выданная сервером несёт номер экземпляра, которого у превью добычи ещё нет
             val shown = remember(item, game.hero) { game.hero?.item(item.id)?.takeIf { it.serial != item.item.serial }?.let { ItemView(it, item.template, item.index) } ?: item }
             ItemCard(shown, enabled = false, detailed = true, price = game.sellPrice(item.item), totals = wearTotals(game, item.item, rememberWearChoice(game, item.item)), unmet = game.unmetNeeds(item.code))
             when (stand) {
@@ -66,8 +68,6 @@ internal fun LootSheet(
 
                 LootPresence.ARRIVING -> MutedText(ui("expedition.loot_arriving"))
 
-                // В заходе торговцу не продают (3.90.4; проверяет только клиент, 3.91.1): вещь помечают к продаже (3.91.0) - в итогах карты
-                // она уже отмечена. В самих итогах ([markable] = false) отмечают их же выбором.
                 LootPresence.HELD -> if (markable) {
                     val marked = item.id in expedition.saleMarks
                     ForgeOutlinedButton(onClick = { vm.toggleSaleMark(item.id) }, modifier = Modifier.fillMaxWidth()) {

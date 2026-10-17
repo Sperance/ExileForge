@@ -61,7 +61,7 @@ import com.sperance.exileforge.ui.theme.Parchment
 import kotlinx.coroutines.delay
 
 /**
- * Скрытая строка вещи, что ждёт выбора игрока (4.6.2, зеркало `Revelation` правил): сфера кладёт варианты на копию, выбор ставит
+ * Скрытая строка вещи, что ждёт выбора игрока (зеркало `Revelation` правил): сфера кладёт варианты на копию, выбор ставит
  * один. Маршрут выбора у всех один (`hero/unveil`) - его ведёт первая ждущая строка, так что и рисуется только она. Новая скрытая
  * строка - новая реализация в [REVEALS].
  */
@@ -73,14 +73,14 @@ internal interface LineReveal {
     @Composable fun Choice(game: GameUi, item: ItemInstance, enabled: Boolean, onChoose: (String, Int) -> Unit)
 }
 
-/** Скрытый аффикс (3.36.0): гибриды сферы раскрытия списком строк. */
+/** Скрытый аффикс: гибриды сферы раскрытия списком строк. */
 internal object VeiledReveal : LineReveal {
     override fun pending(item: ItemInstance): Boolean = item.unveil.isNotEmpty()
 
     @Composable override fun Choice(game: GameUi, item: ItemInstance, enabled: Boolean, onChoose: (String, Int) -> Unit) = LineChoice(game, item, item.unveil, "forge.unveil_title", "forge.unveil_hint", enabled, onChoose)
 }
 
-/** Судьбоносная строка Осквернения (4.6.2): строки дара, что предложила Сфера прозрения, - «Тлеющие письмена». */
+/** Судьбоносная строка Осквернения: строки дара, что предложила Сфера прозрения, - «Тлеющие письмена». */
 internal object FatedReveal : LineReveal {
     override fun pending(item: ItemInstance): Boolean = item.desecration?.offers?.isNotEmpty() == true
 
@@ -91,7 +91,7 @@ internal object FatedReveal : LineReveal {
 internal val REVEALS: List<LineReveal> = listOf(VeiledReveal, FatedReveal)
 
 /**
- * Выбор Раскрытия (4.6.2, макет «Тлеющие письмена», утверждён владельцем): заголовок, тлеющая полоса разворачивается, строки
+ * Выбор Раскрытия (утверждён владельцем): заголовок, тлеющая полоса разворачивается, строки
  * дара прожигаются слева направо одна за другой (крупное число и текст словами сервера), выбранная - в золоте; принять -
  * удержанием. Без `LocalMotion` всё сразу на месте.
  */
@@ -154,7 +154,6 @@ internal val REVEALS: List<LineReveal> = listOf(VeiledReveal, FatedReveal)
             .drawWithContent {
                 val edge = size.width * burn.value
                 clipRect(right = edge) { this@drawWithContent.drawContent() }
-                // Кромка огня и вспышка ещё не остывшей строки
                 if (burn.value < 1f) {
                     drawRect(Color.White.copy(alpha = .3f * (1 - burn.value)), size = Size(edge, size.height))
                     drawRect(Brush.horizontalGradient(listOf(Color.Transparent, FateInk.GoldLight), edge - 24f, edge), Offset(edge - 24f, 0f), Size(24f, size.height))

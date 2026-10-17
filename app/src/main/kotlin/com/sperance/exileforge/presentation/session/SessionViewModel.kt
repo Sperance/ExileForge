@@ -16,8 +16,8 @@ import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Экран входа (3.80.22): сервер, вход по логину или по устройству, повтор подтверждения; сессия - у `SessionActions`,
- * словарь и иконки - у `WorldLoader` (3.80.44).
+ * Экран входа: сервер, вход по логину или по устройству, повтор подтверждения; сессия - у `SessionActions`,
+ * словарь и иконки - у `WorldLoader`.
  */
 class SessionViewModel(
     slice: GameSlice,
@@ -28,7 +28,7 @@ class SessionViewModel(
     private val sessionActions: SessionActions,
     private val characters: CharacterActions,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val session: StateFlow<Session> = sessions.state
     val activity: StateFlow<Activity> = commands.state
@@ -46,7 +46,7 @@ class SessionViewModel(
     fun bind(login: String, password: String) = sessionActions.bind(login, password)
     fun mode(mode: AppMode) = sessionActions.mode(mode)
 
-    /** Тестовые учётки администратора (3.80.30), как их просят страницы настроек. */
+    /** Тестовые учётки администратора, как их просят страницы настроек. */
     fun refreshLocale() = loader.refreshLocale()
     fun refreshIcons() = loader.refreshIcons()
 

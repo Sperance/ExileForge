@@ -22,7 +22,7 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
- * Статья справки ремёсел (3.90.3): заголовок `crafts.help.<key>` и текст `crafts.help.<key>_text` из словаря; числа в текст
+ * Статья справки ремёсел: заголовок `crafts.help.<key>` и текст `crafts.help.<key>_text` из словаря; числа в текст
  * подставляются из правил ремёсел, что пришли с сервера ([args]), - своих балансных чисел у справки нет.
  */
 private class GlossaryEntry(val key: String, val args: (CraftsRules) -> List<Any> = { emptyList() })

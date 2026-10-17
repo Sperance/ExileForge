@@ -103,7 +103,7 @@ internal fun RiftNodeKind.color(): Color = when (this) {
 }
 
 /**
- * Разлом недели (3.96.0) на весь экран. До забега - входное меню «Врата» (4.0.1): портал, неделя, стражи, мутаторы и вход; во
+ * Разлом недели на весь экран. До забега - входное меню «Врата»: портал, неделя, стражи, мутаторы и вход; во
  * время забега - карта «Восхождение» с тонким HUD, предложение узла всплывает снизу. Пока идёт бой, экран - арена; назад
  * закрывает Разлом, забег ждёт на сервере до конца недели.
  */
@@ -111,7 +111,6 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     val model = koinViewModel<ExpeditionViewModel>()
     val game by model.game.collectAsStateWithLifecycle()
     val state by model.riftState.collectAsStateWithLifecycle()
-    // «Журнал боя» (4.8.0): меню забега, плашка итога боя и итог забега - последний бой узла
     CompositionLocalProvider(LocalFightReport provides state.lastFight) { RiftBody(game, model, state) }
 }
 
@@ -134,7 +133,11 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     }
 }
 
-/** Входное меню «Врата»: портал, неделя и уровень Разлома (закреплённый первым забегом недели), стражи силуэтами, мутаторы, счёт, вход и схема недели в тумане. */
+/**
+ * Входное меню «Врата»: портал, неделя и уровень Разлома (закреплённый первым забегом недели), стражи силуэтами, мутаторы, счёт, вход и схема недели в тумане.
+ *
+ * Причина у неактивной кнопки: уровень входа (`unlocks`), ключ сверх бесплатных.
+ */
 @Composable private fun RiftGate(game: GameUi, model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, engine: RiftEngine) {
     val hero = game.hero ?: return
     val idle = !game.busy
@@ -177,7 +180,6 @@ internal fun RiftNodeKind.color(): Color = when (this) {
             Text(ui("rift.free", board.free, rules.free), color = RiftColors.Text, style = MaterialTheme.typography.bodySmall)
             if (board.progress.best > 0) Text(ui("rift.best", board.progress.best), color = RiftColors.Hot, style = MaterialTheme.typography.bodySmall)
         }
-        // Причина у неактивной кнопки: уровень входа (`unlocks`), ключ сверх бесплатных
         val keys = hero.bag[RiftRules.KEY] ?: 0L
         val reason = when {
             !open -> ui("unlock.locked", ui(Feature.RIFT.title), Feature.RIFT.level(game.index?.rules))
@@ -206,9 +208,10 @@ internal fun RiftNodeKind.color(): Color = when (this) {
 /**
  * Портал Врат: ореол, кольцо рун-засечек (40 с), встречное пунктирное кольцо (18 с), дышащее ядро (5,5 с) и всплывающие искры
  * (6 с). Декор стоит при выключенном `LocalMotion`.
+ *
+ * Фазы читаются в рисовании: портал перерисовывается без перекомпоновки экрана.
  */
 @Composable private fun RiftPortal(modifier: Modifier) {
-    // Фазы читаются в рисовании (4.9.0): портал перерисовывается шагом часов декора без перекомпоновки экрана.
     val spinning = motionPhase(40_000)
     val countering = motionPhase(18_000)
     val breathing = motionPhase(5_500)
@@ -247,9 +250,12 @@ internal fun RiftNodeKind.color(): Color = when (this) {
     }
 }
 
-/** Страж недели силуэтом: знак в кольце тревоги дышит (5,5 с), под ним имя заглавными. */
+/**
+ * Страж недели силуэтом: знак в кольце тревоги дышит (5,5 с), под ним имя заглавными.
+ *
+ * Дыхание - прозрачностью слоя знака в рисовании, без перекомпоновки.
+ */
 @Composable private fun GuardianSeal(name: String, act: Int) {
-    // Дыхание - прозрачностью слоя знака в рисовании (4.9.0): то же, что прозрачность оттенка, без перекомпоновки.
     val phase = motionPhase(5_500)
     Column(Modifier.width(100.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
@@ -365,7 +371,7 @@ private enum class RunSheet { BOONS, CURSES }
 }
 
 /**
- * Меню забега Разлома (4.7.0 - общее [RunMenu]): настройки, жук; свой блок - конец недели и мутаторы; свои пункты - завершить
+ * Меню забега Разлома (общее [RunMenu]): настройки, жук; свой блок - конец недели и мутаторы; свои пункты - завершить
  * забег (с вопросом) и закрыть Разлом.
  */
 @Composable private fun RiftMenu(model: ExpeditionViewModel, rules: RiftRules, board: RiftBoard, idle: Boolean) {
@@ -398,7 +404,7 @@ private enum class RunSheet { BOONS, CURSES }
     }
 }
 
-/** Дар одной строкой: имя цветом редкости, ступень и его строки листа; дар правил (4.0.1) - своим описанием. */
+/** Дар одной строкой: имя цветом редкости, ступень и его строки листа; дар правил - своим описанием. */
 @Composable private fun BoonLine(rules: RiftRules, code: String, grade: Int = 0, modifier: Modifier = Modifier) {
     val boon = rules.boonsByCode[code] ?: return
     val scale = 1 + rules.nodes.gradePower / 100 * grade
@@ -425,7 +431,7 @@ private fun lineText(line: TraitLine, scale: Double = 1.0): String = SkillText.s
 }
 
 /**
- * Почему на узел [node] не шагнуть (4.0.1) - ключ словаря; null - можно идти. До забега - сперва войти; пройденный - уже был;
+ * Почему на узел [node] не шагнуть - ключ словаря; null - можно идти. До забега - сперва войти; пройденный - уже был;
  * пока открыт выбор или идёт бой - сперва его закончить; дальше следующего ряда - дорога приведёт позже; иначе тропа позади.
  */
 private fun RiftEngine.blocked(run: RiftRun?, node: RiftNode): String? {
@@ -632,7 +638,11 @@ private const val SPARKS = 14
     )
 }
 
-/** Бой узла: арена, как у испытаний, и плашка с волной и условием Чемпиона. */
+/**
+ * Бой узла: арена, как у испытаний, и плашка с волной и условием Чемпиона.
+ *
+ * Посреди боя уйти нельзя: назад ставит паузу; досье стража перед боем, «В бой» начинает бой.
+ */
 @Composable private fun RiftFight(game: GameUi, model: ExpeditionViewModel, arena: RiftArena, delivery: RiftDelivery?) {
     val shell: ShellViewModel = koinViewModel()
     val hud by arena.hud.collectAsState()
@@ -645,7 +655,6 @@ private const val SPARKS = 14
             }
         }
     }
-    // Посреди боя уйти нельзя: назад ставит паузу
     BackHandler { model.riftCommand(RunCommand.Pause) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
@@ -666,7 +675,6 @@ private const val SPARKS = 14
                 Text(ui(if (hud.met) "rift.champion_met" else "rift.champion_failed"), color = if (hud.met) RiftColors.Rift else RiftColors.Warn, style = MaterialTheme.typography.labelSmall)
             }
         }
-        // Досье стража перед боем, с живым портретом: «В бой» начинает бой
         val fight = hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT && !it.started }
         val boss = fight?.boss
         var seen by remember(arena) { mutableStateOf(false) }
@@ -686,8 +694,8 @@ private const val SPARKS = 14
 }
 
 /**
- * Итог кончившегося боя в пути (4.7.0): «Победа · отправка итога» со спиннером, без связи - номер повтора, отказ сервера -
- * его слова и «К карте». Раньше здесь был голый спиннер, и потерянный итог держал его вечно.
+ * Итог кончившегося боя в пути: «Победа · отправка итога» со спиннером, без связи - номер повтора, отказ сервера -
+ * его слова и «К карте». Не голый спиннер: потерянный итог держал бы его вечно.
  */
 @Composable private fun DeliveryPlate(won: Boolean, delivery: RiftDelivery?, onLeave: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
@@ -742,7 +750,7 @@ private const val SPARKS = 14
     }
 }
 
-/** «Журнал боя» (4.8.0) в итоге боя или забега: последний бой узла листом; без боя кнопки нет. */
+/** «Журнал боя» в итоге боя или забега: последний бой узла листом; без боя кнопки нет. */
 @Composable private fun FightLogButton() {
     val report = LocalFightReport.current ?: return
     var open by remember { mutableStateOf(false) }

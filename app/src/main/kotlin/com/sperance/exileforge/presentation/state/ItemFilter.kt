@@ -12,8 +12,8 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.Transient
 
 /**
- * A shelf of the stash's slot chips (3.30.0): the slots the rules tag alike are one — both weapons, both rings,
- * the three flask bays — and every other slot is its own. С 4.2.0 - вариант «Типа» фильтра предметов ([ItemType.Group]).
+ * A shelf of the stash's slot chips: the slots the rules tag alike are one — both weapons, both rings,
+ * the three flask bays — and every other slot is its own. Вариант «Типа» фильтра предметов ([ItemType.Group]).
  */
 @Serializable
 @JvmInline
@@ -23,7 +23,7 @@ value class SlotGroup(val tag: String) {
         else -> Slot.entries.firstOrNull { it.tag == tag }?.let { slotTitle(it, lang) } ?: tag
     }
 
-    /** Место группы, чей значок она носит в рейке тайника (3.90.3): первое место с её тегом. */
+    /** Место группы, чей значок она носит в рейке тайника: первое место с её тегом. */
     val slot: Slot get() = Slot.entries.first { it.tag == tag }
 
     val isTool: Boolean get() = tag == TOOL
@@ -38,7 +38,7 @@ value class SlotGroup(val tag: String) {
 }
 
 /**
- * Раздел списка шире места (4.2.0): вся экипировка, карты, инструменты, надетое - быстрые варианты «Типа» на полке у наковальни.
+ * Раздел списка шире места: вся экипировка, карты, инструменты, надетое - быстрые варианты «Типа» на полке у наковальни.
  * Новый раздел - запись здесь и в [ItemShelf.sections].
  */
 @Serializable
@@ -57,7 +57,7 @@ enum class ItemSection {
     }
 }
 
-/** «Тип» фильтра предметов (4.2.0): место (группа мест рейки) или раздел шире места - одно состояние для рейки, полки и шторки. */
+/** «Тип» фильтра предметов: место (группа мест рейки) или раздел шире места - одно состояние для рейки, полки и шторки. */
 @Serializable
 sealed interface ItemType {
     fun admits(piece: ItemView): Boolean
@@ -73,7 +73,7 @@ sealed interface ItemType {
     }
 }
 
-/** Качество в фильтре предметов (4.2.0): любое, есть хоть сколько-то, на потолке своего вида (фляги - свой), нет совсем. */
+/** Качество в фильтре предметов: любое, есть хоть сколько-то, на потолке своего вида (фляги - свой), нет совсем. */
 @Serializable
 enum class QualityFilter {
     ANY,
@@ -93,10 +93,10 @@ enum class QualityFilter {
     }
 }
 
-/** Потолок качества вещи - потолок её вида качества по правилам (4.3.0, [QualityKind]); вида нет - общий. */
+/** Потолок качества вещи - потолок её вида качества по правилам ([QualityKind]); вида нет - общий. */
 private val ItemView.qualityCap: Int get() = QualityKind.of(catalyst).gain(item, template, index)?.cap(index.rules) ?: index.rules.quality.max
 
-/** Порядки списка предметов (3.30.0, с 4.2.0 - общие для всех списков): новые первыми, по редкости, уровню предмета или цене списка. */
+/** Порядки списка предметов (общие для всех списков): новые первыми, по редкости, уровню предмета или цене списка. */
 @Serializable
 enum class ItemSort {
     NEWEST,
@@ -124,7 +124,7 @@ enum class ItemSort {
 enum class FilterFacet { TYPE, RARITY, QUALITY, MINE, WEARABLE, HIDE_WORN, SORT }
 
 /**
- * Список предметов приложения с фильтром (4.2.0): какие грани фильтра в нём есть ([facets]), какие порядки ([sorts]) и с чего он
+ * Список предметов приложения с фильтром: какие грани фильтра в нём есть ([facets]), какие порядки ([sorts]) и с чего он
  * начинается ([defaults]). Выбор фильтра запоминается на список, на устройстве ([ItemFilters]). Новый список - запись здесь.
  */
 enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, val defaults: ItemFilter, val sections: List<ItemSection> = emptyList()) {
@@ -139,7 +139,7 @@ enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, va
 }
 
 /**
- * Единый фильтр предметов (4.2.0, обобщение фильтра тайника 3.30.0): тип ([type], null - всё), редкости (пусто - все), качество,
+ * Единый фильтр предметов всех списков: тип ([type], null - всё), редкости (пусто - все), качество,
  * «сделано мной» (поле `maker` копии - имя героя), «могу надеть», «скрыть надетое», порядок и поиск. Поиск - только экрана и не
  * запоминается; прочее хранится на устройстве для своего списка ([ItemShelf]).
  */
@@ -182,7 +182,7 @@ data class ItemFilter(
     fun apply(pieces: List<ItemView>, shelf: ItemShelf, heroName: String, unmet: (String) -> List<String>, price: (ItemView) -> Long?): List<ItemView> = (if (FilterFacet.SORT in shelf.facets) sort else shelf.defaults.sort).order(pieces.filter { admits(it, shelf, heroName, unmet) }, price)
 }
 
-/** Запомненные фильтры списков на устройстве (4.2.0): у списка без записи - его обычный. */
+/** Запомненные фильтры списков на устройстве: у списка без записи - его обычный. */
 @Serializable
 data class ItemFilters(val shelves: Map<ItemShelf, ItemFilter> = emptyMap()) {
     operator fun get(shelf: ItemShelf): ItemFilter = shelves[shelf] ?: shelf.defaults
@@ -194,8 +194,8 @@ data class ItemFilters(val shelves: Map<ItemShelf, ItemFilter> = emptyMap()) {
 val ItemView.isWorn: Boolean get() = equipped || socketed
 
 /**
- * Пункты рейки тайника (3.90.3): группы мест в порядке мест тела, инструменты - в конце, со счётом вещей [pieces];
- * группа без вещей пункта не получает. С 4.2.0 - и варианты «Типа» в шторке фильтра.
+ * Пункты рейки тайника: группы мест в порядке мест тела, инструменты - в конце, со счётом вещей [pieces];
+ * группа без вещей пункта не получает. И варианты «Типа» в шторке фильтра.
  */
 fun railGroups(pieces: List<ItemView>): List<Pair<SlotGroup, Int>> {
     val counts = pieces.groupingBy { SlotGroup.of(it.slot) }.eachCount()

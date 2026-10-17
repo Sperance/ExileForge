@@ -20,7 +20,7 @@ import com.sperance.exileforge.ui.screens.expedition.scene.BlightTint
 import com.sperance.exileforge.ui.theme.rarityColor
 
 /**
- * Очаг Скверны на полосе карты (4.0.0): какая точка («Очаг 2 из 4» или Матерь), сколько монстров Скверны ещё стоит вокруг
+ * Очаг Скверны на полосе карты: какая точка («Очаг 2 из 4» или Матерь), сколько монстров Скверны ещё стоит вокруг
  * неё, а у зачищенной - сундук и его качество. Пока очаг не найден или уже иссяк - ничего.
  */
 @Composable internal fun BlightLine(view: BlightView?) {
@@ -46,7 +46,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
 }
 
 /**
- * Новости Скверны строкой над картой (4.0.0): пробудилась, расползается, иссякла, пробуждается Матерь. Объявляется только
+ * Новости Скверны строкой над картой: пробудилась, расползается, иссякла, пробуждается Матерь. Объявляется только
  * новая новость - вошедший снова в заход старых не слышит.
  */
 @Composable internal fun BlightWatch(view: BlightView?, announce: (String) -> Unit) {

@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 /**
- * Испытания (3.80.20, из `TrialViewModel`): раш по области и башня. Арена - мир, который сцена шагает; её события
+ * Испытания (из `TrialViewModel`): раш по области и башня. Арена - мир, который сцена шагает; её события
  * уходят на сервер пачками под ключом, ответ ложится на арену наградами. Один на приложение.
  */
 class TrialActions(
@@ -70,10 +70,10 @@ class TrialActions(
 
     private val speedSteps: Int get() = speedPresses(world.state.value.content, prefs.settings.value.fightSpeed)
 
-    /** «Раш»: ключ раша тратится на раш [region] ступени [tier] (3.96.0, с 0). */
+    /** «Раш»: ключ раша тратится на раш [region] ступени [tier] (с 0). */
     fun rush(region: String, tier: Int = 0) = enter { api.trials.rush(it, region, tier) }
 
-    /** «Собрать ключ» (3.50.0): пять обломков герба становятся ключом раша. */
+    /** «Собрать ключ»: пять обломков герба становятся ключом раша. */
     fun forgeKey() {
         if (commands.state.value.busy) return
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
@@ -128,16 +128,21 @@ class TrialActions(
         mutableArena.value?.send(command)
     }
 
-    /** Событие арены: итоги боя (4.9.0, NET-9) - только статистика, они ждут следующего события и уходят с ним одной пачкой. */
+    /** Событие арены: итоги боя - только статистика, они ждут следующего события и уходят с ним одной пачкой. */
     private fun recorded(event: TrialEvent) {
         synchronized(pending) { pending += event }
         if (event !is TrialEvent.Fight) sends.trySend(Unit)
     }
 
-    /** Отправляет пачку в пути снова или ожидающие события под новым ключом; ответ ложится на арену. */
+    /**
+     * Отправляет пачку в пути снова или ожидающие события под новым ключом; ответ ложится на арену.
+     *
+     * Не больше пачки за раз: длинный журнал сервер отвергает целиком. Дошедшая без отчёта пачка взята - добыча придёт с героем. Рубеж
+     * башни и первая зачистка раша - тост нового очка Атласа. Закрытое испытание или чужой журнал - ничто больше не ждёт; любой другой
+     * отказ оставляет события неотправленными под новым ключом позже.
+     */
     private suspend fun flush() {
         val (key, events) = synchronized(pending) {
-            // Не больше пачки за раз (3.71.0): журнал длиннее сервер отвергает целиком, остальное - следом.
             batch ?: pending.take(RunJournal.MAX_BATCH).takeIf { it.isNotEmpty() }?.let {
                 (UUID.randomUUID().toString() to it).also { made ->
                     batch = made
@@ -150,14 +155,12 @@ class TrialActions(
             failures = 0
             synchronized(pending) { batch = null }
             if (report == null) {
-                // Дошла без отчёта: пачка взята, добыча придёт с перечитанным героем.
                 mutableArena.value?.settle(events.last().n + 1, emptyMap())
                 heroSync.readHero()
                 if (synchronized(pending) { pending.isNotEmpty() }) sends.trySend(Unit)
                 return
             }
             mutableArena.value?.settle(report.applied, report.rewards.associate { it.n to it.reward.toReward() })
-            // Рубеж башни и первая зачистка раша (4.10.0): новое очко Атласа - тостом и строкой итогов
             expedition.atlasEarned(owner, report.rewards.flatMap { it.atlas })
             if (report.rejected.isNotEmpty()) notices.toast(ui("expedition.rejected", report.rejected.size))
             report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
@@ -166,7 +169,6 @@ class TrialActions(
         } catch (e: CancellationException) {
             throw e
         } catch (e: ApiFailure) {
-            // Испытание там закрыто или журнал другого: ничто из него больше не ждёт.
             if (e.code in TRIAL_CLOSED) {
                 synchronized(pending) {
                     batch = null
@@ -174,7 +176,6 @@ class TrialActions(
                 }
                 mutableArena.value?.settle(Int.MAX_VALUE, emptyMap())
             } else if (!CommandQueue.transient(e.status)) {
-                // Любой другой отказ оставляет события неотправленными, не учтёнными (3.71.0): снова под новым ключом позже.
                 synchronized(pending) {
                     batch?.let { pending.addAll(0, it.second) }
                     batch = null
@@ -196,10 +197,13 @@ class TrialActions(
         }
     }
 
-    /** Экран испытания закрыт: неотправленное уходит, герой перечитывается. */
+    /**
+     * Экран испытания закрыт: неотправленное уходит, герой перечитывается.
+     *
+     * Испытание, закрытое посреди боя, кончено на сервере уходом; принесённое остаётся.
+     */
     fun close() {
         val arena = mutableArena.value ?: return
-        // Закрытое посреди боя испытание остаётся как есть: на сервере кончено уходом, принесённое остаётся.
         if (arena.hud.value.phase == TrialPhase.FIGHT) arena.send(RunCommand.Leave).also { arena.update(0.0) }
         mutableArena.value = null
         sends.trySend(Unit)

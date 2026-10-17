@@ -32,9 +32,8 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Выбор продажи (3.90.3) - одна абстракция на режим продажи тайника и окно конца захода: текущие [lots] и отмеченное поверх
- * них. Отметить можно только лот - то, что уходит пачкой; проданное выпадает из выбора само, с новыми лотами. Быстрые наборы
- * (3.90.4) берут только [shown] - лоты открытого пункта рейки и фильтров; отмеченное в других пунктах остаётся.
+ * Выбор продажи - одна абстракция на режим продажи тайника и окно конца захода: текущие [lots] и отмеченное поверх
+ * них. Отметить можно только лот - то, что уходит пачкой; проданное выпадает из выбора само, с новыми лотами. Быстрые наборы берут только [shown] - лоты открытого пункта рейки и фильтров; отмеченное в других пунктах остаётся.
  */
 @Stable
 class SellPick internal constructor(val lots: List<SellLot>, private val shown: List<SellLot>, private val state: MutableState<SellSelection>) {
@@ -65,7 +64,7 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 
 /**
  * Выбор над [lots]: отмеченное живёт, пока жив вызывающий экран, и переживает смену лотов. Заранее отмечено [initial]
- * (3.91.0: помеченное к продаже посреди захода). [shown] - id на экране, по которым работают наборы; null - все лоты.
+ * (помеченное к продаже посреди захода). [shown] - id на экране, по которым работают наборы; null - все лоты.
  */
 @Composable fun rememberSellPick(lots: List<SellLot>, shown: Set<String>? = null, initial: Set<String> = emptySet()): SellPick {
     val state = remember { mutableStateOf(SellSelection(initial)) }
@@ -101,14 +100,14 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 }
 
 /**
- * Строка списка в режиме выбора (3.91.0): без галочки сбоку - [content] (сама вещь) рисует отмеченную в золотой рамке, монета
+ * Строка списка в режиме выбора: без галочки сбоку - [content] (сама вещь) рисует отмеченную в золотой рамке, монета
  * в углу говорит, что она продастся; ширина строки не меняется. [content] получает, отмечена ли вещь, и переключатель.
  */
 @Composable fun SellLine(pick: SellPick, id: String, content: @Composable (chosen: Boolean, onToggle: () -> Unit) -> Unit) {
     SaleMarked(pick.chosen(id)) { content(pick.chosen(id)) { pick.toggle(id) } }
 }
 
-/** Вещь [content] с монетой «продастся» в правом верхнем углу, когда она отмечена [marked] (3.91.0). */
+/** Вещь [content] с монетой «продастся» в правом верхнем углу, когда она отмечена [marked]. */
 @Composable fun SaleMarked(marked: Boolean, content: @Composable () -> Unit) {
     Box {
         content()
@@ -124,6 +123,8 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 /**
  * Кнопка снизу «Продать N · +◎ сумма», удерживаемая: продажа не отменяется. [onCancel] - «Отмена» рядом (режим тайника);
  * без отмеченного - подсказка вместо суммы, кнопка погашена. [verb] - ключ подписи с числом: в итогах захода - «Продать N и вернуться».
+ *
+ * Что продажа даст осколками - над кнопкой, до продажи.
  */
 @Composable fun SellDock(
     pick: SellPick,
@@ -136,7 +137,6 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
 ) {
     val picked = pick.picked
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        // Что продажа даст осколками (3.95.3) - над кнопкой, до продажи
         shards(picked)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally)) }
         SellRow(pick, picked, enabled, verb, onCancel, onSell)
     }

@@ -17,12 +17,6 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
 
-/*
- * Три кнопки игры в стиле «Мягкий» (3.88.3): таблетки без свечения - главную выделяет только заливка.
- * Два размера сами по месту: кнопка во всю отведённую ширину (fillMaxWidth, weight в ряду диалога) - 44 dp,
- * кнопка в строке и плотных местах - 36 dp. Экраны зовут эти, а не Material'овские.
- */
-
 private val ButtonShape = RoundedCornerShape(50)
 
 /** The padding a compact button carries unless its call site asks for its own. */
@@ -30,7 +24,7 @@ val CompactPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
 private val MinHeight = 36.dp
 private val WideHeight = 44.dp
 
-/** Высота по месту (3.88.3): ширину кнопке задал родитель - она широкая, 44 dp; иначе компактная, 36 dp. */
+/** Высота по месту: ширину кнопке задал родитель - она широкая, 44 dp; иначе компактная, 36 dp. */
 private fun Modifier.forgeHeight(): Modifier = layout { measurable, constraints ->
     val wanted = (if (constraints.hasFixedWidth) WideHeight else MinHeight).roundToPx()
     val minHeight = wanted.coerceIn(constraints.minHeight, constraints.maxHeight)
@@ -42,7 +36,12 @@ private fun label(content: @Composable RowScope.() -> Unit): @Composable RowScop
     ProvideTextStyle(MaterialTheme.typography.labelLarge) { content() }
 }
 
-/** Путь вперёд: градиентная пилюля «Глубины» с зелёным ореолом (3.88.7). */
+/**
+ * Путь вперёд: градиентная пилюля «Глубины» с зелёным ореолом.
+ *
+ * Три кнопки игры в стиле «Мягкий»: таблетки без свечения, главную выделяет только заливка. Размер по месту: во всю отведённую ширину - 44
+ * dp, в строке и плотных местах - 36 dp. Экраны зовут эти, а не кнопки Material.
+ */
 @Composable fun ForgeButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -61,7 +60,7 @@ private fun label(content: @Composable RowScope.() -> Unit): @Composable RowScop
     content = label(content),
 )
 
-/** Второй выбор: приподнятое стекло «Глубины» (3.88.7) со светлыми словами. */
+/** Второй выбор: приподнятое стекло «Глубины» со светлыми словами. */
 @Composable fun ForgeOutlinedButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

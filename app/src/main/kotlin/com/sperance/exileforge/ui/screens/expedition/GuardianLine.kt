@@ -8,12 +8,12 @@ import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Vital
 
-/** Строка о страже карты (3.95.2): одна на полосу захода, карту и вопрос об уходе. */
+/** Строка о страже карты: одна на полосу захода, карту и вопрос об уходе. */
 internal data class GuardianLine(val text: String, val color: Color) {
     companion object {
         /**
-         * Страж жив, повержен в этом заходе или отдыхает после прошлой победы - с отсчётом до возвращения: прежде отдыхающий
-         * звался поверженным, и пустой пост у портала казался ошибкой. [zone] - страж порчи зоны Ваал.
+         * Страж жив, повержен в этом заходе или отдыхает после прошлой победы - с отсчётом до возвращения: отдыхающий
+         * не зовётся поверженным, иначе пустой пост у портала казался бы ошибкой. [zone] - страж порчи зоны Ваал.
          */
         fun of(hud: RunHud, zone: Boolean = false): GuardianLine {
             val rest = hud.guardianRest

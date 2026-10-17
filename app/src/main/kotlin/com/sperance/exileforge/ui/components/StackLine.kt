@@ -29,7 +29,7 @@ import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
- * Стопка сумки строкой списка (3.91.0, как добыча карт): значок, имя и сколько - «+12» добытого или «−3» потраченного в цвете
+ * Стопка сумки строкой списка (как добыча карт): значок, имя и сколько - «+12» добытого или «−3» потраченного в цвете
  * [tint]; нажатие открывает карточку предмета.
  */
 @Composable fun StackLine(game: GameUi, code: String, figure: String, tint: Color, onClick: () -> Unit) {

@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.map
 
 private val Context.guides by preferencesDataStore("guides")
 
-/** Which first-visit guides (3.14.0) this device has read: once per device, not per account or hero. */
+/** Which first-visit guides this device has read: once per device, not per account or hero. */
 class GuideStore(private val context: Context) {
     private val key = stringSetPreferencesKey("read")
 

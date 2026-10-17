@@ -22,7 +22,7 @@ import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.rules.content.GuildMode
 
 /**
- * Гильдии (3.22.0, сервер 1.20.0). Все правила у сервера; клиент называет гильдию или участника, печатает отказ и
+ * Гильдии. Все правила у сервера; клиент называет гильдию или участника, печатает отказ и
  * рисует то, чем команда ответила - всю картину гильдии героя или гильдию, как она теперь стоит. Команда, что двигает
  * героя (вступить, уйти, отдать), просит перечитать его: золото едет на снимке.
  */
@@ -48,7 +48,7 @@ class GuildActions(
         search(0)
     }
 
-    /** Гильдия героя; контент прежде - числа экрана берутся из `guilds.json`. [fresh] (3.94.1) - экран открылся. */
+    /** Гильдия героя; контент прежде - числа экрана берутся из `guilds.json`. [fresh] - экран открылся. */
     fun load(fresh: Boolean = false) = commands.read(Reads.GUILD, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
         content.ensure()
@@ -82,7 +82,7 @@ class GuildActions(
         api.guild.invite(it, target).also { guild { state -> state.copy(recruit = null) } }
     }
 
-    /** Превью приглашения (4.7.0): одно чтение по нажатию «Найти», не на каждую букву - сервер не нагружается вводом. */
+    /** Превью приглашения: одно чтение по нажатию «Найти», не на каждую букву - сервер не нагружается вводом. */
     fun lookup(target: String) = commands.read(Reads.GUILD_SEARCH, restart = true) {
         val id = hero()
         val found = api.guild.lookup(id, target)
@@ -91,19 +91,19 @@ class GuildActions(
 
     fun clearRecruit() = guild { it.copy(recruit = null) }
 
-    /** Новый код вступления (4.7.0). */
+    /** Новый код вступления. */
     fun renewCode() = inside(ui("guild.toast.code_renewed")) { api.guild.renewCode(it) }
 
-    /** Вступление по коду гильдии (4.7.0). */
+    /** Вступление по коду гильдии. */
     fun joinByCode(code: String) = moving(ui("guild.toast.joined_code")) { api.guild.joinByCode(it, code) }
     fun member(command: MemberCommand, memberId: String) = inside(ui("guild.toast.done")) { api.guild.member(it, command, memberId) }
     fun settings(mode: GuildMode, minLevel: Int, emblem: String, color: String, announcement: String) = inside(ui("guild.toast.saved")) { api.guild.settings(it, mode, minLevel, emblem, color, announcement) }
 
-    /** Древо бонусов (3.79.0): глава берёт ранг или сбрасывает всё. */
+    /** Древо бонусов: глава берёт ранг или сбрасывает всё. */
     fun takeNode(node: String) = moving(ui("guild.toast.node")) { api.guild.takeNode(it, node) }
     fun resetTree() = moving(ui("guild.toast.tree_reset")) { api.guild.resetTree(it) }
 
-    /** Хранилище гильдии (3.79.0): чтение, вклад, выдача, ранг вкладки; каждая запись отвечает хранилищем как оно стоит. */
+    /** Хранилище гильдии: чтение, вклад, выдача, ранг вкладки; каждая запись отвечает хранилищем как оно стоит. */
     fun loadStash() = commands.read(Reads.GUILD) {
         val id = hero()
         val stash = api.guild.stash(id)
@@ -113,10 +113,10 @@ class GuildActions(
     fun take(entryId: String) = stashCommand(ui("guild.toast.taken")) { api.guild.take(it, entryId) }
     fun tabRank(tab: Int, minRank: Int) = stashCommand(ui("guild.toast.saved")) { api.guild.tabRank(it, tab, minRank) }
 
+    /** Ответ хранилища несёт золото героя после записи: взятие за золото видно в кошельке сразу. */
     private fun stashCommand(done: String, block: suspend (String) -> GuildStashView) = command(done) { id ->
         val stash = block(id)
         guild { it.copy(stash = stash) }
-        // Ответ хранилища несёт золото героя после записи (0.14.5, #42): взятие за золото видно в кошельке сразу, цена сверяется с ним
         heroes.money(stash.money)
     }
 
@@ -151,7 +151,7 @@ class GuildActions(
 
     /**
      * Команда, что вводит героя в гильдию или выводит из неё - или отвечает на приглашение - и отвечает всей [GuildMine].
-     * Герой едет снимком в том же ответе (3.94.1): перечитывать нечего.
+     * Герой едет снимком в том же ответе: перечитывать нечего.
      */
     private fun moving(done: String, block: suspend (String) -> GuildMine) = command(done) { id ->
         val mine = block(id)

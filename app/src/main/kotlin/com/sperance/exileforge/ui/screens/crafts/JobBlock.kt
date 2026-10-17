@@ -11,7 +11,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.JobKind
 
 /**
- * Почему работу нельзя начать (3.90.0): одна точная причина внизу листа вместо кнопки запуска. Выбор вариантов виден
+ * Почему работу нельзя начать: одна точная причина внизу листа вместо кнопки запуска. Выбор вариантов виден
  * всегда, даже у работы выше уровня профессии; причина считается по выбранному варианту, кнопка - только без неё.
  */
 internal sealed interface JobBlock {
@@ -32,17 +32,17 @@ internal sealed interface JobBlock {
         override val text: String get() = ui("crafts.no_variant")
     }
 
-    /** Варианты у работы есть, но ни один не выбран (3.90.2). */
+    /** Варианты у работы есть, но ни один не выбран. */
     data object PickVariant : JobBlock {
         override val text: String get() = ui("crafts.pick_variant")
     }
 
-    /** Работе нужна вещь героя (4.6.2, Осквернение), но ни одна в тайнике не подходит: [minLevel] - нижний уровень предмета. */
+    /** Работе нужна вещь героя (Осквернение), но ни одна в тайнике не подходит: [minLevel] - нижний уровень предмета. */
     data class NoItem(val minLevel: Int) : JobBlock {
         override val text: String get() = ui("crafts.no_desecrate_item", minLevel)
     }
 
-    /** Подходящие вещи есть, но ни одна не выбрана (4.6.2). */
+    /** Подходящие вещи есть, но ни одна не выбрана. */
     data object PickItem : JobBlock {
         override val text: String get() = ui("crafts.pick_item_first")
     }
@@ -57,10 +57,10 @@ internal sealed interface JobBlock {
         override val text: String get() = ui("crafts.no_tool")
     }
 
-    /** Отказ правил умений (4.4.0, ритуал тира): умение не изучено, тир не следующий или уровень ниже порога. */
+    /** Отказ правил умений (ритуал тира): умение не изучено, тир не следующий или уровень ниже порога. */
     data class Refused(override val text: String) : JobBlock
 
-    /** Сумке не хватает на цикл: [line] называет, чего и сколько (3.89.0). */
+    /** Сумке не хватает на цикл: [line] называет, чего и сколько. */
     data class Short(val line: String) : JobBlock {
         override val text: String get() = line
     }
@@ -69,8 +69,8 @@ internal sealed interface JobBlock {
         /**
          * Первая причина по порядку проверки сервера: уровень, вариант, регион, инструмент, расход цикла [job] с добавками
          * [additives]; null - работу можно начать. [work] - сама работа, [choices] - её варианты, что лист предлагает.
-         * Вариант выбирающей работы того же вида, что она сама (кузнец - EQUIPMENT, 3.90.2): не выбран лишь тот, у кого нет
-         * [JobView.choice]. Работа над вещью героя (4.6.2, `Job.targetsItem`) ждёт подходящую вещь из [items] и выбранную [picked].
+         * Вариант выбирающей работы того же вида, что она сама (кузнец - EQUIPMENT): не выбран лишь тот, у кого нет
+         * [JobView.choice]. Работа над вещью героя (`Job.targetsItem`) ждёт подходящую вещь из [items] и выбранную [picked].
          */
         fun of(
             game: GameUi,

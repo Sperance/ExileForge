@@ -18,7 +18,7 @@ import com.sperance.exileforge.rules.content.WorldRule
 import kotlin.math.roundToInt
 
 /**
- * The world map's camera (2.76.0): how near it is and where it looks.
+ * The world map's camera: how near it is and where it looks.
  *
  * One world unit is one dp at [scale] 1. The world's `y` grows up from the start and the screen's
  * grows down, so the art is laid out «down» — `height - y` — and [toScreen] / [toWorld] turn a point
@@ -42,7 +42,7 @@ class WorldCamera(val world: WorldRule, private val density: Float) {
     val unit: Float get() = density * scale
 
     /**
-     * As far out as the world's width fills the screen, never nearer than [HOME]. Since 3.75.0 not the whole height too: on a
+     * As far out as the world's width fills the screen, never nearer than [HOME]. Not the whole height too: on a
      * tall world that left a strip of crumbs; the rest is a drag away.
      */
     val minScale: Float get() =
@@ -68,7 +68,7 @@ class WorldCamera(val world: WorldRule, private val density: Float) {
         placed = true
     }
 
-    /** Где стоит камера (4.6.5): точка мира в середине экрана и приближение - чтобы вернуть её туда же ([restore]). */
+    /** Где стоит камера: точка мира в середине экрана и приближение - чтобы вернуть её туда же ([restore]). */
     fun view(): WorldView {
         val middle = toWorld(Offset(viewport.width / 2f, viewport.height / 2f))
         return WorldView(middle.x.roundToInt(), middle.y.roundToInt(), scale)

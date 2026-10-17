@@ -55,32 +55,31 @@ import org.koin.compose.viewmodel.koinViewModel
 import java.util.Locale
 
 /**
- * After the fight — «Поле боя», the owner's pick of five mockups (2.49.0). On top the scene: the
+ * After the fight — «Поле боя», the owner's pick of five mockups. On top the scene: the
  * fallen monster's token in the half-dark with the outcome over it. Under it what the fight brought,
  * in engraved sections — «Снаряжение», a line per piece with its price, a tap opening its card;
  * «Сферы» as chips; «Награда», gold and experience — or, after a defeat, what the death cost and
  * what the run had gathered. The fight itself is a row of figures at the foot, and its log unfolds
- * from there. The spoils are the server's roll (1.30.0): the screen opens at once, says the loot is on its way,
+ * from there. The spoils are the server's roll: the screen opens at once, says the loot is on its way,
  * and fills in as the answers arrive — offline, when the connection is back. Until they have, there is no way on:
  * neither the button nor the system back leaves, so nothing the fight brought is walked past unseen.
+ *
+ * Гибель открывается на журнале рокового боя. Награды в пути спрашиваются сразу; жест «назад» держит только копилка Бездны при гибели.
+ * Первая победа над стражем - место героя среди всех победивших. Гибель ведёт к итогам карты, а не в лагерь. Над отчётом - карточка строки
+ * журнала, разбор боя, рецепт с убийства и экран нового уровня.
  */
 @Composable internal fun ReportScreen(game: GameUi, model: ExpeditionViewModel, hud: RunHud, report: FightReport, onContinue: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val expedition: ExpeditionViewModel = koinViewModel()
     val won = report.outcome == Outcome.WIN
-    // A fall opens on the fatal fight's log (3.70.0): every line of it, down to the blow that ended it.
     var logOpen by remember { mutableStateOf(!won) }
     var line by remember { mutableStateOf<Pair<CombatEvent, String>?>(null) }
     var looked by remember { mutableStateOf<ItemView?>(null) }
     val inspect = rememberInspect()
     var recipe by remember { mutableStateOf<String?>(null) }
     var breakdown by remember { mutableStateOf(false) }
-    // The spoils still on the way — a victory's, or the Abyss hoard a fall there keeps; the answers are asked for at once,
-    // and the back gesture is held while they are on the way.
     val receiving = if (won) hud.rewardAwaiting > 0 else hud.abyss?.let { it.fallen && it.hoardAwaiting } == true
     LaunchedEffect(receiving) { if (receiving) model.flushRun() }
-    // A victory goes on at once (3.81.0): each kill's loot was asked for as the foe fell, and what is still on the way lands
-    // in the run's loot on the map. Only the Abyss hoard of a fall holds the way back until it comes.
     val holding = receiving && !won
     BackHandler(enabled = holding) {}
     Column(
@@ -88,7 +87,6 @@ import java.util.Locale
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         FieldHead(report, won)
-        // A first win over this guardian (3.81.0, server 1.76.0): the hero's place among everyone who has beaten it.
         if (won) hud.rank?.let { place -> FirstWin(place, monsterTitle(report.monster.code)) }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (won) Spoils(game, hud, onStack = { inspect(Inspect.Stack(it)) }, onRecipe = { recipe = it }) { looked = it } else DeathPrice(game, hud)
@@ -111,27 +109,24 @@ import java.util.Locale
             modifier = Modifier.fillMaxWidth().height(50.dp),
             colors = ButtonDefaults.buttonColors(containerColor = if (won) Gold else LifeRed, contentColor = if (won) Ink else Parchment),
         ) {
-            // Гибель ведёт к итогам карты (3.91.0), а не в лагерь: «Вернуться» там же, где эта кнопка, - подпись их различает.
             Text(ui(if (won) "expedition.continue" else "expedition.to_summary"), style = MaterialTheme.typography.titleMedium)
         }
     }
-    // A line of the log opened (3.37.0): its card over the report.
     line?.let { (event, name) -> CombatDetailSheet(game, event, name) { line = null } }
-    // Compared and worn right here (3.24.0), as on the gear sheet.
     looked?.let { item -> LootSheet(game, model, item, onDismiss = { looked = null }) }
-    // Разбор боя (0.14.4, #30): этот бой и весь заход
     if (breakdown) FightStatsSheet(report.stats, hud.summary.fights) { breakdown = false }
-    // The recipe the kill turned up: what it does, and that the bench waits for the run's end.
     recipe?.let { code -> RecipeSheet(game, code, inRun = true) { recipe = null } }
-    // The fight raised the hero's level (3.81.0): its own screen over the report until it is read.
     if (won) hud.levelUp?.let { rise -> LevelUpScreen(rise, game.heroClass, game.index, game.isTester) { model.runCommand(RunCommand.LevelSeen) } }
 }
 
-/** The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words. */
+/**
+ * The scene: the monster's round token in its rarity's ring, lit warm for a victory and red for a defeat, and the outcome in words.
+ *
+ * Дыхание портрета - декор: общие часы декора, при выключенных анимациях - покой.
+ */
 @Composable private fun FieldHead(report: FightReport, won: Boolean) {
     val expedition: ExpeditionViewModel = koinViewModel()
     val monster = report.monster
-    // Дыхание портрета - декор (4.8.x): общие часы декора, при выключенных анимациях - покой
     val time = decorTime()
     val glow = if (won) Color(0xFF3B2A17) else Color(0xFF3B1717)
     Box(
@@ -153,7 +148,6 @@ import java.util.Locale
                 color = outcomeColour(report.outcome),
                 style = MaterialTheme.typography.titleLarge,
             )
-            // A pack (since 2.54.0) says its size under the outcome.
             if (report.packSize > 1) MutedText(ui("expedition.report_pack", report.packSize), style = MaterialTheme.typography.labelSmall)
         }
         BugAction(Modifier.align(Alignment.TopEnd))
@@ -180,7 +174,12 @@ import java.util.Locale
     )
 }
 
-/** What the kill brought, by section, as the server's answers bring it (1.30.0); on its way, or its absence said plainly. */
+/**
+ * What the kill brought, by section, as the server's answers bring it; on its way, or its absence said plainly.
+ *
+ * По положению у героя: проданная вещь уходит из списка, надетая - с меткой «Надето». Строка на вещь, карточка - по касанию, удержание
+ * помечает к продаже.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecipe: (String) -> Unit, onItem: (ItemView) -> Unit) {
@@ -191,12 +190,9 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         Caption(ui("expedition.report_recipe"))
         Chip(index?.let { i -> i.recipe(code)?.let { recipeText(i, it) } } ?: displayName(code), Rune) { onRecipe(code) }
     }
-    // По положению у героя (3.90.0): проданная вещь уходит из списка, надетая остаётся с меткой «Надето».
     val gear = game.presentLoot(reward.equipment, arriving = hud.rewardAwaiting > 0).mapNotNull { (instance, presence) -> game.view(instance)?.let { it to presence } }
     if (gear.isNotEmpty()) {
         Caption(ui("expedition.report_gear"))
-        // A line a piece, as the map's summary has it: the whole card is one tap behind each. Удержание (3.91.0) помечает вещь
-        // к продаже: в итогах карты она уже отмечена.
         val marks = expedition.state.collectAsStateWithLifecycle().value.saleMarks
         gear.forEach { (piece, presence) ->
             val marked = piece.id in marks
@@ -223,7 +219,12 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     }
 }
 
-/** A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it. */
+/**
+ * A defeat: what the death cost by the rules' price — the server's answer stands — and what the run had gathered before it.
+ *
+ * Гибель в зоне Ваал опыта не стоит; гибель, что журнал не записал, оценивается при чтении героя; ниже уровня штрафа - даром; в Бездне
+ * сгорает копилка, кроме доли атласа.
+ */
 @Composable private fun DeathPrice(game: GameUi, hud: RunHud) {
     val expedition: ExpeditionViewModel = koinViewModel()
     Caption(ui("expedition.report_death"), LifeRed)
@@ -234,7 +235,6 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         val fall = hud.fall
         Column(Modifier.weight(1f)) {
             when {
-                // A fall in a Vaal zone costs no experience; a fall the journal could not record is priced when the hero is read.
                 fall == null -> if (hud.vaal) {
                     MutedText(ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
                 } else {
@@ -243,13 +243,11 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
 
                 fall > 0 -> Text(ui("expedition.fall_lost", number(fall)), color = LifeRed, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
 
-                // Ниже уровня штрафа (4.4.1) гибель даром: с какого уровня она стоит опыта
                 else -> MutedText(hud.fallFrom?.let { ui("expedition.fall_from", it) } ?: ui("expedition.fall_free"), style = MaterialTheme.typography.bodyMedium)
             }
             MutedText(ui(if (hud.vaal) "vaal.dead_hint" else "expedition.dead_hint"), style = MaterialTheme.typography.labelSmall)
         }
     }
-    // A fall in the Abyss (2.82.0) burns its hoard, but for the atlas's share.
     hud.abyss?.takeIf { it.fallen }?.let { abyss ->
         Caption(ui("abyss.fallen"), AbyssGlow)
         val kept = abyss.hoard
@@ -271,7 +269,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
     if (hud.awaiting > 0) Receiving()
 }
 
-/** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log; «Разбор» (0.14.4, #30) - лист разбора боя. */
+/** The fight as a row of figures — dealt, taken, how long, criticals — and the way into its log; «Разбор» - лист разбора боя. */
 @Composable private fun FightFigures(report: FightReport, logOpen: Boolean, onBreakdown: () -> Unit, onLog: () -> Unit) {
     val expedition: ExpeditionViewModel = koinViewModel()
     Row(

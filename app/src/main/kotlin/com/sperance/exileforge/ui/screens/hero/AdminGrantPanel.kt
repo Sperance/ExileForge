@@ -28,22 +28,23 @@ import com.sperance.exileforge.ui.icons.orbArt
  *
  * The headline action rolls an item: the client picks a template of the chosen rarity and slot out
  * of the content, the server rolls its modifiers, their tiers and their values when the copy is made.
- * Since 3.0.0 the templates and the stacks are picked from the content on the device — there is no
+ * The templates and the stacks are picked from the content on the device — there is no
  * catalogue to page through — and the bag is only ever added to: the server takes nothing back.
+ *
+ * Редкость и слот случайной выдачи - черновик панели, пусто - любые; редкость общая для случайного и названного шаблона, пусто - своя у
+ * шаблона. Количество только положительное: сервер стопки не забирает.
  */
 @Composable fun AdminGrantPanel(game: GameUi, vm: AdminViewModel) {
     if (!game.adminTools || !game.isAdmin || game.heroId.isBlank()) return
     var expanded by remember(game.heroId) { mutableStateOf(true) }
     val enabled = !game.busy && game.session.signedIn && game.heroId.isNotBlank()
     val any = ui("grant.any")
-    // Редкость и слот случайной выдачи (3.80.32: черновик панели); пусто - любые.
     var rarity by rememberSaveable { mutableStateOf("") }
     var slot by rememberSaveable { mutableStateOf("") }
     ForgeTextButton(onClick = { expanded = !expanded }) {
         Text(ui("grant.title", if (expanded) ui("common.hide") else ui("common.show")))
     }
     if (!expanded) return
-    // The content's templates and stacks, named and keyed by code: what the pickers search through.
     val templates = remember(game.index, game.lang) {
         game.index?.templates?.values.orEmpty().sortedBy { it.code }.associate { it.code to "${equipmentTitle(it.code)} · ${it.code}" }
     }
@@ -52,7 +53,6 @@ import com.sperance.exileforge.ui.icons.orbArt
     }
     ForgePanel {
         Engraved(ui("grant.random_item"))
-        // The rarity is the roll's for a random template and a named one alike; blank leaves the template's own.
         Spinner(ui("common.rarity"), rarity, mapOf("" to any) + Rarity.entries.associate { it.name to rarityTitle(it, game.lang) }, enabled, glyph = Glyph.RARITY, onChange = { rarity = it })
         Spinner(ui("grant.category"), slot, mapOf("" to any) + Slot.entries.associate { it.name to slotTitle(it, game.lang) }, enabled, glyph = Glyph.ITEM, onChange = { slot = it })
         ForgeButton(enabled = enabled, onClick = { vm.grantRandom(rarity, slot) }, modifier = Modifier.fillMaxWidth()) {
@@ -101,7 +101,6 @@ import com.sperance.exileforge.ui.icons.orbArt
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        // A positive amount only: the server hands stacks out and never takes them back (3.0.0).
         ForgeButton(
             enabled = enabled && code in stacks && amount.toLongOrNull()?.let { it > 0L } == true,
             onClick = { vm.grantItem(code, amount.toLong()) },

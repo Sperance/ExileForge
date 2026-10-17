@@ -47,7 +47,11 @@ import kotlin.math.PI
 import kotlin.math.ceil
 import kotlin.math.sin
 
-/** The pack's leader by name and what the pack is: its rarity, the map's level, the fight of a chain, how many are left standing. */
+/**
+ * The pack's leader by name and what the pack is: its rarity, the map's level, the fight of a chain, how many are left standing.
+ *
+ * Мощь вожака стаи - цвета его стойки против героя; ярость боя видна и у стаи.
+ */
 @Composable internal fun PackHeader(fight: FightHud, level: Int) {
     val leader = fight.leader
     Box(Modifier.fillMaxWidth()) {
@@ -67,24 +71,22 @@ import kotlin.math.sin
             ).joinToString(" · ")
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(line, color = Muted, style = MaterialTheme.typography.labelSmall)
-                // Мощь вожака стаи (4.8.0): «⚜ 15.9k» цвета его стойки против героя
                 FoeMightMark(leader)
             }
-            // Ярость боя (4.3.0): ступень и отсчёт - и у стаи, не только у стража
             fight.rage?.let { RageMark(it) }
         }
         BugAction(Modifier.align(Alignment.TopEnd))
     }
 }
 
-/** Мощь врага [monster] мелко (4.8.0): печать и число цвета его стойки против героя; вне оверлея боя - ничего. Не прогноз боя. */
+/** Мощь врага [monster] мелко: печать и число цвета его стойки против героя; вне оверлея боя - ничего. Не прогноз боя. */
 @Composable internal fun FoeMightMark(monster: RolledMonster, modifier: Modifier = Modifier) {
     val might = LocalFightMight.current ?: return
     val reading = might.of(monster)
     FoeMight(reading, might.standing(reading), modifier)
 }
 
-/** A swing and a skill's blow carry a card toward the other side (2.78.0); a tick, a reflection, a draught do not. */
+/** A swing and a skill's blow carry a card toward the other side; a tick, a reflection, a draught do not. */
 internal val Action.strikes: Boolean get() = this == Action.ATTACK || this == Action.SKILL
 
 /**
@@ -125,6 +127,10 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
  * is on it. Lit and lowered toward the hero while it swings, ringed in blood while struck, ringed in
  * gold when the player singled it out, marked with a sight when the hero's next blow goes to it.
  * The fallen go dark; one the hero's weapon cannot reach yet is dimmed.
+ *
+ * [narrow] - три и больше на поле: узкая плитка. Замах (последние 30% - рамка наливается кровью), выпады и тряска - в рисовании кадра
+ * ([FightFrame]): карточка не перекомпонуется на каждом шаге боя. Свой уровень врага - на карте он бывает выше или ниже карты. Полка
+ * эффектов одна, не влезло - «+N». Фокус за провокатором держится, удары идут провокатору. Плашка намерения проступает по доле замаха.
  */
 @Composable internal fun FoeCard(
     foe: FoeView,
@@ -134,15 +140,12 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
     modifier: Modifier,
     large: Boolean,
     traits: List<TraitView>,
-    /** Three and more on the field (3.81.0): the narrow tile of variant A. */
     narrow: Boolean = false,
     onTap: () -> Unit,
 ) {
     val ring = rarityTint(foe.monster.rarity)
     val live = foe.alive && fight.outcome == null
 
-    // Замах и удары (4.9.3): последние 30% замаха - рамка наливается кровью, выпад - каждым своим ударом, тряска - каждым по нему.
-    // Всё это - в рисовании кадра ([FightFrame]): карточка не перекомпонуется на каждом шаге боя
     fun swing() = if (live) frame.foeSwing(foe) else 0f
     fun acting() = strikeReach(fight, frame.now(fight), Side.MONSTER, foe.index, swing = swing(), held = foe.held)
     fun flash() = if (foe.alive) strikeFlash(fight, frame.now(fight), Side.MONSTER, foe.index) else 0f
@@ -154,7 +157,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
         modifier.graphicsLayer {
             translationY = acting() * 10.dp.toPx()
             translationX = shake(flash(), frame.time).dp.toPx()
-            // A stun gone off (3.78.0) tilts the card while it holds.
             rotationZ = if (foe.alive && foe.buildup?.stunned == true) -3f else 0f
             alpha = when {
                 !foe.alive -> .35f
@@ -203,10 +205,8 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                     }
                 }
                 val seals: @Composable () -> Unit = {
-                    // Its traits (3.73.0) as seals; a tap on the card opens what they do.
                     if (traits.isNotEmpty() && foe.alive) {
                         Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                            // Печать свойства (3.92.0) открывает его лист
                             val lore = LocalLore.current
                             traits.forEach { trait ->
                                 SkillGlyph(
@@ -219,7 +219,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                     }
                 }
                 if (narrow) {
-                    // Variant A (3.81.0): three narrow tiles — the portrait over a one-line name that shrinks to fit; the whole name is in its window.
                     portrait(FOE_AVATAR_NARROW)
                     FittedName(monsterTitle(foe.monster.code), ring)
                     FoeMightMark(foe.monster)
@@ -237,7 +236,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                                 overflow = TextOverflow.Ellipsis,
                                 lineHeight = 12.sp,
                             )
-                            // Its own level (3.73.0): on a map a foe may stand a little above or below the map.
                             if (foe.monster.level > 0) Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, maxLines = 1)
                             FoeMightMark(foe.monster)
                             seals()
@@ -245,7 +243,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                     }
                 }
                 LifeBar(foe.life, foe.maxLife, foe.shield, foe.maxShield, Modifier.fillMaxWidth().height(12.dp))
-                // A caster's or a boss's mana (2.78.0), a thread under its life: what its spells are paid with.
                 if (foe.maxMana > 0) {
                     Box(Modifier.fillMaxWidth().height(3.dp).background(Color(0x14FFFFFF), RoundedCornerShape(2.dp))) {
                         Box(Modifier.fillMaxWidth((foe.mana / foe.maxMana.toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(ManaBlue, RoundedCornerShape(2.dp)))
@@ -253,14 +250,12 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                 }
                 if (foe.alive) foe.buildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
                 SwingBar({ swing() }, foe.held, Modifier.fillMaxWidth()) { if (acting() > 0f) LifeRed else SwingRed }
-                // What is on it (4.9.3): одна компактная полка - что не влезло, то «+N», касание открывает лист эффектов врага.
                 val tile = if (large) 16.dp else 14.dp
                 if (foe.held || foe.ailments.isNotEmpty() || foe.effects.isNotEmpty()) {
                     val shelf = timedShelf(foe.held, foe.ailments, foe.effects) + foe.effects.filter { it.lasting }.map { Shelved.Effect(it) }
                     EffectShelf(shelf, tile, { effectsOpen = true }, Modifier.fillMaxWidth().height(tile), gap = 2.dp)
                 }
             }
-            // A narrow tile keeps the level in its corner.
             if (narrow && foe.monster.level > 0) {
                 Text(ui("fight.level_short", foe.monster.level), color = Muted, fontSize = 9.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 4.dp, end = 5.dp))
             }
@@ -270,8 +265,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             if (foe.taunt && foe.alive) TauntSeal(frame, Modifier.align(Alignment.TopStart).padding(2.dp).size(18.dp)) { tauntTip(null) }
             if (!foe.alive) {
                 Text(ui("fight.fallen"), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.Center))
-            } // A foe singled out behind a standing taunter: the focus holds, the blows go to the taunter.
-            else if (focused && !foe.reachable) {
+            } else if (focused && !foe.reachable) {
                 Text(
                     ui("fight.out_of_reach_short"),
                     color = Muted,
@@ -284,7 +278,6 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
             if (foe.alive) foe.buildup?.let { BuildupMark(it, frame) }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }
-        // Плашка намерения (4.9.3): замах врага вот-вот ляжет на героя - проступает в рисовании по доле замаха
         if (live && !foe.held) {
             Text(
                 ui("fight.at_you"),
@@ -312,10 +305,10 @@ private val FoeActing = Blood.copy(alpha = .35f)
 private val FoeGround = Panel.copy(alpha = .9f)
 private val SwingRed = LifeRed.copy(alpha = .7f)
 
-/** The round portrait of a foe's card (3.80.0, variant C). */
+/** The round portrait of a foe's card (variant C). */
 private val FOE_AVATAR = 52.dp
 
-/** The portrait of a narrow tile (3.81.0, variant A). */
+/** The portrait of a narrow tile (variant A). */
 private val FOE_AVATAR_NARROW = 46.dp
 
 /** A foe's name on one line, its type stepping down from 11sp to 8.5sp until it fits, cut only past that. */
@@ -337,9 +330,10 @@ private val FOE_AVATAR_NARROW = 46.dp
 /**
  * The numbers rising off a card: the blows that reached it in the last second. Подъём и угасание - в рисовании кадра [frame]:
  * возраст числа идёт и между снимками боя.
+ *
+ * Настройки выбирают, какие числа всплывают: все, только криты или ни одного.
  */
 @Composable internal fun BoxScope.CardHits(fight: FightHud, frame: FightFrame, hits: List<FloatingHit>) {
-    // The settings (3.77.0) choose which numbers rise: all, the critical strikes alone, or none.
     val shown = when (LocalSettings.current.damageNumbers) {
         DamageNumbers.ALL -> hits
         DamageNumbers.CRITS -> hits.filter { it.kind == HitKind.CRIT }
@@ -366,7 +360,7 @@ private val FOE_AVATAR_NARROW = 46.dp
     }
 }
 
-/** Удар по герою (4.9.3): число всегда кровью и с «−», за ним - значок стихии её цветом; по врагу - цветом стихии, как было. */
+/** Удар по герою: число всегда кровью и с «−», за ним - значок стихии её цветом; по врагу - цветом стихии. */
 private val FloatingHit.onHero: Boolean get() = target == Side.HERO && amount > 0 && !(kind == HitKind.EVADED || kind == HitKind.BLOCKED)
 
 private fun hitLabel(hit: FloatingHit): AnnotatedString {
@@ -380,15 +374,10 @@ private fun hitLabel(hit: FloatingHit): AnnotatedString {
 }
 
 private fun hitText(hit: FloatingHit): String = when {
-    // A heal (2.78.0): a skill's or a draught's, rising in green.
     hit.amount == 0 && hit.healed > 0 -> "+${hit.healed}"
-
     hit.kind == HitKind.EVADED -> ui("expedition.evaded")
-
     hit.kind == HitKind.BLOCKED -> ui("expedition.blocked")
-
     hit.kind == HitKind.CRIT -> ui("expedition.crit", hit.amount)
-
     else -> hit.amount.toString()
 }
 

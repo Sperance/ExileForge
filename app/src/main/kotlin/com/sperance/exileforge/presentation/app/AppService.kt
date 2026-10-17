@@ -9,7 +9,7 @@ import com.sperance.exileforge.presentation.Repositories
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * Общее у сервисов приложения (3.80.44, вместо `ForgeRuntime` и `FeatureViewModel`): репозитории и действия игры,
+ * Общее у сервисов приложения (вместо `ForgeRuntime` и `FeatureViewModel`): репозитории и действия игры,
  * команды, текущий сервер, хранилище устройства и область приложения. Сервис пишет репозитории; экран читает их
  * через свою модель.
  */

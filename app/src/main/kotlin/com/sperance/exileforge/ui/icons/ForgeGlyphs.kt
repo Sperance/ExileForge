@@ -31,7 +31,7 @@ private fun glyph(name: String, vararg strokes: PathBuilder.() -> Unit): ImageVe
 }.build()
 
 /**
- * Заливка глифа (4.x): те же фигуры без обводки, закрашенные на [alpha] - под обводкой глифа даёт «залитую» иконку
+ * Заливка глифа: те же фигуры без обводки, закрашенные на [alpha] - под обводкой глифа даёт «залитую» иконку
  * (капсула выбранной вкладки нижней панели).
  */
 fun ImageVector.solid(alpha: Float = .2f): ImageVector = ImageVector.Builder("$name.solid", defaultWidth, defaultHeight, viewportWidth, viewportHeight).apply {
@@ -68,7 +68,7 @@ private fun PathBuilder.dashedRing(cx: Float, cy: Float, r: Float, dashes: Int, 
 }
 
 object ForgeGlyphs {
-    /** Аура (4.6.4): ядро и пунктирное кольцо вокруг - строка, что сдвинули ауры и пассивные умения. */
+    /** Аура: ядро и пунктирное кольцо вокруг - строка, что сдвинули ауры и пассивные умения. */
     val Aura = glyph("Aura", { ring(12f, 12f, 3f) }, { dashedRing(12f, 12f, 8.5f, 8, .55f) })
 
     /** Anvil under a raised hammer — the crafting bench. */
@@ -132,7 +132,7 @@ object ForgeGlyphs {
     /** Waypoint portal: servers and travel. */
     val Portal = glyph("Portal", { poly(12f to 2f, 20f to 12f, 12f to 22f, 4f to 12f) }, { poly(12f to 6f, 17f to 12f, 12f to 18f, 7f to 12f) }, { ring(12f, 12f, 1.6f) })
 
-    /** Crosshair: back to the frontier of the world map (2.76.0). */
+    /** Crosshair: back to the frontier of the world map. */
     val Target = glyph("Target", { ring(12f, 12f, 6.5f) }, { ring(12f, 12f, 1.6f) }, {
         line(12f, 2.5f, 12f, 6.5f)
         line(12f, 17.5f, 12f, 21.5f)
@@ -140,7 +140,7 @@ object ForgeGlyphs {
         line(17.5f, 12f, 21.5f, 12f)
     })
 
-    /** Nearer and farther on the world map (2.76.0). */
+    /** Nearer and farther on the world map. */
     val Plus = glyph("Plus", {
         line(12f, 5f, 12f, 19f)
         line(5f, 12f, 19f, 12f)
@@ -205,7 +205,7 @@ object ForgeGlyphs {
         line(13.5f, 13f, 12f, 22f)
     })
 
-    /** A crack of the Abyss (2.82.0): a jagged rift torn open, its lips flaring. */
+    /** A crack of the Abyss: a jagged rift torn open, its lips flaring. */
     val Rift = glyph(
         "Rift",
         { poly(12f to 2f, 15.5f to 8f, 12.5f to 12f, 16.5f to 17f, 12f to 22f, 8.5f to 16f, 11.5f to 12f, 7.5f to 7f) },
@@ -218,7 +218,7 @@ object ForgeGlyphs {
     /** A stack of coins — what the merchant pays. */
     val Coins = glyph("Coins", { ring(10f, 9f, 6f) }, { ring(14f, 15f, 6f) }, { line(14f, 12.5f, 14f, 17.5f) })
 
-    /** An open book with a star on it — the grimoire of the class skills (2.78.0). */
+    /** An open book with a star on it — the grimoire of the class skills. */
     val Grimoire = glyph(
         "Grimoire",
         { poly(3f to 5f, 11f to 7f, 11f to 21f, 3f to 19f) },
@@ -226,10 +226,10 @@ object ForgeGlyphs {
         { poly(17f to 9f, 18f to 11.5f, 20f to 12f, 18f to 13f, 17f to 16f, 16f to 13f, 14f to 12f, 16f to 11.5f) },
     )
 
-    /** A flask — the belt's places (2.78.0). */
+    /** A flask — the belt's places. */
     val Flask = glyph("Flask", { poly(10f to 3f, 14f to 3f, 14f to 9f, 19f to 19f, 17f to 21f, 7f to 21f, 5f to 19f, 10f to 9f) }, { line(7f, 15f, 17f, 15f) })
 
-    /** A crenellated keep with its gate — the City (3.22.0). */
+    /** A crenellated keep with its gate — the City. */
     val Keep = glyph(
         "Keep",
         { poly(4f to 21f, 4f to 8f, 7f to 8f, 7f to 10f, 10f to 10f, 10f to 8f, 14f to 8f, 14f to 10f, 17f to 10f, 17f to 8f, 20f to 8f, 20f to 21f) },
@@ -240,6 +240,6 @@ object ForgeGlyphs {
         },
     )
 
-    /** A banner on its pole, swallow-tailed — the guild (3.22.0). */
+    /** A banner on its pole, swallow-tailed — the guild. */
     val Banner = glyph("Banner", { line(5f, 2f, 5f, 22f) }, { poly(5f to 4f, 19f to 4f, 19f to 16f, 12f to 13f, 5f to 16f) }, { ring(12f, 9f, 2f) })
 }

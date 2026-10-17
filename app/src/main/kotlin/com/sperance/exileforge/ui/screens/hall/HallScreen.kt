@@ -38,15 +38,13 @@ import com.sperance.exileforge.ui.screens.guild.GuildEmblem
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/*
- * Доска славы Города (4.2.0, макет «Реликвии»): вкладки - таблицы реестра [HallBoard], под ними выбор раздела (лига, регион
- * и ступень раша, профессия). Первые три места - плиты редкостей (мифическая, уникальная, редкая), дальше список; строка
- * героя (его гильдии) закреплена внизу.
- */
-
 /** Облик призовых мест: первое - мифическая плита, второе - уникальная, третье - редкая. */
 private val PODIUM = listOf(Rarity.MYTHICAL, Rarity.UNIQUE, Rarity.RARE)
 
+/**
+ * Доска славы Города: вкладки - таблицы реестра [HallBoard], под ними выбор раздела (регион и ступень раша, профессия). Первые три места -
+ * плиты редкостей, дальше список; строка героя (его гильдии) закреплена внизу.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HallScreen() {
@@ -113,7 +111,7 @@ private val HallBoard.tab: StoneTab
         HallBoard.UNIQUES -> StoneTab(ui("hall.board.UNIQUES"), ForgeGlyphs.Gem, ModeHue.Uniques)
     }
 
-/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии, Мощь героя (4.9.0, строкой «⚜ 12.5k»), находки (4.10.x). */
+/** Чем меряется место в таблице: счёт, этаж, время раша, опыт гильдии или профессии, Мощь героя (строкой «⚜ 12.5k»), находки. */
 private fun HallBoard.measure(value: Long): String = when (this) {
     HallBoard.RIFT -> ui("hall.value.RIFT", number(value.toDouble()))
     HallBoard.TOWER -> ui("hall.value.TOWER", value)
@@ -123,7 +121,7 @@ private fun HallBoard.measure(value: Long): String = when (this) {
     HallBoard.UNIQUES -> ui("hall.value.UNIQUES", value)
 }
 
-/** Герой строки [entry] для карточки игрока (4.5.1); в таблице гильдий строки - гильдии, героя нет. */
+/** Герой строки [entry] для карточки игрока; в таблице гильдий строки - гильдии, героя нет. */
 private fun HallTable.heroOf(entry: HallEntry): String? = entry.id.takeIf { board != HallBoard.GUILD }
 
 /** Кто стоит на месте: герой - класс и уровень, гильдия - знак и уровень. */
@@ -134,7 +132,7 @@ private fun about(entry: HallEntry): String = listOfNotNull(
 ).joinToString(" · ")
 
 /**
- * Выбор раздела под вкладками (4.4.x - бронзовые плашки [BronzePills]): регион и ступень у раша, профессия у профессий; у
+ * Выбор раздела под вкладками (бронзовые плашки [BronzePills]): регион и ступень у раша, профессия у профессий; у
  * прочих таблиц раздела нет. Лига не выбирается - таблица с лигами берёт лигу героя.
  */
 @Composable private fun ScopePicker(index: ContentIndex, pick: HallPick, onPick: (HallPick) -> Unit) {

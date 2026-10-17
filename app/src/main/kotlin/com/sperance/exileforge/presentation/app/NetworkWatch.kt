@@ -5,7 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 
 /**
- * Сеть устройства (3.95.2), пока игра на экране: появившаяся сеть - Wi-Fi после мобильной, связь после метро, сеть после
+ * Сеть устройства, пока игра на экране: появившаяся сеть - Wi-Fi после мобильной, связь после метро, сеть после
  * сна - сразу будит связь с сервером ([onAvailable]), не дожидаясь паузы повтора или таймаута первого запроса.
  */
 class NetworkWatch(context: Context, private val onAvailable: () -> Unit) {

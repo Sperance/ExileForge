@@ -55,7 +55,7 @@ import kotlin.math.sin
 
 /**
  * What a rise brings: the class's growth for every level, the skill slots and the tree's points that open on the way;
- * разделы, открытые по таблице `unlocks` ([opened], 4.2.0), и ближайший следующий ([next]). Тестировщику открыто всё -
+ * разделы, открытые по таблице `unlocks` ([opened]), и ближайший следующий ([next]). Тестировщику открыто всё -
  * ни тех, ни другого.
  */
 internal data class LevelGains(
@@ -65,7 +65,7 @@ internal data class LevelGains(
     val points: Int,
     val opened: List<Feature>,
     val next: Feature?,
-    /** Умения класса и общие, что стали доступны на этих уровнях (0.14.0, SKILL-02): их книги теперь падают и читаются. */
+    /** Умения класса и общие, что стали доступны на этих уровнях: их книги теперь падают и читаются. */
     val skills: List<String> = emptyList(),
 )
 
@@ -85,10 +85,12 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
 }
 
 /**
- * «Вознесение» (3.81.0, mockup A): a won fight that raised the hero's level stops on a screen of its own before the report —
+ * «Вознесение» (mockup A): a won fight that raised the hero's level stops on a screen of its own before the report —
  * rays behind, the new level falling into place over the old, then what it brought one line after another: the class's growth
  * (with the attributes every level adds), the skill slots and the tree's points it opened. Several levels at once are one screen.
- * Ниже (4.2.0) - «Открыто»: каждый раздел, что открыл уровень, значком и строкой о нём, и «Следующее» - ближайший раздел.
+ * Ниже - «Открыто»: каждый раздел, что открыл уровень, значком и строкой о нём, и «Следующее» - ближайший раздел.
+ *
+ * Открывшееся умение - строкой, что открывает его карточку.
  */
 @Composable internal fun LevelUpScreen(rise: LevelUp, heroClass: HeroClass?, index: ContentIndex?, tester: Boolean, onDone: () -> Unit) {
     val gains = remember(rise, heroClass, index, tester) { levelGains(rise, heroClass, index, tester) }
@@ -143,7 +145,6 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         unlocks.forEach { Text("✦ $it", color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
-                        // Открывшееся умение - строкой, что открывает его карточку (0.14.4, #25)
                         gains.skills.forEach { code ->
                             Text(
                                 "✦ " + ui("levelup.skill", SkillText.title(code)) + " ›",
@@ -188,7 +189,7 @@ internal fun levelGains(rise: LevelUp, heroClass: HeroClass?, index: ContentInde
     }
 }
 
-/** «Открыто» (4.2.0): каждый открытый раздел - значок, название и одна строка о том, что там. */
+/** «Открыто»: каждый открытый раздел - значок, название и одна строка о том, что там. */
 @Composable private fun Opened(features: List<Feature>) {
     Column(
         Modifier.fillMaxWidth().padding(top = 8.dp).background(Vital.copy(alpha = .08f), RoundedCornerShape(8.dp))
@@ -223,9 +224,12 @@ private val Feature.glyph: ImageVector get() = when (this) {
     Feature.MAIL -> Icons.Outlined.Mail
 }
 
-/** The rays behind the number: a slow golden wheel, still when the animations are off. */
+/**
+ * The rays behind the number: a slow golden wheel, still when the animations are off.
+ *
+ * Фаза читается в рисовании: колесо крутится без перекомпоновки.
+ */
 @Composable private fun Rays(motion: Boolean, modifier: Modifier) {
-    // Фаза читается в рисовании (4.9.0): колесо крутится без перекомпоновки
     val phase = if (motion) motionPhase(RAYS_MS) else null
     Canvas(modifier) {
         val turn = phase?.let { it.value * 360f } ?: 0f

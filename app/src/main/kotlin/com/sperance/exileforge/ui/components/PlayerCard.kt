@@ -73,12 +73,12 @@ import com.sperance.exileforge.ui.theme.Rune
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Действие места под карточкой игрока (4.5.1): [label] на кнопке, [run] выполняется, и карточка закрывается. Так состав
- * гильдии оставляет за картой игрока прежний лист званий и прав.
+ * Действие места под карточкой игрока: [label] на кнопке, [run] выполняется, и карточка закрывается. Так состав
+ * гильдии оставляет за картой игрока свой лист званий и прав.
  */
 data class PlayerAction(val label: String, val run: () -> Unit)
 
-/** Как открыть карточку игрока по id его героя (4.5.1) с действием места; null - хозяина нет, нажатие ничего не открывает. */
+/** Как открыть карточку игрока по id его героя с действием места; null - хозяина нет, нажатие ничего не открывает. */
 val LocalPlayerCard = staticCompositionLocalOf<((String, PlayerAction?) -> Unit)?> { null }
 
 private val NO_PLAYER: (String, PlayerAction?) -> Unit = { _, _ -> }
@@ -87,7 +87,7 @@ private val NO_PLAYER: (String, PlayerAction?) -> Unit = { _, _ -> }
 @Composable fun rememberPlayerCard(): (String, PlayerAction?) -> Unit = LocalPlayerCard.current ?: NO_PLAYER
 
 /**
- * Нажатие открывает карточку игрока [heroId] (4.5.1) - имя или строка игрока где угодно: состав гильдии, Зал славы, продавец
+ * Нажатие открывает карточку игрока [heroId] - имя или строка игрока где угодно: состав гильдии, Зал славы, продавец
  * лота, автор отчёта. Пустой id ([heroId] null или пусто) нажатия не даёт.
  */
 fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()) {
@@ -100,8 +100,8 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 }
 
 /**
- * Хозяин карточки игрока (4.5.1, утверждён макет «Свиток»): всё внутри открывает её через [LocalPlayerCard]; лист один, поверх.
- * Карточку читает [PlayerCardViewModel]; модерация уводит в досье окна модерации - там прежние бан и удаление.
+ * Хозяин карточки игрока («Свиток»): всё внутри открывает её через [LocalPlayerCard]; лист один, поверх.
+ * Карточку читает [PlayerCardViewModel]; модерация уводит в досье окна модерации - там бан и удаление.
  */
 @Composable fun PlayerCardHost(game: GameUi, content: @Composable () -> Unit) {
     val vm = koinViewModel<PlayerCardViewModel>()
@@ -123,7 +123,6 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 return@Column
             }
             Scroll(game, vm, card)
-            // Предначертание аккаунта (4.6.3, «Лента и свиток»): лента во всю ширину под строками; не выбрано - ленты нет
             card.fate?.let { fate -> FateRibbon(fate, ui("fate.ribbon.caption"), Modifier.fillMaxWidth()) }
             CardActions(
                 game,
@@ -151,7 +150,11 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
     }
 }
 
-/** «Свиток»: слева корешок - уровень, знак класса и класс; справа титул над именем и справочные строки. */
+/**
+ * «Свиток»: слева корешок - уровень, знак класса и класс; справа титул над именем и справочные строки.
+ *
+ * Номер героя: по нему зовут в гильдию, касание копирует.
+ */
 @Composable private fun Scroll(game: GameUi, vm: PlayerCardViewModel, card: PlayerCard) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Spine(game, card, Modifier.width(96.dp).fillMaxHeight())
@@ -160,7 +163,6 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 Text(titleName(it).uppercase(), color = Caution, style = MaterialTheme.typography.labelSmall, letterSpacing = 1.sp)
             }
             Text(card.name, style = relicName(19).copy(color = GoldBright), maxLines = 2, overflow = TextOverflow.Ellipsis)
-            // Номер героя (4.7.0): по нему зовут в гильдию; касание копирует
             ShortCodeChip(ui("hero.number"), card.number, Modifier.padding(top = 4.dp))
             Spacer(Modifier.height(6.dp))
             card.guild?.let { guild ->
@@ -172,7 +174,11 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
     }
 }
 
-/** Корешок свитка: уровень серифом, знак класса, имя класса, Мощь (4.8.0). */
+/**
+ * Корешок свитка: уровень серифом, знак класса, имя класса, Мощь.
+ *
+ * Мощь «⚜ 12.5k» под классом - сервер считает её из листа при выдаче карточки.
+ */
 @Composable private fun Spine(game: GameUi, card: PlayerCard, modifier: Modifier) {
     val shape = RoundedCornerShape(14.dp)
     Column(
@@ -184,7 +190,6 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
         Text(card.level.toString(), style = relicName(22).copy(color = GoldBright))
         ClassPortrait(card.heroClass.takeIf { it.isNotBlank() }, game.world.portraits, Modifier.size(44.dp), round = true)
         Text(classTitle(card.heroClass), color = Muted, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center, maxLines = 2)
-        // Мощь (4.8.0): «⚜ 12.5k» под классом - сервер считает её из листа при выдаче карточки
         MightLine(card.might)
     }
 }
@@ -201,19 +206,19 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 }
 
 /**
- * Кнопки карточки: «Написать» герою (4.6.3) - всем, кроме своей карточки; нельзя писать - кнопка погашена, под ней причина
+ * Кнопки карточки: «Написать» герою - всем, кроме своей карточки; нельзя писать - кнопка погашена, под ней причина
  * ([MailGate] сервера); «В гильдию» - по правам сервера; «Лоты игрока» - всегда, с их числом. Игнор героя - из полученного
  * письма и списка игнора почты, не из карточки.
+ *
+ * Гильдии открываются с уровня `unlocks`: младшего героя не позвать - кнопка погашена, причина ниже.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () -> Unit, onInvite: () -> Unit, onLots: () -> Unit) {
     val rights = card.rights
     val letter = rights.letter
-    // Гильдии открываются с уровня `unlocks` (0.14.0, ASANA-N13): младшего героя не позвать - кнопка погашена, причина ниже
     val guildNeed = guildEntryLevel(game.index?.rules)
     val guildLow = card.level < guildNeed
-    // Малые кнопки одной строкой (4.7.0, макет «Компактные кнопки», вариант A)
     FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         if (letter != null) SmallAction(Icons.Outlined.Mail, ui("player.write"), onWrite, primary = true, enabled = !game.busy && letter == MailGate.OPEN)
         if (rights.invite) SmallAction(Icons.Outlined.Flag, ui("player.invite"), onInvite, enabled = !game.busy && !guildLow)
@@ -227,7 +232,7 @@ private fun ColumnScope.CardActions(game: GameUi, card: PlayerCard, onWrite: () 
 }
 
 /**
- * Строка модерации (только модератору и администратору): бан, немота (4.6.3) и удаление - в досье окна модерации; письмо
+ * Строка модерации (только модератору и администратору): бан, немота и удаление - в досье окна модерации; письмо
  * администратора аккаунту [onMail] - только ему.
  */
 @OptIn(ExperimentalLayoutApi::class)

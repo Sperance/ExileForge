@@ -57,9 +57,10 @@ import com.sperance.exileforge.ui.theme.*
  * The server's dictionary holds the phrasing — "+{0} to armour" — and the line's values fill it,
  * so there is no label to put on the left of a number any more. The glyph is the characteristic
  * the modifier's first effect changes.
+ *
+ * Замена значения - цена узла, не бонус: строка цветом потери.
  */
 @Composable fun ModifierLine(index: ContentIndex, line: Line) {
-    // Замена значения (4.12.x, ASANA-02) - цена узла, не бонус: строка цветом потери
     val penalty = index.modifier(line.code)?.let { modifierText(index).penalty(it) } == true
     ModifierLine(lineText(index, line), Glyph.ofModifier(line.code, index), if (penalty) LifeRed else ModBlue)
 }
@@ -123,11 +124,17 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
 }
 
 /**
- * Предмет как страница «Реликвария» (3.88.6, выбор владельца): рамка в свете редкости, иконка в гнезде, имя серифами,
+ * Предмет как страница «Реликвария» (выбор владельца): рамка в свете редкости, иконка в гнезде, имя серифами,
  * под ним что это и плашки уровня, качества и цены; база - крупными числами в три колонки; строки - со значком тира и вилкой
  * справа, нажатие открывает тир и место ролла. Уникальная и мифическая вещь лежат в «Астролябии»: кольца вокруг гнезда, искры
  * или звёзды, завитки по углам и номер экземпляра печатью. [totals] - итог героя «сейчас → станет» под строками,
- * [unmet] отмечает чипы требований. Всё напечатанное - вид [item] (3.0.0): копия поверх шаблона и контента.
+ * [unmet] отмечает чипы требований. Всё напечатанное - вид [item]: копия поверх шаблона и контента.
+ *
+ * Цена торговца копии заменяет голую цену шаблона. Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
+ * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
+ * требований - галка или крест, null - не с чем сравнить. Плашки состояний и замок - в углу (у легенды ниже и от края, мимо завитков
+ * рамки); кольцо качества роллов - у всех редкостей по строкам с вилкой. Английское торговое имя - для поиска на аукционе. Врождённые
+ * строки - над чертой; судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -137,17 +144,11 @@ fun ItemCard(
     selected: Boolean = false,
     detailed: Boolean = false,
     actionLabel: String = ui("common.open"),
-    /** What the merchant pays for this copy (2.46.0); it replaces the template's bare base price. */
     price: Long? = null,
-    /** Whether the card shows its [actionLabel]: a short card always, a full one only when it leads somewhere (3.2.0). */
     action: Boolean = !detailed,
-    /** The padlock (3.30.0): the copy is locked against selling and listing. */
     locked: Boolean = item.item.locked,
-    /** A command about this copy waits for the network (3.30.0). */
     waiting: Boolean = false,
-    /** Итог героя «если надеть» (3.88.6) - таблица под строками; null - без неё. */
     totals: (@Composable (RelicLook) -> Unit)? = null,
-    /** Невыполненные требования (4.6.5): у чипа - зелёная галка или красный крест; null - героя не с чем сравнить, без отметок. */
     unmet: Set<NeedKind>? = null,
     onClick: () -> Unit = {},
 ) {
@@ -165,8 +166,6 @@ fun ItemCard(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // Плашки состояний и замок - в углу, их видят, а не читают. У легенды (4.7.0) - ниже и от края: золотые завитки рамки
-        // ([relicCorners]) лежали на кольце роллов
         Row(
             Modifier.fillMaxWidth().then(if (legend) Modifier.padding(top = LEGEND_CORNER_TOP, start = LEGEND_CORNER_SIDE, end = LEGEND_CORNER_SIDE) else Modifier),
             verticalAlignment = Alignment.CenterVertically,
@@ -176,7 +175,6 @@ fun ItemCard(
             if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
             if (waiting) PendingMark()
             Spacer(Modifier.weight(1f))
-            // Кольцо качества роллов (4.6.5) - у всех редкостей, легенда тоже: по строкам с вилкой
             if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }
             if (selected) Icon(Icons.Outlined.CheckCircle, ui("card.selected"), tint = GoldBright, modifier = Modifier.size(22.dp))
         }
@@ -203,7 +201,6 @@ fun ItemCard(
             letterSpacing = if (legend) 2.4.sp else .4.sp,
             textAlign = TextAlign.Center,
         )
-        // Английское торговое имя (2.51.0): по нему ищут на аукционе.
         if (detailed) item.trade?.let { Text(it, color = look.faint, style = MaterialTheme.typography.labelSmall, fontStyle = FontStyle.Italic) }
         if (serial > 0) SerialSeal(serial, look)
         FlowRow(
@@ -221,7 +218,6 @@ fun ItemCard(
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 shown.forEachIndexed { i, line ->
                     RelicModLine(line, if (detailed) ({ opened = line }) else null)
-                    // Врождённые строки - над чертой: они от основы, а не от ролла.
                     val next = shown.getOrNull(i + 1)
                     if (line.marks.kind == AffixKind.IMPLICIT && next != null && next.marks.kind != AffixKind.IMPLICIT) {
                         HorizontalDivider(thickness = .5.dp, color = Color.White.copy(alpha = .08f))
@@ -230,7 +226,6 @@ fun ItemCard(
             }
         }
         if (!detailed && rolled.size > shown.size) MutedText(ui("card.more_properties", rolled.size - shown.size), style = MaterialTheme.typography.labelMedium)
-        // Осквернение Предначертания (4.6.2): судьбоносная строка - под строками вещи, печатью или раскрытой
         FatedSlot(item.item)
         if (detailed) {
             item.description.takeIf { it.isNotBlank() }?.let {
@@ -244,7 +239,6 @@ fun ItemCard(
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
             }
-            // Мастер (3.91.0, сервер 1.82.0): кто и когда изготовил снаряжение ремеслом.
             item.item.maker?.let { maker ->
                 Text(ui("card.maker", maker.hero, stampText(maker.at)), color = look.muted, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
             }
@@ -264,7 +258,7 @@ fun ItemCard(
     opened?.let { ModifierInfoSheet(it) { opened = null } }
 }
 
-/** Высота плашек шапки карточки: уровень, жетон качества, цена (4.8.0). */
+/** Высота плашек шапки карточки: уровень, жетон качества, цена. */
 internal val RelicChipHeight = 24.dp
 
 /** Плашка шапки карточки: тихий фон-пилюля под уровнем, качеством и ценой. */
@@ -278,7 +272,7 @@ internal val RelicChipHeight = 24.dp
 }
 
 /**
- * База вещи крупными числами (3.88.6): по три в ряд, под числом - что оно считает; число, сдвинутое строками копии, -
+ * База вещи крупными числами: по три в ряд, под числом - что оно считает; число, сдвинутое строками копии, -
  * голубое. Свойство без характеристики остаётся фразой.
  */
 @Composable private fun BaseFigures(item: ItemView, look: RelicLook) {
@@ -299,7 +293,7 @@ internal val RelicChipHeight = 24.dp
 }
 
 /**
- * Свёрнутые строки внизу карточки (3.88.6): требования и термины строк. Требования (4.6.5, макет «Требования», вариант A) -
+ * Свёрнутые строки внизу карточки: требования и термины строк. Требования -
  * заголовок и под ним чипы с переносом, у каждого своя отметка: длинный набор (уровень, атрибуты, класс) не обрезается.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -353,7 +347,7 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
     }
 }
 
-/** «Ждёт отправки» (3.30.0): a command about this thing waits for the network; its result comes with the server's answer. */
+/** «Ждёт отправки»: a command about this thing waits for the network; its result comes with the server's answer. */
 @Composable fun PendingMark(modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         Icon(Icons.Outlined.Schedule, null, tint = Muted, modifier = Modifier.size(13.dp))
@@ -361,6 +355,6 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
     }
 }
 
-/** Отступ значков шапки легенды от верха и края - мимо завитков рамки (4.7.0). */
+/** Отступ значков шапки легенды от верха и края - мимо завитков рамки. */
 private val LEGEND_CORNER_TOP = 14.dp
 private val LEGEND_CORNER_SIDE = 22.dp

@@ -37,28 +37,19 @@ import com.sperance.exileforge.ui.theme.*
 /** Each kind of line in the colour Path of Exile writes it in; the game's own kinds take the tone they already had. */
 fun affixTint(kind: AffixKind?): Color = when (kind) {
     AffixKind.PREFIX, AffixKind.SUFFIX, null -> Rune
-
     AffixKind.IMPLICIT -> Parchment
-
     AffixKind.CRAFTED -> Crafted
-
     AffixKind.HANDCRAFTED -> Handcrafted
-
     AffixKind.FRACTURED -> Fractured
-
     AffixKind.CORRUPTION -> Color(0xFFD20000)
-
     AffixKind.ALCHEMY -> Vital
-
     AffixKind.UNIQUE -> Color(0xFFAF6025)
-
-    // A special essence (2.78.0), violet as its crystal.
     AffixKind.ESSENCE -> Color(0xFFB07FE0)
 }
 
 /**
- * The letter in front of a line (2.58.0), as PoE's trade site prints it — «P1», «S3», «I», «F2» — on
- * a stained-glass hexagon in the kind's colour since 2.69.0 (the owner's mockup C), the lead line
+ * The letter in front of a line, as PoE's trade site prints it — «P1», «S3», «I», «F2» — on
+ * a stained-glass hexagon in the kind's colour the lead line
  * and the lit upper facet of the orbs' glass. A long press spells it out beside the badge: letters
  * are learnt, not guessed. A line with no kind (a passive's) keeps the plain rhombus.
  */

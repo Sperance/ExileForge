@@ -23,8 +23,8 @@ private val ROLE_MARKS: Map<AccountRole, Pair<ImageVector, Color>> = mapOf(
 )
 
 /**
- * Роль аккаунта значком (3.88.7): у администратора и модератора - свой знак своего цвета рядом с именем, у игрока - ничего;
- * нажатие называет роль. Тестировщик (4.12.x) - отметка героя: [TesterMark].
+ * Роль аккаунта значком: у администратора и модератора - свой знак своего цвета рядом с именем, у игрока - ничего;
+ * нажатие называет роль. Тестировщик - отметка героя: [TesterMark].
  */
 @Composable fun RoleMark(role: AccountRole?, size: Dp = 16.dp) {
     val (icon, tint) = role?.let(ROLE_MARKS::get) ?: return
@@ -32,7 +32,7 @@ private val ROLE_MARKS: Map<AccountRole, Pair<ImageVector, Color>> = mapOf(
     Tipped({ Tip(title, tint = tint) }) { Icon(icon, title, tint = tint, modifier = Modifier.size(size)) }
 }
 
-/** Герой-тестировщик (4.12.x, сервер ROLE-01): свой знак рядом с именем героя; нажатие называет отметку. */
+/** Герой-тестировщик: свой знак рядом с именем героя; нажатие называет отметку. */
 @Composable fun TesterMark(tester: Boolean, size: Dp = 16.dp) {
     if (!tester) return
     val title = ui("hero.tester_mark")

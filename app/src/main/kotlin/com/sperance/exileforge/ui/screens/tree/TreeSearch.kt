@@ -80,11 +80,11 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** Поиск и план древа (3.80.16): строка поиска, фильтр по тегу, планировщик сборки. */
+/** Поиск и план древа: строка поиска, фильтр по тегу, планировщик сборки. */
 /**
  * Finding a node by name.
  *
- * The tree is over a hundred nodes across seven class areas, so panning to one by eye is no longer
+ * The tree is over a hundred nodes across seven class areas, so panning to one by eye is not
  * realistic. A match selects the node, which is what the map draws a ring around.
  */
 @Composable internal fun TreeSearch(game: GameUi, rawQuery: String, selected: String, nodes: List<TreeNode>, onSelect: (String) -> Unit) {
@@ -157,12 +157,10 @@ internal fun TreeFilters(query: String, onQuery: (String) -> Unit, found: Int?, 
     }
 }
 
-/** The tags the tree's filter offers (3.47.0): the ones its lines carry most. */
+/** The tags the tree's filter offers: the ones its lines carry most. */
 internal val TREE_TAGS = listOf("life", "defences", "critical", "fire", "cold", "lightning", "chaos", "physical", "elemental", "attack", "caster", "speed", "mana")
 
-/** Every node whose lines — or any of its options — carry [tag]. */
-
-/** Nodes whose name, or any stat they give, holds [query] (3.54.0). */
+/** Nodes whose name, or any stat they give, holds [query]. */
 internal fun nodesMatching(index: ContentIndex, query: String): Set<String> = index.content.tree.nodes.mapNotNullTo(HashSet()) { node ->
     val stats = (node.lines + node.options.flatten()).flatMap { line -> index.modifier(line.code)?.effects?.map { statTitle(it.stat) }.orEmpty() }
     node.code.takeIf { nodeTitle(it).contains(query, true) || stats.any { stat -> stat.contains(query, true) } }

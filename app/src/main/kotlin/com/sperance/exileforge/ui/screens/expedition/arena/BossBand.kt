@@ -89,7 +89,7 @@ private const val PHASE_TITLE_SECONDS = 2.6
 /** За сколько секунд до готовности умения вокруг портрета загорается круг-предупреждение. */
 private const val TELEGRAPH_SECONDS = 1.6
 
-/** Палитра боя с боссом «Кино» (3.93.0): золото рамки, кровь полосы, фиолет каста и свиты. */
+/** Палитра боя с боссом «Кино»: золото рамки, кровь полосы, фиолет каста и свиты. */
 internal val FrameGold = Color(0xFFD9B46A)
 internal val FrameGoldBright = Color(0xFFF5D58A)
 private val FrameInk = Color(0xFF120A08)
@@ -128,10 +128,12 @@ internal fun totemTint(slot: SlotView.Totem): Color = when (slot.kind) {
 internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 
 /**
- * Бой с боссом «Кино» (3.93.0, макет владельца): сверху - кованая рамка с именем, номером фазы, полосой здоровья со шлейфом и
+ * Бой с боссом «Кино»: сверху - кованая рамка с именем, номером фазы, полосой здоровья со шлейфом и
  * кристаллами порогов, щитом и барьером, нитью маны, накоплениями и кастом; ниже - крупный портрет в ауре фазы и по три ниши
  * склепа с каждой стороны: в них встаёт свита из портала и тотемы со своим сроком. Касание приспешника выбирает его целью,
  * а на паузе открывает его лист; касание тотема - его справку.
+ *
+ * Бой без слотов (страж без фаз и тотемов): прочие враги поля - узкими карточками по бокам.
  */
 @Composable internal fun BossBand(
     fight: FightHud,
@@ -149,7 +151,6 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         BossFrame(foe, name, boss, fight, frame)
         if (boss.slots.isEmpty()) {
-            // Бой без слотов (страж без фаз и тотемов): прочие враги поля - узкими карточками по бокам, как прежде
             val others = fight.field.filter { it.index != boss.index }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 others.filterIndexed { i, _ -> i % 2 == 0 }.takeIf { it.isNotEmpty() }?.let { Retinue(it, fight, frame, chosen, large, traits, track, onFocus) }
@@ -165,8 +166,10 @@ internal fun phaseNumber(boss: BossHud): Int = 1 + boss.passed.count { it }
 /** Касание врага: на паузе и до боя - его лист, в бою - выбор цели. */
 private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: (Int) -> Unit) = if (fight.scouting) onInspect(index) else onFocus(index)
 
-// ============================================================ Рамка: имя, полосы, каст
-
+/**
+ * Имя на всю ширину сжимается до минимума, дальше многоточие. Фаза и ярость - табулярными цифрами: ширина не прыгает. Ярость - сколько
+ * прибавила и когда следующая ступень. Нить каста мерцает в рисовании кадра.
+ */
 @Composable private fun BossFrame(foe: FoeView, name: String, boss: BossHud, fight: FightHud, frame: FightFrame) {
     val lore = LocalLore.current
     val shape = RoundedCornerShape(10.dp)
@@ -175,7 +178,6 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
             .drawBehind { cornerFlourish(FrameGold) }.padding(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(5.dp),
     ) {
-        // Строка 1 (4.2.0): имя на всю ширину - шрифт сжимается до минимума, дальше многоточие - и уровень
         Row(verticalAlignment = Alignment.CenterVertically) {
             FittedName(name, FrameGold, 15.sp, 10.sp, Modifier.weight(1f))
             foe.monster.level.takeIf { it > 0 }?.let { level ->
@@ -186,11 +188,9 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                     modifier = Modifier.padding(start = 6.dp).border(1.dp, Color(0xFF5A4632), RoundedCornerShape(4.dp)).padding(horizontal = 4.dp),
                 )
             }
-            // Мощь босса (4.8.0): печать мелко и число цвета его стойки против героя
             FoeMightMark(foe.monster, Modifier.padding(start = 6.dp))
         }
         LifeBar(foe, boss, frame)
-        // Строка 2 под полосой: фаза и ярость табулярными цифрами - ширина не прыгает, пока тикают секунды
         if (boss.marks.isNotEmpty() || foe.alive) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (boss.marks.isNotEmpty()) {
@@ -203,13 +203,11 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                // Ярость (3.95.0): сколько уже прибавил урон и когда следующая ступень; без неё - когда первая
                 val rage = fight.rage
                 if (foe.alive && rage != null) RageMark(rage)
             }
         }
         if (boss.rift != null && foe.alive) RiftStrip(boss, frame)
-        // Сердце Скверны (4.0.0): пуповины Матери гаснут по фазам
         if (boss.tainted && boss.marks.isNotEmpty()) CordStrip(boss, foe.alive, frame)
         if (foe.maxMana > 0) ThinBar(foe.mana / foe.maxMana.toFloat(), ManaThread, 3.dp)
         foe.buildup?.takeIf { foe.alive && it.bars.any { share -> share > 0.005f } }?.let { Buildups(it.bars) }
@@ -222,7 +220,6 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
             ) {
                 val near = cast.left < TELEGRAPH_SECONDS
                 Box(
-                    // Нить каста мерцает в рисовании кадра: близкий каст не перекомпонует рамку
                     Modifier.size(22.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFF2A1840))
                         .drawWithContent {
                             drawContent()
@@ -243,7 +240,7 @@ private fun tap(fight: FightHud, index: Int, onFocus: (Int) -> Unit, onInspect: 
 }
 
 /**
- * Имя босса в одну строку (4.2.0): серифы цвета [color] от [max] вниз до [min] - сколько влезет, дальше многоточие. Общее для
+ * Имя босса в одну строку: серифы цвета [color] от [max] вниз до [min] - сколько влезет, дальше многоточие. Общее для
  * рамки боя и заставки.
  */
 @Composable internal fun FittedName(name: String, color: Color, max: TextUnit, min: TextUnit, modifier: Modifier = Modifier, align: TextAlign = TextAlign.Start) {
@@ -281,7 +278,7 @@ private val GemHalo = FrameGoldBright.copy(alpha = .35f)
 private val GemEdge = Color(0xFF7A5A1E)
 
 /**
- * Кристаллы порогов фаз [marks] (проценты здоровья) на полосе (4.9.0): ромбы и кисти горящих собираются раз на размер полосы,
+ * Кристаллы порогов фаз [marks] (проценты здоровья) на полосе: ромбы и кисти горящих собираются раз на размер полосы,
  * кадр только рисует их.
  */
 private class PhaseGems(private val marks: List<Double>) {
@@ -318,6 +315,8 @@ private class PhaseGems(private val marks: List<Double>) {
 /**
  * Полоса здоровья босса: шлейф урона догоняет её с запозданием, глянец и бегущий блик, кристаллы порогов фаз (сработавшие
  * гаснут), щит - штриховкой поверх, барьер - золотым свечением и числом, здоровье числом на тёмной плашке.
+ *
+ * Кристаллы порогов считаются раз на пороги и размер полосы.
  */
 @Composable private fun LifeBar(foe: FoeView, boss: BossHud, frame: FightFrame) {
     val share = if (foe.maxLife > 0) (foe.life / foe.maxLife.toFloat()).coerceIn(0f, 1f) else 0f
@@ -325,7 +324,6 @@ private class PhaseGems(private val marks: List<Double>) {
     val shield = if (foe.maxShield > 0) (foe.shield / foe.maxShield.toFloat()).coerceIn(0f, 1f) else 0f
     val motion = LocalSettings.current.animations
     val shape = RoundedCornerShape(8.dp)
-    // Кристаллы порогов - раз на пороги и размер полосы, не на кадр (4.9.0)
     val gems = remember(boss.marks) { PhaseGems(boss.marks) }
     Box(
         Modifier.fillMaxWidth().height(18.dp)
@@ -406,8 +404,6 @@ private class PhaseGems(private val marks: List<Double>) {
 
 private fun roman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").getOrElse(n - 1) { n.toString() }
 
-// ============================================================ Арена: ниши и портрет
-
 /**
  * Портрет босса между двумя колоннами ниш: слева слоты первой половины, справа - второй. Нити тянутся от тотемов: к боссу -
  * у силы и знамени, вниз к герою - у проклятия и стихии.
@@ -430,7 +426,6 @@ private fun roman(n: Int): String = listOf("I", "II", "III", "IV", "V", "VI").ge
             ) { onTap(foe.index) }
             NicheColumn(half until boss.slots.size, boss, fight, frame, chosen, track, name, { i, at -> centres[i] = at - origin }, onTap)
         }
-        // Нити тотемов поверх: от ниши к боссу или вниз, к герою; бегущий пунктир их цвета
         Canvas(Modifier.fillMaxSize()) {
             val time = frame.time
             boss.slots.forEachIndexed { i, slot ->
@@ -484,9 +479,10 @@ private fun slotKey(slot: SlotView?): String = when (slot) {
 /**
  * Ниша слота: пустая - тёмная арка с руной; приспешник встаёт из фиолетового портала и при смерти рассыпается вниз прахом;
  * тотем встаёт из портала своего цвета, его срок стекает по табличке, и он гаснет вспышкой.
+ *
+ * Последний вид каждого жильца: уходящий рисуется таким, каким был.
  */
 @Composable private fun NicheSlot(slot: SlotView?, fight: FightHud, frame: FightFrame, chosen: Int?, track: (Int) -> Modifier, name: String, onTap: (Int) -> Unit) {
-    // Последний вид каждого жильца: уходящий рисуется таким, каким был
     val seen = remember { mutableMapOf<String, Pair<SlotView, FoeView?>>() }
     val key = slotKey(slot)
     if (slot != null) seen[key] = slot to (slot as? SlotView.Minion)?.let { m -> fight.foes.firstOrNull { it.index == m.index } }
@@ -668,6 +664,8 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
  * Портрет босса: двойная золотая рамка, аура цвета фазы дышит за ним, удар - вспышкой, крит - коротким толчком (без него при
  * упрощённых эффектах); перед готовым умением вокруг пульсирует фиолетовый круг, новая фаза - титулом поверх, павший босс
  * растворяется искрами.
+ *
+ * Толчок крита - к часам кадра, в рисовании; Матерь показывает порванные пуповины.
  */
 @Composable private fun PortraitStage(foe: FoeView, boss: BossHud, fight: FightHud, frame: FightFrame, open: Boolean, modifier: Modifier, onTap: () -> Unit) {
     val settings = LocalSettings.current
@@ -675,7 +673,6 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
     val aura = phaseAura(phaseNumber(boss))
     val focused = fight.focus == foe.index
     val gone by animateFloatAsState(if (foe.alive) 0f else 1f, tween(1400, easing = LinearEasing), label = "dissolve")
-    // Толчок крита - к часам кадра, в рисовании
     val critical = fight.lunge?.takeIf { it.actor == Side.HERO && it.landed && it.foe == foe.index && it.kind == HitKind.CRIT }
     fun nudge(): Float {
         if (settings.simpleEffects || critical == null) return 0f
@@ -700,7 +697,6 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
                 .clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
         ) {
             Canvas(Modifier.fillMaxSize()) {
-                // Матерь Скверны рвёт пуповины по фазам - портрет показывает порванные
                 Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
             }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
@@ -745,10 +741,13 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
     }
 }
 
-/** Титул новой фазы поверх портрета: «Фаза II» и её имя, нарастает и гаснет. */
+/**
+ * Титул новой фазы поверх портрета: «Фаза II» и её имя, нарастает и гаснет.
+ *
+ * Поиск по журналу - по новой строке, не каждый кадр.
+ */
 @Composable private fun PhaseTitle(fight: FightHud, boss: BossHud) {
     val now = fight.events.firstOrNull()?.time ?: return
-    // Поиск по журналу - по новой строке, не каждый кадр (4.9.0): журнал снимка тот же, пока не вырос
     val event = remember(fight.events, boss.index) {
         fight.events.firstOrNull { it.foe == boss.index && it.actor == Side.MONSTER && (it.trace as? NoteTrace)?.kind == NoteKind.PHASE }
     } ?: return
@@ -792,8 +791,6 @@ internal fun phaseAura(phase: Int): Color = when (phase) {
         }
     }
 }
-
-// ============================================================ Стражи Разлома (3.96.0)
 
 /** Палитра Разлома (RULES.md, «Стражи Разлома»): панель, черта, ядовитая зелень, текст, тревога. */
 private val RiftPanel = Color(0xFF0E1812)
@@ -877,7 +874,6 @@ private const val CHIP_MS = 500
         if (glow > 0f) drawCircle(RiftGreen.copy(alpha = .45f * glow * pulse()), r * 1.1f, c)
         drawPath(gem, Brush.linearGradient(listOf(RiftHot.copy(alpha = glow), RiftGreen.copy(alpha = .25f + .75f * glow), RiftDeep), Offset(c.x - r, c.y - r), Offset(c.x + r, c.y + r)))
         drawPath(gem, if (glow > .5f) RiftSoft else RiftLineBright, style = Stroke(1.dp.toPx()))
-        // Снятая печать - трещина поперёк ромба
         if (glow < 1f) drawLine(RiftDim.copy(alpha = 1 - glow), Offset(c.x - r * .4f, c.y - r * .3f), Offset(c.x + r * .35f, c.y + r * .4f), 1.dp.toPx())
     }
 }
@@ -888,11 +884,14 @@ private fun lawName(law: RiftLaw, element: String?): String {
     return if (law == RiftLaw.ONE_ELEMENT && element != null) ui("boss.rift_law_element", name, ui("enum.damage.$element")) else name
 }
 
-/** Законы Владыки: скрижаль с Законами в силе; в знамение - тревога, отсчёт и имя следующего. */
+/**
+ * Законы Владыки: скрижаль с Законами в силе; в знамение - тревога, отсчёт и имя следующего.
+ *
+ * Мигание тревоги - ступенями по часам кадра: полоса перекомпонуется лишь со сменой ступени.
+ */
 @Composable private fun Laws(boss: BossHud, frame: FightFrame) {
     val motion = LocalMotion.current
     val omen = boss.lawNext.isNotEmpty()
-    // Мигание тревоги - ступенями по часам кадра: полоса перекомпонуется лишь со сменой ступени, не каждый кадр
     val flash by remember(frame, omen, motion) {
         derivedStateOf {
             when {

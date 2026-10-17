@@ -57,7 +57,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
 import kotlin.math.roundToLong
 
 /**
- * Строка награды итогов карты (4.10.0, макет «Итоги карты», вариант A): значок, сумма, подпись и множитель «×1,35 ▾»; нажатие
+ * Строка награды итогов карты: значок, сумма, подпись и множитель «×1,35 ▾»; нажатие
  * раскрывает разбор [breakdown] - полоса долей, сток, каждый источник с процентом и его долей, итог. Без разбора - просто строка.
  */
 @Composable internal fun RewardRow(icon: ImageVector, label: String, tone: Color, breakdown: LootBreakdown) {
@@ -134,7 +134,7 @@ private fun sourceTone(source: BoostSource): Color = when (source) {
 private fun amount(value: Double): String = number(value.roundToLong().toDouble())
 
 /**
- * «Сданы задания» (4.10.0; 4.12.x ASANA-09, макет «Сданы задания», вариант A «список с фишками»): задания, что сдались разом после
+ * «Сданы задания»: задания, что сдались разом после
  * карты, - имя задания на всю ширину, под ним награда фишками; между заданиями тонкая черта. «Всего за задания» - только при двух
  * и больше: у одного задания она повторяла бы его фишки.
  */
@@ -187,7 +187,7 @@ private fun RewardChips(reward: QuestReward, modifier: Modifier = Modifier) {
 }
 
 /**
- * «Очки атласа» (4.10.0): очки, что принесли ответы карты или испытания, - «+1 очко атласа — босс Склепа»; в итогах карты и
+ * «Очки атласа»: очки, что принесли ответы карты или испытания, - «+1 очко атласа — босс Склепа»; в итогах карты и
  * испытаний.
  */
 @Composable internal fun AtlasBlock(keys: List<String>) {

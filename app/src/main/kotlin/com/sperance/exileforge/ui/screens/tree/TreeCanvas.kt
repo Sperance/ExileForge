@@ -32,7 +32,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** Холст древа (3.80.16): колесо, медальоны узлов, масштаб и сдвиг карты. */
+/** Холст древа: колесо, медальоны узлов, масштаб и сдвиг карты. */
 /**
  * The graph, drawn from the coordinates the content seeded.
  *
@@ -41,6 +41,12 @@ import kotlin.math.sin
  * without that the outer nodes are painted over whatever the map happens to be sitting on. And the
  * pan is held to the tree's own half-extent, so a stray flick cannot drag the whole graph away and
  * leave an empty rectangle with no way back but the reset.
+ *
+ * Первый взгляд - на старт класса. Масштаб - вокруг точки (щипок, двойное касание). Доступные узлы дышат в рисовании, без анимаций светятся
+ * ровно. Детекторы - по графу и читают вид как он есть: ключ по масштабу и сдвигу перезапускал бы касание на каждом кадре и съедал бы
+ * второй палец щипка. Двойное касание приближает, с ближайшего - назад к целому дереву. Ближайший узел выигрывает только в своём круге не
+ * меньше пальца. Неподвижный слой рисуется заново лишь со сдвигом, масштабом или выбором; дышащий - только узлы на шаг от взятого и только
+ * на экране.
  */
 @Composable internal fun TreeCanvas(
     nodes: List<TreeNode>,
@@ -57,7 +63,6 @@ import kotlin.math.sin
     val bounds = remember(nodes) { Bounds.of(nodes) }
     val select by rememberUpdatedState(onSelect)
     var area by remember { mutableStateOf(Size.Zero) }
-    // The first look (3.81.0) is on the class's own start, near enough to read, not on the whole tree's centre.
     LaunchedEffect(area, focus) {
         val node = focus?.let(byCode::get) ?: return@LaunchedEffect
         if (view.focused || area.width <= 0f) return@LaunchedEffect
@@ -68,7 +73,6 @@ import kotlin.math.sin
         view.pan = Offset((area.width / 2 - at.x).coerceIn(-limit.x, limit.x), (area.height / 2 - at.y).coerceIn(-limit.y, limit.y))
     }
 
-    // The zoom is about a point — the pinch's centre, the double tap — so what is under the fingers stays there.
     fun zoomAt(focus: Offset, factor: Float, drag: Offset, width: Float, height: Float) {
         val next = (view.scale * factor).coerceIn(MIN_ZOOM, MAX_ZOOM)
         val centre = Offset(width / 2, height / 2)
@@ -77,17 +81,11 @@ import kotlin.math.sin
         view.scale = next
         view.pan = Offset(moved.x.coerceIn(-limit.x, limit.x), moved.y.coerceIn(-limit.y, limit.y))
     }
-    // The reachable nodes breathe (3.76.0, «Неон»): their glow swells and fades, drawn again on the draw pass alone.
-    // With the animations off in the settings (3.77.0) they glow steadily.
-    // 4.7.0: общие часы декора; дыхание туда и обратно - треугольником от доли круга
     val phase = motionPhase(PULSE_MS * 2, still = .5f)
     val breathing: State<Float> = remember(phase) { derivedStateOf { PULSE_LOW + (1f - PULSE_LOW) * (1f - kotlin.math.abs(phase.value * 2 - 1f)) } }
     val pulse by breathing
     fun breathes(node: TreeNode) = node.code in reachable && node.code !in taken
     Box(modifier.fillMaxWidth()) {
-        // Both detectors are keyed on the graph alone and read the view as it is now. Keyed on the zoom and
-        // the pan, the tap detector restarted on every frame of a drag and took the second finger's touch
-        // for a fresh tap, consuming it — and a consumed touch cancels the pinch before it begins.
         Canvas(
             Modifier.fillMaxSize().clipToBounds().onSizeChanged { area = Size(it.width.toFloat(), it.height.toFloat()) }
                 .pointerInput(nodes) {
@@ -97,7 +95,6 @@ import kotlin.math.sin
                 }
                 .pointerInput(nodes) {
                     detectTapGestures(
-                        // A double tap steps in towards the spot, and from the closest zoom back to the whole tree.
                         onDoubleTap = { at ->
                             if (view.scale >= MAX_ZOOM - .01f) {
                                 view.reset()
@@ -106,7 +103,6 @@ import kotlin.math.sin
                             }
                         },
                         onTap = { tap ->
-                            // The nearest node wins, but only within its own circle — never smaller than a finger: a tap on bare canvas changes nothing.
                             val width = size.width.toFloat()
                             val height = size.height.toFloat()
                             nodes.minByOrNull { (place(it, bounds, width, height, view.scale, view.pan) - tap).getDistanceSquared() }?.let { hit ->
@@ -117,11 +113,9 @@ import kotlin.math.sin
                     )
                 },
         ) {
-            // Неподвижный слой: колесо, нити и медальоны без дыхания - рисуется заново лишь со сдвигом, масштабом или выбором
             val width = size.width
             val height = size.height
             wheel(nodes, bounds, width, height, view.scale, view.pan)
-            // Edges first, so a node always sits on top of the lines that reach it.
             nodes.forEach { node ->
                 val from = place(node, bounds, width, height, view.scale, view.pan)
                 node.connections.forEach { code ->
@@ -142,21 +136,17 @@ import kotlin.math.sin
                     )
                 }
             }
-            // Узлы на шаг от взятого - в дышащем слое, здесь их нет
             nodes.forEach { node ->
                 if (breathes(node)) return@forEach
                 val at = place(node, bounds, width, height, view.scale, view.pan)
                 if (!onScreen(node, at, view.scale, width, height)) return@forEach
                 medallion(node, at, view.scale, node.code in taken, false, node.code == selected, 0f)
             }
-            // Узлы фильтра носят зелёное кольцо поверх медальона, не вместо него.
             nodes.forEach { node ->
                 if (node.code !in highlight || breathes(node)) return@forEach
                 drawCircle(Vital, radius(node) * view.scale.coerceIn(.5f, 2.2f) + 5f, place(node, bounds, width, height, view.scale, view.pan), style = Stroke(2.5f))
             }
         }
-        // Дышащий слой - только узлы на шаг от взятого и только на экране: свечение, медальон поверх него и кольцо фильтра;
-        // шаг часов декора перерисовывает его один
         val breathers = remember(nodes, taken, reachable) { nodes.filter(::breathes) }
         Canvas(Modifier.fillMaxSize().clipToBounds()) {
             if (breathers.isEmpty()) return@Canvas
@@ -185,21 +175,14 @@ private fun crosses(from: Offset, to: Offset, width: Float, height: Float): Bool
 /** Ореол узла - столько его радиусов. */
 private const val GLOW_REACH = 2.6f
 
+/** Гнездо само ничего не даёт, поэтому на карте стоит за то, что может держать. */
 internal fun nodeColour(node: TreeNode, selected: Boolean): Color = when {
     node.type == SkillNodeType.KEYSTONE -> LifeRed
-
     node.type == SkillNodeType.NOTABLE -> if (selected) GoldBright else Gold
-
     node.type == SkillNodeType.START -> ShieldCyan
-
-    // A socket gives nothing itself, so on the map it has to stand for what it can hold rather
-    // than blend into the small nodes around it.
     node.type == SkillNodeType.JEWEL_SOCKET -> ManaBlue
-
     node.type == SkillNodeType.MASTERY -> Elder
-
     node.type == SkillNodeType.ATTRIBUTE -> Vital
-
     else -> Rune
 }
 
@@ -276,7 +259,7 @@ internal fun classTint(code: String): Color = when (code.removeSuffix("_START"))
 }
 
 /**
- * The wheel under the graph (2.59.0, the owner's pick «Колесо PoE»): a stone disc with its rings,
+ * The wheel under the graph (the owner's pick «Колесо PoE»): a stone disc with its rings,
  * each class's sector washed in its colour. The sectors are read off the start
  * nodes' positions, so the wheel turns with whatever tree the content seeds.
  */
@@ -296,10 +279,10 @@ internal fun DrawScope.wheel(nodes: List<TreeNode>, bounds: Bounds, width: Float
 
 /**
  * One node as a medallion of its kind: a small disc, a notable's double ring, a keystone's hexagon, a mastery's diamond,
- * an attribute's triangle, a socket's hollow ring and a start's octagon. Since 3.76.0 («Неон», the owner's pick of three
- * mockups) every node shines in its kind's colour so the tree reads at a glance: one out of reach is a dark stone with a
+ * an attribute's triangle, a socket's hollow ring and a start's octagon. In «Неон»
+ * every node shines in its kind's colour so the tree reads at a glance: one out of reach is a dark stone with a
  * bright rim and a faint halo, one a step away is ringed thicker and breathes ([pulse]), a taken one is filled with its
- * colour under a light rim and a strong halo. Since 3.77.0 a node out of reach is grey and unlit: only what can be taken
+ * colour under a light rim and a strong halo. A node out of reach is grey and unlit: only what can be taken
  * and what is taken keep their colour.
  */
 internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, taken: Boolean, next: Boolean, selected: Boolean, pulse: Float) {
@@ -361,7 +344,7 @@ internal fun DrawScope.medallion(node: TreeNode, centre: Offset, scale: Float, t
     if (selected) drawCircle(GoldBright, r + 5.dp.toPx(), centre, style = Stroke(2.dp.toPx()))
 }
 
-/** «Неон» (3.76.0): the wheel a shade lighter, so a dark stone with a bright rim stands off it. */
+/** «Неон»: the wheel a shade lighter, so a dark stone with a bright rim stands off it. */
 internal val WHEEL_BG = Color(0xFF141A21)
 internal val NEON_STONE = Color(0xFF10151B)
 internal val NEON_RIM = Color(0xFFEEF8F1)

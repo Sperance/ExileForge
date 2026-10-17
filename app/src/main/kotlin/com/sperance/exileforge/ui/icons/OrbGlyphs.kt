@@ -23,15 +23,16 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * The orbs as stained glass (2.69.0, the owner's mockup C «Витраж»): three flat tones of the orb's
+ * The orbs as stained glass (the owner's mockup C «Витраж»): three flat tones of the orb's
  * own hue in a heavy dark lead line, its emblem in a gold-rimmed medallion, and rays round the
  * precious ones. Every orb is a colour and a sign, so two orbs are told apart at 20 dp by either.
  *
  * Each is an [ImageVector] built once and kept: a bag of twenty stacks draws the same few again.
  * It is painted as an [Image], never an `Icon` — an icon's tint would flatten the glass to one colour.
+ *
+ * Стекло сервера главнее: сферы нарисованы там вместе с прочими вещами.
  */
 @Composable fun OrbGlyph(orb: Orb?, modifier: Modifier = Modifier, description: String? = null) {
-    // The server's glass wins since 3.6.0: the orbs are drawn there with every other item.
     val sprite = orb?.let { itemIcon(it.name) }?.takeIf { it.isGlass }
     if (sprite == null || !SpriteIcon(sprite, Color.Unspecified, modifier, halo = false)) {
         Image(rememberVectorPainter(orbVector(orb)), description, modifier)
@@ -39,8 +40,7 @@ import kotlin.math.sin
 }
 
 /**
- * A picker's art for orb options keyed by the orb's item code (2.69.1; the code is the orb's name since
- * 3.0.0): the orb's glass, or nothing for a key that is not an orb of [orbs] — «любая сфера», an empty
+ * A picker's art for orb options keyed by the orb's item code (the code is the orb's name): the orb's glass, or nothing for a key that is not an orb of [orbs] — «любая сфера», an empty
  * choice — which then keeps the list's own spacing.
  */
 fun orbArt(orbs: List<Item>): @Composable (String, Dp) -> Unit = { key, size ->
@@ -70,10 +70,8 @@ private val art = mapOf(
     Orb.ELDER_ORB to OrbArt(0xFFB080E0, Emblem.TENTACLE, rays = true),
     Orb.ABYSS_ORB to OrbArt(0xFF8A4FE8, Emblem.RIFT, rays = true),
     Orb.ORB_OF_REGRET to OrbArt(0xFF9AA8B8, Emblem.MOON),
-    // 3.36.0: the unveiling; server 1.65.0: one Orb of Quality for every kind of quality, its catalysts are omens now.
     Orb.UNVEILING_ORB to OrbArt(0xFFC0A0F0, Emblem.EYE, rays = true),
     Orb.QUALITY_ORB to OrbArt(0xFFD8A070, Emblem.FLAME),
-    // 4.6.2: Сфера прозрения раскрывает судьбоносную строку - золото Предначертания
     Orb.INSIGHT_ORB to OrbArt(0xFFF0C76A, Emblem.EYE, rays = true),
 )
 

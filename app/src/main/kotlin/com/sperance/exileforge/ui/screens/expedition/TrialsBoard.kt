@@ -52,7 +52,7 @@ import com.sperance.exileforge.ui.screens.hero.compactCount
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Испытания (4.0.0): страница «Похода» - доска читает героя, как прежде на странице «Развития». */
+/** Испытания: страница «Похода» - доска читает героя сама. */
 @Composable fun TrialsPage() {
     val vm = koinViewModel<ExpeditionViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
@@ -62,9 +62,12 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * «Испытания» (3.49.0; 4.0.0 - страница «Похода», макет «Скрижали»): ключи под рукой, незавершённое испытание и три режима
+ * «Испытания» (страница «Похода»): ключи под рукой, незавершённое испытание и три режима
  * плитами [TrialMode] - Разлом недели, Башня и Босс-раш; плита раскрывается касанием, внутри - вход и подробности.
- * Тестировщику (4.0.0) замки прогресса не мешают: вход в Разлом, зачистка региона и ступень раша открыты.
+ * Тестировщику замки прогресса не мешают: вход в Разлом, зачистка региона и ступень раша открыты.
+ *
+ * Разлом недели - своя доска на весь экран. Покорённая башня печать не тратит. Закрытый раш не показывается (тестировщику открыты все
+ * регионы); ключ не куётся, пока ни один раш не открыт; ближайший закрытый регион - один, с тем, что осталось зачистить.
  */
 @Composable fun TrialsBoard(game: GameUi, vm: ExpeditionViewModel, modifier: Modifier = Modifier) {
     val index = game.index ?: return
@@ -91,7 +94,6 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         val toggle = { mode: TrialMode -> opened = mode.takeIf { it != opened } }
-        // Разлом недели (3.96.0): своя доска на весь экран
         rules.rift?.let { riftRules ->
             val left = rift.board?.free
             TrialModeCard(TrialMode.RIFT, ui("trials.mode_rift_note"), left?.let { ui("trials.chip_free", it, riftRules.free) }, opened == TrialMode.RIFT, 0f, { toggle(TrialMode.RIFT) }) {
@@ -102,7 +104,6 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         val tower = rules.tower
-        // Покорена (3.71.0): после последнего этажа входить некуда, печать не тратится
         val conquered = tower.start(trials.towerBest) > tower.maxFloor
         val towerNote = if (conquered) ui("trials.tower_conquered", tower.maxFloor) else ui("trials.tower_record", trials.towerBest, tower.start(trials.towerBest))
         TrialModeCard(TrialMode.TOWER, towerNote, ui("trials.chip_seals", seals), opened == TrialMode.TOWER, 1f / 3, { toggle(TrialMode.TOWER) }) {
@@ -113,7 +114,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 ),
             )
             if (!conquered) {
-                // Строки десятков (3.96.0): выбранные героем, по ним идёт вход
                 tower.mods(tower.start(trials.towerBest) + tower.modEvery - 1, trials.towerPicks).forEach {
                     Text(SkillText.statLine(it.stat, it.op, it.value), color = LifeRed, style = MaterialTheme.typography.labelSmall)
                 }
@@ -123,11 +123,9 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         val cleared = hero.campaign.cleared
-        // Раш, ещё закрытый, не показывается (3.67.0); тестировщику открыты все регионы
         val unlocked = index.campaign.regions.filter { free || RushPlan.open(it, cleared) }
         TrialModeCard(TrialMode.RUSH, ui("trials.mode_rush_note"), ui("trials.chip_keys", keys), opened == TrialMode.RUSH, 2f / 3, { toggle(TrialMode.RUSH) }) {
             MutedText(ui("trials.rush_hint", rules.rush.key, rules.rush.life.toInt(), rules.rush.seconds.toInt()))
-            // Ковка (3.94.0): пока ни один раш не открыт, ключ ковать незачем - вместо кнопки ближайший регион и сколько зон осталось
             if (unlocked.isEmpty()) {
                 index.campaign.regions.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
                     Text(ui("trials.rush_locked", regionTitle(near.code), near.zones.count { it.code !in cleared }), color = LifeRed, style = MaterialTheme.typography.bodySmall)
@@ -139,7 +137,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 if (crests < rules.rush.key) MutedText(ui("trials.key_short", rules.rush.key - crests), style = MaterialTheme.typography.labelSmall)
             }
             unlocked.forEach { region -> RushRegion(game, vm, rules, region, keys, free) }
-            // Ближайший закрытый регион (макет «Испытания боссов», вариант A) - один, с тем, что осталось зачистить; дальние не рисуются
             index.campaign.regions.filterNot { it in unlocked }.minByOrNull { region -> region.zones.count { it.code !in cleared } }?.let { near ->
                 LockedRegion(near, near.zones.count { it.code !in cleared })
             }
@@ -148,16 +145,17 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Регион раша (макет «Испытания боссов», вариант A): имя и «зачищен», боссы и лучшее время, лента ступеней - все пройденные
+ * Регион раша: имя и «зачищен», боссы и лучшее время, лента ступеней - все пройденные
  * (зелёные) и ровно одна следующая (золотая, выбрана по умолчанию); дальше ступени не рисуются. Под лентой - сила и награда
- * выбранной ступени и «Войти» с числом ключей. Тестировщику (4.0.0, `ProgressGate`) лента показывает все ступени.
+ * выбранной ступени и «Войти» с числом ключей. Тестировщику (`ProgressGate`) лента показывает все ступени.
+ *
+ * Следующая ступень - первая непройденная, её и выбирают по умолчанию.
  */
 @Composable private fun RushRegion(game: GameUi, vm: ExpeditionViewModel, rules: TrialRules, region: Region, keys: Long, free: Boolean) {
     val trials = game.hero?.campaign?.trials ?: return
     val idle = !game.busy
     val best = trials.rushBest[region.code]
     val count = rules.rush.tierCount
-    // Пройдено ступеней; следующая - первая непройденная, её и выбирают по умолчанию (4.2.0), у тестировщика тоже
     val passed = (trials.rushTiers[region.code] ?: 0).coerceIn(0, count)
     val lowest = passed.coerceAtMost(count - 1)
     val shown = if (free) count else minOf(passed + 1, count)
@@ -198,7 +196,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 Text(compactCount(keys))
             }
         }
-        // Причина у неактивной кнопки (3.94.0)
         when {
             trials.run != null -> MutedText(ui("trials.rush_busy"), style = MaterialTheme.typography.labelSmall)
             keys < 1 -> MutedText(ui("trials.rush_no_key"), style = MaterialTheme.typography.labelSmall)
@@ -271,7 +268,7 @@ private fun rushTierText(tier: RushTier): String = listOfNotNull(
 
 private const val KEYS_PER_ROW = 4
 
-/** Номер ступени раша римскими цифрами (3.96.0). */
+/** Номер ступени раша римскими цифрами. */
 internal fun roman(n: Int): String = listOf(10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I").fold(n to "") { (left, out), (value, sign) ->
     (left % value) to (out + sign.repeat(left / value))
 }.second

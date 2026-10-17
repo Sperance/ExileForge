@@ -38,14 +38,12 @@ class CharacterActions(
     private val warmupActions: WarmupActions get() = lazyWarmup.value
 
     /**
-     * The account's heroes; [autoEnter] skips the menu for a single hero straight after a sign-in. Аккаунт без Предначертания
-     * (4.6.0) сначала выбирает его - список героев ждёт выбора.
+     * The account's heroes; [autoEnter] skips the menu for a single hero straight after a sign-in. Аккаунт без Предначертания сначала выбирает его - список героев ждёт выбора.
      */
     suspend fun readCharacters(autoEnter: Boolean = false) {
         run {
             if (!fated()) return
             val owner = sessions.state.value.profile?.id.orEmpty()
-            // Герои вместе с санкциями (3.94.1): карточки сразу знают, кто под баном или в корзине
             val roster = if (owner.isBlank()) HeroRoster() else api.hero.rosterOf(owner)
             val characters = roster.heroes
             val sanctions = roster.sanctions
@@ -59,7 +57,7 @@ class CharacterActions(
     }
 
     /**
-     * Предначертание аккаунта (4.6.0) до списка героев - один путь нового и прежнего аккаунта: выбранное ложится в профиль,
+     * Предначертание аккаунта до списка героев - один путь нового и прежнего аккаунта: выбранное ложится в профиль,
      * невыбранное открывает экран выбора с тремя дарами сервера. True - выбрано.
      */
     private suspend fun fated(): Boolean {
@@ -72,13 +70,13 @@ class CharacterActions(
         return false
     }
 
-    /** Три дара заново (4.6.0): экран выбора открыт, а прочитать их не вышло. */
+    /** Три дара заново: экран выбора открыт, а прочитать их не вышло. */
     fun refreshFate() {
         run { read(Reads.CHARACTERS) { readCharacters() } }
     }
 
     /**
-     * Выбор Предначертания [code] (4.6.0) - раз и навсегда; ответ - выбранный дар, экран играет вспышку и уходит к героям
+     * Выбор Предначертания [code] - раз и навсегда; ответ - выбранный дар, экран играет вспышку и уходит к героям
      * ([fateAccepted]). Отказ `FT_001` - дар уже выбран (другим устройством): читается заново.
      */
     fun chooseFate(code: String) {
@@ -94,7 +92,7 @@ class CharacterActions(
         }
     }
 
-    /** Дар принят и вспышка сыграна (4.6.0): к героям - у нового аккаунта сразу форма создания. */
+    /** Дар принят и вспышка сыграна: к героям - у нового аккаунта сразу форма создания. */
     fun fateAccepted() {
         run {
             if (sessions.state.value.profile?.fate == null) return
@@ -107,6 +105,7 @@ class CharacterActions(
         run { task(touches = setOf(Reads.HERO)) { entered(id) } }
     }
 
+    /** Части героя с устройства: чтение героя просит лишь сдвинутое; герой запоминается для следующего запуска. */
     private suspend fun entered(id: String) {
         run {
             heroes.select(id)
@@ -115,9 +114,7 @@ class CharacterActions(
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Hero)
             warmupActions.clear()
             heroSync.forget()
-            // Части героя с устройства (4.12.x, NET-6): чтение героя просит лишь сдвинутое, а не всего героя
             heroSync.seed(id)
-            // The hero the next launch opens straight into (3.30.0).
             store.saveLastHero(sessions.state.value.server, id)
             loader.ensureContent(fresh = true)
             trace.step(StartStage.SESSION, "start.step.hero") { heroSync.readHero() }
@@ -145,7 +142,7 @@ class CharacterActions(
     }
 
     /**
-     * Сервер отказал активному герою из-за санкции (`CH_034`, 3.88.0; id санкции - 3.88.5): когда команда, встретившая отказ,
+     * Сервер отказал активному герою из-за санкции (`CH_034` с id санкции): когда команда, встретившая отказ,
      * кончится, игрок уходит к выбору героя, а карточка героя там говорит, кто, за что и до когда. Отказ про другого героя ничего не меняет.
      */
     fun blocked(heroId: String, failure: ApiFailure) {
@@ -157,7 +154,11 @@ class CharacterActions(
         }
     }
 
-    /** Create a hero and start playing it; the class is chosen here and nowhere else. */
+    /**
+     * Create a hero and start playing it; the class is chosen here and nowhere else.
+     *
+     * Без Предначертания герой не создаётся (`CH_042`): сначала выбор.
+     */
     fun create(name: String, heroClass: String) {
         run {
             task(writing = true, touches = setOf(Reads.CHARACTERS, Reads.HERO)) {
@@ -169,7 +170,6 @@ class CharacterActions(
                 val created = try {
                     api.hero.create(owner, name, "", heroClass)
                 } catch (e: ApiFailure) {
-                    // Без Предначертания герой не создаётся (4.6.0, `CH_042`): сначала выбор
                     if (e.code == NO_FATE) {
                         sessions.update { it.copy(profile = it.profile?.copy(fate = null)) }
                         fated()
@@ -183,23 +183,23 @@ class CharacterActions(
     }
 
     /**
-     * Последствия самоудаления героя [id] (4.5.1) - гильдия, лоты, срок корзины - для листа подтверждения; ответ отдаётся
+     * Последствия самоудаления героя [id] - гильдия, лоты, срок корзины - для листа подтверждения; ответ отдаётся
      * [onPreview], пока лист открыт.
      */
     fun deletionPreview(id: String, onPreview: (DeletionPreview) -> Unit) {
         read(Reads.DELETION, restart = true) { onPreview(api.hero.deletionPreview(id)) }
     }
 
-    /** Свой герой [id] - в корзину на `selfDeleteDays` дней (4.5.1); [name] - его имя, введённое для подтверждения. */
+    /** Свой герой [id] - в корзину на `selfDeleteDays` дней; [name] - его имя, введённое для подтверждения. */
     fun markDeletion(id: String, name: String) = rosterCommand { api.hero.markDeletion(id, name) }
 
-    /** Вернуть героя [id] из самоудаления (4.5.1): занимает место аккаунта снова. */
+    /** Вернуть героя [id] из самоудаления: занимает место аккаунта снова. */
     fun restore(id: String) = rosterCommand { api.hero.restoreDeletion(id) }
 
-    /** Стереть героя [id] сразу и навсегда (4.5.1); [name] - его имя, введённое ещё раз. */
+    /** Стереть героя [id] сразу и навсегда; [name] - его имя, введённое ещё раз. */
     fun erase(id: String, name: String) = rosterCommand { api.hero.eraseDeletion(id, name) }
 
-    /** Команда над героями аккаунта, что отвечает их списком с санкциями (4.5.1): меню берёт ответ как есть. */
+    /** Команда над героями аккаунта, что отвечает их списком с санкциями: меню берёт ответ как есть. */
     private fun rosterCommand(call: suspend () -> HeroRoster) {
         task(writing = true, touches = setOf(Reads.CHARACTERS)) {
             val roster = call()
@@ -213,7 +213,7 @@ class CharacterActions(
     }
 
     private companion object {
-        /** Отказ сервера: аккаунт ещё не выбрал Предначертание (4.6.0). */
+        /** Отказ сервера: аккаунт ещё не выбрал Предначертание. */
         const val NO_FATE = "CH_042"
     }
 

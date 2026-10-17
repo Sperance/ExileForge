@@ -42,11 +42,11 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Отчёты для модерации (3.73.0; 0.14.2 - макет «Отчёты у модерации», вариант A «список-строки»): поиск по тексту, «#номеру» и
+ * Отчёты для модерации: поиск по тексту, «#номеру» и
  * логину, чипы очереди со счётом ([Queue]) и вида; строка на отчёт - точка судьбы, текст, автор и метки; нажатие раскрывает
  * отчёт в списке: контекст, ошибки сети, действия, герой, переписка Issue и действия одной строкой. «Рассмотрения» нет: слово
  * модерации к новому отчёту отправляет его в GitHub сразу. Любой чип, и уже выбранный, и потягивание страницы перечитывают
- * список с сервера (0.14.4, #33).
+ * список с сервера.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>()
@@ -93,7 +93,7 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Очередь модерации (0.14.2): новые ждут решения, в GitHub - Issue открыт или ещё выгружается, закрытые, отклонённые. */
+/** Очередь модерации: новые ждут решения, в GitHub - Issue открыт или ещё выгружается, закрытые, отклонённые. */
 private enum class Queue(val key: String) {
     NEW("feedback.queue.new"),
     GITHUB("feedback.queue.github"),
@@ -195,7 +195,7 @@ private fun rowMeta(entry: AdminReport): String {
 }
 
 /**
- * Решение по новому отчёту (0.14.2): слово модерации и «В GitHub» (Issue со словом первым комментарием) или «Отклонить» (слово -
+ * Решение по новому отчёту: слово модерации и «В GitHub» (Issue со словом первым комментарием) или «Отклонить» (слово -
  * причина автору); апелляция и жалоба не уходят наружу - у них «Принять» вместо «В GitHub».
  */
 @Composable private fun NewReportActions(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport, onDelete: () -> Unit) {
@@ -223,14 +223,14 @@ private fun rowMeta(entry: AdminReport): String {
     }
 }
 
-/** Виды, что уходят в GitHub (0.14.2, как на сервере): ошибка и падение. */
+/** Виды, что уходят в GitHub (как на сервере): ошибка и падение. */
 private val FeedbackKind.exported: Boolean get() = this == FeedbackKind.BUG || this == FeedbackKind.CRASH
 
 private const val REASON = 400
 private const val SEARCH = 60
 
 /**
- * Ведение Issue из игры (0.14.2): слово модерации (уходит комментарием) и действие - ответить, закрыть
+ * Ведение Issue из игры: слово модерации (уходит комментарием) и действие - ответить, закрыть
  * исправленным, отказом или дублем (с номером оригинала). Судьба приходит из GitHub сразу.
  */
 @Composable private fun IssueSteer(account: AccountUi, vm: FeedbackViewModel, id: String) {
@@ -263,13 +263,12 @@ private const val SEARCH = 60
 private const val DUPLICATE_DIGITS = 6
 
 /**
- * The administrator's letter (3.73.0): to one account by login or, blank, to every account; a subject, a text, and what it
+ * The administrator's letter: to one account by login or, blank, to every account; a subject, a text, and what it
  * carries — gold, stacks of any item, things of any template at a chosen rarity — built line by line.
  */
 @Composable internal fun MailComposePage(account: AccountUi) {
     val index = account.index ?: return
     val vm = koinViewModel<FeedbackViewModel>()
-    // Письмо из карточки игрока (4.5.1): адресат уже вписан
     var login by remember { mutableStateOf(vm.takeMailTo()) }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }

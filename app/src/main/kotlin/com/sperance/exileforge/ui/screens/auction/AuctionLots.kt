@@ -61,12 +61,16 @@ import com.sperance.exileforge.ui.icons.orbArt
 import com.sperance.exileforge.ui.screens.hero.StackIcon
 import com.sperance.exileforge.ui.theme.*
 
-/** Свои лоты и история сделок (3.80.24). */
-/** The hero's own lots that are still on sale, and those whose time ran out and are on their way back by mail; withdrawn and sold lots leave this list. */
+/** Свои лоты и история сделок. */
+/**
+ * The hero's own lots that are still on sale, and those whose time ran out and are on their way back by mail; withdrawn and sold lots leave this list.
+ *
+ * Места лотов одинаковы у всех героев и не покупаются. Продление - в последний день, не больше `auction.extendMax` раз, каждое за плату
+ * выставления против кошелька; истёкший лот уже возвращается почтой.
+ */
 @Composable internal fun ColumnScope.MyLotsTab(game: GameUi, market: Market, vm: MarketViewModel) {
     var openLot by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        // Lot places (3.47.0): the same for every hero, never bought.
         market.slots?.let { slots ->
             item {
                 ForgePanel {
@@ -86,22 +90,18 @@ import com.sperance.exileforge.ui.theme.*
         }
     }
     market.ownLots.firstOrNull { it.id == openLot }?.let { lot ->
-        // On its last day the author may give it another week (3.79.0), as often as they like.
-        // Продление (ECON-05): не больше `auction.extendMax` раз, каждое - за плату выставления
         val extendable = game.index?.rules?.auction?.let { lot.extendable(it) } == true
         val fee = game.index?.let { AuctionFees.listing(it, game.heroLevel, lot.priceOrb, lot.price) } ?: 0L
         LotSheet(
             game,
             lot,
             action = ui("auction.withdraw"),
-            // Срок вышел - лот уже возвращается почтой: снимать нечего
             enabled = !game.busy && lot.onSale,
             note = lotExpiry(lot),
             onDismiss = { openLot = null },
             extra = if (extendable) {
                 (
                     {
-                        // Плата продления против кошелька (0.14.5, #42)
                         val bill = game.goldBill(fee)
                         bill?.let { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { GoldCost(it) } }
                         ForgeOutlinedButton(enabled = !game.busy && bill?.affordable == true, onClick = {
@@ -122,12 +122,14 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Which deals the history shows (3.73.0). */
+/** Which deals the history shows. */
 internal enum class DealFilter { ALL, SOLD, BOUGHT }
 
 /**
- * The hero's deals of the last days (3.73.0): what they sold and to whom, what they bought and from whom, the copy as it
- * changed hands a tap away; on top - две свёрнутые таблички «Получено» и «Потрачено» ([DealLedger], 4.3.0).
+ * The hero's deals of the last days: what they sold and to whom, what they bought and from whom, the copy as it
+ * changed hands a tap away; on top - две свёрнутые таблички «Получено» и «Потрачено» ([DealLedger]).
+ *
+ * Стопку и сферу открывает общая карточка, товар - карточка лота.
  */
 @Composable internal fun ColumnScope.HistoryTab(game: GameUi, market: Market) {
     var filter by remember { mutableStateOf(DealFilter.ALL) }
@@ -136,7 +138,6 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
     val deals = market.history.map { it.deal }
     val ledger = remember(deals, heroId) { DealLedger.of(deals, heroId) }
     var opened by remember { mutableStateOf<DealEntry?>(null) }
-    // Стопку и сферу открывает общая карточка (4.3.2), товар - карточка лота
     val inspect = rememberInspect()
     val open = { entry: DealEntry ->
         if (entry is DealEntry.Stack) {
@@ -173,7 +174,6 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
     shown.firstOrNull { it.id == openLot }?.let { deal ->
         LotSheet(game, deal, action = null, enabled = false, note = dealMark(deal, heroId), onDismiss = { openLot = null })
     }
-    // Строка табличек открывает своё (4.3.0): товар - карточку лота, стопку и сферу - их лист
     when (val entry = opened) {
         is DealEntry.Goods -> LotSheet(game, entry.lot, action = null, enabled = false, note = dealMark(entry.lot, heroId), onDismiss = { opened = null })
         is DealEntry.Stack, is DealEntry.Gold, null -> Unit
@@ -181,7 +181,7 @@ internal enum class DealFilter { ALL, SOLD, BOUGHT }
 }
 
 /**
- * Табличка итога истории (4.3.0): «Получено» или «Потрачено», свёрнутая, в заголовке - сколько строк. Строка - значок, название и
+ * Табличка итога истории: «Получено» или «Потрачено», свёрнутая, в заголовке - сколько строк. Строка - значок, название и
  * количество (стопки и валюта сложены); нажатие на стопку, сферу или вещь - [onOpen]. Пустой таблички нет.
  */
 @Composable private fun DealTable(game: GameUi, title: String, entries: List<DealEntry>, onOpen: (DealEntry) -> Unit) {

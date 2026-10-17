@@ -46,13 +46,12 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/*
- * Сюжет (4.2.0): не раздел доски заданий, а свой экран «Похода», открытый с первого уровня. На карте мира - карточка текущей
- * главы (цель, прогресс, награда); нажатие открывает все главы. «Девять тронов»: у главы - вступление, за её финал - эпилог и
- * выбор закона трона ([LawChoice]), взятые законы - под главой.
+/**
+ * Весь сюжет: глава, её шаги - пройденные, текущий заданием и будущие; «назад» - на карту «Похода».
+ *
+ * Сюжет - свой экран «Похода», открытый с первого уровня. «Девять тронов»: у главы вступление, за её финал - эпилог и выбор закона трона
+ * ([LawChoice]), взятые законы - под главой.
  */
-
-/** Весь сюжет: глава, её шаги - пройденные, текущий заданием и будущие; «назад» - на карту «Похода». */
 @Composable fun StoryScreen() {
     val vm = koinViewModel<QuestViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
@@ -60,7 +59,6 @@ import org.koin.compose.viewmodel.koinViewModel
     val activity by vm.activity.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) { if (game.heroId.isNotBlank()) vm.open() }
     val board = quests.board
-    // Цепочка «назад» (4.4.x): «← Поход › Сюжет»
     BackTrailHost(ui("expedition.title")) {
         TrailLevel(ui("story.title"), onBack = vm::back) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -72,10 +70,12 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Карточка текущей главы над картой мира и сверху экрана «Задания» (4.3.0) - одна на оба места: глава, цель шага, прогресс и
- * награда; нажатие - весь сюжет. Сюжет пройден или доска не прочитана - карточки нет. С 4.4.x шеврон сворачивает её в строку
+ * Карточка текущей главы над картой мира и сверху экрана «Задания» - одна на оба места: глава, цель шага, прогресс и
+ * награда; нажатие - весь сюжет. Сюжет пройден или доска не прочитана - карточки нет. Шеврон сворачивает её в строку
  * «глава · задание» с тонкой полосой прогресса ([fold] - из настроек устройства); новый шаг сюжета или награда, что стала ждать,
  * раскрывают её сами ([onSeen] сообщает, какой шаг карточка показала).
+ *
+ * Трон пройденной главы ждёт выбора закона - карточка зовёт к нему раньше шага.
  */
 @Composable fun StoryCard(
     game: GameUi,
@@ -90,7 +90,6 @@ import org.koin.compose.viewmodel.koinViewModel
     val index = game.index ?: return
     board ?: return
     val shape = RoundedCornerShape(12.dp)
-    // Трон пройденной главы ждёт выбора закона - карточка зовёт к нему раньше шага, даже когда сюжет уже пройден
     if (ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty() || StoryBooks(index).pending(board.chapter, board.books).isNotEmpty()) {
         Row(
             modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = GoldBright).clickable(role = Role.Button, onClick = onOpen).padding(12.dp),
@@ -155,7 +154,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Кнопка сюжета над картой «Похода» (4.6.5, макет «Сюжет в Походе», вариант A): том в кольце прогресса шага, точка `Vital` -
+ * Кнопка сюжета над картой «Похода»: том в кольце прогресса шага, точка `Vital` -
  * награда ждёт, свечение - трон ждёт закона. Нажатие - лист с текущим шагом: глава, цель, прогресс, награда и «Весь сюжет».
  * Сюжет пройден и закон выбран - кнопки нет.
  */
@@ -202,6 +201,8 @@ private val FOLDED_HEIGHT = 36.dp
 /**
  * The story: a throne waiting for its law first (the chapter's epilogue and the two laws), then the chapter - its name, its
  * introduction, its steps behind and ahead, the step at hand as a quest, - and the laws already taken.
+ *
+ * Книга за пройденную главу - после закона трона, по одной на главу.
  */
 private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
     val index = game.index ?: return
@@ -211,7 +212,6 @@ private fun LazyListScope.story(game: GameUi, vm: QuestViewModel, busy: Boolean,
     laws.pending(board.chapter, taken).forEach { throne ->
         item(key = "law-${throne.region}") { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { LawChoice(index, throne, busy, vm::law) } }
     }
-    // Книга за пройденную главу (0.14.0, SKILL-02): после закона трона, по одной на главу
     val hero = game.hero
     if (hero != null) {
         StoryBooks(index).pending(board.chapter, board.books).forEach { chapter ->

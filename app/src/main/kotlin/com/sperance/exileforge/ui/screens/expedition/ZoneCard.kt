@@ -72,11 +72,11 @@ internal data class StashMap(val item: ItemInstance, val view: ItemView)
 /** A line of the picked map: its sentence, what it is, and what it pays if it is a harm. */
 internal data class MapLine(val text: String, val kind: MapLineKind, val risk: Double)
 
-/** The stash's loose maps, zone by zone: the world map marks each token with how many wait for it. */
-
 /**
- * How many maps of each zone the stash holds. Read off the items' zone alone (3.76.0): building a full view of every
+ * How many maps of each zone the stash holds. Read off the items' zone alone: building a full view of every
  * thing in the stash on each opening of the tab froze the tap.
+ *
+ * Карты тайника по зонам: карта мира метит жетон их числом.
  */
 fun stashCounts(game: GameUi): Map<String, Int> = game.hero?.stash.orEmpty().filter { it.mapZone.isNotEmpty() }.groupingBy { it.mapZone.value }.eachCount()
 
@@ -84,18 +84,19 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
     .filter { it.mapZone.isNotEmpty() }.mapNotNull { item -> game.view(item)?.takeIf { it.slot == Slot.MAP }?.let { StashMap(item, it) } }
 
 /**
- * A zone's card on the world map (2.76.0, in place of the launch window): it rises over the map's
+ * A zone's card on the world map (in place of the launch window): it rises over the map's
  * foot when a token is tapped. It names the zone, its level, biome and region and whether it is
  * passed; for a zone the hero may enter, its guardian — waiting, or slain until its time — the atlas
  * points the zone has given, the stash's maps of it with what the picked one pays, line by line, and
  * «Войти в портал». A «???» zone says only whose guardian opens it. The rules and the content are the
  * index's; the windows of the zone — its guardian's return — are the hero's own campaign.
+ *
+ * Запертая карта хранится нарочно: трата на заход спрашивается. Тестировщик начинает заход сразу боем со стражем.
  */
 @Composable fun ZoneCard(game: GameUi, vm: ExpeditionViewModel, world: WorldMap, launch: MapLaunch, forced: Set<MapMechanic>, modifier: Modifier = Modifier) {
     val token = world.token(launch.mapCode) ?: return
     val index = game.index ?: return
     val zone = token.zone
-    // A locked map is kept on purpose: spending it on a run is asked about first, for either launch.
     var askLocked by remember { mutableStateOf<(() -> Unit)?>(null) }
     val launchGuarded: (() -> Unit) -> Unit = { go -> if (stashMaps(game).any { it.item.id == launch.picked && it.item.locked }) askLocked = go else go() }
     askLocked?.let { go ->
@@ -130,7 +131,6 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 return@Column
             }
             MutedText(mapDescription(zone.code.value), style = MaterialTheme.typography.bodySmall)
-            // How many times this hero passed the zone (3.81.0, server 1.76.0): its guardian slain.
             val passed = game.hero?.campaign?.completions?.get(zone.code.value) ?: 0
             Text(if (passed > 0) ui("expedition.completions", passed) else ui("expedition.completions_none"), color = Parchment, style = MaterialTheme.typography.labelMedium)
             index.monster(zone.boss)?.let { Guardian(game, zone, it) }
@@ -147,7 +147,6 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
                 Text(ui("expedition.launch_go"), style = MaterialTheme.typography.titleMedium)
             }
             if (game.isTester) TesterMechanics(vm, forced)
-            // Тестировщик и выше (3.92.0): заход начинается сразу боем со стражем
             if (game.isTester) {
                 ForgeOutlinedButton(
                     enabled = game.hero != null && !game.busy,
@@ -161,7 +160,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
 }
 
 /**
- * Механики тестировщика (4.0.1): что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится
+ * Механики тестировщика: что поставить на новый заход насильно - каждая переключателем и «Все» разом. Выбор держится
  * между зонами; открытый заход с другим выбором начинается заново.
  */
 @Composable private fun TesterMechanics(vm: ExpeditionViewModel, forced: Set<MapMechanic>) {
@@ -179,7 +178,7 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
 }
 
 /**
- * Автопроход (3.2.0, лента боёв с 3.94.0): когда страж зоны пал, её карту можно пройти самой - стаи волнами, сундуки между
+ * Автопроход (лента боёв): когда страж зоны пал, её карту можно пройти самой - стаи волнами, сундуки между
  * ними, страж последним. Алтари, Бездна, Ваал и торговец пропускаются; лечения между боями нет.
  */
 @Composable internal fun AutoLaunch(game: GameUi, vm: ExpeditionViewModel, zone: String, launch: MapLaunch, guarded: (() -> Unit) -> Unit) {
@@ -230,13 +229,14 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
 
 /**
  * The zone's guardian: its bust and name, and whether it waits by the exit or lies slain until its
- * time — the hero's campaign says when it is back; summoning it early is the map's own bar's (3.0.0).
+ * time — the hero's campaign says when it is back; summoning it early is the map's own bar's.
+ *
+ * Страж открывает свой лист: умения и фазы, каждое своей справкой.
  */
 @Composable internal fun Guardian(game: GameUi, zone: Zone, boss: Monster) {
     val campaign = game.hero?.campaign
     val back = campaign?.takeIf { it.bossDown(zone.code, System.currentTimeMillis()) }?.bosses?.get(zone.code.value)
     val shape = RoundedCornerShape(12.dp)
-    // Страж открывает свой лист (3.92.0): умения и фазы, каждое - своей справкой
     var open by remember { mutableStateOf(false) }
     if (open) GuardianSheet(game, zone, boss) { open = false }
     Row(
@@ -256,7 +256,11 @@ internal fun stashMaps(game: GameUi): List<StashMap> = game.hero?.stash.orEmpty(
     }
 }
 
-/** Лист стража зоны (3.92.0): уровень и здоровье, умения и фазы чипами - каждый открывает свою справку. */
+/**
+ * Лист стража зоны: уровень и здоровье, умения и фазы чипами - каждый открывает свою справку.
+ *
+ * Хаос и яд идут мимо энергощита - лист говорит это до боя.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: () -> Unit) {
@@ -281,7 +285,6 @@ private fun GuardianSheet(game: GameUi, zone: Zone, boss: Monster, onDismiss: ()
                 val marks = steps.map { it.at }.distinct().joinToString("/") { "${it.toInt()}" }
                 LoreChip(ui("challenge.phase", com.sperance.exileforge.core.display.phaseTitle(code), marks), Elder) { lore?.invoke(Lore.Phase(code, name)) }
             }
-            // Чем он бьёт и что это значит (3.95.2): хаос и яд идут мимо энергощита - лист говорит это до боя
             val terms = remember(body) { com.sperance.exileforge.core.display.Term.ofStats(body.stats.filterValues { it != 0.0 }.keys) }
             TermsBlock(terms, rules)
         }

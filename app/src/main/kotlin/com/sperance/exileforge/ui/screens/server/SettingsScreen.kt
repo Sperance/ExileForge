@@ -64,7 +64,7 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
- * Настройки поверх забега (4.7.0): тот же экран во весь экран над походом, Разломом или испытанием - стек экранов под ними
+ * Настройки поверх забега: тот же экран во весь экран над походом, Разломом или испытанием - стек экранов под ними
  * не трогается; «Назад» и системный «назад» закрывают его.
  */
 @Composable internal fun SettingsOverlay(onClose: () -> Unit) {
@@ -75,15 +75,17 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
- * «Настройки» (3.77.0, variant A of three mockups, «Список с группами»): every setting on one screen in groups — the general
+ * «Настройки» (variant A of three mockups, «Список с группами»): every setting on one screen in groups — the general
  * ones, the fight, the interface, the vibration — with its switch in its row; the developers' tools at the foot for a
  * tester or an administrator only. «Back» returns to the tab the settings were opened over.
+ *
+ * Страница, открытая прямо с экрана «Аккаунт», закрывает настройки целиком по «Назад»; страница, что умеет перечитываться, объявляет это
+ * сама.
  */
 @Composable internal fun SettingsScreen(direct: String? = null, onClose: (() -> Unit)? = null) {
     val account by koinViewModel<ServerViewModel>().ui.collectAsStateWithLifecycle()
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
-    // Страница, открытая прямо с экрана «Аккаунт» (3.94.0), приходит маршрутом: «Назад» с неё закрывает настройки целиком
     val opened = remember(direct) { SettingsPage.entries.firstOrNull { it.name == direct } }
     var page by rememberSaveable(direct) { mutableStateOf(opened) }
     val open = page
@@ -91,7 +93,6 @@ internal enum class SettingsPage(val title: String) {
         BackRow(ui(if (open == null || opened != null) "common.back" else "settings.title")) {
             if (open == null || opened != null) onClose?.invoke() ?: shell.closeSettings() else page = null
         }
-        // Страница, что умеет перечитываться (отчёты у модерации), объявляет это сама - потягивание экрана её перечитает (0.14.4)
         RefreshHost(rememberPageRefresh(), Modifier.fillMaxSize()) {
             Column(
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 8.dp),
@@ -166,19 +167,20 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
- * Разделы персонала (3.94.0): модерация модератору и администратору, инструменты разработчика тестировщику и администратору.
+ * Разделы персонала: модерация модератору и администратору, инструменты разработчика тестировщику и администратору.
  * Живут на экране «Аккаунт», а не в настройках; каждая строка открывает свою страницу настроек напрямую.
+ *
+ * Модерация - модератору и администратору; инструменты разработчика - тестировщику и администратору; выключенные инструменты администратора
+ * прячут свою вкладку, поэтому путь назад живёт не только в ней.
  */
 @Composable internal fun StaffGroups(account: AccountUi, onPage: (SettingsPage) -> Unit) {
     val sessionModel: SessionViewModel = koinViewModel()
-    // Модерация (3.88.5): модератору и администратору - баны, корзина, журнал и отчёты игроков.
     if (account.isModerator) {
         RowGroup(ui("moderation.group")) {
             AccountRow(Icons.Outlined.Gavel, ui("moderation.title"), enabled = !account.busy) { onPage(SettingsPage.MODERATION) }
             AccountRow(Icons.Outlined.BugReport, ui("feedback.admin"), enabled = !account.busy) { onPage(SettingsPage.FEEDBACK) }
         }
     }
-    // The developers' tools (3.77.0): moved here from the account, seen by a tester or an administrator alone.
     if (account.isTester || account.isAdmin) {
         RowGroup(ui("settings.developers")) {
             AccountRow(
@@ -190,7 +192,6 @@ internal enum class SettingsPage(val title: String) {
             AccountRow(Icons.Outlined.Info, ui("account.client"), value = "API $API_REVISION") { onPage(SettingsPage.CLIENT) }
             if (account.grants) AccountRow(Icons.Outlined.Science, ui("tester.window"), enabled = !account.busy) { onPage(SettingsPage.TESTING) }
             if (account.isAdmin) AccountRow(Icons.Outlined.Mail, ui("mail.compose"), enabled = !account.busy) { onPage(SettingsPage.MAIL) }
-            // Turning the administrator's tools off hides their tab, so the way back cannot live only inside it.
             if (account.isModerator && !account.adminTools) {
                 AccountRow(Icons.Outlined.AdminPanelSettings, ui("account.tools_back"), enabled = !account.busy, chevron = false) { sessionModel.mode(AppMode.ADMIN) }
             }
@@ -199,7 +200,7 @@ internal enum class SettingsPage(val title: String) {
 }
 
 /**
- * «Что нового» (3.93.0): заметки пяти последних версий с GitHub (4.0.0) - одинаковые карточки [ReleaseCard] (4.2.0),
+ * «Что нового»: заметки пяти последних версий с GitHub - одинаковые карточки [ReleaseCard],
  * свежая раскрыта, прочие раскрываются касанием.
  */
 @Composable private fun WhatsNewPage() {
@@ -219,7 +220,7 @@ internal enum class SettingsPage(val title: String) {
     }
 }
 
-/** Версия сборки (3.91.1): проверка идёт сама после загрузки и возврата в игру; «Обновить» - только когда есть новая. */
+/** Версия сборки: проверка идёт сама после загрузки и возврата в игру; «Обновить» - только когда есть новая. */
 @Composable private fun UpdateRow() {
     val updates = LocalUpdates.current ?: return
     val state by updates.state.collectAsStateWithLifecycle()

@@ -53,10 +53,13 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Карта Разлома «Восхождение» (4.0.1, утверждена владельцем по макету): все акты одной лентой снизу вверх, страж ведёт дальше
+ * Карта Разлома «Восхождение»: все акты одной лентой снизу вверх, страж ведёт дальше
  * без разрывов. Узлы - шестигранники-руны, путь - жила с текущей энергией, доступные узлы дышат и пускают кольцо. Дальше
  * обзора ([RiftEngine.seen]) клубится туман, в нём видны только силуэты стражей. Лента сама держит героя в нижней трети.
  * Декор стоит при выключенном `LocalMotion`.
+ *
+ * Фазы декора читаются в рисовании: лента перерисовывается шагом часов, жилы и фон собираются раз на раскладку. Герой - в нижней трети,
+ * туман - выше последнего видимого ряда.
  */
 @Composable internal fun RiftAscent(
     rules: RiftRules,
@@ -76,7 +79,6 @@ import kotlin.math.sin
     val seen = remember(run, plan) { plan.nodes.filter { engine.seen(run, it) }.map { it.id }.toSet() }
     val sight = engine.sight(run)
     val reach = here?.let(engine::depth) ?: -1
-    // Фазы декора читаются в рисовании (4.9.0): лента перерисовывается шагом часов, а не перекомпонуется.
     val flow = motionPhase(FLOW_MS)
     val breath = motionPhase(BREATH_MS)
     val drift = motionPhase(DRIFT_MS)
@@ -88,7 +90,6 @@ import kotlin.math.sin
         fun y(node: RiftNode): Dp = top + ROW * (depths - 1 - engine.depth(node)) + ROW / 2
         fun x(node: RiftNode): Dp = SIDE + (width - SIDE * 2) * ((node.lane + .5f) / node.width)
         val density = LocalDensity.current
-        // Герой - в нижней трети: лента едет к нему с каждым шагом
         LaunchedEffect(run?.at, viewport) {
             snapshotFlow { scroll.maxValue }.first { it > 0 }
             val anchor = here?.let(::y) ?: (top + ROW * (depths - 1))
@@ -96,7 +97,6 @@ import kotlin.math.sin
         }
         Box(Modifier.fillMaxWidth().verticalScroll(scroll)) {
             Box(Modifier.width(width).height(height)) {
-                // Жилы и фон собираются раз на раскладку (4.9.0); кадр декора только рисует их с новой фазой
                 Spacer(
                     Modifier.fillMaxSize().drawWithCache {
                         val px = { d: Dp -> d.toPx() }
@@ -119,7 +119,6 @@ import kotlin.math.sin
                                 }
                             }
                         }
-                        // Туман: всё выше последнего видимого ряда
                         val fogEdge = px(top + ROW * (depths - 1 - (reach + sight)))
                         onDrawBehind {
                             drawRect(ground)
@@ -151,7 +150,7 @@ import kotlin.math.sin
     }
 }
 
-/** Жила между узлами, собранная раз на раскладку (4.9.0): изгиб [path] и пройдена ли она ([walked]) или доступна ([open]). */
+/** Жила между узлами, собранная раз на раскладку: изгиб [path] и пройдена ли она ([walked]) или доступна ([open]). */
 private class Vein(val path: Path, val walked: Boolean, val open: Boolean) {
     companion object {
         fun of(from: Offset, to: Offset, bend: Float, walked: Boolean, open: Boolean): Vein {
@@ -206,7 +205,11 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
     drawRect(Brush.verticalGradient(listOf(Color.Transparent, RiftColors.Ground.copy(alpha = .9f), Color.Transparent), edge - fade, edge + fade / 2), Offset(0f, edge - fade), size.copy(height = fade * 1.5f))
 }
 
-/** Узел-руна: шестигранник цвета вида, знак вида внутри; доступный дышит и пускает кольцо, над героем - огонёк. */
+/**
+ * Узел-руна: шестигранник цвета вида, знак вида внутри; доступный дышит и пускает кольцо, над героем - огонёк.
+ *
+ * Дыхание читается в рисовании и в слое: силуэт - слоем с обрезкой по рамке, прочие без слоя.
+ */
 @Composable private fun NodeRune(
     node: RiftNode,
     open: Boolean,
@@ -222,11 +225,9 @@ private fun DrawScope.fog(edge: Float, drift: Float) {
     val radius = if (guardian) 24.dp else 16.dp
     val tint = if (silhouette) RiftColors.Warn else node.kind.color()
 
-    // Дыхание читается в рисовании и в слое (4.9.0): узел перерисовывается без перекомпоновки
     fun pulse() = (1 - cos(breath.value * 2 * PI).toFloat()) / 2
     Box(
         modifier.size(NODE_BOX).then(
-            // Как `alpha()`: силуэт - слоем с обрезкой по рамке, прочие без слоя
             if (silhouette) {
                 Modifier.graphicsLayer {
                     alpha = .45f + .2f * pulse()

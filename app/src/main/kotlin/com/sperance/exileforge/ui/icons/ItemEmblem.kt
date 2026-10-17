@@ -36,7 +36,6 @@ import com.sperance.exileforge.core.i18n.ui
                 drawPath(p, tint.copy(alpha = .15f))
                 drawPath(p, tint, style = Stroke(2.5f, join = StrokeJoin.Round))
             }
-            // Struck-metal socket: a bevelled ring with four rivets, as on a stash tab.
             drawCircle(tint.copy(alpha = .13f), 33f, Offset(40f, 40f), style = Stroke(1f))
             drawCircle(tint.copy(alpha = .07f), 37f, Offset(40f, 40f), style = Stroke(1f))
             listOf(8f to 8f, 72f to 8f, 8f to 72f, 72f to 72f).forEach { (x, y) -> drawCircle(tint.copy(alpha = .35f), 2f, Offset(x, y)) }

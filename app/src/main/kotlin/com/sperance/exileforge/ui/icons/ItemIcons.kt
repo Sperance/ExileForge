@@ -24,7 +24,7 @@ import com.sperance.exileforge.ui.theme.Gold
  * client paints it itself and tints it by rarity, so the dark theme still owns the colour.
  *
  * Without the set, or for a code it does not cover, the bundled emblem chosen from the template's
- * slot and weapon stands in. That is what was drawn before the server had any, so a hole looks
+ * slot and weapon stands in, so a hole looks
  * deliberate rather than broken.
  */
 @Composable fun ItemIcon(item: ItemView, color: Color, modifier: Modifier = Modifier, tint: Color? = null) = ItemIcon(item.code, item.visualKind, color, modifier, tint)
@@ -38,9 +38,12 @@ import com.sperance.exileforge.ui.theme.Gold
     if (!SpriteIcon(equipmentIcon(code), paint, modifier)) ItemEmblem(kind, paint, modifier)
 }
 
-/** An empty place of the body: the emblem of what would go there. */
+/**
+ * An empty place of the body: the emblem of what would go there.
+ *
+ * Стекло сервера; встроенная эмблема, когда у набора нет иконки слота.
+ */
 @Composable fun SlotIcon(slot: Slot, color: Color, modifier: Modifier = Modifier, tint: Color? = null) {
-    // The server's shadow glass since 3.7.0; the bundled emblem when the set has none for the slot.
     if (!SpriteIcon(slotIcon(slot.name), tint ?: color, modifier, halo = false)) ItemEmblem(slotVisualKind(slot), tint ?: color, modifier)
 }
 
@@ -48,7 +51,7 @@ import com.sperance.exileforge.ui.theme.Gold
 fun slotVisualKind(slot: Slot): ItemVisualKind = itemVisualKind(ItemTemplate(code = "", slot = slot))
 
 /**
- * Artwork for a stacking item of the bag, by its code: the server's glass when the set has it (3.6.0),
+ * Artwork for a stacking item of the bag, by its code: the server's glass when the set has it,
  * else an orb's bundled glass, the server's mono sprite, or the bundled glyph of its [kind] — a scroll
  * for a book, a shard for an essence, a gem for a material or a stack the content does not name.
  * A stack has no rarity, so its glass goes without a halo.

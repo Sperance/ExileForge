@@ -39,7 +39,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * Срез «игра» (3.80.33): что читают экраны героя и его мест - команда в полёте, язык, мир, сессия, герой на экране,
+ * Срез «игра»: что читают экраны героя и его мест - команда в полёте, язык, мир, сессия, герой на экране,
  * связь, режим и настройки устройства. Имена - те же, что у общего состояния, чтобы экраны переезжали без пересказа.
  */
 data class GameUi(
@@ -52,7 +52,7 @@ data class GameUi(
     val mode: AppMode = AppMode.PLAYER,
     val settings: GameSettings = GameSettings(),
     val logFilter: Set<LogKind> = LogKind.DEFAULT,
-    /** Тост успеха на экране (3.80.38); отказ - у [activity]. */
+    /** Тост успеха на экране; отказ - у [activity]. */
     val notice: Notice? = null,
 ) {
     val busy: Boolean get() = activity.held
@@ -64,13 +64,13 @@ data class GameUi(
     fun refreshing(read: String): Boolean = busy || read in loading
     val isAdmin: Boolean get() = session.isAdmin
 
-    /** Герой в игре - тестировщик (4.12.x, сервер ROLE-01). */
+    /** Герой в игре - тестировщик. */
     val isTester: Boolean get() = session.tester(holding)
 
-    /** Модератор или администратор (4.12.x, ROLE-02). */
+    /** Модератор или администратор. */
     val isModerator: Boolean get() = session.isModerator
 
-    /** Инструменты администратора (4.12.x, ADMIN-UI): роль модерации аккаунта и режим вместе; права проверяет сервер. */
+    /** Инструменты администратора: роль модерации аккаунта и режим вместе; права проверяет сервер. */
     val adminTools: Boolean get() = isModerator && mode == AppMode.ADMIN
     val sessionEpoch: Int get() = session.sessionEpoch
     val index: ContentIndex? get() = world.content
@@ -84,12 +84,12 @@ data class GameUi(
 
     /**
      * The rules refuse one hero more than they allow, so the button that would ask for one is not offered. Герой, удалённый
-     * самим игроком (4.5.1), места не держит.
+     * самим игроком, места не держит.
      */
     val characterSlotsLeft: Int get() = ((index?.rules?.maxCharacters ?: MAX_CHARACTERS) - session.slotHolders).coerceAtLeast(0)
     val ownsCharacter: Boolean get() = session.signedIn && session.profile?.id == holding.owner
 
-    /** Что продажа вещей редкостей [rarities] даст осколками сейчас (3.95.3), словами: правило сервера над сумкой героя; null - ничего. */
+    /** Что продажа вещей редкостей [rarities] даст осколками сейчас, словами: правило сервера над сумкой героя; null - ничего. */
     fun shardsFor(rarities: Collection<com.sperance.exileforge.rules.content.Rarity>): String? {
         val rules = index?.rules?.sell ?: return null
         return com.sperance.exileforge.core.display.shardsText(rules.yields(rarities, hero?.bag.orEmpty()), rules.shardsPerOrb)
@@ -98,10 +98,10 @@ data class GameUi(
     /** How many of one stacking item the hero holds, or null while the hero has not been read. */
     fun bagAmount(code: String): Long? = hero?.let { it.bag[code] ?: 0L }
 
-    /** Чего герою не хватает на [cost] (3.89.0); null, пока герой не прочитан. */
+    /** Чего герою не хватает на [cost]; null, пока герой не прочитан. */
     fun shortfall(cost: Cost): Shortfall? = hero?.let { h -> cost.shortfall({ h.bag[it] ?: 0L }, h.money) }
 
-    /** Цена [price] в золоте против кошелька героя (0.14.5, #42); null, пока герой не прочитан. */
+    /** Цена [price] в золоте против кошелька героя; null, пока герой не прочитан. */
     fun goldBill(price: Long): GoldBill? = hero?.let { GoldBill(price, it.money) }
     val orbs: List<Item> get() = HeroLens.orbs(index)
     val currencies: List<Item> get() = HeroLens.currencies(index)
@@ -111,7 +111,7 @@ data class GameUi(
     val treeState: TreeState? get() = HeroLens.treeState(index, hero)
 }
 
-/** Один срез «игра» на процесс (3.80.33): модели экранов отдают его своим экранам. */
+/** Один срез «игра» на процесс: модели экранов отдают его своим экранам. */
 class GameSlice(
     sessions: SessionRepository,
     commands: CommandRunner,

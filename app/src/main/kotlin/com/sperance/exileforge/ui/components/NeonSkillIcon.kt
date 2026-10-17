@@ -38,7 +38,7 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * Цвет умения «Неон рун» (4.4.0): стихия - огонь, холод, молния, хаос, физика, - а без стихии вид умения. Палитра одна на
+ * Цвет умения «Неон рун»: стихия - огонь, холод, молния, хаос, физика, - а без стихии вид умения. Палитра одна на
  * иконку гримуара и «Жилы энергии» боя.
  */
 enum class NeonHue(val color: Color) {
@@ -72,11 +72,11 @@ enum class NeonHue(val color: Color) {
 /** Плитка «Неон рун»: почти чёрная, у всех иконок одна. */
 private val NeonTile = Color(0xFF0A0F12)
 
-/** Дыхание свечения тира III, мс (макет: 2,6 с). */
+/** Дыхание свечения тира III, мс (2,6 с). */
 private const val BREATH_MS = 2600
 
 /**
- * Силуэт плитки умения по его виду (0.14.4, макет «Иконки умений», вариант B): атака - скруглённый квадрат, чары и лечение - круг,
+ * Силуэт плитки умения по его виду: атака - скруглённый квадрат, чары и лечение - круг,
  * аура - восьмиугольник, клич и защита - щит, проклятие - ромб, бонус - шестигранник, срабатывание - треугольник. Вид читается
  * силуэтом и на малой иконке боя; [glyph] - доля стороны под контур, [lift] - сдвиг контура вниз (доля стороны), чтобы он лёг в
  * широкую часть силуэта; [points] - вершины в долях стороны (пусто - скруглённый квадрат или круг).
@@ -121,19 +121,19 @@ enum class NeonFrame(val glyph: Float, val lift: Float = 0f, private val points:
 }
 
 /**
- * Иконка умения «Неон рун» (4.4.0, утверждена владельцем, макет C): тёмная плитка в нити цвета умения, на ней светящийся
+ * Иконка умения «Неон рун» (утверждена владельцем): тёмная плитка в нити цвета умения, на ней светящийся
  * контур-глиф - моно-спрайт сервера ([SkillDefinition.icon]) только обводкой - и римская цифра тира в углу. Тир II - рамка цвета
  * и мягкое свечение, тир III - двойная рамка и дышащее свечение (стоит при выключенном `LocalMotion`). [dim] - умение не
- * изучено: всё приглушено. С 0.14.4 (макет «Иконки умений», вариант B) плитка - силуэт вида умения ([NeonFrame]), а внизу -
+ * изучено: всё приглушено. Плитка - силуэт вида умения ([NeonFrame]), а внизу -
  * его руна ([SkillDefinition.sigil]): умения одного вида и цвета различаются с первого взгляда.
+ *
+ * Фаза дыхания читается в рисовании: плитка перерисовывается шагом часов без перекомпоновки; силуэт строится раз на размер.
  */
 @Composable fun NeonSkillIcon(skill: SkillDefinition, tier: Int, size: Dp, modifier: Modifier = Modifier, dim: Boolean = false) {
     val hue = NeonHue.of(skill).color.let { if (dim) lerp(it, NeonTile, .55f) else it }
     val frame = NeonFrame.of(skill.type)
-    // Фаза дыхания читается в рисовании (4.9.0): плитка перерисовывается шагом часов декора без перекомпоновки.
     val phase = if (tier >= 3) motionPhase(BREATH_MS) else null
     Box(
-        // Силуэт строится раз на размер, кадр дыхания его только перерисовывает
         modifier.size(size).drawWithCache {
             val outline = frame.path(this.size)
             val inner = frame.path(this.size, 4.dp.toPx())
@@ -143,7 +143,6 @@ enum class NeonFrame(val glyph: Float, val lift: Float = 0f, private val points:
     ) {
         val glyph = size * frame.glyph
         val lift = Modifier.offset(y = size * frame.lift)
-        // Ореол под глифом - неоновое свечение контура
         Box(lift.size(glyph).drawBehind { drawCircle(Brush.radialGradient(listOf(hue.copy(alpha = .32f), Color.Transparent)), radius = this.size.minDimension * .75f) })
         if (!NeonSprite(skillIcon(skill.icon), hue, lift.size(glyph))) {
             Icon(ForgeGlyphs.Grimoire, null, tint = hue, modifier = lift.size(glyph))

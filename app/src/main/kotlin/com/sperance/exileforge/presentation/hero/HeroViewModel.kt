@@ -17,7 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Экран героя (3.80.17): сундук, снаряжение, сумка и хроника; команды - общие действия героя и рынка. */
+/** Экран героя: сундук, снаряжение, сумка и хроника; команды - общие действия героя и рынка. */
 class HeroViewModel(
     private val hero: HeroActions,
     private val sync: HeroSync,
@@ -27,7 +27,7 @@ class HeroViewModel(
     commands: CommandRunner,
     slice: GameSlice,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val holding: StateFlow<HeroHolding> = heroes.state
     val activity: StateFlow<Activity> = commands.state
@@ -50,14 +50,14 @@ class HeroViewModel(
     fun temper(itemId: String) = hero.temper(itemId)
     fun unsocketJewel(itemId: String) = hero.unsocketJewel(itemId)
 
-    /** Статистика героя (3.51.0), свежая полминуты (3.94.1); null - чтение не удалось. */
+    /** Статистика героя, свежая полминуты; null - чтение не удалось. */
     suspend fun heroStats(heroId: String): Map<String, Long>? = reads.stats(heroId)
 
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? = market.priceHint(itemCode, rarity, itemLevel)
     fun sellEquipment(itemId: String, priceOrb: String, price: Long) = market.sellEquipment(itemId, priceOrb, price)
     fun sellItem(code: String, amount: Long, priceOrb: String, price: Long) = market.sellItem(code, amount, priceOrb, price)
 
-    /** Выдачи администратора и тестера (3.80.30) и код награды, как их просят страницы настроек. */
+    /** Выдачи администратора и тестера и код награды, как их просят страницы настроек. */
     fun grant(template: String, rarity: Rarity? = null) = hero.grant(template, rarity)
     fun grantItem(code: String, amount: Long) = hero.grantItem(code, amount)
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = hero.testerGrant(what, *params)
@@ -68,7 +68,7 @@ class HeroViewModel(
 
     private val openPage = MutableStateFlow(HeroPage.CHARACTER)
 
-    /** Открытый раздел героя (3.90.3): полоса разделов в оболочке и экран героя читают один и тот же. */
+    /** Открытый раздел героя: полоса разделов в оболочке и экран героя читают один и тот же. */
     val page: StateFlow<HeroPage> = openPage.asStateFlow()
 
     fun page(page: HeroPage) {

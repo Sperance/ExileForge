@@ -63,11 +63,16 @@ import com.sperance.exileforge.ui.theme.Parchment
 import kotlin.math.hypot
 
 /**
- * The world map itself (2.76.0): the parchment, the fog above the frontier, the roads between the
+ * The world map itself: the parchment, the fog above the frontier, the roads between the
  * tokens and the tokens — bronze medallions with the zone's level, the passed ones ticked, the open
  * ones glowing, the «???» behind them dark and locked. A drag moves it, a pinch zooms it; a tap on a
  * token picks the zone, a tap on the land lets it go. Everything but the words is drawn in world
  * units under one transform; the words are laid out once and only scaled.
+ *
+ * [story] - зона шага сюжета, вокруг жетона кольцо; null - сюжета на карте нет. Без анимаций жетоны и дороги стоят; общие часы декора, а не
+ * свой бесконечный переход. Пергамент записан один раз в свой слой ([LocalWorldArtLayer], живёт с оболочкой) и воспроизводится под камерой.
+ * Неподвижное рисуется заново лишь со сдвигом, масштабом или выбором; часы будят только дышащее и только на экране. Пока арт не собран -
+ * голый пергамент с дорогами и жетонами.
  */
 @Composable
 fun WorldCanvas(
@@ -77,13 +82,10 @@ fun WorldCanvas(
     selected: String?,
     stash: Map<String, Int>,
     modifier: Modifier = Modifier,
-    /** Зона текущего шага сюжета (4.7.0): вокруг жетона вращается руническое кольцо; null - сюжета на карте нет. */
     story: String? = null,
     onTap: (String?) -> Unit,
 ) {
     val measurer = rememberTextMeasurer()
-    // With the animations off in the settings (3.77.0) the tokens and the roads stand still. 4.7.0: общие часы декора (30 к/с)
-    // вместо своего бесконечного перехода - карта мира больше не держит экран в 60 кадрах ради пульса жетонов
     val pulse by motionPhase(PULSE_MS, still = .5f)
     val marchPhase by motionPhase(MARCH_MS)
     val spin by motionPhase(STORY_SPIN_MS)
@@ -94,14 +96,9 @@ fun WorldCanvas(
     val fog = remember(world, camera.world.width, height) { Fog.of(world, camera.world.width.toFloat(), height) }
     val density = LocalDensity.current
     val words = remember(world, measurer, density) { Words.of(world, measurer, density) }
-    // The parchment is recorded once into its own layer (3.77.0) and replayed under the camera: hundreds of sketches and
-    // grains are no longer laid out again on every frame of the tokens' pulse. 4.10.x: слой живёт с оболочкой игры
-    // ([LocalWorldArtLayer]), а не с вкладкой - вход в «Поход» не пишет пергамент заново
     val artLayer = LocalWorldArtLayer.current ?: rememberWorldArtLayer()
     val tap by rememberUpdatedState(onTap)
     val description = ui("expedition.world_map")
-    // Слоями: неподвижное (пергамент, туман, дороги, жетоны, слова) рисуется заново лишь со сдвигом, масштабом или выбором;
-    // часы декора будят только дышащее - бегущие дороги впереди, пульс открытых жетонов и кольцо сюжета, и только на экране
     Box(
         modifier
             .clipToBounds()
@@ -112,7 +109,6 @@ fun WorldCanvas(
     ) {
         Canvas(Modifier.matchParentSize()) {
             onWorld(camera) {
-                // Until the art is built (3.75.0), the bare parchment: the roads and the tokens are there at once.
                 if (art == null) {
                     drawRect(BARE, size = Size(camera.world.width.toFloat(), height))
                 } else {
@@ -313,7 +309,7 @@ private fun DrawScope.token(token: WorldToken, height: Float, selected: Boolean,
 }
 
 /**
- * Руническое кольцо зоны сюжета (4.7.0, макет «Сюжетные зоны», вариант B): засечки по кругу вокруг жетона медленно вращаются
+ * Руническое кольцо зоны сюжета: засечки по кругу вокруг жетона медленно вращаются
  * (доля круга [spin]); без анимаций стоят.
  */
 private fun DrawScope.storyRing(token: WorldToken, height: Float, spin: Float) {
@@ -339,12 +335,12 @@ private fun radius(token: WorldToken): Float = if (token.zone.finale) FINALE_RAD
 
 /**
  * The map's words, laid out once per world and only scaled with the zoom: each token's level and
- * name, the regions the hero knows with their levels, and «Неизведанное» in the fog. Since 3.75.0 a token's words are
+ * name, the regions the hero knows with their levels, and «Неизведанное» in the fog. A token's words are
  * laid out the first time it comes on screen, and one off screen is not drawn: the map opens without measuring the world.
  */
 private class Words(val world: WorldMap, private val measurer: TextMeasurer) {
     companion object {
-        /** Слова последней карты: возврат на вкладку берёт уже измеренные, а не меряет мир заново (3.88.9). */
+        /** Слова последней карты: возврат на вкладку берёт уже измеренные, а не меряет мир заново. */
         @Volatile private var last: Pair<List<Any>, Words>? = null
 
         fun of(world: WorldMap, measurer: TextMeasurer, density: Density): Words {
@@ -486,7 +482,7 @@ private val OPEN_GLOW = Brush.radialGradient(listOf(GoldBright.copy(alpha = .45f
 private val PULSE_RING = Stroke(1.5f)
 
 /**
- * Слой пергамента карты мира (4.10.x): записывается один раз на рисунок [WorldArt] и переживает уход с вкладки - его держит оболочка
+ * Слой пергамента карты мира: записывается один раз на рисунок [WorldArt] и переживает уход с вкладки - его держит оболочка
  * игры ([LocalWorldArtLayer]). Запись - при первом рисовании, дальше только воспроизведение.
  */
 class WorldArtLayer internal constructor(private val layer: GraphicsLayer) {

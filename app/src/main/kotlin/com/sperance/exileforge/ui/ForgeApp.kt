@@ -71,13 +71,16 @@ import kotlinx.coroutines.flow.map
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
+/**
+ * Настройки на всех экранах: размер текста, движение, экран без сна, отклик. Обновление - поверх всего, забег и испытание сперва кончаются;
+ * окно запуска держится, пока сервер не ответит, и читает модель без шлюза жизненного цикла. Прогрев героя - то же окно запуска.
+ */
 @Composable fun ForgeApp(updates: UpdateViewModel) {
     val shell: ShellViewModel = koinViewModel()
     val context = LocalContext.current
     val expedition by shell.run.collectAsStateWithLifecycle()
     val trial by shell.arena.collectAsStateWithLifecycle()
     val rift by shell.rift.collectAsStateWithLifecycle()
-    // The settings (3.77.0) that reach every screen: the text's size, the motion, the lit screen and the phone's buzz.
     val settings by remember(shell) { shell.game.map { it.settings }.distinctUntilChanged() }.collectAsStateWithLifecycle(GameSettings())
     val base = LocalDensity.current
     val view = LocalView.current
@@ -102,15 +105,11 @@ import org.koin.compose.viewmodel.koinViewModel
         LocalDensity provides Density(base.density, base.fontScale * settings.textSize.scale),
     ) {
         com.sperance.exileforge.ui.components.DecorClockHost { ForgeScreens() }
-        // Updates (3.72.0): over everything; a run or a trial under way is finished first.
-        // 3.86.0: the start window holds only until the server answers.
-        // 3.87.0: the window reads the model without the lifecycle's gate - a frozen collection held it forever.
         val window by shell.reach.window.collectAsState()
         val stages by remember(shell) {
             shell.game.map { g -> StartStages(g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0) }.distinctUntilChanged()
         }.collectAsState(StartStages(contentReady = false, dictionaryReady = false, iconsReady = false))
         val watchdog = koinInject<StallWatchdog>()
-        // 0.14.4: прогрев героя - то же окно запуска; прогрев другого героя - не этого
         val warmup by shell.warmup.collectAsState()
         val heroId by remember(shell) { shell.game.map { it.heroId }.distinctUntilChanged() }.collectAsState("")
         val actions = remember(shell) { StartActions(shell.reach::retry, shell.reach::release, shell.reach::checkFit) }
@@ -126,6 +125,12 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
+/**
+ * В ключе экранов - язык и размер словаря: пришедшие с сервера имена перерисовывают экраны, что печатали код. Карта мира строится, как
+ * только пришла кампания, вне главного потока; слой пергамента живёт с оболочкой. Хозяева поверх всего: системные листы (отчёт и настройки,
+ * аккорд громкости), отчёты, справки, карточки предмета, умения и игрока, экран санкции, письма. Прогрев, поход и испытание - не экраны
+ * стека, а состояния игры, что накрывают всё.
+ */
 @Composable internal fun ForgeScreens() {
     val shell: ShellViewModel = koinViewModel()
     val game by shell.game.collectAsStateWithLifecycle()
@@ -135,63 +140,38 @@ import org.koin.compose.viewmodel.koinViewModel
     val warming by shell.warmup.collectAsStateWithLifecycle()
     val navigator = koinInject<Navigator>()
     val route by navigator.current.collectAsStateWithLifecycle()
-    // The warm-up of the hero on screen (3.54.0); another hero's is not this one's.
     val warmup = warming?.takeIf { it.heroId == game.heroId }
-    // Language is part of the key: every cached label is rebuilt in the chosen tongue.
-    // The dictionary arrives after the first frame, so its size joins the key: when the server's
-    // names land, every screen that printed a bare code is drawn again.
-    // The beetle (3.48.0): in the banner of the game; since 3.57.0 in the own header of every screen without one.
-    // Системные листы (4.7.0): отчёт об ошибке и настройки - и из оболочки, и из меню забега
     val sheets = remember { com.sperance.exileforge.ui.components.SystemSheets() }
     val drafts = koinInject<DraftStore>()
-    // Аккорд громкости в Activity открывает лист отчёта (4.8.0)
     LaunchedEffect(shell) { shell.bugRequests.collect { sheets.bug = true } }
-    // Отчёты (0.14.1, макет A): «Мои» и «Известные» - лист поверх всего, как жук; null - закрыт, иначе открытая вкладка.
     var reportsTab by remember { mutableStateOf<com.sperance.exileforge.ui.components.ReportsTab?>(null) }
     var mailOpen by remember { mutableStateOf(false) }
     LaunchedEffect(route.phase, game.heroId) { if (route.phase == AppPhase.GAME && game.heroId.isNotBlank()) shell.warmUp() }
-    // The world map's art is built as soon as the campaign arrives (3.75.0), away from the main thread: the tab opens on it.
     val campaign = game.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
-    // 3.81.0: the dictionary's language joins it too — the Russian and English dictionaries hold the same number of strings,
-    // so a switch whose dictionary landed after the first redraw left the server's names in the old language.
     key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
         CompositionLocalProvider(
             LocalBugReport provides { sheets.bug = true },
             LocalMailOpen provides { mailOpen = true },
             com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
-            // Пергамент карты мира (4.10.x): слой живёт с оболочкой, вход в «Поход» его только воспроизводит
             com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
         ) {
-            // Судьбоносные строки вещей (4.6.2) читают дар и надетое героя отсюда - и в листах карточек
             com.sperance.exileforge.ui.components.FateSightHost(game) {
-                // Листы-справки (3.92.0): умение монстра, проклятие, свойство, фаза - откуда бы их ни открыли
                 com.sperance.exileforge.ui.components.LoreHost(game) {
-                    // Карточка предмета (4.3.2): любое касание вещи или стопки открывает её здесь, поверх всего
                     com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
-                        // Карточка умения (0.14.4, #25): любое умение героя где угодно открывает её здесь, поверх всего
                         com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
-                            // Карточка игрока (4.5.1): имя или строка игрока где угодно открывает её здесь, поверх всего
                             com.sperance.exileforge.ui.components.PlayerCardHost(game) {
                                 Box(Modifier.fillMaxSize()) {
-                                    // Прогрев (3.54.0), поход и испытание (3.49.0) - не экраны стека, а состояния игры: они накрывают всё, пока идут.
                                     val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
                                     val run = expedition
                                     val arena = trial
                                     val notice = game.session.notice
                                     when {
-                                        // Доступ закрыт санкцией (3.88.5): экран санкции накрывает всё, пока игрок его не закроет
                                         notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
-
-                                        // Прогрев (0.14.4): его показывает окно запуска поверх, под ним - пустая заставка, а не полусобранная игра
                                         warming != null -> Box(Modifier.fillMaxSize().background(Ink))
-
                                         run != null -> ExpeditionPlay(run)
-
                                         arena != null -> TrialScreen(arena)
-
                                         rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
-
                                         else -> Shell(game, route, navigator) { sheets.bug = true }
                                     }
                                 }
@@ -202,7 +182,6 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
     }
-    // Настройки поверх забега (4.7.0): из оболочки они - экран стека, из меню забега - этот лист, забег под ним держится
     if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
     if (sheets.bug) {
         BugSheet(
@@ -216,19 +195,18 @@ import org.koin.compose.viewmodel.koinViewModel
         )
     }
     reportsTab?.let { tab -> ReportsSheet(tab) { reportsTab = null } }
-    // Вложения письма открывают карточку предмета (4.3.2): лист почты стоит вне хозяина игры - у него свой
     if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
-    // Новое письмо (4.6.3): из карточки игрока, «Ответить» и рассылки гильдии - лист поверх всего, и поверх ящика
     if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
-    // Продолжение сюжета (4.7.0): шаг выполнен - сюжетный экран, когда забег уже не на экране
     if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
-    // Незаконченный заход (3.89.0): после прогрева, пока поход не на экране, - продолжить или покинуть.
     if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }
 
 /**
- * Стек экранов (3.80.23): `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
+ * Стек экранов: `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
  * Путь Изгнанника, полоска героя и нижняя панель; вход, меню героев и атлас - без неё.
+ *
+ * Корень вкладки хранит прокрутку до возвращения; смена вкладки сдвигает экран и меняющуюся шапку в сторону порядка. Сворачиваемые шапки -
+ * одно состояние на вкладку, шапка игры не сворачивается.
  */
 @Composable internal fun Shell(game: GameUi, route: Route, navigator: Navigator, onBug: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
@@ -239,7 +217,6 @@ import org.koin.compose.viewmodel.koinViewModel
             backStack = navigator.stack,
             modifier = modifier,
             onBack = { navigator.back() },
-            // Память вкладок (4.x): корень вкладки хранит прокрутку до возвращения; смена вкладки сдвигает экран в сторону порядка
             entryDecorators = listOf(tabs.decorator),
             transitionSpec = { tabShift(navigator.tabStep) },
             popTransitionSpec = { tabShift(navigator.tabStep) },
@@ -256,13 +233,10 @@ import org.koin.compose.viewmodel.koinViewModel
                 entry<Route.Expedition>(metadata = TabMemory.ROOT) { ExpeditionScreen() }
                 entry<Route.Crafts>(metadata = TabMemory.ROOT) { CraftsScreen() }
                 entry<Route.Progress>(metadata = TabMemory.ROOT) { ProgressScreen() }
-                // The forge and the trials open from the hub of «Развитие», «back» leading to it.
                 entry<Route.Forge> { ProgressPlaceScreen(ProgressPlace.FORGE) }
                 entry<Route.Trials> { com.sperance.exileforge.ui.screens.expedition.TrialsPage() }
-                // The atlas (2.68.0) is a sky of its own, above the tabs.
                 entry<Route.Atlas> { AtlasScreen() }
                 entry<Route.Story> { com.sperance.exileforge.ui.screens.quests.StoryScreen() }
-                // The City's square and its buildings are one screen that reads which building is open.
                 entry<Route.City>(metadata = TabMemory.ROOT) { CityScreen(null) }
                 entry<Route.Quests> { CityScreen(Building.QUESTS) }
                 entry<Route.Merchant> { CityScreen(Building.MERCHANT) }
@@ -281,28 +255,22 @@ import org.koin.compose.viewmodel.koinViewModel
         screens(Modifier.fillMaxSize())
         return
     }
-    // Сворачиваемые шапки (3.88.7): одно состояние на открытую вкладку, любой список внутри сворачивает их прокруткой вниз.
     val collapse = remember(route.tab) { HeaderCollapse() }
     Scaffold(containerColor = Ink, bottomBar = { GameBar(game, route) }) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
             Column(Modifier.fillMaxSize().voidBackdrop().nestedScroll(collapse.connection)) {
-                // Шапка игры с меню не сворачивается (3.88.8): сворачиваются только шапки экранов.
-                // Смена вкладки (4.x) сдвигает шапку вместе с экраном, когда её облик меняется (строка героя на «Герое»)
                 TabShifted(route, look = { it.tab == TAB_HERO }) { ForgeBanner(game, it, onBug) }
                 if (game.busy || game.reading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised) else OrnateDivider(Gold)
                 CompositionLocalProvider(LocalHeaderCollapse provides collapse) {
                     TabShifted(route, look = { it.root?.tab }) { shown ->
                         Column {
-                            // Полоса разделов героя (3.90.5) - над персонажем, надетым, тайником и сумкой; сам герой - в шапке игры.
                             HeroChrome(shown.tab)
-                            // Полоса страниц «Похода» (4.0.0): карта, испытания и Атлас
                             com.sperance.exileforge.ui.screens.expedition.ExpeditionChrome(shown)
                         }
                     }
                     screens(Modifier.weight(1f).fillMaxWidth())
                 }
             }
-            // The toasts float over the screen, under the banner (2.80.0).
             ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
         }
     }

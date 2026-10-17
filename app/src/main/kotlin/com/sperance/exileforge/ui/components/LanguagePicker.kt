@@ -34,7 +34,7 @@ import com.sperance.exileforge.ui.theme.*
  * client could speak a language the server cannot name a single item in, and half a translation
  * is worse than none.
  *
- * It used to be two runes in the banner. Three languages is already a crowd there, and a language
+ * Three languages are a crowd in the banner, and a language
  * is a setting rather than an action, so it sits where settings sit - on the Account tab, and on
  * the sign-in screen beside the server address, because behind the gate there is no way back.
  */
@@ -71,7 +71,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * The language behind a globe (3.79.0): «🌐 RU» in a screen's corner, the list of the offered languages under it. For the
+ * The language behind a globe: «🌐 RU» in a screen's corner, the list of the offered languages under it. For the
  * screens before the game — the hero's choice — where the settings are out of reach.
  */
 @Composable fun LanguageButton(current: Lang, offered: List<Lang>, modifier: Modifier = Modifier, enabled: Boolean = true, onLanguage: (Lang) -> Unit) {

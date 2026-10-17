@@ -33,9 +33,9 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.ceil
 
 /**
- * The roll quality in steps of twenty (3.2.0): each step louder than the one below — from a quiet grey
- * with no frame to a gold that glows — and a perfect hundred is molten gold (4.7.0, макет «Идеальный ролл», вариант A:
- * радуга выбивалась из тёмного фэнтези).
+ * The roll quality in steps of twenty: each step louder than the one below — from a quiet grey
+ * with no frame to a gold that glows — and a perfect hundred is molten gold (не радуга:
+ * она выбивалась бы из тёмного фэнтези).
  */
 private enum class RollTier(val key: String, val tint: Color, val fill: Float, val edge: Float, val glow: Dp) {
     POOR("card.roll_poor", Muted, .06f, .25f, 0.dp),
@@ -51,11 +51,11 @@ private enum class RollTier(val key: String, val tint: Color, val fill: Float, v
     }
 }
 
-/** Расплавленное золото идеального ролла (4.7.0): тёмная бронза, золото и белый жар посередине. */
+/** Расплавленное золото идеального ролла: тёмная бронза, золото и белый жар посередине. */
 private val Molten = listOf(Color(0xFF8A5A12), Color(0xFFF2D27A), Color(0xFFFFF1C2), Color(0xFFF2D27A), Color(0xFF8A5A12))
 
 /**
- * Течение жара идеального ролла: доля круга [MOLTEN_MS] состоянием - читается в рисовании (4.9.0), так что ролл
+ * Течение жара идеального ролла: доля круга [MOLTEN_MS] состоянием - читается в рисовании, так что ролл
  * перерисовывается шагом часов декора без перекомпоновки; без анимаций (`LocalMotion`) - стоит на середине.
  */
 @Composable private fun moltenPhase(): State<Float> = motionPhase(MOLTEN_MS, still = MOLTEN_STILL)
@@ -76,7 +76,6 @@ private fun Modifier.moltenFill(phase: State<Float>, shape: Shape, width: Dp, fi
     drawOutline(outline, fill ?: brush)
     val stroke = ceil(width.toPx())
     if (outline is Outline.Rounded && outline.roundRect.isSimple && stroke * 2 <= size.minDimension) {
-        // Рамка как у `border`: штрих внутри формы, углы уже на полштриха
         val half = stroke / 2
         val corner = outline.roundRect.topLeftCornerRadius
         drawRoundRect(
@@ -115,7 +114,7 @@ private val MOLTEN_EDGE = 1.5.dp
 }
 
 /**
- * How well the item rolled (2.72.0; a ring in the card's head since this version): a gauge filling its
+ * How well the item rolled (a ring in the card's head): a gauge filling its
  * ring to the share with the figure inside, in its step's colour; a tap says «Модификаторы предмета · Хорошие · 72%».
  */
 @Composable fun RollRing(quality: Int, modifier: Modifier = Modifier) {
@@ -140,7 +139,7 @@ private val MOLTEN_EDGE = 1.5.dp
     }
 }
 
-/** «роллы 87%» as a pill in its step's dress (2.73.0, steps since 3.2.0): the one figure a list line is judged by. */
+/** «роллы 87%» as a pill in its step's dress: the one figure a list line is judged by. */
 @Composable fun RollPill(quality: Int) {
     val tier = RollTier.of(quality)
     val shape = RoundedCornerShape(50)

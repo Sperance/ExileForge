@@ -77,7 +77,7 @@ import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Vital
 
 /**
- * Полоса опыта умения (4.4.0): доля к следующему уровню и подпись - сколько из скольких, полная полоса в ожидании требования
+ * Полоса опыта умения: доля к следующему уровню и подпись - сколько из скольких, полная полоса в ожидании требования
  * следующего уровня или потолок тира (и что тир III ведёт дальше). [compact] - тонкая полоса страницы без подписи.
  */
 @Composable internal fun XpBar(index: ContentIndex, skill: SkillDefinition, view: SkillGrowthView, compact: Boolean = false) {
@@ -99,12 +99,7 @@ internal fun xpCaption(index: ContentIndex, skill: SkillDefinition, view: SkillG
     else -> ui("skills.xp_progress", number(view.xp), number(view.toNext ?: 0.0), view.level + 1)
 }
 
-/**
- * Книга умения (4.4.0): неизученное - «Изучить», изученное - «Прочитать книгу: +N опыта»; на потолке и в ожидании требования
- * книга не читается - кнопка погашена, причина под ней. Без книг - откуда их взять.
- */
-
-/** Почему книгу [skill] сейчас не прочесть (4.7.0: и кнопка книги, и цель обмена); null - читается. */
+/** Почему книгу [skill] сейчас не прочесть (и кнопка книги, и цель обмена); null - читается. */
 internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: SkillGrowthView, heroLevel: Int, stats: Map<String, Double>): String? = when {
     view.level == 0 -> ui("skills.requires", 1, needLine(index, skill, 1)).takeIf { index.skillRules.unmet(skill, 1, heroLevel, stats) }
     view.capped -> ui("skills.book_capped")
@@ -112,6 +107,10 @@ internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: Skil
     else -> null
 }
 
+/**
+ * Книга умения: неизученное - «Изучить», изученное - «Прочитать книгу: +N опыта»; на потолке и в ожидании требования книга не читается -
+ * кнопка погашена, причина под ней. Без книг - откуда их взять.
+ */
 @Composable internal fun BookButton(
     game: GameUi,
     index: ContentIndex,
@@ -139,7 +138,7 @@ internal fun bookRefusal(index: ContentIndex, skill: SkillDefinition, view: Skil
 }
 
 /**
- * Гнёзда рун (4.4.0): открытые - руна или пустое гнездо, закрытые - римская цифра тира, что их откроет. Касание пустого
+ * Гнёзда рун: открытые - руна или пустое гнездо, закрытые - римская цифра тира, что их откроет. Касание пустого
  * открывает выбор руны, касание руны - её карточку с «Вынуть»: снятая руна разрушается.
  */
 @Composable internal fun RuneSockets(game: GameUi, vm: GrimoireViewModel, skill: SkillDefinition, view: SkillGrowthView, onPick: (Int) -> Unit) {
@@ -191,7 +190,7 @@ private fun DrawScope.socketRing(color: Color, dashed: Boolean) {
 internal fun runePower(game: GameUi): Double = 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100
 
 /**
- * Выбор руны в гнездо [socket] (4.4.0): стопки сумки категории руны, что встают в вид умения. Касание - карточка руны с
+ * Выбор руны в гнездо [socket]: стопки сумки категории руны, что встают в вид умения. Касание - карточка руны с
  * «Вставить»; правила отказа ([com.sperance.exileforge.rules.content.SkillGrowth.socketRefusal]) гасят кнопку и называют причину.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -249,7 +248,7 @@ internal fun RunePicker(
 }
 
 /**
- * Ритуал тира (4.4.0): следующий тир, его порог уровня и вся цена - книги умения, примесь стихии и вход работы чар, - сколько
+ * Ритуал тира: следующий тир, его порог уровня и вся цена - книги умения, примесь стихии и вход работы чар, - сколько
  * этого в сумке; отказ правил, если ритуал пока не начать, и кнопка к работе Зачарования. Высший тир - одна строка.
  */
 @Composable internal fun RitualCard(game: GameUi, vm: GrimoireViewModel, view: SkillGrowthView) {

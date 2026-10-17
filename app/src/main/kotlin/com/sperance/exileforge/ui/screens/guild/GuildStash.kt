@@ -90,10 +90,12 @@ import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.rarityColor
 
 /**
- * The guild stash (3.79.0, server 1.74.0): tabs of the rules' places; anyone puts in, taking needs the tab's rank and,
- * for a member, one of the day's takes — a stack is one take. What lies here is the guild's. С 4.7.0 список - плиты
+ * The guild stash: tabs of the rules' places; anyone puts in, taking needs the tab's rank and,
+ * for a member, one of the day's takes — a stack is one take. What lies here is the guild's. Список - плиты
  * «Ценника», как витрина аукциона, с её отбором (на клиенте, [StashFilter]); ярлык - цена взятия в золоте
  * ([StashTakePrice]), взять и положить - удержанием.
+ *
+ * Участник и офицер видят «N/M» на сегодня, глава - без ограничений.
  */
 @Composable internal fun StashTab(game: GameUi, vm: GuildViewModel, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
@@ -118,7 +120,6 @@ import com.sperance.exileforge.ui.theme.rarityColor
                 }
                 PropertyRow(ui("guild.stash_places"), "${inTab.size} / ${stash.tabSize}", Glyph.ITEM)
                 PropertyRow(ui("guild.stash_rank"), ranks.getOrNull(minRank)?.code?.let(GuildText::rank).orEmpty(), Glyph.CHARACTER)
-                // Точные цифры роли (4.2.0): участник и офицер - «N/M» на сегодня, глава - без ограничений
                 Text(
                     if (stash.takesPerDay < 0) ui("guild.stash_takes_free") else ui("guild.stash_takes", stash.takesLeft.coerceAtLeast(0), stash.takesPerDay),
                     color = Muted,
@@ -191,7 +192,11 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
     StashField.MAX_LEVEL -> ui("auction.chip_ilvl_to", filter.maxLevel)
 }
 
-/** Отбор хранилища в общем листе-«Аккордеоне», поля витрины аукциона без цены и продавца; ничего не применяется до «Показать». */
+/**
+ * Отбор хранилища в общем листе-«Аккордеоне», поля витрины аукциона без цены и продавца; ничего не применяется до «Показать».
+ *
+ * «Сбросить» применяет сброс сразу и закрывает шторку.
+ */
 @Composable private fun StashFilterSheet(game: GameUi, filter: StashFilter, onDismiss: () -> Unit, onApply: (StashFilter) -> Unit) {
     var draft by remember { mutableStateOf(filter) }
     val any = ui("filter.any")
@@ -236,7 +241,6 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
         switches = emptyList(),
         show = ui("filter.show_all"),
         resettable = draft != draft.cleared(),
-        // «Сбросить» (4.12.x, ASANA-15) применяет сброс сразу и закрывает шторку
         onReset = { onApply(draft.cleared()) },
         onShow = { onApply(draft) },
         onDismiss = onDismiss,
@@ -244,15 +248,16 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
 }
 
 /**
- * Плита записи хранилища «Ценником» (4.7.0): копия - со всеми строками, как лот, стопка - иконка, имя и число; ярлык - цена
+ * Плита записи хранилища «Ценником»: копия - со всеми строками, как лот, стопка - иконка, имя и число; ярлык - цена
  * взятия в золоте. Касание - карточка, «Взять» в ней по удержанию; погашено, если взятий на сегодня нет или золота мало.
+ *
+ * Цена взятия против кошелька героя - тот же счёт, что у всех цен в золоте.
  */
 @Composable private fun EntryRow(game: GameUi, stash: GuildStashView, entry: GuildStashEntry, onTake: () -> Unit) {
     val index = game.index ?: return
     val view = entry.item?.let { game.view(it) }
     val inspect = rememberInspect()
     val price = StashTakePrice.of(index, entry.item, entry.code, entry.amount)
-    // Цена взятия против кошелька героя (0.14.5, #42) - тот же счёт, что у всех цен в золоте
     val bill = game.goldBill(price)
     val reason = when {
         stash.takesLeft == 0 -> ui("guild.stash_no_takes")
@@ -278,7 +283,11 @@ private fun fieldLabel(game: GameUi, filter: StashFilter, field: StashField): St
     }
 }
 
-/** What the hero may put in: a loose item of the stash, or part of a stack of the bag; кладётся удержанием (4.7.0). */
+/**
+ * What the hero may put in: a loose item of the stash, or part of a stack of the bag; кладётся удержанием.
+ *
+ * Касание - карточка, положить в хранилище - её кнопка удержанием.
+ */
 @Composable
 private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: String?, code: String?, amount: Long) -> Unit) {
     val hero = game.hero ?: return
@@ -311,7 +320,6 @@ private fun DepositSheet(game: GameUi, onDismiss: () -> Unit, onPut: (itemId: St
             items(loose, key = { it.id }) { item ->
                 val view = game.view(item) ?: return@items
                 Row(
-                    // Касание - карточка (4.3.2), положить в хранилище - её кнопка удержанием
                     Modifier.fillMaxWidth().clickable { inspect(Inspect.Copy(item, InspectAction(put, enabled = !game.busy, hold = true) { onPut(item.id, null, 1) })) }.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp),

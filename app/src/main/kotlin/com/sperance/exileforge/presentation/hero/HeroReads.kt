@@ -6,7 +6,7 @@ import com.sperance.exileforge.core.session.ServerConnection
 import kotlinx.coroutines.CancellationException
 
 /**
- * Чтения героя вне снимка (3.94.1): находки уникалок («История» и «Уникальные предметы») и статистика летописи - общие
+ * Чтения героя вне снимка: находки уникалок («История» и «Уникальные предметы») и статистика летописи - общие
  * экранам и свежие [com.sperance.exileforge.core.session.READ_FRESH_MS]; null - чтение не удалось.
  */
 class HeroReads(private val connection: ServerConnection) {

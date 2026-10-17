@@ -54,14 +54,19 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** Карточка узла атласа и итоги (3.80.24). */
-/** The chosen star: what it is, what it gives, and the one command the server would accept for it. */
+/** Карточка узла атласа и итоги. */
+/**
+ * The chosen star: what it is, what it gives, and the one command the server would accept for it.
+ *
+ * [refund] - цена снятия узла золотом против кошелька; null - герой не прочитан. «Было → станет»: каждая строка рядом с итогом Атласа по её
+ * модификатору сейчас и с этим узлом; под строкой - пояснение сервера; итог - с основой правил («шанс 15% + узлы 3,6% = 18,6%»).
+ * Взаимоисключающие ключевые узлы: пара названа всегда, взятый второй гасит кнопку с причиной.
+ */
 @Composable internal fun NodeSheet(
     index: ContentIndex,
     node: AtlasNode,
     taken: Set<String>,
     available: Int,
-    /** Цена снятия узла золотом против кошелька (0.14.5, #42); null - герой не прочитан. */
     refund: GoldBill?,
     enabled: Boolean,
     onTake: () -> Unit,
@@ -83,11 +88,9 @@ import kotlin.math.sin
         )
         Text(atlasNodeTitle(node.code), color = Color.White, style = MaterialTheme.typography.titleMedium)
         val isTaken = node.code in taken
-        // «Было → станет» (3.54.0): each line beside the atlas's whole of its modifier now and with this node taken.
         val totals = remember(taken) { AtlasTotals.of(index, taken) }
         node.lines.forEach { line ->
             effectLines(index, line).forEach { Text("•  $it", color = ModBlue, style = MaterialTheme.typography.bodySmall) }
-            // Что делает характеристика строки (0.15.0, #41): пояснение сервера серым под строкой
             atlasLineNote(index, line)?.let { note ->
                 Text(note, color = Sky.text.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 14.dp))
             }
@@ -95,7 +98,6 @@ import kotlin.math.sin
                 val now = totals[line.code]?.firstOrNull() ?: 0.0
                 val value = line.values.firstOrNull() ?: 0.0
                 val after = if (isTaken) now - value else now + value
-                // Итог с основой правил (0.14.0, ASANA-N08): «шанс 15% + узлы 3,6% = 18,6%», а не одна сумма узлов
                 val base = index.modifier(line.code)?.effectOf(0)?.let { AtlasEffects.base(index, it.stat) }
                 Text(
                     if (base != null) {
@@ -109,7 +111,6 @@ import kotlin.math.sin
                 )
             }
         }
-        // Взаимоисключающие ключевые узлы (0.14.0, ASANA-N09): пара названа всегда, взятый второй гасит кнопку с причиной
         val blocker = AtlasFog.excludedBy(graph, node.code, taken)
         node.excludes.forEach { other ->
             Text(ui("atlas.excludes", atlasNodeTitle(other)), color = Caution, style = MaterialTheme.typography.labelSmall)
@@ -149,12 +150,12 @@ import kotlin.math.sin
 }
 
 /**
- * Строка узла Атласа полной фразой словаря сервера (0.14.0, ASANA-N08): «+1,8% к шансу, что вещь, выпавшая на захваченной карте,
+ * Строка узла Атласа полной фразой словаря сервера: «+1,8% к шансу, что вещь, выпавшая на захваченной карте,
  * несёт влияние этой карты»; флаг - фраза без числа («…захватывает только Зодчий»). Короткое имя характеристики узел не печатает.
  */
 internal fun effectLines(index: ContentIndex, line: Line): List<String> = listOf(lineText(index, line))
 
-/** The atlas's lines added up (3.54.0): by modifier code, value by value, over every taken node. */
+/** The atlas's lines added up: by modifier code, value by value, over every taken node. */
 internal object AtlasTotals {
     fun of(index: ContentIndex, taken: Set<String>): Map<ModifierCode, List<Double>> = sum(index.atlas.nodes.filter { it.code in taken }.flatMap { it.lines })
 
@@ -163,7 +164,7 @@ internal object AtlasTotals {
     }
 }
 
-/** «Итого» (3.54.0): what the taken nodes give, added up and grouped by mechanic. */
+/** «Итого»: what the taken nodes give, added up and grouped by mechanic. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun AtlasSummary(index: ContentIndex, taken: Set<String>, onDismiss: () -> Unit) {

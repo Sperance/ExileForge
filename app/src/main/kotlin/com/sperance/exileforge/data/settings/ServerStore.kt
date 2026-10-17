@@ -25,11 +25,11 @@ import java.util.UUID
 
 private val Context.settings by preferencesDataStore("server_settings")
 
-/** The one server every player plays on (3.75.0): there is no address to type before the gate. */
+/** The one server every player plays on: there is no address to type before the gate. */
 const val DEFAULT_SERVER = "https://147.45.219.84.sslip.io/"
 
 class ServerStore(private val context: Context, private val vault: SecretVault = SecretVault()) {
-    // A new key (3.75.0): an address typed before it is left behind, only an administrator's choice from the Server page counts.
+    // A new key: an address typed before it is left behind, only an administrator's choice from the Server page counts.
     private val key = stringPreferencesKey("server_override")
     val server = context.settings.data.map { it[key] ?: DEFAULT_SERVER }
 
@@ -56,7 +56,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         context.settings.edit { it[languageKey] = value.code }
     }
 
-    /** Фильтры списков предметов (4.2.0) одним документом: выбор каждого списка; нечитаемый - обычные фильтры. */
+    /** Фильтры списков предметов одним документом: выбор каждого списка; нечитаемый - обычные фильтры. */
     private val itemFiltersKey = stringPreferencesKey("item_filters")
     val itemFilters = context.settings.data.map { prefs ->
         prefs[itemFiltersKey]?.let { runCatching { WireJson.decodeFromString(ItemFilters.serializer(), it) }.getOrNull() } ?: ItemFilters()
@@ -65,7 +65,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         context.settings.edit { it[itemFiltersKey] = WireJson.encodeToString(ItemFilters.serializer(), value) }
     }
 
-    /** The player's settings (3.77.0) as one document; an unreadable one falls back to the defaults. */
+    /** The player's settings as one document; an unreadable one falls back to the defaults. */
     private val gameSettingsKey = stringPreferencesKey("game_settings")
     val gameSettings = context.settings.data.map { prefs ->
         prefs[gameSettingsKey]?.let { runCatching { WireJson.decodeFromString(GameSettings.serializer(), it) }.getOrNull() } ?: GameSettings()
@@ -74,7 +74,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         context.settings.edit { it[gameSettingsKey] = WireJson.encodeToString(GameSettings.serializer(), value) }
     }
 
-    /** Which shelves of the fight's log are shown (3.37.0), by their names; nothing is the default, blows and ailments. */
+    /** Which shelves of the fight's log are shown, by their names; nothing is the default, blows and ailments. */
     private val logFilterKey = stringPreferencesKey("log_filter")
     val logFilter = context.settings.data.map { it[logFilterKey] }
     suspend fun saveLogFilter(value: String) {
@@ -115,7 +115,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     suspend fun saveIcons(server: String, hash: String, document: String) = iconSets.write(server, hash, document)
 
     /**
-     * The server's portraits (since 2.31.0): every SVG verbatim beside the fingerprint it was served
+     * The server's portraits: every SVG verbatim beside the fingerprint it was served
      * with, by key, in one file per server — a changed file is fetched again, the rest never are.
      */
     suspend fun portraits(server: String): Map<String, Pair<String, String>> {
@@ -129,6 +129,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
         }
     }
 
+    /** У набора нет своего отпечатка: он у каждого портрета, поэтому файл - сам себе ключ. */
     suspend fun savePortraits(server: String, portraits: Map<String, Pair<String, String>>) {
         val document = buildJsonObject {
             portraits.forEach { (key, file) ->
@@ -141,7 +142,6 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
                 )
             }
         }
-        // The set has no fingerprint of its own: each portrait carries one, so the file is its own key.
         portraitSets.write(server, PORTRAITS_HASH, document.toString())
     }
 
@@ -151,7 +151,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
      */
     suspend fun chunk(server: String, file: String): Pair<String, String>? = chunks.read(server, file)
 
-    /** The server's manifest as last served (3.1.0): a cold start without the network reads its content by it. */
+    /** The server's manifest as last served: a cold start without the network reads its content by it. */
     suspend fun manifest(server: String): String? = manifests.read(server)?.second
     suspend fun saveManifest(server: String, document: String) {
         if (manifests.read(server)?.second != document) manifests.write(server, document.hashCode().toString(), document)
@@ -171,20 +171,20 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     private fun journalFile(heroId: String) = File(context.filesDir, "journal/$heroId.json")
 
     /**
-     * The commands one server has not answered yet (3.30.0), in order, as text: they survive the process and
+     * The commands one server has not answered yet, in order, as text: they survive the process and
      * go out with their own keys on the next launch. The file is replaced whole, never torn.
      */
     suspend fun commands(server: String): String? = withContext(Dispatchers.IO) { serverFile("commands", server).takeIf { it.isFile }?.readText() }
     suspend fun saveCommands(server: String, text: String) = withContext(Dispatchers.IO) { replace(serverFile("commands", server), text) }
 
     /**
-     * The last snapshot of one hero on one server, beside the API revision it was read under (3.30.0): the
+     * The last snapshot of one hero on one server, beside the API revision it was read under: the
      * fast start draws the hero from it before the server answers. Another revision reads as no copy at all.
      */
     suspend fun heroCopy(server: String, heroId: String): String? = withContext(Dispatchers.IO) { serverFile("heroes", "$server|$heroId").takeIf { it.isFile }?.readText() }
     suspend fun saveHeroCopy(server: String, heroId: String, text: String) = withContext(Dispatchers.IO) { replace(serverFile("heroes", "$server|$heroId"), text) }
 
-    /** Последний запущенный выбор кузнеца героя на сервере (3.89.0): лист кузнеца открывается в его режиме. */
+    /** Последний запущенный выбор кузнеца героя на сервере: лист кузнеца открывается в его режиме. */
     suspend fun smithChoice(server: String, heroId: String): String? = context.settings.data.first()[smithKey(server, heroId)]
     suspend fun saveSmithChoice(server: String, heroId: String, choice: String) {
         context.settings.edit { it[smithKey(server, heroId)] = choice }
@@ -192,9 +192,9 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     private fun smithKey(server: String, heroId: String) = stringPreferencesKey("smith_choice:$server|$heroId")
 
     /**
-     * The world of other rules forgotten (3.81.2): when the rules' version moves, the heroes' copies, the waiting commands, the
+     * The world of other rules forgotten: when the rules' version moves, the heroes' copies, the waiting commands, the
      * runs' journals and the content kept for the old one are dropped once, so a launch never opens on a world the server no
-     * longer has. The session and the last hero stay (3.91.0): an update must not sign the player out - a token the server no
+     * longer has. The session and the last hero stay: an update must not sign the player out - a token the server no
      * longer takes is dropped by its 401, a stale hero by the fast start's revision check. The language, the settings, the
      * dictionary, the art and the device's own account stay too.
      * Whether anything was dropped.
@@ -276,8 +276,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     }
 
     /**
-     * The session token for one server, sealed by the Keystore ([SecretBox], 3.48.0). Хранилище ключей не ответило
-     * (3.81.3) - токена будто нет: запуск идёт ко входу, а не стоит; несохранённый токен лишь просит войти в следующий раз.
+     * The session token for one server, sealed by the Keystore ([SecretBox]). Хранилище ключей не ответило - токена будто нет: запуск идёт ко входу, а не стоит; несохранённый токен лишь просит войти в следующий раз.
      */
     suspend fun token(server: String): String? = try {
         secret(tokenKey(server))
@@ -293,7 +292,7 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
     private fun tokenKey(server: String) = stringPreferencesKey("token:$server")
 
     /**
-     * The device's own secret on one server (3.48.0): the server issued it at registration and knows only its hash — the
+     * The device's own secret on one server: the server issued it at registration and knows only its hash — the
      * account of this device is whoever holds it. Sealed like the token; a data wipe loses it, and the [deviceFingerprint]
      * brings the same account back.
      */

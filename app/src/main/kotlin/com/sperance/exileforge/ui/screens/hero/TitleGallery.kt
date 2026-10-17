@@ -36,7 +36,7 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Медаль титула по разделу летописи, где лежит счётчик его достижения (4.8.0): новый счётчик раздела получает медаль сам,
+ * Медаль титула по разделу летописи, где лежит счётчик его достижения: новый счётчик раздела получает медаль сам,
  * новый раздел - строку здесь; без строки - печать.
  */
 private val SectionMedals: Map<String, ImageVector> = mapOf(
@@ -55,7 +55,7 @@ private data class TitleTile(val code: String, val achievement: Achievement, val
     val reason: String get() = ui("chronicle.title_for", loc("achievement.${achievement.code}.name"), number(achievement.tiers.last().toDouble()))
 }
 
-/** Текущий титул героя крупно (4.8.0, макет «Титулы», вариант A): Cinzel цвета `Caution`, без титула - приглушённо. */
+/** Текущий титул героя крупно: Cinzel цвета `Caution`, без титула - приглушённо. */
 @Composable internal fun CurrentTitle(title: String) {
     Column(
         Modifier.fillMaxWidth().depthPanel(RoundedCornerShape(14.dp)).padding(horizontal = 16.dp, vertical = 14.dp),
@@ -73,9 +73,9 @@ private data class TitleTile(val code: String, val achievement: Achievement, val
 }
 
 /**
- * «Галерея медалей» (4.8.0, макет «Титулы», вариант A): заголовок «Титулы · X / N ▾» сворачивает таблицу (помнит устройство,
+ * «Галерея медалей»: заголовок «Титулы · X / N ▾» сворачивает таблицу (помнит устройство,
  * [com.sperance.exileforge.presentation.state.GameSettings.titlesFolded]); сетка в два столбца - «Без титула» первой плиткой,
- * затем полученные: медаль, имя, за что; выбранный - в рамке `Gold`. Закрытых титулов галерея не показывает (4.9.0).
+ * затем полученные: медаль, имя, за что; выбранный - в рамке `Gold`. Закрытых титулов галерея не показывает.
  */
 @Composable internal fun TitleGallery(achievements: List<Achievement>, values: Map<String, Long>, current: String, enabled: Boolean, onPick: (String) -> Unit) {
     val settings = koinViewModel<SettingsViewModel>()

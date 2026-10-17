@@ -49,9 +49,9 @@ import kotlin.math.sin
 }
 
 /**
- * One pool as a bar (3.24.0): a rounded dark track with a soft border of the pool's colour, the fill lit from above,
+ * One pool as a bar: a rounded dark track with a soft border of the pool's colour, the fill lit from above,
  * and the figures — now / most · share — across it in a shadowed type that reads over the fill and the track alike.
- * [ring] outlines it brighter, as a barrier (2.78.0) does the hero's life while it soaks. [reserved] past [max] is
+ * [ring] outlines it brighter, as a barrier does the hero's life while it soaks. [reserved] past [max] is
  * the mana the auras hold: the bar's hatched tail, the fill running up to it.
  */
 @Composable internal fun VitalBar(
@@ -109,7 +109,7 @@ private fun vitalFigures(value: Int, max: Int): String = "$value / $max · ${if 
 
 private val SwingTrack = Color(0x14FFFFFF)
 
-/** The colour and glyph of a buildup (3.78.0, variant A «Тонкая полоса со значком»): stun gold, freeze ice, electrocute violet. */
+/** The colour and glyph of a buildup (variant A «Тонкая полоса со значком»): stun gold, freeze ice, electrocute violet. */
 internal fun buildupTint(kind: Buildup): Color = when (kind) {
     Buildup.STUN -> Color(0xFFF2D23A)
     Buildup.FREEZE -> Color(0xFF8FD3FF)

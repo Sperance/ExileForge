@@ -21,13 +21,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-/** Открытая карточка игрока (4.5.1): чья ([target], null - закрыта) и ответ сервера ([card], null - ещё читается). */
+/** Открытая карточка игрока: чья ([target], null - закрыта) и ответ сервера ([card], null - ещё читается). */
 data class PlayerCardUi(val target: String? = null, val card: PlayerCard? = null)
 
 /**
- * Карточка игрока (4.5.1): одна на приложение, открывается нажатием на имя или строку игрока где угодно (`LocalPlayerCard`).
+ * Карточка игрока: одна на приложение, открывается нажатием на имя или строку игрока где угодно (`LocalPlayerCard`).
  * Профиль и права на действия - у сервера (`GET hero/card`): клиент не дублирует права гильдии и модерации, а лишь прячет
- * недоступные кнопки. Действия карточки ведут в свои экраны: письмо герою (4.6.3) и администратора, гильдия, витрина лотов
+ * недоступные кнопки. Действия карточки ведут в свои экраны: письмо герою и администратора, гильдия, витрина лотов
  * продавца; игнор писем героя меняет карточку на месте.
  */
 class PlayerCardViewModel(
@@ -47,7 +47,11 @@ class PlayerCardViewModel(
     private val mutable = MutableStateFlow(PlayerCardUi())
     val state: StateFlow<PlayerCardUi> = mutable.asStateFlow()
 
-    /** Карточка героя [target] глазами своего героя; без своего героя (меню героев) смотреть не от кого. */
+    /**
+     * Карточка героя [target] глазами своего героя; без своего героя (меню героев) смотреть не от кого.
+     *
+     * Отказ (героя нет, другой сервер) печатает исполнитель; пустой лист не остаётся висеть.
+     */
     fun open(target: String) {
         val viewer = heroes.heroId.takeIf { it.isNotBlank() } ?: return
         if (target.isBlank()) return
@@ -57,7 +61,6 @@ class PlayerCardViewModel(
                 val card = connection.api.hero.card(viewer, target)
                 mutable.update { if (it.target == target) it.copy(card = card) else it }
             } catch (e: com.sperance.exileforge.core.network.ApiFailure) {
-                // Отказ (героя нет, другой сервер) печатает исполнитель; пустой лист не остаётся висеть
                 mutable.update { if (it.target == target) PlayerCardUi() else it }
                 throw e
             }
@@ -80,7 +83,7 @@ class PlayerCardViewModel(
         close()
     }
 
-    /** «Написать» (4.6.3): окно письма герою карточки; адресат - плашкой, не вводом. */
+    /** «Написать»: окно письма герою карточки; адресат - плашкой, не вводом. */
     fun write(card: PlayerCard) = leave { letters.compose(LetterDraft.to(card.heroId, card.name, card.heroClass, card.level)) }
 
     /** Письмо администратора аккаунту героя (только администратору): форма письма с логином владельца. */

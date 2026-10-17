@@ -21,7 +21,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
- * Экран квестов Города, вкладка квестов гильдии (3.80.10) и сюжет «Похода» (4.2.0): доски из репозитория, действия общие,
+ * Экран квестов Города, вкладка квестов гильдии и сюжет «Похода»: доски из репозитория, действия общие,
  * раздел - свой.
  */
 class QuestViewModel(
@@ -32,7 +32,7 @@ class QuestViewModel(
     private val navigator: Navigator,
     private val prefs: PreferencesRepository,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val quests: StateFlow<Quests> = repository.state
     val activity: StateFlow<Activity> = commands.state
@@ -47,11 +47,11 @@ class QuestViewModel(
     fun load() = actions.load()
     fun loadGuild() = actions.loadGuild()
 
-    /** Экран открылся (3.94.1): ответ моложе полуминуты не перечитывается. */
+    /** Экран открылся: ответ моложе полуминуты не перечитывается. */
     fun open() = actions.load(fresh = true)
     fun openGuild() = actions.loadGuild(fresh = true)
 
-    /** Доска для карты мира (4.10.x): читается, только если её ещё нет, - шаг сюжета двигают сдача и итоги захода, они её перечитывают. */
+    /** Доска для карты мира: читается, только если её ещё нет, - шаг сюжета двигают сдача и итоги захода, они её перечитывают. */
     fun glance() {
         if (quests.value.board == null) actions.load()
     }
@@ -65,7 +65,7 @@ class QuestViewModel(
     fun book(chapter: Int, code: String) = actions.book(chapter, code)
     fun claimGuild(questId: String? = null, goal: String? = null) = actions.claimGuild(questId, goal)
 
-    /** Свёрнутость карточки сюжета (4.4.x), из настроек устройства. */
+    /** Свёрнутость карточки сюжета, из настроек устройства. */
     val storyFold: StateFlow<StoryFold> = prefs.settings.map { it.storyFold }.stateIn(viewModelScope, SharingStarted.Eagerly, prefs.settings.value.storyFold)
 
     /** Свернуть или раскрыть карточку сюжета. */

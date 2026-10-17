@@ -48,7 +48,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.abs
 
 /**
- * The class carousel (3.13.0): one class to a card, turned by the arrows or a swipe. The card says who the class is
+ * The class carousel: one class to a card, turned by the arrows or a swipe. The card says who the class is
  * and how it plays, what a level-one hero of it starts with, the skills it learns and where it stands on the tree —
  * everything the one choice that is never undone should rest on.
  */
@@ -152,7 +152,7 @@ import kotlin.math.abs
     }
 }
 
-/** Умения класса: строка открывает карточку умения на первом уровне (0.14.4, #25). */
+/** Умения класса: строка открывает карточку умения на первом уровне. */
 @Composable private fun ColumnScope.SkillsSection(guide: ClassGuide) {
     SectionLabel(ui("chars.class.skills"))
     val inspect = rememberSkillInspect()

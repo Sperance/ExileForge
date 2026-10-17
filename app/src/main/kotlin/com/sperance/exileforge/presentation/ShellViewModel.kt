@@ -43,8 +43,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 /**
- * Оболочка приложения (3.80.30): вкладки и здания по прежнему номеру, «Настройки» поверх экрана, строка в тосты,
- * прогрев, поход и испытание поверх стека и жизненный цикл активности (3.80.44: над сервисами, без рантайма).
+ * Оболочка приложения: вкладки и здания по прежнему номеру, «Настройки» поверх экрана, строка в тосты,
+ * прогрев, поход и испытание поверх стека и жизненный цикл активности (над сервисами, без рантайма).
+ *
+ * Приложение запускается один раз, кто бы из оболочки или активности ни попросил первым.
  */
 class ShellViewModel(
     startup: AppStartup,
@@ -64,19 +66,18 @@ class ShellViewModel(
     private val expedition: ExpeditionActions,
     trial: TrialActions,
     rift: com.sperance.exileforge.presentation.expedition.RiftActions,
-    /** Связь с сервером на старте (3.86.0): окно запуска уходит по её ответу. */
+    /** Связь с сервером на старте: окно запуска уходит по её ответу. */
     val reach: ServerReach,
     private val foreground: Foreground,
-    /** Последние падения (0.14.2): их стеки прикладываются к отчёту об ошибке. */
+    /** Последние падения: их стеки прикладываются к отчёту об ошибке. */
     private val crashes: com.sperance.exileforge.presentation.app.CrashKeeper,
 ) : ViewModel() {
     init {
         reach.start()
-        // Приложение запускается один раз, кто бы из оболочки или активности ни попросил первым.
         startup.start()
     }
 
-    /** Верх стека навигатора: фаза, вкладка, здание (3.80.40). */
+    /** Верх стека навигатора: фаза, вкладка, здание. */
     val route: StateFlow<Route> = navigator.current
 
     /** Прогрев героя, поход и испытание - состояния игры поверх стека. */
@@ -84,23 +85,22 @@ class ShellViewModel(
     val run: StateFlow<ExpeditionRun?> = expedition.run
     val arena: StateFlow<TrialArena?> = trial.arena
 
-    /** Разлом недели (3.96.0): открыт - экран Разлома поверх стека. */
+    /** Разлом недели: открыт - экран Разлома поверх стека. */
     val rift: StateFlow<com.sperance.exileforge.presentation.expedition.RiftState> = rift.state
 
-    /** Что телефон отзывает вибрацией (3.77.0), уже по настройкам. */
+    /** Что телефон отзывает вибрацией, уже по настройкам. */
     val buzzes: SharedFlow<Buzz> get() = buzzer.flow
 
     fun warmUp() = warming.start()
 
     /**
-     * Отчёт жука (3.48.0): со входом или без. С 4.9.0 собранный отчёт сразу ложится в очередь на диске ([BugDelivery]) и уходит
-     * оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать. Снимков экрана нет
-     * (0.14.1, GH-ISSUES).
+     * Отчёт жука: со входом или без. Собранный отчёт сразу ложится в очередь на диске ([BugDelivery]) и уходит
+     * оттуда повторами, не занимая очередь команд; [onQueued] - отчёт сохранён, черновик можно стирать. Снимков экрана нет.
+     *
+     * К ошибке прикладываются последние падения клиента и снимок героя; без прочитанного контента отчёт уходит без журнала сбоев.
      */
     fun reportBug(report: BugReportRequest, onQueued: suspend () -> Unit = {}) = bugs.file({
-        // Без прочитанного контента (4.12.x: у правил нет значений по умолчанию) отчёт уходит без журнала сбоев
         val rules = game.value.index?.rules?.feedback
-        // К ошибке (0.14.2) - последние падения клиента и снимок героя
         val evidence = if (report.kind == FeedbackKind.BUG) {
             report.copy(traces = crashes.recent(), heroSheet = game.value.hero?.reportSheet().orEmpty())
         } else {
@@ -109,7 +109,7 @@ class ShellViewModel(
         connection.current.value?.bugReport(evidence, rules?.failures ?: 0) ?: evidence
     }, onQueued)
 
-    /** Аккорд громкости (4.8.0): просьба открыть лист отчёта. */
+    /** Аккорд громкости: просьба открыть лист отчёта. */
     private val bugAsks = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val bugRequests: SharedFlow<Unit> = bugAsks
 
@@ -118,17 +118,20 @@ class ShellViewModel(
         bugAsks.tryEmit(Unit)
     }
 
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
 
-    /** Повторное нажатие на открытую вкладку (3.95.0): её экран закрывает вложенное и прокручивается наверх. */
+    /** Повторное нажатие на открытую вкладку: её экран закрывает вложенное и прокручивается наверх. */
     private val reselects = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val reselected: kotlinx.coroutines.flow.SharedFlow<Int> = reselects
 
-    /** Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого. */
+    /**
+     * Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого.
+     *
+     * Промокоды заводит только администратор: модератору их экран не открывается.
+     */
     fun tab(tab: Int) {
         if (!adminTools() && tab in ADMIN_TABS) return
-        // Промокоды (ADMIN-UI) заводит только администратор: модератору их экран не открывается
         if (tab == TAB_REDEMPTION && !sessions.state.value.isAdmin) return
         commands.dismissMessage()
         val again = navigator.current.value.tab == tab
@@ -136,22 +139,22 @@ class ShellViewModel(
         if (again) reselects.tryEmit(tab)
     }
 
-    /** Инструменты администратора (4.12.x, ADMIN-UI): роль модерации аккаунта и режим вместе. */
+    /** Инструменты администратора: роль модерации аккаунта и режим вместе. */
     private fun adminTools(): Boolean = sessions.state.value.isModerator && modes.mode.value == AppMode.ADMIN
 
-    /** Здание Города (3.22.0) или площадь для null. */
+    /** Здание Города или площадь для null. */
     fun building(building: Building?) {
         commands.dismissMessage()
         navigator.tab(Route.ofBuilding(building))
     }
 
-    /** «Настройки» (3.77.0) поверх открытой вкладки; закрытие возвращает на неё. [page] (3.94.0) - сразу на свою страницу. */
+    /** «Настройки» поверх открытой вкладки; закрытие возвращает на неё. [page] - сразу на свою страницу. */
     fun openSettings(page: String? = null) {
         commands.dismissMessage()
         navigator.open(Route.Settings(page))
     }
 
-    /** Узел дерева, на котором оно откроется (3.94.1): гнездо для самоцвета из карточки. */
+    /** Узел дерева, на котором оно откроется: гнездо для самоцвета из карточки. */
     private var treeNode: String? = null
 
     /** Пассивное дерево с выбранным узлом [node]. */
@@ -164,28 +167,26 @@ class ShellViewModel(
 
     fun closeSettings() = navigator.back()
 
-    /** Проба связи сразу (3.30.0): нажата иконка «не в сети». */
+    /** Проба связи сразу: нажата иконка «не в сети». */
     fun retryLink() = link.wake(now = true)
 
-    /** Сеть устройства вернулась (3.95.2). */
+    /** Сеть устройства вернулась. */
     fun networkBack() {
         link.networkBack()
         bugs.kick()
     }
 
-    /** Строка в тосты с экранов (3.76.0: место, открытое уровнем). */
+    /** Строка в тосты с экранов (место, открытое уровнем). */
     fun announce(text: String) = notices.toast(text)
 
     fun dismissMessage() = commands.dismissMessage()
     fun dismissNotice() = notices.dismiss()
     fun buzz(kind: Buzz) = buzzer.buzz(kind)
 
-    /** Настройка устройства, в хранилище устройства: фильтр журнала боя. Фильтры списков предметов - у самих списков (4.2.0). */
+    /** Настройка устройства, в хранилище устройства: фильтр журнала боя. Фильтры списков предметов - у самих списков. */
     fun logFilter(kinds: Set<LogKind>) {
         viewModelScope.launch { prefs.saveLogFilter(kinds) }
     }
-
-    // ---- жизненный цикл активности (3.80.42: из удалённой общей модели) ----
 
     /** Возврат на передний план: фоновые циклы идут дальше, связь восстанавливается без нажатия. */
     fun reconnect() {
@@ -193,7 +194,7 @@ class ShellViewModel(
         session.reconnect()
     }
 
-    /** Касание красного облака связи (4.4.x): переподключение сразу. */
+    /** Касание красного облака связи: переподключение сразу. */
     fun reconnectLink() = session.reconnectLink()
 
     /** Уход с переднего плана: фоновые циклы встают на паузу, момент запомнен - долгое отсутствие обновит экран на возврате. */
@@ -205,7 +206,7 @@ class ShellViewModel(
     /** Журнал похода уходит сразу: процесс, убитый в фоне, не унесёт его с собой. */
     fun flushRun() = expedition.flushRun()
 
-    /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
+    /** Вход встретил сервер новее сборки: проверка обновлений идёт сразу. */
     val newerServer: Flow<Unit> get() = session.newerServer
     val serverFailed: Flow<Unit> get() = session.serverFailed
 }

@@ -86,12 +86,15 @@ import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.ceil
 
-/** Экран ремёсел (3.80.14): плашка работы, итоги и плитки профессий; окно профессии и работы - в соседних файлах. */
+/** Экран ремёсел: плашка работы, итоги и плитки профессий; окно профессии и работы - в соседних файлах. */
 /**
- * The crafts tab (since 2.41.0, server 0.37.0): the work under way on a plaque over the tiles, one
+ * The crafts tab: the work under way on a plaque over the tiles, one
  * tile per profession, and a profession's window behind each. The work runs on the server by time;
- * this screen asks when it opens, throws each cycle here the moment it ends (2.47.0) and asks the
+ * this screen asks when it opens, throws each cycle here the moment it ends and asks the
  * server behind it, and runs the cycle's bar smoothly on the device's clock set by the server's.
+ *
+ * Экран с ремёслами спрашивает снова тихо; досчёт - когда смена вкладки доехала ([TAB_SHIFT_MS]) и только если прошлый ответ старше срока
+ * свежести. Разделы плиток считаются раз на ответ. Вкладка нажата снова - окно профессии закрывается, плитки наверх.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -101,9 +104,6 @@ fun CraftsScreen() {
     val held by vm.crafts.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     val openCode by vm.profession.collectAsStateWithLifecycle()
-    // A screen already holding the crafts asks again in silence; герой приходит в том же ответе (3.94.1), а будильник цикла
-    // стоит, пока экран открыт. 4.x: досчёт - когда смена вкладки доехала ([TAB_SHIFT_MS]), не посреди её анимации, и только
-    // если прошлый ответ старше срока свежести (`freshness`)
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         withFrameNanos { }
         delay(TAB_SHIFT_MS.toLong())
@@ -116,12 +116,10 @@ fun CraftsScreen() {
     val crafts = held.state
     val offset = held.offset
     val list = rememberLazyListState()
-    // Разделы плиток считаются раз на ответ, а не на каждую перекомпоновку экрана
     val sections = remember(crafts?.professions) {
         val (crafting, gathering) = crafts?.professions.orEmpty().partition { it.crafting }
         listOf("crafts.section_gather" to gathering, "crafts.section_craft" to crafting).filter { it.second.isNotEmpty() }.map { (title, group) -> title to group.chunked(TILES) }
     }
-    // Вкладка нажата снова (3.95.0): окно профессии закрывается, плитки - наверх
     OnReselect(TAB_CRAFTS) {
         vm.openProfession("")
         list.animateScrollToItem(0)
@@ -140,7 +138,6 @@ fun CraftsScreen() {
                     return@LazyColumn
                 }
                 item { WorkPlaque(game, vm, held, offset) }
-                // Gathering over crafting, with the materials flowing from one into the other (the owner's pick of five mockups, 2.44.0).
                 sections.forEachIndexed { index, (title, rows) ->
                     if (index > 0) item { FlowMark() }
                     item { SectionRule(ui(title)) }
@@ -151,7 +148,6 @@ fun CraftsScreen() {
                         }
                     }
                 }
-                // The rules travel with the answer; an answer without them says nothing about the offline cap.
                 crafts.rules?.let { rules -> item { MutedText(ui("crafts.note", number(rules.offlineHours))) } }
             }
         }
@@ -160,8 +156,10 @@ fun CraftsScreen() {
 
 /**
  * The work under way, on every screen of the tab: which, how far the cycle is, and a stop — and
- * since 2.75.0 (server 0.66.0), in its own frame, what the work has come to since it started: how
- * long it runs, its cycles and experience, what it made, and every stack gathered and spent. С 4.x итог - книгой учёта ([WorkLedger]).
+ * in its own frame, what the work has come to since it started: how
+ * long it runs, its cycles and experience, what it made, and every stack gathered and spent. Итог - книгой учёта ([WorkLedger]).
+ *
+ * Вещь в работе (Осквернение) не видна среди вещей героя, пока работа идёт.
  */
 @Composable
 internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offset: Long) {
@@ -178,26 +176,24 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             }
             ForgeOutlinedButton(enabled = !game.busy, onClick = vm::stop) { Text(ui("crafts.stop")) }
         }
-        // Вещь в работе (4.6.2, Осквернение): её нет среди вещей героя, пока работа идёт; касание открывает карточку
         game.heldWork?.let { held -> game.view(held)?.let { HeldItem(it) } }
         CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
         LevelLine(crafts, work, offset)
-        // Книга учёта (4.x, вариант C): итог сервера с начала работы, сделанные вещи - чипами (за сессию, по одной на вещь)
         val sums = remember(work.totals) { WorkSums.of(work.totals) }
         WorkLedger(game, ui("crafts.totals_title"), sums, crafts.totals.equipment, startedAt = work.startedAt, offset = offset, makes = crafts.state?.running?.kind?.makesItems == true)
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }
 
-/** Вещь, что держит работа (4.6.2): строка плиты с подписью «в работе»; касание открывает её карточку. */
+/** Вещь, что держит работа: строка плиты с подписью «в работе»; касание открывает её карточку. */
 @Composable private fun HeldItem(view: ItemView) {
     val inspect = rememberInspect()
     ItemRow(view, facts = listOf(ui("crafts.held"))) { inspect(Inspect.Copy(view.item)) }
 }
 
 /**
- * Что принесла работа за эту сессию (2.47.0; с 4.x - книгой учёта, как плашка работы): итоги, строки стопок и сделанные вещи;
- * каждая строка и чип открывают карточку (4.3.2).
+ * Что принесла работа за эту сессию (с 4.x - книгой учёта, как плашка работы): итоги, строки стопок и сделанные вещи;
+ * каждая строка и чип открывают карточку.
  */
 @Composable
 internal fun SessionTally(game: GameUi, totals: WorkGains) {
@@ -241,11 +237,11 @@ internal fun SessionTally(game: GameUi, totals: WorkGains) {
 }
 
 /**
- * A cycle's bar, filled smoothly (2.47.0): it reads the device's clock, set by the server's through [offset], and only
- * the bar is redrawn — the screen around it is not recomposed. С 4.9.0 часы полосы тикают не каждый кадр, а с шагом
+ * A cycle's bar, filled smoothly: it reads the device's clock, set by the server's through [offset], and only
+ * the bar is redrawn — the screen around it is not recomposed. Часы полосы тикают не каждый кадр, а с шагом
  * в один пиксель её ширины ([cycleStepMs]): на глаз так же плавно, а экран ремёсел не держит полный FPS.
- * Under it (3.24.0) the time the cycle has run of its whole, and what the work brings in an hour on average.
- * С 3.90.0 полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
+ * Under it the time the cycle has run of its whole, and what the work brings in an hour on average.
+ * Полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
  * всплывает, что принёс пересчёт на границе цикла ([last]).
  */
 @Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6, hourly: String? = null) {
@@ -282,7 +278,7 @@ internal fun SessionTally(game: GameUi, totals: WorkGains) {
 }
 
 /**
- * Всплывашка сбора над полосой цикла (3.90.0): что принёс пересчёт сервера - «+1 Медная руда · +2 опыта» или «пусто» -
+ * Всплывашка сбора над полосой цикла: что принёс пересчёт сервера - «+1 Медная руда · +2 опыта» или «пусто» -
  * на [HARVEST_SHOWN] мс. Сбор, что уже был при открытии экрана, не всплывает; без анимаций в настройках - без плавности.
  */
 @Composable private fun HarvestPopup(last: Harvest?) {

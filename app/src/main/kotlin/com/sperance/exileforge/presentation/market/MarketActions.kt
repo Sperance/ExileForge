@@ -26,9 +26,9 @@ import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.coroutines.CancellationException
 
 /**
- * Аукцион игроков и лавка торговца. Все правила у сервера; клиент называет лот и печатает отказ. С 3.94.1 сделка - один
+ * Аукцион игроков и лавка торговца. Все правила у сервера; клиент называет лот и печатает отказ. Сделка - один
  * запрос: ответ несёт снимок героя, а команды над своими лотами - ещё и свой аукцион. Полка торговца едет в снимке героя.
- * Действия общие для экранов Города и для продажи из сундука героя (3.80.11).
+ * Действия общие для экранов Города и для продажи из сундука героя.
  */
 class MarketActions(
     private val repository: MarketRepository,
@@ -48,7 +48,7 @@ class MarketActions(
     fun showOwnLots(show: Boolean) = market { it.copy(showOwnLots = show) }
 
     /**
-     * Лоты одного продавца [sellerId] по имени [name] (4.5.1, «Лоты игрока» карточки игрока): витрина, суженная до него, с первой
+     * Лоты одного продавца [sellerId] по имени [name] («Лоты игрока» карточки игрока): витрина, суженная до него, с первой
      * страницы; свои лоты при этом не прячутся.
      */
     fun sellerLots(sellerId: String, name: String) {
@@ -87,13 +87,13 @@ class MarketActions(
     /** Фильтр, как его читает сервер: свои лоты убраны, если не просили, названия на языке экрана. */
     private fun showcaseFilter(): AuctionFilter = market.filter.copy(excludeSellerId = if (market.showOwnLots) "" else heroes.heroId, lang = uiLanguage.code)
 
-    /** [glance] - площадь Города (3.22.0): без полосы, а герой ниже уровня аукциона узнаёт это с карточки, не отказом. */
+    /** [glance] - площадь Города: без полосы, а герой ниже уровня аукциона узнаёт это с карточки, не отказом. */
     fun loadMyLots(glance: Boolean = false, fresh: Boolean = false) = trade(key = Reads.LOTS, glance = glance, maxAgeMs = freshness(fresh)) {
         val mine = api.auction.mine(heroes.heroId)
         market { it.copy(myLots = mine.lots, slots = mine.slots, history = mine.history) }
     }
 
-    /** Два списка аукциона; торговец - своё здание с 3.22.0, его полка едет в снимке героя (3.94.1). */
+    /** Два списка аукциона; торговец - своё здание его полка едет в снимке героя. */
     fun loadAuction(fresh: Boolean = false) {
         loadShowcase()
         loadMyLots(fresh = fresh)
@@ -108,7 +108,7 @@ class MarketActions(
     }
 
     /**
-     * Покупка с полки, что успела смениться (4.12.x, ASANA-04): отказ `CH_017` - не ошибка игрока, а старая витрина - герой
+     * Покупка с полки, что успела смениться: отказ `CH_017` - не ошибка игрока, а старая витрина - герой
      * перечитывается (полка едет в его снимке), тост «Витрина обновилась».
      */
     private suspend fun restocked(buy: suspend () -> Unit) {
@@ -123,7 +123,7 @@ class MarketActions(
     }
 
     /**
-     * Трофеи босса [boss] - на его уникалку (4.6.0, Предначертание «Трофейщик»): копия в тайнике, тост называет её. Отказы
+     * Трофеи босса [boss] - на его уникалку (Предначертание «Трофейщик»): копия в тайнике, тост называет её. Отказы
      * `FT_003`-`FT_005` - словами сервера.
      */
     fun tradeTrophy(boss: String) = trade(writing = true) {
@@ -131,10 +131,10 @@ class MarketActions(
         notices.toast(ui("fate.trophy_traded", equipmentTitle(bought.item.template)), NoticeKind.LOOT)
     }
 
+    /** Купленный лот уходит с витрины; страницы под ним остаются. */
     fun buy(lotId: String) = trade(writing = true) {
         val lot = api.auction.buy(heroes.heroId, lotId)
         notices.toast(ui("toast.bought", lot.title))
-        // Купленный лот уходит с витрины; страницы, добавленные под ним «Показать ещё», остаются.
         market { it.copy(showcase = it.showcase.without(lotId)) }
     }
 
@@ -148,12 +148,12 @@ class MarketActions(
         listed(api.auction.sellItem(heroes.heroId, code, amount, priceOrb, price))
     }
 
-    /** Ещё неделя своему лоту в его последний день (3.79.0). */
+    /** Ещё неделя своему лоту в его последний день. */
     fun extend(lotId: String) = trade(writing = true) {
         mine(api.auction.extend(heroes.heroId, lotId), "toast.extended")
     }
 
-    /** Подсказка цены тому, что герой выставляет (3.79.0): читается тихо, ошибка - просто нет подсказки; одна на вещь за сеанс (3.94.1). */
+    /** Подсказка цены тому, что герой выставляет: читается тихо, ошибка - просто нет подсказки; одна на вещь за сеанс. */
     suspend fun priceHint(itemCode: String, rarity: Rarity?, itemLevel: Int): PriceHint? {
         val key = "$itemCode/${rarity?.name}/$itemLevel"
         hints[key]?.let { return it.value }
@@ -175,7 +175,7 @@ class MarketActions(
         mine(api.auction.cancel(heroes.heroId, lotId), "toast.withdrawn")
     }
 
-    /** Выставлено (3.94.1): ответ уже несёт свой аукцион и героя - перечитывать нечего; экран - на свои лоты. */
+    /** Выставлено: ответ уже несёт свой аукцион и героя - перечитывать нечего; экран - на свои лоты. */
     private fun listed(answer: AuctionMine) {
         mine(answer, "toast.listed")
         market { it.copy(tab = 1) }

@@ -43,14 +43,14 @@ import com.sperance.exileforge.ui.theme.*
  * the ceiling and the leader's word; under them a grid of the guild's sections, each with its figure and a badge where
  * something waits. A tile opens its section over the hub, «back» leading to it. The applications are only for those
  * who may answer them.
+ *
+ * Разделы по праву таблицы: у каждого своё право [GuildTab.requires], раздела без права нет; раздел - уровень цепочки «назад».
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
-    // Звено здания в цепочке «назад» (4.4.x) - «Гильдия [TAG]»
     TrailTitle(GuildText.title(ui("guild.title"), guild.tag))
-    // Разделы по праву таблицы (4.4.x): у каждого своё право [GuildTab.requires], раздела без права нет
     val tabs = GuildTab.entries.filter { it.openTo(me?.role) }
     val tab = guilds.tab?.takeIf { it in tabs }
     if (tab == null) {
@@ -74,7 +74,6 @@ internal fun ColumnScope.GuildInside(game: GameUi, vm: GuildViewModel, guild: Gu
         }
         return
     }
-    // Раздел гильдии - уровень цепочки «назад» (4.4.x): «← Город › Гильдия [TAG] › Раздел», стрелка - к хабу гильдии
     TrailLevel(tabTitle(tab), onBack = { vm.tab(null) }) {
         PullToRefreshBox(isRefreshing = Reads.GUILD in game.loading, onRefresh = vm::load, modifier = Modifier.weight(1f)) {
             when (tab) {
@@ -160,7 +159,6 @@ private fun sectionFigure(tab: GuildTab, guild: GuildView, me: GuildMember?): St
             MutedText(if (guild.next > 0) ui("guild.xp", number(guild.experience.toDouble()), number(guild.next.toDouble())) else ui("guild.xp_max"))
         }
         LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(6.dp), color = guildColor(guild.color), trackColor = Abyss)
-        // The leader's word in a dark band under its flag, one glance from the arms.
         guild.announcement.takeIf { it.isNotBlank() }?.let {
             Row(
                 Modifier.fillMaxWidth().background(Abyss, RoundedCornerShape(8.dp)).padding(horizontal = 9.dp, vertical = 7.dp),

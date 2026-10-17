@@ -20,6 +20,8 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * «✦ +20%»: the copy's quality as a badge, nothing for none. A tap says what it boosts — the base's figures, or a
  * catalyst's kind of modifiers. [compact] is the list line's size, the card's otherwise.
+ *
+ * На карточке жетон - в высоту плашек уровня и цены: шапка читается одной линией.
  */
 @Composable fun QualityBadge(item: ItemView, modifier: Modifier = Modifier, compact: Boolean = false) {
     val quality = item.quality.takeIf { it > 0 } ?: return
@@ -33,7 +35,6 @@ import com.sperance.exileforge.ui.theme.*
         )
     }, modifier) {
         val frame = Modifier.background(Gold.copy(alpha = .12f), shape).border(1.dp, Gold.copy(alpha = .5f), shape)
-        // На карточке жетон - в высоту плашек уровня и цены (RelicChip), чтобы шапка читалась одной линией (4.8.0).
         val size = if (compact) frame.padding(horizontal = 5.dp) else frame.height(RelicChipHeight).padding(horizontal = 9.dp)
         Row(size, verticalAlignment = Alignment.CenterVertically) {
             Text(

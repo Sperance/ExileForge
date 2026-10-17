@@ -76,7 +76,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
-/** Работы профессии (3.80.14): строка работы, лист запуска с выбором и добавками, выбор инструмента. */
+/** Работы профессии: строка работы, лист запуска с выбором и добавками, выбор инструмента. */
 /**
  * A work as a card: what it makes under its name, then three figures to compare works by — about how much an hour
  * brings, how long a cycle runs, and how a cycle may turn out (doubled, in vain, or sure) — and at the foot what a
@@ -137,43 +137,36 @@ import kotlin.math.ceil
 @Composable internal fun JobIcon(job: JobView, modifier: Modifier) {
     when (job.kind) {
         JobKind.ITEM, JobKind.CONDENSE, JobKind.REFINE -> if (job.output.isNotBlank()) BagIcon(job.output, modifier) else GlyphIcon(Glyph.CRAFT, Gold, modifier)
-
         JobKind.FLASK, JobKind.EQUIPMENT, JobKind.JEWEL, JobKind.TOOL -> if (!SpriteIcon(equipmentIcon(job.output), Gold, modifier, halo = false)) GlyphIcon(Glyph.ITEM, Gold, modifier)
-
         JobKind.MAP -> GlyphIcon(Glyph.MAP, Gold, modifier)
-
         JobKind.BOOK -> GlyphIcon(Glyph.TEXT, Gold, modifier)
-
-        // Ритуал тира (4.4.0) поднимает умение, резьба (4.4.0) делает руну - выбранный вариант резьбы рисует свою руну
         JobKind.EVOLVE -> GlyphIcon(Glyph.LEVEL, Gold, modifier)
-
         JobKind.CARVE -> if (job.output.isNotBlank()) BagIcon(job.output, modifier) else GlyphIcon(Glyph.GEM, Gold, modifier)
-
-        // Осквернение (4.6.2): вещь героя получает судьбоносную строку
         JobKind.DESECRATE -> GlyphIcon(Glyph.RARITY, Gold, modifier)
     }
 }
 
-/** A work, opened: what it brings, how long, how often in vain, what it teaches and finds on the side — and its button. */
+/**
+ * A work, opened: what it brings, how long, how often in vain, what it teaches and finds on the side — and its button.
+ *
+ * Работа с выбором запускается одним из вариантов; недоступный виден с замком, причину называет низ листа. Кузнец открывается в последнем
+ * режиме этого героя на устройстве, иначе «Случайно»; случайная ковка примесей не берёт - её строки на два тира ниже. Осквернение выбирает
+ * вещь тайника, что пропустят правила. Вместо кнопки - одна точная причина: уровень, вариант, регион, инструмент или нехватка на цикл.
+ */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, profession: ProfessionView, work: JobView, current: Boolean, onDismiss: () -> Unit) {
     val crafts = held.state
     var additives by remember(work.code) { mutableStateOf(emptyList<String>()) }
-    // A choosing work (3.45.0) is started as one of its variants: the sheet shows the one picked.
-    // С 3.90.0 варианты не прячутся по уровню: недоступный виден с замком, а причину называет низ листа.
     val choices = choices(game, work)
-    // Кузнец (3.89.0) открывается в режиме, последний раз запущенном этим героем на устройстве; ничего не было - «Случайно».
     val smith = work.kind == JobKind.EQUIPMENT
     var picked by remember(work.code) {
         mutableStateOf(if (smith) SmithChoice.RANDOM.name else (choices.firstOrNull { it.level <= profession.level } ?: choices.firstOrNull())?.choice.orEmpty())
     }
     LaunchedEffect(work.code, game.heroId) { if (smith) vm.smithChoice(game.heroId)?.let { picked = it.name } }
     val job = work.options.firstOrNull { it.choice == picked } ?: work
-    // The smith's random piece (3.81.0, server 1.76.0) takes no additives: its lines roll two tiers lower instead.
     val random = job.choice == SmithChoice.RANDOM.name
     val chosenAdditives = if (random) emptyList() else additives
-    // Работа над вещью героя (4.6.2, Осквернение): выбор - вещь тайника, что пропустят правила; касание выбирает, долгое - карточка
     val targets = remember(work.code, game.hero?.items, game.index) { itemTargets(game, work.job) }
     var target by remember(work.code) { mutableStateOf("") }
     val item = target.takeIf { id -> targets.any { it.id == id } }.orEmpty()
@@ -215,7 +208,6 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                     PropertyRow(itemTitle(input.item), ui("crafts.have", have, input.amount), Glyph.CRAFT)
                 }
             }
-            // The smith's additives (2.42.0): each is spent every smelt and guarantees its handcrafted line.
             if (random) MutedText(ui("crafts.random_hint"))
             if (job.additives && !random && crafts != null && crafts.maxAdditives > 0) {
                 Engraved(ui("crafts.additives", crafts.maxAdditives))
@@ -242,7 +234,6 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
                     vm.stop()
                 }, modifier = Modifier.fillMaxWidth().height(48.dp)) { Text(ui("crafts.stop")) }
 
-                // Одна точная причина вместо кнопки (3.90.0): уровень, вариант, регион, инструмент или нехватка на цикл.
                 block != null -> Text(block.text, color = LifeRed, style = MaterialTheme.typography.bodyMedium)
 
                 else -> ForgeButton(enabled = !game.busy, onClick = {
@@ -255,7 +246,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
     }
 }
 
-/** The stash's tools of this profession — the copies whose template sits in the profession's tool slot; касание открывает карточку (4.3.2), её кнопка кладёт инструмент в слот. */
+/** The stash's tools of this profession — the copies whose template sits in the profession's tool slot; касание открывает карточку, её кнопка кладёт инструмент в слот. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ToolPicker(game: GameUi, profession: ProfessionView, onDismiss: () -> Unit, onPick: (String) -> Unit) {

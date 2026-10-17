@@ -148,7 +148,6 @@ internal class Sketches {
                 hillEdge.lineTo(p.x - s * .55f, p.y - s * .7f)
                 hillEdge.lineTo(p.x + s * .55f, p.y - s * .7f)
                 hillEdge.lineTo(p.x + s, p.y)
-                // The strata of the red rock, two bands across the face.
                 for (t in listOf(.35f, .65f)) {
                     hillHatch.moveTo(p.x - s * (1 - .45f * t), p.y - s * .7f * t)
                     hillHatch.lineTo(p.x + s * (1 - .45f * t), p.y - s * .7f * t)

@@ -3,7 +3,7 @@ package com.sperance.exileforge.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Цвета механик (4.4.x): значки вкладок режимов ([com.sperance.exileforge.ui.components.StoneTabs]) - Доски славы и «Похода».
+ * Цвета механик: значки вкладок режимов ([com.sperance.exileforge.ui.components.StoneTabs]) - Доски славы и «Похода».
  * Свой цвет у каждой механики, экраны берут его отсюда, а не пишут числом.
  */
 object ModeHue {
@@ -22,9 +22,9 @@ object ModeHue {
     /** Профессии - золото. */
     val Professions = Color(0xFFF2D27A)
 
-    /** Мощь (4.9.0) - золото печати ⚜. */
+    /** Мощь - золото печати ⚜. */
     val Might = Caution
 
-    /** Находки уникальных (4.10.x) - имя уникальной вещи, «тёплый уголь». */
+    /** Находки уникальных - имя уникальной вещи, «тёплый уголь». */
     val Uniques = Color(0xFFFFB774)
 }

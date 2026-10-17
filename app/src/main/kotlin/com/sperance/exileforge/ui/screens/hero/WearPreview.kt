@@ -40,11 +40,11 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** Whether an item goes on the hero at all: a map and a jewel are placed elsewhere; a tool (0.15.0, #34) - in its profession's slot. */
+/** Whether an item goes on the hero at all: a map and a jewel are placed elsewhere; a tool - in its profession's slot. */
 fun wearable(game: GameUi, item: ItemInstance): Boolean = game.index?.template(item.template)?.slot?.let { !it.isJewelLike } == true
 
 /**
- * Выбор места для «Если надеть» (3.90.3): у вещи слота с несколькими местами (кольца - две руки, фляги) игрок выбирает,
+ * Выбор места для «Если надеть»: у вещи слота с несколькими местами (кольца - две руки, фляги) игрок выбирает,
  * с чем сравнивать, а «Надеть» надевает туда же. Пока игрок не выбрал - лучшее место ([WearPlace.best]).
  */
 @Stable
@@ -71,25 +71,25 @@ class WearChoice internal constructor(val places: List<WearPlace>, private val p
 }
 
 /**
- * «Если надеть» (2.46.0) в итоге героя карточки (3.88.6): что станет с листом с этой вещью, сложенное здесь формулой правил, -
- * строка на каждую сдвинутую характеристику, под ними - одна строка Мощи «было → стало» (0.14.5, #44: только когда сдвиг стоит
+ * «Если надеть» в итоге героя карточки: что станет с листом с этой вещью, сложенное здесь формулой правил, -
+ * строка на каждую сдвинутую характеристику, под ними - одна строка Мощи «было → стало» (только когда сдвиг стоит
  * показа, `MightShift.shown`). Недоступная вещь говорит вместо этого красным, чего ей не хватает.
- * С 3.90.3 над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги (4.2.0) итог - «ИТОГ ФЛЯГИ», у
- * инструмента (0.15.0, #34) - «ИТОГ РЕМЕСЛА» против инструмента его профессии. Все итоги - сравнение «было → стало»
+ * Над итогом - вкладки мест ([WearChoice]): с чем из надетого сравнивать. У фляги итог - «ИТОГ ФЛЯГИ», у
+ * инструмента - «ИТОГ РЕМЕСЛА» против инструмента его профессии. Все итоги - сравнение «было → стало»
  * ([StatComparison]), свёрнутое до важнейших строк.
+ *
+ * Фляга и инструмент листа героя не меняют: вместо итога героя - их вердикт против надетого в гнезде. Мощь - одной строкой «было → стало»
+ * из того же листа боя, что сдвиги.
  */
 @Composable private fun WearTotals(game: GameUi, item: ItemInstance, choice: WearChoice, look: RelicLook) {
     val unmet = game.unmetFor(item.template)
     val selected = choice.selected
     val place = choice.target
-    // Фляга и инструмент листа героя не меняют (4.2.0, #34): вместо пустого итога героя - их вердикт против надетого в гнезде.
     val apart = game.index?.template(item.template)?.slot?.let { it.isFlask || it.isTool } == true
     val outcome = remember(item, game.hero, game.index, place) { if (apart) null else game.wearing(item, place) }
     val delta = remember(outcome) { outcome?.let { Comparison.of(it.delta, game.index, sheet = game.hero?.figures?.values, level = game.hero?.level ?: 0) } }
-    // Мощь «было → стало» (4.8.0): Мощь героя сейчас и с вещью - из того же листа боя, что сдвиги
     val might = game.hero?.might?.let { before -> outcome?.might?.let { MightShift(before.value, it.value) } }
     if (unmet.isEmpty()) {
-        // Мощь - одной строкой «было → стало» под построчным «Если надеть» (0.14.5, #44: прежняя сводка «⚜ Мощь +N» сверху ушла).
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (choice.choosable && selected != null) {
                 PillTabs(choice.places.map { placeTitle(it.slot) }, choice.places.indexOf(selected), { choice.pick(choice.places[it].slot) }, segmented = true)

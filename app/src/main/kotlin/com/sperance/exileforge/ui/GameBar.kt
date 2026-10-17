@@ -84,10 +84,12 @@ private enum class BarTab(val tab: Int, val title: String, val icon: ImageVector
 private const val CAPSULE_GROW = 2.4f
 
 /**
- * Нижняя панель (4.x, макет «Нижнее меню», вариант C «капсула»): парящая плита «Глубины» (3.88.7); у выбранной вкладки
+ * Нижняя панель: парящая плита «Глубины»; у выбранной вкладки
  * кнопка раскрывается в капсулу - иконка заливается и растёт, рядом выезжает подпись; прочие - одни значки. Всё за 220 мс
  * той же кривой, что и сдвиг экрана. Пять вкладок - игра, администратор получает ровно ещё одну. Вкладка, нажатая снова
- * изнутри (3.22.0), возвращает к своему корню.
+ * изнутри, возвращает к своему корню.
+ *
+ * Свободные очки отмечают вкладку, откуда их тратят: атлас - «Поход», дерево - «Развитие».
  */
 @Composable internal fun GameBar(game: GameUi, route: Route) {
     val shell: ShellViewModel = koinViewModel()
@@ -100,13 +102,11 @@ private const val CAPSULE_GROW = 2.4f
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         destinations.forEach { index ->
-            // Свободные очки отмечают вкладку, откуда их тратят: атлас (3.47.0) - «Поход», дерево (3.90.5) - «Развитие».
             val free = when (index) {
                 TAB_EXPEDITION -> game.atlasState?.available ?: 0
                 TAB_PROGRESS -> game.treeState?.available ?: 0
                 else -> 0
             }
-            // Выбрана вкладка корня экрана (4.0.1): кузня, дерево и гримуар - «Развития», испытания и атлас - «Похода».
             BarCapsule(
                 BarTab.of(index),
                 selected = route.root?.tab == index,
@@ -117,7 +117,7 @@ private const val CAPSULE_GROW = 2.4f
     }
 }
 
-/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; замок (3.76.0) или число очков в углу. */
+/** Кнопка панели: капсула с залитой иконкой и подписью, когда [selected], иначе значок; замок или число очков в углу. */
 @Composable private fun RowScope.BarCapsule(tab: BarTab, selected: Boolean, locked: Boolean, free: Int, onClick: () -> Unit) {
     val spec = tween<Float>(TAB_SHIFT_MS, easing = TabShiftEasing)
     val grow by animateFloatAsState(if (selected) 1f else 0f, spec, label = "capsule")
@@ -146,7 +146,6 @@ private const val CAPSULE_GROW = 2.4f
                     scaleY = scale
                 },
             ) {
-                // Заливка иконки проявляется с капсулой: та же фигура, закрашенная на пятую часть
                 val solid = remember(tab) { tab.icon.solid() }
                 Icon(solid, null, tint = tint, modifier = Modifier.size(22.dp).graphicsLayer { alpha = grow })
                 Icon(tab.icon, label, tint = tint, modifier = Modifier.size(22.dp))

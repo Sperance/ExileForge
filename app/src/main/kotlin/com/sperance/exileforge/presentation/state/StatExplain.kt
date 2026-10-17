@@ -38,22 +38,22 @@ import kotlin.math.abs
 import kotlin.math.ln
 
 /**
- * The cards of a figure's window, in the order they are read; the colour is the UI's, keyed by the kind. 4.6.4: [SKILL] - пассивные
+ * The cards of a figure's window, in the order they are read; the colour is the UI's, keyed by the kind. [SKILL] - пассивные
  * умения в бою (входят в итог), [FATE] - строки Предначертания, [RESHAPE] - его преобразования листа, [FIGHT] - что бой читает вместе
  * с цифрой, [LOW_LIFE] - бонусы низкого здоровья (в итог не входят), [APART] - силы добычи против отдельных врагов и шансы
- * уникалок, карт и книг (4.12.x, STAT-PW1-13; в итог не входят).
+ * уникалок, карт и книг (в итог не входят).
  */
 enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE, APART }
 
 /**
- * One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. [better] (0.15.0, #46) - к лучшему
+ * One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. [better] - к лучшему
  * ли то, что строка даёт, по полярности характеристики ([StatPolarity]), а не по знаку: null - без оценки и без цвета.
  */
 data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null, val better: Boolean? = null)
 
 /** A card of one kind of source: its rows and what they give together, one figure per operation; [title] - своё имя карточки (дар). */
 data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String, val title: String? = null) {
-    /** Итог карточки к лучшему или к худшему (#46): оценка её строк, если они согласны; разные или без оценки - null. */
+    /** Итог карточки к лучшему или к худшему: оценка её строк, если они согласны; разные или без оценки - null. */
     val better: Boolean? get() = rows.mapNotNull { it.better }.distinct().singleOrNull()
 }
 
@@ -79,7 +79,13 @@ class StatExplainer(private val game: GameUi) {
     private val index = game.index
     private val passives = hero?.combat?.passives.orEmpty().associateBy { it.skill }
 
-    /** [lowLife] - бонусы низкого здоровья на цифре с тем, что прибавят (4.6.4, [CombatSheet.lowLife]): в итог не входят. */
+    /**
+     * [lowLife] - бонусы низкого здоровья на цифре с тем, что прибавят ([CombatSheet.lowLife]): в итог не входят.
+     *
+     * Сдвиги поверх свода: «больше» умений - к их карточке, шаги дара - «Перестройка», чтение боя - своя карточка; множитель - сдвигом
+     * доли, карточка - их произведением. Бонус низкого здоровья - строкой с тем, что прибавит, в итог не входит. Силы добычи - строкой под
+     * силой.
+     */
     fun explain(
         breakdown: StatBreakdown,
         grants: List<Grant>,
@@ -99,8 +105,6 @@ class StatExplainer(private val game: GameUi) {
         breakdown.shares.groupBy(::kindOf).toSortedMap().forEach { (kind, shares) ->
             cards += ShareCard(kind, merged(shares).map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent), cardTitle(kind, shares.first().source))
         }
-        // Сдвиги поверх свода (4.6.4): «больше» умений - к их карточке, шаги дара - «Перестройка», чтение боя - своя карточка.
-        // Множитель (4.6.5) - сдвиг читается своим сдвигом доли «−40%», карточка - их произведением.
         val factors = shiftFactors(breakdown)
         breakdown.shifts.groupBy(::shiftKind).toSortedMap().forEach { (kind, shifts) ->
             val rows = shifts.map { shift -> shiftRow(stat, shift, holders, breakdown.percent).let { row -> factors[shift]?.let { row.copy(value = factorChange(it)) } ?: row } }
@@ -108,7 +112,6 @@ class StatExplainer(private val game: GameUi) {
             val at = cards.indexOfFirst { it.kind == kind }
             if (at >= 0) cards[at] = cards[at].let { it.copy(rows = it.rows + rows, summary = "${it.summary} · $sum") } else cards += ShareCard(kind, rows, sum, cardTitle(kind, shifts.first().source))
         }
-        // Бонус низкого здоровья - строкой с тем, что прибавит, и в итог не входит: «+10% · при низком здоровье: +40».
         if (lowLife.isNotEmpty()) {
             cards += ShareCard(
                 ShareKind.LOW_LIFE,
@@ -116,7 +119,6 @@ class StatExplainer(private val game: GameUi) {
                 "",
             )
         }
-        // Силы добычи вне цифры (4.12.x, STAT-PW1-13): против кого или к какому шансу - строкой под силой
         if (apart.isNotEmpty()) {
             cards += ShareCard(ShareKind.APART, apart.map { (part, kind) -> ShareRow(statTitle(part.stat), signedNumber(part.value) + "%", apartNote(part, kind), better = judge(part.stat, part.value)) }, "")
         }
@@ -144,7 +146,7 @@ class StatExplainer(private val game: GameUi) {
         }
     }
 
-    /** Карточка сдвига (4.6.4): умение, шаг дара, чтение боя; сила уникалки, карта и Атлас - «После расчёта». */
+    /** Карточка сдвига: умение, шаг дара, чтение боя; сила уникалки, карта и Атлас - «После расчёта». */
     private fun shiftKind(shift: Shift): ShareKind = when (shift.source.kind) {
         SourceKind.SKILL -> ShareKind.SKILL
         SourceKind.FATE -> ShareKind.FATE
@@ -153,7 +155,7 @@ class StatExplainer(private val game: GameUi) {
         else -> ShareKind.AFTER
     }
 
-    /** Карточка дара называется им (4.6.4): «Предначертание: Живая крепость»; прочие - своим видом. */
+    /** Карточка дара называется им: «Предначертание: Живая крепость»; прочие - своим видом. */
     private fun cardTitle(kind: ShareKind, source: StatSource?): String? = if (kind == ShareKind.FATE) sourceTitle(source) else null
 
     /** Строка сдвига: шаг дара - его правилом, чтение боя - характеристикой, откуда прибавка (касание открывает её). */
@@ -171,7 +173,7 @@ class StatExplainer(private val game: GameUi) {
     }
 
     /**
-     * Часть чтения боя (0.15.0, #50): своё имя, у множителя - он сам под именем («×0.50»), касание - характеристика, что её задаёт.
+     * Часть чтения боя: своё имя, у множителя - он сам под именем («×0.50»), касание - характеристика, что её задаёт.
      */
     private fun partRow(stat: String, part: ReadingPart, value: String, better: Boolean?): ShareRow {
         val times = factorOf(stat, part)
@@ -182,7 +184,7 @@ class StatExplainer(private val game: GameUi) {
     private fun factorOf(stat: String, part: ReadingPart): Double? = hero?.combat?.steps(stat)?.firstOrNull { it.part == part }?.factor
 
     /**
-     * Что даёт строка разбора характеристике [stat] - к лучшему ли (0.15.0, #46): одна точка оценки [StatPolarity]; замена
+     * Что даёт строка разбора характеристике [stat] - к лучшему ли: одна точка оценки [StatPolarity]; замена
      * значения ([Op.SET]) - без оценки.
      */
     private fun judge(stat: String, value: Double, op: Op = Op.ADD): Boolean? = if (op == Op.SET) null else StatPolarity.better(index, stat, value)
@@ -194,7 +196,7 @@ class StatExplainer(private val game: GameUi) {
     private fun skillNote(source: StatSource?): String? = source?.takeIf { it.kind == SourceKind.SKILL }?.let { passives[it.ref] }?.reserve?.takeIf { it > 0 }?.let { ui("stat.src.reserve", number(it)) }
 
     /**
-     * Sources of one name and one operation as one row (3.81.0): ten tree nodes «Здоровье» or two rings of the same name
+     * Sources of one name and one operation as one row: ten tree nodes «Здоровье» or two rings of the same name
      * read as their sum, not ten rows. A conversion keeps its own row - its rule is told on it.
      */
     private fun merged(shares: List<Share>): List<Share> = shares.groupBy { if (it.perStat != null) it else sourceTitle(it.source) to it.op }.values.map { same ->
@@ -240,26 +242,14 @@ class StatExplainer(private val game: GameUi) {
     } else {
         when (source.kind) {
             SourceKind.CLASS -> ui("stat.src.class", classTitle(source.ref))
-
             SourceKind.NODE -> nodeTitle(source.ref)
-
             SourceKind.ITEM -> hero?.item(source.ref)?.let { item -> game.view(item)?.let { view -> "${view.title} · ${slotTitle(item.slot ?: view.slot)}" } } ?: ui("stat.kind.ITEM")
-
             SourceKind.LAW -> loc(LocaleKey.lawName(source.ref))
-
-            // Предначертание аккаунта (4.6.0): строка листа называется даром
             SourceKind.FATE -> ui("stat.src.fate", loc(LocaleKey.fateName(source.ref)))
-
             SourceKind.POWER, SourceKind.MAP, SourceKind.ATLAS, SourceKind.FIGHT -> statTitle(source.ref)
-
-            // Пассивное умение в бою и шаг дара (4.6.4)
             SourceKind.SKILL -> skillTitle(source.ref)
-
             SourceKind.RESHAPE -> hero?.combat?.fate?.let { fate -> index?.let { reshapeText(it, fate, source.ref) } } ?: source.ref
-
-            // Доли захода (4.10.x): узлы древа гильдии с этой строкой и выпитое зелье
             SourceKind.GUILD -> guildLineTitle(source.ref)
-
             SourceKind.POTION -> ui("stat.src.potion", itemTitle(source.ref))
         }
     }
@@ -281,10 +271,7 @@ class StatExplainer(private val game: GameUi) {
         .toSortedMap().map { (op, group) ->
             when (op) {
                 Op.MORE -> fmt(stat, (group.fold(1.0) { acc, it -> acc * (1 + it.value / 100) } - 1) * 100, op, percent)
-
-                // Замена - та, что держит характеристику в своде (0.15.0): запрет сильнее прочих
                 Op.SET -> fmt(stat, ModifierMath.settled(group.map { it.value }) ?: 0.0, op, percent)
-
                 else -> fmt(stat, group.sumOf { it.value }, op, percent)
             }
         }.joinToString(" · ")
@@ -335,11 +322,11 @@ class StatExplainer(private val game: GameUi) {
         )
     }
 
-    /** Характеристика читается множителем (4.6.5, `StatDef.multiplier`). */
+    /** Характеристика читается множителем (`StatDef.multiplier`). */
     private fun multiplier(stat: String): Boolean = index?.stats?.get(stat)?.multiplier == true
 
     /**
-     * Множитель каждого сдвига множителя [b] (4.6.5): сдвиги ложатся по порядку, `(100 + после) / (100 + до)` - «Невесомость −40%»,
+     * Множитель каждого сдвига множителя [b]: сдвиги ложатся по порядку, `(100 + после) / (100 + до)` - «Невесомость −40%»,
      * а не «−40%». Не множитель - пусто.
      */
     private fun shiftFactors(b: StatBreakdown): Map<Shift, Double> {
@@ -348,10 +335,13 @@ class StatExplainer(private val game: GameUi) {
         return b.shifts.associateWith { shift -> ((100 + at + shift.delta) / (100 + at)).also { at += shift.delta } }
     }
 
-    /** «135 × 1.30 × 1.10 = 193 − 13 = 180»: the flat sum, the multipliers that are there, the set value, the shifts. */
+    /**
+     * «135 × 1.30 × 1.10 = 193 − 13 = 180»: the flat sum, the multipliers that are there, the set value, the shifts.
+     *
+     * Множитель: «100% · −40% = 60%»; поток восстановления - по шагам, как его читает бой: «26.4 + 9.0 = 35.4 × 0.50 = 17.7 − 2.0 = 15.7».
+     */
     private fun formula(b: StatBreakdown): String {
         val stat = b.stat
-        // Множитель (4.6.5): «100% · −40% = 60%» - доля свода и сдвиги долей, итог - их произведение
         if (multiplier(stat)) return (listOf(multiplierText(b.formed)) + shiftFactors(b).values.map(::factorChange)).joinToString(" · ") + " = ${multiplierText(b.total)}"
         val parts = mutableListOf(fmt(stat, b.flatSum, Op.ADD, b.percent, sign = false))
         if (!b.percent && b.increasedSum != 0.0) parts += "× ${factor(1 + b.increasedSum / 100)}"
@@ -360,7 +350,6 @@ class StatExplainer(private val game: GameUi) {
         b.set?.let { text += " → ${fmt(stat, it.value, Op.SET, b.percent)}" }
         val formed = fmt(stat, b.formed, Op.ADD, b.percent, sign = false)
         if (parts.size > 1 && b.set == null) text += " = $formed"
-        // Поток восстановления (0.15.0, #50) - по шагам, как его читает бой: «26.4 + 9.0 = 35.4 × 0.50 = 17.7 − 2.0 = 15.7»
         if (b.shifts.any { it.source.kind == SourceKind.FIGHT && ReadingPart.of(it.source.ref) != null }) return text + steps(b)
         val shifted = b.shifts.sumOf { it.delta }
         if (abs(shifted) >= 0.05) text += " ${signedStep(stat, shifted, b.percent)} = ${fmt(stat, b.total, Op.ADD, b.percent, sign = false)}"
@@ -385,11 +374,13 @@ class StatExplainer(private val game: GameUi) {
 
     private fun signed(stat: String, value: Double, percent: Boolean): String = fmt(stat, value, Op.ADD, percent)
 
-    /** A figure with its operation: «+20», «+10%», «×1.10», «= 1»; a percent stat carries its sign on the flat too. */
+    /**
+     * A figure with its operation: «+20», «+10%», «×1.10», «= 1»; a percent stat carries its sign on the flat too.
+     *
+     * Итог множителя - доля «60%», доли свода - прибавки процентов; флаг (`StatDef.unit`) - отметка без числа.
+     */
     fun fmt(stat: String, value: Double, op: Op, percent: Boolean, sign: Boolean = true): String {
-        // Итог множителя (4.6.5) - доля «60%»; доли свода остаются прибавками процентов, как их складывает лист
         if (!sign && op == Op.ADD && multiplier(stat)) return multiplierText(value)
-        // Флаг (4.8.0, `StatDef.unit`) - отметка без числа: и итог, и строка источника
         if (op != Op.MORE && statFlag(stat, index)) return flagMark(value)
         val unit = if (percent || statPercent(stat, index)) "%" else ""
         val size = if (op == Op.INCREASED) shareNumber(stat, abs(value)) else statNumber(stat, abs(value))

@@ -9,16 +9,16 @@ import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.StateFlow
 
-/** «История» Города (3.90.2): разделы прошлого героя; пока - найденные уникальные вещи, экраном над зданием. */
+/** «История» Города: разделы прошлого героя; пока - найденные уникальные вещи, экраном над зданием. */
 class HistoryViewModel(slice: GameSlice, private val reads: HeroReads, private val navigator: Navigator) : ViewModel() {
     val game: StateFlow<GameUi> = slice.ui
 
-    /** Находки уникалок героя [heroId], общие обоим экранам и свежие полминуты (3.94.1); null - чтение не удалось. */
+    /** Находки уникалок героя [heroId], общие обоим экранам и свежие полминуты; null - чтение не удалось. */
     suspend fun uniques(heroId: String): Map<String, UniqueFind>? = reads.uniques(heroId)
 
     fun openUniques() = navigator.open(Route.Uniques)
     fun back() = navigator.back()
 
-    /** На площадь Города: звено «Город» цепочки «назад» (4.4.x). */
+    /** На площадь Города: звено «Город» цепочки «назад». */
     fun city() = navigator.tab(Route.ofBuilding(null))
 }

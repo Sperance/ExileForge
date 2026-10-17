@@ -67,16 +67,18 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 /**
- * Сумка на карте (4.10.0, макет «Сундук на карте», вариант B «Веер в счётчик»): плашка внизу справа - «Сумка» и сколько добычи
+ * Сумка на карте: плашка внизу справа - «Сумка» и сколько добычи
  * легло за карту; ответ сервера на сундук выпускает веер фишек редкостей от героя в плашку, и у неё на миг встают «+N» и лучшая
  * вещь. Ждущие ответа сундуки - «ждёт N сундук». Веер и пульс - декор: без `LocalMotion` их нет, «+N» и строка встают сразу.
- * Нажатие открывает «Сумку захода» ([onOpen], 4.10.x) - всю добычу захода; плашка встаёт с первой добычей ([looted]) или
+ * Нажатие открывает «Сумку захода» ([onOpen]) - всю добычу захода; плашка встаёт с первой добычей ([looted]) или
  * первым сундуком. [gathered] - штук добычи за всю карту.
+ *
+ * Добыча, что легла до этого экрана, не вылетает снова: веер - только для ответов при нём; новый ответ обрывает веер. Фишки летят к значку
+ * сумки; веер раскрывается над героем.
  */
 @Composable internal fun MapBag(game: GameUi, drops: List<MapDrop>, looted: Boolean, gathered: Long, onOpen: () -> Unit) {
     if (drops.isEmpty() && !looted) return
     val moving = LocalMotion.current
-    // Добыча, что уже легла до этого экрана, не вылетает снова: веер - только для ответов, пришедших при нём
     val told = remember { drops.filterNot { it.waiting }.mapTo(HashSet()) { it.n } }
     var flying by remember { mutableStateOf<MapDrop?>(null) }
     var news by remember { mutableStateOf<MapDrop?>(null) }
@@ -86,7 +88,6 @@ import kotlin.math.sin
         drops.filter { !it.waiting && it.n !in told }.forEach { drop ->
             told += drop.n
             if (drop.chips.isEmpty()) return@forEach
-            // Новый ответ посреди веера обрывает его: добыча всё равно встаёт у сумки
             try {
                 if (moving) {
                     flying = drop
@@ -108,11 +109,9 @@ import kotlin.math.sin
         news = null
     }
     val density = LocalDensity.current
-    // Где значок сумки в этом слое: туда летят фишки
     var origin by remember { mutableStateOf(Offset.Zero) }
     var bag by remember { mutableStateOf<Offset?>(null) }
     BoxWithConstraints(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
-        // Герой стоит чуть ниже середины сцены ([SceneCamera]): веер раскрывается над ним
         val target = bag?.let { with(density) { (it.x - origin.x).toDp() to (it.y - origin.y).toDp() } }
         if (target != null) flying?.let { drop -> Fan(drop, from = maxWidth / 2 to maxHeight * SceneCamera.HERO_DOWN, to = target, progress = fan.value) }
         Column(
@@ -174,6 +173,8 @@ import kotlin.math.sin
 /**
  * Веер добычи [drop] в мере экрана: фишки раскрываются дугой над [from] (углы −150…−30°), висят миг и летят в [to], тая.
  * [progress] - 0..1 всего полёта.
+ *
+ * Раскрытие, вис и полёт в сумку - доли [progress].
  */
 @Composable private fun Fan(drop: MapDrop, from: Pair<Dp, Dp>, to: Pair<Dp, Dp>, progress: Float) {
     val chips = drop.chips.take(FAN_CHIPS)
@@ -181,7 +182,6 @@ import kotlin.math.sin
         val angle = Math.toRadians(if (chips.size == 1) -90.0 else -150.0 + 120.0 * i / (chips.size - 1))
         val fanX = from.first + FAN_RADIUS * cos(angle).toFloat()
         val fanY = from.second + FAN_RADIUS * sin(angle).toFloat()
-        // Раскрытие, вис и полёт в сумку: доли [progress]
         val open = (progress / FAN_OPEN).coerceIn(0f, 1f)
         val fly = ((progress - FAN_HOLD) / (1f - FAN_HOLD)).coerceIn(0f, 1f)
         val x = lerp(lerp(from.first, fanX, open), to.first, fly)

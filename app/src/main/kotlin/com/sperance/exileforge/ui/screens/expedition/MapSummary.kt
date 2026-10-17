@@ -90,19 +90,20 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
  * and every stack and piece the server granted for it, compact, each with its icon. The loot is the server's roll:
  * while some of it is on its way the screen says so, asks for it at once and fills in as the answers arrive.
  * A piece opens its comparison with what is worn, a stack its description.
- * С 3.90.3 добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N · +◎» над возвратом в лагерь.
+ * Добычу продают здесь же: отметки у вещей, быстрые наборы и одна кнопка «Продать N · +◎» над возвратом в лагерь.
+ *
+ * Продажа добычи: лоты - копии захода в тайнике, помеченное в заходе уже отмечено, продаётся «Продать и вернуться» после захода. Из
+ * выигранной зоны Ваал возвращаются на карту без продажи; павший в зоне продаёт и её добычу, и добычу основной карты. Разбор золота и опыта
+ * - прибавки контекста захода, как их берёт сервер. Режим продажи включает удержание вещи; страница открывается в обычном режиме. Кнопки
+ * итогов оживают не сразу: нажатие, пришедшее в кнопку отчёта боя на том же месте, не закрывает заход. Ниже уровня штрафа гибель даром.
  */
 @Composable internal fun MapSummary(game: GameUi, vm: ExpeditionViewModel, hud: RunHud, head: SummaryHead = SummaryHead.of(hud), onDone: (sell: List<String>) -> Unit) {
     val tally = hud.tally
     var looked by remember { mutableStateOf<ItemView?>(null) }
     val inspect = rememberInspect()
     LaunchedEffect(tally.receiving) { if (tally.receiving) vm.flushRun() }
-    // Продажа добычи (3.90.3): лоты - копии захода, что лежат в тайнике героя; заранее отмечено помеченное к продаже в заходе
-    // (3.91.0). Продаётся «Продать и вернуться» (3.90.4) - уже после захода.
     val hero = game.hero
     val run by vm.run.collectAsStateWithLifecycle()
-    // Из выигранной зоны Ваал возвращаются на карту - заход идёт, и продажи нет (3.90.4); павший в зоне (3.94.0) заканчивает
-    // весь заход - он продаёт и добычу зоны, и добычу основной карты под ней.
     val back = hud.returnsToMap
     val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index, back) {
         val ids = tally.loot.equipment.mapTo(HashSet()) { it.id }
@@ -111,14 +112,11 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     }
     val state by vm.state.collectAsStateWithLifecycle()
     val marks = state.saleMarks
-    // Разбор золота и опыта (4.10.0): прибавки контекста захода со сделками алтарей и зельем входа - как их берёт сервер
     val potion = remember(state.potion, game.index) { state.potion?.let { game.index?.rules?.brews?.potion(it) }.orEmpty() }
     val gold = remember(run, run?.pacts, potion, tally.gold) { run?.let { LootBreakdown.gold(it.run, it.pacts, potion, tally.gold.toDouble()) } }
     val experience = remember(run, run?.pacts, potion, tally.experience, hud.vaal) { run?.let { LootBreakdown.experience(it.run, it.pacts, potion, tally.experience, hud.vaal) } }
     val pick = rememberSellPick(lots, initial = marks)
     val offered = lots.isNotEmpty() && !back
-    // Режим продажи (4.0.0): включает удержание вещи, как в тайнике. Страница всегда открывается в обычном режиме (4.0.1):
-    // касание открывает карточку; помеченное посреди захода остаётся помеченным, и его продажа видна сразу
     var selling by rememberSaveable { mutableStateOf(false) }
     val selecting = offered && selling
     val docked = offered && (selling || pick.picked.isNotEmpty())
@@ -126,7 +124,6 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         pick.clear()
         selling = false
     }
-    // Кнопки итогов оживают не сразу (3.91.0): нажатие, пришедшее в кнопку отчёта боя на том же месте, не закрывает заход.
     var armed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         delay(ARM_DELAY)
@@ -140,7 +137,6 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             MutedText(head.hint, style = MaterialTheme.typography.bodySmall)
             Tallies(tally, gold, experience)
-            // Сданное после карты и новые очки Атласа (4.10.0, макет «Итоги карты», вариант A)
             TurnedInBlock(state.turnedIn)
             AtlasBlock(state.atlasPoints)
             if (tally.end == MapEnd.FELL) {
@@ -148,7 +144,6 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
                 if (lost != null) {
                     Text(ui("expedition.fall_lost", number(lost)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
                 } else {
-                    // Ниже уровня штрафа (4.4.1) гибель даром - игрок знает, с какого уровня это не так
                     hud.fallFrom?.let { MutedText(ui("expedition.fall_from", it), style = MaterialTheme.typography.bodySmall) }
                 }
             }
@@ -211,7 +206,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 
 /**
  * The map's figures, three to a row: the slaughter, the time and the damage, then what it paid - золото и опыт строками с разбором
- * ([gold], [experience], 4.10.0); без захода на экране - плитками.
+ * ([gold], [experience]); без захода на экране - плитками.
  */
 @Composable private fun Tallies(tally: MapTally, gold: LootBreakdown?, experience: LootBreakdown?) {
     Caption(ui("summary.figures"))
@@ -255,7 +250,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
 
 /**
  * Everything the server granted for the map: the recipe, the pieces a line each, the stacks as chips; on its way, or its absence said.
- * Продажа (4.0.0) - как в тайнике: нажатие открывает карточку вещи, удержание лота [pick] включает режим продажи [selecting]
+ * Продажа - как в тайнике: нажатие открывает карточку вещи, удержание лота [pick] включает режим продажи [selecting]
  * и отмечает её ([onSelect]); в режиме нажатие отмечает, над вещами - быстрые наборы.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -296,8 +291,8 @@ private fun Loot(game: GameUi, tally: MapTally, pick: SellPick?, selecting: Bool
 }
 
 /**
- * Добытая вещь «Полем боя» (3.88.6): две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
- * Надетая (3.90.0, [presence]) - строкой с меткой «Надето», без действий.
+ * Добытая вещь «Полем боя»: две линии - имя целиком, под ним значки тиров и отметки; всё прочее - в карточке по нажатию.
+ * Надетая ([presence]) - строкой с меткой «Надето», без действий.
  */
 @Composable internal fun PieceLine(item: ItemView, presence: LootPresence, selected: Boolean = false, onLongClick: (() -> Unit)? = null, trailing: (@Composable () -> Unit)? = null, onClick: () -> Unit) = if (presence.worn) WornLootRow(item) else ItemRow(item, compact = true, selected = selected, trailing = trailing, onLongClick = onLongClick, onClick = onClick)
 

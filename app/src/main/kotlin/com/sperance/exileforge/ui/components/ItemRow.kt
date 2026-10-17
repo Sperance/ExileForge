@@ -37,11 +37,18 @@ import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Вещь в списке - «Плита» (3.88.6, выбор владельца): гнездо с иконкой в цвете редкости, имя серифами, под ним номер
+ * Вещь в списке - «Плита» (выбор владельца): гнездо с иконкой в цвете редкости, имя серифами, под ним номер
  * экземпляра уникальной или мифической, строка «что это · уровень · база», а ниже - каждая строка вещи со значком тира:
  * модификаторы видны всегда, не открывая карточку. Мифическая плита лежит под звёздами, уникальная - в тёплом угле.
  * [trailing] - напротив имени (цена лота), иначе [price] - что платит торговец; [footer] - под всем, что добавляет список.
  * [compact] - две линии (лут после боя): имя целиком, под ним значки тиров и отметки, без текстов строк.
+ *
+ * [worn] - надетое или вставленное: строка в золотой рамке, значок на иконке. [unwearable] - причины правил, почему сейчас не надеть.
+ * [extra] - факты после слота, [trailing] - напротив имени (цена лота), [price] - цена торговца, когда напротив имени больше ничего,
+ * [footer] - строка под свойствами. [locked] - замок, [waiting] - команда ждёт сети. Две линии вместо плиты - лут после боя; «Ценник» -
+ * ярлык цены сверху плиты; «лучше или хуже» - только у вещей, что герой может надеть. Удержание строки - пометка к продаже или карточка;
+ * свёртка строк - все сразу или под чипом «Свойства · N». Вторая линия лута - значки тиров, уровень, качество, состояния и замок; каждая
+ * строка вещи видна без карточки.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -51,31 +58,18 @@ fun ItemRow(
     noteColor: Color = Gold,
     selected: Boolean = false,
     enabled: Boolean = true,
-    /** Worn or socketed (2.51.0): the line is framed and washed in gold and the icon carries a badge. */
     worn: Boolean = false,
-    /** The rules' reasons this cannot be worn right now; empty means it can. */
     unwearable: List<String> = emptyList(),
-    /** Extra facts for the line under the name, after the slot. */
     facts: List<String> = emptyList(),
-    /** Opposite the name: the price of a lot. */
     trailing: (@Composable () -> Unit)? = null,
-    /** What the merchant pays for it (2.46.0), drawn opposite the name when nothing else is there. */
     price: Long? = null,
-    /** A line below the properties — the seller of a lot, and what else belongs at the bottom. */
     footer: @Composable (ColumnScope.() -> Unit)? = null,
-    /** The padlock on the icon (3.30.0): the copy is locked against selling and listing. */
     locked: Boolean = item.item.locked,
-    /** A command about this copy waits for the network (3.30.0). */
     waiting: Boolean = false,
-    /** Две линии вместо плиты (3.88.6): лут после боя, где строки читают уже в карточке. */
     compact: Boolean = false,
-    /** «Ценник» (3.88.6): цена лота или полки торговца ярлыком, свисающим с верхнего края плиты. */
     tag: (@Composable RowScope.() -> Unit)? = null,
-    /** «Лучше или хуже» (3.89.0): стрелки урона и защиты героя, если надеть; только вещи тайника и лута, что герой может надеть. */
     verdict: GearVerdict? = null,
-    /** Удержание строки (3.91.0): пометка к продаже в заходе или карточка там, где нажатие отмечает. */
     onLongClick: (() -> Unit)? = null,
-    /** Свёртка строк вещи (4.8.0): все сразу или под чипом «Свойства · N». */
     lines: LineFold = LineFold.OPEN,
     onClick: () -> Unit,
 ) {
@@ -131,7 +125,6 @@ fun ItemRow(
                 }
             }
             if (compact) {
-                // Вторая линия лута: значки тиров всех строк, уровень вещи (4.3.0), качество, состояния и замок - важное одним взглядом.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
                     item.lines.forEach { TierHex(it.marks, 16.dp) }
                     if (item.lines.isNotEmpty()) Spacer(Modifier.width(6.dp))
@@ -151,8 +144,6 @@ fun ItemRow(
                     QualityBadge(item, compact = true)
                 }
                 if (unwearable.isNotEmpty()) Text(requirementReason(unwearable.first()), color = Color(0xFFFF8F88), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold)
-                // Каждая строка вещи (2.72.0, со значком тира с 3.88.6): тайник читают сверху вниз, не открывая карточек;
-                // витрина аукциона сворачивает свойства легенд (4.8.0, [lines]).
                 if (item.lines.isNotEmpty()) FoldedLines(item.lines, lines, look)
             }
             footer?.invoke(this)
@@ -172,7 +163,11 @@ fun ItemRow(
     )
 }
 
-/** Гнездо плиты: иконка в цвете редкости, у мифической - круглое; поверх - замок, запрет и отметка надетого. */
+/**
+ * Гнездо плиты: иконка в цвете редкости, у мифической - круглое; поверх - замок, запрет и отметка надетого.
+ *
+ * Отметка на строке одна: чего не хватает, говорит карточка или подсказка отметки.
+ */
 @Composable private fun RowSocket(item: ItemView, look: RelicLook, worn: Boolean, locked: Boolean, unwearable: List<String>) {
     val shape = if (look.legend == RelicLook.Legend.STARS) CircleShape else RoundedCornerShape(12.dp)
     Box(
@@ -182,7 +177,6 @@ fun ItemRow(
         contentAlignment = Alignment.Center,
     ) {
         ItemIcon(item, look.rarity, Modifier.size(28.dp))
-        // The mark alone on a row (2.74.0): what is missing is the card's to say, or the mark's own tip.
         if (unwearable.isNotEmpty()) {
             Tipped(
                 { Tip(ui("hero.inactive"), unwearable.joinToString("\n") { requirementReason(it) }, LifeRed) },

@@ -10,7 +10,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Secrets at rest (3.48.0): the session token and the device secret are kept AES-GCM sealed under a key that lives
+ * Secrets at rest: the session token and the device secret are kept AES-GCM sealed under a key that lives
  * in the Android Keystore and never leaves it — a copy of the preference file read off a rooted phone or a backup
  * is useless without the handset. A value that no longer opens (the key was wiped with the app's data) reads as none.
  */

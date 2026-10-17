@@ -18,7 +18,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.text.LocaleKey
 import kotlin.math.abs
 
-/** Как действует раскрытая судьбоносная строка вещи у героя (4.6.2, Осквернение Предначертания). */
+/** Как действует раскрытая судьбоносная строка вещи у героя (Осквернение Предначертания). */
 enum class BoonState {
     /** Надета, дар героя, сильнейшая из одинаковых - действует. */
     ACTIVE,
@@ -37,7 +37,7 @@ enum class BoonState {
 data class FatedLine(val boon: FateBoon, val state: BoonState, val rival: Slot? = null)
 
 /**
- * Судьбоносные строки вещей для героя с даром [fate] и надетым [worn] (4.6.2): та же логика, что у правил - строки чужого дара
+ * Судьбоносные строки вещей для героя с даром [fate] и надетым [worn]: та же логика, что у правил - строки чужого дара
  * спят, одинаковые не складываются, действует сильнейшая (тир, затем модуль значения, `FateBoons.active`), сила вещи - через
  * `Fates.worn`.
  */
@@ -86,8 +86,8 @@ fun boonFigure(index: ContentIndex, boon: FateBoon): String? = FIGURE.find(loc(i
 }
 
 /**
- * Текст рычага дара [effect] словами сервера (4.6.4, `fate.lever.<рычаг>`): каждое поле рычага - `{value}`, `{step}`, `{cap}`… (имя
- * [FateField] строчными) - его число на силе дара и со строками, `{ailments}` - недуги, `{orbs}` (4.9.0) - сферы.
+ * Текст рычага дара [effect] словами сервера (`fate.lever.<рычаг>`): каждое поле рычага - `{value}`, `{step}`, `{cap}`… (имя
+ * [FateField] строчными) - его число на силе дара и со строками, `{ailments}` - недуги, `{orbs}` - сферы.
  */
 fun leverText(effect: FateEffect): String = FateField.entries.fold(loc(LocaleKey.fateLever(effect.lever.name))) { text, field -> text.replace("{${field.name.lowercase()}}", number(field.of(effect))) }
     .replace(AILMENTS, effect.ailments.joinToString(", ") { ui("enum.ailment.$it") })
@@ -97,7 +97,7 @@ fun leverText(effect: FateEffect): String = FateField.entries.fold(loc(LocaleKey
 private fun knobBoon(index: ContentIndex, fate: FateEffects, knob: FateKnob): FateBoon? = fate.boons.firstOrNull { (index.fates.boons.def(it.fate, it.boon, it.tier) as? FateBoonDef.Knob)?.knob == knob }
 
 /**
- * Шаг «Перестройка» разбора (4.6.4): рычаг или правило строки [ref] дара [fate] его текстом. Ни того, ни другого (0.14.5, #48) -
+ * Шаг «Перестройка» разбора: рычаг или правило строки [ref] дара [fate] его текстом. Ни того, ни другого -
  * заглушка и дыра словаря (`LocaleHoles`), а не код рычага.
  */
 fun reshapeText(index: ContentIndex, fate: FateEffects, ref: String): String {
@@ -106,7 +106,7 @@ fun reshapeText(index: ContentIndex, fate: FateEffects, ref: String): String {
 }
 
 /**
- * Что дар героя делает сейчас (4.9.0, «Сейчас действует» в свитке ленты): каждый рычаг дара [fate] - текстом с числами на его силе и
+ * Что дар героя делает сейчас («Сейчас действует» в свитке ленты): каждый рычаг дара [fate] - текстом с числами на его силе и
  * с подстройками строк, правила действующих судьбоносных строк - их текстом, строки листа дара на силе - словами модификаторов.
  */
 fun fateNow(index: ContentIndex, fate: FateEffects): List<String> = fate.effects.map(::leverText) +

@@ -19,14 +19,15 @@ import com.sperance.exileforge.ui.screens.hero.StatSheet
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The hero's figures over a map (2.75.0), in two tabs at the foot as the gear's window has them:
+ * The hero's figures over a map, in two tabs at the foot as the gear's window has them:
  * the hero's own sheet, and the same sheet under the map's and the atlas's effects — [mapEffects],
  * what the run was started with — each changed figure lit beside what it was.
+ *
+ * Карта ложится на лист боя героя, как в заходе (`HeroBuild`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsSheet(game: GameUi, mapEffects: Map<String, Double>, origins: EffectOrigins = EffectOrigins.NONE, onDismiss: () -> Unit) {
-    // Лист боя героя (4.6.4): карта ложится на него, как в заходе (`HeroBuild`)
     val combat = game.hero?.combat
     val mine = game.hero?.figures ?: StatFigures(emptyMap())
     val own = mine.stats

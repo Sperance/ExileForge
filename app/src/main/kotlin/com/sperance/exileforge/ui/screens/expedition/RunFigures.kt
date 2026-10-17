@@ -27,8 +27,10 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The run's figures (3.47.0): three numbers at once — damage a second, damage taken, kills a minute — and, opened,
+ * The run's figures: three numbers at once — damage a second, damage taken, kills a minute — and, opened,
  * the split of the dealt damage by type and by skill and of the taken by type. The combat's own events, summed.
+ *
+ * Разбор всего захода - тот же лист, что у итога боя; яд - своей долей, не хаосом.
  */
 @Composable internal fun RunFigures(summary: RunSummary) {
     if (summary.seconds <= 0) return
@@ -42,12 +44,10 @@ import com.sperance.exileforge.ui.theme.*
     var breakdown by remember { mutableStateOf(false) }
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ForgeTextButton(onClick = { open = !open }) { Text(ui(if (open) "run.less" else "run.more")) }
-        // Разбор всего захода (0.14.4, #30) - тот же лист, что у итога боя
         ForgeTextButton(onClick = { breakdown = true }) { Text(ui("breakdown.open")) }
     }
     if (breakdown) FightStatsSheet(null, summary.fights) { breakdown = false }
     if (open) {
-        // Яд (0.15.0, реш. 43) - своей долей, не хаосом
         Split(ui("run.dealt_by_type"), summary.dealt.mapKeys { typeTitle(it.key) } + poisonPart(summary.fights.dealt.poison), summary.totalDealt)
         Split(ui("run.dealt_by_skill"), summary.bySkill.mapKeys { skillTitle(it.key) }, summary.totalDealt)
         Split(ui("run.taken_by_type"), summary.taken.mapKeys { typeTitle(it.key) } + poisonPart(summary.fights.taken.poison), summary.totalTaken)
@@ -55,7 +55,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * What killed the hero (3.47.0): the last blows, oldest first — who struck, how hard, of what — and one line of advice
+ * What killed the hero: the last blows, oldest first — who struck, how hard, of what — and one line of advice
  * from the type that hurt most.
  */
 @Composable internal fun DeathRecap(recap: List<DeathHit>) {
@@ -88,7 +88,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Доля яда в разбивке по типам (0.15.0): своей строкой, когда он был. */
+/** Доля яда в разбивке по типам: своей строкой, когда он был. */
 private fun poisonPart(amount: Double): Map<String, Double> = if (amount > 0) mapOf(ui("breakdown.poison") to amount) else emptyMap()
 
 @Composable private fun Split(title: String, parts: Map<String, Double>, total: Double) {

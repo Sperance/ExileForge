@@ -38,40 +38,38 @@ import org.koin.compose.viewmodel.koinViewModel
 internal const val UNCRAFT = "-"
 
 /**
- * The forge as an anvil (the owner's mockup B, 3.x): a rail of the picker's sections beside the anvil (с 4.2.0 - «Тип» общего
+ * The forge as an anvil: a rail of the picker's sections beside the anvil («Тип» общего
  * фильтра выбора вещи), which holds the target, the orb, essence or bench line laid on it and, for an orb, its omen — and shows the
  * target as it stands. Under it the section's tray: a compact grid of only what the bag holds and the target takes, or the bench's
  * lines. What is laid sits in a bar over the navigation with a button that is held, because an orb is spent the moment it is used.
  *
- * С 4.4.x цель - [ForgeTarget] (зеркало правил [OrbTarget]). Every rule is the server's; what a target takes is the rules' own [OrbApplier.accepts].
+ * Цель - [ForgeTarget] (зеркало правил [OrbTarget]). Every rule is the server's; what a target takes is the rules' own [OrbApplier.accepts].
+ *
+ * Сферы и материалы читаются из сумки - кузня открывается на свежем герое. Лоток - только сферы, что лягут на цель сами или со знамением
+ * сумки; переставшая ложиться выбранная сфера снимается. Печати Атласа - только на карту. Эссенции, что не лягут, - серыми с отказом правил
+ * словами игрока. Сфера качества говорит, что поднимет и сколько качества другого вида сбросится; сфера удачи - какие уникалки может дать
+ * вещь.
  */
 @Composable fun CraftScreen() {
     val vm = koinViewModel<SmithyViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
     val smithy by vm.smithy.collectAsStateWithLifecycle()
-    // Orbs and ingredients are read off the bag, so the forge opens on a hero that is not stale.
     LaunchedEffect(game.heroId, game.sessionEpoch) { vm.ensure() }
     val hero = game.hero
     val index = game.index
     val target = remember(hero, index, game.holding.selectedEquipment) { game.forgeTarget() }
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
     var picking by remember { mutableStateOf(false) }
-    // Один фильтр выбора вещи на полку у наковальни и шторку (4.2.0).
     val pickFilter = rememberItemFilter(ItemShelf.FORGE)
     var benchLine by remember(target?.id) { mutableStateOf("") }
-    // Лист Сферы гравёра (4.11.x): открыт выбором сферы в лотке и кнопкой её полосы
     var engraving by remember(target?.id) { mutableStateOf(false) }
-    // The omens in the bag: an orb that goes on the target only with one of them (a catalyst's Orb of Quality on a ring) is offered too.
     val omens: List<Omen> = remember(index, hero?.bag) { if (hero == null || index == null) emptyList() else heldOmens(index, hero) }
-    // Лоток - только сферы, что лягут на цель (4.4.x): не лягут ни сами, ни со знамением сумки - их нет.
     val choices = remember(target, index, omens, hero?.bag) {
         if (index == null || hero == null || target == null) emptyList() else target.orbChoices(index, game.orbs.map { it.code.value }, omens, hero::count)
     }
-    // Выбранная сфера перестала ложиться (кончилась, цель сменилась или изменилась после сферы) - выбор снимается.
     LaunchedEffect(target?.id, choices, smithy.orb) {
         if (target != null && smithy.orb.isNotBlank() && choices.none { it.code == smithy.orb }) vm.selectOrb("")
     }
-    // Печати Атласа сумки, что лягут на карту (4.6.4): сами или со знамением сумки; у прочих целей их нет.
     val seals = remember(target, index, omens, hero?.bag) {
         if (index == null || hero == null || target == null) emptyList() else target.seals(index, omens, hero::count)
     }
@@ -79,20 +77,16 @@ internal const val UNCRAFT = "-"
         if (target != null && smithy.seal.isNotBlank() && seals.none { it.code == smithy.seal }) vm.selectSeal("")
     }
     val gear = target as? ForgeTarget.Gear
-    // Эссенции сумки, что на эту вещь не лягут (3.94.1): лоток показывает их серыми, с отказом правил словами игрока.
     val essenceRefusals = remember(gear, index, hero?.bag) {
         if (index == null || gear == null || hero == null) emptyMap() else essenceRefusals(index, hero, gear)
     }
-    // Сфера качества над вещью (4.3.0): что поднимет вид качества выбранного знамения и сколько качества другого вида сбросится.
     val quality = remember(target, index, smithy.omen) { index?.let { target?.quality(it, Omen.of(smithy.omen)) } }
-    // Что может выйти из сферы удачи (4.3.0): уникалки правил того же семейства и уровня вещи, тот же список, что тянет сервер.
     val chanceUniques = remember(target, index) { index?.let { target?.chanceUniques(it) }.orEmpty() }
     val sections = target?.sections ?: listOf(ForgeSection.ORBS)
     val section = smithy.section.takeIf { it in sections } ?: ForgeSection.ORBS
     val chosen = choices.firstOrNull { it.code == smithy.orb }
     val sealChosen = seals.firstOrNull { it.code == smithy.seal }
     Column(Modifier.fillMaxSize()) {
-        // Шапка над прокруткой (3.88.7): уходит при прокрутке вниз и возвращается вверх.
         Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) { CollapsibleHeader { ScreenHeader(ui("craft.title"), ui("craft.subtitle"), ForgeGlyphs.Anvil) } }
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (hero == null || index == null) {
@@ -155,7 +149,7 @@ internal const val UNCRAFT = "-"
     }
 }
 
-/** Почему каждая эссенция сумки не ляжет на вещь [gear] (3.94.1): отказ правил словами игрока; эссенции, что ляжет, в карте нет. */
+/** Почему каждая эссенция сумки не ляжет на вещь [gear]: отказ правил словами игрока; эссенции, что ляжет, в карте нет. */
 private fun essenceRefusals(index: ContentIndex, hero: HeroView, gear: ForgeTarget.Gear): Map<String, String> {
     val applier = OrbApplier(index)
     val view = gear.view
@@ -164,7 +158,7 @@ private fun essenceRefusals(index: ContentIndex, hero: HeroView, gear: ForgeTarg
     }
 }
 
-/** Строки на выбор, что ждут решения над вещью: скрытая строка ([REVEALS] - аффикс или судьбоносная, 4.6.2) и знамение выбора. */
+/** Строки на выбор, что ждут решения над вещью: скрытая строка ([REVEALS] - аффикс или судьбоносная) и знамение выбора. */
 @Composable private fun LineChoices(game: GameUi, target: ForgeTarget, enabled: Boolean, vm: SmithyViewModel) {
     when (target) {
         is ForgeTarget.Gear -> {

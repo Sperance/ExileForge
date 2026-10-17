@@ -59,12 +59,14 @@ internal fun ShareKind.color(): Color = when (this) {
 }
 
 /**
- * A figure's own window (3.11.0): its total, then what it is made of — a bar of each kind's share,
+ * A figure's own window: its total, then what it is made of — a bar of each kind's share,
  * a card per kind with every source by name, the formula, and for a stat others take from, what it
  * gives them now. A linked stat opens in the same window; the chip on top goes back.
  *
- * [shifts] are what lies over the hero's own sheet — a map's and the atlas's effects — by stat. 4.6.4: цифра - лист боя ([CombatSheet]):
+ * [shifts] are what lies over the hero's own sheet — a map's and the atlas's effects — by stat. Цифра - лист боя ([CombatSheet]):
  * пассивные умения и шаги Предначертания - доли итога, полосы и формулы.
+ *
+ * Ключи карточек - по виду и заголовку: переход по цифрам не перекомпонует совпавшие карточки.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,7 +80,6 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
     val view = remember(current, combat, shifts, game.lang) {
         StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, combat.lowLife(current), combat.lootApart(current))
     }
-    // Ключи карточек (4.9.0): по виду и заголовку - переход по цифрам не перекомпонует совпавшие карточки
     val cardKeys = remember(view) { contentKeys(view.cards) { "${it.kind}|${it.title}" } }
     val accent = game.index?.stats?.section(current)?.accent() ?: Muted
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -118,7 +119,6 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
             }
             Text(view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
-        // Что даёт строка сводки (4.6.5, макет «Описание характеристики», вариант C): одна фраза серифом в кавычках под шапкой
         if (section != null) {
             Text(
                 "«${ui(game.lang, "stat.desc.$stat")}»",
@@ -132,7 +132,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
 }
 
 /**
- * The ceiling of a capped figure (3.12.0): the rules' base limit, each raise by the stat that gives it (a tap
+ * The ceiling of a capped figure: the rules' base limit, each raise by the stat that gives it (a tap
  * opens that stat's own breakdown), the limit that stands and the hard ceiling; then what the fight counts
  * and what lies above the limit for nothing.
  */
@@ -237,7 +237,7 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
     }
 }
 
-/** Цвет числа строки разбора (0.15.0, #46): к худшему по полярности - кровью, иначе - [plain]; знак числа цвета не решает. */
+/** Цвет числа строки разбора: к худшему по полярности - кровью, иначе - [plain]; знак числа цвета не решает. */
 private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == false) LifeRed else plain
 
 @Composable private fun Formula(text: String) {

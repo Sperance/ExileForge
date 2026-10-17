@@ -70,11 +70,14 @@ import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 
-/** Снаряжение входа в зону (3.80.24): карты из сундука, зелье и скарабеи. */
+/** Снаряжение входа в зону: карты из сундука, зелье и скарабеи. */
 /**
  * The stash's maps of this zone as a ribbon, the empty square first for going in without one; the
  * picked map's rarity, the three figures it pays and its lines marked by kind — red a harm with the
  * share of risk it pays, blue the content, gold a reward. Every number is the rules' own.
+ *
+ * Тир карты поднимает уровень района: по нему монстры, добыча и мифические захода. Захваченная карта - сильнее монстры и влияние на добычу.
+ * Атлас усиливает действующие числа карты, как их сложит сервер на входе.
  */
 @Composable internal fun Maps(game: GameUi, vm: ExpeditionViewModel, index: ContentIndex, zone: Zone, launch: MapLaunch) {
     val maps = stashMaps(game).filter { it.item.mapZone == zone.code }
@@ -98,14 +101,10 @@ import com.sperance.exileforge.ui.theme.*
         color = rarityColor(rarity.name),
         style = MaterialTheme.typography.labelMedium,
     )
-    // Тир карты поднимает уровень района (4.3.0): по нему монстры, добыча и мифические захода
     picked.view.areaLevel?.takeIf { picked.item.mapTier > 0 }?.let { area ->
         Text(ui("expedition.launch_area", picked.item.mapTier, area, zone.level), color = GoldBright, style = MaterialTheme.typography.labelMedium)
     }
-    // A map taken by an influence (3.52.0, server 1.50.0): stronger monsters — the risk pays for them — its influence on the loot;
-    // the Abyss (server 1.65.0) only from its orb, with its cracks besides.
     val influence = picked.item.influence?.takeIf { index.campaign.maps.influence.accepts(it) }
-    // «Эффект модификаторов карт» Атласа (4.12.8): карта печатает действующие числа - как их сложит сервер на входе
     val atlas = remember(game.hero?.info?.atlas, index) { AtlasBonuses.of(index.atlasGraph, game.hero?.info?.atlas.orEmpty(), index::modifier) }
     val loot = LootRoller(index)
     val bonus = loot.activeMap(zone.code, loot.atlasPowers(loot.mapEffects(picked.item, atlas.mapEffect), atlas.effects), rarity, picked.item.mapTier, influence, atlas.effects)
@@ -127,7 +126,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Ворота тиров (0.15.0): высший тир упавшей карты у героя уровня [level] - правило `MapTierRule.heroCap`; ниже предела тиров -
+ * Ворота тиров: высший тир упавшей карты у героя уровня [level] - правило `MapTierRule.heroCap`; ниже предела тиров -
  * строка «до T10; T12 - с 80 ур.», на пределе - ничего.
  */
 @Composable private fun TierGate(index: ContentIndex, level: Int?) {
@@ -139,12 +138,15 @@ import com.sperance.exileforge.ui.theme.*
     MutedText(ui("expedition.launch_tier_gate", cap, next.value, next.key), style = MaterialTheme.typography.labelSmall)
 }
 
-/** The picked map's lines in the order it rolled them; a composite line is a harm if any of its stats is one. */
+/**
+ * The picked map's lines in the order it rolled them; a composite line is a harm if any of its stats is one.
+ *
+ * Атлас усиливает только строки `scalable` (печать, флаги и счётные - как есть); риск строки с условием платится, только если условие на
+ * карте есть.
+ */
 internal fun lines(map: ItemView, index: ContentIndex, atlasEffect: Double = 1.0): List<MapLine> {
     val roller = LootRoller(index)
-    // Действующие значения строки (4.12.8): Атлас усиливает только строки `scalable` - печать, флаги и счётные как есть
     val bound = map.lines.map { line -> line.definition?.let { def -> def to roller.mapValues(def, line.values, atlasEffect) } }
-    // Все строки карты вместе (0.15.0): риск строки с условием платится, только если условие на карте есть
     val all = bound.filterNotNull().flatMap { (def, values) -> def.bind(values) }.groupingBy { it.first.stat }.fold(0.0) { sum, (_, value) -> sum + value }
     return map.lines.mapIndexed { i, line -> line(index, line, bound[i]?.second, all) }
 }
@@ -164,6 +166,7 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
     return MapLine(if (def != null && shown != line.values) modifierLine(index, def, shown) else line.text, kind, risk)
 }
 
+/** Бафф героя оплачивается наградой карты. */
 @Composable internal fun LineRow(line: MapLine) {
     val tint = when (line.kind) {
         MapLineKind.HARM -> LifeRed
@@ -176,7 +179,6 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
         if (line.kind == MapLineKind.HARM && line.risk > 0) {
             MutedText(ui("expedition.launch_risk", number(line.risk)), style = MaterialTheme.typography.labelSmall)
         }
-        // A hero's buff is paid for from the map's reward (3.16.0, server 1.14.0).
         if (line.risk < 0) MutedText(ui("expedition.launch_cost", number(-line.risk)), style = MaterialTheme.typography.labelSmall)
     }
 }
@@ -189,9 +191,9 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
 }
 
 /**
- * The crafts' gifts to the run (3.79.0): one potion of the bag drunk on entering, and with a map up to two scarabs
+ * The crafts' gifts to the run: one potion of the bag drunk on entering, and with a map up to two scarabs
  * spent with it. A tap picks, a tap again puts back; what each does is the item's own line.
- * С 4.3.2 касание открывает карточку стопки, взять или убрать - её кнопкой.
+ * Касание открывает карточку стопки, взять или убрать - её кнопкой.
  */
 @Composable internal fun Brews(game: GameUi, vm: ExpeditionViewModel, launch: MapLaunch) {
     val brews = game.index?.rules?.brews ?: return
@@ -240,7 +242,7 @@ private fun line(index: ContentIndex, line: ItemLine, values: List<Double>?, all
     }
 }
 
-/** The stash maps of this zone as squares framed in their rarity, the empty one first; карта открывает карточку (4.3.2), выбирает её кнопка. */
+/** The stash maps of this zone as squares framed in their rarity, the empty one first; карта открывает карточку, выбирает её кнопка. */
 @Composable internal fun MapRibbon(maps: List<StashMap>, picked: StashMap?, enabled: Boolean, onPick: (String?) -> Unit) {
     val inspect = rememberInspect()
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(horizontal = 2.dp), modifier = Modifier.fillMaxWidth()) {

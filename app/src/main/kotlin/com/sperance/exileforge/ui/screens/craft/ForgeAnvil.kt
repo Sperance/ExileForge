@@ -60,7 +60,7 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
 }
 
 /**
- * Полка у наковальни (макет B; с 4.2.0 - быстрый переключатель «Типа» общего фильтра [ItemShelf.FORGE], как рейка тайника):
+ * Полка у наковальни (быстрый переключатель «Типа» общего фильтра [ItemShelf.FORGE], как рейка тайника):
  * «Все» и разделы списка рисунками; выбранный - в золоте. Нажатие ставит тип фильтра и открывает выбор цели на вещах - выбор на
  * полке и «Тип» в шторке одно и то же состояние.
  */
@@ -95,7 +95,7 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
 
 /**
  * The anvil (mockup B): the target's socket, then the [tool] laid on it and, for an orb, its [omen] — then the target itself as it
- * stands and the server's last word about it. С 4.4.x цель - [ForgeTarget]: вещь (база и строки со значками). Касание лежащей цели открывает её карточку, выбор другой - кнопкой карточки; пустая открывает выбор.
+ * stands and the server's last word about it. Цель - [ForgeTarget]: вещь (база и строки со значками). Касание лежащей цели открывает её карточку, выбор другой - кнопкой карточки; пустая открывает выбор.
  */
 @Composable internal fun Anvil(game: GameUi, target: ForgeTarget?, tool: Socket, omen: Socket?, onPick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(14.dp)
@@ -137,7 +137,11 @@ private val ItemSection.glyph: ImageVector get() = when (this) {
     }
 }
 
-/** The item as the anvil holds it: the name in its rarity's colour, what it is and its affix sides (4.2.0), its base and its lines. */
+/**
+ * The item as the anvil holds it: the name in its rarity's colour, what it is and its affix sides, its base and its lines.
+ *
+ * Метка строки называет свой вид удержанием.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
@@ -171,7 +175,6 @@ private fun AnvilItem(item: ItemView, onClick: () -> Unit) {
             }
         }
         if (item.corrupted) Text(ui("orb.corrupted"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-        // Метка строки называет свой вид удержанием (0.14.5, #39)
         if (item.lines.any { it.marks.kind != null }) HoldHint(HoldSubject.INFO)
     }
 }

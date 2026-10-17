@@ -16,8 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Какая таблица доски славы открыта (4.2.0): [board] из реестра [HallBoard], её раздел [scope] (раш - `регион:ступень`,
- * профессия - код). Лига - всегда лига героя (4.4.x), её называет ответ.
+ * Какая таблица доски славы открыта: [board] из реестра [HallBoard], её раздел [scope] (раш - `регион:ступень`,
+ * профессия - код). Лига - всегда лига героя, её называет ответ.
  */
 data class HallPick(val board: HallBoard, val scope: String = "")
 
@@ -28,7 +28,7 @@ data class HallPick(val board: HallBoard, val scope: String = "")
 data class HallUi(val pick: HallPick? = null, val table: HallTable? = null, val hero: String = "")
 
 /**
- * Доска славы Города (4.2.0, сервер 1.84.0): одна таблица за раз, читается заново при каждом выборе. Ответ, пришедший к
+ * Доска славы Города: одна таблица за раз, читается заново при каждом выборе. Ответ, пришедший к
  * уже сменённому выбору, не показывается.
  */
 class HallViewModel(

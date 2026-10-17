@@ -28,7 +28,7 @@ import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
- * Плотное поле поиска (40dp, макет «Состав гильдии», вариант A): лупа, ввод одной строкой и подсказка [placeholder], пока
+ * Плотное поле поиска (40dp): лупа, ввод одной строкой и подсказка [placeholder], пока
  * пусто; басальт в нити `Bronze`. Для списков, где поиск не должен занимать полэкрана.
  */
 @Composable fun CompactSearchField(value: String, onValue: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {

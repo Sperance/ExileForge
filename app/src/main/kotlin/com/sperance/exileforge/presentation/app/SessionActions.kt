@@ -55,10 +55,10 @@ class SessionActions(
     private val lazyConnection: Lazy<ConnectionActions>,
     private val lazyCharacters: Lazy<CharacterActions>,
     private val lazyWarmup: Lazy<WarmupActions>,
-    /** HTTP-клиент процесса (3.80.45, из Koin): все серверы делят его пул и TLS-сессии. */
+    /** HTTP-клиент процесса (из Koin): все серверы делят его пул и TLS-сессии. */
     private val http: HttpLink,
     private val trace: StartupTrace,
-    /** Среда устройства и переходы экранов для отчётов (0.14.2). */
+    /** Среда устройства и переходы экранов для отчётов. */
     private val evidence: ReportEvidence,
 ) : AppService(repositories, actions, commands, connection, store, scope) {
     private val connectionActions: ConnectionActions get() = lazyConnection.value
@@ -73,10 +73,10 @@ class SessionActions(
         }
     }
 
-    /** Подключение к адресу [draft] из поля экрана (3.80.32: черновик живёт на экране). */
+    /** Подключение к адресу [draft] из поля экрана (черновик живёт на экране). */
     fun connect(draft: String) = connectTo(normalizeServer(draft))
 
-    /** Back to the one server (3.75.0): the administrator's address is forgotten, not overwritten with the default. */
+    /** Back to the one server: the administrator's address is forgotten, not overwritten with the default. */
     fun resetServer() = connectTo(null)
 
     private fun connectTo(override: String?) {
@@ -163,9 +163,11 @@ class SessionActions(
     private var unconfirmed: String? = null
 
     /**
-     * The fast start (3.30.0): with a kept session, the last hero played on this server opens straight from the
+     * The fast start: with a kept session, the last hero played on this server opens straight from the
      * device — their copy, the content and the dictionary — and the session is confirmed behind it; commands
      * given meanwhile wait in the queue. No copy, another API revision or content missing: `false`, the usual start.
+     *
+     * Лист героя складывается вне главного потока: без ожидания рисунка герой здесь ещё пуст, и быстрый старт падал бы в обычный вход.
      */
     suspend fun fastStart(server: String, saved: String): Boolean {
         run {
@@ -181,8 +183,6 @@ class SessionActions(
             modes.set(AppMode.PLAYER)
             warmupActions.clear()
             heroSync.restore(heroId, copy.snapshot)
-            // Лист героя складывается вне главного потока (3.55.0): без ожидания рисунка герой здесь ещё пуст, и быстрый
-            // старт всякий раз падал в обычный вход (3.84.3).
             heroSync.drawn()
             val foreign = heroes.state.value.owner.let { it.isNotEmpty() && it != copy.account.id }
             if (heroes.state.value.hero == null || foreign) {
@@ -214,6 +214,7 @@ class SessionActions(
 
     private var confirming: Job? = null
 
+    /** Сохранённый токен ответил за другой аккаунт, чем нарисованный герой: тот герой не этой сессии. */
     private suspend fun confirmNow() {
         run {
             val saved = unconfirmed ?: return
@@ -231,7 +232,6 @@ class SessionActions(
                 }
                 return
             }
-            // The kept token answered for another account than the hero drawn: that hero is not this session's.
             if (profile.id != adopted || heroes.state.value.owner.let { it.isNotEmpty() && it != profile.id }) return fallBack(saved, foreign = true)
             unconfirmed = null
             sessions.update { it.copy(profile = profile) }
@@ -261,9 +261,11 @@ class SessionActions(
         }
     }
 
-    /** The link came back: a session the fast start adopted is confirmed now. */
-
-    /** The server answers again: the session waiting for it is confirmed, or a kept one that could not resume is tried again (3.79.0). */
+    /**
+     * The server answers again: the session waiting for it is confirmed, or a kept one that could not resume is tried again.
+     *
+     * Связь вернулась: сессия, принятая быстрым стартом, подтверждается сейчас.
+     */
     fun restored() {
         if (unconfirmed != null) {
             confirm()
@@ -284,16 +286,19 @@ class SessionActions(
     /** When the app left the foreground, by the monotonic clock; null while it is in front. */
     @Volatile private var awaySince: Long? = null
 
-    /** Leaving the foreground (3.28.0): the moment is kept, so the return knows how long the screen stood still. */
+    /** Leaving the foreground: the moment is kept, so the return knows how long the screen stood still. */
     fun away() {
         awaySince = System.nanoTime()
     }
 
     /**
      * Back in the foreground — from the background or a locked screen: the dead sockets go, and what the
-     * last try could not reach is asked again — the kept session, or the screen the player is on. Since 3.28.0 a
+     * last try could not reach is asked again — the kept session, or the screen the player is on. A
      * return after more than [STALE_AWAY_MS] re-reads the screen quietly even without a failure: the session is
      * checked by that very read, and the screen shows what happened while the app was away.
+     *
+     * Связь проверяется при каждом возврате, а не первым запросом экрана: живая по старой памяти, она могла умереть в фоне. Следом
+     * перечитывается экран - оно и проверяет связь, отдельной пробы нет; чтение, повисшее на умершем сокете, заменяется новым.
      */
     fun reconnect() {
         run {
@@ -305,16 +310,12 @@ class SessionActions(
                 val link = links.state.value
                 val reread = session.signedIn && navigator.current.value.phase != AppPhase.AUTH &&
                     (commands.state.value.failure is FailureState.Offline || link.offline || stale)
-                // Связь проверяется при каждом возврате (3.95.2), а не первым запросом экрана: живая по старой памяти, она
-                // могла умереть в фоне - проба коротка и не ждёт паузы повтора. Следом идёт перечитывание экрана (4.x) - оно
-                // само проверяет связь: отдельной пробы нет, возврат - один запрос
                 if (session.signedIn) connectionActions.wake(now = true, verify = !reread)
                 when {
                     !session.signedIn -> if (session.resumable) retryResume()
 
                     reread -> {
                         commands.clearOffline()
-                        // Чтение, повисшее на сокете, умершем в фоне, заменяется новым (3.95.2): иначе новое ждало бы его таймаута
                         when (navigator.current.value.phase) {
                             AppPhase.GAME -> read(Reads.HERO, restart = true, silent = true) { heroSync.readHero() }
                             AppPhase.CHARACTERS -> read(Reads.CHARACTERS, restart = true, silent = true) { characterActions.readCharacters() }
@@ -327,7 +328,7 @@ class SessionActions(
     }
 
     /**
-     * Касание красного облака (4.4.x): полное переподключение сразу - как возврат в игру, но проба связи без паузы повтора.
+     * Касание красного облака: полное переподключение сразу - как возврат в игру, но проба связи без паузы повтора.
      * До её итога облако «переподключается»; удача - связь в сети, неудача - снова красное облако и тост с причиной.
      */
     fun reconnectLink() {
@@ -336,10 +337,14 @@ class SessionActions(
         reconnect()
     }
 
-    /** What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu. */
+    /**
+     * What every sign-in ends with: the account is the session, and the gate opens one step — the hero menu.
+     *
+     * Маршруты клиента - у вошедшего: без входа манифест их не называет. Что ждало сессию, уходит с этой; команды другого аккаунта
+     * отбрасываются.
+     */
     private suspend fun signedIn(profile: UserProfile, byDevice: Boolean) {
         run {
-            // Маршруты клиента - у вошедшего (4.12.x, сервер SEC-09): без входа манифест их не называет
             api.requireRoutes()
             sessions.update { it.copy(signedIn = true, resumable = false, profile = profile) }
             navigator.reset(com.sperance.exileforge.presentation.nav.Route.Characters)
@@ -347,7 +352,6 @@ class SessionActions(
             store.saveDeviceSession(byDevice)
             store.saveToken(sessions.state.value.server, api.sessionToken())
             forgetForeignHero(sessions.state.value.server, profile.id)
-            // What waited for a session goes out with this one; another account's commands are dropped on the way.
             connectionActions.wake(now = true)
             loader.refreshLocale()
             loader.refreshIcons()
@@ -366,7 +370,11 @@ class SessionActions(
         }
     }
 
-    /** Signing out is explicit, so the next launch must not sign straight back in. */
+    /**
+     * Signing out is explicit, so the next launch must not sign straight back in.
+     *
+     * Выход явный: что этот аккаунт оставил в ожидании, для следующего не отправляется.
+     */
     fun logout() {
         run {
             if (commands.state.value.busy) return
@@ -379,7 +387,6 @@ class SessionActions(
                 store.saveDeviceSession(false)
                 store.saveToken(server, null)
                 store.saveLastHero(server, null)
-                // A sign-out is explicit: what this account left waiting is not sent for the next one.
                 leaving.commands?.clear()
                 token?.let { leaving.revoke(it) }
             }
@@ -387,7 +394,7 @@ class SessionActions(
     }
 
     /**
-     * Гостевой аккаунт получает логин и пароль (3.88.0, server 1.80.0): ответ - аккаунт с логином, он и становится профилем
+     * Гостевой аккаунт получает логин и пароль: ответ - аккаунт с логином, он и становится профилем
      * сессии; токен и вход по устройству остаются. Занятый раннер не глотает нажатие: «занято, повторите».
      */
     fun bind(login: String, password: String) {
@@ -413,20 +420,23 @@ class SessionActions(
         const val STALE_AWAY_MS = 30_000L
     }
 
-    // ---- сервер и сессия (3.80.44: из `ForgeRuntime`) ----
-
-    /** Первый [api] создан (3.74.0): проверка обновлений ждёт его, а не спрашивает никакой сервер. */
+    /** Первый [api] создан: проверка обновлений ждёт его, а не спрашивает никакой сервер. */
     val apiReady = CompletableDeferred<Unit>()
 
-    /** Вход встретил сервер новее сборки (3.74.0): проверка обновлений идёт сразу. */
+    /** Вход встретил сервер новее сборки: проверка обновлений идёт сразу. */
     val newerServer = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    /** Сервер ответил ошибкой (4.3.1) или не ответил вовсе: проверка обновлений с порогом. */
+    /** Сервер ответил ошибкой или не ответил вовсе: проверка обновлений с порогом. */
     val serverFailed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
     /**
      * A refused token is forgotten, and a player who plays by device is signed in again without being
      * asked. The sign-in waits for the command that met the 401 to finish, because [task] refuses to nest.
+     *
+     * Копия последнего героя принадлежит отказанной сессии - следующий запуск её не открывает. Проверку сборки поднимают 426 сервера, сбой
+     * сервера (5xx, битый ответ) и обрыв без ответа; отказ правила (4xx) - слово сервера, не повод искать обновление. Отчёты подписаны
+     * устройством, версией и активным героем; заблокированный герой уводит к выбору, закрытый санкцией доступ гасит сессию и показывает
+     * экран санкции. Команды сервера, что ждут сети, живут на устройстве.
      */
     fun newApi(server: String): GameApi {
         lateinit var created: GameApi
@@ -435,7 +445,6 @@ class SessionActions(
                 clearSession()
                 scope.launch {
                     store.saveToken(server, null)
-                    // The copy of the last hero belongs to the refused session: the next launch does not open it.
                     store.saveLastHero(server, null)
                     if (store.deviceSession.first()) {
                         commands.state.first { !it.busy }
@@ -448,26 +457,20 @@ class SessionActions(
         })
         created.heroSync(heroSync::heldParts, heroSync::delivered)
         created.onNewerServer = { newerServer.tryEmit(Unit) }
-        // Проверку сборки (NET-3, закрыто 4.12.x) поднимают 426 сервера (сразу, как сервер новее при входе), сбой сервера (5xx, битый
-        // ответ) и обрыв без ответа; отказ правила (4xx) - слово сервера, не повод искать обновление.
         created.onServerError = { alarm ->
             when (alarm) {
                 ServerAlarm.OUTDATED -> newerServer.tryEmit(Unit)
                 ServerAlarm.FAILED, ServerAlarm.UNREACHED -> serverFailed.tryEmit(Unit)
             }
         }
-        // Отчёты подписаны устройством, версией и активным героем (3.88.0), со средой устройства и последними действиями (0.14.2);
-        // заблокированный герой уводит к выбору (3.88.0).
         created.identity = ClientIdentity(BuildConfig.VERSION_NAME, store::deviceFingerprint, { heroes.heroId }, android.os.Build.MODEL.orEmpty(), evidence::environment)
         created.trail = evidence.trail
         created.onHeroBlocked = { heroId, failure -> if (api === created) characterActions.blocked(heroId, failure) }
-        // Доступ закрыт санкцией (3.88.5): сессия гаснет, поверх всего - экран санкции с её id
         created.onSanctioned = { sanctionId, token -> if (api === created) sanctioned(server, sanctionId, token) }
         created.manifestCache = object : ManifestCache {
             override suspend fun read(): String? = store.manifest(server)
             override suspend fun write(text: String) = store.saveManifest(server, text)
         }
-        // The commands of this server that wait for the network live on the device (3.30.0).
         created.commandStore(object : CommandStore {
             override suspend fun read(): String? = store.commands(server)
             override suspend fun write(text: String) = store.saveCommands(server, text)
@@ -477,9 +480,9 @@ class SessionActions(
     }
 
     /**
-     * Сервер закрыл доступ санкцией (`AUTH_006`, 3.88.5): бан аккаунта или устройства, удаление аккаунта. Сессия и её токен
+     * Сервер закрыл доступ санкцией (`AUTH_006`): бан аккаунта или устройства, удаление аккаунта. Сессия и её токен
      * забываются, приложение уходит ко входу, а поверх - экран санкции; повторный отказ, пока экран открыт, его не перезапускает.
-     * [token] (4.9.0) - токен апелляции из отказа: экран санкции подаёт с ним апелляцию.
+     * [token] - токен апелляции из отказа: экран санкции подаёт с ним апелляцию.
      */
     private fun sanctioned(server: String, sanctionId: String, token: String) {
         if (sessions.state.value.notice != null) return

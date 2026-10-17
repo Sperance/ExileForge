@@ -17,7 +17,7 @@ import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.ManaBlue
 import com.sperance.exileforge.ui.theme.Rune
 
-/** A skill's drawing (2.78.0): the server's sprite it names - с 4.4.0 неоновым контуром, - the grimoire's own mark without one. */
+/** A skill's drawing: the server's sprite it names - неоновым контуром, - the grimoire's own mark without one. */
 @Composable fun SkillGlyph(icon: String, modifier: Modifier = Modifier, tint: Color = Gold) {
     if (!NeonSprite(skillIcon(icon), tint, modifier)) Icon(ForgeGlyphs.Grimoire, null, tint = tint, modifier = modifier)
 }

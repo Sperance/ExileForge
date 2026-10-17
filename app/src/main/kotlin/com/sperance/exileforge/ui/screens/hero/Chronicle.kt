@@ -30,7 +30,7 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.ui.theme.Vital
 
-/** A title as the dictionary names it; нет строки (0.15.0, #48) - заглушка и дыра словаря, не код. */
+/** A title as the dictionary names it; нет строки - заглушка и дыра словаря, не код. */
 fun titleName(code: String): String = loc("title.$code")
 
 /** The three steps of an achievement: bronze, silver, gold — a single one-off step is gold. */
@@ -44,24 +44,24 @@ fun GameUi.chronicleDone(): Pair<Int, Int>? {
 }
 
 /**
- * The chronicle (3.3.0, server 1.3.0): the hero's title, and a way into all they have done — the
+ * The chronicle: the hero's title, and a way into all they have done — the
  * counters by section, the achievements with their steps and the titles they open. Only what the
  * server counts is counted; the level, the zones and the atlas are read off the hero.
  *
- * A page of the «Развитие» tab since 3.69.0, opened from its tile; it was a card and a sheet on the Hero tab.
+ * A page of the «Развитие» tab opened from its tile.
+ *
+ * Статистика читается отдельно при открытии страницы. Показано только начатое героем.
  */
 @Composable
 fun ChronicleScreen(game: GameUi, vm: HeroViewModel) {
     val hero = game.hero ?: return
     val achievements = game.index?.achievements ?: return
     val values = hero.chronicle
-    // The statistics (3.51.0) are read apart, when the page opens: hundreds of figures ride with no hero snapshot.
     val stats by produceState<Map<String, Long>?>(null, hero.id) { value = vm.heroStats(hero.id) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         CurrentTitle(hero.info.title)
         game.chronicleDone()?.let { (done, all) -> MutedText(ui("chronicle.done", done, all)) }
         TitleGallery(achievements.achievements, values, hero.info.title, enabled = !game.busy, onPick = vm::setTitle)
-        // Only what the hero has begun: an untouched achievement or counter is noise, not a record.
         val begun = achievements.achievements.filter { (values[it.counter] ?: 0L) > 0L }
         Engraved(ui("chronicle.achievements"))
         if (begun.isEmpty()) MutedText(ui("chronicle.nothing_yet"))
@@ -85,7 +85,7 @@ fun ChronicleScreen(game: GameUi, vm: HeroViewModel) {
 }
 
 /**
- * The hero's statistics (3.51.0, server 1.49.0): the fights' figures — what the server was told of every fight — and the
+ * The hero's statistics: the fights' figures — what the server was told of every fight — and the
  * breakdowns by kind, each a group folded under its total that a tap opens. Nothing that is zero is shown, at either level.
  */
 @Composable private fun StatSections(stats: Map<String, Long>) {
@@ -142,7 +142,11 @@ private fun clock(seconds: Long): String {
     return if (h > 0) "$h:${m.toString().padStart(2, '0')}:$s" else "$m:$s"
 }
 
-/** An achievement: its name, what the next step asks and how far it is, and a medal for each step taken. */
+/**
+ * An achievement: its name, what the next step asks and how far it is, and a medal for each step taken.
+ *
+ * Сферы золотой ступени выдаёт запись героя один раз - взятая ступень пишет «получено».
+ */
 @Composable private fun AchievementRow(achievement: Achievement, value: Long) {
     val reached = achievement.reached(value)
     val next = achievement.tiers.getOrNull(reached)
@@ -173,7 +177,6 @@ private fun clock(seconds: Long): String {
             color = Muted,
             style = MaterialTheme.typography.labelSmall,
         )
-        // Сферы золотой ступени (0.15.0, реш. 23): их выдаёт запись героя один раз - взятая ступень пишет «получено»
         if (achievement.reward.isNotEmpty()) {
             val goods = achievement.reward.entries.joinToString(", ") { (code, amount) -> ui("chronicle.reward_item", itemTitle(code), number(amount.toDouble())) }
             Text(ui(if (next == null) "chronicle.reward_got" else "chronicle.reward", goods), color = if (next == null) Vital else Gold, style = MaterialTheme.typography.labelSmall)

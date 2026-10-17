@@ -59,10 +59,10 @@ import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Who opens the inbox (3.73.0): the app hands it down to the banner's envelope. */
+/** Who opens the inbox: the app hands it down to the banner's envelope. */
 val LocalMailOpen = staticCompositionLocalOf<(() -> Unit)?> { null }
 
-/** A report's status by name, in the server's words (3.73.0). */
+/** A report's status by name, in the server's words. */
 fun statusTitle(status: ReportStatus): String = statusTitle(status.name)
 fun kindTitle(kind: FeedbackKind): String = kindTitle(kind.name)
 
@@ -88,7 +88,7 @@ fun statusTint(status: ReportStatus): Color = when (status) {
 }
 
 /**
- * Судьба отчёта глазами игрока (0.14.1, GH-ISSUES, макет A): модерация, отказ модерации, затем судьба его Issue. Цвет - кромка
+ * Судьба отчёта глазами игрока: модерация, отказ модерации, затем судьба его Issue. Цвет - кромка
  * карточки и плашка статуса; [closed] - закрытые идут ниже открытых и приглушены.
  */
 enum class ReportFate(val tint: Color, val icon: ImageVector, val closed: Boolean = false) {
@@ -148,14 +148,16 @@ fun fateTitle(fate: ReportFate, kind: FeedbackKind, issue: IssueView?, short: Bo
     }
 }
 
-/** Вкладка листа отчётов (0.14.1, макет A): свои отчёты или известные проблемы. */
+/** Вкладка листа отчётов: свои отчёты или известные проблемы. */
 enum class ReportsTab { MINE, KNOWN }
 
 /**
- * Отчёты (0.14.1, GH-ISSUES, макет A; 0.14.2 - без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
+ * Отчёты (без предложений): вкладки «Мои» (свои отчёты с судьбой их Issues и перепиской;
  * число новых ответов на вкладке, открытая вкладка их гасит) и «Известные» (открытые ошибки из игры с голосованием «+ / −», поиск
  * по тексту и номеру). Открытые выше закрытых; известные - по рейтингу и номеру. Списки
- * перечитываются (0.14.4, #33) потягиванием вниз и нажатием на уже открытую вкладку.
+ * перечитываются потягиванием вниз и нажатием на уже открытую вкладку.
+ *
+ * Открытая «Мои» гасит новые ответы, точки этого показа остаются до следующего открытия.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -170,14 +172,12 @@ fun ReportsSheet(start: ReportsTab, onDismiss: () -> Unit) {
     var query by rememberSaveable { mutableStateOf("") }
     var searching by rememberSaveable { mutableStateOf(false) }
     val fresh = feedback.mine.filter { own -> own.replyPrint?.let { it != seen[own.id] } == true }.map { it.id }.toSet()
-    // Открытая «Мои» гасит новые ответы - но точки этого показа остаются до следующего открытия
     val shownFresh = remember(tab, feedback.mine) { fresh }
     LaunchedEffect(tab, feedback.mine) { if (tab == ReportsTab.MINE) model.markSeen(feedback.mine) }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.9f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("feedback.title"), color = GoldBright, style = MaterialTheme.typography.titleLarge)
             val mineTitle = ui("feedback.tab.mine") + if (tab != ReportsTab.MINE && fresh.isNotEmpty()) " · ${fresh.size}" else ""
-            // Шапка (0.14.2, макет «Отчёты у модерации», вариант A для игрока): вкладки и значок поиска, поле - по нажатию
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Box(Modifier.weight(1f)) {
                     PillTabs(listOf(mineTitle, ui("feedback.tab.known") + " · ${feedback.known.size}"), tab.ordinal, { tab = ReportsTab.entries[it] }, onReselect = model::loadReports)
@@ -234,7 +234,7 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 }
 
 /**
- * Карточка отчёта - тикет (0.14.2, #23, макет A): вид, номер Issue, судьба и дата сверху; текст до трёх строк; путь отчёта шкалой
+ * Карточка отчёта - тикет: вид, номер Issue, судьба и дата сверху; текст до трёх строк; путь отчёта шкалой
  * из четырёх шагов ([StepPath]); ответ разработчика или модерации цитатой; подвал - голоса, ссылка на Issue, удаление. Закрытые
  * свои приглушены. Свой отчёт и известная проблема - одна карточка, разное - в подвале.
  */
@@ -279,7 +279,7 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
 }
 
 /**
- * Путь отчёта для шкалы (0.14.2, #23; 0.14.4 - три шага): принят, в работе (Issue открыт - отправка и работа теперь одно), итог;
+ * Путь отчёта для шкалы (три шага): принят, в работе (Issue открыт - отправка и работа - одно), итог;
  * [reached] - сколько пройдено (последний пройденный - «сейчас»), [tint] - цвет судьбы; последний шаг - итог: у отказа это сам
  * отказ, у дубля - его номер.
  */
@@ -332,7 +332,7 @@ private data class StepPath(val labels: List<String>, val reached: Int, val tint
 private fun shortDate(createdAt: String): String = createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, month, day) -> "$day.$month" }.orEmpty()
 
 /**
- * Переписка карточки (0.14.2): слово модерации при решении ([reason]), затем вся переписка Issue по порядку - разработчик,
+ * Переписка карточки: слово модерации при решении ([reason]), затем вся переписка Issue по порядку - разработчик,
  * модерация из игры и автор.
  */
 private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, String>> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + issue?.notes.orEmpty().map { it.author to it.text }
@@ -356,7 +356,7 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
     }
 }
 
-/** Ответ автора в Issue (0.14.2): поле и «Отправить»; уходит комментарием в GitHub и встаёт в переписку. */
+/** Ответ автора в Issue: поле и «Отправить»; уходит комментарием в GitHub и встаёт в переписку. */
 @Composable private fun AnswerField(onSend: (String) -> Unit) {
     var text by rememberSaveable { mutableStateOf("") }
     Row(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -375,9 +375,9 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
     Icon(Icons.Outlined.BugReport, kindTitle(kind), tint = Muted, modifier = Modifier.size(16.dp))
 }
 
+/** Ответить в Issue можно, пока он открыт. */
 @Composable private fun OwnCard(own: OwnReport, fresh: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
-    // Ответить в Issue можно, пока он открыт (0.14.2)
     val answer = onAnswer.takeIf { own.issue?.state?.open == true && enabled }
     ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, thread(own.issue, own.reason), dim = fate.closed, fresh = fresh, onAnswer = answer) {
         Score(own.likes, own.dislikes)
@@ -403,7 +403,7 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
     VoteButton("−", known.dislikes, known.vote == Vote.DISLIKE, LifeRed, enabled && known.votable) { onVote(Vote.DISLIKE) }
 }
 
-/** Удаление отчёта (4.3.0) - всегда с вопросом: оно жёсткое и не возвращается. */
+/** Удаление отчёта - всегда с вопросом: оно жёсткое и не возвращается. */
 @Composable fun ReportDeleteButton(enabled: Boolean, onClick: () -> Unit) {
     ForgeTextButton(enabled = enabled, onClick = onClick) {
         Icon(Icons.Outlined.Delete, null, tint = LifeRed, modifier = Modifier.size(16.dp))
@@ -417,7 +417,7 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
     ConfirmSheet(ui("feedback.delete_q"), ui("feedback.delete"), onDismiss = onDismiss, note = ui("feedback.delete_note"), danger = true, blocked = busy, onConfirm = onDelete)
 }
 
-/** Голос «+» или «−» со счётом: свой голос подсвечен цветом стороны (макет A). */
+/** Голос «+» или «−» со счётом: свой голос подсвечен цветом стороны. */
 @Composable private fun VoteButton(sign: String, count: Int, chosen: Boolean, tint: Color, enabled: Boolean, onClick: () -> Unit) {
     Text(
         "$sign$count",
@@ -435,7 +435,7 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
     )
 }
 
-/** Длина ответа автора в Issue из игры (0.14.2): сервер всё равно режет по `inputs.report`. */
+/** Длина ответа автора в Issue из игры: сервер всё равно режет по `inputs.report`. */
 private const val ANSWER_MAX = 1000
 
 /** Закрытые свои отчёты приглушены. */

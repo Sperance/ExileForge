@@ -63,12 +63,6 @@ import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.ui.theme.*
 
-/*
- * Мощь (4.8.0, макет A+B; 4.9.x - чип, макет A): печать - кольцо долей «натиск / стойкость» (Ember / Rune) с ⚜ внутри; на листе
- * героя - чип «⚜ 12.5k» с чертой долей в строке с номером героя, у врага - мелко с числом цвета его стойки против героя; в списках -
- * строка «⚜ 12.5k». Не прогноз боя.
- */
-
 /** Цвет числа Мощи врага по его стойке против героя: серый - слабее вдвое, золото - сопоставим, красный - сильнее. */
 fun MightStanding.tint(): Color = when (this) {
     MightStanding.WEAKER -> Muted
@@ -76,7 +70,12 @@ fun MightStanding.tint(): Color = when (this) {
     MightStanding.STRONGER -> LifeRed
 }
 
-/** Печать Мощи: кольцо, где дуга натиска ([MightReading.offenseShare], Ember) и стойкости (Rune) делят круг, ⚜ в середине. */
+/**
+ * Печать Мощи: кольцо, где дуга натиска ([MightReading.offenseShare], Ember) и стойкости (Rune) делят круг, ⚜ в середине.
+ *
+ * Мощь: печать - кольцо долей «натиск / стойкость» с ⚜ внутри; на листе героя - чип «⚜ 12.5k» с чертой долей, у врага - мелко с числом
+ * цвета его стойки, в списках - строка «⚜ 12.5k». Не прогноз боя.
+ */
 @Composable fun MightSeal(reading: MightReading, modifier: Modifier = Modifier, size: Dp = 92.dp) {
     val offense = reading.offenseShare.toFloat().coerceIn(0f, 1f)
     Box(modifier.size(size), contentAlignment = Alignment.Center) {
@@ -94,7 +93,7 @@ fun MightStanding.tint(): Color = when (this) {
 }
 
 /**
- * Мощь героя на его листе (4.9.x, макет «Мощь героя», вариант A): чип «⚜ 12.5k» высотой 28dp в строке с номером героя, под числом -
+ * Мощь героя на его листе: чип «⚜ 12.5k» высотой 28dp в строке с номером героя, под числом -
  * черта 2dp из долей натиска (Ember) и стойкости (Rune). Касание открывает разбор ([MightBreakdown]). [reading] null - Мощь ещё не
  * посчитана: «…» вместо числа, без черты и разбора; [defense] - из чего сложена стойкость, без него разбор без частей.
  */
@@ -140,7 +139,7 @@ private fun MightDefense.parts(): List<DefensePart> = listOf(
 )
 
 /**
- * Разбор Мощи героя (макет A): «⚜ Мощь» и число целиком, формула «√ натиск × стойкость», натиск (урон в секунду) и стойкость
+ * Разбор Мощи героя: «⚜ Мощь» и число целиком, формула «√ натиск × стойкость», натиск (урон в секунду) и стойкость
  * (эффективное здоровье) своими цветами; под стойкостью - её части из [defense] правил (`Might.defense`): здоровье и щит, мана перед
  * здоровьем, множители подавления и отражения, меньшего получаемого урона и пополнения (реген, вампиризм, флаконы). Внизу - «не прогноз боя».
  */
@@ -174,7 +173,7 @@ private fun MightDefense.parts(): List<DefensePart> = listOf(
     }
 }
 
-/** Мощь врага мелко (4.8.0): печать и короткое число цвета его стойки против героя ([FightMight]); без Мощи героя - золото. */
+/** Мощь врага мелко: печать и короткое число цвета его стойки против героя ([FightMight]); без Мощи героя - золото. */
 @Composable fun FoeMight(reading: MightReading, standing: MightStanding, modifier: Modifier = Modifier, seal: Dp = 12.dp, fontSize: TextUnit = 10.sp) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
         MightSeal(reading, size = seal)
@@ -182,14 +181,14 @@ private fun MightDefense.parts(): List<DefensePart> = listOf(
     }
 }
 
-/** Мощь строкой списка «⚜ 12.5k» (4.8.0): карточка игрока, состав гильдии; ноль - сервер ещё не посчитал её (4.9.0): «⚜ …». */
+/** Мощь строкой списка «⚜ 12.5k»: карточка игрока, состав гильдии; ноль - сервер ещё не посчитал её: «⚜ …». */
 @Composable fun MightLine(value: Double, modifier: Modifier = Modifier, tint: Color = Caution, fontSize: TextUnit = 11.sp) {
     Text(if (value > 0) mightLine(value) else ui("might.short", PENDING), color = tint, fontSize = fontSize, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false, modifier = modifier)
 }
 
 /**
- * Мощь героя «было → стало» с вещью (4.8.0) - строкой сравнения, как у [StatComparison], с плашкой разницы; одна строка Мощи в
- * карточке (0.14.5, #44), и только когда сдвиг стоит показа ([MightShift.shown]).
+ * Мощь героя «было → стало» с вещью - строкой сравнения, как у [StatComparison], с плашкой разницы; одна строка Мощи в
+ * карточке, и только когда сдвиг стоит показа ([MightShift.shown]).
  */
 @Composable fun MightComparison(shift: MightShift, look: RelicLook? = null) {
     if (!shift.shown) return
@@ -205,7 +204,7 @@ private fun MightDefense.parts(): List<DefensePart> = listOf(
 }
 
 /**
- * Мощь в бою (4.8.0): Мощь героя [hero] по его телу боя - под эффектами карты - и Мощь каждого врага, сосчитанная один раз на
+ * Мощь в бою: Мощь героя [hero] по его телу боя - под эффектами карты - и Мощь каждого врага, сосчитанная один раз на
  * монстра. Одна на оверлей боя ([LocalFightMight]).
  */
 @Stable
@@ -233,7 +232,7 @@ class FightMight internal constructor(
 val LocalFightMight = compositionLocalOf<FightMight?> { null }
 
 /**
- * Мощь боя на уровне врагов [level]: враги - один раз на монстра, герой - заново, когда меняется его тело боя [hero]; [extras] (4.9.x) -
+ * Мощь боя на уровне врагов [level]: враги - один раз на монстра, герой - заново, когда меняется его тело боя [hero]; [extras] -
  * что сверх листа из боевого листа героя: урон умений, резерв маны, фляги (`CombatSheet.mightExtras`).
  */
 @Composable fun rememberFightMight(index: ContentIndex?, hero: Combatant?, level: Int, extras: MightExtras): FightMight? {
@@ -248,13 +247,13 @@ private const val MIGHT_GLYPH = "⚜"
 /** Мощь, которую сервер ещё не посчитал: многоточие вместо нуля. */
 private const val PENDING = "…"
 
-/** Высота чипа Мощи в строке с номером героя (вариант A). */
+/** Высота чипа Мощи в строке с номером героя. */
 private val MARK_HEIGHT = 28.dp
 
 /** Тоньше доли черта натиска и стойкости не бывает: обе стороны видны всегда. */
 private const val MIN_SHARE = .04f
 
-/** Метки частей стойкости в разборе (макет A): запас - сталь, мана перед здоровьем - бледная синь, меньший урон - лёд. */
+/** Метки частей стойкости в разборе: запас - сталь, мана перед здоровьем - бледная синь, меньший урон - лёд. */
 private val PoolHue = Color(0xFF5E7F95)
 private val ManaShieldHue = Color(0xFF7FB2D4)
 private val LessTakenHue = Color(0xFFB4E2FF)

@@ -16,7 +16,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 /**
- * The downloaded APK into the system installer (3.72.0): a [PackageInstaller] session, so no file is shared with another
+ * The downloaded APK into the system installer: a [PackageInstaller] session, so no file is shared with another
  * app. The system asks the player to confirm; what it answers comes back through [UpdateReceiver] as [results]. The
  * release is signed with the same key as the build on the device, so it installs over it, the hero data kept.
  */
@@ -30,10 +30,14 @@ object UpdateInstaller {
     /** The system screen that lets this app install packages. */
     fun permissionScreen(context: Context): Intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
 
-    /** Hands [apk] to the system installer; the answer comes as [results]. */
+    /**
+     * Hands [apk] to the system installer; the answer comes as [results].
+     *
+     * Прежняя сессия, чьё окно закрыли без ответа, бросается: повтор начинает с чистой. Установщик пишет статус в intent - он обязан быть
+     * изменяемым.
+     */
     suspend fun install(context: Context, apk: File) = withContext(Dispatchers.IO) {
         val installer = context.packageManager.packageInstaller
-        // Прежняя сессия, чьё системное окно закрыли без ответа, бросается: повтор начинает с чистой.
         installer.mySessions.forEach { runCatching { installer.abandonSession(it.sessionId) } }
         val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply { setAppPackageName(context.packageName) }
         val id = installer.createSession(params)
@@ -43,7 +47,6 @@ object UpdateInstaller {
                 session.fsync(output)
             }
             val intent = Intent(context, UpdateReceiver::class.java).setPackage(context.packageName)
-            // The installer writes its status into the intent: it must stay mutable.
             val flags = PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_MUTABLE else 0
             session.commit(PendingIntent.getBroadcast(context, id, intent, flags).intentSender)
         }
@@ -65,6 +68,7 @@ sealed interface InstallResult {
 
 /** The installer's answers: the confirmation screen is opened, the end is passed on to [UpdateInstaller.results]. */
 class UpdateReceiver : BroadcastReceiver() {
+    /** Приёмник не экспортирован: до него доходит только подтверждение системного установщика. */
     override fun onReceive(context: Context, intent: Intent) {
         when (val status = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE)) {
             PackageInstaller.STATUS_PENDING_USER_ACTION -> {
@@ -74,7 +78,6 @@ class UpdateReceiver : BroadcastReceiver() {
                     @Suppress("DEPRECATION")
                     intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT)
                 }
-                // The receiver is not exported: only the system installer's own confirmation reaches it.
                 if (confirm != null) {
                     context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 } else {

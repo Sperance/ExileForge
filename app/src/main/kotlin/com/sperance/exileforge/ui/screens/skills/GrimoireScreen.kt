@@ -49,7 +49,7 @@ import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** The grimoire's two sections (2.78.0, the owner's mockup A «Гримуар»): the class's skills, and the belt. */
+/** The grimoire's two sections (the owner's mockup A «Гримуар»): the class's skills, and the belt. */
 internal enum class GrimoireSection(val title: String, val icon: ImageVector) {
     SKILLS("skills.section_skills", ForgeGlyphs.Grimoire),
     BELT("skills.section_belt", ForgeGlyphs.Flask),
@@ -63,13 +63,16 @@ internal sealed interface Pick {
 }
 
 /**
- * The grimoire (2.78.0, server 0.69.0): the class's skills as the pages of a book and the belt of flasks.
+ * The grimoire: the class's skills as the pages of a book and the belt of flasks.
  *
  * On top are the slots — three active, each with when it fires by itself, and two passive — opening with
  * the hero's level; under them every skill of the class, its level, and what the next book of it asks.
  * A page opens its skill whole: what it does now and at the next level, the book to read, the slot to
  * put it in. The belt holds the three flasks worn, each with when it is drunk by itself. Every rule is
- * the rules module's (3.0.0), read off the content on screen; the page says beforehand what the server will say.
+ * the rules module's, read off the content on screen; the page says beforehand what the server will say.
+ *
+ * «Можно изучить» - неизученные своего класса и общие, чья книга в сумке. Показано только изученное; общие умения - своим разделом. Замена
+ * умения ячейки - из её листа условия.
  */
 @Composable fun GrimoireScreen() {
     val game by koinViewModel<GrimoireViewModel>().game.collectAsStateWithLifecycle()
@@ -109,18 +112,15 @@ internal sealed interface Pick {
             when (section) {
                 GrimoireSection.SKILLS -> {
                     item { Slots(index, skills, level, body.stats) { pick = it } }
-                    // Можно изучить (0.15.0, #47): неизученные умения своего класса и общие, чья книга лежит в сумке, - с «Изучить»
                     val learnable = pages.filter { skills.level(it.code) == 0 && bookCount(game, it.code) > 0 }
                     if (learnable.isNotEmpty()) item { Caption(ui("skills.can_learn")) }
                     items(learnable, key = { "learn:" + it.code }) { skill ->
                         Learnable(game, index, skill, skills, level, body.stats, onOpen = { page = skill.code }) { vm.learnSkill(skill.code) }
                     }
                     item { Caption(ui("skills.book_of", classTitle(classCode))) }
-                    // Only what the hero has learned (2.81.0): an unread book's skill appears once its book is read.
                     items(pages.filter { !it.common && skills.level(it.code) > 0 }, key = { it.code }) { skill ->
                         Page(game, index, skill, skills, level, body.stats, slotOf(skills, skill.code)) { page = skill.code }
                     }
-                    // Общие умения (0.14.0, SKILL-02) - своим разделом: любому классу, атрибут - свой у умения
                     val shared = pages.filter { it.common && skills.level(it.code) > 0 }
                     if (shared.isNotEmpty()) item { Caption(ui("skills.book_common")) }
                     items(shared, key = { it.code }) { skill ->
@@ -152,7 +152,6 @@ internal sealed interface Pick {
                 slot.condition,
                 flask = false,
                 onDismiss = { pick = null },
-                // Замена умения ячейки (0.14.5, #38) - из её листа условия: отдельной надписи «заменить» в ячейке нет
                 onSwap = { pick = Pick.Slot(SkillKind.ACTIVE, chosen.index) },
             ) { condition ->
                 pick = null
@@ -199,10 +198,10 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 }
 
 /**
- * Ячейки умений (0.14.5, #38, макет «Строки в две колонки», вариант A): активные и пассивные - одна сетка в две колонки, ячейка -
+ * Ячейки умений: активные и пассивные - одна сетка в две колонки, ячейка -
  * строка [SLOT_ROW] (иконка [SLOT_ICON] с уровнем внутри, имя и строка условия или резерва). Ряд с нечётным числом ячеек
  * дополняется пустым местом - ширина ячеек одна у обоих разделов. Касание пустой или пассивной ячейки - выбор умения, занятой
- * активной - лист условия (там же «Заменить умение»); долгое нажатие на занятую - карточка её умения (0.14.4, #25), о нём - одна
+ * активной - лист условия (там же «Заменить умение»); долгое нажатие на занятую - карточка её умения, о нём - одна
  * подсказка «Осмотра» под панелью.
  */
 @Composable internal fun Slots(index: ContentIndex, skills: HeroSkills, level: Int, stats: Map<String, Double>, onPick: (Pick) -> Unit) {
@@ -262,7 +261,7 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 /**
  * Одна ячейка - строка: знак умения «Неон рун» с тиром [tier] и уровнем [level] в углу внутри, имя и под ним [line] - условие
  * ячейки ([Rune]) или резерв ауры (приглушённо, [quiet]); пустая - пунктир с «+», «Пусто · коснитесь»; закрытая - цепь и «с ур. N».
- * [onPeek] (0.14.4, #25) - долгое нажатие, карточка умения ячейки.
+ * [onPeek] - долгое нажатие, карточка умения ячейки.
  */
 @Composable internal fun SlotTile(
     skill: SkillDefinition?,
@@ -334,14 +333,14 @@ internal fun slotOf(skills: HeroSkills, code: String): String? {
 private val NAME_MAX = 11.sp
 private val NAME_MIN = 8.sp
 
-/** Ячейка Гримуара (0.14.5, #38): строка высотой [SLOT_ROW], знак [SLOT_ICON], [SLOT_COLUMNS] колонки с зазором [SLOT_GAP]. */
+/** Ячейка Гримуара: строка высотой [SLOT_ROW], знак [SLOT_ICON], [SLOT_COLUMNS] колонки с зазором [SLOT_GAP]. */
 private val SLOT_ROW = 48.dp
 private val SLOT_ICON = 32.dp
 private val SLOT_GAP = 6.dp
 private const val SLOT_COLUMNS = 2
 
 /**
- * A page of the class's book: what the skill is, its level, where it stands, and what comes next. С 4.4.0 - иконка «Неон рун»
+ * A page of the class's book: what the skill is, its level, where it stands, and what comes next. Иконка «Неон рун»
  * с тиром, тонкая полоса опыта и подпись роста: опыт, ожидание требования, потолок или книга в опыт.
  */
 @Composable internal fun Page(game: GameUi, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, stats: Map<String, Double>, slot: String?, onOpen: () -> Unit) {
@@ -372,7 +371,7 @@ private const val SLOT_COLUMNS = 2
 }
 
 /**
- * Умение, что можно изучить (0.15.0, #47): страница неизученного умения, чья книга в сумке, и под ней «Изучить» - тот же путь, что
+ * Умение, что можно изучить: страница неизученного умения, чья книга в сумке, и под ней «Изучить» - тот же путь, что
  * лист умения ([BookButton]: погашена с причиной, если герою не хватает уровня или атрибутов).
  */
 @Composable private fun Learnable(game: GameUi, index: ContentIndex, skill: SkillDefinition, skills: HeroSkills, heroLevel: Int, stats: Map<String, Double>, onOpen: () -> Unit, onLearn: () -> Unit) {
@@ -384,7 +383,7 @@ private const val SLOT_COLUMNS = 2
 }
 
 /**
- * What stands before the next level of a skill (4.4.0): неизученное - книга или уровень открытия; изученное - потолок, ожидание
+ * What stands before the next level of a skill: неизученное - книга или уровень открытия; изученное - потолок, ожидание
  * требования, книга в опыт или опыт к следующему уровню.
  */
 internal fun nextLine(index: ContentIndex, skill: SkillDefinition, view: SkillGrowthView, heroLevel: Int, books: Long): String = when {

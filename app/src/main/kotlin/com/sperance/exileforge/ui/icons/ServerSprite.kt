@@ -42,7 +42,7 @@ private val Lead = SolidColor(Color(0xFF0B0907))
 
 /**
  * A server sprite drawn the way its style asks: glass as it is, over a halo of [color]; mono tinted
- * by [color]. [muted] glass is grey and faint (3.7.0), for places where the figures matter more than
+ * by [color]. [muted] glass is grey and faint, for places where the figures matter more than
  * the icon. Returns false when there is nothing to draw, so the caller can put its own emblem there.
  */
 @Composable fun SpriteIcon(sprite: IconSprite?, color: Color, modifier: Modifier = Modifier, halo: Boolean = true, muted: Boolean = false): Boolean {
@@ -69,14 +69,15 @@ private fun Modifier.rarityHalo(color: Color): Modifier = drawBehind {
  *
  * A malformed path costs exactly its own icon: the caller falls back to the bundled emblem, and
  * the rest of the set keeps drawing. One typo in a hand-written file should not blank an app.
+ *
+ * Контур, что разобрался в ничто, - та же дыра (часть битых строк возвращается пустой, а не бросает). Каждый контур и заливается, и
+ * обводится: спрайт голыми линиями иначе невидим.
  */
 fun spriteVector(sprite: IconSprite): ImageVector? {
     parsed[sprite]?.let { return it }
     if (sprite.paths.isEmpty() || sprite.viewBox <= 0f) return null
     return try {
         val outlines = sprite.paths.map { it to PathParser().parsePathString(it.d).toNodes() }
-        // An outline that parsed to nothing is as good as a hole, and some malformed strings come
-        // back empty rather than throwing. Treating both the same keeps the fallback predictable.
         if (outlines.any { (_, nodes) -> nodes.isEmpty() }) return null
         val built = ImageVector.Builder(
             defaultWidth = 24.dp,
@@ -88,8 +89,6 @@ fun spriteVector(sprite: IconSprite): ImageVector? {
                 glass(sprite.viewBox, outlines)
                 return@apply
             }
-            // Every outline is filled and also traced (2.72.0): a sprite drawn with bare lines — the
-            // snowflake of cold, a slash, a row of bars — has no area to fill and was invisible.
             val line = sprite.viewBox * STROKE_SHARE
             outlines.forEach { (path, nodes) ->
                 val alpha = path.alpha.coerceIn(0f, 1f)
@@ -114,11 +113,11 @@ fun spriteVector(sprite: IconSprite): ImageVector? {
 
 private val outlined = ConcurrentHashMap<IconSprite, ImageVector>()
 
-/** Толщина неонового контура (4.4.0) - доля коробки спрайта: 1,6 из 24, как в макете «Неон рун». */
+/** Толщина неонового контура - доля коробки спрайта: 1,6 из 24 («Неон рун»). */
 private const val NEON_SHARE = .067f
 
 /**
- * Моно-спрайт контуром (4.4.0, «Неон рун»): каждая линия только обводится, без заливки, - глиф умения светится нитью цвета.
+ * Моно-спрайт контуром («Неон рун»): каждая линия только обводится, без заливки, - глиф умения светится нитью цвета.
  * Стекло и битые линии - null: место рисует свой знак.
  */
 fun neonVector(sprite: IconSprite): ImageVector? {
@@ -144,7 +143,7 @@ fun neonVector(sprite: IconSprite): ImageVector? {
     }
 }
 
-/** Неоновый глиф (4.4.0): моно-спрайт контуром [neonVector] в цвете [color]; false - рисовать нечего. */
+/** Неоновый глиф: моно-спрайт контуром [neonVector] в цвете [color]; false - рисовать нечего. */
 @Composable fun NeonSprite(sprite: IconSprite?, color: Color, modifier: Modifier = Modifier): Boolean {
     val vector = sprite?.let(::neonVector) ?: return false
     Icon(vector, null, tint = color, modifier = modifier)
@@ -152,7 +151,7 @@ fun neonVector(sprite: IconSprite): ImageVector? {
 }
 
 /**
- * Stained glass (3.6.0): a piece is its colour with a diagonal sheen and a lead line round it, a
+ * Stained glass: a piece is its colour with a diagonal sheen and a lead line round it, a
  * glaze (alpha below one) is a highlight or a shade laid over the pieces, a line is lead with colour
  * inside. The same three rules as `scripts/gen_icons.py` on the server that draws them.
  */

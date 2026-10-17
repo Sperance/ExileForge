@@ -16,8 +16,8 @@ import kotlin.math.hypot
 import kotlin.math.sin
 
 /**
- * Живые портреты Скверны (4.0.0): поверх статичного портрета сервера (scripts/gen_blight_portraits.py) - слои по утверждённым
- * макетам (RULES.md, «Скверна»). Матерь: сердце бьётся двойным ударом (1,4 с), желчные огни глаз мерцают ступенью (3,2 с),
+ * Живые портреты Скверны: поверх статичного портрета сервера (scripts/gen_blight_portraits.py) - слои по утверждённым
+ * облику (RULES.md, «Скверна»). Матерь: сердце бьётся двойным ударом (1,4 с), желчные огни глаз мерцают ступенью (3,2 с),
  * фигура дышит (5,5 с), четыре пуповины качаются и гонят свет к сердцу. Пожиратель очагов: пасть дышит, четыре глаза моргают.
  * Желчный пророк: шар желчи пульсирует, ядовитые искры всплывают. Гнилостайник: глаза мерцают, по когтям бегут блики.
  * Слои рисуются в поле 300 на 400; при выключенных анимациях вызывающий держит [time] неподвижным, и портрет стоит в покое.
@@ -110,13 +110,11 @@ internal object BlightPortraits : FieldPortraitMotion() {
         drawCircle(color.copy(alpha = 1 - u), 1.6f + (1 - u), p)
     }
 
-    // ---------------------------------------------------------------------------------- Матерь Скверны
-
     private const val BREATH = 5.5f
     private const val FLICKER = 3.2f
     private const val SWAY = 4f
 
-    /** Точка макета Матери (квадрат 300) в поле портрета: так её перенёс генератор портретов сервера. */
+    /** Точка рисунка Матери (квадрат 300) в поле портрета: так её перенёс генератор портретов сервера. */
     private fun motherAt(x: Float, y: Float) = Offset(1.15f * (x - 150) + 150, 1.15f * y + 46)
 
     /** Пуповины: корень за спиной, вершина изгиба, конец за краем; порядок - порядок разрыва. */
@@ -144,7 +142,6 @@ internal object BlightPortraits : FieldPortraitMotion() {
         cords.forEachIndexed { i, (root, c, tip) ->
             if (i < broken) tornCord(t, i, root, c, tip) else livingCord(t, i, root, c, tip)
         }
-        // сердце: двойной удар, на пике вспышка
         val k = motherBeat(t)
         val surge = ((k - 1f) / .07f).coerceIn(0f, 1f)
         glow(heart, 44f + 10f * surge, hot, .2f + .35f * surge)
@@ -157,7 +154,6 @@ internal object BlightPortraits : FieldPortraitMotion() {
         )
         drawPath(curve(heart + Offset(-7f, -12f) * k, heart + Offset(0f, -3f) * k, heart + Offset(-5f, 11f) * k), clot.copy(alpha = .8f), style = Stroke(1.6f))
         drawPath(curve(heart + Offset(7f, -9f) * k, heart + Offset(2f, 2f) * k, heart + Offset(9f, 14f) * k), clot.copy(alpha = .8f), style = Stroke(1.6f))
-        // желчные огни: ровный жар и короткий провал каждые 3,2 с
         val dim = (t / FLICKER) % 1f in .72f..<.74f
         motherEyes.forEachIndexed { i, eye ->
             if (dim) {
@@ -182,13 +178,11 @@ internal object BlightPortraits : FieldPortraitMotion() {
         drawPath(body, pit, style = Stroke(1.4f))
         val pulse = wave(t, MOTHER_BEAT, i * .1f)
         drawPath(curve(from, mid, to), vein.copy(alpha = .45f + .35f * pulse), style = Stroke(1.8f, cap = StrokeCap.Round))
-        // узлы на пуповине
         listOf(.35f, .7f).forEach { s ->
             val p = quad(from, mid, to, s)
             drawCircle(dark, (w0 + (CORD_TIP_W - w0) * s) * .62f, p)
             drawCircle(vein.copy(alpha = .5f), (w0 + (CORD_TIP_W - w0) * s) * .3f, p)
         }
-        // свет течёт от края к сердцу
         repeat(3) { k ->
             val u = (t / 1.2f + k / 3f + i * .17f) % 1f
             val p = quad(from, mid, to, 1 - u)
@@ -206,7 +200,6 @@ internal object BlightPortraits : FieldPortraitMotion() {
         val w0 = CORD_ROOT_W + (CORD_TIP_W - CORD_ROOT_W) * cordExit[i]
         val wCut = CORD_ROOT_W + (CORD_TIP_W - CORD_ROOT_W) * CORD_BREAK
         drawPath(taper(from, stubC, cut, w0, wCut), flesh.copy(alpha = .7f))
-        // обрывок висит и чуть покачивается
         val side = if (cut.x < FIELD_W / 2) -1f else 1f
         val sway = sin(t * 1.3f + i) * 4f
         val limpC = cut + Offset(side * 8f, 24f)
@@ -214,16 +207,13 @@ internal object BlightPortraits : FieldPortraitMotion() {
         val limp = taper(cut, limpC, limpEnd, wCut * .85f, 2.5f)
         drawPath(limp, flesh.copy(alpha = .55f))
         drawPath(limp, vein.copy(alpha = .3f), style = Stroke(1.2f))
-        // рана на месте разрыва
         glow(cut, wCut * 1.4f, vein, .35f)
         drawCircle(pit, wCut * .4f, cut)
         drawCircle(hot.copy(alpha = .45f), wCut * .45f, cut, style = Stroke(1.2f))
         drip(t, limpEnd, 26f, 2.2f, i * .37f, vein)
     }
 
-    // ---------------------------------------------------------------------------------- Пожиратель очагов
-
-    /** Точка макета Пожирателя (квадрат 300) в поле портрета. */
+    /** Точка рисунка Пожирателя (квадрат 300) в поле портрета. */
     private fun devourerAt(x: Float, y: Float) = Offset(1.2f * (x - 150) + 150, 1.2f * y - 50)
 
     private val maw = devourerAt(150f, 206f)
@@ -237,13 +227,11 @@ internal object BlightPortraits : FieldPortraitMotion() {
     ).map { (p, rx, ry) -> Triple(devourerAt(p.first, p.second), rx * 1.2f, ry * 1.2f) }
 
     private fun DrawScope.devourer(t: Float) {
-        // пасть дышит: жар в глотке раздувается и опадает
         val breath = wave(t, 2.6f)
         glow(maw, 40f + 16f * breath, hot, .18f + .22f * breath)
         val rx = (5f + 4f * breath) * 1.2f
         val ry = (30f + 8f * breath) * 1.2f
         drawOval(Brush.radialGradient(listOf(hot.copy(alpha = .55f), vein.copy(alpha = .2f), Color.Transparent), maw, ry), maw - Offset(rx, ry), Size(rx * 2, ry * 2))
-        // глаза моргают каждый в свой срок: веко плоти на миг
         devourerEyes.forEachIndexed { i, (eye, rx, ry) ->
             val phase = (t / (3.4f + i * .7f) + i * .31f) % 1f
             if (phase < .07f) {
@@ -259,18 +247,14 @@ internal object BlightPortraits : FieldPortraitMotion() {
         portraitSparks(t, 10, hot)
     }
 
-    // ---------------------------------------------------------------------------------- Желчный пророк
-
     private val orb = Offset(238f, 96f)
     private val curse = Offset(62f, 122f)
     private val prophetEyes = listOf(Offset(136f, 134f), Offset(164f, 134f))
 
     private fun DrawScope.prophet(t: Float) {
-        // шар желчи пульсирует в клети
         val pulse = wave(t, 1.8f)
         glow(orb, 40f + 14f * pulse, bile, .16f + .24f * pulse)
         drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .55f * pulse), bile.copy(alpha = .35f), Color.Transparent), orb - Offset(3f, 4f), 14f + 3f * pulse), 14f + 3f * pulse, orb)
-        // ядовитые искры всплывают от шара, виляя
         repeat(10) { i ->
             val u = (t * .22f + i / 10f) % 1f
             val x = orb.x + sin(t * 1.7f + i * 2f) * 10f * u + (i % 3 - 1) * 9f * u
@@ -279,14 +263,11 @@ internal object BlightPortraits : FieldPortraitMotion() {
             glow(Offset(x, y), 6f, bile, .45f * a)
             drawCircle(bile.copy(alpha = .9f * a), 1.3f, Offset(x, y))
         }
-        // печать проклятия над рукой тлеет
         glow(curse, 26f + 6f * wave(t, 2.4f), hot, .12f + .18f * wave(t, 2.4f))
         drawCircle(hot.copy(alpha = .25f + .35f * wave(t, 2.4f)), 20f + 2f * wave(t, 2.4f), curse, style = Stroke(1f))
         prophetEyes.forEachIndexed { i, eye -> glow(eye, 10f, hot, .2f + .25f * wave(t, 1.6f, i * .5f)) }
         portraitSparks(t, 6, vein)
     }
-
-    // ---------------------------------------------------------------------------------- Гнилостайник
 
     private val stalkerEyes = listOf(
         Offset(136f, 130f) to 3.2f,
@@ -311,7 +292,6 @@ internal object BlightPortraits : FieldPortraitMotion() {
     private const val GLINT_RUN = .5f
 
     private fun DrawScope.rotstalker(t: Float) {
-        // глаза мерцают вразнобой: у каждого свой короткий провал
         stalkerEyes.forEachIndexed { i, (eye, r) ->
             val dim = (t * (.55f + i * .07f) + i * .37f) % 1f < .06f
             if (dim) {
@@ -320,7 +300,6 @@ internal object BlightPortraits : FieldPortraitMotion() {
                 glow(eye, r * 4f, hot, .2f + .25f * wave(t, .9f + i * .13f, i * .2f))
             }
         }
-        // блики бегут по когтям от корня к острию
         listOf(0f, .5f).forEachIndexed { hand, shift ->
             val k = ((t / GLINT_CYCLE + shift) % 1f) * GLINT_CYCLE / GLINT_RUN
             claws.forEachIndexed { j, (r0, c0, p0) ->
@@ -343,7 +322,7 @@ internal object BlightPortraits : FieldPortraitMotion() {
 /** Удар сердца Матери Скверны, секунды: двойной удар (RULES.md, «Скверна»); в этот ритм бьются и жетоны её монстров. */
 internal const val MOTHER_BEAT = 1.4f
 
-/** Двойной удар сердца в момент [t]: масштаб по ключам макета (0 - 1, 12% - 1.07, 24% - .98, 36% - 1.04, дальше покой). */
+/** Двойной удар сердца в момент [t]: масштаб по ключам (0 - 1, 12% - 1.07, 24% - .98, 36% - 1.04, дальше покой). */
 internal fun motherBeat(t: Float): Float {
     val k = (t / MOTHER_BEAT) % 1f
     val keys = floatArrayOf(0f, .12f, .24f, .36f, 1f)

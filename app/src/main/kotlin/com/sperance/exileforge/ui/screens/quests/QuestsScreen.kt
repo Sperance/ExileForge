@@ -27,9 +27,11 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The quest board of the City (3.23.0): three sections — dailies, weeklies and the contract board (the story is the
- * expedition's own screen since 4.2.0; its chapter card heads the board since 4.3.0) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
+ * The quest board of the City: three sections — dailies, weeklies and the contract board (the story is the
+ * expedition's own screen; its chapter card heads the board) — each a ledger of rows. The server rolls and counts; a finished quest is claimed here, a daily replaced, a notice taken off
  * the board or given up. Pulling down reads the board again.
+ *
+ * Текущая глава сюжета - та же карточка, что над картой Похода; вкладки - сегментами с числом готовых к сдаче.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -45,10 +47,8 @@ fun QuestsScreen() {
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             CollapsibleHeader { ScreenHeader(ui("quest.title"), ui("quest.subtitle"), ForgeGlyphs.Scroll) }
-            // Текущая глава сюжета (4.3.0) - та же карточка, что над картой Похода, ведёт на экран Сюжета
             StoryCard(game, board, vm, Modifier.padding(bottom = 8.dp))
         }
-        // Вкладки сегментами (4.7.0, макет «Компактные кнопки», вариант A): капсула 32dp, число готовых к сдаче - плашкой
         Segments(
             QuestTab.entries,
             current,
@@ -80,8 +80,8 @@ private fun readyCount(tab: QuestTab, board: QuestBoard?): Int = when (tab) {
     QuestTab.CONTRACTS -> board?.contracts
 }.orEmpty().count { it.done && !it.claimed }
 
+/** Задания дня не меняются за золото: что выпало, то и задание дня. */
 private fun LazyListScope.daily(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
-    // Dailies are not swapped for gold since 3.24.0 (server 1.22.0): what the day rolled is the day's.
     item { MutedText(ui("quest.resets", untilText(board.dayEndsAt))) }
     if (board.daily.isEmpty()) item { MutedText(ui("quest.none")) }
     items(board.daily, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(vm, busy, quest) } }
@@ -93,6 +93,7 @@ private fun LazyListScope.weekly(vm: QuestViewModel, busy: Boolean, board: Quest
     items(board.weekly, key = { it.id }) { quest -> QuestRow(quest) { ClaimButton(vm, busy, quest) } }
 }
 
+/** Невзятый листок не истекает: срок у него появится со взятия; каждое пустое место - со своим таймером пополнения. */
 private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: QuestBoard) {
     item { Engraved(ui("quest.contracts_taken", board.contracts.size, board.activeLimit)) }
     if (board.contracts.isEmpty()) item { MutedText(ui("quest.contracts_none")) }
@@ -110,7 +111,6 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
     }
     if (board.offers.isEmpty() && board.refills.isEmpty()) item { MutedText(ui("quest.board_empty")) }
     val full = board.contracts.size >= board.activeLimit
-    // Невзятый листок не истекает (4.2.0): срок у него появится со взятия; ненужный сбрасывается, место заполнится само
     items(board.offers, key = { it.id }) { offer ->
         QuestRow(offer) {
             ForgeButton({ vm.take(offer.id) }, enabled = !busy && !full) { Text(ui("quest.take")) }
@@ -118,7 +118,6 @@ private fun LazyListScope.contracts(vm: QuestViewModel, busy: Boolean, board: Qu
         }
     }
     if (full && board.offers.isNotEmpty()) item { MutedText(ui("quest.take_full", board.activeLimit)) }
-    // Каждое пустое место - со своим таймером пополнения
     items(board.refills.withIndex().toList(), key = { "refill-${it.index}" }) { (_, at) -> EmptySlot(at) }
 }
 

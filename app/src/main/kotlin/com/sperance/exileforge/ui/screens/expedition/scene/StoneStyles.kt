@@ -7,7 +7,7 @@ import androidx.compose.ui.graphics.lerp
 import kotlin.math.max
 import kotlin.math.sin
 
-/** I · Wet stone: flagstones split by mortar, puddles holding the torch, walls laid in courses. Капель с 4.2.0 нет - дождя на картах нет. */
+/** I · Wet stone: flagstones split by mortar, puddles holding the torch, walls laid in courses. Капель нет - дождя на картах нет. */
 internal class WetStone : MapStyle() {
     private val wet = Color(0xFFBED2E1)
 
@@ -50,7 +50,6 @@ internal class RuneDark : MapStyle() {
         val a = (.35f + .35f * sin(time * 2f + noise(spot.x, spot.y, 6) * 6f)) * max(.3f, light)
         val shape = (noise(spot.x, spot.y, 7) * 3).toInt()
 
-        // Руна дважды: широкое свечение, затем тонкий знак
         fun rune(glow: Float, stroke: Float) {
             pen.color = palette.accent.copy(alpha = a * glow)
             pen.ring(cx - u * .42f, cy - u * .21f, u * .84f, u * .42f, u * stroke)

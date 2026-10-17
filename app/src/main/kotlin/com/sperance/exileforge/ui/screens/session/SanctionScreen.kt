@@ -28,8 +28,8 @@ import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Экран санкции (3.88.5, вариант B): кольцо с остатком срока, что закрыто и до когда, когда и за что - категорией и причиной для
- * игрока (4.12.x, сервер SEC-02: без номера санкции, заметки и того, кто наказал); «Обжаловать» один раз и «Сменить аккаунт».
+ * Экран санкции: кольцо с остатком срока, что закрыто и до когда, когда и за что - категорией и причиной для
+ * игрока (без номера санкции, заметки и того, кто наказал); «Обжаловать» один раз и «Сменить аккаунт».
  * [sanctionId] пустой - аккаунт удалён и уже стирается: подробностей нет, остаётся только выйти.
  */
 @Composable fun SanctionScreen(sanctionId: String) {
@@ -124,7 +124,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable private fun Value(text: String) = Text(text, color = Parchment, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.End)
 
 /**
- * Апелляция (3.88.5): одна на санкцию, текст до `rules.inputs.appeal`. Уходит без входа - по id санкции, - и попадает
+ * Апелляция: одна на санкцию, текст до `rules.inputs.appeal`. Уходит без входа - по id санкции, - и попадает
  * модераторам в отчёты.
  */
 @Composable internal fun AppealDialog(onDismiss: () -> Unit, onSend: (String) -> Unit) {

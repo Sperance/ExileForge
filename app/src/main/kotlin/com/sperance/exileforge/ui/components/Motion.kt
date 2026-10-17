@@ -20,16 +20,16 @@ import com.sperance.exileforge.presentation.state.GameSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 
-/** Whether the screens move (3.77.0, «Анимации» in the settings): the pulses, glows and marching roads stand still when off. */
+/** Whether the screens move («Анимации» in the settings): the pulses, glows and marching roads stand still when off. */
 val LocalMotion = staticCompositionLocalOf { true }
 
 /** The player's settings for the screens that read one directly: the fight's numbers and its pause. */
 val LocalSettings = staticCompositionLocalOf { GameSettings() }
 
 /**
- * Общие часы декора (4.7.0): секунды одним циклом на всё приложение, шагом около 30 раз в секунду (между шагами спят [SLEEP_MS]) - декор не держит
+ * Общие часы декора: секунды одним циклом на всё приложение, шагом около 30 раз в секунду (между шагами спят [SLEEP_MS]) - декор не держит
  * экран в 60 кадрах и не заводит свой бесконечный переход на каждый пульс. Стоят, когда анимации выключены (`LocalMotion`) и
- * когда приложение не на экране. Бой и сцена забега идут своими часами - их анимация не декор. С 4.9.0 стоят и без
+ * когда приложение не на экране. Бой и сцена забега идут своими часами - их анимация не декор. Стоят и без
  * читателей ([readers]): экран без декора не будит кадры; вернувшийся читатель продолжает с прежней секунды.
  */
 @Stable
@@ -54,7 +54,12 @@ class DecorClock {
 
 val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
 
-/** Хозяин часов декора: под ним [motionPhase], [decorTime] и [LocalDecorClock] идут общими часами. */
+/**
+ * Хозяин часов декора: под ним [motionPhase], [decorTime] и [LocalDecorClock] идут общими часами.
+ *
+ * Нет читателей - нет кадров: часы ждут первого. Кадр бесконечный, а не `withFrameNanos`: политика бесконечных анимаций тестов UI
+ * останавливает часы. Между шагами часы спят, а не просыпаются каждый vsync.
+ */
 @Composable fun DecorClockHost(content: @Composable () -> Unit) {
     val clock = remember { DecorClock() }
     val moving = LocalMotion.current
@@ -63,16 +68,13 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
         if (!moving) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             while (true) {
-                // Нет читателей - нет кадров (4.9.0): часы ждут первого, а не просят каждый vsync
                 snapshotFlow { clock.readers.intValue > 0 }.first { it }
                 var last = 0L
-                // Бесконечный кадр (не `withFrameNanos`): политика бесконечных анимаций (тесты UI) останавливает часы, как прежние переходы
                 while (clock.readers.intValue > 0) {
                     withInfiniteAnimationFrameNanos { now ->
                         if (last != 0L) clock.seconds.floatValue += ((now - last) / 1e9f).coerceAtMost(MAX_STEP_S)
                         last = now
                     }
-                    // Между шагами часы спят, а не просыпаются каждый vsync: следующий кадр после паузы - через шаг
                     delay(SLEEP_MS)
                 }
             }
@@ -82,7 +84,7 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
 }
 
 /**
- * Доля круга за [periodMs] состоянием (4.7.0): читать в фазе рисования - декор перерисовывается шагом часов без перекомпозиции;
+ * Доля круга за [periodMs] состоянием: читать в фазе рисования - декор перерисовывается шагом часов без перекомпозиции;
  * без анимаций - [still].
  */
 @Composable fun motionPhase(periodMs: Int, still: Float = 0f): State<Float> {
@@ -93,7 +95,7 @@ val LocalDecorClock = staticCompositionLocalOf<DecorClock?> { null }
 }
 
 /**
- * Часы декора в секундах состоянием (4.9.0): читать в фазе рисования - рисунок, что сам считает фазы, перерисовывается шагом
+ * Часы декора в секундах состоянием: читать в фазе рисования - рисунок, что сам считает фазы, перерисовывается шагом
  * часов без перекомпозиции; без анимаций - 0.
  */
 @Composable fun decorTime(): State<Float> {

@@ -19,14 +19,11 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.Ink
 
-/*
- * Метка «непрочитано» (0.14.5, #37, макет «Метка почты», вариант B «Изумрудная искра») - одна семья на шапку и ящик, язык
- * утверждённой метки вкладки: искра [UnreadDot] без числа - на значке, число [UnreadCount] - только внутри ящика.
- */
-
 /**
  * Искра «есть непрочитанное»: точка 8dp цвета [Gold] с мягким ореолом и вырезом [Ink] вокруг - отделяет её от
  * контура значка. Без числа: сколько - скажет ящик.
+ *
+ * Метка «непрочитано» - одна семья на шапку и ящик: искра без числа - на значке, число [UnreadCount] - только внутри ящика.
  */
 @Composable fun UnreadDot(modifier: Modifier = Modifier) {
     Box(

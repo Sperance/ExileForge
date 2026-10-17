@@ -63,11 +63,11 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 /**
- * Кампания: карта мира и поход по карте, которым идёт игрок (3.80.20, из `ExpeditionViewModel`).
+ * Кампания: карта мира и поход по карте, которым идёт игрок (из `ExpeditionViewModel`).
  *
  * Поход - мир, который сцена шагает каждый кадр; он держится здесь, а оверлей читает его [ExpeditionRun.hud].
  * Каждое убийство, сундук и спуск - событие журнала похода; журнал лежит на диске и уходит на сервер пачками - на
- * контрольных точках, на выходе, при падении, в фоне, - и ответ сервера есть истина. Награды только серверные (1.30.0):
+ * контрольных точках, на выходе, при падении, в фоне, - и ответ сервера есть истина. Награды только серверные:
  * каждый ответ называет, что принесло каждое событие, и поход показывает это по мере прихода; офлайн - ждёт связи.
  * Пачка хранит ключ идемпотентности, пока не отвечена: потерянный ответ спрашивается снова. Неотправленный журнал
  * уходит на следующем запуске. Один на приложение.
@@ -88,7 +88,7 @@ class ExpeditionActions(
 ) {
     private val api: GameApi get() = connection.api
 
-    /** Боссы сервера героя (3.92.0): спрошены раз за запуск, следующий вызов берёт их отсюда. */
+    /** Боссы сервера героя: спрошены раз за запуск, следующий вызов берёт их отсюда. */
     private var bossRecords: com.sperance.exileforge.core.network.BossRecords? = null
 
     /** Сколько героев сервера дрались с боссом [code] и сколько победили; null - сервер не ответил. */
@@ -111,7 +111,7 @@ class ExpeditionActions(
     /** Поход по карте, из которого вошли в зону Ваал: стоит, пока зона играется. */
     private var parent: ExpeditionRun? = null
 
-    /** Добыча основной карты под открытой зоной Ваал (3.94.0): павший в зоне заканчивает весь заход и продаёт и её. */
+    /** Добыча основной карты под открытой зоной Ваал: павший в зоне заканчивает весь заход и продаёт и её. */
     fun outerLoot(): List<String> = parent?.hud?.value?.tally?.loot?.equipment?.map { it.id }.orEmpty()
 
     /** Журнал похода, что идёт. */
@@ -126,7 +126,7 @@ class ExpeditionActions(
     private var sendJob: Job? = null
 
     /**
-     * Пачка боя (4.9.0): отправка через `run.journalSeconds` правил после первого неотправленного события; поздние присоединяются,
+     * Пачка боя: отправка через `run.journalSeconds` правил после первого неотправленного события; поздние присоединяются,
      * ничто её не откладывает.
      */
     private var batchJob: Job? = null
@@ -140,24 +140,26 @@ class ExpeditionActions(
     /** Жетоны зоны Ваал, которые сервер уже сосчитал, когда в поход вошли снова. */
     private var vaalKilled: List<Int> = emptyList()
 
-    /** Запуск после сборки графа: отправки журнала по часам и по сигналу, новое снаряжение и новый герой - походу. */
+    /**
+     * Запуск после сборки графа: отправки журнала по часам и по сигналу, новое снаряжение и новый герой - походу.
+     *
+     * Отправка по часам: что тихий отрезок карты оставил в ожидании, уходит само; без связи повторы ведёт пауза [retryLater]. Новое чтение
+     * героя: поход читает сумку через состояние и берёт решённое сервером (зона Ваал, кристалл).
+     */
     fun start() {
         scope.launch { for (signal in flushes) flush() }
-        // Отправка по часам: что тихий отрезок карты оставил в ожидании, уходит само. Без связи (4.0.1) повторы ведёт пауза
-        // [retryLater] - часы её не обгоняют.
         scope.launch {
             while (true) {
                 delay(FLUSH_EVERY)
                 if (failures == 0 && runJournal?.pending?.isNotEmpty() == true) flushes.trySend(Unit)
             }
         }
-        // Новое чтение героя: поход читает сумку через состояние и берёт кампанию - зону Ваал или кристалл, что сервер решил.
         scope.launch { heroes.state.map { it.hero }.distinctUntilChanged { a, b -> a === b }.filterNotNull().collect { heroChanged(it) } }
     }
 
     private fun expedition(transform: (Expedition) -> Expedition) = repository.update(transform)
 
-    /** Сколько нажатий кнопки скорости боя дают скорость из настроек (3.77.0): 1 → 2 → 4. */
+    /** Сколько нажатий кнопки скорости боя дают скорость из настроек: 1 → 2 → 4. */
     private val speedSteps: Int get() = speedPresses(index, prefs.settings.value.fightSpeed)
 
     /** Прогресс кампании, как его считают правила по герою и миру. */
@@ -172,16 +174,16 @@ class ExpeditionActions(
     /** Карта из сундука, с которой войти, или null - войти без неё. */
     fun pickMap(itemId: String?) = expedition { e -> e.copy(launch = e.launch?.let { l -> l.copy(picked = itemId, scarabs = if (itemId == null) emptyList() else l.scarabs) }) }
 
-    /** Механика, что тестировщик ставит на заход насильно (4.0.1): переключить одну. */
+    /** Механика, что тестировщик ставит на заход насильно: переключить одну. */
     fun toggleForced(mechanic: MapMechanic) = expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
 
     /** Все механики разом - или ни одной. */
     fun forceAll(on: Boolean) = expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
 
-    /** Зелье на поход (3.79.0): одно, повторным касанием снимается. */
+    /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
 
-    /** Скарабей к карте или снят (3.79.0): не больше, чем велят правила, и не больше одного вида, чем в сумке. */
+    /** Скарабей к карте или снят: не больше, чем велят правила, и не больше одного вида, чем в сумке. */
     fun toggleScarab(code: String, add: Boolean) = expedition { e ->
         val launch = e.launch ?: return@expedition e
         val max = index?.rules?.brews?.scarabsPerMap ?: 0
@@ -201,7 +203,7 @@ class ExpeditionActions(
     fun start(mapCode: MapCode, auto: AutoPlan? = null, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, auto, toBoss)
 
     /**
-     * «Продолжить» незаконченный заход (3.89.0): вход в ту же зону без карты - сервер отдаёт тот же заход, его павших и открытые
+     * «Продолжить» незаконченный заход: вход в ту же зону без карты - сервер отдаёт тот же заход, его павших и открытые
      * сундуки; герой у входа, туман заново.
      */
     fun continueUnfinished() {
@@ -212,7 +214,7 @@ class ExpeditionActions(
     }
 
     /**
-     * «Покинуть» незаконченный заход (3.89.0): журнал, что ещё не дошёл, отправляется - его добыча героя, - и заход закрывается
+     * «Покинуть» незаконченный заход: журнал, что ещё не дошёл, отправляется - его добыча героя, - и заход закрывается
      * на сервере, как выходом.
      */
     fun abandonUnfinished() {
@@ -225,18 +227,20 @@ class ExpeditionActions(
         }
     }
 
+    /**
+     * Автопоход тратит карту зоны, чей страж уже пал однажды. Журнал, которого сервер ещё не взял, не бросается ради нового похода. Новое
+     * семя не раньше правил - ожидание, не ошибка.
+     */
     private fun enter(mapCode: MapCode, launch: MapLaunch?, auto: AutoPlan?, toBoss: Boolean = false) {
         if (mutableRun.value != null || commands.state.value.busy) return
         val i = index ?: return
         val progress = progress()
         if (i.zone(mapCode) == null || progress?.unlocked?.contains(mapCode) != true) return
         val picked = launch?.picked
-        // Автопоход (3.2.0) тратит карту зоны, чей страж уже пал однажды.
         if (auto != null && (picked == null || progress.cleared.contains(mapCode) != true)) return
         autoPlan = auto
         commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroes.heroId
-            // Журнал, которого сервер ещё не взял, не бросается ради нового похода: его убийства - героя.
             runJournal?.let { j ->
                 flush()
                 check(j.settled || runJournal == null) { ui("expedition.unsent") }
@@ -254,7 +258,6 @@ class ExpeditionActions(
                     forced = repository.state.value.forced,
                 )
             } catch (e: ApiFailure) {
-                // Новое семя не раньше, чем велят правила, чем бы ни кончился прошлый поход (сервер 1.30.0): ожидание, не ошибка.
                 if (e.code != SEED_TOO_SOON) throw e
                 notices.toast(ui("expedition.seed_wait", e.args.firstOrNull().orEmpty()))
                 return@task
@@ -265,17 +268,18 @@ class ExpeditionActions(
         }
     }
 
+    /**
+     * Войдя снова, поход продолжается со своими числами и павшими, начатый автопробегом - им же. Лист «Задания» считает от доски на входе;
+     * счёт Предначертания - павшие карты и её Ваал-зоны, как у сервера. Тестировщик идёт сразу в бой со стражем.
+     */
     private fun begin(id: String, started: RunStart, toBoss: Boolean = false, potion: String? = null) {
         val i = index ?: return
         val h = hero?.takeIf { it.id == id } ?: return
         val zone = i.zone(started.zone) ?: return
         val gear = gear() ?: return
-        // Войдя снова, поход продолжается (сервер 1.1.0): его числа и его павшие до сих пор.
         val run = Run(i, zone, started.seed, started.context)
-        // Заход, начатый автопробегом, и продолжается им (3.95.1): признак едет в его контексте с сервера.
         if (started.context.auto) autoPlan = AutoPlan
         val journal = RunJournal(started.id, id, zone.code.value, applied = started.applied, base = started.applied).also { runJournal = it }
-        // Доска заданий на входе (4.10.0): лист «Задания» карты считает от неё - перечитанная доска уже несёт события захода
         val board = quests.board().takeIf { it.board != null }
         expedition {
             it.copy(
@@ -288,11 +292,9 @@ class ExpeditionActions(
             vaalOrbs = ::vaalOrbsFree, onRecorded = ::recorded,
             onCleared = { flushes.trySend(Unit) }, onFallen = { flushes.trySend(Unit) }, killed = started.killed, opened = started.chests, features = started.features, auto = autoPlan,
             summoned = started.tally.summons,
-            // Счёт Предначертания захода (4.6.1): павшие карты и её Ваал-зоны - как их считает сервер
             fateRun = FateRun(started.killed, started.vaalKilled),
         ).also { r ->
             repeat(speedSteps) { r.send(RunCommand.Speed) }
-            // Тестировщик (3.92.0): сразу бой со стражем
             if (toBoss) r.send(RunCommand.ToBoss)
         }
         vaalKilled = started.vaalKilled
@@ -303,9 +305,9 @@ class ExpeditionActions(
     private fun vaalOrbsFree(): Long = (hero?.bag?.get(Orb.VAAL_ORB.name) ?: 0L) - (runJournal?.pending?.count { it.kind == RunEventKind.CRYSTAL_VAAL } ?: 0)
 
     /**
-     * Ещё одно событие: журнал записан, контрольная точка или полная пачка отправляют его сразу. Прочие события боя (4.9.0, NET-9) -
+     * Ещё одно событие: журнал записан, контрольная точка или полная пачка отправляют его сразу. Прочие события боя -
      * убийства и начала боёв - копятся и уходят одной пачкой через `run.journalSeconds` правил; итог выигранного боя вручную
-     * отправляет её сразу - его добычу ждёт экран итогов. Сбоящая связь держит паузу повтора (4.0.0: и для контрольных точек и полных
+     * отправляет её сразу - его добычу ждёт экран итогов. Сбоящая связь держит паузу повтора (и для контрольных точек и полных
      * пачек - без связи событие не шлёт запрос само).
      */
     private fun recorded(event: RunEvent) {
@@ -340,7 +342,7 @@ class ExpeditionActions(
     }
 
     /**
-     * Отправка не дошла: следующая после удвоенной паузы, не дольше [FLUSH_EVERY]. Первая неудача (4.0.0) ставит автопробег на
+     * Отправка не дошла: следующая после удвоенной паузы, не дольше [FLUSH_EVERY]. Первая неудача ставит автопробег на
      * паузу ([RunCommand.Link]); ответ сервера снимает её ([linkBack]).
      */
     private fun retryLater() {
@@ -368,6 +370,11 @@ class ExpeditionActions(
     /**
      * Отправляет, что держит журнал - пачку в пути снова под её ключом или ожидающие события под новым; ответ -
      * счёт сервера и награда каждого события, снимок героя едет с ним.
+     *
+     * Ключ пачки - на диске до её ухода: потерянный с процессом ответ спрашивается снова. Отклонённое начало боя - не потеря игрока, о нём
+     * не говорят. Длинный журнал уходит частями подряд. `CP_018`, `CP_020`, `CP_026` кончают журнал похода. Сервер недоступен (5xx) -
+     * повтор с паузой и одно сообщение на всю пропажу связи; отказ - последнее слово под ключом пачки, следующая отправка - новый запрос;
+     * офлайн или таймаут - снова скоро.
      */
     private suspend fun flush() {
         val j = runJournal ?: return
@@ -378,7 +385,6 @@ class ExpeditionActions(
         }
         val (batch, pending) = outgoing
         try {
-            // Ключ пачки на диске до её ухода: ответ, потерянный с процессом, спрашивается снова после него.
             store.saveJournal(j.heroId, j.encode())
             val report = api.campaign.events(j.heroId, j.runId, pending, batch.key)
             linkBack()
@@ -390,21 +396,15 @@ class ExpeditionActions(
             if (!report.open) shut = j.runId
             j.confirm(report.applied, report.rejected)
             expedition { it.copy(pending = j.pending.size, rejected = j.rejected.size) }
-            // Отклонённое начало боя (бой, который сервер не начал) - не потеря игрока: о нём не говорят.
             val engages = pending.filter { it.kind == RunEventKind.ENGAGE }.map { it.n }.toSet()
             report.rejected.count { it !in engages }.takeIf { it > 0 }?.let { notices.toast(ui("expedition.rejected", it)) }
             report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
             if (!report.open && j.settled) done(j, report) else store.saveJournal(j.heroId, j.encode())
             if (heroes.state.value.readAt == 0L && heroes.onScreen(j.heroId)) heroSync.readHero()
-            // Журнал длиннее одной пачки идёт дальше сразу, часть за частью.
             if (report.open && !j.settled) flushes.trySend(Unit)
         } catch (e: CancellationException) {
             throw e
         } catch (e: ApiFailure) {
-            // CP_018: сервер не держит похода для героя - поход журнала окончен, последняя пачка уже учтена;
-            // CP_020: мир сменился под походом, сервер закрыл его; CP_026: журнал старшего похода.
-            // Сервер недоступен за шлюзом (4.0.0) или упал сам (5xx, 4.0.1): повтор с паузой и одно сообщение на всю пропажу
-            // связи, не на каждую попытку. Журнал на диске - пачка дойдёт, когда сервер встанет.
             val transient = CommandQueue.transient(e.status) || (e.status ?: 0) >= SERVER_ERROR
             when {
                 e.code in RUN_CLOSED -> {
@@ -416,10 +416,8 @@ class ExpeditionActions(
 
                 else -> commands.report(e, writing = true)
             }
-            // Отказ - последнее слово сервера под ключом пачки: следующая отправка - новый запрос, не повтор.
             if (transient) retryLater() else j.release()
         } catch (_: Exception) {
-            // Офлайн или таймаут: снова скоро, не на следующем круге часов.
             retryLater()
         }
     }
@@ -454,7 +452,7 @@ class ExpeditionActions(
     }
 
     /**
-     * Новые очки Атласа из ответа (4.10.0): тост на каждое и строки в итогах карты или испытания; [heroId] - чей ответ, чужой
+     * Новые очки Атласа из ответа: тост на каждое и строки в итогах карты или испытания; [heroId] - чей ответ, чужой
      * экран их не получает.
      */
     fun atlasEarned(heroId: String, keys: List<String>) {
@@ -463,7 +461,7 @@ class ExpeditionActions(
         expedition { it.copy(atlasPoints = (it.atlasPoints + keys).distinct()) }
     }
 
-    /** Заход или испытание начат (4.10.0): очки Атласа прошлого больше не его. */
+    /** Заход или испытание начат: очки Атласа прошлого больше не его. */
     fun atlasReset() = expedition { it.copy(atlasPoints = emptyList()) }
 
     /** Походы, которых касается ответ журнала: на экране и карта, из которой вошли в зону Ваал. */
@@ -475,14 +473,16 @@ class ExpeditionActions(
         runs().forEach { it.send(RunCommand.Campaign(state)) }
     }
 
-    /** Поход закрыт и журнал сведён; [report] - ответ, что закрыл заход: с ним сервер сдал задания (4.11.x). */
+    /**
+     * Поход закрыт и журнал сведён; [report] - ответ, что закрыл заход: с ним сервер сдал задания.
+     *
+     * Чего сервер не ответил, того не ответит. Поход сдаётся целиком: сервером в закрывшем ответе или отдельным запросом; сданное - блоком
+     * в итогах карты, закрытые итоги - тостом.
+     */
     private suspend fun done(j: RunJournal, report: RunReport? = null) {
-        // Чего сервер не ответил, того не ответит: никто больше не ждёт.
         if (runJournal === j) runs().forEach { it.send(RunCommand.Settled(Int.MAX_VALUE)) }
         if (runJournal === j) runJournal = null
         store.clearJournal(j.heroId)
-        // Поход считается целиком (3.24.0): всё, что он закончил, сдаётся разом - сервером в закрывшем ответе (4.11.x), иначе
-        // отдельным запросом. Сданное (4.10.0) - блоком в итогах карты, пока они на экране; закрытые итоги - тостом.
         quests.turnIn(j.heroId, report?.turnIns, report?.guildQuests) { turnedIn ->
             val shown = mutableRun.value?.journal?.runId == j.runId
             if (shown) expedition { it.copy(turnedIn = it.turnedIn + turnedIn) }
@@ -490,7 +490,7 @@ class ExpeditionActions(
         }
     }
 
-    /** Пометка вещи добычи к продаже посреди захода (3.91.0): в итогах карты помеченное уже отмечено; повтор снимает. */
+    /** Пометка вещи добычи к продаже посреди захода: в итогах карты помеченное уже отмечено; повтор снимает. */
     fun toggleSaleMark(itemId: String) = expedition { it.copy(saleMarks = if (itemId in it.saleMarks) it.saleMarks - itemId else it.saleMarks + itemId) }
 
     /** Отправить журнал сейчас: приложение уходит в фон или поход окончен. */
@@ -519,7 +519,7 @@ class ExpeditionActions(
     }
 
     /**
-     * Заход, открытый на сервере, когда похода на экране нет (3.89.0): приложение закрылось или упало посреди него. Сервер держит
+     * Заход, открытый на сервере, когда похода на экране нет: приложение закрылось или упало посреди него. Сервер держит
      * его час с последнего запроса - простоявший он уже закрыл, - игроку предлагается продолжить или покинуть.
      */
     private fun offerUnfinished(id: String) {
@@ -530,13 +530,16 @@ class ExpeditionActions(
 
     private fun stance(): HeroStance = hero?.let { HeroStance.of(it.heroClass) } ?: HeroStance()
 
-    /** Герой, как его берёт поход: лист и из чего он сложен, стойка и что он несёт сверх листа. */
+    /**
+     * Герой, как его берёт поход: лист и из чего он сложен, стойка и что он несёт сверх листа.
+     *
+     * Рычаги боя Предначертания - на силе листа, с судьбоносными строками надетого.
+     */
     fun gear(): HeroGear? {
         val i = index ?: return null
         val h = hero ?: return null
         val conditions = h.skills.flasks
         val flasks = Slot.FLASKS.mapIndexed { n, slot -> h.equipped[slot]?.let { item -> i.template(item.template)?.let { BeltFlask.of(item, it, i, conditions.getOrNull(n)) } } }
-        // Предначертание аккаунта (4.6.0): рычаги боя на силе листа, с судьбоносными строками надетого (4.6.2)
         val fate = FateKit.of(i, h.info.fate, h.stats, h.equipped.values)
         return HeroGear(h.stats, h.level, h.sheet.model, stance(), Loadout.of(h.skills, i, h.heroClass, flasks, h.stats, i.powers, i.rules.charges, fate), i.stats.percent)
     }
@@ -564,15 +567,13 @@ class ExpeditionActions(
         mutableRun.value = inner
     }
 
-    // ==================== Атлас ====================
-
-    /** Страница «Похода» (4.0.0): карта, испытания или Атлас - экраном под вкладкой; Атлас прежде готовит своё окно. */
+    /** Страница «Похода»: карта, испытания или Атлас - экраном под вкладкой; Атлас прежде готовит своё окно. */
     fun openPage(route: Route) {
         if (route == Route.Atlas) prepareAtlas()
         navigator.tab(route)
     }
 
-    /** Атлас (4.0.0 - страница «Похода»): окно с последним взятым узлом. */
+    /** Атлас (страница «Похода»): окно с последним взятым узлом. */
     fun openAtlas() = openPage(Route.Atlas)
 
     private fun prepareAtlas() {
@@ -586,7 +587,7 @@ class ExpeditionActions(
     /** Команда атласа: снимок героя с её ответом несёт новые узлы и очки. */
     fun allocateAtlas(code: String) = atlasCommand { id -> api.atlas.allocate(id, code) }
 
-    /** Золотом или, с [regret] (сервер 1.65.0), Сферой сожаления за узел. */
+    /** Золотом или, с [regret], Сферой сожаления за узел. */
     fun refundAtlas(code: String, regret: Boolean = false) = atlasCommand { id -> api.atlas.refund(id, code, regret) }
     fun resetAtlas(regret: Boolean = false) = atlasCommand { id -> api.atlas.reset(id, regret) }
 
@@ -602,9 +603,11 @@ class ExpeditionActions(
 
     /**
      * Поход окончен или брошен: журнал уходит, герой перечитывается, если ответы оставили его холодным. Выигранная
-     * зона Ваал - не конец: герой снова на карте у портала с жизнью, что оставила зона. Павший в ней (3.71.0)
-     * гибнет, как везде: весь поход окончен. С [then] (3.90.4) заход ещё и закрывается на сервере - журнал сдаётся, заход
+     * зона Ваал - не конец: герой снова на карте у портала с жизнью, что оставила зона. Павший в ней
+     * гибнет, как везде: весь поход окончен. С [then] заход ещё и закрывается на сервере - журнал сдаётся, заход
      * брошен, как выходом, - и уже вне захода выполняется [then]: продажа добычи, которой в заходе нет.
+     *
+     * Конец захода закрывает его на сервере всегда, иначе та же карта с её бонусами проходилась бы снова.
      */
     fun close(then: (suspend (heroId: String) -> Unit)? = null) {
         val outer = parent
@@ -619,8 +622,6 @@ class ExpeditionActions(
         parent = null
         mutableRun.value = null
         heroes.stale()
-        // Конец захода закрывает его на сервере всегда (3.95.0): выход порталом прежде оставлял его открытым на час, и та
-        // же карта с её бонусами проходилась снова через «Продолжить»
         val runId = runJournal?.runId ?: hero?.campaign?.run?.id
         val closing = commands.task(writing = true, touches = setOf(Reads.HERO)) {
             val id = heroes.heroId
@@ -669,14 +670,15 @@ class ExpeditionActions(
         const val SEED_TOO_SOON = "CP_021"
 
         /**
-         * События, что отправляют журнал сразу: всё, что не убийство и не начало или итог боя. Сундук (4.10.0) - тоже: его крышка
+         * События, что отправляют журнал сразу: всё, что не убийство и не начало или итог боя. Сундук - тоже: его крышка
          * открыта, добыча вылетает, как придёт ответ.
+         *
+         * Объект карты (золото торговца, сделка алтаря, добыча комнаты) ждёт ответа сразу.
          */
         val CHECKPOINTS = setOf(
             RunEventKind.CHEST,
             RunEventKind.BOSS, RunEventKind.CORRUPT, RunEventKind.CRYSTAL, RunEventKind.CRYSTAL_VAAL, RunEventKind.VAAL_OPEN, RunEventKind.VAAL_LEAVE,
             RunEventKind.ABYSS_OPEN, RunEventKind.ABYSS_CLAIM, RunEventKind.SUMMON, RunEventKind.FALL, RunEventKind.LEAVE,
-            // Объект карты (3.90.0): золото торговца, сделка алтаря и добыча комнаты - ответ нужен сразу.
             RunEventKind.FEATURE,
         )
         const val FLUSH_EVERY = 20_000L

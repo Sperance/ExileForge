@@ -38,6 +38,8 @@ internal typealias Founding = (String, String, String, String, String, GuildMode
  * Founding a guild: its name and tag, the faction — chosen for good, a banner with no bonus, each in its own colour —
  * the arms, and the way in. The price and the level stand at the bottom; short of either, or with a name
  * the rules' lengths refuse, the button stays off and says why. It is held, as every purchase of gold is.
+ *
+ * С создания героя должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -52,7 +54,6 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
     var minLevel by remember { mutableStateOf("1") }
     val price = rules.create.price.of(game.heroLevel)
     val bill = game.goldBill(price)
-    // Возраст героя (4.2.0): с создания должно пройти `create.heroDays` дней; тестировщика уровень и возраст не держат
     val readyAt = game.heroRow?.createdAtMs?.let { it + TimeUnit.DAYS.toMillis(rules.create.heroDays.toLong()) }
     val refusal = when {
         !game.isTester && game.heroLevel < rules.create.level -> ui("guild.found_level", rules.create.level)
@@ -94,7 +95,6 @@ internal fun FoundingSheet(game: GameUi, onDismiss: () -> Unit, onFound: Foundin
             ModePicker(mode, enabled = true) { mode = it }
             MinLevelField(minLevel, enabled = true) { minLevel = it }
             OrnateDivider()
-            // Цена и кошелёк одним чипом (0.14.5, #42)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MutedText(ui("guild.found_price"), Modifier.weight(1f))
                 bill?.let { GoldCost(it) } ?: GoldPrice(price)

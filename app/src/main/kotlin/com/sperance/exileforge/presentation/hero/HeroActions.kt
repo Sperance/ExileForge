@@ -22,7 +22,7 @@ import com.sperance.exileforge.rules.content.SlotGroup
 import com.sperance.exileforge.rules.roll.Dice
 
 /**
- * Команды героя (3.80.15): сундук, кузница, гримуар, древо, выдачи тестеру. Каждая отвечает героем, как
+ * Команды героя: сундук, кузница, гримуар, древо, выдачи тестеру. Каждая отвечает героем, как
  * его теперь держит сервер, так что из ответа ничего не латается - кроме ответа без снимка, который `HeroSync`
  * отмечает холодным чтением. Общие для всех экранов героя.
  */
@@ -41,7 +41,7 @@ class HeroActions(
     /** Предмет под кузницей: тот, на который укажет следующая сфера. */
     fun selectEquipment(itemId: String) = heroes.selectEquipment(itemId)
 
-    /** Фраза наковальни уходит вместе с целью, о которой она (4.4.x): выбрана другая вещь. */
+    /** Фраза наковальни уходит вместе с целью, о которой она: выбрана другая вещь. */
     fun clearForgeLine() = heroes.forgeLine("")
 
     fun equip(itemId: String, slot: Slot? = null) {
@@ -50,20 +50,20 @@ class HeroActions(
     }
     fun unequip(itemId: String) = heroCommand { id -> api.hero.unequip(id, itemId) }
 
-    /** Титул рядом с именем (1.3.0): открытый хроникой, или никакой. */
+    /** Титул рядом с именем: открытый хроникой, или никакой. */
     fun setTitle(title: String) = heroCommand { id -> api.hero.setTitle(id, title) }
 
-    /** Замок на предмете (3.30.0): запертый не продаётся, не выставляется и не уходит автопродажей; флаг едет в снимке. */
+    /** Замок на предмете: запертый не продаётся, не выставляется и не уходит автопродажей; флаг едет в снимке. */
     fun lockItem(itemId: String, locked: Boolean) = heroCommand { id -> api.hero.lock(id, itemId, locked) }
 
-    /** Ещё пачка мест сундука за золото (1.1.0); снимок с ответом несёт новый счёт. */
+    /** Ещё пачка мест сундука за золото; снимок с ответом несёт новый счёт. */
     fun expandStash() = heroCommand { id -> api.hero.expandStash(id) }
 
     /** Из переполнения в сундук: [itemId], или сколько влезет. */
     fun claimOverflow(itemId: String? = null) = heroCommand { id -> api.hero.claimOverflow(id, itemId) }
     fun sellOverflow(itemId: String) = heroCommand { id -> shardsText(api.hero.sellOverflow(id, itemId).shards, perOrb)?.let(notices::toast) }
 
-    /** Окно тестера (3.73.0): одна выдача `/hero/grant/` герою в игре. */
+    /** Окно тестера: одна выдача `/hero/grant/` герою в игре. */
     fun testerGrant(what: String, vararg params: Pair<String, String?>) = heroCommand { id ->
         check(sessions.state.value.grants(heroes.state.value)) { ui("hero.grant_admin_only") }
         api.hero.grant(id, what, *params)
@@ -76,13 +76,16 @@ class HeroActions(
         api.hero.grantEquipment(id, template, rarity)
     }
 
-    /** Админу: случайный шаблон выбранной редкости и слота - выбран здесь из контента, брошен сервером. */
+    /**
+     * Админу: случайный шаблон выбранной редкости и слота - выбран здесь из контента, брошен сервером.
+     *
+     * Редкость - только та, что выдача даёт шаблону: уникальный и мифический - своя, база - обычная, волшебная, редкая.
+     */
     fun grantRandom(rarityCode: String, slotCode: String) = heroCommand { id ->
         check(sessions.state.value.grants(heroes.state.value)) { ui("hero.grant_admin_only") }
         val index = world.state.value.content ?: error(ui("runtime.request_failed"))
         val rarity = Rarity.of(rarityCode)
         val slot = Slot.of(slotCode)
-        // Редкость - только та, что выдача даёт шаблону (4.9.0, CT-4): уникальный и мифический - своя, база - обычная, волшебная, редкая
         val factory = com.sperance.exileforge.rules.roll.ItemFactory(index)
         val candidates = index.templates.values.filter { (slot == null || it.slot == slot) && (rarity == null || rarity in factory.grantable(it)) }
         check(candidates.isNotEmpty()) { ui("hero.no_template") }
@@ -97,18 +100,19 @@ class HeroActions(
 
     /**
      * Одна сфера на один предмет: применима ли и что перебрасывает - дело правил; фраза возвращается. [omen] тратится с ней;
-     * [line] (4.11.x) - строка, что гравирует Сфера гравёра.
+     * [line] - строка, что гравирует Сфера гравёра.
+     *
+     * Бережливый кузнец (Предначертание): сфера может остаться в сумке.
      */
     fun applyOrb(itemId: String, orb: String, omen: String, onApplied: () -> Unit = {}, line: Int? = null) = forgeCommand { id ->
         val outcome = api.hero.applyOrb(id, itemId, orb, omen, line)
         heroes.forgeLine(outcome.message)
-        // Бережливый кузнец (4.6.0, Предначертание): сфера осталась в сумке
         if (outcome.kept) notices.toast(ui("fate.orb_kept", itemTitle(orb)), NoticeKind.CRAFT)
         heroes.selectEquipment(outcome.created?.id ?: outcome.item.id)
         onApplied()
     }
 
-    /** Печать Атласа [seal] на карту [itemId] (4.6.4): как сфера - строка итога, бережливость Предначертания, знамение тратится с ней. */
+    /** Печать Атласа [seal] на карту [itemId]: как сфера - строка итога, бережливость Предначертания, знамение тратится с ней. */
     fun applySeal(itemId: String, seal: String, omen: String, onApplied: () -> Unit = {}) = forgeCommand { id ->
         val outcome = api.hero.applySeal(id, itemId, seal, omen)
         heroes.forgeLine(outcome.message)
@@ -117,12 +121,12 @@ class HeroActions(
         onApplied()
     }
 
-    /** Закалка кузнеца (3.79.0): фраза о том, что поднялось, уходит тостом. */
+    /** Закалка кузнеца: фраза о том, что поднялось, уходит тостом. */
     fun temper(itemId: String) = forgeCommand { id -> notices.toast(api.hero.temper(id, itemId).message, NoticeKind.CRAFT) }
 
     fun unveil(itemId: String, choice: Int) = forgeCommand { id -> heroes.forgeLine(api.hero.unveil(id, itemId, choice).message) }
 
-    /** Строка Предзнаменования выбора оставлена (сервер 1.65.0). */
+    /** Строка Предзнаменования выбора оставлена. */
     fun choose(itemId: String, choice: Int) = forgeCommand { id -> heroes.forgeLine(api.hero.choose(id, itemId, choice).message) }
 
     fun craft(itemId: String, recipe: String) = forgeCommand { id -> heroes.forgeLine(api.hero.craft(id, itemId, recipe).message) }
@@ -137,19 +141,19 @@ class HeroActions(
     /** Гримуар: книга прочитана, навык вставлен или вынут, условие ячейки или флакона, книги обменяны на одну. */
     fun learnSkill(code: String) = heroCommand { id -> api.hero.learnSkill(id, code) }
 
-    /** Сундук с добычей вскрыт (3.76.0): добыча на экране, пока её не закрыли. */
+    /** Сундук с добычей вскрыт: добыча на экране, пока её не закрыли. */
     fun openChest(code: String) = heroCommand { id -> heroes.chest(api.hero.openChest(id, code)) }
     fun dismissChest() = heroes.chest(null)
     fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = heroCommand { id -> api.hero.slotSkill(id, kind, index, code, condition) }
     fun flaskCondition(index: Int, condition: String?) = heroCommand { id -> api.hero.flaskCondition(id, index, condition) }
 
-    /** Обмен книг (4.7.0): полученная книга сразу читается сервером - умение изучено или выросло. */
+    /** Обмен книг: полученная книга сразу читается сервером - умение изучено или выросло. */
     fun exchangeBooks(books: List<String>, code: String) = heroCommand { id ->
         api.hero.exchangeBooks(id, books, code)
         notices.toast(ui("skills.exchanged", com.sperance.exileforge.core.display.SkillText.title(code)))
     }
 
-    /** Руна в гнездо умения или гнездо пустеет (4.4.0): вынутая и заменённая руна разрушаются. */
+    /** Руна в гнездо умения или гнездо пустеет: вынутая и заменённая руна разрушаются. */
     fun socketRune(code: String, socket: Int, rune: String?) = heroCommand { id -> api.hero.socketRune(id, code, socket, rune) }
 
     /** Древо навыков: взять узел, вернуть его или сбросить всё древо. Каждое правило - серверное. */
@@ -160,7 +164,7 @@ class HeroActions(
     fun resetTree() = heroCommand { id -> api.tree.reset(id) }
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = heroCommand { id -> api.hero.autoSell(id, rarity, groups) }
 
-    /** Правило автопродажи «всё, что герой не может носить» (3.90.3). */
+    /** Правило автопродажи «всё, что герой не может носить». */
     fun autoSellUnwearable(on: Boolean) = heroCommand { id -> api.hero.autoSellUnwearable(id, on) }
 
     /** Админу: опыт герою, уровень решает сервер. */
@@ -174,8 +178,8 @@ class HeroActions(
         api.hero.redeem(id, code)
     }
 
+    /** Один уникальный самоцвет вида на героя - общее правило, спрошенное прежде отказа сервера. */
     fun socketJewel(itemId: String, nodeCode: String) = heroCommand { id ->
-        // Один уникальный самоцвет вида на героя (сервер 1.31.0): общее правило, спрошенное прежде отказа сервера.
         val hero = heroes.state.value.hero
         val item = hero?.item(itemId)
         val index = world.state.value.content
@@ -190,16 +194,16 @@ class HeroActions(
         notices.toast(withShards(ui("toast.sold", sold.gold), sold.shards, perOrb))
     }
 
-    /** Продажа пачкой (3.90.3): выбор тайника и «по правилам»; сколько и за сколько - тостом. */
+    /** Продажа пачкой: выбор тайника и «по правилам»; сколько и за сколько - тостом. */
     fun sellMany(itemIds: Collection<String>) = heroCommand { id -> sellBatch(id, itemIds) }
 
-    /** Та же продажа пачкой внутри идущей команды - «Продать и вернуться» конца захода (3.90.4), уже вне захода. */
+    /** Та же продажа пачкой внутри идущей команды - «Продать и вернуться» конца захода, уже вне захода. */
     suspend fun sellBatch(heroId: String, itemIds: Collection<String>) {
         val sold = api.hero.sellMany(heroId, itemIds.toList())
         notices.toast(withShards(ui("toast.sold_many", sold.itemIds.size, sold.gold), sold.shards, perOrb))
     }
 
-    /** Сколько осколков склеиваются в сферу - для строки осколков в тосте (3.95.3). */
+    /** Сколько осколков склеиваются в сферу - для строки осколков в тосте. */
     private val perOrb: Int get() = world.state.value.content.shardsPerOrb
 
     /** Одна команда героя: владелец или админ; ответ без снимка перечитывается и рисуется. */
@@ -213,7 +217,7 @@ class HeroActions(
         sync.drawn()
     }
 
-    /** Команда кузницы: прежняя фраза уходит, как только начинается другая; каждое касание кузницы вибрирует (3.77.0). */
+    /** Команда кузницы: прежняя фраза уходит, как только начинается другая; каждое касание кузницы вибрирует. */
     private fun forgeCommand(block: suspend (String) -> Unit) {
         buzzes.buzz(Buzz.BUTTON)
         heroCommand { id ->

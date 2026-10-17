@@ -13,7 +13,7 @@ import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.Gold
 
 /**
- * A class's portrait outside a fight (since 2.31.0): three by four, or [round] as the token the map
+ * A class's portrait outside a fight: three by four, or [round] as the token the map
  * draws. The server's drawing; пока его нет - пустой жетон. [portraits] is how
  * many the server has sent so far — read here so the picture is redrawn the moment they arrive.
  */

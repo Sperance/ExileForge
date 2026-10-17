@@ -24,9 +24,9 @@ import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * The parchment the world map is drawn on (2.76.0, the owner's pick «Пергамент»): a dark chart with
+ * The parchment the world map is drawn on (the owner's pick «Пергамент»): a dark chart with
  * a sea along the west, the land each zone stands on sketched in its biome — hills and snow over the
- * mines and passes, trees in the forests, reeds in the mire, columns over ruins, and since 2.77.0
+ * mines and passes, trees in the forests, reeds in the mire, columns over ruins, and
  * dunes, mesas, hives, towers, chasms and spore caps over the lands up to level 70 — the dotted borders
  * of the regions and a compass rose. It is the world's alone, not the hero's: built once per world,
  * laid out «down» (`height - y`, as the screen goes) in world units, and every sketch of one kind is
@@ -96,7 +96,7 @@ class WorldArt private constructor(
         /** Where the sea meets the land at [y] (down): a slow swell over a quick ripple. */
         fun coastAt(y: Float): Float = (95 + 26 * sin(y / 70.0) + 12 * sin(y / 29.0 + 1)).toFloat()
 
-        /** The one world's art, built once per process (3.75.0): a return to the tab finds it ready. */
+        /** The one world's art, built once per process: a return to the tab finds it ready. */
         @Volatile private var cache: Pair<CampaignFile, WorldArt>? = null
         private val building = Mutex()
 
@@ -104,13 +104,17 @@ class WorldArt private constructor(
         fun cached(campaign: CampaignFile): WorldArt? = cache?.takeIf { it.first === campaign }?.second
 
         /**
-         * The art, built away from the main thread (3.75.0): hundreds of sketches and grains took the tab a second to open.
+         * The art, built away from the main thread: hundreds of sketches and grains took the tab a second to open.
          * It is warmed as soon as the campaign arrives, so the map seldom waits for it at all.
          */
         suspend fun of(campaign: CampaignFile): WorldArt = cached(campaign) ?: building.withLock {
             cached(campaign) ?: withContext(Dispatchers.Default) { build(campaign) }.also { cache = campaign to it }
         }
 
+        /**
+         * Пятна и зерно мерены по первой карте 1100 × 2000: более высокий мир получает столько же на отрезок. Наброски обходят жетоны,
+         * имена, названия регионов и море.
+         */
         private fun build(campaign: CampaignFile): WorldArt {
             val width = campaign.world.width.toFloat()
             val height = campaign.world.height.toFloat()
@@ -118,10 +122,8 @@ class WorldArt private constructor(
             val zones = campaign.zones
             val tokens = zones.map { Offset(it.x.toFloat(), height - it.y) }
             val labels = campaign.regions.map { Rect(Offset(it.label.x.toFloat(), height - it.label.y), 190f) }
-            // The stains and the grain were measured for the first chart of 1100 × 2000; a taller world gets as many per stretch.
             val area = width * height / (1100f * 2000f)
 
-            // A sketch keeps off the tokens, off the names hanging under them, off the regions' names and out of the sea.
             fun free(p: Offset, room: Float): Boolean = p.x > coastAt(p.y) + 14 && p.x < width - 8 && p.y > 8 && p.y < height - 8 &&
                 tokens.none { t -> hypot(t.x - p.x, t.y - p.y) < room || (kotlin.math.abs(t.x - p.x) < 72 && p.y > t.y && p.y < t.y + 56) } &&
                 labels.none { it.copy(top = it.center.y - 26, bottom = it.center.y + 26).contains(p) }
@@ -198,53 +200,28 @@ class WorldArt private constructor(
 
         private fun sketchOf(biome: String): SketchKind? = when (biome) {
             "MINES" -> SketchKind.CRYSTAL_HILL
-
             "FROST" -> SketchKind.SNOW_HILL
-
             "ASH", "VOLCANO" -> SketchKind.CINDER_HILL
-
             "FOREST", "JUNGLE" -> SketchKind.TREE
-
             "MIRE" -> SketchKind.REED
-
             "RUINS", "TEMPLE" -> SketchKind.COLUMN
-
             "CRYPT" -> SketchKind.TOMB
-
             "CAVE", "SHORE" -> SketchKind.ROCK
-
             "DESERT" -> SketchKind.DUNE
-
             "CANYON" -> SketchKind.MESA
-
             "HIVE" -> SketchKind.MOUND
-
             "CITADEL" -> SketchKind.TOWER
-
             "ABYSS" -> SketchKind.CHASM
-
             "BLIGHT" -> SketchKind.SPORE
-
-            // The lands 71–100 (3.43.0): floating isles, glass spires, storm peaks, drowned arches, coral, the vaults'
-            // columns, golden shrines, stars and the chasm of oblivion.
             "SKYREACH" -> SketchKind.ISLE
-
             "GLASSWASTE" -> SketchKind.SPIRE
-
             "STORMPEAK" -> SketchKind.STORM
-
             "SUNKEN" -> SketchKind.ARCH
-
             "CORAL" -> SketchKind.CORAL
-
             "TIDEVAULT" -> SketchKind.COLUMN
-
             "GODHALL" -> SketchKind.SHRINE
-
             "ASTRAL" -> SketchKind.STAR
-
             "OBLIVION" -> SketchKind.CHASM
-
             else -> null
         }
     }

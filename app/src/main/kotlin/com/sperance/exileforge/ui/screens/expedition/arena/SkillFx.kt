@@ -29,7 +29,7 @@ import kotlin.math.min
 import kotlin.math.sin
 
 /**
- * Вид жилы по стихии (4.4.0, «Жилы энергии»): толщина [width] и размах изгиба [jag] в dp, сколько жил [veins] и боковых
+ * Вид жилы по стихии («Жилы энергии»): толщина [width] и размах изгиба [jag] в dp, сколько жил [veins] и боковых
  * ответвлений [branches], перерисовываются ли изломы каждый шаг ([reseed]), извиваются ли волной ([writhe]), и тяга частиц
  * [gravity] (dp/с², минус - вверх).
  */
@@ -64,7 +64,7 @@ private enum class VeinStyle(val width: Float, val jag: Float, val veins: Int, v
 /** Умения на себя: вместо жил - вращающиеся пунктирные орбиты. */
 private val SELF_TYPES = setOf(SkillType.AURA, SkillType.WARCRY, SkillType.HEAL, SkillType.GUARD)
 
-/** Доля сцены, за которую жила доходит до цели; дальше - удар и угасание (макет: 0,45 с из 0,9). */
+/** Доля сцены, за которую жила доходит до цели; дальше - удар и угасание (0,45 с из 0,9). */
 private const val TRAVEL = .55f
 
 /** Точек на жиле и на ответвлении. */
@@ -82,11 +82,13 @@ private const val ECHO_ALPHA = .45f
 private const val DASHES = 18
 
 /**
- * «Жилы энергии» (4.4.0, утверждён владельцем, макет 2): сцена последнего применения умения героя [cast] одним холстом поверх
+ * «Жилы энергии»: сцена последнего применения умения героя [cast] одним холстом поверх
  * боя. От героя к каждой цели бегут ветвящиеся жилы цвета умения ([NeonHue]) - огонь, молния, холод, хаос, физика по-своему
  * ([VeinStyle]), - гаснут от начала к концу; у цели - ударная волна и искры. Умение на себя - встречные пунктирные орбиты. Тир III
  * - больше искр и вспышка по краям, эхо - бледнее. Всё считается из прогресса сцены и номера строки лога детерминированным
  * шумом: ни частиц в куче, ни выделений на кадр. Бой анимируется всегда - `LocalMotion` сцену не гасит.
+ *
+ * Доля сцены - к часам кадра: снимок боя выходит реже кадра.
  */
 @Composable internal fun SkillFx(fight: FightHud, frame: FightFrame, hero: Rect?, foe: (Int) -> Rect?, origin: Offset) {
     val cast = fight.heroCast
@@ -96,7 +98,6 @@ private const val DASHES = 18
     val density = LocalDensity.current
     val strokes = remember(density) { with(density) { FxStrokes(Stroke(2.dp.toPx(), cap = StrokeCap.Round), Stroke(3.dp.toPx()), Stroke(6.dp.toPx())) } }
     Canvas(Modifier.fillMaxSize()) {
-        // Доля сцены - к часам кадра: снимок боя выходит реже кадра
         val p = cast.progressAt(fight, frame.now(fight))
         val alpha = if (cast.echo) ECHO_ALPHA else 1f
         val from = hero.center - origin
@@ -123,7 +124,6 @@ private fun DrawScope.veins(cast: HeroCastView, p: Float, style: VeinStyle, colo
     val tail = max(0f, (p - TRAVEL * .7f) / (1 - TRAVEL * .7f))
     if (head <= tail) return
     val veins = style.veins + if (cast.tier >= 2) 1 else 0
-    // Молния перерисовывает изломы на каждом шаге сцены
     val step = if (style.reseed) (p * 20).toInt() else 0
     repeat(veins) { k ->
         val seed = cast.serial * 31 + target * 7 + k * 131 + step * 977

@@ -20,7 +20,7 @@ import com.sperance.exileforge.rules.content.SmithCategory
 import com.sperance.exileforge.rules.content.SmithChoice
 import com.sperance.exileforge.ui.components.PillTabs
 
-/** Режим листа кузнеца (3.89.0): случайная вещь из одних слитков или выбранные группа и атрибут. */
+/** Режим листа кузнеца: случайная вещь из одних слитков или выбранные группа и атрибут. */
 internal enum class SmithMode(val label: String) {
     RANDOM("crafts.mode.random"),
     PICK("crafts.mode.pick"),
@@ -32,7 +32,7 @@ internal enum class SmithMode(val label: String) {
 }
 
 /**
- * Выбор кузнеца (3.89.0): переключатель «Случайно / Выбрать», а в «Выбрать» - группа (оружие, доспех, бижутерия) и
+ * Выбор кузнеца: переключатель «Случайно / Выбрать», а в «Выбрать» - группа (оружие, доспех, бижутерия) и
  * атрибут; у бижутерии атрибута нет. Пара сводится к [SmithChoice.of]; группа и атрибут помнятся, пока лист открыт,
  * так что «Случайно» и обратно возвращает прежний выбор.
  */

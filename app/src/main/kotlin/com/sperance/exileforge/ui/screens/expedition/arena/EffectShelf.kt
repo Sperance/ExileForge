@@ -49,7 +49,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.roundToInt
 
 /**
- * Плитка полки эффектов (4.9.3, макет «Полки эффектов», вариант C): что лежит на бойце - плиткой на полке и строкой листа эффектов.
+ * Плитка полки эффектов: что лежит на бойце - плиткой на полке и строкой листа эффектов.
  * Новый вид состояния - новая реализация здесь, полка и лист берут его сами.
  */
 internal sealed interface Shelved {
@@ -95,7 +95,6 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
 }
 
 @Composable internal fun ShelfTile(item: Shelved, side: Dp) {
-    // Подсказка плитки (4.10.x, макет «Эффекты в бою», вариант A «Выноска у плитки»): касание - её подробная выноска, читается при открытии
     val tip = { item.tip() }
     when (item) {
         Shelved.Stun -> StateTile(null, GoldBright, 1f, 1, ui("expedition.stunned"), side, tip)
@@ -108,7 +107,7 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
 }
 
 /**
- * Подробная выноска плитки (4.10.x): имя, что делает - те же строки, что в листе эффектов ([row]), откуда, сколько осталось и
+ * Подробная выноска плитки: имя, что делает - те же строки, что в листе эффектов ([row]), откуда, сколько осталось и
  * стаки; у недуга - ещё его сила.
  */
 internal fun Shelved.tip(): Tip {
@@ -190,7 +189,7 @@ internal fun effectTint(view: EffectView): Color = when {
 
 private fun modTint(mod: HeroMapMod): Color = if (mod.harm) Color(0xFFC0504A) else Gold
 
-/** Имя плитки строки на герое (4.10.x): строка карты - своим кодом, доля гильдии и зелья - своим источником. */
+/** Имя плитки строки на герое: строка карты - своим кодом, доля гильдии и зелья - своим источником. */
 private fun modTitle(mod: HeroMapMod): String = when (mod.source.kind) {
     SourceKind.GUILD -> guildLineTitle(mod.source.ref)
     SourceKind.POTION -> itemTitle(mod.source.ref)
@@ -230,8 +229,8 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
 }
 
 /**
- * Полка эффектов (4.9.3): плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
- * «+N» последней. Касание плитки - её подробная выноска ([tip], 4.10.x), касание «+N» - лист эффектов ([onOpen]).
+ * Полка эффектов: плитки [items] стороной [side] в ряд или столбец ([vertical]), сколько влезает; не влезшие - плиткой
+ * «+N» последней. Касание плитки - её подробная выноска ([tip]), касание «+N» - лист эффектов ([onOpen]).
  * Подкомпоновка по месту - число «+N» зависит от размера полки; интринсиков у полки нет, её размер задаёт родитель.
  */
 @Composable internal fun EffectShelf(items: List<Shelved>, side: Dp, onOpen: () -> Unit, modifier: Modifier = Modifier, vertical: Boolean = false, gap: Dp = 4.dp) {
@@ -275,7 +274,7 @@ internal fun flowTint(net: Double): Color = when {
 
 /**
  * Из чего сложился итог: «реген +8 · отдых вне боя +8 · деген 2% · отложенный урон −14 · недуги −34» (отдых и недуги - на карте,
- * 4.12.x UI-X2: сумма частей сходится с итогом); без источников - пусто.
+ * сумма частей сходится с итогом); без источников - пусто.
  */
 internal fun flowParts(flow: LifeFlow): String = listOfNotNull(
     ui("fight.flow.regen", (flow.regen - flow.rest).roundToInt()).takeIf { flow.regen - flow.rest >= 1 },
@@ -286,12 +285,12 @@ internal fun flowParts(flow: LifeFlow): String = listOfNotNull(
     ui("fight.flow.shielded", flow.shielded.roundToInt()).takeIf { flow.shielded >= .5 },
 ).joinToString(" · ")
 
-/** Итог здоровья на полосе жизни (0.14.5, #52): «+27/с», под ранящим недугом - «−13/с · кровотечение». */
+/** Итог здоровья на полосе жизни: «+27/с», под ранящим недугом - «−13/с · кровотечение». */
 internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight.flow.rate_cause", flowNumber(flow.net), ui("fight.flow.stalled.${it.name}")) }
     ?: ui("fight.flow.rate", flowNumber(flow.net))
 
 /**
- * Разбор здоровья в секунду на карте (0.14.5, #52) - касанием метки на полосе жизни: регенерация, отдых, деген, недуги и что принял
+ * Разбор здоровья в секунду на карте - касанием метки на полосе жизни: регенерация, отдых, деген, недуги и что принял
  * щит строками с итогом; под ранящим недугом - чем он глушит восстановление. Читает живой снимок: числа идут.
  */
 @Composable internal fun LifeFlowSheet(flow: () -> LifeFlow?, onDismiss: () -> Unit) {
@@ -323,7 +322,7 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
     }
 }
 
-/** Плитка итога здоровья (4.9.3): «−12/с» красным, «+8/с» зелёным, сверху рельса героя; [stacked] - «/с» строкой ниже. */
+/** Плитка итога здоровья: «−12/с» красным, «+8/с» зелёным, сверху рельса героя; [stacked] - «/с» строкой ниже. */
 @Composable internal fun FlowTile(flow: LifeFlow, modifier: Modifier, stacked: Boolean = true) {
     val tint = flowTint(flow.net)
     val shape = RoundedCornerShape(4.dp)
@@ -346,7 +345,7 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
 }
 
 /**
- * Лист эффектов (4.9.3): всё, что лежит на бойце, - временные и на весь бой; у героя сверху - итог здоровья в секунду и его
+ * Лист эффектов: всё, что лежит на бойце, - временные и на весь бой; у героя сверху - итог здоровья в секунду и его
  * разбор. Читается вживую: таймеры идут, бой не стоит.
  */
 @Composable internal fun EffectsSheet(title: String, timed: List<Shelved>, lasting: List<Shelved>, flow: LifeFlow?, onDismiss: () -> Unit) {

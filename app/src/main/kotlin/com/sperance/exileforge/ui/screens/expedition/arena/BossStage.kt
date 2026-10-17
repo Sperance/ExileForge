@@ -67,7 +67,7 @@ private val SKIES = mapOf(
 private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9FE8C0), Drift.RISE)
 
 /**
- * Фон боя с боссом «Кино» (3.93.0): небо биома зоны, медленные частицы его погоды и свечение фазы снизу; к третьей фазе
+ * Фон боя с боссом «Кино»: небо биома зоны, медленные частицы его погоды и свечение фазы снизу; к третьей фазе
  * свет уходит в её цвет. Без анимаций частицы стоят.
  */
 @Composable internal fun BossBackdrop(biome: String, boss: BossHud, frame: FightFrame) {
@@ -95,9 +95,11 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
 }
 
 /**
- * Кино поверх боя (3.93.0): вход стража - чёрные шторки сверху и снизу и его имя, расходятся за пару секунд; новая фаза -
+ * Кино поверх боя: вход стража - чёрные шторки сверху и снизу и его имя, расходятся за пару секунд; новая фаза -
  * виньетка её цвета по краям (держится до конца фазы) и короткая светлая вспышка; победа - золотая вспышка. Вспышек нет
  * при упрощённых эффектах.
+ *
+ * Поиск по журналу - по новой строке, не каждый кадр; имя - авторазмером.
  */
 @Composable internal fun BossCinema(fight: FightHud, boss: BossHud) {
     val simple = LocalSettings.current.simpleEffects
@@ -109,7 +111,6 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
     }
     val phase = phaseNumber(boss)
     val vignette by animateFloatAsState(((phase - 1).coerceIn(0, 2)) * .18f, tween(1200), label = "vignette")
-    // Поиск по журналу - по новой строке, не каждый кадр (4.9.0): журнал снимка тот же, пока не вырос
     val phaseAt = remember(fight.events, boss.index) { fight.events.firstOrNull { it.foe == boss.index && (it.trace as? NoteTrace)?.kind == NoteKind.PHASE }?.time }
     val flash = remember { Animatable(0f) }
     LaunchedEffect(phaseAt) {
@@ -141,7 +142,6 @@ private val DEFAULT_SKY = Sky(Color(0xFF24392F), Color(0xFF070908), Color(0xFF9F
                 Box(Modifier.fillMaxWidth().height(bar).align(Alignment.BottomCenter).background(Color.Black), contentAlignment = Alignment.Center) {
                     Column(Modifier.alpha(c).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(ui("boss.intro"), color = Color(0xFF9A8B7A), fontSize = 10.sp, letterSpacing = 3.sp)
-                        // Имя - авторазмером (4.2.0): длинное сжимается, а не рвётся
                         FittedName(monsterTitle(foe.monster.code), FrameGold, 22.sp, 13.sp, Modifier.fillMaxWidth(), TextAlign.Center)
                     }
                 }

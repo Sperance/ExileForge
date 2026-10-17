@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 private val Context.replies by preferencesDataStore("report_replies")
 
 /**
- * Прочитанные ответы на свои отчёты (0.14.1, макет A): по отчёту - отпечаток последнего ответа разработчика или модерации, что
+ * Прочитанные ответы на свои отчёты: по отчёту - отпечаток последнего ответа разработчика или модерации, что
  * игрок уже видел. Новый ответ - красная точка у статуса и число на вкладке «Мои»; открытая вкладка гасит их. Только на устройстве.
  */
 class RepliesSeen(private val context: Context, private val scope: CoroutineScope) {

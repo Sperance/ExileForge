@@ -38,9 +38,9 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 
 /**
- * Разлом на экране (3.96.0): доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
- * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер (4.7.0); [lastFight] - журнал последнего
- * боя узла (4.8.0, «Журнал боя»).
+ * Разлом на экране: доска недели с забегом, бой текущего узла (арена) и итог последнего забега.
+ * [open] - экран Разлома открыт; [delivery] - итог кончившегося боя в пути на сервер; [lastFight] - журнал последнего
+ * боя узла («Журнал боя»).
  */
 data class RiftState(
     val open: Boolean = false,
@@ -51,7 +51,7 @@ data class RiftState(
     val lastFight: FightReport? = null,
 )
 
-/** Итог боя Разлома в пути (4.7.0): уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
+/** Итог боя Разлома в пути: уходит, пока сервер не ответит, под одним ключом - дважды он не ляжет. */
 sealed interface RiftDelivery {
     /** Отправка; [attempt] - какая по счёту (с 2 - нет связи, повтор). */
     data class Sending(val attempt: Int) : RiftDelivery
@@ -61,7 +61,7 @@ sealed interface RiftDelivery {
 }
 
 /**
- * Разлом недели (3.96.0, сервер 1.83.0): доска с сервера, каждый шаг забега - действие [RiftAct], которое сервер применяет
+ * Разлом недели: доска с сервера, каждый шаг забега - действие [RiftAct], которое сервер применяет
  * правилами и отвечает новой доской. Бой узла считает [RiftArena] здесь; его итог уходит действием сам. Один на приложение.
  */
 class RiftActions(
@@ -115,14 +115,15 @@ class RiftActions(
     }
 
     /**
-     * Итог боя (4.7.0): не через раннер команд - тот отказывает, пока занят, и итог пропадал, а арена ждала вечно. Итог уходит
+     * Итог боя: не через раннер команд - тот отказывает, пока занят, и итог пропадал, а арена ждала вечно. Итог уходит
      * сам, под одним ключом, с повтором при сбое сети; отказ сервера - на экран, с выходом к карте.
+     *
+     * Журнал боя арена уже сложила - итог уходит; сеть - тот же ключ позже.
      */
     private fun deliver(end: RiftAct.Fight) {
         val run = mutable.value.board?.progress?.run ?: return
         val heroId = heroes.heroId
         val key = UUID.randomUUID().toString()
-        // Журнал боя (4.8.0): арена уже сложила его, итог уходит
         mutable.update { it.copy(lastFight = it.arena?.report ?: it.lastFight) }
         sending?.cancel()
         sending = scope.launch {
@@ -142,7 +143,6 @@ class RiftActions(
                         return@launch
                     }
                 } catch (_: Exception) {
-                    // Сеть: тот же ключ позже
                 }
                 delay(RETRY_FIRST shl (attempt - 1).coerceAtMost(RETRY_DOUBLINGS))
                 attempt++
@@ -156,12 +156,15 @@ class RiftActions(
         refresh()
     }
 
-    /** Ответ на шаг: тосты переполнения, итог забега, новая доска; герой перечитывается, только если ответ его не принёс. */
+    /**
+     * Ответ на шаг: тосты переполнения, итог забега, новая доска; герой перечитывается, только если ответ его не принёс.
+     *
+     * Итог забега, как всякий ответ со снимком, уже освежил героя; перечитывается лишь заведомо устаревший.
+     */
     private suspend fun land(report: RiftReport) {
         report.received.takeIf { it.overflowed > 0 || it.sold > 0 }?.let { notices.toast(receivedText(it, world.state.value.content.shardsPerOrb)) }
         report.result?.let { result -> mutable.update { it.copy(result = result) } }
         show(report.board)
-        // Итог забега, как и всякий ответ со снимком, уже освежил героя; перечитывается лишь заведомо устаревший
         if (report.result != null && heroes.state.value.readAt == 0L) heroSync.readHero()
     }
 
@@ -172,19 +175,19 @@ class RiftActions(
         mutable.value.arena?.send(command)
     }
 
-    /** Доска легла: стоит бой - встаёт его арена (одна на узел), нет - арены нет. */
+    /**
+     * Доска легла: стоит бой - встаёт его арена (одна на узел), нет - арены нет.
+     *
+     * Итог ещё в пути - доска стоит на том же бою, арена с итогом остаётся.
+     */
     private fun show(board: RiftBoard) {
         val fight = board.fight
         val run = board.progress.run
         val current = mutable.value.arena
         val arena = when {
             fight == null || run == null || run.stage != RiftStage.FIGHT -> null
-
             current != null && current.hud.value.phase == com.sperance.exileforge.core.campaign.TrialPhase.FIGHT -> current
-
-            // Итог ещё в пути: доска до него стоит на том же бою, арена с итогом остаётся
             current != null && mutable.value.delivery != null -> current
-
             else -> arena(board)
         }
         mutable.update { it.copy(board = board, arena = arena) }
@@ -192,7 +195,7 @@ class RiftActions(
 
     private var sending: Job? = null
 
-    /** Счёт Предначертания забега (4.6.0) по id забега: арены одного забега делят «Второе дыхание». */
+    /** Счёт Предначертания забега по id забега: арены одного забега делят «Второе дыхание». */
     private var fateRun: Pair<String, com.sperance.exileforge.core.campaign.combat.FateRun>? = null
 
     private fun arena(board: RiftBoard): RiftArena? {

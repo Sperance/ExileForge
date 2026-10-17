@@ -54,11 +54,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.theme.*
 
-/*
- * The pieces of a quest (3.23.0) — the board's «ledger» look: a row with the rarity's edge and pill, the goal, where it
- * counts, its conditions in the modifiers' blue, the bar, the reward and whatever may be done with it.
- */
-
 /** What the quest asks, in the server's words: a story step by its own name, any other goal with its number. */
 internal fun questTitle(quest: Quest): String = if (quest.kind == QuestKind.STORY) loc("quest.story.${quest.goal}.name") else goalTitle(quest.goal, quest.target)
 
@@ -84,7 +79,7 @@ internal fun questRarity(rarity: Rarity): String = ui("quest.rarity.${rarity.nam
     )
 }
 
-/** The reward as chips: gold, experience, orbs, and for a guild's quest the guild's experience; сфера открывает карточку (4.3.2). */
+/** The reward as chips: gold, experience, orbs, and for a guild's quest the guild's experience; сфера открывает карточку. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun RewardChips(reward: QuestReward) {
@@ -107,10 +102,13 @@ internal fun RewardChips(reward: QuestReward) {
 }
 
 /**
- * Задание двухстрочной карточкой (0.14.0, ASANA-N02, макет «Задания и контракты», вариант B, ~58dp): строка 1 - точка редкости,
+ * Задание двухстрочной карточкой (~58dp): строка 1 - точка редкости,
  * имя и «7 / 10»; строка 2 - награды мелкими фишками (сфера открывает карточку), срок, условия значками ModBlue и место;
  * прогресс - кромкой 3dp по низу; [actions] - справа на обе строки (сдать, взять и сбросить, отказаться). Сданное - серым с ✓.
  * Описание шага сюжета - по касанию.
+ *
+ * Части задания - облик «книги учёта»: строка с кромкой и пилюлей редкости, цель, где она считается, условия синим, полоса, награда и
+ * действия; прогресс - кромкой по низу.
  */
 @Composable internal fun QuestRow(quest: Quest, actions: @Composable ColumnScope.() -> Unit = {}) {
     val color = if (quest.claimed) Muted else rarityColor(quest.rarity.name)
@@ -122,7 +120,6 @@ internal fun RewardChips(reward: QuestReward) {
         Modifier.fillMaxWidth().greyed(quest.claimed).clip(shape).depthPanel(shape).raritySpine(color, 3.dp)
             .border(1.dp, if (quest.done && !quest.claimed) Vital.copy(alpha = .55f) else Bronze, shape)
             .drawBehind {
-                // Прогресс - кромкой по низу карточки
                 val edge = QUEST_EDGE.toPx()
                 drawRect(Bronze, Offset(0f, size.height - edge), Size(size.width, edge))
                 drawRect(color, Offset(0f, size.height - edge), Size(size.width * share, edge))
@@ -202,7 +199,7 @@ private val QUEST_EDGE = 3.dp
 /** Срок задания короче часа - тревожным цветом. */
 private const val SOON_MS = 3_600_000L
 
-/** Серая «отработанная» строка (4.7.0): без цвета и вполсилы. */
+/** Серая «отработанная» строка: без цвета и вполсилы. */
 private fun Modifier.greyed(on: Boolean): Modifier = if (!on) {
     this
 } else {

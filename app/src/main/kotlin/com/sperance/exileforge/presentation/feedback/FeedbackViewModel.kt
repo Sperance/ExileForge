@@ -26,8 +26,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * Голоса игроков и почта аккаунта (3.73.0): предложения с голосами, свои отчёты, чтение администратора,
- * ящик с вложениями, письма администратора. Первая модель экрана на репозиториях :core (3.80.9). С 4.6.3 ящик - глазами
+ * Голоса игроков и почта аккаунта: предложения с голосами, свои отчёты, чтение администратора,
+ * ящик с вложениями, письма администратора. Первая модель экрана на репозиториях :core. Ящик - глазами
  * героя в игре, и почта между героями ([LetterActions]).
  */
 class FeedbackViewModel(
@@ -37,24 +37,24 @@ class FeedbackViewModel(
     private val sessions: SessionRepository,
     private val notices: Notices,
     private val heroes: HeroRepository,
-    /** Почта между героями (4.6.3): окно письма, ответ, игнор, жалоба - общие с карточкой игрока и гильдией. */
+    /** Почта между героями: окно письма, ответ, игнор, жалоба - общие с карточкой игрока и гильдией. */
     val letters: LetterActions,
     private val replies: RepliesSeen,
 ) : ViewModel() {
     val feedback: StateFlow<Feedback> = repository.state
     val activity = commands.state
 
-    /** Виденные ответы на свои отчёты (0.14.1): отпечаток по id отчёта. */
+    /** Виденные ответы на свои отчёты: отпечаток по id отчёта. */
     val seen: StateFlow<Map<String, String>> = replies.seen.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     private val api: GameApi get() = connection.api
 
     private fun feedback(transform: (Feedback) -> Feedback) = repository.update(transform)
 
-    /** Адресат из карточки игрока (4.5.1) для формы письма: отдаётся один раз и забывается. */
+    /** Адресат из карточки игрока для формы письма: отдаётся один раз и забывается. */
     fun takeMailTo(): String = feedback.value.mailTo.also { if (it.isNotEmpty()) feedback { f -> f.copy(mailTo = "") } }
 
-    /** Свои отчёты и известные проблемы (0.14.1, GH-ISSUES): обе вкладки листа отчётов; новый вызов (0.14.4, #33) сменяет идущий. */
+    /** Свои отчёты и известные проблемы: обе вкладки листа отчётов; новый вызов сменяет идущий. */
     fun loadReports() = commands.read(Reads.FEEDBACK, restart = true) {
         val mine = api.feedback.mine()
         val known = api.feedback.known()
@@ -72,7 +72,7 @@ class FeedbackViewModel(
     }
 
     /**
-     * Отчёты у модерации вида [kind] и статуса [status]: своим ключом чтения, новый вызов сменяет идущий (0.14.4, #33) - последний
+     * Отчёты у модерации вида [kind] и статуса [status]: своим ключом чтения, новый вызов сменяет идущий - последний
      * выбранный фильтр не теряется за прежним чтением.
      */
     fun loadReports(kind: FeedbackKind?, status: ReportStatus?) = commands.read(Reads.FEEDBACK_ADMIN, restart = true) {
@@ -83,20 +83,20 @@ class FeedbackViewModel(
 
     fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
 
-    /** Ответ автора в Issue своего отчёта (0.14.2): уходит комментарием; отчёт возвращается с перепиской. */
+    /** Ответ автора в Issue своего отчёта: уходит комментарием; отчёт возвращается с перепиской. */
     fun answerReport(id: String, text: String) = commands.task(writing = true) {
         val answered = api.feedback.answer(id, text)
         feedback { f -> f.copy(mine = f.mine.map { if (it.id == id) answered else it }) }
         notices.toast(ui("feedback.answer_sent"))
     }
 
-    /** Модерация ведёт Issue отчёта из игры (0.14.2): ответ или закрытие с причиной; судьба приходит из GitHub сразу. */
+    /** Модерация ведёт Issue отчёта из игры: ответ или закрытие с причиной; судьба приходит из GitHub сразу. */
     fun steerIssue(id: String, move: IssueMove, text: String, duplicate: Int = 0) = answer(ui("feedback.issue_moved")) { api.feedback.steer(id, move, text, duplicate) }
 
-    /** Отчёт в GitHub Issues (0.14.1): сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
+    /** Отчёт в GitHub Issues: сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
     fun reportToIssue(id: String) = answer(ui("feedback.issue_done")) { api.feedback.toIssue(id) }
 
-    /** Удаление отчёта (4.3.0): уходит из своих, из общего списка и из окна модерации разом. */
+    /** Удаление отчёта: уходит из своих, из общего списка и из окна модерации разом. */
     fun deleteReport(id: String) = commands.task(writing = true) {
         api.feedback.delete(id)
         feedback { f -> f.copy(mine = f.mine.filterNot { it.id == id }, known = f.known.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
@@ -109,7 +109,7 @@ class FeedbackViewModel(
         notices.toast(done)
     }
 
-    /** Ящик глазами героя в игре, тихо - при открытии почты; счёт конверта в шапке едет в снимке героя (3.94.1). */
+    /** Ящик глазами героя в игре, тихо - при открытии почты; счёт конверта в шапке едет в снимке героя. */
     fun loadMail() {
         if (!sessions.state.value.signedIn) return
         commands.read(Reads.MAIL, silent = true) {
@@ -123,7 +123,7 @@ class FeedbackViewModel(
         feedback { f -> f.withMail(f.mail.map { if (it.id == id) letter else it }) }
     }
 
-    /** Вложение уходит герою в игре [heroId]; герой приходит снимком в том же ответе (3.94.1). */
+    /** Вложение уходит герою в игре [heroId]; герой приходит снимком в том же ответе. */
     fun claimMail(id: String, heroId: String) = commands.task(writing = true, touches = setOf(Reads.HERO)) {
         check(heroId.isNotBlank()) { ui("auction.choose_character") }
         val letter = api.mail.claim(id, heroId)
@@ -131,13 +131,13 @@ class FeedbackViewModel(
         notices.toast(ui("mail.claimed"))
     }
 
-    /** «Прочитать все» (3.94.0). */
+    /** «Прочитать все». */
     fun readAllMail() = commands.task(writing = true) {
         api.mail.readAll(heroes.heroId)
         feedback { f -> f.withMail(f.mail.map { it.copy(read = true) }) }
     }
 
-    /** «Удалить прочитанные» (3.94.0): письма с незабранным вложением остаются. */
+    /** «Удалить прочитанные»: письма с незабранным вложением остаются. */
     fun deleteReadMail() = commands.task(writing = true) {
         val gone = api.mail.deleteRead(heroes.heroId)
         feedback { f -> f.withMail(f.mail.filterNot { it.read && !it.claimable }) }

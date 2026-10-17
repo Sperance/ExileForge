@@ -30,7 +30,7 @@ import com.sperance.exileforge.ui.theme.Vital
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Журнал законченного боя листом (4.8.0): «Журнал боя» меню забега и плашек итога Разлома и испытаний. Все вступившие враги
+ * Журнал законченного боя листом: «Журнал боя» меню забега и плашек итога Разлома и испытаний. Все вступившие враги
  * [report] - лентой по времени или по противникам, полки журнала - те же, что у экрана боя; строка открывает свой расчёт.
  */
 @Composable internal fun FightLogSheet(report: FightReport, onDismiss: () -> Unit) {

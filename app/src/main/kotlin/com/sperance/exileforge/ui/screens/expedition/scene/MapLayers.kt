@@ -56,14 +56,17 @@ internal class MapLayers {
     private var window: CellWindow? = null
     private var windows = 0L
 
-    /** Запись устарела - пишется заново; кадр без перемен её только переносит. */
+    /**
+     * Запись устарела - пишется заново; кадр без перемен её только переносит.
+     *
+     * Окрестность - под углами экрана с запасом на высоту скалы и шаг героя внутри клетки. Записанное стоит: часы сцены на время записи -
+     * на нуле. Сначала вся земля, под скалой - подложка массива; мягкая тень у подножия ложится на пол.
+     */
     fun refresh(painter: ScenePainter, scope: DrawScope, world: ExpeditionWorld, shape: MapRelief, rock: WallRelief, style: MapStyle, palette: Palette, biome: String, hx: Int, hy: Int) {
         val graphics = graphics ?: return
         val unit = painter.unit
         val width = scope.size.width
-        // Окрестность - под углами экрана камеры (0.14.4, #31), с запасом на высоту скалы и шаг героя внутри клетки
         val seen = SceneCamera.window(scope.size, unit, RISE.toInt(), CELL_SLACK)
-        // Камера ходит внутри клетки: ширина полосы - с запасом на клетку
         val across = (width / 2 / unit + 3).toDouble()
         val here = (hx.toLong() shl 32) or (hy.toLong() and 0xFFFFFFFFL)
         val ground = here != cell || shape !== relief || rock !== this.rock || style !== this.style || palette !== this.palette || world.lightRadius != light || seen != window
@@ -80,7 +83,6 @@ internal class MapLayers {
         val map = world.map
         val (xs, ys) = seen.around(hx, hy, map.width, map.height)
         if (xs.isEmpty() || ys.isEmpty()) return
-        // Рамка записи: изометрия углов окрестности и запас на высоту скалы и мелочи
         left = ((xs.first - ys.last) * unit) - unit * MARGIN
         top = ((xs.first + ys.first) * unit / 2) - unit * (MARGIN + RISE)
         val right = ((xs.last + 1 - ys.first) * unit) + unit * MARGIN
@@ -93,7 +95,6 @@ internal class MapLayers {
         val pen = painter.pen
         val drawing = pen.scope
         val clock = painter.time
-        // Записанное стоит: часы сцены на время записи - на нуле (как без `LocalMotion`)
         painter.time = 0f
         try {
             if (ground) {
@@ -101,9 +102,7 @@ internal class MapLayers {
                 below.record(scope, scope.layoutDirection, size) {
                     pen.scope = this
                     translate(-left, -top) {
-                        // The ground first, all of it: nothing stands below the floor.
                         for (y in ys) for (x in xs) if (map.walkable(x, y) && sight.visible(x, y)) style.floor(frame, painter.spot(map, x, y), palette, painter.glow(x, y))
-                        // Земля под скалой: подложка массива, где нет пола
                         for (y in ys) for (x in xs) rock.cell(x, y)?.takeIf { it.plate != null && sight.shown(x, y) }?.let { style.wallGround(frame, it, rock.tones, painter.rockGlow(rock, x, y)) }
                     }
                 }
@@ -113,7 +112,6 @@ internal class MapLayers {
                     pen.scope = this
                     translate(-left, -top) {
                         for (y in ys) for (x in xs) if (map.walkable(x, y) && sight.visible(x, y)) painter.decor(map, x, y, palette, biome, painter.glow(x, y))
-                        // Мягкая тень у подножия скалы ложится на пол и его мелочь
                         for (y in ys) for (x in xs) rock.cell(x, y)?.takeIf { sight.shown(x, y) }?.let { style.wallShadow(frame, it) }
                     }
                 }
@@ -142,7 +140,7 @@ internal class MapLayers {
     fun wallDepth(i: Int): Double = depths[i]
 
     /**
-     * Гладь (3.91.0, 3.95.0; с 4.2.0 - одна по контуру карты): пропасти уходят в землю, воды - вровень с полом; неувиденное под
+     * Гладь (одна по контуру карты): пропасти уходят в землю, воды - вровень с полом; неувиденное под
      * гладью закрыто тьмой. Клетки и свет - из записи, течение - вживую на часах декора [frame].
      */
     fun drawPools(painter: ScenePainter, frame: SceneFrame, shape: MapRelief, style: MapStyle, palette: Palette, liquid: Liquid?) {
@@ -200,6 +198,10 @@ internal class MapLayers {
         }
     }
 
+    /**
+     * Скала между героем и игроком прозрачна - круглое окно вокруг героя, монстров, что гонятся за ним, и ориентиров. Скала - кусками
+     * массива по клеткам, по глубине.
+     */
     private fun walls(
         painter: ScenePainter,
         scope: DrawScope,
@@ -216,16 +218,12 @@ internal class MapLayers {
         hx: Int,
         hy: Int,
     ) {
-        // Rock between the hero and the player is see-through, or a corridor would hide them. С 4.2.0 - круглое «окно» вокруг
-        // героя, монстров, что гонятся за ним, и закрытых скалой ориентиров (3.95.3): скала перед ними прозрачна к центру; с
-        // записью слоями - вокруг середины их клеток
         val windows = buildList {
             add(painter.Window(hx + .5, hy + .5))
             world.agents.filter { it.alive && it.mode in ENGAGED && world.lit(floor(it.x).toInt(), floor(it.y).toInt()) }
                 .forEach { add(painter.Window(floor(it.x) + .5, floor(it.y) + .5)) }
             world.screened().forEach { add(painter.Window(it.x + .5, it.y + .5)) }
         }
-        // Скала - кусками массива по клеткам (контур один на массив), по глубине; слой - куски одной целой части глубины
         val pieces = buildList {
             for (y in ys) {
                 for (x in xs) {
@@ -292,7 +290,7 @@ internal class MapLayers {
         const val MARGIN = 3f
         const val RISE = 4f
 
-        /** Запас окрестности в клетках (#31): шаг героя внутри клетки до перезаписи и округление углов экрана. */
+        /** Запас окрестности в клетках: шаг героя внутри клетки до перезаписи и округление углов экрана. */
         const val CELL_SLACK = 2
         const val WALL_LAYERS = 64
         const val MIX = -7046029254386353131L

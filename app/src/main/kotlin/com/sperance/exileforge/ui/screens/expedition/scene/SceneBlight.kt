@@ -18,8 +18,6 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.sin
 
-// ==================== Скверна на карте (4.0.0, макет A «Гнойное пятно») ====================
-
 /** Палитра Скверны (RULES.md, «Скверна»): только она - у очага, следа, сундука, полосы карты и полосы Матери. */
 internal object BlightTint {
     val void = Color(0xFF12040A)
@@ -33,6 +31,8 @@ internal object BlightTint {
 /**
  * Очаг Скверны в очереди стоящего: по открытой точке - след к следующей и лужа (вровень с землёй), сундук взятой или ждущей
  * точки и сундук Матери. Часть - номер точки и её слой ([drawBlight]).
+ *
+ * Взятый сундук стоит открытым, ждущий - на зачищенной активной точке, сундук Матери - на последней точке после её смерти.
  */
 internal fun ScenePainter.standBlight(queue: Standing, spot: BlightSpot, world: ExpeditionWorld) {
     val shown = spot.revealed
@@ -42,12 +42,10 @@ internal fun ScenePainter.standBlight(queue: Standing, spot: BlightSpot, world: 
         if (!world.explored(cell.x, cell.y)) continue
         if (point + 1 < shown) queue.add(GROUND, Standing.FEATURE, spot, point * BLIGHT_LAYERS + BLIGHT_TRAIL)
         queue.add(GROUND + .1, Standing.FEATURE, spot, point * BLIGHT_LAYERS + BLIGHT_POOL)
-        // Сундук: взятый стоит открытым, ждущий - на зачищенной активной точке; на клетке Матери стоит её сундук
         val looted = point in spot.taken && !(point == spot.blight.points - 1 && spot.raised(spot.blight.motherChoice))
         val waiting = point == active && spot.cleared(world, point)
         if (looted || waiting) queue.add(cell.x + cell.y + 1.0, Standing.FEATURE, spot, point * BLIGHT_LAYERS + BLIGHT_CHEST)
     }
-    // Сундук Матери - на последней точке, после её смерти
     val mother = spot.blight.motherChoice
     if (spot.blight.mother && spot.raised(mother)) {
         val cell = spot.at(mother)
@@ -109,7 +107,6 @@ internal fun ScenePainter.drawBlightPool(cell: Cell, live: Boolean, seed: Int, l
         }
         drawPath(edge, Brush.radialGradient(stops.map { tone(it, light, alpha = it.alpha * (if (live) breathe else .55f)) }, Offset(cx, cy), radius * 1.15f))
         if (!live) return@withTransform
-        // Жилы: свечение и тонкая нить, от центра к краю, ломаной
         VEINS.forEachIndexed { i, (angle, bend) ->
             val a = angle + seed * .7f
             val mid = Offset(cx + cos(a + bend) * radius * .5f, cy + sin(a + bend) * radius * .5f)
@@ -120,7 +117,6 @@ internal fun ScenePainter.drawBlightPool(cell: Cell, live: Boolean, seed: Int, l
             drawLine(BlightTint.hot.copy(alpha = .9f * pulse * light), Offset(cx, cy), mid, unit * .05f, StrokeCap.Round)
             drawLine(BlightTint.hot.copy(alpha = .8f * pulse * light), mid, tip, unit * .035f, StrokeCap.Round)
         }
-        // Ядро бьётся: 2,2 с, на пике чуть шире и тусклее
         val beat = .5f + .5f * sin(t * 2 * PI.toFloat() / CORE_SECONDS)
         val core = unit * .3f * (1f + .08f * beat)
         drawCircle(Brush.radialGradient(listOf(BlightTint.hot.copy(alpha = .55f * light), Color.Transparent), Offset(cx, cy), core * 2.4f), core * 2.4f, Offset(cx, cy))
@@ -170,7 +166,6 @@ internal fun ScenePainter.drawBlightChest(cell: Cell, quality: Rarity, opened: B
     pen.color = frame.copy(alpha = (if (opened) .12f else .22f + .08f * sin(decor * 2f + x.toFloat())) * light)
     pen.ellipse(cx - w * 1.6f, cy - d * 1.3f, w * 3.2f, d * 2.6f)
     drawChest(x, y, opened, light)
-    // Рамка по качеству: рёбра крышки и передние грани
     pen.color = frame.copy(alpha = (if (opened) .45f else .95f) * light)
     val top = cy + h
     pen.polyline(cx - w, top, cx, top + d, cx + w, top, cx, top - d, cx - w, top, width = unit * .045f)
@@ -191,7 +186,6 @@ internal fun blightPop(age: Double, n: Int): Float {
     val t = ((age - n * POP_STAGGER) / POP_SECONDS).toFloat()
     if (t <= 0f) return 0f
     if (t >= 1f) return 1f
-    // Отскок с перелётом (как cubic-bezier(.3, 1.6, .5, 1) макета)
     val u = t - 1f
     return 1f + BACK_OVERSHOOT_3 * u * u * u + BACK_OVERSHOOT * u * u
 }
@@ -207,17 +201,17 @@ private const val POOL_CELLS = 1.15f
 /** Точек на рваном крае лужи. */
 private const val EDGE_POINTS = 36
 
-/** Дыхание лужи и жил и удар ядра, секунды (макет: 3,4 с и 2,2 с). */
+/** Дыхание лужи и жил и удар ядра, секунды (3,4 с и 2,2 с). */
 private const val BREATHE_SECONDS = 3.4f
 private const val CORE_SECONDS = 2.2f
 
-/** За сколько секунд струя ихора проползает свой шаг пунктира (макет: 1,6 с). */
+/** За сколько секунд струя ихора проползает свой шаг пунктира (1,6 с). */
 private const val ICHOR_SECONDS = 1.6f
 
 /** Жилы лужи: угол от центра и излом середины, радианы. */
 private val VEINS = listOf(-2.6f to .35f, -0.7f to -.2f, .45f to .3f, 1.75f to -.25f, 2.85f to .2f)
 
-/** Появление жетона кольца: длительность и шаг очереди, секунды (макет: 0,6 с и 0,12 с). */
+/** Появление жетона кольца: длительность и шаг очереди, секунды (0,6 с и 0,12 с). */
 private const val POP_SECONDS = .6
 private const val POP_STAGGER = .12
 

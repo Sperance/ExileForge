@@ -25,22 +25,22 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
- * Трофеи боссов у торговца (4.6.0, Предначертание «Трофейщик»): строка на босса - сколько трофеев из цены дара и кнопка
+ * Трофеи боссов у торговца (Предначертание «Трофейщик»): строка на босса - сколько трофеев из цены дара и кнопка
  * обмена на его уникалку. Обмен закрыт с причиной: трофеев мало (`FT_003`) или уникалок босса на уровне героя ещё нет (`FT_004`).
+ *
+ * Цена обмена - на силе дара, как её считает сервер; причина закрытой кнопки - здесь, а не отказом сервера.
  */
 @Composable fun TrophyShelf(game: GameUi, busy: Boolean, onTrade: (String) -> Unit) {
     val hero = game.hero ?: return
     val index = game.index ?: return
     val trophies = hero.info.trophies.filterValues { it > 0 }
     if (trophies.isEmpty()) return
-    // Цена обмена - на силе дара (4.6.3), как её считает сервер
     val price = FateKit.of(index, hero.info.fate, hero.stats, hero.equipped.values).effects.of(FateLever.TROPHIES)?.value?.toInt()
     ForgePanel(accent = FateInk.Gold) {
         Text(ui("fate.trophies_title"), color = FateInk.GoldLight, style = MaterialTheme.typography.titleSmall)
         Text(ui("fate.trophies_hint"), color = Muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 6.dp))
         trophies.entries.sortedBy { monsterTitle(it.key) }.forEach { (boss, have) ->
             val pool = index.monster(MonsterCode(boss))?.let { index.fates.trophyPool(index, it, hero.level) }.orEmpty()
-            // Причина закрытой кнопки - здесь, а не отказом сервера
             val reason = when {
                 price == null -> ui("fate.trophies_no_fate")
                 have < price -> ui("fate.trophies_few", price - have)

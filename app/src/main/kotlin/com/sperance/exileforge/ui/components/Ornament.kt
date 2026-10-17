@@ -20,11 +20,10 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Панель «Мягкого» стиля (3.88.3): ровный приподнятый фон, скругление 18 dp, без рамки и линии света. Свой [accent]
+ * Панель «Мягкого» стиля: ровный приподнятый фон, скругление 18 dp, без рамки и линии света. Свой [accent]
  * (гильдия, роль, опасность) лишь чуть окрашивает фон; у обычной панели, с акцентом по умолчанию, фон чистый.
  */
 @Composable fun ForgePanel(modifier: Modifier = Modifier, accent: Color = Gold, content: @Composable ColumnScope.() -> Unit) {
-    // «Глубина» (3.88.7): градиент со светом по кромке и тенью; свой акцент лишь окрашивает верх.
     Column(
         modifier.fillMaxWidth().depthPanel(RoundedCornerShape(18.dp), accent.takeIf { it != Gold }).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -54,7 +53,7 @@ import com.sperance.exileforge.ui.theme.*
 /**
  * The band of rarity colour down the left edge of an item.
  *
- * An item used to be framed in its rarity; the frame is gone, and this carries it instead — a
+ * An item is not framed in its rarity; this band carries it instead — a
  * bookmark in the edge of a page rather than a box drawn round it. It fades downwards so a long
  * card does not end in a stripe, and it needs its parent `Row` to be `height(IntrinsicSize.Min)`.
  */
@@ -66,7 +65,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Полоса редкости фоном (3.94.0): то же, что [RaritySpine], но рисуется за содержимым и не требует `IntrinsicSize.Min` у
+ * Полоса редкости фоном: то же, что [RaritySpine], но рисуется за содержимым и не требует `IntrinsicSize.Min` у
  * строки - кнопки внутри меряются как есть и не сжимаются. Содержимому нужен левый отступ не меньше [width].
  */
 fun Modifier.raritySpine(accent: Color, width: Dp = 4.dp): Modifier = drawBehind {
@@ -107,7 +106,7 @@ fun Modifier.raritySpine(accent: Color, width: Dp = 4.dp): Modifier = drawBehind
     Text(text.uppercase(), color = accent.copy(alpha = .75f), style = MaterialTheme.typography.labelSmall, modifier = modifier)
 }
 
-/** Тёмная земля каждого экрана; сверху - изумрудный свет «Глубины» (3.88.7), к низу - тень. */
+/** Тёмная земля каждого экрана; сверху - изумрудный свет «Глубины», к низу - тень. */
 fun Modifier.voidBackdrop(): Modifier = this.background(voidBrush()).drawBehind {
     drawCircle(
         Brush.radialGradient(listOf(Gold.copy(alpha = .16f), Color.Transparent), center = Offset(size.width * .5f, 0f), radius = size.width * .95f),

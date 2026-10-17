@@ -21,7 +21,7 @@ internal fun rarityTint(rarity: MonsterRarity) = when (rarity) {
 }
 
 /**
- * Цвет урона тика недуга [ailment] (0.15.0, реш. 43): яд - цветом своей плитки (зелёным), а не хаосом, как удар; прочие - цветом
+ * Цвет урона тика недуга [ailment]: яд - цветом своей плитки (зелёным), а не хаосом, как удар; прочие - цветом
  * вида урона [type].
  */
 internal fun tickTint(ailment: Ailment?, type: DamageType?, onHero: Boolean = false): Color = if (ailment == Ailment.POISONED) ailmentTint(ailment) else damageTint(type, onHero)
@@ -35,7 +35,7 @@ internal fun damageTint(type: DamageType?, onHero: Boolean = false): Color = whe
     else -> if (onHero) LifeRed else Parchment
 }
 
-/** Значок стихии у числа удара по герою (4.9.3): текстом, не эмодзи; у физики - без значка. */
+/** Значок стихии у числа удара по герою: текстом, не эмодзи; у физики - без значка. */
 internal fun damageGlyph(type: DamageType): String? = when (type) {
     DamageType.FIRE -> "✹"
     DamageType.COLD -> "❄\uFE0E"
@@ -62,7 +62,7 @@ internal fun Ailment.key() = "enum.ailment.$name"
 internal fun DamageType.key() = "enum.damage.$name"
 
 /**
- * What each effect's window says (2.72.0, a window growing out of the icon since 2.73.0): its name,
+ * What each effect's window says (a window growing out of the icon): its name,
  * the rule in words, and its figures — strength, seconds left, stacks.
  */
 internal fun ailmentTip(view: AilmentView) = Tip(
@@ -76,7 +76,7 @@ internal fun ailmentTip(view: AilmentView) = Tip(
     ),
 )
 
-/** Как окно недуга [ailment] пишет его силу [value] (4.11.0): урон в секунду, доля или срезанное восстановление запаса. */
+/** Как окно недуга [ailment] пишет его силу [value]: урон в секунду, доля или срезанное восстановление запаса. */
 private fun strengthFact(ailment: Ailment, value: Double): String = when (ailment) {
     Ailment.BURNING, Ailment.POISONED, Ailment.BLEEDING, Ailment.DRAINED -> ui("fight.fact_dps", fineNumber(value))
     Ailment.CHILLED, Ailment.FROZEN, Ailment.SHOCKED, Ailment.DECAYED -> ui("fight.fact_percent", fineNumber(value))

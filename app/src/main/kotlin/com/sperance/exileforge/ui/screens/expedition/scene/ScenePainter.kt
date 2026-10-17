@@ -50,13 +50,13 @@ internal class ScenePainter {
     /** The hero's class, whose portrait is the hero's token. */
     internal var classCode: String? = null
 
-    /** Босс этого захода запечатан (3.93.0). */
+    /** Босс этого захода запечатан. */
     private var sealed = false
 
     /** Анимации-декор включены (`LocalMotion`): без них декор стоит в покое ([decor]). */
     internal var motion = true
 
-    /** Значки материалов узлов ремесла по коду материала (4.7.0), их готовит сцена. */
+    /** Значки материалов узлов ремесла по коду материала, их готовит сцена. */
     internal var materials: Map<String, MaterialMark> = emptyMap()
 
     /** Слои земли и скалы карты: их даёт сцена ([ExpeditionScene]). */
@@ -65,13 +65,13 @@ internal class ScenePainter {
     /** Часы декора: при выключенных анимациях стоят на нуле. */
     internal val decor: Float get() = if (motion) time else 0f
 
-    /** Массивы скалы и контуры вод карты (4.2.0): считаются раз на карту и её правку. */
+    /** Массивы скалы и контуры вод карты: считаются раз на карту и её правку. */
     private var relief: MapRelief? = null
 
     /** Контуры стен карты: раз на карту, её правку, стиль и масштаб. */
     private var walls: WallRelief? = null
 
-    /** Пещера боя: её контуры и неподвижные кисти живут со сценой, а не собираются на кадр (4.9.0). */
+    /** Пещера боя: её контуры и неподвижные кисти живут со сценой, а не собираются на кадр. */
     private val stage = FightStage()
 
     /** Очередь стоящего (скала, жетоны, ориентиры) по глубине: одна на сцену, без новых записей на кадр. */
@@ -97,17 +97,15 @@ internal class ScenePainter {
         if (run.fight != null) stage.draw(scope, palette, time) else map(scope, run, palette)
     }
 
-    // ==================== The map ====================
-
-    // Изометрия ядра (0.14.5, #49): художник - та же матрица, что камера и стик; y здесь растёт вверх
+    // Изометрия ядра: художник - та же матрица, что камера и стик; y здесь растёт вверх
     internal fun isoX(x: Double, y: Double) = (IsoGrid.across(x, y) * unit).toFloat()
     internal fun isoY(x: Double, y: Double) = (-IsoGrid.down(x, y) * unit).toFloat()
 
-    /** Высота стены у клетки в клетках сцены (0.14.0, ASANA-N10); до первой раскладки стен - обычная. */
+    /** Высота стены у клетки в клетках сцены; до первой раскладки стен - обычная. */
     internal fun wallRise(x: Int, y: Int): Double = (walls?.height(x, y) ?: PLAIN_WALL).toDouble()
 
     /**
-     * Как освещена клетка (с 2.32.0): полностью у героя, к краю света тускнеет, увиденное прежде - тускло; свет считается от
+     * Как освещена клетка: полностью у героя, к краю света тускнеет, увиденное прежде - тускло; свет считается от
      * середины клетки героя без мерцания факела, так что земля и скала перезаписываются лишь со сменой клетки.
      */
     internal fun glow(x: Int, y: Int): Float {
@@ -125,6 +123,12 @@ internal class ScenePainter {
         return best
     }
 
+    /**
+     * Узор вод и пропастей - декор, без `LocalMotion` стоит. Герой чуть ниже середины: впереди больше карты, чем позади. Земля и скала -
+     * слоями, гладь течёт вживую поверх пола. Всё стоящее - сзади вперёд по x + y; выход и портал Ваал стоят по глубине, как всё стоящее.
+     * Объекты появляются, когда увидены; ловушка - только замеченная светом. Жетон - круг портрета; монстр виден лишь в свете героя или
+     * сквозь туман по Предначертанию. Очередь глубины одна на сцену, без копии на кадр; воздух (туман, искры, светлячки) - на часах декора.
+     */
     internal fun map(scope: DrawScope, run: ExpeditionRun, palette: Palette) {
         val world = run.world
         val map = world.map
@@ -132,12 +136,10 @@ internal class ScenePainter {
         val style = MapStyles.of(biome)
         val shape = MapRelief.of(map, world.shoreline, relief).also { relief = it }
         val rock = WallRelief.of(map, shape, style, MapGenerator.styleOf(run.index.campaign.expedition.shapeOf(biome).shape), palette, unit, walls).also { walls = it }
-        // Узор воды и пропастей - декор (4.2.0): без `LocalMotion` стоит
         frame.unit = unit
         frame.time = decor
         val width = scope.size.width
         val height = scope.size.height
-        // The hero stands a little below the middle: more of the map lies ahead of a player than behind.
         val cameraX = isoX(world.heroX, world.heroY)
         val cameraY = isoY(world.heroX, world.heroY) + unit
         val hx = floor(world.heroX).toInt()
@@ -146,14 +148,11 @@ internal class ScenePainter {
         lightX = hx + .5
         lightY = hy + .5
         lightRadius = world.lightRadius
-        // Земля и скала - слоями (T19): перезапись со сменой клетки героя, карты или «окон» в скале
         layers.refresh(this, scope, world, shape, rock, style, palette, biome, hx, hy)
         scope.translate(width / 2 - cameraX, height * SceneCamera.HERO_DOWN + cameraY) {
             layers.drawUnder(this)
-            // Гладь вод и пропастей течёт вживую по клеткам, что запомнил слой: под ней - пол, над ней - мелочь пола
             layers.drawPools(this@ScenePainter, frame, shape, style, palette, map.liquid)
             layers.drawOver(this)
-            // The torch's warmth on the ground, an ellipse because the ground is seen at a slant. Кисть одна - круг радиуса 1
             val hxs = isoX(world.heroX, world.heroY)
             val hys = -isoY(world.heroX, world.heroY)
             val warm = (world.lightRadius * unit * 1.414).toFloat()
@@ -163,77 +162,60 @@ internal class ScenePainter {
                 scale(warm, warm, Offset.Zero)
             }) { drawCircle(TorchWarmth, 1f, Offset.Zero) }
 
-            // Then everything that stands, back to front: rock, monsters and the hero by x + y.
             standing.clear()
-            // Скала - слоями кусков по глубине: слой встаёт в очередь глубиной своего первого куска
             for (i in 0 until layers.wallCount) standing.add(layers.wallDepth(i), Standing.WALLS, null, i)
-            // Выход и портал Ваал стоят по глубине, как всё стоящее (3.95.3): прежде их рисовала земля, и любая скала за ними
-            // ложилась поверх овала
             if (world.explored(map.exit.x, map.exit.y)) standing.add(map.exit.x + map.exit.y + 1.0, Standing.EXIT)
             world.portal?.takeIf { world.explored(it.x, it.y) }?.let { at -> standing.add(at.x + at.y + 1.0, Standing.VAAL_PORTAL, at) }
-            // A chest stands once the hero has seen its place (2.33.0); an opened one stays, open.
-            // A fountain stands once seen (2.48.0): brimming until drunk, dry after.
             for (fountain in world.fountains) if (world.explored(fountain.cell.x, fountain.cell.y)) standing.add(fountain.cell.x + fountain.cell.y + 1.0, Standing.FOUNTAIN, fountain)
             for (chest in world.chests) if (world.shows(chest)) standing.add(chest.cell.x + chest.cell.y + 1.0, Standing.CHEST, chest)
-            // A crystal of essences stands once seen (2.78.0): humming until its guardian is slain, dull after.
             for (spot in world.crystals) if (world.explored(spot.cell.x, spot.cell.y)) standing.add(spot.cell.x + spot.cell.y + 1.0, Standing.CRYSTAL, spot)
-            // A crack of the Abyss gapes once seen (2.82.0): breathing violet until opened, a dull scar after.
             for (spot in world.cracks) if (world.explored(spot.cell.x, spot.cell.y)) standing.add(spot.cell.x + spot.cell.y + .5, Standing.CRACK, spot)
-            // Объекты карты (3.90.0): каждый своим знаком, когда виден; ловушка - только замеченная светом.
             var blight: BlightSpot? = null
             for (spot in world.features) {
                 if (spot is BlightSpot && blight == null) blight = spot
                 if (spot.shown(world)) standFeature(standing, spot, world)
             }
-            // Since 2.31.0 whoever walks the map is a round token cut from their portrait's face: the
-            // class's for the hero, the monster's own or its form's for a monster, ringed by what it is.
-            // Since 2.32.0 a monster is drawn only where the hero's light reaches - или сквозь туман по Предначертанию (4.6.0).
             for (agent in world.agents) if (agent.alive && world.shows(agent)) standing.add(agent.x + agent.y, Standing.AGENT, agent)
             standing.add(world.heroX + world.heroY, Standing.HERO)
-            // По глубине, устойчиво и на месте (4.9.0): очередь одна на сцену, без копии на кадр
             standing.sort()
             for (i in 0 until standing.size) stand(this, run, world, blight, i)
             standing.clear()
         }
-        // The air over everything (2.64.0): fog, sparks or fireflies, by the biome's style - на часах декора (4.2.0).
         style.atmosphere(scope, palette, decor)
     }
 
-    /** Запись [i] очереди стоящего. */
+    /**
+     * Запись [i] очереди стоящего.
+     *
+     * Открытый сундук без ответа сервера приоткрыт и ждёт.
+     */
     private fun stand(scope: DrawScope, run: ExpeditionRun, world: ExpeditionWorld, blight: BlightSpot?, i: Int) {
         val ref = standing.ref(i)
         when (standing.kind(i)) {
             Standing.WALLS -> layers.drawWalls(scope, standing.part(i))
-
             Standing.EXIT -> portal(world.map.exit.x + .5, world.map.exit.y + .5, world.sealed)
-
             Standing.VAAL_PORTAL -> (ref as Cell).let { vaalPortal(it.x + .5, it.y + .5, glow(it.x, it.y)) }
-
             Standing.FOUNTAIN -> (ref as Fountain).let { drawFountain(it.cell.x + .5, it.cell.y + .5, it.used, glow(it.cell.x, it.cell.y)) }
-
-            // Открытый сундук без ответа сервера (4.10.0) приоткрыт и ждёт
             Standing.CHEST -> (ref as Chest).let { drawChest(it.cell.x + .5, it.cell.y + .5, it.opened, glow(it.cell.x, it.cell.y), run.waiting(it)) }
-
             Standing.CRYSTAL -> (ref as CrystalSpot).let { drawCrystal(it.cell.x + .5, it.cell.y + .5, it.freed, it.crystal.stronger, glow(it.cell.x, it.cell.y)) }
-
             Standing.CRACK -> (ref as AbyssSpot).let { drawCrack(it.cell.x + .5, it.cell.y + .5, it.opened, it.id, glow(it.cell.x, it.cell.y)) }
-
             Standing.FEATURE -> drawFeature(ref as FeatureSpot, standing.part(i), world)
-
             Standing.AGENT -> agent(ref as MonsterAgent, world, blight)
-
             else -> hero(run, world)
         }
     }
 
-    /** Жетон монстра [agent]: размер по редкости, качание по повадке, метка очага Скверны, печать стража. */
+    /**
+     * Жетон монстра [agent]: размер по редкости, качание по повадке, метка очага Скверны, печать стража.
+     *
+     * Жетон кольца очага Скверны «выпрыгивает» по очереди. Редкий монстр - крупнее; спящий сидит, засадный низко, охотник покачивается
+     * быстрее. Запечатанный босс - под фиолетовой пеленой.
+     */
     private fun agent(agent: MonsterAgent, world: ExpeditionWorld, blight: BlightSpot?) {
-        // Жетон кольца очага Скверны «выпрыгивает» по очереди (4.0.0); ещё не вставший не виден
         val pop = blight?.age(agent.id)?.let { (age, n) -> blightPop(age, n) } ?: 1f
         if (pop <= 0f) return
         val mark = blight.decorOf(agent.id)
         val monster = agent.monster
-        // A rarer monster is a bigger one: the tier is read before the ring is noticed.
         val size = pop * unit * when (monster.rarity) {
             MonsterRarity.NORMAL -> .7f
             MonsterRarity.MAGIC -> .8f
@@ -246,7 +228,6 @@ internal class ScenePainter {
             MonsterRarity.RARE -> Palettes.rare
             MonsterRarity.UNIQUE -> Palettes.unique
         }
-        // A sleeper sits still and a lurker low; whoever hunts bobs faster.
         val bob = when (agent.mode) {
             AgentMode.ASLEEP, AgentMode.LURKING -> 0f
             AgentMode.CHASING, AgentMode.HUNTING -> abs(sin(time * 8f + agent.id)) * unit * .12f
@@ -256,7 +237,6 @@ internal class ScenePainter {
         token(isoX(agent.x, agent.y), isoY(agent.x, agent.y), size, ring, bob, mark) {
             Portraits.monster(this, monster.code.value, monster.form, time)
             if (agent.mode == AgentMode.ASLEEP) drawRect(Asleep)
-            // Печать стража (3.93.0): запечатанный босс - под фиолетовой пеленой с бегущим кругом
             if (boss) {
                 drawRect(SealVeil.copy(alpha = .55f + .1f * sin(time * 2f)))
                 drawArc(SealArc, time * 90f, 270f, false, style = Strokes.of(drawContext.size.minDimension * .06f))
@@ -264,19 +244,20 @@ internal class ScenePainter {
         }
     }
 
-    /** Жетон героя: след скорости, ореол недугов, кольцо простоя у трещины. */
+    /**
+     * Жетон героя: след скорости, ореол недугов, кольцо простоя у трещины.
+     *
+     * След скорости, ореол ранящих недугов и кольцо простоя у трещины - декор.
+     */
     private fun hero(run: ExpeditionRun, world: ExpeditionWorld) {
         val bob = if (world.moving) abs(sin(time * 9f)) * unit * .14f else 0f
         val x = isoX(world.heroX, world.heroY)
         val y = isoY(world.heroX, world.heroY)
-        // След скорости (4.10.0): босс карты пал - за идущим героем тянутся штрихи; декор, без `LocalMotion` его нет
         if (run.swift && world.moving && motion) swiftTrail(x, y + unit * HERO_TOKEN * TOKEN_MID + bob, world.facingX, world.facingY)
-        // Ореол ранящих недугов (макет «Эффекты героя на карте», вариант C): яд, горение, кровотечение - кольцо их цвета; декор
         val centre = Offset(x, -y - unit * HERO_TOKEN * TOKEN_MID - bob)
         ailmentHalo(centre, run.hud.value.heroAilments)
         val code = classCode
         token(x, y, unit * HERO_TOKEN, Palettes.hero, bob) { Portraits.hero(this, code, time) }
-        // Простой у трещины (4.9.0, макет «Ломание трещины», вариант B): кольцо вокруг жетона героя, пока трещина поддаётся
         for (spot in world.features) {
             val progress = (spot.cue(world) as? EntranceCue.Crack)?.progress ?: continue
             if (progress > 0f) crackRing(centre, progress)
@@ -289,7 +270,6 @@ internal class ScenePainter {
      * мерцают на часах декора.
      */
     private fun swiftTrail(x: Float, y: Float, facingX: Double, facingY: Double) {
-        // Направление назад на экране: изометрия клетки, как у [isoX] и [isoY]
         val backX = -(facingX - facingY).toFloat()
         val backY = (facingX + facingY).toFloat() / 2
         val length = hypot(backX, backY).takeIf { it > 0f } ?: return
@@ -342,13 +322,12 @@ internal class ScenePainter {
     )
 
     /**
-     * «Окно» в скале вокруг точки карты ([x], [y]) (4.2.0): скала перед ней по ходу камеры прозрачна до [WINDOW_ALPHA] в центре
+     * «Окно» в скале вокруг точки карты ([x], [y]): скала перед ней по ходу камеры прозрачна до [WINDOW_ALPHA] в центре
      * и плавно плотнеет к краю круга в [WINDOW_CELLS] клеток на экране; скала за точкой не трогается.
      */
     internal inner class Window(val x: Double, val y: Double) {
         fun alpha(cx: Int, cy: Int): Float {
             if (cx + cy + 1.0 <= x + y) return 1f
-            // Расстояние на экране: середина скалы по высоте против середины жетона
             val dx = isoX(cx + .5, cy + .5) - isoX(x, y)
             val dy = isoY(cx + .5, cy + .5) + unit * WALL_MID - (isoY(x, y) + unit * TOKEN_MID)
             val d = (hypot(dx, dy) / (unit * WINDOW_CELLS * CELL_STEP)).coerceIn(0f, 1f)
@@ -360,7 +339,7 @@ internal class ScenePainter {
     /**
      * A token standing on its feet at ([x], [y]) in the pen's upward measure: a shadow on the floor
      * and the disc above it, lifted by [bob]. The pen turns `y` over; a token is drawn on the scope
-     * itself, so it turns it over here. [decor] - метка жетона слоем под ним и над ним (4.3.0), на часах декора.
+     * itself, so it turns it over here. [decor] - метка жетона слоем под ним и над ним, на часах декора.
      */
     internal inline fun token(x: Float, y: Float, radius: Float, ring: Color, bob: Float, decor: TokenDecor? = null, draw: DrawScope.() -> Unit) {
         val scope = pen.scope
@@ -382,10 +361,10 @@ internal class ScenePainter {
     internal fun diamond(cx: Float, cy: Float, halfWidth: Float, halfHeight: Float) = pen.quad(cx - halfWidth, cy, cx, cy + halfHeight, cx + halfWidth, cy, cx, cy - halfHeight)
 }
 
-/** Прозрачность скалы в центре «окна» (4.2.0; 4.7.0 - почти насквозь). */
+/** Прозрачность скалы в центре «окна» (почти насквозь). */
 private const val WINDOW_ALPHA = .08f
 
-/** Радиус «окна» в клетках (4.2.0; 4.7.0 - шире: стены, закрывающие героя и ямы). */
+/** Радиус «окна» в клетках (шире: стены, закрывающие героя и ямы). */
 private const val WINDOW_CELLS = 5f
 
 /** Шаг клетки на экране в полуширинах клетки: сдвиг на клетку по x - полуширина вбок и четверть ширины вниз. */
@@ -398,7 +377,7 @@ internal const val TOKEN_MID = 1.1f
 /** Тень жетона на полу. */
 internal val TokenShadow = Color.Black.copy(alpha = .45f)
 
-/** Пелена спящего монстра и печать запечатанного стража (3.93.0). */
+/** Пелена спящего монстра и печать запечатанного стража. */
 private val Asleep = Color.Black.copy(alpha = .35f)
 private val SealVeil = Color(0xFF2A1040)
 private val SealArc = Color(0xFFB07CFF)
@@ -406,13 +385,13 @@ private val SealArc = Color(0xFFB07CFF)
 /** Тепло факела на земле: круг радиуса 1, растянутый на свет героя. */
 private val TorchWarmth = Brush.radialGradient(listOf(Palettes.torch.copy(alpha = .16f), Palettes.torch.copy(alpha = .05f), Color.Transparent), Offset.Zero, 1f)
 
-/** Монстры, что гонятся за героем: вокруг них в скале тоже «окно» (4.2.0). */
+/** Монстры, что гонятся за героем: вокруг них в скале тоже «окно». */
 internal val ENGAGED = setOf(AgentMode.CHASING, AgentMode.HUNTING)
 
 /** Жетон героя: радиус в полуширинах клетки. */
 private const val HERO_TOKEN = .85f
 
-/** Кольцо простоя у трещины (4.9.0): радиус в радиусах жетона и толщина нити в полуширинах клетки. */
+/** Кольцо простоя у трещины: радиус в радиусах жетона и толщина нити в полуширинах клетки. */
 private const val RING_SPAN = 1.35f
 private const val RING_WIDTH = .2f
 
@@ -422,16 +401,16 @@ private const val HALO_STEP = .14f
 private const val HALO_WIDTH = .09f
 private const val HALO_BREATH = 3.2f
 
-/** Цвета трещины (4.9.0, макет «Ломание трещины»): дорожка кольца, дуга простоя и подпись над героем. */
+/** Цвета трещины: дорожка кольца, дуга простоя и подпись над героем. */
 private val CrackTrack = Color(0xFF1F2C35)
 private val CrackHue = Color(0xFFA26BFF)
 internal val CrackText = Color(0xFFCDB6FF)
 
-/** След скорости после босса (4.10.0): сколько штрихов и их цвет - руна, как значок «быстрее» над картой. */
+/** След скорости после босса: сколько штрихов и их цвет - руна, как значок «быстрее» над картой. */
 private const val SWIFT_STREAKS = 3
 internal val SwiftHue = Color(0xFF8FD3FF)
 
-/** Есть ли среди клетки и восьми её соседей ([dx], [dy] в -1..1) такая, что [test] (4.9.0: без диапазонов на клетку кадра). */
+/** Есть ли среди клетки и восьми её соседей ([dx], [dy] в -1..1) такая, что [test] (без диапазонов на клетку кадра). */
 internal inline fun nearby(test: (dx: Int, dy: Int) -> Boolean): Boolean {
     for (dy in -1..1) for (dx in -1..1) if (test(dx, dy)) return true
     return false

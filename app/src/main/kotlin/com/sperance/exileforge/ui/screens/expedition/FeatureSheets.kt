@@ -70,7 +70,7 @@ import kotlin.math.ceil
 import kotlin.math.roundToInt
 
 /**
- * Лист объекта карты (3.90.0, сервер 1.81.3), по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
+ * Лист объекта карты, по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
  * открывают - они срабатывают сами (очаг Скверны - касанием точки и сундука).
  */
 @Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, gathering: () -> Float? = { view.gathering }, onCommand: (RunCommand) -> Unit) {
@@ -83,9 +83,11 @@ import kotlin.math.roundToInt
 }
 
 /**
- * Алтарь (0.14.0, ALTAR-01, в духе Eldritch): готовые варианты - у каждого цель (герой, монстры карты, босс карты) и связанная пара
+ * Алтарь (в духе Eldritch): готовые варианты - у каждого цель (герой, монстры карты, босс карты) и связанная пара
  * «минус цели - награда» строками модификаторов, как их пишет словарь сервера; выбрать один или пройти мимо ([onLeave]). Панель над
  * картой, как у кристалла.
+ *
+ * Минус сделки открывает свой лист: что меняет и что действует до конца карты.
  */
 @Composable internal fun AltarSheet(game: GameUi, altar: MapFeature.Altar, onLeave: () -> Unit, onPick: (Int) -> Unit) {
     val index = game.index ?: return
@@ -105,7 +107,6 @@ import kotlin.math.roundToInt
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(ui("feature.altar.target.${pact.target.name}"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
-                    // Минус сделки (3.92.0) открывает свой лист: что меняет и что действует до конца карты
                     val lore = LocalLore.current
                     Column(
                         Modifier.fillMaxWidth().then(
@@ -126,7 +127,7 @@ import kotlin.math.roundToInt
 }
 
 /**
- * Единый шаблон листа объекта карты (4.12.x, ASANA-12, макет «Окно сбора», вариант C): метка вида [kind] цветом [tone], гнездо с
+ * Единый шаблон листа объекта карты: метка вида [kind] цветом [tone], гнездо с
  * иконкой [icon], имя [name] серифом и подпись [sub], факты фишками [facts], своё тело [body] (товары, полоса сбора) и действия
  * [actions] одной строкой. Новый объект карты с листом - этот шаблон, а не своя вёрстка.
  */
@@ -185,7 +186,9 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
 
 /**
  * Странствующий торговец (шаблон объекта карты): вещи плитами, цена на кнопке; купленное помечено, золота не хватает - кнопка
- * не нажимается. Нажатие на товар открывает полную карточку со сравнением с надетым - ту же, что у лавки Города (4.2.0).
+ * не нажимается. Нажатие на товар открывает полную карточку со сравнением с надетым - ту же, что у лавки Города.
+ *
+ * Скидка против витрины Города - множитель цены торговца из правил меньше единицы; цена против кошелька - чип «цена / есть».
  */
 @Composable private fun MerchantSheet(game: GameUi, merchant: MapFeature.Merchant, bought: List<Int>, onCommand: (RunCommand) -> Unit) {
     val money = game.hero?.money ?: 0L
@@ -199,7 +202,6 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
         facts = listOfNotNull(
             FeatureFact(ui("feature.merchant.left", left)),
             FeatureFact(ui("feature.merchant.bought", bought.size), Vital).takeIf { bought.isNotEmpty() },
-            // Скидка против витрины Города (0.15.0): множитель цены торговца из правил меньше единицы
             game.index?.campaign?.features?.merchant?.markup?.takeIf { it < 1 }?.let { FeatureFact(ui("feature.merchant.discount", number((1 - it) * 100)), Vital) },
         ),
         icon = { Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(28.dp)) },
@@ -215,7 +217,6 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
                         if (sold) {
                             Text(ui("feature.merchant.sold"), color = Vital, style = MaterialTheme.typography.labelMedium)
                         } else {
-                            // Цена против кошелька (0.14.5, #42): чип «цена / есть», не хватает - кнопка пишет недостачу
                             val bill = game.goldBill(offer.price)
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 bill?.let { GoldCost(it) }
@@ -242,9 +243,11 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
 }
 
 /**
- * Узел ремесла (шаблон объекта карты, 4.12.x ASANA-12): ресурс в гнезде, профессия и её уровень, факты фишками - сколько штук,
- * опыт ремесла, сколько уже есть, инструмент (надет - зелёным, нет - красным «нужен»). Под стражами сокровищ ([guarded], 4.9.0)
- * сбор не начать, пока они стоят; идущий сбор - полоса, что идёт по кадру ([gathering], ASANA-06).
+ * Узел ремесла (шаблон объекта карты): ресурс в гнезде, профессия и её уровень, факты фишками - сколько штук,
+ * опыт ремесла, сколько уже есть, инструмент (надет - зелёным, нет - красным «нужен»). Под стражами сокровищ ([guarded])
+ * сбор не начать, пока они стоят; идущий сбор - полоса, что идёт по кадру ([gathering]).
+ *
+ * Доля сбора читается в рисовании полосы по кадру: лист не перекомпонуется на её шаге.
  */
 @Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, busy: Boolean, gathering: () -> Float?, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
     val index = game.index
@@ -273,7 +276,6 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
                     Text(ui("feature.node.gathering"), color = Rune, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
                     Text(ui("feature.node.seconds", number(node.seconds)), color = Vital, style = MaterialTheme.typography.labelMedium)
                 }
-                // Доля сбора читается в рисовании полосы по кадру: лист не перекомпонуется на каждом её шаге
                 Box(
                     Modifier.fillMaxWidth().height(10.dp).background(Abyss, RoundedCornerShape(5.dp)).drawBehind {
                         val share = (gathering() ?: 0f).coerceIn(0f, 1f)
@@ -293,7 +295,7 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
 }
 
 /**
- * Над героем у входа в комнату (4.9.0, макет «Ломание трещины», вариант B «Кольцо над героем»): кольцо простоя рисует сцена
+ * Над героем у входа в комнату: кольцо простоя рисует сцена
  * вокруг жетона, здесь - строка над ним: «Трещина поддаётся · N%», при нуле - «стой рядом»; у запертой двери - «Заперто. Найди
  * рычаг поблизости». Стоит над кольцом, выше чисел урона.
  */
@@ -319,24 +321,25 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
 private const val ENTRANCE_LIFT = 2.3f
 
 /**
- * Урон карты над героем (3.94.1; 4.2.0 - одной строкой): удар ловушки - «−12 Хаос · Яд: 3% здоровья/с, 6 с» цветом её урона,
+ * Урон карты над героем (одной строкой): удар ловушки - «−12 Хаос · Яд: 3% здоровья/с, 6 с» цветом её урона,
  * щит и здоровье вместе; тики состояния - мелким курсивом, как в бою. Число встаёт над жетоном героя - камера держит его чуть
  * ниже середины - и уплывает вверх, гаснет; без анимаций висит, пока видно.
+ *
+ * Ноги героя - на 55% высоты и полтайла ниже, жетон над ними - около двух полутайлов.
  */
 @Composable internal fun HazardFloat(hazards: List<HazardView>) {
     if (hazards.isEmpty()) return
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // Ноги героя - на 55% высоты и полтайла ниже; жетон над ними - около двух полутайлов.
         val feet = maxHeight * .55f + SCENE_UNIT - SCENE_UNIT * 2.6f
         hazards.forEach { hazard -> androidx.compose.runtime.key(hazard.id) { HazardNumber(hazard, feet) } }
     }
 }
 
+/** Тик чуть в стороне от удара: оба читаются, пока удар висит; тик недуга - «−34» и знак недуга его цветом. */
 @Composable private fun BoxWithConstraintsScope.HazardNumber(hazard: HazardView, feet: Dp) {
     val motion = LocalSettings.current.animations
     val rise = remember { Animatable(0f) }
     LaunchedEffect(Unit) { if (motion) rise.animateTo(1f, tween(if (hazard.tick) HAZARD_TICK_MS else HAZARD_FLOAT_MS, easing = LinearOutSlowInEasing)) }
-    // Тик чуть в стороне от удара: оба читаются, когда эффект тикает, пока удар ещё висит
     val side = if (hazard.tick) SCENE_UNIT * .9f else 0.dp
     Column(
         Modifier.align(Alignment.TopCenter).offset(x = side, y = feet - SCENE_UNIT * rise.value).alpha(1f - rise.value * .8f),
@@ -345,7 +348,6 @@ private const val ENTRANCE_LIFT = 2.3f
         val tint = damageTint(hazard.type, onHero = true)
         val ticked = hazard.of
         if (ticked != null) {
-            // Тик недуга (макет «Эффекты героя на карте», вариант C): «−34» и знак недуга его цветом
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(ui("trap.float", hazard.total), color = tint, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, style = MaterialTheme.typography.labelMedium)
                 val glyph = ailmentTint(ticked)
@@ -357,7 +359,7 @@ private const val ENTRANCE_LIFT = 2.3f
     }
 }
 
-/** Удар ловушки одной строкой (4.2.0): сколько снял и чем, затем её состояние - сколько здоровья в секунду и сколько секунд. */
+/** Удар ловушки одной строкой: сколько снял и чем, затем её состояние - сколько здоровья в секунду и сколько секунд. */
 private fun hazardLine(hazard: HazardView): String {
     val type = ui(hazard.type.key())
     val ailment = hazard.ailment ?: return ui("trap.hit", hazard.total, type)

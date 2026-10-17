@@ -98,12 +98,16 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** Карточка узла (3.80.16): описание, действия, самоцвет в гнезде, «Итого». */
+/** Карточка узла: описание, действия, самоцвет в гнезде, «Итого». */
 /**
  * The chosen node: what it gives, and the commands the server accepts for it.
  *
  * A socket is the exception, because it gives nothing by itself — what it holds is a jewel, and
  * the command there is to put one in or take it out.
+ *
+ * Взятый вариант читается из снимка. Узел мастерства или атрибута - один вариант при взятии; атрибут меняется за Сферу хаоса, мастерство
+ * нет. Термины строк открывают свои правила. Возврат держится секунду; узел, без которого ветка оторвётся, правила не отдадут - кнопка
+ * гаснет с причиной. Причина отказа взять - та же, что вернул бы сервер.
  */
 @Composable internal fun NodeDetails(
     game: GameUi,
@@ -137,10 +141,8 @@ import kotlin.math.sin
     val cost = index.tree.cost(node)
     val options = node.options
     val choosing = options.isNotEmpty()
-    // The option the hero took is theirs: it is read from the snapshot, not from the tree.
     val chosen = game.hero?.tree?.firstOrNull { it.code == node.code }?.choice
     var picked by remember(node.code) { mutableStateOf<Int?>(null) }
-    // The node's name heads the card in its own colour, with its kind, its price and whether it is taken under it.
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(nodeTitle(node.code), color = nodeColour(node, true), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
@@ -157,8 +159,6 @@ import kotlin.math.sin
     if (node.type == SkillNodeType.JEWEL_SOCKET) {
         SocketContents(game, index, node, allocated, enabled, onSocket, onUnsocket)
     } else if (choosing) {
-        // A mastery or an attribute node (server 0.52.0): one option, chosen when it is taken. A taken
-        // attribute node may change it for a Chaos Orb (2.72.0, server 0.63.0); a mastery may not.
         val rechoosable = allocated && node.type == SkillNodeType.ATTRIBUTE
         MutedText(
             ui(
@@ -202,17 +202,13 @@ import kotlin.math.sin
 
     if (!allocated) AllocationChange(game, index, node, picked.takeIf { choosing })
 
-    // The game's words the lines use (3.81.0): «Всплеск магии», a charge, an ailment — each with its rule on a tap.
     val terms = remember(node.code, index) { Term.ofLines(index, node.lines + node.options.flatten()) }
     TermsBlock(terms, index.campaign.combat)
 
     if (allocated) {
-        // A refund is held for a second (3.81.0): a tap on the wrong node no longer costs the point. Узел, без которого ветка
-        // оторвётся, правила не отдадут (3.94.1): кнопка гаснет, причина - под ней, запрос не уходит.
         val refusal = remember(node.code, taken) { ruleRefusal { TreeAllocation.requireRefundable(index.tree, node, taken) } }
         HoldButton(ui("tree.refund"), LifeRed, Modifier.fillMaxWidth(), enabled = enabled && refusal == null, rearm = true, millis = REFUND_HOLD_MS) { onRefund(node.code) }
         if (refusal != null && node.type != SkillNodeType.START) Text(refusal, color = LifeRed, style = MaterialTheme.typography.bodySmall)
-        // The branch (3.54.0, server 1.52.0): this node and everything that would hang loose without it, an Orb of Regret each.
         val branch = remember(node.code, taken) { runCatching { TreeAllocation.branch(index.tree, node, taken) }.getOrNull().orEmpty() }
         if (branch.size > 1) {
             val owned = game.bagAmount(Orb.ORB_OF_REGRET.name) ?: 0L
@@ -224,7 +220,6 @@ import kotlin.math.sin
     } else if (start == null) {
         MutedText(ui("tree.path_none"))
     } else {
-        // Почему узел не взять - причина правил (4.3.0), та же, что вернул бы сервер: сначала место узла, затем очки.
         val placement = remember(node.code, taken, start) { TreeAllocation.placement(index.tree, node, taken, start) }
         if (placement == null) {
             val short = remember(node.code, taken, start, available) { TreeAllocation.refusal(index.tree, node, taken, start, available) }
@@ -247,7 +242,7 @@ import kotlin.math.sin
 }
 
 /**
- * Что станет с листом героя, если взять узел (макет «Изменения характеристик», вариант B): сравнение «было → стало» тем же
+ * Что станет с листом героя, если взять узел: сравнение «было → стало» тем же
  * расчётом, что сервер, сложенное вне главного потока, без запроса. У узла с выбором - по выбранному варианту [choice],
  * пока вариант не выбран - ничего; гнездо самоцвета само ничего не даёт.
  */
@@ -277,6 +272,9 @@ import kotlin.math.sin
  * A jewel is an ordinary item, so the stash is where the candidates come from: every jewel the hero
  * owns that is neither worn nor already in another socket. Whether this one may go in is still the
  * server's call — the socket has to be taken and free — so the list offers and the refusal explains.
+ *
+ * Имя гнезда - тема, а не бонус. Взятое гнездо может держать бездействующий самоцвет (вторая копия уникального) - причина листа; уникальный
+ * самоцвет, уже стоящий в другом гнезде, ждёт и говорит почему.
  */
 @Composable internal fun SocketContents(
     game: GameUi,
@@ -290,11 +288,9 @@ import kotlin.math.sin
     val hero = game.hero ?: return
     val inside = hero.jewels[node.code]
     val inspect = rememberInspect()
-    // Имя гнезда - тема, а не бонус (3.95.1): «Гнездо: точность» само ничего не даёт, игрок ждал от него баффа.
     MutedText(ui("tree.socket_hint"))
 
     if (inside != null) {
-        // A taken socket may still hold a jewel that does nothing - a second copy of a unique one (1.31.0): the sheet's reason.
         val idle = hero.inactive[inside.id]?.joinToString("\n") { requirementReason(it, game.lang) }
         game.view(inside)?.let { jewel ->
             ItemRow(
@@ -326,7 +322,6 @@ import kotlin.math.sin
     }
     Engraved(ui("tree.jewel_in"))
     free.forEach { instance ->
-        // A unique jewel already in another socket (server 1.31.0): one of its kind per hero, so this copy waits, and says why.
         val single = hero.jewelFree(index, instance)
         game.view(instance)?.let { jewel ->
             ItemRow(
@@ -335,7 +330,6 @@ import kotlin.math.sin
                 note = if (single) null else ui("tree.jewel_unique_taken"),
                 noteColor = LifeRed,
             ) {
-                // Касание - карточка самоцвета (4.3.2), в гнездо его ставит её кнопка
                 inspect(Inspect.Copy(instance, InspectAction(ui("tree.jewel_in"), enabled = enabled && single) { onSocket(instance.id, node.code) }))
             }
         }
@@ -345,7 +339,7 @@ import kotlin.math.sin
 internal fun nodes(n: Int) = plural("tree.node", n)
 
 /**
- * Строка вклада дерева (4.9.2): одна на характеристику, части через « · » в порядке правил ([StatTotal]) - своя характеристика,
+ * Строка вклада дерева: одна на характеристику, части через « · » в порядке правил ([StatTotal]) - своя характеристика,
  * затем её доли (`partOf`); без условия раньше условных, внутри - ADD · INCREASED · MORE · SET.
  */
 internal fun contributionText(total: StatTotal, index: ContentIndex?): String = total.parts.joinToString(PART_GLUE) { partText(total.stat, it, index) }
@@ -382,13 +376,15 @@ private const val PART_GLUE = " · "
     )
 }
 
-/** The tree's bonuses as the rules sum them (3.54.0: behind «Итого» as well as in the details). */
+/**
+ * The tree's bonuses as the rules sum them (behind «Итого» as well as in the details).
+ *
+ * Сумму считают правила: два «увеличения» складываются, два «больше» множатся. Это вклад дерева, не итог героя.
+ */
 @Composable internal fun TreeTotals(game: GameUi, tree: com.sperance.exileforge.core.model.tree.TreeState) {
     ForgePanel(accent = Rune) {
         Engraved(ui("tree.totals_title"), Rune)
         if (tree.totals.isEmpty()) Text(ui("tree.totals_empty"), color = Muted)
-        // The rules sum this: two INCREASED add up while two MORE multiply, so adding the snapshots here would lie exactly
-        // where a player is choosing. It is the tree's contribution, not the character's total.
         tree.totals.forEach { total -> PropertyRow(statTitle(total.stat, game.lang), contributionText(total, game.index), stat = total.stat) }
     }
 }

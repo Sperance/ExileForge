@@ -44,9 +44,12 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * The blows so far, newest first: when, who, what came of it - and the target's life before and after (3.88.8).
- * Живой журнал (4.9.3): пока игрок наверху, новая строка держит список на ней; отлистал вниз - список стоит, а кнопка
+ * The blows so far, newest first: when, who, what came of it - and the target's life before and after.
+ * Живой журнал: пока игрок наверху, новая строка держит список на ней; отлистал вниз - список стоит, а кнопка
  * «↑ новое (N)» считает пришедшие строки; касание кнопки или возврат наверх снова держат список на новой.
+ *
+ * Игрок листает - следование снято; наверху - снова следим. Ключ строки - её место от начала боя: новая строка сверху не сдвигает ключи
+ * прочих.
  */
 @Composable internal fun FightLog(events: List<CombatEvent>, names: Map<Int, String>, modifier: Modifier = Modifier, onOpen: ((CombatEvent) -> Unit)? = null) {
     val shifts = remember(events) { lifeShifts(events.asReversed()).asReversed() }
@@ -55,7 +58,6 @@ import kotlin.math.roundToInt
     var follow by remember { mutableStateOf(true) }
     var seen by remember { mutableIntStateOf(events.size) }
     fun atTop() = state.firstVisibleItemIndex == 0 && state.firstVisibleItemScrollOffset == 0
-    // Игрок листает пальцем - следование снято; отпустил наверху или список докатился до верха - снова следим
     LaunchedEffect(state) {
         launch {
             state.interactionSource.interactions.collect { interaction ->
@@ -67,7 +69,6 @@ import kotlin.math.roundToInt
         }
         snapshotFlow { atTop() }.collect { top -> if (top) follow = true }
     }
-    // Новая строка сверху: список держит прежнюю по ключу, следуя - возвращаемся к новой
     LaunchedEffect(events.size, follow) {
         if (follow) {
             seen = events.size
@@ -76,7 +77,6 @@ import kotlin.math.roundToInt
     }
     Box(modifier.fillMaxWidth()) {
         LazyColumn(Modifier.fillMaxWidth(), state = state, verticalArrangement = Arrangement.spacedBy(1.dp)) {
-            // Ключ - место строки от начала боя (4.9.0): новая строка сверху не сдвигает ключи прочих, их строки не перекомпонуются
             itemsIndexed(events, key = { i, _ -> events.size - i }) { i, event -> EventRow(event, event.time, names[event.foe].orEmpty(), shifts.getOrNull(i), onOpen) }
         }
         val fresh = events.size - seen
@@ -99,15 +99,15 @@ import kotlin.math.roundToInt
 private sealed interface PackRow {
     data class Head(val text: String) : PackRow
 
-    /** [at] (3.91.1) - секунда шага целиком: бой начинается с [PackHit.start], а время его событий - с нуля. */
+    /** [at] - секунда шага целиком: бой начинается с [PackHit.start], а время его событий - с нуля. */
     data class Line(val event: CombatEvent, val name: String, val shift: LifeShift?, val at: Double = event.time) : PackRow
 }
 
-/** Здоровье цели строки до удара и после (3.88.8), как его показывает экран боя. */
+/** Здоровье цели строки до удара и после, как его показывает экран боя. */
 internal data class LifeShift(val before: Int, val after: Int)
 
 /**
- * «ХП было → стало» для каждой строки [events] в порядке времени (3.88.8): «было» - здоровье цели после её прошлой строки
+ * «ХП было → стало» для каждой строки [events] в порядке времени: «было» - здоровье цели после её прошлой строки
  * в этом бою, у первой - после удара плюс урон. Строки без урона и лечения и заметки - без него.
  */
 internal fun lifeShifts(events: List<CombatEvent>): List<LifeShift?> {
@@ -132,10 +132,12 @@ internal fun lifeShifts(events: List<CombatEvent>): List<LifeShift?> {
 private const val HERO_KEY = -1
 
 /**
- * The log of a whole pack (since 2.54.0): one list, each foe's blows under its own name — a mixed
+ * The log of a whole pack: one list, each foe's blows under its own name — a mixed
  * pack's «they hit» lines would otherwise all say the wrong name. A caption between them names which
- * of the pack it was, only when there was more than one. [toDeath] (3.70.0) opens it on the blow that
+ * of the pack it was, only when there was more than one. [toDeath] opens it on the blow that
  * felled the hero, or at its end.
+ *
+ * Лента по времени по умолчанию; бои шага испытания - подряд со сквозным временем.
  */
 @Composable internal fun FightLog(
     pack: List<PackHit>,
@@ -144,7 +146,6 @@ private const val HERO_KEY = -1
     toDeath: Boolean = false,
     onOpen: ((CombatEvent, String) -> Unit)? = null,
 ) {
-    // Лента по времени по умолчанию (3.88.8): удары всей стаи по порядку; по противникам - каждый под своим именем.
     var byFoe by rememberSaveable { mutableStateOf(false) }
     val rows = remember(pack, shown, byFoe) {
         val names = pack.map { monsterTitle(it.monster.code) }
@@ -156,7 +157,6 @@ private const val HERO_KEY = -1
                     hit.events.forEachIndexed { i, event -> if (LogKind.of(event) in shown) add(PackRow.Line(event, names[index], shifts[i])) }
                 }
             } else {
-                // Бои шага испытания (3.91.1) - подряд, со сквозным временем: внутри боя удары стаи по порядку, между ними - подпись.
                 val stages = pack.withIndex().groupBy { it.value.start }.entries.sortedBy { it.key }
                 stages.forEachIndexed { stage, (start, hits) ->
                     if (stages.size > 1) add(PackRow.Head(ui("expedition.log_stage", stage + 1, hits.joinToString { names[it.index] })))
@@ -190,7 +190,6 @@ private const val HERO_KEY = -1
 }
 
 @Composable private fun EventRow(event: CombatEvent, at: Double, monster: String, shift: LifeShift?, onOpen: ((CombatEvent) -> Unit)? = null) {
-    // Умение врага и удар фазы (3.92.0) открывают свой лист; иная строка с разбором - его карточку (3.37.0)
     val lore = LocalLore.current
     val skill = event.skill?.takeIf { event.actor == Side.MONSTER && event.action != Action.NOTE }
     val tap = when {
@@ -218,11 +217,14 @@ private const val HERO_KEY = -1
     }
 }
 
+/**
+ * Шипы и отражение - удар назад от ударенного; уклонение и блок - у того, по кому били; умение называет удар или кто и на кого; заметка -
+ * что случилось без удара.
+ */
 private fun logLine(event: CombatEvent, monster: String): String {
     val damage = event.damage.roundToInt()
     val hero = event.actor == Side.HERO
     val line = when (event.action) {
-        // Thorns and reflect (2.75.0): the one who was struck gives a blow back.
         Action.REFLECT -> if (hero) ui("expedition.log_reflect_you", monster, damage) else ui("expedition.log_reflect_they", monster, damage)
 
         Action.TICK -> {
@@ -232,16 +234,11 @@ private fun logLine(event: CombatEvent, monster: String): String {
 
         Action.ATTACK -> when (event.kind) {
             HitKind.HIT -> if (hero) ui("expedition.log_you_hit", damage) else ui("expedition.log_they_hit", monster, damage)
-
             HitKind.CRIT -> if (hero) ui("expedition.log_you_crit", damage) else ui("expedition.log_they_crit", monster, damage)
-
-            // An evasion or a block belongs to the one who was struck at.
             HitKind.EVADED -> if (hero) ui("expedition.log_they_evade", monster) else ui("expedition.log_you_evade")
-
             HitKind.BLOCKED -> if (hero) ui("expedition.log_they_block", monster) else ui("expedition.log_you_block")
         }
 
-        // A skill (2.78.0): a blow names it, anything else says who used it and on whom.
         Action.SKILL -> {
             val skill = SkillText.title(event.skill.orEmpty())
             when {
@@ -265,10 +262,8 @@ private fun logLine(event: CombatEvent, monster: String): String {
         Action.FLASK -> ui("expedition.log_flask", equipmentTitle(event.skill.orEmpty())) +
             (if (event.healed >= 1) " · +${event.healed.roundToInt()}" else "")
 
-        // A note (3.37.0): what happened without a blow, by the trace that carries it.
         Action.NOTE -> noteLine(event, monster)
     }
-    // The blow's leading element and what it left behind, as words after the sentence.
     val marks = buildList {
         event.type?.takeIf { event.action.strikes && event.landed && event.damage > 0 && it != DamageType.PHYSICAL }?.let { add(ui(it.key())) }
         if (event.stunned) add(ui("expedition.stunned"))
@@ -311,18 +306,18 @@ internal fun noteLine(event: CombatEvent, monster: String): String {
     }
 }
 
-/** Строка применения умения (4.12.x, SKILL-01): своя у героя, у врага - с его именем ([key] с `_foe`). */
+/** Строка применения умения: своя у героя, у врага - с его именем ([key] с `_foe`). */
 private fun castLine(key: String, event: CombatEvent, monster: String, vararg args: Any): String = if (event.actor == Side.HERO) {
     ui(key, *args)
 } else {
     ui("${key}_foe", monster, *args)
 }
 
-/** Итог здоровья за секунду (4.9.3): «Здоровье −12/с · реген +8 · деген 2%». */
+/** Итог здоровья за секунду: «Здоровье −12/с · реген +8 · деген 2%». */
 private fun lifeFlowLine(flow: LifeFlow): String = ui("expedition.log_note_life_flow", ui("fight.flow.rate", flowNumber(flow.net)), flowParts(flow))
 
 /**
- * Срабатывание Предначертания (4.9.0): «✦ дар: что сделал рычаг» словами `expedition.fate_beat.<срабатывание>` - числа по порядку,
+ * Срабатывание Предначертания: «✦ дар: что сделал рычаг» словами `expedition.fate_beat.<срабатывание>` - числа по порядку,
  * предмет (недуг, умение) последним; свёртка частого - «ещё ×N» и итог.
  */
 internal fun fateLine(trace: FateTrace): String {
@@ -336,7 +331,7 @@ internal fun fateLine(trace: FateTrace): String {
     return if (trace.repeats > 0) ui("expedition.log_fate_fold", fate, trace.repeats, text) else ui("expedition.log_fate", fate, text)
 }
 
-/** Цвет строки журнала; итог здоровья (4.9.3) - убыль красным, прибыль зелёным. */
+/** Цвет строки журнала; итог здоровья - убыль красным, прибыль зелёным. */
 private fun logColour(event: CombatEvent): Color = when {
     (event.trace as? NoteTrace)?.kind == NoteKind.LIFE_FLOW -> flowTint((event.trace as NoteTrace).value)
     (event.trace as? NoteTrace)?.kind?.recovery == true -> Vital

@@ -54,21 +54,19 @@ import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
 import kotlinx.coroutines.delay
 
-/*
- * «Сумка захода» (4.10.x, макет «Сумка захода», вариант A «Лента по событиям»): вся добыча захода - бои, сундуки, объекты карты,
- * Ваал-зона - порциями по событию, новое сверху. Порция - шапка «когда · откуда», вещи строками «Плиты», стопки чипами; над
- * списком - золото и опыт захода. Касание вещи - её карточка, заход стоит, пока лист открыт. Данные - ответы сервера, что уже
- * пришли (`RunHud.bag`), новых запросов нет.
+/**
+ * Лист «Сумки захода»: [bag] - порции новые сверху, [gold] и [experience] - итог захода, [awaiting] - событий ждут ответа.
+ *
+ * «Сумка захода»: вся добыча захода - бои, сундуки, объекты карты, Ваал-зона - порциями по событию, новое сверху; над списком - золото и
+ * опыт захода. Данные - пришедшие ответы сервера (`RunHud.bag`), новых запросов нет; заход стоит, пока лист открыт. Подпись «N мин назад» -
+ * по часам захода шагом в полминуты. Пометка к продаже удержанием - монета на строке, отклик, счёт в шапке.
  */
-
-/** Лист «Сумки захода»: [bag] - порции новые сверху, [gold] и [experience] - итог захода, [awaiting] - событий ждут ответа. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionRun, bag: List<BagEntry>, gold: Long, experience: Double, awaiting: Int, onClose: () -> Unit) {
     val expedition by vm.state.collectAsStateWithLifecycle()
     var looked by remember { mutableStateOf<ItemView?>(null) }
     val inspect = rememberInspect()
-    // Часы подписи «N мин назад» - по часам захода, шагом в полминуты: лист не перекомпонуется на кадр
     val now by produceState(run.now()) {
         while (true) {
             delay(AGE_TICK_MS)
@@ -77,7 +75,6 @@ internal fun RunBagSheet(game: GameUi, vm: ExpeditionViewModel, run: ExpeditionR
     }
     val pieces = bag.sumOf { entry -> entry.reward?.let { it.equipment.size + it.items.values.sum().toInt() } ?: 0 }
     val haptics = LocalHapticFeedback.current
-    // Пометка к продаже удержанием (4.12.x, ASANA-16): то же, что кнопка карточки, - монета на строке, лёгкий отклик, счёт в шапке
     val mark = { id: String ->
         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
         vm.toggleSaleMark(id)
@@ -154,7 +151,7 @@ private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long,
     }
 }
 
-/** Монета пометки к продаже (4.12.x, ASANA-16). */
+/** Монета пометки к продаже. */
 @Composable private fun SaleCoin() = GlyphIcon(Glyph.CURRENCY, GoldBright, Modifier.size(16.dp))
 
 /** Откуда порция: монстр - его именем, прочее - видом события. */

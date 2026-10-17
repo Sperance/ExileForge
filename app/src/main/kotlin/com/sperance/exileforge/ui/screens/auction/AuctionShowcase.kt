@@ -57,7 +57,7 @@ import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Витрина аукциона (3.80.24): список лотов, строка поиска и фильтры. */
+/** Витрина аукциона: список лотов, строка поиска и фильтры. */
 /** The showcase: the server's own search, so the page and the filter both belong to it. */
 @Composable internal fun ColumnScope.ShowcaseTab(game: GameUi, market: Market, vm: MarketViewModel) {
     ShowcaseList(game, market, header = { ShowcaseHeader(game, market, vm) }, onBuy = vm::buy, onMore = vm::moreShowcase, onRetry = vm::loadShowcase)
@@ -72,6 +72,10 @@ import org.koin.compose.viewmodel.koinViewModel
  * Buying happens in the lot's own sheet and nowhere else. A line in a list is not enough to decide
  * on — the rolls are what a trader is paying for — and a purchase is irreversible, so it is worth
  * the extra tap that guarantees the item was looked at.
+ *
+ * Поиск и фильтры уходят при прокрутке вниз. Не загрузилась витрина - отказ и «Повторить», а не «ничего не найдено». Свой лот не купить.
+ * Нехватку видно сразу: «Купить» гаснет, под ней - чего не хватает. Покупку не отменить, поэтому она спрашивается, а вещь, которую не
+ * надеть, называется в том же вопросе. Сбор золотом называет долю цены лота, «Останется» - тем же счётом, что у всех оплат.
  */
 @Composable internal fun ColumnScope.ShowcaseList(
     game: GameUi,
@@ -83,10 +87,8 @@ import org.koin.compose.viewmodel.koinViewModel
 ) {
     var openLot by remember { mutableStateOf<String?>(null) }
     var confirmBuy by remember { mutableStateOf<String?>(null) }
-    // Поиск и фильтры над списком (3.88.7): уходят при прокрутке вниз, возвращаются при прокрутке вверх.
     Box(Modifier.padding(top = 10.dp)) { CollapsibleHeader { header() } }
     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 10.dp)) {
-        // Не загрузилась - отказ и «Повторить», а не «ничего не найдено»: пустой витрины никто не видел
         if (market.showcase.items.isEmpty() && market.showcaseFailed) {
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -105,7 +107,6 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         items(market.showcase.items, key = { it.id }) { lot ->
-            // A seller cannot buy their own lot, and the server says so; the sheet does not offer it.
             LotRow(game, lot, mark = if (lot.belongsTo(game.heroId)) ui("auction.your_lot") else null) { openLot = lot.id }
         }
         val showcase = market.showcase
@@ -118,7 +119,6 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
     market.showcase.items.firstOrNull { it.id == openLot }?.let { lot ->
-        // Нехватку видно сразу (3.88.9): «Купить» гаснет, а под ней - чего не хватает.
         val own = lot.belongsTo(game.heroId)
         val short = game.shortfall(lot.cost)?.text()
         LotSheet(
@@ -133,16 +133,11 @@ import org.koin.compose.viewmodel.koinViewModel
             confirmBuy = lot.id
         }
     }
-    // A purchase cannot be undone, so it is asked about — and an item the hero cannot wear
-    // is said so in the same breath, because that is exactly the mistake worth catching.
     market.showcase.items.firstOrNull { it.id == confirmBuy }?.let { lot ->
         val blocked = lotUnmet(game, lot)
         val orb = orbTitle(lot)
-        // What the bag keeps after paying: shown when the bag is known and can pay; when it cannot,
-        // the sheet says so and the purchase is not sent (2.46.0).
         val have = game.bagAmount(lot.priceOrb)
         val fee = lot.fee
-        // Сбор золотом (3.94.0): подпись называет и долю цены лота, чтобы было видно, откуда сумма.
         val feeRate = game.index?.rules?.auction?.buyerFee?.let { r -> if (r % 1.0 == 0.0) r.toLong().toString() else r.toString() }
         val short = game.shortfall(lot.cost)?.text()
         ConfirmSheet(
@@ -153,7 +148,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 LedgerLine(ui("confirm.spend"), ui("confirm.minus", lot.price, orb), Tone.SPEND),
                 fee.takeIf { it > 0 }?.let { LedgerLine(feeRate?.let { r -> ui("auction.fee_rate", r) } ?: ui("auction.fee"), ui("merchant.gold_amount", it), Tone.SPEND) },
                 have?.takeIf { it >= lot.price }?.let { LedgerLine(ui("confirm.left"), ui("confirm.amount", it - lot.price, orb)) },
-                // Золото после сбора (0.14.5, #42): «Останется» и для кошелька, тем же счётом, что у всех оплат золотом
                 game.goldBill(fee)?.takeIf { fee > 0 && it.affordable }?.let { LedgerLine(ui("confirm.left"), ui("merchant.gold_amount", number(it.left.toDouble()))) },
                 LedgerLine(ui("confirm.gain"), lot.title, Tone.GAIN),
                 LedgerLine(ui("auction.seller"), sellerName(lot)),
@@ -178,6 +172,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Nothing here asks the server on its own: the search key of the keyboard, «Показать» in the sheet
  * and a chip's cross do. A chip is one filter the server understands, named as the player set it,
  * and its cross drops that filter and asks again — the quickest way back from "nothing found".
+ *
+ * Фильтры - одна строка чипов, что прокручивается вбок.
  */
 @Composable internal fun ShowcaseHeader(game: GameUi, market: Market, vm: MarketViewModel) {
     var sheet by remember { mutableStateOf(false) }
@@ -203,7 +199,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 }
             }
         }
-        // The filters set are one line of chips that scrolls sideways, never a block growing down over the lots.
         if (count > 0) {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 f.active().forEach { field ->
@@ -257,9 +252,13 @@ internal fun chipLabel(game: GameUi, field: FilterField, value: String, sellerNa
 internal val templateSlots: List<Slot> = Slot.entries.filter { it != Slot.RING_2 && it != Slot.FLASK_2 }
 
 /**
- * Every filter the server understands, on a draft, in the shared «Аккордеон» sheet (4.2.0): the name to search on top, each filter a
+ * Every filter the server understands, on a draft, in the shared «Аккордеон» sheet: the name to search on top, each filter a
  * row with its value that opens on a tap, own lots as a switch. Nothing reaches the showcase until «Показать», so trying a
  * combination costs no request, and «Сбросить» clears all but the typed name.
+ *
+ * Сервер ищет по одной редкости: плитка выбирает её, повторное нажатие снимает. Валюта цены - код предмета. Продавец - по id героя. Свои
+ * лоты не показываются, если продавец не сравнивает цены. Раскрытие свойств легенд - настройка устройства: действует сразу, «Сбросить» её
+ * не трогает; «Сбросить» применяет сброс сразу и закрывает шторку.
  */
 @Composable
 internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> Unit, onApply: (AuctionFilter, Boolean) -> Unit) {
@@ -278,7 +277,6 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
             ChoiceChips(listOf("") + templateSlots.map { it.name }, { it == draft.slot }, { if (it.isBlank()) any else slotTitle(it, game.lang) }) { draft = draft.copy(slot = it) }
         },
         AccordionGroup("rarity", ui("filter.rarity"), draft.rarity.takeIf { it.isNotBlank() }?.let { rarityTitle(it, game.lang) } ?: any) {
-            // Сервер ищет по одной редкости: плитка выбирает её, повторное нажатие снимает.
             RarityTiles(Rarity.entries, { it.name == draft.rarity }) { draft = draft.copy(rarity = if (draft.rarity == it.name) "" else it.name) }
         },
         AccordionGroup("level", ui("auction.item_level"), levels.joinToString(" · ").ifBlank { any }) {
@@ -301,7 +299,6 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
                 )
             }
         },
-        // The price's orb is an item code (3.0.0): the auction's currencies in the orb grid (4.6.3), «любая» - empty.
         AccordionGroup("price", ui("auction.price"), listOfNotNull(draft.priceOrb.takeIf { it.isNotBlank() }?.let(::itemTitle), draft.maxPrice.takeIf { it.isNotBlank() }?.let { ui("auction.chip_max_price", it) }).joinToString(" · ").ifBlank { any }) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OrbGrid(ui("auction.priced_in"), game.currencies, draft.priceOrb, { draft = draft.copy(priceOrb = it) }, any = any)
@@ -315,7 +312,6 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
                 )
             }
         },
-        // A seller is named by the hero's id: there is no catalogue of heroes to pick one from.
         AccordionGroup("seller", ui("auction.seller"), draft.sellerId.takeIf { it.isNotBlank() }?.let { chipLabel(game, FilterField.SELLER, it, draft.sellerName) } ?: any) {
             OutlinedTextField(
                 draft.sellerId,
@@ -331,15 +327,12 @@ internal fun AuctionFilterSheet(game: GameUi, market: Market, onDismiss: () -> U
         onQuery = { draft = draft.copy(title = it.take(game.inputs.search)) },
         queryHint = ui("auction.name"),
         groups = groups,
-        // Own lots cannot be bought, so they are dropped unless a seller wants to compare prices. Раскрытие свойств легенд (4.8.0) -
-        // настройка устройства, не фильтр сервера: действует сразу и «Сбросить» её не трогает.
         switches = listOf(
             FilterSwitch(ui("auction.show_mine"), mine) { mine = it },
             FilterSwitch(ui("auction.legends_open"), legendsOpen) { open -> settings.change { copy(legendsOpen = open) } },
         ),
         show = ui("filter.show_all"),
         resettable = draft != draft.cleared() || mine,
-        // «Сбросить» (4.12.x, ASANA-15) применяет сброс сразу и закрывает шторку
         onReset = { if (!game.busy) onApply(draft.cleared(), false) },
         onShow = { if (!game.busy) onApply(draft, mine) },
         onDismiss = onDismiss,

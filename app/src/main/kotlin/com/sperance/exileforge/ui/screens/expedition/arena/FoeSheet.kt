@@ -55,7 +55,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
 }
 
 /**
- * Лист врага на паузе (3.93.0): босс или приспешник целиком - защита с тем, что от неё остаётся против героя, урон, умения и
+ * Лист врага на паузе: босс или приспешник целиком - защита с тем, что от неё остаётся против героя, урон, умения и
  * свойства с сутью, фазы и тотемы босса, его строки с источниками - монстр, карта, атлас, сделки алтаря.
  */
 @Composable internal fun FoeSheet(
@@ -101,7 +101,7 @@ private enum class FoeTab(val key: String, val bossKey: String = key) {
     }
 }
 
-/** Мощь врага в его листе (4.8.0): печать, число и как он стоит против героя словами - «сильнее на 27%». Не прогноз боя. */
+/** Мощь врага в его листе: печать, число и как он стоит против героя словами - «сильнее на 27%». Не прогноз боя. */
 @Composable private fun FoeSheetMight(foe: FoeView) {
     val might = LocalFightMight.current ?: return
     val reading = might.of(foe.monster)

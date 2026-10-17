@@ -37,6 +37,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * shows the sentence that comes back, including a refusal.
  *
  * [onGrant] adds the administrator's top-up button, so an orb can be tried without farming it first.
+ *
+ * Сфера без перевода в клиенте объясняется словарём сервера; фраза сервера о последней сфере - под вещью.
  */
 @Composable fun OrbPanel(
     game: GameUi,
@@ -65,7 +67,6 @@ import org.koin.compose.viewmodel.koinViewModel
         optionArt = orbArt(orbs),
         onChange = onSelect,
     )
-    // An orb the client has no translation for still explains itself: the server's dictionary has one.
     orb?.let { itemDescription(it.code.value).takeIf { rule -> rule.isNotBlank() } }?.let { MutedText(it) }
     if (instance == null) {
         Text(ui("orb.choose_item"), color = Muted)
@@ -83,7 +84,6 @@ import org.koin.compose.viewmodel.koinViewModel
         Spacer(Modifier.width(8.dp))
         Text(ui("orb.apply"))
     }
-    // The server's sentence about the last orb, as the forge prints it under its item.
     game.holding.forgeLine.takeIf { it.isNotBlank() }?.let { Text(it, color = Rune, style = MaterialTheme.typography.bodyMedium) }
     if (onGrant != null) {
         ForgeOutlinedButton(

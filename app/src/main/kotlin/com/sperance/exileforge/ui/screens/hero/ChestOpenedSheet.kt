@@ -29,7 +29,7 @@ import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Parchment
 
-/** A loot chest just opened (3.76.0): its name and everything it gave — gold, stacks, things — then «Забрать». */
+/** A loot chest just opened: its name and everything it gave — gold, stacks, things — then «Забрать». */
 @Composable fun ChestOpenedSheet(game: GameUi, opening: ChestOpening, onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -44,7 +44,7 @@ import com.sperance.exileforge.ui.theme.Parchment
     }
 }
 
-/** Строка добычи сундука; у стопки касание открывает её карточку (4.3.2). */
+/** Строка добычи сундука; у стопки касание открывает её карточку. */
 @Composable private fun Line(game: GameUi, code: String?, text: String) {
     val inspect = rememberInspect()
     Row(code?.let { Modifier.clickable { inspect(Inspect.Stack(it)) } } ?: Modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {

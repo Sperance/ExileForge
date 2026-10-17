@@ -11,7 +11,7 @@ import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Rune
 
-/** Цвет роли в гильдии (4.5.1): глава - золото, офицер - руна, участник - латунь. */
+/** Цвет роли в гильдии: глава - золото, офицер - руна, участник - латунь. */
 val GuildRole.tint: Color
     get() = when (this) {
         GuildRole.LEADER -> Caution
@@ -19,7 +19,7 @@ val GuildRole.tint: Color
         GuildRole.MEMBER -> Brass
     }
 
-/** Кольцо портрета роли в составе (4.6.3): глава - золото, офицер - руна, участник - бронзовая нить без выделения. */
+/** Кольцо портрета роли в составе: глава - золото, офицер - руна, участник - бронзовая нить без выделения. */
 val GuildRole.ring: Color
     get() = when (this) {
         GuildRole.LEADER -> Caution
@@ -27,7 +27,7 @@ val GuildRole.ring: Color
         GuildRole.MEMBER -> Bronze
     }
 
-/** Знак роли перед именем в составе (4.6.3): корона главы, щит офицера; у участника знака нет. */
+/** Знак роли перед именем в составе: корона главы, щит офицера; у участника знака нет. */
 private val GuildRole.glyph: String?
     get() = when (this) {
         GuildRole.LEADER -> "♛"

@@ -22,11 +22,11 @@ internal class TileSpot(val x: Int, val y: Int, val cx: Float, val cy: Float, va
 /** What every stroke of a frame shares: the pen, half a tile's width, and the scene's clock (декора: стоит без `LocalMotion`). */
 internal class SceneFrame(val pen: Pen, var unit: Float, var time: Float)
 
-/** Клетка воды или пропасти, как её видит слой глади (4.2.0): место и свет. */
+/** Клетка воды или пропасти, как её видит слой глади: место и свет. */
 internal class PoolCell(val spot: TileSpot, val light: Float)
 
 /**
- * How a biome's ground and rock are drawn (2.64.0, the owner's map mockups I, II, III and V).
+ * How a biome's ground and rock are drawn (the owner's map mockups I, II, III and V).
  *
  * The camera, the tile, the torch and the fog stay the scene's: a style only decides what a floor
  * tile and the rock look like, and what hangs in the air over the whole screen. Colours
@@ -42,7 +42,7 @@ internal abstract class MapStyle {
     abstract fun wallHeight(rise: Float): Float
 
     /**
-     * Узор контурной стены по раскладке карты (утверждено владельцем, макеты «Стены v2»): залы - «Обточенный камень»,
+     * Узор контурной стены по раскладке карты (утверждено владельцем): залы - «Обточенный камень»,
      * пещеры и пустоши - «Живая скала»; стиль может выбрать свой.
      */
     open fun texture(layout: Layout): WallTexture = if (layout == Layout.HALLS) Ashlar else LiveRock
@@ -70,6 +70,8 @@ internal abstract class MapStyle {
     /**
      * Кусок массива клетки ([x], [y]) слоями: грани (светлее, что смотрят в `+y`, темнее - в `+x`, сумрак к подножию) и их узор,
      * крышка, фаска, узор крышки, мелочь у подножия. [alpha] - прозрачность «окна» у героя, [light] - свет клетки.
+     *
+     * Скат дальней кромки: верх массива уходит в «тьму скалы», а не обрывается плитой.
      */
     fun wall(frame: SceneFrame, piece: WallPiece, x: Int, y: Int, tones: WallTones, palette: Palette, alpha: Float, light: Float) {
         val scope = frame.pen.scope
@@ -82,7 +84,6 @@ internal abstract class MapStyle {
         scope.drawPath(piece.cap, tone(tones.cap, light, alpha = alpha))
         piece.rim?.let { scope.drawPath(it, rim(tones, palette, x, y, frame.time, light).let { c -> c.copy(alpha = c.alpha * alpha) }) }
         marks(frame, piece.capMarks, tones, alpha, light)
-        // Скат дальней кромки (4.12.x, ASANA-01): верх массива уходит в «тьму скалы», а не обрывается плитой
         piece.slope?.let { scope.drawPath(it, Color.Black.copy(alpha = SLOPE_DUSK * alpha)) }
         marks(frame, piece.footMarks, tones, alpha, light)
     }
@@ -104,13 +105,13 @@ internal abstract class MapStyle {
     }
 
     /**
-     * A chasm (3.91.0): the ground's rim around a sunken dark, the biome's accent glimmering at the bottom - a pit, a crack, a
-     * sinkhole, the same hole in every biome's colours. Seen across, never walked. С 4.2.0 соседние клетки - одна пропасть по
+     * A chasm: the ground's rim around a sunken dark, the biome's accent glimmering at the bottom - a pit, a crack, a
+     * sinkhole, the same hole in every biome's colours. Seen across, never walked. Соседние клетки - одна пропасть по
      * контуру [outline]; край - только снаружи.
+     *
+     * Дальняя стенка провала - тёмный камень, тьма сдвинута к зрителю, по краю - светлая кромка: яма читается и на тёмном полу.
      */
     open fun chasm(frame: SceneFrame, cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, palette: Palette): Unit = with(frame) {
-        // Глубина (4.7.0): дальняя стенка провала - тёмный камень, сама тьма сдвинута к зрителю, по краю - светлая кромка; яма
-        // читается и на тёмном полу
         val face = tone(palette.floor, .42f)
         pool(cells, shade, outline, { tone(palette.floor, .9f * it) }, face, CHASM_LIP, depth = {
             pen.scope.translate(0f, unit * CHASM_DEPTH) { drawPath(outline, tone(palette.void, .95f)) }
@@ -122,15 +123,15 @@ internal abstract class MapStyle {
     }
 
     /**
-     * Вода (3.95.0): берег цвета пола, гладь цвета воды биома и блики, бегущие по течению; у лавы и тьмы - своё свечение. С 4.2.0
+     * Вода: берег цвета пола, гладь цвета воды биома и блики, бегущие по течению; у лавы и тьмы - своё свечение.
      * соседние клетки - одна гладь по контуру [outline] со скруглёнными углами: берег только по внешнему краю, блики по всей
      * площади, светлая кромка у берега.
+     *
+     * Гладь светлее у берега; блик течения - со сдвигом по времени и месту, соседние клетки текут одной волной.
      */
     open fun water(frame: SceneFrame, cells: List<PoolCell>, shade: List<PoolCell>, outline: Path, palette: Palette, liquid: Liquid): Unit = with(frame) {
         val look = LiquidLook.of(liquid)
-        // Гладь светлее у берега: кромка по всему контуру изнутри
         pool(cells, shade, outline, { tone(palette.floor, .75f * it) }, lerp(look.deep, look.surface, .45f), look.surface.copy(alpha = .5f)) { cell ->
-            // Блик течения: по диагонали клетки, со сдвигом по времени и месту - соседние клетки текут одной волной
             val (cx, cy, u) = Triple(cell.spot.cx, cell.spot.cy, unit)
             val wave = ((time * look.flow + (cell.spot.x + cell.spot.y) * .37f) % 1f)
             pen.color = look.glint.copy(alpha = look.glintAlpha * sin(wave * Math.PI.toFloat()))
@@ -139,7 +140,7 @@ internal abstract class MapStyle {
     }
 
     /**
-     * Слой глади (4.2.0): край [rim] по клеткам [cells] - он остаётся виден лишь снаружи контура, - заливка [fill] по контуру, затем
+     * Слой глади: край [rim] по клеткам [cells] - он остаётся виден лишь снаружи контура, - заливка [fill] по контуру, затем
      * внутри контура - кромка [edge] вдоль берега, [inside] каждой клетки и тень света клеток [shade] (клетки глади и суши рядом,
      * куда заходит скруглённый угол).
      */
@@ -225,13 +226,13 @@ internal class PaletteBrush(private val make: (Palette) -> Brush) {
 /** Тень грани, что смотрит в `+x`, против освещённой, что смотрит в `+y`. */
 private const val FACE_SHADE = .36f
 
-/** Сумрак ската дальней кромки массива (4.12.x, ASANA-01). */
+/** Сумрак ската дальней кромки массива. */
 private const val SLOPE_DUSK = .45f
 
-/** Глубина пропасти (4.7.0): на сколько клетки тьма сдвинута к зрителю - видна дальняя стенка. */
+/** Глубина пропасти: на сколько клетки тьма сдвинута к зрителю - видна дальняя стенка. */
 private const val CHASM_DEPTH = .24f
 
-/** Светлая кромка края пропасти (4.7.0). */
+/** Светлая кромка края пропасти. */
 private val CHASM_LIP = Color(0xFFA89878).copy(alpha = .6f)
 
 /** Мягкая тень у подножия: дальний край и ближний. */
@@ -252,27 +253,18 @@ internal object MapStyles {
 
     fun of(biome: String): MapStyle = when (biome) {
         com.sperance.exileforge.core.campaign.VaalZones.BIOME -> altar
-
         "CRYPT", "TEMPLE", "ABYSS" -> runes
-
         "ASH", "VOLCANO" -> ash
-
         "FOREST", "MIRE", "JUNGLE", "HIVE", "BLIGHT" -> moss
-
         "DESERT", "CANYON" -> dunes
-
-        // The lands 71–100 (3.43.0): the broken sky, the drowned empire, the halls of the gods.
         "SKYREACH", "GLASSWASTE", "STORMPEAK" -> sky
-
         "SUNKEN", "CORAL", "TIDEVAULT" -> drowned
-
         "GODHALL", "ASTRAL", "OBLIVION" -> divine
-
         else -> wet
     }
 }
 
-/** Цвета воды биома (3.95.0): глубина, гладь, блик и как быстро бежит течение. */
+/** Цвета воды биома: глубина, гладь, блик и как быстро бежит течение. */
 internal class LiquidLook(val deep: Color, val surface: Color, val glint: Color, val glintAlpha: Float, val flow: Float) {
     companion object {
         private val looks = mapOf(
@@ -288,5 +280,5 @@ internal class LiquidLook(val deep: Color, val surface: Color, val glint: Color,
     }
 }
 
-/** Цвет воды на миникарте (3.95.0). */
+/** Цвет воды на миникарте. */
 internal fun liquidTint(liquid: Liquid): Color = LiquidLook.of(liquid).surface

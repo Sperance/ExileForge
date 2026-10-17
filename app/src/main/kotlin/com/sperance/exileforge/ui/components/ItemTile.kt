@@ -28,11 +28,13 @@ import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
- * Плитка вещи (3.90.0) - сжатая карточка «Реликвария» в том же облике редкости ([relicGround], [RelicSocket], [RelicLook.nameStyle]):
+ * Плитка вещи - сжатая карточка «Реликвария» в том же облике редкости ([relicGround], [RelicSocket], [RelicLook.nameStyle]):
  * гнездо и имя в шапке, под ним «что это · редкость», база одной строкой, затем каждая строка вещи мелким шрифтом в цвете её вида -
  * без значков и тиров. [footer] - что добавляет список под строками (вердикт, «Надеть»).
- * Строка тайника (3.90.3): [trailing] - напротив имени (цена, вердикт, отметки), [selected] - золотая рамка, [onClick] - вся плитка,
- * [onLongClick] (3.90.5) - удержание плитки: в тайнике оно начинает выбор для продажи.
+ * Строка тайника: [trailing] - напротив имени (цена, вердикт, отметки), [selected] - золотая рамка, [onClick] - вся плитка,
+ * [onLongClick] - удержание плитки: в тайнике оно начинает выбор для продажи.
+ *
+ * Врождённые строки - над чертой, как в полной карточке.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -83,7 +85,6 @@ fun ItemTile(
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 item.lines.forEachIndexed { i, line ->
                     Text(line.text, color = modColor(line.marks), style = MaterialTheme.typography.labelSmall)
-                    // Врождённые строки - над чертой, как в полной карточке.
                     val next = item.lines.getOrNull(i + 1)
                     if (line.marks.kind == AffixKind.IMPLICIT && next != null && next.marks.kind != AffixKind.IMPLICIT) {
                         HorizontalDivider(Modifier.padding(vertical = 2.dp), thickness = .5.dp, color = Color.White.copy(alpha = .08f))

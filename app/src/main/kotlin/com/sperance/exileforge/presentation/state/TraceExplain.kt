@@ -20,14 +20,14 @@ import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.roll.MonsterRoller
 
-/** One source of a stat on a log line's card (3.37.0): who gave it and how much, with a grey note under it. */
+/** One source of a stat on a log line's card: who gave it and how much, with a grey note under it. */
 data class TraceRow(val title: String, val value: String, val note: String? = null)
 
 /** A stat of one side at the moment of a line: its figure then and every source of it. */
 data class StatTrace(val stat: String, val title: String, val total: String, val rows: List<TraceRow>)
 
 /**
- * Lays a fighter's stat at the moment of a log line out by source (3.37.0): the hero's by the sheet's own breakdown, the
+ * Lays a fighter's stat at the moment of a log line out by source: the hero's by the sheet's own breakdown, the
  * map's shifts and the passives; a monster's by the roller's fold — base, rarity, each modifier, the map; then for both
  * what the fight laid on at that moment. The figure itself is the fight's.
  */

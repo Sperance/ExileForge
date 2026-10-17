@@ -79,14 +79,14 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
-/** Строки и числа ремёсел (3.80.14): названия, итоги, подсказки по уровню и часовой выработке. */
+/** Строки и числа ремёсел: названия, итоги, подсказки по уровню и часовой выработке. */
 /** The dictionary's name of a work; the tab bar's badge (ForgeApp) names it by this package, so it stays here. */
 fun jobTitle(code: String): String = com.sperance.exileforge.core.display.jobTitle(code)
 
 /** The work under way by name, with its choice. */
 fun workTitle(work: WorkView): String = com.sperance.exileforge.core.display.workTitle(work.job, work.choice)
 
-/** Всплывашка сбора у полосы цикла (3.90.0): добыча, сделанное и голод сумки, с опытом - «+1 Медная руда · +2 опыта», а без добычи - «пусто». */
+/** Всплывашка сбора у полосы цикла: добыча, сделанное и голод сумки, с опытом - «+1 Медная руда · +2 опыта», а без добычи - «пусто». */
 fun harvestLine(gains: WorkGains): String = (gainParts(gains) + listOfNotNull(gains.experience.takeIf { it > 0 }?.let { ui("crafts.experience_gain", number(it)) }))
     .joinToString(" · ").ifBlank { ui("crafts.harvest_empty") }
 
@@ -99,40 +99,29 @@ private fun gainParts(gains: WorkGains): List<String> = listOfNotNull(
 /** How many of a stack the bag holds, by the item's code — a material, an orb, an essence or a book; 0 before the hero is read. */
 fun bagCount(game: GameUi, code: String): Long = game.bagAmount(code) ?: 0L
 
-/** What a work makes, in words: the stack, the smith's range or the cartographer's location. */
+/**
+ * What a work makes, in words: the stack, the smith's range or the cartographer's location.
+ *
+ * Работа с выбором - выбранный вариант как обычная работа: инструмент кузнеца - база инструмента, ритуал тира - умение, резьба - руна на
+ * выходе, Осквернение - та же вещь с запечатанной судьбоносной строкой.
+ */
 fun jobProduct(view: JobView): String = when (val job = view.job) {
     is Job.Item -> itemTitle(job.output)
-
     is Job.Equipment -> ui("crafts.kind_equipment", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
-
     is Job.Chart -> ui("crafts.kind_map", regionTitle(job.region))
-
     is Job.Flask -> equipmentTitle(job.output)
-
-    // Choosing works (3.45.0): the variant picked in the sheet is a plain ITEM work.
     is Job.Book -> ui("crafts.kind_book", job.upTo)
-
     is Job.Condense -> ui("crafts.kind_condense")
-
     is Job.Refine -> ui("crafts.kind_refine")
-
     is Job.Jewel -> ui("crafts.kind_jewel", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
-
-    // Инструмент кузнеца (server 4.3.0): выбранный вариант - база инструмента, сама работа - полоса уровней.
     is Job.Tool -> if (job.output.isNotEmpty()) equipmentTitle(job.output) else ui("crafts.kind_tool", job.band.getOrElse(0) { 1 }, job.band.getOrElse(1) { 1 })
-
-    // Ритуал тира (4.4.0): выбранный вариант - умение героя, сама работа - тир
     is Job.Evolve -> if (job.skill.isNotEmpty()) ui("crafts.kind_evolve_skill", SkillText.title(job.skill), roman(job.tier)) else ui("crafts.kind_evolve", roman(job.tier))
-
-    // Резьба руны (4.4.0): выбранный вариант - обычная работа ITEM с руной на выходе
     is Job.Carve -> ui("crafts.kind_carve", job.upTo)
-
-    // Осквернение (4.6.2): выход - та же вещь с запечатанной судьбоносной строкой
     is Job.Desecrate -> ui("crafts.kind_desecrate")
 }
 
 /**
- * Вещи тайника, что примет работа над вещью героя [job] (4.6.2, `Job.targetsItem`): те, что пропустят правила, - та же проверка,
+ * Вещи тайника, что примет работа над вещью героя [job] (`Job.targetsItem`): те, что пропустят правила, - та же проверка,
  * что у сервера при запуске; у прочих работ - пусто.
  */
 internal fun itemTargets(game: GameUi, job: Job): List<ItemView> {
@@ -144,7 +133,7 @@ internal fun itemTargets(game: GameUi, job: Job): List<ItemView> {
     return game.hero?.stash.orEmpty().mapNotNull { game.view(it) }.filter { ruleRefusal { check(it) } == null }
 }
 
-/** Вещь, что держит идущая работа (4.6.2, Осквернение): её нет среди вещей героя, пока работа идёт. */
+/** Вещь, что держит идущая работа (Осквернение): её нет среди вещей героя, пока работа идёт. */
 internal val GameUi.heldWork: ItemInstance? get() = hero?.crafts?.work?.held
 
 /** Имя идущей работы [work]: у работы над вещью - с именем этой вещи, иначе с выбранным вариантом. */
@@ -171,9 +160,9 @@ fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
 }
 
 /**
- * How long the work still needs to lift its profession a level (3.2.0), counted here: the experience a
+ * How long the work still needs to lift its profession a level, counted here: the experience a
  * cycle brings past its «nothing» chance, the cycles that leaves, less what the running cycle has done.
- * Опыт удачного цикла с 4.2.0 - [com.sperance.exileforge.core.model.crafts.JobView.experience] по кривой сервера, не поле работы.
+ * Опыт удачного цикла - [com.sperance.exileforge.core.model.crafts.JobView.experience] по кривой сервера, не поле работы.
  */
 @Composable internal fun LevelLine(crafts: Crafts, work: WorkView, offset: Long) {
     val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession } ?: return
@@ -187,7 +176,7 @@ fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
 
 /**
  * Сколько до уровня [level] живьём: свои часы раз в секунду - перерисовывается только эта строка, не плашка работы вокруг
- * (4.x: часы в листовом элементе, вкладка ремёсел не теряет кадров).
+ * (часы в листовом элементе, вкладка ремёсел не теряет кадров).
  */
 @Composable private fun LevelEta(level: Int, total: Long, work: WorkView, offset: Long) {
     val now by produceState(System.currentTimeMillis()) {
@@ -224,7 +213,7 @@ internal fun duration(millis: Long): String {
 internal const val CLOCK_TICK = 200L
 
 /**
- * What the work under way brings in an hour on average (3.24.0), counted from the job as the server
+ * What the work under way brings in an hour on average, counted from the job as the server
  * sends it — the cycle, the «nothing» chance and each find's chance already made of the hero's gear —
  * and the yield bonus's extra units: the cycles an hour holds, less the empty ones, times what one brings.
  * Display only: the server's dice decide.
@@ -269,17 +258,16 @@ internal fun cycleCost(game: GameUi, job: JobView): AnnotatedString = buildAnnot
 internal const val TILES = 3
 
 /**
- * The variants a choosing work offers: every one, whatever the profession's level (3.90.0: a locked one shows its lock and
+ * The variants a choosing work offers: every one, whatever the profession's level (a locked one shows its lock and
  * the sheet names the level) — but for the condensing only the essences the bag can feed a cycle of, else a hundred and
  * forty chips would bury the few that can run.
+ *
+ * Ритуал тира - только изученные умения; почему вариант закрыт, называет низ листа.
  */
 internal fun choices(game: GameUi, work: JobView): List<JobView> = work.options.filter { option ->
     when (work.kind) {
         JobKind.CONDENSE -> option.inputs.all { bagCount(game, it.item) >= it.amount }
-
-        // Ритуал тира (4.4.0): только изученные умения; почему вариант закрыт, называет низ листа
         JobKind.EVOLVE -> (game.hero?.skills?.level(option.choice) ?: 0) > 0
-
         else -> true
     }
 }

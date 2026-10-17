@@ -88,7 +88,7 @@ internal fun ArmsPicker(
     }
 }
 
-/** A faction's colour (3.27.0): the rules' `#rrggbb`, the app's own gold for a faction the rules do not know. */
+/** A faction's colour: the rules' `#rrggbb`, the app's own gold for a faction the rules do not know. */
 internal fun factionColor(faction: GuildFaction?): Color = faction?.color?.let(::guildColor) ?: Gold
 
 /**

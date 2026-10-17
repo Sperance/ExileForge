@@ -34,8 +34,8 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The screens the «Развитие» tab holds: the forge, the tree and the grimoire (3.90.5) open over the hub with a
- * way back to it. The trials and the atlas are pages of «Поход», the chronicle a building of the City (4.0.0).
+ * The screens the «Развитие» tab holds: the forge, the tree and the grimoire open over the hub with a
+ * way back to it. The trials and the atlas are pages of «Поход», the chronicle a building of the City.
  */
 enum class ProgressPlace(val tab: Int, private val title: String, val icon: ImageVector) {
     FORGE(TAB_CRAFT, "nav.forge", ForgeGlyphs.Anvil),
@@ -47,9 +47,11 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 }
 
 /**
- * «Развитие» (макет «Развитие», вариант C «2×2 с заглушкой», 4.11.x): the hero's growth between runs gathered in one tab — the forge,
+ * «Развитие»: the hero's growth between runs gathered in one tab — the forge,
  * the tree and the grimoire, and a dashed tile of the place to come («Скоро · Восхождение»). Each tile says in a line what it
  * holds and, in its colour, what waits; a badge counts what asks to be done.
+ *
+ * Место, что ещё впереди, держит сетку 2×2 и не открывается; вкладка нажата снова - наверх.
  */
 @Composable fun ProgressScreen() {
     val game by koinViewModel<ProgressViewModel>().game.collectAsStateWithLifecycle()
@@ -70,7 +72,6 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 0,
                 game.lockOf(Feature.FORGE),
             ) { shell.tab(TAB_CRAFT) },
-            // Дерево и гримуар (3.90.5) - из полосы «Героя»: там остались только вещи.
             HubTile(
                 ui("nav.tree"),
                 ForgeGlyphs.Constellation,
@@ -88,12 +89,10 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
                 0,
                 game.lockOf(Feature.GRIMOIRE),
             ) { shell.tab(TAB_SKILLS) },
-            // Место, что ещё впереди (4.11.x): держит сетку 2×2, не открывается
             HubTile(ui("progress.soon"), Icons.Outlined.QuestionMark, Muted, ui("progress.soon_ascendancy"), null, onOpen = null),
         )
     }
     val scroll = rememberScrollState()
-    // Вкладка нажата снова (3.95.0): развитие - наверх
     OnReselect(TAB_PROGRESS) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader(ui("progress.title"), ui("progress.subtitle"), ForgeGlyphs.Sigil)
@@ -104,15 +103,15 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
 
 /**
  * A screen of the hub with its way back: the forge, the tree or the grimoire. The forge is reached from an item's
- * sheet as well, and «back» from it comes here too — the hub is where it lives now.
+ * sheet as well, and «back» from it comes here too — the hub is where it lives.
+ *
+ * Кузня читает героя сама, дерево и гримуар - только это.
  */
 @Composable fun ProgressPlaceScreen(place: ProgressPlace) {
     val game by koinViewModel<ProgressViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val heroModel: HeroViewModel = koinViewModel()
-    // The forge reads the hero itself; the tree and the grimoire have only this.
     LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
-    // Цепочка «назад» (4.4.x): «← Развитие › Место»
     BackTrailHost(ui("nav.progress")) {
         TrailLevel(place.label, onBack = { shell.tab(TAB_PROGRESS) }) {
             when (place) {
@@ -124,5 +123,5 @@ enum class ProgressPlace(val tab: Int, private val title: String, val icon: Imag
     }
 }
 
-/** The level a tile's place opens at (3.76.0), while the hero is below it. */
+/** The level a tile's place opens at, while the hero is below it. */
 private fun GameUi.lockOf(feature: Feature): Int? = feature.takeIf { !unlocked(it) }?.level(index?.rules)

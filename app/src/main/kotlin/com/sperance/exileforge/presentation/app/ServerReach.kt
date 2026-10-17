@@ -25,7 +25,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 data class ReachState(val reach: Reach = Reach.CONNECTING, val wire: Wire? = null, val retryAt: Long = 0)
 
 /**
- * Окно запуска глазами модели (3.87.0): связь, сколько идёт старт и отпущен ли он ([released], 0.14.4 - на весь процесс, а не на
+ * Окно запуска глазами модели: связь, сколько идёт старт и отпущен ли он ([released], на весь процесс, а не на
  * экран) - по ним [StartGate] решает, держать ли окно; [fit] - провод ответившего сервера против этой сборки.
  */
 data class StartWindow(val reach: ReachState = ReachState(), val elapsedMs: Long = 0, val released: Boolean = false) {
@@ -33,7 +33,7 @@ data class StartWindow(val reach: ReachState = ReachState(), val elapsedMs: Long
 }
 
 /**
- * Связь с сервером на старте (3.86.0): манифест сервера спрашивается сразу, а не ответил - каждые [RETRY_MS] снова или по
+ * Связь с сервером на старте: манифест сервера спрашивается сразу, а не ответил - каждые [RETRY_MS] снова или по
  * «Повторить сейчас». Ответ - провод сервера для проверки обновлений и знак окну запуска уйти; связь, пропавшая на старте,
  * дальше восстанавливается сама ([ConnectionActions.wake]).
  */
@@ -55,11 +55,12 @@ class ServerReach(
     /** Окно запуска как его решает модель, а не экран: связь и время старта, тиком до предела [StartGate.LIMIT_MS]. */
     val window: StateFlow<StartWindow> = combine(state, elapsed, released, ::StartWindow).stateIn(scope, SharingStarted.Eagerly, StartWindow())
 
-    /** Старт отпущен (0.14.4): окно старта больше не возвращается - ни экраном, ни после пересоздания Activity. */
+    /** Старт отпущен: окно старта больше не возвращается - ни экраном, ни после пересоздания Activity. */
     fun release() {
         released.value = true
     }
 
+    /** В фоне манифест не спрашивается: повтор - по возврату в игру. */
     fun start() {
         if (started) return
         started = true
@@ -90,7 +91,6 @@ class ServerReach(
                 failed = true
                 mutable.value = ReachState(Reach.UNREACHABLE, retryAt = System.currentTimeMillis() + RETRY_MS)
                 withTimeoutOrNull(RETRY_MS) { nudge.receive() }
-                // В фоне манифест не спрашивается (4.9.0): повтор - по возврату в игру.
                 foreground.awaitFront()
                 mutable.update { it.copy(reach = Reach.CONNECTING) }
             }
@@ -103,7 +103,7 @@ class ServerReach(
     }
 
     /**
-     * Провод сервера не совпал с этой сборкой (0.14.4): манифест перечитывается каждые [AWAIT_POLL_MS] или по «Проверить сейчас»
+     * Провод сервера не совпал с этой сборкой: манифест перечитывается каждые [AWAIT_POLL_MS] или по «Проверить сейчас»
      * ([checkFit]), пока провода не сойдутся - сервер, что старше сборки, обновится сам; сборку новее ищет [UpdateViewModel].
      * Сошлись - игра снова входит в сессию ([fitted]).
      */
@@ -154,7 +154,7 @@ class ServerReach(
         const val FRESH_MS = 10_000L
         const val TICK_MS = 500L
 
-        /** Как часто перечитывается провод сервера, пока он не совпал со сборкой (0.14.4). */
+        /** Как часто перечитывается провод сервера, пока он не совпал со сборкой. */
         const val AWAIT_POLL_MS = 30_000L
     }
 }

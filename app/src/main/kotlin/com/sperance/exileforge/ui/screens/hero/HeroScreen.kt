@@ -36,18 +36,22 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * The hero: who they are, what they wear, and what they own.
  *
- * It used to be one long scroll with the stash — the list a player opens this tab for — at the very
- * bottom, under a character sheet and eleven slots that were mostly empty. Each is its own section
- * now, one tap apart, under a header that says who the character is — the one part they all share.
+ * Each part is its own section, one tap apart, under a header that says who the character is — the one part they all
+ * share; the stash, the list a player opens this tab for, is not buried under the sheet and the slots.
  * Every item, wherever it is shown, opens the same [ItemSheet].
  *
- * Since 2.22.0 the stash holds only what lies loose — what is worn or socketed is the Equipment
- * section's — and the bag is a section of its own, a list rather than a strip of chips. Since 3.0.0
+ * The stash holds only what lies loose — what is worn or socketed is the Equipment
+ * section's — and the bag is a section of its own, a list rather than a strip of chips.
  * every copy is read through its view over the content on the device, and the bag is keyed by item code.
  *
- * С 3.90.3 полоса разделов - в оболочке ([HeroChrome]), раздел - [HeroPage] модели героя; тайник - рейка мест слева и список
- * справа (макет «Тайник» В), с режимом продажи и автопродажей (макет «Продажа» А и В). С 3.90.5 (макет «Герой» A) герой - в шапке
+ * Полоса разделов - в оболочке ([HeroChrome]), раздел - [HeroPage] модели героя; тайник - рейка мест слева и список
+ * справа, с режимом продажи и автопродажей. Герой - в шапке
  * игры, разделов четыре, дерево и гримуар - в «Развитии», продажа - удержанием плитки.
+ *
+ * Фильтры - свои у экрана и уходят с ним. Открытие вкладки освежает героя, только если прошлое чтение остыло; потягивание - если игрок не
+ * согласен. Вкладка нажата снова - карточки закрыты, герой на первой странице и наверху. Предначертание - лентой над листом. Номер героя -
+ * касание копирует, Мощь - справа в той же строке. Лист стопки закрывается вместе с ушедшей стопкой; место идёт с выбором (кольцо во вторую
+ * строку - во второе кольцо).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,12 +66,8 @@ fun HeroScreen() {
     var pickPlace by remember(heroId) { mutableStateOf<BodyPlace?>(null) }
     var stackCode by remember(heroId) { mutableStateOf<String?>(null) }
     var listStack by remember(heroId) { mutableStateOf<String?>(null) }
-    // The filters (3.30.0) are the screen's own and go with it: a page switched away and back keeps the rail's choice.
-    // Opening the tab is what refreshes the hero, and only when the last reading has gone cold.
-    // Nothing here asks the player to press anything: the pull below is for when they disagree.
     LaunchedEffect(heroId, game.sessionEpoch) { model.ensure() }
     val list = rememberLazyListState()
-    // Вкладка нажата снова (3.95.0): карточки закрыты, герой - на первой странице и наверху
     OnReselect(TAB_HERO) {
         detailId = null
         stackCode = null
@@ -89,13 +89,10 @@ fun HeroScreen() {
 
                     HeroPage.BAG -> {
                         val sections = bagSections(game)
-                        // A table since 2.75.0: icon and count per cell, everything else behind the tap.
                         if (sections.isEmpty()) item { InfoCard(ui("hero.bag_empty"), ui("bag.empty_hint")) } else item(key = "bag") { BagGrid(game, sections) { stackCode = it } }
                     }
 
                     else -> {
-                        // Предначертание аккаунта (4.6.3, «Лента и свиток») над листом: в подписи - что дар копит, касание - описание
-                        // 4.9.0: в свитке - «Сейчас действует» с числами на силе и строках дара, в подписи - сила
                         heroFate(game)?.let { fate ->
                             item(key = "fate") {
                                 val effects = remember(game.hero, game.index) { heroFateEffects(game) }
@@ -109,8 +106,6 @@ fun HeroScreen() {
                                 )
                             }
                         }
-                        // Свой номер героя (4.7.0): его диктуют главе, чтобы позвал в гильдию; касание копирует. Мощь (4.9.0, макет A) -
-                        // справа в той же строке: печать и число, отдельной панели нет
                         game.hero?.let { hero -> item(key = "number") { NumberAndMight(hero) } }
                         item { HeroSummary(game) }
                     }
@@ -119,7 +114,6 @@ fun HeroScreen() {
         }
     }
     detailId?.let { id -> ItemSheet(game, model, id) { detailId = null } }
-    // The sheet is about a stack the bag still holds: listed or read away, it closes with it.
     stackCode?.let { code ->
         hero?.bag?.get(code)?.takeIf { it > 0 }?.let { amount ->
             BagSheet(
@@ -136,7 +130,6 @@ fun HeroScreen() {
                     stackCode = null
                     listStack = stack
                 },
-                // A book is read where it lies, and its page opens in the grimoire (2.78.0); an essence goes to the forge.
                 onRead = { skill ->
                     stackCode = null
                     model.learnSkill(skill)
@@ -168,14 +161,13 @@ fun HeroScreen() {
             model.sellItem(code, amount, orb, price)
         }
     }
-    // The place goes with the pick: a ring chosen for the second line lands in the second ring, a flask in its own bay.
     pickPlace?.let { place -> SlotPicker(game, place, onDismiss = { pickPlace = null }, onEquip = { itemId -> model.equip(itemId, place.place) }) }
 }
 
-/** Предначертание аккаунта героя карточкой (4.6.0); не выбрано или нет в контенте - null. */
+/** Предначертание аккаунта героя карточкой; не выбрано или нет в контенте - null. */
 private fun heroFate(game: GameUi): FateCard? = game.index?.fates?.of(game.hero?.info?.fate)?.let(FateCard::of)
 
-/** Дар героя на его силе и с действующими строками надетого (4.9.0) - тем же резолвером правил, что бой; нет дара - null. */
+/** Дар героя на его силе и с действующими строками надетого - тем же резолвером правил, что бой; нет дара - null. */
 private fun heroFateEffects(game: GameUi): FateEffects? {
     val hero = game.hero ?: return null
     val index = game.index ?: return null
@@ -183,8 +175,8 @@ private fun heroFateEffects(game: GameUi): FateEffects? {
 }
 
 /**
- * Боёв до сферы Щедрости судьбы (4.6.1, `FateLever.FIGHT_BOUNTY`, счёт сервера `fateFights`) - с судьбоносными строками надетого
- * (4.6.3: строка «раньше» сокращает счёт); у дара без рычага - null.
+ * Боёв до сферы Щедрости судьбы (`FateLever.FIGHT_BOUNTY`, счёт сервера `fateFights`) - с судьбоносными строками надетого
+ * (строка «раньше» сокращает счёт); у дара без рычага - null.
  */
 private fun fateProgress(game: GameUi, effects: FateEffects?): String? {
     val info = game.hero?.info ?: return null

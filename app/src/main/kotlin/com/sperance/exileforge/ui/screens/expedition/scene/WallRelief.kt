@@ -17,8 +17,8 @@ import com.sperance.exileforge.core.campaign.MapStyle as Layout
  * Скала карты контурами: каждый массив - одна изолиния сглаженного поля ([WallField]), выдавленная на высоту массива в
  * изометрии. Считается раз на карту, её правку, стиль, палитру и масштаб; кадр только заливает готовые пути.
  *
- * Для сортировки по глубине массив нарезан по клеткам карты ([WallPiece]): кусок клетки рисуется с глубиной клетки, как прежний
- * блок, так что жетоны героя и монстров встают перед скалой и за ней как раньше, а соседние куски сходятся в одну фигуру без
+ * Для сортировки по глубине массив нарезан по клеткам карты ([WallPiece]): кусок клетки рисуется с глубиной клетки, как
+ * блок, так что жетоны героя и монстров встают перед скалой и за ней верно, а соседние куски сходятся в одну фигуру без
  * швов (края кусков на границе клетки заходят к соседу на [SEAL]).
  */
 internal class WallRelief private constructor(
@@ -53,7 +53,7 @@ internal class WallRelief private constructor(
      */
     fun deep(x: Int, y: Int) = map.tile(x, y) == Tile.WALL && !field.rim(x, y)
 
-    /** Высота массива у клетки [x], [y] в клетках сцены (0.14.0, ASANA-N10): дверь и рычаг встают в рост своей стены. */
+    /** Высота массива у клетки [x], [y] в клетках сцены: дверь и рычаг встают в рост своей стены. */
     fun height(x: Int, y: Int): Float = style.wallHeight(riseNear(x, y))
 
     private fun fits(map: ExpeditionMap, relief: MapRelief, style: MapStyle, palette: Palette, unit: Float) = this.map === map && this.relief === relief && this.style === style && this.palette === palette && this.unit == unit
@@ -89,7 +89,6 @@ internal class WallRelief private constructor(
                 gx += (contour.xs[k] + contour.xs[m]) * cross
                 gy += (contour.ys[k] + contour.ys[m]) * cross
                 if (!contour.crossing[k] || !contour.crossing[m]) continue
-                // Отрезок края: внутри - справа по ходу, наружу - (dy, -dx); к камере смотрит то, что глядит в +x+y
                 val dx = contour.xs[m] - contour.xs[k]
                 val dy = contour.ys[m] - contour.ys[k]
                 val length = hypot(dx, dy)
@@ -109,7 +108,7 @@ internal class WallRelief private constructor(
         }
 
         /**
-         * Дальняя от камеры кромка массива (4.12.x, ASANA-01) - скат: полоса крышки от кромки вглубь на [SLOPE_DEPTH] клетки, у кромки
+         * Дальняя от камеры кромка массива - скат: полоса крышки от кромки вглубь на [SLOPE_DEPTH] клетки, у кромки
          * ниже на долю высоты [SLOPE_DROP] - верх массива скругляется вниз, а не обрывается плоским краем; кадр кладёт её сумраком.
          */
         private fun back(ax: Float, ay: Float, bx: Float, by: Float, nx: Float, ny: Float) {
@@ -188,7 +187,7 @@ private const val SEAL = .012f
 /** Грань смотрит к камере, если её нормаль хоть немного глядит в `+x+y` (доля длины отрезка). */
 private const val FRONT = .02f
 
-/** Скат дальней кромки (4.12.x, ASANA-01): насколько вглубь массива, в клетках, и на какую долю высоты ниже у самой кромки. */
+/** Скат дальней кромки: насколько вглубь массива, в клетках, и на какую долю высоты ниже у самой кромки. */
 private const val SLOPE_DEPTH = .35f
 private const val SLOPE_DROP = .35f
 
@@ -222,7 +221,7 @@ internal class WallPiece(
     val faceMarks: Array<WallMark>,
     val capMarks: Array<WallMark>,
     val footMarks: Array<WallMark>,
-    /** Скат дальней кромки (4.12.x, ASANA-01): сумрак поверх крышки у края, что смотрит от камеры; нет такого края - null. */
+    /** Скат дальней кромки: сумрак поверх крышки у края, что смотрит от камеры; нет такого края - null. */
     val slope: Path? = null,
 )
 

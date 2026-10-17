@@ -24,9 +24,11 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.ui.theme.Vital
 
 /**
- * Пополнение фляги на глазах (0.14.2, #21): заряды выросли - над кнопкой [content] всплывает и гаснет «+N», ободок коротко
+ * Пополнение фляги на глазах: заряды выросли - над кнопкой [content] всплывает и гаснет «+N», ободок коротко
  * вспыхивает цветом фляги [tint]. Источник роста не важен (убийство, сила, фонтан): виден любой прирост [charges], расход -
  * нет. Новый прирост во время всплытия начинает его заново со своим числом.
+ *
+ * Перезапуск отменяет прежнее всплытие.
  */
 @Composable fun FlaskGain(charges: Int, tint: Color, content: @Composable () -> Unit) {
     var last by remember { mutableIntStateOf(charges) }
@@ -35,7 +37,6 @@ import com.sperance.exileforge.ui.theme.Vital
     LaunchedEffect(charges) {
         val added = charges - last
         last = charges
-        // Перезапуск отменил прежнее всплытие: расход его гасит, а не оставляет застывшим
         if (added <= 0) return@LaunchedEffect rise.snapTo(1f)
         gain = added
         rise.snapTo(0f)

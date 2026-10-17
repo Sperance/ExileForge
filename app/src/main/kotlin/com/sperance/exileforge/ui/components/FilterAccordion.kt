@@ -41,7 +41,7 @@ class AccordionGroup(val key: String, val title: String, val value: String, val 
 class FilterSwitch(val title: String, val checked: Boolean, val onChange: (Boolean) -> Unit)
 
 /**
- * Шторка фильтров «Аккордеон» (4.2.0) - одна на все списки приложения: поиск сверху, каждая группа - строка с текущим выбором,
+ * Шторка фильтров «Аккордеон» - одна на все списки приложения: поиск сверху, каждая группа - строка с текущим выбором,
  * что раскрывается по нажатию (открыта одна), ниже переключатели, внизу «Сбросить» и «Показать N» ([show]). Что выбрано -
  * решает список: шторка лишь рисует [groups] и [switches].
  */
@@ -144,7 +144,7 @@ fun <T> ChoiceChips(options: List<T>, selected: (T) -> Boolean, label: (T) -> St
     }
 }
 
-/** Редкости цветными плитками (4.2.0): плитка в цвете своей редкости ([rarityColor]), выбранная - залита им. */
+/** Редкости цветными плитками: плитка в цвете своей редкости ([rarityColor]), выбранная - залита им. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun RarityTiles(rarities: List<Rarity>, selected: (Rarity) -> Boolean, onToggle: (Rarity) -> Unit) {

@@ -11,11 +11,11 @@ import kotlinx.coroutines.launch
 
 private val Context.drafts by preferencesDataStore("feedback_drafts")
 
-/** What the report sheet held when it closed (3.75.0). */
+/** What the report sheet held when it closed. */
 data class FeedbackDraft(val kind: FeedbackKind = FeedbackKind.BUG, val texts: Map<FeedbackKind, String> = emptyMap())
 
 /**
- * The words of an unsent report (3.75.0; 0.14.2 - без предложений), one per kind, and the kind last open: they outlive the sheet and
+ * The words of an unsent report (без предложений), one per kind, and the kind last open: they outlive the sheet and
  * the app, and go only once the server has taken them.
  */
 class DraftStore(private val context: Context, private val scope: CoroutineScope) {

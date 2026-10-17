@@ -14,8 +14,8 @@ import com.sperance.exileforge.core.display.icon
 /**
  * The drawing of each meaning: the one table a new [Glyph] has to be added to.
  *
- * It is a `when` over the enum, so a glyph without a drawing does not compile — which is the whole
- * difference from the keyword search it replaced, where a missing case silently became a sigil.
+ * It is a `when` over the enum, so a glyph without a drawing does not compile — unlike a keyword search,
+ * where a missing case would silently become a sigil.
  */
 val Glyph.vector: ImageVector get() = when (this) {
     Glyph.LIFE -> Icons.Outlined.FavoriteBorder
@@ -58,9 +58,10 @@ val Glyph.vector: ImageVector get() = when (this) {
 /**
  * A characteristic: the server's drawing when its icon set covers the stat, the bundled glyph for
  * its meaning otherwise — the same fallback every icon here makes.
+ *
+ * Стекло держит свои цвета: [tint] - для встроенного знака, [muted] гасит стекло.
  */
 @Composable fun StatIcon(stat: String, tint: Color, modifier: Modifier = Modifier, muted: Boolean = false) {
-    // Glass keeps its own colours (3.7.0): [tint] is for the bundled glyph, [muted] greys the glass.
     if (!SpriteIcon(icon(IconKey.stat(stat)), tint, modifier, halo = false, muted = muted)) {
         Icon(Glyph.ofStat(stat).vector, null, tint = tint, modifier = modifier)
     }

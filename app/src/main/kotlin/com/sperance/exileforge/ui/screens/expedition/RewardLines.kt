@@ -27,12 +27,14 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card (3.2.0).
+ * What the server rolled — experience, gold, orbs and items — for a kill and a chest alike; each item as its whole card.
  * [awaiting]: some of it is still on its way, and the sheet says so instead of «nothing else».
- * With [onItem] a card opens its comparison with what is worn (3.24.0). Каждая надеваемая вещь несёт стрелки урона и
- * защиты (3.89.0). Вещь показывается по её положению у героя (3.90.0, [presentLoot]): проданной нет, надетая - с меткой
+ * With [onItem] a card opens its comparison with what is worn. Каждая надеваемая вещь несёт стрелки урона и
+ * защиты. Вещь показывается по её положению у героя ([presentLoot]): проданной нет, надетая - с меткой
  * «Надето»; [arriving] - журнал ещё несёт ответы, и вещи, которой нет у героя, ждут, а не пропадают.
- * Без [onItem] вещь и стопка открывают общую карточку предмета (4.3.2).
+ * Без [onItem] вещь и стопка открывают общую карточку предмета.
+ *
+ * Без нелокальных return из составных лямбд: D8 не переводит их в dex. Сравнение - с копией героя, когда она уже у него.
  */
 @Composable internal fun RewardLines(game: GameUi, reward: Reward, onItem: ((ItemView) -> Unit)? = null, awaiting: Boolean = false, arriving: Boolean = awaiting) {
     val gear = game.presentLoot(reward.equipment, arriving = awaiting || arriving)
@@ -49,7 +51,6 @@ import com.sperance.exileforge.ui.theme.*
             }
         }
         gear.forEach { (instance, presence) ->
-            // Без нелокальных return из составных лямбд (3.90.0): D8 не переводит их в dex.
             key(instance.id) {
                 val piece = game.view(instance)
                 when {
@@ -58,7 +59,6 @@ import com.sperance.exileforge.ui.theme.*
                     presence.worn -> WornLootRow(piece)
 
                     else -> {
-                        // Две линии «Поля боя» (3.88.6): карточку открывает нажатие. Сравнение - с копией героя, когда она уже у него.
                         ItemRow(
                             piece,
                             compact = true,
@@ -77,7 +77,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** The loot on its way (server 1.30.0): the server alone rolls it, and it shows as its answers arrive — offline, once the connection is back. */
+/** The loot on its way: the server alone rolls it, and it shows as its answers arrive — offline, once the connection is back. */
 @Composable internal fun Receiving(modifier: Modifier = Modifier) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         CircularProgressIndicator(Modifier.size(12.dp), color = Rune, strokeWidth = 2.dp)
@@ -85,7 +85,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Надетая вещь лута (3.90.0): строка с меткой «Надето», без цены и действий - во всех списках лута одна; касание - карточка (4.3.2). */
+/** Надетая вещь лута: строка с меткой «Надето», без цены и действий - во всех списках лута одна; касание - карточка. */
 @Composable internal fun WornLootRow(piece: ItemView) {
     val inspect = rememberInspect()
     ItemRow(piece, compact = true, worn = true) { inspect(Inspect.Copy(piece.item)) }

@@ -44,10 +44,10 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The City (3.22.0): where the auction's tab was, a square of buildings — the quest board (3.23.0), the merchant, the auction, the guild,
- * «История» (3.90.2) and «Доска славы» (4.2.0).
+ * The City: a square of buildings — the quest board, the merchant, the auction, the guild,
+ * «История» and «Доска славы».
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
- * The buildings are the screens they always were, each explaining itself on its first visit.
+ * Each building explains itself on its first visit.
  */
 @Composable fun CityScreen(building: Building?) {
     val shell: ShellViewModel = koinViewModel()
@@ -55,7 +55,6 @@ import org.koin.compose.viewmodel.koinViewModel
         CitySquare()
         return
     }
-    // Цепочка «назад» (4.4.x): «← Город › Здание», вложенные уровни здания (гильдия) встают в ту же строку
     BackTrailHost(ui("nav.city")) {
         TrailLevel(ui(building.titleKey), onBack = { shell.building(null) }) {
             when (building) {
@@ -83,7 +82,11 @@ private val Building.titleKey: String
         Building.HALL -> "hall.title"
     }
 
-/** The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero. */
+/**
+ * The square: the three buildings and their news, read when the square opens — the merchant's comes with the hero.
+ *
+ * Площадь, открытая снова за полминуты, сервер не спрашивает; вкладка нажата снова - наверх.
+ */
 @Composable private fun CitySquare() {
     val shell: ShellViewModel = koinViewModel()
     val game by shell.game.collectAsStateWithLifecycle()
@@ -97,14 +100,12 @@ private val Building.titleKey: String
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         if (game.heroId.isNotBlank()) {
             heroModel.ensure()
-            // Срок свежести (3.94.1): площадь, открытая снова за полминуты, сервер не спрашивает
             market.glanceLots()
             guild.open()
             quests.open()
         }
     }
     val scroll = rememberScrollState()
-    // Вкладка нажата снова на площади (3.95.0): наверх; из здания навигатор и так вернул на площадь
     OnReselect(TAB_CITY) { scroll.animateScrollTo(0) }
     Column(Modifier.fillMaxSize().verticalScroll(scroll).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Spacer(Modifier.height(12.dp))
@@ -114,14 +115,14 @@ private val Building.titleKey: String
     }
 }
 
-/** Летопись (4.0.0): сколько деяний свершено и носимый титул. */
+/** Летопись: сколько деяний свершено и носимый титул. */
 private fun chronicleNews(game: GameUi): String {
     val done = game.chronicleDone()?.let { (done, all) -> ui("chronicle.done", done, all) } ?: return ui("common.loading")
     val title = game.hero?.info?.title?.takeIf { it.isNotBlank() } ?: return done
     return "$done · ${titleName(title)}"
 }
 
-/** Летопись в здании Города (4.0.0): её экран читает героя, как прежде на странице «Развития». */
+/** Летопись в здании Города: её экран читает героя сам. */
 @Composable private fun CityChronicle() {
     val game by koinViewModel<ShellViewModel>().game.collectAsStateWithLifecycle()
     val heroModel: HeroViewModel = koinViewModel()
@@ -130,7 +131,7 @@ private fun chronicleNews(game: GameUi): String {
 }
 
 /**
- * Здания площади плитками хаба (4.4.x, как «Развитие»): у каждого строка новостей и замок уровня; счётчик - что ждёт действия:
+ * Здания площади плитками хаба (как «Развитие»): у каждого строка новостей и замок уровня; счётчик - что ждёт действия:
  * награды заданий, приглашения в гильдию, свои лоты аукциона, что пора продлить.
  */
 private fun cityTiles(game: GameUi, board: Quests, trade: Market, guilds: Guilds, open: (Building) -> Unit): List<HubTile> {
@@ -152,7 +153,7 @@ private fun questsReady(quests: Quests): Int = quests.board?.let { board -> (boa
 /** Свои лоты, срок которых подходит к концу и которые уже можно продлить (окно продления правил). */
 private fun lotsToExtend(game: GameUi, market: Market): Int = game.index?.rules?.auction?.let { rules -> market.myLots.count { it.extendable(rules) } } ?: 0
 
-/** How many quests wait for their reward, or how many are under way; сюжет (4.2.0) - в «Походе», не здесь. */
+/** How many quests wait for their reward, or how many are under way; сюжет - в «Походе», не здесь. */
 private fun questNews(quests: Quests): String {
     val board = quests.board ?: return ui("city.quests_idle")
     val ready = questsReady(quests)
@@ -171,5 +172,5 @@ private fun guildNews(guilds: Guilds): String {
     return if (mine.invites.isNotEmpty()) ui("city.guild_invites", mine.invites.size) else ui("city.guild_none")
 }
 
-/** The level a building opens at (3.76.0), while the hero is below it. */
+/** The level a building opens at, while the hero is below it. */
 private fun GameUi.lockOf(building: Building): Int? = Feature.ofBuilding(building)?.takeIf { !unlocked(it) }?.level(index?.rules)

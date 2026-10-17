@@ -27,7 +27,7 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The guild's quests (3.23.0): the hero's own two for the day, then the common goals of the day and of the week. A common
+ * The guild's quests: the hero's own two for the day, then the common goals of the day and of the week. A common
  * goal fills with every member's counters; once it is full, each member who gave at least the threshold claims a share,
  * and the first claim brings the guild its experience. Under a goal, who gave most.
  */

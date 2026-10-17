@@ -7,13 +7,15 @@ import com.sperance.exileforge.core.campaign.Shoreline
 import com.sperance.exileforge.core.campaign.Tile
 
 /**
- * Рельеф карты для сцены (4.2.0): что зависит только от клеток карты и потому считается раз на карту и её правку
+ * Рельеф карты для сцены: что зависит только от клеток карты и потому считается раз на карту и её правку
  * ([ExpeditionMap.revision]), а не каждый кадр.
  *
  * - Массивы скалы: связные (по сторонам и диагоналям - контур стены сливает и их) клетки стены получают одну высоту [rise] -
  *   крышка массива ровная, без ступенек и швов.
- * - Контуры вод и пропастей ([outline]): соседние клетки - одна гладь со скруглёнными углами; с 4.9.0 контур строит
+ * - Контуры вод и пропастей ([outline]): соседние клетки - одна гладь со скруглёнными углами; контур строит
  *   [Shoreline] ядра (marching squares, сглаживание, отступ берега из правил) - одна линия для сцены и для тел.
+ *
+ * Массивы находятся обходом в ширину: номер массива - его первая клетка по порядку.
  */
 internal class MapRelief private constructor(private val map: ExpeditionMap, private val shoreline: Shoreline) {
     private val revision = map.revision
@@ -22,7 +24,6 @@ internal class MapRelief private constructor(private val map: ExpeditionMap, pri
     private val paths = HashMap<Tile, Pair<Float, Path>>()
 
     init {
-        // Массивы обходом в ширину: номер массива - его первая клетка по порядку, от неё и высота
         val queue = ArrayDeque<Int>()
         for (start in masses.indices) {
             if (masses[start] >= 0 || !rock(start % map.width, start / map.width)) continue
@@ -56,7 +57,7 @@ internal class MapRelief private constructor(private val map: ExpeditionMap, pri
 
     /**
      * Контур клеток [tile] в координатах холста сцены при полуширине клетки [unit] (до сдвига камеры): заливка - гладь, вне
-     * её - берег. С 4.9.0 - петли [Shoreline] мира, те же, в которые упираются тела. Путь держится, пока не сменился [unit].
+     * её - берег. Петли [Shoreline] мира, те же, в которые упираются тела. Путь держится, пока не сменился [unit].
      */
     fun outline(tile: Tile, unit: Float): Path {
         paths[tile]?.takeIf { it.first == unit }?.let { return it.second }

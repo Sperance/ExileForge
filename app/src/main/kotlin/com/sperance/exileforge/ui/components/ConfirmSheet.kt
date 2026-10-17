@@ -59,6 +59,10 @@ data class LedgerLine(val label: String, val value: String, val tone: Tone = Ton
  * same button answers an accessibility click at once — that tap is deliberate by construction.
  *
  * It is deliberately not on everything. A question in front of an ordinary action stops being read.
+ *
+ * [blocked] - клиент уже знает, что действие не пройдёт: [warning] говорит почему, кнопка погашена. [options] - выбор под счётом (оплата
+ * атласа), между счётом и заметкой. [gold] - оплата золотом: строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка
+ * погашена, а [warning] без своего говорит недостачу.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,15 +75,9 @@ fun ConfirmSheet(
     note: String? = null,
     warning: String? = null,
     danger: Boolean = false,
-    /** The client already knows the action cannot go through (2.46.0): the [warning] says why and the button stays off. */
     blocked: Boolean = false,
     icon: (@Composable () -> Unit)? = null,
-    /** A choice under the ledger (the atlas's payment, server 1.65.0): drawn as given, between the ledger and the note. */
     options: (@Composable () -> Unit)? = null,
-    /**
-     * Оплата золотом (0.14.5, #42): строки «Есть · Спишется · Останется» под [ledger]; не хватает - кнопка погашена, а [warning]
-     * без своего говорит недостачу.
-     */
     gold: GoldBill? = null,
     onConfirm: () -> Unit,
 ) {
@@ -164,9 +162,9 @@ fun ConfirmSheet(
  * In a sheet it fires once, because the sheet goes with it. [rearm] is for a button that stays —
  * the forge's, where the same orb is spent again and again — and empties the band after each hold.
  *
- * [millis] is how long the hold lasts (3.81.0: the tree's refunds ask a full second).
+ * [millis] is how long the hold lasts (the tree's refunds ask a full second).
  *
- * An [icon] and a [figure] (2.73.0) make it a ribbon: a rounded gilt frame, the icon on the left
+ * An [icon] and a [figure] make it a ribbon: a rounded gilt frame, the icon on the left
  * and the figure — a price — in a coin chip on the right.
  */
 @Composable fun HoldButton(
@@ -198,7 +196,6 @@ fun ConfirmSheet(
     }
     val tint = if (enabled) accent else Muted.copy(alpha = .45f)
     val ribbon = icon != null || figure != null
-    // «Мягкий» (3.88.3): таблетка 44 dp на полупрозрачном цвете действия, без рамки и свечения; удержание заливает её.
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
     Box(
         modifier.fillMaxWidth().height(44.dp).clip(shape)

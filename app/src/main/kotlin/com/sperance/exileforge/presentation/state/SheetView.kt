@@ -25,7 +25,7 @@ import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 
 /**
- * Герой над контентом (3.80.33): что экраны выводят из пары «контент + герой». Одна логика для срезов экранов.
+ * Герой над контентом: что экраны выводят из пары «контент + герой». Одна логика для срезов экранов.
  */
 internal object HeroLens {
     /** The view of an item over the content on screen, or null before the content has been read. */
@@ -35,7 +35,7 @@ internal object HeroLens {
     fun sellPrice(index: ContentIndex?, item: ItemInstance): Long? = view(index, item)?.sellPrice()
 
     /**
-     * What putting [item] on would change on the sheet - на место [place] (3.90.3) или туда, что выберут правила; с 4.8.0 - и Мощь
+     * What putting [item] on would change on the sheet - на место [place] или туда, что выберут правила; и Мощь
      * героя с вещью.
      */
     fun wearing(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): WearOutcome {
@@ -55,16 +55,16 @@ internal object HeroLens {
         return Sheets.allocating(index, TakenNode(code, choice), hero.level, hero.heroClass, hero.tree, hero.items, hero.figures.values, hero.info.laws, hero.info.fate, hero.skills)
     }
 
-    /** Память вердиктов (3.89.0): одна на приложение, сбрасывается сама с новым героем или контентом. */
+    /** Память вердиктов: одна на приложение, сбрасывается сама с новым героем или контентом. */
     private val verdicts = GearVerdicts()
 
     /**
-     * Урон и защита героя, если надеть [item] (3.89.0) - на место [place] (3.90.3), а без него или для слота с одним местом -
+     * Урон и защита героя, если надеть [item] - на место [place], а без него или для слота с одним местом -
      * на лучшее; null - вещь не надевается, надета или не по требованиям.
      */
     fun verdict(index: ContentIndex?, hero: HeroView?, item: ItemInstance, place: Slot? = null): GearVerdict? = place?.let { wanted -> verdicts.places(index, hero, item).firstOrNull { it.slot == wanted } }?.verdict ?: verdicts.of(index, hero, item)
 
-    /** Места [item] с тем, что там надето, и вердиктом каждого (3.90.3); пусто - вещь не надеть. */
+    /** Места [item] с тем, что там надето, и вердиктом каждого; пусто - вещь не надеть. */
     fun wearPlaces(index: ContentIndex?, hero: HeroView?, item: ItemInstance): List<WearPlace> = verdicts.places(index, hero, item)
 
     /** The requirements the template [code] misses against the sheet, in the rules' words; empty means it can be worn. */
@@ -74,14 +74,14 @@ internal object HeroLens {
         return Sheets.unmet(index, code, hero.level, hero.stats)
     }
 
-    /** What the hero's auras hold of the mana, as the fight holds it (4.6.4, лист боя); null until the hero's sheet is here. */
+    /** What the hero's auras hold of the mana, as the fight holds it (лист боя); null until the hero's sheet is here. */
     fun manaReserve(hero: HeroView?): ManaReserve? = hero?.combat?.let { ManaReserve(it.body.maxMana, it.reserved) }
 
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
     fun orbs(index: ContentIndex?): List<Item> = index?.let(orbsMemo::of).orEmpty()
     private val orbsMemo = LastOf { i: ContentIndex -> i.itemsByCategory[Item.CURRENCY].orEmpty().sortedBy { it.price } }
 
-    /** The auction's money (server 1.84.36: every orb, `AuctionRules.trades`): what a lot is priced, bought and filtered in, cheapest first. */
+    /** The auction's money (every orb, `AuctionRules.trades`): what a lot is priced, bought and filtered in, cheapest first. */
     fun currencies(index: ContentIndex?): List<Item> = index?.let(currenciesMemo::of).orEmpty()
     private val currenciesMemo = LastOf { i: ContentIndex -> orbs(i).filter(i.rules.auction::trades) }
 
@@ -107,12 +107,15 @@ internal object HeroLens {
     /** The hero's tree as the rules count it: the point balance and what the taken nodes give. */
     fun treeState(index: ContentIndex?, hero: HeroView?): TreeState? = treeMemo.of(index, hero)
 
-    /** Дерево раскрывается раз на героя и контент (4.9.0): нижняя навигация спрашивает его на каждый срез игры. */
+    /**
+     * Дерево раскрывается раз на героя и контент: нижняя навигация спрашивает его на каждый срез игры.
+     *
+     * Вклад «за каждые N» - от листа героя, как у сервера.
+     */
     private val treeMemo = LastPair { i, h ->
         val total = i.classes.pointsTotal(h.level) + h.info.bonusPoints
         val spent = i.tree.spent(h.tree)
         val calculator = SheetCalculator(i)
-        // Вклад «за каждые N» (4.9.2) - от листа героя, как у сервера
         TreeState(total, spent, total - spent, h.tree, calculator.totals(calculator.expand(i.tree.lines(h.tree))) { h.stats[it] ?: 0.0 })
     }
 }
@@ -125,7 +128,7 @@ fun GameUi.gearVerdict(item: ItemInstance, place: Slot? = null): GearVerdict? = 
 fun GameUi.wearPlaces(item: ItemInstance): List<WearPlace> = HeroLens.wearPlaces(index, hero, item)
 fun GameUi.unmetFor(code: String): List<String> = HeroLens.unmet(index, hero, code)
 
-/** Какие требования вещи [code] герой не выполняет (4.6.5) - по чипу карточки; героя или шаблона нет - null (без отметок). */
+/** Какие требования вещи [code] герой не выполняет - по чипу карточки; героя или шаблона нет - null (без отметок). */
 fun GameUi.unmetNeeds(code: String): Set<NeedKind>? {
     val hero = hero ?: return null
     val template = index?.template(code) ?: return null
@@ -134,12 +137,12 @@ fun GameUi.unmetNeeds(code: String): Set<NeedKind>? {
 fun GameUi.manaReserve(): ManaReserve? = HeroLens.manaReserve(hero)
 
 /**
- * Цифры сводки героя (4.6.4): лист боя с пассивными умениями и Предначертанием ([CombatSheet]); до него - лист как есть. Сводка,
+ * Цифры сводки героя: лист боя с пассивными умениями и Предначертанием ([CombatSheet]); до него - лист как есть. Сводка,
  * разбор и сравнения вещи и узла дерева читают одни и те же цифры.
  */
 val HeroView.figures: StatFigures get() = combat?.figures ?: StatFigures(stats)
 
-/** Мощь героя (4.8.0) - из того же листа боя без карты, что сводка; null - листа боя ещё нет. */
+/** Мощь героя - из того же листа боя без карты, что сводка; null - листа боя ещё нет. */
 val HeroView.might: MightReading? get() = combat?.might
 
 /** The hero's mana [pool] and the [percent] of it the passive auras hold, as the fight reserves it. */
@@ -149,7 +152,7 @@ data class ManaReserve(val pool: Double, val percent: Double) {
 }
 
 /**
- * Последний ответ по контенту (4.9.0): тот же [ContentIndex] (по ссылке) - тот же ответ; срез игры пересоздаётся часто, а
+ * Последний ответ по контенту: тот же [ContentIndex] (по ссылке) - тот же ответ; срез игры пересоздаётся часто, а
  * контент и герой в нём - те же объекты, пока не пришли новые.
  */
 private class LastOf<R>(private val compute: (ContentIndex) -> R) {
@@ -161,7 +164,7 @@ private class LastOf<R>(private val compute: (ContentIndex) -> R) {
     }
 }
 
-/** Последний ответ по паре «контент + герой» (4.9.0), по ссылкам; без контента или героя - null. */
+/** Последний ответ по паре «контент + герой», по ссылкам; без контента или героя - null. */
 private class LastPair<R : Any>(private val compute: (ContentIndex, HeroView) -> R) {
     @Volatile private var last: Triple<ContentIndex, HeroView, R>? = null
 

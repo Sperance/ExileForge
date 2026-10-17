@@ -12,12 +12,14 @@ import kotlin.math.floor
 internal class EdgeNoise(val amplitude: Float, val scale: Float, val rough: Float)
 
 /**
- * Сглаженное поле скалы карты: сумма гауссиан («метаболы») по клеткам каймы - стенам, что касаются пола (8 соседей), и (4.12.x,
- * ASANA-01) по стенам за каймой на [DEEP] шага вглубь с затухающим весом - массив сплошной, а не лента в клетку, - плюс
+ * Сглаженное поле скалы карты: сумма гауссиан («метаболы») по клеткам каймы - стенам, что касаются пола (8 соседей), и
+ * по стенам за каймой на [DEEP] шага вглубь с затухающим весом - массив сплошной, а не лента в клетку, - плюс
  * детерминированный шум края стиля [edge]. Поле считается раз на карту в узлах сетки по [STEPS] на клетку, так что каждый
  * квадрат marching squares лежит внутри одной клетки карты: изолинии режутся по клеткам без пересчёта.
  *
  * Изолиния поля на уровне [ROCK] - подножие массива; ниже - подложка земли ([PLATE]) и тень у подножия ([AO_FAR], [AO_NEAR]).
+ *
+ * Гауссиана разделима: вес клетки - произведение весов по осям.
  */
 internal class WallField(private val map: ExpeditionMap, private val edge: EdgeNoise, private val salt: Int) {
     val width = map.width
@@ -57,7 +59,6 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
     }
 
     init {
-        // Гауссиана разделима: вес клетки - произведение весов по осям, по доле шага внутри клетки и сдвигу до клетки
         val weights = Array(STEPS) { s -> FloatArray(REACH * 2 + 1) { k -> (s.toFloat() / STEPS - (k - REACH) - .5f).let { exp(-SPREAD * it * it) } } }
         for (j in 0 until rows) {
             val wy = weights[j % STEPS]
@@ -136,7 +137,6 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
                 contour.cellY = j / STEPS
                 val saddle = inside == 2 && (v[0] > level) == (v[2] > level)
                 if (saddle && (v[0] + v[1] + v[2] + v[3]) / 4 <= level) {
-                    // Две разные лапы по диагонали: каждый угол - свой треугольник
                     for (k in 0 until 4) {
                         if (v[k] <= level) continue
                         contour.clear()
@@ -173,7 +173,7 @@ internal class WallField(private val map: ExpeditionMap, private val edge: EdgeN
         const val AO_NEAR = .58f
 
         /**
-         * Веса стены за каймой по шагу вглубь (4.12.x, ASANA-01): массив сплошной на 2-3 клетки, затем поле затухает - крышка уходит
+         * Веса стены за каймой по шагу вглубь: массив сплошной на 2-3 клетки, затем поле затухает - крышка уходит
          * в «тьму скалы», а не обрывается плитой.
          */
         private val DEEP_WEIGHTS = floatArrayOf(.85f, .6f)

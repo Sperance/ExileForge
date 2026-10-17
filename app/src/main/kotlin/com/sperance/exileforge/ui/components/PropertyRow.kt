@@ -24,7 +24,6 @@ import com.sperance.exileforge.ui.theme.*
  */
 @Composable fun PropertyRow(label: String, value: String, glyph: Glyph = Glyph.INFO, stat: String? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Руна только называет вид строки: подпись и значение рядом, подсказка по нажатию не нужна (3.90.2).
         Box(Modifier.size(26.dp).background(Rune.copy(alpha = .10f), RoundedCornerShape(5.dp)), contentAlignment = Alignment.Center) {
             if (stat != null) StatIcon(stat, Rune, Modifier.size(16.dp)) else GlyphIcon(glyph, Rune, Modifier.size(16.dp))
         }

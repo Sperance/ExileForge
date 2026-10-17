@@ -41,10 +41,9 @@ import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 
-/** Полосы кузницы над навигацией (3.80.24): выбранная сфера, эссенция или строка верстака с удерживаемой кнопкой. */
+/** Полосы кузницы над навигацией: выбранная сфера, эссенция или строка верстака с удерживаемой кнопкой. */
 /**
- * The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. С 0.14.0
- * (ASANA-N12) под именем - что гарантия даст именно этой вещи: «Даст T5 из 6: +(12–18)% к урону огнём» (`OrbApplier.essenceGuarantee`).
+ * The chosen essence over the navigation, with the held button: a common item becomes rare, a rare one is rolled anew. Под именем - что гарантия даст именно этой вещи: «Даст T5 из 6: +(12–18)% к урону огнём» (`OrbApplier.essenceGuarantee`).
  */
 @Composable internal fun EssenceBar(game: GameUi, code: String, view: ItemView, enabled: Boolean, accepted: (String) -> Boolean, onApply: (String, String) -> Unit) {
     val owned = game.bagAmount(code) ?: 0L
@@ -71,8 +70,11 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. С 4.4.x - над любой целью
+ * The chosen orb over the navigation: what it does, what the bag keeps, and the button that is held. Над любой целью
  * кузницы ([ForgeTarget]): [chosen] - сфера лотка, что ляжет на цель; нет её - полоса просит выбрать.
+ *
+ * Сфера качества, что сбросит качество другого вида, сперва спрашивает подтверждение. Сфера, что идёт только со знамением, ждёт его. Сбор
+ * золотом - по уровню предмета копии, одна функция правил. Сфера гравёра тратится в листе выбора строки ([EngraveSheet]).
  */
 @Composable internal fun OrbBar(
     game: GameUi,
@@ -85,7 +87,6 @@ import com.sperance.exileforge.ui.theme.*
     onPickLine: () -> Unit,
     onApply: (String) -> Unit,
 ) {
-    // Качество другого вида (4.3.0): сфера качества сбросит его - сначала подтверждение с тем, сколько пропадёт.
     var confirming by remember(target.id, chosen, smithy.omen) { mutableStateOf(false) }
     ForgeBar {
         if (chosen == null) {
@@ -94,7 +95,6 @@ import com.sperance.exileforge.ui.theme.*
         }
         val code = chosen.code
         val owned = game.bagAmount(code) ?: 0L
-        // An orb the target takes only under an omen (a catalyst's Orb of Quality) waits for one: alone the server would refuse it.
         val waiting = chosen.needsOmen && smithy.omen.isBlank()
         BarTitle(
             ForgeGlyphs.Orb,
@@ -105,14 +105,11 @@ import com.sperance.exileforge.ui.theme.*
         )
         val resets = code == Orb.QUALITY_ORB.name && lost > 0
         if (resets) Text(ui("forge.quality_reset", lost), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-        // Сфера удачи (4.3.0): какие уникалки может дать эта вещь - список правил ([OrbApplier.chanceUniques]).
         if (code == Orb.ORB_OF_CHANCE.name && chanceUniques.isNotEmpty()) {
             Text(ui("forge.chance_uniques", chanceUniques.joinToString(", ") { equipmentTitle(it) }), color = Parchment, style = MaterialTheme.typography.bodySmall)
         }
-        // Сбор золотом за сферу (0.15.0, реш. 22): по уровню предмета копии, одна функция правил
         val fee = game.index?.let { index -> Orb.of(code)?.let { game.goldBill(index.rules.craftFee.orb(it, target.itemLevel)) } }
         FeeChip(fee)
-        // Сфера гравёра (4.11.x) ложится на одну строку: её выбирают в листе ([EngraveSheet]), там и тратится сфера
         if (code == Orb.ENGRAVERS_ORB.name) {
             ForgeButton(onPickLine, Modifier.fillMaxWidth(), enabled = enabled && !target.corrupted && fee.covered) { Text(fee.paying(ui("forge.engrave_pick"))) }
             return@ForgeBar
@@ -144,7 +141,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Выбранная печать Атласа над навигацией (4.6.4): что она, сколько в сумке и удерживаемая кнопка; печать, что ляжет только со
+ * Выбранная печать Атласа над навигацией: что она, сколько в сумке и удерживаемая кнопка; печать, что ляжет только со
  * знамением, ждёт его - одна она сервером отвергнута.
  */
 @Composable internal fun SealBar(game: GameUi, smithy: Smithy, target: ForgeTarget, chosen: OrbChoice?, enabled: Boolean, onApply: (String) -> Unit) {
@@ -166,7 +163,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** The chosen bench line over the navigation, priced, with the same held button; рецепт, что не встанет (4.2.0), не предлагается. */
+/** The chosen bench line over the navigation, priced, with the same held button; рецепт, что не встанет, не предлагается. */
 @Composable internal fun BenchBar(game: GameUi, vm: SmithyViewModel, item: ItemView, chosen: String, enabled: Boolean) {
     val index = game.index ?: return
     val hero = game.hero ?: return
@@ -198,7 +195,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Сбор золотом за действие кузницы (0.15.0, реш. 22): чип «цена / есть» ([GoldCost]) - цена считается функцией правил
+ * Сбор золотом за действие кузницы: чип «цена / есть» ([GoldCost]) - цена считается функцией правил
  * `CraftFeeRules` по уровню предмета копии; сбора нет (печати, нулевой вес) - чипа нет.
  */
 @Composable private fun FeeChip(fee: GoldBill?) {
@@ -213,8 +210,8 @@ private fun GoldBill?.paying(ready: String): String = this?.payLabel(ready) ?: r
 
 /**
  * What the bag keeps after one use. It is printed only when the bag can pay; when it cannot, the
- * bar says so in red and the button stays off (2.46.0).
- * Нехватка с 3.89.0 - общей строкой «Не хватает: …».
+ * bar says so in red and the button stays off.
+ * Нехватка - общей строкой «Не хватает: …».
  */
 internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> = Cost.item(code, need).shortfall({ have }, 0).text()?.let { it to true } ?: (ui("forge.orb_left", have, have - need) to false)
 
@@ -243,7 +240,7 @@ internal fun stock(code: String, have: Long, need: Long): Pair<String, Boolean> 
 }
 
 /**
- * Лист Сферы гравёра (4.11.x, макет «Сфера гравёра», вариант B «Лист выбора строки»): «Какую строку гравировать?» - каждая строка
+ * Лист Сферы гравёра: «Какую строку гравировать?» - каждая строка
  * вещи [target] с вилкой своего тира; строка, что правила не примут, тусклая, с причиной ([ForgeTarget.engraving]). Выбранная - в
  * золотой рамке; удержание «Гравировать · 1 сфера» тратит сферу на неё ([onEngrave] - номер строки в `item.rolls`).
  */

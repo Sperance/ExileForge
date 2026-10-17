@@ -50,11 +50,6 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-/*
- * «Реликварий» (3.88.6, выбор владельца): подробная карточка предмета, её строки модификаторов со значком тира, итог героя
- * «сейчас → станет» и «Астролябия» уникальных и мифических вещей - кольца, искры и звёзды вокруг предмета.
- */
-
 /** Имена предметов: Cinzel, начертание задаётся осью веса вариативного шрифта. */
 @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
 val RelicSerif = FontFamily(
@@ -68,6 +63,9 @@ fun relicName(size: Int = 23) = TextStyle(fontFamily = RelicSerif, fontWeight = 
 /**
  * Облик карточки по редкости: рамка, фон, свечение и цвета текста. Обычные, волшебные и редкие вещи - басальт в тон редкости;
  * уникальные - тёплый уголь с искрами, мифические - звёздное небо.
+ *
+ * «Реликварий»: подробная карточка предмета, её строки модификаторов со значком тира, итог героя «сейчас → станет» и «Астролябия»
+ * уникальных и мифических вещей.
  */
 @Immutable
 data class RelicLook(
@@ -110,13 +108,13 @@ fun relicLook(rarity: Rarity): RelicLook {
     }
 }
 
-/** Имя вещи серифами размера [size] в цвете редкости; у легенды - с ореолом её свечения (3.90.0). */
+/** Имя вещи серифами размера [size] в цвете редкости; у легенды - с ореолом её свечения. */
 fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = name, shadow = if (legend != null) Shadow(glow.copy(alpha = .6f), blurRadius = 18f) else null)
 
 /**
- * Подложка вещи в облике редкости (3.90.0) - общая для полной карточки и плитки: градиент [RelicLook.top] → [RelicLook.bottom],
+ * Подложка вещи в облике редкости - общая для полной карточки и плитки: градиент [RelicLook.top] → [RelicLook.bottom],
  * свечение редкости от верхнего края, завитки по углам у легенды и рамка - нить [RelicLook.gold], у выбранной - золото.
- * Небо легенды ([relicSky]) - только при [sky] (4.3.0): его зажигает полная карточка, в списках подложка без анимации.
+ * Небо легенды ([relicSky]) - только при [sky]: его зажигает полная карточка, в списках подложка без анимации.
  */
 @Composable fun Modifier.relicGround(look: RelicLook, shape: Shape, selected: Boolean = false, sky: Boolean = false): Modifier {
     val frame = Brush.verticalGradient(
@@ -135,7 +133,7 @@ fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = nam
 }
 
 /**
- * Гнездо иконки размера [size] (3.90.0): у обычной, волшебной и редкой - скруглённый квадрат басальта в нити редкости,
+ * Гнездо иконки размера [size]: у обычной, волшебной и редкой - скруглённый квадрат басальта в нити редкости,
  * у легенды - круг её неба в золотой нити с ореолом, как гнездо «Астролябии».
  */
 @Composable fun RelicSocket(item: ItemView, look: RelicLook, size: Dp) {
@@ -191,7 +189,7 @@ fun modColor(marks: AffixMarks): Color = when (marks.kind) {
     else -> Color(0xFFA9CFFF)
 }
 
-/** Шестигранник [size] с вершиной вверх, как в макете. */
+/** Шестигранник [size] с вершиной вверх. */
 private fun DrawScope.hexPath(): Path {
     val w = size.width
     val h = size.height
@@ -207,7 +205,7 @@ private fun DrawScope.hexPath(): Path {
 }
 
 /**
- * Значок строки (3.88.6): шестигранник в цвете тира с его номером, ✦ у уникальной строки, молот у ремесла, пустой контур у врождённой.
+ * Значок строки: шестигранник в цвете тира с его номером, ✦ у уникальной строки, молот у ремесла, пустой контур у врождённой.
  * Долгое нажатие называет вид строки.
  */
 @Composable fun TierHex(marks: AffixMarks, size: Dp = 20.dp) {
@@ -229,7 +227,6 @@ private fun DrawScope.hexPath(): Path {
                     drawPath(hex, fill)
                 }
                 if (kind == AffixKind.CRAFTED) {
-                    // Молот ремесла: рукоять наискось и боёк поперёк.
                     val ink = Color(0xFF14123A)
                     val s = this.size.width / 20f
                     val stroke = 1.6f * s
@@ -250,7 +247,9 @@ private fun DrawScope.hexPath(): Path {
 
 /**
  * Строка модификатора в карточке: значок тира, текст в цвете вида и справа «ремесло» у строки верстака. Вилку тира
- * карточка не печатает (3.88.7): тир, вилку и место ролла открывает нажатие на строку.
+ * карточка не печатает: тир, вилку и место ролла открывает нажатие на строку.
+ *
+ * Усиленная строка: ▲ у значка, текст - уже итог; ролл и процент - в разборе по нажатию.
  */
 @Composable fun RelicModLine(line: ItemLine, onClick: (() -> Unit)?, big: Boolean = true) {
     val tap = if (onClick == null) Modifier else Modifier.clickable(role = Role.Button, onClickLabel = line.text, onClick = onClick)
@@ -260,7 +259,6 @@ private fun DrawScope.hexPath(): Path {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         TierHex(line.marks, if (big) 20.dp else 16.dp)
-        // Усиленная строка (AMP-01): ▲ у значка, текст - уже итог; ролл и процент - в разборе по нажатию
         if (line.amplified != null) Text(ui("relic.amplified"), color = Vital, style = if (big) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelSmall)
         Text(
             line.text,
@@ -319,10 +317,11 @@ private val SPARKS = List(26) { i ->
 /**
  * Фон легенды: у мифической - мерцающие звёзды, у уникальной - искры, медленно поднимающиеся к имени.
  * Рисуется за содержимым и не трогает раскладку; только в полной карточке ([relicGround] с `sky`).
+ *
+ * Фаза читается в рисовании: небо перерисовывается без перекомпоновки карточки.
  */
 @Composable private fun Modifier.relicSky(look: RelicLook): Modifier {
     val legend = look.legend ?: return this
-    // Фаза читается в рисовании (4.9.0): небо перерисовывается шагом часов декора без перекомпоновки карточки.
     val sky = motionPhase(SKY_MS)
     return drawBehind {
         val time = sky.value
@@ -331,7 +330,6 @@ private val SPARKS = List(26) { i ->
                 val glow = .25f + .75f * ((sin(((time * 6 + phase) * 2 * PI)).toFloat() + 1) / 2)
                 drawCircle(Color(0xFFFFF0D2).copy(alpha = glow), r.dp.toPx(), Offset(size.width * x, size.height * y))
             } else {
-                // Искра живёт свой отрезок пути: всплывает на треть карточки и гаснет.
                 val life = (time * 5 + phase) % 1f
                 val alpha = if (life < .2f) life / .2f else 1f - (life - .2f) / .8f
                 val rise = life * size.height * .3f
@@ -357,7 +355,7 @@ private val CornerInner = Path().apply {
     lineTo(38f, 5f)
 }
 
-/** Завитки по углам рамки легенды: двойная дуга и капля золота; без аллокаций в кадре (4.9.0). */
+/** Завитки по углам рамки легенды: двойная дуга и капля золота; без аллокаций в кадре. */
 fun DrawScope.relicCorners(gold: Color) {
     val k = 38.dp.toPx() / 40f
     val inset = 8.dp.toPx()
@@ -380,11 +378,12 @@ fun DrawScope.relicCorners(gold: Color) {
 }
 
 /**
- * «Астролябия» (3.88.6): вокруг вещи - кольцо с делениями, медленно идущее по кругу, встречная пунктирная орбита со
+ * «Астролябия»: вокруг вещи - кольцо с делениями, медленно идущее по кругу, встречная пунктирная орбита со
  * спутниками и дышащее свечение; в центре - круглое гнездо с иконкой. Размер блока [size].
+ *
+ * Фазы читаются в рисовании: кольцо и свечение перерисовываются без перекомпоновки.
  */
 @Composable fun Astrolabe(look: RelicLook, size: Dp = 200.dp, socket: Dp = 108.dp, content: @Composable BoxScope.() -> Unit) {
-    // Фазы читаются в рисовании (4.9.0): кольцо и свечение перерисовываются без перекомпоновки.
     val ring = motionPhase(RING_MS)
     val breathing = motionPhase(BREATH_MS)
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {

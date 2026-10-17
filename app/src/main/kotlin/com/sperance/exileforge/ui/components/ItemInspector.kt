@@ -31,7 +31,7 @@ import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
 
-/** Что показать в карточке предмета (4.3.2): где бы его ни коснулись - строка, плитка, чип, значок. */
+/** Что показать в карточке предмета: где бы его ни коснулись - строка, плитка, чип, значок. */
 sealed interface Inspect {
     /** Главная кнопка под карточкой - прежнее действие места касания; null - карточка только смотрит. */
     val action: InspectAction?
@@ -47,8 +47,8 @@ sealed interface Inspect {
 }
 
 /**
- * Действие места под карточкой: [label] на кнопке, [run] выполняется, и карточка закрывается. [reason] (4.4.0) - почему
- * кнопка погашена, строкой под ней. [hold] (4.7.0) - действие по удержанию ([HoldButton]), [figure] - цена в его ярлыке.
+ * Действие места под карточкой: [label] на кнопке, [run] выполняется, и карточка закрывается. [reason] - почему
+ * кнопка погашена, строкой под ней. [hold] - действие по удержанию ([HoldButton]), [figure] - цена в его ярлыке.
  */
 data class InspectAction(
     val label: String,
@@ -67,7 +67,7 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
 /** Открыватель карточки предмета из [LocalItemInspector]; без хозяина - пустой. */
 @Composable fun rememberInspect(): (Inspect) -> Unit = LocalItemInspector.current ?: NO_INSPECT
 
-/** Хозяин карточек предметов (4.3.2): всё внутри открывает их через [LocalItemInspector]; лист один, поверх. */
+/** Хозяин карточек предметов: всё внутри открывает их через [LocalItemInspector]; лист один, поверх. */
 @Composable fun ItemInspectorHost(game: GameUi, content: @Composable () -> Unit) {
     var open by remember { mutableStateOf<Inspect?>(null) }
     val opener: (Inspect) -> Unit = remember { { open = it } }

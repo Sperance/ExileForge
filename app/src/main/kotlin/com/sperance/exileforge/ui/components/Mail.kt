@@ -45,11 +45,6 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
-/*
- * Почта (4.6.3, утверждён макет «Свиток писем», вариант A): нынешний лист почты с вкладками, письмо - листом поверх, новое
- * письмо - своим листом. Письма героев видны лишь адресату - ящик читается глазами героя в игре.
- */
-
 /** A letter's subject and body in the player's language: a system letter is the dictionary's, the administrator's as written. */
 fun mailSubject(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) systemLine(mail, "subject") else mail.subject
 fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
@@ -63,12 +58,13 @@ fun mailBody(mail: Mail): String = if (mail.kind == MailKind.SYSTEM) {
 
 /**
  * `mail.feedback_status`: its args are the kind, the status, an excerpt of the report and the administrator's word. The
- * auction's letters (3.79.0, server 1.74.0) name the lot's item by its code and its amount.
+ * auction's letters name the lot's item by its code and its amount.
+ *
+ * Судьба Issue (`mail.feedback_issue`): второй аргумент - судьба, пятый - версия исправления.
  */
 private fun systemLine(mail: Mail, part: String): String {
     if (mail.key in AUCTION_MAIL) return loc("${mail.key}.$part", listOf(mail.args.getOrNull(0)?.let(::lotItemTitle).orEmpty(), mail.args.getOrNull(1).orEmpty()))
     val kind = mail.args.getOrNull(0)?.takeIf { it.isNotBlank() }?.let(::kindTitle).orEmpty()
-    // Судьба Issue (0.14.2, `mail.feedback_issue`): второй аргумент - судьба Issue, пятый - версия исправления
     val status = mail.args.getOrNull(1)?.takeIf { it.isNotBlank() }?.let { if (mail.key == ISSUE_MAIL) issueStateTitle(it, mail.args.getOrNull(4).orEmpty()) else statusTitle(it) }.orEmpty()
     return when (part) {
         "subject" -> loc("${mail.key}.subject", listOf(kind, status))
@@ -76,7 +72,7 @@ private fun systemLine(mail: Mail, part: String): String {
     }
 }
 
-/** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает (4.3.2); у золота её нет. */
+/** What a letter carries, a line each: gold, stacks, things - с карточкой, которую строка открывает; у золота её нет. */
 fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
     if (mail.attachment.gold > 0) add(ui("mail.gold", mail.attachment.gold) to null)
     mail.attachment.items.forEach { (code, amount) -> add("${itemTitle(code)} × $amount" to Inspect.Stack(code)) }
@@ -84,7 +80,7 @@ fun attachmentLines(mail: Mail): List<Pair<String, Inspect?>> = buildList {
     mail.attachment.equipment.forEach { add(equipmentTitle(it.template) + (it.rarity?.let { r -> " · " + ui("enum.rarity.${r.name}") } ?: "") to Inspect.Showcase(it.template)) }
 }
 
-/** Вкладка ящика (4.6.3): какие письма она держит. Новая вкладка - запись перечисления, не ветка экрана. */
+/** Вкладка ящика: какие письма она держит. Новая вкладка - запись перечисления, не ветка экрана. */
 internal enum class MailBox(val holds: (MailKind) -> Boolean) {
     ALL({ true }),
     PERSONAL({ it == MailKind.PLAYER }),
@@ -116,7 +112,7 @@ internal fun senderLine(mail: Mail): String {
 private fun daysLeft(mail: Mail, now: Long = System.currentTimeMillis()): Long = (mail.expiresAt - now).coerceAtLeast(0) / DAY_MS
 
 /**
- * «сгорит через N дн.» или «сгорит сегодня»; письмо с невзятым вложением (4.9.0, сервер SEC-9) не сгорает - «хранится, пока не
+ * «сгорит через N дн.» или «сгорит сегодня»; письмо с невзятым вложением не сгорает - «хранится, пока не
  * заберёшь».
  */
 internal fun burnText(mail: Mail): String = when {
@@ -146,9 +142,12 @@ internal fun burnText(mail: Mail): String = when {
 }
 
 /**
- * Ящик (3.73.0; 4.6.3 - «Свиток писем»): вкладки Все / Личные / Гильдия / Система со счётом непрочитанного, письмо строкой со
+ * Ящик («Свиток писем»): вкладки Все / Личные / Гильдия / Система со счётом непрочитанного, письмо строкой со
  * знаком отправителя, темой, первой строкой и сроком; касание открывает письмо листом поверх. «Прочитать все» и «Удалить
- * прочитанные» - разом (3.94.0); список игнора - тут же.
+ * прочитанные» - разом; список игнора - тут же.
+ *
+ * Почта: лист с вкладками, письмо - листом поверх, новое письмо - своим листом. Письма героев видны лишь адресату - ящик читается глазами
+ * героя в игре.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -193,7 +192,7 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
     feedback.mail.firstOrNull { it.id == open }?.let { letter -> LetterSheet(game, model, feedback, activity.busy, letter) { open = null } }
 }
 
-/** «Прочитать все» и «Удалить прочитанные» (3.94.0) - с вопросом, сколько уйдёт; письмо с вложением не удаляется. */
+/** «Прочитать все» и «Удалить прочитанные» - с вопросом, сколько уйдёт; письмо с вложением не удаляется. */
 @Composable private fun MailActionsRow(model: FeedbackViewModel, feedback: Feedback, busy: Boolean) {
     var purging by remember { mutableStateOf(false) }
     val unread = feedback.mail.count { !it.read }
@@ -214,7 +213,7 @@ fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
     }
 }
 
-/** Вкладки ящика: подчёркнута выбранная, у каждой - счёт непрочитанного ([UnreadCount], 0.14.5, #37: число без плашки). */
+/** Вкладки ящика: подчёркнута выбранная, у каждой - счёт непрочитанного ([UnreadCount], число без плашки). */
 @Composable private fun MailTabs(mail: List<Mail>, chosen: MailBox, onChoose: (MailBox) -> Unit) {
     Row(
         Modifier.fillMaxWidth().drawBehind { drawLine(Bronze, Offset(0f, size.height), Offset(size.width, size.height), 1.dp.toPx()) },
@@ -379,7 +378,7 @@ private fun LetterSheet(game: GameUi, model: FeedbackViewModel, feedback: Feedba
 }
 
 /**
- * Хозяин окна нового письма (4.6.3): черновик в почте ([Feedback.letter]) открывает лист поверх всего - из карточки игрока,
+ * Хозяин окна нового письма: черновик в почте ([Feedback.letter]) открывает лист поверх всего - из карточки игрока,
  * «Ответить» и рассылки гильдии. Кому - плашка героя или гильдии, не ввод; тема и текст со счётчиками, цитата ответа, квота
  * «Сегодня X из N · этому герою Y из M»; немота - причина и срок сверху, кнопка погашена.
  */
@@ -440,7 +439,7 @@ fun LetterHost(game: GameUi) {
 /** Ответ на рассылку гильдии пишут и до уровня права писать (как сервер): уровень ему не помеха. */
 private fun effectiveGate(quota: MailQuota, draft: LetterDraft): MailGate = if (quota.gate == MailGate.LEVEL && draft.early) MailGate.OPEN else quota.gate
 
-/** Немота: писать нельзя до срока (или навсегда), категория и причина для игрока (4.12.x). */
+/** Немота: писать нельзя до срока (или навсегда), категория и причина для игрока. */
 @Composable private fun MuteNote(mute: MailMute) {
     val term = mute.until?.let { listedAt(it) }?.let { ui("mail.mute.until", it) } ?: ui("mail.mute.forever")
     val reason = listOf(ui("moderation.category.${mute.category}"), mute.reason).filter { it.isNotBlank() }.joinToString(" · ")
@@ -502,7 +501,7 @@ internal fun gateText(gate: MailGate, quota: MailQuota?, rules: MailRules, unloc
     MailGate.RECIPIENT_LIMIT -> ui("mail.gate.recipient_limit", quota?.perRecipient ?: rules.perRecipient)
 }
 
-/** The auction's system letters (3.79.0): a lot come back, a lot about to leave. */
+/** The auction's system letters: a lot come back, a lot about to leave. */
 private val AUCTION_MAIL = setOf("mail.auction_expired", "mail.auction_expiring")
 
 /** A lot's item by its code: an equipment template or a stack of the bag. */
@@ -518,7 +517,7 @@ private const val DAY_MS = 86_400_000L
 private const val SECOND_MS = 1_000L
 private const val TICK_MS = 1_000L
 
-/** Письмо о новой судьбе Issue отчёта (0.14.2). */
+/** Письмо о новой судьбе Issue отчёта. */
 private const val ISSUE_MAIL = "mail.feedback_issue"
 
 /** Судьба Issue по имени словами сервера; исправленный - «Исправлено в X», если версия известна. */

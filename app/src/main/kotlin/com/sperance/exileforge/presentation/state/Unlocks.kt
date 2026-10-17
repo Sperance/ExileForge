@@ -3,9 +3,9 @@ package com.sperance.exileforge.presentation.state
 import com.sperance.exileforge.rules.content.EngineRules
 
 /**
- * What opens with the hero's level (3.76.0): not everything at once, a new place every few levels. The client alone keeps
+ * What opens with the hero's level: not everything at once, a new place every few levels. The client alone keeps
  * the gate; testers and staff pass it. [tab] or [building] is the way into the feature that the gate closes. Уровни - в
- * правилах `unlocks` (3.88.8), не в коде: раздела там нет - он открыт с первого уровня.
+ * правилах `unlocks`, не в коде: раздела там нет - он открыт с первого уровня.
  */
 enum class Feature(val title: String, val tab: Int? = null, val building: Building? = null) {
     GRIMOIRE("nav.skills", tab = TAB_SKILLS),
@@ -18,10 +18,10 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
     TRIALS("trials.title", tab = TAB_TRIALS),
     GUILD("guild.title", building = Building.GUILD),
 
-    /** Разлом недели (4.6.4): своего входа нет - он внутри «Испытаний»; кнопка входа на доске испытаний и у Врат. */
+    /** Разлом недели: своего входа нет - он внутри «Испытаний»; кнопка входа на доске испытаний и у Врат. */
     RIFT("rift.title"),
 
-    /** Письма героям (4.6.3): своего входа нет - пишут из карточки игрока; ящик и ответ на рассылку гильдии открыты сразу. */
+    /** Письма героям: своего входа нет - пишут из карточки игрока; ящик и ответ на рассылку гильдии открыты сразу. */
     MAIL("mail.unlock"),
     ;
 
@@ -32,7 +32,7 @@ enum class Feature(val title: String, val tab: Int? = null, val building: Buildi
         /** The features a hero gains between [from] and [to], both levels inclusive of [to] only. */
         fun gained(from: Int, to: Int, rules: EngineRules?): List<Feature> = entries.filter { it.level(rules) in (from + 1)..to }
 
-        /** Ближайший раздел, что откроется после уровня [level] (4.2.0); всё открыто - ничего. */
+        /** Ближайший раздел, что откроется после уровня [level]; всё открыто - ничего. */
         fun next(level: Int, rules: EngineRules?): Feature? = entries.filter { it.level(rules) > level }.minByOrNull { it.level(rules) }
     }
 }
@@ -44,7 +44,7 @@ fun GameUi.unlocked(feature: Feature?): Boolean = feature == null || isTester ||
 fun Feature.level(rules: EngineRules?): Int = rules?.unlockLevel(name) ?: 1
 
 /**
- * С какого уровня героя можно взять в гильдию (0.14.0, ASANA-N13): открытие гильдий (`unlocks` → `GUILD`) и порог самой гильдии
+ * С какого уровня героя можно взять в гильдию: открытие гильдий (`unlocks` → `GUILD`) и порог самой гильдии
  * [guildMin]. Сервер держит то же на каждом пути вступления; клиент гасит кнопку заранее и называет уровень.
  */
 fun guildEntryLevel(rules: EngineRules?, guildMin: Int = 1): Int = maxOf(Feature.GUILD.level(rules), guildMin)

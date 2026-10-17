@@ -14,7 +14,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 
-/** A price in gold, as a lot's price in orbs is drawn: the coin and the figure — the merchant's shelf and, since 2.46.0, what he pays for an item. */
+/** A price in gold, as a lot's price in orbs is drawn: the coin and the figure — the merchant's shelf and, what he pays for an item. */
 @Composable fun GoldPrice(gold: Long, modifier: Modifier = Modifier) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(14.dp))

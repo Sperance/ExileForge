@@ -24,15 +24,15 @@ class MainActivity : ComponentActivity() {
      */
     private val shell: ShellViewModel by viewModel()
 
-    /** Updates from GitHub Releases (3.72.0): checked against the server the game model is connected to. */
+    /** Updates from GitHub Releases: checked against the server the game model is connected to. */
     private val updates: UpdateViewModel by viewModel { parametersOf(shell.newerServer, shell.serverFailed) }
 
-    /** Сеть устройства (3.95.2): вернувшаяся будит связь сразу. */
+    /** Сеть устройства: вернувшаяся будит связь сразу. */
     private val network by lazy { NetworkWatch(applicationContext, shell::networkBack) }
 
     /**
-     * Громкость↑ и Громкость↓ вместе (4.8.0): лист отчёта. Уровня приложения (4.9.0): окна диалогов цепляются к нему через
-     * [LocalVolumeChord]. Снимков экрана нет (0.14.1, GH-ISSUES).
+     * Громкость↑ и Громкость↓ вместе: лист отчёта. Уровня приложения: окна диалогов цепляются к нему через
+     * [LocalVolumeChord]. Снимков экрана нет.
      */
     private val chord = VolumeChord { shell.requestBug() }
 

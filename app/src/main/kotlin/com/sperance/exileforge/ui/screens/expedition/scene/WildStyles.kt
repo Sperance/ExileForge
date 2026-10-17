@@ -69,7 +69,7 @@ internal class Overgrown : MapStyle() {
 }
 
 /**
- * VI · Blood altar, the Vaal zones' own (2.65.0, the owner's mockup I): black obsidian where scarlet
+ * VI · Blood altar, the Vaal zones' own (the owner's mockup I): black obsidian where scarlet
  * veins pulse in a wave, pools of blood in the hollows, blocks weeping blood, red haze.
  */
 internal class BloodAltar : MapStyle() {
@@ -88,11 +88,9 @@ internal class BloodAltar : MapStyle() {
         pen.color = Color.Black.copy(alpha = .5f)
         pen.polyline(cx - u, cy, cx, cy + u / 2, cx + u, cy, width = u * .025f)
         if (noise(spot.x, spot.y, 3) < .38f) {
-            // The veins pulse as one wave rolling across the floor, not each on its own.
             val a = (.4f + .4f * sin(time * 2.2f - (spot.x + spot.y) * .6f)) * max(.4f, light)
             val bend = (noise(spot.x, spot.y, 5) - .5f) * u * .3f
             val across = noise(spot.x, spot.y, 4) < .5f
-            // Жила поперёк или вдоль клетки: три точки, без массива на клетку
             val y1 = if (across) cy + u / 4 else cy - u / 4
             val x2 = if (across) cx + bend else cx
             val y2 = if (across) cy else cy + bend * .6f
@@ -119,7 +117,6 @@ internal class BloodAltar : MapStyle() {
     override fun atmosphere(scope: DrawScope, palette: Palette, time: Float) {
         val w = scope.size.width
         val h = scope.size.height
-        // Красная мгла к краям: круг единичного радиуса, растянутый на экран
         val reach = max(w, h) * .75f
         scope.withTransform({
             translate(w / 2, h * .55f)
@@ -134,7 +131,7 @@ internal class BloodAltar : MapStyle() {
     }
 }
 
-/** VI · Dunes (2.77.0): sand rippled by the wind, sandstone laid in bands, grains blowing across the screen. */
+/** VI · Dunes: sand rippled by the wind, sandstone laid in bands, grains blowing across the screen. */
 internal class Dunes : MapStyle() {
     private val glare = PaletteBrush { unitFade(it.accent.copy(alpha = .06f), Color.Transparent) }
 
@@ -144,7 +141,6 @@ internal class Dunes : MapStyle() {
         val u = unit
         pen.color = tone(palette.floor, (.95f + noise(spot.x, spot.y) * .25f) * light)
         pen.diamond(cx, cy, u, u / 2)
-        // The wind's hand: two or three soft ripples across the tile.
         pen.color = tone(palette.decor, .9f * light, alpha = .35f)
         val ripples = 2 + (noise(spot.x, spot.y, 40) * 2).toInt()
         repeat(ripples) { k ->

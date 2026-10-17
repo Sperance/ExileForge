@@ -22,16 +22,17 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.screens.quests.QuestRow
 
 /**
- * Доска заданий захода [run] (4.10.0): снятая на входе [snapshot]; без неё (доска ещё не была прочитана) - первая, что пришла при
+ * Доска заданий захода [run]: снятая на входе [snapshot]; без неё (доска ещё не была прочитана) - первая, что пришла при
  * этом экране, и дальше она не меняется: перечитанная доска уже несёт события захода.
+ *
+ * Ключ - «доска прочитана»: первая прочитанная запоминается, перечитывания ключа не меняют.
  */
 @Composable internal fun rememberRunBoard(run: ExpeditionRun, snapshot: Quests?, live: Quests): Quests {
-    // Ключ - «доска прочитана»: первая прочитанная запоминается, её перечитывания ключа не меняют
     val first = remember(run, live.board != null) { live }
     return snapshot ?: first
 }
 
-/** Лист «Задания» на карте (3.95.0): несданные задания со счётом этого захода; боевые - сверху. */
+/** Лист «Задания» на карте: несданные задания со счётом этого захода; боевые - сверху. */
 @Composable internal fun RunQuestsSheet(quests: Quests, tally: Map<String, Long>, onDismiss: () -> Unit) {
     val shown = remember(quests, tally) {
         quests.running().filterNot { it.claimed }.map { it.live(tally) }.sortedBy { it.counter !in QuestCounter.COMBAT }

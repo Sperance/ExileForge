@@ -50,7 +50,7 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
 
-/** Пояс флаконов и обмен книг (3.80.19). */
+/** Пояс флаконов и обмен книг. */
 /** The belt as three flasks side by side, each filled to its charges, the chosen one lit; an empty place is a dashed outline. */
 @Composable internal fun Belt(hero: HeroView, index: ContentIndex, skills: HeroSkills, body: Combatant, selected: Int, onSelect: (Int) -> Unit) {
     val flasks = worn(hero, index, skills)
@@ -157,8 +157,11 @@ internal fun worn(hero: HeroView, index: ContentIndex, skills: HeroSkills): List
 }
 
 /**
- * Three books for one (2.78.0): any three of the bag — a book counted as often as it lies there — and the
+ * Three books for one: any three of the bag — a book counted as often as it lies there — and the
  * rules' gold for a book of the class's own, opened by the hero's level.
+ *
+ * Цена обмена против кошелька - тот же счёт, что у всех оплат; касание отбирает книгу, долгое - карточка её умения; цель, чью книгу не
+ * прочесть, погашена со своей причиной.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -177,7 +180,6 @@ internal fun Exchange(
     var chosen by remember { mutableStateOf(listOf<String>()) }
     var target by remember { mutableStateOf<String?>(null) }
     val price = rule.goldPerLevel * hero.level
-    // Цена обмена против кошелька (0.14.5, #42): тот же счёт, что у всех оплат золотом
     val bill = game.goldBill(price)
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
@@ -191,7 +193,6 @@ internal fun Exchange(
             }
             HoldHint(HoldSubject.SKILL)
             Caption(ui("skills.exchange_give", chosen.size, rule.books))
-            // Касание отбирает книгу, долгое нажатие - карточка её умения (0.14.4, #25)
             val inspect = rememberSkillInspect()
             owned.forEach { (code, amount) ->
                 val taken = chosen.count { it == code }
@@ -208,7 +209,6 @@ internal fun Exchange(
                 }
             }
             Caption(ui("skills.exchange_take"))
-            // Книга обмена сразу читается (4.7.0): цель, чью книгу не прочесть, погашена со своей причиной
             pages.filter { it.unlock <= hero.level }.forEach { skill ->
                 val refusal = remember(skill, hero.skills, stats) { bookRefusal(index, skill, SkillGrowthView.of(index, skill, hero.skills, hero.level, stats), hero.level, stats) }
                 val on = target == skill.code

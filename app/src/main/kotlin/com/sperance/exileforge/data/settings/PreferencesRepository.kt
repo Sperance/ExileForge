@@ -12,16 +12,16 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 /**
- * Настройки игрока на устройстве как единственный источник правды (3.80.6): экраны читают потоки
+ * Настройки игрока на устройстве как единственный источник правды: экраны читают потоки
  * отсюда, а не копию в общем состоянии. Запись идёт в [ServerStore], поток обновляется сам.
  */
 class PreferencesRepository(private val store: ServerStore, scope: CoroutineScope) {
     val settings: StateFlow<GameSettings> = store.gameSettings.stateIn(scope, SharingStarted.Eagerly, GameSettings())
 
-    /** Запомненные фильтры списков предметов (4.2.0). */
+    /** Запомненные фильтры списков предметов. */
     val itemFilters: StateFlow<ItemFilters> = store.itemFilters.stateIn(scope, SharingStarted.Eagerly, ItemFilters())
 
-    /** Какие строки журнала боя видны (3.80.32: из общего состояния сюда). */
+    /** Какие строки журнала боя видны (из общего состояния сюда). */
     val logFilter: StateFlow<Set<LogKind>> = store.logFilter.map { LogKind.parse(it) }.stateIn(scope, SharingStarted.Eagerly, LogKind.DEFAULT)
 
     suspend fun saveSettings(value: GameSettings) = store.saveGameSettings(value)

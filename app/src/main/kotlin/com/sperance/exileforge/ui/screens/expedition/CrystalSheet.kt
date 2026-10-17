@@ -33,11 +33,13 @@ import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * A crystal of essences (2.78.0, the owner's mockup A): what it holds, who guards it — the zone's monster
+ * A crystal of essences (the owner's mockup A): what it holds, who guards it — the zone's monster
  * standing up rare with the modifier of every essence inside — and the choice. «Освободить» takes the
- * guardian on; «Применить сферу Ваал», one plain button greyed without an orb (3.2.0), passes over the crystal once — every essence a step higher, one of them
+ * guardian on; «Применить сферу Ваал», one plain button greyed without an orb, passes over the crystal once — every essence a step higher, one of them
  * special, or a stronger guardian — and stepping away leaves it standing for later. The orb's outcome is the
- * server's (1.30.0): the sheet waits for its answer, and the guardian with it.
+ * server's: the sheet waits for its answer, and the guardian with it.
+ *
+ * Страж - монстр зоны, редкий, назван тем, что делают из него эссенции. Кнопка сферы Ваал говорит, что делает, и без сферы не нажимается.
  */
 @Composable internal fun CrystalSheet(game: GameUi, view: CrystalView, onCommand: (RunCommand) -> Unit) {
     val index = game.index
@@ -62,13 +64,11 @@ import com.sperance.exileforge.ui.theme.*
                     Text(itemTitle(code), color = if (special) GoldBright else Parchment, style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            // The guardian: the zone's monster, rare, named by what its essences make of it.
             val traits = kinds.map { "«" + loc("essence.$it.monster") + "»" }
             Text(ui("crystal.guardian", monsterTitle(view.guardian), traits.joinToString(", ")), color = Rune, style = MaterialTheme.typography.bodySmall)
             if (view.stronger) Text(ui("crystal.stronger", number(index?.essences?.crystals?.stronger ?: 0.0)), color = LifeRed, style = MaterialTheme.typography.bodySmall)
             view.outcome?.let { Text(ui("crystal.outcome.$it"), color = GoldBright, style = MaterialTheme.typography.bodyMedium) }
             if (view.awaiting) Text(ui("crystal.vaal_waiting"), color = Rune, style = MaterialTheme.typography.bodySmall)
-            // One plain button for the Vaal orb (3.2.0): it says what it does, and without an orb it cannot be pressed
             if (!view.vaal) {
                 ForgeOutlinedButton(enabled = vaalOrbs > 0 && !view.awaiting, onClick = { onCommand(RunCommand.VaalCrystal) }, modifier = Modifier.fillMaxWidth()) {
                     OrbGlyph(Orb.VAAL_ORB, Modifier.size(18.dp))

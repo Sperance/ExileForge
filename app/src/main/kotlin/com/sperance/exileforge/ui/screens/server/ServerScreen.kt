@@ -62,7 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
 private enum class AccountPage(val title: String) { SIGN_IN("account.signin_section"), }
 
 /**
- * «Врата мира» (variant A, «Списки и плитки»): who is playing, then the hero's and the account's rows. Since 3.77.0 it
+ * «Врата мира» (variant A, «Списки и плитки»): who is playing, then the hero's and the account's rows. It
  * opens from the game's sigil in the banner, and the language, the guides and the developers' tools live in «Настройки».
  */
 @Composable internal fun ServerScreen() {
@@ -95,6 +95,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     }
 }
 
+/** Героя меняют, выходя из игры, а не изнутри вкладки; награда платится герою, поэтому диалог называет героя. */
 @Composable private fun AccountHome(account: AccountUi, onPage: (AccountPage) -> Unit, onPromo: () -> Unit) {
     val sessionModel: SessionViewModel = koinViewModel()
     val shell: ShellViewModel = koinViewModel()
@@ -102,10 +103,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         ScreenHeader(ui("account.title"), icon = ForgeGlyphs.Portal)
         ProfileCard(account)
         RowGroup(ui("account.group_game")) {
-            // A hero is swapped by leaving the game, never from inside a tab: every button elsewhere is
-            // bound to the one chosen in the menu, and this is the way back to it.
             AccountRow(Icons.Outlined.SwapHoriz, ui("account.change_character"), enabled = !account.busy, onClick = sessionModel::leaveGame)
-            // A reward is paid to a hero, not to an account, so the dialog names the hero being played.
             AccountRow(Icons.Outlined.CardGiftcard, ui("account.enter_promo"), enabled = !account.busy && account.heroId.isNotBlank(), onClick = onPromo)
             AccountRow(
                 Icons.Outlined.Person,
@@ -114,7 +112,6 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             ) { onPage(AccountPage.SIGN_IN) }
             AccountRow(ForgeGlyphs.Sigil, ui("settings.title")) { shell.openSettings() }
         }
-        // Модерация и инструменты разработчика (3.94.0) - здесь, а не в настройках
         StaffGroups(account) { shell.openSettings(it.name) }
     }
 }
@@ -203,13 +200,16 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     InfoCard(ui("account.signin_section"), ui("account.signin_note"))
 }
 
-/** The server: where it is, the way to connect and to ask after its health, and the answer. */
+/**
+ * The server: where it is, the way to connect and to ask after its health, and the answer.
+ *
+ * Адрес у игроков закреплён; только администратор указывает устройству другой сервер.
+ */
 @Composable internal fun ServerPage(account: AccountUi) {
     val sessionModel: SessionViewModel = koinViewModel()
     val model = koinViewModel<ServerViewModel>()
     val session by model.session.collectAsStateWithLifecycle()
     ForgePanel {
-        // The address is fixed for players (3.75.0); only an administrator points the device at another server.
         if (session.isAdmin) {
             var draft by rememberSaveable(session.server) { mutableStateOf(session.server) }
             OutlinedTextField(
@@ -231,14 +231,18 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
     if (session.isAdmin) InfoCard(ui("account.local_dev"), ui("account.local_dev_note"))
 }
 
-/** What the client holds of the server: the dictionary, the drawings, the world's tables and the contract it speaks. */
+/**
+ * What the client holds of the server: the dictionary, the drawings, the world's tables and the contract it speaks.
+ *
+ * Имена принадлежат серверу: без словаря экраны печатают коды, поэтому сказано, сколько словаря пришло. Набор рисунков без дыр не отличить
+ * - счёт единственный способ заметить пропажу. Таблицы мира - чанками по отпечатку. Работающий сервер - из манифеста, закреплённый - из
+ * сборки: расхождение видно сразу.
+ */
 @Composable internal fun ClientPage(account: AccountUi) {
     val sessionModel: SessionViewModel = koinViewModel()
     val model = koinViewModel<ServerViewModel>()
     val world by model.world.collectAsStateWithLifecycle()
     ForgePanel {
-        // Names of things belong to the server since 0.14.0: without its dictionary the screens
-        // print codes, so how much of it arrived is worth saying out loud.
         if (world.localeStrings > 0) {
             PropertyRow(
                 ui("account.dictionary"),
@@ -248,8 +252,6 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         } else {
             MutedText(ui("account.dictionary_missing"))
         }
-        // Drawings come from the server too, and a missing set is invisible by design: every
-        // hole falls back to a bundled emblem, so the count is the only way to notice one.
         if (world.iconKeys > 0) {
             PropertyRow(
                 ui("account.icons"),
@@ -260,8 +262,6 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             MutedText(ui("account.icons_missing"))
         }
         if (world.portraits > 0) PropertyRow(ui("account.portraits"), world.portraits.toString(), Glyph.IMAGE)
-        // The world's tables come the same way (3.0.0): chunks fetched once per fingerprint and
-        // parsed by the rules. The fingerprint is what tells a changed world from the one on screen.
         if (world.content != null) {
             PropertyRow(
                 ui("account.content"),
@@ -276,9 +276,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
             sessionModel.refreshIcons()
         }, modifier = Modifier.fillMaxWidth()) { Text(ui("account.reread_bundles")) }
     }
-    // The build and its updates (3.72.0): the version, and a check by hand.
     UpdateCard()
-    // Работающий сервер - из его манифеста, закреплённый - из сборки (3.88.2): расхождение видно сразу.
     val live = if (world.serverVersion.isNotBlank()) {
         ui("account.contract_live", world.serverVersion, world.serverRevision, world.serverCommit.take(12).ifBlank { "-" })
     } else {

@@ -65,10 +65,12 @@ import com.sperance.exileforge.ui.screens.expedition.Caption
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Страница навыка (3.80.19): лист с ценой и строками, действия ячеек, выбор навыка и условия. */
+/** Страница навыка: лист с ценой и строками, действия ячеек, выбор навыка и условия. */
 /**
- * A skill's page opened: what it does now — or at its first level, unlearned — and at the next, the slots it may go in. С 4.4.0
+ * A skill's page opened: what it does now — or at its first level, unlearned — and at the next, the slots it may go in.
  * - иконка «Неон рун» с тиром, полоса опыта, книга в опыт, гнёзда рун и ритуал следующего тира; строки - умение в бою (тир и руны).
+ *
+ * Только ячейки своего вида: пассивное не предлагает активную ячейку.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,7 +117,6 @@ internal fun SkillSheet(
             if (learned > 0) {
                 RuneSockets(game, vm, skill, view) { socket = it }
                 RitualCard(game, vm, view)
-                // Only the slots of the skill's own kind, and a tap puts this very skill there (3.2.0): a passive page never offers an active slot
                 SlotActions(game, index, skill, skills, heroLevel) { kind, at, put ->
                     onDismiss()
                     vm.slotSkill(kind.name, at, if (put) skill.code else null)
@@ -127,9 +128,9 @@ internal fun SkillSheet(
 }
 
 /**
- * What a skill does at [level]: its price and pace, then every line. С 4.12.x (SKILL-01, BUILD-01) подготовки нет: темп - время
+ * What a skill does at [level]: its price and pace, then every line. Подготовки нет: темп - время
  * применения и перезарядка по листу героя [stats] уровня [heroLevel], цена маны (атаки - от уровня героя) и строка «цена в секунду
- * / ваша регенерация». The grimoire's page and the fight's sheet (3.24.0) both read it; a slotted skill's own [condition] stands in
+ * / ваша регенерация». The grimoire's page and the fight's sheet both read it; a slotted skill's own [condition] stands in
  * for the page's default.
  */
 @Composable internal fun SkillFacts(
@@ -193,7 +194,11 @@ internal fun SkillSheet(
     }
 }
 
-/** A skill for a slot: the class's learned ones of its kind, or nothing to empty it. */
+/**
+ * A skill for a slot: the class's learned ones of its kind, or nothing to empty it.
+ *
+ * Касание ставит умение в ячейку, долгое нажатие - его карточка.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, pages: List<SkillDefinition>, onDismiss: () -> Unit, onPick: (String?) -> Unit) {
@@ -209,7 +214,6 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
                 style = MaterialTheme.typography.titleMedium,
             )
             if (offered.isEmpty()) MutedText(ui("skills.nothing_learned")) else HoldHint(HoldSubject.SKILL)
-            // Касание ставит умение в ячейку, долгое нажатие - его карточка (0.14.4, #25)
             val inspect = rememberSkillInspect()
             offered.forEach { skill ->
                 Row(
@@ -234,7 +238,7 @@ internal fun SkillPicker(game: GameUi, pick: Pick.Slot, skills: HeroSkills, page
 
 /**
  * When a slot fires, or a flask is drunk, by itself: every condition — a flask's own kind's too, and the mana's only for a flask.
- * [onSwap] (0.14.5, #38) - «Заменить умение» ячейки под условиями.
+ * [onSwap] - «Заменить умение» ячейки под условиями.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

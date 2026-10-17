@@ -72,10 +72,13 @@ import kotlin.math.floor
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
-/** Управление походом (3.80.24): полосы жизни и маны, стик движения. */
+/** Управление походом: полосы жизни и маны, стик движения. */
 /**
- * Литые полосы (3.95.0, макет A): объёмная полоса жизни с числами внутри, щит - светящаяся кромка по её верху со своим числом,
+ * Литые полосы: объёмная полоса жизни с числами внутри, щит - светящаяся кромка по её верху со своим числом,
  * мана - тонкая полоса под ней с числами внутри; удержанная аурами часть ([reserved] сверх [maxMana]) - штриховкой.
+ *
+ * [flow] - итог здоровья в секунду на полосе жизни, только пока здоровье меняется ([LifeFlow.moves]); null - не писать. [onFlow] - касание
+ * полосы - разбор итога; null - полоса не нажимается. Запас, что ауры держат целиком, рисуется полной штрихованной полосой.
  */
 @Composable internal fun Vitals(
     life: Int,
@@ -86,12 +89,7 @@ import kotlin.math.roundToInt
     mana: Int = 0,
     maxMana: Int = 0,
     reserved: Int = 0,
-    /**
-     * Итог здоровья в секунду на карте (макет «Эффекты героя на карте», вариант C): «· −14/с» на полосе жизни, только пока здоровье
-     * меняется ([LifeFlow.moves], 0.14.5, #52); null - не писать.
-     */
     flow: LifeFlow? = null,
-    /** Касание полосы жизни с меткой итога - его разбор (0.14.5, #52); null - полоса не нажимается. */
     onFlow: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(5.dp)
@@ -104,7 +102,6 @@ import kotlin.math.roundToInt
                 .then(if (moving != null && onFlow != null) Modifier.clickable(onClickLabel = ui("fight.flow.title"), onClick = onFlow) else Modifier),
         ) {
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.verticalGradient(listOf(LifeTop, LifeRed, LifeDeep))))
-            // Блик литой полосы: верхние две пятых чуть светлее
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight(.4f).background(Brush.verticalGradient(listOf(Color.White.copy(alpha = .22f), Color.Transparent))))
             if (maxShield > 0) {
                 Box(
@@ -116,7 +113,6 @@ import kotlin.math.roundToInt
                 buildAnnotatedString {
                     append(ui("expedition.vitals_figure", number(life.toDouble()), number(maxLife.toDouble())))
                     if (maxShield > 0) withStyle(SpanStyle(color = ShieldBright, fontWeight = FontWeight.SemiBold)) { append("  ◈ " + number(shield.toDouble())) }
-                    // Чистый итог в секунду - светлым на литой полосе: убыль розовым, прибыль зелёным
                     moving?.let { f ->
                         withStyle(SpanStyle(color = if (f.net < 0 || f.stalledBy != null) FlowLoss else Vital, fontWeight = FontWeight.SemiBold)) { append(" · " + flowLabel(f)) }
                     }
@@ -124,7 +120,6 @@ import kotlin.math.roundToInt
                 11.sp,
             )
         }
-        // A pool the auras hold whole is still drawn: a full hatched bar.
         val pooled = maxMana + reserved.coerceAtLeast(0) > 0
         if (pooled) {
             Box(
@@ -170,7 +165,9 @@ private val ManaDeep = Color(0xFF3F86D6)
 /**
  * The stick: wherever the thumb lands in the lower part of the screen, dragging from there walks.
  * The direction is sent in screen axes; the run turns it into the map's. A tap anywhere that does not
- * drag (3.70.0) lands on the map: on a fountain still full, it names it to [onFountain].
+ * drag lands on the map: on a fountain still full, it names it to [onFountain].
+ *
+ * Бой может начаться под пальцем на стекле: герой не уходит после него.
  */
 @Composable internal fun Stick(run: ExpeditionRun, onFountain: (Int) -> Unit) {
     var centre by remember { mutableStateOf<Offset?>(null) }
@@ -182,7 +179,6 @@ private val ManaDeep = Color(0xFF3F86D6)
         val (x, y) = SceneCamera.toWorld(run.world.heroX, run.world.heroY, at, area.toSize(), unit)
         run.world.fountains.firstOrNull { !it.used && hypot(it.cell.x + .5 - x, it.cell.y + .5 - y) < FOUNTAIN_TAP }?.let { onFountain(it.id) }
     }
-    // A fight can start under a thumb still on the glass; the hero must not walk off after it.
     DisposableEffect(run) {
         onDispose {
             run.stickX = 0.0

@@ -46,26 +46,26 @@ import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Шапка игры (3.80.24): сигил и аккаунт, имя героя, плашка ремесла, значок связи и меню «⋮». */
+/** Шапка игры: сигил и аккаунт, имя героя, плашка ремесла, значок связи и меню «⋮». */
 /**
  * Title banner: the sigil, the character being played, and the one switch an exile keeps at hand.
  *
  * The subtitle names the character rather than the league, because every button on every tab acts
  * on that one and nothing on screen would otherwise say which.
  *
- * The administrator's mode switch used to sit here too. It moved to the administrator's own tab in
- * 2.3.0: it is not something a player has, and the banner is the one thing on screen every player
- * sees on every tab. The language runes went the same way in 2.4.0, to the Account tab and to the
+ * The administrator's mode switch lives on the administrator's own tab:
+ * it is not something a player has, and the banner is the one thing on screen every player
+ * sees on every tab. The language runes live on the Account tab and on the
  * sign-in screen: with a third language they were a crowd, and a language is a setting, not an act.
- * Since 2.48.0 the hero's class is gone from it and the account sits in its corner — it left the bottom bar; the plaque
- * of the craft under way is gone too (3.91.0). Since 3.75.0 the inbox, the beetle and the
- * account share one «⋮»: with every badge up the name of the game no longer fit. С 4.3.0 почта - снова свой конверт ([MailBadge]).
+ * The account sits in its corner, apart from the bottom bar. The beetle and the account share one «⋮»: with every badge up
+ * the name of the game would not fit. Почта - свой конверт ([MailBadge]).
+ *
+ * На вкладке «Герой» шапка игры и строка героя - одна строка. Знак игры открывает аккаунт; загруженный герой называет себя сам.
  */
 @Composable internal fun ForgeBanner(game: GameUi, route: Route, onBug: () -> Unit) {
     val feedback by koinViewModel<FeedbackViewModel>().feedback.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val glow = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
-    // Вкладка «Герой» (3.90.5): шапка игры и строка героя - одна строка, имя и уровень не повторяются дважды.
     val hero = rememberHeroHeader(game)?.takeIf { route.tab == TAB_HERO }
     if (hero != null) {
         HeroLine(hero, glow, onPortrait = { shell.tab(TAB_ACCOUNT) }) {
@@ -79,7 +79,6 @@ import org.koin.compose.viewmodel.koinViewModel
         glow.padding(horizontal = 18.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // The game's sigil opens the account (3.77.0), where the menu's row was.
         val accountOpen = route.tab == TAB_ACCOUNT
         Box(
             Modifier.size(40.dp).clip(RoundedCornerShape(9.dp)).border(1.dp, (if (accountOpen) GoldBright else Gold).copy(alpha = .5f), RoundedCornerShape(9.dp))
@@ -91,7 +90,6 @@ import org.koin.compose.viewmodel.koinViewModel
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text("EXILE FORGE", style = MaterialTheme.typography.titleLarge, color = GoldBright, maxLines = 1, softWrap = false)
-            // The loaded hero names themself; before the snapshot lands, the menu's row does.
             val named = game.heroInfo != null || game.heroRow != null
             Text(
                 if (named) game.heroName + ui("app.hero_level", game.heroLevel) else ui("app.title"),
@@ -108,8 +106,8 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * The banner's «⋮» (3.75.0, the owner's pick «B» of three mockups): the beetle and the settings behind one button, so the name
- * of the game fits beside the badges. Почта с 4.3.0 - свой конверт рядом ([MailBadge]), у «⋮» поводов для отметки нет.
+ * The banner's «⋮» (the owner's pick «B» of three mockups): the beetle and the settings behind one button, so the name
+ * of the game fits beside the badges. Почта - свой конверт рядом ([MailBadge]), у «⋮» поводов для отметки нет.
  */
 @Composable internal fun BannerMenu(settingsOpen: Boolean, onBug: () -> Unit, onSettings: () -> Unit) {
     var open by remember { mutableStateOf(false) }
@@ -133,8 +131,8 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * Конверт почты в шапке (4.3.0): всегда под рукой, рядом со значком связи. Непрочитанное (0.14.5, #37, макет «Метка почты»,
- * вариант B «Изумрудная искра») - конверт залит [Gold] и искра [UnreadBadge] в углу, без числа: сколько - скажет ящик; без
+ * Конверт почты в шапке: всегда под рукой, рядом со значком связи. Непрочитанное
+ * - конверт залит [Gold] и искра [UnreadBadge] в углу, без числа: сколько - скажет ящик; без
  * новых писем конверт приглушён. Открывает почту тот, кого дало приложение ([LocalMailOpen]); без него конверта нет.
  */
 @Composable internal fun MailBadge(unread: Int) {
@@ -148,7 +146,7 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * The link to the server (3.30.0): nothing while the server answers and nothing waits. С 4.4.x - по [LinkState]: команды ждут -
+ * The link to the server: nothing while the server answers and nothing waits. По [LinkState]: команды ждут -
  * облако с числом, нажатие спрашивает сервер сразу ([onRetry]); нет связи - красное перечёркнутое облако, нажатие - полное
  * переподключение ([onReconnect]); переподключается - жёлтое облако, не нажимается; неудача вернёт красное и скажет тостом
  * почему. Долгое нажатие открывает подробности: причина, что делать, ждущие команды, слова транспорта для администратора.

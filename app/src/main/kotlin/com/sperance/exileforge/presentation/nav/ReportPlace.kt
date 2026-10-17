@@ -11,7 +11,7 @@ import com.sperance.exileforge.presentation.state.TAB_PROGRESS
 import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 
 /**
- * Где игрок, для отчёта (0.14.2): [name] - для человека («Город › Auction»), [area] - раздел игры, что сервер пишет в Issue
+ * Где игрок, для отчёта: [name] - для человека («Город › Auction»), [area] - раздел игры, что сервер пишет в Issue
  * строкой «Раздел» (`IssueBody.AREAS` сервера). Код экрана (`TAB:17`) остаётся в поле `screen` отчёта.
  */
 data class ReportPlace(val name: String, val area: String)

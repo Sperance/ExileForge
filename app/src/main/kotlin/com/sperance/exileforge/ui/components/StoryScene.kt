@@ -43,11 +43,13 @@ import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Сюжетный экран (4.7.0, макет «Пролог и продолжение», вариант A «Пепел и свиток»): палитра Предначертания, жар снизу и угли,
+ * Сюжетный экран: палитра Предначертания, жар снизу и угли,
  * заголовок Cinzel, абзацы [paragraphs] печатаются по буквам один за другим. Касание дописывает абзац, касание по дописанному -
  * следующий, после последнего - [onDone]. «Пропустить» видно, если [skippable], и не раньше [skipAfterMs]. Без анимаций
- * (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета. [overlay] (4.9.0) - слой поверх сцены
+ * (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета. [overlay] - слой поверх сцены
  * (тосты: сцена накрывает оболочку с её тостами).
+ *
+ * Счёт напечатанных букв абзаца сбрасывается синхронно в `advance()`, иначе новый абзац мигнёт целиком.
  */
 @Composable fun StoryScene(
     kicker: String,
@@ -60,7 +62,6 @@ import org.koin.compose.viewmodel.koinViewModel
 ) {
     val moving = LocalMotion.current
     var shown by remember(paragraphs) { mutableIntStateOf(1) }
-    // Сколько букв текущего абзаца напечатано; «готово» - длина абзаца. Сбрасывается синхронно в advance(), иначе новый абзац мигнёт целиком.
     var typed by remember(paragraphs) { mutableIntStateOf(if (moving) 0 else paragraphs.firstOrNull().orEmpty().length) }
     var skipReady by remember { mutableStateOf(skipAfterMs <= 0) }
     val current = paragraphs.getOrNull(shown - 1).orEmpty()
@@ -138,7 +139,7 @@ fun storyParagraphs(text: String): List<String> = text.split("\n\n").map(String:
 private const val TYPE_MS = 22L
 
 /**
- * Пролог перед [content] (4.7.0): новый аккаунт видит его до Предначертания ([always] = false - только пока пролог не показан на
+ * Пролог перед [content]: новый аккаунт видит его до Предначертания ([always] = false - только пока пролог не показан на
  * устройстве), создание героя - каждый раз ([always] = true). Пропустить можно сразу, если пролог уже видели, иначе - через
  * [FIRST_SKIP_MS]. Показанный пролог отмечается на устройстве.
  */

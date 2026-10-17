@@ -11,7 +11,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.flow.StateFlow
 
-/** Выбор Предначертания аккаунта (4.6.0): три дара, выбор навсегда и уход к героям; логика - у `CharacterActions`. */
+/** Выбор Предначертания аккаунта: три дара, выбор навсегда и уход к героям; логика - у `CharacterActions`. */
 class FateViewModel(
     slice: GameSlice,
     private val commands: CommandRunner,

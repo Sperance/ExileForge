@@ -49,8 +49,6 @@ import org.koin.compose.viewmodel.koinViewModel
 /** What the action row opened on top of the sheet, if anything. */
 private enum class ItemAction { AUCTION, SELL, WORN }
 
-/** The template a zone's map is named after: `MAP_<zone code>`; the card's map action walks it back. */
-
 /**
  * One item of the stash: its card, and what can be done with it.
  *
@@ -58,8 +56,14 @@ private enum class ItemAction { AUCTION, SELL, WORN }
  * player came to do is never below the fold. Each one is a single tap: wearing and taking off at
  * once, an orb and the crafting bench in the forge, opened over this item, a listing through a small sheet of its own, and selling to
  * the merchant through the held confirmation, because that one cannot be taken back. Every rule behind them is the
- * server's, and it checks them again; since 2.46.0 the client adds the sheet up itself, so wearing
+ * server's, and it checks them again; the client adds the sheet up itself, so wearing
  * is also off for an item whose requirements it misses, and the card says what it would change.
+ *
+ * Вещь может уйти, пока лист открыт (продана, выставлена, перекатана) - лист закрывается. Запертая вещь недоступна торговцу и аукциону,
+ * кузня с ней работает. Вторую копию уникалки не надеть - кнопка гаснет с причиной. Закалка кузнеца - раз на оружие или броню. Самоцвет без
+ * свободного взятого гнезда гасит «В дерево». Кнопки «Реликвария» - одна низкая строка. Карта не надевается и в зону не ведёт. Надетую вещь
+ * не выставить и не продать (`AU_010`, `CH_014`) - касание говорит это. Продажа окончательна: спрашивается по имени с суммой по правилу
+ * торговца и осколками.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,8 +72,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     val smithy = koinViewModel<SmithyViewModel>()
     val instance = game.hero?.item(itemId)
     val view = instance?.let { game.view(it) }
-    // The item can leave while its sheet is open — sold, listed, rolled into a copy — and then the
-    // sheet has nothing left to be about; nor is there a card for a copy the content cannot explain.
     if (instance == null || view == null) {
         LaunchedEffect(itemId) { onDismiss() }
         return
@@ -79,15 +81,11 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     val loose = !instance.equipped && !instance.socketed
     val price = game.sellPrice(instance)
     val reachable = game.unmetFor(instance.template).isEmpty()
-    // A locked item (3.30.0) is kept from the merchant and the auction; the forge still works on it.
     val locked = instance.locked
     val waiting = instance.id in game.link.waitingItems
     var open by remember(itemId) { mutableStateOf<ItemAction?>(null) }
-    // «Заменить» (3.81.0): the place this copy is worn in, opened on what could go there instead.
     var replacing by remember(itemId) { mutableStateOf<BodyPlace?>(null) }
-    // Место пары для «Если надеть» и «Надеть» (3.90.3): с каким из колец сравнивать и куда надевать.
     val wear = rememberWearChoice(game, instance)
-    // Вторая копия уникалки (0.15.0, реш. 7): уже надетую такую же не надеть - кнопка гаснет, под карточкой причина
     val twin = remember(instance, game.hero, game.index, wear.target) { loose && game.index?.let { index -> game.hero?.uniqueWorn(index, instance, wear.target) } == true }
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
@@ -107,7 +105,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                 if (locked) item { Text(ui("item.locked_hint"), color = Muted, style = MaterialTheme.typography.bodySmall) }
                 temperOffer(game, instance)?.let { (ore, need) ->
                     item {
-                        // The smith's tempering (3.79.0): once per weapon or armour, the ore of its level.
                         ForgePanel {
                             Engraved(ui("temper.title"))
                             MutedText(
@@ -125,12 +122,10 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         }
                     }
                 }
-                // Самоцвет без свободного взятого гнезда (3.94.1): почему «В дерево» погасла.
                 if (view.slot == Slot.JEWEL && !instance.socketed && game.index?.let { game.hero?.freeSocket(it) } == null) {
                     item { Text(ui("hero.to_tree_none"), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
                 }
                 if (twin) item { Text(ui("hero.unique_worn"), color = LifeRed, style = MaterialTheme.typography.bodySmall) }
-                // Worn but not counting: the rules' reasons, as the slot cell prints them.
                 game.hero?.inactive?.get(instance.id)?.let { reasons ->
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -140,9 +135,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     }
                 }
             }
-            // Кнопки «Реликвария» (3.88.6; 3.91.0 - одна низкая строка): главное действие, кузня и «ещё» с заменой, замком, аукционом и продажей.
             var more by remember(itemId) { mutableStateOf(false) }
-            // Место, где надета вещь (3.88.8): «Заменить» открывает его на всё, что туда идёт.
             val wornPlace = game.hero?.equipped?.let { worn -> bodyPlaces.firstOrNull { it.wornIn(worn)?.id == instance.id } }
             Row(
                 Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
@@ -162,11 +155,8 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         model.unequip(instance.id)
                     }
 
-                    // Карта не надевается и в зону из карточки не ведёт (3.88.7): её выбирают в окне запуска зоны.
                     view.slot == Slot.MAP -> Unit
 
-                    // Самоцвет не надевается, а встаёт в гнездо дерева (3.94.1): кнопка ведёт к первому свободному взятому
-                    // гнезду; нет такого - гаснет, причина под карточкой.
                     view.slot == Slot.JEWEL -> {
                         val socket = remember(game.hero, game.index) { game.index?.let { game.hero?.freeSocket(it) } }
                         PrimaryPill(ui("hero.to_tree"), can && socket != null, look) {
@@ -180,7 +170,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         model.equip(instance.id, wear.target)
                     }
                 }
-                // One way into the forge (2.51.0): its orbs and bench are its own tabs; у карты кузница - главная кнопка.
                 QuietPill(can, modifier = if (view.slot == Slot.MAP) Modifier.weight(1f) else Modifier, onClick = {
                     onDismiss()
                     smithy.open(instance.id, ForgeSection.ORBS)
@@ -191,7 +180,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = GoldBright, modifier = Modifier.size(18.dp))
                     }
                     DropdownMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
-                        // «Снять» надетую вещь (3.88.8) - в меню: главная кнопка у неё «Заменить».
                         if (instance.equipped && wornPlace != null) {
                             MenuLine(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
                                 more = false
@@ -203,7 +191,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                             more = false
                             model.lockItem(instance.id, !locked)
                         }
-                        // A worn item cannot be listed or sold (AU_010, CH_014): the tap says so instead of doing nothing.
                         MenuLine(ForgeGlyphs.Scales, ui("hero.action_auction"), can && !locked) {
                             more = false
                             open = if (loose) ItemAction.AUCTION else ItemAction.WORN
@@ -226,8 +213,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             model.sellEquipment(instance.id, orb, price)
         }
 
-        // Selling is final and takes the rolls with it, so it is asked about by name, with the sum
-        // worked out here by the merchant's own rule.
         ItemAction.SELL -> ConfirmSheet(
             title = ui("hero.sell_q"),
             subtitle = name,
@@ -236,7 +221,6 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             ledger = listOfNotNull(
                 LedgerLine(ui("confirm.give"), name, Tone.SPEND),
                 LedgerLine(ui("confirm.gain"), price?.let { ui("merchant.gold_amount", it) } ?: ui("confirm.gold_by_server"), Tone.GAIN),
-                // Осколки сфер за неё (3.95.3): что продажа даст кроме золота
                 game.shardsFor(listOf(view.rarity))?.let { LedgerLine(ui("confirm.gain"), it, Tone.GAIN) },
             ),
             note = ui("hero.sell_confirm"),
@@ -311,13 +295,16 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
     )
 }
 
-/** The ore and its amount the smith asks to temper [item] (3.79.0), or null when it cannot be: not gear, tempered, corrupted. */
+/**
+ * The ore and its amount the smith asks to temper [item], or null when it cannot be: not gear, tempered, corrupted.
+ *
+ * Ниже уровня кузнеца предложение не показывается, а не отказывается.
+ */
 private fun temperOffer(game: GameUi, item: com.sperance.exileforge.rules.roll.ItemInstance): Pair<String, Long>? {
     val index = game.index ?: return null
     val template = index.template(item.template) ?: return null
     val rule = index.rules.brews.temper
     if (item.tempered || item.corrupted || !(template.slot.isWeapon || template.slot.isArmour)) return null
-    // The smith's own level (3.81.0) as the server asks it: below it the offer is not shown at all, rather than refused.
     val smith = game.hero?.crafts?.professions?.get(SMITHING)?.level ?: 1
     if (smith < rule.smithLevel) return null
     return rule.oreFor(template.level)?.let { it to rule.ore }
@@ -326,5 +313,5 @@ private fun temperOffer(game: GameUi, item: com.sperance.exileforge.rules.roll.I
 /** The profession whose level tempering asks. */
 private const val SMITHING = "SMITHING"
 
-/** Высота кнопок карточки (3.91.0): одна низкая строка вместо крупных плит. */
+/** Высота кнопок карточки: одна низкая строка вместо крупных плит. */
 private val PillHeight = 36.dp

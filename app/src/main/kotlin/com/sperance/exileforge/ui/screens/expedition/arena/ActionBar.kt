@@ -48,17 +48,18 @@ import com.sperance.exileforge.ui.screens.skills.SkillCard
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The hero's skills and belt in the fight (2.78.0): фляги слева, умения справа (4.4.1, решение владельца) - каждое квадратной
+ * The hero's skills and belt in the fight: фляги слева, умения справа - каждое квадратной
  * иконкой «Неон рун» ([NeonSkillIcon]) своего тира: откат - тёмный сектор и секунды, нехватка маны - синяя подложка, пустой
  * слот - пунктирный квадрат того же размера. A tap uses a skill or drinks a flask at once, whatever its condition; a long press
- * on a skill, or its «i», opens its page (3.24.0).
+ * on a skill, or its «i», opens its page.
+ *
+ * Четыре слота умений с тремя флягами - плитки меньше, чтобы ряд влез в узкий экран.
  */
 @Composable internal fun ActionBar(game: GameUi, fight: FightHud, frame: FightFrame, onCommand: (RunCommand) -> Unit, onInfo: (SkillView) -> Unit) {
     val live = fight.started && fight.outcome == null
     val index = game.index
     val skills = game.hero?.skills ?: HeroSkills()
     val stats = fight.heroBody?.stats ?: game.hero?.stats.orEmpty()
-    // Четыре слота умений (0.14.0, SKILL-02) с тремя флягами - плитки меньше, чтобы ряд влез в узкий экран
     val compact = fight.skills.size > COMPACT_FROM
     val side = if (compact) COMPACT_SIDE else SKILL_SIDE
     val flask = if (compact) COMPACT_FLASK else FLASK_SIDE
@@ -83,7 +84,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Сторона квадрата умения в бою (4.4.1) и круга фляги; при четырёх слотах (SKILL-02) - меньше. */
+/** Сторона квадрата умения в бою и круга фляги; при четырёх слотах - меньше. */
 private val SKILL_SIDE = 52.dp
 private val FLASK_SIDE = 44.dp
 private val COMPACT_SIDE = 44.dp
@@ -107,6 +108,10 @@ private val SkillShape = RoundedCornerShape(SKILL_SIDE / 4)
     }
 }
 
+/**
+ * Нехватка маны - синяя подложка; откат - тёмный сектор по часовой от верха и секунды, доля - к часам кадра; полоса применения растёт по
+ * низу плитки.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, live: Boolean, side: Dp, readyNow: () -> Float, onInfo: () -> Unit, onTap: () -> Unit) {
@@ -121,12 +126,9 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
         } else {
             SkillGlyph(view.icon, Modifier.size(26.dp).align(Alignment.Center), GoldBright)
         }
-        // Нехватка маны (4.4.1): синяя подложка под отметками слота
         if (!view.affordable) Box(Modifier.matchParentSize().clip(SkillShape).background(ManaBlue.copy(alpha = .28f)))
-        // Откат - тёмный сектор того, что ещё восстанавливается, по часовой от верха, и секунды
         if (!ready && view.locked <= 0.0) {
             Canvas(Modifier.matchParentSize().clip(SkillShape)) {
-                // Откат идёт и между снимками боя: доля - к часам кадра
                 val share = readyNow()
                 val reach = size.maxDimension * 1.5f
                 drawArc(
@@ -141,7 +143,6 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
             Text(fineNumber(view.seconds), color = Parchment, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Center))
         }
         if (view.locked > 0.0) SealedSlot(view.locked, SkillShape)
-        // Полоса применения (4.12.x, SKILL-01): пока умение применяется, золотая черта растёт слева направо по низу плитки
         if (view.casting > 0f) {
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).clip(SkillShape).background(Color.Black.copy(alpha = .5f))) {
                 Box(Modifier.fillMaxWidth(view.casting).fillMaxHeight().background(GoldBright))
@@ -171,8 +172,10 @@ private fun SkillButton(view: SkillView, skill: SkillDefinition?, tier: Int, liv
 }
 
 /**
- * A skill's page over the fight (3.24.0): what the grimoire says of it at its level — damage, cost, cooldown,
+ * A skill's page over the fight: what the grimoire says of it at its level — damage, cost, cooldown,
  * cast time and effects — with the condition its slot fires on. The fight holds while the page is open.
+ *
+ * Та же карточка умения, что везде: уровень и условие - ячейки боя.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -187,7 +190,6 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).navigationBarsPadding().padding(horizontal = 18.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            // Та же карточка умения, что везде (0.14.4, #25): уровень и условие - ячейки боя
             if (index != null) SkillCard(game, index, view.code, view.level, view.condition) else MutedText(ui("common.loading"))
         }
     }
@@ -212,7 +214,7 @@ internal fun FightSkillSheet(game: GameUi, view: SkillView, onCommand: (RunComma
     }
 }
 
-/** Слот, запертый «Запечатыванием» Стража Врат (3.96.0): тёмная печать Разлома и сколько ещё секунд. */
+/** Слот, запертый «Запечатыванием» Стража Врат: тёмная печать Разлома и сколько ещё секунд. */
 @Composable private fun BoxScope.SealedSlot(seconds: Double, shape: Shape) {
     Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = .65f), shape).border(1.5.dp, RiftSeal, shape), contentAlignment = Alignment.Center) {
         Text("◈ ${fineNumber(seconds)}", color = RiftSeal, fontSize = 10.sp, fontWeight = FontWeight.Bold)

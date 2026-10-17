@@ -19,8 +19,10 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Under the hero: before «В бой» the call to fight and the way back; once it runs, pause and go on,
- * the speed and, on the pause (3.95.0), «Сдаться». Under an autorun (3.77.0) its wave reads above the row and its stop joins it, so
+ * the speed and, on the pause, «Сдаться». Under an autorun its wave reads above the row and its stop joins it, so
  * nothing floats over the speed.
+ *
+ * Меню забега посреди боя - бой стоит, пока открыто. «Сдаться» - только на паузе, с подтверждением.
  */
 @Composable internal fun Controls(fight: FightHud, hud: RunHud, onCommand: (RunCommand) -> Unit) {
     val auto = hud.auto
@@ -67,14 +69,12 @@ import com.sperance.exileforge.ui.theme.*
         ForgeOutlinedButton(onClick = { onCommand(RunCommand.Speed) }, modifier = Modifier.weight(1f), contentPadding = PaddingValues(horizontal = 8.dp)) {
             Text(ui("expedition.speed", fight.speed), style = MaterialTheme.typography.labelMedium)
         }
-        // Меню забега (4.7.0): настройки и жук посреди боя; пока открыто - бой стоит
         RunMenu(
             items = emptyList(),
             hold = { ArenaHold(onCommand) },
             trigger = { onClick -> RunMenuButton(onClick = onClick) },
         )
     }
-    // «Сдаться» (3.95.0): только на паузе, с подтверждением - бой, что сам не кончается, иначе не покинуть
     if (fight.paused && live) {
         var asking by remember { mutableStateOf(false) }
         ForgeTextButton(onClick = { asking = true }, modifier = Modifier.fillMaxWidth()) {
@@ -95,7 +95,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** Держит бой арены, пока лист на экране (4.7.0). */
+/** Держит бой арены, пока лист на экране. */
 @Composable private fun ArenaHold(onCommand: (RunCommand) -> Unit) {
     DisposableEffect(Unit) {
         onCommand(RunCommand.Hold(true))

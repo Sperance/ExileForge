@@ -27,7 +27,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * The link to the server (3.30.0): whether it is reachable, and the commands waiting for it.
+ * The link to the server: whether it is reachable, and the commands waiting for it.
  *
  * A lost connection is not a refusal: it shows as an icon in the top bar, not as the red strip, and the
  * server is asked again by itself — after [BACKOFF_S] seconds, the last step repeating — until it answers.
@@ -55,10 +55,14 @@ class ConnectionActions(
     /** A wake for the running loop: it cuts the backoff pause or asks for one more pass — never the send in flight. */
     private val nudge = Channel<Unit>(Channel.CONFLATED)
 
-    /** Связь нужно проверить, даже если она числится живой и ничего не ждёт (3.95.2): возврат из фона, вернувшаяся сеть. */
+    /** Связь нужно проверить, даже если она числится живой и ничего не ждёт: возврат из фона, вернувшаяся сеть. */
     @Volatile private var verifying = false
 
-    /** A new [GameApi]: its queue is read from the device and drawn in the top bar as it changes. */
+    /**
+     * A new [GameApi]: its queue is read from the device and drawn in the top bar as it changes.
+     *
+     * Что оставил прошлый запуск, уходит, когда есть сессия.
+     */
     fun attach(api: GameApi) {
         run {
             watcher?.cancel()
@@ -66,7 +70,6 @@ class ConnectionActions(
             watcher = scope.launch {
                 val expired = queue.load()
                 if (expired.isNotEmpty()) notices.toast(ui("link.expired", expired.size), NoticeKind.DONE)
-                // What the last launch left waiting goes out once there is a session to send it with.
                 if (queue.waiting.value.isNotEmpty()) wake()
                 queue.waiting.collect { waiting -> links.update { it.copy(waiting = waiting) } }
             }
@@ -80,7 +83,7 @@ class ConnectionActions(
     }
 
     /**
-     * Связь упала из-за [error]. Шло переподключение по просьбе игрока (4.4.x) - тост называет причину: облако снова красное,
+     * Связь упала из-за [error]. Шло переподключение по просьбе игрока - тост называет причину: облако снова красное,
      * но игрок узнаёт, почему его касание не помогло.
      */
     private fun down(error: Throwable?) {
@@ -96,7 +99,7 @@ class ConnectionActions(
     }
 
     /**
-     * Сеть устройства вернулась (3.95.2): сокеты прежней сети мертвы, связь проверяется сразу, без паузы повтора.
+     * Сеть устройства вернулась: сокеты прежней сети мертвы, связь проверяется сразу, без паузы повтора.
      */
     fun networkBack() {
         ForgeHttp.dropIdleConnections()
@@ -108,6 +111,10 @@ class ConnectionActions(
      * commands waiting sends them at once. It ends once the server answered and nothing waits. [now] skips the
      * pause the loop is in — the app came back to the foreground, or the session was just confirmed. A running
      * loop is only nudged: cancelling it could cut a command mid-flight and send its key again.
+     *
+     * Смотрится сама очередь, а не её отражение в состоянии. Толчок (возврат в игру, сеть вернулась, «Повторить») - новый повод: пауза
+     * повтора с первой ступени; проба офлайна в фоне ждёт возврата в игру, отправка очереди при живой связи - нет. Доставленные команды
+     * принесли героя снимками - после очереди он не перечитывается. Нет сессии - вход разбудит цикл снова.
      */
     fun wake(now: Boolean = false, verify: Boolean = false) {
         run {
@@ -121,13 +128,10 @@ class ConnectionActions(
                 var step = 0
                 var first = now
                 while (true) {
-                    // The queue itself, not its reflection in the state, which may lag a frame behind a command just added.
                     val offline = links.state.value.offline
                     if (!offline && !verifying && api.commands?.waiting?.value.isNullOrEmpty()) break
-                    // Толчок (возврат в игру, сеть вернулась, «Повторить») - новый повод: пауза повтора снова с первой ступени
                     if (offline && !first && withTimeoutOrNull(BACKOFF_S[step.coerceAtMost(BACKOFF_S.lastIndex)] * 1_000L) { nudge.receive() } != null) step = 0
                     first = false
-                    // Проба офлайна в фоне ждёт возврата в игру (4.9.0); отправка очереди при живой связи - нет.
                     if (offline) foreground.awaitFront()
                     val probe = probe()
                     verifying = false
@@ -155,7 +159,6 @@ class ConnectionActions(
                         FlushOutcome.EMPTY
                     }
                     if (foreign > 0) notices.toast(ui("link.foreign", foreign), NoticeKind.DONE)
-                    // Доставленные команды принесли героя своими снимками (4.12.x, NET-7): после очереди он не перечитывается
                     if (wasOffline || delivered > 0) refreshScreen(hero = delivered == 0)
                     when (outcome) {
                         FlushOutcome.OFFLINE -> {
@@ -163,7 +166,6 @@ class ConnectionActions(
                             step++
                         }
 
-                        // No session to send them with: the sign-in wakes the loop again — or already did, during this pass.
                         FlushOutcome.SIGNED_OUT, FlushOutcome.EMPTY -> if (nudge.tryReceive().isSuccess) first = true else break
                     }
                 }
@@ -174,11 +176,12 @@ class ConnectionActions(
     /**
      * The probe: the health route, cheap and unauthenticated. Any answer of the game — even a refusal — means the
      * server is there; null then, else what stood in the way (a proxy's 502 is the server restarting, not an answer).
+     *
+     * Сервер только что ответил настоящим запросом - связь не проверяется ещё раз; проба коротка: нет ответа за [PROBE_MS] - связи нет,
+     * следующая проба - по паузе повтора.
      */
     private suspend fun probe(): Throwable? = try {
-        // Сервер только что ответил настоящим запросом (3.94.1): проверять связь ещё раз незачем.
         if (links.state.value.offline || System.currentTimeMillis() - api.answeredAt > ANSWER_FRESH_MS) {
-            // Проба коротка (3.95.2): ответа нет за [PROBE_MS] - связи нет, следующая проба - по паузе повтора
             withTimeoutOrNull(PROBE_MS) { api.health() } ?: throw java.net.SocketTimeoutException("probe")
         }
         null
@@ -232,7 +235,7 @@ class ConnectionActions(
         /** Сколько ждёт проба связи, мс. */
         const val PROBE_MS = 4_000L
 
-        /** Ответ сервера моложе этого заменяет проверку связи (3.94.1). */
+        /** Ответ сервера моложе этого заменяет проверку связи. */
         const val ANSWER_FRESH_MS = 10_000L
     }
 }

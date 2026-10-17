@@ -12,12 +12,12 @@ import kotlin.math.abs
 import kotlin.math.sin
 
 /**
- * The fight's ground — the cave of the owner's mockup VI (2.57.0): a vault, two ridges and the
+ * The fight's ground — the cave of the owner's mockup VI: a vault, two ridges and the
  * torches between them drifting at their own depths, the biome's floor with its seams running to
- * the horizon, fog along it. Since 2.70.0 nobody stands on it: the fighters are the overlay's cards
+ * the horizon, fog along it. Nobody stands on it: the fighters are the overlay's cards
  * (mockup B «карточки против карточек»), and the cave is only what they are laid over.
  *
- * С 4.9.0 - своим объектом у сцены: контуры свода, гряд и пламени переписываются в те же [Path], а кисти, что не движутся,
+ * Своим объектом у сцены: контуры свода, гряд и пламени переписываются в те же [Path], а кисти, что не движутся,
  * собираются раз на биом и размер холста, - кадр боя не плодит новые объекты.
  */
 internal class FightStage {
@@ -44,7 +44,6 @@ internal class FightStage {
         torch(flamePath, brushes.flame, w * .9f + sway * .55f, floor - h * .15f, time, 1)
         ridge(ridgePath, 11, floor - h * .05f, h * .05f, tone(palette.wallTop, .55f), sway * .55f)
         ground(brushes, floor, palette, sway)
-        // Darker than it was: the cards carry the fight now, and the cave only sets the mood behind them.
         drawRect(brushes.dark)
     }
 }

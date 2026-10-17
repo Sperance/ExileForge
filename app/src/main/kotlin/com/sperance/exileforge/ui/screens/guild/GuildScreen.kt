@@ -37,7 +37,7 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The guild (3.22.0, server 1.20.0), a building of the City. A hero outside one finds a guild, answers an invitation or
+ * The guild, a building of the City. A hero outside one finds a guild, answers an invitation or
  * founds a guild of their own; a hero inside sees their guild under its arms, in tabs. Every rule is the server's —
  * the screen only says in advance what a button would be refused for, from `guilds.json`.
  */
@@ -78,7 +78,11 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Outside a guild: the wait after leaving, the invitations, the founding and the list of guilds to knock at. */
+/**
+ * Outside a guild: the wait after leaving, the invitations, the founding and the list of guilds to knock at.
+ *
+ * Вступление по коду: шесть цифр от главы или офицера - сразу в гильдию, мимо её режима.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: GuildMine) {
@@ -104,7 +108,6 @@ private fun ColumnScope.GuildOutside(game: GameUi, vm: GuildViewModel, mine: Gui
                     }
                 }
             }
-            // Вступление по коду (4.7.0): шесть цифр от главы или офицера - сразу в гильдию, мимо её режима
             item { JoinByCode(game, vm, enabled = waiting == null) }
             item {
                 ForgePanel {
@@ -170,7 +173,7 @@ private const val CODE_LENGTH = 6
     )
 }
 
-/** The list's faction chips (3.28.0): all, then each faction under its sign and name in its colour. */
+/** The list's faction chips: all, then each faction under its sign and name in its colour. */
 @Composable private fun FactionFilter(chosen: String, rules: GuildRules, enabled: Boolean, onChoose: (String) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         item { FilterChip(selected = chosen.isBlank(), enabled = enabled, onClick = { onChoose("") }, label = { Text(ui("common.all")) }) }
@@ -197,7 +200,9 @@ private fun joinBlock(game: GameUi, card: GuildCard, waiting: Boolean): String? 
 
 /**
  * One guild of the list: arms, name, faction and level, the roll and the way in; the button asks or joins by the guild's mode.
- * Заявка (4.2.0) называет цену вступления `application.price` от уровня героя: золото спишется, когда заявку примут.
+ * Заявка называет цену вступления `application.price` от уровня героя: золото спишется, когда заявку примут.
+ *
+ * Цена вступления спишется при принятии: заявку можно подать и без неё.
  */
 @Composable private fun GuildCardRow(game: GameUi, card: GuildCard, blocked: String?, onJoin: () -> Unit) {
     ForgePanel(accent = guildColor(card.color)) {
@@ -222,7 +227,6 @@ private fun joinBlock(game: GameUi, card: GuildCard, waiting: Boolean): String? 
                     },
                 )
             }
-            // Цена вступления против кошелька (0.14.5, #42): спишется при принятии - заявку можно подать и без неё
             if (card.mode != GuildMode.OPEN && price > 0) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MutedText(ui("guild.apply_note"), Modifier.weight(1f))

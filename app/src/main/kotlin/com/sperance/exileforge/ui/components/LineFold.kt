@@ -22,7 +22,7 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
 
 /**
- * Как плита [ItemRow] показывает строки вещи (4.8.0, макет «Аукцион», вариант A): все сразу или свёрнутыми под чип
+ * Как плита [ItemRow] показывает строки вещи: все сразу или свёрнутыми под чип
  * «Свойства · N». Свёртка - только облик списка: сервер о ней не знает.
  */
 enum class LineFold {

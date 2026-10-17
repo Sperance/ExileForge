@@ -96,8 +96,12 @@ import org.koin.dsl.module
 const val APP_SCOPE = "app"
 
 /**
- * Граф приложения (3.81.0): хранилища устройства, журнал запросов, HTTP-клиент процесса, репозитории ядра, сервисы
+ * Граф приложения: хранилища устройства, журнал запросов, HTTP-клиент процесса, репозитории ядра, сервисы
  * `presentation/app` и модели экранов.
+ *
+ * Один HTTP-клиент на процесс: пул соединений, потоки и TLS-сессии общие у всех серверов и обновлений. Сервисы приложения (сессия, связь,
+ * герои аккаунта, прогрев, коды наград, запуск) зовут друг друга и поэтому ссылаются лениво. Проверка обновлений ждёт сервер игровой
+ * модели: поток и манифест приходят параметрами из активности.
  */
 val appModule = module {
     single<CoroutineScope>(named(APP_SCOPE)) { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
@@ -113,7 +117,6 @@ val appModule = module {
     single { ServerConnection() }
     single { Foreground() }
     single { ServerReach(get(), lazy { get<ConnectionActions>() }, get(named(APP_SCOPE)), get(), get()) }
-    // Один HTTP-клиент на процесс (3.80.45): пул соединений, потоки и TLS-сессии общие у всех серверов и обновлений.
     single<HttpLink> { ForgeHttp.link }
     singleOf(::Navigator)
     single { ConnectionEventsHub() }
@@ -152,8 +155,6 @@ val appModule = module {
     single { QuestActions(get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::Repositories)
     singleOf(::Actions)
-    // Сервисы приложения (3.80.44, вместо `ForgeRuntime`): сессия, связь, герои аккаунта, прогрев, коды наград и запуск.
-    // Сессия, связь и герои зовут друг друга, поэтому ссылаются лениво.
     single { SessionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), lazy { get<ConnectionActions>() }, lazy { get<CharacterActions>() }, lazy { get<WarmupActions>() }, get(), get(), get()) }
     single { CharacterActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<WarmupActions>() }, get()) }
     single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }, get()) }
@@ -183,8 +184,6 @@ val appModule = module {
     viewModelOf(::ExpeditionViewModel)
     viewModel { SettingsViewModel(get(), get()) }
     viewModelOf(::ServerViewModel)
-    // Проверка обновлений ждёт сервер игровой модели: поток и манифест приходят параметрами из активности.
-    // 3.90.3: и ресурсы игры, которых ждёт первая проверка, и поход с испытанием, во время которых проверок нет.
     viewModel { params ->
         val playing = combine(get<ExpeditionActions>().run, get<TrialActions>().arena, get<RiftActions>().state) { run, arena, rift -> run != null || arena != null || rift.arena != null }
         UpdateViewModel(androidApplication(), get(), params.get(0), get(), get(), get<WorldLoader>(), playing, params.get(1))

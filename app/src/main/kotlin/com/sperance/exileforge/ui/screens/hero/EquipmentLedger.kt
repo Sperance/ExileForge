@@ -50,9 +50,9 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Снаряжение «Группами» (3.88.6, выбор владельца): места тела под заголовками - оружие, броня, украшения, прочее, фляги - и в
+ * Снаряжение «Группами» (выбор владельца): места тела под заголовками - оружие, броня, украшения, прочее, фляги - и в
  * каждой группе по две карточки в ряд: место, имя, номер экземпляра и все строки вещи со значком тира. Пустое место говорит,
- * сколько подходящего лежит в тайнике. Своя нарезка состояния (3.66.0): движение кошелька не перерисовывает надетое.
+ * сколько подходящего лежит в тайнике. Своя нарезка состояния: движение кошелька не перерисовывает надетое.
  */
 @Composable fun EquipmentLedger(equipment: EquipmentState, onPlace: (place: BodyPlace, itemId: String?) -> Unit) {
     val byCode = equipment.places.associateBy { it.place.code }
@@ -86,9 +86,11 @@ private val GEAR_GROUPS: List<Pair<String, List<String>>> = listOf(
 )
 
 /**
- * Одно место карточкой (3.88.6): гнездо с иконкой, место мелкими буквами, имя серифами в цвете редкости и строки вещи со
+ * Одно место карточкой: гнездо с иконкой, место мелкими буквами, имя серифами в цвете редкости и строки вещи со
  * значком тира, каждая в одну линию. Вещь, что перестала действовать, несёт красный знак с причиной в подсказке;
  * пустое место - пунктир и что о нём сказать.
+ *
+ * Бездействующая вещь - отметка на строке; почему - в её карточке.
  */
 @Composable
 private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier: Modifier, onClick: () -> Unit) {
@@ -122,7 +124,6 @@ private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier:
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(title.uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall, fontSize = 9.sp, letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    // An idle piece is a mark on the line (2.74.0); why is in its card, or behind the mark.
                     line.reasons?.let { reasons ->
                         Tipped({
                             Tip(ui("hero.inactive"), reasons.joinToString("\n") { requirementReason(it, lang) }, LifeRed)
@@ -155,16 +156,18 @@ private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier:
 /**
  * What could go into one empty place: the stash, narrowed to the slots that fill it.
  *
- * Whether the hero can wear a line is read off the sheet added up here (2.46.0): a line out of
+ * Whether the hero can wear a line is read off the sheet added up here: a line out of
  * reach says what it needs and does not send the command.
  * The ring place goes with it, so a ring picked for the second line lands in the second ring.
+ *
+ * Дороже - выше по цене торговца, что не надеть - серым внизу. Вердикт - на это самое место (второе кольцо - со вторым кольцом). Вторую
+ * копию уникалки не надеть.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (String) -> Unit) {
     val hero = game.hero ?: return
     val inspect = rememberInspect()
-    // The dearest first by the merchant's price (3.81.0), what the hero cannot wear yet greyed at the foot.
     val fitting = hero.stash.filter { !it.socketed }.mapNotNull { game.view(it) }.filter { place.takes(it.slot) }
         .sortedWith(compareBy({ game.unmetFor(it.code).isNotEmpty() }, { -(game.sellPrice(it.item) ?: 0L) }))
     ForgeSheet(onDismissRequest = onDismiss) {
@@ -177,10 +180,8 @@ fun SlotPicker(game: GameUi, place: BodyPlace, onDismiss: () -> Unit, onEquip: (
                     piece,
                     unwearable = unmet,
                     price = game.sellPrice(piece.item),
-                    // Вердикт на это самое место (3.90.3): кольцо во вторую руку меряется со вторым кольцом.
                     verdict = rememberGearVerdict(game, piece.item, place.place),
                 ) {
-                    // Касание открывает карточку (4.3.2), надевает её кнопка; вторую копию уникалки - нет (0.15.0, реш. 7)
                     val twin = game.index?.let { hero.uniqueWorn(it, piece.item, place.place) } == true
                     val equip = InspectAction(
                         ui("hero.equip"),

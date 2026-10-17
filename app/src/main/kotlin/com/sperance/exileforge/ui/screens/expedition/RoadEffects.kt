@@ -28,12 +28,13 @@ import com.sperance.exileforge.ui.screens.expedition.arena.EffectsSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.timedShelf
 
 /**
- * Что герой несёт на карте (макет «Эффекты героя на карте», вариант C): недуги - из боя и от ловушек, баффы и проклятия, заряды -
+ * Что герой несёт на карте: недуги - из боя и от ловушек, баффы и проклятия, заряды -
  * плитками той же полки, что в бою ([EffectShelf]: стаки и секунды, касание плитки - её выноска). Слева «≡ N» - лист всех
  * эффектов ([EffectsSheet]) с итогом здоровья в секунду; его же открывает «+N». Ничего не несёт - полки нет.
+ *
+ * Полка читает живой снимок (тело экрана несомого не видит) и перекомпонуется сама, когда несомое сменилось.
  */
 @Composable internal fun RoadEffects(live: State<RunHud>) {
-    // Из живого снимка (тело экрана его без несомого не видит): полка перекомпонуется сама, когда несомое сменилось
     val hud by remember(live) { derivedStateOf { live.value.let { RoadView(it.heroAilments, it.heroEffects, it.heroCharges, it.lifeFlow) } } }
     val timed = remember(hud) { timedShelf(false, hud.ailments, hud.effects, hud.charges) }
     var open by remember { mutableStateOf(false) }

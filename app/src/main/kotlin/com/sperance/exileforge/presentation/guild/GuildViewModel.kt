@@ -13,14 +13,14 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildMode
 import kotlinx.coroutines.flow.StateFlow
 
-/** Экран гильдии (3.80.13): гильдия из репозитория, действия общие с возвратом в приложение. */
+/** Экран гильдии: гильдия из репозитория, действия общие с возвратом в приложение. */
 class GuildViewModel(
     private val actions: GuildActions,
     repository: GuildRepository,
     commands: CommandRunner,
     slice: GameSlice,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val guilds: StateFlow<Guilds> = repository.state
     val activity: StateFlow<Activity> = commands.state
@@ -30,7 +30,7 @@ class GuildViewModel(
     fun filterFaction(code: String) = actions.filterFaction(code)
     fun load() = actions.load()
 
-    /** Экран открылся (3.94.1): ответ моложе полуминуты не перечитывается. */
+    /** Экран открылся: ответ моложе полуминуты не перечитывается. */
     fun open() = actions.load(fresh = true)
     fun search(page: Int = 0) = actions.search(page)
     fun create(name: String, tag: String, faction: String, emblem: String, color: String, mode: GuildMode, minLevel: Int) = actions.create(name, tag, faction, emblem, color, mode, minLevel)

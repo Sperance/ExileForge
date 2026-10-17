@@ -54,17 +54,17 @@ import kotlinx.coroutines.withContext
 /** One stack of the bag: the item's code and how many the hero holds. */
 data class BagStack(val code: String, val amount: Long)
 
-/** A shelf of the bag (2.75.0): each has its heading over its own run of cells; books and essences since 2.78.0. */
+/** A shelf of the bag: each has its heading over its own run of cells; books and essences too. */
 enum class BagCategory(val key: String) {
     CHESTS("bag.section_chests"),
     ORBS("bag.section_orbs"),
 
-    /** Печати Атласа (4.6.4): валюта только для карт. */
+    /** Печати Атласа: валюта только для карт. */
     SEALS("bag.section_seals"),
     ESSENCES("bag.section_essences"),
     BOOKS("bag.section_books"),
 
-    /** Руны умений (4.4.0): вставляются в гнёзда гримуара. */
+    /** Руны умений: вставляются в гнёзда гримуара. */
     RUNES("bag.section_runes"),
     MATERIALS("bag.section_materials"),
     OTHER("bag.section_other"),
@@ -72,7 +72,7 @@ enum class BagCategory(val key: String) {
 
 /**
  * The bag by category — orbs, then essences, books and materials, then whatever the content does not
- * name — each by rarity, then by name (2.73.0). A stack has no rarity of its own, so its worth stands
+ * name — each by rarity, then by name. A stack has no rarity of its own, so its worth stands
  * for it: the dearer the rarer. An empty category is left out.
  */
 fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
@@ -95,7 +95,7 @@ fun bagSections(game: GameUi): List<Pair<BagCategory, List<BagStack>>> {
 }
 
 /**
- * The bag as a table (2.75.0): a heading per category and under it square cells — the stack's icon
+ * The bag as a table: a heading per category and under it square cells — the stack's icon
  * and its count in the corner — as many to a row as fit [CELL]. The name, the rule and the ways on
  * are one tap behind a cell, in [BagSheet]; [onOpen] gets the stack's code.
  */
@@ -150,7 +150,7 @@ internal fun compactCount(amount: Long): String = when {
 
 /**
  * An orb, a material or an unnamed stack, drawn in a gold frame the way an item row frames its icon.
- * An orb is its stained glass since 2.69.0; anything else is the server's sprite when the set has one,
+ * An orb is its stained glass; anything else is the server's sprite when the set has one,
  * the bundled glyph of its category otherwise — muted for a code the content does not know.
  */
 @Composable internal fun StackIcon(game: GameUi, code: String, size: Int) {
@@ -171,6 +171,9 @@ internal fun compactCount(amount: Long): String = when {
  * The forge is offered for an orb that is applied to items — Regret is spent on the tree and the
  * server refuses it on an item (`CR_009`), so it has no way in. The auction takes any stack.
  * Every callback gets the stack's code, but [onRead], which gets the skill's.
+ *
+ * [onRead] - книга умения класса читается сразу, [onEssence] - эссенция в кузню, [onOpenChest] - сундук-добыча открывается на месте,
+ * [onSeal] - печать Атласа в раздел печатей кузни. Сундук можно и выставить на аукцион, торговцу - нет.
  */
 @Composable fun BagSheet(
     game: GameUi,
@@ -178,13 +181,9 @@ internal fun compactCount(amount: Long): String = when {
     onDismiss: () -> Unit,
     onForge: (String) -> Unit,
     onAuction: (String) -> Unit,
-    /** A skill book of the class read at once (2.78.0), by the skill's code. */
     onRead: (String) -> Unit = {},
-    /** An essence taken to the forge (2.78.0). */
     onEssence: (String) -> Unit = {},
-    /** A loot chest opened where it lies (3.76.0). */
     onOpenChest: (String) -> Unit = {},
-    /** Печать Атласа (4.6.4) - в кузницу, в раздел печатей карты. */
     onSeal: (String) -> Unit = {},
 ) {
     val code = stack.code
@@ -194,7 +193,6 @@ internal fun compactCount(amount: Long): String = when {
     val readable = skill != null && game.hero?.heroClass?.let(skill::fits) == true
     val essence = game.index?.essence(code) != null
     val seal = game.index?.seal(code) != null
-    // A loot chest (3.76.0) is opened here; since 3.77.0 it may also go to the auction, never to the merchant.
     val chest = game.index?.item(ItemCode(code))?.category == Item.CHEST
     StackPanel(onDismiss) {
         StackFace(game, code, stack.amount)
@@ -254,20 +252,22 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
     }
 }
 
-/** A stack's face: its icon, name and English trade name, how many the hero holds, and what it is for. */
+/**
+ * A stack's face: its icon, name and English trade name, how many the hero holds, and what it is for.
+ *
+ * Книга умения: чип открывает карточку её умения.
+ */
 @Composable private fun StackFace(game: GameUi, code: String, owned: Long) {
     Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
         StackIcon(game, code, 56)
         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(itemTitle(code), color = GoldBright, style = MaterialTheme.typography.titleLarge)
-            // The English trade name (2.51.0), under the translated one.
             tradeName(code, equipment = false)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelMedium, fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
             MutedText(ui("bag.owned", owned), style = MaterialTheme.typography.labelSmall)
         }
     }
     itemDescription(code).takeIf { it.isNotBlank() }?.let { Text(it, color = Parchment, style = MaterialTheme.typography.bodyMedium) }
     game.index?.skillGrowth?.rune(code)?.let { RuneLore(it, 1 + (game.hero?.stats?.get(CoreStat.RUNE_EFFECT.code) ?: 0.0) / 100) }
-    // Книга умения (0.14.4, #25): чип открывает карточку её умения
     game.index?.skills?.byBook(code)?.let { skill ->
         val inspect = rememberSkillInspect()
         LoreChip(ui("bag.book_skill", SkillText.title(skill.code)), Rune) { inspect(SkillPeek(skill.code)) }
@@ -275,7 +275,7 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
     game.index?.let { StackLore(it, code, game.hero?.crafts?.professions.orEmpty().mapValues { (_, p) -> p.level }) }
 }
 
-/** Руна умения (4.4.0): семейство, действие с силой рун героя [power] и виды умений, куда она встаёт. */
+/** Руна умения: семейство, действие с силой рун героя [power] и виды умений, куда она встаёт. */
 @Composable private fun RuneLore(rune: RuneDefinition, power: Double) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Engraved(ui("runes.family", RuneText.family(rune)))
@@ -285,12 +285,12 @@ private fun StackPanel(onDismiss: () -> Unit, content: @Composable ColumnScope.(
 }
 
 /**
- * What the content says of a stack under its description: an essence's guaranteed line by kind of item, where it is found and
- * (3.94.1) where it goes - работы профессий; закрытые по уровню героя [levels] - серым с нужным уровнем.
+ * What the content says of a stack under its description: an essence's guaranteed line by kind of item, where it is found and where it goes - работы профессий; закрытые по уровню героя [levels] - серым с нужным уровнем.
+ *
+ * Обратный указатель всего контента строится раз на контент вне главного потока; до этого карточка не показывает ничего.
  */
 @Composable private fun StackLore(index: ContentIndex, code: String, levels: Map<String, Int>) {
     val guarantees = remember(index, code) { essenceGuarantees(index, code) }
-    // The reverse of the whole content, built once per content off the main thread; the card shows none until it is.
     val sourceIndex by produceState<Map<String, List<ItemSource>>>(emptyMap(), index) {
         value = withContext(Dispatchers.Default) { itemSourceIndex(index) }
     }

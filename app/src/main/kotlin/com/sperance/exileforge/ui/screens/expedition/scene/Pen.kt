@@ -73,13 +73,13 @@ internal class Pen {
         line(x4, y4, x5, y5, width)
     }
 
-    /** Многоугольник из первых [count] точек [points] (x, y парами) - арка на грани стены (0.14.0, ASANA-N10). */
+    /** Многоугольник из первых [count] точек [points] (x, y парами) - арка на грани стены. */
     fun polygon(points: FloatArray, count: Int) {
         trace(path, points, count)
         scope.drawPath(path, color)
     }
 
-    /** Рисунок [block] только внутри многоугольника [points] (0.14.0): доски и полосы створок не выходят за арку. */
+    /** Рисунок [block] только внутри многоугольника [points]: доски и полосы створок не выходят за арку. */
     fun clipped(points: FloatArray, count: Int, block: () -> Unit) {
         trace(outline, points, count)
         scope.clipPath(outline) { block() }

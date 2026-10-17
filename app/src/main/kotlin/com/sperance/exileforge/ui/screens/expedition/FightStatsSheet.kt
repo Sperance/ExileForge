@@ -32,7 +32,7 @@ import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Разбор боя (0.14.4, #30, макет «Разбор боя», вариант A «Три вкладки»): «Нанесено», «Получено» и «Защита» - плитки итога сверху,
+ * Разбор боя: «Нанесено», «Получено» и «Защита» - плитки итога сверху,
  * затем полосы по типам урона, умениям, запасам и защитам. Переключатель «Этот бой / Весь заход» - когда есть оба: [fight] -
  * последний бой (итог боя), [run] - весь заход. Оценки избежанного урона помечены «≈».
  */
@@ -137,7 +137,7 @@ private enum class BreakdownTab(val key: String) {
 /** Полоса разбора: подпись, число и цвет. */
 private data class Bar(val name: String, val amount: Double, val tint: Color)
 
-/** Графа яда (0.15.0, реш. 43): своим цветом плитки яда, не хаосом. */
+/** Графа яда: своим цветом плитки яда, не хаосом. */
 private fun poisonBar(amount: Double): Bar = Bar(ui("breakdown.poison"), amount, ailmentTint(Ailment.POISONED))
 
 /** Урон по типам - полосами цвета своей стихии; по герою физический - кровью, как числа боя. */

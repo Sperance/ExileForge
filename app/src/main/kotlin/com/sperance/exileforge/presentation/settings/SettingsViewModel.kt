@@ -13,7 +13,7 @@ import kotlinx.coroutines.launch
 class SettingsViewModel(private val prefs: PreferencesRepository, private val world: WorldRepository) : ViewModel() {
     val settings: StateFlow<GameSettings> = prefs.settings
 
-    /** Скорости боя на выбор - из правил (`fight.speeds`, 4.7.0), не из клиента. */
+    /** Скорости боя на выбор - из правил (`fight.speeds`), не из клиента. */
     val speeds: List<Int> get() = fightSpeeds(world.state.value.content)
 
     fun change(edit: GameSettings.() -> GameSettings) {

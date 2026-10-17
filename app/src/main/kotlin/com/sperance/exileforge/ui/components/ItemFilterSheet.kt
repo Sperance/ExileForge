@@ -33,7 +33,7 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Фильтр одного списка на экране (4.2.0, предметов): [filter] - текущий, [update] меняет его и запоминает выбор
+ * Фильтр одного списка на экране (предметов): [filter] - текущий, [update] меняет его и запоминает выбор
  * на устройстве для своего списка [shelf] (поиск не запоминается).
  */
 @Stable
@@ -58,7 +58,7 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 }
 
 /**
- * Значок фильтра списка (3.91.0, с 4.2.0 - общий): маленький круг, золотой и с числом того, что сужает список; его размер
+ * Значок фильтра списка (общий): маленький круг, золотой и с числом того, что сужает список; его размер
  * обязателен, строка его не сжимает.
  */
 @Composable fun ItemFilterButton(tweaks: Int, onClick: () -> Unit) {
@@ -72,7 +72,7 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 }
 
 /**
- * Строка над списком (4.2.0): порядок коротким словом и сколько видно, справа - значок фильтра; любое нажатие открывает
+ * Строка над списком: порядок коротким словом и сколько видно, справа - значок фильтра; любое нажатие открывает
  * шторку ([ItemFilterSheet]).
  */
 @Composable fun ItemFilterBar(state: ItemFilterState, shown: Int, onOpen: () -> Unit, modifier: Modifier = Modifier) {
@@ -91,9 +91,9 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 }
 
 /**
- * Строка над любым списком с фильтром (4.x): [summary] - порядок и поиск словами, [shown] - сколько
+ * Строка над любым списком с фильтром: [summary] - порядок и поиск словами, [shown] - сколько
  * видно, справа значок фильтра с числом [tweaks]; любое нажатие - [onOpen]. Фильтр сужает список - крестик [onClear] сбрасывает его
- * сразу, без шторки (4.12.x, ASANA-15).
+ * сразу, без шторки.
  */
 @Composable fun FilterBar(summary: String, shown: Int, tweaks: Int, onOpen: () -> Unit, modifier: Modifier = Modifier, onClear: (() -> Unit)? = null) {
     Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -119,9 +119,9 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 }
 
 /**
- * Шторка фильтра списка предметов (4.2.0, «Аккордеон»): грани списка [ItemFilterState.shelf] - тип ([groups] - что есть в
+ * Шторка фильтра списка предметов («Аккордеон»): грани списка [ItemFilterState.shelf] - тип ([groups] - что есть в
  * списке), редкость плитками ([rarities]), качество, порядок, и переключатели «сделано мной», «могу надеть», «скрыть надетое».
- * Правки идут в черновик; «Показать N» ([count] - сколько пройдёт черновик) применяет его, «Сбросить» (4.12.x, ASANA-15) сразу
+ * Правки идут в черновик; «Показать N» ([count] - сколько пройдёт черновик) применяет его, «Сбросить» сразу
  * применяет обычный списка и закрывает шторку.
  */
 @Composable

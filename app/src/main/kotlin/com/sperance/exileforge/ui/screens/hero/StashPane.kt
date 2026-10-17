@@ -44,15 +44,18 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /**
- * Тайник (3.90.3, макет «Тайник» В; 3.90.5 - макет «Герой» A): сверху только порядок и фильтры, слева рейка мест со счётом,
+ * Тайник: сверху только порядок и фильтры, слева рейка мест со счётом,
  * справа список под названием выбранного пункта с фишкой мест и автопродажи - она открывает лист тайника ([StashSheet]).
- * Удержание плитки включает режим выбора (макет «Продажа» А): у строк отметки, сверху быстрые наборы, снизу удерживаемая
+ * Удержание плитки включает режим выбора: у строк отметки, сверху быстрые наборы, снизу удерживаемая
  * кнопка с суммой; «Отмена» и системный «назад» выходят из него. Как продавать, говорит разовая плашка над списком
  * ([SELL_HINT], до закрытия или первого удержания на этом устройстве) и лист тайника.
  *
- * Фильтр - общий фильтр предметов (4.2.0, [ItemShelf.STASH]): строка над списком и шторка «Аккордеон», выбор запоминается на
+ * Фильтр - общий фильтр предметов ([ItemShelf.STASH]): строка над списком и шторка «Аккордеон», выбор запоминается на
  * устройстве; рейка - его же «Тип». Список, лоты и счёт рейки запоминаются по копиям, а не по герою: изменившийся кошелёк не
  * перестраивает тысячу строк.
+ *
+ * Копия без шаблона в контенте не показывается. «Скрыть надетое» - правило снаряжения, инструменты видны всегда. Лоты - весь тайник, наборы
+ * - только видимое; удержание плитки входит в выбор с ней отмеченной, в выборе касание отмечает, удержание - карточка.
  */
 @Composable
 internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> Unit) {
@@ -62,16 +65,13 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
     var filtering by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(false) }
     var selling by remember(game.heroId) { mutableStateOf(false) }
-    // A copy whose template the content does not hold is left out rather than drawn blank.
     val stash = remember(hero.items, game.index, game.world) { hero.items.mapNotNull { game.view(it) } }
-    // «Скрыть надетое» (3.69.0) - правило снаряжения: инструменты видны всегда.
     val counted = remember(stash, filter.hideWorn) { stash.filterNot { filter.hideWorn && it.isWorn && !it.slot.isTool } }
     val rail = remember(counted) { railGroups(counted) }
     val rarities = remember(stash) { stash.map { it.rarity }.distinct().sortedByDescending { it.ordinal } }
     val shelf = { draft: ItemFilter -> game.itemShelf(stash, ItemShelf.STASH, draft) { game.sellPrice(it.item) } }
     val visible = remember(stash, filter, hero.level, hero.stats, game.world) { shelf(filter) }
     val lines = rememberStashLines(game, visible)
-    // Лоты - весь тайник, наборы - только видимое в открытом пункте рейки (3.90.4): отмеченное в других пунктах остаётся.
     val lots = remember(stash, hero.info.autoSell, hero.stats, hero.info.heroClass, game.index) { game.sellLots(stash) }
     val shown = remember(visible) { visible.mapTo(HashSet()) { it.id } }
     val pick = rememberSellPick(lots, shown)
@@ -81,7 +81,6 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
     val read by guides.read.collectAsStateWithLifecycle(initialValue = null)
     val scope = rememberCoroutineScope()
     val hintRead = { scope.launch { guides.markRead(SELL_HINT) } }
-    // Удержание плитки - вход в выбор с ней отмеченной; вне продаваемого пачкой тайника выбора нет.
     val hold = { id: String ->
         if (lots.isNotEmpty()) {
             selling = true
@@ -122,7 +121,6 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
                 items(lines, key = { it.piece.id }) { line ->
                     val verdict = rememberGearVerdict(game, line.piece.item)
                     if (selling) {
-                        // В выборе касание отмечает, удержание открывает карточку (4.3.2)
                         SellLine(pick, line.piece.id) { chosen, toggle -> StashTile(line, verdict, selected = chosen, onHold = { inspect(Inspect.Copy(line.piece.item)) }, onClick = toggle) }
                     } else {
                         StashTile(line, verdict, selected = line.piece.id == selected, onHold = { hold(line.piece.id) }) {
@@ -159,7 +157,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
 /** Ключ разовой плашки «удерживайте, чтобы продать» в [GuideStore]: раз на устройство. */
 private const val SELL_HINT = "stash.hold_to_sell"
 
-/** Разовая плашка над списком (3.90.5): как начать продажу пачкой; крестик закрывает её навсегда. */
+/** Разовая плашка над списком: как начать продажу пачкой; крестик закрывает её навсегда. */
 @Composable private fun SellHint(onDismiss: () -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Row(
@@ -172,7 +170,7 @@ private const val SELL_HINT = "stash.hold_to_sell"
 }
 
 /**
- * Строка тайника (3.90.3) - плитка вещи [ItemTile] в облике её редкости: все строки мелко, напротив имени цена торговца,
+ * Строка тайника - плитка вещи [ItemTile] в облике её редкости: все строки мелко, напротив имени цена торговца,
  * стрелки урона и защиты и отметки - надето, заперто, не надеть, ждёт сети; под строками - чего не хватает, чтобы надеть.
  */
 @Composable internal fun StashTile(line: StashLine, verdict: GearVerdict?, selected: Boolean, onHold: (() -> Unit)? = null, onClick: () -> Unit) {

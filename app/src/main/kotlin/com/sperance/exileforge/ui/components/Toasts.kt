@@ -33,7 +33,7 @@ private data class Toast(val text: String, val tint: Color, val mark: String, va
 private const val TOAST_MS = 4_000L
 
 /**
- * The toasts (2.80.0, «Эфир»): one card floating under the banner — a refusal in red, a success in
+ * The toasts («Эфир»): one card floating under the banner — a refusal in red, a success in
  * ether, loot in the rare item's yellow, a finished craft in frost. It slides in, stays four seconds
  * and leaves by itself; a tap sends it away sooner. A refusal outranks a success.
  */
@@ -57,7 +57,7 @@ private const val TOAST_MS = 4_000L
     }
 }
 
-/** Значок в кружке тоста (3.88.3): ✓ - сделано, i - сообщение; отказ - «!». */
+/** Значок в кружке тоста: ✓ - сделано, i - сообщение; отказ - «!». */
 private fun NoticeKind.mark(): String = when (this) {
     NoticeKind.ATLAS -> "i"
     NoticeKind.FAILED -> "!"
@@ -72,7 +72,7 @@ private fun NoticeKind.tint(): Color = when (this) {
     NoticeKind.FAILED -> LifeRed
 }
 
-/** Тост «Мягкого» стиля (3.88.3): капсула по центру, значок в кружке цвета тоста; касание убирает его. */
+/** Тост «Мягкого» стиля: капсула по центру, значок в кружке цвета тоста; касание убирает его. */
 @Composable private fun ToastCard(toast: Toast) {
     val shape = RoundedCornerShape(50)
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {

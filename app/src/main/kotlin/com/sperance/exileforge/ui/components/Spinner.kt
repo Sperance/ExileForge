@@ -21,7 +21,7 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 /**
  * A picker: [glyph] says what is being picked, and [optionGlyph], when given, draws each option —
  * a list of characteristics, say, where the options are codes with meanings of their own.
- * [optionArt] (2.69.1) is richer art for an option — an orb's stained glass — drawn at the given
+ * [optionArt] is richer art for an option — an orb's stained glass — drawn at the given
  * size in the list and in place of [glyph] once that option is picked.
  */
 @Composable fun Spinner(
@@ -72,7 +72,7 @@ import com.sperance.exileforge.ui.theme.PanelRaised
     }
 }
 
-/** Диалог «Мягкого» стиля (3.88.3): по центру, приподнятый фон, скругление 22 dp, без рамки и тени. */
+/** Диалог «Мягкого» стиля: по центру, приподнятый фон, скругление 22 dp, без рамки и тени. */
 val DialogShape = RoundedCornerShape(22.dp)
 
 /** Every picker opens in the same dialog. */

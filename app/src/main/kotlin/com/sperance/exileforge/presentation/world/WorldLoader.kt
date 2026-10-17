@@ -43,7 +43,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Мир сервера на устройстве (3.80.43, из `ForgeRuntime`): контент кусками с отпечатками, словарь выбранного языка,
+ * Мир сервера на устройстве (из `ForgeRuntime`): контент кусками с отпечатками, словарь выбранного языка,
  * иконки и портреты. Всё хранится по серверу и качается заново, только когда манифест говорит, что кусок сменился;
  * словарь, иконки и портреты - фоновая работа, их отказ не красная полоса.
  */
@@ -60,7 +60,6 @@ class WorldLoader(
     private val api: GameApi get() = connection.api
 
     init {
-        // Дыра словаря (0.14.5, #48): след в последних действиях отчёта, первая дыра редакции - перечитать словарь
         LocaleHoles.listener = { key, refetch ->
             evidence.trail.hole(key)
             if (refetch) refreshLocale()
@@ -69,7 +68,7 @@ class WorldLoader(
     private var localeJob: Job? = null
     private var iconJob: Job? = null
 
-    /** Словарь, иконки и портреты - каждый одним полётом (4.12.x, NET-5): старт, перепроверка и обновление не качают их дважды. */
+    /** Словарь, иконки и портреты - каждый одним полётом: старт, перепроверка и обновление не качают их дважды. */
     private val flights = SingleFlight<String>(scope)
 
     /** Language is global: core validation messages and Compose both read it, so switch them together. */
@@ -88,9 +87,9 @@ class WorldLoader(
      */
     suspend fun loadLocale(language: Lang) = flights.run("locale:${language.code}") { readLocale(language) }
 
+    /** Шаги словаря видны в окне запуска: память устройства, манифест, сервер. */
     private suspend fun readLocale(language: Lang) {
         val server = sessions.state.value.server
-        // Шаги словаря видны в окне запуска (3.82.0): память устройства, манифест, сервер.
         val cached = trace.step(StartStage.DICTIONARY, "start.step.cache") {
             store.locale(server, language.code)?.also { (hash, document) -> applyLocale(parsed { LocaleBundle.parse(language.code, hash, document) }) }
         }
@@ -151,7 +150,7 @@ class WorldLoader(
 
     override val ready: Flow<Boolean> = world.state.map { it.content != null && it.localeStrings > 0 && it.iconKeys > 0 }.distinctUntilChanged()
 
-    /** Контент, словарь и иконки сверяются с манифестом бок о бок (3.90.3); шаги видны в журнале запуска своих пунктов. */
+    /** Контент, словарь и иконки сверяются с манифестом бок о бок; шаги видны в журнале запуска своих пунктов. */
     override suspend fun recheck() = coroutineScope {
         launch { quietly { ensureContent(fresh = true) } }
         launch { quietly { loadLocale(languages.lang.value) } }
@@ -172,12 +171,12 @@ class WorldLoader(
 
     suspend fun loadPortraits() = trace.step(StartStage.ICONS, "start.step.portraits") { flights.run(PORTRAITS) { readPortraits() } }
 
+    /** Хоть один портрет разошёлся - весь набор одним документом. */
     private suspend fun readPortraits() {
         val server = sessions.state.value.server
         val cached = store.portraits(server)
         applyPortraits(cached)
         val manifest = api.manifest().portraits
-        // Хоть один портрет разошёлся - весь набор одним документом (3.94.1, прежде запрос на каждый файл)
         if (manifest.portraits.all { (key, hash) -> cached[key]?.first == hash } && cached.keys == manifest.portraits.keys) return
         val bundle = api.files.portraits()
         val fresh = manifest.portraits.mapNotNull { (key, hash) -> bundle[key]?.let { key to (hash to it) } }.toMap()
@@ -218,6 +217,9 @@ class WorldLoader(
      * The world's content: every chunk kept on the device per server beside its fingerprint, fetched
      * again only when the start manifest's fingerprint for that chunk moves, and parsed by the rules.
      * A warm start reads none of it from the server. [fresh] asks the manifest again — on entering a hero.
+     *
+     * Каждый чанк знает, пришёл ли он с устройства или из сети; скачанное сохраняется, только когда прочитался весь мир - битая загрузка
+     * качается снова. Контент, проверенный сервером, читается терпимым JSON клиента.
      */
     suspend fun ensureContent(fresh: Boolean = false) = locked {
         val server = sessions.state.value.server
@@ -225,8 +227,6 @@ class WorldLoader(
         world.update { it.server(served) }
         val manifest = served.content
         if (manifest.hash == world.state.value.contentHash && world.state.value.content != null) return@locked
-        // Each chunk says whether it came from the device or the network; the downloads are kept only once
-        // the whole world has read, so a broken download is fetched again rather than stored.
         val total = ContentFiles.ALL.size
         val done = java.util.concurrent.atomic.AtomicInteger()
         val reading = trace.begin(StartStage.CONTENT, "start.step.chunks", 0, total)
@@ -246,14 +246,13 @@ class WorldLoader(
             trace.end(reading, e)
             throw e
         }
-        // Контент, проверенный сервером, - терпимым JSON клиента (4.12.x, CONTENT-02): строгий разбор - только на старте сервера
         val index = trace.step(StartStage.CONTENT, "start.step.parse") { parsed { ContentLoader.load(WireJson) { chunks.getValue(it).first } } }
         chunks.forEach { (file, chunk) -> if (chunk.second) store.saveChunk(server, file, manifest.chunks[file].orEmpty(), chunk.first) }
         world.update { it.copy(content = index, contentHash = manifest.hash) }
     }
 
     /**
-     * Замок контента; ожидание его - отдельный подпункт (3.82.0): чтение, что держит замок, видно как стоящее. Ждётся не
+     * Замок контента; ожидание его - отдельный подпункт: чтение, что держит замок, видно как стоящее. Ждётся не
      * дольше [LOCK_WAIT_MS] и отменяемо: зависший владелец замка не держит за собой чтения, они падают с ошибкой.
      */
     private suspend inline fun <T> locked(block: () -> T): T {
@@ -270,7 +269,7 @@ class WorldLoader(
     }
 
     /**
-     * The content from the device alone (3.30.0), as the kept manifest names it — no request: what the fast start
+     * The content from the device alone, as the kept manifest names it — no request: what the fast start
      * draws the last hero with. `false` when the manifest is of another revision or a chunk is missing or stale.
      */
     suspend fun contentFromDevice(): Boolean = trace.step(StartStage.CONTENT, "start.step.device_content") { contentKept() }
@@ -301,7 +300,7 @@ class WorldLoader(
 /** Дольше этого чтение не ждёт замок контента, мс: меньше предела раннера, чтобы упасть своей ошибкой раньше сторожа. */
 private const val LOCK_WAIT_MS = 20_000L
 
-/** Что сервер сказал о себе в манифесте (3.88.2) - экран «Контракт сервера» показывает это рядом с закреплённым сервером. */
+/** Что сервер сказал о себе в манифесте - экран «Контракт сервера» показывает это рядом с закреплённым сервером. */
 private fun World.server(manifest: StaticManifest) = copy(serverVersion = manifest.version, serverRevision = manifest.revision, serverCommit = manifest.commit)
 
 /** Ключи полётов иконок и портретов. */

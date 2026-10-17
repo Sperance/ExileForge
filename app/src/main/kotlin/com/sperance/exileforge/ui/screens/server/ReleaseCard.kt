@@ -26,7 +26,7 @@ import com.sperance.exileforge.ui.theme.Panel
 import com.sperance.exileforge.ui.theme.Parchment
 
 /**
- * Карточка релиза «Что нового» (4.2.0): все релизы одной плитой басальта в бронзовой нити, без выделения по весу версии и
+ * Карточка релиза «Что нового»: все релизы одной плитой басальта в бронзовой нити, без выделения по весу версии и
  * без анимаций. Касание раскрывает заметки.
  */
 @Composable fun ReleaseCard(release: ReleaseNotes, open: Boolean, onToggle: () -> Unit) {

@@ -34,7 +34,7 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Every state on a fighter as a tile of its colour whose dark fill rises as it wears off; a stun is a gold star. Действующие рычаги
- * Предначертания (4.9.0) - золотой ✦ дара [fates]. С 4.9.3 - полка эффектов ([EffectShelf]): что не влезло - «+N», касание
+ * Предначертания - золотой ✦ дара [fates]. Полка эффектов ([EffectShelf]): что не влезло - «+N», касание
  * открывает лист всех эффектов [title].
  */
 @Composable internal fun StateTiles(
@@ -58,7 +58,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Действующий рычаг дара (4.9.0, макет «Свиток + значок»): ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,
+ * Действующий рычаг дара: ✦ золотом Предначертания, тёмная заливка растёт по мере ухода срока,
  * в углу - стаки; подсказка - имя дара и что он делает сейчас (`fight.fate_state.<рычаг>`).
  */
 @Composable internal fun FateTile(view: FateGlow, side: Dp = 30.dp, tip: () -> Tip) {
@@ -86,7 +86,7 @@ import com.sperance.exileforge.ui.theme.*
 /** Знак Предначертания на значке рычага. */
 private const val FATE_GLYPH = "✦"
 
-/** A kind of the hero's charges (3.33.0): the drawing of its maximum and the count held. */
+/** A kind of the hero's charges: the drawing of its maximum and the count held. */
 @Composable internal fun ChargeTile(view: ChargeView, side: Dp = 30.dp, tip: () -> Tip) {
     val shape = RoundedCornerShape(4.dp)
     val title = ui("fight.charge.${view.kind.name}")
@@ -106,15 +106,17 @@ private const val FATE_GLYPH = "✦"
     }
 }
 
-/** A buff or a curse (2.78.0) as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off. */
+/**
+ * A buff or a curse as a tile: the skill's mark in gold for a buff, in blood for a curse, darkening as it wears off.
+ *
+ * Бафф правил (Натиск, Укрепление) назван и нарисован по виду, умения - по умению, глоток - бутылью; бафф Предначертания называется даром.
+ * Проклятие открывает лист.
+ */
 @Composable internal fun EffectTile(view: EffectView, side: Dp = 30.dp, tip: () -> Tip) {
     val tint = effectTint(view)
     val shape = RoundedCornerShape(4.dp)
-    // A buff of the rules (3.35.0) — Onslaught, Fortify — is named and drawn by its kind, a skill's by the skill; глоток (4.9.3) - бутылью флакона.
     val buff = view.buff
-    // Бафф Предначертания (4.6.0) - не умение: называется даром
     val title = effectTitle(view)
-    // Проклятие (3.92.0) открывает лист: что меняет, сколько ещё, чем снять; бафф - подсказку [tip]
     val lore = LocalLore.current?.takeIf { view.kind == EffectKind.CURSE && buff == null }
     Tipped(
         tip.takeIf { lore == null },
@@ -127,7 +129,6 @@ private const val FATE_GLYPH = "✦"
         } else if (buff != null) {
             com.sperance.exileforge.ui.icons.StatIcon(buff.icon, tint, Modifier.fillMaxSize().padding(side / 6))
         } else if (view.source == PROVOKED) {
-            // Провокация героя на враге (4.12.x, STAT-DEF-05) - знаком своей характеристики
             com.sperance.exileforge.ui.icons.StatIcon(CoreStat.PROVOKE.code, tint, Modifier.fillMaxSize().padding(side / 6))
         } else {
             SkillGlyph(view.icon, Modifier.fillMaxSize().padding(side / 6), tint)
@@ -158,8 +159,7 @@ private const val FATE_GLYPH = "✦"
 }
 
 /**
- * An ailment's mark drawn from shapes: a flame, a snowflake, a crystal, a bolt, a drop, two drops; a star for a stun. Изранение
- * (4.11.0) - рваная рана со стежками, иссушение - капля в трещинах.
+ * An ailment's mark drawn from shapes: a flame, a snowflake, a crystal, a bolt, a drop, two drops; a star for a stun. Изранение - рваная рана со стежками, иссушение - капля в трещинах.
  */
 internal fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
     val u = size.minDimension / 16f
@@ -203,7 +203,6 @@ internal fun DrawScope.stateGlyph(ailment: Ailment?, tint: Color) {
             drawLine(crack, Offset(7 * u, 9 * u), Offset(5 * u, 11 * u), u)
         }
 
-        // Разложение (0.15.0) - треснувший круг с тремя каплями распада; высасывание сути - капля, втянутая в воронку
         Ailment.DECAYED -> {
             drawCircle(tint, 5.5f * u, Offset(8 * u, 7 * u), style = androidx.compose.ui.graphics.drawscope.Stroke(1.6f * u))
             listOf(8f to 7f, 6f to 9f, 9f to 11f).zipWithNext { (x1, y1), (x2, y2) -> drawLine(tint, Offset(x1 * u, y1 * u), Offset(x2 * u, y2 * u), u) }

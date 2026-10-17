@@ -23,12 +23,12 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * Everything an administrator can do, in one place.
  *
- * С 4.12.x (ADMIN-UI) экран в основной сборке: вкладку видят администратор и модератор в режиме инструментов, промокоды и выдачи -
+ * Экран в основной сборке: вкладку видят администратор и модератор в режиме инструментов, промокоды и выдачи -
  * только администратор; права на каждое действие проверяет сервер.
  *
  * It is the only tab a player does not have, which is the point: the promo codes open from here,
  * and the grant panel sits here rather than inside the Hero tab where a player would otherwise be
- * reading their own stash. The catalogue, the editor and the checks left with the content (3.0.0):
+ * reading their own stash. The catalogue, the editor and the checks left with the content:
  * the world is a set of files the server serves, not records to edit. Gathering what remains here
  * leaves every other screen the same for everyone, which is what makes "look at it as a player"
  * below a real check rather than a guess.
@@ -39,7 +39,13 @@ import org.koin.compose.viewmodel.koinViewModel
     AdminPanels(game, vm)
 }
 
-/** Панели админки по состоянию [game] (0.14.0, UI-SHOTS: снимок экрана рисует их с ролью администратора). */
+/**
+ * Панели админки по состоянию [game] (снимок экрана рисует их с ролью администратора).
+ *
+ * Промокоды и выдачи любому герою - только администратору, модератору - режим игрока. Выдача требует выбранного героя и говорит об этом
+ * сама. Выход из режима администратора прячет эту вкладку, поэтому переключатель говорит, куда он ведёт: назад - тем же переключателем во
+ * вкладке «Аккаунт».
+ */
 @Composable internal fun AdminPanels(game: GameUi, vm: AdminViewModel) {
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -51,7 +57,6 @@ import org.koin.compose.viewmodel.koinViewModel
             ForgeGlyphs.Scroll,
         )
 
-        // Промокоды и выдачи любому герою (4.12.x, ADMIN-UI, ROLE-01) - только администратору; модератору здесь - режим игрока.
         if (game.isAdmin) {
             ForgePanel {
                 Engraved(ui("admin.screens"))
@@ -64,8 +69,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 MutedText(ui("admin.screens_note"))
             }
 
-            // Granting is done to a hero, so it needs one chosen — which is why it says so itself
-            // rather than being hidden when there is none.
             AdminGrantPanel(game, vm)
         }
 
@@ -80,8 +83,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 color = Muted,
                 style = MaterialTheme.typography.bodySmall,
             )
-            // Leaving admin mode hides this very tab, so the switch says where it lands you: the
-            // way back is the same switch on the Account tab, and nothing else can turn it on.
             ForgeOutlinedButton(
                 enabled = !game.busy,
                 modifier = Modifier.fillMaxWidth(),

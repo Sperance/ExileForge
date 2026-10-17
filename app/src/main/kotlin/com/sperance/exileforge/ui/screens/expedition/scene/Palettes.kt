@@ -22,8 +22,6 @@ object Palettes {
         "ASH" to Palette(Color(0xFF0A0605), Color(0xFF3A2A22), Color(0xFF40302A), Color(0xFF261A15), Color(0xFFD9642E), Color(0xFFE08A3C)),
         "FROST" to Palette(Color(0xFF070A0E), Color(0xFF46505C), Color(0xFF6C7A88), Color(0xFF3E4852), Color(0xFFBFD8EA), Color(0xFFDDEEFF)),
         "TEMPLE" to Palette(Color(0xFF04070A), Color(0xFF23343A), Color(0xFF2E4750), Color(0xFF192A30), Color(0xFF3B6FA8), Color(0xFF63B7C4)),
-        // The lands past the Drowned Temple (2.77.0, server 0.68.0): sand and red rock, the green
-        // dark and the amber hive, fire and its fortress, the void and the rot.
         "DESERT" to Palette(Color(0xFF0B0906), Color(0xFF5A4A30), Color(0xFF7A6340), Color(0xFF4A3B26), Color(0xFFB8965A), Color(0xFFE8C878)),
         "CANYON" to Palette(Color(0xFF0A0605), Color(0xFF4E3024), Color(0xFF7A4530), Color(0xFF4A2A1E), Color(0xFF9A5A3A), Color(0xFFE07A4A)),
         "JUNGLE" to Palette(Color(0xFF030704), Color(0xFF24331E), Color(0xFF1E4424), Color(0xFF122A16), Color(0xFF3A8A3E), Color(0xFF7ADE6A)),
@@ -32,7 +30,6 @@ object Palettes {
         "CITADEL" to Palette(Color(0xFF070405), Color(0xFF3A2A2A), Color(0xFF5A3E3A), Color(0xFF2E1E1E), Color(0xFF8A3030), Color(0xFFFF6A3A)),
         "ABYSS" to Palette(Color(0xFF020104), Color(0xFF1E1A2A), Color(0xFF2E2640), Color(0xFF161222), Color(0xFF6A3AA0), Color(0xFFA070FF)),
         "BLIGHT" to Palette(Color(0xFF050604), Color(0xFF2E3022), Color(0xFF3A3A28), Color(0xFF22241A), Color(0xFF7A8A30), Color(0xFFB0D040)),
-        // The lands 71–100 (3.42.0, server 1.40.0): the broken sky, the drowned empire, the halls of the gods.
         "SKYREACH" to Palette(Color(0xFF060A10), Color(0xFF4A5868), Color(0xFF6E8298), Color(0xFF3A4656), Color(0xFFBFE3EF), Color(0xFFE8F4FF)),
         "GLASSWASTE" to Palette(Color(0xFF050A0B), Color(0xFF3E5A5C), Color(0xFF5E8A8E), Color(0xFF304A4C), Color(0xFF9FD8E8), Color(0xFFCFF4FF)),
         "STORMPEAK" to Palette(Color(0xFF05050A), Color(0xFF2E3040), Color(0xFF454860), Color(0xFF22243A), Color(0xFF8A6AE0), Color(0xFFD0C0FF)),
@@ -42,7 +39,6 @@ object Palettes {
         "GODHALL" to Palette(Color(0xFF0A0804), Color(0xFF5A5040), Color(0xFF8A7A5A), Color(0xFF4A4232), Color(0xFFE8C860), Color(0xFFFFF0B0)),
         "ASTRAL" to Palette(Color(0xFF020210), Color(0xFF1E1E40), Color(0xFF2E2E60), Color(0xFF16163A), Color(0xFF5A62E0), Color(0xFFB0B8FF)),
         "OBLIVION" to Palette(Color(0xFF030303), Color(0xFF26262A), Color(0xFF38383E), Color(0xFF1A1A1E), Color(0xFF6A6A78), Color(0xFFD8D8E8)),
-        // The Vaal zones (2.65.0): black obsidian and scarlet, whatever map the portal stood on.
         "VAAL" to Palette(Color(0xFF050102), Color(0xFF1E1416), Color(0xFF3A2A2C), Color(0xFF2A1D1F), Color(0xFF5A1A1A), Color(0xFFFF3C28)),
     )
 
@@ -56,7 +52,7 @@ object Palettes {
     val magic = Color(0xFF8888FF)
     val rare = Color(0xFFFFFF77)
 
-    /** A boss (server 0.32.0), in the unique items' brown-orange. */
+    /** A boss, in the unique items' brown-orange. */
     val unique = Color(0xFFAF6025)
     val portal = Color(0xFF7FA9C8)
     val blood = Color(0xFFB03A3A)

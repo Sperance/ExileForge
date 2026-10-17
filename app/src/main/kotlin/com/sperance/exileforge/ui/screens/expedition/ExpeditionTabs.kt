@@ -18,7 +18,7 @@ import com.sperance.exileforge.ui.theme.Rune
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Страницы «Похода» (4.0.0): карта мира, испытания и Атлас - под одной вкладкой, каждая своим экраном стека; [hue] - цвет значка,
+ * Страницы «Похода»: карта мира, испытания и Атлас - под одной вкладкой, каждая своим экраном стека; [hue] - цвет значка,
  * [alerts] - на странице есть что сделать (метка вкладки [StoneTab.alert]): у Атласа - свободные очки.
  */
 enum class ExpeditionPage(val route: Route, private val title: String, val icon: ImageVector, val hue: Color, val alerts: (GameUi) -> Boolean = { false }) {
@@ -36,7 +36,7 @@ enum class ExpeditionPage(val route: Route, private val title: String, val icon:
 }
 
 /**
- * Полоса страниц «Похода» в оболочке (4.0.0, макет «Скрижали»; с 4.4.x - общие [StoneTabs]): каменная дорожка, у каждой
+ * Полоса страниц «Похода» в оболочке (общие [StoneTabs]): каменная дорожка, у каждой
  * страницы значок над подписью. Вне страниц «Похода» полосы нет. Закрытая уровнем страница отвечает тостом навигатора,
  * Атлас готовит своё окно сам ([ExpeditionViewModel.openAtlas]).
  */

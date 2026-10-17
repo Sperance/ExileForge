@@ -61,14 +61,13 @@ import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
 import com.sperance.exileforge.ui.theme.Vital
 
-/*
- * Состав гильдии (4.6.3, макет «Плотная таблица», вариант A; строки - макет «Состав гильдии», вариант A): плотный поиск по
- * имени с кнопкой порядка, плотные чипы отбора со счётчиками, таблица «Участник» / «Неделя / всего» и итог. Строка - две
- * плотные строки ~60dp: портрет класса в кольце роли с точкой присутствия и уровнем в углу; знак роли, имя и титул; «был N
- * назад» и дар; у себя - полоса вклада за сутки.
+/**
+ * Чем отбирается состав: правила гильдий (порог неактивности) и момент отбора [now] (мс эпохи).
+ *
+ * Состав гильдии: плотный поиск по имени с кнопкой порядка, чипы отбора со счётчиками, таблица «Участник» / «Неделя / всего» и итог. Строка
+ * - две плотные строки ~60dp: портрет класса в кольце роли с точкой присутствия и уровнем, знак роли, имя и титул, «был N назад» и дар; у
+ * себя - полоса вклада за сутки.
  */
-
-/** Чем отбирается состав: правила гильдий (порог неактивности) и момент отбора [now] (мс эпохи). */
 internal data class RosterScope(val rules: GuildRules, val now: Long)
 
 /** Правила отбора состава [members]: момент берётся заново, когда пришёл новый состав или правила; контента нет - null. */
@@ -217,6 +216,8 @@ internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.co
  * Строка состава - две плотные строки (~60dp): портрет ([MemberPortrait]); знак роли, имя и титул курсивом; ниже «был N назад»
  * у не в сети и дар ([FateMark]); справа вклад за неделю крупно и «Σ всего». Своя строка подсвечена чертой `Gold` слева и
  * несёт полосу вклада за сутки из потолка ([DayContribution]).
+ *
+ * Мощь - одно число для сравнения, не прогноз боя; не посчитана сервером - «⚜ …».
  */
 @Composable internal fun MemberRow(game: GameUi, member: GuildMember, isMe: Boolean, onClick: () -> Unit) {
     Column(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
@@ -245,7 +246,6 @@ internal fun RosterOrder?.next(column: RosterColumn): RosterOrder = if (this?.co
                 }
                 val seen = seenTail(member, isMe)
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    // Мощь (4.8.0): «⚜ 12.5k» - одно число для сравнения, не прогноз боя; не посчитана сервером - «⚜ …» (4.9.0)
                     MightLine(member.might)
                     seen?.let { Text(it, color = Presence.of(member.online, member.lastSeenAt).color, fontSize = 11.sp, maxLines = 1) }
                     member.fate?.let { FateMark(it, Modifier.weight(1f, fill = false)) }

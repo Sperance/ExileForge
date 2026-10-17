@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
-/** Экран ремёсел (3.80.14): ремёсла из репозитория, действия общие; открытое окно профессии - состояние экрана. */
+/** Экран ремёсел: ремёсла из репозитория, действия общие; открытое окно профессии - состояние экрана. */
 class CraftsViewModel(
     private val actions: CraftsActions,
     repository: CraftsRepository,
@@ -24,7 +24,7 @@ class CraftsViewModel(
     private val sessions: SessionRepository,
     slice: GameSlice,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val crafts: StateFlow<Crafts> = repository.state
     val activity: StateFlow<Activity> = commands.state
@@ -44,7 +44,7 @@ class CraftsViewModel(
     fun stop() = actions.stop()
     fun equipTool(itemId: String) = actions.equipTool(itemId)
 
-    /** Последний запущенный выбор кузнеца героя на этом устройстве (3.89.0): лист открывается в его режиме. */
+    /** Последний запущенный выбор кузнеца героя на этом устройстве: лист открывается в его режиме. */
     suspend fun smithChoice(heroId: String): SmithChoice? = SmithChoice.of(store.smithChoice(sessions.state.value.server, heroId).orEmpty())
 
     fun rememberSmithChoice(heroId: String, choice: SmithChoice) {

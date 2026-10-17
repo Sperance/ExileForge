@@ -30,7 +30,7 @@ import kotlinx.coroutines.flow.update
 enum class ModerationTab { ALL, BANNED, TRASH, JOURNAL }
 
 /**
- * Порядок и отбор списка модерации (макет «Фильтры модерации», вариант B): [sort] - порядок (3.94.0), [fate] - дар (4.6.3);
+ * Порядок и отбор списка модерации: [sort] - порядок, [fate] - дар;
  * [active] - сколько из них не обычные, число на значке кнопки фильтров. Новый отбор - поле здесь и строка в [active].
  */
 data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY, val fate: ModerationFate = ModerationFate.All) {
@@ -42,27 +42,27 @@ data class ModerationFilters(val sort: ModerationSort = ModerationSort.ACTIVITY,
 }
 
 /**
- * Окно модерации (3.88.5, вариант B «Досье-карточки»): раздел, поиск, страница строк или журнала; открытое досье - поверх
+ * Окно модерации: раздел, поиск, страница строк или журнала; открытое досье - поверх
  * списка, [dossierKey] - чьё оно (герой и аккаунт), чтобы после действия перечитать именно его.
  */
 data class ModerationState(
     val tab: ModerationTab = ModerationTab.ALL,
     val query: String = "",
-    /** Порядок списка (3.94.0) и отбор по Предначертанию (4.6.3). */
+    /** Порядок списка и отбор по Предначертанию. */
     val filters: ModerationFilters = ModerationFilters.DEFAULT,
     val page: ModerationPage = ModerationPage(),
     val journal: List<ModerationEntryView> = emptyList(),
     val journalPage: Int = 0,
     val dossier: Dossier? = null,
     val dossierKey: Pair<String, String>? = null,
-    /** Только что созданный тестировщик (3.88.7): логин и пароль показываются один раз. */
+    /** Только что созданный тестировщик: логин и пароль показываются один раз. */
     val createdTester: TesterAccount? = null,
-    /** Игровые серверы (3.91.0): администратор переносит между ними героя из досье. */
+    /** Игровые серверы: администратор переносит между ними героя из досье. */
     val servers: List<GameServer> = emptyList(),
 )
 
 /**
- * Модерация глазами модератора и администратора (3.88.5, server 1.80.8): списки героев, баны, корзина и журнал, досье игрока,
+ * Модерация глазами модератора и администратора: списки героев, баны, корзина и журнал, досье игрока,
  * бан героя, аккаунта или устройства, его снятие, удаление в корзину и восстановление. Права решает сервер; клиент только
  * прячет то, что досье ([Dossier.rights]) не разрешает.
  */
@@ -125,7 +125,7 @@ class ModerationViewModel(
         mutable.update { if (it.dossierKey == hero to user) it.copy(dossier = dossier) else it }
     }
 
-    /** Санкция на срок - бан или (4.6.3) немота: подпись по виду санкции. */
+    /** Санкция на срок - бан или немота: подпись по виду санкции. */
     fun ban(request: SanctionRequest) = act { api.ban(request).also { notices.toast(ui("moderation.imposed.${it.kind.name}", it.label)) } }
 
     /** Снимает бан или немоту, восстанавливает удалённое из корзины. */
@@ -133,7 +133,7 @@ class ModerationViewModel(
         api.lift(sanction.id).also { notices.toast(ui("moderation.lifted.${it.kind.name}", it.label)) }
     }
 
-    /** Новая роль аккаунта [userId] (3.88.7): администратор выдаёт игрока, тестировщика или модератора. */
+    /** Новая роль аккаунта [userId]: администратор выдаёт игрока, тестировщика или модератора. */
     fun setRole(userId: String, role: AccountRole) {
         val started = commands.task(writing = true) {
             staff()
@@ -145,7 +145,7 @@ class ModerationViewModel(
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }
 
-    /** Новый аккаунт [login] с ролью [role] (3.88.8): пароль сервер придумывает сам и отдаёт один раз. */
+    /** Новый аккаунт [login] с ролью [role]: пароль сервер придумывает сам и отдаёт один раз. */
     fun createAccount(login: String, role: AccountRole) {
         val started = commands.task(writing = true) {
             staff()
@@ -156,14 +156,14 @@ class ModerationViewModel(
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }
 
-    /** Список серверов (3.91.0) - только администратору: перенос и новый сервер - его команды. */
+    /** Список серверов - только администратору: перенос и новый сервер - его команды. */
     fun loadServers() = commands.read(Reads.SERVERS) {
         if (!sessions.state.value.isAdmin) return@read
         val servers = connection.api.admin.servers()
         mutable.update { it.copy(servers = servers) }
     }
 
-    /** Новый игровой сервер (3.91.0). */
+    /** Новый игровой сервер. */
     fun createServer(code: String, name: String) {
         val started = commands.task(writing = true) {
             staff()
@@ -174,9 +174,11 @@ class ModerationViewModel(
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }
 
-    /** Переносит героя [heroId] на сервер [server] (3.91.0); тост называет, вышел ли он из гильдии и сколько лотов вернулось. */
-
-    /** Отметка тестировщика героя [heroId] (4.12.x, сервер ROLE-01): только администратор, в досье героя. */
+    /**
+     * Отметка тестировщика героя [heroId]: только администратор, в досье героя.
+     *
+     * Переносит героя на другой сервер - тост называет, вышел ли он из гильдии и сколько лотов вернулось.
+     */
     fun setTester(heroId: String, tester: Boolean) {
         val started = commands.task(writing = true) {
             staff()
@@ -198,7 +200,7 @@ class ModerationViewModel(
     }
 
     /**
-     * Предначертание [code] своему аккаунту (0.15.0, #35): только администратор и только себе - сервер берёт цель из сессии. Дар
+     * Предначертание [code] своему аккаунту: только администратор и только себе - сервер берёт цель из сессии. Дар
      * ложится в профиль сессии, досье перечитывается, герои и список героев - при следующем чтении.
      */
     fun redrawFate(code: String) {
@@ -220,7 +222,7 @@ class ModerationViewModel(
     fun delete(request: DeletionRequest) = act { api.delete(request).also { notices.toast(ui("moderation.deleted", it.label)) } }
 
     /**
-     * Действие модерации: уходит сразу или падает видимой ошибкой (команда администратора не ждёт сети, как в 3.88.0); после
+     * Действие модерации: уходит сразу или падает видимой ошибкой (команда администратора не ждёт сети); после
      * него досье и раздел перечитываются - сервер отвечает санкцией, а не готовой строкой списка.
      */
     private fun act(block: suspend () -> SanctionView) {

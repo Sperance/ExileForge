@@ -19,11 +19,12 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.CombatDetailSheet
 import com.sperance.exileforge.ui.theme.*
 
-/** The latest blows while the fight runs, newest on top, each under the name of the foe it was about. */
-
 /**
- * The live log (3.37.0): its shelves as chips over it, and a line tapped opens its card — the fight holds still while
+ * The live log: its shelves as chips over it, and a line tapped opens its card — the fight holds still while
  * it is read, and goes on as it was when the card is closed.
+ *
+ * Последние удары, пока бой идёт, новые сверху, каждый под именем своего врага. Отбор полок - по новой строке или смене полок, не каждый
+ * кадр.
  */
 @Composable internal fun FightFeed(game: GameUi, fight: FightHud, names: Map<Int, String>, onCommand: (RunCommand) -> Unit, onLogFilter: (Set<LogKind>) -> Unit) {
     val shape = RoundedCornerShape(10.dp)
@@ -32,7 +33,6 @@ import com.sperance.exileforge.ui.theme.*
     Column(Modifier.fillMaxSize().background(Panel.copy(alpha = .75f), shape).border(1.dp, Bronze.copy(alpha = .4f), shape).padding(horizontal = 10.dp, vertical = 6.dp)) {
         LogShelves(game.logFilter, onLogFilter)
         if (fight.events.isEmpty()) MutedText(ui("expedition.log"), style = MaterialTheme.typography.labelSmall)
-        // Отбор полок - по новой строке журнала или смене полок, не каждый кадр (4.9.0): журнал снимка тот же, пока не вырос
         val shown = remember(fight.events, game.logFilter) { fight.events.filter { LogKind.of(it) in game.logFilter } }
         FightLog(shown, names) { event ->
             if (fight.started && !fight.paused && fight.outcome == null) {
@@ -53,7 +53,7 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** The log's shelves as chips (3.37.0): each on or off, the choice kept on the device. */
+/** The log's shelves as chips: each on or off, the choice kept on the device. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun LogShelves(shown: Set<LogKind>, onChange: (Set<LogKind>) -> Unit) {

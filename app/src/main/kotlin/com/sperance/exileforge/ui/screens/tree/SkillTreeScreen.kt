@@ -83,16 +83,17 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
+/**
+ * Открытое из карточки самоцвета дерево встаёт на свободном гнезде. «Карта на весь экран»: без шапки и прокрутки - холст внутри прокрутки
+ * дрался бы с ней за каждый жест.
+ */
 @Composable fun SkillTreeScreen() {
     val game by koinViewModel<TreeViewModel>().game.collectAsStateWithLifecycle()
     val vm = koinViewModel<TreeViewModel>()
     val selected by vm.selected.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
-    // Открыто из карточки самоцвета (3.94.1): сразу на свободном гнезде.
     LaunchedEffect(Unit) { shell.takeTreeNode()?.let(vm::select) }
-    // «Карта на весь экран» (variant A): no header and no scrolling column — the map owns everything between the Hero
-    // strip and the bar, and the rest floats over it. A pannable canvas inside a scroll fights the scroll for every drag.
     SkillTreePanel(
         game, selected, query, vm::select, vm::allocate, vm::refund, vm::reset, vm::query,
         onSocket = vm::socket, onUnsocket = vm::unsocket, onRechoose = vm::rechoose, onRefundBranch = vm::refundBranch,
@@ -110,6 +111,10 @@ import kotlin.math.sin
  * The map takes the whole panel. The point balance is a plaque in its corner; the search, «Итого» and «Ещё»
  * (the details, the reset) are round buttons down its right edge, the way back to the whole tree under
  * them; a chosen node rises as a card over the map's foot rather than a sheet, so the branch stays in sight.
+ *
+ * Карточка узла - сама вопрос: взятие и возврат действуют сразу, цена у кнопки; дважды спрашивается только сброс всего дерева. Узлы на шаг
+ * от взятого подсвечены, решает сервер. Фильтр тега и поиск - за кнопкой поиска: зелёная с числом подсвеченных, пока включены. Карточка
+ * держит только низ карты.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,12 +137,9 @@ fun SkillTreePanel(
     val index = game.index
     val tree = game.treeState
     var detailsOpen by remember { mutableStateOf(false) }
-    // «Итого» (3.54.0): the tree's bonuses at once, without the rest of the details.
     var totalsOpen by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
     var nodeOpen by remember { mutableStateOf(false) }
-    // The node's own card is the question (2.72.0): taking or giving back a node acts at once from
-    // it, the price written beside the button. Only the whole tree's reset is still asked twice.
     var confirmReset by remember { mutableStateOf(false) }
     val view = remember { TreeView() }
     if (hero == null) {
@@ -151,18 +153,12 @@ fun SkillTreePanel(
     val nodes = index.content.tree.nodes
     val taken = hero.takenNodes
     val enabled = !game.busy && game.session.signedIn && (game.ownsCharacter || game.isAdmin)
-    // Which nodes are one step away: neighbours of what is taken, or the class's own start when
-    // nothing is taken yet. The server still decides — this only says where to look on 122 nodes.
     val heroClass = game.heroClass
     val reachable = remember(index, heroClass, taken) { reachableFrom(index, heroClass, taken) }
-    // The tag filter (3.47.0): every node whose lines carry the tag lights up.
     var tag by remember { mutableStateOf<String?>(null) }
-    // The search (3.54.0): by a node's name or the stats it gives; every match lights up with the tag's.
     val query = rawQuery.trim()
     val found = remember(index, query, game.lang) { if (query.length < 2) emptySet() else nodesMatching(index, query) }
     val highlight = remember(index, tag, found) { tag?.let { nodesTagged(index, it) }.orEmpty() + found }
-    // Both live behind the search button, so the map keeps the height; while either is on, the button
-    // turns green and wears the number of nodes lit.
     var filtersOpen by remember { mutableStateOf(false) }
     val filtering = tag != null || query.length >= 2
     BackHandler(nodeOpen) { nodeOpen = false }
@@ -210,8 +206,6 @@ fun SkillTreePanel(
             Spacer(Modifier.height(16.dp))
             MapButton(ForgeGlyphs.Target, ui("tree.reset_view"), tint = Muted, size = 34.dp, onClick = view::reset)
         }
-        // The card about the chosen node: what it gives, and the commands over it. It holds the map's foot only, so
-        // half the point — seeing where the branch leads — is kept.
         if (nodeOpen) {
             val shape = RoundedCornerShape(12.dp)
             Column(
@@ -316,16 +310,16 @@ internal val PILL = RoundedCornerShape(16.dp)
 
 /**
  * Which nodes are one step away - those the rules place next to the taken ones ([TreeAllocation.placement]): the class's
- * own start while nothing is taken, otherwise every adjacent node of any branch (4.3.1).
+ * own start while nothing is taken, otherwise every adjacent node of any branch.
  */
 internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Set<String>): Set<String> {
     val start = heroClass?.startNode ?: return emptySet()
     return index.content.tree.nodes.mapNotNullTo(HashSet()) { node -> node.code.takeIf { TreeAllocation.placement(index.tree, node, taken, start) == null } }
 }
 
+/** Сброс оплачивается сферой - код и сколько её в сумке; старт не возвращается и не оплачивается. */
 @Composable internal fun TreeConfirmations(game: GameUi, reset: Boolean, onClear: () -> Unit, onReset: () -> Unit) {
     val treeIcon: @Composable () -> Unit = { Icon(ForgeGlyphs.Constellation, null, tint = Rune, modifier = Modifier.size(40.dp)) }
-    // What a reset is paid with: the orb, named by its code, and how many of it the bag holds right now.
     val regretTitle = itemTitle(Orb.ORB_OF_REGRET.name)
     val regretLeft = game.bagAmount(Orb.ORB_OF_REGRET.name)
     fun regretLines(spent: Int) = listOfNotNull(
@@ -335,7 +329,6 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
     fun shortage(spent: Int) = regretLeft?.takeIf { it < spent }?.let { ui("confirm.short", it) }
 
     if (reset) {
-        // The start node is not given back, so it is not paid for — the count says what is.
         val returned = (game.hero?.tree?.size ?: 1) - 1
         ConfirmSheet(
             title = ui("tree.reset_q"), subtitle = ui("confirm.count", returned, nodes(returned)), icon = treeIcon,
@@ -345,5 +338,3 @@ internal fun reachableFrom(index: ContentIndex, heroClass: HeroClass?, taken: Se
         ) { onReset() }
     }
 }
-
-/** Russian counts its nouns in three forms and English in two: see `plural`. */

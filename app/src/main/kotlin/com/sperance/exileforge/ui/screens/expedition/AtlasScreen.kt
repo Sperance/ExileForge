@@ -58,7 +58,7 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** The night the atlas is drawn on (2.68.0, the owner's mockup I «Звёздная карта»). */
+/** The night the atlas is drawn on (the owner's mockup I «Звёздная карта»). */
 internal object Sky {
     val deep = Color(0xFF030408)
     val night = Color(0xFF070A12)
@@ -69,7 +69,7 @@ internal object Sky {
     val take = Color(0xFF3B6FA8)
 }
 
-/** Each trunk's own light, so a player reads which direction a star belongs to before its name; Скверна (0.15.0) - жила своей палитры. */
+/** Each trunk's own light, so a player reads which direction a star belongs to before its name; Скверна - жила своей палитры. */
 internal fun AtlasBranch.hue(): Color = when (this) {
     AtlasBranch.LOOT -> Color(0xFFE8CF94)
     AtlasBranch.MAPS -> Color(0xFF8EC5FF)
@@ -94,11 +94,14 @@ internal fun AtlasBranch.hue(): Color = when (this) {
 internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
 
 /**
- * The atlas tree (2.68.0) as a night sky: every node a star, the taken ones burning and joined by lit
- * threads, the ones a point could take next twinkling. The tree is the content's (3.0.0) and the hero's
+ * The atlas tree as a night sky: every node a star, the taken ones burning and joined by lit
+ * threads, the ones a point could take next twinkling. The tree is the content's and the hero's
  * nodes and points are the hero's own; [AtlasFog] only foresees the server's rule so a refused command
  * shows no button. The sky is dragged and pinched; a tap picks the nearest star within reach, and its
  * sheet takes or gives it.
+ *
+ * Возврат узла спрашивается удержанием: очки возвращаются, золото нет. «Итого» - строки всех взятых узлов по механикам. Очки парят над
+ * небом над листом узла. Старт не возвращается. Атлас - страница «Похода»: имя и возврат - в полосе страниц.
  */
 @Composable fun AtlasScreen() {
     val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
@@ -109,9 +112,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     val index = game.index
     val state = game.atlasState
     var resetting by remember { mutableStateOf(false) }
-    // A node given back asks first, held to confirm (3.2.0): the points come back, the gold does not
     var refunding by remember { mutableStateOf<String?>(null) }
-    // «Итого» (3.54.0): every taken node's lines added up, by mechanic.
     var summary by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Sky.deep, Sky.night, Sky.dawn)))) {
         if (index == null || state == null) {
@@ -119,7 +120,6 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
         } else {
             val taken = state.allocated.toSet()
             Sky(index, taken, atlas.selected, Modifier.fillMaxSize(), onSelect = model::selectAtlasNode)
-            // The points float over the sky, stacked above the node's sheet so neither hides the other.
             Column(Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.CenterHorizontally) {
                 val node = index.atlasGraph.node(atlas.selected)
                 PointsPill(state.available, state.points, if (node == null) Modifier.padding(bottom = 16.dp) else Modifier)
@@ -131,9 +131,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
                 }
             }
         }
-        // The start is nobody's to give back: what was spent is every taken node but it.
         val spent = (state?.allocated?.size ?: 1) - 1
-        // Атлас - страница «Похода» (4.0.0): имя и возврат - в полосе страниц, над небом только меню
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
             AtlasMenu(summary = spent > 0, reset = spent > 0 && !game.busy, onSummary = { summary = true }, onReset = { resetting = true })
         }
@@ -175,9 +173,8 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
 }
 
 /**
- * Giving [nodes] atlas nodes back: [gold] at the respec price or, since server 1.65.0 and when the bag holds [regrets],
- * an Orb of Regret per node — the player picks; a payment the hero cannot make keeps the button off and says why. Золото
- * (0.14.5, #42) - счёт [GoldBill] против кошелька: «Есть · Спишется · Останется»; null - герой не прочитан, платить нечем.
+ * Giving [nodes] atlas nodes back: [gold] at the respec price or, when the bag holds [regrets],
+ * an Orb of Regret per node — the player picks; a payment the hero cannot make keeps the button off and says why. Золото - счёт [GoldBill] против кошелька: «Есть · Спишется · Останется»; null - герой не прочитан, платить нечем.
  */
 @Composable internal fun RespecSheet(
     title: String,

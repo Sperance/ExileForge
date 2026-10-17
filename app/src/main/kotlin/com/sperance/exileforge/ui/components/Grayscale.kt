@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 
-/** Рисует содержимое без цвета (4.5.1): то, что «погасло» - герой в корзине и прочее неактивное. */
+/** Рисует содержимое без цвета: то, что «погасло» - герой в корзине и прочее неактивное. */
 fun Modifier.grayscale(): Modifier = drawWithCache {
     val paint = Paint().apply { colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) }) }
     onDrawWithContent {

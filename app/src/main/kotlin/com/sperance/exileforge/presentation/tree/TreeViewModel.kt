@@ -10,13 +10,13 @@ import com.sperance.exileforge.rules.content.TakenNode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
-/** Древо навыков (3.80.16): команды - общие действия героя; узел под курсором и строка поиска - состояние экрана. */
+/** Древо навыков: команды - общие действия героя; узел под курсором и строка поиска - состояние экрана. */
 class TreeViewModel(
     private val hero: HeroActions,
     commands: CommandRunner,
     slice: GameSlice,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val activity: StateFlow<Activity> = commands.state
 

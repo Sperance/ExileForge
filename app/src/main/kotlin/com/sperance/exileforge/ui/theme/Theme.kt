@@ -23,16 +23,16 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.R
 
 /*
- * «Эфир» (2.80.0, the owner's pick of six mockups): thin lines over dark basalt, air between things,
+ * «Эфир» (the owner's pick of six mockups): thin lines over dark basalt, air between things,
  * and light only on what is alive — the chosen, the ready, the mana. The names are the roles the app
- * has always drawn with; `Gold` is the accent (emerald since 2.81.0) and `Parchment` the reading text.
+ * has always drawn with; `Gold` is the accent (emerald) and `Parchment` the reading text.
  */
 val Ink = Color(0xFF0C1115)
 val Abyss = Color(0xFF0A0E12)
 val Panel = Color(0xFF0F161B)
 val PanelRaised = Color(0xFF16212A)
 
-/** The accent (2.81.0, the owner's choice): a deep emerald green, bright enough to read on basalt. */
+/** The accent (the owner's choice): a deep emerald green, bright enough to read on basalt. */
 val Gold = Color(0xFF3FB67A)
 
 /** Titles and the lit state of the accent. */
@@ -48,17 +48,17 @@ val Muted = Color(0xFF7A8D99)
 /** Frost: a second, cooler light for secondary marks. */
 val Rune = Color(0xFF8FD3FF)
 
-/** Every modifier's sentence — item, monster, map or atlas — in one sky blue (2.73.0). */
+/** Every modifier's sentence — item, monster, map or atlas — in one sky blue. */
 val ModBlue = Color(0xFF8EC5FF)
 val LifeRed = Color(0xFFD24A43)
 val ManaBlue = Color(0xFF6FB6FF)
 val ShieldCyan = Color(0xFF63B7C4)
 val Blood = Color(0xFF8A2E2E)
 
-/** Тёплая бронза (4.4.x): нить плашек выбора раздела и цвет Башни. */
+/** Тёплая бронза: нить плашек выбора раздела и цвет Башни. */
 val Brass = Color(0xFFC9A26B)
 
-/** Ожидание итога (4.4.x): связь переподключается - жёлтый между красным «нет связи» и обычным видом. */
+/** Ожидание итога: связь переподключается - жёлтый между красным «нет связи» и обычным видом. */
 val Caution = Color(0xFFF2C94C)
 
 /** Regeneration and success. */
@@ -71,12 +71,12 @@ val Ember = Color(0xFFD9642E)
 val Crafted = Color(0xFFB4B4FF)
 val Fractured = Color(0xFFA29162)
 
-/** The smith's handcrafted lines (2.42.0): forge copper. A map's alchemy lines read in `Vital`. */
+/** The smith's handcrafted lines: forge copper. A map's alchemy lines read in `Vital`. */
 val Handcrafted = Color(0xFFD08A4E)
 val Shaper = Color(0xFF9FD2F0)
 val Elder = Color(0xFFA77BCF)
 
-/** The Abyss (2.82.0): its cracks on the map, its sheet, and the influence of what it gives. */
+/** The Abyss: its cracks on the map, its sheet, and the influence of what it gives. */
 val AbyssGlow = Color(0xFFA26BFF)
 
 /** The three faces of «Эфир»: a wide display for titles, a quiet grotesque to read, a mono for numbers. */
@@ -88,7 +88,7 @@ val Reading = FontFamily(
     Font(R.font.onest_semibold, FontWeight.Bold),
 )
 
-/** Цвета редкостей «Реликвария» (3.88.6): мягче цветов Path of Exile на басальте; неизвестная редкость - кость. */
+/** Цвета редкостей «Реликвария»: мягче цветов Path of Exile на басальте; неизвестная редкость - кость. */
 fun rarityColor(value: String) = when (value) {
     "MAGIC" -> Color(0xFF8E8EFF)
     "RARE" -> Color(0xFFF2E46B)
@@ -102,10 +102,10 @@ fun panelBrush(accent: Color = Gold) = Brush.verticalGradient(listOf(Color(0xFF1
 fun voidBrush() = Brush.verticalGradient(listOf(Color(0xFF0E151A), Ink, Abyss))
 
 /**
- * Light around what is alive (2.80.0): a coloured halo around the shape, nothing drawn when [on] is false.
+ * Light around what is alive: a coloured halo around the shape, nothing drawn when [on] is false.
  * Рисуется сам, а не тенью: цветная тень `shadow` ниже Android 9 и у части прошивок выходит чёрной. Ореол - [GLOW_LAYERS]
  * полупрозрачных копий формы, каждая шире прежней до [radius]: наложение даёт мягкий спад цвета к краю на любом API.
- * Рисуется за содержимым и без обрезки - за границы элемента, как прежняя тень. С 3.89.0 едва заметен: [radius] -
+ * Рисуется за содержимым и без обрезки - за границы элемента, как тень. Едва заметен: [radius] -
  * относительная сила, вживую ореол выходит за форму лишь на долю [GLOW_REACH] от неё (10.dp - около 3.dp).
  */
 fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, shape: Shape = RoundedCornerShape(8.dp)): Modifier = if (!on || radius <= 0.dp) {
@@ -125,10 +125,10 @@ fun Modifier.glow(color: Color = Gold, on: Boolean = true, radius: Dp = 10.dp, s
 /** Слоёв в ореоле [glow]: больше - мягче спад, дороже рисунок. */
 private const val GLOW_LAYERS = 8
 
-/** Непрозрачность одного слоя ореола от цвета (3.89.0: втрое слабее прежних .09): у края формы - едва заметный отсвет. */
+/** Непрозрачность одного слоя ореола от цвета (около трети от .09): у края формы - едва заметный отсвет. */
 private const val GLOW_ALPHA = .027f
 
-/** Доля [radius], на которую ореол [glow] выходит за форму (3.89.0): один множитель гасит свечение всех мест разом. */
+/** Доля [radius], на которую ореол [glow] выходит за форму: один множитель гасит свечение всех мест разом. */
 private const val GLOW_REACH = .3f
 
 @Composable fun ForgeTheme(content: @Composable () -> Unit) {

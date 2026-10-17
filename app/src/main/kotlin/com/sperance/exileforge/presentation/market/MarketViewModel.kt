@@ -10,14 +10,14 @@ import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.StateFlow
 
-/** Лавка торговца и аукцион (3.80.11): рынок из репозитория, действия общие с продажей из сундука. */
+/** Лавка торговца и аукцион: рынок из репозитория, действия общие с продажей из сундука. */
 class MarketViewModel(
     private val actions: MarketActions,
     repository: MarketRepository,
     commands: CommandRunner,
     slice: GameSlice,
 ) : ViewModel() {
-    /** Срез «игра» для экранов этой модели (3.80.33). */
+    /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
     val market: StateFlow<Market> = repository.state
     val activity: StateFlow<Activity> = commands.state
@@ -30,7 +30,7 @@ class MarketViewModel(
     fun loadMyLots(glance: Boolean = false) = actions.loadMyLots(glance)
     fun loadAuction() = actions.loadAuction()
 
-    /** Экран открылся (3.94.1): свои лоты моложе полуминуты не перечитываются; [glance] - карточка Города. */
+    /** Экран открылся: свои лоты моложе полуминуты не перечитываются; [glance] - карточка Города. */
     fun openAuction() = actions.loadAuction(fresh = true)
     fun glanceLots() = actions.loadMyLots(glance = true, fresh = true)
     fun buyOffer(offerId: String) = actions.buyOffer(offerId)

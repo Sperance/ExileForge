@@ -28,8 +28,10 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The testing window (3.73.0): everything a hero earns by playing, granted to the hero in play at a tap — gold, level, points,
+ * The testing window: everything a hero earns by playing, granted to the hero in play at a tap — gold, level, points,
  * zones, items of every kind, maps, professions, recipes — and the resets. Testers and administrators only.
+ *
+ * Стопка за раз - не больше `moderation.grantStack`; редкости выдачи - по шаблону (`ItemFactory.grantable`).
  */
 @Composable internal fun TestingPage(account: AccountUi) {
     val heroModel: HeroViewModel = koinViewModel()
@@ -53,7 +55,6 @@ import org.koin.compose.viewmodel.koinViewModel
         Engraved(ui("tester.items"))
         var item by remember { mutableStateOf("") }
         Spinner(ui("tester.item"), item, index.items.keys.associate { it.value to itemTitle(it.value) }, enabled) { item = it }
-        // Стопка за раз - не больше `moderation.grantStack` (4.9.0): больше сервер не выдаст
         NumberGrant(ui("tester.amount_cap", index.rules.moderation.grantStack), "10", account.inputs.number, enabled && item.isNotBlank()) { heroModel.grantItem(item, it.toLong()) }
         var unique by remember { mutableStateOf("") }
         val uniques = index.templates.values.filter { it.rarity >= Rarity.UNIQUE }.associate { it.code to equipmentTitle(it.code) }
@@ -65,7 +66,6 @@ import org.koin.compose.viewmodel.koinViewModel
         Engraved(ui("tester.maps"))
         var zone by remember { mutableStateOf("") }
         var rarity by remember { mutableStateOf(Rarity.RARE) }
-        // Редкости выдачи - по шаблону карты (4.9.0, `ItemFactory.grantable`): прочие сервер не выдаёт
         val rarities = remember(index) { index.template(MAP_TEMPLATE)?.let { ItemFactory(index).grantable(it) }.orEmpty() }
         Spinner(ui("tester.zone"), zone, index.zones.values.sortedBy { it.level }.associate { it.code.value to "${mapTitle(it.code)} · ${it.level}" }, enabled) { zone = it }
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {

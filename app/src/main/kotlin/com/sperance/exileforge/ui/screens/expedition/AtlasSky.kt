@@ -34,8 +34,15 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
 
-/** Небо атласа (3.80.24): звёзды узлов, нити, масштаб и расстановка. */
-/** The sky itself: faint stars behind, the threads, then the nodes; dragged, pinched and tapped. */
+/** Небо атласа: звёзды узлов, нити, масштаб и расстановка. */
+/**
+ * The sky itself: faint stars behind, the threads, then the nodes; dragged, pinched and tapped.
+ *
+ * Небо открывается близко, старт - посреди открытого листом места. Часы декора - состоянием, читаются только в дышащих слоях: мерцание
+ * стоит без анимаций и вне экрана; свечения, нити и кольца рисуются заново лишь со сдвигом, масштабом или взятием. Тумана нет: всё небо
+ * видно и нажимается, недоступное лишь тусклее. Нити считаются раз, дышащее - раз на взятие. Касание читает масштаб и сдвиг на миг касания,
+ * жест не перезапускается каждый кадр. Атлас растёт вверх от старта; щипок масштабирует вокруг пальцев.
+ */
 @Composable internal fun Sky(index: ContentIndex, taken: Set<String>, selected: String, modifier: Modifier, onSelect: (String) -> Unit) {
     val graph = index.atlasGraph
     val nodes = index.atlas.nodes
@@ -43,24 +50,16 @@ import kotlin.math.sin
     val density = LocalDensity.current
     val floor = with(density) { 240.dp.toPx() }
     val margin = with(density) { 28.dp.toPx() }
-    // The sky opens close (3.24.0): at [OPEN_ZOOM], the start in the middle of what the sheet leaves open.
     var scale by remember { mutableFloatStateOf(OPEN_ZOOM) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var framed by remember { mutableStateOf(false) }
-    // The clock (3.56.0; 4.7.0 - общие часы декора, 30 к/с): мерцание стоит без анимаций и вне экрана; only the layers that
-    // breathe are drawn on its tick — the glows, threads and rings are drawn again on a pan, a zoom or a take.
-    // С 4.9.0 часы - состоянием, читаются только в слоях, что дышат: небо не перекомпонуется на каждый их шаг.
     val clock = com.sperance.exileforge.ui.components.decorTime()
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
-    // No fog (3.54.0): the whole sky is drawn and tappable; what cannot be taken yet is only dim.
     val shown = nodes
     val glows = remember(nodes) { Glow.of(nodes) }
-    // The threads once (3.56.0): both ends of every link, not a graph lookup per link per frame.
     val strands = remember(nodes, graph) { nodes.flatMap { node -> node.parents.mapNotNull { parent -> graph.node(parent)?.let { Strand(it, node) } } } }
     val brushes = remember(nodes) { SkyBrushes() }
-    // Что дышит - раз на взятие (не перебор всего неба на каждый шаг часов): мерцают открытые, вращаются ключевые
     val live = remember(nodes, taken, reachable) { LiveStar.of(nodes, taken, reachable) }
-    // The tap reads the zoom and the pan as they are when the finger lands (3.56.0): the gesture is not restarted on every frame of a drag.
     Box(
         modifier.clipToBounds()
             .onSizeChanged { size ->
@@ -69,7 +68,6 @@ import kotlin.math.sin
                 val width = size.width.toFloat()
                 val height = size.height.toFloat()
                 val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(start)
-                // The atlas grows upward from its start (3.52.0): the start sits low, the branches fan out above it.
                 pan = Offset(width / 2 - at.x, (height - floor) * START_DOWN - at.y)
                 framed = true
             }
@@ -78,7 +76,6 @@ import kotlin.math.sin
                     val width = size.width.toFloat()
                     val height = size.height.toFloat()
                     val next = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                    // A pinch zooms about the fingers — the point under them stays there — and the drag pans on top of it.
                     val anchor = Offset(width / 2, height - floor)
                     val moved = centroid - anchor - (centroid - anchor - pan) * (next / scale) + drag
                     scale = next
@@ -93,13 +90,9 @@ import kotlin.math.sin
                 }
             },
     ) {
-        // The far stars breathe on their own layer, behind everything.
         Canvas(Modifier.matchParentSize()) { stars(clock.value) }
-        // The still sky: the glows, the threads, the rings and the cores of what is taken or dim — no clock is read here,
-        // so this layer is drawn again only when the view, the taken set or the choice moves.
         Canvas(Modifier.matchParentSize()) {
             val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
-            // The constellations (3.53.0): a soft glow of its mechanic's hue under every one.
             glows.forEach { glow ->
                 val c = place(glow.center)
                 val r = glow.radius * placeScale(place)
@@ -111,7 +104,6 @@ import kotlin.math.sin
             }
             shown.forEach { starStill(it, place(it), it.code in taken, it.code in reachable, it.code == selected, brushes) }
         }
-        // The breathing layer: the twinkle of what a point could take and the keystones' orbiting motes.
         Canvas(Modifier.matchParentSize()) {
             val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
             val now = clock.value
@@ -127,7 +119,7 @@ import kotlin.math.sin
 /** One thread of the sky: a node and the parent it hangs from. */
 internal class Strand(val parent: AtlasNode, val node: AtlasNode)
 
-/** The gradients of the sky, made once per hue and radius (3.56.0): a shader was built for every glow and halo on every frame. */
+/** The gradients of the sky, made once per hue and radius, not a shader for every glow and halo on every frame. */
 internal class SkyBrushes {
     private val glows = HashMap<Pair<Color, Float>, Brush>()
     private val halos = HashMap<Pair<Color, Float>, Brush>()
@@ -140,8 +132,7 @@ internal class SkyBrushes {
 }
 
 /**
- * How far the sky zooms out and in, and where it opens. With [SPREAD] the closest pair of the server's atlas (4.6 units,
- * server 1.65.0) is some 30 dp apart at [OPEN_ZOOM] on a phone and a hundred at [MAX_ZOOM]; [MIN_ZOOM] shows the whole sky.
+ * How far the sky zooms out and in, and where it opens. With [SPREAD] the closest pair of the server's atlas (4.6 units,) is some 30 dp apart at [OPEN_ZOOM] on a phone and a hundred at [MAX_ZOOM]; [MIN_ZOOM] shows the whole sky.
  */
 internal const val MIN_ZOOM = .4f
 internal const val OPEN_ZOOM = 1.5f
@@ -213,7 +204,7 @@ internal fun DrawScope.starRadius(node: AtlasNode): Float = when (node.kind) {
 }.toPx()
 
 /**
- * The still part of one node (3.56.0): a halo once taken or chosen, a burning white core once taken, a dim core while
+ * The still part of one node: a halo once taken or chosen, a burning white core once taken, a dim core while
  * no point could take it, a ring on a notable, a dashed halo on the chosen one. The twinkle and the motes are [starLive]'s.
  */
 internal fun DrawScope.starStill(node: AtlasNode, at: Offset, taken: Boolean, open: Boolean, selected: Boolean, brushes: SkyBrushes) {
@@ -259,7 +250,7 @@ internal class LiveStar(val node: AtlasNode, val twinkles: Boolean, val rim: Col
 /** How far down the view the atlas's start is framed: its branches rise above it. */
 internal const val START_DOWN = .8f
 
-/** A constellation's glow (3.53.0): its middle, how far it spreads in atlas units, its mechanic's hue and its nodes. */
+/** A constellation's glow: its middle, how far it spreads in atlas units, its mechanic's hue and its nodes. */
 internal class Glow(val center: AtlasNode, val radius: Float, val hue: Color, val codes: Set<String>) {
     companion object {
         fun of(nodes: List<AtlasNode>): List<Glow> = nodes.groupBy { AtlasFog.constellation(it.code) }.mapNotNull { (key, members) ->

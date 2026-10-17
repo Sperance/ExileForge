@@ -19,8 +19,8 @@ import com.sperance.exileforge.presentation.state.TAB_TRIALS
 import kotlinx.serialization.Serializable
 
 /**
- * Экраны приложения (3.80.23): типизированные ключи стека Navigation 3. [root] - корень нижней панели, под которым
- * экран лежит (`null` - экран кладётся поверх любого); [tab] и [building] - прежние числа вкладок, которыми ещё
+ * Экраны приложения: типизированные ключи стека Navigation 3. [root] - корень нижней панели, под которым
+ * экран лежит (`null` - экран кладётся поверх любого); [tab] и [building] - числовые номера вкладок, которыми ещё
  * читают состояние не переведённые экраны; [bars] - рисуются ли шапка и нижняя панель.
  */
 @Serializable
@@ -41,7 +41,7 @@ sealed interface Route : NavKey {
         override val bars get() = false
     }
 
-    /** Выбор Предначертания аккаунта (4.6.0): до списка героев, пока дар не выбран. */
+    /** Выбор Предначертания аккаунта: до списка героев, пока дар не выбран. */
     @Serializable data object Fate : Route {
         override val phase get() = AppPhase.CHARACTERS
         override val bars get() = false
@@ -76,19 +76,19 @@ sealed interface Route : NavKey {
         override val tab get() = TAB_CRAFT
     }
 
-    /** Испытания (4.0.0): страница «Похода», прежде «Развития». */
+    /** Испытания: страница «Похода», прежде «Развития». */
     @Serializable data object Trials : Route {
         override val root: Route get() = Expedition
         override val tab get() = TAB_TRIALS
     }
 
-    /** Атлас (4.0.0): страница «Похода» под полосой страниц, прежде небо над вкладками «Развития». */
+    /** Атлас: страница «Похода» под полосой страниц, прежде небо над вкладками «Развития». */
     @Serializable data object Atlas : Route {
         override val root: Route get() = Expedition
         override val tab get() = TAB_EXPEDITION
     }
 
-    /** Сюжет (4.2.0): все главы и шаг под рукой, экран над картой «Похода»; открыт с первого уровня. */
+    /** Сюжет: все главы и шаг под рукой, экран над картой «Похода»; открыт с первого уровня. */
     @Serializable data object Story : Route {
         override val root: Route get() = Expedition
         override val tab get() = TAB_EXPEDITION
@@ -128,21 +128,21 @@ sealed interface Route : NavKey {
         override val building get() = Building.HISTORY
     }
 
-    /** Летопись (4.0.0): здание Города, прежде страница «Развития». */
+    /** Летопись: здание Города, прежде страница «Развития». */
     @Serializable data object Chronicle : Route {
         override val root: Route get() = City
         override val tab get() = TAB_CITY
         override val building get() = Building.CHRONICLE
     }
 
-    /** Доска славы (4.2.0): здание Города, таблицы реестра `HallBoard`. */
+    /** Доска славы: здание Города, таблицы реестра `HallBoard`. */
     @Serializable data object Hall : Route {
         override val root: Route get() = City
         override val tab get() = TAB_CITY
         override val building get() = Building.HALL
     }
 
-    /** Найденные уникалки (3.90.2): экран над «Историей», «назад» ведёт в неё. */
+    /** Найденные уникалки: экран над «Историей», «назад» ведёт в неё. */
     @Serializable data object Uniques : Route {
         override val root: Route get() = City
         override val tab get() = TAB_CITY
@@ -156,7 +156,7 @@ sealed interface Route : NavKey {
     }
 
     /**
-     * Настройки; [page] (3.95.2) - страница, открытая сразу с экрана «Аккаунт». Страница - часть маршрута, а не разовое поле
+     * Настройки; [page] - страница, открытая сразу с экрана «Аккаунт». Страница - часть маршрута, а не разовое поле
      * модели: у каждой свой ключ сохранённого состояния, и быстрый повторный вход не поднимает прежнюю страницу.
      */
     @Serializable data class Settings(val page: String? = null) : Route {

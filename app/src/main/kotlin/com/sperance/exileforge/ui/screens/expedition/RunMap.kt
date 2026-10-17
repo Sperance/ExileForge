@@ -64,12 +64,14 @@ import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
-/** Карта похода (3.80.24): мини-карта и полная карта с легендой. */
+/** Карта похода: мини-карта и полная карта с легендой. */
 /**
  * The map in small: round, framed in bronze, the hero at its centre and the explored ground moving
- * under them (2.56.1) — rock darker than floor, the exit once seen, the chests and fountains still
- * standing. Two small buttons under it zoom in and out (2.72.0), and a tap opens the whole map.
+ * under them — rock darker than floor, the exit once seen, the chests and fountains still
+ * standing. Two small buttons under it zoom in and out, and a tap opens the whole map.
  * It redraws a few times a second on its own tick — the scene's clock is the scene's.
+ *
+ * Изометрия сцены своим масштабом: «вверх» на мини-карте - «вверх» на сцене.
  */
 @Composable internal fun MiniMap(run: ExpeditionRun, hud: RunHud) {
     val world = run.world
@@ -85,7 +87,6 @@ import kotlin.math.roundToInt
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Canvas(Modifier.size(150.dp).clip(CircleShape).background(Color(0xE60A0D12)).clickable { full = true }) {
             if (tick < 0) return@Canvas
-            // Изометрия сцены своим масштабом (0.14.4, #18): «вверх» на мини-карте - «вверх» на сцене
             drawExplored(world, MapProjection.centred(world.heroX, world.heroY, size, size.width / cells), monsters = false)
             val centre = Offset(size.width / 2, size.height / 2)
             val radius = size.width / 2
@@ -117,7 +118,10 @@ import kotlin.math.roundToInt
 /**
  * The explored ground through [projection], only what falls on the canvas: floor lighter where lit, rock dark, the chests,
  * fountains, portal and exit, the hero — and, on the whole map, the monsters standing in the hero's light, in their rarity's
- * colour. С 0.14.4 (#18) - изометрией сцены ([MapProjection]): клетка - ромб, ромбы одного цвета - одним контуром.
+ * colour. Изометрией сцены ([MapProjection]): клетка - ромб, ромбы одного цвета - одним контуром.
+ *
+ * Объекты карты - не исчерпанные и видимые, у комнаты - вход и рычаг; рычаг найденной запертой двери - пятно кольцами вокруг неувиденного
+ * места.
  */
 internal fun DrawScope.drawExplored(world: ExpeditionWorld, projection: MapProjection, monsters: Boolean) {
     val map = world.map
@@ -144,10 +148,8 @@ internal fun DrawScope.drawExplored(world: ExpeditionWorld, projection: MapProje
     world.crystals.filter { !it.freed && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, CrystalViolet) }
     world.cracks.filter { !it.opened && world.explored(it.cell.x, it.cell.y) }.forEach { mark(it.cell.x + .5, it.cell.y + .5, AbyssGlow, dot * 1.2f) }
     world.portal?.takeIf { world.explored(it.x, it.y) }?.let { mark(it.x + .5, it.y + .5, PortalTint, dot * 1.2f) }
-    // Объекты карты (3.90.0): не исчерпанные и видимые; у комнаты - вход и рычаг
     world.features.filter { !it.spent && it.shown(world) }.forEach { spot -> featureMark(spot.kind)?.let { mark(spot.focus.x + .5, spot.focus.y + .5, it.tint) } }
     world.features.filterIsInstance<RoomSpot>().mapNotNull { spot -> spot.lever?.takeIf { !spot.opened && world.explored(it.x, it.y) } }.forEach { mark(it.x + .5, it.y + .5, RoomMark.tint) }
-    // Рычаг где-то здесь (4.9.0): найденная запертая дверь - размытое пятно вокруг неувиденного рычага, кольцами от края к середине
     world.features.forEach { spot ->
         val hint = (spot as? RoomSpot)?.takeIf { it.hinted(world) }?.hint ?: return@forEach
         val radius = world.rules.lever.hint.toFloat() * unit
@@ -174,9 +176,11 @@ private fun Path.diamond(centre: Offset, unit: Float) {
 }
 
 /**
- * The whole map (2.72.0), over everything: all the explored ground fitted to the screen, the
+ * The whole map, over everything: all the explored ground fitted to the screen, the
  * monsters in the hero's light, a legend of what each mark is, what the map still holds, and what
  * the map item, the atlas, the guild tree and the potion lay on it - each share in its own section once.
+ *
+ * Каждая доля - в своём разделе один раз ([ExpeditionRun.windowLines]), строки читаются как строки вещи.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -216,8 +220,6 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
             FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 legendOf(world).forEach { (tint, text) -> Legend(tint, text) }
             }
-            // Каждая доля - в своём разделе один раз (4.x): свои строки карты, атлас, древо гильдии, зелье ([ExpeditionRun.windowLines]).
-            // Читаются как строки вещи - фраза под значком, без тира.
             val sections = remember(run, run.mapEffects) { run.windowLines }
             MapSection.entries.forEach { section ->
                 val lines = sections[section].orEmpty()
@@ -249,7 +251,6 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
     world.features.filter { !it.spent && it.shown(world) }.mapNotNull { featureMark(it.kind) }.distinct().forEach { add(it.tint to ui(it.legend)) }
     if (world.features.any { it is RoomSpot && it.lever?.let { lever -> world.explored(lever.x, lever.y) } == true && !it.opened }) add(RoomMark.tint to ui("map.legend_lever"))
     if (world.features.any { it is RoomSpot && it.hinted(world) }) add(RoomMark.tint.copy(alpha = HINT_ALPHA * HINT_RINGS) to ui("map.legend_lever_hint"))
-    // Скверна (4.0.0): сундук зачищенной точки и проснувшаяся Матерь
     world.features.filterIsInstance<BlightSpot>().filter { it.shown(world) }.forEach { spot ->
         val point = spot.active ?: return@forEach
         if (spot.cleared(world, point)) add(BlightTint.bile to ui("map.legend_blight_chest"))
@@ -261,19 +262,19 @@ internal fun legendOf(world: ExpeditionWorld): List<Pair<Color, String>> = build
         .forEach { add(rarityTint(it) to ui(it.key())) }
 }
 
-/** A map's summed line (3.81.0) in the server's own sentence for it, as an item's line reads: «Игрок получает на 20% больше физического урона». */
+/** A map's summed line in the server's own sentence for it, as an item's line reads: «Игрок получает на 20% больше физического урона». */
 internal fun effectText(stat: String, value: Double): String = SkillText.statLine(stat, Op.ADD, value)
 
-/** Отметка объекта карты на миникарте (3.90.0): цвет и ключ легенды. */
+/** Отметка объекта карты на миникарте: цвет и ключ легенды. */
 internal data class FeatureMark(val tint: Color, val legend: String)
 
 private val RoomMark = FeatureMark(Color(0xFFE8E0C8), "map.legend_room")
 
-/** Пятно «рычаг где-то здесь» (4.9.0): столько колец, каждое такой прозрачности - к середине гуще, край размыт. */
+/** Пятно «рычаг где-то здесь»: столько колец, каждое такой прозрачности - к середине гуще, край размыт. */
 private const val HINT_RINGS = 4
 private const val HINT_ALPHA = .09f
 
-/** Отметка объекта карты; ловушек на миникарте нет (3.91.0) - их видно только на самой карте. */
+/** Отметка объекта карты; ловушек на миникарте нет - их видно только на самой карте. */
 internal fun featureMark(kind: FeatureKind): FeatureMark? = when (kind) {
     FeatureKind.ALTAR -> FeatureMark(Color(0xFFD03040), "map.legend_altar")
     FeatureKind.MERCHANT -> FeatureMark(Color(0xFFE8C060), "map.legend_merchant")
@@ -283,7 +284,7 @@ internal fun featureMark(kind: FeatureKind): FeatureMark? = when (kind) {
     FeatureKind.BLIGHT -> FeatureMark(BlightTint.vein, "map.legend_blight")
 }
 
-/** Пропасть на миникарте (3.91.0): темнее пола, но не скала - сквозь неё видно. */
+/** Пропасть на миникарте: темнее пола, но не скала - сквозь неё видно. */
 private val ChasmTint = Color(0xFF0E1420)
 
 /** The Vaal portal's mark on the maps and in their legend. */
@@ -307,7 +308,7 @@ internal val PortalTint = Color(0xFFFF8A78)
     }
 }
 
-/** A crystal of essences on the maps and its sheet (2.78.0): the violet of its glass. */
+/** A crystal of essences on the maps and its sheet: the violet of its glass. */
 internal val CrystalViolet = Color(0xFFB07FE0)
 
 /** How many cells the minimap shows across by default, and how near and how far its zoom goes. */

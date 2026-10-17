@@ -43,7 +43,7 @@ import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.update.UpdateInstaller
 import kotlinx.coroutines.delay
 
-/** The update model of the activity (3.72.0), for the screens that show the version and check by hand. */
+/** The update model of the activity, for the screens that show the version and check by hand. */
 val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
 
 /** Что из сохранённого на устройстве уже прочитано: мир, словарь, иконки. */
@@ -52,13 +52,17 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
 }
 
 /**
- * Окно запуска, обновления и прогрева - одно (0.14.4, макет «Окно запуска», вариант B «Заставка с полосой»): заставка во весь экран,
+ * Окно запуска, обновления и прогрева - одно: заставка во весь экран,
  * внизу - что идёт сейчас и общая полоса, шаги - по «Подробнее». Что показать, решает [StartGate] по модели (связь, провод сервера,
  * проверка сборки, мир устройства, прогрев героя [warmup]); обязательное обновление и несовпавший провод сервера держат окно, пока
  * не разрешатся, - игра пишет, чего ждёт. Окно появляется не раньше [SHOW_DELAY_MS] (быстрый запуск его не мигает), а показавшись,
  * держится не меньше [MIN_SHOWN_MS] и уходит одним переходом: «отпущен» - флаг модели на весь процесс ([ServerReach.release]),
  * а не экрана. Ни назад, ни касание мимо его не закрывают. [busy] - идёт поход, испытание или Разлом: найденное обновление ждёт
  * его конца, а пока о нём говорит плашка сверху ([UpdateHint]), не мешая бою.
+ *
+ * Окно не привязано к жизненному циклу: обязано видеть каждое изменение. Возврат в приложение - сборка спрашивается сразу (сверку ресурсов
+ * модель откладывает до конца похода); возврат из настроек или установщика - разрешение спрашивается снова. Появление с задержкой и не
+ * короче [MIN_SHOWN_MS]. Сборка, найденная в походе или испытании, закроет игру по их концу, а пока - плашка сверху.
  */
 @Composable fun UpdateGate(
     updates: UpdateViewModel,
@@ -69,20 +73,16 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
     actions: StartActions,
     diagnostics: () -> String,
 ) {
-    // Не привязано к жизненному циклу (3.87.0): окно запуска обязано видеть каждое изменение, пока оно на экране.
     val s by updates.state.collectAsState()
     val reach = window.reach
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    // Back in the app (3.76.0): the build is asked again at once, в походе тоже; сверку ресурсов модель откладывает до его конца.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { updates.resumed() }
-    // Back from the settings or the system installer: the permission is asked again, a closed installer stops waiting.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { updates.foreground() }
     val warming = warmup?.takeIf { !it.finished }
     val verdict = StartGate.verdict(
         StartInput(reach.reach, window.fit, s.mandatory, s.checking, stages.deviceReady, warming != null, window.elapsedMs, window.released, busy),
     )
     LaunchedEffect(verdict) { if (verdict == StartVerdict.RELEASE) actions.release() }
-    // Появление с задержкой и не короче [MIN_SHOWN_MS]: последний показанный вид держится, пока окно уходит
     var visible by remember { mutableStateOf(false) }
     var shownAt by remember { mutableLongStateOf(0L) }
     var face by remember { mutableStateOf(verdict.takeIf { it.shown } ?: StartVerdict.HOLD) }
@@ -131,7 +131,6 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
 
         s.askSources && window.released -> Locked { SourcesBody() }
 
-        // Сборка найдена в походе или испытании: игру она закроет по их концу, а пока - плашка сверху, ничего не держит
         busy -> s.update?.let { UpdateHint(it.info.versionName) }
     }
 }
@@ -241,11 +240,14 @@ private val SPLASH_PANEL = 560.dp
     }
 }
 
-/** Строки окна запуска: что проверяется или качается сейчас, по пункту на строку; связь - только когда её нет. */
+/**
+ * Строки окна запуска: что проверяется или качается сейчас, по пункту на строку; связь - только когда её нет.
+ *
+ * Связь - не пункт для игрока: строка появляется только с ошибкой и отсчётом до повтора.
+ */
 @Composable private fun StartRows(s: UpdateState, stages: StartStages, reach: ReachState) {
     val now by ticking()
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Связь - не пункт для игрока: строка появляется только с ошибкой, вместе с отсчётом до повтора.
         if (reach.reach == Reach.UNREACHABLE) {
             StartRow(ui("start.row.server"), RowState.FAIL, ui("start.state.retry_in", ((reach.retryAt - now + 999) / 1000).coerceAtLeast(0)))
         }
@@ -328,7 +330,11 @@ private const val CONTINUE_AFTER_MS = 15_000L
     }
 }
 
-/** The build to take: from what to what, what is new, and the download into the installer. */
+/**
+ * The build to take: from what to what, what is new, and the download into the installer.
+ *
+ * Обход установщика: страница релиза на GitHub, APK руками.
+ */
 @Composable private fun ColumnScope.UpdateBody(s: UpdateState, updates: UpdateViewModel) {
     val update = s.update ?: return
     val context = LocalContext.current
@@ -364,7 +370,6 @@ private const val CONTINUE_AFTER_MS = 15_000L
         else -> {
             s.error?.let { InfoCard(ui("update.failed_title"), it, failure = true) }
             ForgeButton(onClick = updates::install, modifier = Modifier.fillMaxWidth()) { Text(ui(if (s.error != null) "update.retry" else "update.install")) }
-            // The way around the installer: the release page on GitHub, the APK by hand.
             if (s.error != null) {
                 ForgeOutlinedButton(onClick = {
                     context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -374,12 +379,12 @@ private const val CONTINUE_AFTER_MS = 15_000L
     }
 }
 
-/** This build's version, dim: on the way in and in the account (3.72.0). */
+/** This build's version, dim: on the way in and in the account. */
 @Composable fun VersionLabel(modifier: Modifier = Modifier) {
     Text(ui("app.version", BuildConfig.VERSION_NAME), modifier = modifier, color = Muted.copy(alpha = .55f), style = MaterialTheme.typography.labelSmall)
 }
 
-/** Версия в аккаунте (3.72.0): без проверки вручную (3.91.1) - она идёт сама; «Обновить» - только когда есть новая. */
+/** Версия в аккаунте: без проверки вручную - она идёт сама; «Обновить» - только когда есть новая. */
 @Composable fun UpdateCard() {
     val updates = LocalUpdates.current ?: return
     val s by updates.state.collectAsStateWithLifecycle()
@@ -389,7 +394,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
     }
 }
 
-/** Что сказать о версии (3.91.1): есть новая, идёт проверка, отказ проверки или «последняя». */
+/** Что сказать о версии: есть новая, идёт проверка, отказ проверки или «последняя». */
 fun updateNote(s: UpdateState): String? = when {
     s.update != null -> ui("update.found", s.update.info.versionName)
     s.checking -> ui("update.checking")

@@ -34,11 +34,11 @@ import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.ui.theme.PanelRaised
 
-/** Шторка «Мягкого» стиля (3.88.3): скругление 22 dp сверху. */
+/** Шторка «Мягкого» стиля: скругление 22 dp сверху. */
 val SheetShape: Shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
 
 /**
- * Every bottom sheet of the app: Material's own `ModalBottomSheet` (back since 3.75.5), held in by three bounds.
+ * Every bottom sheet of the app: Material's own `ModalBottomSheet`, held in by three bounds.
  *
  * - **One rest.** No half-open stop (`skipPartiallyExpanded`): with content near half the screen the two stops nearly met
  *   and a fling tossed the sheet between them.
@@ -52,6 +52,8 @@ val SheetShape: Shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp)
  *   the finger still reaches the sheet, so pulling down from the list's top closes it as before.
  *
  * The dismissal reaches the caller once, however many times the gesture, the scrim and «back» report it.
+ *
+ * Аккорд громкости работает и поверх листа: у листа своё окно.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +83,6 @@ fun ForgeSheet(
         dragHandle = dragHandle,
         contentWindowInsets = { WindowInsets(0.dp) },
     ) {
-        // Аккорд громкости (4.9.0) - и поверх листа: у листа своё окно
         ChordOverDialog()
         Column(
             Modifier
@@ -102,9 +103,8 @@ fun ForgeSheet(
 private class FlingStaysInList : NestedScrollConnection {
     private var sheetMoved = false
 
+    /** Пока лист сдвинут пальцем, остаток броска не съедается: иначе бросок списка крутился бы вхолостую, а лист стоял полузакрытым. */
     override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset = when {
-        // Пока лист сдвинут пальцем, остаток броска не съедается: иначе бросок списка «крутился» вхолостую секунды, и лист
-        // стоял полузакрытым, пока тот не кончится (3.88.9).
         source == NestedScrollSource.SideEffect -> if (sheetMoved) Offset.Zero else available
 
         available.y != 0f -> {

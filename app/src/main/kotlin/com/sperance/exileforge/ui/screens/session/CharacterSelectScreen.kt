@@ -41,6 +41,8 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * An account with nothing to choose between does not get a chooser: the creation form opens
  * straight away, because an empty list is not a decision.
+ *
+ * Язык - до игры: настройки недоступны, пока герой не выбран.
  */
 @Composable fun CharacterSelectScreen() {
     val game by koinViewModel<CharactersViewModel>().game.collectAsStateWithLifecycle()
@@ -72,7 +74,6 @@ import org.koin.compose.viewmodel.koinViewModel
                     )
                 }
             }
-            // The language before the game (3.79.0): the settings are out of reach until a hero is chosen.
             LanguageButton(game.lang, game.world.languages, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), enabled = !game.busy, onLanguage = vm::language)
             ToastHost(game, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
@@ -96,6 +97,9 @@ import org.koin.compose.viewmodel.koinViewModel
  *
  * What is worth checking here is which hero a tap plays and how many slots are left — not the
  * wiring behind them.
+ *
+ * Список перечитывается потягиванием; сколько героев держит аккаунт, говорят правила, до их чтения - своё число клиента. Предначертание -
+ * лентой над героями.
  */
 @Composable internal fun ColumnScope.CharacterMenu(
     game: GameUi,
@@ -107,19 +111,15 @@ import org.koin.compose.viewmodel.koinViewModel
     onRefresh: () -> Unit = {},
     onLogout: () -> Unit = {},
 ) {
-    // A list is refreshed by pulling it, here as everywhere else. The button that used to sit at
-    // the bottom of this one said the same thing twice.
     PullToRefreshBox(isRefreshing = game.refreshing(Reads.CHARACTERS), onRefresh = onRefresh, modifier = Modifier.weight(1f)) {
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
-                // How many heroes an account holds is the rules' to say; until they are read, the client's own figure stands in.
                 ScreenHeader(
                     ui("chars.title"),
                     ui("chars.slots", game.characterSlotsLeft, game.index?.rules?.maxCharacters ?: MAX_CHARACTERS),
                     ForgeGlyphs.Exile,
                 )
             }
-            // Предначертание аккаунта (4.6.3, «Лента и свиток») шапкой над героями: дар один на всех героев аккаунта
             accountFate(game)?.let { fate -> item(key = "fate") { FateRibbon(fate, ui("fate.ribbon.account"), Modifier.fillMaxWidth()) } }
             items(game.session.characters, key = { it.id }) { character ->
                 CharacterCard(
@@ -148,18 +148,21 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** Предначертание аккаунта карточкой (4.6.3), `UserProfile.fate`; не выбрано или нет в контенте - null. */
+/** Предначертание аккаунта карточкой, `UserProfile.fate`; не выбрано или нет в контенте - null. */
 private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.session.profile?.fate)?.let(FateCard::of)
 
-/** The creation form on its own page: there is nothing to choose between while it is open. */
+/**
+ * The creation form on its own page: there is nothing to choose between while it is open.
+ *
+ * Пролог перед каждым созданием героя; пропустить можно.
+ */
 @Composable private fun ColumnScope.CreatingColumn(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
-    // Пролог (4.7.0) перед каждым созданием героя: начало истории, пропустить можно
     com.sperance.exileforge.ui.components.PrologueGate(always = true) { CreatingList(game, vm, onBack, onSignOut) }
 }
 
+/** Жук и на форме создания: это единственная страница до игры без пути к отчёту. */
 @Composable private fun ColumnScope.CreatingList(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // The beetle on the creation form too (3.75.0): it is the one page before the game without a way to report.
         item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) { BugAction() } }
         item { CreateCharacterPanel(game, vm, canGoBack = game.session.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
@@ -168,15 +171,16 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
 /**
  * One hero, as the menu describes them: the name, the class and how far they have come.
  *
- * The row carries the class as a code (3.0.0); the server's dictionary names it, and the portrait
+ * The row carries the class as a code; the server's dictionary names it, and the portrait
  * is drawn by the code alone, so the menu reads before the content has.
+ *
+ * Под баном и в корзине героем не играют - карточка говорит, кто, за что и до когда, и даёт обжаловать; самоудаление - серая карточка с
+ * отсчётом. Значок роли - у администратора и модератора.
  */
 @Composable private fun CharacterCard(game: GameUi, character: HeroSummary, onPlay: () -> Unit, onDelete: () -> Unit, onRestore: () -> Unit, onErase: () -> Unit) {
     val heroClass = character.heroClass.takeIf { it.isNotBlank() }
-    // Санкция героя (3.88.5): под баном и в корзине им не играют; карточка говорит, кто, за что и до когда, и даёт обжаловать
     val sanction = game.session.sanctions[character.id]
     val deleted = character.deleted || sanction?.kind == SanctionKind.DELETION
-    // Самоудаление (4.5.1): серая карточка с отсчётом; вернуть или стереть сразу - сам владелец, обжаловать нечего
     val voluntary = sanction?.voluntary == true
     val playable = sanction == null && !deleted
     var appealing by remember(character.id) { mutableStateOf(false) }
@@ -186,7 +190,6 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(character.name, color = nameColor(sanction != null, voluntary), style = MaterialTheme.typography.titleMedium)
-                    // Роль аккаунта (3.88.7): значок у администратора и модератора; тестировщик (4.12.x) - отметка героя
                     RoleMark(accountRole(game.session.profile?.role))
                     TesterMark(character.tester)
                 }
@@ -231,7 +234,7 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
     else -> GoldBright
 }
 
-/** Кнопки героя в своей корзине (4.5.1): вернуть - если есть свободное место, иначе погашено с причиной; стереть навсегда. */
+/** Кнопки героя в своей корзине: вернуть - если есть свободное место, иначе погашено с причиной; стереть навсегда. */
 @Composable private fun MarkedActions(game: GameUi, onRestore: () -> Unit, onErase: () -> Unit) {
     val slot = game.characterSlotsLeft > 0
     ForgeButton(enabled = !game.busy && slot, onClick = onRestore, modifier = Modifier.fillMaxWidth()) { Text(ui("chars.restore")) }
@@ -245,9 +248,11 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
  * The creation form.
  *
  * The class is chosen here or nowhere: it is the whole stat base and the root of the tree, and the
- * server has no route that moves a hero to another one. The classes come with the content
- * (3.0.0), and the one picked is the play state's draft, so it survives the form being redrawn.
- * Each is shown by the carousel (3.13.0), whole, between the name and the button that seals the choice.
+ * server has no route that moves a hero to another one. The classes come with the content, and the one picked is the play state's draft, so it survives the form being redrawn.
+ * Each is shown by the carousel, whole, between the name and the button that seals the choice.
+ *
+ * Классы приходят с контентом после открытия формы: пустой список - ошибка, только когда чтение кончилось. У аккаунта без героев нет
+ * списка, куда вернуться, поэтому здесь же - вход под другим аккаунтом.
  */
 @Composable private fun CreateCharacterPanel(
     game: GameUi,
@@ -272,8 +277,6 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            // The classes arrive with the content, which is read after the form opens: an empty
-            // list is only an error once that read has finished (the app bar shows its progress).
             if (classes.isEmpty() && index != null && Reads.CONTENT !in game.loading) {
                 Text(
                     ui("editor.no_classes"),
@@ -297,9 +300,6 @@ private fun nameColor(sanctioned: Boolean, voluntary: Boolean) = when {
                     Text(ui("chars.back"))
                 }
             }
-            // An account with no heroes has no list to go back to, and a device registration is
-            // silent — so without this the first screen a new player sees is also the only one, with
-            // no way to sign in as someone who already has an exile.
             ForgeTextButton(enabled = !game.busy, onClick = onSignOut, modifier = Modifier.fillMaxWidth()) {
                 Text(ui("chars.other_account"))
             }

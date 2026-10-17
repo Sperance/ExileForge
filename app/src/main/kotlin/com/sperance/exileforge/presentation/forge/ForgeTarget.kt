@@ -16,14 +16,14 @@ import com.sperance.exileforge.rules.roll.AtlasSeals
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.rules.roll.OrbTarget
 
-/** Верстак берёт модификатор только с волшебной редкости (2.51.0), как правила: у обычной нет мест аффиксов, у закреплённой они закрыты. */
+/** Верстак берёт модификатор только с волшебной редкости, как правила: у обычной нет мест аффиксов, у закреплённой они закрыты. */
 private val BENCHABLE = setOf(Rarity.MAGIC, Rarity.RARE)
 
-/** Эссенция (2.78.0) делает обычную вещь редкой; с 0.15.0 (реш. 12) - только обычную, редкую не перековывает (`OrbApplier`). */
+/** Эссенция делает обычную вещь редкой; только обычную, редкую не перековывает (`OrbApplier`). */
 private val ESSENTIAL = setOf(Rarity.COMMON)
 
 /**
- * Над чем работает кузница (4.4.x) - зеркало правил [OrbTarget]: вещь. Наковальня, лоток сфер и полоса с удерживаемой кнопкой
+ * Над чем работает кузница - зеркало правил [OrbTarget]: вещь. Наковальня, лоток сфер и полоса с удерживаемой кнопкой
  * не знают вида цели; что у цели своё (разделы, свои сферы, прогноз качества), говорит она сама.
  */
 sealed interface ForgeTarget {
@@ -48,13 +48,13 @@ sealed interface ForgeTarget {
     /** Ключ словаря: кнопка карточки цели, что открывает выбор другой. */
     val changeKey: String
 
-    /** Уровень предмета копии до действия: по нему сбор золотом за ремесло (0.15.0, реш. 22, `CraftFeeRules` правил). */
+    /** Уровень предмета копии до действия: по нему сбор золотом за ремесло (`CraftFeeRules` правил). */
     val itemLevel: Int
 
-    /** Печати Атласа сумки, что лягут на цель (4.6.4): сами или со знамением сумки [omens]; лягут только на карту. */
+    /** Печати Атласа сумки, что лягут на цель: сами или со знамением сумки [omens]; лягут только на карту. */
     fun seals(index: ContentIndex, omens: List<Omen>, held: (String) -> Long): List<OrbChoice> = emptyList()
 
-    /** Знамения сумки [held], что меняют печать [seal] на цели (4.6.4). */
+    /** Знамения сумки [held], что меняют печать [seal] на цели. */
     fun sealOmens(index: ContentIndex, seal: String, held: List<Omen>): List<Omen> = emptyList()
 
     /** Что поднимет сфера качества со знамением [omen] и сколько качества другого вида сбросится; null - прогноза нет. */
@@ -66,7 +66,7 @@ sealed interface ForgeTarget {
     /** Пойдёт ли сфера [orb] на цель (со знамением [omen]): сфера одной строки - если хоть одну строку правила примут. */
     fun accepts(applier: OrbApplier, orb: Orb, omen: Omen? = null): Boolean = applier.accepts(orb, orbTarget, omen)
 
-    /** Строки цели для Сферы гравёра (4.11.x), каждая со своим отказом правил; у цели без строк - пусто. */
+    /** Строки цели для Сферы гравёра, каждая со своим отказом правил; у цели без строк - пусто. */
     fun engraving(index: ContentIndex): List<EngraveLine> = emptyList()
 
     /** Вещь под кузницей: сферы, печати Атласа (только карта), верстак (не у карты, с волшебной редкости) и эссенции (только снаряжение). */
@@ -126,7 +126,7 @@ sealed interface ForgeTarget {
 fun GameUi.forgeTarget(): ForgeTarget? = hero?.item(holding.selectedEquipment)?.let { view(it) }?.let(ForgeTarget::Gear)
 
 /**
- * Строка вещи под Сферой гравёра (4.11.x, макет «Сфера гравёра» B): номер [line] в `item.rolls`, её текст [text], вилка тира
+ * Строка вещи под Сферой гравёра: номер [line] в `item.rolls`, её текст [text], вилка тира
  * [range] (печатается только здесь - карточка вещи вилок не пишет) и отказ правил словами игрока [refusal]; null - гравировать можно.
  */
 data class EngraveLine(val line: Int, val text: String, val range: String?, val refusal: String?)
@@ -135,7 +135,7 @@ data class EngraveLine(val line: Int, val text: String, val range: String?, val 
 data class OrbChoice(val code: String, val needsOmen: Boolean)
 
 /**
- * Сферы сумки, что лягут на цель (4.4.x): [held] - сколько стопки в сумке, [shelf] - коды сфер ремесла в порядке полки, [omens] -
+ * Сферы сумки, что лягут на цель: [held] - сколько стопки в сумке, [shelf] - коды сфер ремесла в порядке полки, [omens] -
  * знамения сумки. Сфера ремесла, что цель не примет ни сама, ни со знамением, в лоток не попадает; сожаление тратится на древе.
  */
 fun ForgeTarget.orbChoices(index: ContentIndex, shelf: List<String>, omens: List<Omen>, held: (String) -> Long): List<OrbChoice> {

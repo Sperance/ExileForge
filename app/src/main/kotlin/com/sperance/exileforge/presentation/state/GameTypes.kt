@@ -1,12 +1,11 @@
 package com.sperance.exileforge.presentation.state
 
-/* Типы игры для экранов (3.80.41): режим, фаза, вкладки, здания, разделы кузницы и порядок сундука. Общее состояние удалено - экраны читают срезы. */
-
+/** Типы игры для экранов: режим, фаза, вкладки, здания, разделы кузницы и порядок сундука; общего состояния нет - экраны читают срезы. */
 enum class AppMode { PLAYER, ADMIN }
 
 typealias NoticeKind = com.sperance.exileforge.core.session.NoticeKind
 
-/** Строка на языке игрока в момент показа - из :core (3.80.8). */
+/** Строка на языке игрока в момент показа - из :core. */
 typealias Phrase = com.sperance.exileforge.core.i18n.Phrase
 
 fun phrase(key: String, vararg args: Any?): Phrase = com.sperance.exileforge.core.i18n.phrase(key, *args)
@@ -16,11 +15,11 @@ typealias Notice = com.sperance.exileforge.core.session.Notice
 /** Which of the three screens the app is on, above the tabs: the tabs only make sense once there is an account and a hero. */
 enum class AppPhase { AUTH, CHARACTERS, GAME }
 
-/** Вещь, принесённая походом, - из :core (3.80.20). */
+/** Вещь, принесённая походом, - из :core. */
 typealias LootEntry = com.sperance.exileforge.core.campaign.LootEntry
 
 /**
- * The forge's sections: orbs, the bench and the essences work on one item; печати Атласа (4.6.4) - только у карты. [omens] - раздел
+ * The forge's sections: orbs, the bench and the essences work on one item; печати Атласа - только у карты. [omens] - раздел
  * кладёт рядом с валютой знамение.
  */
 enum class ForgeSection(val omens: Boolean = false) {
@@ -31,8 +30,8 @@ enum class ForgeSection(val omens: Boolean = false) {
 }
 
 /**
- * The City's buildings (3.22.0): each one a screen of its own behind the square; «История» (3.90.2) - прошлое героя,
- * «Летопись» (4.0.0, прежде страница «Развития») - его деяния и титулы, «Доска славы» (4.2.0) - таблицы сервера.
+ * The City's buildings: each one a screen of its own behind the square; «История» - прошлое героя,
+ * «Летопись» (прежде страница «Развития») - его деяния и титулы, «Доска славы» - таблицы сервера.
  */
 enum class Building { QUESTS, MERCHANT, AUCTION, GUILD, HISTORY, CHRONICLE, HALL }
 
@@ -44,7 +43,7 @@ const val TAB_ACCOUNT = 3
 const val TAB_HERO = 4
 const val TAB_TREE = 5
 
-/** The City (3.22.0): the merchant, the auction and the guild, where the auction's tab was. */
+/** The City: the merchant, the auction and the guild. */
 const val TAB_CITY = 6
 const val TAB_CRAFT = 7
 const val TAB_ADMIN = 8
@@ -53,14 +52,14 @@ const val TAB_EXPEDITION = 10
 const val TAB_CRAFTS = 11
 const val TAB_SKILLS = 12
 
-/** «Развитие»: кузня ([TAB_CRAFT]), дерево и гримуар; испытания и атлас - страницы «Похода» (4.0.0). */
+/** «Развитие»: кузня ([TAB_CRAFT]), дерево и гримуар; испытания и атлас - страницы «Похода». */
 const val TAB_PROGRESS = 13
 const val TAB_TRIALS = 15
 
-/** «Настройки» (3.77.0): from the banner's menu, «back» leading to the tab it was opened over. */
+/** «Настройки»: from the banner's menu, «back» leading to the tab it was opened over. */
 const val TAB_SETTINGS = 17
 
-// Порядок нижних кнопок (3.95.3; 4.10.x - Ремёсла перед Городом): Герой, Развитие, Поход, Ремёсла, Город
+// Порядок нижних кнопок (Ремёсла перед Городом): Герой, Развитие, Поход, Ремёсла, Город
 val PLAYER_TABS = listOf(TAB_HERO, TAB_PROGRESS, TAB_EXPEDITION, TAB_CRAFTS, TAB_CITY)
 
 /** Все кнопки нижней панели слева направо: вкладки игрока и вкладка администратора последней - по ним считается сторона перехода. */

@@ -15,7 +15,7 @@ import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger
 
 /**
- * The gear on the map (since 2.40.0): the body's ledger as the Equipment section draws it, over the walking map.
+ * The gear on the map: the body's ledger as the Equipment section draws it, over the walking map.
  * Только просмотр: в заходе снаряжение не меняется - ни снять, ни заменить, ни надеть из тайника или лута; надетая
  * вещь открывает свою карточку, пустое место - ничего. Сменить снаряжение можно только в убежище.
  */

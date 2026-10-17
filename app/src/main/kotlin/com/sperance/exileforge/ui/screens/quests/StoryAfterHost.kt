@@ -22,10 +22,10 @@ import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Продолжение сюжета (4.7.0): шаг сюжета героя выполнен - один раз на устройстве поверх игры встаёт сюжетный экран с его
+ * Продолжение сюжета: шаг сюжета героя выполнен - один раз на устройстве поверх игры встаёт сюжетный экран с его
  * продолжением (`quest.story.<шаг>.after`), у финала главы - и с эпилогом главы. Показанное отмечается `герой:шаг`
  * ([com.sperance.exileforge.presentation.state.GameSettings.storySeen]); запросов к серверу нет - доска заданий уже на клиенте.
- * Тосты (4.9.0: «отчёт отправлен») видны и поверх сцены.
+ * Тосты («отчёт отправлен») видны и поверх сцены.
  */
 @Composable fun StoryAfterHost(game: GameUi) {
     val board = koinInject<QuestRepository>().state.collectAsStateWithLifecycle().value.board ?: return

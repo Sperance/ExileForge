@@ -33,7 +33,7 @@ import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.theme.*
 
-/** The Vaal zone's own reds (2.65.0, the owner's mockup I «Кровавый алтарь»). */
+/** The Vaal zone's own reds (the owner's mockup I «Кровавый алтарь»). */
 private object Altar {
     val deep = Color(0xFF070203)
     val night = Color(0xFF110305)
@@ -47,9 +47,11 @@ private object Altar {
 }
 
 /**
- * The gate before a Vaal zone (2.65.0): what the server rolled for it (1.30.0) — every modifier, and what
+ * The gate before a Vaal zone: what the server rolled for it — every modifier, and what
  * the zone adds to the loot for bearing them — and the choice; until its answer comes, the gate waits. «Войти» closes the portal behind the
  * hero, «Отказаться» closes it for good; the zone is never re-rolled by walking away and back.
+ *
+ * От портала только отходят: он остаётся и откроется снова.
  */
 @Composable fun VaalGate(game: GameUi, hud: RunHud, guardian: MonsterCode?, onEnter: () -> Unit, onBack: () -> Unit) {
     val index = game.index
@@ -90,7 +92,6 @@ private object Altar {
             Text(ui("vaal.warning"), color = Altar.muted, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 ForgeOutlinedButton(
-                    // «Отказаться» убрана (3.88.8): от портала только отходят, он остаётся и откроется снова.
                     onClick = onBack,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Altar.muted),

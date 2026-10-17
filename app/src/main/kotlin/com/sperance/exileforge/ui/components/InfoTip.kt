@@ -28,13 +28,13 @@ import androidx.compose.ui.window.PopupProperties
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * What an icon says about itself (2.73.0): its name in its colour, the rule in words, and the
+ * What an icon says about itself: its name in its colour, the rule in words, and the
  * figures it carries — strength, time left, stacks — as label and value.
  */
 data class Tip(val title: String, val body: String = "", val tint: Color = GoldBright, val facts: List<Pair<String, String>> = emptyList())
 
 /**
- * An icon that explains itself (2.73.0): a tap opens [tip] as a small window growing out of the
+ * An icon that explains itself: a tap opens [tip] as a small window growing out of the
  * icon, its pointer on it, below it or above when there is no room; a tap anywhere closes it.
  * A null [tip] leaves the icon as it was. The tip is read when opened, so its figures are fresh.
  */
@@ -69,7 +69,7 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
 }
 
 /**
- * Окно-справка со своим содержимым [body] (4.x): то же окно, что у [Tip], - растёт из того, к чему привязано, клювом к нему, в рамке
+ * Окно-справка со своим содержимым [body]: то же окно, что у [Tip], - растёт из того, к чему привязано, клювом к нему, в рамке
  * цвета [tint]; касание где угодно закрывает. Для разборов, которым мало строк «подпись - число» (Мощь героя).
  */
 @Composable fun TipCallout(tint: Color, onClose: () -> Unit, body: @Composable ColumnScope.() -> Unit) {

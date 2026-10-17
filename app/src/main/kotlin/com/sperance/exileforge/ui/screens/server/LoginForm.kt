@@ -20,6 +20,7 @@ import com.sperance.exileforge.ui.theme.Gold
 import kotlinx.serialization.json.*
 import org.koin.compose.viewmodel.koinViewModel
 
+/** Гость создаёт аккаунт, у аккаунта с логином - смена пароля. */
 @Composable fun LoginForm(account: AccountUi) {
     val sessionModel: SessionViewModel = koinViewModel()
     var login by remember { mutableStateOf("") }
@@ -29,7 +30,6 @@ import org.koin.compose.viewmodel.koinViewModel
             Icon(ForgeGlyphs.Exile, null, tint = Gold, modifier = Modifier.size(20.dp))
             Text("${account.session.title} · ${if (account.isAdmin) ui("account.administrator") else ui("account.player")}")
         }
-        // Гость (вход по устройству, без логина) создаёт аккаунт; у аккаунта с логином - смена пароля (3.88.0).
         if (account.session.profile?.login.isNullOrBlank()) {
             BindForm(account, sessionModel)
             ForgeOutlinedButton(enabled = !account.busy, onClick = sessionModel::logout) { Text(ui("account.sign_out")) }
@@ -64,7 +64,11 @@ import org.koin.compose.viewmodel.koinViewModel
     }
 }
 
-/** «Создать аккаунт» гостя (3.88.0): логин, пароль дважды; беда формы видна до запроса, отказ сервера - строкой раннера. */
+/**
+ * «Создать аккаунт» гостя: логин, пароль дважды; беда формы видна до запроса, отказ сервера - строкой раннера.
+ *
+ * Беда показывается, когда игрок уже что-то ввёл.
+ */
 @Composable private fun BindForm(account: AccountUi, sessionModel: SessionViewModel) {
     var login by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -76,7 +80,6 @@ import org.koin.compose.viewmodel.koinViewModel
     OutlinedTextField(login, { login = it.take(limits.accountLogin) }, enabled = !account.busy, label = { Text(ui("account.login")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
     OutlinedTextField(password, { password = it.take(limits.password) }, enabled = !account.busy, label = { Text(ui("account.password")) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
     OutlinedTextField(repeat, { repeat = it.take(limits.password) }, enabled = !account.busy, label = { Text(ui("account.bind_repeat")) }, singleLine = true, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-    // Беда показывается, когда игрок уже что-то ввёл: пустая форма не ругается.
     if (problem != null && (login.isNotEmpty() || password.isNotEmpty() || repeat.isNotEmpty())) {
         Text(ui(problem.key, AccountBinding.argument(problem, limits)), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
     }

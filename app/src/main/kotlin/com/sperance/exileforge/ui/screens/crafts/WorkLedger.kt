@@ -64,13 +64,6 @@ import com.sperance.exileforge.ui.theme.Vital
 import com.sperance.exileforge.ui.theme.rarityColor
 import kotlinx.coroutines.delay
 
-/*
- * Книга учёта ремесла (4.x, макет «Ремёсла: плашка „С начала работы“», вариант C): итоги с иконками в две колонки - время (идёт
- * вживую), циклы (−впустую), опыт (▲уровни), сделано; затем каждая стопка строкой - иконка, имя, мини-полоса на общей шкале и
- * сколько: добытое зелёным, потраченное красным, под чертой; сделанные вещи - чипами цвета редкости. Касание стопки или вещи
- * открывает её карточку.
- */
-
 /** Итог работы для книги учёта: и с начала работы ([WorkTally] сервера), и за сессию ([WorkGains] клиента). */
 internal class WorkSums(
     val cycles: Long,
@@ -108,6 +101,10 @@ internal class WorkSums(
 /**
  * Книга учёта: итоги [sums] с иконками, под чертой [title] строки стопок и чипы сделанного [made]. [startedAt] > 0 - есть время в
  * работе: оно идёт по часам сервера (сдвиг [offset]); ноль - итог сессии, без времени. [makes] - работа делает вещи: есть итог «сделано».
+ *
+ * Книга учёта ремесла: итоги с иконками в две колонки - время (вживую), циклы (−впустую), опыт (▲уровни), сделано; затем каждая стопка
+ * строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное красным); сделанные вещи - чипами цвета
+ * редкости. Касание открывает карточку. «Сделано» - только у работ, что делают вещи ([JobKind.makesItems]).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -130,7 +127,6 @@ internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<
             LedgerFigure(Icons.Outlined.StarOutline, ui("crafts.totals_experience"), cell) {
                 Text("+" + number(sums.experience) + (if (sums.levels > 0) " ▲${sums.levels}" else ""), color = Vital)
             }
-            // «Сделано» - только у работ, что делают вещи (4.10.x, [JobKind.makesItems]): у добычи и стопок оно всегда ноль
             if (makes) LedgerFigure(ForgeGlyphs.Anvil, ui("crafts.totals_made"), cell) { Text(sums.made.toString(), color = Parchment) }
         }
         SectionRule(title)

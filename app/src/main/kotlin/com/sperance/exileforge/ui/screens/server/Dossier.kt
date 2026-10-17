@@ -47,9 +47,9 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 /**
- * Досье (0.15.0, #36, макет «Досье», вариант A «Паспорт»): шапка в две строки, одна панель «ключ — значение» в две колонки,
+ * Досье: шапка в две строки, одна панель «ключ — значение» в две колонки,
  * свёрнутые строки Экономика, Связи, История и Предначертание с итогом справа, одна строка управления (роль, сервер, тестировщик) и
- * кнопки санкций внизу - досье помещается в экран. Своё досье администратора (#35) - «Сменить» в Предначертании: лист всех даров.
+ * кнопки санкций внизу - досье помещается в экран. Своё досье администратора - «Сменить» в Предначертании: лист всех даров.
  */
 @Composable internal fun DossierView(account: AccountUi, vm: ModerationViewModel, dossier: Dossier?) {
     var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
@@ -122,7 +122,7 @@ import java.time.format.DateTimeFormatter
 private data class Fact(val label: String, val value: String, val color: Color = Parchment)
 
 /**
- * Панель фактов (макет A): «ключ — значение» плотными строками в две колонки - регистрация, вход, в сети (последнее использование
+ * Панель фактов: «ключ — значение» плотными строками в две колонки - регистрация, вход, в сети (последнее использование
  * сессии аккаунта, коротко), клиент, устройство, у героя - с какого дня, гильдия, золото, бои, уровни в час и часы боя. Версии
  * Android сервер не знает - её строки нет.
  */
@@ -164,7 +164,7 @@ private data class Fact(val label: String, val value: String, val color: Color =
     }
 }
 
-/** Свёрнутая строка досье (макет A): своё имя и итог справа; касание раскрывает подробности под ней. */
+/** Свёрнутая строка досье: своё имя и итог справа; касание раскрывает подробности под ней. */
 private enum class DossierFold(val title: String) {
     ECONOMY("moderation.economy"),
     LINKS("moderation.links"),
@@ -176,6 +176,8 @@ private enum class DossierFold(val title: String) {
  * Свёрнутые строки досье: экономика (стоимость снаряжения и уникальные), связи (устройства, гильдия, другие герои), история
  * (санкции, апелляции и отчёты) и Предначертание (лента с датой выбора; своё досье администратора - «Сменить»). Итог строки -
  * справа, раскрыта одна. [onBanDevice] - бан устройства из связей.
+ *
+ * Смена дара - только администратор и только себе: сервер берёт цель из сессии.
  */
 @Composable private fun DossierFolds(account: AccountUi, vm: ModerationViewModel, dossier: Dossier, onBanDevice: (DeviceView) -> Unit) {
     var open by remember(dossier.account.userId, dossier.hero?.heroId) { mutableStateOf<DossierFold?>(null) }
@@ -213,7 +215,6 @@ private enum class DossierFold(val title: String) {
                         DossierFold.FATE -> {
                             val fate = dossier.account.fate
                             if (fate == null) MutedText(DASH) else FateRibbon(FateCard(fate), ui("moderation.fate.chosen", dossier.account.fateAt?.let(::dayOf) ?: DASH), Modifier.fillMaxWidth())
-                            // Смена дара (0.15.0, #35): только администратор и только себе - сервер берёт цель из сессии
                             if (account.isAdmin && dossier.account.userId == account.session.profile?.id) {
                                 ForgeOutlinedButton(enabled = !account.busy, onClick = { redrawing = true }, modifier = Modifier.fillMaxWidth()) { Text(ui("moderation.fate.change"), color = Gold) }
                             }
@@ -269,8 +270,8 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
 }
 
 /**
- * Строка управления (макет A): роль аккаунта (администратор; администратора не меняет никто), сервер героя (администратор: перенос
- * с подтверждением - он уводит из гильдии и снимает лоты, «+ новый сервер») и отметка тестировщика (4.12.x, ROLE-02: администратор и
+ * Строка управления: роль аккаунта (администратор; администратора не меняет никто), сервер героя (администратор: перенос
+ * с подтверждением - он уводит из гильдии и снимает лоты, «+ новый сервер») и отметка тестировщика (администратор и
  * модератор) - выпадающими выборами одной строкой. Нечего менять - строки нет.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -356,12 +357,15 @@ private fun ControlRow(account: AccountUi, vm: ModerationViewModel, dossier: Dos
     }
 }
 
-/** Кнопки санкций внизу досье (макет A): бан, немота (4.6.3) и удаление - что разрешают права досье, поровну в ширину. */
+/**
+ * Кнопки санкций внизу досье: бан, немота и удаление - что разрешают права досье, поровну в ширину.
+ *
+ * Немота: не пишет письма, играет как обычно.
+ */
 @Composable private fun SanctionButtons(account: AccountUi, dossier: Dossier, onSanction: (SanctionKind) -> Unit, onDelete: (SanctionTarget) -> Unit) {
     val hero = dossier.hero
     val actions = buildList<Pair<String, () -> Unit>> {
         if (dossier.rights.ban) add(ui("moderation.ban") to { onSanction(SanctionKind.BAN) })
-        // Немота (4.6.3): не пишет письма, играет как прежде
         if (dossier.rights.mute) add(ui("moderation.mute") to { onSanction(SanctionKind.MUTE) })
         if (dossier.rights.delete) add(ui("moderation.delete") to { onDelete(if (hero != null && !hero.deleted) SanctionTarget.HERO else SanctionTarget.ACCOUNT) })
     }
@@ -374,7 +378,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationViewModel, dossier: Dos
 }
 
 /**
- * Лист смены Предначертания своему аккаунту (0.15.0, #35): сетка всех даров контента по имени в два столбца, описание выбранного и
+ * Лист смены Предначертания своему аккаунту: сетка всех даров контента по имени в два столбца, описание выбранного и
  * «удержи, чтобы сменить» - нынешний дар выбрать нельзя. Счётчики дара у героев начнутся с нуля, начатый заход доиграет со старым.
  */
 @Composable private fun FateRedrawSheet(account: AccountUi, current: String?, onDismiss: () -> Unit, onPick: (String) -> Unit) {
@@ -434,6 +438,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationViewModel, dossier: Dos
     }
 }
 
+/** Модерация видит и причину для игрока, и служебную заметку. */
 @Composable private fun SanctionLine(sanction: SanctionView, busy: Boolean, onLift: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Column(Modifier.weight(1f)) {
@@ -446,7 +451,6 @@ private fun ControlRow(account: AccountUi, vm: ModerationViewModel, dossier: Dos
                 listOfNotNull(sanction.byLogin, listedAt(sanction.at), termText(sanction), sanction.liftedAt?.let { ui("moderation.lifted_by", sanction.liftedBy) }, if (sanction.appealed) ui("moderation.appealed") else null)
                     .joinToString(" · "),
             )
-            // Причина для игрока (4.12.x) и служебная заметка - модерация видит обе
             if (sanction.reason.isNotBlank()) MutedText(ui("moderation.reason_shown", sanction.reason))
             if (sanction.comment.isNotBlank()) MutedText("«${sanction.comment}»")
         }
@@ -458,7 +462,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationViewModel, dossier: Dos
     }
 }
 
-/** Давность в сети коротко (макет A): «сейчас», «5 мин», «3 ч», дальше - «14.10 21:03». */
+/** Давность в сети коротко: «сейчас», «5 мин», «3 ч», дальше - «14.10 21:03». */
 private fun seenShort(at: Long, now: Long): String {
     val minutes = (now - at) / MINUTE_MS
     return when {
@@ -469,7 +473,7 @@ private fun seenShort(at: Long, now: Long): String {
     }
 }
 
-/** День в зоне устройства: «12.03.26». */
+/** День в зоне устройства: `дд.мм.гг`. */
 private fun dayOf(at: Long): String = Instant.ofEpochMilli(at).atZone(ZoneId.systemDefault()).format(DAY)
 
 /** Миг в зоне устройства: «14.10 21:03». */

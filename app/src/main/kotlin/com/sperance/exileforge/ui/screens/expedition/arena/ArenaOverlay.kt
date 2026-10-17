@@ -31,7 +31,7 @@ import com.sperance.exileforge.ui.theme.*
 private const val HERO_CARD = -1
 
 /**
- * The fight as cards (2.70.0, the owner's mockup B «карточки против карточек»): the foes on screen across the
+ * The fight as cards (the owner's mockup B «карточки против карточек»): the foes on screen across the
  * top in one line — any of them is in reach of any weapon — the hero's card at the foot, and between them
  * either the scouting panel or the latest blows. Whoever swings is lifted toward the other side and
  * lit — gold for the hero, blood for a foe — and a line runs from them to whom they struck. A tap on
@@ -39,6 +39,12 @@ private const val HERO_CARD = -1
  *
  * Before «В бой», and whenever paused, nothing moves: the tapped foe — or the one the hero would
  * strike — is laid open, its numbers held against the hero's.
+ *
+ * [biome] - небо и погода боя с боссом; [shares] - источники строк карты на монстрах; [mapEffects] - строки карты захода на рельсе героя;
+ * [pulse] - часы и замахи кадра, снимок [fight] выходит реже кадра. Часы арены читаются только в рисовании ([FightFrame]). Пауза и отклик -
+ * раз при падении здоровья через свою черту, отклик - и при гибели. Лист врага открывается касанием на паузе и до боя; лист умения держит
+ * бой. Мощь боя: герой - по телу боя под эффектами карты, враги - по своему листу. Стороны арены: верх - враги, низ - герой; бой с боссом -
+ * своя раскладка. Карточка врага - по ключу врага. Победу говорит окно наград, здесь - только поражение и отступление.
  */
 @Composable internal fun ArenaOverlay(
     game: GameUi,
@@ -50,20 +56,14 @@ private const val HERO_CARD = -1
     onCommand: (RunCommand) -> Unit,
     onLogFilter: (Set<LogKind>) -> Unit = {},
     onBuzz: (Buzz) -> Unit = {},
-    /** Биом зоны (3.93.0): небо и погода боя с боссом. */
     biome: String = "",
-    /** Источники строк карты на монстрах (3.93.0): лист врага раскладывает по ним его модификаторы. */
     shares: (Boolean) -> List<BuffShare> = { emptyList() },
-    /** Строки карты захода (4.9.3): что из них меняет героя - на рельсе «на весь бой» его карточки. */
     mapEffects: Map<String, Double> = emptyMap(),
     origins: EffectOrigins = EffectOrigins.NONE,
-    /** Пульс боя хозяина (4.11.x): часы и замахи кадра; снимок [fight] выходит реже кадра. */
     pulse: FightPulse? = null,
 ) {
-    // Часы арены читаются только в рисовании ([FightFrame]): композиция идёт со снимком боя, не с кадром
     val clock = rememberClock()
     val frame = remember(clock, pulse) { FightFrame(clock, pulse) }
-    // The settings' pause and buzz (3.77.0): each once as the hero's life falls through its line, the buzz again at a fall.
     val settings = LocalSettings.current
     val share = if (hud.heroMaxLife > 0) fight.heroLife / hud.heroMaxLife.toFloat() else 1f
     val low = share * 100 < settings.autoPause
@@ -74,34 +74,26 @@ private const val HERO_CARD = -1
     val bounds = remember { mutableStateMapOf<Int, Rect>() }
     var origin by remember { mutableStateOf(Offset.Zero) }
     val names = remember(fight.foes.size, fight.leader, fight.round) { fight.foes.associate { it.index to monsterTitle(it.monster.code) } }
-    // Each foe's traits (3.73.0): seals on its card, their whole text in its window.
     val traits = remember(fight.foes.size, fight.leader, fight.round, game.index) {
         fight.foes.associate { foe -> foe.index to (game.index?.let { traitViews(foe.monster, it) } ?: emptyList()) }
     }
     val chosen = fight.focus ?: fight.target ?: fight.field.firstOrNull { it.alive }?.index
-    // The tiles are larger while the fight stands still; a tap on any of them opens its window at any time (2.73.0).
     val large = fight.scouting
-    // The skill whose page is open over the fight (3.24.0); the fight holds still while it is read.
     var info by remember { mutableStateOf<SkillView?>(null) }
-    // Лист врага (3.93.0): открывается касанием на паузе и до боя
     var inspect by remember { mutableStateOf<Int?>(null) }
     fun track(key: Int) = Modifier.onGloballyPositioned { bounds[key] = it.boundsInRoot() }
-    // Строки карты на герое (4.9.3) - раз на заход и героя, не каждый кадр
     val mods = remember(mapEffects, origins, game.hero, game.index) {
         if (mapEffects.isEmpty()) emptyList() else game.index?.let { MapEffects.heroMods(it, game.hero?.figures?.stats.orEmpty(), mapEffects, origins) }.orEmpty()
     }
-    // Мощь боя (4.8.0): герой - по телу боя под эффектами карты (4.9.0: с уроном умений из листа боя), враги - по своему листу
     val might = rememberFightMight(game.index, fight.heroBody, level, game.hero?.combat?.mightExtras ?: MightExtras.NONE)
     CompositionLocalProvider(LocalFightMight provides might) {
         Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInRoot() }) {
             fight.boss?.let { BossBackdrop(biome, it, frame) }
-            // Стороны арены (4.9.3, макет «Стороны»): верх - врагов, низ - героя
             Spacer(Modifier.fillMaxSize().sideTint())
             Column(
                 Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                // Бой с боссом (3.92.0, макет B): своя раскладка - полоса с фазами, каст, крупный портрет, свита по бокам
                 val boss = fight.boss
                 if (boss != null) {
                     BossBand(fight, boss, frame, chosen, large, traits, ::track, { onCommand(RunCommand.Focus(it)) }) { inspect = it }
@@ -109,7 +101,6 @@ private const val HERO_CARD = -1
                     PackHeader(fight, level)
                     if (fight.field.isNotEmpty()) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
-                            // Keyed by the foe: one stepping into a fallen one's place is a card of its own.
                             fight.field.forEach { foe ->
                                 key(foe.index) {
                                     FoeCard(
@@ -146,14 +137,11 @@ private const val HERO_CARD = -1
                     }
                 }
                 HeroCard(game, hud, fight, frame, names, stance, track(HERO_CARD), large, mods, onCommand)
-                // The skills and the belt (2.78.0): under the hero, over the fight's own controls.
                 if (fight.skills.any { it != null } || fight.flasks.any { it != null }) ActionBar(game, fight, frame, onCommand) { info = it }
                 Controls(fight, hud, onCommand)
             }
-            // Кто кого бьёт (4.9.3): каждый удар на экране - выпад или снаряд, разрез на цели; попадание по герою - виньетка
             StrikeFx(fight, frame, { foe -> bounds[foe ?: HERO_CARD] }, origin)
             HitVignette(fight, frame)
-            // «Жилы энергии» (4.4.0): сцена применения умения героя поверх боя, всегда - бой анимируется и без декора
             SkillFx(fight, frame, bounds[HERO_CARD], bounds::get, origin)
             fight.boss?.let { BossCinema(fight, it) }
             inspect?.let { i -> fight.foes.firstOrNull { it.index == i } }?.let { foe ->
@@ -169,7 +157,6 @@ private const val HERO_CARD = -1
                 ) { inspect = null }
             }
             info?.let { view -> FightSkillSheet(game, view, onCommand) { info = null } }
-            // A win says so in the rewards window itself (2.73.0); only a loss or a retreat is announced here.
             fight.outcome?.takeIf { it != Outcome.WIN }?.let {
                 Text(
                     ui("expedition.outcome_${it.name.lowercase()}"),
@@ -182,5 +169,5 @@ private const val HERO_CARD = -1
     }
 }
 
-/** The life share under which the phone warns of danger (3.77.0). */
+/** The life share under which the phone warns of danger. */
 private const val DANGER_SHARE = .3f

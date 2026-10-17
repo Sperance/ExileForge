@@ -31,10 +31,13 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * The scouting panel (2.70.0): one foe while nothing moves — what it is and where it stands, its
+ * The scouting panel: one foe while nothing moves — what it is and where it stands, its
  * pools, block, how hard and how often it strikes, what it rolled — and whether the hero's weapon
- * reaches it. Its armour, evasion and resistances are not shown since 2.75.0: the fight is read by
+ * reaches it. Its armour, evasion and resistances are not shown: the fight is read by
  * what happens in it, not by the foe's defence sheet.
+ *
+ * Каждый набор на враге (карточка показывает только полный); умения - чипами; свойства - на силе его редкости; что это значит для героя;
+ * сумма и вклад каждого источника, строка одной карты помечена.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -73,7 +76,6 @@ internal fun ScoutPanel(
                 Text("${ui(type.key())} ${number(amount)}", color = damageTint(type), style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
             }
         }
-        // Every buildup on it (3.78.0): the card shows only the fullest.
         foe.buildup?.let { view ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Buildup.entries.forEach { kind ->
@@ -84,8 +86,6 @@ internal fun ScoutPanel(
                 }
             }
         }
-        // What it casts for its mana (2.78.0): a boss's own skills, a caster's spell, a borrowed one.
-        // Каждое умение (3.92.0) - чип: его лист говорит суть, урон по герою, перезарядку и ману
         if (foe.monster.skills.isNotEmpty()) {
             val lore = LocalLore.current
             Caption(ui("fight.skills_title"))
@@ -95,7 +95,6 @@ internal fun ScoutPanel(
                 }
             }
         }
-        // Its traits (3.73.0): what its kind and its form do, at its rarity's strength.
         if (traits.isNotEmpty()) {
             Caption(ui("fight.traits", traits.size))
             traits.forEach { trait ->
@@ -114,7 +113,6 @@ internal fun ScoutPanel(
                 }
             }
         }
-        // What it means for this hero; a taunter's own rule is told by its trait above (3.81.0), not again in red.
         val taunting = fight.foes.any { it.alive && it.taunt }
         when {
             foe.taunt -> Unit
@@ -128,7 +126,6 @@ internal fun ScoutPanel(
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     Rhombus(if (line.fromMap) LifeRed else ModBlue, 4.dp)
                     Text(monsterLineText(line, index), color = ModBlue, style = MaterialTheme.typography.labelSmall)
-                    // The sum first, then what each source put in it (2.73.0); a line the map alone gives is tagged.
                     val sources = monsterLineSources(line, index)
                     if (sources != null) {
                         Text("($sources)", color = Muted, style = MaterialTheme.typography.labelSmall)

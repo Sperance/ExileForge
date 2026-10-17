@@ -30,7 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
 /**
- * Квесты (3.23.0, сервер 1.21.0). Сервер бросает, считает и платит; клиент читает доску, называет квест и рисует доску,
+ * Квесты. Сервер бросает, считает и платит; клиент читает доску, называет квест и рисует доску,
  * которой команда ответила. Награда двигает героя - золото, опыт, сферы, - так что после сдачи герой перечитывается.
  * Действия общие для экрана квестов и для игры вне него: прогрев, возврат в приложение, конец похода.
  */
@@ -47,10 +47,10 @@ class QuestActions(
 
     private fun quests(transform: (Quests) -> Quests) = repository.update(transform)
 
-    /** Доски героя, как они прочитаны сейчас (4.10.0): снимок на входе в заход. */
+    /** Доски героя, как они прочитаны сейчас: снимок на входе в заход. */
     fun board(): Quests = repository.state.value
 
-    /** Доска героя; [fresh] (3.94.1) - экран открылся: ответ моложе полуминуты не перечитывается. */
+    /** Доска героя; [fresh] - экран открылся: ответ моложе полуминуты не перечитывается. */
     fun load(fresh: Boolean = false) = commands.read(Reads.QUESTS, tag = heroes.heroId, maxAgeMs = freshness(fresh)) {
         val id = hero()
         content.ensure()
@@ -67,7 +67,7 @@ class QuestActions(
     fun claim(questId: String) = board(ui("quest.toast.claimed")) { api.quests.claim(it, questId) }
     fun take(offerId: String) = board(ui("quest.toast.taken")) { api.quests.take(it, offerId) }
 
-    /** Невзятый листок [offerId] снят с доски (4.2.0): место заполнится само по своему таймеру. */
+    /** Невзятый листок [offerId] снят с доски: место заполнится само по своему таймеру. */
     fun reset(offerId: String) = board(ui("quest.toast.reset")) { api.quests.reset(it, offerId) }
     fun abandon(questId: String) = board(ui("quest.toast.abandoned")) { api.quests.abandon(it, questId) }
 
@@ -75,7 +75,7 @@ class QuestActions(
     fun law(code: String) = board(ui("story.law.toast", loc(LocaleKey.lawName(code)))) { api.quests.law(it, code) }
 
     /**
-     * Книга умения [code] за пройденную главу [chapter] (SKILL-02; 0.15.0, #47): неизученное умение, что герой тянет, сервер учит сразу,
+     * Книга умения [code] за пройденную главу [chapter]: неизученное умение, что герой тянет, сервер учит сразу,
      * иначе книга ложится в сумку - тост называет, что стало с книгой ([bookToast]); снимок героя - тем же ответом.
      */
     fun book(chapter: Int, code: String) = command(::bookToast) { id ->
@@ -91,14 +91,15 @@ class QuestActions(
     }
 
     /**
-     * После похода (3.24.0, сервер 1.22.0): всё, что поход закончил, сдаётся разом - личные квесты и доля героя в
-     * гильдейских. С 4.11.x сдаёт сам сервер в ответе журнала, что закрыл заход ([turnIns], доски гильдии - [guild]); не сдал -
-     * сдача отдельным запросом, как прежде. Сданное (4.10.0) уходит в [shown] - строки итогов карты; не взявшие его итоги (уже
+     * После похода: всё, что поход закончил, сдаётся разом - личные квесты и доля героя в
+     * гильдейских. Сдаёт сам сервер в ответе журнала, что закрыл заход ([turnIns], доски гильдии - [guild]); не сдал -
+     * сдача отдельным запросом, как прежде. Сданное уходит в [shown] - строки итогов карты; не взявшие его итоги (уже
      * закрыты) - тост. Молча при ошибке: пропущенный вызов ничего не теряет, квесты ждут на доске, а концу похода не место для отказа.
+     *
+     * Заголовки - шаблоны над целью; цели берутся с досок, какими они стояли до сдачи.
      */
     fun turnIn(heroId: String, turnIns: QuestClaimAll?, guild: GuildQuests?, shown: (List<QuestTurnIn>) -> Boolean) {
         scope.launch {
-            // Заголовки - шаблоны над целью; цели берутся с досок, какими они стояли до сдачи.
             val targets = repository.state.value.targets()
             val result = turnIns ?: quietly { api.quests.claimAll(heroId) } ?: return@launch
             if (!heroes.onScreen(heroId)) return@launch
@@ -134,7 +135,7 @@ class QuestActions(
         heroes.money(board.money)
     }
 
-    /** Одна команда квестов: по одной за раз и без повторов; награда приходит снимком героя в том же ответе (3.94.1). */
+    /** Одна команда квестов: по одной за раз и без повторов; награда приходит снимком героя в том же ответе. */
     private fun command(done: String, block: suspend (String) -> Unit) = command({ done }, block)
 
     /** Команда квестов, чей тост [done] читает её итог. */
@@ -142,7 +143,7 @@ class QuestActions(
         notices.toast(done(block(hero())))
     }
 
-    /** Тост книги за главу (#47): умение изучено или книга в сумке (уже изучено, не хватает требований). */
+    /** Тост книги за главу: умение изучено или книга в сумке (уже изучено, не хватает требований). */
     private fun bookToast(taken: StoryBookTaken): String = when (taken.outcome) {
         StoryBookOutcome.LEARNED -> ui("story.book.learned", SkillText.title(taken.skill))
         StoryBookOutcome.KNOWN, StoryBookOutcome.UNMET -> ui("story.book.toast", SkillText.title(taken.skill))

@@ -47,11 +47,11 @@ import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** Верстак и выбор строки (3.80.24): рецепты, предзнаменования в руках, раскрытие и выбор. */
+/** Верстак и выбор строки: рецепты, предзнаменования в руках, раскрытие и выбор. */
 /**
  * The bench lines for this item's slot, and the crafted modifier it already carries, if any.
- * Only the recipes the hero has found are offered (3.0.0); the rest of the bench stays hidden.
- * С 4.2.0 рецепт подписан стороной (префикс, суффикс), а тот, что на вещь не встанет, погашен с причиной правил ([benchRefusals]).
+ * Only the recipes the hero has found are offered; the rest of the bench stays hidden.
+ * Рецепт подписан стороной (префикс, суффикс), а тот, что на вещь не встанет, погашен с причиной правил ([benchRefusals]).
  */
 @Composable internal fun BenchLedger(game: GameUi, index: ContentIndex, hero: HeroView, item: ItemView, chosen: String, onChoose: (String) -> Unit) {
     val recipes = game.bench.filter { it.fits(item.slot) }.sortedWith(compareBy({ it.source }, { it.modifier }, { -it.tier }))
@@ -87,7 +87,7 @@ import org.koin.compose.viewmodel.koinViewModel
     if (recipes.isEmpty()) Text(ui("bench.none"), color = Muted)
 }
 
-/** Почему каждый найденный рецепт не встанет на [item] (4.2.0): отказ [Bench.blockedBy] словами игрока; рецепта, что встанет, нет в карте. */
+/** Почему каждый найденный рецепт не встанет на [item]: отказ [Bench.blockedBy] словами игрока; рецепта, что встанет, нет в карте. */
 @Composable internal fun benchRefusals(index: ContentIndex, hero: HeroView, item: ItemView): Map<String, String> {
     val bench = remember(index) { Bench(index) }
     return remember(bench, item.item, hero.info.recipes) {
@@ -99,7 +99,7 @@ import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * One line of a forge ledger: a spine lit when chosen, a drawing, a name over what it means, and a figure. Описание раскрывается
- * нажатием ([ExpandableText], 4.2.0); строка с [refusal] погашена, не выбирается и называет причину.
+ * нажатием ([ExpandableText]); строка с [refusal] погашена, не выбирается и называет причину.
  */
 @Composable internal fun LedgerRow(
     icon: ImageVector,
@@ -121,7 +121,6 @@ import org.koin.compose.viewmodel.koinViewModel
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RaritySpine(if (selected) GoldBright else accent.copy(alpha = .35f), 3.dp)
-        // An orb's line wears its stained glass (2.69.0); the bench and the rest keep their glyph.
         if (orb != null) {
             OrbGlyph(orb, Modifier.size(28.dp))
         } else {
@@ -137,12 +136,12 @@ import org.koin.compose.viewmodel.koinViewModel
     HorizontalDivider(color = PanelRaised)
 }
 
-/** The omens the bag holds (3.36.0; server 1.65.0: the catalysts are omens of the Orb of Quality), in the content's order. */
+/** The omens the bag holds (the catalysts are omens of the Orb of Quality), in the content's order. */
 internal fun heldOmens(index: ContentIndex, hero: HeroView): List<Omen> = index.itemsByCategory[Item.OMEN].orEmpty().mapNotNull { item -> Omen.of(item.code.value)?.takeIf { hero.count(item.code.value) > 0 } }
 
 /**
- * A choice of lines waiting on the item: the unveiling's offer (3.36.0) — each modifier the veiled one may become — or the
- * Omen of Choice's (server 1.65.0) — each line an Orb of Alchemy or an Exalted Orb may add. One tap keeps it and the rest are lost.
+ * A choice of lines waiting on the item: the unveiling's offer — each modifier the veiled one may become — or the
+ * Omen of Choice's — each line an Orb of Alchemy or an Exalted Orb may add. One tap keeps it and the rest are lost.
  */
 @Composable internal fun LineChoice(
     game: GameUi,

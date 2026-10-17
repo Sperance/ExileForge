@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 
 /**
- * Подпись в узком месте, что не рвёт слов (0.14.1): до [maxLines] строк, кегль от [max] вниз до [min] шагом [step] - первый, при
+ * Подпись в узком месте, что не рвёт слов: до [maxLines] строк, кегль от [max] вниз до [min] шагом [step] - первый, при
  * котором текст встаёт в ширину места переносами только между словами; разрядка букв в узком месте снимается. Не встал и на
  * [min] - [min] с многоточием. Строк всегда не меньше [minLines]: соседние плитки ряда держат одну высоту.
  */
@@ -31,7 +31,6 @@ import androidx.compose.ui.unit.sp
     maxLines: Int = 2,
     minLines: Int = 1,
     step: TextUnit = FIT_STEP,
-    /** Выравнивание строк (0.14.5): по центру - плитки, с начала - строки списков. */
     textAlign: TextAlign = TextAlign.Center,
 ) {
     val measurer = rememberTextMeasurer()

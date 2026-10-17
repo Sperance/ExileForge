@@ -33,13 +33,12 @@ import com.sperance.exileforge.ui.screens.skills.SkillPeek
 import com.sperance.exileforge.ui.screens.skills.rememberSkillInspect
 import com.sperance.exileforge.ui.theme.*
 
-/*
- * Законы тронов (сюжет «Девять тронов»): за финал главы герой навсегда берёт один из двух законов её трона. Карточка закона
- * показывает обе стороны до выбора - строки героя и цену для монстров дальше трона и на Атласе; взятие - через шторку
- * подтверждения с удержанием, перевыбора нет.
+/**
+ * Трон пройденной главы [chapter] ждёт выбора: эпилог главы и две карточки законов; [onTake] - взять закон навсегда.
+ *
+ * За финал главы герой навсегда берёт один из двух законов её трона: карточка показывает обе стороны до выбора, взятие - через шторку с
+ * удержанием, перевыбора нет.
  */
-
-/** Трон пройденной главы [chapter] ждёт выбора: эпилог главы и две карточки законов; [onTake] - взять закон навсегда. */
 @Composable internal fun LawChoice(index: ContentIndex, chapter: StoryChapter, busy: Boolean, onTake: (String) -> Unit) {
     var asked by remember { mutableStateOf<ThroneLaw?>(null) }
     ForgePanel(accent = GoldBright) {
@@ -96,8 +95,8 @@ private fun ledger(index: ContentIndex, law: ThroneLaw): List<LedgerLine> = law.
     law.monsters.map { LedgerLine(ui("story.law.ledger_monsters"), lineText(index, it), Tone.SPEND) }
 
 /**
- * Книга за пройденную главу [chapter] (0.14.0, SKILL-02): варианты правил ([StoryBooks.options]) - умения своего класса или общие,
- * открытые к уровню главы; [onTake] - книга в сумку. Выбор один на главу. С 0.14.4 (#25, макет «Карточка умения», вариант A)
+ * Книга за пройденную главу [chapter]: варианты правил ([StoryBooks.options]) - умения своего класса или общие,
+ * открытые к уровню главы; [onTake] - книга в сумку. Выбор один на главу.
  * строка варианта открывает карточку умения, а книгу берёт её главная кнопка: выбор - после того, как прочитано, что умение делает.
  */
 @Composable internal fun BookChoice(index: ContentIndex, chapter: Int, heroClass: String, skills: HeroSkills, busy: Boolean, onTake: (Int, String) -> Unit) {

@@ -76,13 +76,12 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.roundToInt
 
-/*
- * Предначертание (4.6.0, макет «Пепел предков», утверждён владельцем): палитра уголь и золото, как у уникальных вещей. Части
- * экрана выбора - угли, алтарь, карта-таро, кнопка удержания - и лента дара (4.6.3) для карточек героя, выбора героя и досье. Декор
- * (угли, дыхание алтаря, кольцо печати) стоит при выключенном `LocalMotion`.
+/**
+ * Палитра «Пепла предков».
+ *
+ * Палитра Предначертания: уголь и золото, как у уникальных вещей. Части экрана выбора - угли, алтарь, карта-таро, кнопка удержания - и
+ * лента дара для карточек героя, выбора героя и досье; декор стоит при выключенном `LocalMotion`.
  */
-
-/** Палитра «Пепла предков». */
 object FateInk {
     val Gold = Color(0xFFF0C76A)
     val GoldLight = Color(0xFFFFD99A)
@@ -99,7 +98,7 @@ object FateInk {
     val Warn = Color(0xFFE8A35A)
     val Accepted = Color(0xFF3FB67A)
 
-    /** Осквернение (4.6.2, макеты «Руническая печать» и «Тлеющие письмена»): тлеющий уголь, сургуч печати, пепел спящей строки. */
+    /** Осквернение («Руническая печать» и «Тлеющие письмена»): тлеющий уголь, сургуч печати, пепел спящей строки. */
     val Cinder = Color(0xFFE0743A)
     val CinderInk = Color(0xFFB48A70)
     val Wax = listOf(Color(0xFFFFCF7A), Color(0xFFA5531D), Color(0xFF4A1F0A))
@@ -107,11 +106,11 @@ object FateInk {
     val Ash = Color(0xFF44515A)
     val AshInk = Color(0xFF6F7D86)
 
-    /** Лента дара (4.6.3, макет «Лента и свиток»): описание на свитке - тёплая бумага. */
+    /** Лента дара: описание на свитке - тёплая бумага. */
     val Vellum = Color(0xFFE9D9BF)
 }
 
-/** Знак Предначертания в печати (4.6.1 - без тем): один на все дары. */
+/** Знак Предначертания в печати (без тем): один на все дары. */
 internal const val SIGIL = "✦"
 
 /** Подложка «Пепла предков»: жар снизу, уголь к верху. */
@@ -122,16 +121,19 @@ fun Modifier.ashGround(): Modifier = drawBehind {
 /** Одна искра: место по ширине, снос вбок, доля периода на подъём и сдвиг фазы. */
 private data class Spark(val x: Float, val drift: Float, val pace: Float, val phase: Float)
 
+/** Разброс без кости: искры одни и те же при каждом показе. */
 private val SPARKS = List(26) { i ->
-    // Детерминированный разброс без кости: искры одни и те же при каждом показе
     val h = (i * 7919 + 13) % 997 / 997f
     val g = (i * 104729 + 7) % 991 / 991f
     Spark(.05f + .9f * h, (g - .5f) * 80f, .45f + .55f * ((i * 31) % 17 / 17f), (i * 37 % 100) / 100f)
 }
 
-/** Угли поднимаются со дна (6-9 с на подъём); при выключенных анимациях стоят, где застал их кадр. */
+/**
+ * Угли поднимаются со дна (6-9 с на подъём); при выключенных анимациях стоят, где застал их кадр.
+ *
+ * Фазы декора читаются в рисовании: перерисовка шагом часов без перекомпоновки.
+ */
 @Composable fun EmberField(modifier: Modifier = Modifier) {
-    // Фазы декора читаются в рисовании (4.9.0): перерисовка шагом часов без перекомпоновки.
     val phase = motionPhase(EMBER_MS)
     Canvas(modifier) {
         val time = phase.value
@@ -183,7 +185,7 @@ private val SPARKS = List(26) { i ->
 }
 
 /**
- * Карта-таро дара [card] (4.6.1, решение владельца): на лице - только имя, крупно Cinzel между золотыми узорами, чтобы
+ * Карта-таро дара [card]: на лице - только имя, крупно Cinzel между золотыми узорами, чтобы
  * помещалось всегда; описание - свиток под веером ([FateScroll]). Рубашка - узор и звезда. [turn] - поворот вокруг вертикали
  * в градусах (0 - лицом, 180 - рубашкой); лицо и рубашка не просвечивают друг сквозь друга.
  */
@@ -222,7 +224,7 @@ private val SPARKS = List(26) { i ->
 }
 
 /**
- * Кегль имени на лице карты (4.6.1): по самому длинному слову - Cinzel заглавными, чтобы слово не рвалось на узкой карте.
+ * Кегль имени на лице карты: по самому длинному слову - Cinzel заглавными, чтобы слово не рвалось на узкой карте.
  */
 private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNull { it.length } ?: 0) {
     in 0..7 -> 17
@@ -251,7 +253,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
 }
 
 /**
- * Свиток судьбы (4.6.1, решение владельца): описание выбранного дара [card] - выезжает снизу и разворачивается между двумя
+ * Свиток судьбы: описание выбранного дара [card] - выезжает снизу и разворачивается между двумя
  * золотыми валиками (подъём, затем развёртка, ~0,9 с); новая карта - свиток разворачивается заново. Без анимаций - сразу
  * развёрнут. Имя - Cinzel, текст - словами сервера, длинный листается.
  */
@@ -277,7 +279,6 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
         ) {
             Column(
                 Modifier.fillMaxWidth().background(Brush.verticalGradient(FateInk.Parchment)).drawBehind {
-                    // Края свитка темнее - бумага загибается к валикам
                     drawRect(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = .35f), Color.Transparent, Color.Transparent, Color.Black.copy(alpha = .35f))))
                 }.heightIn(max = SCROLL_MAX).verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -305,7 +306,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
 }
 
 /**
- * Кнопка «удержи, чтобы принять» (4.6.0): полоса наполняется, пока палец держит кнопку, [holdMs]; отпущенная раньше - пустеет.
+ * Кнопка «удержи, чтобы принять»: полоса наполняется, пока палец держит кнопку, [holdMs]; отпущенная раньше - пустеет.
  * Полное удержание - [onHeld] один раз. [enabled] false - касание лишь зовёт [onRefused] (например, «сначала выбери карту»).
  */
 @Composable fun HoldToAccept(
@@ -358,11 +359,10 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
 }
 
 /**
- * Лента Предначертания (4.6.3, утверждена владельцем по макету «Лента и свиток», вариант A): угольная лента во всю ширину -
+ * Лента Предначертания: угольная лента во всю ширину -
  * печать [FateSigil], имя дара [card] Cinzel заглавными и подпись [caption] (что это за дар или что он копит). Касание
  * разворачивает под лентой свиток: узор, описание серифом курсивом и «Изменить нельзя никогда». Одна на карточку игрока, шапку
- * выбора героя, лист героя и досье модерации; без `LocalMotion` свиток раскрывается сразу, кольцо печати стоит. На листе героя
- * (4.9.0, макет «Свиток + значок», вариант A) свиток несёт блок «Сейчас действует» - [now]: что дар делает с числами на силе и
+ * выбора героя, лист героя и досье модерации; без `LocalMotion` свиток раскрывается сразу, кольцо печати стоит. На листе героя свиток несёт блок «Сейчас действует» - [now]: что дар делает с числами на силе и
  * строках дара.
  */
 @Composable fun FateRibbon(card: FateCard, caption: String, modifier: Modifier = Modifier, now: List<String> = emptyList()) {
@@ -394,12 +394,12 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
     }
 }
 
-/** Метка дара в строке (4.6.3): знак Предначертания и имя дара [card] золотом - рядом с классом в списках. */
+/** Метка дара в строке: знак Предначертания и имя дара [card] золотом - рядом с классом в списках. */
 @Composable fun FateMark(card: FateCard, modifier: Modifier = Modifier) {
     Text("$SIGIL ${card.title}", modifier, color = FateInk.GoldLight, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
-/** Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом, «Сейчас действует» [now] (4.9.0) и предупреждение, что дар навсегда. */
+/** Свиток под лентой: узор ❧✦❧, описание дара серифом курсивом, «Сейчас действует» [now] и предупреждение, что дар навсегда. */
 @Composable private fun FateUnrolled(card: FateCard, now: List<String>) {
     Box(Modifier.fillMaxWidth().height(1.dp).background(FateInk.Rim))
     Column(
@@ -425,7 +425,7 @@ private fun nameSize(title: String): Int = when (title.split(' ', '-').maxOfOrNu
 }
 
 /**
- * «Сейчас действует» (4.9.0): заголовок гравировкой с чертой и строки дара [lines] с числами - числа золотом, как на макете.
+ * «Сейчас действует»: заголовок гравировкой с чертой и строки дара [lines] с числами - числа золотом.
  */
 @Composable private fun FateNow(lines: List<String>) {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -462,7 +462,7 @@ private const val EMBER_MS = 9_000
 private const val ALTAR_MS = 3_000
 private const val SIGIL_MS = 14_000
 
-/** Лента (4.6.3): уголь к краям, жар в середине; размер печати. */
+/** Лента: уголь к краям, жар в середине; размер печати. */
 private val RIBBON = listOf(FateInk.Face.first(), FateInk.Back.first(), FateInk.Face.first())
 private val RIBBON_SIGIL = 20.dp
 

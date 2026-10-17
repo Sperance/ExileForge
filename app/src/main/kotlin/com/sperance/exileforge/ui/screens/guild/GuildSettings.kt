@@ -26,7 +26,7 @@ private enum class Exit(val label: String, val question: String) {
 }
 
 /**
- * Меню «⋮» в шапке зала гильдии (4.4.x): выход - покинуть гильдию или, тому, кому таблица [GuildPolicy] даёт роспуск,
+ * Меню «⋮» в шапке зала гильдии: выход - покинуть гильдию или, тому, кому таблица [GuildPolicy] даёт роспуск,
  * распустить её; каждое спрашивается ещё раз ([ConfirmSheet]).
  */
 @Composable internal fun GuildExitMenu(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {
@@ -71,7 +71,7 @@ private enum class Exit(val label: String, val question: String) {
 }
 
 /**
- * The guild's settings (с 4.4.x раздел только главы - [com.sperance.exileforge.core.guild.GuildTab.SETTINGS]): the way in, the
+ * The guild's settings (раздел только главы - [com.sperance.exileforge.core.guild.GuildTab.SETTINGS]): the way in, the
  * level to join, the arms and the word to all. Выход - в меню шапки зала ([GuildExitMenu]).
  */
 @Composable internal fun SettingsTab(game: GameUi, vm: GuildViewModel, guild: GuildView, me: GuildMember?) {

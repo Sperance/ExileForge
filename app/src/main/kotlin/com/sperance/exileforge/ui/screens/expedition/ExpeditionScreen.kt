@@ -48,12 +48,17 @@ private const val CARD_DOWN = .28f
 private const val CARD_TOP = .48f
 
 /**
- * The expedition tab (2.76.0): the world map, the owner's pick «Пергамент» of three mockups.
+ * The expedition tab: the world map, the owner's pick «Пергамент» of three mockups.
  *
  * The zones are tokens on a parchment chart, linked from the start upward: a passed one is ticked,
  * an open one glows, the «???» one past it is dark with its level, and the fog hides the rest. The
  * map opens on the frontier; it drags and pinches, «+» and «−» zoom it and the crosshair flies back
  * to the frontier. A tapped token raises its card over the map's foot — the way into the zone.
+ *
+ * Сюжет - над картой с первого уровня, доска заданий читается и без раздела, если её ещё нет. Вкладка нажата снова - лист зоны закрывается.
+ * Первый кадр вкладки - голая карта, карта собирается, когда смена вкладки доехала ([TAB_SHIFT_MS]). Карта открывается там, где герой её
+ * оставил (на устройстве), впервые - на фронтире; камера запоминается после паузы, не на каждый кадр жеста. Зона шага сюжета - руническое
+ * кольцо без запросов.
  */
 @Composable fun ExpeditionScreen() {
     val game by koinViewModel<ExpeditionViewModel>().game.collectAsStateWithLifecycle()
@@ -63,11 +68,8 @@ private const val CARD_TOP = .48f
     val quests by questModel.quests.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) {
         vm.loadCampaign()
-        // Сюжет (4.2.0) - над картой с первого уровня: доска заданий читается и без раздела «Задания». 4.10.x - только если её
-        // ещё нет: шаг сюжета двигают сдача заданий и итоги захода, а они доску перечитывают сами
         if (game.heroId.isNotBlank()) questModel.glance()
     }
-    // Вкладка нажата снова (3.95.0): лист зоны закрывается, видна карта мира
     OnReselect(TAB_EXPEDITION) { vm.closeZone() }
     val index = game.index
     val progress = game.progress
@@ -77,8 +79,6 @@ private const val CARD_TOP = .48f
     }
     val campaign = index.campaign
     val world = remember(index, progress.cleared, progress.unlocked) { LastWorld.of(campaign, index.world, progress) }
-    // The tab answers the tap at once (3.77.0): its first frame is the bare chart. 4.10.x: карта собирается, когда смена вкладки
-    // доехала ([TAB_SHIFT_MS]) - не посреди анимации, где кадр делят два экрана
     var settled by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         withFrameNanos { }
@@ -92,14 +92,11 @@ private const val CARD_TOP = .48f
     val launch = expedition.launch?.takeIf { world.token(it.mapCode) != null }
     val stash = remember(game.hero?.items, index) { stashCounts(game) }
     BackHandler(launch != null) { vm.closeZone() }
-    // The map opens where the hero left it (4.6.5, настройки устройства), впервые - на фронтире; a zone picked elsewhere — a map's
-    // sheet in the stash — is flown to above its card.
     LaunchedEffect(camera, camera.viewport) {
         if (camera.placed || camera.viewport == IntSize.Zero) return@LaunchedEffect
         val kept = vm.worldView(game.heroId)?.takeIf { launch == null }
         if (kept != null) camera.restore(kept) else camera.look(world.frontier(), WorldCamera.HOME, if (launch != null) CARD_DOWN else .5f)
     }
-    // Камера запоминается, когда встала (4.6.5): запись на устройство - после паузы, не на каждый кадр жеста.
     LaunchedEffect(camera, game.heroId) {
         snapshotFlow { if (camera.placed) camera.view() else null }.filterNotNull().distinctUntilChanged().collectLatest { view ->
             delay(KEEP_VIEW_MS)
@@ -115,11 +112,9 @@ private const val CARD_TOP = .48f
         if (!settled) {
             Box(Modifier.fillMaxSize().background(CHART_BARE))
         } else {
-            // Зона текущего шага сюжета (4.7.0) - руническим кольцом; шаг берётся из доски заданий и контента, без запросов
             val story = quests.board?.let { board -> game.index?.quests?.story?.getOrNull(board.chapter)?.steps?.getOrNull(board.step)?.zone?.value?.takeIf { it != com.sperance.exileforge.rules.content.MapCode.NONE.value } }
             WorldCanvas(world, art, camera, launch?.mapCode?.value, stash, Modifier.fillMaxSize(), story = story) { code -> if (code == null) vm.closeZone() else vm.selectZone(code) }
         }
-        // Голова карты (4.2.0): шапка, под ней справа - кнопка сюжета (4.6.5, вместо карточки над картой) и масштаб
         Column(Modifier.align(Alignment.TopCenter).fillMaxWidth()) {
             WorldBar(
                 Modifier,
@@ -135,7 +130,7 @@ private const val CARD_TOP = .48f
 }
 
 /**
- * Последняя карта мира (3.88.9): вход на вкладку с тем же прогрессом берёт её же, и с ней - уже измеренные надписи
+ * Последняя карта мира: вход на вкладку с тем же прогрессом берёт её же, и с ней - уже измеренные надписи
  * холста, так что «Поход» не строит и не меряет мир на каждое нажатие.
  */
 private object LastWorld {
@@ -146,7 +141,7 @@ private object LastWorld {
         ?: WorldMap(campaign, graph, progress).also { last = Triple(graph, progress, it) }
 }
 
-/** The map's head: the title and the way back to the frontier (счётчик пройденного убран в 4.4.x). */
+/** The map's head: the title and the way back to the frontier. */
 @Composable private fun WorldBar(modifier: Modifier, onFrontier: () -> Unit) {
     Row(
         modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Ink.copy(alpha = .92f), Ink.copy(alpha = 0f))))
@@ -177,7 +172,7 @@ private object LastWorld {
 
 private const val ZOOM_STEP = 1.35f
 
-/** Сколько камера стоит, прежде чем запомниться (4.6.5), мс. */
+/** Сколько камера стоит, прежде чем запомниться, мс. */
 private const val KEEP_VIEW_MS = 600L
 
 /** The chart's own colour, shown for the one frame before the map is laid out. */

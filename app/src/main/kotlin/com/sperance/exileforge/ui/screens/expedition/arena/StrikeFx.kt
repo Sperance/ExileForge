@@ -27,10 +27,6 @@ import kotlin.math.cos
 import kotlin.math.max
 import kotlin.math.sin
 
-// ==================== «Кто кого бьёт» (4.9.3, макет «Стороны», вариант C) ====================
-// Сцена удара - доля 0..1 окна [StrikeView.progress]: карта бьющего в выпаде первую треть, чары летят [FLIGHT], у цели - вспышка
-// и тряска [IMPACT]. Всё - отклик боя: идёт всегда, без LocalMotion, и без выделений, кроме кистей в миг удара.
-
 /** Доля сцены, что карта бьющего вынесена к цели: выпад правил - треть сцены из трёх выпадов. */
 private const val LUNGE = 1f / 3
 
@@ -108,8 +104,12 @@ private fun strikeTint(strike: StrikeView): Color = when {
 }
 
 /**
- * Удары поверх боя (4.9.3): атака - вспышка-разрез на цели, чары - снаряд цвета стихии от бьющего к цели и вспышка; все
+ * Удары поверх боя: атака - вспышка-разрез на цели, чары - снаряд цвета стихии от бьющего к цели и вспышка; все
  * одновременные удары, каждый своим местом на цели. [card] - рамка карты стороны (герой - `null`, враг - его номер).
+ *
+ * Сцена удара - доля 0..1 окна [StrikeView.progress]: карта бьющего в выпаде первую треть, чары летят [FLIGHT], у цели - вспышка и тряска
+ * [IMPACT]. Отклик боя: идёт всегда, без `LocalMotion`, и без выделений, кроме кистей в миг удара; одновременные удары по одной цели - бок
+ * о бок.
  */
 @Composable internal fun StrikeFx(fight: FightHud, frame: FightFrame, card: (Int?) -> Rect?, origin: Offset) {
     val strikes = fight.strikes
@@ -120,7 +120,6 @@ private fun strikeTint(strike: StrikeView): Color = when {
             val strike = strikes[i]
             val from = card(if (strike.actor == Side.HERO) null else strike.foe) ?: continue
             val to = card(if (strike.target == Side.HERO) null else strike.foe) ?: continue
-            // Одновременные удары по одной цели (тот же миг) - бок о бок, а не друг на друге
             var place = 0
             var together = 0
             for (j in strikes.indices) {
@@ -146,7 +145,6 @@ private fun DrawScope.slash(strike: StrikeView, p: Float, at: Offset, height: Fl
     val grow = (t / .35f).coerceAtMost(1f)
     val fade = (1 - t) * (if (strike.landed) 1f else .5f)
     val half = height * .3f
-    // −35°: из правого верха в левый низ
     val dir = Offset(SLASH_X, SLASH_Y)
     val start = at - dir * half
     val end = start + dir * (2 * half * grow)
@@ -181,7 +179,7 @@ private fun DrawScope.bolt(strike: StrikeView, p: Float, from: Offset, to: Offse
 }
 
 /**
- * Красная виньетка по краю экрана (4.9.3), пока попадание по герою свежо: угроза читается боковым зрением. Отклик боя -
+ * Красная виньетка по краю экрана, пока попадание по герою свежо: угроза читается боковым зрением. Отклик боя -
  * всегда, но мягко.
  */
 @Composable internal fun HitVignette(fight: FightHud, frame: FightFrame) {
@@ -208,7 +206,7 @@ private fun DrawScope.bolt(strike: StrikeView, p: Float, from: Offset, to: Offse
     }
 }
 
-/** Тон сторон арены (4.9.3): верх - красноватый (враги), низ - зелёно-золотой (герой), середина чиста. Кисть одна на приложение. */
+/** Тон сторон арены: верх - красноватый (враги), низ - зелёно-золотой (герой), середина чиста. Кисть одна на приложение. */
 private val SideTint = Brush.verticalGradient(
     0f to LifeRed.copy(alpha = .09f),
     .42f to Color.Transparent,
@@ -216,5 +214,5 @@ private val SideTint = Brush.verticalGradient(
     1f to Gold.copy(alpha = .1f),
 )
 
-/** Арена поделена тоном сторон (4.9.3): отклик боя, мягкий и всегда. */
+/** Арена поделена тоном сторон: отклик боя, мягкий и всегда. */
 internal fun Modifier.sideTint(): Modifier = drawBehind { drawRect(SideTint) }

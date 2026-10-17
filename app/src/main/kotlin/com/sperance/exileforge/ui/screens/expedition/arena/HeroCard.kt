@@ -49,9 +49,12 @@ import kotlin.math.sin
  * every state on them, and whom the next blow goes to — the player's pick or the class's rule.
  * Lifted and lit in gold while they swing; ringed in blood while struck.
  *
- * Полки эффектов (4.9.3, макет «Полки эффектов», вариант C): слева у портрета - рельс «на весь бой» (итог здоровья в секунду
+ * Полки эффектов: слева у портрета - рельс «на весь бой» (итог здоровья в секунду
  * сверху, ауры и пассивные умения, носимые баффы, строки карты [mods], дары ✦), внизу карточки - временная полка (оглушение,
  * недуги, глотки, проклятия, заряды). Касание любой полки открывает лист всех эффектов.
+ *
+ * Замах (последние 30% - рамка золотом), выпады и тряска - в рисовании кадра ([FightFrame]). Запас, что ауры держат целиком, - полной
+ * штрихованной полосой. Временная полка - под портретом во всю ширину.
  */
 @Composable internal fun HeroCard(
     game: GameUi,
@@ -69,8 +72,6 @@ import kotlin.math.sin
     var effectsOpen by remember { mutableStateOf(false) }
     val live = fight.outcome == null
 
-    // Замах и удары (4.9.3): последние 30% замаха - рамка наливается золотом, выпад - каждым своим ударом, тряска - каждым по нему.
-    // Всё это - в рисовании кадра ([FightFrame]): карточка не перекомпонуется на каждом шаге боя
     fun swing() = if (live) frame.heroSwing(fight) else 0f
     fun acting() = strikeReach(fight, frame.now(fight), Side.HERO, null, swing = swing(), held = fight.heroHeld)
     fun flash() = strikeFlash(fight, frame.now(fight), Side.HERO, null)
@@ -135,15 +136,11 @@ import kotlin.math.sin
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f),
                         )
-                        // The hero's own mark (2.72.0): the taunt's seal, opening its window on a tap.
                         fight.heroProvoke?.let { provoke -> TauntSeal(frame, Modifier.size(22.dp)) { tauntTip(provoke) } }
                     }
-                    // The pools as bars of their own (3.24.0): the shield over life, mana under it, each with its figures and share.
                     if (hud.heroMaxShield > 0) VitalBar(fight.heroShield, hud.heroMaxShield, ShieldCyan, Modifier.fillMaxWidth().height(16.dp))
                     VitalBar(fight.heroLife, hud.heroMaxLife, LifeRed, Modifier.fillMaxWidth().height(18.dp), ring = GoldBright.takeIf { fight.heroBarrier > 0 })
-                    // A pool the auras hold whole is still drawn: a full hatched bar.
                     if (fight.heroMaxMana + fight.heroReserved.coerceAtLeast(0) > 0) VitalBar(fight.heroMana, fight.heroMaxMana, ManaBlue, Modifier.fillMaxWidth().height(16.dp), reserved = fight.heroReserved)
-                    // The hero's own buildups (3.78.0): the foes stun and freeze by the same bars.
                     fight.heroBuildup?.let { BuildupBar(it, Modifier.fillMaxWidth()) }
                     SwingBar({ swing() }, fight.heroHeld, Modifier.fillMaxWidth())
                     val target = fight.target?.let(names::get)
@@ -159,7 +156,6 @@ import kotlin.math.sin
                 }
             }
         }
-        // Временная полка (4.9.3) - под портретом, во всю ширину карточки; под рельсом - «все эффекты» (4.10.x, макет «Эффекты в бою», вариант A)
         Row(Modifier.fillMaxWidth().height(30.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(RAIL_GAP)) {
             AllEffects(timed.size + lasting.size, Modifier.width(RAIL).fillMaxHeight(), openEffects)
             if (timed.isEmpty()) {
@@ -172,7 +168,7 @@ import kotlin.math.sin
     if (effectsOpen) EffectsSheet(ui("fight.shelf.hero"), timed, lasting, fight.heroFlow) { effectsOpen = false }
 }
 
-/** Мини-кнопка «все эффекты» (4.10.x): «≡» и сколько эффектов на герое; касание - лист всех эффектов, бой идёт. */
+/** Мини-кнопка «все эффекты»: «≡» и сколько эффектов на герое; касание - лист всех эффектов, бой идёт. */
 @Composable internal fun AllEffects(count: Int, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(8.dp)
     val label = ui("fight.shelf.all", count)
@@ -193,7 +189,7 @@ private val RAIL_PAD = 6.dp
 private val RAIL_GAP = 8.dp
 
 /**
- * Рельс слева и содержимое справа (4.9.3): высоту задаёт содержимое, рельс получает ровно её - столбец плиток не растит карточку,
+ * Рельс слева и содержимое справа: высоту задаёт содержимое, рельс получает ровно её - столбец плиток не растит карточку,
  * лишнее уходит в «+N».
  */
 @Composable private fun Railed(rail: @Composable () -> Unit, content: @Composable () -> Unit) {

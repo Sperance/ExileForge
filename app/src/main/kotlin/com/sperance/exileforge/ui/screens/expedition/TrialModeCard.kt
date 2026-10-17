@@ -46,7 +46,7 @@ import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.glow
 
-/** Режимы испытаний (4.0.0, макет «Скрижали»): у каждого свой цвет медальона и знак. */
+/** Режимы испытаний: у каждого свой цвет медальона и знак. */
 enum class TrialMode(val accent: Color, val icon: ImageVector, private val title: String) {
     RIFT(Color(0xFF39FF88), ForgeGlyphs.Rift, "rift.title"),
     TOWER(Rune, ForgeGlyphs.Keep, "trials.tower_title"),
@@ -57,7 +57,7 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
 }
 
 /**
- * Плита режима (4.0.0, макет «Скрижали»): медальон в цвете режима с вращающейся пунктирной орбитой, имя серифами, строка
+ * Плита режима: медальон в цвете режима с вращающейся пунктирной орбитой, имя серифами, строка
  * сути и плашка ключа; по плите пробегает блик со сдвигом [phase] круга, чтобы плиты не мигали разом. Касание раскрывает
  * [details] - вход и подробности; шеврон поворачивается. Декор стоит, когда анимации выключены.
  */
@@ -104,10 +104,13 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
     }
 }
 
-/** Медальон: знак режима в круге его цвета, вокруг - пунктирная орбита, оборот за 18 с. */
+/**
+ * Медальон: знак режима в круге его цвета, вокруг - пунктирная орбита, оборот за 18 с.
+ *
+ * Фаза читается в рисовании: орбита идёт без перекомпоновки.
+ */
 @Composable private fun Medallion(mode: TrialMode) {
     val accent = mode.accent
-    // Фаза читается в рисовании (4.9.0): орбита идёт без перекомпоновки
     val orbit = motionPhase(ORBIT_MS)
     Box(Modifier.size(MEDALLION.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
@@ -124,9 +127,12 @@ enum class TrialMode(val accent: Color, val icon: ImageVector, private val title
     }
 }
 
-/** Блик плиты: светлая косая полоса раз в 5 с, со сдвигом [phase] круга. */
+/**
+ * Блик плиты: светлая косая полоса раз в 5 с, со сдвигом [phase] круга.
+ *
+ * Фаза читается в рисовании: блик бежит без перекомпоновки плиты.
+ */
 @Composable private fun Modifier.sweep(phase: Float): Modifier {
-    // Фаза читается в рисовании (4.9.0): блик бежит без перекомпоновки плиты
     val clock = motionPhase(SWEEP_MS)
     return drawWithContent {
         drawContent()

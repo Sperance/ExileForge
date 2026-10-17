@@ -8,13 +8,13 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.withTimeoutOrNull
 import java.io.IOException
 
-/** Хранилище ключей устройства не ответило вовремя (3.81.3): секрет есть, но прочесть или запечатать его сейчас нельзя. */
+/** Хранилище ключей устройства не ответило вовремя: секрет есть, но прочесть или запечатать его сейчас нельзя. */
 class SecretsUnavailable : IOException(ui("secrets.unavailable"))
 
 /**
- * [SecretBox] за ограниченным вызовом (3.81.3). Каждое запечатывание и вскрытие - binder-вызов в хранилище ключей
- * устройства; на части телефонов он виснет насовсем, а на главном потоке при запуске замораживал весь старт - окно
- * запуска стояло над мёртвым кадром. Теперь вызов идёт в своём потоке и ждётся не дольше [LIMIT_MS]: зависший
+ * [SecretBox] за ограниченным вызовом. Каждое запечатывание и вскрытие - binder-вызов в хранилище ключей
+ * устройства; на части телефонов он виснет насовсем, а на главном потоке при запуске заморозил бы весь старт. Поэтому
+ * вызов идёт в своём потоке и ждётся не дольше [LIMIT_MS]: зависший
  * остаётся позади (binder-вызов не отменить), а вместо ответа бросается [SecretsUnavailable].
  */
 class SecretVault(private val box: Box = Box.Keystore) {
@@ -33,7 +33,7 @@ class SecretVault(private val box: Box = Box.Keystore) {
 
     suspend fun seal(plain: String): String = bounded { box.seal(plain) }
 
-    /** null - значение больше не вскрывается (ключ ушёл вместе с данными приложения), как и прежде. */
+    /** null - значение больше не вскрывается (ключ ушёл вместе с данными приложения). */
     suspend fun open(sealed: String): String? = bounded { box.open(sealed) }
 
     private suspend fun <T> bounded(call: () -> T): T {

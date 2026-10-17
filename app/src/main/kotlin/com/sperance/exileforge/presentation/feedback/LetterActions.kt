@@ -13,7 +13,7 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 
 /**
- * Почта между героями (4.6.3, сервер `mail/letter`): одно место для ящика, карточки игрока и гильдии. Окно письма открывается
+ * Почта между героями (сервер `mail/letter`): одно место для ящика, карточки игрока и гильдии. Окно письма открывается
  * черновиком [LetterDraft] в [FeedbackRepository] - его рисует хозяин окна поверх всего; адресата вводом не задают. Пределы,
  * немоту и право писать решает сервер: квота окна - его же [com.sperance.exileforge.rules.content.MailRules.gate].
  * Письмо - команда транспорта с `Idempotency-Key`, как прочая почта (героя письмо не меняет - мимо `HeroActions`), но в очереди

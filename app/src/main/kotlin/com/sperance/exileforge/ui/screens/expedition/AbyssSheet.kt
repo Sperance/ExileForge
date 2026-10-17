@@ -33,16 +33,18 @@ import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * Расщелина Бездны (2.82.0; 4.9.0 - «копилка» стала «наградой Расщелины»): до спуска - глубина, первая волна и награда, если
+ * Расщелина Бездны: до спуска - глубина, первая волна и награда, если
  * забрать её на дне; между ступенями - награда, если забрать сейчас, волна ниже с вожаком и награда на следующей ступени, и
  * выбор: забрать и уйти или спуститься глубже. Под выбором - строка «растёт с каждой ступенью, уйдёшь - заберёшь, погибнешь -
- * потеряешь всё». После - что принесла награда: её бросает сервер, показ - по его ответу (server 1.30.0). Между ступенями
+ * потеряешь всё». После - что принесла награда: её бросает сервер, показ - по его ответу. Между ступенями
  * видны жизнь, щит и мана героя и пояс фляг: что от них осталось, то и встретит следующую волну.
+ *
+ * «Мягкий»: приподнятый фон и скругление 22 dp, без рамки и свечения. Между глубинами - герой, каким его оставила волна, и глоток до
+ * следующей.
  */
 @Composable internal fun AbyssSheet(game: GameUi, hud: RunHud, view: AbyssView, onCommand: (RunCommand) -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Ink.copy(alpha = .85f), Ink))), contentAlignment = Alignment.BottomCenter) {
         Column(
-            // «Мягкий» (3.88.3): приподнятый фон и скругление 22 dp, без рамки и свечения.
             Modifier.fillMaxWidth().navigationBarsPadding().padding(12.dp)
                 .background(PanelRaised.copy(alpha = .97f), RoundedCornerShape(22.dp))
                 .padding(16.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
@@ -58,7 +60,6 @@ import com.sperance.exileforge.ui.theme.*
                 )
             }
             val hoard = view.hoard
-            // Between depths (2.82.0): the hero as the last wave left them, and a draught before the next.
             if (view.open && hoard == null && !view.fallen) {
                 Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks) { onCommand(RunCommand.Drink(it)) }
@@ -108,10 +109,13 @@ import com.sperance.exileforge.ui.theme.*
     }
 }
 
-/** The sheet's choice: open the crack or leave it; between depths take the hoard or go deeper; after, back to the map. */
+/**
+ * The sheet's choice: open the crack or leave it; between depths take the hoard or go deeper; after, back to the map.
+ *
+ * Отойти можно только от неоткрытой трещины: никогда - с копилкой на кону.
+ */
 @Composable private fun Actions(view: AbyssView, onCommand: (RunCommand) -> Unit) {
     val deep = ButtonDefaults.buttonColors(containerColor = Color(0xFF3A1F66), contentColor = GoldBright)
-    // Stepping away is for a crack not yet opened: never with a hoard at stake.
     val away: @Composable () -> Unit = {
         ForgeTextButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.fillMaxWidth()) {
             Text(ui(if (view.open) "abyss.leave" else "abyss.later"), color = Muted)

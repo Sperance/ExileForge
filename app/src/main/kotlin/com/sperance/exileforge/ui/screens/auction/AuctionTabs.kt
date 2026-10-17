@@ -64,15 +64,16 @@ import com.sperance.exileforge.ui.theme.*
  * no rolls, and its line is the lot's own: the item's icon, its name and how many.
  *
  * Rarity is not written anywhere: it is the frame of the icon and the colour of the name.
+ *
+ * Вердикт правил о шаблоне, как в тайнике: лот, который не надеть, говорит почему; свойства легенд свёрнуты, пока игрок не велел их
+ * раскрывать.
  */
 @Composable internal fun LotRow(game: GameUi, lot: AuctionLot, mark: String?, withSeller: Boolean = true, onClick: () -> Unit) {
     val inspect = rememberInspect()
     val price: @Composable RowScope.() -> Unit = { LotPrice(lot) { inspect(Inspect.Stack(lot.priceOrb)) } }
     val seller = listOfNotNull(sellerName(lot).takeIf { withSeller })
     val view = lot.equipment?.let { game.view(it) }
-    // The rules' verdict on the template, as the stash marks it: a lot the buyer cannot wear yet says why instead of its facts.
     if (view != null) {
-        // Свойства легенд свёрнуты (4.8.0), пока игрок не велел раскрывать их в фильтрах.
         val lines = LineFold.legend(view, LocalSettings.current.legendsOpen)
         ItemTradeRow(view, enabled = !game.busy, unmet = lotUnmet(game, lot), extra = seller, mark = mark, lines = lines, onClick = onClick, price = price)
     } else {
@@ -90,7 +91,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /**
- * Цена лота в ярлыке «Ценника» (3.88.6): сфера в своём стекле (2.69.0) - простой знак, если рисунка нет, - число и имя сферы,
+ * Цена лота в ярлыке «Ценника»: сфера в своём стекле - простой знак, если рисунка нет, - число и имя сферы,
  * ведь стёкла младших сфер похожи; нажатие на известную сферу открывает её.
  */
 @Composable internal fun RowScope.LotPrice(lot: AuctionLot, onOrb: () -> Unit) {
@@ -108,7 +109,7 @@ import com.sperance.exileforge.ui.theme.*
     )
 }
 
-/** How long an own lot still stands (server 1.30.0): days and hours, hours and minutes on its last day; null when it names no end. */
+/** How long an own lot still stands: days and hours, hours and minutes on its last day; null when it names no end. */
 internal fun lotExpiry(lot: AuctionLot): String? {
     if (lot.returning) return ui("auction.returning")
     val minutes = ((lot.timeLeft() ?: return null) + 59_999) / 60_000
@@ -154,6 +155,9 @@ internal fun stackFacts(game: GameUi, lot: AuctionLot): List<String> = listOf(if
  *
  * The copy travels inside the lot, rolls and all, and its template is in the content every hero
  * reads once: looking at a lot costs no request at all.
+ *
+ * Сравнение с надетым: лот несёт копию целиком - итог «если надеть» и требования, как у торговца. Цена - в сферах; продавец открывает
+ * карточку игрока.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,7 +177,6 @@ internal fun LotSheet(
         LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(.9f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             if (copy != null && view != null) {
                 item {
-                    // Сравнение с надетым (4.6.5): лот несёт копию целиком - итог «если надеть» и требования, как у торговца
                     ItemCard(
                         view,
                         enabled = false,
@@ -189,9 +192,7 @@ internal fun LotSheet(
                     Engraved(ui("auction.lot"))
                     if (view == null) Text(lot.title, color = Gold, style = MaterialTheme.typography.titleMedium)
                     if (lot.kind == LotKind.ITEM) PropertyRow(ui("auction.amount"), lot.amount.toString(), Glyph.ITEM)
-                    // The price is always counted in orbs; the content gives the orb its name.
                     PropertyRow(ui("card.price"), orbPrice(lot), Glyph.CURRENCY)
-                    // Продавец открывает карточку игрока (4.5.1)
                     Box(Modifier.opensPlayer(lot.sellerId)) { PropertyRow(ui("auction.seller"), sellerName(lot), Glyph.CHARACTER) }
                     listedAt(lot.createdAt)?.let { PropertyRow(ui("auction.listed_at"), it, Glyph.LEVEL) }
                     note?.let { MutedText(it, style = MaterialTheme.typography.labelMedium) }

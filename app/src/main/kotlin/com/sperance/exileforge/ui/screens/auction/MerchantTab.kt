@@ -49,24 +49,25 @@ import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * The merchant (since 2.36.0, server 0.34.0): a shelf of items the server rolled for this hero,
+ * The merchant: a shelf of items the server rolled for this hero,
  * sold for gold, new every few hours and never sooner. The price is the server's — what the
  * merchant would pay for the item, several times over — and buying asks first, held.
  *
- * An offer is a copy like any in the stash (3.0.0): its view over the content draws it, and the
+ * An offer is a copy like any in the stash: its view over the content draws it, and the
  * rules say whether this hero could wear it.
  *
- * Under the header, the orb shelf (3.15.0, server 1.13.0): lesser orbs for gold, each one of a kind
+ * Under the header, the orb shelf: lesser orbs for gold, each one of a kind
  * dearer than the last until the shelf renews with the wares.
  *
- * It left the auction's tabs in 3.22.0 for a building of the City of its own.
+ * It has a building of the City of its own, apart from the auction's tabs.
+ *
+ * Полка едет в снимке героя: вход лишь освежает остывшего героя.
  */
 @Composable fun MerchantScreen() {
     val game by koinViewModel<MarketViewModel>().game.collectAsStateWithLifecycle()
     val heroModel: HeroViewModel = koinViewModel()
     val market = koinViewModel<MarketViewModel>()
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Полка едет в снимке героя (3.94.1): вход лишь освежает героя, если он остыл.
         LaunchedEffect(game.heroId, game.sessionEpoch) {
             if (game.heroId.isNotBlank()) heroModel.ensure()
         }
@@ -77,7 +78,10 @@ import org.koin.compose.viewmodel.koinViewModel
 /**
  * «Шапка и вкладки» (variant A): the gold, the time to the next shelf and the loot filter in one strip; the notes behind
  * the header's (i); the wares and the orbs as two halves of one switch, so the first item is in sight at once.
- * С 3.90.3 под шапкой только кошелёк: время до нового товара - первой строкой списка, фильтр добычи - автопродажа тайника.
+ * Под шапкой только кошелёк: время до нового товара - первой строкой списка, фильтр добычи - автопродажа тайника.
+ *
+ * Копия без шаблона в контенте не показывается. Товар - под общим фильтром предметов. Таймер на нуле - витрина и полка сфер перечитываются,
+ * карточка ушедшего товара закрывается. Шапка и полоса кошелька уходят при прокрутке, вкладки остаются; трофеи боссов - над товаром.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -87,14 +91,11 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     var chosen by remember { mutableStateOf<MerchantOffer?>(null) }
     var notes by remember { mutableStateOf(false) }
     var orbsShelf by rememberSaveable { mutableStateOf(false) }
-    // The orb a tap on its glass or name opened: what it is for, before it is bought - общей карточкой (4.3.2).
     val inspect = rememberInspect()
     val stock = game.hero?.merchant
     val money = game.hero?.money
-    // A copy whose template the content does not hold cannot be drawn, and is not offered.
     val offers = remember(stock?.offers, game.index, game.world) { stock?.offers.orEmpty().mapNotNull { offer -> game.view(offer.item)?.let { offer to it } } }
     val orbs = stock?.orbs.orEmpty()
-    // Товар - под общим фильтром предметов (4.2.0, [ItemShelf.MERCHANT]): цена - торговца, порядок «новые» - полки.
     val filterState = rememberItemFilter(ItemShelf.MERCHANT)
     var filtering by remember { mutableStateOf(false) }
     val prices = remember(offers) { offers.associate { (offer, view) -> view.id to offer.price } }
@@ -102,8 +103,6 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     val shelf = { draft: ItemFilter -> game.itemShelf(wares, ItemShelf.MERCHANT, draft) { prices[it.id] } }
     val visible = remember(offers, filterState.filter, game.hero) { shelf(filterState.filter).map { it.id } }
     val byId = remember(offers) { offers.associateBy { it.first.item.id } }
-    // Таймер дошёл до нуля (4.12.x, ASANA-04): витрина и полка сфер перечитываются сами, пока экран открыт; открытая карточка
-    // товара, которого больше нет, закрывается
     stock?.refreshAt?.takeIf { it > 0 }?.let { at ->
         LaunchedEffect(at) {
             delay((at - serverNow()).coerceAtLeast(0) + RENEW_SLACK_MS)
@@ -113,7 +112,6 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     LaunchedEffect(stock?.offers) {
         if (chosen != null && stock?.offers.orEmpty().none { it.id == chosen?.id }) chosen = null
     }
-    // Шапка и полоса кошелька уходят при прокрутке вниз (3.88.9), вкладки остаются.
     CollapsibleHeader {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -150,9 +148,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
                     }
                 }
             } else {
-                // Таймер обновления (3.90.3) - шапка списка товаров: тикает и уходит с прокруткой.
                 stock?.refreshAt?.takeIf { it > 0 }?.let { at -> item(key = "renews") { RenewalRow(at) } }
-                // Трофеи боссов (4.6.0, Предначертание «Трофейщик») - над товаром
                 if (game.hero?.info?.trophies.orEmpty().isNotEmpty()) item(key = "trophies") { TrophyShelf(game, busy, market::tradeTrophy) }
                 if (stock != null && offers.isEmpty()) item { InfoCard(ui("merchant.empty"), ui("merchant.empty_hint")) }
                 if (offers.isNotEmpty()) item(key = "filter") { ItemFilterBar(filterState, visible.size, onOpen = { filtering = true }) }
@@ -181,7 +177,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     }
 }
 
-/** Кошелёк под шапкой (3.90.3): таймер товара ушёл шапкой списка, фильтр добычи - автопродажей тайника. */
+/** Кошелёк под шапкой: таймер товара ушёл шапкой списка, фильтр добычи - автопродажей тайника. */
 @Composable private fun MerchantPurse(money: Long) {
     val shape = RoundedCornerShape(12.dp)
     Row(Modifier.fillMaxWidth().depthPanel(shape).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -189,7 +185,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     }
 }
 
-/** «Новый товар через 2:14:03» (3.90.3): первая строка списка товаров, тикает раз в секунду по часам устройства. */
+/** «Новый товар через 2:14:03»: первая строка списка товаров, тикает раз в секунду по часам устройства. */
 @Composable private fun RenewalRow(at: Long) {
     val now by produceState(serverNow(), at) {
         while (true) {
@@ -232,7 +228,9 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
 
 /**
  * One orb on the shelf: its glass and name (a tap on them opens the orb), how many the bag holds, and the button with the next price.
- * Цена - чип «цена / есть» на кнопке (0.14.5, #42, [GoldCost]); не хватает - цена красная, кнопка погашена.
+ * Цена - чип «цена / есть» на кнопке ([GoldCost]); не хватает - цена красная, кнопка погашена.
+ *
+ * Запас окна - сколько ещё на полке, угольным, когда пусто; нехватка золота - недостачей счёта.
  */
 @Composable private fun OrbRow(orb: MerchantOrb, bill: GoldBill?, have: Long?, enabled: Boolean, onInfo: () -> Unit, onBuy: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -245,9 +243,7 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(itemTitle(orb.code), style = MaterialTheme.typography.bodyMedium)
                 have?.let { MutedText(ui("merchant.orb_have", it)) }
-                // The window's stock (3.24.0): how many more the shelf holds, in ember once it holds none.
                 orb.left?.let { Text(ui("merchant.orb_left", it), color = if (it > 0) Muted else Ember, style = MaterialTheme.typography.labelSmall) }
-                // Нехватка золота (0.14.5, #42) - недостачей счёта, пока полка не пуста
                 bill?.takeUnless { it.affordable || orb.soldOut }?.let { Text(it.shortText(), color = LifeRed, style = MaterialTheme.typography.labelSmall) }
             }
         }
@@ -256,11 +252,13 @@ private fun MerchantNotes(onDismiss: () -> Unit) {
 }
 
 /**
- * An offer's full card (since 2.40.0): the item as the stash would show it, scrolling, and under it
+ * An offer's full card: the item as the stash would show it, scrolling, and under it
  * the one way to buy it — a button held for the price. Short of gold, it says so and the button
- * stays off (2.46.0); what wearing it would change is added up here, as on a stash card.
+ * stays off; what wearing it would change is added up here, as on a stash card.
  *
- * Общая для любого товара за золото (4.2.0): лавка Города и странствующий торговец карты.
+ * Общая для любого товара за золото: лавка Города и странствующий торговец карты.
+ *
+ * Цена против кошелька одним чипом; не хватает - кнопка пишет недостачу и гаснет.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -273,7 +271,6 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, onDismiss
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                // Цена против кошелька одним чипом (0.14.5, #42); не хватает - кнопка пишет недостачу и гаснет
                 val bill = game.goldBill(price)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     MutedText(ui("merchant.gold"), Modifier.weight(1f))

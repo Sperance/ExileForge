@@ -22,7 +22,7 @@ private val HeroPage.label: String get() = when (this) {
 }
 
 /**
- * Полоса разделов вкладки «Герой» в оболочке (3.90.5): герой сам - в шапке игры ([com.sperance.exileforge.ui.ForgeBanner]),
+ * Полоса разделов вкладки «Герой» в оболочке: герой сам - в шапке игры ([com.sperance.exileforge.ui.ForgeBanner]),
  * здесь только четыре раздела его вещей; раздел запоминает модель героя. Вне вкладки героя полосы нет.
  */
 @Composable fun HeroChrome(tab: Int) {
@@ -33,7 +33,7 @@ private val HeroPage.label: String get() = when (this) {
 }
 
 /**
- * Полоса разделов героя (3.92.0, макет A): персонаж, надетое, тайник и сумка - вдавленная дорожка [PillTabs], как вкладки
+ * Полоса разделов героя: персонаж, надетое, тайник и сумка - вдавленная дорожка [PillTabs], как вкладки
  * везде в игре, прямо на фоне экрана, без своей подложки и черты.
  */
 @Composable fun HeroPageStrip(selected: HeroPage, onSelect: (HeroPage) -> Unit) {

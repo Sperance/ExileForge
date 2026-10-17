@@ -19,7 +19,7 @@ import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 
 /**
- * Сторож главного потока (3.82.0). Фоновый поток раз в секунду ставит в очередь главного потока отметку; не выполнилась
+ * Сторож главного потока. Фоновый поток раз в секунду ставит в очередь главного потока отметку; не выполнилась
  * за [STALL_MS] - поток завис: его стек, шаги запуска ([StartupTrace]) и версия пишутся в файл. Завис намертво - отчёт
  * всё равно на диске, и следующий запуск сам отправляет его баг-репортом ([pending]/[sent]). Одно зависание - один отчёт.
  * Отправленный отчёт остаётся последним ([diagnostics]): игрок копирует его из окна запуска вместе со стеками всех потоков.
@@ -50,6 +50,10 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         if (on) woken.signalAll()
     }
 
+    /**
+     * Сторож проспал больше пары тиков - процесс стоял целиком (заморозка свёрнутого приложения): главный поток не виноват, отсчёт идёт
+     * заново.
+     */
     private fun watch() {
         while (true) {
             gate.withLock { while (!awake) woken.await() }
@@ -62,8 +66,6 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
             while (!answered.get()) {
                 Thread.sleep(TICK_MS)
                 val now = SystemClock.uptimeMillis()
-                // Сторож проспал больше пары тиков - процесс стоял целиком (заморозка свёрнутого приложения, 3.84.0):
-                // главный поток не виноват, отсчёт идёт заново, иначе разморозка пишет «зависание» на всю паузу.
                 if (now - tick > PAUSE_MS || !awake) since = now
                 tick = now
                 val stalled = now - since
@@ -94,11 +96,14 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
         }
     }
 
-    /** Отчёт о прошлом зависании, ещё не отправленный; null - его нет. */
+    /**
+     * Отчёт о прошлом зависании, ещё не отправленный; null - его нет.
+     *
+     * Краткая причина - верх стека главного потока - прямо в тексте отчёта.
+     */
     suspend fun pending(): BugReportRequest? = withContext(Dispatchers.IO) {
         val text = file.takeIf { it.isFile }?.readText() ?: return@withContext null
         val head = text.substringBefore("\n---\n").lines()
-        // Краткая причина - верх стека главного потока (его заголовок и первые кадры) - прямо в тексте отчёта
         val reason = text.substringAfter("\n---\n", "").lines().filter { it.isNotBlank() }.take(REASON_LINES)
         BugReportRequest(
             text = (listOf(ui("stall.title") + " ${head.getOrNull(1).orEmpty()} ms") + reason).joinToString("\n"),
@@ -132,7 +137,7 @@ class StallWatchdog(context: Context, private val trace: StartupTrace, private v
 
     /**
      * Стеки потоков: главный первым, затем занятые. Простаивающие (ждут очередь, сообщений или сокета пула) сведены в одну
-     * строку именами (3.87.0): журнал, вставленный в чат, не обрезается на них.
+     * строку именами: журнал, вставленный в чат, не обрезается на них.
      */
     private fun threads(): String {
         val main = Looper.getMainLooper().thread

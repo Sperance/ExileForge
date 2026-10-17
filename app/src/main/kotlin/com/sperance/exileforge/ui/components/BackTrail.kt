@@ -45,7 +45,7 @@ private class TrailScope(val state: TrailState, val depth: Int)
 private val LocalTrail = compositionLocalOf<TrailScope?> { null }
 
 /**
- * Хозяин цепочки «назад» (4.4.x) - экран-хаб ([root] - его имя: «Город», «Развитие», «Поход»): одна строка ~40dp
+ * Хозяин цепочки «назад» - экран-хаб ([root] - его имя: «Город», «Развитие», «Поход»): одна строка ~40dp
  * «← Город › Гильдия [TAG] › Состав» над [content]. Вложенные уровни встают в неё сами ([TrailLevel]); пока их нет - строки нет.
  * Стрелка и системный «назад» - на уровень вверх, нажатие звена - прыжок к нему (уровни глубже закрываются по очереди).
  */
@@ -93,9 +93,12 @@ private val LocalTrail = compositionLocalOf<TrailScope?> { null }
     }
 }
 
-/** Строка цепочки: стрелка на уровень вверх, корень и звенья через «›»; последнее - где игрок сейчас, не нажимается. */
+/**
+ * Строка цепочки: стрелка на уровень вверх, корень и звенья через «›»; последнее - где игрок сейчас, не нажимается.
+ *
+ * Прыжок к звену (0 - корень): уровни глубже закрываются, начиная с самого глубокого.
+ */
 @Composable private fun BackTrail(root: String, levels: List<TrailEntry>) {
-    // Прыжок к звену [keep] (0 - корень): уровни глубже него закрываются, начиная с самого глубокого
     val jump = { keep: Int -> levels.drop(keep).asReversed().forEach { it.back.value() } }
     Row(Modifier.fillMaxWidth().height(TRAIL_HEIGHT).padding(start = 4.dp, end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = { levels.last().back.value() }, modifier = Modifier.size(TRAIL_HEIGHT)) {

@@ -26,7 +26,7 @@ data class Warmup(val heroId: String, val done: Set<WarmStep> = emptySet(), val 
 }
 
 /**
- * The warm-up (3.54.0): entering a hero reads, before the game opens, everything the screens would otherwise ask for one
+ * The warm-up: entering a hero reads, before the game opens, everything the screens would otherwise ask for one
  * by one — the content, the dictionary, the icons, the hero whole, and the boards the tabs open on (quests, crafts, the
  * merchant) — so the play itself sends few requests and short ones. Every step is kept from the device when it can be;
  * a step that fails does not hold the game back, and after [LIMIT] ms the game opens whatever is left.
@@ -43,7 +43,7 @@ class WarmupActions(
     private var job: Job? = null
     private val mutable = MutableStateFlow<Warmup?>(null)
 
-    /** Прогрев героя на экране (3.80.32: свой поток вместо общего состояния). */
+    /** Прогрев героя на экране (свой поток вместо общего состояния). */
     val state: StateFlow<Warmup?> = mutable.asStateFlow()
 
     /** Выход из героя: следующий вход прогревается заново. */

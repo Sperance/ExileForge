@@ -15,7 +15,7 @@ import com.sperance.exileforge.ui.icons.drawPortrait
 import kotlin.math.sin
 
 /**
- * The busts in the arena's frames (2.28.0): the hero and every monster form, head and shoulders, in whatever box the frame
+ * The busts in the arena's frames: the hero and every monster form, head and shoulders, in whatever box the frame
  * gives - всегда портрет сервера. Пока портреты не пришли, жетон пуст: своих фигур клиент не рисует.
  *
  * A [wash] colours the whole portrait (an ailment on the fighter), [flash] whitens it (a blow just landed) and [time] lets it
@@ -38,7 +38,6 @@ object Portraits {
         val portrait = PortraitLookup.monster(code, form)
         if (portrait != null) {
             val lift = sin(time * 1.2f + 1f) * size.height * .006f
-            // живые портреты (Разлом, Скверна): дыхание фигуры и слои анимации поверх портрета
             LivingPortraits.breathing(scope, code, time) {
                 drawPortrait(portrait, lift)
                 LivingPortraits.draw(this, code, time, lift, phase)
@@ -52,7 +51,6 @@ object Portraits {
     private fun finish(scope: DrawScope, wash: Color?, washAmount: Float, flash: Float) = with(scope) {
         if (wash != null && washAmount > 0) drawRect(wash.copy(alpha = washAmount.coerceIn(0f, .7f)))
         if (flash > 0) drawRect(Color.White.copy(alpha = flash.coerceIn(0f, .85f)))
-        // Vignette: the frame's dark closes in on the bust. Кисть одна - круг единичного радиуса, растянутый переносом
         val radius = size.maxDimension * .75f
         withTransform({
             translate(size.width / 2, size.height / 2)

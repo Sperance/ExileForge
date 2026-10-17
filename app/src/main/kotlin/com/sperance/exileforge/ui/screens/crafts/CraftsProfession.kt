@@ -73,7 +73,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
-/** Окно профессии (3.80.14): плитка, уровень, инструмент и его бонусы. */
+/** Окно профессии: плитка, уровень, инструмент и его бонусы. */
 /** A profession as a tile, three to a row: its tool in a medallion, name, level, how far to the next one, and what stands out. */
 @Composable internal fun ProfessionTile(game: GameUi, profession: ProfessionView, working: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val shape = RoundedCornerShape(4.dp)
@@ -131,6 +131,8 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
  * A profession's window: its level, the tool in its slot and what the tool and the tree give, the
  * work under way here with what this session brought, and every work with the numbers the server
  * worked out for this hero — a locked one says the level it wants.
+ *
+ * Открытые работы и следующая за ними - «???» со своим уровнем.
  */
 @Composable internal fun ProfessionWindow(game: GameUi, vm: CraftsViewModel, crafts: Crafts, profession: ProfessionView, offset: Long) {
     BackHandler { vm.openProfession("") }
@@ -168,7 +170,6 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
             }
         }
         item { Engraved(ui("crafts.works")) }
-        // Open works, and the one after them as «???» with its level (2.48.0, as the expedition does).
         val locked = { job: JobView -> job.level > profession.level || !job.open }
         val next = profession.jobs.firstOrNull(locked)
         items(profession.jobs.filter { !locked(it) || it == next }, key = { it.code }) { job ->
@@ -226,10 +227,7 @@ internal fun ToolSheet(game: GameUi, profession: ProfessionView, onDismiss: () -
             val view = tool?.let { game.view(it) }
             when {
                 tool == null -> Text(ui("crafts.no_tool"), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-
                 view != null -> ItemCard(view, detailed = true, price = game.sellPrice(view.item))
-
-                // A tool whose template the content does not hold yet: its name, and nothing to open.
                 else -> Text(equipmentTitle(tool.template), color = Parchment, style = MaterialTheme.typography.bodyMedium)
             }
             BonusChips(profession)

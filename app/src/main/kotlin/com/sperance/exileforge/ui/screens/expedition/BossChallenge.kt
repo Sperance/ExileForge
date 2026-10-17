@@ -41,7 +41,7 @@ import com.sperance.exileforge.ui.screens.expedition.scene.Portraits
 import com.sperance.exileforge.ui.theme.*
 import kotlin.math.roundToInt
 
-/** Экран-вызов перед стражем карты (3.92.0): досье стража и «В бой» - бой (4.7.0: «Весы» прогона убраны). */
+/** Экран-вызов перед стражем карты: досье стража и «В бой» - бой («Весы» прогона убраны). */
 @Composable internal fun BossChallenge(game: GameUi, model: ExpeditionViewModel, run: ExpeditionRun, view: ChallengeView, onCommand: (RunCommand) -> Unit) {
     BossDossier(
         game,
@@ -58,8 +58,10 @@ import kotlin.math.roundToInt
 }
 
 /**
- * Досье босса перед боем (3.92.0, макет B): портрет, уровень и здоровье, доля героев сервера [record], победивших его, умения, свойства и фазы - всё открывает свой лист;
+ * Досье босса перед боем: портрет, уровень и здоровье, доля героев сервера [record], победивших его, умения, свойства и фазы - всё открывает свой лист;
  * «Снаряжение», «Разведка» и «В бой». Отойти нельзя: подошёл к логову - бой.
+ *
+ * Кодекс стража - строка лора хранителя трона или стража механики, если она есть.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -98,7 +100,6 @@ internal fun BossDossier(
             Text(name, color = rarityTint(boss.rarity), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             MutedText(ui("challenge.subtitle", level, number(maxLife)))
         }
-        // Кодекс стража (0.13.3, LORE-01): строка лора хранителя трона или стража механики, если она есть
         monsterLore(boss.code.value)?.let { lore ->
             Text(lore, color = Parchment, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         }
@@ -143,7 +144,7 @@ internal fun BossDossier(
     if (scout) ScoutSheet(name, body) { scout = false }
 }
 
-/** Разведка стража (3.92.0): здоровье, щит, урон по типам, броня, уклонение и сопротивления его листом. */
+/** Разведка стража: здоровье, щит, урон по типам, броня, уклонение и сопротивления его листом. */
 @Composable private fun ScoutSheet(name: String, body: Combatant, onDismiss: () -> Unit) {
     val facts = buildList {
         add(ui("challenge.scout_life") to number(body.maxLife))

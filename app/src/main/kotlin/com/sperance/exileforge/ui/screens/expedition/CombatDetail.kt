@@ -53,7 +53,7 @@ import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
- * A line of the fight's log, laid open (3.37.0): first the outcome — the figure, what marked the blow, and per damage type
+ * A line of the fight's log, laid open: first the outcome — the figure, what marked the blow, and per damage type
  * what it was, what landed and what cut it; «Полный расчёт» lays out the rest — the formula as a chain of chips (a chip
  * tapped lays out the stats it reads by source), the dice, where the damage went, and tabs of the striker, the target and
  * what lay on both at that moment. Every figure is the fight's own.
@@ -192,8 +192,6 @@ internal fun cuts(type: TypeTrace): List<String> = listOfNotNull(
     )
 }
 
-// ==================== A blow ====================
-
 internal fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, game: GameUi) {
     if (trace.factors.isNotEmpty()) item { Chain(trace.factors, trace.attacker, trace.target, trace.origin, explainer, game) }
     if (trace.types.isNotEmpty()) {
@@ -220,8 +218,6 @@ internal fun LazyListScope.hitItems(trace: HitTrace, explainer: TraceExplainer, 
     item { Sides(trace.attacker, trace.target, trace.origin, explainer, game, trace.factors) }
 }
 
-// ==================== An ailment's tick ====================
-
 internal fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer, game: GameUi) {
     item {
         Section(ui("trace.section.ailment")) {
@@ -234,8 +230,6 @@ internal fun LazyListScope.tickItems(trace: TickTrace, explainer: TraceExplainer
     item { Chain(trace.factors, trace.striker ?: trace.target, trace.target, trace.origin, explainer, game) }
     item { Sides(trace.striker ?: trace.target, trace.target, trace.origin, explainer, game, trace.factors) }
 }
-
-// ==================== A draught, a buff, a curse ====================
 
 internal fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExplainer, game: GameUi) {
     item {
@@ -250,12 +244,10 @@ internal fun LazyListScope.effectItems(trace: EffectTrace, explainer: TraceExpla
     item { States(listOf(trace.actor), explainer) }
 }
 
-// ==================== A note ====================
-
+/** Итог здоровья: из чего сложилась секунда. */
 internal fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer, game: GameUi) {
     val flow = trace.flow
     if (flow != null) {
-        // Итог здоровья (4.9.3): из чего сложилась секунда
         item {
             Section(ui("trace.section.note")) {
                 Line(ui("trace.note.value.${trace.kind.name}"), fineNumber(flow.net))
@@ -269,5 +261,3 @@ internal fun LazyListScope.noteItems(trace: NoteTrace, explainer: TraceExplainer
     }
     item { States(listOf(trace.actor), explainer) }
 }
-
-// ==================== The chain of the formula ====================

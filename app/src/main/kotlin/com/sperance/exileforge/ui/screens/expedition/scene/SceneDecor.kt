@@ -32,7 +32,7 @@ import kotlin.math.max
 import kotlin.math.sin
 
 /**
- * What lies on the ground, by biome (since 2.32.0): the seed says which of three kinds grows on
+ * What lies on the ground, by biome: the seed says which of three kinds grows on
  * a tile, the biome what that kind is — a shell on the shore, a skull in the crypt, embers in the ash.
  */
 internal fun ScenePainter.decor(map: ExpeditionMap, x: Int, y: Int, palette: Palette, biome: String, light: Float) {
@@ -177,8 +177,6 @@ internal fun ScenePainter.decor(map: ExpeditionMap, x: Int, y: Int, palette: Pal
             else -> puddle()
         }
 
-        // The lands past the Drowned Temple (2.77.0): bleached bones in the sand, pillars of red
-        // rock, the jungle's tufts, amber in the hive, lava pools, braziers, void crystals, rot.
         "DESERT" -> when (kind) {
             1 -> stone()
             2 -> bones()
@@ -227,8 +225,6 @@ internal fun ScenePainter.decor(map: ExpeditionMap, x: Int, y: Int, palette: Pal
             else -> tuft()
         }
 
-        // The lands 71–100 (3.42.0): sky pillars and beacons, glass shards, storm-split rock, drowned columns,
-        // coral growths, the vaults' brass, golden braziers, fallen stars and what oblivion leaves.
         "SKYREACH" -> when (kind) {
             1 -> column()
             2 -> flame()

@@ -209,10 +209,7 @@ private fun RewardChips(reward: QuestReward, modifier: Modifier = Modifier) {
         Modifier.fillMaxWidth().background(Abyss, shape).border(1.dp, tone.copy(alpha = .45f), shape).padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Caption(title)
-            Text(count, color = tone, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-        }
+        Caption(title) { Text(count, color = tone, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1) }
         content()
     }
 }

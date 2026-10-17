@@ -137,7 +137,10 @@ internal fun ExpeditionRun.release() {
 /** A foe of the fight fell: the event by what it was; its reward comes with the server's answer. */
 internal fun ExpeditionRun.fell(agent: MonsterAgent, member: Int) {
     kills++
-    if (agent === world.boss) bosses++
+    if (agent === world.boss) {
+        bosses++
+        guardianSlain = true
+    }
     if (abyssFight) return
     val spot = agent.crystal?.let { id -> world.crystals.firstOrNull { it.id == id } }
     val event = when {

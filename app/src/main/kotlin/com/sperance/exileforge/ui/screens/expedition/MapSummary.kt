@@ -63,7 +63,7 @@ import kotlinx.coroutines.delay
 
 /**
  * How a map's summary opens: its title and line, the colour and glyph of the ending, and the button that closes it.
- * Read off the run: a fall, the exit, the portal out — a Vaal zone and an autorun in their own words.
+ * Итог - из состояния захода ([MapEnd]): гибель, страж повержен (любым уходом) или карта покинута; зона Ваал - своими словами.
  */
 internal data class SummaryHead(val title: String, val hint: String, val accent: Color, val glyph: ImageVector, val done: String) {
     companion object {

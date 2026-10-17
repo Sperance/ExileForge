@@ -344,6 +344,9 @@ class ExpeditionRun(
     internal var end: MapEnd? = null
     internal var seconds = 0.0
     internal var bosses = 0
+
+    /** Страж этой карты (или зоны Ваал) пал в этом заходе: итог ухода - «пройдена» ([MapEnd]). */
+    internal var guardianSlain = false
     internal var deaths = 0
 
     /** The run's figures and, after a fall, its last blows. */

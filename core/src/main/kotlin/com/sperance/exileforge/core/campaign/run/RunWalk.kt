@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.campaign.run
 
 import com.sperance.exileforge.core.atlas.AtlasEffects
-import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.Ailment
 import com.sperance.exileforge.core.campaign.combat.Battle
@@ -104,10 +103,10 @@ internal fun ExpeditionRun.drink(spring: Fountain) {
     charges = kit.flasks.map { it?.sheet?.maxCharges ?: 0.0 }
 }
 
-/** The way out: the Vaal zone's exit leads back to the map; the zone's own records the leaving, the boss passed. */
+/** Выход: из зоны Ваал - обратно на карту, с карты - событие ухода; итог - по состоянию захода ([departed]). */
 internal fun ExpeditionRun.exit() {
     if (!vaal) record(RunEvent::Leave)
-    end = MapEnd.CLEARED
+    end = departed()
     phase = RunPhase.CLEARED
     onCleared()
 }

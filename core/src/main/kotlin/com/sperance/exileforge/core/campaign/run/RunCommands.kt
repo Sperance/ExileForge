@@ -254,9 +254,15 @@ internal fun ExpeditionRun.drinkOnMap(slot: Int) {
     healedInto(life - before, draught.toMana, draught.toShield)
 }
 
-/** Уход с карты: вне боя - всегда; бой идёт до конца, а карта - нет. С карты - концом `LEFT`, с итога - просто закрыть его. */
+/**
+ * Уход с карты: вне боя - всегда; бой идёт до конца, а карта - нет. С карты - итогом по состоянию захода ([departed]), с итога -
+ * просто закрыть его.
+ */
 internal fun ExpeditionRun.leave() {
     if (phase != RunPhase.MAP && phase != RunPhase.DEAD && phase != RunPhase.CLEARED) return
-    if (phase == RunPhase.MAP) end = MapEnd.LEFT
+    if (phase == RunPhase.MAP) end = departed()
     phase = RunPhase.LEFT
 }
+
+/** Итог живого ухода с карты - выходом или порталом одинаково: страж пал в этом заходе - пройдена, иначе - покинута. */
+internal fun ExpeditionRun.departed(): MapEnd = if (guardianSlain) MapEnd.CLEARED else MapEnd.LEFT

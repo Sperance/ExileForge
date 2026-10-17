@@ -153,11 +153,17 @@ import java.util.Locale
     }
 }
 
-/** An engraved caption with a bronze rule running out of it, heading one part of the spoils. */
-@Composable internal fun Caption(text: String, tone: Color = Gold) {
+/**
+ * Гравированная подпись части итогов с бронзовой чертой за ней. [trailing] (счёт «+N») стоит после черты своим местом и меряется
+ * первым: подпись и черта делят только остаток ширины, счёт всегда виден целиком.
+ */
+@Composable internal fun Caption(text: String, tone: Color = Gold, trailing: (@Composable () -> Unit)? = null) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-        Text(text.uppercase(), color = tone, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        Box(Modifier.weight(1f).height(1.dp).background(Brush.horizontalGradient(listOf(Bronze, Color.Transparent))))
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(text.uppercase(), color = tone, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            Box(Modifier.weight(1f).height(1.dp).background(Brush.horizontalGradient(listOf(Bronze, Color.Transparent))))
+        }
+        trailing?.invoke()
     }
 }
 

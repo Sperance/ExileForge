@@ -2,7 +2,10 @@ package com.sperance.exileforge.core.campaign
 
 import com.sperance.exileforge.rules.run.Reward
 
-/** How a map run ended, as its summary is headed: the hero fell, walked out through the exit, or left by the portal. */
+/**
+ * Итог захода по его состоянию, а не по кнопке ухода: герой пал - [FELL]; страж карты повержен в этом заходе - [CLEARED], каким бы
+ * путём герой ни ушёл; иначе - [LEFT].
+ */
 enum class MapEnd { FELL, CLEARED, LEFT }
 
 /**

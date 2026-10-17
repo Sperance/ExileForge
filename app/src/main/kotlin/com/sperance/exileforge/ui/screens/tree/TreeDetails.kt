@@ -185,8 +185,9 @@ import kotlin.math.sin
                 Text(ui("tree.rechoose", owned))
             }
         }
-        if (node.type == SkillNodeType.MASTERY && !allocated && node.code !in reachable) {
-            MutedText(ui("tree.mastery_locked"))
+        if (node.type == SkillNodeType.MASTERY) {
+            if (!allocated && node.code !in reachable) MutedText(ui("tree.mastery_locked"))
+            MutedText(ui("tree.mastery_no_path"))
         }
     } else {
         if (node.lines.isEmpty()) Text(ui("tree.no_bonuses"), color = Muted)

@@ -1368,6 +1368,7 @@
   "state.elder_hint.map": "The Void has captured this map: its monsters are stronger, and magic and rare items from it may carry the Void's influence.",
   "state.abyss_hint.map": "The Abyss has captured this map: its monsters are stronger, items from it may carry the Abyss influence, and it holds more Abyss cracks.",
   "tree.mastery_locked": "Opens after any adjacent notable.",
+  "tree.mastery_no_path": "Does not open a path to adjacent nodes.",
   "tree.option_chosen": "The chosen option:",
   "tree.option_pick": "Choose one option:",
   "tree.allocate": "Take the node",

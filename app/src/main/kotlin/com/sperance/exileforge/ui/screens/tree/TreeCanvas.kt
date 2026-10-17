@@ -13,6 +13,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -116,6 +117,8 @@ import kotlin.math.sin
             val width = size.width
             val height = size.height
             wheel(nodes, bounds, width, height, view.scale, view.pan)
+            val thickness = view.scale.coerceIn(.6f, 1.6f)
+            val masteryDash = PathEffect.dashPathEffect(floatArrayOf(MASTERY_DASH * thickness, MASTERY_GAP * thickness))
             nodes.forEach { node ->
                 val from = place(node, bounds, width, height, view.scale, view.pan)
                 node.connections.forEach { code ->
@@ -123,6 +126,10 @@ import kotlin.math.sin
                     val to = place(other, bounds, width, height, view.scale, view.pan)
                     if (!crosses(from, to, width, height)) return@forEach
                     val both = node.code in taken && code in taken
+                    if (node.type == SkillNodeType.MASTERY || other.type == SkillNodeType.MASTERY) {
+                        drawLine(MASTERY_EDGE.copy(alpha = if (both) .95f else .6f), from, to, MASTERY_WIDTH * thickness, pathEffect = masteryDash)
+                        return@forEach
+                    }
                     val open = (node.code in taken && code in reachable) || (code in taken && node.code in reachable)
                     drawLine(
                         when {
@@ -132,7 +139,7 @@ import kotlin.math.sin
                         },
                         from,
                         to,
-                        (if (both) 3f else 2f) * view.scale.coerceIn(.6f, 1.6f),
+                        (if (both) 3f else 2f) * thickness,
                     )
                 }
             }
@@ -349,6 +356,12 @@ internal val WHEEL_BG = Color(0xFF141A21)
 internal val NEON_STONE = Color(0xFF10151B)
 internal val NEON_RIM = Color(0xFFEEF8F1)
 internal val NEON_LINE = Color(0xFF57E39A)
+
+/** Связь с мастерством - не линия пути (мастерство путь к соседям не открывает): тонкий пунктир цвета мастерства. */
+private val MASTERY_EDGE = Elder
+private const val MASTERY_WIDTH = 1.6f
+private const val MASTERY_DASH = 4f
+private const val MASTERY_GAP = 5f
 internal val FAR_LINE = Color(0xFF3C4D5A)
 internal val FAR_RIM = Color(0xFF6E7C86)
 internal const val NEXT_GLOW = .45f

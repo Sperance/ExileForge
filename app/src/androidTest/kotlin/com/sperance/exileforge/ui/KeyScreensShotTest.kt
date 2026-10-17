@@ -17,6 +17,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.app.DEFAULT_SERVER
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.HeroGear
@@ -35,23 +36,41 @@ import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.filter.ItemShelf
+import com.sperance.exileforge.core.crafts.Crafts
+import com.sperance.exileforge.core.display.jobTitle
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.core.model.command.UserProfile
+import com.sperance.exileforge.core.model.crafts.CraftsState
+import com.sperance.exileforge.core.model.crafts.JobView
+import com.sperance.exileforge.core.model.crafts.ProfessionView
+import com.sperance.exileforge.core.model.crafts.WorkView
+import com.sperance.exileforge.core.model.feedback.AdminReport
+import com.sperance.exileforge.core.model.feedback.FeedbackKind
+import com.sperance.exileforge.core.model.feedback.FullReport
+import com.sperance.exileforge.core.model.feedback.IssueNote
+import com.sperance.exileforge.core.model.feedback.IssueView
+import com.sperance.exileforge.core.model.feedback.NoteAuthor
+import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.hero.HeroInfo
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.sheet.itemSeals
+import com.sperance.exileforge.core.update.AppBuild
+import com.sperance.exileforge.core.update.AvailableUpdate
+import com.sperance.exileforge.core.update.UpdateState
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Influence
+import com.sperance.exileforge.rules.content.Job
+import com.sperance.exileforge.rules.content.JobExtra
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.ModifierDef
@@ -70,6 +89,7 @@ import com.sperance.exileforge.rules.roll.Dice
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.MonsterRoller
 import com.sperance.exileforge.rules.roll.Roll
+import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.rules.run.AltarPact
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.rules.run.MapMechanic
@@ -86,6 +106,10 @@ import com.sperance.exileforge.ui.components.rememberItemFilter
 import com.sperance.exileforge.ui.screens.admin.AdminPanels
 import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.craft.TargetRail
+import com.sperance.exileforge.ui.components.FeedbackViewModel
+import com.sperance.exileforge.ui.components.UpdateDialog
+import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
+import com.sperance.exileforge.ui.screens.crafts.WorkPlaque
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
 import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen
@@ -97,6 +121,8 @@ import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
 import com.sperance.exileforge.ui.screens.quests.BookChoice
 import com.sperance.exileforge.ui.screens.quests.QuestRow
 import com.sperance.exileforge.ui.screens.quests.StoryCodex
+import com.sperance.exileforge.ui.screens.server.AdminTicket
+import com.sperance.exileforge.ui.screens.server.ReportLine
 import com.sperance.exileforge.ui.screens.skills.Page
 import com.sperance.exileforge.ui.screens.skills.Slots
 import com.sperance.exileforge.ui.theme.ForgeTheme
@@ -114,6 +140,8 @@ import java.io.File
  * Экраны: задания и контракты, гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
  * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка, карточка редкой вещи с плашками
  * особых строк, карточка захваченной карты, полка кузницы с карточкой вещи и её действиями.
+ * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка, окно обновления, модерация отчётов,
+ * плашка идущей работы.
  */
 class KeyScreensShotTest {
     @get:Rule val compose = createComposeRule()
@@ -295,6 +323,40 @@ class KeyScreensShotTest {
         val rolls = listOf(roll(def { it.source == Source.ALCHEMY })) + mapLines.map { roll(it) }
         val zone = index.campaign.zones.last().code
         return ItemInstance("shot-map", template.code, Rarity.RARE, rolls, influence = Influence.SHAPER, quality = 12, itemLevel = 80, mapTier = 7, mapZone = zone)
+    /** Окно обязательного обновления: найдено (версии чипами, заметки с прокруткой, «Обновить», размер) и загрузка (тонкая полоса и «64% · 24 из 38 МБ»). */
+    @Test fun update() = shot("update") {
+        val notes = (1..9).joinToString("\n") { "• Строки предмета сгруппированы по источникам, пункт $it" }
+        val update = AvailableUpdate(AppBuild(9999, "0.17.0", 1, 1, "app.apk", 39_845_888, "", notes), "", "https://github.com")
+        UpdateDialog(update, UpdateState(checking = false, update = update), {}, {})
+        UpdateDialog(update, UpdateState(checking = false, update = update, progress = .64f), {}, {})
+    }
+
+    /** Модерация: плотные строки и раскрытые тикеты - новый (Отклонить / В GitHub) и отправленный с ответом (Закрыть… / Issue #N ↗). */
+    @Test fun moderation() = shot("moderation") {
+        val vm = GlobalContext.get().get<FeedbackViewModel>().model
+        val account = AccountUi(Session(DEFAULT_SERVER, profile = UserProfile("owner", role = "MODERATOR"), signedIn = true))
+        fun report(id: String, text: String, status: ReportStatus, issue: IssueView? = null, kind: FeedbackKind = FeedbackKind.BUG) = AdminReport(
+            FullReport(id, text, heroId = "hero", heroName = "Морвен", heroClass = heroClass.code, heroLevel = 25, status = status, kind = kind, createdAt = "2026-10-17T10:00:00", issue = issue),
+            login = "sperance",
+            moves = if (status == ReportStatus.CREATED) listOf(ReportStatus.SENT, ReportStatus.REJECTED) else emptyList(),
+            deletable = true,
+        )
+        ReportLine(report("r0", "Убери на всех экранах названия экранов и слоганы под ними, они только занимают место", ReportStatus.SENT, IssueView(258))) {}
+        AdminTicket(account, vm, report("r1", "В походе отображается «+0/с» и съезжает весь текст. Поправь глобально нормально", ReportStatus.CREATED)) {}
+        val answered = IssueView(265, "https://github.com", notes = listOf(IssueNote(NoteAuthor.DEVELOPER, "Спасибо, поправим в следующей версии.")))
+        AdminTicket(account, vm, report("r2", "В ремёслах текст текущих работ съехал, поправь и сделай красиво", ReportStatus.SENT, answered)) {}
+        ReportLine(report("r3", "Жалоба на письмо: оскорбления", ReportStatus.CREATED, kind = FeedbackKind.COMPLAINT)) {}
+    }
+
+    /** Плашка идущей работы: длинное имя, часы цикла и три фишки выхода в час с «+N», строка уровня и итоги одним рядом. */
+    @Test fun workPlaque() = shot("work", frozen = true) {
+        val (profession, job) = index.professions.professions.flatMap { p -> p.jobs.filterIsInstance<Job.Item>().map { p to it } }.maxBy { (_, j) -> j.extra.size * 100 + jobTitle(j.code).length }
+        val now = System.currentTimeMillis()
+        val view = JobView(job, cycleMillis = 30_000, nothing = 10.0, extra = (job.extra + index.items.keys.take(3).map { JobExtra(it.value, 2.0) }).take(4), experience = 12.0)
+        val held = ProfessionView(profession.code, level = 14, experience = 600.0, next = 1000.0, jobs = listOf(view))
+        val work = WorkView(profession.code, job.code, settledAt = now - 12_000, cycleMillis = 30_000, startedAt = now - 65 * 60_000, totals = WorkTally(cycles = 130, nothing = 2, items = mapOf(job.output to 118), experience = 12_345.0, levels = 1))
+        val vm: CraftsViewModel = GlobalContext.get().get()
+        WorkPlaque(game(40), vm, Crafts(CraftsState(now = now, professions = listOf(held), work = work), readAt = now), 0L)
     }
 
     /** Состояние слота умения на снимке панели боя. */

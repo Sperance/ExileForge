@@ -49,7 +49,7 @@ import com.sperance.exileforge.update.UpdateInstaller
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false)) {
         ChordOverWindow()
         Box(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
-            UpdateDialog(update, s, updates)
+            UpdateDialog(update, s, onInstall = updates::install, onPermissionAsked = updates::permissionAsked)
         }
     }
 }
@@ -57,11 +57,12 @@ import com.sperance.exileforge.update.UpdateInstaller
 /**
  * Окно обязательного обновления: печать, «Нужно обновление», версии «было → станет» чипами, «Что нового» с прокруткой внутри, внизу -
  * «Обновить» и размер; пока качается - тонкая полоса и «64% · 24 из 38 МБ» мелко; установка, разрешение на неё и ошибка загрузки - в этом
- * же окне. Не влезает в экран (крупный шрифт) - прокручивается целиком.
+ * же окне. Не влезает в экран (крупный шрифт) - прокручивается целиком. [onInstall] - «Обновить» и «Повторить»; [onPermissionAsked] -
+ * игрок ушёл в настройки за разрешением.
  *
  * Обход установщика: страница релиза на GitHub, APK руками.
  */
-@Composable internal fun UpdateDialog(update: AvailableUpdate, s: UpdateState, updates: UpdateModel) {
+@Composable internal fun UpdateDialog(update: AvailableUpdate, s: UpdateState, onInstall: () -> Unit, onPermissionAsked: () -> Unit) {
     val context = LocalContext.current
     Column(
         Modifier.widthIn(max = DIALOG_WIDTH).fillMaxWidth().background(PanelRaised, DialogShape).border(1.dp, Gold.copy(alpha = .45f), DialogShape)
@@ -96,13 +97,13 @@ import com.sperance.exileforge.update.UpdateInstaller
                 MutedText(ui("update.permission_note"), style = MaterialTheme.typography.bodySmall)
                 ForgeButton(onClick = {
                     context.startActivity(UpdateInstaller.permissionScreen(context))
-                    updates.permissionAsked()
+                    onPermissionAsked()
                 }, modifier = Modifier.fillMaxWidth()) { Text(ui("update.open_settings")) }
             }
 
             else -> {
                 s.error?.let { Text(it, color = LifeRed, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center) }
-                ForgeButton(onClick = updates::install, modifier = Modifier.fillMaxWidth()) { Text(ui(if (s.error != null) "update.retry" else "update.install")) }
+                ForgeButton(onClick = onInstall, modifier = Modifier.fillMaxWidth()) { Text(ui(if (s.error != null) "update.retry" else "update.install")) }
                 if (s.error != null) {
                     ForgeOutlinedButton(onClick = {
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))

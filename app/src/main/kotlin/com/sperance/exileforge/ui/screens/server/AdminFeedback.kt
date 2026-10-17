@@ -154,7 +154,7 @@ private fun AdminReport.matches(query: String): Boolean {
 }
 
 /** Плотная строка отчёта: значок вида цветом судьбы, первая строка текста и справа «▲голоса · ×повторы · дата»; касание - [onOpen]. */
-@Composable private fun ReportLine(entry: AdminReport, onOpen: () -> Unit) {
+@Composable internal fun ReportLine(entry: AdminReport, onOpen: () -> Unit) {
     val report = entry.report
     val fate = ReportFate.of(report.status, report.issue)
     val shape = RoundedCornerShape(10.dp)
@@ -192,7 +192,7 @@ private fun AdminReport.matches(query: String): Boolean {
  * очереди: у нового «Отклонить» (со словом - причиной автору) и «В GitHub» (апелляция и жалоба не уходят наружу - «Принять»), у
  * отправленного - «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Касание шапки - [onCollapse].
  */
-@Composable private fun AdminTicket(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onCollapse: () -> Unit) {
+@Composable internal fun AdminTicket(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onCollapse: () -> Unit) {
     val report = entry.report
     val fate = ReportFate.of(report.status, report.issue)
     val fresh = report.status == ReportStatus.CREATED

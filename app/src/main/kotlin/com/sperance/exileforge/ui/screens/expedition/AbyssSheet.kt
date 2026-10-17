@@ -61,7 +61,7 @@ import com.sperance.exileforge.ui.theme.*
             }
             val hoard = view.hoard
             if (view.open && hoard == null && !view.fallen) {
-                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved)
+                Vitals(hud.heroLife, hud.heroMaxLife, hud.heroShield, hud.heroMaxShield, Modifier.fillMaxWidth(), hud.heroMana, hud.heroMaxMana, hud.heroReserved, lifeReserved = hud.heroLifeReserved)
                 if (hud.flasks.any { it != null }) MapFlasks(hud.flasks) { onCommand(RunCommand.Drink(it)) }
             }
             when {

@@ -13,6 +13,7 @@ import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.rules.content.StatGroup
@@ -79,8 +80,11 @@ class MetaCombatTest {
     /** Меняет ли [extra] хоть одну из эталонных схваток. */
     private fun moves(extra: List<StatOperation>): Boolean = SCENARIOS.any { scenario -> fight(scenario, emptyList()) != fight(scenario, extra) }
 
-    /** Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]. */
-    private data class Scenario(val heroClass: String, val style: SkillType, val foesPower: Double, val cleared: Boolean, val seed: Int, val pack: Long = PACK)
+    /**
+     * Схватка: класс и стиль героя, удары стаи ×[foesPower], прошлый бой выигран, кости боя [seed] и кости стаи [pack]; [auras] -
+     * запасы, чью ауру несёт герой.
+     */
+    private data class Scenario(val heroClass: String, val style: SkillType, val foesPower: Double, val cleared: Boolean, val seed: Int, val pack: Long = PACK, val auras: Set<ReservePool> = setOf(ReservePool.MANA))
 
     private val prints = java.util.concurrent.ConcurrentHashMap<Scenario, Int>()
 
@@ -92,7 +96,7 @@ class MetaCombatTest {
         val res = calc.hero(LEVEL, heroClass, listOf(TakenNode(heroClass.startNode)), emptyList())
         val model = SheetModel(res.base, res.operations + BASE.map { (stat, value) -> StatOperation(stat, Op.ADD, value) } + extra, index)
         val stats = model.plain
-        val skills = skills(scenario.heroClass, scenario.style)
+        val skills = skills(scenario.heroClass, scenario.style, scenario.auras)
         val kit = Loadout.of(skills, index, scenario.heroClass, kitFlasks, stats, index.powers, index.rules.charges)
         val gear = HeroGear(stats, LEVEL, model, HeroStance.of(scenario.heroClass), kit, index.stats.percent)
         val build = HeroBuild(gear, emptyMap(), rules)
@@ -109,8 +113,8 @@ class MetaCombatTest {
 
     private val kitFlasks by lazy { MobKit(index).flasks(LEVEL, Rarity.RARE) }
 
-    /** Умения схватки: удар стиля, трата зарядов и её накопитель, проклятие, клич и метка; пассивные - два бонуса класса и аура. */
-    private fun skills(heroClass: String, style: SkillType): HeroSkills {
+    /** Умения схватки: удар стиля, трата зарядов и её накопитель, проклятие, клич и метка; пассивные - два бонуса класса и аура каждого запаса [auras]. */
+    private fun skills(heroClass: String, style: SkillType, auras: Set<ReservePool>): HeroSkills {
         val all = index.skills.ofClass(heroClass).filter { it.unlock <= LEVEL }
         val hit = all.filter { it.type == style && it.hit != null && !it.common && it.charges == null }.maxBy { it.unlock }
         val spender = all.firstOrNull { it.charges?.consume == true }
@@ -118,7 +122,7 @@ class MetaCombatTest {
         val gainer = spent?.let { kind -> all.firstOrNull { g -> g.charges?.gain != null && (kind == ChargeKind.ALL || g.charges?.kind == kind) } }
         val support = listOf(SkillType.CURSE, SkillType.WARCRY).mapNotNull { type -> all.firstOrNull { it.type == type && it.mark == null } } + listOfNotNull(all.firstOrNull { it.mark != null })
         val actives = (listOfNotNull(hit, spender, gainer) + support).distinct()
-        val passives = all.filter { it.type.kind == SkillKind.PASSIVE && it.type != SkillType.AURA }.take(2) + listOfNotNull(all.firstOrNull { it.type == SkillType.AURA })
+        val passives = all.filter { it.type.kind == SkillKind.PASSIVE && it.type != SkillType.AURA }.take(2) + auras.mapNotNull { pool -> all.firstOrNull { it.type == SkillType.AURA && it.reserves == pool } }
         return HeroSkills(
             learned = (actives + passives).associate { it.code to SKILL_LEVEL },
             active = actives.map { ActiveSlot(it.code, it.condition) },
@@ -242,6 +246,7 @@ class MetaCombatTest {
             Scenario("WITCH", SkillType.SPELL, 1.6, cleared = false, seed = 5, pack = ELEMENTAL_PACK),
             Scenario("MARAUDER", SkillType.ATTACK, 1.35, cleared = false, seed = 13),
             Scenario("MARAUDER", SkillType.ATTACK, 1.65, cleared = false, seed = 3),
+            Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7, auras = ReservePool.entries.toSet()),
             Scenario("MARAUDER", SkillType.ATTACK, 1.25, cleared = false, seed = 7, pack = ELEMENTAL_PACK),
         )
 
@@ -303,6 +308,7 @@ class MetaCombatTest {
             addAll(listOf("POWER_RED_RAMPAGE", "POWER_EMPTY_THRONE", "POWER_BLACKFLAME_PACT"))
             addAll(listOf("POWER_STILL_POSTURE"))
             addAll(listOf("POWER_CINDER_SKIN", "POWER_FORGE_TEMPER", "POWER_EMBER_DRINK", "POWER_WYRM_CRUST"))
+            addAll(listOf("POWER_BLOODIRON", "POWER_VEINDRINKER"))
             addAll(DRAIN)
         }
     }

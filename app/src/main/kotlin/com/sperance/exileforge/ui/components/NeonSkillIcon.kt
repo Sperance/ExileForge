@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.display.roman
 import com.sperance.exileforge.core.display.skillIcon
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillType
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -54,8 +55,14 @@ enum class NeonHue(val color: Color) {
     ;
 
     companion object {
-        /** Цвет умения [skill]: стихия ([SkillDefinition.element]) первой, иначе - вид. */
-        fun of(skill: SkillDefinition): NeonHue = skill.element?.let { element -> entries.firstOrNull { it.name == element } } ?: of(skill.type)
+        /** Цвет умения [skill]: стихия ([SkillDefinition.element]) первой, затем запас, что держит аура, иначе - вид. */
+        fun of(skill: SkillDefinition): NeonHue = skill.element?.let { element -> entries.firstOrNull { it.name == element } } ?: of(skill.reserves) ?: of(skill.type)
+
+        /** Цвет запаса ауры: аура здоровья - цветом здоровья, аура маны - цветом своего вида. */
+        fun of(pool: ReservePool): NeonHue? = when (pool) {
+            ReservePool.MANA -> null
+            ReservePool.LIFE -> LIFE
+        }
 
         fun of(type: SkillType): NeonHue = when (type) {
             SkillType.ATTACK -> PHYSICAL

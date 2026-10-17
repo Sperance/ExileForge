@@ -52,7 +52,7 @@ import kotlin.math.sin
  * One pool as a bar: a rounded dark track with a soft border of the pool's colour, the fill lit from above,
  * and the figures — now / most · share — across it in a shadowed type that reads over the fill and the track alike.
  * [ring] outlines it brighter, as a barrier does the hero's life while it soaks. [reserved] past [max] is
- * the mana the auras hold: the bar's hatched tail, the fill running up to it.
+ * the pool the auras hold (mana or life): the bar's hatched tail, the fill running up to it.
  */
 @Composable internal fun VitalBar(
     value: Int,

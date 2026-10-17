@@ -18,6 +18,7 @@ import com.sperance.exileforge.rules.content.FightKind
 import com.sperance.exileforge.rules.content.FightRules
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.RecoveryPool
+import com.sperance.exileforge.rules.content.ReservePool
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.random.Random
@@ -519,10 +520,13 @@ class Battle(
     val heroMana: Double get() = heroFighter.mana
 
     /** The hero's mana the auras leave free. */
-    fun manaCap(): Double = heroFighter.body.maxMana * (1 - kit.reserved(heroFighter.body) / 100)
+    fun manaCap(): Double = kit.reserve(ReservePool.MANA, heroFighter.body).free
 
     /** The hero's mana the auras hold: the rest of the pool past [manaCap]. */
-    fun manaReserved(): Double = heroFighter.body.maxMana - manaCap()
+    fun manaReserved(): Double = kit.reserve(ReservePool.MANA, heroFighter.body).held
+
+    /** Здоровье героя, что держат ауры сверх его максимума в бою. */
+    fun lifeReserved(): Double = kit.reserve(ReservePool.LIFE, heroFighter.body).held
     internal fun manaCap(fighter: Fighter): Double = if (fighter === heroFighter) manaCap() else fighter.body.maxMana
 
     /** Uses the skill of active slot [slot] at the next slice, if it is ready and the mana is there — its condition aside. */

@@ -51,6 +51,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
 import com.sperance.exileforge.rules.content.ExpeditionRules
 import com.sperance.exileforge.rules.content.MapStat
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SummonLog
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
@@ -359,7 +360,7 @@ class ExpeditionRun(
     internal val waves get() = AbyssWaves(index, run)
     internal val abyssRule get() = index.campaign.abyss
 
-    internal fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
+    internal fun manaCap(): Double = kit.reserve(ReservePool.MANA, hero).free
 
     internal fun regear(gear: HeroGear) {
         val next = HeroBuild(gear, mapEffects, rules, origins = origins)

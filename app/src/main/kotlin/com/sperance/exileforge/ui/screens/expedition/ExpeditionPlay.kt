@@ -222,14 +222,14 @@ private fun RunHud.screenOnly(): RunHud = when (phase) {
 
 /** Полосы героя на карте из живого снимка: тикают сами, не трогая панель. */
 @Composable private fun MapVitals(live: State<RunHud>, modifier: Modifier) {
-    val now by remember(live) { derivedStateOf { live.value.let { VitalsView(it.heroLife, it.heroMaxLife, it.heroShield, it.heroMaxShield, it.heroMana, it.heroMaxMana, it.heroReserved, it.lifeFlow) } } }
+    val now by remember(live) { derivedStateOf { live.value.let { VitalsView(it.heroLife, it.heroMaxLife, it.heroShield, it.heroMaxShield, it.heroMana, it.heroMaxMana, it.heroReserved, it.lifeFlow, it.heroLifeReserved) } } }
     var breakdown by remember { mutableStateOf(false) }
-    Vitals(now.life, now.maxLife, now.shield, now.maxShield, modifier, now.mana, now.maxMana, now.reserved, flow = now.flow) { breakdown = true }
+    Vitals(now.life, now.maxLife, now.shield, now.maxShield, modifier, now.mana, now.maxMana, now.reserved, flow = now.flow, lifeReserved = now.lifeReserved) { breakdown = true }
     if (breakdown) LifeFlowSheet({ live.value.lifeFlow }) { breakdown = false }
 }
 
 /** Полосы героя одним значением: перекомпоновка - лишь когда сменилось число. */
-private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, val maxShield: Int, val mana: Int, val maxMana: Int, val reserved: Int, val flow: LifeFlow?)
+private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, val maxShield: Int, val mana: Int, val maxMana: Int, val reserved: Int, val flow: LifeFlow?, val lifeReserved: Int)
 
 /** Пояс на карте из живого снимка. */
 @Composable private fun LiveFlasks(live: State<RunHud>, onDrink: (Int) -> Unit) {

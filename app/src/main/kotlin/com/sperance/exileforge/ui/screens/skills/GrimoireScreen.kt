@@ -39,6 +39,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillRules
@@ -94,13 +95,16 @@ internal sealed interface Pick {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             val mana = body?.maxMana ?: 0.0
-            val reserved = if (body != null && index != null) Loadout.of(skills, index, classCode, emptyList(), hero?.stats.orEmpty()).reserved(body) else 0.0
+            val loadout = if (body != null && index != null) Loadout.of(skills, index, classCode, emptyList(), hero?.stats.orEmpty()) else null
+            val reserved = body?.let { loadout?.reserve(ReservePool.MANA, it)?.percent } ?: 0.0
+            val lifeReserved = body?.let { loadout?.reserve(ReservePool.LIFE, it)?.percent } ?: 0.0
             ScreenHeader(
                 ui("skills.title"),
                 listOfNotNull(
                     classCode.takeIf { it.isNotBlank() }?.let(::classTitle),
                     ui("skills.level", level),
                     ui("skills.mana", number(mana)) + if (reserved > 0) " " + ui("skills.reserved", number(reserved)) else "",
+                    ui("skills.life_reserved", number(lifeReserved)).takeIf { lifeReserved > 0 },
                 ).joinToString(" · "),
                 ForgeGlyphs.Grimoire,
             )

@@ -18,6 +18,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.campaign.PoolReserve
+import com.sperance.exileforge.core.campaign.stat
 import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.display.StatLimit
 import com.sperance.exileforge.core.display.StatLimits
@@ -27,14 +29,14 @@ import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.ManaReserve
 import com.sperance.exileforge.presentation.state.ShareCard
 import com.sperance.exileforge.presentation.state.ShareKind
 import com.sperance.exileforge.presentation.state.ShareRow
 import com.sperance.exileforge.presentation.state.StatExplainer
 import com.sperance.exileforge.presentation.state.StatExplanation
-import com.sperance.exileforge.presentation.state.manaReserve
+import com.sperance.exileforge.presentation.state.reserve
 import com.sperance.exileforge.presentation.state.view
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.contentKeys
@@ -95,7 +97,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
             }
             item { Header(current, view, accent, game) }
             game.index?.campaign?.let { StatLimits.of(current, combat.stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
-            if (current == MANA_STAT) game.manaReserve()?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
+            ReservePool.entries.firstOrNull { it.stat == current }?.let(game::reserve)?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
             if (view.cards.isEmpty()) item { Text(ui("stat.empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
@@ -159,17 +161,17 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
     }
 }
 
-/** What the passive auras hold of the mana: their share and amount, and the mana left free to spend. */
-@Composable private fun ReserveCard(reserve: ManaReserve, game: GameUi) {
+/** What the passive auras hold of a pool (mana or life): their share and amount, and the pool left free. */
+@Composable private fun ReserveCard(reserve: PoolReserve, game: GameUi) {
     val shape = RoundedCornerShape(12.dp)
-    val value = { v: Double -> statValue(MANA_STAT, v, game.index) }
+    val value = { v: Double -> statValue(reserve.pool.stat, v, game.index) }
     Column(
-        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, ManaBlue.copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, reserve.pool.tint().copy(alpha = .45f), shape).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Text(ui("stat.reserve.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
         SourceLine(ShareRow(ui("stat.reserve.held", number(reserve.percent)), "−" + value(reserve.held), better = false)) {}
-        SourceLine(ShareRow(ui("stat.reserve.free"), value(reserve.free))) {}
+        SourceLine(ShareRow(ui("stat.reserve.free.${reserve.pool}"), value(reserve.free))) {}
     }
 }
 

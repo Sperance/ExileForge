@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdicts
@@ -18,6 +19,7 @@ import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -74,8 +76,8 @@ internal object HeroLens {
         return Sheets.unmet(index, code, hero.level, hero.stats)
     }
 
-    /** What the hero's auras hold of the mana, as the fight holds it (лист боя); null until the hero's sheet is here. */
-    fun manaReserve(hero: HeroView?): ManaReserve? = hero?.combat?.let { ManaReserve(it.body.maxMana, it.reserved) }
+    /** What the hero's auras hold of the pool [pool], as the fight holds it (лист боя); null until the hero's sheet is here. */
+    fun reserve(hero: HeroView?, pool: ReservePool): PoolReserve? = hero?.combat?.reserve(pool)
 
     /** The orbs of the world, in the order of their price: what the forge and the auction offer. */
     fun orbs(index: ContentIndex?): List<Item> = index?.let(orbsMemo::of).orEmpty()
@@ -134,7 +136,7 @@ fun GameUi.unmetNeeds(code: String): Set<NeedKind>? {
     val template = index?.template(code) ?: return null
     return unmetNeeds(template, hero.heroClass, unmetFor(code))
 }
-fun GameUi.manaReserve(): ManaReserve? = HeroLens.manaReserve(hero)
+fun GameUi.reserve(pool: ReservePool): PoolReserve? = HeroLens.reserve(hero, pool)
 
 /**
  * Цифры сводки героя: лист боя с пассивными умениями и Предначертанием ([CombatSheet]); до него - лист как есть. Сводка,
@@ -144,12 +146,6 @@ val HeroView.figures: StatFigures get() = combat?.figures ?: StatFigures(stats)
 
 /** Мощь героя - из того же листа боя без карты, что сводка; null - листа боя ещё нет. */
 val HeroView.might: MightReading? get() = combat?.might
-
-/** The hero's mana [pool] and the [percent] of it the passive auras hold, as the fight reserves it. */
-data class ManaReserve(val pool: Double, val percent: Double) {
-    val held: Double get() = pool * percent / 100
-    val free: Double get() = pool - held
-}
 
 /**
  * Последний ответ по контенту: тот же [ContentIndex] (по ссылке) - тот же ответ; срез игры пересоздаётся часто, а

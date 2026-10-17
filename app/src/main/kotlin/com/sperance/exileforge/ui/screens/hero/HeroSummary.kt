@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.StatFigures
+import com.sperance.exileforge.core.campaign.stat
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
@@ -35,10 +36,10 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.figures
-import com.sperance.exileforge.presentation.state.manaReserve
 import com.sperance.exileforge.presentation.state.might
+import com.sperance.exileforge.presentation.state.reserve
 import com.sperance.exileforge.rules.content.ContentIndex
-import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.ui.components.MightMark
@@ -185,7 +186,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Tipped({ Tip(statTitle(key, game.lang), tint = accent, facts = listOf(ui("tip.value") to statValue(key, value, game.index))) }) { StatIcon(key, accent, Modifier.size(18.dp)) }
-        val reserve = if (key == MANA_STAT) remember(game.hero, game.index) { game.manaReserve() }?.takeIf { it.percent > 0 } else null
+        val reserve = remember(key, game.hero, game.index) { ReservePool.entries.firstOrNull { it.stat == key }?.let(game::reserve) }?.takeIf { it.percent > 0 }
         val parts = remember(key, figures, game.index) { game.index?.let { partsText(key, figures.stats, it) } }
         val limit = remember(key, figures, game.index) { game.index?.campaign?.let { StatLimits.of(key, figures.stats, it) } }
         val level = game.hero?.level
@@ -193,7 +194,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
         val defenceWas = remember(key, before, game.index, level) { if (was == null) null else game.index?.let { index -> level?.let { before?.let { sheet -> StatLimits.defence(key, sheet, it, index) } } } }
         Column(Modifier.weight(1f)) {
             Text(statTitle(key, game.lang), color = Parchment, style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
-            reserve?.let { Text(ui("hero.mana_reserved", number(it.percent)), color = ManaBlue, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+            reserve?.let { Text(ui("hero.reserved", number(it.percent)), color = it.pool.tint(), style = MaterialTheme.typography.labelSmall, maxLines = 1) }
             parts?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
             limit?.takeIf { it.clamped }?.let { Text(ui("stat.cap.reached", statValue(key, it.gathered, game.index)), color = Caution, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
             defence?.let {
@@ -231,4 +232,8 @@ private fun partsText(key: String, stats: Map<String, Double>, index: ContentInd
     return (listOfNotNull(statValue(key, own, index).takeIf { own != 0.0 }) + texts).joinToString(" + ")
 }
 
-internal val MANA_STAT: String = CoreStat.MANA.code
+/** Цвет запаса резерва аур: мана - синим, здоровье - красным. */
+internal fun ReservePool.tint(): Color = when (this) {
+    ReservePool.MANA -> ManaBlue
+    ReservePool.LIFE -> LifeRed
+}

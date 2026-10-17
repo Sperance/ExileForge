@@ -50,7 +50,7 @@ object SkillText {
      * Урон во времени называет своё состояние (яд или свой урон умения); руны - эхо и дары применения.
      */
     fun lines(skill: SkillDefinition, level: Int, rules: CombatRules): List<String> = buildList {
-        if (skill.reserve > 0) add(ui("skill.line.reserve", number(skill.reserve)))
+        if (skill.reserve > 0) add(ui("skill.line.reserve.${skill.reserves}", number(skill.reserve)))
         skill.hit?.let { addAll(hit(it, level)) }
         skill.dot?.let { dot ->
             add(ui("skill.line.dot", number(dot.min.at(level)), number(dot.max.at(level)), element(dot.element), fineNumber(dot.duration), ailment(dot.ailment)))

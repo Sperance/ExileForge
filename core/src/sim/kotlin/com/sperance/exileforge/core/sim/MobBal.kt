@@ -29,6 +29,7 @@ import com.sperance.exileforge.rules.content.MAP_TEMPLATE
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
 import com.sperance.exileforge.rules.content.SkillNodeType
@@ -353,7 +354,7 @@ class Arena(private val index: ContentIndex, private val hero: Hero, effects: Ma
         gear = HeroGear(sheet.stats, hero.level, sheet.model, HeroStance.of(hero.heroClass.code), loadout, index.stats.percent)
         build = HeroBuild(gear, effects, rules)
         body = build.body
-        pools = HeroPools(body.maxLife, body.maxMana * (1 - loadout.reserved(body) / 100), loadout.flasks.map { it?.sheet?.maxCharges ?: 0.0 }, loadout.flasks.map { 0.0 }, loadout.flasks.map { DraughtRate() })
+        pools = HeroPools(body.maxLife, loadout.reserve(ReservePool.MANA, body).free, loadout.flasks.map { it?.sheet?.maxCharges ?: 0.0 }, loadout.flasks.map { 0.0 }, loadout.flasks.map { DraughtRate() })
     }
 
     val damage: Double get() = CombatProfile.of(index, body.stats, hero.level).total

@@ -30,6 +30,7 @@ import com.sperance.exileforge.core.model.campaign.CampaignState
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.EssenceBook
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.Zone
 import com.sperance.exileforge.rules.roll.AbyssRifts
 import com.sperance.exileforge.rules.roll.Crystal
@@ -73,7 +74,8 @@ internal fun ExpeditionRun.snapshot(): RunHud {
         fountain = fountain?.let { FountainView(it.id, it.heal) },
         gate = gate, vaal = vaal,
         heroMana = (battle?.heroMana ?: mana).roundToInt(), heroMaxMana = (battle?.manaCap() ?: manaCap()).roundToInt(),
-        heroReserved = (battle?.manaReserved() ?: (hero.maxMana - manaCap())).roundToInt(),
+        heroReserved = (battle?.manaReserved() ?: kit.reserve(ReservePool.MANA, hero).held).roundToInt(),
+        heroLifeReserved = (battle?.lifeReserved() ?: kit.reserve(ReservePool.LIFE, hero).held).roundToInt(),
         flasks = battle?.flaskViews() ?: mapFlasks(),
         crystal = crystal?.let { CrystalView(it.id, it.crystal.essences, it.crystal.guardian, it.crystal.stronger, it.crystal.vaal, crystalOutcome, vaaling(it)) },
         crystalsLeft = world.standingCrystals.size,

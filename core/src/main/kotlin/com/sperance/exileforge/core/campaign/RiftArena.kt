@@ -29,6 +29,7 @@ import com.sperance.exileforge.rules.content.FightKind
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRule
 import com.sperance.exileforge.rules.content.RiftRules
@@ -228,7 +229,7 @@ class RiftArena(
             val max = flask?.sheet?.maxCharges ?: 0.0
             (run.flasks.getOrNull(i) ?: max).coerceAtMost(max - dry).coerceIn(0.0, max)
         }
-        val mana = hero.maxMana * (1 - kit.reserved(hero) / 100)
+        val mana = kit.reserve(ReservePool.MANA, hero).free
         return HeroPools(hero.maxLife * run.life.coerceIn(0.0, 1.0), mana, charges, kit.flasks.map { 0.0 }, kit.flasks.map { DraughtRate() })
     }
 
@@ -332,12 +333,12 @@ class RiftArena(
     /** Условие Чемпиона вскрывается, когда бой начался. */
     private fun snapshot(): RiftFightHud {
         val fight = battle
-        val manaCap = hero.maxMana * (1 - kit.reserved(hero) / 100)
+        val mana = kit.reserve(ReservePool.MANA, hero)
         val runHud = RunHud(
             RunPhase.FIGHT, MapCode.NONE, (fight?.heroLife ?: pools.life).let { shownLife(it, it > 0, hero.maxLife) }, shownMax(hero.maxLife),
             (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
-            alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = manaCap.roundToInt(),
-            heroReserved = (hero.maxMana - manaCap).roundToInt(),
+            alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = mana.free.roundToInt(),
+            heroReserved = mana.held.roundToInt(), heroLifeReserved = kit.reserve(ReservePool.LIFE, hero).held.roundToInt(),
         )
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
         if (fight != null) {

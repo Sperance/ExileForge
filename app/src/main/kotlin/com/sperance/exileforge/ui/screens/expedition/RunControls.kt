@@ -78,7 +78,8 @@ import kotlin.math.roundToInt
  * мана - тонкая полоса под ней с числами внутри; удержанная аурами часть ([reserved] сверх [maxMana]) - штриховкой.
  *
  * [flow] - итог здоровья в секунду на полосе жизни, только пока здоровье меняется ([LifeFlow.moves]); null - не писать. [onFlow] - касание
- * полосы - разбор итога; null - полоса не нажимается. Запас, что ауры держат целиком, рисуется полной штрихованной полосой.
+ * полосы - разбор итога; null - полоса не нажимается. Запас, что ауры держат целиком, рисуется полной штрихованной полосой;
+ * [lifeReserved] - здоровье, что держат ауры сверх [maxLife], - штрихованный хвост полосы здоровья.
  */
 @Composable internal fun Vitals(
     life: Int,
@@ -90,15 +91,17 @@ import kotlin.math.roundToInt
     maxMana: Int = 0,
     reserved: Int = 0,
     flow: LifeFlow? = null,
+    lifeReserved: Int = 0,
     onFlow: (() -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(5.dp)
-    val lifeShare by animateFloatAsState(if (maxLife > 0) life / maxLife.toFloat() else 0f, label = "life")
+    val lifeWhole = maxLife + lifeReserved.coerceAtLeast(0)
+    val lifeShare by animateFloatAsState(if (lifeWhole > 0) life / lifeWhole.toFloat() else 0f, label = "life")
     val shieldShare by animateFloatAsState(if (maxShield > 0) shield / maxShield.toFloat() else 0f, label = "shield")
     val moving = flow?.takeIf { it.moves(life.toDouble(), maxLife.toDouble()) }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Box(
-            Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).border(1.dp, LifeRim, shape)
+            Modifier.fillMaxWidth().height(18.dp).clip(shape).background(VitalsWell, shape).reservedTail(reservedShare(maxLife, lifeReserved), LifeRed).border(1.dp, LifeRim, shape)
                 .then(if (moving != null && onFlow != null) Modifier.clickable(onClickLabel = ui("fight.flow.title"), onClick = onFlow) else Modifier),
         ) {
             Box(Modifier.fillMaxWidth(lifeShare.coerceIn(0f, 1f)).fillMaxHeight().background(Brush.verticalGradient(listOf(LifeTop, LifeRed, LifeDeep))))

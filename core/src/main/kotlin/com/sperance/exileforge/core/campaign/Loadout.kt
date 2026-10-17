@@ -17,6 +17,7 @@ import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.rules.content.ModifierCode
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerBook
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SlotCondition
 import com.sperance.exileforge.rules.roll.GuardianFloor
 import com.sperance.exileforge.rules.roll.ItemInstance
@@ -85,20 +86,20 @@ data class Loadout(
     /** Умения героя правилами: резерв аур и строки пассивных считает [HeroKit], тот же, что у Мощи сервера. */
     val heroKit: HeroKit by lazy { HeroKit(actives, passives, curses) }
 
-    /** How many percent of the maximum mana the passive auras hold, after the sheet's reservation efficiency. */
-    fun reserved(hero: Combatant): Double = heroKit.reserved(hero, hero.rules.floors.reserve)
+    /** Резерв запаса [pool] аурами тела [hero] - правило [HeroKit.reserved], как его держит бой. */
+    fun reserve(pool: ReservePool, hero: Combatant): PoolReserve = PoolReserve.of(pool, hero, heroKit.reserved(pool, hero, hero.rules))
 
-    /** Сколько процентов максимума маны держит пассивное умение [passive]: аура - свою долю на эффективности резерва листа. */
-    fun reserve(passive: KitSkill, hero: Combatant): Double = heroKit.reserve(passive, hero, hero.rules.floors.reserve)
+    /** Сколько процентов своего запаса держит пассивное умение [passive]: аура - свою долю на эффективности резерва листа. */
+    fun reserve(passive: KitSkill, hero: Combatant): Double = heroKit.reserve(passive, hero, hero.rules)
 
     /**
      * What the passives lay on the sheet all the time: an aura's lines stronger by the aura effect, a bonus's
      * and a trigger's standing lines as they are. [hero] is the sheet without them.
      */
-    fun passiveLines(hero: Combatant): List<StatLine> = heroKit.passiveLines(hero)
+    fun passiveLines(hero: Combatant): List<StatLine> = heroKit.passiveLines(hero, hero.rules)
 
     /** Each passive with the lines it lays on [hero], the low-life bonuses among them: a figure's window names them one by one. */
-    fun passiveSources(hero: Combatant): List<Pair<KitSkill, List<StatLine>>> = heroKit.passiveSources(hero)
+    fun passiveSources(hero: Combatant): List<Pair<KitSkill, List<StatLine>>> = heroKit.passiveSources(hero, hero.rules)
 
     /** What the low-life bonuses lay on while the hero's life is under half. */
     fun lowLifeLines(hero: Combatant): List<StatLine> = heroKit.lowLifeLines(hero)
@@ -323,4 +324,31 @@ fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught 
         toMana = own(FlaskStat.LIFE_TO_MANA.code) / 100,
         toShield = own(FlaskStat.LIFE_TO_SHIELD.code) / 100,
     )
+}
+
+/**
+ * Резерв запаса [pool] аурами: весь запас [whole] и доля [percent], что держат ауры; [held] - удержанное, [free] - свободное, что
+ * берёт бой. Запас, что резерв урезает строкой листа ([ReservePool.held]: здоровье), в теле уже без доли - весь запас собран обратно.
+ */
+data class PoolReserve(val pool: ReservePool, val whole: Double, val percent: Double) {
+    val held: Double get() = whole * percent / 100
+    val free: Double get() = whole - held
+
+    companion object {
+        /** Резерв запаса [pool] тела [body] при доле [percent]. */
+        fun of(pool: ReservePool, body: Combatant, percent: Double): PoolReserve {
+            val amount = when (pool) {
+                ReservePool.MANA -> body.maxMana
+                ReservePool.LIFE -> body.maxLife
+            }
+            val whole = if (pool.held != null && percent < 100) amount / (1 - percent / 100) else amount
+            return PoolReserve(pool, whole, percent)
+        }
+    }
+}
+
+/** Характеристика листа, что меряет запас: мана - максимум маны, здоровье - максимум здоровья. */
+val ReservePool.stat: String get() = when (this) {
+    ReservePool.MANA -> CoreStat.MANA.code
+    ReservePool.LIFE -> CoreStat.HEALTH.code
 }

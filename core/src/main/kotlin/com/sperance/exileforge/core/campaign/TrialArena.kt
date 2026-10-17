@@ -20,6 +20,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.RushPlan
 import com.sperance.exileforge.rules.content.TowerFloor
 import com.sperance.exileforge.rules.content.TowerMod
@@ -330,7 +331,7 @@ class TrialArena(
         pools = pools.copy(life = if (before > 0) pools.life / before * hero.maxLife else hero.maxLife, mana = pools.mana.coerceAtMost(manaCap()))
     }
 
-    private fun manaCap(): Double = hero.maxMana * (1 - kit.reserved(hero) / 100)
+    private fun manaCap(): Double = kit.reserve(ReservePool.MANA, hero).free
 
     /** The floor's growth: so many percent more life and damage on every monster of it (ступень раша ниже нуля - меньше). */
     private fun growth(power: Double): List<MonsterEffect> = if (power == 0.0) emptyList() else (listOf(CoreStat.HEALTH.code) + GuardianFloor.STRIKES).map { MonsterEffect(it, Op.MORE, power) }
@@ -411,7 +412,7 @@ class TrialArena(
         val runHud = RunHud(
             RunPhase.FIGHT, MapCode.NONE, life, shownMax(hero.maxLife), (fight?.heroFighter?.shield ?: hero.maxShield).roundToInt(), hero.maxShield.roundToInt(),
             alive = 0, total = 0, heroMana = (fight?.heroMana ?: pools.mana).roundToInt(), heroMaxMana = manaCap().roundToInt(),
-            heroReserved = (hero.maxMana - manaCap()).roundToInt(), kills = kills,
+            heroReserved = kit.reserve(ReservePool.MANA, hero).held.roundToInt(), heroLifeReserved = kit.reserve(ReservePool.LIFE, hero).held.roundToInt(), kills = kills,
         )
         val leader = monsters.maxByOrNull { it.rarity.ordinal }
         val fightHud = if (fight != null && leader != null) {

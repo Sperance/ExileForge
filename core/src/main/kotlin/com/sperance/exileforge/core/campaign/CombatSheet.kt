@@ -9,6 +9,7 @@ import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.HeroSkills
+import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSpread
 import com.sperance.exileforge.rules.content.WorldKind
 import com.sperance.exileforge.rules.content.WorldPart
@@ -28,7 +29,7 @@ import com.sperance.exileforge.rules.sheet.StatSource
 import kotlin.math.abs
 
 /**
- * Пассивное умение героя в бою: код [skill], уровень [level], на котором оно действует, доля маны [reserve], что держит аура,
+ * Пассивное умение героя в бою: код [skill], уровень [level], на котором оно действует, доля своего запаса [reserve], что держит аура,
  * его строки [lines] на листе (аура - на силе `STOCK_AURA_EFFECT`) и ждёт ли оно низкого здоровья ([lowLife]).
  */
 data class PassiveSource(val skill: String, val level: Int, val reserve: Double, val lines: List<StatLine>, val lowLife: Boolean)
@@ -198,8 +199,8 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     /** Предначертание героя на силе его листа, с действующими судьбоносными строками. */
     val fate: FateEffects get() = kit.fate.effects
 
-    /** Сколько процентов максимума маны держат ауры - как её держит бой (`Battle.manaCap`). */
-    val reserved: Double by lazy { kit.reserved(body) }
+    /** Резерв запаса [pool] аурами - как его держит бой (`Battle.manaCap`, `Battle.lifeReserved`). */
+    fun reserve(pool: ReservePool): PoolReserve = kit.reserve(pool, body)
 
     /** Пассивные умения героя с их уровнем, резервом и строками - уровень и сила аур читаются с листа без них, как в бою. */
     val passives: List<PassiveSource> by lazy {

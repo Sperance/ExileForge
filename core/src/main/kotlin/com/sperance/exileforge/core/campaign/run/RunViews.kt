@@ -364,6 +364,8 @@ data class RunHud(
     val heroMana: Int = 0,
     val heroMaxMana: Int = 0,
     val heroReserved: Int = 0,
+    /** Здоровье, что держат ауры сверх [heroMaxLife]: хвост полосы здоровья. */
+    val heroLifeReserved: Int = 0,
     val flasks: List<FlaskView?> = emptyList(),
     val crystal: CrystalView? = null,
     val crystalsLeft: Int = 0,

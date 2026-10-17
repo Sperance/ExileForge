@@ -44,23 +44,27 @@ private val GLOSSARY: List<GlossaryEntry> = listOf(
     GlossaryEntry("away") { listOf(number(it.offlineHours)) },
 )
 
-/** Кнопка ⓘ шапки ремёсел: открывает справку по показателям работ; пока правила не пришли, её нет. */
-@Composable internal fun CraftsGlossaryButton(rules: CraftsRules?) {
+/** Кнопка ⓘ шапки ремёсел: открывает справку по показателям работ, над ней - [intro] (описание профессии); пока правила не пришли, её нет. */
+@Composable internal fun CraftsGlossaryButton(rules: CraftsRules?, intro: String = "") {
     rules ?: return
     var open by remember { mutableStateOf(false) }
     IconButton(onClick = { open = true }, modifier = Modifier.size(36.dp)) { Icon(Icons.Outlined.Info, ui("crafts.help.title"), tint = Muted) }
-    if (open) CraftsGlossary(rules) { open = false }
+    if (open) CraftsGlossary(rules, GLOSSARY, intro) { open = false }
 }
 
-/** Справка: что значит каждый показатель на карточке работы, по правилам ремёсел. */
-@Composable private fun CraftsGlossary(rules: CraftsRules, onDismiss: () -> Unit) {
+/** Одна статья справки [key] - по касанию показателя работы. */
+@Composable internal fun CraftsGlossaryEntry(rules: CraftsRules, key: String, onDismiss: () -> Unit) = CraftsGlossary(rules, GLOSSARY.filter { it.key == key }, onDismiss = onDismiss)
+
+/** Справка: что значит каждый показатель [entries] на карточке работы, по правилам ремёсел; над ними - [intro], если он есть. */
+@Composable private fun CraftsGlossary(rules: CraftsRules, entries: List<GlossaryEntry>, intro: String = "", onDismiss: () -> Unit) {
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
+            if (intro.isNotEmpty()) Text(intro, color = Parchment, style = MaterialTheme.typography.bodyMedium)
             Engraved(ui("crafts.help.title"))
-            GLOSSARY.forEach { entry ->
+            entries.forEach { entry ->
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(ui("crafts.help.${entry.key}"), color = Gold, style = MaterialTheme.typography.titleSmall)
                     Text(ui("crafts.help.${entry.key}_text", *entry.args(rules).toTypedArray()), color = Parchment, style = MaterialTheme.typography.bodyMedium)

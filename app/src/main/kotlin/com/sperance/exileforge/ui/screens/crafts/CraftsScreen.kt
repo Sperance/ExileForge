@@ -188,37 +188,22 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         val heroModel = koinViewModel<HeroViewModel>()
         WorkLedger(
             game,
-            ui("crafts.totals_title"),
             sums,
             made,
+            title = ui("crafts.totals_title"),
             startedAt = work.startedAt,
             offset = offset,
             makes = crafts.state?.running?.kind?.makesItems == true,
             onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
         )
-        crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
+        crafts.state?.running?.let { StockRow(game, work, it) }
     }
 }
 
 /** Вещь, что держит работа: строка плиты с подписью «в работе»; касание открывает её карточку. */
-@Composable private fun HeldItem(view: ItemView) {
+@Composable internal fun HeldItem(view: ItemView) {
     val inspect = rememberInspect()
     ItemRow(view, facts = listOf(ui("crafts.held"))) { inspect(Inspect.Copy(view.item)) }
-}
-
-/**
- * Что принесла работа за эту сессию (с 4.x - книгой учёта, как плашка работы): итоги, строки стопок и сделанные вещи;
- * каждая строка и чип открывают карточку.
- */
-@Composable
-internal fun SessionTally(game: GameUi, totals: WorkGains) {
-    if (totals.cycles == 0) {
-        MutedText(ui("crafts.session_empty"), style = MaterialTheme.typography.labelMedium)
-        return
-    }
-    val sums = remember(totals) { WorkSums.of(totals) }
-    WorkLedger(game, ui("crafts.session_title"), sums, totals.equipment)
-    if (totals.starved) Text(ui("crafts.starved"), color = LifeRed, style = MaterialTheme.typography.labelSmall)
 }
 
 /** Чип стопки или вещи: [figure] в тоне [tone] (null - без числа) и название; касание - [onClick]. */
@@ -255,7 +240,7 @@ internal fun SessionTally(game: GameUi, totals: WorkGains) {
  * A cycle's bar, filled smoothly: it reads the device's clock, set by the server's through [offset], and only
  * the bar is redrawn — the screen around it is not recomposed. Часы полосы тикают не каждый кадр, а с шагом
  * в один пиксель её ширины ([cycleStepMs]): на глаз так же плавно, а экран ремёсел не держит полный FPS.
- * Under it the time the cycle has run of its whole, and what the work brings in an hour on average.
+ * Под ней одной строкой - сколько прошло цикла из всего и что работа даёт в час.
  * Полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
  * всплывает, что принёс пересчёт на границе цикла ([last]).
  */
@@ -277,11 +262,13 @@ internal fun SessionTally(game: GameUi, totals: WorkGains) {
         )
         HarvestPopup(last)
     }
-    CycleClock(work, offset, Modifier.fillMaxWidth())
-    hourly?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelSmall) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        CycleClock(work, offset, Modifier.weight(1f))
+        hourly?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, maxLines = 2) }
+    }
 }
 
-/** The running cycle as figures — «12.4 / 30 s» — a few times a second, so the text alone is redrawn, not the bar's frame. */
+/** Идущий цикл часами - «Цикл 3:41 из 5:19» - несколько раз в секунду: перерисовывается только текст, не полоса. */
 @Composable internal fun CycleClock(work: WorkView, offset: Long, modifier: Modifier) {
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
@@ -289,7 +276,7 @@ internal fun SessionTally(game: GameUi, totals: WorkGains) {
             delay(CLOCK_TICK)
         }
     }
-    MutedText(ui("crafts.cycle_progress", fineNumber(work.phase(now + offset) / 1000.0), number(work.cycleMillis / 1000.0)), modifier, style = MaterialTheme.typography.labelSmall)
+    MutedText(ui("crafts.cycle_clock", clock(work.phase(now + offset)), clock(work.cycleMillis)), modifier, style = MaterialTheme.typography.labelSmall)
 }
 
 /**

@@ -65,6 +65,7 @@ import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.Desecrations
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.roll.Work
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
 import com.sperance.exileforge.ui.components.*
@@ -143,19 +144,28 @@ internal fun workTitle(game: GameUi, work: WorkView): String = game.heldWork?.le
 val ProfessionView.crafting get() = jobs.any { it.inputs.isNotEmpty() }
 
 /**
- * How long the bag keeps the work going: the input that runs out first, what the bag holds of it and
- * how many cycles that pays for — every additive the work was started with is spent each cycle too.
- * Display only: the server stops the work when a cycle cannot be paid.
+ * Сколько сумка ещё держит работу: вход, что кончится первым, сколько его в сумке и на сколько циклов хватит - каждая примесь,
+ * с которой работу начали, тоже уходит каждый цикл. Пара - код этого входа и строка; работа без входа - null. Только показ:
+ * сервер сам остановит работу, когда цикл нечем оплатить.
  */
-fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
+fun stock(game: GameUi, work: WorkView, job: JobView): Pair<String, String>? {
     val inputs = job.inputs + work.additives.map { JobInput(it, 1) }
     val scarce = inputs.filter { it.amount > 0 }.minByOrNull { bagCount(game, it.item) / it.amount } ?: return null
     val have = bagCount(game, scarce.item)
     val cycles = (have / scarce.amount).toInt()
-    return if (cycles == 0) {
+    return scarce.item to if (cycles == 0) {
         ui("crafts.stock_empty", itemTitle(scarce.item), have)
     } else {
         ui("crafts.stock", itemTitle(scarce.item), have, cycles, plural("crafts.cycles", cycles), eta(cycles * work.cycleMillis))
+    }
+}
+
+/** Запас входа идущей работы строкой: иконка входа, что кончится первым, и [stock] цветом предупреждения. */
+@Composable internal fun StockRow(game: GameUi, work: WorkView, job: JobView) {
+    val (code, line) = stock(game, work, job) ?: return
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        BagIcon(code, Modifier.size(18.dp))
+        Text(line, color = Caution, style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -189,6 +199,25 @@ fun stockLine(game: GameUi, work: WorkView, job: JobView): String? {
 }
 
 @Composable private fun LevelText(text: String) = Text(text, color = Vital, style = MaterialTheme.typography.labelMedium)
+
+/**
+ * Подсказка листа работы при нехватке на цикл (с примесями [additives]): первый недостающий материал, сколько его есть и нужно, и где он
+ * добывается - самая ранняя работа-стопка, что его даёт; хватает - null.
+ */
+internal fun shortNote(game: GameUi, job: JobView, additives: List<String>): String? {
+    val (code, need) = Work.perCycle(job.job, additives).entries.firstOrNull { (code, amount) -> bagCount(game, code) < amount } ?: return null
+    val line = ui("crafts.short_note", itemTitle(code), bagCount(game, code), need)
+    val source = game.index?.professions?.professions.orEmpty()
+        .flatMap { profession -> profession.jobs.filterIsInstance<Job.Item>().filter { it.output == code }.map { profession to it } }
+        .minByOrNull { it.second.level } ?: return line
+    return line + " " + ui("crafts.short_source", professionTitle(source.first.code), jobTitle(source.second.code), source.second.level)
+}
+
+/** Время часами: «3:41», «1:05:09». */
+internal fun clock(millis: Long): String {
+    val seconds = (millis / 1000).coerceAtLeast(0)
+    return if (seconds >= 3600) "%d:%02d:%02d".format(seconds / 3600, seconds % 3600 / 60, seconds % 60) else "%d:%02d".format(seconds / 60, seconds % 60)
+}
 
 internal fun eta(millis: Long): String {
     val seconds = (millis + 999) / 1000
@@ -228,6 +257,9 @@ internal fun hourlyLine(crafts: Crafts, work: WorkView): String? {
     val figures = (listOf(made) + finds).filter { it.second > 0 }.takeIf { it.isNotEmpty() } ?: return null
     return ui("crafts.per_hour", figures.joinToString(" · ") { (name, amount) -> ui("crafts.per_hour_item", fineNumber(amount), name) })
 }
+
+/** Выход работы [job] профессии [profession] в час одной строкой: «≈ 8.5 в час»; без цикла - null. */
+internal fun hourlyShort(job: JobView, profession: ProfessionView): String? = perHour(job, profession)?.let { ui("crafts.per_hour_short", fineNumber(it)) }
 
 /** The cycles an hour of [cycleMillis] brings that do not come back empty. */
 internal fun landed(cycleMillis: Long, job: JobView): Double = HOUR_MILLIS / cycleMillis.toDouble() * (1 - job.nothing / 100).coerceAtLeast(0.0)

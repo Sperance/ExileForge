@@ -3,7 +3,6 @@ package com.sperance.exileforge.presentation.crafts
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.crafts.Harvest
-import com.sperance.exileforge.core.crafts.plus
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.model.crafts.CraftsState
 import com.sperance.exileforge.core.network.GameApi
@@ -16,7 +15,6 @@ import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.freshness
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.presentation.app.Foreground
-import com.sperance.exileforge.rules.roll.WorkGains
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -103,11 +101,9 @@ class CraftsActions(
         repository.clear()
     }
 
-    /** Новая работа - «За сессию» считается с нуля. */
+    /** Новая работа или та же с другим выбором. */
     fun start(job: String, choice: String = "", additives: List<String> = emptyList()) {
         buzzes.buzz(Buzz.BUTTON)
-        val running = crafts.state?.work
-        if (running == null || running.job != job || running.choice != choice) crafts { it.copy(totals = WorkGains()) }
         commands.task(writing = true, touches = setOf(Reads.CRAFTS)) {
             val id = heroes.heroId
             land(id, api.crafts.start(id, job, choice, additives))
@@ -127,7 +123,7 @@ class CraftsActions(
     }
 
     /**
-     * Ответ сервера: работа как он её пересчитал, его сбор с прошлого ответа - в итог сеанса; сбор с циклами - [Crafts.last] для
+     * Ответ сервера: работа как он её пересчитал; сбор с циклами - [Crafts.last] для
      * всплывашки у полосы цикла. Сумка приходит снимком героя в том же ответе; не пришёл - герой
      * перечитывается.
      */
@@ -138,7 +134,6 @@ class CraftsActions(
             c.copy(
                 state = answer,
                 readAt = System.currentTimeMillis(),
-                totals = c.totals + gains,
                 last = if (gains.cycles > 0) Harvest(gains, (c.last?.seq ?: 0L) + 1) else c.last,
             )
         }

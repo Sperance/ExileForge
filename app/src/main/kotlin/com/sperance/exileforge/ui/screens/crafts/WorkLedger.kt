@@ -1,37 +1,40 @@
 package com.sperance.exileforge.ui.screens.crafts
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Autorenew
-import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material.icons.outlined.StarOutline
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -44,8 +47,11 @@ import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
+import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
@@ -55,12 +61,14 @@ import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
-import com.sperance.exileforge.ui.theme.Bronze
+import com.sperance.exileforge.ui.icons.ItemIcon
+import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.PanelRaised
 import com.sperance.exileforge.ui.theme.Parchment
+import com.sperance.exileforge.ui.theme.Rune
 import com.sperance.exileforge.ui.theme.Vital
 import com.sperance.exileforge.ui.theme.rarityColor
 import kotlinx.coroutines.delay
@@ -100,58 +108,108 @@ internal class WorkSums(
 }
 
 /**
- * Книга учёта: итоги [sums] с иконками, под чертой [title] строки стопок и чипы сделанного [made]. [startedAt] > 0 - есть время в
- * работе: оно идёт по часам сервера (сдвиг [offset]); ноль - итог сессии, без времени. [makes] - работа делает вещи: есть итог «сделано».
- * [onShow] - кнопка «Показать в тайнике» под сделанным; null - без неё.
- *
- * Книга учёта ремесла: итоги с иконками в две колонки - время (вживую), циклы (−впустую), опыт (▲уровни), сделано; затем каждая стопка
- * строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное красным); сделанные вещи - чипами цвета
- * редкости. Касание открывает карточку. «Сделано» - только у работ, что делают вещи ([JobKind.makesItems]).
+ * Книга учёта ремесла: под чертой [title] итоги плитками в ряд - время в работе (вживую, [startedAt] > 0 по часам сервера со сдвигом
+ * [offset]), циклы (−впустую), опыт (▲уровни), сделано (только у работ, что делают вещи: [makes]) и уровень профессии [level]; затем каждая
+ * стопка строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное красным); сделанные вещи [made] -
+ * строками с иконкой в рамке редкости, именем её цвета, видом и уровнем: первые [MADE_SHOWN], прочие - под «Ещё N». [onShow] - кнопка
+ * «Показать в тайнике» под сделанным; null - без неё. Касание строки открывает карточку.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<ItemInstance>, startedAt: Long = 0, offset: Long = 0, makes: Boolean = sums.made > 0, onShow: (() -> Unit)? = null) {
+internal fun WorkLedger(
+    game: GameUi,
+    sums: WorkSums,
+    made: List<ItemInstance>,
+    title: String? = null,
+    startedAt: Long = 0,
+    offset: Long = 0,
+    makes: Boolean = sums.made > 0,
+    level: Int? = null,
+    onShow: (() -> Unit)? = null,
+) {
     val inspect = rememberInspect()
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = 2, verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val cell = Modifier.weight(1f)
-            if (startedAt > 0) LedgerFigure(Icons.Outlined.Schedule, ui("crafts.totals_time"), cell) { WorkTime(startedAt, offset) }
-            LedgerFigure(Icons.Outlined.Autorenew, ui("crafts.totals_cycles"), cell) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        title?.let { SectionRule(it) }
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            val cell = Modifier.weight(1f).fillMaxHeight()
+            if (startedAt > 0) LedgerTile(ui("crafts.totals_time"), cell) { WorkTime(startedAt, offset) }
+            LedgerTile(ui("crafts.totals_cycles"), cell) {
                 val empty = MaterialTheme.typography.labelSmall.toSpanStyle().copy(color = LifeRed)
                 Text(
                     buildAnnotatedString {
                         append(sums.cycles.toString())
-                        if (sums.nothing > 0) withStyle(empty) { append("  −${sums.nothing}") }
+                        if (sums.nothing > 0) withStyle(empty) { append(" −${sums.nothing}") }
                     },
                     color = Parchment,
+                    maxLines = 1,
                 )
             }
-            LedgerFigure(Icons.Outlined.StarOutline, ui("crafts.totals_experience"), cell) {
-                Text("+" + number(sums.experience) + (if (sums.levels > 0) " ▲${sums.levels}" else ""), color = Vital)
+            LedgerTile(ui("crafts.totals_experience"), cell) {
+                Text("+" + number(sums.experience) + (if (sums.levels > 0) " ▲${sums.levels}" else ""), color = Vital, maxLines = 1)
             }
-            if (makes) LedgerFigure(ForgeGlyphs.Anvil, ui("crafts.totals_made"), cell) { Text(sums.made.toString(), color = Parchment) }
+            if (makes) LedgerTile(ui("crafts.totals_made"), cell) { Text(sums.made.toString(), color = Parchment, maxLines = 1) }
+            level?.let { LedgerTile(ui("crafts.totals_profession"), cell) { Text(ui("crafts.level", it), color = Rune, maxLines = 1) } }
         }
-        SectionRule(title)
         if (sums.isEmpty) {
             Text(ui("crafts.totals_empty"), color = Muted, style = MaterialTheme.typography.labelSmall)
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Column {
                 sums.gatheredSorted.forEach { (code, amount) ->
                     LedgerRow(game, code, amount, sums.scale, gathered = true) { inspect(Inspect.Stack(code)) }
                 }
-                if (sums.gathered.isNotEmpty() && sums.spent.isNotEmpty()) HorizontalDivider(Modifier.padding(vertical = 2.dp), color = Bronze)
                 sums.spentSorted.forEach { (code, amount) ->
                     LedgerRow(game, code, amount, sums.scale, gathered = false) { inspect(Inspect.Stack(code)) }
                 }
             }
         }
         if (made.isNotEmpty()) {
-            SectionRule(ui("crafts.totals_made"))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                made.forEach { item -> TallyChip(equipmentTitle(item.template), null, rarityColor(item.rarity.name)) { inspect(Inspect.Copy(item)) } }
+            SectionRule(ui("crafts.made_title", made.size))
+            MadeList(game, made) { inspect(Inspect.Copy(it)) }
+            onShow?.let { show ->
+                ForgeOutlinedButton(onClick = show, modifier = Modifier.fillMaxWidth()) {
+                    Icon(ForgeGlyphs.Stash, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(ui("crafts.show_in_stash"))
+                }
             }
-            onShow?.let { ForgeOutlinedButton(onClick = it) { Text(ui("crafts.show_in_stash")) } }
         }
+    }
+}
+
+/** Сделанные вещи строками: первые [MADE_SHOWN], прочие раскрываются касанием «Ещё N ▾». */
+@Composable internal fun MadeList(game: GameUi, made: List<ItemInstance>, onOpen: (ItemInstance) -> Unit) {
+    var open by remember(made.size) { mutableStateOf(false) }
+    Column {
+        (if (open) made else made.take(MADE_SHOWN)).forEach { item -> MadeRow(game, item) { onOpen(item) } }
+        if (made.size > MADE_SHOWN) {
+            Row(
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button) { open = !open }.heightIn(min = 40.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(if (open) ui("crafts.less") else ui("crafts.more", made.size - MADE_SHOWN), color = Gold, style = MaterialTheme.typography.labelLarge)
+                Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Gold, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+/** Сделанная вещь строкой 40dp: иконка в рамке редкости, имя её цвета, вид и уровень справа; касание - [onClick]. */
+@Composable private fun MadeRow(game: GameUi, item: ItemInstance, onClick: () -> Unit) {
+    val view = game.view(item)
+    val tone = rarityColor(item.rarity.name)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 40.dp).clip(RoundedCornerShape(6.dp)).clickable(role = Role.Button, onClick = onClick).padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(Modifier.size(32.dp).background(Abyss, RoundedCornerShape(6.dp)).border(1.dp, tone.copy(alpha = .7f), RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+            view?.let { ItemIcon(it, tone, Modifier.size(22.dp)) }
+        }
+        Column(Modifier.weight(1f)) {
+            Text(view?.title ?: equipmentTitle(item.template), color = tone, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            view?.let { Text(it.weaponType?.let(::weaponTitle) ?: slotTitle(it.slot), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1) }
+        }
+        view?.let { Text(ui("crafts.made_level", it.level), color = Parchment, style = MaterialTheme.typography.labelMedium) }
     }
 }
 
@@ -166,16 +224,11 @@ internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<
     Text(duration(now + offset - startedAt), color = Parchment)
 }
 
-/** Итог с иконкой: значок в плашке 28dp, под числом [figure] - подпись [caption]. */
-@Composable private fun LedgerFigure(icon: ImageVector, caption: String, modifier: Modifier, figure: @Composable () -> Unit) {
-    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(PanelRaised), contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Gold, modifier = Modifier.size(16.dp))
-        }
-        Column {
-            ProvideTextStyle(MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)) { figure() }
-            Text(caption, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+/** Итог плиткой: число [figure] крупно, под ним подпись [caption]. */
+@Composable private fun LedgerTile(caption: String, modifier: Modifier, figure: @Composable () -> Unit) {
+    Column(modifier.background(Abyss, RoundedCornerShape(8.dp)).padding(horizontal = 8.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        ProvideTextStyle(MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)) { figure() }
+        Text(caption, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -216,3 +269,6 @@ private const val MIN_BAR = .03f
 
 /** Шаг живых часов «В работе». */
 private const val CLOCK_TICK_MS = 1_000L
+
+/** Сколько сделанных вещей видно до «Ещё N». */
+private const val MADE_SHOWN = 5

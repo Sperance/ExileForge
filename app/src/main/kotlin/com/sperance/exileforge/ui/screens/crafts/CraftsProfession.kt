@@ -15,12 +15,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Stop
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -35,8 +37,10 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.crafts.Crafts
+import com.sperance.exileforge.core.crafts.JobGroups
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.choiceTitle
+import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.equipmentIcon
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -54,7 +58,9 @@ import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.JobInput
@@ -71,6 +77,7 @@ import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
+import org.koin.compose.viewmodel.koinViewModel
 import kotlin.math.ceil
 
 /** Окно профессии: плитка, уровень, инструмент и его бонусы. */
@@ -128,9 +135,9 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 }
 
 /**
- * A profession's window: its level, the tool in its slot and what the tool and the tree give, the
- * work under way here with what this session brought, and every work with the numbers the server
- * worked out for this hero — a locked one says the level it wants.
+ * Окно профессии плотной колонкой: в шапке имя, уровень тонкой полосой с опытом, справка ⓘ (с описанием профессии) и инструмент;
+ * под ней панель «Сейчас» - идущая здесь работа целиком: что, полоса цикла, запас входа и учёт с начала работы со сделанным; ниже
+ * работы профессии строками ([JobRow]) с отбором по группе выхода ([JobGroups]), когда групп больше одной.
  *
  * Открытые работы и следующая за ними - «???» со своим уровнем.
  */
@@ -139,41 +146,19 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
     var picking by remember { mutableStateOf(false) }
     var toolOpen by remember { mutableStateOf(false) }
     var chosen by remember { mutableStateOf<JobView?>(null) }
+    var group by remember(profession.code) { mutableStateOf<String?>(null) }
     val work = crafts.state?.work?.takeIf { it.profession == profession.code }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { vm.openProfession("") }) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold) }
-                Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                CraftsGlossaryButton(crafts.state?.rules)
-                ToolButton(game, profession) { toolOpen = true }
-            }
-        }
-        item {
-            ForgePanel {
-                MutedText(professionDescription(profession.code))
-                Text(
-                    profession.next?.let { ui("crafts.level_progress", profession.level, number(profession.experience), number(it)) } ?: ui("crafts.level_last", profession.level),
-                    color = Rune,
-                    style = MaterialTheme.typography.labelLarge,
-                )
-                LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.fillMaxWidth().height(5.dp), color = Vital, trackColor = PanelRaised)
-            }
-        }
-        if (work != null) {
-            item {
-                ForgePanel(accent = GoldBright) {
-                    Engraved(ui("crafts.now", workTitle(game, work)))
-                    CycleBar(work, offset, crafts.last, height = 10, hourly = hourlyLine(crafts, work))
-                    SessionTally(game, crafts.totals)
-                }
-            }
-        }
-        item { Engraved(ui("crafts.works")) }
-        val locked = { job: JobView -> job.level > profession.level || !job.open }
-        val next = profession.jobs.firstOrNull(locked)
-        items(profession.jobs.filter { !locked(it) || it == next }, key = { it.code }) { job ->
-            JobRow(game, profession, job, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
+    val groups = remember(profession.jobs, game.index) { JobGroups.of(profession.jobs, game.index) }
+    val locked = { job: JobView -> job.level > profession.level || !job.open }
+    val next = profession.jobs.firstOrNull(locked)
+    val shown = profession.jobs.filter { (!locked(it) || it == next) && (group == null || groups.groupOf(it) == group) }
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { ProfessionHeader(game, crafts, profession, onBack = { vm.openProfession("") }) { toolOpen = true } }
+        if (work != null) item { NowPanel(game, vm, crafts, work, offset) }
+        item { SectionRule(ui("crafts.works")) }
+        if (groups.size > 1) item { JobFilters(groups, profession.jobs.size, group) { group = it } }
+        items(shown, key = { it.code }) { job ->
+            JobRow(game, profession, job, crafts.state?.rules, locked = locked(job), current = work?.job == job.code) { if (!locked(job)) chosen = job }
         }
     }
     chosen?.let { job -> JobSheet(game, vm, crafts, profession, job, current = work?.job == job.code) { chosen = null } }
@@ -189,6 +174,77 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
             vm.equipTool(id)
         }
     }
+}
+
+/** Шапка окна профессии: назад, имя и уровень тонкой полосой с опытом «набрано / нужно», справка с описанием профессии и инструмент. */
+@Composable private fun ProfessionHeader(game: GameUi, crafts: Crafts, profession: ProfessionView, onBack: () -> Unit, onTool: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Outlined.ArrowBack, ui("common.back"), tint = Gold) }
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(professionTitle(profession.code), color = GoldBright, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+                LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.weight(1f).height(4.dp), color = Vital, trackColor = PanelRaised)
+                Text(
+                    profession.next?.let { ui("crafts.level_experience", compactNumber(profession.experience), compactNumber(it)) } ?: ui("crafts.level_top_short"),
+                    color = Muted,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+        CraftsGlossaryButton(crafts.state?.rules, intro = professionDescription(profession.code))
+        ToolButton(game, profession, onTool)
+    }
+}
+
+/**
+ * Панель «Сейчас»: идущая работа - иконка, имя, вариант с примесями и квадратная кнопка «Остановить»; вещь в работе; полоса цикла с
+ * часами и выходом в час; запас входа строкой; учёт с начала работы ([WorkLedger]) со сделанным и кнопкой «Показать в тайнике».
+ */
+@Composable internal fun NowPanel(game: GameUi, vm: CraftsViewModel, crafts: Crafts, work: WorkView, offset: Long) {
+    val running = crafts.state?.running
+    ForgePanel(accent = GoldBright) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(40.dp).background(Abyss, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { running?.let { JobIcon(it, Modifier.size(26.dp)) } }
+            Column(Modifier.weight(1f)) {
+                Engraved(ui("crafts.now_label"))
+                Text(workTitle(game, work), color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                workDetail(work)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+            }
+            StopButton(enabled = !game.busy, onClick = vm::stop)
+        }
+        game.heldWork?.let { held -> game.view(held)?.let { HeldItem(it) } }
+        CycleBar(work, offset, crafts.last, height = 8, hourly = running?.let { job -> crafts.state?.professions?.firstOrNull { it.code == work.profession }?.let { hourlyShort(job, it) } })
+        running?.let { StockRow(game, work, it) }
+        HorizontalDivider(color = Bronze)
+        val sums = remember(work.totals) { WorkSums.of(work.totals) }
+        val hero = game.hero
+        val made = remember(work, hero?.items, hero?.overflow) { work.made(hero?.items.orEmpty() + hero?.overflow.orEmpty()) }
+        val heroModel = koinViewModel<HeroViewModel>()
+        WorkLedger(
+            game,
+            sums,
+            made,
+            title = ui("crafts.totals_title"),
+            startedAt = work.startedAt,
+            offset = offset,
+            makes = running?.kind?.makesItems == true,
+            onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
+        )
+    }
+}
+
+/** Вариант и примеси идущей работы строкой: «Оружие · Сила · + Кровавый флюс»; без них - null. */
+internal fun workDetail(work: WorkView): String? = (listOfNotNull(work.choice.takeIf { it.isNotEmpty() }?.let(::choiceTitle)) + work.additives.map { "+ ${itemTitle(it)}" })
+    .takeIf { it.isNotEmpty() }?.joinToString(" · ")
+
+/** Квадратная кнопка «Остановить» 40dp в красной рамке. */
+@Composable internal fun StopButton(enabled: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Box(
+        Modifier.size(40.dp).clip(shape).border(1.dp, LifeRed.copy(alpha = .55f), shape).clickable(enabled = enabled, role = Role.Button, onClickLabel = ui("crafts.stop"), onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(Icons.Outlined.Stop, ui("crafts.stop"), tint = LifeRed.copy(alpha = if (enabled) 1f else .4f), modifier = Modifier.size(18.dp)) }
 }
 
 /** The tool in the window's header: its icon in a frame of its rarity, or an empty «+» cell for none. */

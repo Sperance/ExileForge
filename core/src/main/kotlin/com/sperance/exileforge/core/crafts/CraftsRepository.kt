@@ -7,13 +7,12 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
 /**
- * Ремёсла, как сервер ответил последним, и часы устройства в тот миг ([readAt]); [totals] - итог сеанса,
+ * Ремёсла, как сервер ответил последним, и часы устройства в тот миг ([readAt]);
  * [last] - что принёс последний пересчёт с циклами (его показывает всплывашка у полосы цикла).
  */
 data class Crafts(
     val state: CraftsState? = null,
     val readAt: Long = 0,
-    val totals: WorkGains = WorkGains(),
     val last: Harvest? = null,
 ) {
     /** Сдвиг часов сервера против устройства на миг ответа. */

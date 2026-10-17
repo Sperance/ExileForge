@@ -70,6 +70,26 @@ class MobBalGuardTest {
         assertTrue(over.isEmpty(), "реген и вампиризм стража > ${"%.0f".format(100 * share)}% урона эталона: " + over.entries.sortedByDescending { it.value }.joinToString { (boss, it) -> "$boss ${"%.0f".format(100 * it)}%" })
     }
 
+    /**
+     * Слабый билд: герой полосы [GearBand.WEAK] (небрежный игрок: вещи, дерево и умения подобраны, роллы нижней четверти) на [WeakTarget.LEAD]
+     * уровней выше стража побеждает его в доле [WeakTarget.SHARE] боёв - среднее по всем стражам кампании и классам, по [FIGHTS] бою
+     * на каждый из [GUARD_ROLLS] наборов костей.
+     */
+    @Test
+    fun weakBuildsBeatGuardiansBelowTheirLevel() {
+        val rows = Fights.weak
+        assertTrue(rows.size >= 100 * 7, "the check proves nothing: ${rows.size} weak fights")
+        val wins = rows.map { it.values[WINS] as Double }.average()
+        val acts = rows.groupBy { actOf(it.values[1] as String) }.toSortedMap().mapValues { (_, list) -> list.map { it.values[WINS] as Double }.average() }
+        assertTrue(
+            wins >= WeakTarget.SHARE,
+            "слабый билд +${WeakTarget.LEAD} ур.: ${"%.0f".format(100 * wins)}% побед (цель ≥ ${"%.0f".format(100 * WeakTarget.SHARE)}%), по актам: " +
+                acts.entries.joinToString { (act, it) -> "акт $act ${"%.0f".format(100 * it)}%" },
+        )
+    }
+
+    private fun actOf(zone: String): Int = index.campaign.regions.indexOfFirst { region -> region.zones.any { it.code.value == zone } } + 1
+
     private fun guarded(): List<Zone> = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
 
     /**
@@ -86,6 +106,18 @@ class MobBalGuardTest {
             fun hero(zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
             keys.parallelStream().map { (zone, heroClass) -> sim.boss(zone, hero(zone, heroClass), 0, Rarity.COMMON, CAP) }.toList()
         }
+
+        /** Бои слабого билда на [WeakTarget.LEAD] уровней выше каждого стража, чей уровень это допускает. */
+        val weak: List<Row> by lazy {
+            val index = TestContent.index
+            val sim = MobBal(index, fights = FIGHTS * GUARD_ROLLS, rolls = GUARD_ROLLS, monsterSamples = 1, heroes = GuardHeroes.pool)
+            val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null && it.level + WeakTarget.LEAD <= index.classes.maxLevel }
+            val keys = zones.sortedByDescending { it.level }.flatMap { zone -> sim.classesOf(emptySet()).map { zone to it } }
+            keys.parallelStream().map { (zone, heroClass) ->
+                val hero = sim.hero(heroClass, zone.level + WeakTarget.LEAD, Archetype(GearBand.WEAK), index.campaign.resistPenalty(zone.code, false))
+                sim.boss(zone, hero, 0, Rarity.COMMON, CAP)
+            }.toList()
+        }
     }
 
     private companion object {
@@ -93,6 +125,9 @@ class MobBalGuardTest {
 
         /** Столбец восстановления стража в строке [MobBal.boss]; за ним - урон эталона по стражу. */
         const val RESTORED = 21
+
+        /** Столбец доли побед в строке [MobBal.boss]. */
+        const val WINS = 10
 
         /** Наборов костей стража в стороже побед. */
         const val GUARD_ROLLS = 2

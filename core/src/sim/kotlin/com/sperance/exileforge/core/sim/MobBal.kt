@@ -29,6 +29,7 @@ import com.sperance.exileforge.rules.content.MAP_TEMPLATE
 import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Rarity
+import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SkillKind
@@ -49,6 +50,7 @@ import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.roll.Streams
 import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
+import com.sperance.exileforge.rules.run.RunWorth
 import com.sperance.exileforge.rules.sheet.CombatProfile
 import com.sperance.exileforge.rules.sheet.HeroBody
 import com.sperance.exileforge.rules.sheet.HeroInputs
@@ -1206,6 +1208,19 @@ fun main(args: Array<String>) {
             }
         }
 
+        "trials" -> {
+            val modes = ModesBal(index)
+            val trials = Trials(index, sim, modes)
+            index.campaign.regions.forEachIndexed { act, region ->
+                classes.forEach { c -> trials.rushTiers().forEach { tier -> tasks += Task { (0 until rolls).map { s -> trials.rush(region, c, tier, s).row(act + 1) } } } }
+            }
+            Trials.LEVELS.forEach { level ->
+                classes.forEach { c ->
+                    tasks += Task { (0 until samples).flatMap { s -> listOf(trials.tower(level, c, s).row(), trials.farm(level, c, s).row("farm")) } + trials.run(level, c).row() }
+                }
+            }
+        }
+
         "bossmight" -> zones.forEach { zone -> tasks += Task { listOf(Row(listOf("bossmight", zone.code.value, zone.boss.value, zone.level, com.sperance.exileforge.rules.sheet.BossMight.of(index, zone)))) } }
 
         "spread" -> {
@@ -1239,6 +1254,7 @@ fun main(args: Array<String>) {
     val written = when (mode) {
         "guard" -> rows + guard(index, rows)
         "spread" -> rows + spread(rows)
+        "trials" -> rows + Trials.summary(index, rows)
         else -> rows
     }
     out.writeText(written.joinToString("\n") { it.tsv() } + "\n")
@@ -1343,4 +1359,131 @@ fun heroLevelOf(band: GearBand): Int = when (band) {
     GearBand.WEAK, GearBand.TYPICAL -> 72
     GearBand.GOOD -> 80
     GearBand.OPTIMIZED -> 88
+}
+
+/**
+ * Испытания баланса (RULES «Общее», цели баланса): раш региона на каждой ступени эталоном уровня финала региона, башня с первого
+ * этажа до цели [TowerTarget] эталоном своего уровня и обычный заход зоны того же уровня ([MobBal.runtime]) - мерило награды:
+ * опыт и золото испытания в «заходах» (`RunWorth`) за минуту стены против одного захода за его минуты; этаж башни ниже героя
+ * платит долей опыта своего уровня через окно уровней.
+ */
+class Trials(private val index: ContentIndex, private val sim: MobBal, private val modes: ModesBal) {
+    private val rules = checkNotNull(index.campaign.trials)
+    private val speed = index.rules.fight.speeds.max().toDouble()
+    private val worth = RunWorth(index)
+    private val loot = LootRoller(index)
+
+    /** Ступени раша по порядку, с 0. */
+    fun rushTiers(): List<Int> = (0 until rules.rush.tierCount).toList()
+
+    /** Раш региона [region] ступени [tier] эталоном класса [heroClass] уровня финала региона, кости [seed]. */
+    fun rush(region: Region, heroClass: HeroClass, tier: Int, seed: Int): RushTry {
+        val level = region.zones.maxOf { it.level }
+        val hero = sim.hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(region.zones.last().code, false))
+        val r = modes.rush(hero, region, tier, SimKit.SEED + 101L * seed + 7L * tier + level)
+        val share = r.killed.toDouble() / r.bosses.coerceAtLeast(1)
+        return RushTry(region.code, level, heroClass.code, tier, r.killed >= r.bosses && r.bosses > 0, rules.rush.tier(tier).runs * share, r.wall)
+    }
+
+    /** Башня эталоном класса [heroClass] уровня [level] с первого этажа до этажа цели ([TowerTarget.floor]) или гибели, кости [seed]. */
+    fun tower(level: Int, heroClass: HeroClass, seed: Int): TowerTry {
+        val zone = sim.nearZones(level, 1).first()
+        val hero = sim.hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, false))
+        val goal = TowerTarget.floor(level)
+        val t = modes.tower(hero, SimKit.SEED + 31L * seed + level, goal)
+        val runs = (1..t.floor).sumOf { floor -> (rules.tower.floorRuns + if (rules.tower.hoard(floor)) rules.tower.hoardCap else 0.0) * share(rules.tower.level(floor), level) }
+        return TowerTry(level, heroClass.code, t.floor, goal, runs, t.wall)
+    }
+
+    /** Опыт захода уровня [area] герою уровня [hero] (окно уровней) - долей опыта захода его уровня: так башня платит этажами ниже героя. */
+    private fun share(area: Int, hero: Int): Double = worth.at(area).experience * loot.window(area, hero) / worth.at(hero).experience.coerceAtLeast(1.0)
+
+    /**
+     * Фарм башни эталоном класса [heroClass] уровня [level], кости [seed]: вход с чекпоинта десятка ниже этажа цели (как игрок
+     * продолжает с рекорда) и подъём на десяток выше цели или до гибели - мерило награды башни в минуту.
+     */
+    fun farm(level: Int, heroClass: HeroClass, seed: Int): TowerTry {
+        val zone = sim.nearZones(level, 1).first()
+        val hero = sim.hero(heroClass, level, Archetype(campaignBand(level)), index.campaign.resistPenalty(zone.code, false))
+        val goal = TowerTarget.floor(level)
+        val from = rules.tower.start(goal - rules.tower.checkpoint)
+        val t = modes.tower(hero, SimKit.SEED + 37L * seed + level, goal + rules.tower.checkpoint, from)
+        val runs = (from..t.floor).sumOf { floor -> (rules.tower.floorRuns + if (rules.tower.hoard(floor)) rules.tower.hoardCap else 0.0) * share(rules.tower.level(floor), level) }
+        return TowerTry(level, heroClass.code, t.floor, goal, runs, t.wall)
+    }
+
+    /** Обычный заход зоны уровня [level] эталоном класса [heroClass]: его стена - бои на высшей скорости и ходьба. */
+    fun run(level: Int, heroClass: HeroClass): RunTry {
+        val zone = sim.nearZones(level, 1).first()
+        val hero = sim.hero(heroClass, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
+        val row = sim.runtime(zone, hero, SimKit.SEED, 1.0)
+        return RunTry(level, heroClass.code, (row.values[11] as Double) / speed + (row.values[12] as Double))
+    }
+
+    /** Попытка раша: ступень [tier], зачищен ли, «заходов» награды [runs] по доле павших, секунды стены [wall]. */
+    data class RushTry(val region: String, val level: Int, val heroClass: String, val tier: Int, val cleared: Boolean, val runs: Double, val wall: Double) {
+        fun row(act: Int) = Row(listOf("rush", act, region, level, heroClass, tier, cleared, runs, wall))
+    }
+
+    /** Подъём на башню: этаж [floor] из цели [goal], «заходов» награды [runs] (этажи и клады), секунды стены [wall]. */
+    data class TowerTry(val level: Int, val heroClass: String, val floor: Int, val goal: Int, val runs: Double, val wall: Double) {
+        val reached: Boolean get() = floor >= goal
+        fun row(kind: String = "tower") = Row(listOf(kind, level, heroClass, floor, goal, reached, runs, wall))
+    }
+
+    /** Обычный заход уровня [level]: секунды стены [wall]. */
+    data class RunTry(val level: Int, val heroClass: String, val wall: Double) {
+        fun row() = Row(listOf("run", level, heroClass, wall))
+    }
+
+    companion object {
+        /** Уровни башни и награды: уровни зон кампании от 21 до 88. */
+        val LEVELS = listOf(21, 41, 61, 81)
+
+        /**
+         * Сводка `-Pmode=trials`: доля зачисток раша по ступени против [RushTarget], доля героев, дошедших до этажа цели башни,
+         * и награда испытаний в минуту долей заходов в минуту ([RewardTarget]): раш - ступенью, башня - фармом с чекпоинта.
+         */
+        fun summary(index: ContentIndex, rows: List<Row>): List<Row> {
+            val runs = rows.filter { it.values[0] == "run" }
+            val perMinute = runs.map { 60.0 / (it.values[3] as Double).coerceAtLeast(1.0) }.average()
+            val tiers = checkNotNull(index.campaign.trials).rush.tierCount
+            val rush = rows.filter { it.values[0] == "rush" }.groupBy { it.values[5] as Int }.toSortedMap().map { (tier, list) ->
+                val clear = list.count { it.values[6] == true }.toDouble() / list.size
+                val pay = list.sumOf { it.values[7] as Double } / (list.sumOf { it.values[8] as Double } / 60) / perMinute
+                Row(listOf("rushsum", tier + 1, clear, RushTarget.at(tier, tiers), pay))
+            }
+            val farms = rows.filter { it.values[0] == "farm" }.groupBy { it.values[1] as Int }
+            val tower = rows.filter { it.values[0] == "tower" }.groupBy { it.values[1] as Int }.toSortedMap().map { (level, list) ->
+                val reached = list.count { it.values[5] == true }.toDouble() / list.size
+                val farm = farms[level].orEmpty()
+                val pay = farm.sumOf { it.values[6] as Double } / (farm.sumOf { it.values[7] as Double } / 60) / perMinute
+                Row(listOf("towersum", level, reached, TowerTarget.SHARE, pay))
+            }
+            return rush + tower
+        }
+    }
+}
+
+/** Раш (RULES «Общее», цели баланса): ступень I зачищает эталон уровня финала региона в [FIRST] попыток, дальше линейно до [LAST] на последней. */
+object RushTarget {
+    const val FIRST = 0.50
+    const val LAST = 0.15
+
+    /** Цель ступени [tier] (с 0) из [tiers]. */
+    fun at(tier: Int, tiers: Int): Double = if (tiers <= 1) FIRST else FIRST + (LAST - FIRST) * tier / (tiers - 1)
+}
+
+/** Башня (RULES «Общее», цели баланса): эталон уровня L с первого этажа доходит до этажа L − [BELOW] в [SHARE] попыток. */
+object TowerTarget {
+    const val BELOW = 10
+    const val SHARE = 0.50
+
+    /** Этаж цели эталона уровня [level]. */
+    fun floor(level: Int): Int = (level - BELOW).coerceAtLeast(1)
+}
+
+/** Награда испытаний (RULES «Общее», цели баланса): опыт и золото в минуту - не меньше [SHARE] обычного захода своего уровня в минуту. */
+object RewardTarget {
+    const val SHARE = 1.2
 }

@@ -22,7 +22,7 @@ kotlin { jvmToolchain(17) }
  *
  * Тестам виден набор sim: сторож темпа `MobBalGuardTest` зовёт эталонных героев. Задача `mobBal` - баланс монстров (отчёт, не тест):
  * эталонные герои против монстров и боссов кампании и карт настоящим боем клиента; `./gradlew :core:mobBal [-Pcontent=<папка>]
- * -Pmode=<campaign|probe|maps|sweep|runtime|bossmight|spread|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]`.
+ * -Pmode=<campaign|probe|maps|sweep|runtime|bossmight|spread|trials|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]`.
  */
 val sim: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath

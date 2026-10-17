@@ -39,7 +39,7 @@ import com.sperance.exileforge.rules.run.RunContext
 /**
  * Режимы баланса (отчёт): испытания - настоящей ареной клиента ([TrialArena]) без экрана: босс-раш региона на высшей
  * скорости боя с часами стены, как их мерит сервер (бой, итог боя и [TAP] секунд игрока на «В бой» между боссами), и башня с
- * первого этажа до гибели героя (строка угрозы десятка - первая, самая слабая); стражи кристаллов эссенций и глубины Бездны - боем
+ * первого этажа до гибели героя (строка угрозы десятка - первая, самая слабая; [TAP] секунд на «В бой» между этажами); стражи кристаллов эссенций и глубины Бездны - боем
  * эталона уровня зоны. Разлом недели настоящей ареной узла ([RiftArena]) по правилам забега сервера ([RiftEngine]) и
  * очаг Скверны точка за точкой.
  */
@@ -49,8 +49,8 @@ class ModesBal(private val index: ContentIndex) {
     /** Итог раша: боссов пало из [bosses], полная зачистка, секунды стены и уложился ли в лимит бонуса. */
     data class Rush(val killed: Int, val bosses: Int, val wall: Double, val fast: Boolean)
 
-    /** Итог башни: последний пройденный этаж и уровень его врагов, секунды боёв. */
-    data class Tower(val floor: Int, val level: Int, val seconds: Double)
+    /** Итог башни: последний пройденный этаж (с учётом этажа входа) и уровень его врагов, секунды боёв и стены (высшая скорость боя). */
+    data class Tower(val floor: Int, val level: Int, val seconds: Double, val wall: Double)
 
     fun rush(hero: Hero, region: Region, tier: Int, seed: Long): Rush {
         var now = 0L
@@ -74,14 +74,20 @@ class ModesBal(private val index: ContentIndex) {
         return Rush(hud.cleared, hud.steps, wall, full && wall <= trials.rush.seconds * hud.steps)
     }
 
-    fun tower(hero: Hero, seed: Long, maxFloor: Int): Tower {
+    /** Подъём на башню героем [hero] с этажа [from] до этажа [maxFloor] или гибели. */
+    fun tower(hero: Hero, seed: Long, maxFloor: Int, from: Int = 1): Tower {
         var now = 0L
-        val arena = arena(hero, TrialRun("tower-$seed", TrialKind.TOWER, seed, hero.level, 0L)) { now }
+        val arena = arena(hero, TrialRun("tower-$seed", TrialKind.TOWER, seed, hero.level, 0L, floor = from)) { now }
         repeat(index.rules.fight.speeds.size - 1) { arena.send(RunCommand.Speed) }
         var guard = 0
         var level = 0
-        while (arena.hud.value.phase == TrialPhase.FIGHT && arena.hud.value.cleared < maxFloor && guard++ < LIMIT * 20) {
+        var seen = -1
+        while (arena.hud.value.phase == TrialPhase.FIGHT && from - 1 + arena.hud.value.cleared < maxFloor && guard++ < LIMIT * 20) {
             val hud = arena.hud.value
+            if (hud.cleared != seen) {
+                seen = hud.cleared
+                now += (TAP * 1000).toLong()
+            }
             if (hud.choice != null) arena.send(RunCommand.PickLine(0))
             arena.send(RunCommand.Begin)
             if (hud.fight != null) level = hud.level
@@ -89,7 +95,7 @@ class ModesBal(private val index: ContentIndex) {
             now += (DT * 1000).toLong()
         }
         val hud = arena.hud.value
-        return Tower(hud.cleared, level, hud.elapsed)
+        return Tower(from - 1 + hud.cleared, level, hud.elapsed, now / 1000.0)
     }
 
     /** Бой стража кристалла эссенций зоны [zone]: победа и секунды; [place] - номер кристалла (свои кости). */

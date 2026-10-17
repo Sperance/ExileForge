@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material3.CircularProgressIndicator
@@ -26,8 +27,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -37,6 +41,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.StoryFold
+import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.StoryBooks
 import com.sperance.exileforge.rules.content.ThroneLaws
@@ -75,7 +80,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * «глава · задание» с тонкой полосой прогресса ([fold] - из настроек устройства); новый шаг сюжета или награда, что стала ждать,
  * раскрывают её сами ([onSeen] сообщает, какой шаг карточка показала).
  *
- * Трон пройденной главы ждёт выбора закона - карточка зовёт к нему раньше шага.
+ * Выбор за пройденную главу - закон трона или книга умения - своей плашкой над карточкой ([ChoicePlaque]); шаг сюжета виден всегда.
  */
 @Composable fun StoryCard(
     game: GameUi,
@@ -89,25 +94,31 @@ import org.koin.compose.viewmodel.koinViewModel
 ) {
     val index = game.index ?: return
     board ?: return
-    val shape = RoundedCornerShape(12.dp)
-    if (ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty() || StoryBooks(index).pending(board.chapter, board.books).isNotEmpty()) {
-        Row(
-            modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = GoldBright).clickable(role = Role.Button, onClick = onOpen).padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Icon(ForgeGlyphs.Tome, null, tint = GoldBright, modifier = Modifier.size(16.dp))
-            Text(ui(if (ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty()) "story.card_law" else "story.card_book"), color = GoldBright, style = MaterialTheme.typography.titleSmall)
-        }
-        return
+    val choice = StoryChoice.pending(index, board, game.heroInfo?.laws.orEmpty())
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        choice?.let { ChoicePlaque(it, onOpen) }
+        StepCard(index, board, fold, onFold, onSeen, onOpen, folding)
     }
+}
+
+/** Карточка шага сюжета: глава и шаг, цель, прогресс и награда; свёрнутая - строкой с тонкой полосой. Шага нет - ничего. */
+@Composable private fun StepCard(
+    index: ContentIndex,
+    board: QuestBoard,
+    fold: StoryFold,
+    onFold: (Boolean) -> Unit,
+    onSeen: (String, Boolean) -> Unit,
+    onOpen: () -> Unit,
+    folding: Boolean,
+) {
     val chapter = index.quests.story.getOrNull(board.chapter) ?: return
     val quest = board.story ?: return
+    val shape = RoundedCornerShape(12.dp)
     val ready = quest.done && !quest.claimed
     LaunchedEffect(quest.id, ready) { onSeen(quest.id, ready) }
     val collapsed = fold.collapsed && fold.quest == quest.id
     val chapterTitle = loc(LocaleKey.chapterTitle(chapter.region))
-    Column(modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = Gold).clickable(role = Role.Button, onClick = onOpen)) {
+    Column(Modifier.fillMaxWidth().clip(shape).depthPanel(shape, accent = Gold).clickable(role = Role.Button, onClick = onOpen)) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = FOLDED_HEIGHT).padding(start = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -123,6 +134,7 @@ import org.koin.compose.viewmodel.koinViewModel
                 modifier = Modifier.weight(1f),
             )
             if (ready) Text(ui("story.card_ready"), color = Vital, style = MaterialTheme.typography.labelMedium)
+            if (collapsed) MutedText(ui("quest.progress", number(quest.progress.toDouble()), number(quest.target.toDouble())), style = MaterialTheme.typography.labelSmall)
             if (folding) {
                 IconButton(onClick = { onFold(!collapsed) }, modifier = Modifier.size(FOLDED_HEIGHT)) {
                     Icon(
@@ -135,7 +147,7 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
         if (collapsed) {
-            QuestBar(quest.progress, quest.target, Gold, thickness = 2.dp)
+            QuestBar(quest.progress, quest.target, Caution, thickness = 2.dp)
         } else {
             Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Text(questTitle(quest), color = GoldBright, style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -146,6 +158,58 @@ import org.koin.compose.viewmodel.koinViewModel
         }
     }
 }
+
+/**
+ * Выбор, что ждёт героя за пройденную главу: закон трона ([LAW]) или книга умения ([BOOK]); [text] - строка плашки, [icon] - знак в
+ * кольце. Закон - раньше книги, как на экране сюжета.
+ */
+internal enum class StoryChoice(val text: String, val icon: ImageVector) {
+    LAW("story.card_law", ForgeGlyphs.Keep),
+    BOOK("story.card_book", ForgeGlyphs.Grimoire),
+    ;
+
+    companion object {
+        /** Что ждёт выбора на главе [board] при взятых законах [laws]; ничего - null. */
+        fun pending(index: ContentIndex, board: QuestBoard, laws: List<String>): StoryChoice? = when {
+            ThroneLaws(index).pending(board.chapter, laws).isNotEmpty() -> LAW
+            StoryBooks(index).pending(board.chapter, board.books).isNotEmpty() -> BOOK
+            else -> null
+        }
+    }
+}
+
+/**
+ * Плашка выбора над шагом сюжета: знак в светлом кольце, строка «Трон взят - выберите его закон» (или книги) и шеврон; касание -
+ * экран сюжета с выбором. Зелёное стекло с светлой кромкой и ореолом - зовёт раньше шага, но шаг не прячет.
+ */
+@Composable private fun ChoicePlaque(choice: StoryChoice, onOpen: () -> Unit) {
+    val shape = RoundedCornerShape(12.dp)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = PLAQUE_HEIGHT).glow(Gold, radius = 9.dp, shape = shape).clip(shape)
+            .background(Brush.verticalGradient(listOf(PLAQUE_TOP, PLAQUE_BOTTOM)), shape).border(1.dp, GoldBright.copy(alpha = .45f), shape)
+            .clickable(role = Role.Button, onClick = onOpen).padding(start = 12.dp, end = 6.dp, top = 8.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Box(
+            Modifier.size(30.dp).clip(CircleShape).background(Brush.radialGradient(listOf(RING_CORE, RING_EDGE))).border(1.dp, GoldBright.copy(alpha = .5f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { Icon(choice.icon, null, tint = GoldBright, modifier = Modifier.size(18.dp)) }
+        Text(ui(choice.text), color = GoldBright, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        Icon(Icons.Outlined.ChevronRight, null, tint = GoldBright, modifier = Modifier.size(20.dp))
+    }
+}
+
+/** Высота плашки выбора: строка и кольцо. */
+private val PLAQUE_HEIGHT = 48.dp
+
+/** Зелёное стекло плашки выбора: сверху светлее. */
+private val PLAQUE_TOP = Color(0xFF2A3427)
+private val PLAQUE_BOTTOM = Color(0xFF141C17)
+
+/** Кольцо знака плашки: зелёная сердцевина в тёмной кромке. */
+private val RING_CORE = Color(0xFF2F4A3A)
+private val RING_EDGE = Color(0xFF121A16)
 
 /** Карточка сюжета над моделью заданий: свёрнутость из настроек, нажатие - весь сюжет. */
 @Composable fun StoryCard(game: GameUi, board: QuestBoard?, vm: QuestViewModel, modifier: Modifier = Modifier) {
@@ -161,7 +225,7 @@ import org.koin.compose.viewmodel.koinViewModel
 @Composable fun StoryButton(game: GameUi, board: QuestBoard?, vm: QuestViewModel, modifier: Modifier = Modifier) {
     val index = game.index ?: return
     board ?: return
-    val law = ThroneLaws(index).pending(board.chapter, game.heroInfo?.laws.orEmpty()).isNotEmpty() || StoryBooks(index).pending(board.chapter, board.books).isNotEmpty()
+    val law = StoryChoice.pending(index, board, game.heroInfo?.laws.orEmpty()) != null
     val quest = board.story
     if (!law && (quest == null || index.quests.story.getOrNull(board.chapter) == null)) return
     var open by remember { mutableStateOf(false) }

@@ -49,6 +49,7 @@ import com.sperance.exileforge.ui.components.StartStages
 import com.sperance.exileforge.ui.components.ToastBelow
 import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
+import com.sperance.exileforge.ui.components.UpdateHost
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
@@ -134,6 +135,7 @@ import org.koin.compose.viewmodel.koinViewModel
             diagnostics = watchdog::diagnostics,
             launchLine = { settingsModel.launchLine(LaunchLines.keys(uiLanguage)) },
         )
+        UpdateHost(updates, busy = expedition != null || trial != null || rift.arena != null)
     }
 }
 

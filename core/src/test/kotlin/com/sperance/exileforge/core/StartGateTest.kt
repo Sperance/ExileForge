@@ -25,10 +25,11 @@ class StartGateTest {
         assertEquals(StartVerdict.UNREACHABLE, verdict(Reach.UNREACHABLE))
     }
 
+    /** Найденная сборка - своё окно поверх игры: заставка её не держит и не ждёт новую. */
     @Test
-    fun a_mandatory_update_wins_over_everything_but_a_fight() {
-        Reach.entries.forEach { assertEquals(StartVerdict.UPDATE, verdict(it, { input -> input.copy(mandatoryUpdate = true, fit = WireFit.GAME_BEHIND, warming = true) })) }
-        assertEquals(StartVerdict.RELEASE, verdict(Reach.ANSWERED, { it.copy(mandatoryUpdate = true, busy = true) }))
+    fun a_found_build_is_not_a_state_of_the_start_window() {
+        assertEquals(StartVerdict.RELEASE, verdict(Reach.ANSWERED, { it.copy(mandatoryUpdate = true, fit = WireFit.GAME_BEHIND) }))
+        assertEquals(StartVerdict.AWAIT_SERVER, verdict(Reach.ANSWERED, { it.copy(mandatoryUpdate = true, fit = WireFit.SERVER_BEHIND) }))
     }
 
     /** Предел снимает окно старта при любом состоянии. */
@@ -41,9 +42,8 @@ class StartGateTest {
     }
 
     @Test
-    fun an_update_or_a_wire_that_does_not_fit_is_not_cut_by_the_limit() {
+    fun a_wire_that_does_not_fit_is_not_cut_by_the_limit() {
         val late: (StartInput) -> StartInput = { it.copy(elapsedMs = 10 * StartGate.LIMIT_MS, released = true) }
-        assertEquals(StartVerdict.UPDATE, verdict(Reach.ANSWERED, late, { it.copy(mandatoryUpdate = true) }))
         assertEquals(StartVerdict.AWAIT_GAME, verdict(Reach.ANSWERED, late, { it.copy(fit = WireFit.GAME_BEHIND) }))
         assertEquals(StartVerdict.AWAIT_SERVER, verdict(Reach.ANSWERED, late, { it.copy(fit = WireFit.SERVER_BEHIND) }))
     }

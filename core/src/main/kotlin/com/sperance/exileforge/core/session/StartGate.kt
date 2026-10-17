@@ -27,15 +27,16 @@ enum class WireFit {
 
 /**
  * Что окно запуска показывает сейчас (одно окно запуска): [HOLD] - запуск идёт (связь, версия,
- * мир устройства), [WARMING] - мир героя догружается, [UNREACHABLE] - сервер молчит, [UPDATE] - обязательное обновление,
+ * мир устройства), [WARMING] - мир героя догружается, [UNREACHABLE] - сервер молчит,
  * [AWAIT_GAME] / [AWAIT_SERVER] - провода не совпали, ждём новую сборку или сервер; [RELEASE] - окна нет.
  */
-enum class StartVerdict(val shown: Boolean = true) { HOLD, WARMING, RELEASE(shown = false), UNREACHABLE, UPDATE, AWAIT_GAME, AWAIT_SERVER }
+enum class StartVerdict(val shown: Boolean = true) { HOLD, WARMING, RELEASE(shown = false), UNREACHABLE, AWAIT_GAME, AWAIT_SERVER }
 
 /**
- * Что знает окно запуска: связь [reach] и провод ответившего сервера [fit]; найдена ли обязательная сборка [mandatoryUpdate] и
- * идёт ли проверка [checking]; дочитан ли мир с устройства [deviceReady]; идёт ли прогрев героя [warming]; сколько идёт старт
- * [elapsedMs] и отпущен ли он уже [released]; идёт ли бой [busy] - бой окно не закрывает.
+ * Что знает окно запуска: связь [reach] и провод ответившего сервера [fit]; найдена ли обязательная сборка [mandatoryUpdate] (её
+ * ведёт своё окно обновления поверх игры - ждать новую сборку уже нечего) и идёт ли проверка [checking]; дочитан ли мир с устройства
+ * [deviceReady]; идёт ли прогрев героя [warming]; сколько идёт старт [elapsedMs] и отпущен ли он уже [released]; идёт ли бой [busy] -
+ * бой окно не закрывает.
  */
 data class StartInput(
     val reach: Reach,
@@ -50,11 +51,11 @@ data class StartInput(
 )
 
 /**
- * Окно запуска (одно окно запуска, обновления и прогрева): старт держится, пока сервер не ответил, сборка не
- * проверена и мир устройства не дочитан - но не дольше [LIMIT_MS] (бесконечной загрузки нет по построению). Обязательное
- * обновление и несовпавший провод сервера держат окно сколько нужно: игра с таким сервером не играет. Прогрев героя - тоже окно.
- * Отпущенный старт ([StartInput.released]) больше не возвращается; бой ([StartInput.busy]) окно не закрывает - обновление ждёт его
- * конца.
+ * Окно запуска (одно окно запуска и прогрева): старт держится, пока сервер не ответил, сборка не
+ * проверена и мир устройства не дочитан - но не дольше [LIMIT_MS] (бесконечной загрузки нет по построению). Несовпавший провод
+ * сервера держит окно сколько нужно: игра с таким сервером не играет; найденная сборка снимает ожидание новой - обязательное
+ * обновление не состояние окна, а своё окно поверх игры. Прогрев героя - тоже окно. Отпущенный старт ([StartInput.released]) больше
+ * не возвращается; бой ([StartInput.busy]) окно не закрывает.
  */
 object StartGate {
     const val LIMIT_MS = 20_000L
@@ -62,8 +63,7 @@ object StartGate {
     fun verdict(input: StartInput): StartVerdict = with(input) {
         when {
             busy -> StartVerdict.RELEASE
-            mandatoryUpdate -> StartVerdict.UPDATE
-            fit == WireFit.GAME_BEHIND -> StartVerdict.AWAIT_GAME
+            fit == WireFit.GAME_BEHIND && !mandatoryUpdate -> StartVerdict.AWAIT_GAME
             fit == WireFit.SERVER_BEHIND -> StartVerdict.AWAIT_SERVER
             warming -> StartVerdict.WARMING
             released || elapsedMs >= LIMIT_MS -> StartVerdict.RELEASE

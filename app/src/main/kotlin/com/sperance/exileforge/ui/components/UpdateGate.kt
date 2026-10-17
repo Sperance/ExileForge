@@ -1,7 +1,5 @@
 package com.sperance.exileforge.ui.components
 
-import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -55,19 +53,18 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
 }
 
 /**
- * Окно запуска, обновления и прогрева - одно: заставка во весь экран,
+ * Окно запуска и прогрева - одно: заставка во весь экран,
  * внизу - что идёт сейчас и общая полоса, шаги - по «Подробнее». Что показать, решает [StartGate] по модели (связь, провод сервера,
- * проверка сборки, мир устройства, прогрев героя [warmup]); обязательное обновление и несовпавший провод сервера держат окно, пока
- * не разрешатся, - игра пишет, чего ждёт. С первого кадра, пока [StartGate] держит окно, стек экранов под ним не виден: его накрывает
+ * проверка сборки, мир устройства, прогрев героя [warmup]); несовпавший провод сервера держит окно, пока не разрешится, - игра пишет,
+ * чего ждёт. Обязательное обновление - не состояние окна, а своё окно поверх игры ([UpdateHost]). С первого кадра, пока [StartGate] держит окно, стек экранов под ним не виден: его накрывает
  * фон окна ([SplashBackdrop]) в окне приложения, касания он не пропускает; текст шагов появляется не раньше [SHOW_DELAY_MS]
  * (быстрый запуск его не мигает), а показавшись, окно держится не меньше [MIN_SHOWN_MS] и уходит одним переходом: «отпущен» - флаг модели на весь процесс ([ServerReach.release]),
  * а не экрана. Над шагами - подсказка или строка лора ([launchLine] выбирает ключ словаря, не повторяя прошлый). Ни назад, ни касание
- * мимо его не закрывают. [busy] - идёт поход, испытание или Разлом: найденное обновление ждёт
- * его конца, а пока о нём говорит плашка сверху ([UpdateHint]), не мешая бою.
+ * мимо его не закрывают. [busy] - идёт поход, испытание или Разлом: бой окно не закрывает.
  *
  * Окно не привязано к жизненному циклу: обязано видеть каждое изменение. Возврат в приложение - сборка спрашивается сразу (сверку ресурсов
  * модель откладывает до конца похода); возврат из настроек или установщика - разрешение спрашивается снова. Появление с задержкой и не
- * короче [MIN_SHOWN_MS]. Сборка, найденная в походе или испытании, закроет игру по их концу, а пока - плашка сверху.
+ * короче [MIN_SHOWN_MS].
  */
 @Composable fun UpdateGate(
     updates: UpdateModel,
@@ -115,8 +112,6 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
         visible -> Splash {
             LaunchLine(launchLine)
             when (face) {
-                StartVerdict.UPDATE -> UpdateBody(s, updates)
-
                 StartVerdict.AWAIT_GAME -> Awaiting(ui("launch.await_game.title"), ui("launch.await_game.text"), null, updates::checkNow)
 
                 StartVerdict.AWAIT_SERVER -> Awaiting(ui("launch.await_server.title"), ui("launch.await_server.text"), reach.retryAt, actions.checkFit)
@@ -137,9 +132,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
             }
         }
 
-        s.askSources && window.released -> Locked { SourcesBody() }
-
-        busy -> s.update?.let { UpdateHint(it.info.versionName) }
+        s.askSources && window.released && !s.mandatory -> Locked { SourcesBody() }
     }
 }
 
@@ -258,20 +251,8 @@ private const val MIN_SHOWN_MS = 800L
 /** Размах свечения заставки. */
 private const val SPLASH_GLOW = 1200f
 
-/** Наибольшая высота нижней части заставки: длинные заметки обновления прокручиваются. */
+/** Наибольшая высота нижней части заставки: длинные шаги прокручиваются. */
 private val SPLASH_PANEL = 560.dp
-
-/** Плашка сверху над боем: найдено обновление, оно встанет по концу похода или испытания; касания идут мимо неё. */
-@Composable private fun UpdateHint(version: String) {
-    Box(Modifier.fillMaxSize().statusBarsPadding().padding(top = 56.dp), contentAlignment = Alignment.TopCenter) {
-        Text(
-            ui("update.after_fight", version),
-            color = GoldBright,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.background(PanelRaised.copy(alpha = .92f), MaterialTheme.shapes.small).padding(horizontal = 12.dp, vertical = 6.dp),
-        )
-    }
-}
 
 /**
  * Строки окна запуска: что проверяется или качается сейчас, по пункту на строку; связь - только когда её нет.
@@ -362,55 +343,6 @@ private const val CONTINUE_AFTER_MS = 15_000L
             verticalArrangement = Arrangement.spacedBy(12.dp),
             content = content,
         )
-    }
-}
-
-/**
- * The build to take: from what to what, what is new, and the download into the installer.
- *
- * Обход установщика: страница релиза на GitHub, APK руками.
- */
-@Composable private fun ColumnScope.UpdateBody(s: UpdateState, updates: UpdateModel) {
-    val update = s.update ?: return
-    val context = LocalContext.current
-    Text(ui("update.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-    if (update.info.size > 0) MutedText(ui("update.size", "%.1f".format(update.info.size / 1_048_576.0)))
-    Text(ui("update.notes"), color = Parchment, style = MaterialTheme.typography.labelLarge)
-    Column(Modifier.fillMaxWidth().heightIn(max = 280.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(update.info.versionName, color = GoldBright, style = MaterialTheme.typography.labelLarge)
-        if (update.info.notes.isNotBlank()) MutedText(update.info.notes)
-    }
-    val progress = s.progress
-    when {
-        progress != null -> {
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
-            MutedText(ui("update.downloading", (progress * 100).toInt()))
-        }
-
-        s.installing -> {
-            LinearProgressIndicator(Modifier.fillMaxWidth(), color = Gold, trackColor = PanelRaised)
-            MutedText(ui("update.installing"))
-        }
-
-        s.needsPermission -> {
-            InfoCard(ui("update.permission_title"), ui("update.permission_note"))
-            ForgeButton(onClick = {
-                context.startActivity(UpdateInstaller.permissionScreen(context))
-                updates.permissionAsked()
-            }, modifier = Modifier.fillMaxWidth()) {
-                Text(ui("update.open_settings"))
-            }
-        }
-
-        else -> {
-            s.error?.let { InfoCard(ui("update.failed_title"), it, failure = true) }
-            ForgeButton(onClick = updates::install, modifier = Modifier.fillMaxWidth()) { Text(ui(if (s.error != null) "update.retry" else "update.install")) }
-            if (s.error != null) {
-                ForgeOutlinedButton(onClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(update.pageUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }, modifier = Modifier.fillMaxWidth()) { Text(ui("update.browser")) }
-            }
-        }
     }
 }
 

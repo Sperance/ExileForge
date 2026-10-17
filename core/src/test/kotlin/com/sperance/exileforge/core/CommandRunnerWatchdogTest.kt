@@ -4,9 +4,11 @@ import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.ConnectionEvents
 import com.sperance.exileforge.core.session.RUNNER_LIMIT_MS
 import com.sperance.exileforge.core.session.Stall
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
@@ -89,6 +91,22 @@ class CommandRunnerWatchdogTest {
 
         assertFalse(runner.state.value.starting)
         assertEquals(listOf("starting"), stalls.map { it.key })
+    }
+
+    @Test
+    fun reads_cancelled_on_an_immediate_dispatcher_do_not_break_the_sweep() = runTest {
+        val immediate = CoroutineScope(backgroundScope.coroutineContext + UnconfinedTestDispatcher(testScheduler))
+        val runner = CommandRunner(immediate, NoConnection, { stalls += it })
+        runner.ready()
+        runner.read("hero") { awaitCancellation() }
+        runner.read("world") { awaitCancellation() }
+        runner.read("mail", silent = true) { awaitCancellation() }
+        assertEquals(setOf("hero", "world"), runner.state.value.loading)
+
+        runner.cancelReads()
+
+        assertTrue(runner.state.value.loading.isEmpty())
+        assertFalse("read " in runner.describe(), "no read is left behind")
     }
 
     private object NoConnection : ConnectionEvents {

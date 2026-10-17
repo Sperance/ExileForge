@@ -244,10 +244,17 @@ class CommandRunner(
 
     private fun loading(): Set<String> = reads.keys.filterNotTo(HashSet()) { it in quiet }
 
+    /**
+     * Снимает все чтения. Карты чистятся до отмены: на немедленном диспетчере отмена сразу выполняет `finally` чтения,
+     * а он правит те же карты.
+     */
     fun cancelReads() {
-        reads.values.forEach { it.cancel() }
+        val cancelled = reads.values.toList()
         reads.clear()
+        quiet.clear()
+        readOrigins.clear()
         mutable.update { it.copy(loading = emptySet()) }
+        cancelled.forEach { it.cancel() }
     }
 
     /** Беда, как её увидит игрок: очередь - не беда, пропавшая связь - значок и зонд, а не красная полоса. */

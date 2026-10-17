@@ -49,10 +49,19 @@ import kotlin.math.ln
 enum class ShareKind { BASE, ATTRIBUTE, CLASS, NODE, ITEM, LAW, SKILL, FATE, OTHER, RESHAPE, AFTER, FIGHT, LOW_LIFE, APART }
 
 /**
- * One source on a card: what it is, what it gives, a grey line under it, and the stat a tap goes to. [better] - к лучшему
+ * One source on a card: what it is, what it gives, a grey line under it, and where a tap goes ([link]). [better] - к лучшему
  * ли то, что строка даёт, по полярности характеристики ([StatPolarity]), а не по знаку: null - без оценки и без цвета.
  */
-data class ShareRow(val title: String, val value: String, val note: String? = null, val link: String? = null, val better: Boolean? = null)
+data class ShareRow(val title: String, val value: String, val note: String? = null, val link: RowLink? = null, val better: Boolean? = null)
+
+/** Куда ведёт касание строки разбора: разбор другой характеристики или карточка предмета героя. */
+sealed interface RowLink {
+    /** Разбор характеристики [code] в том же окне. */
+    data class Stat(val code: String) : RowLink
+
+    /** Карточка копии [id] - вещи героя, что дала строку. */
+    data class Item(val id: String) : RowLink
+}
 
 /** A card of one kind of source: its rows and what they give together, one figure per operation; [title] - своё имя карточки (дар). */
 data class ShareCard(val kind: ShareKind, val rows: List<ShareRow>, val summary: String, val title: String? = null) {
@@ -106,7 +115,7 @@ class StatExplainer(private val game: GameUi) {
             )
         }
         breakdown.shares.groupBy(::kindOf).toSortedMap().forEach { (kind, shares) ->
-            cards += ShareCard(kind, merged(shares).map { row(stat, it, breakdown.percent) }, summary(stat, shares, breakdown.percent), cardTitle(kind, shares.first().source))
+            cards += ShareCard(kind, merged(shares).map { (share, sole) -> row(stat, share, breakdown.percent, sole) }, summary(stat, shares, breakdown.percent), cardTitle(kind, shares.first().source))
         }
         val factors = shiftFactors(breakdown)
         breakdown.shifts.groupBy(::shiftKind).toSortedMap().forEach { (kind, shifts) ->
@@ -131,7 +140,7 @@ class StatExplainer(private val game: GameUi) {
             cards,
             weights(breakdown),
             formula(breakdown),
-            grants.map { ShareRow(statTitle(it.stat), fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true), link = it.stat, better = judge(it.stat, it.value, it.op)) },
+            grants.map { ShareRow(statTitle(it.stat), fmt(it.stat, it.value, it.op, index?.stats?.isPercent(it.stat) == true), link = RowLink.Stat(it.stat), better = judge(it.stat, it.value, it.op)) },
         )
     }
 
@@ -167,11 +176,11 @@ class StatExplainer(private val game: GameUi) {
         val better = judge(stat, shift.delta)
         return when (shift.source.kind) {
             SourceKind.FIGHT -> ReadingPart.of(shift.source.ref)?.let { part -> partRow(stat, part, value, better) }
-                ?: ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = shift.source.ref, better = better)
+                ?: ShareRow(statTitle(shift.source.ref), value, ui("stat.fight.note"), link = RowLink.Stat(shift.source.ref), better = better)
 
             SourceKind.SKILL, SourceKind.RESHAPE -> ShareRow(sourceTitle(shift.source), value, skillNote(shift.source), better = better)
 
-            else -> ShareRow(shiftTitle(shift.source, holders), value, shift.from?.let { from -> ui("stat.from", statTitle(from)) }, better = better)
+            else -> ShareRow(shiftTitle(shift.source, holders), value, shift.from?.let { from -> ui("stat.from", statTitle(from)) }, link = soleHolder(shift.source, holders), better = better)
         }
     }
 
@@ -180,7 +189,7 @@ class StatExplainer(private val game: GameUi) {
      */
     private fun partRow(stat: String, part: ReadingPart, value: String, better: Boolean?): ShareRow {
         val times = factorOf(stat, part)
-        return ShareRow(ui("stat.flow.${part.name}"), value, times?.let { "×${factor(it)} · " + ui("stat.fight.note") } ?: ui("stat.fight.note"), link = part.stat, better = better)
+        return ShareRow(ui("stat.flow.${part.name}"), value, times?.let { "×${factor(it)} · " + ui("stat.fight.note") } ?: ui("stat.fight.note"), link = part.stat?.let(RowLink::Stat), better = better)
     }
 
     /** Множитель части [part] чтения боя цифры [stat] на листе героя; прибавка - null. */
@@ -200,24 +209,32 @@ class StatExplainer(private val game: GameUi) {
 
     /**
      * Sources of one name and one operation as one row: ten tree nodes «Здоровье» or two rings of the same name
-     * read as their sum, not ten rows. A conversion keeps its own row - its rule is told on it.
+     * read as their sum, not ten rows. A conversion keeps its own row - its rule is told on it. Вторая половина пары - строка
+     * от одного источника (две одноимённые вещи - уже нет): только такая ведёт к своей вещи.
      */
-    private fun merged(shares: List<Share>): List<Share> = shares.groupBy { if (it.perStat != null) it else sourceTitle(it.source) to it.op }.values.map { same ->
+    private fun merged(shares: List<Share>): List<Pair<Share, Boolean>> = shares.groupBy { if (it.perStat != null) it else sourceTitle(it.source) to it.op }.values.map { same ->
+        val sole = same.mapTo(HashSet()) { it.source }.size == 1
         if (same.size == 1) {
-            same.single()
+            same.single() to sole
         } else {
             val value = if (same.first().op == Op.MORE) (same.fold(1.0) { acc, it -> acc * (1 + it.value / 100) } - 1) * 100 else same.sumOf { it.value }
-            same.first().copy(value = value, local = same.flatMap { it.local })
+            same.first().copy(value = value, local = same.flatMap { it.local }) to sole
         }
     }
 
-    private fun row(stat: String, share: Share, percent: Boolean): ShareRow {
+    /** Строка источника-вещи ведёт к её карточке; прочие источники - никуда. */
+    private fun itemLink(source: StatSource?): RowLink? = source?.takeIf { it.kind == SourceKind.ITEM && hero?.item(it.ref) != null }?.let { RowLink.Item(it.ref) }
+
+    /** Сила уникалки с одним носителем среди надетого ведёт к карточке этой вещи; с несколькими или без носителя - никуда. */
+    private fun soleHolder(source: StatSource, holders: (String) -> List<StatSource>): RowLink? = if (source.kind == SourceKind.POWER) holders(source.ref).filter { it.kind == SourceKind.ITEM }.singleOrNull()?.let(::itemLink) else null
+
+    private fun row(stat: String, share: Share, percent: Boolean, sole: Boolean): ShareRow {
         val value = fmt(stat, share.value, share.op, percent)
         val better = judge(stat, share.value, share.op)
-        val per = share.perStat ?: return ShareRow(rowTitle(share.source), value, localNote(share.local) ?: skillNote(share.source), better = better)
+        val per = share.perStat ?: return ShareRow(rowTitle(share.source), value, localNote(share.local) ?: skillNote(share.source), if (sole) itemLink(share.source) else null, better)
         val rule = ui("stat.per", fmt(stat, share.each, share.op, percent), statNumber(per, share.per), statTitle(per))
         val by = share.source?.takeIf { it.kind != SourceKind.CLASS }?.let { "${sourceTitle(it)}: " }.orEmpty()
-        return ShareRow("${statTitle(per)} ${statNumber(per, share.perValue)}", value, by + rule, link = per, better = better)
+        return ShareRow("${statTitle(per)} ${statNumber(per, share.perValue)}", value, by + rule, link = RowLink.Stat(per), better = better)
     }
 
     /** Строка в карточке дара - его именем: карточка уже называется «Предначертание: …». */

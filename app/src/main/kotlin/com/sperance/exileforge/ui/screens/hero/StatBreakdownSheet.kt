@@ -30,6 +30,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.RowLink
 import com.sperance.exileforge.core.sheet.ShareCard
 import com.sperance.exileforge.core.sheet.ShareKind
 import com.sperance.exileforge.core.sheet.ShareRow
@@ -41,6 +42,8 @@ import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.sheet.Shift
 import com.sperance.exileforge.rules.sheet.StatReading
 import com.sperance.exileforge.ui.components.ForgeSheet
+import com.sperance.exileforge.ui.components.Inspect
+import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
 
@@ -64,7 +67,7 @@ internal fun ShareKind.color(): Color = when (this) {
 /**
  * A figure's own window: its total, then what it is made of — a bar of each kind's share,
  * a card per kind with every source by name, the formula, and for a stat others take from, what it
- * gives them now. A linked stat opens in the same window; the chip on top goes back.
+ * gives them now. A linked stat opens in the same window (the chip on top goes back), a linked item - its card.
  *
  * [shifts] are what lies over the hero's own sheet — a map's and the atlas's effects — by stat. Цифра - лист боя ([CombatSheet]):
  * пассивные умения и шаги Предначертания - доли итога, полосы и формулы.
@@ -85,6 +88,13 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
         StatExplainer(game).explain(combat.explain(current, shifts), combat.grants(current), combat::holders, combat.lowLife(current), combat.lootApart(current))
     }
     val cardKeys = remember(view) { contentKeys(view.cards) { "${it.kind}|${it.title}" } }
+    val inspect = rememberInspect()
+    val follow: (RowLink) -> Unit = { link ->
+        when (link) {
+            is RowLink.Stat -> trail = trail + link.code
+            is RowLink.Item -> game.hero?.item(link.id)?.let { inspect(Inspect.Copy(it)) }
+        }
+    }
     val accent = game.index?.stats?.section(current)?.accent() ?: Muted
     ForgeSheet(onDismissRequest = onDismiss) {
         LazyColumn(
@@ -100,13 +110,13 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
             val defence = game.index?.let { index -> game.hero?.level?.let { StatLimits.defence(current, stats, it, index) } }
             item { Header(current, view, defence, stats, accent, game) }
             defence?.let { reading -> item { DefenceCard(current, reading, stats, game) } }
-            game.index?.campaign?.let { StatLimits.of(current, stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
+            game.index?.campaign?.let { StatLimits.of(current, stats, it) }?.let { limit -> item { LimitCard(limit, game, follow) } }
             ReservePool.entries.firstOrNull { it.stat == current }?.let(game::reserve)?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
-            items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
+            items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game, follow) }
             if (view.cards.isEmpty()) item { Text(ui("stat.empty"), color = Muted, style = MaterialTheme.typography.bodySmall) }
             if (view.cards.isNotEmpty()) item { Formula(view.formula) }
-            if (view.grants.isNotEmpty()) item { Grants(current, view.grants, game) { trail = trail + it } }
+            if (view.grants.isNotEmpty()) item { Grants(current, view.grants, game, follow) }
         }
     }
 }
@@ -144,7 +154,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
  * opens that stat's own breakdown), the limit that stands and the hard ceiling; then what the fight counts
  * and what lies above the limit for nothing.
  */
-@Composable private fun LimitCard(limit: StatLimit, game: GameUi, open: (String) -> Unit) {
+@Composable private fun LimitCard(limit: StatLimit, game: GameUi, open: (RowLink) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     val value = { v: Double -> statValue(limit.stat, v, game.index) }
     Column(
@@ -156,7 +166,7 @@ fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, s
             Text(value(limit.cap), color = Gold, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
         }
         SourceLine(ShareRow(ui("stat.cap.base"), value(limit.base)), open)
-        limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, game.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = stat, better = StatPolarity.better(game.index, limit.stat, amount)), open) }
+        limit.raises.forEach { (stat, amount) -> SourceLine(ShareRow(statTitle(stat, game.lang), (if (amount >= 0) "+" else "−") + value(kotlin.math.abs(amount)), link = RowLink.Stat(stat), better = StatPolarity.better(game.index, limit.stat, amount)), open) }
         limit.hard?.let { SourceLine(ShareRow(ui("stat.cap.hard"), value(it)), open) }
         limit.floor?.let { SourceLine(ShareRow(ui("stat.cap.floor"), value(it)), open) }
         Text(
@@ -238,7 +248,7 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
 }
 
 /** A kind's card: its tag, its name and what it gives together, then a line per source, a grey note under one that has it. */
-@Composable private fun SourceCard(card: ShareCard, game: GameUi, open: (String) -> Unit) {
+@Composable private fun SourceCard(card: ShareCard, game: GameUi, open: (RowLink) -> Unit) {
     val shape = RoundedCornerShape(12.dp)
     Column(
         Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
@@ -253,7 +263,8 @@ private fun ShareBar(weights: Map<ShareKind, Double>) {
     }
 }
 
-@Composable private fun SourceLine(row: ShareRow, open: (String) -> Unit) {
+/** Строка источника: со ссылкой ([ShareRow.link] - характеристика или вещь) - подчёркнута и нажимается. */
+@Composable private fun SourceLine(row: ShareRow, open: (RowLink) -> Unit) {
     Column(Modifier.fillMaxWidth().then(row.link?.let { link -> Modifier.clickable { open(link) } } ?: Modifier).padding(start = 8.dp, top = 2.dp, bottom = 2.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -285,7 +296,7 @@ private fun shiftColor(better: Boolean?, plain: Color): Color = if (better == fa
 }
 
 /** What the stat gives others now; a tap opens the one given to. */
-@Composable private fun Grants(stat: String, rows: List<ShareRow>, game: GameUi, open: (String) -> Unit) {
+@Composable private fun Grants(stat: String, rows: List<ShareRow>, game: GameUi, open: (RowLink) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(ui("stat.gives", statTitle(stat, game.lang)).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall)
         rows.forEach { row ->

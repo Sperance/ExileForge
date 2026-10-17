@@ -36,21 +36,14 @@ class MobBalGuardTest {
     }
 
     /**
-     * Сторож стражей (быстрый вариант полного прогона `:core:mobBal -Pmode=guard`): эталон каждого класса - тот
-     * же, что в полном прогоне (вещи полосы и штраф сопротивлений своей зоны, её уровень), - бьётся с каждым стражем кампании по [FIGHTS]
-     * бою на каждом из [GUARD_ROLLS] наборов костей, кости детерминированы. Доля побед эталонов над стражем своего уровня держит цель
-     * [GuardianTarget]: каждый страж - с допуском [EACH], средняя акта - с допуском [ACT]. Разброс стражей сторожит бой, а не Мощь.
-     *
-     * Старшие уровни первыми: их постройки и бои дольше, параллельный поток меньше ждёт хвоста.
+     * Сторож стражей (быстрый вариант полного прогона `:core:mobBal -Pmode=guard`) на боях [Fights]: доля побед эталонов над стражем
+     * своего уровня держит цель [GuardianTarget]: каждый страж - с допуском [EACH], средняя акта - с допуском [ACT]. Разброс стражей
+     * сторожит бой, а не Мощь.
      */
     @Test
     fun everyGuardianMeetsTheWinTarget() {
-        val sim = MobBal(index, fights = FIGHTS * GUARD_ROLLS, rolls = GUARD_ROLLS, monsterSamples = 1, heroes = GuardHeroes.pool)
-        val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
-        val keys = zones.sortedByDescending { it.level }.flatMap { zone -> sim.classesOf(emptySet()).map { zone to it } }
-        fun hero(zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
-        val rows = keys.parallelStream().map { (zone, heroClass) -> sim.boss(zone, hero(zone, heroClass), 0, Rarity.COMMON, CAP) }.toList()
-        val verdicts = guard(index, rows, EACH)
+        val zones = guarded()
+        val verdicts = guard(index, Fights.rows, EACH)
         assertTrue(zones.size >= 100 && verdicts.size == zones.size, "the check proves nothing: ${verdicts.size} of ${zones.size} guardians")
         val target = GuardianTarget.WINS
         val acts = verdicts.groupBy { it.values[3] as Int }.mapValues { (_, list) -> list.map { it.values[5] as Double }.average() }
@@ -63,8 +56,44 @@ class MobBalGuardTest {
         )
     }
 
+    /**
+     * Восстановление стражей: реген и вампиризм каждого стража кампании в тех же боях сторожа побед (сумма по всем боям) - не больше
+     * доли урона эталонов его уровня ([com.sperance.exileforge.rules.content.BossRule.sustainShare] контента): стража не перебивают одним уроном,
+     * его сила - в здоровье.
+     */
+    @Test
+    fun everyGuardianRecoversUnderTheShare() {
+        val share = index.campaign.bosses.sustainShare
+        val sustain = Fights.rows.groupBy { it.values[2] as String }.mapValues { (_, rows) -> rows.sumOf { it.values[RESTORED] as Double } / rows.sumOf { it.values[RESTORED + 1] as Double }.coerceAtLeast(1.0) }
+        assertTrue(sustain.size == guarded().map { it.boss }.toSet().size, "the check proves nothing: ${sustain.size} guardians")
+        val over = sustain.filterValues { it > share }
+        assertTrue(over.isEmpty(), "реген и вампиризм стража > ${"%.0f".format(100 * share)}% урона эталона: " + over.entries.sortedByDescending { it.value }.joinToString { (boss, it) -> "$boss ${"%.0f".format(100 * it)}%" })
+    }
+
+    private fun guarded(): List<Zone> = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
+
+    /**
+     * Бои сторожа стражей - один прогон на оба сторожа: эталон каждого класса - тот же, что в полном прогоне (вещи полосы и штраф
+     * сопротивлений своей зоны, её уровень), - бьётся с каждым стражем кампании по [FIGHTS] бою на каждом из [GUARD_ROLLS] наборов
+     * костей, кости детерминированы. Старшие уровни первыми: их постройки и бои дольше, параллельный поток меньше ждёт хвоста.
+     */
+    private object Fights {
+        val rows: List<Row> by lazy {
+            val index = TestContent.index
+            val sim = MobBal(index, fights = FIGHTS * GUARD_ROLLS, rolls = GUARD_ROLLS, monsterSamples = 1, heroes = GuardHeroes.pool)
+            val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
+            val keys = zones.sortedByDescending { it.level }.flatMap { zone -> sim.classesOf(emptySet()).map { zone to it } }
+            fun hero(zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
+            keys.parallelStream().map { (zone, heroClass) -> sim.boss(zone, hero(zone, heroClass), 0, Rarity.COMMON, CAP) }.toList()
+        }
+    }
+
     private companion object {
         const val ROLLS = 2
+
+        /** Столбец восстановления стража в строке [MobBal.boss]; за ним - урон эталона по стражу. */
+        const val RESTORED = 21
+
 
         /** Наборов костей стража в стороже побед. */
         const val GUARD_ROLLS = 4

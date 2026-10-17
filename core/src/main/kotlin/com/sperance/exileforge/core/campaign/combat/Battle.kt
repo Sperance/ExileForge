@@ -130,6 +130,10 @@ class Battle(
         var recoveryStart = -1e9
         var recovered = 0.0
 
+        /** Сколько здоровья реген и вампиризм вернули монстру за весь бой - под подавлением и потолком в секунду. */
+        var restored = 0.0
+            private set
+
         /** Сколько из [amount] здоровья монстр ещё вернёт в секунду [time] под потолком [FightRules.recoveryRoom], учтя его. */
         fun recoveryRoom(amount: Double, time: Double): Double {
             if (time - recoveryStart >= 1.0) {
@@ -138,6 +142,7 @@ class Battle(
             }
             val allowed = min(amount, fight.recoveryRoom(body.maxLife, recovered))
             recovered += allowed
+            restored += allowed
             return allowed
         }
 

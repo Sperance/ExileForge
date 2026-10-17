@@ -377,12 +377,16 @@ class Arena(private val index: ContentIndex, private val hero: Hero, effects: Ma
         val actions = events.subList(0, death).count { it.actor == Side.HERO && !it.onSelf && it.foe == 0 && (it.action == Action.ATTACK || it.action == Action.SKILL) }
         val taken = events.filter { it.actor == Side.MONSTER && it.damage > 0 && !it.onSelf }.sumOf { it.damage }
         val strongest = events.filter { it.actor == Side.MONSTER && it.ailment == null && !it.onSelf }.maxOfOrNull { it.damage } ?: 0.0
-        return Fought(battle.outcome, battle.time, firstKill, actions, taken, 1 - battle.heroLife / body.maxLife.coerceAtLeast(1.0), strongest / (body.maxLife + body.maxShield).coerceAtLeast(1.0))
+        val dealt = events.filter { it.actor == Side.HERO && it.foe == 0 && !it.onSelf }.sumOf { it.damage }
+        return Fought(battle.outcome, battle.time, firstKill, actions, taken, 1 - battle.heroLife / body.maxLife.coerceAtLeast(1.0), strongest / (body.maxLife + body.maxShield).coerceAtLeast(1.0), battle.foeFighters[0].restored, dealt)
     }
 }
 
-/** Итог боя; [maxHit] - сильнейший удар врага долей запаса героя (здоровье и щит). */
-data class Fought(val outcome: Outcome?, val time: Double, val firstKill: Double, val actions: Int, val taken: Double, val lifeLost: Double, val maxHit: Double = 0.0)
+/**
+ * Итог боя; [maxHit] - сильнейший удар врага долей запаса героя (здоровье и щит); [restored] - сколько здоровья реген и вампиризм
+ * вернули первому врагу, [dealt] - урон героя по нему за бой.
+ */
+data class Fought(val outcome: Outcome?, val time: Double, val firstKill: Double, val actions: Int, val taken: Double, val lifeLost: Double, val maxHit: Double = 0.0, val restored: Double = 0.0, val dealt: Double = 0.0)
 
 /** Одна строка результата. */
 data class Row(val values: List<Any>) {
@@ -495,7 +499,8 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
 
     /**
      * Босс зоны [zone] (на карте тира [tier], [rarity] - редкость карты): [rolls] бросков босса (каждый - своя карта при тире) ×
-     * fights/rolls боёв. Время - секунды; урон по герою - доля пула в секунду.
+     * fights/rolls боёв. Время - секунды; урон по герою - доля пула в секунду; два последних столбца - сколько здоровья реген и
+     * вампиризм вернули боссу и сколько урона нанёс ему герой, в среднем за бой.
      */
     fun boss(zone: Zone, hero: Hero, tier: Int, rarity: Rarity, cap: Double, extra: Map<String, Double> = emptyMap()): Row {
         var wins = 0
@@ -508,6 +513,8 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         var might = 0.0
         var heroPool = 0.0
         var heroDmg = 0.0
+        var restored = 0.0
+        var dealt = 0.0
         repeat(rolls) { r ->
             val (rolled, active) = mapEffects(zone, tier, rarity, SimKit.SEED + 7919L * r + zone.level, hero.level)
             val effects = MapEffects.sum(rolled, extra)
@@ -526,6 +533,8 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
                 n++
                 allTime += f.time
                 taken += f.taken / (arena.body.maxLife + arena.body.maxShield).coerceAtLeast(1.0) / f.time.coerceAtLeast(0.1)
+                restored += f.restored
+                dealt += f.dealt
                 if (f.outcome == Outcome.WIN) {
                     wins++
                     winTime += f.time
@@ -538,7 +547,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
             listOf(
                 "boss", zone.code.value, zone.boss.value, zone.level, index.campaign.maps.areaLevel(zone.level, tier), tier, rarity.name, hero.heroClass.code, hero.level, hero.archetype.name,
                 wins.toDouble() / n.coerceAtLeast(1), if (wins > 0) winTime / wins else -1.0, allTime / n.coerceAtLeast(1), timeouts, taken / n.coerceAtLeast(1),
-                bossLife / k, might / k, heroPool / k, heroDmg / k, n, hero.note,
+                bossLife / k, might / k, heroPool / k, heroDmg / k, n, hero.note, restored / n.coerceAtLeast(1), dealt / n.coerceAtLeast(1),
             ),
         )
     }

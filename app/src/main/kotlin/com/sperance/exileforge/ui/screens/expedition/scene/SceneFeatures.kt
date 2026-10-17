@@ -16,6 +16,7 @@ import com.sperance.exileforge.core.campaign.run.RoomSpot
 import com.sperance.exileforge.core.campaign.run.TrapSpot
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Job
+import com.sperance.exileforge.rules.content.NodeLook
 import com.sperance.exileforge.rules.run.FeatureKind
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Parchment
@@ -56,7 +57,7 @@ internal fun ScenePainter.drawFeature(spot: FeatureSpot, part: Int, world: Exped
         is MerchantSpot -> drawMerchant(spot.cell.x + .5, spot.cell.y + .5, spot.spent, glow(spot.cell.x, spot.cell.y))
 
         is NodeSpot -> {
-            drawNode(spot.cell.x + .5, spot.cell.y + .5, spot.node.profession, spot.spent, glow(spot.cell.x, spot.cell.y))
+            drawNode(spot.cell.x + .5, spot.cell.y + .5, spot.node.job.look, spot.spent, glow(spot.cell.x, spot.cell.y))
             if (!spot.spent) materials[spot.node.job.output]?.let { drawMaterial(spot.cell.x + .5, spot.cell.y + .5, it, glow(spot.cell.x, spot.cell.y)) }
         }
 
@@ -139,43 +140,10 @@ internal fun ScenePainter.drawMerchant(x: Double, y: Double, spent: Boolean, lig
     }
 }
 
-/** Узел ремесла по профессии: рудная глыба, кусты трав или поваленное бревно; собранный - пустой пень и крошка. */
-internal fun ScenePainter.drawNode(x: Double, y: Double, profession: String, spent: Boolean, light: Float) {
-    val cx = isoX(x, y)
-    val cy = isoY(x, y)
-    val alpha = if (spent) .45f else 1f
-    pen.color = Color.Black.copy(alpha = .3f)
-    pen.ellipse(cx - unit * .45f, cy - unit * .12f, unit * .9f, unit * .24f)
-    when (profession) {
-        HERBALISM -> {
-            val leaf = tone(Color(0xFF4FA048), light).copy(alpha = alpha)
-            for (i in -1..1) {
-                pen.color = leaf
-                pen.triangle(cx + i * unit * .2f - unit * .08f, cy, cx + i * unit * .2f + unit * .08f, cy, cx + i * unit * .2f, cy + unit * (.35f + .08f * i * i))
-            }
-            if (!spent) {
-                pen.color = Color(0xFFE070C0).copy(alpha = light)
-                pen.circle(cx, cy + unit * .38f, unit * .05f)
-            }
-        }
-
-        WOODCUTTING -> {
-            pen.color = tone(Color(0xFF6B4423), light).copy(alpha = alpha)
-            pen.quad(cx - unit * .4f, cy + unit * .05f, cx + unit * .3f, cy - unit * .1f, cx + unit * .3f, cy + unit * .12f, cx - unit * .4f, cy + unit * .27f)
-            pen.color = tone(Color(0xFFC09060), light).copy(alpha = alpha)
-            pen.ellipse(cx + unit * .22f, cy - unit * .1f, unit * .16f, unit * .22f)
-        }
-
-        else -> {
-            pen.color = tone(Color(0xFF6E6A62), light).copy(alpha = alpha)
-            pen.quad(cx - unit * .35f, cy, cx, cy - unit * .12f, cx + unit * .35f, cy, cx, cy + unit * .45f)
-            if (!spent) {
-                pen.color = Color(0xFFE0B050).copy(alpha = (.6f + .3f * sin(time * 2.5f + x.toFloat())) * light)
-                pen.circle(cx - unit * .08f, cy + unit * .15f, unit * .045f)
-                pen.circle(cx + unit * .1f, cy + unit * .25f, unit * .035f)
-            }
-        }
-    }
+/** Узел ремесла: облик его работы-сбора ([NodeGlyphs]), целый или собранный. */
+internal fun ScenePainter.drawNode(x: Double, y: Double, look: NodeLook?, spent: Boolean, light: Float) {
+    look ?: return
+    nodes.draw(pen.scope, look, spent, isoX(x, y), isoY(x, y), unit, light)
 }
 
 /**
@@ -494,6 +462,3 @@ internal fun materialTier(index: ContentIndex, code: String): Color {
         else -> GoldBright
     }
 }
-
-private const val HERBALISM = "HERBALISM"
-private const val WOODCUTTING = "WOODCUTTING"

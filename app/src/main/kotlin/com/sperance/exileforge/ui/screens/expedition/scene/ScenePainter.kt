@@ -53,6 +53,9 @@ internal class ScenePainter {
     /** Анимации-декор включены (`LocalMotion`): без них декор стоит в покое ([decor]). */
     internal var motion = true
 
+    /** Художник узлов сбора: контуры обликов строятся раз на сцену. */
+    internal val nodes = NodeGlyphs()
+
     /** Значки материалов узлов ремесла по коду материала, их готовит сцена. */
     internal var materials: Map<String, MaterialMark> = emptyMap()
 

@@ -646,19 +646,11 @@ private const val SPARKS = 14
 @Composable private fun RiftFight(game: GameUi, model: ExpeditionViewModel, arena: RiftArena, delivery: RiftDelivery?) {
     val shell: ShellViewModel = koinViewModel()
     val hud by arena.hud.collectAsState()
-    LaunchedEffect(arena) {
-        var last = 0L
-        while (true) {
-            withFrameNanos { now ->
-                if (last != 0L) arena.update(((now - last) / 1e9).coerceAtMost(.05))
-                last = now
-            }
-        }
-    }
+    val clock = rememberSimClock(arena)
     BackHandler { model.riftCommand(RunCommand.Pause) }
     Box(Modifier.fillMaxSize().background(Ink)) {
         hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-            ArenaOverlay(game, hud.run, fight, hud.level, arena.combat, arena.stance, onCommand = model::riftCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
+            ArenaOverlay(game, hud.run, fight, hud.level, arena.combat, arena.stance, clock, onCommand = model::riftCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
         }
         val shape = RoundedCornerShape(10.dp)
         Column(

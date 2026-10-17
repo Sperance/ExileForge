@@ -122,7 +122,7 @@ import kotlin.math.sin
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(64.dp).aspectRatio(.75f).clip(RoundedCornerShape(6.dp)).background(Color(0xFF0B0E13))) {
                     Canvas(Modifier.fillMaxSize()) {
-                        Portraits.hero(this, game.heroClass?.code, frame.time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash())
+                        Portraits.hero(this, game.heroClass?.code, frame.breath, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, flash())
                     }
                     CardHits(fight, frame, fight.hits.filter { it.target == Side.HERO })
                 }

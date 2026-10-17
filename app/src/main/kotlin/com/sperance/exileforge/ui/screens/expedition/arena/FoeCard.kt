@@ -195,7 +195,7 @@ internal fun DrawScope.roundEdge(radius: Dp, width: Dp, color: Color) {
                                 this,
                                 foe.monster.code.value,
                                 foe.monster.form,
-                                frame.time,
+                                frame.breath,
                                 wash?.let(::ailmentTint),
                                 wash?.let(::washAmount) ?: 0f,
                                 flash(),

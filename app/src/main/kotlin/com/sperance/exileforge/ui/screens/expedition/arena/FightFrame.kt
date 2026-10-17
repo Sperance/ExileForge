@@ -13,9 +13,12 @@ import com.sperance.exileforge.core.campaign.run.FoeView
  * часам пульса ([now]). Без пульса (превью) - как в снимке.
  */
 @Stable
-internal class FightFrame(private val clock: State<Float>, private val pulse: FightPulse?) {
-    /** Секунды арены: тряска, пульсы, дыхание портретов. */
+internal class FightFrame(private val clock: State<Float>, private val pulse: FightPulse?, private val decor: State<Float> = clock) {
+    /** Секунды арены по часам симуляции: тряска и пульсы боя; на паузе стоят. */
     val time: Float get() = clock.value
+
+    /** Секунды дыхания портретов - часы декора ([decorTime]): декор, а не бой. */
+    val breath: Float get() = decor.value
 
     /** Часы боя этого кадра. */
     fun now(fight: FightHud): Double {

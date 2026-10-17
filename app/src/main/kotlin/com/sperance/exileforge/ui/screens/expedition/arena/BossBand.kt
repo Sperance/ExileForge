@@ -572,7 +572,7 @@ private fun DrawScope.archFrame(glow: Color?) {
         Box(Modifier.fillMaxWidth().padding(bottom = 16.dp).fillMaxHeight()) {
             Canvas(Modifier.fillMaxSize()) { archFrame(null) }
             Canvas(Modifier.fillMaxSize().padding(3.dp).clip(ArchShape)) {
-                Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index))
+                Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.breath, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index))
             }
             if (focused) Box(Modifier.matchParentSize().border(2.dp, FrameGoldBright, ArchShape))
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
@@ -697,7 +697,7 @@ private fun DrawScope.totemFigure(tint: Color, time: Float, kind: TotemKind) {
                 .clickable(enabled = foe.alive && fight.outcome == null, onClick = onTap),
         ) {
             Canvas(Modifier.fillMaxSize()) {
-                Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.time, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
+                Portraits.monster(this, foe.monster.code.value, foe.monster.form, frame.breath, wash?.let(::ailmentTint), wash?.let(::washAmount) ?: 0f, lungeFlash(fight, frame, Side.MONSTER, foe.index), if (boss.tainted) boss.torn else 0)
             }
             CardHits(fight, frame, fight.hits.filter { it.target == Side.MONSTER && it.foe == foe.index })
         }

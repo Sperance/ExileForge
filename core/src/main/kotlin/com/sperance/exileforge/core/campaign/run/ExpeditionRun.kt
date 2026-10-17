@@ -14,6 +14,8 @@ import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunJournal
 import com.sperance.exileforge.core.campaign.RunStats
+import com.sperance.exileforge.core.campaign.SimWake
+import com.sperance.exileforge.core.campaign.Simulation
 import com.sperance.exileforge.core.campaign.Spawns
 import com.sperance.exileforge.core.campaign.VaalZones
 import com.sperance.exileforge.core.campaign.ZoneShare
@@ -112,7 +114,7 @@ class ExpeditionRun(
      * ([tallyWins]).
      */
     val fateRun: FateRun = FateRun(),
-) {
+) : Simulation {
     /** The run as the rules roll it; it takes the Vaal zone's context once the portal opens. */
     var run: Run = run
         internal set
@@ -402,12 +404,21 @@ class ExpeditionRun(
     val pulse = FightPulse()
     private val cadence = HudCadence()
 
+    /** Кадр нужен, пока заход идёт ([active]) или ждёт команда: на паузе боя, под листом и в итогах часы спят. */
+    private val wake = SimWake()
+    override val awake: StateFlow<Boolean> = wake.awake
+
+    /** Заход идёт: не кончен, не в итогах боя, не под листом и не на паузе или в ожидании начала боя. */
+    private val active: Boolean get() = phase !in RESTING && holds == 0 && !(phase == RunPhase.FIGHT && (!started || paused))
+
     fun send(command: RunCommand) {
         commands.add(command)
+        wake.poke()
     }
 
     /** Предложенный фонтан, лист объекта карты и сбор узла держат шаг, пока игрок не ответит. */
-    fun update(dt: Double) {
+    override fun update(dt: Double) {
+        val poked = wake.took()
         var commanded = false
         while (true) {
             handle(commands.poll() ?: break)
@@ -431,7 +442,8 @@ class ExpeditionRun(
         }
         pulse.capture(fight)
         pulse.gather(channel?.elapsed, channel?.spot?.node?.seconds ?: 0.0)
-        if (cadence.due(dt, commanded, leaps(), fight)) state.value = snapshot()
+        if (cadence.due(dt, commanded || poked, leaps(), fight)) state.value = snapshot()
+        wake.rest(active)
     }
 
     /** Что меняется скачком вне боя: снимок с этим выходит сразу, а не со следующим тактом ([HudCadence]). */
@@ -518,6 +530,9 @@ class ExpeditionRun(
     fun share(): ZoneShare = ZoneShare(mine.associateWith { earned[it] }, seconds, kills, bosses, deaths, stats.summary(kills))
 
     companion object {
+        /** Фазы, где заход не шагает сам: итоги боя, гибель, пройденная и покинутая карта - их будит только команда. */
+        private val RESTING = setOf(RunPhase.LOOT, RunPhase.DEAD, RunPhase.CLEARED, RunPhase.LEFT)
+
         /** How long the fight's last blow hangs before the scene moves on. */
         const val HIT_LIFETIME = 1.0
 

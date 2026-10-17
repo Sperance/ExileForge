@@ -44,20 +44,12 @@ import org.koin.compose.viewmodel.koinViewModel
     val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<ExpeditionViewModel>()
     val hud by arena.hud.collectAsState()
-    LaunchedEffect(arena) {
-        var last = 0L
-        while (true) {
-            withFrameNanos { now ->
-                if (last != 0L) arena.update(((now - last) / 1e9).coerceAtMost(.05))
-                last = now
-            }
-        }
-    }
+    val clock = rememberSimClock(arena)
     BackHandler { if (hud.phase == TrialPhase.FIGHT) model.trialCommand(com.sperance.exileforge.core.campaign.run.RunCommand.Leave) else model.closeTrial() }
     CompositionLocalProvider(LocalFightReport provides hud.report) {
         Box(Modifier.fillMaxSize().background(Ink)) {
             hud.fight?.takeIf { hud.phase == TrialPhase.FIGHT }?.let { fight ->
-                ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
+                ArenaOverlay(game, hud.run, fight, hud.level, arena.rules, arena.stance, clock, onCommand = model::trialCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz, pulse = arena.pulse)
             }
             if (hud.phase == TrialPhase.FIGHT) {
                 TrialPlate(hud, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 44.dp, end = 8.dp))

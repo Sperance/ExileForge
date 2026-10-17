@@ -52,7 +52,6 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.LifeFlowSheet
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
-import com.sperance.exileforge.ui.screens.expedition.scene.rememberRunClock
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
@@ -106,7 +105,7 @@ import kotlin.math.roundToInt
     val board = rememberRunBoard(run, model.state.collectAsStateWithLifecycle().value.quests, quests)
     var questsOpen by remember { mutableStateOf(false) }
     var bagOpen by remember(run) { mutableStateOf(false) }
-    val clock = rememberRunClock(run)
+    val clock = rememberSimClock(run)
     CompositionLocalProvider(LocalFightReport provides hud.lastFight) {
         Box(Modifier.fillMaxSize().background(Ink)) {
             val ribbon = hud.auto?.takeIf { hud.phase == RunPhase.MAP }
@@ -171,7 +170,7 @@ import kotlin.math.roundToInt
 
                 RunPhase.FIGHT -> RunFight(live) { frame, fight ->
                     ArenaOverlay(
-                        game, frame, fight, fight.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance,
+                        game, frame, fight, fight.level.takeIf { level -> level > 0 } ?: run.run.levelOf(run.zone), run.rules, run.stance, clock,
                         onCommand = model::runCommand, onLogFilter = shell::logFilter, onBuzz = shell::buzz,
                         biome = run.zone.biome,
                         shares = { boss -> BuffSources.of(run.mapEffects, run.run.context.atlas, run.pacts, boss) },

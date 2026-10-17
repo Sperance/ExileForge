@@ -95,21 +95,6 @@ internal fun washAmount(ailment: Ailment): Float = when (ailment) {
     Ailment.PARCHED, Ailment.DECAYED -> .2f
 }
 
-/** A clock in seconds for the portraits' idle motion, ticking once a frame while the frame is on screen. */
-@Composable internal fun rememberClock(): State<Float> {
-    val clock = remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(Unit) {
-        var last = 0L
-        while (true) {
-            withFrameNanos { now ->
-                if (last != 0L) clock.floatValue += ((now - last) / 1e9f).coerceAtMost(.05f)
-                last = now
-            }
-        }
-    }
-    return clock
-}
-
 internal fun outcomeColour(outcome: Outcome) = when (outcome) {
     Outcome.WIN -> Vital
     Outcome.LOSS -> LifeRed

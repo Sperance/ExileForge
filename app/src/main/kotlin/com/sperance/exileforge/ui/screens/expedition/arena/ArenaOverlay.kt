@@ -53,6 +53,7 @@ private const val HERO_CARD = -1
     level: Int,
     rules: CombatRules,
     stance: HeroStance,
+    clock: State<Float>,
     onCommand: (RunCommand) -> Unit,
     onLogFilter: (Set<LogKind>) -> Unit = {},
     onBuzz: (Buzz) -> Unit = {},
@@ -62,8 +63,8 @@ private const val HERO_CARD = -1
     origins: EffectOrigins = EffectOrigins.NONE,
     pulse: FightPulse? = null,
 ) {
-    val clock = rememberClock()
-    val frame = remember(clock, pulse) { FightFrame(clock, pulse) }
+    val breath = decorTime()
+    val frame = remember(clock, pulse, breath) { FightFrame(clock, pulse, breath) }
     val settings = LocalSettings.current
     val share = if (hud.heroMaxLife > 0) fight.heroLife / hud.heroMaxLife.toFloat() else 1f
     val low = share * 100 < settings.autoPause

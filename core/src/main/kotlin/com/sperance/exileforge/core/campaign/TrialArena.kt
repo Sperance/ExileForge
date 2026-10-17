@@ -93,7 +93,7 @@ class TrialArena(
     private val onEvent: (TrialEvent) -> Unit,
     /** Часы устройства, мс эпохи: по ним идут часы раша - стена с входа, как её мерит сервер. */
     private val clock: () -> Long = System::currentTimeMillis,
-) {
+) : Simulation {
     val rules = index.campaign.combat
     private val trials: TrialRules = checkNotNull(index.campaign.trials) { "campaign: no trials" }
     private val run = Run(index, TrialRules.arena(index.campaign, trial.heroLevel), trial.seed, context)
@@ -186,11 +186,17 @@ class TrialArena(
     val pulse = FightPulse()
     private val cadence = HudCadence()
 
+    /** Кадр нужен, пока бой идёт (начат, не на паузе, не под листом) или ждёт ввод: в лобби до боя, на паузе и в итогах часы спят. */
+    private val wake = SimWake()
+    override val awake: StateFlow<Boolean> = wake.awake
+
     fun send(command: RunCommand) {
         commands.add(command)
+        wake.poke()
     }
 
-    fun update(dt: Double) {
+    override fun update(dt: Double) {
+        val poked = wake.took()
         var commanded = false
         while (true) {
             apply(commands.poll() ?: break)
@@ -198,11 +204,13 @@ class TrialArena(
         }
         if (phase == TrialPhase.FIGHT) play(dt)
         pulse.capture(battle)
-        if (cadence.due(dt, commanded, phase.ordinal.toLong(), battle)) state.value = snapshot()
+        if (cadence.due(dt, commanded || poked, phase.ordinal.toLong(), battle)) state.value = snapshot()
+        wake.rest(phase == TrialPhase.FIGHT && battle != null && started && !paused && holds == 0)
     }
 
     /** The server answered the journal up to [applied]: what each event brought, by its number. */
     fun settle(applied: Int, rewards: Map<Int, Reward>) {
+        wake.poke()
         answered = maxOf(answered, applied)
         rewards.forEach { (n, reward) ->
             if (n in earned) return@forEach

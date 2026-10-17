@@ -92,7 +92,7 @@ class RiftArena(
     /** Счёт Предначертания забега: перелив маны живёт на весь забег, арены забега делят его. */
     private val fateRun: com.sperance.exileforge.core.campaign.combat.FateRun = com.sperance.exileforge.core.campaign.combat.FateRun(),
     private val onEnd: (RiftAct.Fight) -> Unit,
-) {
+) : Simulation {
     val combat = index.campaign.combat
     private val node = engine.plan.node(fight.node)!!
     private val zone = TrialRules.arena(index.campaign, fight.level)
@@ -149,11 +149,17 @@ class RiftArena(
     val pulse = FightPulse()
     private val cadence = HudCadence()
 
+    /** Кадр нужен, пока бой идёт (начат, не на паузе, не под листом) или ждёт ввод: в лобби до боя, на паузе и в итогах часы спят. */
+    private val wake = SimWake()
+    override val awake: StateFlow<Boolean> = wake.awake
+
     fun send(command: RunCommand) {
         commands.add(command)
+        wake.poke()
     }
 
-    fun update(dt: Double) {
+    override fun update(dt: Double) {
+        val poked = wake.took()
         var commanded = false
         while (true) {
             apply(commands.poll() ?: break)
@@ -161,7 +167,8 @@ class RiftArena(
         }
         if (phase == TrialPhase.FIGHT) play(dt)
         pulse.capture(battle)
-        if (cadence.due(dt, commanded, phase.ordinal.toLong(), battle)) state.value = snapshot()
+        if (cadence.due(dt, commanded || poked, phase.ordinal.toLong(), battle)) state.value = snapshot()
+        wake.rest(phase == TrialPhase.FIGHT && battle != null && started && !paused && holds == 0)
     }
 
     private fun apply(command: RunCommand) {

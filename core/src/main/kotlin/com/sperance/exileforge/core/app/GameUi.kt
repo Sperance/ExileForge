@@ -108,6 +108,12 @@ data class GameUi(
     val progress: CampaignProgress? get() = HeroLens.progress(index, hero)
     val atlasState: AtlasState? get() = HeroLens.atlasState(index, hero)
     val treeState: TreeState? get() = HeroLens.treeState(index, hero)
+
+    /** Свободные очки Атласа: одна точка для числа на вкладке «Поход» и метки страницы Атласа. */
+    val freeAtlasPoints: Int get() = atlasState?.available ?: 0
+
+    /** Свободные очки древа: число на вкладке «Развитие». */
+    val freeTreePoints: Int get() = treeState?.available ?: 0
 }
 
 /** Один срез «игра» на процесс: модели экранов отдают его своим экранам. */

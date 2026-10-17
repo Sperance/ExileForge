@@ -23,7 +23,7 @@ import org.koin.compose.viewmodel.koinViewModel
 enum class ExpeditionPage(val route: Route, private val title: String, val icon: ImageVector, val hue: Color, val alerts: (GameUi) -> Boolean = { false }) {
     MAP(Route.Expedition, "expedition.page_map", ForgeGlyphs.Portal, Gold),
     TRIALS(Route.Trials, "trials.title", ForgeGlyphs.Skull, ModeHue.Bosses),
-    ATLAS(Route.Atlas, "atlas.title", ForgeGlyphs.Atlas, Rune, alerts = { (it.atlasState?.available ?: 0) > 0 }),
+    ATLAS(Route.Atlas, "atlas.title", ForgeGlyphs.Atlas, Rune, alerts = { it.freeAtlasPoints > 0 }),
     ;
 
     val label: String get() = ui(title)

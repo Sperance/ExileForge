@@ -105,8 +105,8 @@ private const val CAPSULE_GROW = 2.4f
     ) {
         destinations.forEach { index ->
             val free = when (index) {
-                TAB_EXPEDITION -> game.atlasState?.available ?: 0
-                TAB_PROGRESS -> game.treeState?.available ?: 0
+                TAB_EXPEDITION -> game.freeAtlasPoints
+                TAB_PROGRESS -> game.freeTreePoints
                 else -> 0
             }
             BarCapsule(

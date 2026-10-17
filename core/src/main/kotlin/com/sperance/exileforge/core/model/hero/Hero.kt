@@ -175,6 +175,9 @@ object ServerClock {
     @Volatile var offset: Long = 0L
         private set
 
+    /** Часы сервера сейчас по последнему измеренному сдвигу. */
+    fun now(): Long = System.currentTimeMillis() + offset
+
     /** The server said its clock read [serverNow] just now. */
     fun heard(serverNow: Long) {
         if (serverNow > 0) offset = serverNow - System.currentTimeMillis()

@@ -104,7 +104,7 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
     val byId = remember(offers) { offers.associateBy { it.first.item.id } }
     stock?.refreshAt?.takeIf { it > 0 }?.let { at ->
         LaunchedEffect(at) {
-            delay((at - serverNow()).coerceAtLeast(0) + RENEW_SLACK_MS)
+            delay((at - ServerClock.now()).coerceAtLeast(0) + RENEW_SLACK_MS)
             heroModel.load()
         }
     }
@@ -186,9 +186,9 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
 
 /** «Новый товар через 2:14:03»: первая строка списка товаров, тикает раз в секунду по часам устройства. */
 @Composable private fun RenewalRow(at: Long) {
-    val now by produceState(serverNow(), at) {
+    val now by produceState(ServerClock.now(), at) {
         while (true) {
-            value = serverNow()
+            value = ServerClock.now()
             delay(1_000)
         }
     }
@@ -201,9 +201,6 @@ private fun ColumnScope.MerchantTab(game: GameUi, market: MarketViewModel, heroM
         Text(ui("merchant.renews", countdown(((at - now) / 1_000).coerceAtLeast(0))), color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
-
-/** Часы сервера (полка меняется по ним): часы устройства со сдвигом последнего ответа. */
-private fun serverNow(): Long = System.currentTimeMillis() + ServerClock.offset
 
 /** Насколько позже нуля таймера витрина перечитывается: окно полки сервера уже сменилось. */
 private const val RENEW_SLACK_MS = 1_500L

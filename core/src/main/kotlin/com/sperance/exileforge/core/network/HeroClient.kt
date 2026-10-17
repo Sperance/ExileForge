@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.core.model.hero.SellBatch
 import com.sperance.exileforge.core.model.hero.SellOutcome
+import com.sperance.exileforge.core.model.hero.ServerClock
 import com.sperance.exileforge.core.model.hero.StashState
 import com.sperance.exileforge.core.model.sync.HeroParts
 import com.sperance.exileforge.core.model.sync.HeroSnapshot
@@ -40,12 +41,12 @@ private const val DELETION = "$HERO/deletion"
 class HeroClient internal constructor(private val http: Transport) {
     /**
      * The hero in one read: only the parts whose fingerprints [parts] does not hold, or `null` on a 304. В ETag и счёт
-     * непрочитанной почты [unread]: новое письмо не прячется за 304.
+     * непрочитанной почты [unread]: новое письмо не прячется за 304; часть по часам, чей срок прошёл, - тоже ([HeroParts.conditional]).
      */
     suspend fun view(heroId: String, parts: HeroParts, unread: Int = 0): HeroSnapshot? {
         val headers = buildMap {
             put(HeroParts.HEADER, parts.header())
-            if (parts.complete && parts.version.isNotBlank()) put("If-None-Match", "\"${parts.version}.$unread\"")
+            if (parts.conditional(ServerClock.now())) put("If-None-Match", "\"${parts.version}.$unread\"")
         }
         val answer = http.request("GET", "$HERO/view", heroQuery(heroId), authenticated = true, headers = headers)
         return if (answer is JsonNull) null else WireJson.decodeFromJsonElement(HeroSnapshot.serializer(), answer)

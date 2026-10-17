@@ -176,16 +176,14 @@ private fun seedReadyAt(game: GameUi, zone: MapCode, launch: MapLaunch, forced: 
 
 /** Сколько целых секунд до [readyAt] по часам сервера, вживую раз в секунду; 0 - можно сейчас. */
 @Composable private fun seedWait(readyAt: Long): Long {
-    val now by produceState(serverNow(), readyAt) {
+    val now by produceState(ServerClock.now(), readyAt) {
         while (readyAt > value) {
             delay(SEED_TICK_MS)
-            value = serverNow()
+            value = ServerClock.now()
         }
     }
     return ((readyAt - now + SEED_TICK_MS - 1) / SEED_TICK_MS).coerceAtLeast(0)
 }
-
-private fun serverNow(): Long = System.currentTimeMillis() + ServerClock.offset
 
 /** Шаг отсчёта до нового семени: секунда. */
 private const val SEED_TICK_MS = 1000L

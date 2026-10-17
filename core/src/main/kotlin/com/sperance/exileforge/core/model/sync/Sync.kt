@@ -78,6 +78,12 @@ const val API_REVISION = 89
 class HeroParts(val heroId: String, val version: String = "", private val parts: Map<String, HeroPart> = emptyMap(), private val memo: PartMemo = PartMemo()) {
     val complete: Boolean get() = NAMES.all { it in parts }
 
+    /**
+     * Можно ли спросить героя по версии (`If-None-Match`): все части на руках и ни одна часть, что сервер считает по часам
+     * ([CLOCKED]), к [now] не дошла до своего срока - иначе 304 прежней версии оставил бы её устаревшей.
+     */
+    fun conditional(now: Long): Boolean = complete && version.isNotBlank() && CLOCKED.none { (name, due) -> name in parts && due(this) in 1..now }
+
     /** `hero=<hash>,items=<hash>,…`, or `none`: the header is how a client asks for a snapshot at all. */
     fun header(): String = parts.entries.joinToString(",") { "${it.key}=${it.value.version}" }.ifEmpty { "none" }
 
@@ -128,6 +134,12 @@ class HeroParts(val heroId: String, val version: String = "", private val parts:
         const val CRAFTS = "crafts"
         const val MERCHANT = "merchant"
         val NAMES = listOf(HERO, BAG, TREE, CAMPAIGN, CRAFTS, MERCHANT, OVERFLOW, ItemBuckets.ORDER) + ItemBuckets.names
+
+        /**
+         * Части, что сервер считает по часам, а не по версии героя, и миг (часы сервера, мс), когда каждая устареет сама;
+         * 0 - срока нет.
+         */
+        private val CLOCKED: Map<String, (HeroParts) -> Long> = mapOf(MERCHANT to { it.merchant.refreshAt })
 
         /** Ключ памяти собранных вещей (не часть сервера). */
         private const val ITEMS = "#items"

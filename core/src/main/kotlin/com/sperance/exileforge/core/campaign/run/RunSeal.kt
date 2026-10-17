@@ -11,7 +11,7 @@ data class SealView(val killed: Int, val need: Int, val total: Int) {
 }
 
 /**
- * Ворота арены кольца: зачищено [cleared] стай из [need] нужных. Пока они закрыты, проход к арене - скала и
+ * Ворота арены босса: зачищено [cleared] стай из [need] нужных. Пока они закрыты, проход к арене - скала и
  * босс не встаёт: сервер не примет его раньше (`Run.bossOpen`).
  */
 data class GateView(val cleared: Int, val need: Int) {
@@ -29,7 +29,7 @@ val ExpeditionRun.seal: SealView?
         return SealView(run.raresKilled(fallenKeys), run.sealNeed, run.rareTotal)
     }
 
-/** Ворота арены этого захода; null - их нет (не кольцо, Ваал-зона). */
+/** Ворота арены этого захода; null - их нет (форма без ворот, Ваал-зона). */
 val ExpeditionRun.arenaGate: GateView?
     get() {
         if (vaal || run.gate <= 0) return null

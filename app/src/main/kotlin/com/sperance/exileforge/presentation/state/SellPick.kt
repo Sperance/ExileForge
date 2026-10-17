@@ -2,15 +2,20 @@ package com.sperance.exileforge.presentation.state
 
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.rules.content.AutoSell
+import com.sperance.exileforge.rules.content.BulkSale
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.sheet.Requirements
 
 /**
  * Вещь, которую можно отметить к продаже пачкой: копия, цена торговца и подходит ли она под правила автопродажи
- * героя. Лотом становится только то, что уходит пачкой ([AutoSell.bulkSellable]) и не надето - то же правило проверяет сервер.
+ * героя. Лотом становится всё, что правила отмечают к продаже ([BulkSale.pickable]: не надето, не вставлено, не заперто) - то же
+ * правило проверяет сервер; ценное ([valuable]) продаётся только после подтверждения со списком.
  */
 data class SellLot(val piece: ItemView, val price: Long, val byRules: Boolean) {
     val id: String get() = piece.id
+
+    /** Ценная вещь ([BulkSale.valuable]): уникальная, мифическая, с влиянием, осквернённая или расколотая. */
+    val valuable: Boolean get() = BulkSale.valuable(piece.item)
 }
 
 /** Быстрый набор выбора: «по правилам автопродажи» или вся одна продаваемая редкость. */
@@ -49,7 +54,7 @@ data class SellSelection(val chosen: Set<String> = emptySet()) {
     }
 }
 
-/** Лоты продажи среди [pieces]: продаваемые пачкой, не надетые, с известной ценой; «по правилам» - как сервер читает фильтр добычи. */
+/** Лоты продажи среди [pieces]: что правила отмечают к продаже, с известной ценой; «по правилам» - как сервер читает фильтр добычи. */
 fun GameUi.sellLots(pieces: List<ItemView>): List<SellLot> {
     val hero = hero ?: return emptyList()
     val index = index ?: return emptyList()
@@ -57,7 +62,7 @@ fun GameUi.sellLots(pieces: List<ItemView>): List<SellLot> {
     return pieces.mapNotNull { piece ->
         val template = index.template(piece.item.template)
         val price = sellPrice(piece.item)
-        if (piece.isWorn || !AutoSell.bulkSellable(piece.item) || template == null || price == null) return@mapNotNull null
-        SellLot(piece, price, rules.sells(template, piece.item) { Requirements.barred(template, hero.heroClass, hero.stats) })
+        if (!BulkSale.pickable(piece.item) || template == null || price == null) return@mapNotNull null
+        SellLot(piece, price, rules.sells(template, piece.item, hero.level) { Requirements.barred(template, hero.heroClass, hero.stats) })
     }
 }

@@ -41,6 +41,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.presentLoot
+import com.sperance.exileforge.presentation.state.saleMarkable
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.Inspect
@@ -137,7 +138,7 @@ private fun BagPortion(game: GameUi, entry: BagEntry, fresh: Boolean, now: Long,
                         piece,
                         presence,
                         selected = marked,
-                        onLongClick = { onMark(piece.id) }.takeIf { presence.actionable },
+                        onLongClick = { onMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, arriving)) },
                         trailing = if (marked) ({ SaleCoin() }) else null,
                     ) { onItem(piece) }
                 }

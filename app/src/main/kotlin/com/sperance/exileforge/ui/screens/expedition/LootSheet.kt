@@ -19,6 +19,7 @@ import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.LootPresence
 import com.sperance.exileforge.presentation.state.lootPresence
+import com.sperance.exileforge.presentation.state.saleMarkable
 import com.sperance.exileforge.presentation.state.sellPrice
 import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.unmetNeeds
@@ -68,7 +69,7 @@ internal fun LootSheet(
 
                 LootPresence.ARRIVING -> MutedText(ui("expedition.loot_arriving"))
 
-                LootPresence.HELD -> if (markable) {
+                LootPresence.HELD -> if (markable && (item.id in expedition.saleMarks || game.saleMarkable(item.id))) {
                     val marked = item.id in expedition.saleMarks
                     ForgeOutlinedButton(onClick = { vm.toggleSaleMark(item.id) }, modifier = Modifier.fillMaxWidth()) {
                         Icon(ForgeGlyphs.Coins, null, tint = if (marked) GoldBright else Gold, modifier = Modifier.size(16.dp))

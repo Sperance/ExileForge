@@ -40,6 +40,7 @@ import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.presentLoot
+import com.sperance.exileforge.presentation.state.saleMarkable
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.decorTime
@@ -202,7 +203,7 @@ private fun Spoils(game: GameUi, hud: RunHud, onStack: (String) -> Unit, onRecip
         gear.forEach { (piece, presence) ->
             val marked = piece.id in marks
             SaleMarked(marked) {
-                PieceLine(piece, presence, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable }) { onItem(piece) }
+                PieceLine(piece, presence, selected = marked, onLongClick = { expedition.toggleSaleMark(piece.id) }.takeIf { presence.actionable && (marked || game.saleMarkable(piece.id, hud.rewardAwaiting > 0)) }) { onItem(piece) }
             }
         }
     }

@@ -14,8 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -124,7 +126,8 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
  * Кнопка снизу «Продать N · +◎ сумма», удерживаемая: продажа не отменяется. [onCancel] - «Отмена» рядом (режим тайника);
  * без отмеченного - подсказка вместо суммы, кнопка погашена. [verb] - ключ подписи с числом: в итогах захода - «Продать N и вернуться».
  *
- * Что продажа даст осколками - над кнопкой, до продажи.
+ * Что продажа даст осколками - над кнопкой, до продажи. Среди отмеченного есть ценное ([SellLot.valuable]) - продажа ждёт
+ * подтверждения со списком ценных вещей и их ценой ([ValuableConfirm]).
  */
 @Composable fun SellDock(
     pick: SellPick,
@@ -136,10 +139,33 @@ class SellPick internal constructor(val lots: List<SellLot>, private val shown: 
     onSell: (List<String>) -> Unit,
 ) {
     val picked = pick.picked
+    var asking by remember { mutableStateOf<List<SellLot>?>(null) }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         shards(picked)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.align(Alignment.CenterHorizontally)) }
-        SellRow(pick, picked, enabled, verb, onCancel, onSell)
+        SellRow(pick, picked, enabled, verb, onCancel) { ids ->
+            val chosen = picked.filter { it.id in ids }
+            if (chosen.any { it.valuable }) asking = chosen else onSell(ids)
+        }
     }
+    asking?.let { lots -> ValuableConfirm(lots, onDismiss = { asking = null }) { onSell(lots.map { it.id }) } }
+}
+
+/**
+ * Подтверждение продажи с ценным: ценные вещи списком - имя в цвете редкости и цена торговца, затем сколько вещей уйдёт всего
+ * и за сколько; удержание продаёт все отмеченные [lots].
+ */
+@Composable private fun ValuableConfirm(lots: List<SellLot>, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    val valuable = lots.filter { it.valuable }
+    ConfirmSheet(
+        title = ui("sell.valuable_title"),
+        confirm = ui("sell.valuable_confirm"),
+        onDismiss = onDismiss,
+        subtitle = ui("sell.valuable_sub", valuable.size, lots.size),
+        ledger = valuable.map { LedgerLine(it.piece.title, "+" + number(it.price.toDouble()), Tone.GAIN) } + LedgerLine(ui("sell.valuable_total", lots.size), "+" + number(lots.sumOf { it.price }.toDouble()), Tone.GAIN),
+        note = ui("sell.valuable_note"),
+        danger = true,
+        onConfirm = onConfirm,
+    )
 }
 
 @Composable private fun SellRow(pick: SellPick, picked: List<SellLot>, enabled: Boolean, verb: String, onCancel: (() -> Unit)?, onSell: (List<String>) -> Unit) {

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.presentation.state
 
+import com.sperance.exileforge.rules.content.BulkSale
 import com.sperance.exileforge.rules.roll.ItemInstance
 
 /**
@@ -39,3 +40,13 @@ fun GameUi.lootPresence(id: String, arriving: Boolean = false): LootPresence {
 
 /** Вещи снимка награды [equipment] с их положением у героя, без пропавших, в порядке снимка. */
 fun GameUi.presentLoot(equipment: List<ItemInstance>, arriving: Boolean = false): List<Pair<ItemInstance, LootPresence>> = equipment.map { it to lootPresence(it.id, arriving) }.filter { (_, presence) -> presence.shown }
+
+/**
+ * Можно ли пометить вещь [id] к продаже посреди захода - то же правило, что лот продажи в итогах ([BulkSale.pickable]): вещь в
+ * тайнике - если правила её отмечают, вещь в пути ([arriving]) - да, надетая и проданная - нет.
+ */
+fun GameUi.saleMarkable(id: String, arriving: Boolean = false): Boolean = when (lootPresence(id, arriving)) {
+    LootPresence.HELD -> hero?.item(id)?.let(BulkSale::pickable) != false
+    LootPresence.ARRIVING -> true
+    LootPresence.WORN, LootPresence.GONE -> false
+}

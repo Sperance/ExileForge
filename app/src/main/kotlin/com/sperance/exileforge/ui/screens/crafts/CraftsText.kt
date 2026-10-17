@@ -170,22 +170,29 @@ fun stock(game: GameUi, work: WorkView, job: JobView): Pair<String, String>? {
 }
 
 /**
- * How long the work still needs to lift its profession a level, counted here: the experience a
- * cycle brings past its «nothing» chance, the cycles that leaves, less what the running cycle has done.
- * Опыт удачного цикла - [com.sperance.exileforge.core.model.crafts.JobView.experience] по кривой сервера, не поле работы.
+ * Строка уровня профессии под полосой цикла: «Ур. 14», тонкая полоса опыта и сколько работа ещё идёт до следующего - «до 15 · 42 мин»,
+ * считая здесь: опыт цикла сверх шанса «впустую», сколько циклов это оставляет, минус пройденное идущим циклом. На последнем уровне -
+ * «макс.». Опыт удачного цикла - [JobView.experience] по кривой сервера, не поле работы.
  */
-@Composable internal fun LevelLine(crafts: Crafts, work: WorkView, offset: Long) {
-    val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession } ?: return
-    val next = profession.next ?: return LevelText(ui("crafts.level_top"))
-    val job = profession.job(work.job, work.choice) ?: return
-    val perCycle = job.experience * (1 + profession.bonus.experience.coerceAtLeast(0.0) / 100) * (1 - job.nothing / 100)
-    if (perCycle <= 0 || work.cycleMillis <= 0) return
-    val cycles = ceil((next - profession.experience).coerceAtLeast(0.0) / perCycle).toLong()
-    LevelEta(profession.level + 1, cycles * work.cycleMillis, work, offset)
+@Composable internal fun LevelRow(profession: ProfessionView, job: JobView, work: WorkView, offset: Long) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(ui("crafts.level", profession.level), color = Rune, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
+        LinearProgressIndicator(progress = { share(profession) }, modifier = Modifier.weight(1f).height(3.dp), color = Vital, trackColor = PanelRaised)
+        val next = profession.next
+        val perCycle = job.experience * (1 + profession.bonus.experience.coerceAtLeast(0.0) / 100) * (1 - job.nothing / 100)
+        when {
+            next == null -> LevelNote(ui("crafts.level_top_short"))
+
+            perCycle > 0 && work.cycleMillis > 0 -> {
+                val cycles = ceil((next - profession.experience).coerceAtLeast(0.0) / perCycle).toLong()
+                LevelEta(profession.level + 1, cycles * work.cycleMillis, work, offset)
+            }
+        }
+    }
 }
 
 /**
- * Сколько до уровня [level] живьём: свои часы раз в секунду - перерисовывается только эта строка, не плашка работы вокруг
+ * Сколько до уровня [level] живьём: свои часы раз в секунду - перерисовывается только эта подпись, не плашка работы вокруг
  * (часы в листовом элементе, вкладка ремёсел не теряет кадров).
  */
 @Composable private fun LevelEta(level: Int, total: Long, work: WorkView, offset: Long) {
@@ -195,10 +202,10 @@ fun stock(game: GameUi, work: WorkView, job: JobView): Pair<String, String>? {
             value = System.currentTimeMillis()
         }
     }
-    LevelText(ui("crafts.level_eta", level, eta((total - work.phase(now + offset)).coerceAtLeast(0L))))
+    LevelNote(ui("crafts.level_eta", level, eta((total - work.phase(now + offset)).coerceAtLeast(0L))))
 }
 
-@Composable private fun LevelText(text: String) = Text(text, color = Vital, style = MaterialTheme.typography.labelMedium)
+@Composable private fun LevelNote(text: String) = Text(text, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
 
 /**
  * Подсказка листа работы при нехватке на цикл (с примесями [additives]): первый недостающий материал, сколько его есть и нужно, и где он
@@ -228,6 +235,16 @@ internal fun eta(millis: Long): String {
     }
 }
 
+/** Время в работе для плитки итога: с часа - часами «1:05», меньше - «≈ 12 мин», «≈ 42 с». */
+internal fun workAge(millis: Long): String {
+    val seconds = (millis / 1000).coerceAtLeast(0)
+    return when {
+        seconds >= 3600 -> "%d:%02d".format(seconds / 3600, seconds % 3600 / 60)
+        seconds >= 60 -> ui("crafts.eta_minutes", seconds / 60)
+        else -> ui("crafts.eta_seconds", seconds)
+    }
+}
+
 /** How long a work runs: «2 ч 05 мин», «14 мин 03 с», «42 с». */
 internal fun duration(millis: Long): String {
     val seconds = (millis / 1000).coerceAtLeast(0)
@@ -241,25 +258,25 @@ internal fun duration(millis: Long): String {
 /** How often the cycle's figures are redrawn. */
 internal const val CLOCK_TICK = 200L
 
+/** Выход в час одной фишкой: стопка [code] (работа делает не стопку - null, фишка несёт иконку работы) и сколько её в среднем за час. */
+internal class HourYield(val code: String?, val amount: Double)
+
 /**
  * What the work under way brings in an hour on average, counted from the job as the server
- * sends it — the cycle, the «nothing» chance and each find's chance already made of the hero's gear —
+ * sends it — the cycle [cycleMillis], the «nothing» chance and each find's chance already made of the hero's gear —
  * and the yield bonus's extra units: the cycles an hour holds, less the empty ones, times what one brings.
- * Display only: the server's dice decide.
+ * Display only: the server's dice decide. Первым - что работа делает, за ним находки; нулевые не пишутся.
  */
-internal fun hourlyLine(crafts: Crafts, work: WorkView): String? {
-    val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession } ?: return null
-    val job = profession.job(work.job, work.choice) ?: return null
-    if (work.cycleMillis <= 0) return null
-    val landed = landed(work.cycleMillis, job)
-    val made = jobProduct(job) to landed * yieldFactor(profession)
-    val finds = job.extra.map { itemTitle(it.item) to landed * it.chance / 100 }
-    val figures = (listOf(made) + finds).filter { it.second > 0 }.takeIf { it.isNotEmpty() } ?: return null
-    return ui("crafts.per_hour", figures.joinToString(" · ") { (name, amount) -> ui("crafts.per_hour_item", fineNumber(amount), name) })
+internal fun hourYields(profession: ProfessionView, job: JobView, cycleMillis: Long): List<HourYield> {
+    if (cycleMillis <= 0) return emptyList()
+    val landed = landed(cycleMillis, job)
+    val made = HourYield(job.output.takeIf { it.isNotBlank() && job.kind in STACK_WORKS }, landed * yieldFactor(profession))
+    val finds = job.extra.map { HourYield(it.item, landed * it.chance / 100) }
+    return (listOf(made) + finds).filter { it.amount > 0 }
 }
 
-/** Выход работы [job] профессии [profession] в час одной строкой: «≈ 8.5 в час»; без цикла - null. */
-internal fun hourlyShort(job: JobView, profession: ProfessionView): String? = perHour(job, profession)?.let { ui("crafts.per_hour_short", fineNumber(it)) }
+/** Работы, чей выход - стопка сумки: её фишка открывает карточку материала. */
+private val STACK_WORKS = setOf(JobKind.ITEM, JobKind.CONDENSE, JobKind.REFINE)
 
 /** The cycles an hour of [cycleMillis] brings that do not come back empty. */
 internal fun landed(cycleMillis: Long, job: JobView): Double = HOUR_MILLIS / cycleMillis.toDouble() * (1 - job.nothing / 100).coerceAtLeast(0.0)

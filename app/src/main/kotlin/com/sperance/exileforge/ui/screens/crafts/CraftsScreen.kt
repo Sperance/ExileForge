@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -137,7 +138,7 @@ fun CraftsScreen() {
                 item { InfoCard(ui("common.loading"), ui("crafts.loading_hint")) }
                 return@LazyColumn
             }
-            item { WorkPlaque(game, vm, held, offset) }
+            item { WorkPlaque(game, vm, held, offset) { CraftsGlossaryButton(crafts.rules) } }
             sections.forEachIndexed { index, (title, rows) ->
                 if (index > 0) item { FlowMark() }
                 item { SectionRule(ui(title)) }
@@ -154,36 +155,52 @@ fun CraftsScreen() {
 }
 
 /**
- * The work under way, on every screen of the tab: which, how far the cycle is, and a stop — and
- * in its own frame, what the work has come to since it started: how
- * long it runs, its cycles and experience, what it made, and every stack gathered and spent. Итог - книгой учёта ([WorkLedger]); сделанное
- * с начала работы - вещи героя с меткой происхождения этой работы ([com.sperance.exileforge.core.model.crafts.WorkView.made]), кнопка
- * под ними открывает тайник с фильтром «Сделано ремеслом».
+ * Идущая работа - одна плашка на главном экране вкладки и в окне профессии: «Сейчас», имя работы целиком (до двух строк), профессия с
+ * циклом и вариантом, квадратная «Остановить»; вещь в работе; полоса цикла, под ней одной строкой часы цикла «0:12 / 0:30» слева и выход
+ * в час фишками справа ([HourChips]); строка уровня профессии ([LevelRow]); запас входа и учёт с начала работы ([WorkLedger]) - сделанное
+ * с начала работы - вещи героя с меткой происхождения этой работы ([WorkView.made]), кнопка под ними открывает тайник с фильтром
+ * «Сделано ремеслом». [help] - значок справки в строке «Сейчас» (на главном экране; в окне профессии справка - в его шапке). Нет работы -
+ * строка «Сейчас» и что герой не работает.
  *
  * Вещь в работе (Осквернение) не видна среди вещей героя, пока работа идёт.
  */
 @Composable
-internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offset: Long) {
+internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offset: Long, help: (@Composable () -> Unit)? = null) {
     val work = crafts.state?.work
     ForgePanel {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Engraved(ui("crafts.now_label"), modifier = Modifier.weight(1f))
-            CraftsGlossaryButton(crafts.state?.rules)
-        }
         if (work == null) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Engraved(ui("crafts.now_label"), modifier = Modifier.weight(1f))
+                help?.invoke()
+            }
             MutedText(ui("crafts.idle"), style = MaterialTheme.typography.bodyMedium)
             return@ForgePanel
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(workTitle(game, work), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                Text(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), color = Rune, style = MaterialTheme.typography.labelMedium)
+        val profession = crafts.state?.professions?.firstOrNull { it.code == work.profession }
+        val job = profession?.job(work.job, work.choice)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Engraved(ui("crafts.now_label"))
+                Text(workTitle(game, work), color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    listOfNotNull(ui("crafts.work_line", professionTitle(work.profession), number(work.cycleMillis / 1000.0)), workDetail(work)).joinToString(" · "),
+                    color = Rune,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
-            ForgeOutlinedButton(enabled = !game.busy, onClick = vm::stop) { Text(ui("crafts.stop")) }
+            help?.invoke()
+            StopButton(enabled = !game.busy, onClick = vm::stop)
         }
         game.heldWork?.let { held -> game.view(held)?.let { HeldItem(it) } }
-        CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
-        LevelLine(crafts, work, offset)
+        CycleBar(work, offset, crafts.last)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            CycleClock(work, offset)
+            if (profession != null && job != null) HourChips(job, hourYields(profession, job, work.cycleMillis), Modifier.weight(1f))
+        }
+        if (profession != null && job != null) LevelRow(profession, job, work, offset)
+        crafts.state?.running?.let { StockRow(game, work, it) }
         val sums = remember(work.totals) { WorkSums.of(work.totals) }
         val hero = game.hero
         val made = remember(work, hero?.items, hero?.overflow) { work.made(hero?.items.orEmpty() + hero?.overflow.orEmpty()) }
@@ -198,9 +215,50 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
             makes = crafts.state?.running?.kind?.makesItems == true,
             onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
         )
-        crafts.state?.running?.let { StockRow(game, work, it) }
     }
 }
+
+/**
+ * Выход в час фишками справа от часов цикла: иконка и число, у первой - «/ч»; больше [HOUR_CHIPS] - первые и «+N», касание «+N»
+ * раскрывает все с переносом. Касание фишки стопки - карточка материала.
+ */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+internal fun HourChips(job: JobView, yields: List<HourYield>, modifier: Modifier) {
+    val inspect = rememberInspect()
+    var all by remember(yields.size) { mutableStateOf(false) }
+    val shown = if (all || yields.size <= HOUR_CHIPS) yields else yields.take(HOUR_CHIPS - 1)
+    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        shown.forEachIndexed { i, piece ->
+            val code = piece.code
+            HourChip(onClick = code?.let { { inspect(Inspect.Stack(it)) } }) {
+                if (code != null) BagIcon(code, Modifier.size(14.dp)) else JobIcon(job, Modifier.size(14.dp))
+                Text(fineNumber(piece.amount), color = Vital, style = HourFigure, maxLines = 1, softWrap = false)
+                if (i == 0) Text(ui("crafts.per_hour_unit"), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, softWrap = false)
+            }
+        }
+        if (shown.size < yields.size) HourChip(onClick = { all = true }) { Text("+${yields.size - shown.size}", color = Parchment, style = HourFigure, maxLines = 1, softWrap = false) }
+    }
+}
+
+/** Фишка выхода в час: тёмная плашка в тонкой рамке; [onClick] null - не нажимается. */
+@Composable private fun HourChip(onClick: (() -> Unit)?, content: @Composable RowScope.() -> Unit) {
+    val shape = RoundedCornerShape(6.dp)
+    Row(
+        Modifier.clip(shape).background(Abyss, shape).border(1.dp, PanelRaised, shape)
+            .then(onClick?.let { Modifier.clickable(role = Role.Button, onClick = it) } ?: Modifier).padding(horizontal = 6.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        content = content,
+    )
+}
+
+/** Число фишки выхода: полужирное, цифры одной ширины. */
+private val HourFigure: androidx.compose.ui.text.TextStyle
+    @Composable get() = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, fontFeatureSettings = "tnum")
+
+/** Сколько фишек выхода в час видно до «+N» (вместе с ней). */
+private const val HOUR_CHIPS = 3
 
 /** Вещь, что держит работа: строка плиты с подписью «в работе»; касание открывает её карточку. */
 @Composable internal fun HeldItem(view: ItemView) {
@@ -242,11 +300,10 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
  * A cycle's bar, filled smoothly: it reads the device's clock, set by the server's through [offset], and only
  * the bar is redrawn — the screen around it is not recomposed. Часы полосы тикают не каждый кадр, а с шагом
  * в один пиксель её ширины ([cycleStepMs]): на глаз так же плавно, а экран ремёсел не держит полный FPS.
- * Под ней одной строкой - сколько прошло цикла из всего и что работа даёт в час.
  * Полоса идёт по кругу ([WorkView.phase]) и не встаёт на 100%, пока сервер не пересчитал работу; над ней
  * всплывает, что принёс пересчёт на границе цикла ([last]).
  */
-@Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6, hourly: String? = null) {
+@Composable internal fun CycleBar(work: WorkView, offset: Long, last: Harvest?, height: Int = 6) {
     var widthPx by remember { mutableIntStateOf(0) }
     val step = cycleStepMs(work.cycleMillis, widthPx)
     val now by produceState(System.currentTimeMillis(), step) {
@@ -264,21 +321,23 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         )
         HarvestPopup(last)
     }
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        CycleClock(work, offset, Modifier.weight(1f))
-        hourly?.let { Text(it, color = Vital, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.End, maxLines = 2) }
-    }
 }
 
-/** Идущий цикл часами - «Цикл 3:41 из 5:19» - несколько раз в секунду: перерисовывается только текст, не полоса. */
-@Composable internal fun CycleClock(work: WorkView, offset: Long, modifier: Modifier) {
+/** Идущий цикл часами - «3:41 / 5:19» одной строкой цифрами одной ширины - несколько раз в секунду: перерисовывается только текст, не полоса. */
+@Composable internal fun CycleClock(work: WorkView, offset: Long) {
     val now by produceState(System.currentTimeMillis()) {
         while (true) {
             value = System.currentTimeMillis()
             delay(CLOCK_TICK)
         }
     }
-    MutedText(ui("crafts.cycle_clock", clock(work.phase(now + offset)), clock(work.cycleMillis)), modifier, style = MaterialTheme.typography.labelSmall)
+    Text(
+        ui("crafts.cycle_clock", clock(work.phase(now + offset)), clock(work.cycleMillis)),
+        color = Parchment,
+        style = MaterialTheme.typography.labelMedium.copy(fontFeatureSettings = "tnum"),
+        maxLines = 1,
+        softWrap = false,
+    )
 }
 
 /**

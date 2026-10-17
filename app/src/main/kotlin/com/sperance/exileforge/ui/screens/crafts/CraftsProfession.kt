@@ -135,7 +135,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
 
 /**
  * Окно профессии плотной колонкой: в шапке имя, уровень тонкой полосой с опытом, справка ⓘ (с описанием профессии) и инструмент;
- * под ней панель «Сейчас» - идущая здесь работа целиком: что, полоса цикла, запас входа и учёт с начала работы со сделанным; ниже
+ * под ней идущая здесь работа - та же плашка, что на главном экране вкладки ([WorkPlaque]); ниже
  * работы профессии строками ([JobRow]) с отбором по группе выхода ([JobGroups]), когда групп больше одной.
  *
  * Открытые работы и следующая за ними - «???» со своим уровнем.
@@ -153,7 +153,7 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
     val shown = profession.jobs.filter { (!locked(it) || it == next) && (group == null || groups.groupOf(it) == group) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item { ProfessionHeader(game, crafts, profession, onBack = { vm.openProfession("") }) { toolOpen = true } }
-        if (work != null) item { NowPanel(game, vm, crafts, work, offset) }
+        if (work != null) item { WorkPlaque(game, vm, crafts, offset) }
         item { SectionRule(ui("crafts.works")) }
         if (groups.size > 1) item { JobFilters(groups, profession.jobs.size, group) { group = it } }
         items(shown, key = { it.code }) { job ->
@@ -193,43 +193,6 @@ internal fun share(profession: ProfessionView): Float = profession.next?.takeIf 
         }
         CraftsGlossaryButton(crafts.state?.rules, intro = professionDescription(profession.code))
         ToolButton(game, profession, onTool)
-    }
-}
-
-/**
- * Панель «Сейчас»: идущая работа - иконка, имя, вариант с примесями и квадратная кнопка «Остановить»; вещь в работе; полоса цикла с
- * часами и выходом в час; запас входа строкой; учёт с начала работы ([WorkLedger]) со сделанным и кнопкой «Показать в тайнике».
- */
-@Composable internal fun NowPanel(game: GameUi, vm: CraftsViewModel, crafts: Crafts, work: WorkView, offset: Long) {
-    val running = crafts.state?.running
-    ForgePanel(accent = GoldBright) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(40.dp).background(Abyss, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) { running?.let { JobIcon(it, Modifier.size(26.dp)) } }
-            Column(Modifier.weight(1f)) {
-                Engraved(ui("crafts.now_label"))
-                Text(workTitle(game, work), color = GoldBright, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                workDetail(work)?.let { Text(it, color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-            }
-            StopButton(enabled = !game.busy, onClick = vm::stop)
-        }
-        game.heldWork?.let { held -> game.view(held)?.let { HeldItem(it) } }
-        CycleBar(work, offset, crafts.last, height = 8, hourly = running?.let { job -> crafts.state?.professions?.firstOrNull { it.code == work.profession }?.let { hourlyShort(job, it) } })
-        running?.let { StockRow(game, work, it) }
-        HorizontalDivider(color = Bronze)
-        val sums = remember(work.totals) { WorkSums.of(work.totals) }
-        val hero = game.hero
-        val made = remember(work, hero?.items, hero?.overflow) { work.made(hero?.items.orEmpty() + hero?.overflow.orEmpty()) }
-        val heroModel = koinViewModel<HeroViewModel>()
-        WorkLedger(
-            game,
-            sums,
-            made,
-            title = ui("crafts.totals_title"),
-            startedAt = work.startedAt,
-            offset = offset,
-            makes = running?.kind?.makesItems == true,
-            onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
-        )
     }
 }
 

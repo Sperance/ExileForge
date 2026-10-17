@@ -131,7 +131,7 @@ private fun PlaceCard(line: PlaceState, lang: Lang, signedIn: Boolean, modifier:
                     }
                 }
                 if (worn != null) {
-                    Text(worn.title, color = look!!.name, style = relicName(12), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(worn.title, color = look!!.name, style = itemName(12), maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (worn.item.serial > 0) Text("◆ № ${worn.item.serial} ◆", color = Color(0xFFF0C76A), style = relicName(9))
                 } else {
                     Text(ui(if (line.blocked) "hero.off_hand_taken" else "hero.empty_slot"), color = Muted, style = MaterialTheme.typography.labelMedium, maxLines = 2)

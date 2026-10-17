@@ -28,7 +28,7 @@ import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.ui.components.ItemRow
 import com.sperance.exileforge.ui.components.LineFold
-import com.sperance.exileforge.ui.components.relicName
+import com.sperance.exileforge.ui.components.itemName
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.theme.*
 
@@ -57,7 +57,7 @@ import com.sperance.exileforge.ui.theme.*
         ) {
             Box(Modifier.size(44.dp).background(Abyss, frame).border(1.dp, color.copy(alpha = .55f), frame), contentAlignment = Alignment.Center, content = icon)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, color = color, style = relicName(15), maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, color = color, style = itemName(15), maxLines = 2, overflow = TextOverflow.Ellipsis)
                 TradeFacts(facts, mark)
             }
         }

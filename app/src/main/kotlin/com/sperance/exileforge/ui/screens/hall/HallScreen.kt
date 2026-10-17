@@ -179,9 +179,9 @@ private fun about(entry: HallEntry): String = listOfNotNull(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(roman(place + 1), style = look.nameStyle(if (big) 30 else 22))
+        Text(roman(place + 1), style = look.titleStyle(if (big) 30 else 22))
         if (entry.emblem.isNotBlank()) GuildEmblem(entry.emblem, entry.color, if (big) 40.dp else 30.dp)
-        Text(entry.name, style = look.nameStyle(if (big) 20 else 15), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(entry.name, style = look.titleStyle(if (big) 20 else 15), maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(about(entry), color = look.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         Text(table.board.measure(entry.value), color = look.gold, style = if (big) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall)
     }

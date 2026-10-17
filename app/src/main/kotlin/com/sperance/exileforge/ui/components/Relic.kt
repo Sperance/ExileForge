@@ -50,15 +50,21 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
-/** Имена предметов: Cinzel, начертание задаётся осью веса вариативного шрифта. */
+/** Надписи «Реликвария» (заголовки, номера, места): Cinzel, начертание задаётся осью веса вариативного шрифта. */
 @OptIn(androidx.compose.ui.text.ExperimentalTextApi::class)
 val RelicSerif = FontFamily(
     Font(R.font.cinzel, FontWeight.SemiBold, variationSettings = FontVariation.Settings(FontVariation.weight(600))),
     Font(R.font.cinzel, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))),
 )
 
-/** Имя предмета в карточке: серифы Cinzel, размер [size]. */
+/** Надпись серифами Cinzel размера [size]: заголовки и номера, не имена предметов. */
 fun relicName(size: Int = 23) = TextStyle(fontFamily = RelicSerif, fontWeight = FontWeight.Bold, fontSize = size.sp, lineHeight = (size * 1.18f).sp, letterSpacing = (size * .02f).sp)
+
+/** Имена предметов: Philosopher Bold с кириллицей - файл шрифта в ресурсах приложения (лицензия SIL OFL 1.1), без сети. */
+val ItemNameFont = FontFamily(Font(R.font.philosopher_bold, FontWeight.Bold))
+
+/** Имя предмета размера [size] - карточка, плита, плитка, снаряжение, витрина: Philosopher Bold. */
+fun itemName(size: Int = 22) = TextStyle(fontFamily = ItemNameFont, fontWeight = FontWeight.Bold, fontSize = size.sp, lineHeight = (size * 1.2f).sp, letterSpacing = (size * .01f).sp)
 
 /**
  * Облик карточки по редкости: рамка, фон, свечение и цвета текста. Обычные, волшебные и редкие вещи - басальт в тон редкости;
@@ -108,8 +114,14 @@ fun relicLook(rarity: Rarity): RelicLook {
     }
 }
 
-/** Имя вещи серифами размера [size] в цвете редкости; у легенды - с ореолом её свечения. */
-fun RelicLook.nameStyle(size: Int): TextStyle = relicName(size).copy(color = name, shadow = if (legend != null) Shadow(glow.copy(alpha = .6f), blurRadius = 18f) else null)
+/** Имя вещи ([itemName]) размера [size] в цвете редкости; у легенды - с ореолом её свечения. */
+fun RelicLook.nameStyle(size: Int): TextStyle = itemName(size).copy(color = name, shadow = halo)
+
+/** Надпись серифами ([relicName]) в облике редкости - места и имена героев доски славы; у легенды - с ореолом. */
+fun RelicLook.titleStyle(size: Int): TextStyle = relicName(size).copy(color = name, shadow = halo)
+
+/** Ореол надписи легенды - её свечение; у прочих редкостей ореола нет. */
+private val RelicLook.halo: Shadow? get() = if (legend != null) Shadow(glow.copy(alpha = .6f), blurRadius = 18f) else null
 
 /**
  * Подложка вещи в облике редкости - общая для полной карточки и плитки: градиент [RelicLook.top] → [RelicLook.bottom],

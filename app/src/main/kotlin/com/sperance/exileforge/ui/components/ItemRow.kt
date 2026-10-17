@@ -110,7 +110,7 @@ fun ItemRow(
                     Text(
                         item.title,
                         color = look.name,
-                        style = relicName(15),
+                        style = itemName(15),
                         maxLines = if (compact) 3 else 2,
                         overflow = TextOverflow.Ellipsis,
                     )

@@ -36,11 +36,14 @@ class DesignPreviewTest {
         serverLocale = LocaleBundle()
     }
 
+    /**
+     * Уникальная и мифическая карточки - первыми, на снимке арсенала. Подпись действия - прописными и только на короткой карточке: полная -
+     * страница, а не вход.
+     */
     @Test fun cardsDisplayIconsPropertiesAndActions() {
         val index = TestWorld.index
         val ring = checkNotNull(ItemView.of(TestWorld.roll("ring", Slot.RING, Rarity.RARE), index))
         val boots = checkNotNull(ItemView.of(TestWorld.roll("boots", Slot.BOOTS, Rarity.RARE, seed = 2L), index))
-        // «Астролябия» (3.88.6): уникальная и мифическая карточки - первыми, на снимке арсенала.
         val unique = checkNotNull(ItemView.of(TestWorld.legend("unique", Rarity.UNIQUE, 41), index))
         val mythic = checkNotNull(ItemView.of(TestWorld.legend("mythic", Rarity.MYTHICAL, 3), index))
         compose.setContent {
@@ -57,7 +60,6 @@ class DesignPreviewTest {
         compose.onNodeWithText(mythic.title).assertExists()
         compose.onNodeWithText(ring.title).assertExists()
         compose.onNodeWithText(boots.title).assertExists()
-        // The label is drawn in capitals, and only on the short card: a full one is a page, not a way in
         compose.onAllNodesWithText("СВОЙСТВА").assertCountEquals(1)
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val context = InstrumentationRegistry.getInstrumentation().targetContext

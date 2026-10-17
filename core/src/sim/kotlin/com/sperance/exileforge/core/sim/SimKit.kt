@@ -9,7 +9,7 @@ import com.sperance.exileforge.rules.roll.ItemInstance
 /** Что билд даёт герою к бою: надетые вещи, взятые узлы дерева, умения и пояс. */
 data class SimBuild(val items: List<ItemInstance>, val tree: List<TakenNode>, val skills: HeroSkills, val flasks: List<BeltFlask?>)
 
-/** Общие постоянные эталонов MOB-BAL: кости, доля ролла фляг, поиск вещей и места брони. */
+/** Общие постоянные эталонов баланса: кости, доля ролла фляг, поиск вещей и места брони. */
 object SimKit {
     const val SEED = 20_261_009L
     const val AVERAGE = 0.5

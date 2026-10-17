@@ -104,7 +104,13 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
         parts = api.hero.view(heroId, held)?.let { held.merge(it) } ?: held
     }
 
-    /** Заход как у клиента: автозабег правил, журнал пачками по 6 событий или на контрольной точке, темп - реальное время боя / [speedup]. */
+    /**
+     * Заход как у клиента: автозабег правил, журнал пачками по 6 событий или на контрольной точке, темп - реальное время боя / [speedup].
+     *
+     * Окна сундуков и кристаллов - как их отдал сервер; возобновлённый заход - как у клиента. Скорость боя - кнопкой, как у игрока, ходьба
+     * и время - реальные. Временный отказ (503, 409) и обрыв - повтор той же пачкой и ключом; журнал шлётся по мере боя, время сжато в
+     * speedup раз.
+     */
     suspend fun run(speedup: Double) {
         val p = parts ?: return
         val zoneCode = index.world.unlocked(p.campaign.cleared).let { open -> open.getOrNull(rnd.nextInt(open.size)) } ?: return
@@ -117,14 +123,11 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
         val gear = HeroGear(sheet.stats, hero.level, sheet.model, HeroStance.of(hero.heroClass), Loadout.of(skills, index, hero.heroClass, emptyList(), sheet.stats, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, start.seed, start.context)
         val journal = RunJournal(start.id, heroId, zone.code.value, applied = start.applied, base = start.applied)
-        // Окна сундуков, кристаллов и прочее - как их отдал сервер, а не выдуманные: иначе сервер законно отвергнет лишний сундук
         val campaign = p.campaign
-        // Возобновлённый заход - как у клиента: мёртвые жетоны, открытые сундуки и использованные объекты карты от сервера
         val expedition = ExpeditionRun.start(
             index, zone, run, journal, gear, campaign, 0L, 0.0, hero.level, { 0L },
             killed = start.killed, opened = start.chests, features = start.features, auto = AutoPlan,
         )
-        // Кнопка скорости боя, как у игрока: 1 -> 2 -> 4 (`fight.speeds`); ходьба и время забега - реальные
         generateSequence(1) { index.rules.fight.next(it).takeIf { next -> next > it } }.takeWhile { it < fightSpeed }.forEach { _ -> expedition.send(RunCommand.Speed) }
         var guard = 0
         var sentAt = 0
@@ -137,7 +140,6 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
                     api.campaign.events(heroId, start.id, events, batch.key)
                 } catch (e: ApiFailure) {
                     if (e.code in setOf("CP_018", "CP_020", "CP_026")) return
-                    // Временный отказ (503, 409 дубль) - повтор той же пачкой и ключом, как `ExpeditionActions`; прочий - пачка отпущена
                     if ((e.status ?: 0) >= 500 || e.status == 409) {
                         delay(2_000)
                         continue
@@ -145,7 +147,6 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
                     journal.release()
                     throw e
                 } catch (e: java.io.IOException) {
-                    // Обрыв или таймаут: та же пачка под тем же ключом чуть позже - сервер ответит её отчётом, если она дошла
                     delay(2_000)
                     continue
                 }
@@ -167,7 +168,6 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
             val pending = journal.all.size - sentAt
             val checkpoint = journal.all.drop(sentAt).any { it is RunEvent.Boss || it is RunEvent.Leave || it is RunEvent.Fall }
             if (pending >= 6 || checkpoint || (pending > 0 && gameSeconds - lastFlush > 20.0)) {
-                // Реальный клиент шлёт журнал по мере боя: ждём реальное время, сжатое в speedup раз
                 delay(((gameSeconds - lastFlush) * 1000 / speedup).toLong().coerceAtMost(30_000))
                 lastFlush = gameSeconds
                 flush()
@@ -184,21 +184,15 @@ private class Player(val n: Int, val url: String, val index: ContentIndex, val p
         view()
     }
 
+    /** Покупка сферы у торговца - пишущая команда с транзакцией; отказ «мало золота» - тоже ответ сервера. */
     suspend fun browse() {
         when (rnd.nextInt(7)) {
             0 -> api.hero.stats(heroId)
-
             1 -> api.hall.table(heroId, HallBoard.TOWER)
-
             2 -> if ((parts?.hero?.level ?: 1) >= auctionLevel) api.auction.search(heroId, AuctionFilter(), listOf("")) else api.hero.stats(heroId)
-
             3 -> api.mail.inbox(heroId)
-
             4 -> api.guild.search(heroId, "", 0)
-
-            // Торговец (0.14.0, LOAD-TEST): покупка сферы - пишущая команда с транзакцией; отказ «мало золота» - тоже ответ сервера
             5 -> merchantOrb?.let { api.merchant.buyOrb(heroId, it) } ?: view()
-
             else -> view()
         }
     }

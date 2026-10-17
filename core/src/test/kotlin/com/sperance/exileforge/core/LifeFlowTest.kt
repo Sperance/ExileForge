@@ -19,7 +19,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Итог здоровья героя (4.9.3): одна строка в секунду - регенерация минус деген, у героя без них - ни одной. */
+/** Итог здоровья героя: одна строка в секунду - регенерация минус деген, у героя без них - ни одной. */
 class LifeFlowTest {
     private val index get() = TestContent.index
     private val rules get() = index.campaign.combat

@@ -20,17 +20,17 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Фазы босса (3.92.0): каждый шаг срабатывает раз, свита встаёт по зову, падает с боссом и убийством не считается. */
+/** Фазы босса: каждый шаг срабатывает раз, свита встаёт по зову, падает с боссом и убийством не считается. */
 class BossPhaseTest {
     private val index get() = TestContent.index
 
+    /** Герой заведомо сильнее: проверяется не баланс, а ход фаз. */
     @Test
     fun the_retinue_answers_the_phase_and_falls_with_the_boss() {
         val heroClass = index.classes.classes.first()
         val zone = index.campaign.zones.first()
         val rules = index.campaign.combat
         val sheet = Sheets.calculate(index, 40, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
-        // Герой заведомо сильнее: проверяется не баланс, а ход фаз
         val hero = Combatant(sheet.stats + mapOf("STOCK_HEALTH" to 1_000_000.0, "STOCK_ATTACK_PHYSICAL" to 40.0), 40, rules)
         val run = Run(index, zone, 7L, RunContext(heroClass.code, 40))
         val boss = checkNotNull(Spawns(index, run).boss(zone, MapEffects.buffs(emptyMap()), emptyList()))
@@ -49,7 +49,7 @@ class BossPhaseTest {
         assertTrue(foes.indices.drop(1).all { !battle.foe(it).alive })
     }
 
-    /** Тотемы (3.93.0): свой тотем босса встаёт в слот, бить его нельзя, и все рассыпаются со смертью босса. */
+    /** Тотемы: свой тотем босса встаёт в слот, бить его нельзя, и все рассыпаются со смертью босса. */
     @Test
     fun totems_stand_in_the_slots_and_crumble_with_the_boss() {
         val heroClass = index.classes.classes.first()

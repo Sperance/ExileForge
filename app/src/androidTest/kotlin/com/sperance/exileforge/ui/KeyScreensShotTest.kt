@@ -91,9 +91,9 @@ import org.koin.core.context.GlobalContext
 import java.io.File
 
 /**
- * Снимки ключевых экранов (0.14.0, UI-SHOTS): каждый экран рисуется над контентом закреплённого сервера по-русски, без анимаций,
+ * Снимки ключевых экранов: каждый экран рисуется над контентом закреплённого сервера по-русски, без анимаций,
  * и ложится в `design/shots/<имя>.jpg` - CI выгружает их артефактом `exile-forge-shots`; что обрезано или наехало, видно там.
- * Экраны: задания и контракты (макет B), гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
+ * Экраны: задания и контракты, гримуар 4+3, лист алтаря, книга главы, окно уровня, Кодекс, узел Атласа с исключением,
  * карта со стенами и дверью комнаты, панель боя на 4 слота (стоящим снимком боя), окно сбора, админка.
  */
 class KeyScreensShotTest {
@@ -121,7 +121,7 @@ class KeyScreensShotTest {
         ).forEach { QuestRow(it) }
     }
 
-    /** Гримуар 4+3 (0.14.1): класс с самыми длинными именами активных умений - имена в слотах видны целиком, без «Тяжёлы…». */
+    /** Гримуар 4+3: класс с самыми длинными именами активных умений - имена в слотах видны целиком, без «Тяжёлы…». */
     @Test fun grimoire() = shot("grimoire") {
         val level = 50
         val (owner, actives) = longestActives(level)
@@ -150,18 +150,19 @@ class KeyScreensShotTest {
         Box(Modifier.height(720.dp)) { LevelUpScreen(LevelUp(9, 10), heroClass, index, false) {} }
     }
 
+    /** Заголовок «Кодекс» гравирован прописными - раскрывается по подписи «развернуть». */
     @Test fun codex() {
-        // Заголовок «Кодекс» гравирован прописными - раскрываем по подписи «развернуть»
         shot("codex", open = ui("common.expand")) { StoryCodex(index.quests.story, 3) }
     }
 
+    /** Ключевые «только Зодчий / только Пустота»: второй погашен с причиной. */
     @Test fun atlasExclusion() = shot("atlas") {
-        // Ключевые «только Зодчий / только Пустота» (ASANA-N09): второй погашен с причиной
         val node = index.atlas.nodes.first { it.excludes.isNotEmpty() }
         val taken = setOf(index.atlasGraph.start) + node.excludes + index.atlasGraph.neighbours(node.code)
         NodeSheet(index, node, taken, available = 3, refund = GoldBill(100, 500), enabled = true, onTake = {}, onRefund = {}, modifier = Modifier)
     }
 
+    /** Герой - у двери комнаты, если она встала: дверь и рычаг видны на снимке. */
     @Test fun mapWithDoor() = shot("map", scroll = false) {
         val zone = index.campaign.zones.firstOrNull { it.code.value == "C2_DEEP_ADITS" } ?: index.campaign.zones.first()
         val level = 12
@@ -169,7 +170,6 @@ class KeyScreensShotTest {
         val gear = HeroGear(sheet.stats, level, sheet.model, HeroStance.of(heroClass.code), Loadout.of(HeroSkills(), index, heroClass.code, emptyList(), sheet.stats, index.powers, index.rules.charges), index.stats.percent)
         val run = Run(index, zone, 7L, RunContext(heroClass.code, level, forced = setOf(MapMechanic.VAULT)))
         val expedition = ExpeditionRun.start(index, zone, run, RunJournal("run-7", "hero", zone.code.value), gear, CampaignState(), System.currentTimeMillis(), 0.0, level, { 0L })
-        // Герой - у двери комнаты, если она встала: дверь и рычаг видны на снимке
         expedition.world.features.filterIsInstance<RoomSpot>().firstOrNull()?.let { room ->
             expedition.world.heroX = room.entrance.x + .5
             expedition.world.heroY = room.entrance.y + 1.5
@@ -179,7 +179,7 @@ class KeyScreensShotTest {
     }
 
     /**
-     * Панель боя на 4 слота (SKILL-02, 0.14.1): снимок боя собран руками и стоит - живой арены нет, часы кадра стоят, тестовые часы
+     * Панель боя на 4 слота: снимок боя собран руками и стоит - живой арены нет, часы кадра стоят, тестовые часы
      * Compose не идут сами (живой бой раша не давал эмулятору покоя). Слоты - готов, откат, нет маны, применяется; фляги - полная,
      * пьётся, пустая.
      */
@@ -201,7 +201,7 @@ class KeyScreensShotTest {
         ActionBar(game(level, owner.code), fight, FightFrame(mutableFloatStateOf(0f), null), {}) {}
     }
 
-    /** Окно сбора (ASANA-12, шаблон листа объекта карты): узел ремесла на карте, полоса сбора на 40%. */
+    /** Окно сбора (шаблон листа объекта карты): узел ремесла на карте, полоса сбора на 40%. */
     @Test fun gathering() = shot("gathering", scroll = false) {
         val level = 20
         val zone = index.campaign.zones.first { it.level >= level }
@@ -210,7 +210,7 @@ class KeyScreensShotTest {
         Box(Modifier.height(640.dp)) { FeatureSheet(game(level), FeatureView(node, emptyList(), gathering = .4f)) {} }
     }
 
-    /** Админка с ролью администратора (ADMIN-UI): промокоды, выдачи, режим. */
+    /** Админка с ролью администратора: промокоды, выдачи, режим. */
     @Test fun admin() = shot("admin", scroll = false) {
         val vm: AdminViewModel = GlobalContext.get().get()
         val plain = game(40)
@@ -269,10 +269,10 @@ class KeyScreensShotTest {
     private companion object {
         const val SHOT_QUALITY = 75
 
-        /** Активных слотов умений (SKILL-02). */
+        /** Активных слотов умений. */
         const val SLOTS = 4
 
-        /** Высота листа алтаря: два варианта и «Пройти мимо» целиком (0.14.1 - на 640 dp кнопка срезалась). */
+        /** Высота листа алтаря: два варианта и «Пройти мимо» целиком (на 640 dp кнопка срезалась). */
         val ALTAR_HEIGHT = 780.dp
     }
 }

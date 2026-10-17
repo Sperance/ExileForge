@@ -90,7 +90,7 @@ class UiStringsTest {
     }
 
     /**
-     * An orb's English trade name (2.51.0) is one in every language, so it is written once, in the
+     * An orb's English trade name is one in every language, so it is written once, in the
      * common file, and never again in a language file — the same line the server draws with
      * `locale/common.json`. The title itself is translated; in English it is the trade name.
      */
@@ -128,15 +128,16 @@ class UiStringsTest {
         assertEquals("узла", plural("tree.node", 3, Lang.RU))
     }
 
+    /**
+     * Обе формы: `ui("key", ...)` и `ui(lang, "key", ...)`. Ключ с шаблоном (`"enum.slot.$slot"`) чтением не проверить - `$` его исключает,
+     * перечисления его кодов обходит тест ниже.
+     */
     @Test
     fun every_key_the_sources_ask_for_exists() {
         val sources = listOf(File("src/main/kotlin"), File("../app/src/main/kotlin"))
             .filter { it.isDirectory }
         assertTrue(sources.isNotEmpty(), "исходники не найдены - тест ничего не проверил")
 
-        // Both shapes: ui("key", ...) and ui(lang, "key", ...). A key built with a template -
-        // "enum.slot.$slot" - cannot be checked by reading, so '$' keeps it out; the enums whose
-        // codes it is built from are walked by the test below instead.
         val call = Regex("\\bui(?:Or)?\\((?:[A-Za-z][A-Za-z0-9_.]*\\s*,\\s*)?\"([^\"\\\\$]+)\"")
         val known = UiStrings.keys(Lang.RU)
         val missing = sources.asSequence()
@@ -153,7 +154,7 @@ class UiStringsTest {
      * Every code the client enumerates is named.
      *
      * These are the keys built from a code at runtime, which the source scan above cannot see. The
-     * enums now live in `rules`, so a value the server grows without its strings is caught here.
+     * enums live in `rules`, so a value the server grows without its strings is caught here.
      */
     @Test
     fun every_code_the_client_enumerates_is_named() {
@@ -164,25 +165,19 @@ class UiStringsTest {
                 add("enum.orb.${it.name}.rule")
             }
             RedemptionKind.entries.forEach { add("enum.reward.${it.name}") }
-            // Слова мира кодекса (0.13.3): имя и история
             com.sperance.exileforge.core.display.LoreTerm.entries.forEach {
                 add("term.lore.${it.name}")
                 add("term.lore.${it.name}.text")
             }
-            // Значок инструмента в списках (0.15.0, #34): лучше и хуже
             listOf(com.sperance.exileforge.core.character.GearVerdict.Shift.UP, com.sperance.exileforge.core.character.GearVerdict.Shift.DOWN).forEach { add("verdict.tool.${it.name}") }
-            // Части чтения боя в разборе (0.15.0, #50)
             com.sperance.exileforge.core.campaign.ReadingPart.entries.forEach { add("stat.flow.${it.name}") }
-            // Термины свёртки строк (0.15.0, #46: изранение и иссушение тоже): имя и правило
             com.sperance.exileforge.core.display.Term.entries.forEach {
                 add("term.${it.name}")
                 add("term.${it.name}.text")
             }
             MonsterRarity.entries.forEach { add("enum.monster_rarity.${it.name}") }
             Rarity.entries.forEach { add("enum.rarity.${it.name}") }
-            // Причины санкций и роли гильдии (4.5.1): самоудаление и роли состава
             com.sperance.exileforge.core.network.SanctionCategory.entries.forEach { add("moderation.category.${it.name}") }
-            // Виды санкций и строки журнала (4.6.3: немота): подпись, тост наложения и снятия
             com.sperance.exileforge.core.network.SanctionKind.entries.forEach {
                 add("moderation.kind.${it.name}")
                 add("moderation.imposed.${it.name}")
@@ -194,9 +189,7 @@ class UiStringsTest {
                 add("moderation.sort_short.${it.name}")
             }
             com.sperance.exileforge.rules.content.GuildRole.entries.forEach { add("guild.role.${it.name}") }
-            // Качество сундука Скверны (4.0.0): от обычного до редкого
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }
-            // Насильные механики тестировщика (4.0.1)
             com.sperance.exileforge.rules.run.MapMechanic.entries.forEach { add("tester.mechanic.${it.name}") }
             Slot.entries.forEach { add("enum.slot.${it.name}") }
             bodyPlaces.forEach { add("enum.slot.${it.code}") }
@@ -206,15 +199,12 @@ class UiStringsTest {
                 add("enum.ailment.${it.name}")
                 add("fight.effect.${it.name}")
             }
-            // Ранящий недуг на метке здоровья карты (0.14.5, #52): «−13/с · кровотечение»
             Ailment.entries.filter { it.hurts }.forEach { add("fight.flow.stalled.${it.name}") }
             DamageType.entries.forEach { add("enum.damage.${it.name}") }
             AffixKind.entries.forEach { add("mod.kind.${it.name}") }
             StatSection.entries.filter { it != StatSection.NONE }.forEach { add("enum.stat_group.${it.name}") }
-            // Что даёт строка сводки (4.6.5): у каждой характеристики с разделом - фраза в шапке её разбора
             TestContent.index.stats.stats.filter { it.section != null && it.section != StatSection.NONE }.forEach { add("stat.desc.${it.code}") }
             TargetRule.entries.forEach { add("fight.rule.${it.name}") }
-            // Разделы окна карты: заголовок и строка пустого раздела
             com.sperance.exileforge.core.campaign.run.MapSection.entries.forEach { section ->
                 add(section.title)
                 section.empty?.let(::add)
@@ -224,7 +214,6 @@ class UiStringsTest {
             AtlasBranch.entries.forEach { add("atlas.branch.${it.name}") }
             AtlasPoints.KINDS.forEach { add("expedition.key_$it") }
             com.sperance.exileforge.core.campaign.run.LootKind.entries.forEach { add("expedition.bag.from.${it.name}") }
-            // Очко Атласа из ответа события (4.10.0) и доли разбора золота и опыта итогов карты
             AtlasPoints.ALL.forEach { add("atlas.earned.$it") }
             com.sperance.exileforge.core.campaign.BoostSource.entries.forEach { add("summary.source.${it.name}") }
             SlotCondition.entries.forEach { add("skills.condition.${it.name}") }
@@ -236,10 +225,8 @@ class UiStringsTest {
             listOf("requiredLevel", "requiredStrength", "requiredDexterity", "requiredIntelligence").forEach { add("req.short.$it") }
             listOf("level", "strength", "dexterity", "intelligence").forEach { add("req.need.$it") }
             (listOf("corrupted", "mirrored", "fractured", "crafted", "equipped", "socketed") + com.sperance.exileforge.rules.content.Influence.entries.map { it.name.lowercase() }).forEach { add("state.$it") }
-            // Имена из кодов контента (4.6.5): разделы Истории и биомы зон - без кода на месте имени
             com.sperance.exileforge.core.display.UniqueAlbum(TestContent.index).pools.forEach { add("history.pool.${it.tag}") }
             TestContent.index.campaign.zones.map { it.biome }.filter { it.isNotBlank() }.forEach { add("expedition.biome.$it") }
-            // The chronicle (3.54.0): every counter and section, every statistic and group the server writes.
             com.sperance.exileforge.rules.content.Counter.SECTIONS.forEach { (section, counters) ->
                 add("chronicle.section.$section")
                 counters.forEach { add("chronicle.counter.$it") }
@@ -248,12 +235,9 @@ class UiStringsTest {
             com.sperance.exileforge.rules.content.Stat.COMBAT.forEach { add("stats.$it") }
             com.sperance.exileforge.rules.content.Stat.GROUPS.forEach { add("stats.group.$it") }
             com.sperance.exileforge.rules.content.QuestCondition.entries.forEach { add("quest.condition.${it.name}") }
-            // Ловушки карты (3.90.0): полоса карты называет удар по коду ловушки контента.
             TestContent.index.campaign.features?.traps?.kinds?.forEach { add("trap.${it.code}") }
-            // Предначертание в бою (4.9.0): срабатывания рычагов в журнале, полка журнала и значки действующих рычагов
             com.sperance.exileforge.core.campaign.combat.FateBeat.entries.forEach { add("expedition.fate_beat.${it.name}") }
             com.sperance.exileforge.core.campaign.LogKind.entries.forEach { add("fight.log_shelf.${it.name}") }
-            // Семейства динамических ключей из перечислений (4.12.x, TEST-02): журнал боя, полки и разборы
             com.sperance.exileforge.core.campaign.NoteKind.entries.forEach { add("trace.note.value.${it.name}") }
             com.sperance.exileforge.core.campaign.FactorKey.entries.forEach {
                 add("trace.factor.${it.name}")
@@ -261,7 +245,6 @@ class UiStringsTest {
             }
             com.sperance.exileforge.rules.content.BuffKind.entries.forEach { add("fight.buff.${it.name}") }
             com.sperance.exileforge.rules.content.ChargeKind.entries.forEach { add("fight.charge.${it.name}") }
-            // Строка и механика фляги называются своей характеристикой, не мерой
             com.sperance.exileforge.core.character.FlaskMeasure.entries.filter { it != com.sperance.exileforge.core.character.FlaskMeasure.LINE && it != com.sperance.exileforge.core.character.FlaskMeasure.MECHANIC }.forEach { add("flask.measure.${it.name}") }
             com.sperance.exileforge.core.network.SanctionTarget.entries.forEach { add("moderation.target.${it.name}") }
             com.sperance.exileforge.rules.content.Catalyst.entries.forEach { add("enum.catalyst.${it.name}") }
@@ -295,7 +278,7 @@ class UiStringsTest {
     }
 
     /**
-     * Узел дерева, дар и рычаг дара, что называет окно разбора (0.14.5, #48), названы в каждом словаре сервера: кода на их месте
+     * Узел дерева, дар и рычаг дара, что называет окно разбора, названы в каждом словаре сервера: кода на их месте
      * клиент не пишет, дыра была бы заглушкой - её ловит этот тест, а не игрок.
      */
     @Test
@@ -311,7 +294,7 @@ class UiStringsTest {
     }
 
     /**
-     * Имя характеристики у клиента - то же, что у сервера (4.12.x, TEXT-PACK, STAT-ATK-10): своя подпись `enum.stat.*` - лишь
+     * Имя характеристики у клиента - то же, что у сервера: своя подпись `enum.stat.*` - лишь
      * копия серверной с меткой «%» единицы, а не второе имя той же характеристики.
      */
     @Test

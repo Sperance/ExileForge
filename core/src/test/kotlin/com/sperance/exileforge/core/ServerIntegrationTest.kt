@@ -41,12 +41,19 @@ import kotlin.test.assertTrue
  */
 class ServerIntegrationTest {
 
+    /**
+     * Манифест называет ревизию клиента и каждый чанк с отпечатком; маршруты - по сессии. Каждый POST героя приносит сдвинутые части. Без
+     * Предначертания герой не создаётся. Выдачи - администратором любому герою; выданная вещь метки не несёт. Заход - семя сервера, награды
+     * катит только он; Ваал-зона живёт только в своём заходе; новое семя не чаще `run.newSeedSeconds`; закрытый заход отвергает журнал
+     * `CP_018`. Аукцион забирает вещь и возвращает при снятии; плата за место - золотом; герою-тестировщику аукцион закрыт (`GR_001`); лот
+     * героя под баном не продаётся, без места в тайнике - `CH_020`. Код погашается один раз на аккаунт и устройство. Чужое и
+     * только-администраторское - отказ.
+     */
     @Test fun realServerClientContract(): Unit = runBlocking {
         val url = System.getenv("EF_LIVE_URL")
         assumeTrue("Enabled only by the isolated client/server job", !url.isNullOrBlank())
         val api = GameApi(requireNotNull(url))
 
-        // The manifest names the revision this client speaks and every chunk with its fingerprint.
         val manifest = api.manifest(fresh = true)
         manifest.requireWorkbench()
         assertEquals(API_REVISION, manifest.revision)
@@ -60,7 +67,6 @@ class ServerIntegrationTest {
         serverLocale = api.files.localeBundle(assertNotNull(locales.language("ru")))
         assertTrue(serverLocale.contains("system.success"))
 
-        // Маршруты манифеста - по сессии (сервер SEC-09): без входа - только открытые, у администратора - и модерация
         assertTrue(manifest.routes.none { it.path.startsWith("/api/v1/admin/") }, "an anonymous manifest named the admin routes")
         val admin = api.login("admin", requireNotNull(System.getenv("EF_ADMIN_PASSWORD")))
         assertEquals("ADMIN", admin.role)
@@ -68,16 +74,13 @@ class ServerIntegrationTest {
         api.requireRoutes()
         assertTrue(api.manifest(fresh = true).routes.any { it.path.startsWith("/api/v1/admin/moderation") }, "the administrator's manifest lacks moderation")
 
-        // One hero, one document: every POST that names the hero brings the parts that changed.
         var delivered: HeroSnapshot? = null
         api.heroSync({ HeroParts(it).header() }) { _, snapshot -> delivered = snapshot }
         val heroClass = index.classes.classes.first().code
-        // Без Предначертания герой не создаётся (4.6.0, `CH_042`): аккаунт выбирает первый из предложенных, если ещё не выбрал
         api.fated()
         val created = api.hero.create(admin.id, "Contract", "", heroClass)
         val heroId = created.id
         try {
-            // Выдачи (сервер ROLE-01, 4.12.x): администратор выдаёт любому герою и без отметки тестировщика; отметку ставит модерация
             api.hero.grantItem(heroId, Orb.CHAOS_ORB.name, 1)
             assertTrue(api.moderation.setTester(heroId, true))
             val parts = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId))))
@@ -87,7 +90,6 @@ class ServerIntegrationTest {
             val sheet = Sheets.calculate(index, parts.hero.level, heroClass, parts.tree, parts.items)
             assertTrue((sheet.stats["STOCK_HEALTH"] ?: 0.0) > 0.0)
 
-            // Granted, worn, rerolled, sold - the server's answers are the client's items.
             val ring = index.templates.values.first { it.slot == Slot.RING && !it.unique && !it.demanding }
             val rare = api.hero.grantEquipment(heroId, ring.code, Rarity.RARE)
             assertEquals(Rarity.RARE, rare.rarity)
@@ -101,20 +103,14 @@ class ServerIntegrationTest {
             val rerolled = assertNotNull(api.hero.applyOrb(heroId, rare.id, Orb.CHAOS_ORB.name).item)
             assertEquals(rare.id, rerolled.id)
             assertTrue(rerolled.rolls.count { index.modifier(it.code)?.affix == true } >= floor)
-            // Выданная вещь (сервер 4.12.x) метки не несёт: торговец платит за неё, как за добытую
             assertTrue(api.hero.sell(heroId, api.hero.unequip(heroId, rare.id).id).gold > 0, "a granted item sold for nothing")
 
-            // The run: a seed from the server, the same zone here, the journal paid on replay — every reward rolled by the server alone.
-            // Открытые зоны клиент считает сам по правилам (3.94.1): у нового героя пройденных нет.
             val zoneCode = index.world.unlocked(emptyList()).first()
-            // Ваал-зона живёт только в своём заходе (сервер 4.8.x): новый заход без выхода прежде оставлял её открытой,
-            // и каждое новое семя ставило в неё свежие стаи. Портал - насильной механикой администратора.
             if (index.zone(zoneCode)!!.corrupted.value.isNotBlank()) {
                 val vaal = api.campaign.start(heroId, zoneCode, forced = setOf(MapMechanic.VAAL))
                 assertEquals(1, assertNotNull(api.campaign.events(heroId, vaal.id, listOf(RunEvent.VaalOpen(0)))).applied)
                 assertEquals(zoneCode, HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).campaign.vaalZone?.mapCode)
             }
-            // Новое семя - не чаще `run.newSeedSeconds`: ждём его (CP_021)
             var entered = runCatching { api.campaign.start(heroId, zoneCode) }
             while ((entered.exceptionOrNull() as? ApiFailure)?.code == "CP_021") {
                 delay(2_000)
@@ -133,18 +129,13 @@ class ServerIntegrationTest {
             assertTrue(report.rewards.map { it.n }.containsAll(listOf(0, 1)), "the kill and the boss did not come back with their rewards")
             assertTrue(report.rewards.first().reward.experience > 0, "a kill paid no experience")
             assertTrue(zoneCode in report.progress.cleared, "a slain boss did not clear the zone")
-            // The run is closed: a journal sent again is refused with CP_018, which the client reads as "settled, drop it".
             assertEquals("CP_018", assertFailsWith<ApiFailure> { api.campaign.events(heroId, start.id, events) }.code)
 
-            // The auction takes the item out of the hero and gives it back on cancel: the run's loot may hold the starter's
-            // orbs too, so the count is compared with itself before the lot, not with a fixed figure.
             suspend fun bag(code: String) = HeroParts(heroId).merge(assertNotNull(api.hero.view(heroId, HeroParts(heroId)))).bag[code] ?: 0L
             val starterOrb = Orb.ORB_OF_TRANSMUTATION.name
             val auctionLevel = index.rules.unlocks["AUCTION"] ?: 1
             api.hero.grant(heroId, "level", "level" to auctionLevel.toString())
-            // Плата за место лота (сервер ECON-05) - золотом продавца
             api.hero.grant(heroId, "gold", "amount" to LISTING_GOLD.toString())
-            // Герою-тестировщику аукцион закрыт (сервер SEC-03): отказ GR_001 по отметке героя; без отметки он торгует как игрок
             assertEquals("GR_001", assertFailsWith<ApiFailure> { api.auction.sellItem(heroId, starterOrb, 1, Orb.CHAOS_ORB.name, 1) }.code)
             assertEquals(false, api.moderation.setTester(heroId, false))
             val held = bag(starterOrb)
@@ -154,16 +145,12 @@ class ServerIntegrationTest {
             assertEquals(LotStatus.CANCELLED, api.auction.cancel(heroId, lot.id).lot?.status)
             assertEquals(held, bag(starterOrb))
 
-            // Лот героя под баном не продаётся и по прямому id; вещь без места в тайнике и переполнении - отказ CH_020, а не
-            // продажа купленного торговцу (сервер 4.8.x). Продавец - отдельный игрок по устройству.
             val trader = GameApi(url)
             val traderHero = trader.hero.create(trader.loginByDevice(null, "contract-trader").id.also { trader.fated() }, "Trader", "", heroClass).id
-            // Выдачи - на время отметки тестировщика: торгуют герои уже без неё
             api.moderation.setTester(traderHero, true)
             api.hero.grant(traderHero, "level", "level" to auctionLevel.toString())
             api.hero.grant(traderHero, "gold", "amount" to LISTING_GOLD.toString())
             val grantedRing = api.hero.grantEquipment(traderHero, ring.code, Rarity.RARE)
-            // Герой-тестировщик не торгует (сервер 4.12.x): отказ GR_001 по отметке героя - метки «выдано» у вещи нет
             assertEquals("GR_001", assertFailsWith<ApiFailure> { trader.auction.sellEquipment(traderHero, grantedRing.id, Orb.CHAOS_ORB.name, 1) }.code)
             api.moderation.setTester(traderHero, false)
             api.moderation.setTester(heroId, true)
@@ -182,7 +169,6 @@ class ServerIntegrationTest {
             api.moderation.setTester(heroId, false)
             assertEquals("CH_020", assertFailsWith<ApiFailure> { api.auction.buy(heroId, open) }.code)
 
-            // A code is a treasure once - на аккаунт и на устройство (сервер 4.9.0): гасит игрок по устройству.
             val code = api.promo.create(RedemptionCode(code = "CONTRACT-${System.currentTimeMillis()}", treasure = listOf(RedemptionReward.Gold(100)), limit = 1))
             suspend fun traderMoney() = HeroParts(traderHero).merge(assertNotNull(trader.hero.view(traderHero, HeroParts(traderHero)))).hero.money
             val before = traderMoney()
@@ -191,7 +177,6 @@ class ServerIntegrationTest {
             assertFailsWith<ApiFailure> { trader.hero.redeem(traderHero, code.code) }
             api.promo.delete(code.id)
 
-            // A player is refused what is not theirs and what only an administrator may do.
             val player = GameApi(url)
             player.login(requireNotNull(System.getenv("EF_PLAYER_LOGIN")), requireNotNull(System.getenv("EF_PLAYER_PASSWORD")))
             assertEquals(403, assertFailsWith<ApiFailure> { player.hero.view(heroId, HeroParts(heroId)) }.status)
@@ -208,13 +193,13 @@ class ServerIntegrationTest {
     }
 }
 
-/** Золото на плату за места лотов контракта (сервер ECON-05): с запасом на несколько выставлений. */
+/** Золото на плату за места лотов контракта: с запасом на несколько выставлений. */
 private const val LISTING_GOLD = 100_000L
 
 /** Сколько вещей выдаёт тестировщику один запрос `grant/rares` (`TESTER_MAX_BATCH` сервера по умолчанию). */
 private const val TESTER_BATCH = 50
 
-/** Предначертание аккаунта выбрано (4.6.0): невыбранное - первый из трёх предложенных, выбранное остаётся. */
+/** Предначертание аккаунта выбрано: невыбранное - первый из трёх предложенных, выбранное остаётся. */
 private suspend fun GameApi.fated() {
     val view = fate.view()
     if (view.chosen == null) assertEquals(view.offers.first().code, assertNotNull(fate.choose(view.offers.first().code).chosen).code)

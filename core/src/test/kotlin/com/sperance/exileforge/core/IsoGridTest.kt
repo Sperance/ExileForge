@@ -8,7 +8,7 @@ import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** Изометрия похода (0.14.5, #49): обратная проекция точна, стик держит направление, вертикаль - 0.75 скорости вбок. */
+/** Изометрия похода: обратная проекция точна, стик держит направление, вертикаль - 0.75 скорости вбок. */
 class IsoGridTest {
     @Test
     fun the_inverse_undoes_the_projection() {

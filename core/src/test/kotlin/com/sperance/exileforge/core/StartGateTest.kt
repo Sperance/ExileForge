@@ -31,9 +31,9 @@ class StartGateTest {
         assertEquals(StartVerdict.RELEASE, verdict(Reach.ANSWERED, { it.copy(mandatoryUpdate = true, busy = true) }))
     }
 
+    /** Предел снимает окно старта при любом состоянии. */
     @Test
     fun never_holds_the_start_longer_than_the_limit() {
-        // 3.86.0: сервер ответил за 0,5 с, а окно так и стояло - предел снимает окно старта при любом состоянии.
         assertEquals(StartVerdict.HOLD, verdict(Reach.CONNECTING, { it.copy(elapsedMs = StartGate.LIMIT_MS - 1) }))
         assertEquals(StartVerdict.RELEASE, verdict(Reach.CONNECTING, { it.copy(elapsedMs = StartGate.LIMIT_MS) }))
         assertEquals(StartVerdict.RELEASE, verdict(Reach.UNREACHABLE, { it.copy(elapsedMs = StartGate.LIMIT_MS) }))

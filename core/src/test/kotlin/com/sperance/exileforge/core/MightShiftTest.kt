@@ -5,7 +5,7 @@ import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Сдвиг Мощи (0.14.5, #44): одно правило показа - шум и непосчитанная Мощь не пишутся нигде. */
+/** Сдвиг Мощи: одно правило показа - шум и непосчитанная Мощь не пишутся нигде. */
 class MightShiftTest {
     @Test
     fun only_a_counted_and_real_shift_is_shown() {

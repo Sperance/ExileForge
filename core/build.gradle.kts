@@ -5,11 +5,9 @@ plugins {
 }
 
 dependencies {
-    // Общие правила сервера и клиента (сабмодуль backend/rules): контент, роллы, лист, заход по семени.
     api("com.sperance.exileforge:rules:1.0.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    // OkHttp - деталь ядра (4.12.x, ARCH-03): наружу - свои типы (`HttpLink`), `:app` его не видит
     implementation("com.squareup.okhttp3:okhttp:5.5.0")
     testImplementation(kotlin("test-junit"))
     testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
@@ -18,21 +16,24 @@ dependencies {
 
 kotlin { jvmToolchain(17) }
 
-// Симуляции баланса (отчёты, не тесты): свой набор исходников поверх main - вне test и ворот CI, новых зависимостей не требует;
-// видит internal main. Запуск - задача `mobBal` ниже.
+/**
+ * Симуляции баланса (отчёты, не тесты): свой набор исходников поверх main - вне test и ворот CI, новых зависимостей не требует; видит
+ * internal main. Запуск - задача `mobBal` ниже.
+ *
+ * Тестам виден набор sim: сторож темпа `MobBalGuardTest` зовёт эталонных героев. Задача `mobBal` - баланс монстров (отчёт, не тест):
+ * эталонные герои против монстров и боссов кампании и карт настоящим боем клиента; `./gradlew :core:mobBal [-Pcontent=<папка>]
+ * -Pmode=<campaign|probe|maps|sweep|runtime|bossmight|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]`.
+ */
 val sim: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
     runtimeClasspath += output + compileClasspath + sourceSets.main.get().runtimeClasspath
 }
 kotlin.target.compilations.getByName("sim").associateWith(kotlin.target.compilations.getByName("main"))
-// Сторож темпа MOB-BAL (`MobBalGuardTest`) зовёт эталонных героев сима: тестам виден набор sim
 sourceSets.test {
     compileClasspath += sim.output
     runtimeClasspath += sim.output
 }
 
-// Баланс монстров MOB-BAL (отчёт, не тест): эталонные герои против монстров и боссов кампании и карт настоящим боем клиента.
-// ./gradlew :core:mobBal [-Pcontent=<папка>] -Pmode=<campaign|probe|maps|sweep|runtime|bossmight|...> [-Pout=<tsv>] [-Pfights=16 -Prolls=4 ...]
 tasks.register<JavaExec>("mobBal") {
     group = "reporting"
     description = "Monster and boss balance against reference heroes: build/reports/mobbal.tsv"
@@ -47,8 +48,12 @@ tasks.register<JavaExec>("mobBal") {
     outputs.upToDateWhen { false }
 }
 
-// Нагрузочный прогон аудита (отчёт, не тест): виртуальные игроки на настоящем клиенте против ЛОКАЛЬНОГО сервера,
-// вне test и ворот CI. Запуск: ./gradlew :core:loadRun -Purl=http://localhost:8081/ -Pplayers=50 -Pseconds=120 -Pprofile=mixed
+/**
+ * Нагрузочный прогон аудита (отчёт, не тест): виртуальные игроки на настоящем клиенте против ЛОКАЛЬНОГО сервера, вне test и ворот CI.
+ * Запуск: ./gradlew :core:loadRun -Purl=http://localhost:8081/ -Pplayers=50 -Pseconds=120 -Pprofile=mixed
+ *
+ * Задача `probeRun` - пробы эксплойтов против локального сервера (отчёт, не тест): `./gradlew :core:probeRun -Padmin=<пароль> -Pdb=<база>`.
+ */
 val load: SourceSet by sourceSets.creating {
     compileClasspath += sourceSets.main.get().output + sourceSets.main.get().compileClasspath
     runtimeClasspath += output + compileClasspath + sourceSets.main.get().runtimeClasspath
@@ -67,7 +72,6 @@ tasks.register<JavaExec>("loadRun") {
     outputs.upToDateWhen { false }
 }
 
-// Пробы эксплойтов аудита против ЛОКАЛЬНОГО сервера (отчёт, не тест): ./gradlew :core:probeRun -Padmin=<пароль> -Pdb=<база>
 tasks.register<JavaExec>("probeRun") {
     group = "reporting"
     classpath = load.runtimeClasspath
@@ -77,7 +81,6 @@ tasks.register<JavaExec>("probeRun") {
     outputs.upToDateWhen { false }
 }
 
-// A failing test in CI is read from the log, not from a report nobody can open: print the stack.
 tasks.withType<Test>().configureEach {
     testLogging {
         exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
@@ -86,7 +89,7 @@ tasks.withType<Test>().configureEach {
 }
 
 /**
- * Закреплённый сервер (3.88.2) - из сабмодуля `backend/`, не из кода: коммит - его HEAD, ветка - из `.gitmodules`, версия -
+ * Закреплённый сервер - из сабмодуля `backend/`, не из кода: коммит - его HEAD, ветка - из `.gitmodules`, версия -
  * как её считает сам сервер (база из `backend/server-version` плюс коммиты после её правки). Закрепить новый сервер -
  * сдвинуть сабмодуль; `ServerPin.kt` пишется при сборке.
  */

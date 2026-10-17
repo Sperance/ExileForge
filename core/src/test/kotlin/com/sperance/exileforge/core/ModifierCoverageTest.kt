@@ -12,9 +12,9 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Every line a modifier or a unique can roll (3.81.0) is counted: its stat is registered and is one the engine reads — by name
+ * Every line a modifier or a unique can roll is counted: its stat is registered and is one the engine reads — by name
  * in the registries of the rules or as a power (no name prefixes: a new dead stat with a familiar name is caught too). Текст строки на каждом
- * языке проверяет один тест - `LocalizationTest` сервера (4.12.x, TEST-05).
+ * языке проверяет один тест - `LocalizationTest` сервера.
  */
 class ModifierCoverageTest {
     private val index = TestContent.index
@@ -22,7 +22,7 @@ class ModifierCoverageTest {
     private val effects: List<Effect> by lazy { index.families.values.flatMap { it.effects } }
 
     /**
-     * Что читает движок (хвост TEST-06): реестры правил, а не префиксы имён - характеристики ядра, карт, Атласа и фляг, силы,
+     * Что читает движок: реестры правил, а не префиксы имён - характеристики ядра, карт, Атласа и фляг, силы,
      * повышаемые пределы, перечень боевых характеристик героя Мощи ([MightStats]: каждую он относит к учтённым, сведённым или
      * читаемым боем вне Мощи), ауры врагов (группа `AURA` - их все читает бой), механики фляг (группа `FLASK` - их читает лист фляги)
      * и метка скрытой строки (её ищет сфера раскрытия).

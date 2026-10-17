@@ -32,7 +32,7 @@ import org.junit.Test
  * The app as it ships, run against the strict `minifiedTest` build (без `-PuiTests`) — the release one, shrunk by R8.
  * It walks what a class R8 took away breaks first: the activity starting, the content parsed through the rules'
  * serializers, a hero and an item through the wire's, and an item's card and a modifier's line drawn.
- * The card is drawn in an activity of its own (3.66.4): the rule's host activity did not outlive MainActivity's start.
+ * The card is drawn in an activity of its own: the rule's host activity did not outlive MainActivity's start.
  */
 class ReleaseSmokeTest {
     @get:Rule val compose = createEmptyComposeRule()
@@ -45,6 +45,10 @@ class ReleaseSmokeTest {
         serverLocale = LocaleBundle()
     }
 
+    /**
+     * Редкая копия всегда несёт модификатор; его текст берётся из вида вещи: ужатое приложение и тестовый APK читают словарь разными
+     * путями.
+     */
     @Test fun shrunkAppStartsDecodesAndDraws() {
         ActivityScenario.launch(MainActivity::class.java).use { assertEquals(Lifecycle.State.RESUMED, it.state) }
         val index = TestWorld.index
@@ -54,9 +58,6 @@ class ReleaseSmokeTest {
         val hero = WireJson.decodeFromString(HeroInfo.serializer(), """{"id":"hero","name":"Изгнанник","level":7,"money":120}""")
         assertEquals(7, hero.level)
         val view = checkNotNull(ItemView.of(item, index))
-        // A rare copy always carries a modifier: its line is the one drawn on its own under the card. Its text is the one
-        // the item's view already holds (4.0.0): the shrunk app and the test APK each read the dictionary through their own
-        // path, and a line re-worded on the test side may not be the line the app drew.
         val line = view.lines.first().text
         ActivityScenario.launch(ComponentActivity::class.java).use { scenario ->
             scenario.onActivity {

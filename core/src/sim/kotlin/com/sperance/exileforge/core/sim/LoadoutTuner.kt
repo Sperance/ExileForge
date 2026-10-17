@@ -18,7 +18,7 @@ import kotlin.math.abs
 import kotlin.math.sqrt
 
 /**
- * Набор активных умений эталона (0.14.0, SKILL-02): слоты заполняются жадно по урону настоящего боя клиента - на каждом шаге
+ * Набор активных умений эталона: слоты заполняются жадно по урону настоящего боя клиента - на каждом шаге
  * берётся умение (или пара «накопитель зарядов + трата», когда на неё есть два слота), что сильнее всего растит урон набора.
  * Урон - среднее геометрическое урона в секунду по редкому манекену и по стае из трёх обычных ([Damage]); поддержка (кличи,
  * проклятия, метки) входит в набор, если её благо в бою перевешивает ещё одно бьющее умение.
@@ -32,7 +32,11 @@ class LoadoutTuner(private val index: ContentIndex) {
         val score: Double get() = sqrt(single.coerceAtLeast(1.0) * pack.coerceAtLeast(1.0))
     }
 
-    /** Лучший набор активных умений для [hero]: изученное не меняется, пассивные - как были. */
+    /**
+     * Лучший набор активных умений для [hero]: изученное не меняется, пассивные - как были.
+     *
+     * Умение, что урона не прибавляет, слот не занимает.
+     */
     fun tune(hero: Hero): Hero {
         val skills = hero.build.skills
         val slots = skillRules.activeSlots(hero.level)
@@ -45,7 +49,6 @@ class LoadoutTuner(private val index: ContentIndex) {
             val options = left.map { listOf(it) } + pairs(left).takeIf { slots - chosen.size >= 2 }.orEmpty()
             val scored = options.map { option -> option to damage(with(hero, chosen + option)).score }
             val (pick, score) = scored.maxByOrNull { it.second } ?: break
-            // Умение, что урона не прибавляет, слот не занимает: пустой слот честнее бесполезного
             if (chosen.isNotEmpty() && score <= best * (1 + GAIN)) break
             chosen += pick
             best = score
@@ -67,7 +70,12 @@ class LoadoutTuner(private val index: ContentIndex) {
         return hero.copy(build = hero.build.copy(skills = skills))
     }
 
-    /** Урон [hero] манекенами зоны его уровня: редкий (×1000 здоровья, [SECONDS] с) и три обычных (×100). */
+    /**
+     * Урон [hero] манекенами зоны его уровня: редкий (×1000 здоровья, [SECONDS] с) и три обычных (×100).
+     *
+     * Урон «от здоровья цели» растёт со здоровьем манекена: два манекена (×[LOW] и ×[HIGH]), урон набора - плоская часть решения системы из
+     * двух. Тики недугов - своей долей по недугу, чтобы отчёт видел урон яда отдельно.
+     */
     fun damage(hero: Hero): Damage {
         val zone = zoneOf(hero.level)
         val run = Run(index, zone, SimKit.SEED + 3, RunContext(hero.heroClass.code, hero.level))
@@ -79,15 +87,11 @@ class LoadoutTuner(private val index: ContentIndex) {
         val parts = HashMap<String, Double>()
         val types = HashMap<String, Double>()
 
-        // Урон «от здоровья цели» (силы и метки, что копят его) на манекене растёт с его здоровьем: как у зонда [Prober], два манекена
-        // (×[LOW] и ×[HIGH] здоровья), урон набора - плоская часть решения системы из двух
         fun dealt(foes: List<com.sperance.exileforge.rules.roll.RolledMonster>, big: Double, count: Boolean): Pair<Double, Double> {
             val battle = arena.battle(foes.map { arena.phases.foe(Prober.dummy(it, big), run.areaLevel) }, 7_300L, false)
             while (battle.time < SECONDS && battle.outcome == null) battle.advance(0.25)
             val hits = battle.events.filter { it.actor == Side.HERO && !it.onSelf && it.skill !in targetLife }
-            // Тики недугов - своей долей по недугу (`~POISONED`), чтобы отчёт классов видел урон яда отдельно от удара
             if (count) hits.forEach { parts.merge(it.skill ?: it.ailment?.let { a -> "~${a.name}" } ?: "-", it.damage, Double::plus) }
-            // Вид урона: тик недуга - своим недугом, удар - сильнейшим видом
             if (count) hits.forEach { types.merge(it.ailment?.name ?: it.type?.name ?: "-", it.damage, Double::plus) }
             val life = foes.sumOf { arena.phases.foe(Prober.dummy(it, big), run.areaLevel).body.let { b -> b.maxLife + b.maxShield } }
             return hits.sumOf { it.damage } / battle.time.coerceAtLeast(0.1) to life

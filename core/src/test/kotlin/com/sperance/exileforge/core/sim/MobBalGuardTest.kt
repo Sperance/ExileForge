@@ -8,7 +8,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Сторож темпа MOB-BAL (В-11/12, быстрый, на выборке): эталонный герой полосы своего уровня ([campaignBand]) всех классов против
+ * Сторож темпа (быстрый, на выборке): эталонный герой полосы своего уровня ([campaignBand]) всех классов против
  * финалов актов кампании - зондом настоящего боя клиента ([MobBal.tempo]). Медианы выборки держат цели баланса с допуском §11
  * аудита: обычный монстр - 2-3,5 действия, редкий - 8-25 с, страж - 50-150 с. Полный прогон - каждый страж кампании против медианы
  * своего акта (0,5-2×) - отчёт `:core:mobBal -Pmode=guard`.
@@ -36,16 +36,17 @@ class MobBalGuardTest {
     }
 
     /**
-     * Сторож стражей (0.15.0, решения 1 и 25; быстрый вариант полного прогона `:core:mobBal -Pmode=guard`): эталон каждого класса - тот
+     * Сторож стражей (быстрый вариант полного прогона `:core:mobBal -Pmode=guard`): эталон каждого класса - тот
      * же, что в полном прогоне (вещи полосы и штраф сопротивлений своей зоны, её уровень), - бьётся с каждым стражем кампании по [FIGHTS]
      * бою на каждом из [GUARD_ROLLS] наборов костей, кости детерминированы. Доля побед эталонов над стражем своего уровня держит цель
      * [GuardianTarget]: каждый страж - с допуском [EACH], средняя акта - с допуском [ACT]. Разброс стражей сторожит бой, а не Мощь.
+     *
+     * Старшие уровни первыми: их постройки и бои дольше, параллельный поток меньше ждёт хвоста.
      */
     @Test
     fun everyGuardianMeetsTheWinTarget() {
         val sim = MobBal(index, fights = FIGHTS * GUARD_ROLLS, rolls = GUARD_ROLLS, monsterSamples = 1, heroes = GuardHeroes.pool)
         val zones = index.campaign.zones.filter { it.boss.value.isNotBlank() && index.monster(it.boss) != null }
-        // Старшие уровни первыми: их постройки и бои дольше, параллельный поток так меньше ждёт хвоста
         val keys = zones.sortedByDescending { it.level }.flatMap { zone -> sim.classesOf(emptySet()).map { zone to it } }
         fun hero(zone: Zone, heroClass: HeroClass) = sim.hero(heroClass, zone.level, Archetype(campaignBand(zone.level)), index.campaign.resistPenalty(zone.code, false))
         val rows = keys.parallelStream().map { (zone, heroClass) -> sim.boss(zone, hero(zone, heroClass), 0, Rarity.COMMON, CAP) }.toList()

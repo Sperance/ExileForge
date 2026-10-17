@@ -34,6 +34,7 @@ class ContentSmokeTest {
         }
     }
 
+    /** Награды катятся потоком сервера: те же броски - та же награда. */
     @Test
     fun a_seeded_run_rolls_the_same_twice() {
         val zone = index.campaign.zones.first()
@@ -42,7 +43,6 @@ class ContentSmokeTest {
         val second = Run(index, zone, 42L, context)
         assertEquals(first.count, second.count)
         assertEquals(first.spawn(0), second.spawn(0))
-        // Rewards roll on the server's own stream (1.30.0): the same draws pay the same, whatever the client holds.
         assertEquals(first.kill(0, 0, false, RewardDraws(7L, 0)), second.kill(0, 0, false, RewardDraws(7L, 0)))
         assertEquals(first.chest(RewardDraws(7L, 1)), second.chest(RewardDraws(7L, 1)))
         assertEquals(first.boss(RewardDraws(7L, 2)), second.boss(RewardDraws(7L, 2)))
@@ -67,6 +67,7 @@ class ContentSmokeTest {
         assertTrue(checked > 0)
     }
 
+    /** Пачка с потерянным ответом уходит снова под своим ключом и после перезапуска; ответ её освобождает. */
     @Test
     fun the_journal_survives_a_restart() {
         val journal = RunJournal("run", "hero", "zone")
@@ -77,7 +78,6 @@ class ContentSmokeTest {
         assertEquals(journal.all, back.all)
         assertEquals(journal.pending, back.pending)
         assertEquals(1, back.applied)
-        // A batch whose answer was lost goes again under its own key, even after a restart; an answer frees it.
         val sent = assertNotNull(back.outgoing { "first" }).first
         back.record { RunEvent.Kill(it, i = 1, m = 0) }
         val again = assertNotNull(assertNotNull(RunJournal.decode(back.encode())).outgoing { "second" })

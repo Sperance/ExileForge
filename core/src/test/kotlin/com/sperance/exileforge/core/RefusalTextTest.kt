@@ -6,7 +6,7 @@ import com.sperance.exileforge.core.i18n.serverLocale
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-/** Отказ без id (4.12.x, ASANA-03): аргумент-id и id в собственном тексте сервера игроку не печатаются. */
+/** Отказ без id: аргумент-id и id в собственном тексте сервера игроку не печатаются. */
 class RefusalTextTest {
     @Test
     fun aRefusalPrintsNoId() {

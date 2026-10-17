@@ -40,7 +40,7 @@ import org.junit.Test
 import java.io.File
 
 /**
- * The narrowest phone the game is laid out for (3.54.0): 320 dp. The hero's panel, an item card and the loading screen are drawn
+ * The narrowest phone the game is laid out for: 320 dp. The hero's panel, an item card and the loading screen are drawn
  * at that width and kept as `design/narrow.jpg`, printed into the verification log — what is cut or runs over is seen there.
  */
 class NarrowScreenTest {

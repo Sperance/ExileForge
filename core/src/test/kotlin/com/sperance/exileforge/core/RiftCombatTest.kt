@@ -36,7 +36,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** Стражи Разлома в бою (3.96.0): печати Стража, кража Поглотителя, Закон Владыки; без Разлома бой прежний. */
+/** Стражи Разлома в бою: печати Стража, кража Поглотителя, Закон Владыки; без Разлома бой обычный. */
 class RiftCombatTest {
     private val index get() = TestContent.index
     private val rules get() = index.campaign.combat
@@ -68,11 +68,11 @@ class RiftCombatTest {
 
     private fun Battle.notes(kind: NoteKind) = events.filter { (it.trace as? NoteTrace)?.kind == kind }
 
+    /** Засада на весь тест: печати снимает только тест; удар по Стражу несёт множитель печатей в своём следе. */
     @Test
     fun seals_cut_the_damage_break_by_hits_and_crits_and_grow_back() {
         val warden = guardians.warden
         val idol = FoeTotem(index.campaign.totems.byCode.getValue(warden.idols))
-        // Засада на весь тест: печати снимает только сам тест
         val quiet = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, ambush = 1e6, idol = idol))
         val boss = quiet.foe(0)
         assertEquals(1 + warden.taken / 100, quiet.sealed(boss), 1e-9)
@@ -90,7 +90,6 @@ class RiftCombatTest {
         assertEquals(warden.seals, quiet.boss(), "and the rest one by one")
         assertTrue(quiet.notes(NoteKind.SEAL_BROKEN).size == 2 && quiet.notes(NoteKind.SEALS_RETURNED).size == 2)
 
-        // В настоящем бою удар по Стражу несёт множитель печатей в своём следе
         val fight = Battle(hero(), listOf(boss()), rules, index.rules.fight, 1_000_000.0, Random(3L), rift = RiftCombat(warden = warden, idol = idol))
         fight.run(10.0)
         val sealedHit = fight.events.firstNotNullOfOrNull { e ->

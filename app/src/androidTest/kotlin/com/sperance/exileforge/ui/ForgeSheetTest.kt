@@ -93,6 +93,7 @@ class ForgeSheetTest {
         assertTrue(gone())
     }
 
+    /** Сильный бросок вверх: список встаёт, лист не берёт остаток броска. */
     @Test fun aFlingInTheListNeitherMovesNorClosesIt() {
         open {
             LazyColumn(Modifier.fillMaxWidth().height(400.dp).testTag(LIST)) {
@@ -102,19 +103,18 @@ class ForgeSheetTest {
         val rest = top(LIST)
         node(LIST).performScrollToIndex(20)
         compose.waitForIdle()
-        // A hard fling back to the top: the list stops there, the sheet does not take what is left of it.
         node(LIST).performTouchInput { swipeDown(startY = top + 10f, endY = bottom - 10f, durationMillis = 50) }
         compose.waitForIdle()
         assertEquals(rest, top(LIST), 1f)
         assertEquals(0, dismissed)
     }
 
+    /** Лист остаётся на месте и под бросками в обе стороны, что его не закрывают. */
     @Test fun aTallSheetStaysClearOfTheTop() {
         open { Column(Modifier.fillMaxWidth().height(3_000.dp).testTag(BODY)) { Text("tall") } }
         val metrics = InstrumentationRegistry.getInstrumentation().targetContext.resources.displayMetrics
         val screen = metrics.heightPixels / metrics.density
         assertTrue("top ${top()} of $screen", top() >= screen * .1f)
-        // And it stays there under flings both ways that do not close it.
         val rest = top()
         node().performTouchInput { swipeUp(durationMillis = 60) }
         compose.waitForIdle()

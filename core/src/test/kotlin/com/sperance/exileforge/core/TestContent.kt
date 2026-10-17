@@ -13,7 +13,7 @@ object TestContent {
     private val root = listOf(File("../backend/src/main/resources"), File("backend/src/main/resources")).first { it.isDirectory }
     val index: ContentIndex by lazy { ContentLoader.load { File(root, "content/$it").readText() } }
 
-    /** Сырой файл контента [name] (0.14.0, META-TESTS): носители строк, как их пишет контент. */
+    /** Сырой файл контента [name]: носители строк, как их пишет контент. */
     fun json(name: String): JsonElement = Json.parseToJsonElement(File(root, "content/$name").readText())
 
     /** Server locale tables by language code, as `/locale/{code}.json` serves them. */

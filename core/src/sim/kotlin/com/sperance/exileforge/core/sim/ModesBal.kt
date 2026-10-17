@@ -37,10 +37,10 @@ import com.sperance.exileforge.rules.run.Run
 import com.sperance.exileforge.rules.run.RunContext
 
 /**
- * Режимы MODES-BAL (0.14.0, отчёт): испытания - настоящей ареной клиента ([TrialArena]) без экрана: босс-раш региона на высшей
+ * Режимы баланса (отчёт): испытания - настоящей ареной клиента ([TrialArena]) без экрана: босс-раш региона на высшей
  * скорости боя с часами стены, как их мерит сервер (бой, итог боя и [TAP] секунд игрока на «В бой» между боссами), и башня с
  * первого этажа до гибели героя (строка угрозы десятка - первая, самая слабая); стражи кристаллов эссенций и глубины Бездны - боем
- * эталона уровня зоны. С 0.14.1 - Разлом недели настоящей ареной узла ([RiftArena]) по правилам забега сервера ([RiftEngine]) и
+ * эталона уровня зоны. Разлом недели настоящей ареной узла ([RiftArena]) по правилам забега сервера ([RiftEngine]) и
  * очаг Скверны точка за точкой.
  */
 class ModesBal(private val index: ContentIndex) {
@@ -128,9 +128,11 @@ class ModesBal(private val index: ContentIndex) {
     data class Rift(val guardians: Int, val acts: Int, val fights: Int, val fallen: Boolean, val fatal: RiftNodeKind?, val wardens: List<Pair<Boolean, Double>>)
 
     /**
-     * Забег Разлома недели [week] героем [hero] (0.14.1): схема недели и правила забега - сервера ([RiftPlan], [RiftEngine]), бой узла -
+     * Забег Разлома недели [week] героем [hero]: схема недели и правила забега - сервера ([RiftPlan], [RiftEngine]), бой узла -
      * арена клиента ([RiftArena]) на высшей скорости. Игрок-модель: при здоровье ниже [REST_BELOW] - отдых, иначе сокровище, бой,
      * элита, кузня; алтарь и чемпион - если иного пути нет; дар - первый вариант, отдых - лечение, контракт - отказ.
+     *
+     * Время боя меряет сервер: заявка - сразу после честного минимума.
      */
     fun rift(hero: Hero, week: Long): Rift {
         val rules = checkNotNull(trials.rift) { "campaign: no rift" }
@@ -158,7 +160,6 @@ class ModesBal(private val index: ContentIndex) {
                     val result = end ?: RiftAct.Fight(false, 0.0)
                     if (node.kind == RiftNodeKind.GUARDIAN) wardens += result.won to arena.hud.value.seconds
                     if (result.won) fights++ else fatal = node.kind
-                    // Время боя меряет сервер: заявка - сразу после честного минимума
                     engine.act(run, result, run.fightAt + HOUR_MS)
                 }
 
@@ -189,12 +190,12 @@ class ModesBal(private val index: ContentIndex) {
     data class BlightPoint(val point: Int, val won: Boolean, val seconds: Double, val lifeLost: Double, val maxHit: Double = 0.0)
 
     /**
-     * Очаг Скверны зоны [zone] целиком (0.14.1): механика поставлена насильно - все точки и Матерь; жетоны точки - монстры захода
+     * Очаг Скверны зоны [zone] целиком: механика поставлена насильно - все точки и Матерь; жетоны точки - монстры захода
      * ([Spawns.summoned]), бои по `fight.maxFoes` с полным здоровьем каждый (как глубины Бездны), Матерь - бой стража со свитой.
      */
     fun blight(hero: Hero, zone: Zone, seed: Long): List<BlightPoint> = hearth(hero, zone, seed)?.let { h -> (0 until h.blight.choices).map(h::point) }.orEmpty()
 
-    /** Только бой Матери очага зоны [zone] (0.15.0, сторож Скверны): null - Матери нет. */
+    /** Только бой Матери очага зоны [zone] (сторож Скверны): null - Матери нет. */
     fun blightMother(hero: Hero, zone: Zone, seed: Long): BlightPoint? = hearth(hero, zone, seed)?.let { h -> h.point(h.blight.motherChoice).takeIf { h.blight.mother } }
 
     private fun hearth(hero: Hero, zone: Zone, seed: Long): Hearth? {

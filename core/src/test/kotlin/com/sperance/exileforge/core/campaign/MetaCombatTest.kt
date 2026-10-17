@@ -37,7 +37,7 @@ import kotlin.test.Test
 import kotlin.test.assertTrue
 
 /**
- * Метаморфные сторожа боя (0.14.0, META-TESTS): каждая характеристика героя - пара «стат × операция», как её кладёт хоть один
+ * Метаморфные сторожа боя: каждая характеристика героя - пара «стат × операция», как её кладёт хоть один
  * носитель контента (вещь, модификатор, дерево, умение, сила), - и каждая боевая сила уникалки меняют настоящий бой клиента:
  * бой «с» и «без» неё в двух эталонных схватках (атакующий против стаи и заклинатель против сильной стаи) расходится хоть одним
  * событием. Не меняет - характеристика небоевая по разделу `OUTSIDE`, сила небоевая по форме (добыча, объекты карты, слоты, Осквернение),
@@ -185,7 +185,7 @@ class MetaCombatTest {
     }
 
     /**
-     * Числа пробы без числа в контенте: флаг - единица, остальное - заметная величина; замена `SET` (0.15.0: замены без числа - минусы
+     * Числа пробы без числа в контенте: флаг - единица, остальное - заметная величина; замена `SET` (замены без числа - минусы
      * ключевых узлов «нет X») - ещё и запрет: заметная величина может совпасть с числом эталона, запрет - с его нулём.
      */
     private fun probes(stat: String, op: Op): List<Double> = when {
@@ -217,25 +217,21 @@ class MetaCombatTest {
         /**
          * Схватки: атакующий и заклинатель, каждый против обычной стаи (бой перед ней выигран - ложатся силы «после победы») и против
          * стаи, что бьёт сильнее (герой теряет здоровье, пьёт фляги и может пасть); строка живая, если меняет хоть одну.
+         *
+         * Сценарии держат силы и строки, что иначе не меняли бы схватку: оборона классов строкой, стаи разной силы (быстрая смерть до
+         * оглушений, долгий бой с оглушениями и низким здоровьем), бой, что кончается раньше огненного удара по герою, и стая, что держится
+         * дольше срока кровотечения.
          */
         val SCENARIOS = listOf(
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = true, seed = 7),
             Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 13),
             Scenario("WITCH", SkillType.SPELL, 0.8, cleared = true, seed = 17),
             Scenario("WITCH", SkillType.SPELL, 1.3, cleared = false, seed = 11),
-            // 0.14.1, оборона классов строкой: Мародёр получает на 30% меньше урона - ещё две стаи, где он теряет здоровье (лечение от
-            // урона живое) и где горят поджоги
             Scenario("MARAUDER", SkillType.ATTACK, 1.75, cleared = false, seed = 13),
             Scenario("MARAUDER", SkillType.ATTACK, 1.8, cleared = false, seed = 7),
-            // 0.15.0 (баланс монстров и защит): стаи ×1.75-1.8 убивают героя за 10-15 с, до оглушений и низкого здоровья под отхилом;
-            // стая ×1.5 держит бой ~20 с - герой оглушает, проседает и выигрывает
             Scenario("MARAUDER", SkillType.ATTACK, 1.5, cleared = false, seed = 13),
-            // Подгонка 0.15.0 (чары Ведьмы слабее, удары Мародёра сильнее): бой стаи кончается раньше огненного удара по герою и
-            // раньше, чем на поле остаётся один враг, - стая ×1.0 против Ведьмы и стая ×0.8 против Мародёра держат эти силы
             Scenario("WITCH", SkillType.SPELL, 1.0, cleared = false, seed = 13),
             Scenario("MARAUDER", SkillType.ATTACK, 0.8, cleared = false, seed = 13),
-            // Яд и хаос 0.15.0 (обычные монстры +35% здоровья): стая держится дольше срока кровотечения между наложениями - ещё одна
-            // стая ×1.0, где длительность кровотечения меняет бой
             Scenario("MARAUDER", SkillType.ATTACK, 1.0, cleared = false, seed = 5),
             Scenario("MARAUDER", SkillType.ATTACK, 1.5, cleared = false, seed = 13, pack = ELEMENTAL_PACK),
             Scenario("WITCH", SkillType.SPELL, 1.3, cleared = false, seed = 11, pack = ELEMENTAL_PACK),
@@ -258,36 +254,34 @@ class MetaCombatTest {
         /** Строки и силы Высасывания сути: умение без удара схватка не берёт, своего урона во времени на стае нет. */
         val DRAIN = listOf("STOCK_DRAIN_DURATION:ADD", "POWER_DRAIN_CONTAGION", "POWER_HOLLOW_HARVEST")
 
-        /** Известные строки и силы, что эталонная схватка не меняет, - с причиной. */
+        /**
+         * Известные строки и силы, что эталонная схватка не меняет, - с причиной.
+         *
+         * Известные без влияния на эталонную схватку: характеристики с источником вне схватки, с недостижимым условием, меткость (эталон
+         * попадает наверняка), недуги без стаи, небоевые, пределы; силы с недостижимым условием, эндгейма и «чистым»; огненный удар по
+         * герою - хаос-частью Разложения.
+         */
         val INERT: Set<String> = buildSet {
-            // Характеристики - нужен источник вне схватки: Предначертание, руны, чужие умения
             addAll(listOf("STOCK_ACTIVE_RUNE_SOCKETS:ADD", "STOCK_BORROW_SKILLS:ADD", "STOCK_FATE_EFFECT:ADD", "STOCK_LAST_RUNE_EFFECT:ADD"))
             addAll(listOf("STOCK_RUNE_EFFECT:ADD"))
-            // Характеристики - условие строки не наступает в эталонных схватках (заряды, оглушение, блок чар и пр.)
             addAll(listOf("STOCK_ASCENDED_DAMAGE:ADD", "STOCK_ATTACK_MAGICAL:ADD", "STOCK_ATTACK_MAGICAL:MORE", "STOCK_BUFF_DURATION:ADD"))
             addAll(listOf("STOCK_DAMAGE_PER_FRENZY:ADD", "STOCK_ENERGY_REGEN:INCREASED", "STOCK_LEECH_ALL:INCREASED", "STOCK_LEECH_PHYSICAL:MORE"))
             addAll(listOf("STOCK_LIFE_DAMAGE_DELAY:ADD", "STOCK_LOW_LIFE_SPEED:ADD", "STOCK_MANA_ON_BLOCK:ADD", "STOCK_POISON_DAMAGE:INCREASED"))
             addAll(listOf("STOCK_SKILL_HEALING:INCREASED", "STOCK_SPELL_BLOCK:ADD", "STOCK_STUN_THRESHOLD:INCREASED", "STOCK_STUN_THRESHOLD:MORE"))
             addAll(listOf("STOCK_TAUNT:ADD"))
-            // Характеристики - меткость (0.15.0, реш. 11: ловкость +2 меткости за очко): эталон с ловкостью 150 попадает по стае 40 ур. наверняка
             addAll(listOf("STOCK_ACCURACY:ADD", "STOCK_ACCURACY:INCREASED"))
-            // Характеристики - недуги, которых нет у стаи эталона, и защита от них
             addAll(listOf("STOCK_AVOID_FREEZE:ADD", "STOCK_AVOID_PARCH:ADD", "STOCK_AVOID_WOUND:ADD", "STOCK_ELECTROCUTE_BUILDUP:ADD"))
             addAll(listOf("STOCK_FREEZE_CHANCE:ADD", "STOCK_FREEZE_DURATION:ADD", "STOCK_FREEZE_DURATION_ON_SELF:ADD", "STOCK_IMMUNE_CURSE:ADD"))
             addAll(listOf("STOCK_IMMUNE_PARCH:ADD", "STOCK_IMMUNE_WOUND:ADD", "STOCK_PARCH_DURATION:ADD", "STOCK_PARCH_EFFECT:ADD"))
             addAll(listOf("STOCK_PARCH_TAKEN:ADD", "STOCK_RECOVERY_SUPPRESSION:ADD", "STOCK_SPELL_SUPPRESSION:ADD", "STOCK_SUPPRESSION_AVOID:ADD"))
             addAll(listOf("STOCK_WOUND_DURATION:ADD", "STOCK_WOUND_EFFECT:ADD", "STOCK_WOUND_TAKEN:ADD"))
             addAll(listOf("STOCK_DAMAGE_VS_PARCHED:ADD", "STOCK_DAMAGE_VS_WOUNDED:ADD"))
-            // Иссушение наверняка (0.15.0: шанс 100% броска не тратит) - стая без маны, срезать ему нечего
             addAll(listOf("STOCK_PARCH_CHANCE:ADD"))
-            // Характеристики - небоевые: добыча и объекты карты
             addAll(listOf("STOCK_BLIGHT_REDUCTION:ADD", "STOCK_FATE_ASH_LOOT:ADD", "STOCK_VEILED:ADD", "STOCK_VEILED_LOOT:ADD"))
-            // Характеристики - пределы: в схватке значение не доходит до потолка
             addAll(listOf("STOCK_BLOCK_MAX:ADD", "STOCK_EVASION_MAX:ADD", "STOCK_MAX_ENDURANCE_CHARGES:ADD"))
             addAll(listOf("STOCK_MAX_FRENZY_CHARGES:ADD", "STOCK_MAX_POWER_CHARGES:ADD", "STOCK_RESIST_MAX_ALL:ADD", "STOCK_RESIST_MAX_CHAOS:ADD"))
             addAll(listOf("STOCK_RESIST_MAX_COLD:ADD", "STOCK_RESIST_MAX_FIRE:ADD", "STOCK_RESIST_MAX_LIGHTNING:ADD", "STOCK_SPELL_BLOCK_MAX:ADD"))
             addAll(listOf("STOCK_PHYSICAL_REDUCTION_MAX:ADD"))
-            // Силы - условие силы не наступает в эталонных схватках (аудит 19_STATS: stats-pw1/pw2, inject.tsv)
             addAll(listOf("POWER_ABSCESS_WARD", "POWER_ALTAR_VAAL_SIGHT", "POWER_ANCESTRAL_BRAND", "POWER_ANCESTRAL_VIGOUR"))
             addAll(listOf("POWER_ASCENDED_FURY", "POWER_AURORA_ECLIPSE", "POWER_BARON_LEGION", "POWER_BILE_TOUCH"))
             addAll(listOf("POWER_BLIND_DEVOTION", "POWER_BLOODBATH", "POWER_BLOODED_TAKINGS", "POWER_CALM_CENTER"))
@@ -306,13 +300,8 @@ class MetaCombatTest {
             addAll(listOf("POWER_SUNS_BLESSING", "POWER_SUTURE_THIEF", "POWER_TAILWIND", "POWER_THICKET_GRACE"))
             addAll(listOf("POWER_TRUE_SWING", "POWER_UMBILICUS_DROUGHT", "POWER_UNDERTOW", "POWER_VEIN_BURST"))
             addAll(listOf("POWER_WARDEN_BASTION", "POWER_ZENITH_GLARE"))
-            // Силы эндгейма 0.15.0: заряды ярости эталону не копятся, сопротивления хаосу у эталона нет, поджог хаосом по стае с равными
-            // сопротивлениями огню и хаосу бьёт тем же числом
             addAll(listOf("POWER_RED_RAMPAGE", "POWER_EMPTY_THRONE", "POWER_BLACKFLAME_PACT"))
-            // Силы «чистым» (0.14.2): обычные монстры +25% здоровья - стая эталона держит недуг на герое с первой секунды
             addAll(listOf("POWER_STILL_POSTURE"))
-            // Силы на огненный удар по герою (0.15.0, реш. 38/41): огонь в стае эталона несёт только редкий со всеми стихиями и хаосом,
-            // Разложение на герое растит хаос-часть - удар ведёт хаос, а не огонь
             addAll(listOf("POWER_CINDER_SKIN", "POWER_FORGE_TEMPER", "POWER_EMBER_DRINK", "POWER_WYRM_CRUST"))
             addAll(DRAIN)
         }

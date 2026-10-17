@@ -60,14 +60,13 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
-/*
- * Баланс монстров MOB-BAL (отчёт, не код игры): эталонные герои по архетипам против монстров и боссов кампании и карт - реальными
- * функциями правил ([com.sperance.exileforge.rules.roll.MonsterRoller], [Run], [LootRoller]) и настоящим боем клиента ([Battle]).
- * Вывод - TSV; цели: обычный 2-3 действия, редкий 10-20 с, босс 50-150 с и 55-60% побед эталона над стражем своего уровня ([GuardianTarget]). Быстрый сторож
- * на выборке - `MobBalGuardTest`.
+/**
+ * Качество вещей: кандидатов на место, доля ролла в тире, тир аффикса (-1 - как выпал, 0 - лучший открытый, 1 - на ступень ниже).
+ *
+ * Баланс монстров (отчёт, не код игры): эталонные герои по архетипам против монстров и боссов кампании и карт - реальными функциями правил
+ * и настоящим боем клиента ([Battle]). Вывод - TSV; цели: обычный 2-3 действия, редкий 10-20 с, босс 50-150 с и 55-60% побед эталона над
+ * стражем своего уровня ([GuardianTarget]). Быстрый сторож на выборке - `MobBalGuardTest`.
  */
-
-/** Качество вещей: кандидатов на место, доля ролла в тире, тир аффикса (-1 - как выпал, 0 - лучший открытый, 1 - на ступень ниже). */
 enum class GearBand(val candidates: Int, val share: Double, val tierStep: Int, val rarities: List<Rarity>, val maxUniques: Int) {
     TYPICAL(12, 0.5, -1, listOf(Rarity.RARE, Rarity.MAGIC), 2),
     GOOD(24, 0.7, 1, listOf(Rarity.RARE), 4),
@@ -83,7 +82,7 @@ enum class Guard(val table: String?) { ANY(null), ARMOUR("local:armor"), EVASION
 /** Умения: любые, только атаки, только чары. */
 enum class Style { ANY, ATTACK, SPELL }
 
-/** Архетип эталона; [seed] - номер набора вещей (0.14.1): другие кости поиска вещей того же архетипа, разброс выборки классов. */
+/** Архетип эталона; [seed] - номер набора вещей: другие кости поиска вещей того же архетипа, разброс выборки классов. */
 data class Archetype(val band: GearBand, val source: GearSource = GearSource.MIXED, val guard: Guard = Guard.ANY, val style: Style = Style.ANY, val shield: Boolean = true, val seed: Int = 0) {
     val name: String get() = listOf(band.name.lowercase(), source.name.lowercase(), guard.name.lowercase(), style.name.lowercase()).joinToString("/") + (if (shield) "" else "/noshield") + if (seed == 0) "" else "/s$seed"
 }
@@ -152,6 +151,7 @@ class MobKit(val index: ContentIndex) {
         return listOfNotNull(start?.slot, offhand) + SimKit.ARMOUR + Slot.RING_2
     }
 
+    /** Броня с защитой - только чистые базы своего вида (уникалка - по её базе). */
     private fun fits(template: ItemTemplate, slot: Slot, heroClass: HeroClass, guard: Guard): Boolean {
         val start = index.template(heroClass.weapon)
         val slotOk = when {
@@ -162,7 +162,6 @@ class MobKit(val index: ContentIndex) {
         if (!slotOk) return false
         val table = guard.table ?: return true
         val defences = template.tables.filter { it in defenceTables }
-        // Броня с защитой: только чистые базы своего вида (уникалка - по её базе: тот же род строк BASE_)
         return when {
             template.unique -> defenceOf(template).let { it.isEmpty() || it == setOf(table) }
             defences.isEmpty() -> true
@@ -211,7 +210,7 @@ class MobKit(val index: ContentIndex) {
     }
 
     /**
-     * Пассивные слоты (0.14.0, SKILL-02): жадно по цене листа [worth] - на каждом шаге пассивное умение (бонус, аура, триггер), что сильнее
+     * Пассивные слоты: жадно по цене листа [worth] - на каждом шаге пассивное умение (бонус, аура, триггер), что сильнее
      * всего растит цену; защитные идут в расчёт наравне с уроном. Без прироста слот остаётся пустым.
      */
     fun passives(heroClass: HeroClass, level: Int, tree: List<TakenNode>, items: List<ItemInstance>, skills: HeroSkills, penalty: Double): HeroSkills {
@@ -305,13 +304,14 @@ class MobKit(val index: ContentIndex) {
     /**
      * Эталон [hero] на уровне [level] (не ниже его): те же вещи, а дерево, умения и фляги - уровня [level]. Поиск вещей - самая дорогая
      * часть постройки, быстрый сторож (`MobBalGuardTest`) строит вещи на сетке уровней и переносит их на уровень зоны.
+     *
+     * Набор, подобранный боем на уровне вещей ([LoadoutTuner]), остаётся; новые слоты уровня - по правилу.
      */
     fun relevel(hero: Hero, level: Int): Hero {
         require(level >= hero.level) { "items of level ${hero.level} cannot be worn below it, at $level" }
         if (level == hero.level) return hero
         val tree = tree(hero.heroClass, index.classes.pointsTotal(level), hero.archetype.style)
         val ruled = skills(hero.heroClass.code, level, stats(hero.heroClass, level, tree, hero.build.items), hero.archetype.style)
-        // Набор, подобранный боем на уровне вещей ([LoadoutTuner]), остаётся; новые слоты уровня - по правилу
         val kept = hero.build.skills.active.filterNotNull().filter { it.skill in ruled.learned }
         val actives = (kept + ruled.active.filterNotNull().filter { slot -> kept.none { it.skill == slot.skill } }).take(skillRules.activeSlots(level))
         val passive = (hero.build.skills.passive.filterNotNull().filter { it in ruled.learned } + ruled.passive.filterNotNull()).distinct().take(skillRules.passiveSlots(level))
@@ -389,20 +389,20 @@ data class Row(val values: List<Any>) {
 }
 
 /**
- * Готовые эталоны MOB-BAL: постройка героя (поиск вещей, дерево, набор умений боем) - самая дорогая часть прогона, поэтому герой
+ * Готовые эталоны баланса: постройка героя (поиск вещей, дерево, набор умений боем) - самая дорогая часть прогона, поэтому герой
  * строится один раз на ключ «класс, уровень, архетип, штраф». [cache] - папка готовых героев (null - строить, ничего не писать);
  * сторожа тестов делят один пул на прогон (эталон уровня зоны кампании - тот же на карте, в Бездне, Скверне и Разломе).
  */
 class HeroPool(val kit: MobKit, private val cache: File? = CACHE) {
     private val heroes = ConcurrentHashMap<String, Hero>()
 
+    /** `-Pretune=1` подбирает набор умений заново боем на тех же вещах. */
     fun hero(heroClass: HeroClass, level: Int, archetype: Archetype, penalty: Double): Hero = heroes.getOrPut("${heroClass.code}/$level/${archetype.name}/$penalty") {
         val key = "${heroClass.code}_${level}_${archetype.name.replace('/', '-')}_${penalty.toInt()}" + System.getProperty("force").orEmpty().let { if (it.isBlank()) "" else "_F$it" }
         val file = cache?.let { File(it, "$key.json") } ?: return@getOrPut kit.hero(heroClass, level, archetype, penalty)
         if (file.exists()) {
             val saved = CACHE_JSON.decodeFromString(SavedHero.serializer(), file.readText())
             val hero = Hero(heroClass, level, archetype, SimBuild(saved.items, saved.tree, saved.skills, kit.flasks(level, if (archetype.band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE)), saved.note)
-            // Подбор чисел умений на тех же вещах (-Pretune=1): набор умений подбирается заново боем
             if (System.getProperty("retune") == "1") kit.tuner.tune(hero) else hero
         } else {
             kit.hero(heroClass, level, archetype, penalty).also { hero ->
@@ -413,7 +413,7 @@ class HeroPool(val kit: MobKit, private val cache: File? = CACHE) {
     }
 }
 
-/** Прогоны MOB-BAL: [fights] боёв на [rolls] бросков босса; эталоны - из пула [heroes]. */
+/** Прогоны баланса: [fights] боёв на [rolls] бросков босса; эталоны - из пула [heroes]. */
 class MobBal(val index: ContentIndex, private val fights: Int, private val rolls: Int, private val monsterSamples: Int, private val heroes: HeroPool = HeroPool(MobKit(index))) {
     val kit = heroes.kit
     private val classes = index.classes.classes.mapNotNull { index.heroClass(it.code) }
@@ -429,7 +429,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     /**
-     * Урон эталона класса [heroClass] уровня [level] в бою (выравнивание классов SKILL-02): вещи источника [source] полосы уровня
+     * Урон эталона класса [heroClass] уровня [level] в бою (выравнивание классов): вещи источника [source] полосы уровня
      * ([heroBand]), штраф сопротивлений ближайшей зоны, набор умений подобран боем ([LoadoutTuner]).
      */
     fun classDamage(heroClass: HeroClass, level: Int, source: GearSource, seed: Int = 0): Pair<Hero, LoadoutTuner.Damage> {
@@ -444,14 +444,14 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         listOf(sorted.first(), sorted[sorted.size / 2], sorted.last()).distinct()
     }.mapNotNull { com.sperance.exileforge.core.campaign.VaalZones.zone(it, index.campaign.vaal) }
 
-    /** Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня (0.15.0, решение 44). */
+    /** Зоны со стражем, чьи карты несут тир (`maps.tiers.fromLevel`): стражи карт своего уровня. */
     fun mapZones(): List<Zone> {
         val from = index.campaign.maps.tiers?.fromLevel ?: return emptyList()
         return index.campaign.zones.filter { it.level >= from && it.boss.value.isNotBlank() && index.monster(it.boss) != null }
     }
 
     /**
-     * Эталон своего уровня на карте тира [tier] зоны [zone] (0.15.0, решение 44): уровень героя - уровень района карты, вещи полосы
+     * Эталон своего уровня на карте тира [tier] зоны [zone]: уровень героя - уровень района карты, вещи полосы
      * этого уровня ([campaignBand]), штраф сопротивлений карты.
      */
     fun mapHero(heroClass: HeroClass, zone: Zone, tier: Int): Hero {
@@ -561,7 +561,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
     }
 
     /**
-     * Заход целиком (пакет 8): автопроход клиента (`ExpeditionRun` + `AutoPlan`, бои настоящими стаями и стражем, паузы между волнами)
+     * Заход целиком: автопроход клиента (`ExpeditionRun` + `AutoPlan`, бои настоящими стаями и стражем, паузы между волнами)
      * даёт секунды боёв; ходьба - жадный маршрут по проходимым клеткам карты `MapGenerator` (вход → ближайшая стая → … → выход/босс)
      * со скоростью героя; опыт - `LootRoller.experience` всех монстров стай и стража зоны.
      */
@@ -588,7 +588,6 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
             }
         }
         val share = expedition.share()
-        // Ходьба
         val rules = index.campaign.expedition
         val layout = com.sperance.exileforge.core.campaign.MapGenerator.generate(seed, zone.biome, run.count, rules.terrain, zone.size, rules.minChasm, rules.minPool, rules.shapeOf(zone.biome).shape)
         fun bfs(from: com.sperance.exileforge.core.campaign.Cell): IntArray {
@@ -627,7 +626,6 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         }
         cells += bfs(at)[layout.exit.y * layout.width + layout.exit.x].let { if (it < 0) 0 else it }
         val speed = rules.heroSpeed * (1 + (sheet.stats["STOCK_MOVEMENT_SPEED"] ?: 0.0) / 100).coerceIn(0.5, 2.5)
-        // Опыт
         val loot = LootRoller(index, hero.level)
         val mobsXp = (0 until run.count).sumOf { i -> run.spawn(i).pack.sumOf { m -> loot.experience(index.monster(m.code)!!, run.areaLevel, index.campaign.rarity(m.rarity), 0.0, hero.level) } }
         val bossXp = index.monster(zone.boss)?.let { loot.experience(it, run.areaLevel, index.campaign.rarity(MonsterRarity.UNIQUE), 0.0, hero.level) } ?: 0.0
@@ -654,7 +652,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
         }
     }
 
-    /** Темп зоны (сторож MOB-BAL): медианы действий героя на обычного монстра, секунд на редкого и на стража. */
+    /** Темп зоны (сторож баланса): медианы действий героя на обычного монстра, секунд на редкого и на стража. */
     fun tempo(zone: Zone, hero: Hero): Tempo {
         val probes = probes(zone, hero, 0, Rarity.COMMON).third
         fun med(kind: String, f: (Probe) -> Double) = probes.getValue(kind).map(f).sorted().let { it[it.size / 2] }
@@ -738,7 +736,7 @@ class MobBal(val index: ContentIndex, private val fights: Int, private val rolls
 }
 
 /**
- * Зонд (MOB-BAL): урон героя и его выживание против одной цели, без исхода боя. «Манекен» - цель с здоровьем ×[BIG] и без урона
+ * Зонд: урон героя и его выживание против одной цели, без исхода боя. «Манекен» - цель с здоровьем ×[BIG] и без урона
  * (удары, умения нулевые): урон героя в секунду ([dps]) и за действие ([perAction]) за [DUMMY] секунд. «Бессмертный» - цель с
  * здоровьем ×[BIG] и своим уроном: секунд до смерти героя ([ttd], потолок [TTD_CAP]).
  */
@@ -750,7 +748,7 @@ data class Probe(val life: Double, val dps: Double, val perAction: Double, val t
     val actions: Double get() = life / perAction.coerceAtLeast(1.0)
 }
 
-/** Темп зоны у эталона: действий на обычного монстра, секунд на редкого и на стража (цели MOB-BAL: 2-3, 10-20, 60-120). */
+/** Темп зоны у эталона: действий на обычного монстра, секунд на редкого и на стража (цели: 2-3, 10-20, 60-120). */
 data class Tempo(val normalActions: Double, val rareSeconds: Double, val bossSeconds: Double)
 
 const val BOSS = "BOSS"
@@ -772,10 +770,10 @@ object Prober {
 
     fun immortal(m: com.sperance.exileforge.rules.roll.RolledMonster) = m.copy(stats = m.stats + ("STOCK_HEALTH" to (m.stats["STOCK_HEALTH"] ?: 1.0) * BIG))
 
+    /** Два манекена (×100 и ×1000 жизни): урон в секунду = плоский + доля жизни цели. */
     fun probe(index: ContentIndex, arena: Arena, m: com.sperance.exileforge.rules.roll.RolledMonster, level: Int, seed: Long): Probe {
         val life = arena.phases.foe(m, level).body.let { it.maxLife + it.maxShield }
 
-        // Два манекена (×100 и ×1000 жизни): урон в секунду = плоский + доля жизни цели; решаем систему из двух
         fun rate(big: Double): Triple<Double, Double, Pair<Double, Int>> {
             val d = arena.battle(listOf(arena.phases.foe(dummy(m, big), level)), seed, false)
             while (d.time < DUMMY && d.outcome == null) d.advance(0.25)
@@ -801,6 +799,10 @@ object Prober {
 
 /**
  * Запуск: `./gradlew :core:mobBal -Pcontent=<папка> -Pmode=<campaign|sweep|maps|might|heroes> -Pout=<файл> [-Pfights=16 -Prolls=4 -Psamples=9 -Pclasses=A,B -Pzones=...]`.
+ *
+ * Режимы: кампания (каждый босс каждым классом), архетипы, стражи Ваал, карты по тирам, Мощь боссов, лист эталонов, зонд, Мощь при
+ * вариантах `might.skills`, время и опыт захода, выравнивание классов (урон и доля побед на уровнях [levels]), разбор по стражам, раш и
+ * башня, стражи кристаллов и Бездна, Бездна по глубинам, Разлом недели, Скверна, алтари, Мощь стражей зон правилом `BossMight`.
  */
 fun main(args: Array<String>) {
     val content = File(System.getProperty("content"))
@@ -821,7 +823,6 @@ fun main(args: Array<String>) {
     val tasks = mutableListOf<Task>()
     fun penalty(zone: Zone, onMap: Boolean) = index.campaign.resistPenalty(zone.code, onMap)
     when (mode) {
-        // Кампания: каждый босс, каждый класс типичным героем уровня зоны; монстры - у финалов и каждой третьей зоны
         "campaign", "guard" -> zones.forEach { zone ->
             classes.forEach { c ->
                 tasks += Task {
@@ -834,7 +835,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Архетипы на выбранных зонах: полосы вещей × источник × защита × стиль
         "sweep" -> zones.forEach { zone ->
             classes.forEach { c ->
                 val archetypes = buildList {
@@ -853,14 +853,12 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Стражи Ваал: каждый страж порчи в своих зонах (низшая, средняя, высшая), эталон уровня зоны
         "vaal" -> sim.vaalZones().filter { zonesOnly.isEmpty() || it.code.value in zonesOnly }.forEach { zone ->
             classes.forEach { c ->
                 tasks += Task { listOf(sim.boss(zone, sim.hero(c, zone.level, Archetype(campaignBand(zone.level)), penalty(zone, false)), 0, Rarity.COMMON, cap)) }
             }
         }
 
-        // Карты (0.15.0, решение 44): стражи зон с тирами на тирах [tiers], эталон своего уровня - уровня района карты ([MobBal.mapHero])
         "maps" -> {
             val tiers = (System.getProperty("tiers") ?: "1,4,8,12,16").split(',').map { it.trim().toInt() }
             val mapRarities = (System.getProperty("mapRarities") ?: "COMMON").split(',').map { Rarity.valueOf(it.trim()) }
@@ -878,7 +876,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Мощь боссов кампании (ASANA-08): средняя по броскам, без героя
         "might" -> zones.forEach { zone ->
             tasks += Task {
                 val roller = com.sperance.exileforge.rules.roll.MonsterRoller(index)
@@ -901,7 +898,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Герои: лист эталонных героев
         "heroes" -> listOf(10, 30, 50, 68, 72, 80, 88).forEach { level ->
             classes.forEach { c ->
                 val archetypes = GearBand.entries.map { Archetype(it) } + listOf(Guard.ARMOUR, Guard.EVASION, Guard.ES).map { Archetype(GearBand.GOOD, guard = it) } + sim.styles(c).map { Archetype(GearBand.GOOD, style = it) }
@@ -955,7 +951,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Зонд: кампания (типичный герой уровня зоны) и карты (герой полосы тира)
         "probe" -> {
             val tiers = (System.getProperty("tiers") ?: "0").split(',').map { it.trim().toInt() }
             val bands = System.getProperty("band")?.split(',')?.map { GearBand.valueOf(it.trim()) }
@@ -974,7 +969,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Пакет 5: Мощь (натиск) героя при вариантах might.skills против боя - урон по одной цели и по стае из трёх
         "might5" -> {
             val levels = (System.getProperty("levels") ?: "20,40,60,72,80,88").split(',').map { it.trim().toInt() }
             val rulesText = File(content, "rules.json").readText()
@@ -1005,7 +999,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Пакет 8: время захода (автопроход - бои настоящими стаями зоны; ходьба - маршрут по карте MapGenerator) и опыт захода
         "runtime" -> {
             val scales = (System.getProperty("countScales") ?: "1.0").split(',').map { it.trim().toDouble() }
             val seeds = (System.getProperty("rolls") ?: "3").toInt()
@@ -1023,13 +1016,9 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Выравнивание классов (0.14.0, SKILL-02): эталон каждого класса на уровнях [levels] - урон в бою (одна цель и стая из трёх,
-        // набор умений подобран боем) и доля побед над стражами ближайших зон не выше уровня героя
         "classes" -> {
             val levels = (System.getProperty("levels") ?: "10,20,40,60,72,80,88").split(',').map { it.trim().toInt() }
-            // Вещи эталона - редкие и смесь с уникалками (силы уникалок - свой разброс): урон - среднее геометрическое, победы - среднее
             val sources = (System.getProperty("source") ?: "RARE,MIXED").split(',').map { GearSource.valueOf(it.trim()) }
-            // Наборов вещей на источник (0.14.1): победы - среднее по всем, разброс одного набора вещей больше разницы классов
             val gearSeeds = (System.getProperty("gearSeeds") ?: "1").toInt()
             levels.forEach { level ->
                 classes.forEach { c ->
@@ -1048,7 +1037,6 @@ fun main(args: Array<String>) {
                         runs.forEach { (_, d, _) -> d.bySkill.forEach { (k, v) -> parts.merge(k, v / d.bySkill.values.sum().coerceAtLeast(1.0), Double::plus) } }
                         val types = HashMap<String, Double>()
                         runs.forEach { (_, d, _) -> d.byType.forEach { (k, v) -> types.merge(k, v / d.byType.values.sum().coerceAtLeast(1.0), Double::plus) } }
-                        // Разбор по стражам (0.14.1): доля побед, среднее время боя, тайм-ауты - смерть или потолок
                         val perBoss = bosses.groupBy { it.values[2] as String }.map { (boss, rows) ->
                             Row(listOf("classboss", c.code, level, boss, rows.map { it.values[10] as Double }.average(), rows.map { it.values[12] as Double }.average(), rows.sumOf { it.values[13] as Int }, rows.map { it.values[14] as Double }.average()))
                         }
@@ -1067,7 +1055,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // MODES-BAL (0.14.0): босс-раш каждого акта эталоном его верхнего уровня и башня с первого этажа эталонами по уровням
         "modes" -> {
             val modes = ModesBal(index)
             val seeds = (System.getProperty("rolls") ?: "2").toInt()
@@ -1083,7 +1070,6 @@ fun main(args: Array<String>) {
                     }
                 }
             }
-            // Стражи кристаллов и Бездна: по три зоны каждого акта (первая, средняя, последняя), эталон уровня зоны
             index.campaign.regions.forEachIndexed { act, region ->
                 val picked = listOf(region.zones.first(), region.zones[region.zones.size / 2], region.zones.last()).distinct()
                 picked.forEach { zone ->
@@ -1110,8 +1096,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Бездна по глубинам (0.14.1): зоны [zones] (по умолчанию - первая зона с Бездной в каждом акте), эталон уровня зоны или [level],
-        // [rolls] трещин на класс; вождь - последний бой своей глубины
         "abyss" -> {
             val modes = ModesBal(index)
             val rule = checkNotNull(index.campaign.abyss)
@@ -1138,7 +1122,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Разлом недели (0.14.1): эталон уровня [levels] (по умолчанию - уровни зон кампании 21-88) каждого класса проходит [rolls] недель моделью игрока
         "rift" -> {
             val modes = ModesBal(index)
             val weeks = (System.getProperty("rolls") ?: "3").toInt()
@@ -1158,7 +1141,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Скверна (0.14.1): очаг целиком (все точки и Матерь) в первой, средней и последней зоне каждого акта эталоном уровня зоны
         "blight" -> {
             val modes = ModesBal(index)
             val seeds = (System.getProperty("rolls") ?: "2").toInt()
@@ -1179,8 +1161,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Алтари (0.14.0, ALTAR-01): каждая пара «минус → награда» на карте тира 1 (зоны 61-70) эталоном 72 - победы над стражем, секунды боя
-        // с ним и с редким монстром против той же карты без алтаря; строки алтаря - как их кладёт заход (строки карты)
         "altars" -> {
             val offers = index.campaign.features?.altar?.offers.orEmpty()
             val mapZones = zones.filter { it.level in 61..70 }.take(4)
@@ -1199,7 +1179,6 @@ fun main(args: Array<String>) {
             }
         }
 
-        // Пакет 8: Мощь стражей зон правилом BossMight (без строк таблицы, сид 0) - отчёт; разброс стражей сторожит доля побед ([guard])
         "bossmight" -> zones.forEach { zone -> tasks += Task { listOf(Row(listOf("bossmight", zone.code.value, zone.boss.value, zone.level, com.sperance.exileforge.rules.sheet.BossMight.of(index, zone)))) } }
 
         else -> error("mode $mode")
@@ -1219,7 +1198,7 @@ fun main(args: Array<String>) {
 }
 
 /**
- * Цель побед эталона над стражем своего уровня (0.15.0, решение 1, RULES «Общее»): [WINS] боёв, финал акта - у нижней границы ([FINALS]).
+ * Цель побед эталона над стражем своего уровня (RULES «Общее»): [WINS] боёв, финал акта - у нижней границы ([FINALS]).
  * Карты своего уровня, вожди Бездны, Разлом недели и Матерь Скверны равняются на неё же (отчёты режимов, сторож `ModesBalanceGuardTest`).
  */
 object GuardianTarget {
@@ -1252,7 +1231,7 @@ object MotherHit {
 }
 
 /**
- * Сторож стражей (полный прогон `-Pmode=guard`; с 0.15.0 - доля побед эталонов вместо разброса Мощи, решение 25): у каждого стража доля
+ * Сторож стражей (полный прогон `-Pmode=guard`; доля побед эталонов вместо разброса Мощи): у каждого стража доля
  * побед эталонов всех классов - в цели [GuardianTarget] с допуском выборки [tolerance]. Строка `guard`: зона, страж, акт, финал ли, доля
  * побед, среднее время победы (-1 - побед нет), в коридоре ли.
  */
@@ -1276,7 +1255,7 @@ const val GUARD_TOLERANCE = 0.10
 const val RIFT_WEEK = 2_900L
 
 /**
- * Стражей на уровень в режиме `classes` и в `ClassBalanceGuardTest`: ближайшие зоны не выше уровня героя. С 0.15.0 - восемь: четыре
+ * Стражей на уровень в режиме `classes` и в `ClassBalanceGuardTest`: ближайшие зоны не выше уровня героя. Восемь: четыре
  * ближайших - стражи одного акта и часто одного вида урона (у 40-го все бьют физикой), их подбор решал победы класса больше его обороны.
  */
 const val CLASS_BOSSES = 8
@@ -1287,7 +1266,7 @@ fun bandOf(tier: Int): GearBand = when {
     else -> GearBand.OPTIMIZED
 }
 
-/** Эталон кампании (допущение MOB-BAL): до 75 - типичный, 76-85 - хороший, с 86 - оптимизированный (район как у T11+). */
+/** Эталон кампании (допущение баланса): до 75 - типичный, 76-85 - хороший, с 86 - оптимизированный (район как у T11+). */
 fun campaignBand(level: Int): GearBand = when {
     level <= 75 -> GearBand.TYPICAL
     level <= 85 -> GearBand.GOOD

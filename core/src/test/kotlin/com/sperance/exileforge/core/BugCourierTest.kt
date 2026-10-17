@@ -17,11 +17,12 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Курьер отчётов (0.14.5, #43): запрос в полёте не рвётся, очередь чистится до вести, за проход - одна весть. */
+/** Курьер отчётов: запрос в полёте не рвётся, очередь чистится до вести, за проход - одна весть. */
 @OptIn(ExperimentalCoroutinesApi::class)
 class BugCourierTest {
     private fun report(text: String) = BugReportRequest(text, "screen", emptyMap())
 
+    /** Новый отчёт будит курьера, но запрос в полёте не рвётся. */
     @Test
     fun a_new_report_wakes_the_courier_without_cutting_the_request_in_flight() = runTest {
         val outbox = BugOutbox(Files.createTempDirectory("outbox").toFile())
@@ -43,7 +44,6 @@ class BugCourierTest {
         down = false
         advanceTimeBy(2_001)
         runCurrent()
-        // «a» в полёте; новый отчёт будит курьера, но запрос не рвётся
         courier.put(report("b"))
         runCurrent()
         assertEquals(emptyList(), sent)

@@ -34,9 +34,9 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Правила боя пакета 4 (4.12.x) на живом бою клиента: единая скорость действий (CAST-02), конечный урон (COMBAT-02), лечение сил
- * под `Recovery` (COMBAT-01), потолки (STAT-ATK-08), лёд шкалы с длительностями (STAT-DEF-01), одинаковые ауры (STAT-MISC-07),
- * отрицательная регенерация (STAT-ATK-04); пакет 7 - одна сила возрождения на смерть (STAT-PW1-02), провокация героя (STAT-DEF-05).
+ * Правила боя пакета 4 на живом бою клиента: единая скорость действий, конечный урон, лечение сил
+ * под `Recovery`, потолки, лёд шкалы с длительностями, одинаковые ауры,
+ * отрицательная регенерация; пакет 7 - одна сила возрождения на смерть, провокация героя.
  */
 class CombatRulesTest {
     private val index get() = TestContent.index
@@ -56,7 +56,11 @@ class CombatRulesTest {
 
     private fun battle(hero: Combatant, vararg foes: Foe, life: Double = hero.maxLife, kit: Loadout = Loadout()) = Battle(hero, foes.toList(), rules, index.rules.fight, life, Random(11), kit = kit)
 
-    /** CAST-02: холод и замедление аур - один множитель замаха и перезарядки умений. */
+    /**
+     * Холод и замедление аур - один множитель замаха и перезарядки умений.
+     *
+     * Холод растягивает и применение; перезарядка идёт с его конца.
+     */
     @Test
     fun chill_and_slow_stretch_skill_cooldowns() {
         val skill = index.skills.monsterSkills.first { it.hit != null }
@@ -67,7 +71,6 @@ class CombatRulesTest {
         assertEquals(1 / 0.5, b.heroFighter.slow(), 1e-9)
         foe.readyAt[skill.code] = 0.0
         b.monsterCast(foe)
-        // SKILL-01: холод растягивает и применение; перезарядка идёт с его конца
         val cast = assertNotNull(foe.casting)
         assertEquals(CastTime.of(skill, foe.body, rules) * 1.3, cast.until - cast.from, 1e-9)
         cast.finish()
@@ -75,8 +78,8 @@ class CombatRulesTest {
     }
 
     /**
-     * SKILL-01: оглушение прерывает применение - умение не срабатывает, маны не тратит, перезарядка не начинается; заново - не раньше
-     * паузы правил (0.14.0, ASANA-N01), прерывание в журнале.
+     * Оглушение прерывает применение - умение не срабатывает, маны не тратит, перезарядка не начинается; заново - не раньше
+     * паузы правил, прерывание в журнале.
      */
     @Test
     fun a_stun_breaks_a_cast() {
@@ -96,7 +99,7 @@ class CombatRulesTest {
     }
 
     /**
-     * ASANA-N01: умения монстров маны не тратят - босс без маны с «Ударом по земле» и «Ослаблением» за 30 с бьёт «Ударом» не раз и не
+     * Умения монстров маны не тратят - босс без маны с «Ударом по земле» и «Ослаблением» за 30 с бьёт «Ударом» не раз и не
      * немеет; держит его только перезарядка.
      */
     @Test
@@ -108,7 +111,7 @@ class CombatRulesTest {
         assertTrue(slams >= 3, "the boss slammed $slams times in 30 s")
     }
 
-    /** STAT-ATK-02 (0.14.0): возврат здоровья работает и у монстра - урон по нему возвращается за срок правила. */
+    /** Возврат здоровья работает и у монстра - урон по нему возвращается за срок правила. */
     @Test
     fun a_monster_recoups_too() {
         fun life(recoup: Double): Double {
@@ -119,7 +122,7 @@ class CombatRulesTest {
         assertTrue(life(50.0) > life(0.0), "a monster's recoup gave nothing back")
     }
 
-    /** COMBAT-02: пустой удар по цели без брони - ноль, не NaN; оба живы. */
+    /** Пустой удар по цели без брони - ноль, не NaN; оба живы. */
     @Test
     fun a_zero_blow_deals_nothing() {
         assertEquals(0.0, Combatant(emptyMap(), 1, rules).physicalMitigation(0.0, rules.armour.factor))
@@ -128,7 +131,7 @@ class CombatRulesTest {
         assertTrue(b.foe(0).life.isFinite() && b.foe(0).alive && b.heroFighter.alive, "foe ${b.foe(0).life}, hero ${b.heroFighter.life}")
     }
 
-    /** COMBAT-01: лечение силы от нанесённого урона режет запрет восстановления. */
+    /** Лечение силы от нанесённого урона режет запрет восстановления. */
     @Test
     fun power_healing_reads_recovery() {
         fun healed(extra: Map<String, Double>): Double {
@@ -140,7 +143,7 @@ class CombatRulesTest {
         assertTrue(healed(mapOf(CoreStat.NO_LIFE_REGEN.code to 1.0)) <= 100.0, "a ban on recovery stops the power's healing")
     }
 
-    /** STAT-ATK-08: добивание (босса - под своим потолком, 0.15.0), цена умений, двойной урон и возврат - под потолками правил. */
+    /** Добивание (босса - под своим потолком), цена умений, двойной урон и возврат - под потолками правил. */
     @Test
     fun combat_caps_hold() {
         val caps = rules.caps
@@ -152,7 +155,7 @@ class CombatRulesTest {
         assertEquals(caps.recoup / 100, capped.recoup, 1e-9)
     }
 
-    /** STAT-DEF-01: лёд шкалы слушает длительность заморозки нападающего и сокращение на себе цели. */
+    /** Лёд шкалы слушает длительность заморозки нападающего и сокращение на себе цели. */
     @Test
     fun freeze_bar_ice_follows_durations() {
         val rule = requireNotNull(rules.buildup).freeze
@@ -168,14 +171,14 @@ class CombatRulesTest {
         assertEquals(rule.duration * 0.4, ice(emptyMap(), mapOf("STOCK_FREEZE_DURATION_ON_SELF" to 60.0)), 1e-9)
     }
 
-    /** STAT-MISC-07: одинаковые ауры не складываются - действует сильнейшая. */
+    /** Одинаковые ауры не складываются - действует сильнейшая. */
     @Test
     fun the_same_aura_does_not_stack() {
         val b = battle(body(), Foe(body(mapOf("AURA_WEAKEN" to 25.0), life = 1e6)), Foe(body(mapOf("AURA_WEAKEN" to 20.0, "AURA_RESIST" to 10.0), life = 1e6)))
         assertEquals(mapOf("AURA_WEAKEN" to 25.0, "AURA_RESIST" to 10.0), b.auras())
     }
 
-    /** STAT-ATK-04: отрицательная регенерация отнимает здоровье - против того же боя без неё. */
+    /** Отрицательная регенерация отнимает здоровье - против того же боя без неё. */
     @Test
     fun negative_regeneration_drains_life() {
         fun life(regen: Double): Pair<Double, Double> {
@@ -187,7 +190,7 @@ class CombatRulesTest {
         assertEquals(plain - 6.0 * time, life(-6.0).first, 0.5)
     }
 
-    /** Решение 7 (0.15.0): возрождение одно на бой на все силы смерти - поднимает сильнейшая по здоровью, вторая смерть - конец. */
+    /** Возрождение одно на бой на все силы смерти - поднимает сильнейшая по здоровью, вторая смерть - конец. */
     @Test
     fun one_revival_a_fight_by_the_strongest() {
         val kit = Loadout(powers = PowerBook(index.powers.powers.filter { it.stat == "POWER_PHOENIX_REBIRTH" || it.stat == "POWER_UNWILLING_DEATH" }))
@@ -202,7 +205,7 @@ class CombatRulesTest {
         assertTrue(!hero.alive, "a second revival in one fight")
     }
 
-    /** STAT-DEF-05: спровоцированный бьёт героя слабее (до потолка правила) и не применяет умений - его перезарядки стоят. */
+    /** Спровоцированный бьёт героя слабее (до потолка правила) и не применяет умений - его перезарядки стоят. */
     @Test
     fun a_provoked_foe_hits_softer_and_waits() {
         val provoke = rules.caps.provoke
@@ -217,7 +220,7 @@ class CombatRulesTest {
     }
 
     /**
-     * SKILL-02: метка копит долю прошедшего урона героя по цели и, истекши, взрывается им мимо защит по цели и соседу; подрыв - в журнале.
+     * Метка копит долю прошедшего урона героя по цели и, истекши, взрывается им мимо защит по цели и соседу; подрыв - в журнале.
      */
     @Test
     fun a_mark_stores_damage_and_bursts_on_neighbours() {

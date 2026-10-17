@@ -18,9 +18,12 @@ object TestWorld {
     val index: ContentIndex by lazy { ContentLoader.load { read("content/$it") } }
     val russian: LocaleBundle by lazy { LocaleBundle.parse("ru", "test", read("locale/ru.json")) }
 
-    /** A rolled copy of the least demanding common base of [slot], at [rarity], from a fixed seed. */
+    /**
+     * A rolled copy of the least demanding common base of [slot], at [rarity], from a fixed seed.
+     *
+     * База слота может просить уровень или атрибут: берётся та, что просит меньше всех.
+     */
     fun roll(id: String, slot: Slot, rarity: Rarity, seed: Long = 1L): ItemInstance {
-        // Every base of a slot may ask for a level or an attribute: the one that asks least stands in
         val template = index.templates.values.filter { it.slot == slot && !it.unique }
             .minWith(compareBy({ it.demanding }, { it.requiredLevel }, { it.code }))
         return ItemFactory(index).create(id, template, rarity, Dice(seed))

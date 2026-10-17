@@ -58,15 +58,17 @@ class ExpeditionGoldenTest {
         assertTrue(golden.listFiles().orEmpty().count { it.name.startsWith("run-") } >= cases.size)
     }
 
-    /** A whole autorun on fixed dice and a fixed step: the journal line by line, then the run's figures. */
+    /**
+     * A whole autorun on fixed dice and a fixed step: the journal line by line, then the run's figures.
+     *
+     * Первое активное умение класса, две простые фляги здоровья; ворота портала ждут игрока - золотой заход не входит в Ваал-зону.
+     */
     private fun play(case: Case): String {
         val heroClass = index.classes.classes[case.heroClass % index.classes.classes.size]
         val zone = index.campaign.zones[case.zone % index.campaign.zones.size]
         val sheet = Sheets.calculate(index, case.level, heroClass.code, listOf(TakenNode(heroClass.startNode)), emptyList())
-        // The class's first active skill, as a fresh hero wields it.
         val skill = index.skills.own(heroClass.code).firstOrNull { it.type.kind == SkillKind.ACTIVE && it.unlock <= case.level }
         val skills = HeroSkills(learned = skill?.let { mapOf(it.code to case.level.coerceAtMost(20)) }.orEmpty(), active = listOf(skill?.let { ActiveSlot(it.code, SlotCondition.READY) }))
-        // Two plain life flasks on the belt: a naked hero would fall before the boss.
         val flasks = List(2) { n ->
             val template = index.template(FLASK) ?: return@List null
             BeltFlask.of(ItemFactory(index).create("flask-$n", template, Rarity.COMMON, Dice(case.seed + n)), template, index, SlotCondition.READY)
@@ -82,12 +84,8 @@ class ExpeditionGoldenTest {
             val hud = expedition.hud.value
             when (hud.phase) {
                 RunPhase.DEAD, RunPhase.CLEARED, RunPhase.LEFT -> break
-
-                // The portal's gate waits for the player: a golden run never enters the Vaal zone.
                 RunPhase.GATE -> expedition.send(RunCommand.ShutGate(false))
-
                 RunPhase.MAP -> if (hud.auto == null) expedition.send(RunCommand.Leave)
-
                 else -> Unit
             }
         }
@@ -103,7 +101,7 @@ class ExpeditionGoldenTest {
         }
     }
 
-    /** The event as the journal wrote it before the sealed events (server 1.75.0): the golden files stay the same. */
+    /** The event as the journal wrote it before the sealed events: the golden files stay the same. */
     private fun RunEvent.flat(): List<Any> {
         val index = when (this) {
             is RunEvent.Chest -> index
@@ -115,7 +113,6 @@ class ExpeditionGoldenTest {
         val engage = this as? RunEvent.Engage
         val vaal = (this as? RunEvent.Kill)?.vaal ?: (this as? RunEvent.Fall)?.vaal ?: engage?.vaal ?: false
         val claim = this as? RunEvent.AbyssClaim
-        // Начало боя (3.88.0): пак - как у убийства, босс - флагом на месте «пал ли» Бездны.
         val pack = (this as? RunEvent.Kill)?.i ?: engage?.i ?: 0
         return listOf(n, kind, pack, (this as? RunEvent.Kill)?.m ?: 0, index, claim?.depth ?: 0, claim?.fallen ?: engage?.boss ?: false, vaal)
     }

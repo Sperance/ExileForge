@@ -25,7 +25,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Страж, что отдыхает и возвращается посреди захода, «Завершить» автопробега и общее правило энергощита (3.95.2). */
+/** Страж, что отдыхает и возвращается посреди захода, «Завершить» автопробега и общее правило энергощита. */
 class GuardianAndAutoTest {
     private val index get() = TestContent.index
     private val zone get() = index.campaign.zones.first()

@@ -18,7 +18,11 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasFog
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.view
@@ -30,6 +34,7 @@ import com.sperance.exileforge.ui.theme.*
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sin
@@ -39,9 +44,10 @@ import kotlin.math.sin
  * The sky itself: faint stars behind, the threads, then the nodes; dragged, pinched and tapped.
  *
  * Небо открывается близко, старт - посреди открытого листом места. Часы декора - состоянием, читаются только в дышащих слоях: мерцание
- * стоит без анимаций и вне экрана; свечения, нити и кольца рисуются заново лишь со сдвигом, масштабом или взятием. Тумана нет: всё небо
- * видно и нажимается, недоступное лишь тусклее. Нити считаются раз, дышащее - раз на взятие. Касание читает масштаб и сдвиг на миг касания,
- * жест не перезапускается каждый кадр. Атлас растёт вверх от старта; щипок масштабирует вокруг пальцев.
+ * стоит без анимаций и вне экрана; нити, кольца дорог и подписи ветвей рисуются заново лишь со сдвигом, масштабом или взятием. Тумана нет:
+ * всё небо видно и нажимается, недоступное лишь тусклее. Нити считаются раз, дышащее - раз на взятие. Касание читает масштаб и сдвиг на миг
+ * касания, жест не перезапускается каждый кадр. Атлас - колесо вокруг старта: пунктирные кольца - кольцевые дороги раскладки, у каждой
+ * ветви - подпись снаружи её звёзд; щипок масштабирует вокруг пальцев.
  */
 @Composable internal fun Sky(index: ContentIndex, taken: Set<String>, selected: String, modifier: Modifier, onSelect: (String) -> Unit) {
     val graph = index.atlasGraph
@@ -56,7 +62,14 @@ import kotlin.math.sin
     val clock = com.sperance.exileforge.ui.components.decorTime()
     val reachable = remember(taken, graph) { nodes.filter { AtlasFog.canTake(graph, it.code, taken) }.map { it.code }.toSet() }
     val shown = nodes
-    val glows = remember(nodes) { Glow.of(nodes) }
+    val rings = remember(index) { index.atlas.layout.rings.map { it.radius } }
+    val measurer = rememberTextMeasurer()
+    val labelStyle = MaterialTheme.typography.labelSmall
+    val labels = remember(nodes, labelStyle) {
+        BranchLabel.of(nodes).map { label ->
+            label to measurer.measure(ui("atlas.branch.${label.branch.name}"), labelStyle.copy(color = label.tint(), fontStyle = if (label.mini) FontStyle.Italic else FontStyle.Normal))
+        }
+    }
     val strands = remember(nodes, graph) { nodes.flatMap { node -> node.parents.mapNotNull { parent -> graph.node(parent)?.let { Strand(it, node) } } } }
     val brushes = remember(nodes) { SkyBrushes() }
     val live = remember(nodes, taken, reachable) { LiveStar.of(nodes, taken, reachable) }
@@ -68,7 +81,7 @@ import kotlin.math.sin
                 val width = size.width.toFloat()
                 val height = size.height.toFloat()
                 val at = Placement(bounds, width, height, floor, margin, scale, Offset.Zero)(start)
-                pan = Offset(width / 2 - at.x, (height - floor) * START_DOWN - at.y)
+                pan = Offset(width / 2 - at.x, (height - floor) / 2 - at.y)
                 framed = true
             }
             .pointerInput(nodes) {
@@ -76,7 +89,7 @@ import kotlin.math.sin
                     val width = size.width.toFloat()
                     val height = size.height.toFloat()
                     val next = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                    val anchor = Offset(width / 2, height - floor)
+                    val anchor = Offset(width / 2, (height - floor) / 2)
                     val moved = centroid - anchor - (centroid - anchor - pan) * (next / scale) + drag
                     scale = next
                     pan = Placement(bounds, width, height, floor, margin, next, moved).held()
@@ -93,16 +106,18 @@ import kotlin.math.sin
         Canvas(Modifier.matchParentSize()) { stars(clock.value) }
         Canvas(Modifier.matchParentSize()) {
             val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
-            glows.forEach { glow ->
-                val c = place(glow.center)
-                val r = glow.radius * placeScale(place)
-                translate(c.x, c.y) { drawCircle(brushes.glow(glow.hue, r), r, Offset.Zero) }
-            }
+            val origin = place(0.0, 0.0)
+            val dash = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 4.dp.toPx()))
+            rings.forEach { drawCircle(Sky.faint.copy(alpha = .16f), (it * place.unit).toFloat(), origin, style = Stroke(1.dp.toPx(), pathEffect = dash)) }
             strands.forEach { strand ->
                 val lit = strand.node.code in taken && strand.parent.code in taken
                 drawLine(if (lit) strand.node.branch.hue() else Sky.faint.copy(alpha = .22f), place(strand.parent), place(strand.node), (if (lit) 2.dp else 1.dp).toPx())
             }
             shown.forEach { starStill(it, place(it), it.code in taken, it.code in reachable, it.code == selected, brushes) }
+            labels.forEach { (label, text) ->
+                val at = place(label.x, label.y)
+                drawText(text, topLeft = Offset(at.x - text.size.width / 2f, at.y - text.size.height / 2f))
+            }
         }
         Canvas(Modifier.matchParentSize()) {
             val place = Placement(bounds, size.width, size.height, floor, margin, scale, pan)
@@ -119,20 +134,17 @@ import kotlin.math.sin
 /** One thread of the sky: a node and the parent it hangs from. */
 internal class Strand(val parent: AtlasNode, val node: AtlasNode)
 
-/** The gradients of the sky, made once per hue and radius, not a shader for every glow and halo on every frame. */
+/** The gradients of the sky, made once per hue and radius, not a shader for every halo on every frame. */
 internal class SkyBrushes {
-    private val glows = HashMap<Pair<Color, Float>, Brush>()
     private val halos = HashMap<Pair<Color, Float>, Brush>()
-
-    /** A constellation's glow of [hue] spreading [r] pixels, centred at the origin: drawn under a translation. */
-    fun glow(hue: Color, r: Float): Brush = glows.getOrPut(hue to r) { Brush.radialGradient(listOf(hue.copy(alpha = .16f), Color.Transparent), Offset.Zero, r) }
 
     /** A taken or chosen star's halo of [hue] reaching [r] pixels, centred at the origin. */
     fun halo(hue: Color, r: Float): Brush = halos.getOrPut(hue to r) { Brush.radialGradient(listOf(hue.copy(alpha = .55f), Color.Transparent), Offset.Zero, r) }
 }
 
 /**
- * How far the sky zooms out and in, and where it opens. With [SPREAD] the closest pair of the server's atlas (4.6 units,) is some 30 dp apart at [OPEN_ZOOM] on a phone and a hundred at [MAX_ZOOM]; [MIN_ZOOM] shows the whole sky.
+ * How far the sky zooms out and in, and where it opens. With [SPREAD] the closest pair of the server's atlas (8 units of a wheel some 400 across)
+ * is some 30 dp apart at [OPEN_ZOOM] on a phone and a hundred at [MAX_ZOOM]; [MIN_ZOOM] shows the whole sky.
  */
 internal const val MIN_ZOOM = .4f
 internal const val OPEN_ZOOM = 1.5f
@@ -147,7 +159,7 @@ internal val TAP_RADIUS = 20.dp
 /** The least pixels per sky unit, whatever room the view leaves. */
 internal const val MIN_FIT = .5f
 
-/** Where a node lands on screen: the start at the bottom middle above the sheet, y up, fitted to the width. */
+/** Where a node lands on screen: the middle of the sky in the middle of the room above the sheet, y up, fitted to the width. */
 internal class Placement(
     private val b: SkyBounds,
     private val width: Float,
@@ -160,29 +172,34 @@ internal class Placement(
     /** Kept above [MIN_FIT]: a sky shorter than the sheet and margins would turn it negative and flip the pan limits. */
     private val fit = (min((width - margin * 2) / b.spanX, (height - floor - margin * 3) / b.spanY) * SPREAD).coerceAtLeast(MIN_FIT)
     val unit: Float get() = fit * scale
-    operator fun invoke(node: AtlasNode) = Offset(
-        width / 2 + ((node.x - b.midX) * fit * scale).toFloat() + pan.x,
-        height - floor - (node.y * fit * scale).toFloat() + pan.y,
+    operator fun invoke(node: AtlasNode) = invoke(node.x, node.y)
+
+    /** Where the sky point ([x], [y]) lands on screen. */
+    operator fun invoke(x: Double, y: Double) = Offset(
+        width / 2 + ((x - b.midX) * fit * scale).toFloat() + pan.x,
+        (height - floor) / 2 - ((y - b.midY) * fit * scale).toFloat() + pan.y,
     )
 
     /**
      * The pan held so the sky never leaves the view: any star can be brought to the middle of what the sheet leaves open
-     * — the farthest left, right, the start, the top — and no further.
+     * — the farthest left, right, top and bottom — and no further.
      */
     fun held(): Offset {
         val halfX = abs(b.spanX / 2 * unit)
-        val middle = (height - floor) / 2 - (height - floor)
-        val top = middle + b.spanY * unit
-        return Offset(pan.x.coerceIn(-halfX, halfX), pan.y.coerceIn(minOf(middle, top), maxOf(middle, top)))
+        val halfY = abs(b.spanY / 2 * unit)
+        return Offset(pan.x.coerceIn(-halfX, halfX), pan.y.coerceIn(-halfY, halfY))
     }
 }
 
-internal class SkyBounds(val midX: Double, val spanX: Float, val spanY: Float) {
+/** The box of the sky: its middle and spans in atlas units. */
+internal class SkyBounds(val midX: Double, val midY: Double, val spanX: Float, val spanY: Float) {
     companion object {
         fun of(nodes: List<AtlasNode>): SkyBounds {
             val minX = nodes.minOfOrNull { it.x } ?: 0.0
             val maxX = nodes.maxOfOrNull { it.x } ?: 1.0
-            return SkyBounds((minX + maxX) / 2, max(1.0, maxX - minX).toFloat(), max(1.0, nodes.maxOfOrNull { it.y } ?: 1.0).toFloat())
+            val minY = nodes.minOfOrNull { it.y } ?: 0.0
+            val maxY = nodes.maxOfOrNull { it.y } ?: 1.0
+            return SkyBounds((minX + maxX) / 2, (minY + maxY) / 2, max(1.0, maxX - minX).toFloat(), max(1.0, maxY - minY).toFloat())
         }
     }
 }
@@ -247,21 +264,28 @@ internal class LiveStar(val node: AtlasNode, val twinkles: Boolean, val rim: Col
     }
 }
 
-/** How far down the view the atlas's start is framed: its branches rise above it. */
-internal const val START_DOWN = .8f
+/**
+ * A branch's name on the sky: at the middle of its stars pushed out from the start ([PUSH], a map-object branch [MINI_PUSH]) and kept
+ * inside the wheel's rim; a map-object branch (no keystones) is written in italics.
+ */
+internal class BranchLabel(val branch: AtlasBranch, val x: Double, val y: Double, val mini: Boolean) {
+    fun tint(): Color = if (mini) branch.hue().copy(alpha = .75f) else Sky.text.copy(alpha = .75f)
 
-/** A constellation's glow: its middle, how far it spreads in atlas units, its mechanic's hue and its nodes. */
-internal class Glow(val center: AtlasNode, val radius: Float, val hue: Color, val codes: Set<String>) {
     companion object {
-        fun of(nodes: List<AtlasNode>): List<Glow> = nodes.groupBy { AtlasFog.constellation(it.code) }.mapNotNull { (key, members) ->
-            key ?: return@mapNotNull null
-            val x = members.sumOf { it.x } / members.size
-            val y = members.sumOf { it.y } / members.size
-            val spread = members.maxOf { kotlin.math.hypot(it.x - x, it.y - y) }.toFloat() + 2f
-            Glow(members.first().copy(x = x, y = y), spread, members.first().branch.hue(), members.mapTo(HashSet()) { it.code })
+        private const val PUSH = 1.2
+        private const val MINI_PUSH = 1.1
+        private const val RIM = .94
+
+        fun of(nodes: List<AtlasNode>): List<BranchLabel> {
+            val rim = nodes.maxOfOrNull { hypot(it.x, it.y) } ?: 1.0
+            return nodes.groupBy { it.branch }.filterKeys { it != AtlasBranch.ROOT }.map { (branch, members) ->
+                val x = members.sumOf { it.x } / members.size
+                val y = members.sumOf { it.y } / members.size
+                val mini = members.none { it.kind == AtlasNodeKind.KEYSTONE }
+                val r = max(hypot(x, y), 1.0)
+                val out = min(r * (if (mini) MINI_PUSH else PUSH), rim * RIM) / r
+                BranchLabel(branch, x * out, y * out, mini)
+            }
         }
     }
 }
-
-/** Screen pixels per atlas unit at the placement's fit and zoom. */
-internal fun placeScale(place: Placement): Float = place.unit

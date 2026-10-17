@@ -120,7 +120,8 @@ typealias ItemFilterState = FilterState<ItemShelf, ItemFilter>
 
 /**
  * Шторка фильтра списка предметов («Аккордеон»): грани списка [ItemFilterState.shelf] - тип ([groups] - что есть в
- * списке), редкость плитками ([rarities]), качество, порядок, и переключатели «сделано мной», «могу надеть», «скрыть надетое».
+ * списке), редкость плитками ([rarities]), качество, порядок, и переключатели «сделано мной», «сделано ремеслом», «могу надеть»,
+ * «скрыть надетое».
  * Правки идут в черновик; «Показать N» ([count] - сколько пройдёт черновик) применяет его, «Сбросить» сразу
  * применяет обычный списка и закрывает шторку.
  */
@@ -147,6 +148,7 @@ fun ItemFilterSheet(state: ItemFilterState, groups: List<SlotGroup>, rarities: L
     )
     val switches = listOfNotNull(
         FilterSwitch(ui("filter.mine"), draft.mine) { draft = draft.copy(mine = it) }.takeIf { has(FilterFacet.MINE) },
+        FilterSwitch(ui("filter.crafted"), draft.crafted) { draft = draft.copy(crafted = it) }.takeIf { has(FilterFacet.CRAFTED) },
         FilterSwitch(ui("filter.wearable"), draft.wearable) { draft = draft.copy(wearable = it) }.takeIf { has(FilterFacet.WEARABLE) },
         FilterSwitch(ui("filter.hide_worn"), draft.hideWorn) { draft = draft.copy(hideWorn = it) }.takeIf { has(FilterFacet.HIDE_WORN) },
     )

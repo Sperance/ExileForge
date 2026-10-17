@@ -50,6 +50,7 @@ import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains
 import com.sperance.exileforge.rules.roll.WorkTally
+import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.rememberInspect
 import com.sperance.exileforge.ui.icons.BagIcon
@@ -101,6 +102,7 @@ internal class WorkSums(
 /**
  * Книга учёта: итоги [sums] с иконками, под чертой [title] строки стопок и чипы сделанного [made]. [startedAt] > 0 - есть время в
  * работе: оно идёт по часам сервера (сдвиг [offset]); ноль - итог сессии, без времени. [makes] - работа делает вещи: есть итог «сделано».
+ * [onShow] - кнопка «Показать в тайнике» под сделанным; null - без неё.
  *
  * Книга учёта ремесла: итоги с иконками в две колонки - время (вживую), циклы (−впустую), опыт (▲уровни), сделано; затем каждая стопка
  * строкой - иконка, имя, мини-полоса на общей шкале и сколько (добытое зелёным, потраченное красным); сделанные вещи - чипами цвета
@@ -108,7 +110,7 @@ internal class WorkSums(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<ItemInstance>, startedAt: Long = 0, offset: Long = 0, makes: Boolean = sums.made > 0) {
+internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<ItemInstance>, startedAt: Long = 0, offset: Long = 0, makes: Boolean = sums.made > 0, onShow: (() -> Unit)? = null) {
     val inspect = rememberInspect()
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         FlowRow(Modifier.fillMaxWidth(), maxItemsInEachRow = 2, verticalArrangement = Arrangement.spacedBy(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -148,6 +150,7 @@ internal fun WorkLedger(game: GameUi, title: String, sums: WorkSums, made: List<
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 made.forEach { item -> TallyChip(equipmentTitle(item.template), null, rarityColor(item.rarity.name)) { inspect(Inspect.Copy(item)) } }
             }
+            onShow?.let { ForgeOutlinedButton(onClick = it) { Text(ui("crafts.show_in_stash")) } }
         }
     }
 }

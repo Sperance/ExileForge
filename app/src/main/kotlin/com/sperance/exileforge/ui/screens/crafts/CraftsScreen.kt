@@ -67,6 +67,7 @@ import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.presentation.state.TAB_CRAFTS
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.JobInput
@@ -157,7 +158,9 @@ fun CraftsScreen() {
 /**
  * The work under way, on every screen of the tab: which, how far the cycle is, and a stop — and
  * in its own frame, what the work has come to since it started: how
- * long it runs, its cycles and experience, what it made, and every stack gathered and spent. Итог - книгой учёта ([WorkLedger]).
+ * long it runs, its cycles and experience, what it made, and every stack gathered and spent. Итог - книгой учёта ([WorkLedger]); сделанное
+ * с начала работы - вещи героя с меткой происхождения этой работы ([com.sperance.exileforge.core.model.crafts.WorkView.made]), кнопка
+ * под ними открывает тайник с фильтром «Сделано ремеслом».
  *
  * Вещь в работе (Осквернение) не видна среди вещей героя, пока работа идёт.
  */
@@ -180,7 +183,19 @@ internal fun WorkPlaque(game: GameUi, vm: CraftsViewModel, crafts: Crafts, offse
         CycleBar(work, offset, crafts.last, hourly = hourlyLine(crafts, work))
         LevelLine(crafts, work, offset)
         val sums = remember(work.totals) { WorkSums.of(work.totals) }
-        WorkLedger(game, ui("crafts.totals_title"), sums, crafts.totals.equipment, startedAt = work.startedAt, offset = offset, makes = crafts.state?.running?.kind?.makesItems == true)
+        val hero = game.hero
+        val made = remember(work, hero?.items, hero?.overflow) { work.made(hero?.items.orEmpty() + hero?.overflow.orEmpty()) }
+        val heroModel = koinViewModel<HeroViewModel>()
+        WorkLedger(
+            game,
+            ui("crafts.totals_title"),
+            sums,
+            made,
+            startedAt = work.startedAt,
+            offset = offset,
+            makes = crafts.state?.running?.kind?.makesItems == true,
+            onShow = { heroModel.showStash(ItemShelf.STASH.defaults.copy(crafted = true)) },
+        )
         crafts.state?.running?.let { stockLine(game, work, it) }?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
     }
 }

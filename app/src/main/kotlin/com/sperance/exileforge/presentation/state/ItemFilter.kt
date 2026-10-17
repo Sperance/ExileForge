@@ -121,7 +121,7 @@ enum class ItemSort {
 }
 
 /** Что умеет сузить фильтр списка: каждая грань - строка шторки или переключатель. */
-enum class FilterFacet { TYPE, RARITY, QUALITY, MINE, WEARABLE, HIDE_WORN, SORT }
+enum class FilterFacet { TYPE, RARITY, QUALITY, MINE, CRAFTED, WEARABLE, HIDE_WORN, SORT }
 
 /**
  * Список предметов приложения с фильтром: какие грани фильтра в нём есть ([facets]), какие порядки ([sorts]) и с чего он
@@ -140,7 +140,8 @@ enum class ItemShelf(val facets: Set<FilterFacet>, val sorts: List<ItemSort>, va
 
 /**
  * Единый фильтр предметов всех списков: тип ([type], null - всё), редкости (пусто - все), качество,
- * «сделано мной» (поле `maker` копии - имя героя), «могу надеть», «скрыть надетое», порядок и поиск. Поиск - только экрана и не
+ * «сделано мной» (поле `maker` копии - имя героя), «сделано ремеслом» (метка происхождения копии `origin` с сервера), «могу надеть»,
+ * «скрыть надетое», порядок и поиск. Поиск - только экрана и не
  * запоминается; прочее хранится на устройстве для своего списка ([ItemShelf]).
  */
 @Serializable
@@ -149,6 +150,7 @@ data class ItemFilter(
     val rarities: Set<Rarity> = emptySet(),
     val quality: QualityFilter = QualityFilter.ANY,
     val mine: Boolean = false,
+    val crafted: Boolean = false,
     val wearable: Boolean = false,
     val hideWorn: Boolean = false,
     val sort: ItemSort = ItemSort.NEWEST,
@@ -159,7 +161,7 @@ data class ItemFilter(
     /** Сколько настроек отличается от обычных списка [shelf]: число на значке фильтра. */
     fun tweaks(shelf: ItemShelf): Int {
         val base = shelf.defaults
-        return listOf(type != base.type, rarities != base.rarities, quality != base.quality, mine != base.mine, wearable != base.wearable, hideWorn != base.hideWorn, query.isNotBlank())
+        return listOf(type != base.type, rarities != base.rarities, quality != base.quality, mine != base.mine, crafted != base.crafted, wearable != base.wearable, hideWorn != base.hideWorn, query.isNotBlank())
             .count { it }
     }
 
@@ -173,6 +175,7 @@ data class ItemFilter(
             (!on(FilterFacet.RARITY) || rarities.isEmpty() || piece.rarity in rarities) &&
             (!on(FilterFacet.QUALITY) || quality.admits(piece)) &&
             (!on(FilterFacet.MINE) || !mine || piece.item.maker?.hero == heroName) &&
+            (!on(FilterFacet.CRAFTED) || !crafted || piece.item.origin != null) &&
             (!on(FilterFacet.WEARABLE) || !wearable || unmet(piece.code).isEmpty()) &&
             (!on(FilterFacet.HIDE_WORN) || !hideWorn || !piece.isWorn || piece.slot.isTool) &&
             ItemSearch.matches(piece, query)

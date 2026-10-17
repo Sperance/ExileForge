@@ -83,6 +83,12 @@ import kotlinx.serialization.Serializable
 
     /** Ближайшая граница цикла позже [now] на часах сервера: на ней работа пересчитывается с сервера. */
     fun nextBoundary(now: Long): Long = maxOf(now, settledAt) - phase(now) + cycleMillis
+
+    /**
+     * Что эта работа сделала с начала, из вещей героя [items]: метка происхождения сервера ([com.sperance.exileforge.rules.roll.ItemOrigin]) - профессия работы и миг
+     * не раньше [startedAt]. Проданное и отданное из списка уходит.
+     */
+    fun made(items: Iterable<ItemInstance>): List<ItemInstance> = items.filter { item -> item.origin?.let { it.profession == profession && it.at >= startedAt } == true }
 }
 
 /** The work [code] as the hero runs it: the chosen variant of a choosing work, else the work itself. */

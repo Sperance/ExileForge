@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.campaign.hexes
 import com.sperance.exileforge.core.campaign.usesAll
 import com.sperance.exileforge.core.character.StatLine
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.FlaskStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.Op
 import com.sperance.exileforge.rules.content.PowerEvent
@@ -482,7 +483,7 @@ internal fun Battle.useFlasks() {
     kit.flasks.forEachIndexed { i, flask ->
         flask ?: return@forEachIndexed
         if (draughtOf(i) != null || flaskLock(i) > 0) return@forEachIndexed
-        val auto = flask.sheet.own("FLASK_AUTO_LOW_LIFE").let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
+        val auto = flask.sheet.own(FlaskStat.AUTO_LOW_LIFE.code).let { it > 0 && hero.life < hero.body.maxLife * it / 100 }
         if (i !in drinks && !auto && !holds(flask.condition, flaskOpened[i])) return@forEachIndexed
         if (charges[i] + 1e-9 < flask.sheet.perUse(hero.body::get)) return@forEachIndexed
         if (hero.life >= hero.body.maxLife && flask.sheet.draught(hero.body, hero.life, manaCap()).lifeOnly) return@forEachIndexed
@@ -495,7 +496,7 @@ internal fun Battle.useFlasks() {
 internal fun Battle.drink(slot: Int, belt: BeltFlask, free: Boolean = false) {
     val flask = belt.sheet
     val hero = heroFighter
-    val keep = !free && flask.own("FLASK_NO_CHARGE_CHANCE").let { it > 0 && random.nextDouble() * 100 < it }
+    val keep = !free && flask.own(FlaskStat.NO_CHARGE_CHANCE.code).let { it > 0 && random.nextDouble() * 100 < it }
     val draught = flask.draught(hero.body, hero.life, manaCap())
     charges[slot] = when {
         free -> charges[slot]

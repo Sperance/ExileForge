@@ -11,6 +11,7 @@ import com.sperance.exileforge.rules.content.AtlasStat
 import com.sperance.exileforge.rules.content.BuffKind
 import com.sperance.exileforge.rules.content.BuildupRule
 import com.sperance.exileforge.rules.content.CoreStat
+import com.sperance.exileforge.rules.content.FlaskStat
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.content.PowerEvent
 import com.sperance.exileforge.rules.content.RecoveryPool
@@ -107,14 +108,14 @@ internal fun Battle.land(me: Fighter, target: Fighter, kind: HitKind, struck: Ma
         if (kind == HitKind.CRIT) critAt = time
         if (blow.primary && target.alive) provoke(target)
         if (kind == HitKind.CRIT) {
-            flaskCharge("FLASK_CHARGE_ON_CRIT")
+            flaskCharge(FlaskStat.CHARGE_ON_CRIT.code)
             trigger(SkillEvent.CRIT, target, hit = ailing)
             if (blow.spell) trigger(SkillEvent.SPELL_CRIT, target, hit = ailing)
         }
         if (powers.dealt(PowerMoment(target, taken, blow.spell, hit = ailing), kind == HitKind.CRIT, stunned, inflicted, blow.primary) && powers.restand()) remake(heroFighter)
     }
     if (target === heroFighter) {
-        flaskCharge("FLASK_CHARGE_WHEN_HIT")
+        flaskCharge(FlaskStat.CHARGE_WHEN_HIT.code)
         trigger(SkillEvent.HIT_TAKEN, me)
         powers.taken(PowerMoment(me, taken, blow.spell), kind == HitKind.CRIT)
         val chance = target.body[CoreStat.CURSE_ON_HIT.code]
@@ -376,7 +377,7 @@ internal fun Battle.fell(fighter: Fighter, spell: Boolean = false, killer: Fight
     kit.flasks.forEachIndexed { i, flask ->
         flask ?: return@forEachIndexed
         chargeFlask(i, flask.sheet.gained(base, hero.body::get))
-        val longer = flask.sheet.own("FLASK_DURATION_PER_KILL")
+        val longer = flask.sheet.own(FlaskStat.DURATION_PER_KILL.code)
         if (longer > 0) draughtOf(i)?.let { running -> hero.effects[hero.effects.indexOf(running)] = running.copy(until = running.until + longer) }
     }
     trigger(SkillEvent.KILL)

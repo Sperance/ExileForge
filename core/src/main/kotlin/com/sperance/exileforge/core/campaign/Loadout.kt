@@ -302,22 +302,22 @@ data class Draught(
 fun FlaskSheet.draught(hero: Combatant, life: Double, manaCap: Double): Draught {
     val duration = duration(hero::get)
     val low = life < hero.maxLife * hero.rules.lowLife
-    val recover = recovery(hero::get) * if (low) 1 + own("FLASK_LOW_LIFE_RECOVERY") / 100 else 1.0
+    val recover = recovery(hero::get) * if (low) 1 + own(FlaskStat.LOW_LIFE_RECOVERY.code) / 100 else 1.0
     val lifeAmount = own(FlaskStat.LIFE.code) * recover
     val manaAmount = own(FlaskStat.MANA.code) * recover
     val scale = effect(hero::get)
     val (steady, conditioned) = lines.partition { it.condition == null }
     return Draught(
         life = lifeAmount * instant,
-        mana = manaAmount * instant + if (FlaskSheet.banned(CoreStat.FLASK_RECOVERY.code, hero::get)) 0.0 else manaCap * own("FLASK_SIP_MANA") / 100,
-        shield = hero.maxShield * own("FLASK_SIP_SHIELD") / 100,
+        mana = manaAmount * instant + if (FlaskSheet.banned(CoreStat.FLASK_RECOVERY.code, hero::get)) 0.0 else manaCap * own(FlaskStat.SIP_MANA.code) / 100,
+        shield = hero.maxShield * own(FlaskStat.SIP_SHIELD.code) / 100,
         lifeRate = lifeAmount * (1 - instant) / duration,
         manaRate = manaAmount * (1 - instant) / duration,
         lines = steady.map { StatLine(it.stat, it.op, it.value * scale) },
         duration = duration,
-        invulnerable = own("FLASK_INVULNERABLE"),
+        invulnerable = own(FlaskStat.INVULNERABLE.code),
         conditional = conditioned.map { ConditionalLine(requireNotNull(it.condition), StatLine(it.stat, it.op, it.value * scale)) },
-        toMana = own("FLASK_LIFE_TO_MANA") / 100,
-        toShield = own("FLASK_LIFE_TO_SHIELD") / 100,
+        toMana = own(FlaskStat.LIFE_TO_MANA.code) / 100,
+        toShield = own(FlaskStat.LIFE_TO_SHIELD.code) / 100,
     )
 }

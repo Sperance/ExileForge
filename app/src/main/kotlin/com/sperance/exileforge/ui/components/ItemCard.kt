@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -45,6 +47,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.presentation.state.FlaskBonuses
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -227,6 +230,7 @@ fun ItemCard(
         }
         if (!detailed && rolled.size > shown.size) MutedText(ui("card.more_properties", rolled.size - shown.size), style = MaterialTheme.typography.labelMedium)
         FatedSlot(item.item)
+        if (detailed && item.slot.isFlask) FlaskYours(look)
         if (detailed) {
             item.description.takeIf { it.isNotBlank() }?.let {
                 Text(
@@ -344,6 +348,39 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
         Text(title, color = Parchment, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
         Text(value, color = tint, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, maxLines = 2)
         if (open != null) Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
+    }
+}
+
+/** Бонусы героя к флягам для блока «У вас» карточки фляги; null - героя нет, блок не рисуется. */
+val LocalFlaskBonuses = compositionLocalOf<FlaskBonuses?> { null }
+
+/**
+ * Блок «У вас» под числами фляги: бонусы героя ко всем флягам свёрнуты строкой с их числом, раскрытые - итог каждого и под ним
+ * его источники с вкладом. Числа фляги выше - сама фляга; бонусов нет - блока нет.
+ */
+@Composable private fun FlaskYours(look: RelicLook) {
+    val bonuses = LocalFlaskBonuses.current?.bonuses.orEmpty()
+    if (bonuses.isEmpty()) return
+    var open by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth()) {
+        FoldRow(ui("card.flask_yours"), bonuses.size.toString(), look.muted, open = open) { open = !open }
+        if (open) {
+            Column(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                MutedText(ui("card.flask_yours_hint"), style = MaterialTheme.typography.labelSmall)
+                bonuses.forEach { bonus ->
+                    YoursRow(statTitle(bonus.stat), bonus.total, bonus.better, MaterialTheme.typography.labelLarge, Parchment)
+                    bonus.sources.forEach { source -> YoursRow(source.title, source.value, source.better, MaterialTheme.typography.labelSmall, look.muted, Modifier.padding(start = 12.dp)) }
+                }
+            }
+        }
+    }
+}
+
+/** Строка блока «У вас»: название слева, число справа цветом оценки - рост `Vital`, потеря `LifeRed`, без оценки - [ink]. */
+@Composable private fun YoursRow(title: String, value: String, better: Boolean?, style: TextStyle, ink: Color, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(title, color = ink, style = style, modifier = Modifier.weight(1f))
+        Text(value, color = better?.let { if (it) Vital else LifeRed } ?: ink, style = style, fontWeight = FontWeight.SemiBold)
     }
 }
 

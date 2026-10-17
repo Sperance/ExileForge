@@ -160,6 +160,7 @@ import org.koin.compose.viewmodel.koinViewModel
             CompositionLocalProvider(
                 LocalBugReport provides { sheets.bug = true },
                 LocalMailOpen provides { mailOpen = true },
+                com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.presentation.state.FlaskBonuses(game) },
                 com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
                 com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
             ) {

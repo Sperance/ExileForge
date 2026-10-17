@@ -3883,6 +3883,8 @@
   "flask.measure.EFFECT": "Сила эффекта",
   "flask.seconds": "{0} с",
   "relic.requirements": "Требования",
+  "card.flask_yours": "У вас",
+  "card.flask_yours_hint": "Бонусы героя ко всем флягам: в бою ложатся поверх чисел этой фляги",
   "stash.rarity_many.COMMON": "Обычные",
   "stash.rarity_many.MAGIC": "Волшебные",
   "stash.rarity_many.RARE": "Редкие",

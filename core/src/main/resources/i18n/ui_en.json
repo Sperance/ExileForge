@@ -3883,6 +3883,8 @@
   "flask.measure.EFFECT": "Effect",
   "flask.seconds": "{0} s",
   "relic.requirements": "Requirements",
+  "card.flask_yours": "Yours",
+  "card.flask_yours_hint": "The hero's bonuses to every flask: in a fight they add to this flask's numbers",
   "stash.rarity_many.COMMON": "Normal",
   "stash.rarity_many.MAGIC": "Magic",
   "stash.rarity_many.RARE": "Rare",

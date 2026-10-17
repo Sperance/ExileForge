@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.fate
 
 import com.sperance.exileforge.core.display.lineText
 import com.sperance.exileforge.core.display.number

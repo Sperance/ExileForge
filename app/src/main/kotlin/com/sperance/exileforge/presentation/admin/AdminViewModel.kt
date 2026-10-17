@@ -3,15 +3,15 @@ package com.sperance.exileforge.presentation.admin
 import androidx.lifecycle.ViewModel
 import com.sperance.exileforge.core.admin.Admin
 import com.sperance.exileforge.core.admin.AdminRepository
+import com.sperance.exileforge.core.app.AppMode
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.presentation.app.RedemptionActions
 import com.sperance.exileforge.presentation.app.SessionActions
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.state.AppMode
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import kotlinx.coroutines.flow.StateFlow
 

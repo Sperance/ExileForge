@@ -1,6 +1,10 @@
 package com.sperance.exileforge.di
 
 import com.sperance.exileforge.core.admin.AdminRepository
+import com.sperance.exileforge.core.app.AppModes
+import com.sperance.exileforge.core.app.DEFAULT_SERVER
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.feedback.FeedbackRepository
@@ -23,10 +27,8 @@ import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.session.StallReports
 import com.sperance.exileforge.core.world.ContentLoader
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.Repositories
@@ -76,8 +78,6 @@ import com.sperance.exileforge.presentation.session.FateViewModel
 import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.presentation.skills.GrimoireViewModel
-import com.sperance.exileforge.presentation.state.AppModes
-import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CoroutineScope

@@ -49,14 +49,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.CardModeration
 import com.sperance.exileforge.core.model.hero.PlayerCard
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
 import com.sperance.exileforge.presentation.player.PlayerCardViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.guildEntryLevel
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.hero.titleName

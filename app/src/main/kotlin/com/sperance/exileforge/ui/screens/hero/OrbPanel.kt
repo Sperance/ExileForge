@@ -6,6 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemDescription
@@ -14,8 +16,6 @@ import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

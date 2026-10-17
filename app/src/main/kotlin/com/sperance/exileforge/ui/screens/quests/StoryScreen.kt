@@ -35,12 +35,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.StoryFold
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.quests.QuestViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.StoryFold
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.StoryBooks

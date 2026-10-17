@@ -1,8 +1,8 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.character
 
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.PassiveSource
 import com.sperance.exileforge.core.campaign.ReadingPart
-import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.factorChange
@@ -19,6 +19,8 @@ import com.sperance.exileforge.core.display.statFlag
 import com.sperance.exileforge.core.display.statNumber
 import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.fate.fateTitle
+import com.sperance.exileforge.core.fate.reshapeText
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op

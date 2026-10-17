@@ -1,21 +1,21 @@
 package com.sperance.exileforge.presentation.nav
 
 import androidx.navigation3.runtime.NavKey
-import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.Building
-import com.sperance.exileforge.presentation.state.TAB_ACCOUNT
-import com.sperance.exileforge.presentation.state.TAB_ADMIN
-import com.sperance.exileforge.presentation.state.TAB_CITY
-import com.sperance.exileforge.presentation.state.TAB_CRAFT
-import com.sperance.exileforge.presentation.state.TAB_CRAFTS
-import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
-import com.sperance.exileforge.presentation.state.TAB_HERO
-import com.sperance.exileforge.presentation.state.TAB_PROGRESS
-import com.sperance.exileforge.presentation.state.TAB_REDEMPTION
-import com.sperance.exileforge.presentation.state.TAB_SETTINGS
-import com.sperance.exileforge.presentation.state.TAB_SKILLS
-import com.sperance.exileforge.presentation.state.TAB_TREE
-import com.sperance.exileforge.presentation.state.TAB_TRIALS
+import com.sperance.exileforge.core.app.AppPhase
+import com.sperance.exileforge.core.app.Building
+import com.sperance.exileforge.core.app.TAB_ACCOUNT
+import com.sperance.exileforge.core.app.TAB_ADMIN
+import com.sperance.exileforge.core.app.TAB_CITY
+import com.sperance.exileforge.core.app.TAB_CRAFT
+import com.sperance.exileforge.core.app.TAB_CRAFTS
+import com.sperance.exileforge.core.app.TAB_EXPEDITION
+import com.sperance.exileforge.core.app.TAB_HERO
+import com.sperance.exileforge.core.app.TAB_PROGRESS
+import com.sperance.exileforge.core.app.TAB_REDEMPTION
+import com.sperance.exileforge.core.app.TAB_SETTINGS
+import com.sperance.exileforge.core.app.TAB_SKILLS
+import com.sperance.exileforge.core.app.TAB_TREE
+import com.sperance.exileforge.core.app.TAB_TRIALS
 import kotlinx.serialization.Serializable
 
 /**

@@ -32,9 +32,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.display.SlotGroup
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.SlotGroup
 import com.sperance.exileforge.ui.components.Tip
 import com.sperance.exileforge.ui.components.TipCallout
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

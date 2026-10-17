@@ -11,6 +11,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.Building
+import com.sperance.exileforge.core.app.Feature
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.TAB_CITY
+import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.guild.Guilds
 import com.sperance.exileforge.core.i18n.ui
@@ -22,12 +28,6 @@ import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.presentation.quests.QuestViewModel
-import com.sperance.exileforge.presentation.state.Building
-import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.TAB_CITY
-import com.sperance.exileforge.presentation.state.level
-import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

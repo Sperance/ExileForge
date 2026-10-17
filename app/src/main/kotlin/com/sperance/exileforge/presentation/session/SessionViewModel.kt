@@ -1,6 +1,9 @@
 package com.sperance.exileforge.presentation.session
 
 import androidx.lifecycle.ViewModel
+import com.sperance.exileforge.core.app.AppMode
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
@@ -9,9 +12,6 @@ import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.presentation.app.CharacterActions
 import com.sperance.exileforge.presentation.app.SessionActions
-import com.sperance.exileforge.presentation.state.AppMode
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.flow.StateFlow
 

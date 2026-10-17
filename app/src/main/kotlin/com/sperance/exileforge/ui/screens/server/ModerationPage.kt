@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -55,7 +56,6 @@ import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.presentation.admin.ModerationFilters
 import com.sperance.exileforge.presentation.admin.ModerationTab
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
-import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*

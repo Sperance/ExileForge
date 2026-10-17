@@ -7,10 +7,12 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.sperance.exileforge.core.app.DEFAULT_SERVER
+import com.sperance.exileforge.core.app.GameSettings
+import com.sperance.exileforge.core.app.SettingsStore
 import com.sperance.exileforge.core.contract.WireJson
+import com.sperance.exileforge.core.display.ItemFilters
 import com.sperance.exileforge.core.i18n.Lang
-import com.sperance.exileforge.presentation.state.GameSettings
-import com.sperance.exileforge.presentation.state.ItemFilters
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -25,16 +27,13 @@ import java.util.UUID
 
 private val Context.settings by preferencesDataStore("server_settings")
 
-/** The one server every player plays on: there is no address to type before the gate. */
-const val DEFAULT_SERVER = "https://147.45.219.84.sslip.io/"
-
-class ServerStore(private val context: Context, private val vault: SecretVault = SecretVault()) {
+class ServerStore(private val context: Context, private val vault: SecretVault = SecretVault()) : SettingsStore {
     // A new key: an address typed before it is left behind, only an administrator's choice from the Server page counts.
     private val key = stringPreferencesKey("server_override")
-    val server = context.settings.data.map { it[key] ?: DEFAULT_SERVER }
+    override val server = context.settings.data.map { it[key] ?: DEFAULT_SERVER }
 
     /** The administrator's address, or none — back to [DEFAULT_SERVER]. */
-    suspend fun save(value: String?) {
+    override suspend fun save(value: String?) {
         context.settings.edit {
             if (value == null || value == DEFAULT_SERVER) {
                 it.remove(key)
@@ -51,33 +50,33 @@ class ServerStore(private val context: Context, private val vault: SecretVault =
      * app takes the device's own language instead of starting everybody in Russian.
      */
     private val languageKey = stringPreferencesKey("language")
-    val language = context.settings.data.map { it[languageKey] }
-    suspend fun saveLanguage(value: Lang) {
+    override val language = context.settings.data.map { it[languageKey] }
+    override suspend fun saveLanguage(value: Lang) {
         context.settings.edit { it[languageKey] = value.code }
     }
 
     /** Фильтры списков предметов одним документом: выбор каждого списка; нечитаемый - обычные фильтры. */
     private val itemFiltersKey = stringPreferencesKey("item_filters")
-    val itemFilters = context.settings.data.map { prefs ->
+    override val itemFilters = context.settings.data.map { prefs ->
         prefs[itemFiltersKey]?.let { runCatching { WireJson.decodeFromString(ItemFilters.serializer(), it) }.getOrNull() } ?: ItemFilters()
     }
-    suspend fun saveItemFilters(value: ItemFilters) {
+    override suspend fun saveItemFilters(value: ItemFilters) {
         context.settings.edit { it[itemFiltersKey] = WireJson.encodeToString(ItemFilters.serializer(), value) }
     }
 
     /** The player's settings as one document; an unreadable one falls back to the defaults. */
     private val gameSettingsKey = stringPreferencesKey("game_settings")
-    val gameSettings = context.settings.data.map { prefs ->
+    override val gameSettings = context.settings.data.map { prefs ->
         prefs[gameSettingsKey]?.let { runCatching { WireJson.decodeFromString(GameSettings.serializer(), it) }.getOrNull() } ?: GameSettings()
     }
-    suspend fun saveGameSettings(value: GameSettings) {
+    override suspend fun saveGameSettings(value: GameSettings) {
         context.settings.edit { it[gameSettingsKey] = WireJson.encodeToString(GameSettings.serializer(), value) }
     }
 
     /** Which shelves of the fight's log are shown, by their names; nothing is the default, blows and ailments. */
     private val logFilterKey = stringPreferencesKey("log_filter")
-    val logFilter = context.settings.data.map { it[logFilterKey] }
-    suspend fun saveLogFilter(value: String) {
+    override val logFilter = context.settings.data.map { it[logFilterKey] }
+    override suspend fun saveLogFilter(value: String) {
         context.settings.edit { it[logFilterKey] = value }
     }
 

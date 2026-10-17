@@ -1,10 +1,9 @@
-package com.sperance.exileforge.data.settings
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.campaign.LogKind
-import com.sperance.exileforge.presentation.state.GameSettings
-import com.sperance.exileforge.presentation.state.ItemFilter
-import com.sperance.exileforge.presentation.state.ItemFilters
-import com.sperance.exileforge.presentation.state.ItemShelf
+import com.sperance.exileforge.core.display.ItemFilter
+import com.sperance.exileforge.core.display.ItemFilters
+import com.sperance.exileforge.core.display.ItemShelf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -14,9 +13,9 @@ import kotlinx.coroutines.flow.stateIn
 
 /**
  * Настройки игрока на устройстве как единственный источник правды: экраны читают потоки
- * отсюда, а не копию в общем состоянии. Запись идёт в [ServerStore], поток обновляется сам.
+ * отсюда, а не копию в общем состоянии. Запись идёт в [SettingsStore], поток обновляется сам.
  */
-class PreferencesRepository(private val store: ServerStore, scope: CoroutineScope) {
+class PreferencesRepository(private val store: SettingsStore, scope: CoroutineScope) {
     val settings: StateFlow<GameSettings> = store.gameSettings.stateIn(scope, SharingStarted.Eagerly, GameSettings())
 
     /** Запомненные фильтры списков предметов. */

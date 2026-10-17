@@ -32,11 +32,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.market.SellLot
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.SellLot
 import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.SlotGroup

@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.screens.crafts
 
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.text
@@ -7,7 +8,6 @@ import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.crafts.JobView
 import com.sperance.exileforge.core.model.crafts.ProfessionView
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.JobKind
 
 /**

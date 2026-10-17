@@ -45,9 +45,13 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Popup
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.TAB_CRAFTS
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.Harvest
 import com.sperance.exileforge.core.display.Glyph
+import com.sperance.exileforge.core.display.ItemShelf
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.choiceTitle
 import com.sperance.exileforge.core.display.equipmentIcon
@@ -66,10 +70,6 @@ import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.ItemShelf
-import com.sperance.exileforge.presentation.state.TAB_CRAFTS
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot

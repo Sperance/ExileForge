@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.FightFigures
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.jobTitle
@@ -22,7 +23,6 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Achievement
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.rules.content.Stat

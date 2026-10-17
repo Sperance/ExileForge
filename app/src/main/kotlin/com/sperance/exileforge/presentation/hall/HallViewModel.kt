@@ -1,13 +1,13 @@
 package com.sperance.exileforge.presentation.hall
 
 import androidx.lifecycle.ViewModel
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.HallBoard
 import com.sperance.exileforge.rules.content.HallTable
 import kotlinx.coroutines.flow.MutableStateFlow

@@ -33,13 +33,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.app.Feature
+import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.campaign.run.LevelUp
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.ui.components.ForgeButton

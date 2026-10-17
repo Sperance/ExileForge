@@ -2,20 +2,20 @@ package com.sperance.exileforge.presentation.hero
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.display.ItemFilter
+import com.sperance.exileforge.core.display.ItemShelf
 import com.sperance.exileforge.core.hero.HeroHolding
+import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.model.auction.PriceHint
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.HeroPage
-import com.sperance.exileforge.presentation.state.ItemFilter
-import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.SlotGroup

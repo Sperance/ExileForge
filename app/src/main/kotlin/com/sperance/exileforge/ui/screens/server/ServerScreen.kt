@@ -39,6 +39,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.BuildConfig
+import com.sperance.exileforge.core.app.AccountUi
+import com.sperance.exileforge.core.app.AppMode
 import com.sperance.exileforge.core.contract.SERVER_BRANCH
 import com.sperance.exileforge.core.contract.SERVER_COMMIT
 import com.sperance.exileforge.core.contract.SERVER_VERSION
@@ -48,10 +50,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.presentation.server.ServerViewModel
 import com.sperance.exileforge.presentation.session.SessionViewModel
-import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.rules.content.ContentFiles
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

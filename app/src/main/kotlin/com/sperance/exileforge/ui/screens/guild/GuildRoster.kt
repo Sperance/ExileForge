@@ -32,10 +32,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.ClassPortrait

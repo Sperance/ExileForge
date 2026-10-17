@@ -2,11 +2,11 @@ package com.sperance.exileforge.presentation.settings
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sperance.exileforge.core.app.GameSettings
+import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.app.fightSpeeds
 import com.sperance.exileforge.core.i18n.LaunchLines
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.PreferencesRepository
-import com.sperance.exileforge.presentation.state.GameSettings
-import com.sperance.exileforge.presentation.state.fightSpeeds
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 

@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.EffectTrace
 import com.sperance.exileforge.core.campaign.FactorKey
 import com.sperance.exileforge.core.campaign.FactorTrace
@@ -34,6 +35,8 @@ import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Side
+import com.sperance.exileforge.core.character.StatTrace
+import com.sperance.exileforge.core.character.TraceExplainer
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -41,9 +44,6 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.StatTrace
-import com.sperance.exileforge.presentation.state.TraceExplainer
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key

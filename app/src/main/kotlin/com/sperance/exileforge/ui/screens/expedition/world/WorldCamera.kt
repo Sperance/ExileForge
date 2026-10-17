@@ -12,7 +12,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.lerp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.util.lerp
-import com.sperance.exileforge.presentation.state.WorldView
+import com.sperance.exileforge.core.app.WorldView
 import com.sperance.exileforge.rules.content.WorldPoint
 import com.sperance.exileforge.rules.content.WorldRule
 import kotlin.math.roundToInt

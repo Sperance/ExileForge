@@ -39,10 +39,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.DamageNumbers
 import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.settings.SettingsViewModel
-import com.sperance.exileforge.presentation.state.DamageNumbers
 import com.sperance.exileforge.ui.screens.expedition.arena.FightLogSheet
 import com.sperance.exileforge.ui.screens.server.ChoiceRow
 import com.sperance.exileforge.ui.screens.server.SwitchRow

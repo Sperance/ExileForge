@@ -10,11 +10,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.CombatDetailSheet
 import com.sperance.exileforge.ui.theme.*

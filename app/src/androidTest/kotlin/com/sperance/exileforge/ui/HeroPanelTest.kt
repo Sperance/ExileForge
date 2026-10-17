@@ -11,6 +11,8 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sperance.exileforge.core.app.DEFAULT_SERVER
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.character.Sheets
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.hero.HeroHolding
@@ -22,8 +24,6 @@ import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.screens.hero.EquipmentLedger

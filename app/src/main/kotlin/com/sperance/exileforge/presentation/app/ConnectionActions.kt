@@ -1,5 +1,10 @@
 package com.sperance.exileforge.presentation.app
 
+import com.sperance.exileforge.core.app.AppPhase
+import com.sperance.exileforge.core.app.Building
+import com.sperance.exileforge.core.app.NoticeKind
+import com.sperance.exileforge.core.app.TAB_CITY
+import com.sperance.exileforge.core.app.TAB_CRAFTS
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.FlushOutcome
@@ -14,11 +19,6 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.nav.Navigator
-import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.Building
-import com.sperance.exileforge.presentation.state.NoticeKind
-import com.sperance.exileforge.presentation.state.TAB_CITY
-import com.sperance.exileforge.presentation.state.TAB_CRAFTS
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job

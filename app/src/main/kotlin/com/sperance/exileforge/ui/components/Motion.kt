@@ -16,7 +16,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import com.sperance.exileforge.presentation.state.GameSettings
+import com.sperance.exileforge.core.app.GameSettings
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 

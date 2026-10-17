@@ -17,6 +17,8 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
+import com.sperance.exileforge.core.app.DEFAULT_SERVER
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.HeroGear
 import com.sperance.exileforge.core.campaign.Loadout
 import com.sperance.exileforge.core.campaign.RunJournal
@@ -43,9 +45,7 @@ import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.admin.AdminViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills

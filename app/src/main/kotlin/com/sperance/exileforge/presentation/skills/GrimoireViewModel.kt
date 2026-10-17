@@ -1,14 +1,14 @@
 package com.sperance.exileforge.presentation.skills
 
 import androidx.lifecycle.ViewModel
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.StateFlow
 
 /** Гримуар: книги, ячейки навыков, условия и пояс флаконов, руны умений; команды - общие действия героя. */

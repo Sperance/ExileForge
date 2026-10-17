@@ -19,11 +19,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.character.sellPrice
+import com.sperance.exileforge.core.character.unmetNeeds
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.sellPrice
-import com.sperance.exileforge.presentation.state.unmetNeeds
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.screens.hero.StackInfoSheet
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice

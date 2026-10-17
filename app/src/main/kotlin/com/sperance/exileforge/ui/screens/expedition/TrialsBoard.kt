@@ -29,6 +29,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.Feature
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.number
@@ -37,10 +41,6 @@ import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.level
-import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.RushPlan

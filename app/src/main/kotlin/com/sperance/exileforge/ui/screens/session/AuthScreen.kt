@@ -17,11 +17,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.DEFAULT_SERVER
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.session.SessionViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.ReportMenu
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton

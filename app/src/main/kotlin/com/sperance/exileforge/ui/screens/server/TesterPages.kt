@@ -11,6 +11,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
@@ -18,7 +19,6 @@ import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.TesterAccount
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.rules.content.MAP_TEMPLATE
 import com.sperance.exileforge.rules.content.Rarity

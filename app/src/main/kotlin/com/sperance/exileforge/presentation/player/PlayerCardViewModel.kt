@@ -1,6 +1,8 @@
 package com.sperance.exileforge.presentation.player
 
 import androidx.lifecycle.ViewModel
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.guild.GuildRepository
@@ -14,8 +16,6 @@ import com.sperance.exileforge.presentation.guild.GuildActions
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

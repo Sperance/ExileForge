@@ -27,9 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.SellLot
-import com.sperance.exileforge.presentation.state.SellPreset
-import com.sperance.exileforge.presentation.state.SellSelection
+import com.sperance.exileforge.core.market.SellLot
+import com.sperance.exileforge.core.market.SellPreset
+import com.sperance.exileforge.core.market.SellSelection
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.*
 

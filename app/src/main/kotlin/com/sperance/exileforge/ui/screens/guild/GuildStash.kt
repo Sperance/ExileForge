@@ -37,6 +37,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.character.unmetFor
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.itemTitle
@@ -51,9 +54,6 @@ import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.presentation.guild.StashField
 import com.sperance.exileforge.presentation.guild.StashFilter
 import com.sperance.exileforge.presentation.guild.StashKind
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.rules.content.GuildRole

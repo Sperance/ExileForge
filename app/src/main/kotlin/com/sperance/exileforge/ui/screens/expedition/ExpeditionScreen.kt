@@ -16,13 +16,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.TAB_EXPEDITION
+import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.quests.QuestViewModel
-import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
-import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.CampaignFile
 import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.rules.content.WorldPoint

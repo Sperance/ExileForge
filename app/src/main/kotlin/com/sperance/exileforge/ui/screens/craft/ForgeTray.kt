@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.QualityForecast
 import com.sperance.exileforge.core.display.Term
@@ -37,7 +38,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.forge.HiddenOrb
 import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier

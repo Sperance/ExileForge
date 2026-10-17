@@ -74,7 +74,7 @@ private data class TitleTile(val code: String, val achievement: Achievement, val
 
 /**
  * «Галерея медалей»: заголовок «Титулы · X / N ▾» сворачивает таблицу (помнит устройство,
- * [com.sperance.exileforge.presentation.state.GameSettings.titlesFolded]); сетка в два столбца - «Без титула» первой плиткой,
+ * [com.sperance.exileforge.core.app.GameSettings.titlesFolded]); сетка в два столбца - «Без титула» первой плиткой,
  * затем полученные: медаль, имя, за что; выбранный - в рамке `Gold`. Закрытых титулов галерея не показывает.
  */
 @Composable internal fun TitleGallery(achievements: List<Achievement>, values: Map<String, Long>, current: String, enabled: Boolean, onPick: (String) -> Unit) {

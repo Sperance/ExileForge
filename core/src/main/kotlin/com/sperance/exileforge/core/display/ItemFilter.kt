@@ -1,8 +1,7 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.display
 
-import com.sperance.exileforge.core.display.ItemSearch
-import com.sperance.exileforge.core.display.ItemView
-import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.character.unmetFor
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Rarity

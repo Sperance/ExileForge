@@ -1,6 +1,10 @@
 package com.sperance.exileforge.presentation.app
 
 import com.sperance.exileforge.BuildConfig
+import com.sperance.exileforge.core.app.AppMode
+import com.sperance.exileforge.core.app.AppPhase
+import com.sperance.exileforge.core.app.DEFAULT_SERVER
+import com.sperance.exileforge.core.app.phrase
 import com.sperance.exileforge.core.contract.WireJson
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.ClientIdentity
@@ -19,15 +23,11 @@ import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.hero.HeroCopy
 import com.sperance.exileforge.presentation.nav.Navigator
-import com.sperance.exileforge.presentation.state.AppMode
-import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.phrase
 import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred

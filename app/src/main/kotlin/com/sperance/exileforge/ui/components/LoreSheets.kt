@@ -167,7 +167,7 @@ sealed interface Lore {
 val LocalLore = androidx.compose.runtime.staticCompositionLocalOf<((Lore) -> Unit)?> { null }
 
 /** Хозяин листов-справок: всё, что внутри, открывает их через [LocalLore]; лист один, поверх. */
-@Composable fun LoreHost(game: com.sperance.exileforge.presentation.state.GameUi, content: @Composable () -> Unit) {
+@Composable fun LoreHost(game: com.sperance.exileforge.core.app.GameUi, content: @Composable () -> Unit) {
     var open by remember { androidx.compose.runtime.mutableStateOf<Lore?>(null) }
     androidx.compose.runtime.CompositionLocalProvider(LocalLore provides { open = it }) { content() }
     val index = game.index ?: return

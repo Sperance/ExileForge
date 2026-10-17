@@ -2,6 +2,10 @@ package com.sperance.exileforge.presentation.expedition
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.app.WorldView
 import com.sperance.exileforge.core.campaign.Expedition
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.campaign.TrialArena
@@ -9,11 +13,7 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroActions
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.WorldView
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.run.MapMechanic
 import kotlinx.coroutines.flow.StateFlow

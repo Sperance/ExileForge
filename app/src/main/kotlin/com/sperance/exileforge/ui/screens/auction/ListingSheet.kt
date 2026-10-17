@@ -8,13 +8,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.Feature
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.auction.PriceHint
-import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.level
-import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.trade.AuctionFees
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet

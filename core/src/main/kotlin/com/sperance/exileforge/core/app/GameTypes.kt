@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.app
 
 /** Типы игры для экранов: режим, фаза, вкладки, здания, разделы кузницы и порядок сундука; общего состояния нет - экраны читают срезы. */
 enum class AppMode { PLAYER, ADMIN }

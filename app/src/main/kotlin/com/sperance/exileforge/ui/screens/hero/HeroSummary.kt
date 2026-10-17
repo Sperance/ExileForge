@@ -21,8 +21,12 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.StatFigures
 import com.sperance.exileforge.core.campaign.stat
+import com.sperance.exileforge.core.character.figures
+import com.sperance.exileforge.core.character.might
+import com.sperance.exileforge.core.character.reserve
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.StatLimits
 import com.sperance.exileforge.core.display.groupedStats
@@ -34,10 +38,6 @@ import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.figures
-import com.sperance.exileforge.presentation.state.might
-import com.sperance.exileforge.presentation.state.reserve
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.StatSection

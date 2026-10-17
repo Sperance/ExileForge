@@ -1,5 +1,6 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.campaign
 
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.rules.content.BulkSale
 import com.sperance.exileforge.rules.roll.ItemInstance
 

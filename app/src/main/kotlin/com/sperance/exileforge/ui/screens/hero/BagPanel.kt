@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemSource
 import com.sperance.exileforge.core.display.ItemUse
 import com.sperance.exileforge.core.display.ItemVisualKind
@@ -30,7 +31,6 @@ import com.sperance.exileforge.core.display.itemUseIndex
 import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.display.tradeName
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.Item

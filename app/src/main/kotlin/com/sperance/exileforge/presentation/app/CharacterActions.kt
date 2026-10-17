@@ -1,5 +1,8 @@
 package com.sperance.exileforge.presentation.app
 
+import com.sperance.exileforge.core.app.AppPhase
+import com.sperance.exileforge.core.app.MAX_CHARACTERS
+import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.i18n.Phrase
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.DeletionPreview
@@ -13,9 +16,6 @@ import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.Repositories
 import com.sperance.exileforge.presentation.nav.Navigator
-import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
-import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.presentation.world.WorldLoader
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.first

@@ -30,6 +30,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.Feature
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.campaign.RiftArena
 import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.campaign.run.RunCommand
@@ -41,10 +45,6 @@ import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.expedition.RiftDelivery
 import com.sperance.exileforge.presentation.expedition.RiftState
-import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.level
-import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity

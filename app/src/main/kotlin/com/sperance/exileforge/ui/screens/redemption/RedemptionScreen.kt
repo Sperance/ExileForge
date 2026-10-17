@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
@@ -26,7 +27,6 @@ import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.redemptionReward
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.admin.AdminViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.reward.RedemptionKind
 import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.ui.components.*

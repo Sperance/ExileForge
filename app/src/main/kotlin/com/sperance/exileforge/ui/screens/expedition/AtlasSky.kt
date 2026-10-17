@@ -24,8 +24,8 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.atlas.AtlasBranch
 import com.sperance.exileforge.core.atlas.AtlasFog
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex

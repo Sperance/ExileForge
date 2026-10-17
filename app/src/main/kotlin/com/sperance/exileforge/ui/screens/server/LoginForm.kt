@@ -6,9 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.AccountBinding
-import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton

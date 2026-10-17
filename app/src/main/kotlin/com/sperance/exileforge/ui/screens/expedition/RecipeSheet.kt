@@ -9,6 +9,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.ForgeSection
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.TAB_CRAFT
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.recipeText
@@ -18,9 +21,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
-import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.TAB_CRAFT
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText

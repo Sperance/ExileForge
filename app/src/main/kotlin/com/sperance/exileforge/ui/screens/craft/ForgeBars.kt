@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -33,7 +34,6 @@ import com.sperance.exileforge.presentation.forge.ForgeTarget
 import com.sperance.exileforge.presentation.forge.OrbChoice
 import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.ui.components.*

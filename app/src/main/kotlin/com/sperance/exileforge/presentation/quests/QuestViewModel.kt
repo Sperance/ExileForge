@@ -2,17 +2,17 @@ package com.sperance.exileforge.presentation.quests
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.app.StoryFold
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.StoryFold
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

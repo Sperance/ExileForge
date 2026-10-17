@@ -1,13 +1,13 @@
 package com.sperance.exileforge.presentation.market
 
 import androidx.lifecycle.ViewModel
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.model.auction.AuctionFilter
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.StateFlow
 
 /** Лавка торговца и аукцион: рынок из репозитория, действия общие с продажей из сундука. */

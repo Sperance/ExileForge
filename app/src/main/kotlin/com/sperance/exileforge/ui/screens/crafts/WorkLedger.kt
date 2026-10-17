@@ -42,6 +42,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.equipmentTitle
@@ -50,8 +52,6 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.rules.roll.WorkGains

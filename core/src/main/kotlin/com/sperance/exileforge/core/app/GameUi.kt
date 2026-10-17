@@ -1,6 +1,7 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.campaign.LogKind
+import com.sperance.exileforge.core.character.HeroLens
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.Lang
@@ -26,8 +27,6 @@ import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass

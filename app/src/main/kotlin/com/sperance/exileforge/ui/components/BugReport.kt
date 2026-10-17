@@ -34,6 +34,8 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
+import com.sperance.exileforge.core.app.AppPhase
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunPhase
 import com.sperance.exileforge.core.campaign.run.reportContext
@@ -44,8 +46,6 @@ import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.VolumeChord
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.nav.reportPlace
-import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.theme.*
 
 /** Кто открывает лист отчёта: его отдаёт приложение - пункт «Сообщить об ошибке» меню шапки ([ReportMenu]) зовёт его; кнопок-жуков на экранах нет. */

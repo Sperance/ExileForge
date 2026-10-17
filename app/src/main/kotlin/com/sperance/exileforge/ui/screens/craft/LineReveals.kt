@@ -40,12 +40,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.roman
+import com.sperance.exileforge.core.fate.boonFigure
+import com.sperance.exileforge.core.fate.boonText
+import com.sperance.exileforge.core.fate.fateTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.boonFigure
-import com.sperance.exileforge.presentation.state.boonText
-import com.sperance.exileforge.presentation.state.fateTitle
 import com.sperance.exileforge.rules.content.FateBoon
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.FateInk

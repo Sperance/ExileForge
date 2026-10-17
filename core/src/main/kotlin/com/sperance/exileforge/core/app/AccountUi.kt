@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.server
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.admin.Admin
 import com.sperance.exileforge.core.hero.HeroHolding
@@ -8,7 +8,6 @@ import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
-import com.sperance.exileforge.presentation.state.AppMode
 import com.sperance.exileforge.rules.content.ContentIndex
 
 /**

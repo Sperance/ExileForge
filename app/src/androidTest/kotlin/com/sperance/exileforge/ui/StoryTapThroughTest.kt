@@ -6,6 +6,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.i18n.LocaleBundle
 import com.sperance.exileforge.core.i18n.serverLocale
@@ -13,7 +14,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.core.world.World
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.Quest
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.QuestKind

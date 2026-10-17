@@ -1,6 +1,6 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.character
 
-import com.sperance.exileforge.core.character.StatPolarity
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.rules.sheet.FlaskSheet
 
 /** Бонус героя к флягам: характеристика [stat], её итог [total] (к лучшему ли - [better]) и источники строками разбора [sources]. */

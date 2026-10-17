@@ -9,6 +9,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.guildEntryLevel
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
@@ -19,8 +21,6 @@ import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.presentation.feedback.LetterActions
 import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.guildEntryLevel
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*

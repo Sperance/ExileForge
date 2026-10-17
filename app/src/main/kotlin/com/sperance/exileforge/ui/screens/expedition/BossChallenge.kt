@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.combat.Combatant
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.run.ChallengeView
@@ -32,7 +33,6 @@ import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.BossRecord
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.ui.components.*

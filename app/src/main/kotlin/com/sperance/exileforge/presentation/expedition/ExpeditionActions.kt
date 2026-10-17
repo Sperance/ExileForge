@@ -1,5 +1,7 @@
 package com.sperance.exileforge.presentation.expedition
 
+import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.app.speedPresses
 import com.sperance.exileforge.core.campaign.AtlasWindow
 import com.sperance.exileforge.core.campaign.BeltFlask
 import com.sperance.exileforge.core.campaign.Expedition
@@ -30,13 +32,11 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.nav.Navigator
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.quests.QuestActions
-import com.sperance.exileforge.presentation.state.speedPresses
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
 import com.sperance.exileforge.rules.content.Orb

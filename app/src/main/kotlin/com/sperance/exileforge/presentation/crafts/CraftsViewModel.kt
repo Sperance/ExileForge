@@ -2,14 +2,14 @@ package com.sperance.exileforge.presentation.crafts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.state.GameSlice
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.SmithChoice
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

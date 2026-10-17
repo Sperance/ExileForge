@@ -23,12 +23,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.Outcome
+import com.sperance.exileforge.core.campaign.presentLoot
 import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.run.RunHud
+import com.sperance.exileforge.core.campaign.saleMarkable
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.displayName
 import com.sperance.exileforge.core.display.monsterTitle
@@ -38,10 +42,6 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.presentLoot
-import com.sperance.exileforge.presentation.state.saleMarkable
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.decorTime
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

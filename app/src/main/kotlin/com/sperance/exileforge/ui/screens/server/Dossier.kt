@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.fineNumber
@@ -37,7 +38,6 @@ import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionTarget
 import com.sperance.exileforge.core.network.SanctionView
 import com.sperance.exileforge.presentation.admin.ModerationViewModel
-import com.sperance.exileforge.presentation.server.AccountUi
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.theme.*

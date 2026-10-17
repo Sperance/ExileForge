@@ -6,10 +6,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.TAB_HERO
+import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.HeroPage
-import com.sperance.exileforge.presentation.state.TAB_HERO
 import com.sperance.exileforge.ui.components.PillTabs
 import org.koin.compose.viewmodel.koinViewModel
 

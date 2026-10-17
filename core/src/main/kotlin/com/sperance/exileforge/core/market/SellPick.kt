@@ -1,5 +1,7 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.market
 
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.character.sellPrice
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.rules.content.AutoSell
 import com.sperance.exileforge.rules.content.BulkSale

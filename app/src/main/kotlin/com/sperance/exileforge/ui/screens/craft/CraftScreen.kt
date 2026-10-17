@@ -8,6 +8,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.ForgeSection
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.display.ItemShelf
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.ruleRefusal
@@ -20,9 +23,6 @@ import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.forge.forgeTarget
 import com.sperance.exileforge.presentation.forge.hiddenOrbs
 import com.sperance.exileforge.presentation.forge.orbChoices
-import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.ItemShelf
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb

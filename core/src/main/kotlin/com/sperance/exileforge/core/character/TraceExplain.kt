@@ -1,5 +1,6 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.character
 
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.FighterShot
 import com.sperance.exileforge.core.campaign.LineKind
 import com.sperance.exileforge.core.campaign.LineSource

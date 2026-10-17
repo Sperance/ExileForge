@@ -24,6 +24,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.Feature
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.level
+import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.display.FoundUnique
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.UniqueAlbum
@@ -36,10 +40,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.UniqueFind
 import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.history.HistoryViewModel
-import com.sperance.exileforge.presentation.state.Feature
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.level
-import com.sperance.exileforge.presentation.state.unlocked
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

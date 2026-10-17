@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.AbyssDepth
 import com.sperance.exileforge.core.campaign.run.AbyssView
 import com.sperance.exileforge.core.campaign.run.RunCommand
@@ -21,7 +22,6 @@ import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.MonsterRarity
 import com.sperance.exileforge.rules.roll.AbyssHoardView
 import com.sperance.exileforge.ui.components.ForgeButton

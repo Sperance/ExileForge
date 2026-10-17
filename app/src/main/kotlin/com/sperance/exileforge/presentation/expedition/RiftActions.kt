@@ -1,5 +1,7 @@
 package com.sperance.exileforge.presentation.expedition
 
+import com.sperance.exileforge.core.app.PreferencesRepository
+import com.sperance.exileforge.core.app.speedPresses
 import com.sperance.exileforge.core.campaign.RiftArena
 import com.sperance.exileforge.core.campaign.RiftStyles
 import com.sperance.exileforge.core.campaign.run.FightReport
@@ -16,9 +18,7 @@ import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.presentation.hero.HeroSync
-import com.sperance.exileforge.presentation.state.speedPresses
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.rift.RiftAct
 import com.sperance.exileforge.rules.rift.RiftBoard

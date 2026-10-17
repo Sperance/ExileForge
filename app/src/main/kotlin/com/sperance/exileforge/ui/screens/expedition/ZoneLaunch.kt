@@ -31,11 +31,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.MapLaunch
 import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemDescription
@@ -53,8 +55,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.AtlasBonuses
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex

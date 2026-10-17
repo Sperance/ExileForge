@@ -1,6 +1,5 @@
-package com.sperance.exileforge.data.settings
+package com.sperance.exileforge.core.i18n
 
-import com.sperance.exileforge.core.i18n.Lang
 import java.util.Locale
 
 /**

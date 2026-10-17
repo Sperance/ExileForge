@@ -1,14 +1,14 @@
 package com.sperance.exileforge.presentation.nav
 
+import com.sperance.exileforge.core.app.AppPhase
+import com.sperance.exileforge.core.app.TAB_ADMIN
+import com.sperance.exileforge.core.app.TAB_CITY
+import com.sperance.exileforge.core.app.TAB_CRAFTS
+import com.sperance.exileforge.core.app.TAB_EXPEDITION
+import com.sperance.exileforge.core.app.TAB_HERO
+import com.sperance.exileforge.core.app.TAB_PROGRESS
+import com.sperance.exileforge.core.app.TAB_SETTINGS
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.AppPhase
-import com.sperance.exileforge.presentation.state.TAB_ADMIN
-import com.sperance.exileforge.presentation.state.TAB_CITY
-import com.sperance.exileforge.presentation.state.TAB_CRAFTS
-import com.sperance.exileforge.presentation.state.TAB_EXPEDITION
-import com.sperance.exileforge.presentation.state.TAB_HERO
-import com.sperance.exileforge.presentation.state.TAB_PROGRESS
-import com.sperance.exileforge.presentation.state.TAB_SETTINGS
 
 /**
  * Где игрок, для отчёта: [name] - для человека («Город › Auction»), [area] - раздел игры, что сервер пишет в Issue

@@ -1,6 +1,7 @@
 package com.sperance.exileforge.presentation
 
 import com.sperance.exileforge.core.admin.AdminRepository
+import com.sperance.exileforge.core.app.AppModes
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.feedback.FeedbackRepository
@@ -20,7 +21,6 @@ import com.sperance.exileforge.presentation.hero.HeroActions
 import com.sperance.exileforge.presentation.hero.HeroSync
 import com.sperance.exileforge.presentation.market.MarketActions
 import com.sperance.exileforge.presentation.quests.QuestActions
-import com.sperance.exileforge.presentation.state.AppModes
 
 /** Репозитории :core одним узлом: их делят сервисы приложения (`AppService`). */
 class Repositories(

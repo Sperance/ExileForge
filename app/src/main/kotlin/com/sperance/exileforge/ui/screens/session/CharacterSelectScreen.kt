@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.MAX_CHARACTERS
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -22,9 +25,6 @@ import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.session.CharactersViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.text.NameCharset
 import com.sperance.exileforge.ui.ReportMenu
 import com.sperance.exileforge.ui.components.*

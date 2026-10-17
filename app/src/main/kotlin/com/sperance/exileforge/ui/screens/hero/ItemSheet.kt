@@ -22,6 +22,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.ForgeSection
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.TAB_CRAFT
+import com.sperance.exileforge.core.character.sellPrice
+import com.sperance.exileforge.core.character.unmetFor
+import com.sperance.exileforge.core.character.unmetNeeds
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.itemTitle
@@ -30,13 +37,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.ShellViewModel
 import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.state.ForgeSection
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.TAB_CRAFT
-import com.sperance.exileforge.presentation.state.sellPrice
-import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.presentation.state.unmetNeeds
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet

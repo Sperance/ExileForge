@@ -3,6 +3,8 @@ package com.sperance.exileforge.presentation.server
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.admin.AdminRepository
+import com.sperance.exileforge.core.app.AccountUi
+import com.sperance.exileforge.core.app.AppModes
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.network.LinkRepository
@@ -11,7 +13,6 @@ import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.core.world.WorldRepository
-import com.sperance.exileforge.presentation.state.AppModes
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine

@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.rules.content.EngineRules
 

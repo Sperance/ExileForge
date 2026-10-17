@@ -46,6 +46,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.character.sellPrice
+import com.sperance.exileforge.core.character.unmetFor
+import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.JobGroups
 import com.sperance.exileforge.core.display.Glyph
@@ -70,10 +74,6 @@ import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.presentation.crafts.CraftsViewModel
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.sellPrice
-import com.sperance.exileforge.presentation.state.unmetFor
-import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.JobInput

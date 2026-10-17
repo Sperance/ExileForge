@@ -19,10 +19,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.itemTitle
-import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.icons.BagIcon
 import com.sperance.exileforge.ui.theme.Bronze

@@ -27,9 +27,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.NoticeKind
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.presentation.state.NoticeKind
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 

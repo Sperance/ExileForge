@@ -1,4 +1,4 @@
-package com.sperance.exileforge.presentation.state
+package com.sperance.exileforge.core.app
 
 import kotlinx.serialization.Serializable
 

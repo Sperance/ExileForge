@@ -1,6 +1,11 @@
 package com.sperance.exileforge.presentation.app
 
+import com.sperance.exileforge.core.app.Buzz
+import com.sperance.exileforge.core.app.DEFAULT_SERVER
+import com.sperance.exileforge.core.app.Phrase
+import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.i18n.deviceLanguage
 import com.sperance.exileforge.core.network.refusalLine
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner
@@ -8,14 +13,9 @@ import com.sperance.exileforge.core.session.ConnectionEventsHub
 import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.world.ContentLoader
-import com.sperance.exileforge.data.settings.DEFAULT_SERVER
-import com.sperance.exileforge.data.settings.PreferencesRepository
 import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.data.settings.deviceLanguage
 import com.sperance.exileforge.presentation.Actions
 import com.sperance.exileforge.presentation.Repositories
-import com.sperance.exileforge.presentation.state.Buzz
-import com.sperance.exileforge.presentation.state.Phrase
 import com.sperance.exileforge.presentation.world.WorldLoader
 import com.sperance.exileforge.rules.content.RULES_VERSION
 import kotlinx.coroutines.CancellationException

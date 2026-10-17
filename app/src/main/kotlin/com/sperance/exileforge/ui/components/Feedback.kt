@@ -242,150 +242,11 @@ private fun knownList(all: List<KnownReport>, query: String): List<KnownReport> 
         .sortedWith(compareByDescending<KnownReport> { it.rating }.thenBy { it.issue?.number ?: Int.MAX_VALUE })
 }
 
-/**
- * Карточка отчёта - тикет: вид, номер Issue, судьба и дата сверху; текст до трёх строк; путь отчёта шкалой
- * из трёх шагов ([StepPath]); ответ разработчика или модерации цитатой; подвал - голоса и удаление, ссылки на GitHub у игрока нет. Закрытые
- * свои приглушены. Свой отчёт и известная проблема - одна карточка, разное - в подвале. [focused] - отчёт, ради которого открыт
- * лист: рамка `GoldBright`.
- */
-@Composable private fun ReportTicket(
-    kind: FeedbackKind,
-    text: String,
-    fate: ReportFate,
-    issue: IssueView?,
-    createdAt: String,
-    thread: List<Pair<NoteAuthor, String>>,
-    dim: Boolean,
-    fresh: Boolean = false,
-    focused: Boolean = false,
-    onAnswer: ((String) -> Unit)? = null,
-    footer: @Composable RowScope.() -> Unit,
-) {
-    val shape = RoundedCornerShape(12.dp)
-    Column(Modifier.fillMaxWidth().alpha(if (dim) DIM else 1f).clip(shape).background(Panel).border(if (focused) 2.dp else 1.dp, if (focused) GoldBright else Bronze, shape)) {
-        Row(Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            KindMark(kind)
-            issue?.let { Text(ui("feedback.issue_number", it.number), color = Gold, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold) }
-            FatePill(fate, kind, issue, fresh)
-            Spacer(Modifier.weight(1f))
-            Text(shortDate(createdAt), color = Muted, style = MaterialTheme.typography.labelSmall)
-        }
-        ExpandableText(text, Modifier.padding(horizontal = 12.dp, vertical = 6.dp), color = Parchment, style = MaterialTheme.typography.bodyMedium, folded = TEXT_LINES, more = true)
-        FateSteps(StepPath.of(fate, kind, issue), Modifier.padding(horizontal = 12.dp).padding(bottom = 10.dp))
-        thread.forEach { (who, words) -> ThreadNote(who, words) }
-        onAnswer?.let { send -> AnswerField(send) }
-        Row(
-            Modifier.fillMaxWidth().background(PanelRaised).padding(horizontal = 12.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            footer()
-        }
-    }
-}
-
-/**
- * Путь отчёта для шкалы (три шага): принят, в работе (Issue открыт - отправка и работа - одно), итог;
- * [reached] - сколько пройдено (последний пройденный - «сейчас»), [tint] - цвет судьбы; последний шаг - итог: у отказа это сам
- * отказ, у дубля - его номер.
- */
-private data class StepPath(val labels: List<String>, val reached: Int, val tint: Color) {
-    companion object {
-        fun of(fate: ReportFate, kind: FeedbackKind, issue: IssueView?): StepPath {
-            val done = ui("feedback.fate.fixed")
-            val base = listOf(ui("feedback.step.accepted"), ui("feedback.fate.open"))
-            return when (fate) {
-                ReportFate.MODERATION -> StepPath(base + done, 1, fate.tint)
-                ReportFate.REJECTED -> StepPath(listOf(base[0], fateTitle(fate, kind, issue, short = true)), 2, fate.tint)
-                ReportFate.SENT, ReportFate.OPEN -> StepPath(base + done, 2, fate.tint)
-                ReportFate.FIXED -> StepPath(base + fateTitle(fate, kind, issue), 3, fate.tint)
-                ReportFate.NOT_PLANNED, ReportFate.INVALID, ReportFate.DUPLICATE -> StepPath(base + fateTitle(fate, kind, issue, short = true), 3, fate.tint)
-            }
-        }
-    }
-}
-
-/** Шкала шагов: пройденные залиты цветом судьбы, текущий - с ореолом, линии между ними - пройденные тоже цветом. */
-@Composable private fun FateSteps(steps: StepPath, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth()) {
-        steps.labels.forEachIndexed { i, label ->
-            val passed = i < steps.reached
-            val now = i == steps.reached - 1
-            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Canvas(Modifier.fillMaxWidth().height(14.dp)) {
-                    val centre = Offset(size.width / 2, size.height / 2)
-                    val line = 2.dp.toPx()
-                    if (i > 0) drawRect(if (passed) steps.tint else Bronze, Offset(0f, centre.y - line / 2), Size(centre.x, line))
-                    if (i < steps.labels.lastIndex) drawRect(if (i + 1 < steps.reached) steps.tint else Bronze, Offset(centre.x, centre.y - line / 2), Size(centre.x, line))
-                    if (now) drawCircle(steps.tint.copy(alpha = .25f), 7.dp.toPx(), centre)
-                    drawCircle(if (passed) steps.tint else Ink, 5.dp.toPx(), centre)
-                    drawCircle(if (passed) steps.tint else Bronze, 5.dp.toPx(), centre, style = Stroke(2.dp.toPx()))
-                }
-                Text(
-                    label,
-                    color = if (now) GoldBright else Muted,
-                    fontSize = 10.sp,
-                    fontWeight = if (now) FontWeight.SemiBold else FontWeight.Normal,
-                    textAlign = TextAlign.Center,
-                    maxLines = 2,
-                )
-            }
-        }
-    }
-}
-
-/** День и месяц отчёта из ISO-времени сервера («2026-10-15T13:06:30» → «15.10»); не разобралось - пусто. */
-private fun shortDate(createdAt: String): String = createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, month, day) -> "$day.$month" }.orEmpty()
-
-/**
- * Переписка карточки: слово модерации ([reason] - сервер шлёт его, только пока у отчёта нет Issue), затем вся переписка Issue по
- * порядку - разработчик, модерация из игры и автор; с Issue слово модерации - его комментарий, и дважды оно не встаёт.
- */
-private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, String>> = listOfNotNull(reason.takeIf { it.isNotBlank() }?.let { NoteAuthor.MODERATION to it }) + issue?.notes.orEmpty().map { it.author to it.text }
-
-/** Запись переписки цитатой: разработчик - руной слева, модерация - золотом слева, автор - пергаментом справа. */
-@Composable private fun ThreadNote(who: NoteAuthor, words: String) {
-    val tint = when (who) {
-        NoteAuthor.DEVELOPER -> Rune
-        NoteAuthor.MODERATION -> Gold
-        NoteAuthor.AUTHOR -> Parchment
-    }
-    val mine = who == NoteAuthor.AUTHOR
-    Column(
-        Modifier.padding(start = if (mine) 36.dp else 12.dp, end = if (mine) 12.dp else 36.dp).padding(bottom = 8.dp).fillMaxWidth()
-            .background(tint.copy(alpha = .08f), RoundedCornerShape(8.dp))
-            .drawBehind { drawRect(tint, topLeft = Offset(if (mine) size.width - 3.dp.toPx() else 0f, 0f), size = Size(3.dp.toPx(), size.height)) }
-            .padding(horizontal = 11.dp, vertical = 6.dp),
-    ) {
-        Text(ui("feedback.who.${who.name.lowercase()}"), color = tint, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-        Text(words, color = Parchment, style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-/** Ответ автора в Issue: поле и «Отправить»; уходит комментарием в GitHub и встаёт в переписку. */
-@Composable private fun AnswerField(onSend: (String) -> Unit) {
-    var text by rememberSaveable { mutableStateOf("") }
-    Row(Modifier.padding(horizontal = 12.dp).padding(bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedTextField(text, { text = it.take(ANSWER_MAX) }, placeholder = { Text(ui("feedback.answer")) }, maxLines = 4, modifier = Modifier.weight(1f))
-        ForgeTextButton(
-            enabled = text.isNotBlank(),
-            onClick = {
-                onSend(text.trim())
-                text = ""
-            },
-        ) { Text(ui("feedback.answer_send"), color = Gold, style = MaterialTheme.typography.labelMedium) }
-    }
-}
-
-@Composable private fun KindMark(kind: FeedbackKind) {
-    Icon(Icons.Outlined.BugReport, kindTitle(kind), tint = Muted, modifier = Modifier.size(16.dp))
-}
-
 /** Ответить в Issue можно, пока он открыт. */
 @Composable private fun OwnCard(own: OwnReport, fresh: Boolean, focused: Boolean, enabled: Boolean, onAnswer: (String) -> Unit, onDelete: () -> Unit) {
     val fate = ReportFate.of(own.status, own.issue)
     val answer = onAnswer.takeIf { own.issue?.state?.open == true && enabled }
-    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, thread(own.issue, own.reason), dim = fate.closed && !focused, fresh = fresh, focused = focused, onAnswer = answer) {
+    ReportTicket(own.kind, own.text, fate, own.issue, own.createdAt, reportThread(own.issue, own.reason), dim = fate.closed && !focused, fresh = fresh, focused = focused, onAnswer = answer) {
         Score(own.likes, own.dislikes)
         if (own.deletable) ReportDeleteButton(enabled, onDelete)
     }
@@ -393,7 +254,7 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
 
 @Composable private fun KnownCard(known: KnownReport, enabled: Boolean, onVote: (Vote) -> Unit) {
     val fate = ReportFate.of(known.status, known.issue)
-    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, thread(known.issue, ""), dim = false) {
+    ReportTicket(known.kind, known.text, fate, known.issue, known.createdAt, reportThread(known.issue, ""), dim = false) {
         if (known.mine) Text(ui("feedback.yours"), color = Gold, style = MaterialTheme.typography.labelSmall)
         VoteRow(known, enabled, onVote)
     }
@@ -440,15 +301,6 @@ private fun thread(issue: IssueView?, reason: String): List<Pair<NoteAuthor, Str
             .clickable(enabled = enabled, onClick = onClick).padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
-
-/** Длина ответа автора в Issue из игры: сервер всё равно режет по `inputs.report`. */
-private const val ANSWER_MAX = 1000
-
-/** Сколько строк текста отчёта видно свёрнутым: касание раскрывает его на месте. */
-private const val TEXT_LINES = 3
-
-/** Закрытые свои отчёты приглушены. */
-private const val DIM = .6f
 
 /** Длина поиска известных проблем. */
 private const val SEARCH_MAX = 60

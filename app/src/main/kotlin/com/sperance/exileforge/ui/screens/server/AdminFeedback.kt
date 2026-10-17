@@ -6,24 +6,30 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.AccountUi
+import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.feedback.FeedbackModel
@@ -44,11 +50,11 @@ import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
- * Отчёты для модерации: поиск по тексту, «#номеру» и
- * логину, чипы очереди со счётом ([Queue]) и вида; строка на отчёт - точка судьбы, текст, автор и метки; нажатие раскрывает
- * отчёт в списке: контекст, ошибки сети, действия, герой, переписка Issue и действия одной строкой. «Рассмотрения» нет: слово
- * модерации к новому отчёту отправляет его в GitHub сразу. Любой чип, и уже выбранный, и потягивание страницы перечитывают
- * список с сервера.
+ * Отчёты для модерации: поиск по тексту, «#номеру» и логину, чипы очереди со счётом ([Queue]) и вида, порядок чипами ([Order]: новые,
+ * рейтинг, номер Issue - на клиенте); строка на отчёт - значок вида цветом судьбы, первая строка текста, «▲голоса · дата» ([ReportLine]);
+ * касание раскрывает на месте полный тикет - тот же, что у игрока ([AdminTicket] над [ReportTicket]), касание его шапки сворачивает.
+ * Системного (устройство, ошибки сети, действия, лист героя) здесь нет - оно только в Issue. «Рассмотрения» нет: слово модерации к новому
+ * отчёту отправляет его в GitHub сразу. Любой чип очереди и вида, и уже выбранный, и потягивание страницы перечитывают список с сервера.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
     val vm = koinViewModel<FeedbackViewModel>().model
@@ -56,6 +62,7 @@ import org.koin.compose.viewmodel.koinViewModel
     val activity by vm.activity.collectAsStateWithLifecycle()
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
     var queue by remember { mutableStateOf(Queue.NEW) }
+    var order by remember { mutableStateOf(Order.NEWEST) }
     var query by remember { mutableStateOf("") }
     var open by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { vm.loadReports(kind, null) }
@@ -85,12 +92,21 @@ import org.koin.compose.viewmodel.koinViewModel
             }
         }
     }
-    val shown = found.filter { queue.holds(it) }.sortedByDescending { it.report.createdAt }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        MutedText(ui("feedback.order"), style = MaterialTheme.typography.labelMedium)
+        Order.entries.forEach { o -> CountChip(ui(o.key), null, order == o) { order = o } }
+    }
+    val shown = found.filter { queue.holds(it) }.sortedWith(order.comparator)
     if (shown.isEmpty()) MutedText(ui("feedback.none"))
-    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Panel).border(1.dp, Bronze, RoundedCornerShape(12.dp))) {
-        shown.forEachIndexed { i, entry ->
-            if (i > 0) HorizontalDivider(color = Bronze)
-            ReportRow(account, vm, entry, entry.report.id == open) { open = if (open == entry.report.id) null else entry.report.id }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        shown.forEach { entry ->
+            key(entry.report.id) {
+                if (entry.report.id == open) {
+                    AdminTicket(account, vm, entry) { open = null }
+                } else {
+                    ReportLine(entry) { open = entry.report.id }
+                }
+            }
         }
     }
 }
@@ -114,6 +130,16 @@ private enum class Queue(val key: String) {
     }
 }
 
+/** Порядок списка модерации - на клиенте: свежие первыми, по рейтингу «+ − −» или по номеру Issue (без Issue - в конце); равные - свежие первыми. */
+private enum class Order(val key: String, val comparator: Comparator<AdminReport>) {
+    NEWEST("feedback.order.newest", compareByDescending { it.report.createdAt }),
+    RATING("feedback.order.rating", compareByDescending<AdminReport> { it.report.likes - it.report.dislikes }.thenByDescending { it.report.createdAt }),
+    ISSUE("feedback.order.issue", compareByDescending<AdminReport> { it.report.issue?.number ?: 0 }.thenByDescending { it.report.createdAt }),
+}
+
+/** Где был автор, когда писал: место и раздел отчёта. */
+private val FullReport.where: String get() = place.ifBlank { screen }
+
 /** Отчёт под поиском [query]: текст, «#номер» Issue или логин автора; пусто - любой. */
 private fun AdminReport.matches(query: String): Boolean {
     val words = query.trim()
@@ -127,111 +153,186 @@ private fun AdminReport.matches(query: String): Boolean {
     FilterChip(selected = chosen, onClick = onClick, label = { Text(listOfNotNull(title, count?.toString()).joinToString(" ")) })
 }
 
-/** Строка отчёта: точка судьбы, текст и метки; раскрытая [open] - весь отчёт и действия. */
-@Composable private fun ReportRow(account: AccountUi, vm: FeedbackModel, entry: AdminReport, open: Boolean, onToggle: () -> Unit) {
+/** Плотная строка отчёта: значок вида цветом судьбы, первая строка текста и справа «▲голоса · ×повторы · дата»; касание - [onOpen]. */
+@Composable private fun ReportLine(entry: AdminReport, onOpen: () -> Unit) {
     val report = entry.report
     val fate = ReportFate.of(report.status, report.issue)
-    var deleting by remember(report.id) { mutableStateOf(false) }
-    Column(
-        Modifier.fillMaxWidth().background(if (open) PanelRaised else Color.Transparent).clickable(onClick = onToggle).padding(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        Modifier.fillMaxWidth().clip(shape).background(Panel).border(1.dp, Bronze, shape).clickable(onClick = onOpen).padding(horizontal = 10.dp, vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.size(8.dp).background(fate.tint, CircleShape))
-            Text(report.text, color = Parchment, style = MaterialTheme.typography.bodyMedium, maxLines = if (open) Int.MAX_VALUE else 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-            Text(report.createdAt.take(10).split('-').takeIf { it.size == 3 }?.let { (_, m, d) -> "$d.$m" }.orEmpty(), color = Muted, style = MaterialTheme.typography.labelSmall)
+        ReportKindMark(report.kind, fate.tint)
+        Text(
+            report.text.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty(),
+            color = Parchment,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            listOfNotNull(
+                ui("feedback.admin.votes", report.likes).takeIf { report.likes > 0 },
+                "×${report.occurrences}".takeIf { report.occurrences > 1 },
+                reportDate(report.createdAt).takeIf { it.isNotBlank() },
+            ).joinToString(" · "),
+            color = Muted,
+            style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"),
+            maxLines = 1,
+            softWrap = false,
+        )
+    }
+}
+
+/**
+ * Раскрытый отчёт модерации - тикет игрока ([ReportTicket]) со слотами модерации: строка автора ([AuthorLine]), обстоятельства дела
+ * (у апелляции и жалобы), «Дополнение модерации», слово модерации у нового и ведение Issue по «Закрыть…»; подвал - голоса и действия
+ * очереди: у нового «Отклонить» (со словом - причиной автору) и «В GitHub» (апелляция и жалоба не уходят наружу - «Принять»), у
+ * отправленного - «Закрыть…» (пока Issue открыт) и «Issue #N ↗»; удаление - значком, по праву. Касание шапки - [onCollapse].
+ */
+@Composable private fun AdminTicket(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onCollapse: () -> Unit) {
+    val report = entry.report
+    val fate = ReportFate.of(report.status, report.issue)
+    val fresh = report.status == ReportStatus.CREATED
+    val issue = report.issue
+    var deleting by remember(report.id) { mutableStateOf(false) }
+    var steering by remember(report.id) { mutableStateOf(false) }
+    var word by remember(report.id) { mutableStateOf(report.reason) }
+    val uri = LocalUriHandler.current
+    ReportTicket(
+        report.kind,
+        report.text,
+        fate,
+        issue,
+        report.createdAt,
+        reportThread(issue, report.reason),
+        dim = false,
+        focused = true,
+        onHeader = onCollapse,
+        author = { AuthorLine(entry) },
+        extra = {
+            if (!report.kind.exported) Circumstances(report.context)
+            ModerationNote(account, vm, report)
+            if (report.issueError.isNotBlank() && issue == null) {
+                Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
+                ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }) { Text(ui("feedback.issue_retry")) }
+            }
+            if (fresh) {
+                OutlinedTextField(
+                    word,
+                    { word = it.take(REASON) },
+                    placeholder = { Text(ui(if (report.kind.exported) "feedback.admin.word_github" else "feedback.reason_field")) },
+                    minLines = 2,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            if (steering && issue?.state?.open == true) IssueSteer(account, vm, report.id)
+        },
+    ) {
+        Text(ui("feedback.admin.score", report.likes, report.dislikes), color = Muted, style = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum"), maxLines = 1, softWrap = false)
+        Row(Modifier.weight(1f).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+            when {
+                fresh -> {
+                    if (ReportStatus.REJECTED in entry.moves) {
+                        ForgeOutlinedButton(enabled = !account.busy && word.isNotBlank(), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }) {
+                            Text(ui("feedback.admin.reject"), color = LifeRed, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                    if (ReportStatus.SENT in entry.moves) {
+                        ForgeButton(enabled = !account.busy, onClick = { vm.setReportStatus(report.id, ReportStatus.SENT, word) }) {
+                            Text(ui(if (report.kind.exported) "feedback.admin.to_github" else "feedback.admin.accept"), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
+
+                issue != null -> {
+                    if (issue.state.open) ForgeOutlinedButton(enabled = !account.busy, onClick = { steering = !steering }) { Text(ui("feedback.admin.steer"), maxLines = 1) }
+                    ForgeOutlinedButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }) {
+                        Text(ui("feedback.admin.issue_link", issue.number), color = Gold, maxLines = 1, softWrap = false)
+                    }
+                }
+            }
+            if (entry.deletable) {
+                IconButton(enabled = !account.busy, onClick = { deleting = true }, modifier = Modifier.size(36.dp)) {
+                    Icon(Icons.Outlined.Delete, ui("feedback.delete"), tint = LifeRed, modifier = Modifier.size(18.dp))
+                }
+            }
         }
-        MutedText(rowMeta(entry), style = MaterialTheme.typography.labelSmall)
-        if (open) ReportDetail(account, vm, entry) { deleting = true }
     }
     if (deleting) ReportDeleteConfirm(account.busy, onDismiss = { deleting = false }) { vm.deleteReport(report.id) }
 }
 
-/** Метки строки: автор и герой, Issue и его судьба, голоса, повторы падения. */
-private fun rowMeta(entry: AdminReport): String {
+/** Кто и откуда: логин автора, герой («Морвен, 25 ур.») ссылкой на его карточку и место отчёта; чего нет - не пишется. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AuthorLine(entry: AdminReport) {
     val report = entry.report
-    return listOfNotNull(
-        entry.login ?: ui("feedback.anonymous"),
-        report.heroClass.takeIf { it.isNotBlank() }?.let { "$it ${report.heroLevel}" },
-        report.issue?.let { "#${it.number} · ${fateTitle(ReportFate.of(report.status, it), report.kind, it, short = true)}" },
-        "▲${report.likes} ▼${report.dislikes}".takeIf { report.likes + report.dislikes > 0 },
-        "×${report.occurrences}".takeIf { report.occurrences > 1 },
-        report.reason.takeIf { report.status == ReportStatus.REJECTED && it.isNotBlank() }?.let { "«$it»" },
-    ).joinToString(" · ")
+    val small = MaterialTheme.typography.labelSmall
+    val hero = report.heroName.ifBlank { report.heroClass.takeIf { it.isNotBlank() }?.let(::classTitle).orEmpty() }
+        .takeIf { it.isNotBlank() }?.let { name -> if (report.heroLevel > 0) ui("feedback.admin.hero_line", name, report.heroLevel) else name }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(entry.login ?: ui("feedback.anonymous"), color = Muted, style = small)
+        hero?.let {
+            Text("·", color = Muted, style = small)
+            Text(it, color = Rune, style = small, textDecoration = TextDecoration.Underline, modifier = Modifier.opensPlayer(report.heroId))
+        }
+        report.where.takeIf { it.isNotBlank() }?.let {
+            Text("·", color = Muted, style = small)
+            Text(it, color = Muted, style = small)
+        }
+    }
 }
 
-/** Раскрытый отчёт: место, обстоятельства дела, переписка - и что модерация может с ним сделать. */
-@Composable private fun ReportDetail(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onDelete: () -> Unit) {
-    val report = entry.report
-    report.heroId?.takeIf { it.isNotBlank() }?.let { hero ->
-        Text(ui("feedback.hero", report.heroName.ifBlank { "…" + hero.takeLast(6) }), color = Gold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.opensPlayer(hero))
-    }
-    Facts(ui("bug.context"), listOfNotNull(report.place.ifBlank { report.screen }.takeIf { it.isNotBlank() }) + report.context.map { (key, value) -> "$key: $value" })
-    report.issue?.notes?.forEach { note -> MutedText("${ui("feedback.who.${note.author.name.lowercase()}")}: ${note.text}", style = MaterialTheme.typography.labelSmall) }
-    ModerationNote(account, vm, report)
-    if (report.issueError.isNotBlank() && report.issue == null) {
-        Text(ui("feedback.issue_failed", report.issueError), color = LifeRed, style = MaterialTheme.typography.bodySmall)
-        ForgeOutlinedButton(enabled = !account.busy, onClick = { vm.reportToIssue(report.id) }) { Text(ui("feedback.issue_retry")) }
-    }
-    when {
-        report.status == ReportStatus.CREATED -> NewReportActions(account, vm, entry, onDelete)
-        report.issue?.state?.open == true -> IssueSteer(account, vm, report.id)
-    }
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        report.issue?.let { issue ->
-            val uri = LocalUriHandler.current
-            ForgeTextButton(enabled = issue.url.startsWith("http"), onClick = { uri.openUri(issue.url) }) { Text(ui("feedback.in_issue", issue.number)) }
-        }
-        Spacer(Modifier.weight(1f))
-        if (entry.deletable && report.status != ReportStatus.CREATED) ReportDeleteButton(!account.busy, onDelete)
-    }
+/** Обстоятельства дела апелляции и жалобы строками «ключ: значение»; пусто - ничего. */
+@Composable private fun Circumstances(context: Map<String, String>) {
+    if (context.isEmpty()) return
+    Engraved(ui("bug.context"))
+    context.forEach { (key, value) -> MutedText("$key: $value", style = MaterialTheme.typography.labelSmall) }
 }
 
 /**
  * Дополнение модерации: его пишут и правят модератор и администратор, оно уходит разделом в тело Issue; автору в игре не видно,
- * письма нет. «Сохранить» горит, когда текст разошёлся с сохранённым; пустой текст стирает дополнение.
+ * письма нет. Свёрнутое - пунктирная плашка с текстом или подсказкой, касание открывает правку; «Сохранить» горит, когда текст разошёлся
+ * с сохранённым; пустой текст стирает дополнение.
  */
 @Composable private fun ModerationNote(account: AccountUi, vm: FeedbackModel, report: FullReport) {
     var note by remember(report.id, report.moderationNote) { mutableStateOf(report.moderationNote) }
-    Engraved(ui("feedback.note.title"))
-    OutlinedTextField(note, { note = it.take(NOTE) }, placeholder = { Text(ui("feedback.note.hint")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
-    ForgeOutlinedButton(enabled = !account.busy && note.trim() != report.moderationNote, onClick = { vm.noteReport(report.id, note) }) { Text(ui("feedback.note.save")) }
-}
-
-/** Блок фактов отчёта мелким шрифтом: заголовок и строки; пустой - ничего. */
-@Composable private fun Facts(title: String, lines: List<String>) {
-    if (lines.isEmpty()) return
-    Engraved(title)
-    lines.forEach { MutedText(it, style = MaterialTheme.typography.labelSmall) }
-}
-
-/**
- * Решение по новому отчёту: слово модерации и «В GitHub» (Issue со словом первым комментарием) или «Отклонить» (слово -
- * причина автору); апелляция и жалоба не уходят наружу - у них «Принять» вместо «В GitHub».
- */
-@Composable private fun NewReportActions(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onDelete: () -> Unit) {
-    val report = entry.report
-    var word by remember(report.id) { mutableStateOf(report.reason) }
-    OutlinedTextField(
-        word,
-        { word = it.take(REASON) },
-        placeholder = { Text(ui(if (report.kind.exported) "feedback.admin.word_github" else "feedback.reason_field")) },
-        minLines = 2,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (ReportStatus.SENT in entry.moves) {
-            ForgeButton(enabled = !account.busy, onClick = { vm.setReportStatus(report.id, ReportStatus.SENT, word) }) {
-                Text(ui(if (report.kind.exported) "feedback.admin.to_github" else "feedback.admin.accept"))
+    var editing by remember(report.id) { mutableStateOf(false) }
+    if (!editing) {
+        val shape = RoundedCornerShape(8.dp)
+        Column(
+            Modifier.fillMaxWidth().clip(shape).dashedBorder(Bronze, shape).clickable { editing = true }.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(ui("feedback.note.title"), color = Gold, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+            if (report.moderationNote.isBlank()) {
+                MutedText(ui("feedback.note.tap"), style = MaterialTheme.typography.bodySmall)
+            } else {
+                Text(report.moderationNote, color = Parchment, style = MaterialTheme.typography.bodySmall)
             }
         }
-        if (ReportStatus.REJECTED in entry.moves) {
-            ForgeOutlinedButton(enabled = !account.busy && word.isNotBlank(), onClick = { vm.setReportStatus(report.id, ReportStatus.REJECTED, word) }) {
-                Text(ui("feedback.admin.reject"), color = LifeRed)
-            }
-        }
-        if (entry.deletable) ReportDeleteButton(!account.busy, onDelete)
+        return
     }
+    OutlinedTextField(note, { note = it.take(NOTE) }, label = { Text(ui("feedback.note.title")) }, placeholder = { Text(ui("feedback.note.hint")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End)) {
+        ForgeTextButton(onClick = {
+            note = report.moderationNote
+            editing = false
+        }) { Text(ui("common.cancel")) }
+        ForgeOutlinedButton(enabled = !account.busy && note.trim() != report.moderationNote, onClick = {
+            vm.noteReport(report.id, note)
+            editing = false
+        }) { Text(ui("feedback.note.save")) }
+    }
+}
+
+/** Пунктирная рамка цвета [color] по форме [shape]. */
+private fun Modifier.dashedBorder(color: Color, shape: androidx.compose.ui.graphics.Shape): Modifier = drawBehind {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val dash = 4.dp.toPx()
+    drawOutline(outline, color, style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(dash, dash))))
 }
 
 /** Виды, что уходят в GitHub (как на сервере): ошибка и падение. */

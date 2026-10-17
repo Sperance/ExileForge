@@ -179,7 +179,7 @@ class HeroClient internal constructor(private val http: Transport) {
     /** Wears the title [title] beside the name — one the chronicle has earned — or takes it off when blank. */
     suspend fun setTitle(heroId: String, title: String): String = http.post("$HERO/title", heroQuery(heroId, "title" to title))
 
-    /** One more pack of stash places, for the rules' gold; never retried — a repeat would buy twice. */
+    /** One more pack of stash places, for the rules' gold; a repeat goes only under the same key ([SafeRetry]) and never buys twice. */
     suspend fun expandStash(heroId: String): StashState = http.post("$HERO/stash/expand", heroQuery(heroId))
 
     /** Takes [itemId] out of the overflow into the stash — or, without it, as many as fit, in order. */
@@ -191,7 +191,7 @@ class HeroClient internal constructor(private val http: Transport) {
         return http.post("$HERO/stash/sell", heroQuery(heroId, "itemId" to itemId))
     }
 
-    /** Tempers a weapon or armour with the smith's ore: quality and item level up, once per item. Never retried. */
+    /** Tempers a weapon or armour with the smith's ore: quality and item level up, once per item. Repeated only under its key. */
     suspend fun temper(heroId: String, itemId: String): CurrencyApplyResponse {
         requireItemId(itemId)
         return http.post("$HERO/temper", heroQuery(heroId, "itemId" to itemId))

@@ -7,10 +7,10 @@ private const val ATLAS = "api/v1/hero/atlas"
 
 /** Команды атласа героя; граф - контент, ответ - только снимок героя. */
 class AtlasClient internal constructor(private val http: Transport) {
-    /** Never retried: a repeat would spend a second point. */
+    /** Repeated only under its key ([SafeRetry]): a repeat never spends a second point. */
     suspend fun allocate(heroId: String, nodeCode: String): Unit = node("allocate", heroId, nodeCode)
 
-    /** Costs gold (the respec price) or, with [regret], an Orb of Regret per node. Never retried. */
+    /** Costs gold (the respec price) or, with [regret], an Orb of Regret per node. Repeated only under its key. */
     suspend fun refund(heroId: String, nodeCode: String, regret: Boolean = false): Unit = node("refund", heroId, nodeCode, payment(regret))
     suspend fun reset(heroId: String, regret: Boolean = false) {
         http.request("POST", "$ATLAS/reset", heroQuery(heroId, payment(regret)), authenticated = true)

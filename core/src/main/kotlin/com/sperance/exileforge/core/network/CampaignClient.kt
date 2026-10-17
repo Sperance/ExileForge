@@ -33,7 +33,7 @@ class CampaignClient internal constructor(private val http: Transport) {
     suspend fun bosses(heroId: String): BossRecords = http.get("$CAMPAIGN/bosses", heroQuery(heroId))
 
     /**
-     * Enters [mapCode], with a map item spent on it or without one. Never retried: a repeat opens another run. A [potion]
+     * Enters [mapCode], with a map item spent on it or without one. Repeated only under its key ([SafeRetry]): a repeat never opens another run. A [potion]
      * goes into the run and [scarabs] with the map, both spent there. [auto] - автопробег:
      * карт он не роняет. [forced] (сервер `API_REVISION` 61) - механики, что тестировщик ставит на заход насильно.
      */

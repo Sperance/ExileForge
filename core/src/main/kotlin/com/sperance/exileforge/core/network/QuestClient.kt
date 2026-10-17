@@ -8,8 +8,8 @@ import com.sperance.exileforge.rules.content.StoryBookTaken
 
 /**
  * Quests: the hero's board — dailies, weeklies, contracts and the story — and the guild's quests.
- * The server rolls, counts and pays; the client names a quest and draws the board it answers. Commands are never retried:
- * a repeat would be refused at best and paid twice at worst.
+ * The server rolls, counts and pays; the client names a quest and draws the board it answers. A command is repeated
+ * only under its own key ([SafeRetry]): the server answers the repeat with the first answer, never paying twice.
  */
 class QuestClient internal constructor(private val http: Transport) {
     /** Доска с выдачей суток, недели и пустых мест (сервер `POST hero/quests/refresh`): чтение доски сервер не пишет. */

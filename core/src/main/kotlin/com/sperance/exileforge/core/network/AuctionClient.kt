@@ -44,13 +44,13 @@ class AuctionClient internal constructor(private val http: Transport) {
         return http.post("$AUCTION/sell/$what", extra + heroQuery(heroId, "priceOrb" to priceOrb, "price" to price.toString()))
     }
 
-    /** Payment, delivery and closing the lot are one server transaction. Never retried. */
+    /** Payment, delivery and closing the lot are one server transaction. Repeated only under its key. */
     suspend fun buy(heroId: String, lotId: String): AuctionLot = lot("buy", heroId, lotId)
 
     /** Снятие отвечает своим аукционом. */
     suspend fun cancel(heroId: String, lotId: String): AuctionMine = lot("cancel", heroId, lotId)
 
-    /** Another week on the showcase: only the author, only on the lot's last day. Never retried. */
+    /** Another week on the showcase: only the author, only on the lot's last day. Repeated only under its key. */
     suspend fun extend(heroId: String, lotId: String): AuctionMine = lot("extend", heroId, lotId)
 
     /** What the like of a lot sold for lately: null with fewer deals than the rules ask. */

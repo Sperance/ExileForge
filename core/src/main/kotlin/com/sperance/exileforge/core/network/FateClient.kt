@@ -3,8 +3,8 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.model.fate.FateView
 
 /**
- * Предначертание аккаунта (сервер `fate`): дар аккаунта или три на выбор и выбор раз и навсегда. Выбор не повторяется:
- * второй ответил бы `FT_001` (уже выбран), не из предложенных - `FT_002`.
+ * Предначертание аккаунта (сервер `fate`): дар аккаунта или три на выбор и выбор раз и навсегда. Выбор повторяется только
+ * под своим ключом ([SafeRetry]) - сервер отдаст первый ответ; второй выбор ответил бы `FT_001` (уже выбран), не из предложенных - `FT_002`.
  */
 class FateClient internal constructor(private val http: Transport) {
     suspend fun view(): FateView = http.get(FATE)

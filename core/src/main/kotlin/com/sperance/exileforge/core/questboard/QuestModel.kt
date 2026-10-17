@@ -1,7 +1,9 @@
-package com.sperance.exileforge.core.quests
+package com.sperance.exileforge.core.questboard
 
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.StoryFold
+import com.sperance.exileforge.core.quests.QuestRepository
+import com.sperance.exileforge.core.quests.QuestTab
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted

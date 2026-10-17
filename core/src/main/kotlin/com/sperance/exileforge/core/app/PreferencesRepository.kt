@@ -1,9 +1,9 @@
 package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.campaign.LogKind
-import com.sperance.exileforge.core.display.ItemFilter
-import com.sperance.exileforge.core.display.ItemFilters
-import com.sperance.exileforge.core.display.ItemShelf
+import com.sperance.exileforge.core.filter.ItemFilter
+import com.sperance.exileforge.core.filter.ItemFilters
+import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.i18n.LaunchLines
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted

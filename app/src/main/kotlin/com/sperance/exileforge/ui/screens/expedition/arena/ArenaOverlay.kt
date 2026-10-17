@@ -18,10 +18,10 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
-import com.sperance.exileforge.core.character.figures
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.figures
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.sheet.MightExtras
 import com.sperance.exileforge.ui.components.*

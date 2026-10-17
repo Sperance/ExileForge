@@ -31,13 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.LootBreakdown
-import com.sperance.exileforge.core.campaign.LootPresence
 import com.sperance.exileforge.core.campaign.MapEnd
 import com.sperance.exileforge.core.campaign.MapTally
 import com.sperance.exileforge.core.campaign.RunSummary
-import com.sperance.exileforge.core.campaign.presentLoot
 import com.sperance.exileforge.core.campaign.run.RunHud
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
@@ -47,10 +44,13 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.recipeText
+import com.sperance.exileforge.core.expedition.LootPresence
+import com.sperance.exileforge.core.expedition.presentLoot
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.sellLots
 import com.sperance.exileforge.core.quests.QuestTurnIn
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect

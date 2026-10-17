@@ -26,11 +26,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.display.ItemSection
-import com.sperance.exileforge.core.display.ItemType
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.sidesText
 import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.filter.ItemSection
+import com.sperance.exileforge.core.filter.ItemType
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage

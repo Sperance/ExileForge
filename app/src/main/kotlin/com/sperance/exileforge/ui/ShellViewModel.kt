@@ -20,12 +20,12 @@ import com.sperance.exileforge.core.app.TAB_REDEMPTION
 import com.sperance.exileforge.core.app.TAB_TREE
 import com.sperance.exileforge.core.app.Warmup
 import com.sperance.exileforge.core.app.WarmupActions
-import com.sperance.exileforge.core.campaign.ExpeditionActions
 import com.sperance.exileforge.core.campaign.LogKind
-import com.sperance.exileforge.core.campaign.TrialActions
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.crafts.CraftsActions
+import com.sperance.exileforge.core.expedition.ExpeditionActions
+import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.reportSheet
 import com.sperance.exileforge.core.i18n.ui
@@ -72,7 +72,7 @@ class ShellViewModel(
     private val warming: WarmupActions,
     private val expedition: ExpeditionActions,
     trial: TrialActions,
-    rift: com.sperance.exileforge.core.campaign.RiftActions,
+    rift: com.sperance.exileforge.core.expedition.RiftActions,
     /** Связь с сервером на старте: окно запуска уходит по её ответу. */
     val reach: ServerReach,
     private val foreground: Foreground,
@@ -95,7 +95,7 @@ class ShellViewModel(
     val craftsAway: StateFlow<Boolean> = crafts.away
 
     /** Разлом недели: открыт - экран Разлома поверх стека. */
-    val rift: StateFlow<com.sperance.exileforge.core.campaign.RiftState> = rift.state
+    val rift: StateFlow<com.sperance.exileforge.core.expedition.RiftState> = rift.state
 
     /** Что телефон отзывает вибрацией, уже по настройкам. */
     val buzzes: SharedFlow<Buzz> get() = buzzer.flow

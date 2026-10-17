@@ -3,8 +3,8 @@ package com.sperance.exileforge.core.hero
 import com.sperance.exileforge.core.app.Landing
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.Screens
-import com.sperance.exileforge.core.display.ItemFilter
-import com.sperance.exileforge.core.display.ItemShelf
+import com.sperance.exileforge.core.filter.ItemFilter
+import com.sperance.exileforge.core.filter.ItemShelf
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

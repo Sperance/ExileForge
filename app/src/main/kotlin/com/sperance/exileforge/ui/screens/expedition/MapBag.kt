@@ -47,10 +47,10 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.DropChip
 import com.sperance.exileforge.core.campaign.run.MapDrop
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.scene.SceneCamera

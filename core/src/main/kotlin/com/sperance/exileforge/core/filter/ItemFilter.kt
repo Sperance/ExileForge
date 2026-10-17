@@ -1,9 +1,13 @@
-package com.sperance.exileforge.core.display
+package com.sperance.exileforge.core.filter
 
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.character.unmetFor
+import com.sperance.exileforge.core.display.ItemSearch
+import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.slotTitle
+import com.sperance.exileforge.core.display.title
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.QualityKind

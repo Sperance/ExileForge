@@ -25,12 +25,12 @@ import com.sperance.exileforge.core.app.SettingsStore
 import com.sperance.exileforge.core.app.ShellModel
 import com.sperance.exileforge.core.app.StartupTrace
 import com.sperance.exileforge.core.app.WarmupActions
-import com.sperance.exileforge.core.campaign.ExpeditionActions
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
-import com.sperance.exileforge.core.campaign.RiftActions
-import com.sperance.exileforge.core.campaign.TrialActions
 import com.sperance.exileforge.core.crafts.CraftsActions
 import com.sperance.exileforge.core.crafts.CraftsRepository
+import com.sperance.exileforge.core.expedition.ExpeditionActions
+import com.sperance.exileforge.core.expedition.RiftActions
+import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.feedback.LetterActions
@@ -53,7 +53,7 @@ import com.sperance.exileforge.core.network.HttpLink
 import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.network.RequestJournal
 import com.sperance.exileforge.core.player.PlayerCardModel
-import com.sperance.exileforge.core.quests.QuestActions
+import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.session.Buzzes
 import com.sperance.exileforge.core.session.CommandRunner

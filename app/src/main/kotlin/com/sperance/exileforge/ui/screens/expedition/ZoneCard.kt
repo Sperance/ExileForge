@@ -38,7 +38,6 @@ import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
@@ -50,6 +49,7 @@ import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ServerClock
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode

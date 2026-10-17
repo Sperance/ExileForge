@@ -5,8 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
-import com.sperance.exileforge.core.display.ItemFilter
-import com.sperance.exileforge.core.display.ItemShelf
+import com.sperance.exileforge.core.filter.ItemFilter
+import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroPage

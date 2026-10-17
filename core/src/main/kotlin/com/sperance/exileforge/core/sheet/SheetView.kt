@@ -1,8 +1,14 @@
-package com.sperance.exileforge.core.character
+package com.sperance.exileforge.core.sheet
 
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.PoolReserve
 import com.sperance.exileforge.core.campaign.StatFigures
+import com.sperance.exileforge.core.character.GearVerdict
+import com.sperance.exileforge.core.character.GearVerdicts
+import com.sperance.exileforge.core.character.Sheets
+import com.sperance.exileforge.core.character.StatDelta
+import com.sperance.exileforge.core.character.WearOutcome
+import com.sperance.exileforge.core.character.WearPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.NeedKind
 import com.sperance.exileforge.core.display.unmetNeeds

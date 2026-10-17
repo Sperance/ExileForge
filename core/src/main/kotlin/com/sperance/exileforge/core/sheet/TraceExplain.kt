@@ -1,4 +1,4 @@
-package com.sperance.exileforge.core.character
+package com.sperance.exileforge.core.sheet
 
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.FighterShot

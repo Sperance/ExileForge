@@ -1,6 +1,6 @@
 package com.sperance.exileforge.core.app
 
-import com.sperance.exileforge.core.display.ItemFilters
+import com.sperance.exileforge.core.filter.ItemFilters
 import com.sperance.exileforge.core.i18n.Lang
 import kotlinx.coroutines.flow.Flow
 

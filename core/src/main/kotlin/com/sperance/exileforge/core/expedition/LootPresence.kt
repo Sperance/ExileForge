@@ -1,4 +1,4 @@
-package com.sperance.exileforge.core.campaign
+package com.sperance.exileforge.core.expedition
 
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.rules.content.BulkSale

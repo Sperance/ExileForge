@@ -1,7 +1,6 @@
 package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.campaign.LogKind
-import com.sperance.exileforge.core.character.HeroLens
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.Lang
@@ -25,6 +24,7 @@ import com.sperance.exileforge.core.session.Notice
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.core.sheet.HeroLens
 import com.sperance.exileforge.core.world.World
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.rules.content.BenchRecipe

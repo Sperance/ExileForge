@@ -1,11 +1,11 @@
 package com.sperance.exileforge.core.app
 
 import com.sperance.exileforge.core.admin.AdminRepository
-import com.sperance.exileforge.core.campaign.ExpeditionActions
 import com.sperance.exileforge.core.campaign.ExpeditionRepository
-import com.sperance.exileforge.core.campaign.TrialActions
 import com.sperance.exileforge.core.crafts.CraftsActions
 import com.sperance.exileforge.core.crafts.CraftsRepository
+import com.sperance.exileforge.core.expedition.ExpeditionActions
+import com.sperance.exileforge.core.expedition.TrialActions
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.guild.GuildActions
 import com.sperance.exileforge.core.guild.GuildRepository
@@ -16,7 +16,7 @@ import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.market.MarketRepository
 import com.sperance.exileforge.core.network.LinkRepository
-import com.sperance.exileforge.core.quests.QuestActions
+import com.sperance.exileforge.core.questboard.QuestActions
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.WorldRepository

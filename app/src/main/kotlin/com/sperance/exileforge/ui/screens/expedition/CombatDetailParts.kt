@@ -34,8 +34,6 @@ import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Side
-import com.sperance.exileforge.core.character.StatTrace
-import com.sperance.exileforge.core.character.TraceExplainer
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -43,6 +41,8 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.display.statValue
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.StatTrace
+import com.sperance.exileforge.core.sheet.TraceExplainer
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint

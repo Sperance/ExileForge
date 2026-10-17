@@ -38,8 +38,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.character.unmetFor
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.GuildText
 import com.sperance.exileforge.core.display.itemTitle
@@ -53,6 +51,8 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildStashEntry
 import com.sperance.exileforge.core.model.guild.GuildStashView
+import com.sperance.exileforge.core.sheet.unmetFor
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.rules.content.GuildRole

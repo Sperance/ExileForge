@@ -4,13 +4,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.character.sellPrice
-import com.sperance.exileforge.core.character.unmetFor
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.i18n.Lang
+import com.sperance.exileforge.core.sheet.sellPrice
+import com.sperance.exileforge.core.sheet.unmetFor
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ClassesFile
 import com.sperance.exileforge.ui.components.accountRole
 

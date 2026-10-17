@@ -33,13 +33,13 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.modifierLine
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.run.MapFeature
 import com.sperance.exileforge.ui.components.ForgeButton

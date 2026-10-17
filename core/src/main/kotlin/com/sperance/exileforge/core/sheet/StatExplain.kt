@@ -1,8 +1,9 @@
-package com.sperance.exileforge.core.character
+package com.sperance.exileforge.core.sheet
 
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.PassiveSource
 import com.sperance.exileforge.core.campaign.ReadingPart
+import com.sperance.exileforge.core.character.StatPolarity
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.factorChange

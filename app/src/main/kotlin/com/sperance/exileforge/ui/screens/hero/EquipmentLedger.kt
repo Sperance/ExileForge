@@ -22,14 +22,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.character.sellPrice
-import com.sperance.exileforge.core.character.unmetFor
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.BodyPlace
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.sellPrice
+import com.sperance.exileforge.core.sheet.unmetFor
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet

@@ -10,9 +10,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.ForgeSection
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.display.ItemShelf
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.filter.ItemShelf
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.forge.OrbChoice
 import com.sperance.exileforge.core.forge.Smithy

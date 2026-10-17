@@ -13,10 +13,10 @@ import com.sperance.exileforge.core.character.GearVerdict
 import com.sperance.exileforge.core.character.GearVerdict.Shift
 import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.character.ToolVerdict
-import com.sperance.exileforge.core.character.gearVerdict
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.gearVerdict
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.theme.LifeRed

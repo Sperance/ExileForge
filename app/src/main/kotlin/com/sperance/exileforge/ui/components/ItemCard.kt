@@ -30,7 +30,6 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.app.GameSettings
-import com.sperance.exileforge.core.character.FlaskBonuses
 import com.sperance.exileforge.core.display.AffixKind
 import com.sperance.exileforge.core.display.BaseProperty
 import com.sperance.exileforge.core.display.Glyph
@@ -50,6 +49,7 @@ import com.sperance.exileforge.core.display.stateHint
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.FlaskBonuses
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.ui.icons.ItemIcon

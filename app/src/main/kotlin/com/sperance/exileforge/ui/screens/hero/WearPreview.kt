@@ -17,11 +17,6 @@ import com.sperance.exileforge.core.character.FlaskVerdict
 import com.sperance.exileforge.core.character.MightShift
 import com.sperance.exileforge.core.character.ToolVerdict
 import com.sperance.exileforge.core.character.WearPlace
-import com.sperance.exileforge.core.character.figures
-import com.sperance.exileforge.core.character.might
-import com.sperance.exileforge.core.character.unmetFor
-import com.sperance.exileforge.core.character.wearPlaces
-import com.sperance.exileforge.core.character.wearing
 import com.sperance.exileforge.core.display.Comparison
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.requirementReason
@@ -29,6 +24,11 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
+import com.sperance.exileforge.core.sheet.figures
+import com.sperance.exileforge.core.sheet.might
+import com.sperance.exileforge.core.sheet.unmetFor
+import com.sperance.exileforge.core.sheet.wearPlaces
+import com.sperance.exileforge.core.sheet.wearing
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.MightComparison

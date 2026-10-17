@@ -25,9 +25,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.character.unmetFor
-import com.sperance.exileforge.core.character.unmetNeeds
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.bagVisualKind
@@ -42,6 +39,9 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.core.sheet.unmetFor
+import com.sperance.exileforge.core.sheet.unmetNeeds
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Slot

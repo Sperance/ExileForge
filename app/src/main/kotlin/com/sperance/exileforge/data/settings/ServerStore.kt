@@ -13,7 +13,7 @@ import com.sperance.exileforge.core.app.GameSettings
 import com.sperance.exileforge.core.app.SecretVault
 import com.sperance.exileforge.core.app.SecretsUnavailable
 import com.sperance.exileforge.core.contract.WireJson
-import com.sperance.exileforge.core.display.ItemFilters
+import com.sperance.exileforge.core.filter.ItemFilters
 import com.sperance.exileforge.core.i18n.Lang
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first

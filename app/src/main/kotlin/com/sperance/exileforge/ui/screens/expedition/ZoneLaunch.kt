@@ -37,7 +37,6 @@ import com.sperance.exileforge.core.campaign.MapLineKind
 import com.sperance.exileforge.core.campaign.TokenState
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.campaign.WorldToken
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemLine
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.itemDescription
@@ -54,6 +53,7 @@ import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
 import com.sperance.exileforge.core.i18n.uiOr
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.AtlasBonuses
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex

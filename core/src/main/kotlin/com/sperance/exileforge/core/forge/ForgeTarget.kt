@@ -2,10 +2,10 @@ package com.sperance.exileforge.core.forge
 
 import com.sperance.exileforge.core.app.ForgeSection
 import com.sperance.exileforge.core.app.GameUi
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.QualityForecast
 import com.sperance.exileforge.core.i18n.refusalText
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.Refusal
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item

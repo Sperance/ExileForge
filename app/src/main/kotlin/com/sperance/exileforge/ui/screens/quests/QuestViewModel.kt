@@ -6,8 +6,8 @@ import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.StoryFold
-import com.sperance.exileforge.core.quests.QuestActions
-import com.sperance.exileforge.core.quests.QuestModel
+import com.sperance.exileforge.core.questboard.QuestActions
+import com.sperance.exileforge.core.questboard.QuestModel
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.quests.Quests

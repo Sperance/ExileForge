@@ -34,10 +34,10 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.SkillDefinition
 import com.sperance.exileforge.rules.content.SlotCondition

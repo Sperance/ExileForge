@@ -26,10 +26,10 @@ import com.sperance.exileforge.core.app.GameSettings
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.KeepScreen
 import com.sperance.exileforge.core.app.TAB_HERO
-import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.i18n.LaunchLines
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.core.update.UpdateModel
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.StallWatchdog
@@ -165,7 +165,7 @@ import org.koin.compose.viewmodel.koinViewModel
             CompositionLocalProvider(
                 LocalBugReport provides { sheets.bug = true },
                 LocalMailOpen provides { mailOpen = true },
-                com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.core.character.FlaskBonuses(game) },
+                com.sperance.exileforge.ui.components.LocalFlaskBonuses provides remember(game.hero, game.index) { com.sperance.exileforge.core.sheet.FlaskBonuses(game) },
                 com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
                 com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
             ) {

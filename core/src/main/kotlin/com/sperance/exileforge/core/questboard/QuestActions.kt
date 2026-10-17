@@ -1,4 +1,4 @@
-package com.sperance.exileforge.core.quests
+package com.sperance.exileforge.core.questboard
 
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
@@ -7,6 +7,9 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.GameApi
+import com.sperance.exileforge.core.quests.QuestRepository
+import com.sperance.exileforge.core.quests.QuestTurnIn
+import com.sperance.exileforge.core.quests.Quests
 import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices

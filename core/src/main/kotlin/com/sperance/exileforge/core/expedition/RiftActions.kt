@@ -1,7 +1,9 @@
-package com.sperance.exileforge.core.campaign
+package com.sperance.exileforge.core.expedition
 
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.speedPresses
+import com.sperance.exileforge.core.campaign.RiftArena
+import com.sperance.exileforge.core.campaign.RiftStyles
 import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText

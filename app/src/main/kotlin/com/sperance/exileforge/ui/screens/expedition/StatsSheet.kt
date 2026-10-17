@@ -10,8 +10,8 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.EffectOrigins
 import com.sperance.exileforge.core.campaign.MapEffects
 import com.sperance.exileforge.core.campaign.StatFigures
-import com.sperance.exileforge.core.character.figures
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.figures
 import com.sperance.exileforge.ui.components.Engraved
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.MutedText

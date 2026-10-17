@@ -15,6 +15,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.ServerReach
 import com.sperance.exileforge.core.app.SessionActions
+import com.sperance.exileforge.core.app.ShellModel
 import com.sperance.exileforge.core.app.TAB_REDEMPTION
 import com.sperance.exileforge.core.app.TAB_TREE
 import com.sperance.exileforge.core.app.Warmup
@@ -24,6 +25,8 @@ import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.core.campaign.TrialActions
 import com.sperance.exileforge.core.campaign.TrialArena
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
+import com.sperance.exileforge.core.crafts.CraftsActions
+import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.reportSheet
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.BugReportRequest
@@ -59,10 +62,11 @@ class ShellViewModel(
     private val notices: Notices,
     private val buzzer: Buzzes,
     private val prefs: PreferencesRepository,
-    private val connection: ServerConnection,
     private val bugs: BugDelivery,
-    private val sessions: SessionRepository,
-    private val modes: AppModes,
+    /** Что прикладывается к отчёту об ошибке: падения клиента, снимок героя, журнал сбоев. */
+    private val evidence: BugEvidence,
+    /** Вкладки аккаунта, повторные нажатия, просьбы листа отчёта, узел древа. */
+    private val shell: ShellModel,
     private val session: SessionActions,
     private val link: ConnectionActions,
     private val warming: WarmupActions,
@@ -72,9 +76,7 @@ class ShellViewModel(
     /** Связь с сервером на старте: окно запуска уходит по её ответу. */
     val reach: ServerReach,
     private val foreground: Foreground,
-    /** Последние падения: их стеки прикладываются к отчёту об ошибке. */
-    private val crashes: com.sperance.exileforge.platform.CrashKeeper,
-    crafts: com.sperance.exileforge.core.crafts.CraftsRepository,
+    crafts: CraftsActions,
 ) : ViewModel() {
     init {
         reach.start()
@@ -90,7 +92,7 @@ class ShellViewModel(
     val arena: StateFlow<TrialArena?> = trial.arena
 
     /** Досчёт ремёсел после отлучки ещё не показан листом: вкладка ремёсел помечена. */
-    val craftsAway: StateFlow<Boolean> = crafts.state.map { it.away != null }.stateIn(viewModelScope, SharingStarted.Eagerly, crafts.state.value.away != null)
+    val craftsAway: StateFlow<Boolean> = crafts.away
 
     /** Разлом недели: открыт - экран Разлома поверх стека. */
     val rift: StateFlow<com.sperance.exileforge.core.campaign.RiftState> = rift.state
@@ -106,48 +108,31 @@ class ShellViewModel(
      *
      * К ошибке прикладываются последние падения клиента и снимок героя; без прочитанного контента отчёт уходит без журнала сбоев.
      */
-    fun reportBug(report: BugReportRequest, onQueued: suspend () -> Unit = {}) = bugs.file({
-        val rules = game.value.index?.rules?.feedback
-        val evidence = if (report.kind == FeedbackKind.BUG) {
-            report.copy(traces = crashes.recent(), heroSheet = game.value.hero?.reportSheet().orEmpty())
-        } else {
-            report
-        }
-        connection.current.value?.bugReport(evidence, rules?.failures ?: 0) ?: evidence
-    }, onQueued)
+    fun reportBug(report: BugReportRequest, onQueued: suspend () -> Unit = {}) = bugs.file({ evidence.attach(report) }, onQueued)
 
     /** Аккорд громкости: просьба открыть лист отчёта. */
-    private val bugAsks = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
-    val bugRequests: SharedFlow<Unit> = bugAsks
+    val bugRequests: SharedFlow<Unit> = shell.bugRequests
 
     /** Открыть лист отчёта: его откроет хозяин системных листов. */
-    fun requestBug() {
-        bugAsks.tryEmit(Unit)
-    }
+    fun requestBug() = shell.requestBug()
 
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
 
     /** Повторное нажатие на открытую вкладку: её экран закрывает вложенное и прокручивается наверх. */
-    private val reselects = kotlinx.coroutines.flow.MutableSharedFlow<Int>(extraBufferCapacity = 1)
-    val reselected: kotlinx.coroutines.flow.SharedFlow<Int> = reselects
+    val reselected: SharedFlow<Int> = shell.reselected
 
     /**
-     * Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого.
-     *
-     * Промокоды заводит только администратор: модератору их экран не открывается.
+     * Вкладка по прежнему номеру; закрытую уровнем героя навигатор не откроет и скажет, с какого. Вкладку, закрытую аккаунту, решает
+     * оболочка ядра.
      */
     fun tab(tab: Int) {
-        if (!adminTools() && tab in ADMIN_TABS) return
-        if (tab == TAB_REDEMPTION && !sessions.state.value.isAdmin) return
+        if (!shell.opens(tab)) return
         commands.dismissMessage()
         val again = navigator.current.value.tab == tab
         navigator.tab(Route.ofTab(tab))
-        if (again) reselects.tryEmit(tab)
+        if (again) shell.reselect(tab)
     }
-
-    /** Инструменты администратора: роль модерации аккаунта и режим вместе. */
-    private fun adminTools(): Boolean = sessions.state.value.isModerator && modes.mode.value == AppMode.ADMIN
 
     /** Здание Города или площадь для null. */
     fun building(building: Building?) {
@@ -161,16 +146,13 @@ class ShellViewModel(
         navigator.open(Route.Settings(page))
     }
 
-    /** Узел дерева, на котором оно откроется: гнездо для самоцвета из карточки. */
-    private var treeNode: String? = null
-
     /** Пассивное дерево с выбранным узлом [node]. */
     fun openTree(node: String) {
-        treeNode = node
+        shell.aimTree(node)
         tab(TAB_TREE)
     }
 
-    fun takeTreeNode(): String? = treeNode.also { treeNode = null }
+    fun takeTreeNode(): String? = shell.takeTreeNode()
 
     fun closeSettings() = navigator.back()
 

@@ -40,12 +40,14 @@ import com.sperance.exileforge.core.session.Reach
 import com.sperance.exileforge.core.session.StartGate
 import com.sperance.exileforge.core.session.StartInput
 import com.sperance.exileforge.core.session.StartVerdict
+import com.sperance.exileforge.core.update.UpdateModel
+import com.sperance.exileforge.core.update.UpdateState
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.update.UpdateInstaller
 import kotlinx.coroutines.delay
 
 /** The update model of the activity, for the screens that show the version and check by hand. */
-val LocalUpdates = staticCompositionLocalOf<UpdateViewModel?> { null }
+val LocalUpdates = staticCompositionLocalOf<UpdateModel?> { null }
 
 /** Что из сохранённого на устройстве уже прочитано: мир, словарь, иконки. */
 data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, val iconsReady: Boolean) {
@@ -68,7 +70,7 @@ data class StartStages(val contentReady: Boolean, val dictionaryReady: Boolean, 
  * короче [MIN_SHOWN_MS]. Сборка, найденная в походе или испытании, закроет игру по их концу, а пока - плашка сверху.
  */
 @Composable fun UpdateGate(
-    updates: UpdateViewModel,
+    updates: UpdateModel,
     busy: Boolean,
     stages: StartStages,
     window: StartWindow,
@@ -164,10 +166,11 @@ class StartActions(val retry: () -> Unit, val release: () -> Unit, val checkFit:
 /** Запуск: что идёт сейчас строкой, общая полоса по шагам (связь, версия, мир устройства) и шаги - по «Подробнее». */
 @Composable private fun ColumnScope.Starting(s: UpdateState, stages: StartStages, reach: ReachState, unreachable: Boolean) {
     val steps = listOf(reach.reach == Reach.ANSWERED, !s.checking, stages.deviceReady)
+    val progress = s.progress
     val now = when {
         unreachable -> ui("start.unreachable")
         reach.reach != Reach.ANSWERED -> ui("launch.step.server")
-        s.progress != null -> ui("start.state.downloading", (s.progress * 100).toInt())
+        progress != null -> ui("start.state.downloading", (progress * 100).toInt())
         s.checking -> ui("launch.step.version")
         !stages.deviceReady -> ui("launch.step.device")
         else -> ui("launch.step.ready")
@@ -281,10 +284,12 @@ private val SPLASH_PANEL = 560.dp
         if (reach.reach == Reach.UNREACHABLE) {
             StartRow(ui("start.row.server"), RowState.FAIL, ui("start.state.retry_in", ((reach.retryAt - now + 999) / 1000).coerceAtLeast(0)))
         }
+        val progress = s.progress
+        val found = s.update
         when {
-            s.progress != null -> StartRow(ui("start.row.version"), RowState.RUN, ui("start.state.downloading", (s.progress * 100).toInt()))
+            progress != null -> StartRow(ui("start.row.version"), RowState.RUN, ui("start.state.downloading", (progress * 100).toInt()))
             s.checking -> StartRow(ui("start.row.version"), RowState.RUN, ui("start.state.checking"))
-            s.update != null -> StartRow(ui("start.row.version"), RowState.DONE, ui("start.state.found", s.update.info.versionName))
+            found != null -> StartRow(ui("start.row.version"), RowState.DONE, ui("start.state.found", found.info.versionName))
             s.failure != null -> StartRow(ui("start.row.version"), RowState.FAIL, ui("start.state.unchecked"))
             else -> StartRow(ui("start.row.version"), RowState.DONE, ui("start.state.latest", BuildConfig.VERSION_NAME))
         }
@@ -365,7 +370,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
  *
  * Обход установщика: страница релиза на GitHub, APK руками.
  */
-@Composable private fun ColumnScope.UpdateBody(s: UpdateState, updates: UpdateViewModel) {
+@Composable private fun ColumnScope.UpdateBody(s: UpdateState, updates: UpdateModel) {
     val update = s.update ?: return
     val context = LocalContext.current
     Text(ui("update.title"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
@@ -425,9 +430,12 @@ private const val CONTINUE_AFTER_MS = 15_000L
 }
 
 /** Что сказать о версии: есть новая, идёт проверка, отказ проверки или «последняя». */
-fun updateNote(s: UpdateState): String? = when {
-    s.update != null -> ui("update.found", s.update.info.versionName)
-    s.checking -> ui("update.checking")
-    s.failure != null -> s.failure
-    else -> ui("update.up_to_date")
+fun updateNote(s: UpdateState): String? {
+    val found = s.update
+    return when {
+        found != null -> ui("update.found", found.info.versionName)
+        s.checking -> ui("update.checking")
+        s.failure != null -> s.failure
+        else -> ui("update.up_to_date")
+    }
 }

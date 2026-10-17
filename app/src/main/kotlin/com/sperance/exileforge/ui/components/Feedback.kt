@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.feedback.Feedback
+import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -165,7 +166,7 @@ data class ReportsView(val tab: ReportsTab, val focus: String? = null)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsSheet(start: ReportsView, onDismiss: () -> Unit) {
-    val model = koinViewModel<FeedbackViewModel>()
+    val model = koinViewModel<FeedbackViewModel>().model
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
     val seen by model.seen.collectAsStateWithLifecycle()
@@ -214,7 +215,7 @@ fun ReportsSheet(start: ReportsView, onDismiss: () -> Unit) {
  * Список открытой вкладки [tab]: свои отчёты ([fresh] - с новыми ответами) или известные проблемы по поиску [query]. Свой отчёт
  * [focus] подсвечен, и «Мои» прокручены к нему, как только он пришёл.
  */
-@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackViewModel, onDelete: (String) -> Unit) {
+@Composable private fun ReportsList(tab: ReportsTab, feedback: Feedback, query: String, fresh: Set<String>, focus: String?, enabled: Boolean, model: FeedbackModel, onDelete: (String) -> Unit) {
     val list = rememberLazyListState()
     val mine = feedback.mine.sortedBy { ReportFate.of(it.status, it.issue).closed }
     val focusAt = mine.indexOfFirst { it.id == focus }.takeIf { tab == ReportsTab.MINE && it >= 0 }

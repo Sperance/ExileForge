@@ -27,6 +27,7 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.feedback.Feedback
+import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.feedback.LetterDraft
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.locOr
@@ -153,7 +154,7 @@ internal fun burnText(mail: Mail): String = when {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MailSheet(game: GameUi, onDismiss: () -> Unit) {
-    val model = koinViewModel<FeedbackViewModel>()
+    val model = koinViewModel<FeedbackViewModel>().model
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId) {
@@ -214,7 +215,7 @@ object MailLinks {
 }
 
 /** «Прочитать все» и «Удалить прочитанные» - с вопросом, сколько уйдёт; письмо с вложением не удаляется. */
-@Composable private fun MailActionsRow(model: FeedbackViewModel, feedback: Feedback, busy: Boolean) {
+@Composable private fun MailActionsRow(model: FeedbackModel, feedback: Feedback, busy: Boolean) {
     var purging by remember { mutableStateOf(false) }
     val unread = feedback.mail.count { !it.read }
     val removable = feedback.mail.count { it.read && !it.claimable }
@@ -293,7 +294,7 @@ object MailLinks {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LetterSheet(game: GameUi, model: FeedbackViewModel, feedback: Feedback, busy: Boolean, mail: Mail, onClose: () -> Unit) {
+private fun LetterSheet(game: GameUi, model: FeedbackModel, feedback: Feedback, busy: Boolean, mail: Mail, onClose: () -> Unit) {
     var reporting by remember { mutableStateOf(false) }
     val from = mail.from
     val ignored = from != null && feedback.ignored.any { it.heroId == from.heroId }
@@ -353,7 +354,7 @@ private fun LetterSheet(game: GameUi, model: FeedbackViewModel, feedback: Feedba
 }
 
 /** Вложение письма: строки с карточкой вещи и «Забрать» героем в игре, один раз. */
-@Composable private fun Attachment(game: GameUi, model: FeedbackViewModel, busy: Boolean, mail: Mail) {
+@Composable private fun Attachment(game: GameUi, model: FeedbackModel, busy: Boolean, mail: Mail) {
     val lines = attachmentLines(mail)
     if (lines.isEmpty()) return
     Engraved(ui("mail.attachment"))
@@ -406,7 +407,7 @@ private fun LetterSheet(game: GameUi, model: FeedbackViewModel, feedback: Feedba
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LetterHost(game: GameUi) {
-    val model = koinViewModel<FeedbackViewModel>()
+    val model = koinViewModel<FeedbackViewModel>().model
     val feedback by model.feedback.collectAsStateWithLifecycle()
     val activity by model.activity.collectAsStateWithLifecycle()
     val draft = feedback.letter ?: return

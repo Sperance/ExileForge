@@ -4,6 +4,7 @@ import com.sperance.exileforge.core.campaign.LogKind
 import com.sperance.exileforge.core.display.ItemFilter
 import com.sperance.exileforge.core.display.ItemFilters
 import com.sperance.exileforge.core.display.ItemShelf
+import com.sperance.exileforge.core.i18n.LaunchLines
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,4 +43,27 @@ class PreferencesRepository(private val store: SettingsStore, scope: CoroutineSc
     suspend fun saveItemFilter(shelf: ItemShelf, value: ItemFilter) = store.saveItemFilters(itemFilters.value.with(shelf, value))
 
     suspend fun saveLogFilter(value: Set<LogKind>) = store.saveLogFilter(LogKind.write(value))
+
+    /** Где стояла камера карты у героя [heroId]; не стояла - null, карта откроется на фронтире. */
+    fun worldView(heroId: String): WorldView? = settings.value.worldViews[heroId]
+
+    /** Запомнить камеру карты героя [heroId] на устройстве: только настройки, сервер не знает; без героя - ничего. */
+    suspend fun keepWorldView(heroId: String, view: WorldView) {
+        if (heroId.isBlank()) return
+        editSettings { copy(worldViews = worldViews + (heroId to view)) }
+    }
+
+    /**
+     * Строка окна загрузки на этот показ из [keys]: не та, что в прошлый ([GameSettings.lastLaunchLine], прочитано с устройства), выбор
+     * помнится; строк нет - null.
+     */
+    suspend fun launchLine(keys: List<String>): String? {
+        var picked: String? = null
+        editStored {
+            val next = LaunchLines.next(keys, lastLaunchLine)
+            picked = next
+            next?.let { copy(lastLaunchLine = it) } ?: this
+        }
+        return picked
+    }
 }

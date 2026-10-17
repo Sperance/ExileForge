@@ -15,6 +15,8 @@ import com.sperance.exileforge.core.display.ItemVisualKind
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.forge.OrbChoice
+import com.sperance.exileforge.core.forge.Smithy
+import com.sperance.exileforge.core.forge.SmithyModel
 import com.sperance.exileforge.core.forge.forgeTarget
 import com.sperance.exileforge.core.forge.hiddenOrbs
 import com.sperance.exileforge.core.forge.orbChoices
@@ -50,7 +52,7 @@ internal const val UNCRAFT = "-"
  * вещь.
  */
 @Composable fun CraftScreen() {
-    val vm = koinViewModel<SmithyViewModel>()
+    val vm = koinViewModel<SmithyViewModel>().model
     val game by vm.game.collectAsStateWithLifecycle()
     val smithy by vm.smithy.collectAsStateWithLifecycle()
     LaunchedEffect(game.heroId, game.sessionEpoch) { vm.ensure() }
@@ -161,7 +163,7 @@ private fun essenceRefusals(index: ContentIndex, hero: HeroView, gear: ForgeTarg
 }
 
 /** Строки на выбор, что ждут решения над вещью: скрытая строка ([REVEALS] - аффикс или судьбоносная) и знамение выбора. */
-@Composable private fun LineChoices(game: GameUi, target: ForgeTarget, enabled: Boolean, vm: SmithyViewModel) {
+@Composable private fun LineChoices(game: GameUi, target: ForgeTarget, enabled: Boolean, vm: SmithyModel) {
     when (target) {
         is ForgeTarget.Gear -> {
             val item = target.view.item

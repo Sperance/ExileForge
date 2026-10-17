@@ -16,6 +16,10 @@ import com.sperance.exileforge.rules.roll.ActiveWork
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /**
@@ -36,6 +40,9 @@ class CraftsActions(
 ) {
     private val api: GameApi get() = connection.api
     private val crafts: Crafts get() = repository.state.value
+
+    /** Досчёт ремёсел после отлучки ещё не показан листом: вкладка ремёсел помечена. Поток заводится при первом чтении, не в конструкторе. */
+    val away: StateFlow<Boolean> by lazy { repository.state.map { it.away != null }.stateIn(scope, SharingStarted.Eagerly, repository.state.value.away != null) }
 
     /**
      * Игрок отсутствовал: запуск, вход в героя или уход игры с переднего плана; первый ответ после этого может стать листом «Пока вас не

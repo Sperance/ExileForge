@@ -106,7 +106,7 @@ const val ORB_TOP_UP = 10L
  */
 @Composable fun AdminOrbPanel(game: GameUi) {
     val heroModel: HeroViewModel = koinViewModel()
-    val smithy = koinViewModel<SmithyViewModel>()
+    val smithy = koinViewModel<SmithyViewModel>().model
     val chosen by smithy.smithy.collectAsStateWithLifecycle()
     val hero = game.hero ?: return
     val targets = hero.items.associate { instance ->

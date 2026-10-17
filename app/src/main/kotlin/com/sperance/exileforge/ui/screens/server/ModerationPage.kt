@@ -33,6 +33,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.admin.ModerationFilters
+import com.sperance.exileforge.core.admin.ModerationTab
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
@@ -66,7 +68,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * Порядок и отбор по дару - за кнопкой с числом активных, у корзины их нет. Над списком - что отобрано и сколько найдено.
  */
 @Composable internal fun ModerationPage(account: AccountUi) {
-    val vm = koinViewModel<ModerationViewModel>()
+    val vm = koinViewModel<ModerationViewModel>().model
     val state by vm.state.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { vm.load(0) }
     if (state.dossierKey != null) {

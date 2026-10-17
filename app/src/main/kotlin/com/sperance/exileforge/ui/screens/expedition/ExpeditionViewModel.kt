@@ -30,7 +30,6 @@ class ExpeditionViewModel(
     private val expedition: ExpeditionActions,
     private val trial: TrialActions,
     private val rift: RiftActions,
-    private val hero: HeroActions,
     repository: ExpeditionRepository,
     commands: CommandRunner,
     slice: GameSlice,
@@ -38,12 +37,11 @@ class ExpeditionViewModel(
     private val navigator: Navigator,
 ) : ViewModel() {
     /** Где стояла камера карты у героя [heroId]; не стояла - null, карта откроется на фронтире. */
-    fun worldView(heroId: String): WorldView? = prefs.settings.value.worldViews[heroId]
+    fun worldView(heroId: String): WorldView? = prefs.worldView(heroId)
 
-    /** Запомнить камеру карты героя [heroId] на устройстве: только настройки, сервер не знает. */
+    /** Запомнить камеру карты героя [heroId] на устройстве. */
     fun keepWorldView(heroId: String, view: WorldView) {
-        if (heroId.isBlank()) return
-        viewModelScope.launch { prefs.editSettings { copy(worldViews = worldViews + (heroId to view)) } }
+        viewModelScope.launch { prefs.keepWorldView(heroId, view) }
     }
 
     /** Срез «игра» для экранов этой модели. */
@@ -67,16 +65,11 @@ class ExpeditionViewModel(
     fun toggleScarab(code: String, add: Boolean) = expedition.toggleScarab(code, add)
 
     /** Насильные механики захода - только тестировщику и выше. */
-    fun toggleForced(mechanic: MapMechanic) {
-        if (game.value.isTester) expedition.toggleForced(mechanic)
-    }
-
-    fun forceAll(on: Boolean) {
-        if (game.value.isTester) expedition.forceAll(on)
-    }
+    fun toggleForced(mechanic: MapMechanic) = expedition.toggleForced(mechanic)
+    fun forceAll(on: Boolean) = expedition.forceAll(on)
 
     /** Заход в зону; [toBoss] (тестировщик и выше) - сразу бой со стражем. */
-    fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.start(MapCode(mapCode), toBoss = toBoss && game.value.isTester)
+    fun startRun(mapCode: String, toBoss: Boolean = false) = expedition.startRun(mapCode, toBoss)
     fun continueUnfinished() = expedition.continueUnfinished()
     fun abandonUnfinished() = expedition.abandonUnfinished()
     fun runCommand(command: RunCommand) = expedition.send(command)
@@ -86,7 +79,7 @@ class ExpeditionViewModel(
     fun closeRun() = expedition.close()
 
     /** «Продать и вернуться»: заход закрывается и на сервере, затем отмеченная добыча продаётся пачкой. */
-    fun closeRunSelling(itemIds: Collection<String>) = expedition.close { id -> hero.sellBatch(id, itemIds) }
+    fun closeRunSelling(itemIds: Collection<String>) = expedition.closeSelling(itemIds)
     fun openAtlas() = expedition.openAtlas()
 
     /** Страница «Похода» экраном под вкладкой; Атлас открывает поход - он прежде готовит своё окно. */

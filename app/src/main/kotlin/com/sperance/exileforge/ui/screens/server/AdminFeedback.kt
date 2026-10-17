@@ -26,6 +26,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
+import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.feedback.AdminReport
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
@@ -50,7 +51,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * список с сервера.
  */
 @Composable internal fun FeedbackAdminPage(account: AccountUi) {
-    val vm = koinViewModel<FeedbackViewModel>()
+    val vm = koinViewModel<FeedbackViewModel>().model
     val feedback by vm.feedback.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     var kind by remember { mutableStateOf(FeedbackKind.BUG) }
@@ -127,7 +128,7 @@ private fun AdminReport.matches(query: String): Boolean {
 }
 
 /** Строка отчёта: точка судьбы, текст и метки; раскрытая [open] - весь отчёт и действия. */
-@Composable private fun ReportRow(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport, open: Boolean, onToggle: () -> Unit) {
+@Composable private fun ReportRow(account: AccountUi, vm: FeedbackModel, entry: AdminReport, open: Boolean, onToggle: () -> Unit) {
     val report = entry.report
     val fate = ReportFate.of(report.status, report.issue)
     var deleting by remember(report.id) { mutableStateOf(false) }
@@ -160,7 +161,7 @@ private fun rowMeta(entry: AdminReport): String {
 }
 
 /** Раскрытый отчёт: контекст, ошибки сети, действия, герой, переписка - и что модерация может с ним сделать. */
-@Composable private fun ReportDetail(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport, onDelete: () -> Unit) {
+@Composable private fun ReportDetail(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onDelete: () -> Unit) {
     val report = entry.report
     report.heroId?.takeIf { it.isNotBlank() }?.let { hero ->
         Text(ui("feedback.hero", report.heroName.ifBlank { "…" + hero.takeLast(6) }), color = Gold, style = MaterialTheme.typography.labelMedium, modifier = Modifier.opensPlayer(hero))
@@ -193,7 +194,7 @@ private fun rowMeta(entry: AdminReport): String {
  * Дополнение модерации: его пишут и правят модератор и администратор, оно уходит разделом в тело Issue; автору в игре не видно,
  * письма нет. «Сохранить» горит, когда текст разошёлся с сохранённым; пустой текст стирает дополнение.
  */
-@Composable private fun ModerationNote(account: AccountUi, vm: FeedbackViewModel, report: FullReport) {
+@Composable private fun ModerationNote(account: AccountUi, vm: FeedbackModel, report: FullReport) {
     var note by remember(report.id, report.moderationNote) { mutableStateOf(report.moderationNote) }
     Engraved(ui("feedback.note.title"))
     OutlinedTextField(note, { note = it.take(NOTE) }, placeholder = { Text(ui("feedback.note.hint")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
@@ -211,7 +212,7 @@ private fun rowMeta(entry: AdminReport): String {
  * Решение по новому отчёту: слово модерации и «В GitHub» (Issue со словом первым комментарием) или «Отклонить» (слово -
  * причина автору); апелляция и жалоба не уходят наружу - у них «Принять» вместо «В GitHub».
  */
-@Composable private fun NewReportActions(account: AccountUi, vm: FeedbackViewModel, entry: AdminReport, onDelete: () -> Unit) {
+@Composable private fun NewReportActions(account: AccountUi, vm: FeedbackModel, entry: AdminReport, onDelete: () -> Unit) {
     val report = entry.report
     var word by remember(report.id) { mutableStateOf(report.reason) }
     OutlinedTextField(
@@ -249,7 +250,7 @@ private const val SEARCH = 60
  * Ведение Issue из игры: слово модерации (уходит комментарием) и действие - ответить, закрыть
  * исправленным, отказом или дублем (с номером оригинала). Судьба приходит из GitHub сразу.
  */
-@Composable private fun IssueSteer(account: AccountUi, vm: FeedbackViewModel, id: String) {
+@Composable private fun IssueSteer(account: AccountUi, vm: FeedbackModel, id: String) {
     var note by remember(id) { mutableStateOf("") }
     var original by remember(id) { mutableStateOf("") }
     OutlinedTextField(note, { note = it.take(REASON) }, label = { Text(ui("feedback.move.text")) }, minLines = 2, modifier = Modifier.fillMaxWidth())
@@ -284,7 +285,7 @@ private const val DUPLICATE_DIGITS = 6
  */
 @Composable internal fun MailComposePage(account: AccountUi) {
     val index = account.index ?: return
-    val vm = koinViewModel<FeedbackViewModel>()
+    val vm = koinViewModel<FeedbackViewModel>().model
     var login by remember { mutableStateOf(vm.takeMailTo()) }
     var subject by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }

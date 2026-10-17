@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.app.HeroCache
 import com.sperance.exileforge.core.crafts.Crafts
 import com.sperance.exileforge.core.crafts.CraftsActions
+import com.sperance.exileforge.core.crafts.CraftsModel
 import com.sperance.exileforge.core.crafts.CraftsRepository
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.CommandRunner
@@ -21,8 +23,8 @@ class CraftsViewModel(
     private val actions: CraftsActions,
     repository: CraftsRepository,
     commands: CommandRunner,
-    private val store: ServerStore,
-    private val sessions: SessionRepository,
+    store: HeroCache,
+    sessions: SessionRepository,
     slice: GameSlice,
 ) : ViewModel() {
     /** Срез «игра» для экранов этой модели. */
@@ -30,14 +32,12 @@ class CraftsViewModel(
     val crafts: StateFlow<Crafts> = repository.state
     val activity: StateFlow<Activity> = commands.state
 
-    private val mutableProfession = MutableStateFlow("")
+    private val model = CraftsModel(store, sessions, viewModelScope)
 
     /** Код профессии, чьё окно открыто; пусто - плитки. */
-    val profession: StateFlow<String> = mutableProfession
+    val profession: StateFlow<String> = model.profession
 
-    fun openProfession(code: String) {
-        mutableProfession.value = code
-    }
+    fun openProfession(code: String) = model.openProfession(code)
 
     fun load(silent: Boolean = false, fresh: Boolean = false) = actions.load(silent, fresh)
     fun watch(on: Boolean) = actions.watch(on)
@@ -49,10 +49,7 @@ class CraftsViewModel(
     fun seen() = actions.seen()
 
     /** Последний запущенный выбор кузнеца героя на этом устройстве: лист открывается в его режиме. */
-    suspend fun smithChoice(heroId: String): SmithChoice? = SmithChoice.of(store.smithChoice(sessions.state.value.server, heroId).orEmpty())
+    suspend fun smithChoice(heroId: String): SmithChoice? = model.smithChoice(heroId)
 
-    fun rememberSmithChoice(heroId: String, choice: SmithChoice) {
-        val server = sessions.state.value.server
-        viewModelScope.launch { store.saveSmithChoice(server, heroId, choice.name) }
-    }
+    fun rememberSmithChoice(heroId: String, choice: SmithChoice) = model.rememberSmithChoice(heroId, choice)
 }

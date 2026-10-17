@@ -30,6 +30,7 @@ import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.i18n.LaunchLines
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.update.UpdateModel
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.StallWatchdog
 import com.sperance.exileforge.ui.components.BugSheet
@@ -48,7 +49,6 @@ import com.sperance.exileforge.ui.components.StartStages
 import com.sperance.exileforge.ui.components.ToastBelow
 import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
-import com.sperance.exileforge.ui.components.UpdateViewModel
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.nav.Navigator
 import com.sperance.exileforge.ui.nav.Route
@@ -84,7 +84,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * Настройки на всех экранах: размер текста, движение, экран без сна, отклик. Обновление - поверх всего, забег и испытание сперва кончаются;
  * окно запуска держится, пока сервер не ответит, и читает модель без шлюза жизненного цикла. Прогрев героя - то же окно запуска.
  */
-@Composable fun ForgeApp(updates: UpdateViewModel) {
+@Composable fun ForgeApp(updates: UpdateModel) {
     val shell: ShellViewModel = koinViewModel()
     val context = LocalContext.current
     val expedition by shell.run.collectAsStateWithLifecycle()

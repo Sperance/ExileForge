@@ -2,160 +2,26 @@ package com.sperance.exileforge.ui.components
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sperance.exileforge.core.feedback.Feedback
+import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.feedback.LetterActions
+import com.sperance.exileforge.core.feedback.SeenReplies
 import com.sperance.exileforge.core.hero.HeroRepository
-import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.core.model.feedback.AdminReport
-import com.sperance.exileforge.core.model.feedback.FeedbackKind
-import com.sperance.exileforge.core.model.feedback.IssueMove
-import com.sperance.exileforge.core.model.feedback.MailRequest
-import com.sperance.exileforge.core.model.feedback.OwnReport
-import com.sperance.exileforge.core.model.feedback.ReportStatus
-import com.sperance.exileforge.core.model.feedback.Vote
-import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.session.CommandRunner
-import com.sperance.exileforge.core.session.GameEvents
 import com.sperance.exileforge.core.session.Notices
-import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
 import com.sperance.exileforge.core.session.SessionRepository
-import com.sperance.exileforge.data.settings.RepliesSeen
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
 
-/**
- * Голоса игроков и почта аккаунта: предложения с голосами, свои отчёты, чтение администратора,
- * ящик с вложениями, письма администратора. Первая модель экрана на репозиториях :core. Ящик - глазами
- * героя в игре, и почта между героями ([LetterActions]).
- */
+/** Голоса, отчёты и почта: модель ядра [model] в области экрана. */
 class FeedbackViewModel(
-    private val repository: FeedbackRepository,
-    private val connection: ServerConnection,
-    private val commands: CommandRunner,
-    private val sessions: SessionRepository,
-    private val notices: Notices,
-    private val heroes: HeroRepository,
-    /** Почта между героями: окно письма, ответ, игнор, жалоба - общие с карточкой игрока и гильдией. */
-    val letters: LetterActions,
-    private val replies: RepliesSeen,
+    repository: FeedbackRepository,
+    connection: ServerConnection,
+    commands: CommandRunner,
+    sessions: SessionRepository,
+    notices: Notices,
+    heroes: HeroRepository,
+    letters: LetterActions,
+    replies: SeenReplies,
 ) : ViewModel() {
-    val feedback: StateFlow<Feedback> = repository.state
-    val activity = commands.state
-
-    /** Виденные ответы на свои отчёты: отпечаток по id отчёта. */
-    val seen: StateFlow<Map<String, String>> = replies.seen.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
-
-    private val api: GameApi get() = connection.api
-
-    private fun feedback(transform: (Feedback) -> Feedback) = repository.update(transform)
-
-    /** Адресат из карточки игрока для формы письма: отдаётся один раз и забывается. */
-    fun takeMailTo(): String = feedback.value.mailTo.also { if (it.isNotEmpty()) feedback { f -> f.copy(mailTo = "") } }
-
-    /** Свои отчёты и известные проблемы: обе вкладки листа отчётов; новый вызов сменяет идущий. */
-    fun loadReports() = commands.read(Reads.FEEDBACK, restart = true) {
-        val mine = api.feedback.mine()
-        val known = api.feedback.known()
-        feedback { it.copy(known = known, mine = mine) }
-    }
-
-    /** Ответы на свои отчёты [reports] видены (вкладка «Мои» открыта). */
-    fun markSeen(reports: List<OwnReport>) = replies.mark(reports.mapNotNull { own -> own.replyPrint?.let { own.id to it } }.filter { (id, print) -> seen.value[id] != print }.toMap())
-
-    /** Тот же голос снова снимает его; голос за другую сторону переключает. */
-    fun vote(id: String, vote: Vote) = commands.task(writing = true) {
-        val current = feedback.value.known.firstOrNull { it.id == id } ?: return@task
-        val answered = api.feedback.vote(id, if (current.vote == vote) Vote.NONE else vote)
-        feedback { f -> f.copy(known = f.known.map { if (it.id == id) answered else it }) }
-    }
-
-    /**
-     * Отчёты у модерации вида [kind] и статуса [status]: своим ключом чтения, новый вызов сменяет идущий - последний
-     * выбранный фильтр не теряется за прежним чтением.
-     */
-    fun loadReports(kind: FeedbackKind?, status: ReportStatus?) = commands.read(Reads.FEEDBACK_ADMIN, restart = true) {
-        check(sessions.state.value.isModerator) { ui("moderation.staff_only") }
-        val reports = api.feedback.all(kind, status)
-        feedback { it.copy(reports = reports) }
-    }
-
-    fun setReportStatus(id: String, status: ReportStatus, reason: String) = answer(ui("feedback.status_saved")) { api.feedback.setStatus(id, status, reason) }
-
-    /** Ответ автора в Issue своего отчёта: уходит комментарием; отчёт возвращается с перепиской. */
-    fun answerReport(id: String, text: String) = commands.task(writing = true) {
-        val answered = api.feedback.answer(id, text)
-        feedback { f -> f.copy(mine = f.mine.map { if (it.id == id) answered else it }) }
-        notices.toast(ui("feedback.answer_sent"))
-    }
-
-    /** Модерация ведёт Issue отчёта из игры: ответ или закрытие с причиной; судьба приходит из GitHub сразу. */
-    fun steerIssue(id: String, move: IssueMove, text: String, duplicate: Int = 0) = answer(ui("feedback.issue_moved")) { api.feedback.steer(id, move, text, duplicate) }
-
-    /** Дополнение модерации к отчёту: сервер кладёт его разделом в тело Issue и отвечает отчётом как он теперь стоит. */
-    fun noteReport(id: String, text: String) = answer(ui("feedback.note.saved")) { api.feedback.note(id, text) }
-
-    /** Отчёт в GitHub Issues: сервер заводит Issue (или повторяет неудачную выгрузку) и отвечает отчётом как он теперь стоит. */
-    fun reportToIssue(id: String) = answer(ui("feedback.issue_done")) { api.feedback.toIssue(id) }
-
-    /** Удаление отчёта: уходит из своих, из общего списка и из окна модерации разом. */
-    fun deleteReport(id: String) = commands.task(writing = true) {
-        api.feedback.delete(id)
-        feedback { f -> f.copy(mine = f.mine.filterNot { it.id == id }, known = f.known.filterNot { it.id == id }, reports = f.reports.filterNot { it.report.id == id }) }
-        notices.toast(ui("feedback.deleted"))
-    }
-
-    private fun answer(done: String, call: suspend () -> AdminReport) = commands.task(writing = true) {
-        val answered = call()
-        feedback { f -> f.copy(reports = f.reports.map { if (it.report.id == answered.report.id) answered else it }) }
-        notices.toast(done)
-    }
-
-    /** Ящик глазами героя в игре, тихо - при открытии почты; счёт конверта в шапке едет в снимке героя. */
-    fun loadMail() {
-        if (!sessions.state.value.signedIn) return
-        commands.read(Reads.MAIL, silent = true) {
-            val mail = api.mail.inbox(heroes.heroId)
-            feedback { it.withMail(mail) }
-        }
-    }
-
-    fun readMail(id: String) = commands.read(Reads.MAIL) {
-        val letter = api.mail.read(id)
-        feedback { f -> f.withMail(f.mail.map { if (it.id == id) letter else it }) }
-    }
-
-    /** Вложение уходит герою в игре [heroId]; герой приходит снимком в том же ответе. */
-    fun claimMail(id: String, heroId: String) = commands.task(writing = true, touches = setOf(Reads.HERO)) {
-        check(heroId.isNotBlank()) { ui("auction.choose_character") }
-        val letter = api.mail.claim(id, heroId)
-        feedback { f -> f.withMail(f.mail.map { if (it.id == id) letter else it }) }
-        notices.toast(ui("mail.claimed"))
-    }
-
-    /** «Прочитать все». */
-    fun readAllMail() = commands.task(writing = true) {
-        api.mail.readAll(heroes.heroId)
-        feedback { f -> f.withMail(f.mail.map { it.copy(read = true) }) }
-    }
-
-    /** «Удалить прочитанные»: письма с незабранным вложением остаются. */
-    fun deleteReadMail() = commands.task(writing = true) {
-        val gone = api.mail.deleteRead(heroes.heroId)
-        feedback { f -> f.withMail(f.mail.filterNot { it.read && !it.claimable }) }
-        notices.toast(ui("mail.deleted_n", gone))
-    }
-
-    fun deleteMail(id: String) = commands.task(writing = true) {
-        api.mail.delete(id)
-        feedback { f -> f.withMail(f.mail.filterNot { it.id == id }) }
-    }
-
-    fun sendMail(request: MailRequest) = commands.task(writing = true) {
-        check(sessions.state.value.isAdmin) { ui("hero.grant_admin_only") }
-        val sent = api.mail.send(request)
-        notices.toast(ui("mail.sent", sent))
-    }
+    val model = FeedbackModel(repository, connection, commands, sessions, notices, heroes, letters, replies, viewModelScope)
 }

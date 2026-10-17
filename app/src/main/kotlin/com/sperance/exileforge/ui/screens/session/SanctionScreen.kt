@@ -32,7 +32,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * [sanctionId] пустой - аккаунт удалён и уже стирается: подробностей нет, остаётся только выйти.
  */
 @Composable fun SanctionScreen(sanctionId: String) {
-    val vm = koinViewModel<NoticeViewModel>()
+    val vm = koinViewModel<NoticeViewModel>().model
     val sanction by vm.sanction.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()
     LaunchedEffect(sanctionId) { vm.load(sanctionId) }

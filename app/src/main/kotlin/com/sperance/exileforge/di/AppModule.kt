@@ -1,23 +1,28 @@
 package com.sperance.exileforge.di
 
 import com.sperance.exileforge.core.admin.AdminRepository
+import com.sperance.exileforge.core.admin.ModerationModel
 import com.sperance.exileforge.core.admin.RedemptionActions
+import com.sperance.exileforge.core.admin.SanctionModel
 import com.sperance.exileforge.core.app.Actions
 import com.sperance.exileforge.core.app.AppModes
 import com.sperance.exileforge.core.app.AppStartup
 import com.sperance.exileforge.core.app.CharacterActions
+import com.sperance.exileforge.core.app.CharactersModel
 import com.sperance.exileforge.core.app.ClientDevice
 import com.sperance.exileforge.core.app.ConnectionActions
 import com.sperance.exileforge.core.app.DEFAULT_SERVER
 import com.sperance.exileforge.core.app.DeviceStore
 import com.sperance.exileforge.core.app.Foreground
 import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.HeroCache
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.Repositories
 import com.sperance.exileforge.core.app.Screens
 import com.sperance.exileforge.core.app.ServerReach
 import com.sperance.exileforge.core.app.SessionActions
 import com.sperance.exileforge.core.app.SettingsStore
+import com.sperance.exileforge.core.app.ShellModel
 import com.sperance.exileforge.core.app.StartupTrace
 import com.sperance.exileforge.core.app.WarmupActions
 import com.sperance.exileforge.core.campaign.ExpeditionActions
@@ -26,15 +31,20 @@ import com.sperance.exileforge.core.campaign.RiftActions
 import com.sperance.exileforge.core.campaign.TrialActions
 import com.sperance.exileforge.core.crafts.CraftsActions
 import com.sperance.exileforge.core.crafts.CraftsRepository
+import com.sperance.exileforge.core.feedback.BugEvidence
 import com.sperance.exileforge.core.feedback.FeedbackRepository
 import com.sperance.exileforge.core.feedback.LetterActions
 import com.sperance.exileforge.core.feedback.ReportTrail
+import com.sperance.exileforge.core.feedback.SeenReplies
 import com.sperance.exileforge.core.guild.GuildActions
 import com.sperance.exileforge.core.guild.GuildRepository
+import com.sperance.exileforge.core.hall.HallModel
 import com.sperance.exileforge.core.hero.HeroActions
+import com.sperance.exileforge.core.hero.HeroPageModel
 import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.hero.HeroSync
+import com.sperance.exileforge.core.hero.TreeModel
 import com.sperance.exileforge.core.i18n.LanguageRepository
 import com.sperance.exileforge.core.market.MarketActions
 import com.sperance.exileforge.core.market.MarketRepository
@@ -42,6 +52,7 @@ import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.HttpLink
 import com.sperance.exileforge.core.network.LinkRepository
 import com.sperance.exileforge.core.network.RequestJournal
+import com.sperance.exileforge.core.player.PlayerCardModel
 import com.sperance.exileforge.core.quests.QuestActions
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.session.Buzzes
@@ -92,6 +103,7 @@ import kotlinx.coroutines.flow.combine
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
 import org.koin.core.module.dsl.bind
+import org.koin.core.module.dsl.factoryOf
 import org.koin.core.module.dsl.singleOf
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
@@ -114,10 +126,10 @@ const val APP_SCOPE = "app"
 val appModule = module {
     single<CoroutineScope>(named(APP_SCOPE)) { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     single { RequestJournal() }
-    single { ServerStore(androidContext()) } binds arrayOf(DeviceStore::class, SettingsStore::class)
+    single { ServerStore(androidContext()) } binds arrayOf(DeviceStore::class, SettingsStore::class, HeroCache::class)
     single { GuideStore(androidContext()) }
     single { DraftStore(androidContext(), get(named(APP_SCOPE))) }
-    single { com.sperance.exileforge.data.settings.RepliesSeen(androidContext(), get(named(APP_SCOPE))) }
+    single { com.sperance.exileforge.data.settings.RepliesSeen(androidContext(), get(named(APP_SCOPE))) } bind SeenReplies::class
     single { BugDelivery(androidContext(), get(), get(), get(named(APP_SCOPE))) }
     single { PreferencesRepository(get(), get(named(APP_SCOPE))) }
     single { SessionRepository(DEFAULT_SERVER) }
@@ -144,7 +156,7 @@ val appModule = module {
     single { HeroSync(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     singleOf(::HeroActions)
     single { ExpeditionRepository() }
-    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
+    single { ExpeditionActions(get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), get(), lazy { get<HeroActions>() }, get(named(APP_SCOPE))) }
     single { TrialActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { RiftActions(get(), get(), get(), get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { CraftsRepository() }
@@ -170,6 +182,15 @@ val appModule = module {
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
     single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get<StallWatchdog>(), get<com.sperance.exileforge.platform.CrashKeeper>(), get()) }
+    single { BugEvidence(get(), get(), get<com.sperance.exileforge.platform.CrashKeeper>()) }
+    factoryOf(::ShellModel)
+    factoryOf(::ModerationModel)
+    factoryOf(::SanctionModel)
+    factoryOf(::HallModel)
+    factoryOf(::PlayerCardModel)
+    factoryOf(::HeroPageModel)
+    factoryOf(::CharactersModel)
+    factoryOf(::TreeModel)
     viewModelOf(::ShellViewModel)
     viewModelOf(::AdminViewModel)
     viewModelOf(::ModerationViewModel)

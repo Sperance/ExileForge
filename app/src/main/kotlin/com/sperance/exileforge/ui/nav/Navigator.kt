@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.SessionRepository
+import com.sperance.exileforge.ui.screens.server.SettingsPage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -49,6 +50,8 @@ class Navigator(
     override fun reset(landing: Landing) = reset(landing.route)
 
     override fun tab(landing: Landing) = tab(landing.route)
+
+    override fun open(landing: Landing) = open(landing.route)
 
     /** Вкладка или экран под ней: корень и, если это не он сам, экран над корнем; без корня - поверх открытого. */
     fun tab(route: Route) {
@@ -110,6 +113,10 @@ private val Landing.route: Route
         Landing.HERO -> Route.Hero
         Landing.ADMIN -> Route.Admin
         Landing.ATLAS -> Route.Atlas
+        Landing.AUCTION -> Route.Auction
+        Landing.GUILD -> Route.Guild
+        Landing.MAIL -> Route.Settings(SettingsPage.MAIL.name)
+        Landing.MODERATION -> Route.Settings(SettingsPage.MODERATION.name)
     }
 
 /** Место экрана в нижней панели слева направо ([BAR_TABS]): по его корню; экран без панели или не вкладка панели - null. */

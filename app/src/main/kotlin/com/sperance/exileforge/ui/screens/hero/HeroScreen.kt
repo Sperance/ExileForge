@@ -58,7 +58,7 @@ fun HeroScreen() {
     val game by koinViewModel<HeroViewModel>().game.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val model = koinViewModel<HeroViewModel>()
-    val smithy = koinViewModel<SmithyViewModel>()
+    val smithy = koinViewModel<SmithyViewModel>().model
     val page by model.page.collectAsStateWithLifecycle()
     val heroId = game.heroId
     var detailId by remember(heroId) { mutableStateOf<String?>(null) }

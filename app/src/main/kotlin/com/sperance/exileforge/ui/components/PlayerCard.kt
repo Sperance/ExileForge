@@ -55,6 +55,7 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.CardModeration
 import com.sperance.exileforge.core.model.hero.PlayerCard
+import com.sperance.exileforge.core.player.PlayerCardModel
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.hero.titleName
@@ -100,10 +101,10 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
 
 /**
  * Хозяин карточки игрока («Свиток»): всё внутри открывает её через [LocalPlayerCard]; лист один, поверх.
- * Карточку читает [PlayerCardViewModel]; модерация уводит в досье окна модерации - там бан и удаление.
+ * Карточку читает [PlayerCardModel]; модерация уводит в досье окна модерации - там бан и удаление.
  */
 @Composable fun PlayerCardHost(game: GameUi, content: @Composable () -> Unit) {
-    val vm = koinViewModel<PlayerCardViewModel>()
+    val vm = koinViewModel<PlayerCardViewModel>().model
     val state by vm.state.collectAsStateWithLifecycle()
     var extra by remember { mutableStateOf<PlayerAction?>(null) }
     val opener: (String, PlayerAction?) -> Unit = remember(vm) {
@@ -137,7 +138,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
                 }, enabled = !game.busy, modifier = Modifier.align(Alignment.CenterHorizontally))
             }
             card.rights.moderation?.takeIf { it.any }?.let { rights ->
-                val moderation = koinViewModel<ModerationViewModel>()
+                val moderation = koinViewModel<ModerationViewModel>().model
                 val adminMail: (() -> Unit)? = if (card.rights.mail && rights.login.isNotBlank()) ({ vm.writeAdmin(card) }) else null
                 ModerationRow(game, rights, adminMail) {
                     vm.close()
@@ -154,7 +155,7 @@ fun Modifier.opensPlayer(heroId: String?): Modifier = if (heroId.isNullOrBlank()
  *
  * Номер героя: по нему зовут в гильдию, касание копирует.
  */
-@Composable private fun Scroll(game: GameUi, vm: PlayerCardViewModel, card: PlayerCard) {
+@Composable private fun Scroll(game: GameUi, vm: PlayerCardModel, card: PlayerCard) {
     Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Spine(game, card, Modifier.width(96.dp).fillMaxHeight())
         Column(Modifier.weight(1f)) {

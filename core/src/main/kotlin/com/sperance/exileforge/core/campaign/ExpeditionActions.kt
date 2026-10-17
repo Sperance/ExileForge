@@ -11,6 +11,7 @@ import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.display.receivedText
 import com.sperance.exileforge.core.display.shardsPerOrb
+import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.hero.HeroSync
 import com.sperance.exileforge.core.i18n.ui
@@ -25,6 +26,7 @@ import com.sperance.exileforge.core.session.CommandRunner
 import com.sperance.exileforge.core.session.Notices
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.core.session.ServerConnection
+import com.sperance.exileforge.core.session.SessionRepository
 import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode
@@ -63,6 +65,7 @@ import java.util.UUID
 class ExpeditionActions(
     private val repository: ExpeditionRepository,
     private val heroes: HeroRepository,
+    private val sessions: SessionRepository,
     private val heroSync: HeroSync,
     private val world: WorldRepository,
     private val connection: ServerConnection,
@@ -72,6 +75,8 @@ class ExpeditionActions(
     private val prefs: PreferencesRepository,
     private val store: DeviceStore,
     private val screens: Screens,
+    /** Действия героя - продажа добычи по концу захода; лениво: они сами держат поход. */
+    private val heroActions: Lazy<HeroActions>,
     private val scope: CoroutineScope,
 ) {
     private val api: GameApi get() = connection.api
@@ -159,11 +164,18 @@ class ExpeditionActions(
     /** Карта из сундука, с которой войти, или null - войти без неё. */
     fun pickMap(itemId: String?) = expedition { e -> e.copy(launch = e.launch?.let { l -> l.copy(picked = itemId, scarabs = if (itemId == null) emptyList() else l.scarabs) }) }
 
-    /** Механика, что тестировщик ставит на заход насильно: переключить одну. */
-    fun toggleForced(mechanic: MapMechanic) = expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
+    /** Механика, что тестировщик ставит на заход насильно: переключить одну; не тестировщику - ничего. */
+    fun toggleForced(mechanic: MapMechanic) {
+        if (tester) expedition { it.copy(forced = if (mechanic in it.forced) it.forced - mechanic else it.forced + mechanic) }
+    }
 
-    /** Все механики разом - или ни одной. */
-    fun forceAll(on: Boolean) = expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
+    /** Все механики разом - или ни одной; не тестировщику - ничего. */
+    fun forceAll(on: Boolean) {
+        if (tester) expedition { it.copy(forced = if (on) MapMechanic.entries.toSet() else emptySet()) }
+    }
+
+    /** Тестировщик и выше: насильные механики и бой сразу со стражем. */
+    private val tester: Boolean get() = sessions.state.value.tester(heroes.state.value)
 
     /** Зелье на поход: одно, повторным касанием снимается. */
     fun pickPotion(code: String?) = expedition { e -> e.copy(launch = e.launch?.let { it.copy(potion = code.takeIf { c -> c != it.potion }) }) }
@@ -184,7 +196,12 @@ class ExpeditionActions(
     /**
      * «В путь»: зона входится на сервере - с выбранной картой, потраченной там, или без неё, - и семя с замороженным
      * контекстом приходят с героем; поход строится здесь и идёт.
+     *
+     * [toBoss] (тестировщик и выше) - сразу бой со стражем.
      */
+    fun startRun(mapCode: String, toBoss: Boolean = false) = start(MapCode(mapCode), toBoss = toBoss && tester)
+
+    /** Заход в зону [mapCode]; [toBoss] - сразу бой со стражем. */
     fun start(mapCode: MapCode, toBoss: Boolean = false) = enter(mapCode, repository.state.value.launch?.takeIf { it.mapCode == mapCode }, toBoss)
 
     /**
@@ -608,6 +625,9 @@ class ExpeditionActions(
             heroSync.ensure()
         }
     }
+
+    /** «Продать и вернуться»: заход закрывается и на сервере, затем отмеченная добыча [itemIds] продаётся пачкой. */
+    fun closeSelling(itemIds: Collection<String>) = close { id -> heroActions.value.sellBatch(id, itemIds) }
 
     /**
      * Закрывает заход [runId] на сервере: недошедший журнал отправляется (его добыча - героя), затем заход брошен, как выходом;

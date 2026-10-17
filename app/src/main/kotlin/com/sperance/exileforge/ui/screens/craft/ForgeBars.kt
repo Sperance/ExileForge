@@ -29,6 +29,8 @@ import com.sperance.exileforge.core.display.text
 import com.sperance.exileforge.core.forge.EngraveLine
 import com.sperance.exileforge.core.forge.ForgeTarget
 import com.sperance.exileforge.core.forge.OrbChoice
+import com.sperance.exileforge.core.forge.Smithy
+import com.sperance.exileforge.core.forge.SmithyModel
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.core.model.trade.GoldBill
@@ -162,7 +164,7 @@ import com.sperance.exileforge.ui.theme.*
 }
 
 /** The chosen bench line over the navigation, priced, with the same held button; рецепт, что не встанет, не предлагается. */
-@Composable internal fun BenchBar(game: GameUi, vm: SmithyViewModel, item: ItemView, chosen: String, enabled: Boolean) {
+@Composable internal fun BenchBar(game: GameUi, vm: SmithyModel, item: ItemView, chosen: String, enabled: Boolean) {
     val index = game.index ?: return
     val hero = game.hero ?: return
     val instance = item.item

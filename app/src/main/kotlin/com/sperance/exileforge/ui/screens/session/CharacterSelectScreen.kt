@@ -220,7 +220,7 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
         }
     }
     if (appealing && sanction != null) {
-        val notices = koinViewModel<com.sperance.exileforge.ui.screens.session.NoticeViewModel>()
+        val notices = koinViewModel<NoticeViewModel>().model
         AppealDialog(onDismiss = { appealing = false }) { text ->
             appealing = false
             notices.appeal(sanction.id, text)

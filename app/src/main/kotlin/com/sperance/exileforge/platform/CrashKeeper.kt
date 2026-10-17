@@ -4,6 +4,7 @@ import android.content.Context
 import com.sperance.exileforge.BuildConfig
 import com.sperance.exileforge.core.app.LeftReport
 import com.sperance.exileforge.core.app.LeftReports
+import com.sperance.exileforge.core.feedback.CrashTraces
 import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import kotlinx.coroutines.Dispatchers
@@ -17,7 +18,9 @@ import java.util.UUID
  * [sent]) - сервер сам заведёт Issue или посчитает повтор. Последние [KEEP] стеков остаются и после отправки: их прикладывает
  * отчёт об ошибке игрока ([recent]).
  */
-class CrashKeeper(context: Context) : LeftReports {
+class CrashKeeper(context: Context) :
+    LeftReports,
+    CrashTraces {
     private val dir = File(context.filesDir, CRASH_DIR)
 
     /** Встаёт перед прежним обработчиком; повторный вызов ничего не меняет. */
@@ -75,7 +78,7 @@ class CrashKeeper(context: Context) : LeftReports {
     }
 
     /** Последние стеки (новые первыми) - к отчёту игрока об ошибке; без версии и потока, только стек. */
-    suspend fun recent(): List<String> = withContext(Dispatchers.IO) {
+    override suspend fun recent(): List<String> = withContext(Dispatchers.IO) {
         files().mapNotNull { runCatching { it.readText().substringAfter(SPLIT, "") }.getOrNull()?.takeIf { s -> s.isNotBlank() } }
     }
 

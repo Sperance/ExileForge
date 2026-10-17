@@ -7,6 +7,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.PreferencesRepository
 import com.sperance.exileforge.core.app.StoryFold
 import com.sperance.exileforge.core.quests.QuestActions
+import com.sperance.exileforge.core.quests.QuestModel
 import com.sperance.exileforge.core.quests.QuestRepository
 import com.sperance.exileforge.core.quests.QuestTab
 import com.sperance.exileforge.core.quests.Quests
@@ -38,12 +39,11 @@ class QuestViewModel(
     val quests: StateFlow<Quests> = repository.state
     val activity: StateFlow<Activity> = commands.state
 
-    private val mutableTab = MutableStateFlow(QuestTab.DAILY)
-    val tab: StateFlow<QuestTab> = mutableTab
+    private val model = QuestModel(actions, repository, prefs, viewModelScope)
 
-    fun tab(tab: QuestTab) {
-        mutableTab.value = tab
-    }
+    val tab: StateFlow<QuestTab> = model.tab
+
+    fun tab(tab: QuestTab) = model.tab(tab)
 
     fun load() = actions.load()
     fun loadGuild() = actions.loadGuild()
@@ -52,10 +52,8 @@ class QuestViewModel(
     fun open() = actions.load(fresh = true)
     fun openGuild() = actions.loadGuild(fresh = true)
 
-    /** Доска для карты мира: читается, только если её ещё нет, - шаг сюжета двигают сдача и итоги захода, они её перечитывают. */
-    fun glance() {
-        if (quests.value.board == null) actions.load()
-    }
+    /** Доска для карты мира: читается, только если её ещё нет. */
+    fun glance() = model.glance()
     fun claim(questId: String) = actions.claim(questId)
     fun take(offerId: String) = actions.take(offerId)
     fun reset(offerId: String) = actions.reset(offerId)
@@ -67,17 +65,10 @@ class QuestViewModel(
     fun claimGuild(questId: String? = null, goal: String? = null) = actions.claimGuild(questId, goal)
 
     /** Свёрнутость карточки сюжета, из настроек устройства. */
-    val storyFold: StateFlow<StoryFold> = prefs.settings.map { it.storyFold }.stateIn(viewModelScope, SharingStarted.Eagerly, prefs.settings.value.storyFold)
+    val storyFold: StateFlow<StoryFold> = model.storyFold
 
-    /** Свернуть или раскрыть карточку сюжета. */
-    fun foldStory(collapsed: Boolean) = editFold { copy(collapsed = collapsed) }
-
-    /** Карточка показала шаг [quest] с наградой [ready]: новый шаг или ждущая награда раскрывают её ([StoryFold.seen]). */
-    fun seeStory(quest: String, ready: Boolean) = editFold { seen(quest, ready) }
-
-    private fun editFold(edit: StoryFold.() -> StoryFold) {
-        viewModelScope.launch { prefs.editSettings { copy(storyFold = storyFold.edit()) } }
-    }
+    fun foldStory(collapsed: Boolean) = model.foldStory(collapsed)
+    fun seeStory(quest: String, ready: Boolean) = model.seeStory(quest, ready)
 
     /** Весь сюжет - экран над картой «Похода». */
     fun openStory() = navigator.tab(Route.Story)

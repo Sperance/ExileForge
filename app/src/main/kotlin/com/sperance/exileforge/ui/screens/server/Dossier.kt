@@ -22,6 +22,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.sperance.exileforge.core.admin.ModerationModel
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.compactNumber
@@ -50,7 +51,7 @@ import java.time.format.DateTimeFormatter
  * кнопки санкций внизу - досье помещается в экран. Своё досье администратора - «Сменить» в Предначертании: лист всех даров. Досье -
  * уровень цепочки «назад» настроек ([TrailLevel] в [ModerationPage]): своей стрелки у него нет.
  */
-@Composable internal fun DossierView(account: AccountUi, vm: ModerationViewModel, dossier: Dossier?) {
+@Composable internal fun DossierView(account: AccountUi, vm: ModerationModel, dossier: Dossier?) {
     var sanctioning by remember { mutableStateOf<SanctionKind?>(null) }
     var deleting by remember { mutableStateOf<SanctionTarget?>(null) }
     var device by remember { mutableStateOf<DeviceView?>(null) }
@@ -174,7 +175,7 @@ private enum class DossierFold(val title: String) {
  *
  * Смена дара - только администратор и только себе: сервер берёт цель из сессии.
  */
-@Composable private fun DossierFolds(account: AccountUi, vm: ModerationViewModel, dossier: Dossier, onBanDevice: (DeviceView) -> Unit) {
+@Composable private fun DossierFolds(account: AccountUi, vm: ModerationModel, dossier: Dossier, onBanDevice: (DeviceView) -> Unit) {
     var open by remember(dossier.account.userId, dossier.hero?.heroId) { mutableStateOf<DossierFold?>(null) }
     var redrawing by remember { mutableStateOf(false) }
     val folds = DossierFold.entries.filter { it != DossierFold.ECONOMY || dossier.economy != null }
@@ -245,7 +246,7 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
 }
 
 /** Связи досье: устройства (модель, первая дата, последний вход, версия, общее с кем и бан устройства), гильдия, другие герои. */
-@Composable private fun Links(account: AccountUi, vm: ModerationViewModel, dossier: Dossier, onBanDevice: (DeviceView) -> Unit) {
+@Composable private fun Links(account: AccountUi, vm: ModerationModel, dossier: Dossier, onBanDevice: (DeviceView) -> Unit) {
     if (dossier.devices.isEmpty()) MutedText(ui("moderation.no_devices"))
     dossier.devices.forEach { item ->
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -271,7 +272,7 @@ private fun summary(fold: DossierFold, dossier: Dossier): Pair<String, Color> = 
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ControlRow(account: AccountUi, vm: ModerationViewModel, dossier: Dossier, servers: List<GameServer>) {
+private fun ControlRow(account: AccountUi, vm: ModerationModel, dossier: Dossier, servers: List<GameServer>) {
     val hero = dossier.hero
     val role = account.isAdmin && dossier.account.role != AccountRole.ADMIN
     val server = account.isAdmin && hero != null

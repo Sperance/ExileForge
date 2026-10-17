@@ -68,7 +68,7 @@ private enum class ItemAction { AUCTION, SELL, WORN }
 @Composable
 fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
-    val smithy = koinViewModel<SmithyViewModel>()
+    val smithy = koinViewModel<SmithyViewModel>().model
     val instance = game.hero?.item(itemId)
     val view = instance?.let { game.view(it) }
     if (instance == null || view == null) {

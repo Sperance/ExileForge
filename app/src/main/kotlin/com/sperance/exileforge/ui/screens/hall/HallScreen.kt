@@ -20,6 +20,7 @@ import com.sperance.exileforge.core.display.mightLine
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.regionTitle
+import com.sperance.exileforge.core.hall.HallPick
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -46,7 +47,7 @@ private val PODIUM = listOf(Rarity.MYTHICAL, Rarity.UNIQUE, Rarity.RARE)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HallScreen() {
-    val vm = koinViewModel<HallViewModel>()
+    val vm = koinViewModel<HallViewModel>().model
     val game by vm.game.collectAsStateWithLifecycle()
     val hall by vm.hall.collectAsStateWithLifecycle()
     val activity by vm.activity.collectAsStateWithLifecycle()

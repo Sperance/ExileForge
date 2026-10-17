@@ -8,7 +8,10 @@ import android.content.pm.PackageInstaller
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
+import com.sperance.exileforge.core.update.ApkInstaller
+import com.sperance.exileforge.core.update.InstallResult
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
@@ -57,13 +60,19 @@ object UpdateInstaller {
     }
 }
 
-/** What the system installer answered. */
-sealed interface InstallResult {
-    /** Installed: the process is about to be replaced. */
-    data object Done : InstallResult
+/** Системный установщик `:app` для обновлений ядра: папка сборок - в кэше приложения. */
+class SystemInstaller(private val context: Context) : ApkInstaller {
+    override val results: Flow<InstallResult> = UpdateInstaller.results
 
-    /** The player closed the confirmation, or the system refused; [message] is the system's own words. */
-    data class Failed(val message: String) : InstallResult
+    override val downloads: File get() = File(context.cacheDir, DOWNLOADS)
+
+    override fun allowed(): Boolean = UpdateInstaller.allowed(context)
+
+    override suspend fun install(apk: File) = UpdateInstaller.install(context, apk)
+
+    private companion object {
+        const val DOWNLOADS = "updates"
+    }
 }
 
 /** The installer's answers: the confirmation screen is opened, the end is passed on to [UpdateInstaller.results]. */

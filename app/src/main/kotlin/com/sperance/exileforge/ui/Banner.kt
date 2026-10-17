@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_ACCOUNT
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_SETTINGS
+import com.sperance.exileforge.core.feedback.FeedbackModel
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.LinkState
@@ -66,7 +67,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * На вкладке «Герой» шапка игры и строка героя - одна строка. Знак игры открывает аккаунт; загруженный герой называет себя сам.
  */
 @Composable internal fun ForgeBanner(game: GameUi, route: Route, onBug: () -> Unit) {
-    val feedback by koinViewModel<FeedbackViewModel>().feedback.collectAsStateWithLifecycle()
+    val feedback by koinViewModel<FeedbackViewModel>().model.feedback.collectAsStateWithLifecycle()
     val shell: ShellViewModel = koinViewModel()
     val glow = Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(Gold.copy(alpha = .10f), Color.Transparent, Gold.copy(alpha = .06f))))
     val hero = rememberHeroHeader(game)?.takeIf { route.tab == TAB_HERO }

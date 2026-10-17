@@ -10,6 +10,7 @@ import com.sperance.exileforge.core.display.ItemShelf
 import com.sperance.exileforge.core.hero.HeroActions
 import com.sperance.exileforge.core.hero.HeroHolding
 import com.sperance.exileforge.core.hero.HeroPage
+import com.sperance.exileforge.core.hero.HeroPageModel
 import com.sperance.exileforge.core.hero.HeroReads
 import com.sperance.exileforge.core.hero.HeroRepository
 import com.sperance.exileforge.core.hero.HeroSync
@@ -37,8 +38,7 @@ class HeroViewModel(
     heroes: HeroRepository,
     commands: CommandRunner,
     slice: GameSlice,
-    private val prefs: PreferencesRepository,
-    private val navigator: Navigator,
+    private val pages: HeroPageModel,
 ) : ViewModel() {
     /** Срез «игра» для экранов этой модели. */
     val game: StateFlow<GameUi> = slice.ui
@@ -80,25 +80,13 @@ class HeroViewModel(
     fun autoSellUnwearable(on: Boolean) = hero.autoSellUnwearable(on)
     fun autoSellBelow(levels: Int, rarities: Set<Rarity>) = hero.autoSellBelow(levels, rarities)
 
-    private val openPage = MutableStateFlow(HeroPage.CHARACTER)
-
     /** Открытый раздел героя: полоса разделов в оболочке и экран героя читают один и тот же. */
-    val page: StateFlow<HeroPage> = openPage.asStateFlow()
+    val page: StateFlow<HeroPage> = pages.page
 
-    fun page(page: HeroPage) {
-        openPage.value = page
-    }
+    fun page(page: HeroPage) = pages.page(page)
 
-    /**
-     * Тайник с фильтром [filter] из другого экрана: фильтр ложится на устройство, и только когда он лёг, открывается раздел тайника
-     * вкладки героя - тайник читает запомненный фильтр при открытии.
-     */
+    /** Тайник с фильтром [filter] из другого экрана: раздел тайника вкладки героя открывается, когда фильтр лёг на устройство. */
     fun showStash(filter: ItemFilter) {
-        viewModelScope.launch {
-            prefs.saveItemFilter(ItemShelf.STASH, filter)
-            prefs.itemFilters.first { it[ItemShelf.STASH] == filter.copy(query = "") }
-            openPage.value = HeroPage.STASH
-            navigator.tab(Route.Hero)
-        }
+        viewModelScope.launch { pages.showStash(filter) }
     }
 }

@@ -38,7 +38,7 @@ import org.koin.compose.viewmodel.koinViewModel
 internal fun RecipeSheet(game: GameUi, code: String, inRun: Boolean = false, onDismiss: () -> Unit) {
     val shell: ShellViewModel = koinViewModel()
     val expedition: ExpeditionViewModel = koinViewModel()
-    val smithy = koinViewModel<SmithyViewModel>()
+    val smithy = koinViewModel<SmithyViewModel>().model
     val index = game.index
     val recipe = index?.recipe(code)
     val title = recipe?.let { r -> index?.modifier(r.modifier)?.effects?.map { statTitle(it.stat) }?.distinct()?.joinToString(" / ") }

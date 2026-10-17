@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.sperance.exileforge.core.feedback.SeenReplies
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -15,12 +16,12 @@ private val Context.replies by preferencesDataStore("report_replies")
  * Прочитанные ответы на свои отчёты: по отчёту - отпечаток последнего ответа разработчика или модерации, что
  * игрок уже видел. Новый ответ - красная точка у статуса и число на вкладке «Мои»; открытая вкладка гасит их. Только на устройстве.
  */
-class RepliesSeen(private val context: Context, private val scope: CoroutineScope) {
+class RepliesSeen(private val context: Context, private val scope: CoroutineScope) : SeenReplies {
     /** Отпечатки виденных ответов по id отчёта. */
-    val seen: Flow<Map<String, String>> = context.replies.data.map { prefs -> prefs.asMap().mapKeys { it.key.name }.mapValues { it.value.toString() } }
+    override val seen: Flow<Map<String, String>> = context.replies.data.map { prefs -> prefs.asMap().mapKeys { it.key.name }.mapValues { it.value.toString() } }
 
     /** Ответы [replies] (id отчёта → отпечаток) видены. */
-    fun mark(replies: Map<String, String>) {
+    override fun mark(replies: Map<String, String>) {
         if (replies.isEmpty()) return
         scope.launch { context.replies.edit { prefs -> replies.forEach { (id, print) -> prefs[stringPreferencesKey(id)] = print } } }
     }

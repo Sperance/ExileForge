@@ -1,0 +1,51 @@
+package com.sperance.exileforge.core.app
+
+import com.sperance.exileforge.core.session.SessionRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
+
+/**
+ * Оболочка приложения глазами ядра: какие вкладки открыты аккаунту, повторное нажатие на открытую вкладку, просьба листа
+ * отчёта и узел древа, на котором оно откроется.
+ */
+class ShellModel(private val sessions: SessionRepository, private val modes: AppModes) {
+    /**
+     * Открыта ли аккаунту вкладка [tab]: инструменты администратора - роли модерации в режиме администратора, промокоды - только
+     * администратору (модератору их экран не открывается).
+     */
+    fun opens(tab: Int): Boolean {
+        if (!adminTools() && tab in ADMIN_TABS) return false
+        return tab != TAB_REDEMPTION || sessions.state.value.isAdmin
+    }
+
+    /** Инструменты администратора: роль модерации аккаунта и режим вместе. */
+    private fun adminTools(): Boolean = sessions.state.value.isModerator && modes.mode.value == AppMode.ADMIN
+
+    private val reselects = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+
+    /** Повторное нажатие на открытую вкладку: её экран закрывает вложенное и прокручивается наверх. */
+    val reselected: SharedFlow<Int> = reselects
+
+    fun reselect(tab: Int) {
+        reselects.tryEmit(tab)
+    }
+
+    private val bugAsks = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Просьбы открыть лист отчёта (аккорд громкости): его откроет хозяин системных листов. */
+    val bugRequests: SharedFlow<Unit> = bugAsks
+
+    fun requestBug() {
+        bugAsks.tryEmit(Unit)
+    }
+
+    /** Узел дерева, на котором оно откроется: гнездо для самоцвета из карточки. */
+    private var treeNode: String? = null
+
+    fun aimTree(node: String) {
+        treeNode = node
+    }
+
+    /** Узел, на котором открыть дерево, - один раз. */
+    fun takeTreeNode(): String? = treeNode.also { treeNode = null }
+}

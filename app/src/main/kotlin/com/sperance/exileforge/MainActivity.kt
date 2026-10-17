@@ -50,7 +50,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         FrameRateCap.apply(this)
-        setContent { CompositionLocalProvider(LocalVolumeChord provides chord) { ForgeTheme { ForgeApp(updates) } } }
+        setContent { CompositionLocalProvider(LocalVolumeChord provides chord) { ForgeTheme { ForgeApp(updates.model) } } }
     }
 
     /** Back in the foreground — unlocked or switched to: the connection is restored without a tap. */

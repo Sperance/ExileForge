@@ -250,7 +250,7 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             if (work.options.isNotEmpty()) {
                 Engraved(ui("crafts.choose"))
                 if (smith) {
-                    SmithPicker(SmithChoice.of(picked) ?: SmithChoice.RANDOM) { picked = it.name }
+                    SmithPicker(SmithChoice.of(picked) ?: SmithChoice.RANDOM, { bagCount(game, it) }) { picked = it.name }
                 } else {
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         choices.forEach { option ->
@@ -274,7 +274,6 @@ internal fun JobSheet(game: GameUi, vm: CraftsViewModel, held: Crafts, professio
             RecipeFormula(game, profession, job, chosenAdditives) { it?.let(inspect) }
             ResultLine(game, job) { it?.let(inspect) }
             JobFigures(profession, job) { help = it }
-            if (random) MutedText(ui("crafts.random_hint"))
             if (job.additives && !random && crafts != null && crafts.maxAdditives > 0) {
                 Engraved(ui("crafts.additives", crafts.maxAdditives))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

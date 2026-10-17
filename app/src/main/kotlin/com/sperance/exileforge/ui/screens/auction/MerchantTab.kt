@@ -31,6 +31,7 @@ import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.model.trade.MerchantOrb
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.core.sheet.itemNotes
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
@@ -263,7 +264,7 @@ internal fun OfferSheet(game: GameUi, item: ItemInstance, price: Long, onDismiss
     ForgeSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(.92f)) {
             LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template)) }
+                if (view != null) item { ItemCard(view, enabled = false, detailed = true, totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template), notes = game.itemNotes(item)) }
             }
             OrnateDivider()
             Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

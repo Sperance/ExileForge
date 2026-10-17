@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
+import com.sperance.exileforge.core.sheet.itemNotes
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
@@ -183,6 +184,7 @@ internal fun LotSheet(
                         actionLabel = ui("auction.lot") + " · ${lot.id.takeLast(6)}",
                         totals = wearTotals(game, copy, rememberWearChoice(game, copy)),
                         unmet = game.unmetNeeds(copy.template),
+                        notes = game.itemNotes(copy),
                     )
                 }
             }

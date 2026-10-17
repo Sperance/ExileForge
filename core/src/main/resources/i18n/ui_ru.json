@@ -933,6 +933,7 @@
   "card.roll_poor": "Слабые",
   "card.roll_perfect": "Идеальные",
   "card.roll_modest": "Скромные",
+  "card.map_quality": "Качество: +{0}% к количеству добычи",
   "card.map_tier_title": "{0} · тир {1} · ур. {2}",
   "expedition.zoom_in": "Приблизить",
   "expedition.zoom_out": "Отдалить",

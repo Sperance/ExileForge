@@ -30,6 +30,7 @@ import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.itemNotes
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetFor
 import com.sperance.exileforge.core.sheet.unmetNeeds
@@ -98,6 +99,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                         price = price,
                         waiting = waiting,
                         totals = wearTotals(game, instance, wear),
+                        notes = game.itemNotes(instance),
                         unmet = game.unmetNeeds(instance.template),
                     )
                 }

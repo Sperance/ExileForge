@@ -11,19 +11,24 @@ import com.sperance.exileforge.core.character.WearOutcome
 import com.sperance.exileforge.core.character.WearPlace
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.NeedKind
+import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.unmetNeeds
+import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.atlas.AtlasState
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
 import com.sperance.exileforge.core.model.hero.HeroView
 import com.sperance.exileforge.core.model.tree.TreeState
+import com.sperance.exileforge.rules.content.AtlasBonuses
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
+import com.sperance.exileforge.rules.content.MapStat
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.roll.ItemInstance
+import com.sperance.exileforge.rules.roll.LootRoller
 import com.sperance.exileforge.rules.sheet.MightReading
 import com.sperance.exileforge.rules.sheet.SheetCalculator
 
@@ -98,6 +103,23 @@ internal object HeroLens {
 
     /** The hero's atlas as the rules count it: points earned and free. */
     fun atlasState(index: ContentIndex?, hero: HeroView?): AtlasState? = atlasMemo.of(index, hero)
+
+    /** Строки общего блока над модификаторами карточки копии [item]: пока - качество карты-предмета ([mapQuality]). */
+    fun itemNotes(index: ContentIndex?, hero: HeroView?, item: ItemInstance): List<String> {
+        val i = index ?: return emptyList()
+        return listOfNotNull(mapQuality(i, hero, item))
+    }
+
+    /**
+     * Качество карты-предмета словами: «Качество: +N% к количеству добычи» - с «эффектом модификаторов карт» Атласа героя, тем же
+     * расчётом правил, что окно входа в карту ([LootRoller.mapEffects] над одним качеством копии); не карта или без качества - null.
+     */
+    private fun mapQuality(index: ContentIndex, hero: HeroView?, item: ItemInstance): String? {
+        if (item.quality <= 0 || index.template(item.template)?.slot != Slot.MAP) return null
+        val atlas = AtlasBonuses.of(index.atlasGraph, hero?.info?.atlas.orEmpty(), index::modifier)
+        val quantity = LootRoller(index).mapEffects(item.copy(rolls = emptyList(), mapTier = 0), atlas.mapEffect)[MapStat.QUANTITY.code] ?: return null
+        return ui("card.map_quality", number(quantity))
+    }
     private val atlasMemo = LastPair { i, h ->
         AtlasState(
             listOf(i.atlasGraph.start) + h.info.atlas,
@@ -124,6 +146,9 @@ internal object HeroLens {
 }
 
 fun GameUi.view(item: ItemInstance): ItemView? = HeroLens.view(index, item)
+
+/** Строки общего блока над модификаторами карточки копии [item] ([HeroLens.itemNotes]). */
+fun GameUi.itemNotes(item: ItemInstance): List<String> = HeroLens.itemNotes(index, hero, item)
 fun GameUi.sellPrice(item: ItemInstance): Long? = HeroLens.sellPrice(index, item)
 fun GameUi.wearing(item: ItemInstance, place: Slot? = null): WearOutcome = HeroLens.wearing(index, hero, item, place)
 fun GameUi.allocationDelta(code: String, choice: Int?): List<StatDelta> = HeroLens.allocationDelta(index, hero, code, choice)

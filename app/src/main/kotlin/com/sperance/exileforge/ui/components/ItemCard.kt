@@ -139,7 +139,8 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
  * требований - галка или крест, null - не с чем сравнить. Плашки состояний и замок - в углу (у легенды ниже и от края, мимо завитков
  * рамки), у полной карточки касание значка открывает подсказку, что он значит; кольцо качества роллов - у всех редкостей по строкам с вилкой. Английское торговое имя - для поиска на аукционе. Врождённые
- * строки - над чертой; судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
+ * строки - над чертой; судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение. [notes] - общий блок
+ * над модификаторами (`GameUi.itemNotes`: качество карты с Атласом героя).
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -155,6 +156,7 @@ fun ItemCard(
     waiting: Boolean = false,
     totals: (@Composable (RelicLook) -> Unit)? = null,
     unmet: Set<NeedKind>? = null,
+    notes: List<String> = emptyList(),
     onClick: () -> Unit = {},
 ) {
     val look = relicLook(item.rarity)
@@ -227,6 +229,7 @@ fun ItemCard(
         }
         RelicDivider(look, Modifier.padding(horizontal = 4.dp))
         BaseFigures(item, look)
+        CardNotes(notes)
         if (shown.isNotEmpty()) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 shown.forEachIndexed { i, line ->
@@ -283,6 +286,16 @@ internal val RelicChipHeight = 24.dp
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         content = content,
     )
+}
+
+/** Общий блок над модификаторами: строка на заметку ядра, значком сведений, как фраза базы. */
+@Composable private fun CardNotes(notes: List<String>) {
+    notes.forEach { note ->
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(Glyph.INFO.vector, null, tint = Rune, modifier = Modifier.size(16.dp))
+            Text(note, color = Parchment, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+        }
+    }
 }
 
 /**

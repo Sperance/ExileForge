@@ -933,6 +933,7 @@
   "card.roll_poor": "Poor",
   "card.roll_perfect": "Perfect",
   "card.roll_modest": "Modest",
+  "card.map_quality": "Quality: +{0}% item quantity",
   "card.map_tier_title": "{0} · tier {1} · lv {2}",
   "expedition.zoom_in": "Zoom in",
   "expedition.zoom_out": "Zoom out",

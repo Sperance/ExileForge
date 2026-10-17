@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.sheet.itemNotes
 import com.sperance.exileforge.core.sheet.sellPrice
 import com.sperance.exileforge.core.sheet.unmetNeeds
 import com.sperance.exileforge.core.sheet.view
@@ -95,7 +96,7 @@ private val NO_INSPECT: (Inspect) -> Unit = {}
 @Composable private fun CopySheet(game: GameUi, view: ItemView, footer: @Composable ColumnScope.() -> Unit, onDismiss: () -> Unit) {
     val item = view.item
     CardSheet(onDismiss) {
-        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template))
+        ItemCard(view, enabled = false, detailed = true, price = game.sellPrice(item), totals = wearTotals(game, item, rememberWearChoice(game, item)), unmet = game.unmetNeeds(item.template), notes = game.itemNotes(item))
         footer()
     }
 }

@@ -47,8 +47,8 @@ import com.sperance.exileforge.ui.theme.*
  * [extra] - факты после слота, [trailing] - напротив имени (цена лота), [price] - цена торговца, когда напротив имени больше ничего,
  * [footer] - строка под свойствами. [locked] - замок, [waiting] - команда ждёт сети. Две линии вместо плиты - лут после боя; «Ценник» -
  * ярлык цены сверху плиты; «лучше или хуже» - только у вещей, что герой может надеть. Удержание строки - пометка к продаже или карточка;
- * свёртка строк - все сразу или под чипом «Свойства · N». Вторая линия лута - значки тиров, уровень, качество, состояния и замок; каждая
- * строка вещи видна без карточки.
+ * свёртка строк - все сразу или под чипом «Свойства · N». Вторая линия лута - уровень предмета плашкой первым, значки тиров, качество,
+ * состояния и замок; каждая строка вещи видна без карточки.
  */
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
@@ -126,9 +126,9 @@ fun ItemRow(
             }
             if (compact) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalArrangement = Arrangement.spacedBy(3.dp), itemVerticalAlignment = Alignment.CenterVertically) {
+                    LevelChip(item.level)
                     item.lines.forEach { TierHex(it.marks, 16.dp) }
-                    if (item.lines.isNotEmpty()) Spacer(Modifier.width(6.dp))
-                    Text(ui("row.level", item.level), color = Muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(end = 3.dp))
+                    if (item.lines.isNotEmpty()) Spacer(Modifier.width(3.dp))
                     QualityBadge(item, compact = true)
                     item.summary.quality?.let { RollPill(it) }
                     RowStates(item)
@@ -150,6 +150,18 @@ fun ItemRow(
         }
         tag?.let { PriceTag(Modifier.align(Alignment.TopEnd).padding(end = 12.dp), it) }
     }
+}
+
+/** Уровень предмета плашкой второй линии лута: «ур. предм. N» светлым на тёмной подложке, как плашка уровня карточки. */
+@Composable private fun LevelChip(level: Int) {
+    Text(
+        ui("row.level", level),
+        color = Parchment,
+        fontWeight = FontWeight.SemiBold,
+        style = MaterialTheme.typography.labelSmall,
+        maxLines = 1,
+        modifier = Modifier.background(Color.White.copy(alpha = .07f), RoundedCornerShape(8.dp)).padding(horizontal = 6.dp, vertical = 1.dp),
+    )
 }
 
 /** Ярлык цены «Ценника»: свисает с верхнего края плиты, скруглён снизу, в тонкой золотой нити. */

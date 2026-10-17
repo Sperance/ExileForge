@@ -12,6 +12,7 @@ import com.sperance.exileforge.core.i18n.UiStrings
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.pluralKey
 import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.sheet.StatDetail
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.EssenceBook
@@ -106,6 +107,24 @@ class UiStringsTest {
             assertEquals(emptyList(), own.keys.filter(orbTitle::matches), "${it.code}: торговое имя сферы вне общего словаря")
         }
         common.forEach { (key, trade) -> assertEquals(trade, UiStrings.own(Lang.EN)[key.removeSuffix(".trade")], "en: $key") }
+    }
+
+    /**
+     * Каждая характеристика героя с разделом сводки описана подробно (`stat.detail.<код>`) на всех языках, и каждая подстановка
+     * правил `{r:…}` в описании находит своё число в контенте: число механики не пишется руками и не теряется.
+     */
+    @Test
+    fun every_sheet_stat_has_a_detailed_description_with_numbers() {
+        val index = TestContent.index
+        val shown = index.stats.stats.filter { index.stats.section(it.code) != null }
+        assertTrue(shown.isNotEmpty(), "нет характеристик с разделом - тест ничего не проверил")
+        languages.forEach { lang ->
+            val table = UiStrings.table(lang)
+            val missing = shown.filter { table[StatDetail.key(it.code)].isNullOrBlank() }.map { it.code }
+            assertEquals(emptyList(), missing, "${lang.code}: нет подробного описания")
+            val unfilled = shown.mapNotNull { stat -> table[StatDetail.key(stat.code)]?.takeIf { index.textNumbers.text(it) == null }?.let { stat.code to it } }
+            assertEquals(emptyList(), unfilled, "${lang.code}: подстановка без числа в контенте")
+        }
     }
 
     @Test

@@ -10,7 +10,6 @@ import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildStashView
 import com.sperance.exileforge.core.model.guild.GuildView
-import com.sperance.exileforge.core.network.GUILD_LOG_PAGE_SIZE
 import com.sperance.exileforge.core.network.GameApi
 import com.sperance.exileforge.core.network.MemberCommand
 import com.sperance.exileforge.core.session.CommandRunner
@@ -137,12 +136,12 @@ class GuildActions(
         if (!started) commands.refuse(phrase("runtime.busy_retry"))
     }
 
-    /** Журнал с новейшей страницы или следующая за показанными; неполная страница - конец, «Ещё» больше не показывается. */
+    /** Журнал с новейшей страницы или следующая за показанными; конец - когда сервер говорит, что старше нет. */
     fun loadLog(more: Boolean = false) = commands.read(Reads.GUILD_LOG, restart = !more) {
         val id = hero()
         val page = if (more) guilds.logPage + 1 else 0
-        val entries = api.guild.log(id, page)
-        if (heroes.onScreen(id)) guild { it.copy(log = if (more) it.log + entries else entries, logPage = page, logEnd = entries.size < GUILD_LOG_PAGE_SIZE) }
+        val read = api.guild.log(id, page)
+        if (heroes.onScreen(id)) guild { it.copy(log = if (more) it.log + read.entries else read.entries, logPage = page, logEnd = !read.more) }
     }
 
     private fun inviteName(guildId: String): String = guilds.mine?.invites?.firstOrNull { it.guild.id == guildId }?.guild?.name.orEmpty()

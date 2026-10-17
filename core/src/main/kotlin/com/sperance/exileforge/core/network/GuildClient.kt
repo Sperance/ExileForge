@@ -3,7 +3,7 @@ package com.sperance.exileforge.core.network
 import com.sperance.exileforge.core.contract.requireId
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildContribution
-import com.sperance.exileforge.core.model.guild.GuildLogEntry
+import com.sperance.exileforge.core.model.guild.GuildLogPage
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.model.guild.GuildPage
 import com.sperance.exileforge.core.model.guild.GuildView
@@ -130,7 +130,8 @@ class GuildClient internal constructor(private val http: Transport) {
         return http.post("$GUILD/contribute", heroQuery(heroId, "amount" to amount.toString()))
     }
 
-    suspend fun log(heroId: String, page: Int): List<GuildLogEntry> {
+    /** Страница [page] журнала гильдии, новые сверху, и есть ли старше. */
+    suspend fun log(heroId: String, page: Int): GuildLogPage {
         requirePage(page)
         return http.get("$GUILD/log", heroQuery(heroId, "page" to page.toString(), "size" to GUILD_LOG_PAGE_SIZE.toString()))
     }

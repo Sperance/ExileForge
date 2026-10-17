@@ -138,3 +138,6 @@ import kotlinx.serialization.Serializable
 
 /** One line of the guild's journal: what happened ([kind]), to whom, and the figure it carries. */
 @Serializable data class GuildLogEntry(val at: Long = 0, val kind: String = "", val heroName: String = "", val value: String = "")
+
+/** Страница журнала гильдии: [entries] новыми сверху и [more] - есть ли старше; журнал дочитывается прокруткой. */
+@Serializable data class GuildLogPage(val entries: List<GuildLogEntry> = emptyList(), val more: Boolean = false)

@@ -3,6 +3,7 @@ package com.sperance.exileforge.core.display
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.i18n.uiLanguage
+import com.sperance.exileforge.core.i18n.uiOr
 import com.sperance.exileforge.rules.content.BaseVariance
 import com.sperance.exileforge.rules.content.BenchRecipe
 import com.sperance.exileforge.rules.content.ContentIndex
@@ -386,6 +387,9 @@ fun itemVisualKind(template: ItemTemplate): ItemVisualKind = when {
 
 /** What a state is called; a flag the dictionary has no name for yet reads as its own word, capitalised. */
 fun stateTitle(state: String, lang: Lang = uiLanguage): String = ui(lang, "state.$state")
+
+/** Что значит состояние для игрока - текст подсказки значка; состояние без записи в словаре - пустая строка. */
+fun stateHint(state: String, lang: Lang = uiLanguage): String = uiOr(lang, "state.${state}_hint", "")
 
 /** The tier's ranges as text: "70–79" per value, a point as its number, values split by " / ". */
 fun rangeText(def: ModifierDef, tier: Tier): String? = tier.values.mapIndexedNotNull { index, range ->

@@ -44,6 +44,7 @@ import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.display.statTitle
+import com.sperance.exileforge.core.display.stateHint
 import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
@@ -137,7 +138,7 @@ fun basePropertyText(property: BaseProperty, withBase: Boolean): AnnotatedString
  * Цена торговца копии заменяет голую цену шаблона. Подпись действия - у короткой карточки всегда, у полной - когда оно куда-то ведёт. Замок
  * - копия заперта от продажи и лотов; «ждёт отправки» - команда о копии ждёт сети. Итог «если надеть» - таблица под строками; отметки
  * требований - галка или крест, null - не с чем сравнить. Плашки состояний и замок - в углу (у легенды ниже и от края, мимо завитков
- * рамки); кольцо качества роллов - у всех редкостей по строкам с вилкой. Английское торговое имя - для поиска на аукционе. Врождённые
+ * рамки), у полной карточки касание значка открывает подсказку, что он значит; кольцо качества роллов - у всех редкостей по строкам с вилкой. Английское торговое имя - для поиска на аукционе. Врождённые
  * строки - над чертой; судьбоносная строка - под строками вещи; мастер - кто и когда изготовил снаряжение.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -175,8 +176,16 @@ fun ItemCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            item.states.forEach { Icon(stateGlyph(it), stateTitle(it), tint = stateColor(it), modifier = Modifier.size(15.dp)) }
-            if (locked) Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
+            item.states.forEach { state ->
+                Tipped(if (detailed) ({ Tip(stateTitle(state), stateHint(state), tint = stateColor(state)) }) else null) {
+                    Icon(stateGlyph(state), stateTitle(state), tint = stateColor(state), modifier = Modifier.size(15.dp))
+                }
+            }
+            if (locked) {
+                Tipped(if (detailed) ({ Tip(ui("item.locked"), ui("item.locked_hint")) }) else null) {
+                    Icon(Icons.Outlined.Lock, ui("item.locked"), tint = GoldBright, modifier = Modifier.size(15.dp))
+                }
+            }
             if (waiting) PendingMark()
             Spacer(Modifier.weight(1f))
             if (detailed && rolled.isNotEmpty()) item.summary.quality?.let { RollRing(it) }

@@ -39,6 +39,7 @@ import com.sperance.exileforge.core.sheet.reserve
 import com.sperance.exileforge.core.sheet.view
 import com.sperance.exileforge.rules.content.ReservePool
 import com.sperance.exileforge.rules.sheet.Shift
+import com.sperance.exileforge.rules.sheet.StatReading
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.StatIcon
 import com.sperance.exileforge.ui.theme.*
@@ -68,11 +69,12 @@ internal fun ShareKind.color(): Color = when (this) {
  * [shifts] are what lies over the hero's own sheet — a map's and the atlas's effects — by stat. Цифра - лист боя ([CombatSheet]):
  * пассивные умения и шаги Предначертания - доли итога, полосы и формулы.
  *
- * Ключи карточек - по виду и заголовку: переход по цифрам не перекомпонует совпавшие карточки.
+ * Ключи карточек - по виду и заголовку: переход по цифрам не перекомпонует совпавшие карточки. Пределы и защита процентом - по
+ * листу [stats], с которого нарисована сводка (во вкладке «Под картой» - с картой).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
+fun StatBreakdownSheet(game: GameUi, stat: String, stats: Map<String, Double>, shifts: Map<String, List<Shift>>, onDismiss: () -> Unit) {
     val combat = game.hero?.combat ?: run {
         LaunchedEffect(stat) { onDismiss() }
         return
@@ -95,8 +97,10 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
                     AssistChip(onClick = { trail = trail.dropLast(1) }, label = { Text("← ${statTitle(trail[trail.size - 2], game.lang)}") })
                 }
             }
-            item { Header(current, view, accent, game) }
-            game.index?.campaign?.let { StatLimits.of(current, combat.stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
+            val defence = game.index?.let { index -> game.hero?.level?.let { StatLimits.defence(current, stats, it, index) } }
+            item { Header(current, view, defence, stats, accent, game) }
+            defence?.let { reading -> item { DefenceCard(current, reading, stats, game) } }
+            game.index?.campaign?.let { StatLimits.of(current, stats, it) }?.let { limit -> item { LimitCard(limit, game) { trail = trail + it } } }
             ReservePool.entries.firstOrNull { it.stat == current }?.let(game::reserve)?.takeIf { it.percent > 0 }?.let { reserve -> item { ReserveCard(reserve, game) } }
             if (view.weights.values.sum() > 0) item { ShareBar(view.weights) }
             items(view.cards.size, key = { cardKeys[it] }) { i -> SourceCard(view.cards[i], game) { trail = trail + it } }
@@ -107,7 +111,8 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
     }
 }
 
-@Composable private fun Header(stat: String, view: StatExplanation, accent: Color, game: GameUi) {
+/** Шапка разбора: имя, раздел и итог; у уклонения и брони итог - процент защиты [defence], рейтинг - мелко под именем. */
+@Composable private fun Header(stat: String, view: StatExplanation, defence: StatReading?, stats: Map<String, Double>, accent: Color, game: GameUi) {
     val section = game.index?.stats?.section(stat)
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -118,8 +123,9 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
             Column(Modifier.weight(1f)) {
                 section?.let { Text(it.title(game.lang).uppercase(), color = Muted, style = MaterialTheme.typography.labelSmall) }
                 Text(statTitle(stat, game.lang), color = GoldBright, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                if (defence != null) Text(ui("stat.defence.rating", statValue(stat, stats[stat] ?: 0.0, game.index)), color = Muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
             }
-            Text(view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(defence?.let { ui("stat.defence_percent", number(it.effective)) } ?: view.total, color = accent, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         }
         if (section != null) {
             Text(
@@ -156,6 +162,30 @@ fun StatBreakdownSheet(game: GameUi, stat: String, shifts: Map<String, List<Shif
         Text(
             ui("stat.cap.counts", value(limit.effective)) + if (limit.clamped) " · " + ui("stat.cap.gathered", value(limit.gathered)) else "",
             color = if (limit.clamped) Muted else Parchment,
+            style = MaterialTheme.typography.labelSmall,
+        )
+    }
+}
+
+/**
+ * Защита процентом: рейтинг [stat], что он даёт против эталонного врага уровня героя (шанс уклонения или снижение физического
+ * урона - [reading], одна функция со сводкой) и предел; набранное сверх предела - мелко.
+ */
+@Composable private fun DefenceCard(stat: String, reading: StatReading, stats: Map<String, Double>, game: GameUi) {
+    val shape = RoundedCornerShape(12.dp)
+    val percent = { v: Double -> ui("stat.defence_percent", number(v)) }
+    val kind = if (stat == StatLimits.EVASION) "evasion" else "armour"
+    Column(
+        Modifier.fillMaxWidth().clip(shape).background(PanelRaised).border(1.dp, Bronze, shape).padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Text(ui("stat.defence.title"), color = Parchment, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold)
+        SourceLine(ShareRow(statTitle(stat, game.lang), statValue(stat, stats[stat] ?: 0.0, game.index))) {}
+        SourceLine(ShareRow(ui("stat.defence_title.$kind"), percent(reading.effective))) {}
+        SourceLine(ShareRow(ui("stat.cap.title"), percent(reading.cap))) {}
+        Text(
+            ui("stat.defence.basis.$kind", game.hero?.level ?: 0) + if (reading.value > reading.cap) " · " + ui("stat.cap.gathered", percent(reading.value)) else "",
+            color = Muted,
             style = MaterialTheme.typography.labelSmall,
         )
     }

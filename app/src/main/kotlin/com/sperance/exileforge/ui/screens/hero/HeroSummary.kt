@@ -92,7 +92,7 @@ import com.sperance.exileforge.ui.theme.*
         if (figures.values.isEmpty()) Text(ui("hero.no_stats"), color = Muted)
         game.index?.stats?.let { registry -> groupedStats(figures.values, registry).forEach { (section, rows) -> StatGroupCard(section, rows, figures, game, before) { open = it } } }
     }
-    open?.let { StatBreakdownSheet(game, it, shifts) { open = null } }
+    open?.let { StatBreakdownSheet(game, it, figures.stats, shifts) { open = null } }
 }
 
 internal fun StatSection.accent(): Color = when (this) {

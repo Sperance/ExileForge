@@ -62,16 +62,20 @@ import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
 /**
- * Качество вещей: кандидатов на место, доля ролла в тире, тир аффикса (-1 - как выпал, 0 - лучший открытый, 1 - на ступень ниже).
+ * Качество вещей: кандидатов на место, доля ролла в тире, тир аффикса (-1 - как выпал, 0 - лучший открытый, 1 - на ступень ниже),
+ * редкость фляг пояса; [picked] - вещи, дерево и пассивные умения подобраны по цене листа, набор активных - боем ([LoadoutTuner]).
+ * Слабый билд ([WEAK]) ничего не подбирает: дерево случайное, вещь места - случайный кандидат с роллом нижней четверти, умения - по
+ * правилу слотов.
  *
  * Баланс монстров (отчёт, не код игры): эталонные герои по архетипам против монстров и боссов кампании и карт - реальными функциями правил
  * и настоящим боем клиента ([Battle]). Вывод - TSV; цели: обычный 2-3 действия, редкий 10-20 с, босс 50-150 с и 55-60% побед эталона над
  * стражем своего уровня ([GuardianTarget]). Быстрый сторож на выборке - `MobBalGuardTest`.
  */
-enum class GearBand(val candidates: Int, val share: Double, val tierStep: Int, val rarities: List<Rarity>, val maxUniques: Int) {
-    TYPICAL(12, 0.5, -1, listOf(Rarity.RARE, Rarity.MAGIC), 2),
-    GOOD(24, 0.7, 1, listOf(Rarity.RARE), 4),
-    OPTIMIZED(40, 0.9, 0, listOf(Rarity.RARE), 99),
+enum class GearBand(val candidates: Int, val share: Double, val tierStep: Int, val rarities: List<Rarity>, val maxUniques: Int, val flasks: Rarity, val picked: Boolean = true) {
+    WEAK(12, 0.125, -1, listOf(Rarity.RARE, Rarity.MAGIC), 2, Rarity.MAGIC, picked = false),
+    TYPICAL(12, 0.5, -1, listOf(Rarity.RARE, Rarity.MAGIC), 2, Rarity.MAGIC),
+    GOOD(24, 0.7, 1, listOf(Rarity.RARE), 4, Rarity.RARE),
+    OPTIMIZED(40, 0.9, 0, listOf(Rarity.RARE), 99, Rarity.RARE),
 }
 
 /** Откуда вещи: только редкие (крафт/находки), только уникалки где есть, смесь - лучшее из обоих. */
@@ -230,6 +234,22 @@ class MobKit(val index: ContentIndex) {
 
     private fun skillLevel(skill: SkillDefinition, level: Int, stats: Map<String, Double>): Int? = (SkillRules.MAX_LEVEL downTo 1).firstOrNull { !skillRules.unmet(skill, it, level, stats) }
 
+    /** Случайное дерево слабого билда: от стартового узла каждый шаг - случайный открытый сосед (и случайный вариант узла), пока хватает [points]. */
+    fun randomTree(heroClass: HeroClass, points: Int, dice: Dice): List<TakenNode> {
+        val graph = index.tree
+        val start = heroClass.startNode
+        val taken = linkedMapOf(start to TakenNode(start))
+        var left = points
+        while (left > 0) {
+            val options = taken.keys.flatMap(graph::neighbours).distinct().filter { it !in taken }.mapNotNull(graph::node)
+                .filter { it.type != SkillNodeType.JEWEL_SOCKET && TreeAllocation.refusal(graph, it, taken.keys, start, left) == null }
+            val node = dice.pickOrNull(options.sortedBy { it.code }) ?: break
+            taken[node.code] = TakenNode(node.code, node.options.indices.toList().let(dice::pickOrNull))
+            left -= graph.cost(node)
+        }
+        return taken.values.toList()
+    }
+
     /** Дерево: порядок узлов жадно по [worth] на уровне 70 со стилем; на уровне - сколько хватает очков. */
     fun tree(heroClass: HeroClass, points: Int, style: Style): List<TakenNode> {
         val order = orders.getOrPut("${heroClass.code}/$style") { order(heroClass, style) }
@@ -264,11 +284,11 @@ class MobKit(val index: ContentIndex) {
     }
 
     fun hero(heroClass: HeroClass, level: Int, archetype: Archetype, penalty: Double): Hero {
-        val tree = tree(heroClass, index.classes.pointsTotal(level), archetype.style)
         val band = archetype.band
+        val dice = Dice(Streams.mix(SimKit.SEED, level.toLong() * 31 + archetype.name.hashCode().toLong(), heroClass.code.hashCode().toLong()))
+        val tree = if (band.picked) tree(heroClass, index.classes.pointsTotal(level), archetype.style) else randomTree(heroClass, index.classes.pointsTotal(level), dice)
         val rareTemplates = wearable(heroClass, level, unique = false)
         val uniqueTemplates = if (archetype.source == GearSource.RARE) emptyList() else wearable(heroClass, level, unique = true)
-        val dice = Dice(Streams.mix(SimKit.SEED, level.toLong() * 31 + archetype.name.hashCode().toLong(), heroClass.code.hashCode().toLong()))
         val places = places(heroClass, archetype.shield)
         val found = places.mapIndexed { n, slot ->
             val bases = rareTemplates.filter { fits(it, slot, heroClass, archetype.guard) }.sortedWith(compareByDescending<ItemTemplate> { it.requiredLevel }.thenByDescending { it.level }.thenBy { it.code }).take(SimKit.BASES)
@@ -282,6 +302,12 @@ class MobKit(val index: ContentIndex) {
         }
         val worn = arrayOfNulls<ItemInstance>(places.size)
         var skills = skills(heroClass.code, level, own(heroClass, level), archetype.style)
+        if (!band.picked) {
+            found.forEachIndexed { n, candidates -> worn[n] = candidates.filter { !isUnique(it) || worn.count { w -> w != null && isUnique(w) } < band.maxUniques }.let(dice::pickOrNull) }
+            val items = worn.filterNotNull()
+            val ruled = skills(heroClass.code, level, stats(heroClass, level, tree, items), archetype.style)
+            return Hero(heroClass, level, archetype, SimBuild(items, tree, ruled, flasks(level, band.flasks)), "uniques=${items.count(::isUnique)} skills=${ruled.active.filterNotNull().joinToString("+") { it.skill }} passives=${ruled.passive.filterNotNull().joinToString("+")}")
+        }
         fun value(): Double = worth(heroClass, level, tree, worn.filterNotNull(), skills, penalty)
         repeat(SimKit.PASSES) {
             found.forEachIndexed { n, candidates ->
@@ -295,7 +321,7 @@ class MobKit(val index: ContentIndex) {
             skills = skills(heroClass.code, level, stats(heroClass, level, tree, worn.filterNotNull()), archetype.style)
         }
         val items = worn.filterNotNull()
-        val flasks = flasks(level, if (band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE)
+        val flasks = flasks(level, band.flasks)
         val uniqueCount = items.count { index.template(it.template)?.unique == true }
         val passives = passives(heroClass, level, tree, items, skills, penalty)
         val tuned = tuner.tune(Hero(heroClass, level, archetype, SimBuild(items, tree, passives, flasks), ""))
@@ -317,7 +343,7 @@ class MobKit(val index: ContentIndex) {
         val actives = (kept + ruled.active.filterNotNull().filter { slot -> kept.none { it.skill == slot.skill } }).take(skillRules.activeSlots(level))
         val passive = (hero.build.skills.passive.filterNotNull().filter { it in ruled.learned } + ruled.passive.filterNotNull()).distinct().take(skillRules.passiveSlots(level))
         val skills = ruled.copy(active = actives, passive = passive)
-        val build = SimBuild(hero.build.items, tree, skills, flasks(level, if (hero.archetype.band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE))
+        val build = SimBuild(hero.build.items, tree, skills, flasks(level, hero.archetype.band.flasks))
         return hero.copy(level = level, build = build, note = hero.note + " gear@${hero.level}")
     }
 
@@ -407,7 +433,7 @@ class HeroPool(val kit: MobKit, private val cache: File? = CACHE) {
         val file = cache?.let { File(it, "$key.json") } ?: return@getOrPut kit.hero(heroClass, level, archetype, penalty)
         if (file.exists()) {
             val saved = CACHE_JSON.decodeFromString(SavedHero.serializer(), file.readText())
-            val hero = Hero(heroClass, level, archetype, SimBuild(saved.items, saved.tree, saved.skills, kit.flasks(level, if (archetype.band == GearBand.TYPICAL) Rarity.MAGIC else Rarity.RARE)), saved.note)
+            val hero = Hero(heroClass, level, archetype, SimBuild(saved.items, saved.tree, saved.skills, kit.flasks(level, archetype.band.flasks)), saved.note)
             if (System.getProperty("retune") == "1") kit.tuner.tune(hero) else hero
         } else {
             kit.hero(heroClass, level, archetype, penalty).also { hero ->
@@ -1182,6 +1208,24 @@ fun main(args: Array<String>) {
 
         "bossmight" -> zones.forEach { zone -> tasks += Task { listOf(Row(listOf("bossmight", zone.code.value, zone.boss.value, zone.level, com.sperance.exileforge.rules.sheet.BossMight.of(index, zone)))) } }
 
+        "spread" -> {
+            val k = (System.getProperty("k") ?: "3").toInt()
+            val bands = (System.getProperty("band") ?: "WEAK,REF").split(',').map { it.trim() }
+            zones.forEach { zone ->
+                (-k..k).map { zone.level + it }.filter { it in 1..index.classes.maxLevel }.forEach { level ->
+                    bands.forEach { name ->
+                        classes.forEach { c ->
+                            tasks += Task {
+                                val band = if (name == REFERENCE_BAND) campaignBand(level) else GearBand.valueOf(name)
+                                val boss = sim.boss(zone, sim.hero(c, level, Archetype(band), penalty(zone, false)), 0, Rarity.COMMON, cap)
+                                listOf(Row(listOf("spread", zone.code.value, zone.boss.value, zone.level, level, level - zone.level, name, c.code, boss.values[10])))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         else -> error("mode $mode")
     }
     out.parentFile?.mkdirs()
@@ -1192,7 +1236,11 @@ fun main(args: Array<String>) {
         if (k % 20 == 0) System.err.println("mobbal: $k/${tasks.size} ${(System.nanoTime() - started) / 1_000_000_000}s")
         r.stream()
     }.toList()
-    val written = if (mode == "guard") rows + guard(index, rows) else rows
+    val written = when (mode) {
+        "guard" -> rows + guard(index, rows)
+        "spread" -> rows + spread(rows)
+        else -> rows
+    }
     out.writeText(written.joinToString("\n") { it.tsv() } + "\n")
     if (mode == "guard") written.filter { it.values[0] == "guard" && it.values.last() == false }.forEach { System.err.println("mobbal guard: ${it.tsv()}") }
     println("mobbal $mode: ${rows.size} rows in ${(System.nanoTime() - started) / 1_000_000_000} s -> ${out.path}")
@@ -1203,6 +1251,7 @@ fun main(args: Array<String>) {
  * Карты своего уровня, вожди Бездны, Разлом недели и Матерь Скверны равняются на неё же (отчёты режимов, сторож `ModesBalanceGuardTest`).
  */
 object GuardianTarget {
+
     val WINS = 0.55..0.60
     val FINALS = 0.55..0.575
 
@@ -1249,6 +1298,16 @@ fun guard(index: ContentIndex, rows: List<Row>, tolerance: Double = GUARD_TOLERA
     }
 }
 
+/**
+ * Отчёт «босс L против героя L±k» (`-Pmode=spread -Pk=3 -Pband=WEAK,REF`): строка `spreadsum` - полоса вещей (`REF` - эталона
+ * кампании своего уровня, [campaignBand]), сдвиг уровня героя от уровня стража и средняя доля побед по всем стражам и классам.
+ */
+fun spread(rows: List<Row>): List<Row> = rows.filter { it.values[0] == "spread" }.groupBy { it.values[6] as String to it.values[5] as Int }.toSortedMap(compareBy({ it.first }, { it.second }))
+    .map { (key, list) -> Row(listOf("spreadsum", key.first, key.second, list.map { it.values[8] as Double }.average(), list.size)) }
+
+/** Полоса отчёта `spread` - эталон кампании своего уровня ([campaignBand]). */
+const val REFERENCE_BAND = "REF"
+
 /** Допуск полного прогона: 8 боёв на класс, 56 на стража - разброс выборки ~7 п.п. */
 const val GUARD_TOLERANCE = 0.10
 
@@ -1281,7 +1340,7 @@ fun heroBand(level: Int): GearBand = when {
 }
 
 fun heroLevelOf(band: GearBand): Int = when (band) {
-    GearBand.TYPICAL -> 72
+    GearBand.WEAK, GearBand.TYPICAL -> 72
     GearBand.GOOD -> 80
     GearBand.OPTIMIZED -> 88
 }

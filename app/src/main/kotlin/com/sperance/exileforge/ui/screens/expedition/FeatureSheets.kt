@@ -21,8 +21,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontStyle
@@ -31,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
@@ -63,21 +60,18 @@ import com.sperance.exileforge.ui.screens.expedition.arena.ailmentTint
 import com.sperance.exileforge.ui.screens.expedition.arena.damageTint
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.stateGlyph
-import com.sperance.exileforge.ui.screens.expedition.scene.CrackText
 import com.sperance.exileforge.ui.screens.expedition.scene.SCENE_UNIT
 import com.sperance.exileforge.ui.theme.*
-import kotlin.math.ceil
-import kotlin.math.roundToInt
 
 /**
  * Лист объекта карты, по объекту правил: алтарь, торговец, узел ремесла. Остальные объекты листа не
  * открывают - они срабатывают сами (очаг Скверны - касанием точки и сундука).
  */
-@Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, gathering: () -> Float? = { view.gathering }, onCommand: (RunCommand) -> Unit) {
+@Composable internal fun FeatureSheet(game: GameUi, view: FeatureView, onCommand: (RunCommand) -> Unit) {
     when (val feature = view.feature) {
         is MapFeature.Altar -> DockPanel { AltarSheet(game, feature, onLeave = { onCommand(RunCommand.StepOff) }) { onCommand(RunCommand.Choose(it)) } }
         is MapFeature.Merchant -> DockPanel { MerchantSheet(game, feature, view.taken, onCommand) }
-        is MapFeature.Node -> DockPanel { NodeSheet(game, feature, view.gathering != null, gathering, view.guarded, onCommand) }
+        is MapFeature.Node -> DockPanel { NodeSheet(game, feature, view.guarded, onCommand) }
         is MapFeature.Trap, is MapFeature.Room, is MapFeature.Blight -> Unit
     }
 }
@@ -245,11 +239,9 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
 /**
  * Узел ремесла (шаблон объекта карты): ресурс в гнезде, профессия и её уровень, факты фишками - сколько штук,
  * опыт ремесла, сколько уже есть, инструмент (надет - зелёным, нет - красным «нужен»). Под стражами сокровищ ([guarded])
- * сбор не начать, пока они стоят; идущий сбор - полоса, что идёт по кадру ([gathering]).
- *
- * Доля сбора читается в рисовании полосы по кадру: лист не перекомпонуется на её шаге.
+ * сбор не начать, пока они стоят; идущий сбор - панель действия у объекта ([ObjectActionPanel]), не этот лист.
  */
-@Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, busy: Boolean, gathering: () -> Float?, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
+@Composable private fun NodeSheet(game: GameUi, node: MapFeature.Node, guarded: Boolean, onCommand: (RunCommand) -> Unit) {
     val index = game.index
     val tool = game.hero?.equipped?.get(node.tool)
     val output = node.job.output
@@ -270,55 +262,13 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
         facts = facts,
         icon = { BagIcon(output, Modifier.size(30.dp)) },
         onDismiss = { onCommand(RunCommand.StepOff) },
-        body = {
-            if (busy) {
-                Row(Modifier.fillMaxWidth()) {
-                    Text(ui("feature.node.gathering"), color = Rune, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                    Text(ui("feature.node.seconds", number(node.seconds)), color = Vital, style = MaterialTheme.typography.labelMedium)
-                }
-                Box(
-                    Modifier.fillMaxWidth().height(10.dp).background(Abyss, RoundedCornerShape(5.dp)).drawBehind {
-                        val share = (gathering() ?: 0f).coerceIn(0f, 1f)
-                        drawRoundRect(Brush.horizontalGradient(listOf(Vital.copy(alpha = .6f), Vital)), size = size.copy(width = size.width * share), cornerRadius = CornerRadius(size.height / 2))
-                    },
-                )
-            }
-        },
     ) {
-        if (!busy) {
-            ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.weight(1f)) { Text(ui("feature.leave")) }
-            ForgeButton(enabled = tool != null && !guarded, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.weight(2f)) {
-                Text(ui("feature.node.gather_for", number(node.seconds)))
-            }
+        ForgeOutlinedButton(onClick = { onCommand(RunCommand.StepOff) }, modifier = Modifier.weight(1f)) { Text(ui("feature.leave")) }
+        ForgeButton(enabled = tool != null && !guarded, onClick = { onCommand(RunCommand.Gather) }, modifier = Modifier.weight(2f)) {
+            Text(ui("feature.node.gather_for", number(node.seconds)))
         }
     }
 }
-
-/**
- * Над героем у входа в комнату: кольцо простоя рисует сцена
- * вокруг жетона, здесь - строка над ним: «Трещина поддаётся · N%», при нуле - «стой рядом»; у запертой двери - «Заперто. Найди
- * рычаг поблизости». Стоит над кольцом, выше чисел урона.
- */
-@Composable internal fun EntranceFloat(cue: EntranceCue?) {
-    cue ?: return
-    val (text, tint) = when (cue) {
-        is EntranceCue.Crack -> if (cue.progress > 0f) ui("feature.secret.yielding", (cue.progress * 100).roundToInt()) to CrackText else ui("feature.secret.stand") to Parchment
-        EntranceCue.Locked -> ui("feature.vault.locked") to Parchment
-    }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        Text(
-            text,
-            color = tint,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.align(Alignment.TopCenter).offset(y = maxHeight * .55f - SCENE_UNIT * ENTRANCE_LIFT),
-        )
-    }
-}
-
-/** Как высоко над ногами героя строка входа, в полутайлах сцены: над кольцом жетона. */
-private const val ENTRANCE_LIFT = 2.3f
 
 /**
  * Урон карты над героем (одной строкой): удар ловушки - «−12 Хаос · Яд: 3% здоровья/с, 6 с» цветом её урона,

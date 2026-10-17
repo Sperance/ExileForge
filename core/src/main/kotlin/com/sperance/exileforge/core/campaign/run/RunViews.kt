@@ -396,8 +396,8 @@ data class RunHud(
     val heroCharges: List<ChargeView> = emptyList(),
     /** Итог здоровья на карте в секунду: регенерация и отдых против дегена и недугов; null - в бою и не на карте. */
     val lifeFlow: LifeFlow? = null,
-    /** Герой у входа в комнату: трещина и её простой или запертая дверь; null - он не у входа. */
-    val entrance: EntranceCue? = null,
+    /** Действие героя у объекта карты (вскрытие трещины, сбор узла, запертая дверь); null - героя ничто не держит. */
+    val action: ObjectAction? = null,
     /** Экран-вызов перед стражем; null - его нет. */
     val challenge: ChallengeView? = null,
     /** Очаг Скверны карты; null - очага нет. */
@@ -438,7 +438,7 @@ data class AbyssView(
  * Объект карты, чей лист открыт: объект правил - что в нём, - выборы, уже сделанные на нём, доля
  * идущего сбора узла (null - сбор не идёт) и стоят ли его стражи сокровищ.
  */
-data class FeatureView(val feature: MapFeature, val taken: List<Int>, val gathering: Float? = null, val guarded: Boolean = false)
+data class FeatureView(val feature: MapFeature, val taken: List<Int>, val guarded: Boolean = false)
 
 /** A fountain as its offer reads: which one, and the share of life and mana it gives back. */
 data class FountainView(val id: Int, val heal: Double)
@@ -466,16 +466,11 @@ data class LevelUp(val from: Int, val to: Int) {
 }
 
 /**
- * Что над героем у входа в комнату: у трещины - кольцо простоя вокруг жетона и
- * «Трещина поддаётся · N%», при нуле - «стой рядом»; у запертой двери - «Заперто. Найди рычаг поблизости».
+ * Действие героя у объекта карты - одна нижняя панель «действие у объекта» для всех: объект [feature] и сделанная доля [progress]
+ * (0..1) - простой у трещины тайной комнаты или сбор узла ремесла; null доли - делать нечего, только подсказка (дверь заперта, нужен
+ * рычаг).
  */
-sealed interface EntranceCue {
-    /** Трещина тайной комнаты: доля простоя [progress], 0..1. */
-    data class Crack(val progress: Float) : EntranceCue
-
-    /** Запертая дверь: рычаг ещё не дёрнут. */
-    data object Locked : EntranceCue
-}
+data class ObjectAction(val feature: MapFeature, val progress: Float?)
 
 /**
  * Раздел окна карты ([ExpeditionRun.windowLines]): свои строки карты, атлас, древо гильдии, зелье; [title] - ключ заголовка,

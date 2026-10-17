@@ -22,7 +22,13 @@ import com.sperance.exileforge.rules.run.RunEvent
 import kotlin.math.roundToInt
 
 /** Сбор узла [spot]: прошло [elapsed] секунд из его [MapFeature.Node.seconds]. */
-internal class Channel(val spot: NodeSpot, var elapsed: Double = 0.0)
+internal class Channel(val spot: NodeSpot, var elapsed: Double = 0.0) {
+    /** Сбор как действие у объекта: узел и пройденная доля его времени. */
+    val action: ObjectAction get() = ObjectAction(spot.feature, if (spot.node.seconds <= 0) 1f else (elapsed / spot.node.seconds).toFloat().coerceIn(0f, 1f))
+}
+
+/** Действие героя у объекта сейчас: идущий сбор, иначе объект, у которого герой стоит; null - ничего. */
+internal fun ExpeditionRun.objectAction(): ObjectAction? = channel?.action ?: world.features.firstNotNullOfOrNull { it.action(world) }
 
 /**
  * Тик недуга на герое вне боя: урон идёт каждый кадр, а на экран - тиками по [TICK_SECONDS]: сколько набралось со щита и

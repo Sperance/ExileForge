@@ -4,7 +4,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -16,7 +15,6 @@ import com.sperance.exileforge.core.campaign.run.AilmentView
 import com.sperance.exileforge.core.campaign.run.BlightSpot
 import com.sperance.exileforge.core.campaign.run.Chest
 import com.sperance.exileforge.core.campaign.run.CrystalSpot
-import com.sperance.exileforge.core.campaign.run.EntranceCue
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.ExpeditionWorld
 import com.sperance.exileforge.core.campaign.run.FeatureSpot
@@ -244,9 +242,9 @@ internal class ScenePainter {
     }
 
     /**
-     * Жетон героя: след скорости, ореол недугов, кольцо простоя у трещины.
+     * Жетон героя: след скорости, ореол недугов.
      *
-     * След скорости, ореол ранящих недугов и кольцо простоя у трещины - декор.
+     * След скорости и ореол ранящих недугов - декор.
      */
     private fun hero(run: ExpeditionRun, world: ExpeditionWorld) {
         val bob = if (world.moving) abs(sin(time * 9f)) * unit * .14f else 0f
@@ -257,11 +255,6 @@ internal class ScenePainter {
         ailmentHalo(centre, run.hud.value.heroAilments)
         val code = classCode
         token(x, y, unit * HERO_TOKEN, Palettes.hero, bob) { Portraits.hero(this, code, time) }
-        for (spot in world.features) {
-            val progress = (spot.cue(world) as? EntranceCue.Crack)?.progress ?: continue
-            if (progress > 0f) crackRing(centre, progress)
-            break
-        }
     }
 
     /**
@@ -299,16 +292,6 @@ internal class ScenePainter {
             pen.scope.drawCircle(tint.copy(alpha = .45f + .3f * breath), radius, centre, style = Strokes.of(unit * HALO_WIDTH))
             ring++
         }
-    }
-
-    /** Кольцо простоя [progress] (0..1) вокруг жетона героя с серединой [centre] в мере холста: дорожка и дуга от верха по часовой. */
-    private fun crackRing(centre: Offset, progress: Float) {
-        val stroke = Strokes.of(unit * RING_WIDTH, StrokeCap.Round)
-        val radius = unit * HERO_TOKEN * RING_SPAN
-        val corner = Offset(centre.x - radius, centre.y - radius)
-        val size = Size(radius * 2, radius * 2)
-        pen.scope.drawArc(CrackTrack, 0f, 360f, false, corner, size, style = stroke)
-        pen.scope.drawArc(CrackHue, -90f, 360f * progress.coerceIn(0f, 1f), false, corner, size, style = stroke)
     }
 
     /** A cell as the style reads it: where its centre falls and how much rock borders it. */
@@ -390,20 +373,11 @@ internal val ENGAGED = setOf(AgentMode.CHASING, AgentMode.HUNTING)
 /** Жетон героя: радиус в полуширинах клетки. */
 private const val HERO_TOKEN = .85f
 
-/** Кольцо простоя у трещины: радиус в радиусах жетона и толщина нити в полуширинах клетки. */
-private const val RING_SPAN = 1.35f
-private const val RING_WIDTH = .2f
-
 /** Ореол недугов героя: первое кольцо в долях жетона, шаг следующих, толщина в мере сцены и темп дыхания. */
 private const val HALO_SPAN = .78f
 private const val HALO_STEP = .14f
 private const val HALO_WIDTH = .09f
 private const val HALO_BREATH = 3.2f
-
-/** Цвета трещины: дорожка кольца, дуга простоя и подпись над героем. */
-private val CrackTrack = Color(0xFF1F2C35)
-private val CrackHue = Color(0xFFA26BFF)
-internal val CrackText = Color(0xFFCDB6FF)
 
 /** След скорости после босса: сколько штрихов и их цвет - руна, как значок «быстрее» над картой. */
 private const val SWIFT_STREAKS = 3

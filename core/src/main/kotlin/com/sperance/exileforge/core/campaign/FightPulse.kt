@@ -27,15 +27,15 @@ class FightPulse {
     private var swings = FloatArray(SWINGS)
 
     /**
-     * Доля идущего сбора узла карты этого кадра; сбора нет - null. Полоса сбора читает её в рисовании, а не
-     * из снимка (не чаще 20 раз в секунду): идёт ровно, без рывков.
+     * Доля действия у объекта карты этого кадра (вскрытие трещины, сбор узла); действия нет - null. Полоса панели действия читает
+     * её в рисовании, а не из снимка (не чаще 20 раз в секунду): идёт ровно, без рывков.
      */
-    var gather: Float? = null
+    var action: Float? = null
         private set
 
-    /** Кадр сбора: прошло [elapsed] из [seconds]; без сбора - null. */
-    fun gather(elapsed: Double?, seconds: Double) {
-        gather = elapsed?.let { if (seconds <= 0) 1f else (it / seconds).toFloat().coerceIn(0f, 1f) }
+    /** Кадр действия у объекта: сделанная доля [progress]; без действия - null. */
+    fun act(progress: Float?) {
+        action = progress
     }
 
     /** Доля замаха врага [index] (номер в паке боя); вне пака - 0. */

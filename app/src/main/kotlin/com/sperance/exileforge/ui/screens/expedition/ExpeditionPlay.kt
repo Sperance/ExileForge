@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -27,14 +26,12 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
-import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
@@ -43,7 +40,6 @@ import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.view
-import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.RunMenu
 import com.sperance.exileforge.ui.components.RunMenuItem
@@ -111,7 +107,6 @@ import kotlin.math.roundToInt
             ExpeditionScene(run, clock, game.heroClass?.code, Modifier.fillMaxSize())
             BlightWatch(hud.blight, shell::announce)
             if (hud.phase == RunPhase.MAP) LiveHazards(live)
-            if (hud.phase == RunPhase.MAP) LiveEntrance(live)
             when (hud.phase) {
                 RunPhase.MAP -> {
                     MapDockHost { dock ->
@@ -143,11 +138,16 @@ import kotlin.math.roundToInt
                         hud.fountain?.let { DockPanel { FountainOffer(it, onTake = { model.runCommand(RunCommand.TakeFountain) }) { model.runCommand(RunCommand.StepOff) } } }
                         if (!dock.occupied) MapBag(game, hud.drops, hud.bag.isNotEmpty(), hud.tally.loot.pieces()) { bagOpen = true }
                         if (bagOpen) RunBagSheet(game, model, run, hud.bag, hud.gold, hud.experience, hud.awaiting) { bagOpen = false }
-                        hud.feature?.let {
-                            FeatureSheet(game, it, {
-                                clock.floatValue
-                                run.pulse.gather
-                            }, onCommand = model::runCommand)
+                        val action = hud.action
+                        if (action != null) {
+                            DockPanel {
+                                ObjectActionPanel(action, {
+                                    clock.floatValue
+                                    run.pulse.action
+                                }) { live.value.action?.progress }
+                            }
+                        } else {
+                            hud.feature?.let { FeatureSheet(game, it, onCommand = model::runCommand) }
                         }
                         if (leaving) {
                             DockPanel {
@@ -202,8 +202,8 @@ import kotlin.math.roundToInt
 /**
  * Снимок захода для тела экрана похода: в бою - без того, что бой меняет каждый кадр (сам бой, пулы и пояс героя,
  * опасности), - их читает только арена ([RunFight]). На карте - без тикающего: здоровья, щита и маны, долей пояса, несомого,
- * урона ловушек, входа в комнату и доли сбора; их читают свои листовые элементы из живого снимка ([MapVitals], [RoadEffects],
- * [LiveFlasks], [LiveHazards], [LiveEntrance]), и экран не перекомпонуется на каждом их шаге. Прочие фазы - как есть.
+ * урона ловушек и доли действия у объекта; их читают свои листовые элементы из живого снимка ([MapVitals], [RoadEffects],
+ * [LiveFlasks], [LiveHazards], [ObjectActionPanel]), и экран не перекомпонуется на каждом их шаге. Прочие фазы - как есть.
  */
 private fun RunHud.screenOnly(): RunHud = when (phase) {
     RunPhase.FIGHT -> copy(
@@ -214,7 +214,7 @@ private fun RunHud.screenOnly(): RunHud = when (phase) {
     RunPhase.MAP -> copy(
         heroLife = 0, heroShield = 0, heroMana = 0, heroReserved = 0,
         flasks = flasks.map { it?.copy(charges = 0, active = 0f) }, hazards = emptyList(), heroAilments = emptyList(), heroEffects = emptyList(),
-        heroCharges = emptyList(), lifeFlow = null, entrance = null, feature = feature?.let { it.copy(gathering = it.gathering?.let { 0f }) },
+        heroCharges = emptyList(), lifeFlow = null, action = action?.let { it.copy(progress = it.progress?.let { 0f }) },
     )
 
     else -> this
@@ -241,12 +241,6 @@ private data class VitalsView(val life: Int, val maxLife: Int, val shield: Int, 
 @Composable private fun LiveHazards(live: State<RunHud>) {
     val hazards by remember(live) { derivedStateOf { live.value.hazards } }
     HazardFloat(hazards)
-}
-
-/** Строка входа в комнату из живого снимка. */
-@Composable private fun LiveEntrance(live: State<RunHud>) {
-    val cue by remember(live) { derivedStateOf { live.value.entrance } }
-    EntranceFloat(cue)
 }
 
 /** Арена захода по живому снимку [live]: кадр боя перекомпонует только её. */

@@ -433,7 +433,7 @@ class ExpeditionRun(
             }
         }
         pulse.capture(fight)
-        pulse.gather(channel?.elapsed, channel?.spot?.node?.seconds ?: 0.0)
+        pulse.act(if (phase == RunPhase.MAP) objectAction()?.progress else null)
         if (cadence.due(dt, commanded || poked, leaps(), fight)) state.value = snapshot()
         wake.rest(active)
     }

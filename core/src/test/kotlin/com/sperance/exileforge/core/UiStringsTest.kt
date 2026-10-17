@@ -190,6 +190,8 @@ class UiStringsTest {
             }
             com.sperance.exileforge.rules.content.GuildRole.entries.forEach { add("guild.role.${it.name}") }
             listOf(Rarity.COMMON, Rarity.MAGIC, Rarity.RARE).forEach { add("feature.blight.quality.${it.name}") }
+            listOf(com.sperance.exileforge.rules.run.FeatureKind.SECRET, com.sperance.exileforge.rules.run.FeatureKind.VAULT).forEach { add("feature.room.${it.name}") }
+            listOf(com.sperance.exileforge.rules.run.FeatureKind.SECRET, com.sperance.exileforge.rules.run.FeatureKind.VAULT, com.sperance.exileforge.rules.run.FeatureKind.NODE).forEach { add("feature.action.${it.name}") }
             com.sperance.exileforge.rules.run.MapMechanic.entries.forEach { add("tester.mechanic.${it.name}") }
             Slot.entries.forEach { add("enum.slot.${it.name}") }
             bodyPlaces.forEach { add("enum.slot.${it.code}") }

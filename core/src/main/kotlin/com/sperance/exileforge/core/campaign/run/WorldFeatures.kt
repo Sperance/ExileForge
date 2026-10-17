@@ -53,8 +53,8 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     /** Доля простоя, что открывает объект (трещина тайной комнаты), 0..1; у прочих - ноль. */
     open val progress: Double get() = 0.0
 
-    /** Что сказать над героем, стоящим у объекта (трещина поддаётся, дверь заперта); null - нечего. */
-    open fun cue(world: ExpeditionWorld): EntranceCue? = null
+    /** Действие героя, стоящего у объекта (простой у трещины, запертая дверь); null - объект героя не держит. */
+    open fun action(world: ExpeditionWorld): ObjectAction? = null
 
     /** Клетки, где объект можно увидеть: хоть одна исследована - объект на карте ([shown]). */
     protected open val sites: List<Cell> get() = listOf(cell)
@@ -221,11 +221,10 @@ class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, va
         progress = 0.0
     }
 
-    /** Герой у входа: у двери - «заперто, найди рычаг», у трещины - её простой (0 - подошёл, ещё не стоит). */
-    override fun cue(world: ExpeditionWorld): EntranceCue? = when {
+    /** Герой у входа: у двери - подсказка без доли (нужен рычаг), у трещины - её простой (0 - подошёл, ещё не стоит). */
+    override fun action(world: ExpeditionWorld): ObjectAction? = when {
         opened || !near(world, entrance, ADJACENT) -> null
-        lever != null -> EntranceCue.Locked
-        else -> EntranceCue.Crack(progress.toFloat())
+        else -> ObjectAction(feature, progress.toFloat().takeIf { lever == null })
     }
 
     /** Размытая метка рычага видна: дверь найдена, заперта, а сам рычаг ещё не увиден. */

@@ -122,7 +122,8 @@ import kotlinx.serialization.Serializable
 
 /**
  * The guild stash as a member sees it: its things, its tabs, places a tab and the takes left today (-1 — no count);
- * [takesPerDay] - дневной лимит взятий роли героя (`guilds.json` → `stash.roles`), -1 - без лимита (глава).
+ * [takesPerDay] - дневной лимит взятий роли героя (`guilds.json` → `stash.roles`), -1 - без лимита (глава); [roleTakes] - дневной
+ * лимит каждой роли с прибавкой древа гильдии (-1 - без счёта), строка пределов по ролям.
  */
 @Serializable data class GuildStashView(
     val entries: List<GuildStashEntry> = emptyList(),
@@ -131,6 +132,7 @@ import kotlinx.serialization.Serializable
     val takesLeft: Int = 0,
     val money: Long = 0,
     val takesPerDay: Int = -1,
+    val roleTakes: Map<GuildRole, Int> = emptyMap(),
 )
 
 /** A contribution landed: the guild after it, the hero's row and the gold the hero has left. */

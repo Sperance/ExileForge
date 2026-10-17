@@ -56,6 +56,7 @@ import com.sperance.exileforge.presentation.state.unmetFor
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
+import com.sperance.exileforge.rules.content.GuildRole
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.sheet.StashTakePrice
 import com.sperance.exileforge.ui.components.AccordionGroup
@@ -95,7 +96,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
  * «Ценника», как витрина аукциона, с её отбором (на клиенте, [StashFilter]); ярлык - цена взятия в золоте
  * ([StashTakePrice]), взять и положить - удержанием.
  *
- * Участник и офицер видят «N/M» на сегодня, глава - без ограничений.
+ * Участник и офицер видят «N/M» на сегодня, глава - без ограничений; под ними - пределы каждой роли одной строкой.
  */
 @Composable internal fun StashTab(game: GameUi, vm: GuildViewModel, me: GuildMember?) {
     val guilds by vm.guilds.collectAsStateWithLifecycle()
@@ -125,6 +126,7 @@ import com.sperance.exileforge.ui.theme.rarityColor
                     color = Muted,
                     style = MaterialTheme.typography.bodySmall,
                 )
+                roleTakesLine(stash)?.let { MutedText(it, style = MaterialTheme.typography.labelSmall) }
                 if (me != null && GuildPolicy.can(me.role, GuildAction.STASH_TABS) && ranks.isNotEmpty()) {
                     Spinner(ui("guild.stash_rank_set"), minRank.toString(), ranks.indices.associate { it.toString() to GuildText.rank(ranks[it].code) }, !game.busy) {
                         vm.tabRank(tab, it.toInt())
@@ -180,6 +182,11 @@ import com.sperance.exileforge.ui.theme.rarityColor
             onFilter(it)
         }
     }
+}
+
+/** Пределы хранилища по ролям одной строкой: «Взятий в сутки: Глава - без счёта · Офицер - 20 · Участник - 10»; сервер не прислал - нет. */
+private fun roleTakesLine(stash: GuildStashView): String? = stash.roleTakes.takeIf { it.isNotEmpty() }?.let { takes ->
+    ui("guild.stash_roles", GuildRole.entries.mapNotNull { role -> takes[role]?.let { ui("guild.stash_role", GuildText.role(role), if (it < 0) ui("guild.stash_role_free") else it.toString()) } }.joinToString(" · "))
 }
 
 private fun kindTitle(kind: StashKind): String = ui("guild.stash_kind.${kind.name}")

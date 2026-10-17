@@ -6,6 +6,7 @@ import com.sperance.exileforge.core.app.LeftReport
 import com.sperance.exileforge.core.app.LeftReports
 import com.sperance.exileforge.core.feedback.CrashTraces
 import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.model.command.CrashTrace
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -57,15 +58,14 @@ class CrashKeeper(context: Context) :
         files().filter { it.name.endsWith(PENDING) }.reversed().mapNotNull { file ->
             val text = runCatching { file.readText() }.getOrNull() ?: return@mapNotNull null
             val head = text.substringBefore(SPLIT).lines()
-            val stack = text.substringAfter(SPLIT, "")
-            if (stack.isBlank()) return@mapNotNull null
+            val crash = trace(text) ?: return@mapNotNull null
             val report = BugReportRequest(
-                text = stack.lineSequence().first().take(TITLE),
+                text = crash.stack.lineSequence().first().take(TITLE),
                 screen = SCREEN,
                 context = mapOf("crashThread" to head.getOrNull(1).orEmpty(), "auto" to "true"),
                 kind = FeedbackKind.CRASH,
-                clientVersion = head.getOrNull(0).orEmpty(),
-                traces = listOf(stack),
+                clientVersion = crash.buildVersion,
+                crashes = listOf(crash),
                 key = "crash-${file.name.substringAfter('-').substringBefore('.')}",
             )
             LeftReport(report) { sent(file) }
@@ -77,9 +77,15 @@ class CrashKeeper(context: Context) :
         file.renameTo(File(dir, file.name.removeSuffix(PENDING) + SENT))
     }
 
-    /** Последние стеки (новые первыми) - к отчёту игрока об ошибке; без версии и потока, только стек. */
-    override suspend fun recent(): List<String> = withContext(Dispatchers.IO) {
-        files().mapNotNull { runCatching { it.readText().substringAfter(SPLIT, "") }.getOrNull()?.takeIf { s -> s.isNotBlank() } }
+    /** Последние падения (новые первыми) - к отчёту игрока об ошибке: стек с версией своей сборки, без потока. */
+    override suspend fun recent(): List<CrashTrace> = withContext(Dispatchers.IO) {
+        files().mapNotNull { file -> runCatching { file.readText() }.getOrNull()?.let(::trace) }
+    }
+
+    /** Запись падения: первая строка шапки - версия сборки, после [SPLIT] - стек; пустой стек - не падение. */
+    private fun trace(text: String): CrashTrace? {
+        val stack = text.substringAfter(SPLIT, "").takeIf { it.isNotBlank() } ?: return null
+        return CrashTrace(stack, text.substringBefore(SPLIT).lineSequence().first())
     }
 
     private companion object {

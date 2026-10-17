@@ -109,13 +109,19 @@ data class ApiCapabilities(val routes: Set<String>) {
      * пока сервер не ответит; второй раз сервер его не запишет. Пусто - без защиты от повтора.
      */
     val key: String = "",
-    /** Стеки падений: у [FeedbackKind.CRASH] - его стек, у ошибки - последние падения клиента (не больше трёх). */
-    val traces: List<String> = emptyList(),
+    /** Падения: у [FeedbackKind.CRASH] - оно само, у ошибки - последние падения клиента (не больше трёх). */
+    val crashes: List<CrashTrace> = emptyList(),
     /** Последние действия игрока: переходы экранов и запросы со временем, старые первыми ([com.sperance.exileforge.core.feedback.ReportTrail]). */
     val trail: List<String> = emptyList(),
     /** Снимок героя строками «что - значение»: здоровье, сопротивления, Мощь, умения, надетое кодами. */
     val heroSheet: List<String> = emptyList(),
 )
+
+/**
+ * Стек падения клиента и версия сборки ([buildVersion] - `versionName`), в которой оно случилось: по ней сервер берёт карту
+ * R8 для расшифровки, а не по версии, что шлёт отчёт.
+ */
+@Serializable data class CrashTrace(val stack: String, val buildVersion: String)
 
 /** Ответ на приём отчёта: [id] записанного отчёта. Снимков экрана нет. */
 @Serializable data class FiledReport(val id: String)

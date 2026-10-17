@@ -2,12 +2,13 @@ package com.sperance.exileforge.core.feedback
 
 import com.sperance.exileforge.core.app.GameSlice
 import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.model.command.CrashTrace
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.core.session.ServerConnection
 
-/** Последние стеки падений клиента на устройстве, новые первыми: только стек, без версии и потока. */
+/** Последние падения клиента на устройстве, новые первыми: стек и версия сборки, в которой оно случилось. */
 fun interface CrashTraces {
-    suspend fun recent(): List<String>
+    suspend fun recent(): List<CrashTrace>
 }
 
 /**
@@ -19,7 +20,7 @@ class BugEvidence(private val slice: GameSlice, private val connection: ServerCo
     suspend fun attach(report: BugReportRequest): BugReportRequest {
         val rules = slice.ui.value.index?.rules?.feedback
         val evidence = if (report.kind == FeedbackKind.BUG) {
-            report.copy(traces = crashes.recent(), heroSheet = slice.ui.value.hero?.reportSheet().orEmpty())
+            report.copy(crashes = crashes.recent(), heroSheet = slice.ui.value.hero?.reportSheet().orEmpty())
         } else {
             report
         }

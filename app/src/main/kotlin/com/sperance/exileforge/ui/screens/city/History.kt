@@ -40,13 +40,13 @@ import com.sperance.exileforge.presentation.state.Feature
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.level
 import com.sperance.exileforge.presentation.state.unlocked
-import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
-import com.sperance.exileforge.ui.screens.hero.chronicleDone
-import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
+import com.sperance.exileforge.ui.screens.hero.chronicleDone
+import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 

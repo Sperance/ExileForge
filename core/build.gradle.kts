@@ -93,6 +93,30 @@ tasks.withType<Test>().configureEach {
 }
 
 /**
+ * Классы сторожей баланса: бои эталонов на минуты. Обычный `test` их не берёт - быстрые тесты ядра, классы в нескольких JVM
+ * на ядра машины.
+ */
+val balanceGuards = "com.sperance.exileforge.core.sim.*GuardTest"
+
+tasks.test {
+    filter { excludeTestsMatching(balanceGuards) }
+    maxParallelForks = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1)
+}
+
+/**
+ * Сторожа баланса (`MobBalGuardTest`, `ModesBalanceGuardTest`, `ClassBalanceGuardTest`) - своя задача и свой job CI рядом с `core`:
+ * одна JVM, эталоны общим пулом на прогон (`GuardHeroes`). `./gradlew :core:balanceGuard [--tests <класс>]`.
+ */
+val balanceGuard by tasks.registering(Test::class) {
+    group = "verification"
+    description = "Balance guards: reference heroes against guardians, modes and classes"
+    testClassesDirs = sourceSets.test.get().output.classesDirs
+    classpath = sourceSets.test.get().runtimeClasspath
+    filter { includeTestsMatching(balanceGuards) }
+    maxHeapSize = "4g"
+}
+
+/**
  * Закреплённый сервер - из сабмодуля `backend/`, не из кода: коммит - его HEAD, ветка - из `.gitmodules`, версия -
  * как её считает сам сервер (база из `backend/server-version` плюс коммиты после её правки). Закрепить новый сервер -
  * сдвинуть сабмодуль; `ServerPin.kt` пишется при сборке.

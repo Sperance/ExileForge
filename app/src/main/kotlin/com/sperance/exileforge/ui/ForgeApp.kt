@@ -42,7 +42,8 @@ import com.sperance.exileforge.ui.components.OrnateDivider
 import com.sperance.exileforge.ui.components.ReportsSheet
 import com.sperance.exileforge.ui.components.StartActions
 import com.sperance.exileforge.ui.components.StartStages
-import com.sperance.exileforge.ui.components.ToastHost
+import com.sperance.exileforge.ui.components.ToastBelow
+import com.sperance.exileforge.ui.components.ToastLayer
 import com.sperance.exileforge.ui.components.UpdateGate
 import com.sperance.exileforge.ui.components.voidBackdrop
 import com.sperance.exileforge.ui.screens.admin.AdminScreen
@@ -129,7 +130,7 @@ import org.koin.compose.viewmodel.koinViewModel
  * В ключе экранов - язык и размер словаря: пришедшие с сервера имена перерисовывают экраны, что печатали код. Карта мира строится, как
  * только пришла кампания, вне главного потока; слой пергамента живёт с оболочкой. Хозяева поверх всего: системные листы (отчёт и настройки,
  * аккорд громкости), отчёты, справки, карточки предмета, умения и игрока, экран санкции, письма. Прогрев, поход и испытание - не экраны
- * стека, а состояния игры, что накрывают всё.
+ * стека, а состояния игры, что накрывают всё. Тосты - один слой над всеми ними ([ToastLayer]), сюжетом и прологом тоже.
  */
 @Composable internal fun ForgeScreens() {
     val shell: ShellViewModel = koinViewModel()
@@ -149,30 +150,32 @@ import org.koin.compose.viewmodel.koinViewModel
     LaunchedEffect(route.phase, game.heroId) { if (route.phase == AppPhase.GAME && game.heroId.isNotBlank()) shell.warmUp() }
     val campaign = game.index?.campaign
     LaunchedEffect(campaign) { campaign?.let { WorldArt.of(it) } }
-    key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
-        CompositionLocalProvider(
-            LocalBugReport provides { sheets.bug = true },
-            LocalMailOpen provides { mailOpen = true },
-            com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
-            com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
-        ) {
-            com.sperance.exileforge.ui.components.FateSightHost(game) {
-                com.sperance.exileforge.ui.components.LoreHost(game) {
-                    com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
-                        com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
-                            com.sperance.exileforge.ui.components.PlayerCardHost(game) {
-                                Box(Modifier.fillMaxSize()) {
-                                    val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
-                                    val run = expedition
-                                    val arena = trial
-                                    val notice = game.session.notice
-                                    when {
-                                        notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
-                                        warming != null -> Box(Modifier.fillMaxSize().background(Ink))
-                                        run != null -> ExpeditionPlay(run)
-                                        arena != null -> TrialScreen(arena)
-                                        rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
-                                        else -> Shell(game, route, navigator) { sheets.bug = true }
+    ToastLayer(game, shell::dismissMessage, shell::dismissNotice) {
+        key(game.session.server, game.sessionEpoch, game.lang, game.world.localeLanguage, game.world.localeStrings) {
+            CompositionLocalProvider(
+                LocalBugReport provides { sheets.bug = true },
+                LocalMailOpen provides { mailOpen = true },
+                com.sperance.exileforge.ui.components.LocalSystemSheets provides sheets,
+                com.sperance.exileforge.ui.screens.expedition.world.LocalWorldArtLayer provides com.sperance.exileforge.ui.screens.expedition.world.rememberWorldArtLayer(),
+            ) {
+                com.sperance.exileforge.ui.components.FateSightHost(game) {
+                    com.sperance.exileforge.ui.components.LoreHost(game) {
+                        com.sperance.exileforge.ui.components.ItemInspectorHost(game) {
+                            com.sperance.exileforge.ui.screens.skills.SkillInspectorHost(game) {
+                                com.sperance.exileforge.ui.components.PlayerCardHost(game) {
+                                    Box(Modifier.fillMaxSize()) {
+                                        val warming = warmup?.takeIf { route.phase == AppPhase.GAME && !it.finished }
+                                        val run = expedition
+                                        val arena = trial
+                                        val notice = game.session.notice
+                                        when {
+                                            notice != null -> com.sperance.exileforge.ui.screens.session.SanctionScreen(notice)
+                                            warming != null -> Box(Modifier.fillMaxSize().background(Ink))
+                                            run != null -> ExpeditionPlay(run)
+                                            arena != null -> TrialScreen(arena)
+                                            rift.open -> com.sperance.exileforge.ui.screens.expedition.RiftScreen()
+                                            else -> Shell(game, route, navigator) { sheets.bug = true }
+                                        }
                                     }
                                 }
                             }
@@ -181,25 +184,28 @@ import org.koin.compose.viewmodel.koinViewModel
                 }
             }
         }
+        if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
+        if (sheets.bug) {
+            BugSheet(
+                game,
+                route,
+                expedition,
+                drafts,
+                onDismiss = { sheets.bug = false },
+                onReports = { reportsTab = it },
+                onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
+            )
+        }
+        reportsTab?.let { tab -> ReportsSheet(tab) { reportsTab = null } }
+        if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
+        if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
+        if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
+        if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
     }
-    if (sheets.settings) com.sperance.exileforge.ui.screens.server.SettingsOverlay { sheets.settings = false }
-    if (sheets.bug) {
-        BugSheet(
-            game,
-            route,
-            expedition,
-            drafts,
-            onDismiss = { sheets.bug = false },
-            onReports = { reportsTab = it },
-            onSend = { report -> shell.reportBug(report) { drafts.clear(report.kind) } },
-        )
-    }
-    reportsTab?.let { tab -> ReportsSheet(tab) { reportsTab = null } }
-    if (mailOpen) com.sperance.exileforge.ui.components.ItemInspectorHost(game) { MailSheet(game) { mailOpen = false } }
-    if (route.phase == AppPhase.GAME) com.sperance.exileforge.ui.components.LetterHost(game)
-    if (route.phase == AppPhase.GAME && expedition == null && trial == null && !rift.open) com.sperance.exileforge.ui.screens.quests.StoryAfterHost(game)
-    if (route.phase == AppPhase.GAME && warmup?.finished != false && expedition == null && trial == null) UnfinishedRunHost()
 }
+
+/** Тост под шапкой игры: оболочка с баннером опускает его ниже баннера. */
+private val BANNER_TOAST_TOP = 60.dp
 
 /**
  * Стек экранов: `NavDisplay` над стеком навигатора. Экраны игры стоят в оболочке - шапка, полоса команды,
@@ -271,7 +277,7 @@ import org.koin.compose.viewmodel.koinViewModel
                     screens(Modifier.weight(1f).fillMaxWidth())
                 }
             }
-            ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
+            ToastBelow(BANNER_TOAST_TOP)
         }
     }
 }

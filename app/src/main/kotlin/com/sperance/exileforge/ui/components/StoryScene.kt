@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,8 +45,8 @@ import org.koin.compose.viewmodel.koinViewModel
  * Сюжетный экран: палитра Предначертания, жар снизу и угли,
  * заголовок Cinzel, абзацы [paragraphs] печатаются по буквам один за другим. Касание дописывает абзац, касание по дописанному -
  * следующий, после последнего - [onDone]. «Пропустить» видно, если [skippable], и не раньше [skipAfterMs]. Без анимаций
- * (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета. [overlay] - слой поверх сцены
- * (тосты: сцена накрывает оболочку с её тостами).
+ * (`LocalMotion`) текст появляется сразу. Один экран на пролог и продолжения шагов сюжета; тосты над сценой - общего слоя
+ * ([ToastLayer]), сцена лишь снимает отступ шапки под ней ([ToastBelow]).
  *
  * Счёт напечатанных букв абзаца сбрасывается синхронно в `advance()`, иначе новый абзац мигнёт целиком.
  */
@@ -58,8 +57,8 @@ import org.koin.compose.viewmodel.koinViewModel
     skippable: Boolean,
     onDone: () -> Unit,
     skipAfterMs: Long = 0,
-    overlay: @Composable BoxScope.() -> Unit = {},
 ) {
+    ToastBelow()
     val moving = LocalMotion.current
     var shown by remember(paragraphs) { mutableIntStateOf(1) }
     var typed by remember(paragraphs) { mutableIntStateOf(if (moving) 0 else paragraphs.firstOrNull().orEmpty().length) }
@@ -128,7 +127,6 @@ import org.koin.compose.viewmodel.koinViewModel
             textAlign = TextAlign.Center,
             modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp).fillMaxWidth(),
         )
-        overlay()
     }
 }
 

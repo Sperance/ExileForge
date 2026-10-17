@@ -168,7 +168,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
             }
         }
         if (summary && index != null && state != null) AtlasSummary(index, state.allocated.toSet()) { summary = false }
-        ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 64.dp))
+        ToastBelow(64.dp)
     }
 }
 

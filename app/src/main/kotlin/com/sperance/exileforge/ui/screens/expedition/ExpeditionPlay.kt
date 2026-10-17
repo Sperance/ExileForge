@@ -198,7 +198,7 @@ import kotlin.math.roundToInt
 
                 RunPhase.CHALLENGE -> hud.challenge?.let { BossChallenge(game, model, run, it, model::runCommand) }
             }
-            ToastHost(game, shell::dismissMessage, shell::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding())
+            ToastBelow(0.dp)
         }
     }
 }

@@ -79,7 +79,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 LanguageButton(game.lang, game.world.languages, enabled = !game.busy, onLanguage = vm::language)
                 ReportMenu()
             }
-            ToastHost(game, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
     }
     pendingDelete?.let { (doomed, mode) ->

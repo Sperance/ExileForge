@@ -54,7 +54,6 @@ import com.sperance.exileforge.ui.components.FateTarot
 import com.sperance.exileforge.ui.components.HoldToAccept
 import com.sperance.exileforge.ui.components.LanguageButton
 import com.sperance.exileforge.ui.components.LocalMotion
-import com.sperance.exileforge.ui.components.ToastHost
 import com.sperance.exileforge.ui.components.ashGround
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.theme.Gold
@@ -114,7 +113,6 @@ import org.koin.compose.viewmodel.koinViewModel
             Text(ui("fate.sign_out"), color = Muted, style = MaterialTheme.typography.labelMedium)
         }
         LanguageButton(game.lang, game.world.languages, Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 6.dp, end = 6.dp), enabled = !game.busy, onLanguage = vm::language)
-        ToastHost(game, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 12.dp))
     }
 }
 

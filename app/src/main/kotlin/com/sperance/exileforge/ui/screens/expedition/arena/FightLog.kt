@@ -29,6 +29,8 @@ import com.sperance.exileforge.core.campaign.shownLife
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.flowParts
+import com.sperance.exileforge.core.display.flowRate
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.display.statTitle
@@ -315,7 +317,7 @@ private fun castLine(key: String, event: CombatEvent, monster: String, vararg ar
 }
 
 /** Итог здоровья за секунду: «Здоровье −12/с · реген +8 · деген 2%». */
-private fun lifeFlowLine(flow: LifeFlow): String = ui("expedition.log_note_life_flow", ui("fight.flow.rate", flowNumber(flow.net)), flowParts(flow))
+private fun lifeFlowLine(flow: LifeFlow): String = ui("expedition.log_note_life_flow", flowRate(flow.net), flowParts(flow))
 
 /**
  * Срабатывание Предначертания: «✦ дар: что сделал рычаг» словами `expedition.fate_beat.<срабатывание>` - числа по порядку,

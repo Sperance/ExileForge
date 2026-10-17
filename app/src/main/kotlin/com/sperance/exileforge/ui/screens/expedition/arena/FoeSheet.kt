@@ -29,6 +29,8 @@ import com.sperance.exileforge.core.campaign.run.BossHud
 import com.sperance.exileforge.core.campaign.run.FightHud
 import com.sperance.exileforge.core.campaign.run.FoeView
 import com.sperance.exileforge.core.campaign.run.SlotView
+import com.sperance.exileforge.core.display.Rate
+import com.sperance.exileforge.core.display.RatePrecision
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.display.mightText
@@ -136,7 +138,7 @@ private fun pct(share: Double) = "${(share * 100).roundToInt()}%"
     if (foe.barrier > 0) Row2(ui("fight.stat_barrier"), number(foe.barrier.toDouble()), FrameGoldBright)
     if (body.maxMana > 0) Row2(ui("fight.stat_mana"), "${number(foe.mana.toDouble())} / ${number(body.maxMana)}", ManaBlue)
     Head(ui("fight.sheet_attack"))
-    Row2(ui("fight.stat_speed"), String.format(Locale.ROOT, "%.2f", body.attackSpeed))
+    Row2(ui("fight.stat_speed"), Rate.perSecond(body.attackSpeed, precision = RatePrecision.PRECISE))
     body.damage.filterValues { it > 0 }.forEach { (type, amount) -> Row2(ui(type.key()), number(amount), damageTint(type)) }
     Head(ui("fight.sheet_defence"))
     val physical = hero?.damage?.get(DamageType.PHYSICAL)?.takeIf { it > 0 }

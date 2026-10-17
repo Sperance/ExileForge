@@ -37,6 +37,7 @@ import com.sperance.exileforge.core.campaign.RunSummary
 import com.sperance.exileforge.core.campaign.run.RunHud
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.ItemVisualKind
+import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.bagVisualKind
 import com.sperance.exileforge.core.display.compactNumber
 import com.sperance.exileforge.core.display.displayName
@@ -273,7 +274,7 @@ private fun breakdownTile(id: String, icon: ImageVector, total: Double, label: S
     var sheet by remember { mutableStateOf(false) }
     HorizontalDivider(thickness = 1.dp, color = Bronze)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        MutedText(ui("summary.run_line", compactNumber(summary.dps), compactNumber(summary.totalTaken)), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
+        MutedText(ui("summary.run_line", Rate.of(compactNumber(summary.dps)), compactNumber(summary.totalTaken)), style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
         Text(
             ui("summary.whole_run"),
             color = Gold,

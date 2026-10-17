@@ -33,6 +33,7 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.campaign.run.FeatureView
 import com.sperance.exileforge.core.campaign.run.HazardView
 import com.sperance.exileforge.core.campaign.run.RunCommand
+import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.modifierLine
@@ -313,7 +314,7 @@ private data class FeatureFact(val text: String, val tone: Color = Parchment)
 private fun hazardLine(hazard: HazardView): String {
     val type = ui(hazard.type.key())
     val ailment = hazard.ailment ?: return ui("trap.hit", hazard.total, type)
-    return ui("trap.hit_ailment", hazard.total, type, ui(ailment.ailment.key()), number(ailment.lifeShare), number(ailment.seconds))
+    return ui("trap.hit_ailment", hazard.total, type, ui(ailment.ailment.key()), Rate.of(number(ailment.lifeShare) + "%"), number(ailment.seconds))
 }
 
 private const val HAZARD_TICK_MS = 1100

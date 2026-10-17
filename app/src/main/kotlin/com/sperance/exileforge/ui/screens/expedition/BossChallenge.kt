@@ -24,6 +24,8 @@ import com.sperance.exileforge.core.campaign.run.ChallengeView
 import com.sperance.exileforge.core.campaign.run.ExpeditionRun
 import com.sperance.exileforge.core.campaign.run.RunCommand
 import com.sperance.exileforge.core.campaign.traitViews
+import com.sperance.exileforge.core.display.Rate
+import com.sperance.exileforge.core.display.RatePrecision
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.monsterLore
@@ -149,7 +151,7 @@ internal fun BossDossier(
         add(ui("challenge.scout_life") to number(body.maxLife))
         if (body.maxShield > 0) add(ui("challenge.scout_shield") to number(body.maxShield))
         body.damage.filterValues { it > 0 }.forEach { (type, value) -> add(ui("lore.damage_of", ui("skill.element.${type.name}")) to number(value * body.damageMore)) }
-        add(ui("challenge.scout_speed") to "%.2f".format(java.util.Locale.ROOT, body.attackSpeed))
+        add(ui("challenge.scout_speed") to Rate.perSecond(body.attackSpeed, precision = RatePrecision.PRECISE))
         add(ui("challenge.scout_armour") to number(body.armour))
         add(ui("challenge.scout_evasion") to number(body.evasion))
         DamageType.entries.filter { it != DamageType.PHYSICAL }.forEach { type ->

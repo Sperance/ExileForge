@@ -33,10 +33,15 @@ import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.combat.fateSourced
 import com.sperance.exileforge.core.campaign.run.*
+import com.sperance.exileforge.core.display.FlowTone
+import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.effectText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
+import com.sperance.exileforge.core.display.flowFigure
+import com.sperance.exileforge.core.display.flowParts
+import com.sperance.exileforge.core.display.flowRate
 import com.sperance.exileforge.core.display.guildLineTitle
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.statTitle
@@ -362,39 +367,12 @@ private fun modSource(mod: HeroMapMod): String = when (mod.source.kind) {
 
 private const val MORE = "more"
 
-/** Итог здоровья в секунду числом со знаком: «−12», «+8», «±0». */
-internal fun flowNumber(net: Double): String {
-    val n = net.roundToInt()
-    return when {
-        n < 0 -> "−${-n}"
-        n > 0 -> "+$n"
-        else -> "±0"
-    }
+/** Цвет итога здоровья по его тону ([FlowTone]): убыль - красным, прибыль - зелёным, покой - приглушённо. */
+internal fun flowTint(net: Double): Color = when (FlowTone.of(net)) {
+    FlowTone.LOSS -> Color(0xFFE5635C)
+    FlowTone.GAIN -> Vital
+    FlowTone.STILL -> Muted
 }
-
-/** Цвет итога здоровья: убыль - красным, прибыль - зелёным, покой - приглушённо. */
-internal fun flowTint(net: Double): Color = when {
-    net <= -.5 -> Color(0xFFE5635C)
-    net >= .5 -> Vital
-    else -> Muted
-}
-
-/**
- * Из чего сложился итог: «реген +8 · отдых вне боя +8 · деген 2% · отложенный урон −14 · недуги −34» (отдых и недуги - на карте,
- * сумма частей сходится с итогом); без источников - пусто.
- */
-internal fun flowParts(flow: LifeFlow): String = listOfNotNull(
-    ui("fight.flow.regen", (flow.regen - flow.rest).roundToInt()).takeIf { flow.regen - flow.rest >= 1 },
-    ui("fight.flow.rest", flow.rest.roundToInt()).takeIf { flow.rest >= 1 },
-    ui("fight.flow.degen", fineNumber(flow.degenShare)).takeIf { flow.degen > 0 },
-    ui("fight.flow.delayed", flow.delayed.roundToInt()).takeIf { flow.delayed > 0 },
-    ui("fight.flow.ailments", flow.ailments.roundToInt()).takeIf { flow.ailments >= .5 },
-    ui("fight.flow.shielded", flow.shielded.roundToInt()).takeIf { flow.shielded >= .5 },
-).joinToString(" · ")
-
-/** Итог здоровья на полосе жизни: «+27/с», под ранящим недугом - «−13/с · кровотечение». */
-internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight.flow.rate_cause", flowNumber(flow.net), ui("fight.flow.stalled.${it.name}")) }
-    ?: ui("fight.flow.rate", flowNumber(flow.net))
 
 /**
  * Разбор здоровья в секунду на карте - касанием метки на полосе жизни: регенерация, отдых, деген, недуги и что принял
@@ -412,7 +390,7 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
             if (now.shielded >= .5) FlowPart(ui("fight.flow.part.shielded"), now.shielded)
             now.stalledBy?.let { ailment ->
                 MutedText(
-                    ui("fight.flow.stalled_note", ui(ailment.key()), flowNumber(now.stalled)),
+                    ui("fight.flow.stalled_note", ui(ailment.key()), flowRate(now.stalled)),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(top = 8.dp),
                 )
@@ -425,7 +403,7 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
 @Composable private fun FlowPart(title: String, value: Double) {
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Parchment, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-        Text(ui("fight.flow.rate", flowNumber(value)), color = flowTint(value), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+        Text(flowRate(value), color = flowTint(value), style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
     }
 }
 
@@ -433,14 +411,14 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
 @Composable internal fun FlowTile(flow: LifeFlow, modifier: Modifier, stacked: Boolean = true) {
     val tint = flowTint(flow.net)
     val shape = RoundedCornerShape(4.dp)
-    val number = flowNumber(flow.net)
+    val rate = flowRate(flow.net)
     Box(
         modifier.clip(shape).background(Color(0xFF0B0E13)).background(tint.copy(alpha = .14f)).border(1.dp, tint, shape)
-            .semantics { contentDescription = ui("fight.flow.title") + " " + ui("fight.flow.rate", number) },
+            .semantics { contentDescription = ui("fight.flow.title") + " " + rate },
         contentAlignment = Alignment.Center,
     ) {
         Text(
-            if (stacked) number + "\n" + ui("fight.flow.per_second") else ui("fight.flow.rate", number),
+            if (stacked) flowFigure(flow.net) + "\n" + Rate.unit else rate,
             color = tint,
             fontSize = 9.sp,
             lineHeight = 10.sp,
@@ -495,7 +473,7 @@ internal fun flowLabel(flow: LifeFlow): String = flow.stalledBy?.let { ui("fight
             Text(ui("fight.flow.title"), color = Parchment, style = MaterialTheme.typography.bodySmall)
             MutedText(flowParts(flow).ifEmpty { ui("fight.flow.quiet") }, style = MaterialTheme.typography.labelSmall)
         }
-        Text(ui("fight.flow.rate", flowNumber(flow.net)), color = flowTint(flow.net), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(flowRate(flow.net), color = flowTint(flow.net), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
     }
 }
 

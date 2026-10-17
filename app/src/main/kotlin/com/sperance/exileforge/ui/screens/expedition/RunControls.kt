@@ -49,6 +49,7 @@ import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
 import com.sperance.exileforge.core.display.Glyph
 import com.sperance.exileforge.core.display.ItemView
+import com.sperance.exileforge.core.display.flowLabel
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.modNumber
 import com.sperance.exileforge.core.display.number
@@ -59,7 +60,6 @@ import com.sperance.exileforge.rules.run.Reward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
-import com.sperance.exileforge.ui.screens.expedition.arena.flowLabel
 import com.sperance.exileforge.ui.screens.expedition.arena.key
 import com.sperance.exileforge.ui.screens.expedition.arena.rarityTint
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene

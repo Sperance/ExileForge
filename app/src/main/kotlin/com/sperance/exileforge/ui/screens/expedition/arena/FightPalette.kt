@@ -5,6 +5,7 @@ import androidx.compose.ui.graphics.Color
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
+import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.fineNumber
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.MonsterRarity
@@ -78,7 +79,7 @@ internal fun ailmentTip(view: AilmentView) = Tip(
 
 /** Как окно недуга [ailment] пишет его силу [value]: урон в секунду, доля или срезанное восстановление запаса. */
 private fun strengthFact(ailment: Ailment, value: Double): String = when (ailment) {
-    Ailment.BURNING, Ailment.POISONED, Ailment.BLEEDING, Ailment.DRAINED -> ui("fight.fact_dps", fineNumber(value))
+    Ailment.BURNING, Ailment.POISONED, Ailment.BLEEDING, Ailment.DRAINED -> ui("fight.fact_dps", Rate.perSecond(value))
     Ailment.CHILLED, Ailment.FROZEN, Ailment.SHOCKED, Ailment.DECAYED -> ui("fight.fact_percent", fineNumber(value))
     Ailment.WOUNDED -> ui("fight.fact_curb_life", fineNumber(value))
     Ailment.PARCHED -> ui("fight.fact_curb_mana", fineNumber(value))

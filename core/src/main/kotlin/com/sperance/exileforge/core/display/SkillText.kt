@@ -106,7 +106,7 @@ object SkillText {
     }
 
     /** Строка цены маны в секунду цикла против регенерации героя. */
-    fun manaRate(pace: SkillPace): String = ui("skill.line.mana_rate", fineNumber(pace.manaRate), fineNumber(pace.regen))
+    fun manaRate(pace: SkillPace): String = ui("skill.line.mana_rate", Rate.perSecond(pace.manaRate), Rate.perSecond(pace.regen))
 
     /** What a monster's skill does, for the scouting panel and the log: one sentence. */
     fun monster(skill: MonsterSkill): List<String> = buildList {

@@ -34,6 +34,7 @@ import com.sperance.exileforge.core.campaign.combat.Action
 import com.sperance.exileforge.core.campaign.combat.CombatEvent
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.Side
+import com.sperance.exileforge.core.display.Rate
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.equipmentTitle
 import com.sperance.exileforge.core.display.fineNumber
@@ -128,7 +129,7 @@ internal val TARGET_STATS = listOf(CoreStat.HEALTH.code, CoreStat.ENERGY_SHIELD.
             lines.forEach { Note("${statTitle(it.line.stat)} ${explainer.fmt(it.line.stat, it.line.value, it.line.op)}") }
         }
         shot.ailments.groupBy { it.ailment }.forEach { (ailment, active) ->
-            Line(ui(ailment.key()), ui("trace.ailment.state", fineNumber(active.sumOf { it.magnitude }), active.size))
+            Line(ui(ailment.key()), ui("trace.ailment.state", Rate.perSecond(active.sumOf { it.magnitude }), active.size))
         }
         shot.conditions.forEach { Line(locOr("condition.${it.name}", it.name), "✓", Rune) }
         if (groups.isEmpty() && shot.ailments.isEmpty() && shot.conditions.isEmpty()) Note(ui("trace.states.none"))

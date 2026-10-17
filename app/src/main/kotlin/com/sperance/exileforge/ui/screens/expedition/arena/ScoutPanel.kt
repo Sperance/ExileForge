@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.sp
 import com.sperance.exileforge.core.campaign.*
 import com.sperance.exileforge.core.campaign.combat.*
 import com.sperance.exileforge.core.campaign.run.*
+import com.sperance.exileforge.core.display.Rate
+import com.sperance.exileforge.core.display.RatePrecision
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
@@ -68,7 +70,7 @@ internal fun ScoutPanel(
             Fact(ui("fight.stat_life"), number(body.maxLife), LifeRed)
             if (body.maxShield > 0) Fact(ui("fight.stat_shield"), number(body.maxShield), ShieldCyan)
             if (body.block > 0) Fact(ui("fight.stat_block"), "${(body.block * 100).roundToInt()}%", Parchment)
-            Fact(ui("fight.stat_speed"), String.format(Locale.ROOT, "%.2f", body.attackSpeed), Parchment)
+            Fact(ui("fight.stat_speed"), Rate.perSecond(body.attackSpeed, precision = RatePrecision.PRECISE), Parchment)
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(ui("fight.stat_damage"), color = Muted, style = MaterialTheme.typography.labelSmall)

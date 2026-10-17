@@ -209,7 +209,10 @@ val preciseStats = setOf(
  * A number as every screen prints it: a stat that lives in its fraction keeps two places; any other keeps its
  * tenth below ten — 7.4, 1.8, 0.4, but «5», not «5.0» — and is whole from ten up. The value itself is never rounded.
  */
-fun statNumber(stat: String, value: Double): String = if (stat in preciseStats) String.format(java.util.Locale.ROOT, "%.2f", value) else fineNumber(value)
+fun statNumber(stat: String, value: Double): String = if (stat in preciseStats) preciseNumber(value) else fineNumber(value)
+
+/** Число с сотыми: характеристика, что живёт в дроби, и темп «атак в секунду» - «1.25». */
+fun preciseNumber(value: Double): String = String.format(java.util.Locale.ROOT, "%.2f", value)
 
 fun number(value: Double): String = statNumber("", value)
 

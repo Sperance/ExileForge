@@ -34,6 +34,8 @@ data class GameSettings(
     val titlesFolded: Boolean = false,
     /** Свойства уникальных и мифических лотов аукциона раскрыты сразу (A+C); на сервер не уходит. */
     val legendsOpen: Boolean = false,
+    /** Чипы требований в карточке предмета раскрыты: свёртку «Можно / Нельзя надеть» игрок раскрыл, и она помнится на устройстве. */
+    val requirementsOpen: Boolean = false,
     /** Ключ строки, что окно загрузки показало последней ([com.sperance.exileforge.core.i18n.LaunchLines]): следующая будет другой. */
     val lastLaunchLine: String = "",
 ) {

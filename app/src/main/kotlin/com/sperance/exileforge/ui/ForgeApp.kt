@@ -102,10 +102,12 @@ import org.koin.compose.viewmodel.koinViewModel
             view.performHapticFeedback(if (kind == Buzz.DANGER) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.VIRTUAL_KEY)
         }
     }
+    val settingsModel = koinViewModel<SettingsViewModel>()
     CompositionLocalProvider(
         LocalUpdates provides updates,
         LocalMotion provides settings.animations,
         LocalSettings provides settings,
+        com.sperance.exileforge.ui.components.LocalSettingsEdit provides settingsModel::change,
         LocalDensity provides Density(base.density, base.fontScale * settings.textSize.scale),
     ) {
         com.sperance.exileforge.ui.components.DecorClockHost { ForgeScreens() }
@@ -114,7 +116,6 @@ import org.koin.compose.viewmodel.koinViewModel
             shell.game.map { g -> StartStages(g.index != null, g.world.localeStrings > 0, g.world.iconKeys > 0) }.distinctUntilChanged()
         }.collectAsState(StartStages(contentReady = false, dictionaryReady = false, iconsReady = false))
         val watchdog = koinInject<StallWatchdog>()
-        val settingsModel = koinViewModel<SettingsViewModel>()
         val warmup by shell.warmup.collectAsState()
         val heroId by remember(shell) { shell.game.map { it.heroId }.distinctUntilChanged() }.collectAsState("")
         val actions = remember(shell) { StartActions(shell.reach::retry, shell.reach::release, shell.reach::checkFit) }

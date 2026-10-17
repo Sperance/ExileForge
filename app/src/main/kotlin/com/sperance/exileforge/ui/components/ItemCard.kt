@@ -48,6 +48,7 @@ import com.sperance.exileforge.core.display.stateTitle
 import com.sperance.exileforge.core.display.weaponTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.state.FlaskBonuses
+import com.sperance.exileforge.presentation.state.GameSettings
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.ui.icons.ItemIcon
@@ -297,8 +298,9 @@ internal val RelicChipHeight = 24.dp
 }
 
 /**
- * Свёрнутые строки внизу карточки: требования и термины строк. Требования -
- * заголовок и под ним чипы с переносом, у каждого своя отметка: длинный набор (уровень, атрибуты, класс) не обрезается.
+ * Свёрнутые строки внизу карточки: требования и термины строк. Требования всегда свёрнуты одной строкой цветом вердикта -
+ * «Можно надеть» `Vital`, «Нельзя надеть» `LifeRed`, без героя для сравнения - «Требования»; касание раскрывает чипы с переносом,
+ * у каждого своя отметка, и раскрытость помнится на устройстве ([GameSettings.requirementsOpen]) для всех карточек.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -307,10 +309,21 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
     var termsOpen by remember(item) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth()) {
         item.requirements.takeIf { it.isNotEmpty() }?.let { needs ->
-            HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = .06f))
-            Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(ui("relic.requirements"), color = Parchment, style = MaterialTheme.typography.labelLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            val barred = unmet?.let { lacking -> needs.any { it.kind in lacking } }
+            val (title, tint) = when (barred) {
+                null -> ui("relic.requirements") to Parchment
+                true -> ui("relic.cannot_wear") to LifeRed
+                false -> ui("relic.can_wear") to Vital
+            }
+            val settings = LocalSettings.current
+            val edit = LocalSettingsEdit.current
+            var held by remember { mutableStateOf(settings.requirementsOpen) }
+            val open = if (edit != null) settings.requirementsOpen else held
+            FoldRow(title, needs.size.toString(), look.muted, open = open, titleTint = tint) {
+                edit?.invoke { copy(requirementsOpen = !requirementsOpen) } ?: run { held = !held }
+            }
+            if (open) {
+                FlowRow(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     needs.forEach { need -> NeedChip(need, unmet?.let { need.kind !in it }, look) }
                 }
             }
@@ -337,15 +350,15 @@ private fun RelicFolds(item: ItemView, look: RelicLook, unmet: Set<NeedKind>?) {
     RelicChip { Text(need.text + mark, color = tint, style = MaterialTheme.typography.labelMedium) }
 }
 
-/** Строка свёртки: название слева, сводка справа и шеврон, когда раскрывается. */
-@Composable private fun FoldRow(title: String, value: String, tint: Color, open: Boolean?, onClick: () -> Unit = {}) {
+/** Строка свёртки: название слева цветом [titleTint], сводка справа и шеврон, когда раскрывается. */
+@Composable private fun FoldRow(title: String, value: String, tint: Color, open: Boolean?, titleTint: Color = Parchment, onClick: () -> Unit = {}) {
     HorizontalDivider(thickness = 1.dp, color = Color.White.copy(alpha = .06f))
     Row(
         Modifier.fillMaxWidth().heightIn(min = 44.dp).clickable(enabled = open != null, role = Role.Button, onClick = onClick).padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Text(title, color = Parchment, style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+        Text(title, color = titleTint, style = MaterialTheme.typography.labelLarge, fontWeight = if (titleTint == Parchment) null else FontWeight.SemiBold, modifier = Modifier.weight(1f))
         Text(value, color = tint, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.End, maxLines = 2)
         if (open != null) Icon(if (open) Icons.Outlined.ExpandLess else Icons.Outlined.ExpandMore, null, tint = Muted, modifier = Modifier.size(18.dp))
     }

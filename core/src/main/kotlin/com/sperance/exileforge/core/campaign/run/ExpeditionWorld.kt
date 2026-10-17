@@ -157,7 +157,8 @@ class ExpeditionWorld(
      * объекты карты, уже увиденные, со скалой перед ними. Сцена открывает вокруг каждого «окно» в скале - так виден и сундук
      * комнаты, что стоит за её каменным краем.
      *
-     * Середина каждой пропасти - ориентир, скала перед ней прозрачна.
+     * Середина каждой пропасти - ориентир, скала перед ней прозрачна; кромки пропастей и замеченные ловушки - ориентиры, пока они в
+     * свете героя.
      */
     fun screened(): List<Cell> {
         val landmarks = buildList {
@@ -167,8 +168,9 @@ class ExpeditionWorld(
             fountains.mapTo(this) { it.cell }
             crystals.mapTo(this) { it.cell }
             cracks.mapTo(this) { it.cell }
-            features.forEach { spot -> addAll(spot.landmarks) }
+            features.forEach { spot -> addAll(spot.landmarks(this@ExpeditionWorld)) }
             addAll(chasmMarks)
+            chasmEdges.filterTo(this) { lit(it.x, it.y) }
         }
         return landmarks.filter { explored(it.x, it.y) && !SceneSight.inView(it.x, it.y) { x, y -> !map.clear(x, y) } }
     }
@@ -200,6 +202,17 @@ class ExpeditionWorld(
                     val mx = part.sumOf { it.x }.toDouble() / part.size
                     val my = part.sumOf { it.y }.toDouble() / part.size
                     add(part.minBy { hypot(it.x - mx, it.y - my) })
+                }
+            }
+        }
+    }
+
+    /** Кромки пропастей: клетки пропасти, что граничат с полом стороной; считаются раз на карту. */
+    private val chasmEdges: List<Cell> by lazy {
+        buildList {
+            for (y in 0 until map.height) {
+                for (x in 0 until map.width) {
+                    if (map.tile(x, y) == com.sperance.exileforge.core.campaign.Tile.CHASM && STEPS.take(4).any { (dx, dy) -> map.walkable(x + dx, y + dy) }) add(Cell(x, y))
                 }
             }
         }

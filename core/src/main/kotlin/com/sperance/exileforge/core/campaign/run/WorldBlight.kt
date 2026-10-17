@@ -98,7 +98,7 @@ class BlightSpot(feature: MapFeature.Blight, val cells: List<Cell>) : FeatureSpo
     /** Видна точка, что Скверна уже раскрыла и герой видел. */
     override val sites: List<Cell> get() = (0 until revealed).map(::at)
 
-    override val landmarks: List<Cell> get() = cells.take(revealed)
+    override fun landmarks(world: ExpeditionWorld): List<Cell> = cells.take(revealed)
 
     override val focus: Cell get() = at(active ?: (blight.choices - 1))
 

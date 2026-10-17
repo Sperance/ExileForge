@@ -44,8 +44,8 @@ sealed class FeatureSpot(val feature: MapFeature, val cell: Cell) {
     val taken = mutableListOf<Int>()
     val spent: Boolean get() = feature.spent(taken)
 
-    /** Клетки, где объект стоит и должен быть виден: ловушка лежит вровень с полом, её скала не закрывает. */
-    open val landmarks: List<Cell> get() = listOf(cell)
+    /** Клетки, где объект стоит и должен быть виден сквозь скалу перед ним ([ExpeditionWorld.screened]) на карте [world]. */
+    open fun landmarks(world: ExpeditionWorld): List<Cell> = listOf(cell)
 
     /** Клетка, где объект ждёт героя сейчас: её отмечает миникарта; у очага Скверны - активная точка. */
     open val focus: Cell get() = cell
@@ -153,7 +153,8 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
     var seen = false
         private set
 
-    override val landmarks: List<Cell> get() = emptyList()
+    /** Замеченная ловушка в свете героя: скала перед ней прозрачна, пока герой рядом. */
+    override fun landmarks(world: ExpeditionWorld): List<Cell> = if (noticed(world) && world.lit(cell.x, cell.y)) listOf(cell) else emptyList()
 
     /** Секунды до нового взвода; ноль - ловушка взведена. */
     var rearming = 0.0
@@ -189,7 +190,7 @@ class TrapSpot(feature: MapFeature.Trap, cell: Cell, private val reach: Double, 
  */
 class RoomSpot(feature: MapFeature.Room, val entrance: Cell, val chest: Cell, val lever: Cell?, private val seconds: Double, val hint: Pair<Double, Double>? = null) : FeatureSpot(feature, entrance) {
     /** Сундук открытой комнаты - за её каменным краем: край над ним рисуется полупрозрачным. */
-    override val landmarks: List<Cell> get() = if (opened) listOf(chest) else emptyList()
+    override fun landmarks(world: ExpeditionWorld): List<Cell> = if (opened) listOf(chest) else emptyList()
 
     val opened: Boolean get() = MapFeature.OPEN in taken
     val looted: Boolean get() = MapFeature.LOOT in taken

@@ -78,7 +78,7 @@ internal fun ExpeditionRun.descend() {
 
 internal fun ExpeditionRun.wave(current: Descent, depth: Int) {
     val rule = abyssRule ?: return
-    current.level = run.levelOf(zone) + (rule.waves.getOrNull(depth - 1)?.level ?: 0)
+    current.level = rule.waves.getOrNull(depth - 1)?.levelAt(run.levelOf(zone)) ?: run.levelOf(zone)
     current.fights = waves.wave(rule, depth, current.spot.id, zone, baseEffects, run.context.extraRareMods)
     nextFight(current)
 }

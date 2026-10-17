@@ -110,13 +110,16 @@ class ModesBal(private val index: ContentIndex) {
         return rule.waves.indices.map { abyssDepth(hero, zone, seed, it + 1) }
     }
 
+    /** Кости расщелины [crack] Бездны зоны [zone] у героя [hero]: у каждого класса свои расщелины - выборка не стоит на паре бросков волн. */
+    fun abyssSeed(hero: Hero, zone: Zone, crack: Int): Long = Streams.mix(SimKit.SEED + 7L * zone.level, crack.toLong(), hero.heroClass.code.hashCode().toLong())
+
     /** Глубина [depth] Бездны зоны [zone] (с полным здоровьем, как её начинает герой): победа и секунды; глубины независимы. */
     fun abyssDepth(hero: Hero, zone: Zone, seed: Long, depth: Int): Fought {
         val rule = checkNotNull(index.campaign.abyss) { "campaign: no abyss" }
         val run = Run(index, zone, seed, RunContext(hero.heroClass.code, hero.level))
         val arena = Arena(index, hero, mapOf(MapStat.HERO_RESIST.code to index.campaign.resistPenalty(zone.code, false)))
         val fights = AbyssWaves(index, run).wave(rule, depth, 0, zone, emptyMap(), 0)
-        val level = run.levelOf(zone) + rule.waves[depth - 1].level
+        val level = rule.waves[depth - 1].levelAt(run.levelOf(zone))
         val battles = fights.mapIndexed { i, foes -> arena.fight(foes.map { arena.phases.foe(it, level) }, seed + 31L * (depth - 1) + i, CAP, retinue = false) }
         return Fought(if (battles.all { it.outcome == Outcome.WIN }) Outcome.WIN else Outcome.LOSS, battles.sumOf { it.time }, -1.0, 0, 0.0, battles.maxOfOrNull { it.lifeLost } ?: 0.0)
     }

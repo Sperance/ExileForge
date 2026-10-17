@@ -32,7 +32,10 @@ class ModesBalanceGuardTest {
         verdict("стражи карт своего уровня", wins, MAP_PART)
     }
 
-    /** Вожди глубин Бездны: эталон уровня зоны в первой зоне Бездны каждого акта, [ABYSS_SEEDS] расщелины на класс. */
+    /**
+     * Вожди глубин Бездны: эталон уровня зоны в первой зоне Бездны каждого акта, [ABYSS_SEEDS] расщелин на класс (у каждого класса
+     * свои). Каждый вождь держит цель в целом и в каждой из [ABYSS_BANDS] полос уровней зон - без провала и прогулки на части уровней.
+     */
     @Test
     fun abyssLeadersMeetTheWinTarget() {
         val sim = MobBal(index, 1, 1, 1, GuardHeroes.pool)
@@ -41,12 +44,16 @@ class ModesBalanceGuardTest {
         val zones = index.campaign.regions.mapNotNull { region -> region.zones.filter { it.level >= rule.minLevel }.minByOrNull { it.level } }
         val depths = rule.waves.withIndex().filter { it.value.leader != null }.map { it.index + 1 }
         val keys = zones.flatMap { zone -> classes.flatMap { c -> depths.flatMap { d -> (0 until ABYSS_SEEDS).map { s -> Key(zone, c, d, s) } } } }
-        val wins = keys.parallelStream().map { k ->
-            val won = modes.abyssDepth(campaignHero(sim, k.zone, k.heroClass), k.zone, SimKit.SEED + 7L * k.zone.level + 1009L * k.seed, k.part).outcome == Outcome.WIN
-            Part("${rule.waves[k.part - 1].leader?.value}", if (won) 1.0 else 0.0)
+        val bands = zones.sortedBy { it.level }.let { sorted -> sorted.chunked((sorted.size + ABYSS_BANDS - 1) / ABYSS_BANDS) }
+            .flatMap { band -> band.map { it to "ур. ${band.first().level}-${band.last().level}" } }.toMap()
+        val fights = keys.parallelStream().map { k ->
+            val hero = campaignHero(sim, k.zone, k.heroClass)
+            k to if (modes.abyssDepth(hero, k.zone, modes.abyssSeed(hero, k.zone, k.seed), k.part).outcome == Outcome.WIN) 1.0 else 0.0
         }.toList()
-        assertTrue(zones.size >= 9 && depths.size >= 3 && wins.size == keys.size, "the check proves nothing: ${zones.size} zones, ${depths.size} leaders")
-        verdict("вожди Бездны", wins, ABYSS_PART)
+        assertTrue(zones.size >= 9 && depths.size >= 3 && fights.size == keys.size, "the check proves nothing: ${zones.size} zones, ${depths.size} leaders")
+        val leader = { k: Key -> "${rule.waves[k.part - 1].leader?.value}" }
+        verdict("вожди Бездны", fights.map { (k, won) -> Part(leader(k), won) }, ABYSS_PART)
+        verdict("вожди Бездны по уровням", fights.map { (k, won) -> Part("${leader(k)} ${bands.getValue(k.zone)}", won) }, ABYSS_BAND_PART)
     }
 
     /** Разлом недели: эталон уровней [RIFT_LEVELS] (уровни зон кампании) проходит [RIFT_WEEKS] недели моделью игрока - дошёл ли до конца. */
@@ -62,7 +69,7 @@ class ModesBalanceGuardTest {
             Part("ур. $level", if (!run.fallen && run.guardians == run.acts) 1.0 else 0.0, FallingTarget.at(level.toDouble(), RIFT_LEVELS.first().toDouble(), RIFT_LEVELS.last().toDouble()))
         }.toList()
         assertTrue(finished.size == keys.size && keys.isNotEmpty(), "the check proves nothing")
-        verdict("Разлом (дошли до конца)", finished, PART)
+        verdict("Разлом (дошли до конца)", finished, RIFT_PART)
     }
 
     /**
@@ -126,11 +133,17 @@ class ModesBalanceGuardTest {
         /** Бросков стража карты (по бою на бросок). */
         const val MAP_ROLLS = 2
 
-        const val ABYSS_SEEDS = 2
+        /** Расщелин на класс в зоне Бездны. */
+        const val ABYSS_SEEDS = 6
+
+        /** Полос уровней зон Бездны: по три зоны - начало, середина и конец кампании. */
+        const val ABYSS_BANDS = 3
 
         /** Уровни сторожа Разлома: уровни зон кампании от 21 до 88 (их эталоны уже в пуле). */
         val RIFT_LEVELS = listOf(21, 41, 61, 71, 81, 88)
-        const val RIFT_WEEKS = 4
+
+        /** Недель Разлома на класс: исход решает схема недели (есть недели-стены и недели-прогулки), меньшая выборка - не мерило. */
+        const val RIFT_WEEKS = 24
 
         const val CAP = 300.0
 
@@ -149,10 +162,16 @@ class ModesBalanceGuardTest {
         /** Допуск стража Ваал: 42 боя - разброс выборки ~8 п.п. */
         const val VAAL_PART = 0.15
 
-        /** Допуск вождя Бездны: ~130 боёв - разброс ~4 п.п., сила вождя по уровням неровна (вождь - одна кривая на все уровни). */
-        const val ABYSS_PART = 0.15
+        /** Допуск вождя Бездны: ~380 боёв - разброс выборки ~3 п.п. */
+        const val ABYSS_PART = 0.07
 
-        /** Допуск уровня Разлома и акта Матери: 20-30 забегов или боёв - разброс выборки ~10 п.п. */
+        /** Допуск вождя в полосе уровней: ~130 боёв - разброс ~4 п.п., остальное - неровность вождя по уровням (кривая одна на всех вождей). */
+        const val ABYSS_BAND_PART = 0.15
+
+        /** Допуск уровня Разлома: ~170 забегов - разброс недель ~4 п.п. */
+        const val RIFT_PART = 0.07
+
+        /** Допуск акта Матери: 20-30 боёв - разброс выборки ~10 п.п. */
         const val PART = 0.20
     }
 }

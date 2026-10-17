@@ -1128,7 +1128,7 @@ fun main(args: Array<String>) {
                         tasks += Task {
                             val hero = sim.hero(c, level, Archetype(campaignBand(level)), penalty(zone, false))
                             (0 until seeds).flatMap { s ->
-                                modes.abyss(hero, zone, SimKit.SEED + 7L * zone.level + 1009L * s).mapIndexed { d, f ->
+                                modes.abyss(hero, zone, modes.abyssSeed(hero, zone, s)).mapIndexed { d, f ->
                                     Row(listOf("abyss", zone.code.value, zone.level, level, c.code, s, d + 1, rule.waves[d].leader?.value ?: "-", f.outcome == Outcome.WIN, f.time, f.lifeLost))
                                 }
                             }

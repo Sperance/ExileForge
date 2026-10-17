@@ -128,11 +128,11 @@ sealed interface Route : NavKey {
         override val building get() = Building.HISTORY
     }
 
-    /** Летопись: здание Города, прежде страница «Развития». */
+    /** Летопись: вторая плитка «Истории», экран над ней - «назад» ведёт в неё. */
     @Serializable data object Chronicle : Route {
         override val root: Route get() = City
         override val tab get() = TAB_CITY
-        override val building get() = Building.CHRONICLE
+        override val building get() = Building.HISTORY
     }
 
     /** Доска славы: здание Города, таблицы реестра `HallBoard`. */
@@ -186,7 +186,6 @@ sealed interface Route : NavKey {
             Building.AUCTION -> Auction
             Building.GUILD -> Guild
             Building.HISTORY -> History
-            Building.CHRONICLE -> Chronicle
             Building.HALL -> Hall
             null -> City
         }

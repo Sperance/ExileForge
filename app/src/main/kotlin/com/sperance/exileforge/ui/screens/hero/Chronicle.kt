@@ -48,7 +48,7 @@ fun GameUi.chronicleDone(): Pair<Int, Int>? {
  * counters by section, the achievements with their steps and the titles they open. Only what the
  * server counts is counted; the level, the zones and the atlas are read off the hero.
  *
- * A page of the «Развитие» tab opened from its tile.
+ * Экран над «Историей» Города: её вторая плитка.
  *
  * Статистика читается отдельно при открытии страницы. Показано только начатое героем.
  */

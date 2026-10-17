@@ -11,11 +11,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ChevronRight
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,7 +34,15 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.UniqueFind
+import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.presentation.history.HistoryViewModel
+import com.sperance.exileforge.presentation.state.Feature
+import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.presentation.state.level
+import com.sperance.exileforge.presentation.state.unlocked
+import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
+import com.sperance.exileforge.ui.screens.hero.chronicleDone
+import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -38,31 +50,67 @@ import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
-/** «История»: здание Города со списком разделов прошлого героя; пока раздел один - найденные уникалки. */
+/**
+ * «История»: здание Города со списком разделов прошлого героя плитками - найденные уникалки и Летопись (деяния и титулы); до уровня
+ * открытия Летописи её плитка под замком.
+ */
 @Composable internal fun HistoryScreen() {
     val vm = koinViewModel<HistoryViewModel>()
     val game by vm.game.collectAsStateWithLifecycle()
+    val heroModel: HeroViewModel = koinViewModel()
     val index = game.index
+    LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
     val finds by produceState<Map<String, UniqueFind>?>(null, game.heroId) { value = game.heroId.takeIf { it.isNotBlank() }?.let { vm.uniques(it) } }
     val album = remember(index) { index?.let { UniqueAlbum(it) } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         ScreenHeader(ui("history.title"), ui("history.subtitle"), ForgeGlyphs.Tome)
-        val shape = RoundedCornerShape(14.dp)
-        Row(
-            Modifier.fillMaxWidth().clip(shape).depthPanel(shape).border(1.dp, Bronze, shape).clickable(onClick = vm::openUniques).padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Icon(ForgeGlyphs.Gem, null, tint = rarityColor("UNIQUE"), modifier = Modifier.size(28.dp))
-            Column(Modifier.weight(1f)) {
-                Text(ui("history.uniques"), color = GoldBright, style = MaterialTheme.typography.titleMedium)
-                val known = finds
-                MutedText(if (known != null && album != null) ui("history.found", album.count(known), album.all.size) else ui("history.uniques_hint"))
-            }
-            Icon(Icons.Outlined.ChevronRight, null, tint = Muted)
+        val known = finds
+        HistoryTile(ForgeGlyphs.Gem, rarityColor("UNIQUE"), ui("history.uniques"), if (known != null && album != null) ui("history.found", album.count(known), album.all.size) else ui("history.uniques_hint"), onOpen = vm::openUniques)
+        val chronicle = Feature.CHRONICLE.takeUnless { game.unlocked(it) }?.level(index?.rules)
+        HistoryTile(ForgeGlyphs.Scroll, GoldBright, ui("chronicle.title"), chronicle?.let { ui("unlock.from", it) } ?: chronicleNews(game), onOpen = vm::openChronicle.takeIf { chronicle == null })
+    }
+}
+
+/** Плитка раздела «Истории»: знак, имя и строка того, что внутри; [onOpen] null - раздел под замком, плитка тусклая и не нажимается. */
+@Composable private fun HistoryTile(icon: ImageVector, tint: Color, title: String, line: String, onOpen: (() -> Unit)?) {
+    val shape = RoundedCornerShape(14.dp)
+    Row(
+        Modifier.fillMaxWidth().alpha(if (onOpen == null) LOCKED_ALPHA else 1f).clip(shape).depthPanel(shape).border(1.dp, Bronze, shape)
+            .then(onOpen?.let { Modifier.clickable(onClick = it) } ?: Modifier).padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(28.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, color = GoldBright, style = MaterialTheme.typography.titleMedium)
+            MutedText(line)
+        }
+        Icon(if (onOpen == null) Icons.Outlined.Lock else Icons.Outlined.ChevronRight, null, tint = Muted)
+    }
+}
+
+/** Летопись: сколько деяний свершено и носимый титул. */
+private fun chronicleNews(game: GameUi): String {
+    val done = game.chronicleDone()?.let { (done, all) -> ui("chronicle.done", done, all) } ?: return ui("common.loading")
+    val title = game.hero?.info?.title?.takeIf { it.isNotBlank() } ?: return done
+    return "$done · ${titleName(title)}"
+}
+
+/** Летопись - экран над «Историей»: «назад» ведёт в неё; героя читает сама. */
+@Composable fun HistoryChronicleScreen() {
+    val vm = koinViewModel<HistoryViewModel>()
+    val game by vm.game.collectAsStateWithLifecycle()
+    val heroModel: HeroViewModel = koinViewModel()
+    LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
+    BackTrailHost(ui("nav.city")) {
+        TrailLevel(ui("history.title"), onBack = vm::city) {
+            TrailLevel(ui("chronicle.title"), onBack = vm::back) { ChronicleScreen(game, heroModel) }
         }
     }
 }
+
+/** Плитка закрытого раздела - вполсилы. */
+private const val LOCKED_ALPHA = .55f
 
 /** Что выбрано чипом: все находки, один пул или боссы. */
 private sealed interface AlbumPick {

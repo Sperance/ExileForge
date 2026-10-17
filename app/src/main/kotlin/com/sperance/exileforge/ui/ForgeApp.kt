@@ -255,7 +255,7 @@ private val BANNER_TOAST_TOP = 60.dp
                 entry<Route.Auction> { CityScreen(Building.AUCTION) }
                 entry<Route.Guild> { CityScreen(Building.GUILD) }
                 entry<Route.History> { CityScreen(Building.HISTORY) }
-                entry<Route.Chronicle> { CityScreen(Building.CHRONICLE) }
+                entry<Route.Chronicle> { com.sperance.exileforge.ui.screens.city.HistoryChronicleScreen() }
                 entry<Route.Hall> { CityScreen(Building.HALL) }
                 entry<Route.Uniques> { UniquesScreen() }
                 entry<Route.Admin>(metadata = TabMemory.ROOT) { AdminScreen() }

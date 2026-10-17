@@ -2747,7 +2747,7 @@
   "city.auction_idle": "Trade between players",
   "city.auction_lots": "Your lots: {0} of {1}",
   "city.guild_idle": "A league of heroes under a faction's banner",
-  "city.history_idle": "Unique items found and their pools",
+  "city.history_idle": "Unique items found and the Chronicle of deeds",
   "city.hall_idle": "The best heroes and guilds of the world",
   "city.guild_in": "{0} · level {1}",
   "city.guild_none": "You are not in a guild",

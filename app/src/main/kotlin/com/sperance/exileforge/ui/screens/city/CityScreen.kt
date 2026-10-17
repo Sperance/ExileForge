@@ -36,16 +36,13 @@ import com.sperance.exileforge.ui.screens.auction.MerchantScreen
 import com.sperance.exileforge.ui.screens.auction.untilText
 import com.sperance.exileforge.ui.screens.guild.GuildScreen
 import com.sperance.exileforge.ui.screens.hall.HallScreen
-import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
-import com.sperance.exileforge.ui.screens.hero.chronicleDone
-import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.screens.quests.QuestsScreen
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 
 /**
  * The City: a square of buildings — the quest board, the merchant, the auction, the guild,
- * «История» and «Доска славы».
+ * «История» (с Летописью внутри) and «Доска славы».
  * Each card says in a line what waits inside; a tap goes in, and «back», on screen or the system's, comes out to the square.
  * Each building explains itself on its first visit.
  */
@@ -63,7 +60,6 @@ import org.koin.compose.viewmodel.koinViewModel
                 Building.AUCTION -> AuctionScreen()
                 Building.GUILD -> GuildScreen()
                 Building.HISTORY -> HistoryScreen()
-                Building.CHRONICLE -> CityChronicle()
                 Building.HALL -> HallScreen()
             }
         }
@@ -78,7 +74,6 @@ private val Building.titleKey: String
         Building.AUCTION -> "nav.auction"
         Building.GUILD -> "guild.title"
         Building.HISTORY -> "history.title"
-        Building.CHRONICLE -> "chronicle.title"
         Building.HALL -> "hall.title"
     }
 
@@ -115,21 +110,6 @@ private val Building.titleKey: String
     }
 }
 
-/** Летопись: сколько деяний свершено и носимый титул. */
-private fun chronicleNews(game: GameUi): String {
-    val done = game.chronicleDone()?.let { (done, all) -> ui("chronicle.done", done, all) } ?: return ui("common.loading")
-    val title = game.hero?.info?.title?.takeIf { it.isNotBlank() } ?: return done
-    return "$done · ${titleName(title)}"
-}
-
-/** Летопись в здании Города: её экран читает героя сам. */
-@Composable private fun CityChronicle() {
-    val game by koinViewModel<ShellViewModel>().game.collectAsStateWithLifecycle()
-    val heroModel: HeroViewModel = koinViewModel()
-    LaunchedEffect(game.heroId, game.sessionEpoch) { heroModel.ensure() }
-    ChronicleScreen(game, heroModel)
-}
-
 /**
  * Здания площади плитками хаба (как «Развитие»): у каждого строка новостей и замок уровня; счётчик - что ждёт действия:
  * награды заданий, приглашения в гильдию, свои лоты аукциона, что пора продлить.
@@ -142,7 +122,6 @@ private fun cityTiles(game: GameUi, board: Quests, trade: Market, guilds: Guilds
         tile(Building.AUCTION, ForgeGlyphs.Orb, Gold, auctionNews(trade), lotsToExtend(game, trade)),
         tile(Building.GUILD, ForgeGlyphs.Banner, Rune, guildNews(guilds), guilds.mine?.takeIf { it.guild == null }?.invites?.size ?: 0),
         tile(Building.HISTORY, ForgeGlyphs.Tome, Parchment, ui("city.history_idle")),
-        tile(Building.CHRONICLE, ForgeGlyphs.Scroll, GoldBright, chronicleNews(game)),
         tile(Building.HALL, ForgeGlyphs.Gem, rarityColor(Rarity.MYTHICAL.name), ui("city.hall_idle")),
     )
 }

@@ -9,7 +9,7 @@ import com.sperance.exileforge.presentation.state.GameSlice
 import com.sperance.exileforge.presentation.state.GameUi
 import kotlinx.coroutines.flow.StateFlow
 
-/** «История» Города: разделы прошлого героя; пока - найденные уникальные вещи, экраном над зданием. */
+/** «История» Города: разделы прошлого героя - найденные уникальные вещи и Летопись, каждый экраном над зданием. */
 class HistoryViewModel(slice: GameSlice, private val reads: HeroReads, private val navigator: Navigator) : ViewModel() {
     val game: StateFlow<GameUi> = slice.ui
 
@@ -17,6 +17,7 @@ class HistoryViewModel(slice: GameSlice, private val reads: HeroReads, private v
     suspend fun uniques(heroId: String): Map<String, UniqueFind>? = reads.uniques(heroId)
 
     fun openUniques() = navigator.open(Route.Uniques)
+    fun openChronicle() = navigator.open(Route.Chronicle)
     fun back() = navigator.back()
 
     /** На площадь Города: звено «Город» цепочки «назад». */

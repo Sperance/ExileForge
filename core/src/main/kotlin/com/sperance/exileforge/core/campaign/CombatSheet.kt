@@ -5,6 +5,8 @@ import com.sperance.exileforge.core.campaign.combat.RegenPool
 import com.sperance.exileforge.core.character.HeroSheet
 import com.sperance.exileforge.core.character.SheetModel
 import com.sperance.exileforge.core.character.StatLine
+import com.sperance.exileforge.rules.content.ChargeKind
+import com.sperance.exileforge.rules.content.ChargeRules
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.FateEffects
@@ -35,14 +37,33 @@ import kotlin.math.abs
 data class PassiveSource(val skill: String, val level: Int, val reserve: Double, val lines: List<StatLine>, val lowLife: Boolean)
 
 /**
- * Что бой читает вместе с характеристикой (как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] - общее
- * сопротивление стихиям к каждой стихии. Восстановление - потоком правил по шагам ([steps]): регенерация здоровья и
- * маны (`Recovery.lifeFlow`/`manaFlow`), щита и здоровье за убийство - так строка сводки равна тому, что даёт бой, а разбор
- * называет каждую часть. [creates] - строка сводки появляется и без своей характеристики (общее сопротивление даёт строки стихий,
- * доля максимума - строку регенерации); иначе прибавка ложится лишь на уже бывшую строку. Часть строки сводки из контента
- * (`StatDef.partOf`) читается здесь же - так строка и её разбор сходятся с боем.
+ * Что бой читает вместе с характеристикой (как [Combatant]): к цифре [stat] он прибавляет часть тела из [from] или шаги [steps] -
+ * так строка сводки равна тому, что даёт бой, а разбор называет каждую часть. [creates] - строка сводки появляется и без своей
+ * характеристики; иначе прибавка ложится лишь на уже бывшую строку.
  */
-enum class FightReading(val stat: String, val from: String, val creates: Boolean) {
+interface SheetReading {
+    val stat: String
+    val from: String
+    val creates: Boolean
+
+    /** Шаги чтения тела [body] поверх цифры [stat]; null - чтение одной прибавкой характеристики [from]. */
+    fun steps(body: Combatant): List<ReadingStep>? = null
+
+    /** Что бой прибавляет к цифре [stat] тела [body]: сумма шагов или сама характеристика [from]. */
+    fun adds(body: Combatant): Double = steps(body)?.sumOf { it.delta } ?: body[from]
+
+    /** Сдвиги разбора: шаг - своим сдвигом (источник [ReadingPart.ref], касание - его характеристика), иначе одна прибавка [from]. */
+    fun shifts(body: Combatant): List<Shift> = steps(body)?.map { Shift(StatSource(SourceKind.FIGHT, it.part.ref), it.delta, it.part.stat) }
+        ?: listOf(Shift(StatSource(SourceKind.FIGHT, from), body[from], from)).filter { it.delta != 0.0 }
+}
+
+/**
+ * Чтения боя без правил движка: общее сопротивление стихиям к каждой стихии; восстановление - потоком правил по шагам: регенерация
+ * здоровья и маны (`Recovery.lifeFlow`/`manaFlow`), щита и здоровье за убийство. Общее сопротивление даёт строки стихий, доля
+ * максимума - строку регенерации ([creates]). Часть строки сводки из контента (`StatDef.partOf`) читается здесь же - так строка и её
+ * разбор сходятся с боем.
+ */
+enum class FightReading(override val stat: String, override val from: String, override val creates: Boolean) : SheetReading {
     FIRE(CoreStat.RESIST_FIRE.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
     COLD(CoreStat.RESIST_COLD.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
     LIGHTNING(CoreStat.RESIST_LIGHTNING.code, CoreStat.ALL_ELEMENTAL_RESISTANCES.code, true),
@@ -101,17 +122,22 @@ enum class FightReading(val stat: String, val from: String, val creates: Boolean
             to(ReadingPart.RATE, raw * body.recoveryRate, body.recoveryRate)
         }.steps
     },
-    ;
+}
 
-    /** Шаги чтения тела [body] поверх цифры [stat]; null - чтение одной прибавкой характеристики [from]. */
-    open fun steps(body: Combatant): List<ReadingStep>? = null
+/**
+ * Максимум зарядов вида [kind] - как его держит бой ([ChargeRules.max]): база правил `charges.maximum` и прибавка листа, не меньше
+ * нуля. Строка сводки есть у каждого героя - база правил есть всегда; разбор - «База правил» и источники прибавки.
+ */
+class ChargeReading private constructor(private val kind: ChargeKind, private val rules: ChargeRules, override val stat: String) : SheetReading {
+    override val from: String get() = stat
+    override val creates: Boolean get() = true
 
-    /** Что бой прибавляет к цифре [stat] тела [body]: сумма шагов или сама характеристика [from]. */
-    fun adds(body: Combatant): Double = steps(body)?.sumOf { it.delta } ?: body[from]
+    override fun steps(body: Combatant): List<ReadingStep> = ReadingSteps(body[stat]).apply { to(ReadingPart.CHARGE_BASE, rules.max(kind, body.stats).toDouble()) }.steps
 
-    /** Сдвиги разбора: шаг - своим сдвигом (источник [ReadingPart.ref], касание - его характеристика), иначе одна прибавка [from]. */
-    fun shifts(body: Combatant): List<Shift> = steps(body)?.map { Shift(StatSource(SourceKind.FIGHT, it.part.ref), it.delta, it.part.stat) }
-        ?: listOf(Shift(StatSource(SourceKind.FIGHT, from), body[from], from)).filter { it.delta != 0.0 }
+    companion object {
+        /** Чтения максимумов всех видов зарядов правил [rules]. */
+        fun of(rules: ChargeRules): List<ChargeReading> = rules.kinds.map { (kind, rule) -> ChargeReading(kind, rules, rule.max) }
+    }
 }
 
 /**
@@ -130,6 +156,7 @@ enum class ReadingPart(val stat: String?) {
     MANA_SHARE(CoreStat.MANA_REGEN_LESS.code),
     SHIELD_OF_MAX(CoreStat.ENERGY_REGEN_PERCENT.code),
     KILL_OF_MAX(CoreStat.HEALTH_ON_KILL_PERCENT.code),
+    CHARGE_BASE(null),
     ;
 
     /** Источник сдвига части в разборе ([SourceKind.FIGHT]). */
@@ -167,7 +194,7 @@ private class ReadingSteps(start: Double) {
 }
 
 /**
- * Цифры сводки героя: [values] - что показывает строка (с частями, что бой читает вместе с ней, [FightReading]),
+ * Цифры сводки героя: [values] - что показывает строка (с частями, что бой читает вместе с ней, [SheetReading]),
  * [skilled] - строки, что сдвинули пассивные умения (значок ауры), [fated] - Предначертание (✦).
  */
 data class StatFigures(
@@ -189,6 +216,9 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
 
     /** Тело героя без пассивных умений: с него читаются их уровни и сила аур. */
     private val bare: Combatant by lazy { Combatant(hero.bare, level, index.campaign.combat) }
+
+    /** Что бой читает вместе с цифрами сводки: чтения без правил и максимумы зарядов правил. */
+    private val readings: List<SheetReading> = FightReading.entries + ChargeReading.of(index.rules.charges)
 
     /** Тело героя между боями: лист с пассивными умениями. */
     val body: Combatant by lazy { Combatant(hero.stats, level, index.campaign.combat) }
@@ -248,7 +278,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     val figures: StatFigures by lazy { figures(stats) }
 
     /**
-     * Цифры сводки над листом боя [stats] - своим или под эффектами карты: что бой читает вместе с характеристикой ([FightReading]),
+     * Цифры сводки над листом боя [stats] - своим или под эффектами карты: что бой читает вместе с характеристикой ([SheetReading]),
      * восстановление строк-долей и отметки.
      */
     fun figures(stats: Map<String, Double>): StatFigures {
@@ -260,7 +290,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     /** Прибавки к добыче - характеристика листа и силы уникалок против всех монстров: тот же `Powers.loot`, что катит сервер. */
     private fun read(fighter: Combatant): Map<String, Double> {
         val values = fighter.stats.toMutableMap()
-        FightReading.entries.forEach { reading ->
+        readings.forEach { reading ->
             val add = reading.adds(fighter)
             if (reading.stat in fighter.stats || (reading.creates && add != 0.0)) values[reading.stat] = (fighter.stats[reading.stat] ?: 0.0) + add
         }
@@ -272,7 +302,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
     }
 
     /** Шаги чтения боя цифры [stat] на теле героя: части восстановления с множителями - для строк и формулы разбора. */
-    fun steps(stat: String): List<ReadingStep> = FightReading.entries.filter { it.stat == stat }.flatMap { it.steps(body).orEmpty() }
+    fun steps(stat: String): List<ReadingStep> = readings.filter { it.stat == stat }.flatMap { it.steps(body).orEmpty() }
 
     /** Силы уникалок в прибавке добычи [stat]: каждая сила против всех монстров - своим сдвигом, как её считает [read]. */
     private fun lootPowers(stat: String): List<Shift> = LOOT.filter { it.stock?.code == stat }.flatMap { kind ->
@@ -300,20 +330,20 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
         direct.toSet() + model.reshapes(steady.flatMap { it.lines }).keys
     }
 
-    /** Отмеченные [marks] с цифрами, что бой читает из них ([FightReading.from]), среди строк сводки [shown]. */
-    private fun marked(marks: Set<String>, shown: Set<String>): Set<String> = (marks + FightReading.entries.filter { it.from in marks }.map { it.stat }).filterTo(HashSet()) { it in shown }
+    /** Отмеченные [marks] с цифрами, что бой читает из них ([SheetReading.from]), среди строк сводки [shown]. */
+    private fun marked(marks: Set<String>, shown: Set<String>): Set<String> = (marks + readings.filter { it.from in marks }.map { it.stat }).filterTo(HashSet()) { it in shown }
 
     /**
      * Из чего сложилась цифра сводки [stat]: лист по источникам с пассивными умениями и шагами Предначертания, «больше» процент-стата
-     * от умений и что бой читает вместе с ней ([FightReading], источник [SourceKind.FIGHT]) - итог равен [figures].
+     * от умений и что бой читает вместе с ней ([SheetReading], источник [SourceKind.FIGHT]) - итог равен [figures].
      *
      * [layer] - сдвиги листа эффектами карты, атласа, гильдии и зелья по характеристике (`MapEffects.heroShifts`): свои
      * сдвиги цифры ложатся как есть, а сдвиги того, что бой читает вместе с ней (общее сопротивление стихиям, доля регенерации,
      * максимум здоровья), - на её чтение: каждый источник своим сдвигом, так итог равен цифре [figures] листа под картой.
      */
     fun explain(stat: String, layer: Map<String, List<Shift>> = emptyMap()): StatBreakdown {
-        val readings = FightReading.entries.filter { it.stat == stat }
-        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + readings.flatMap { it.shifts(body) } + lootPowers(stat) + layer[stat].orEmpty() + readings.flatMap { read(it, layer) })
+        val own = readings.filter { it.stat == stat }
+        return explainer.explain(stat).shifted(scaled[stat].orEmpty() + own.flatMap { it.shifts(body) } + lootPowers(stat) + layer[stat].orEmpty() + own.flatMap { read(it, layer) })
     }
 
     /**
@@ -322,7 +352,7 @@ class CombatSheet(private val index: ContentIndex, private val model: SheetModel
      *
      * Сдвиг самой цифры тоже двигает чтение (плоскую регенерацию режут множитель и доля) - сверх своего сдвига.
      */
-    private fun read(reading: FightReading, layer: Map<String, List<Shift>>): List<Shift> {
+    private fun read(reading: SheetReading, layer: Map<String, List<Shift>>): List<Shift> {
         if (layer.isEmpty()) return emptyList()
         val own = reading.adds(body)
         fun under(moves: List<Pair<String, Double>>): Double = reading.adds(Combatant(moves.fold(stats) { sheet, (key, delta) -> sheet + (key to (sheet[key] ?: 0.0) + delta) }, body.level, body.rules)) - own

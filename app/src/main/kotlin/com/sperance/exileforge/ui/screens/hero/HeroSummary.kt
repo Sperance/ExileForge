@@ -106,6 +106,7 @@ internal fun StatSection.accent(): Color = when (this) {
     StatSection.DEFENCE -> Gold
     StatSection.RESISTANCE -> ShieldCyan
     StatSection.ATTACK -> Ember
+    StatSection.CHARGES -> Handcrafted
     StatSection.AILMENT -> Vital
     StatSection.ATTRIBUTE -> Rune
     StatSection.OUTSIDE, StatSection.NONE -> Brass
@@ -117,6 +118,7 @@ private val StatSection.glyph: Glyph get() = when (this) {
     StatSection.DEFENCE -> Glyph.DEFENCE
     StatSection.RESISTANCE -> Glyph.FIRE
     StatSection.ATTACK -> Glyph.ATTACK
+    StatSection.CHARGES -> Glyph.STATE
     StatSection.AILMENT -> Glyph.CHAOS
     StatSection.ATTRIBUTE -> Glyph.ATTRIBUTE
     StatSection.OUTSIDE, StatSection.NONE -> Glyph.CURRENCY

@@ -38,7 +38,7 @@ class SheetExplainTest {
 
     /**
      * Сводка героя - лист боя: с пассивными умениями класса и каждым Предначертанием разбор цифры сводки складывается в
-     * неё же - доли умений, шаги перестройки дара и что бой читает вместе с цифрой.
+     * неё же - доли умений, шаги перестройки дара и что бой читает вместе с цифрой; максимум зарядов - тот, что держит бой.
      */
     @Test fun combatBreakdownAddsUpToTheSummary() {
         val index = TestContent.index
@@ -52,6 +52,10 @@ class SheetExplainTest {
                     val b = combat.explain(stat)
                     assertTrue(abs(b.total - value) < 0.15, "${heroClass.code} $fate $stat total ${b.total} != $value")
                     assertTrue(abs(b.formed + b.shifts.sumOf { it.delta } - value) < 0.25, "${heroClass.code} $fate $stat formed ${b.formed} + shifts != $value")
+                }
+                index.rules.charges.kinds.forEach { (kind, rule) ->
+                    val held = index.rules.charges.max(kind, combat.stats).toDouble()
+                    assertTrue(combat.figures.values[rule.max] == held, "${heroClass.code} $fate $kind: сводка ${combat.figures.values[rule.max]}, бой держит $held зарядов")
                 }
                 if (fate == LIVING_FORTRESS) {
                     val regen = CoreStat.HEALTH_REGEN.code

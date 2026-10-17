@@ -10,7 +10,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.ui.components.ChordOverDialog
+import com.sperance.exileforge.ui.components.ChordOverWindow
 import com.sperance.exileforge.ui.components.DialogShape
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
@@ -35,7 +35,7 @@ import org.koin.compose.viewmodel.koinViewModel
         shape = DialogShape,
         tonalElevation = 0.dp,
         title = {
-            ChordOverDialog()
+            ChordOverWindow()
             Text(ui("expedition.unfinished_title").uppercase(), style = MaterialTheme.typography.titleMedium)
         },
         text = { Text(ui("expedition.unfinished_text", mapTitle(offer.zone)), color = Parchment) },

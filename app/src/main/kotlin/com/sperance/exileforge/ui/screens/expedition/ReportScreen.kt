@@ -150,7 +150,6 @@ import java.util.Locale
             )
             if (report.packSize > 1) MutedText(ui("expedition.report_pack", report.packSize), style = MaterialTheme.typography.labelSmall)
         }
-        BugAction(Modifier.align(Alignment.TopEnd))
     }
 }
 

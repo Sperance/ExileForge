@@ -38,6 +38,8 @@ import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.presentation.state.*
 import com.sperance.exileforge.presentation.state.GameUi
+import com.sperance.exileforge.ui.components.ForgeMenu
+import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -106,28 +108,36 @@ import org.koin.compose.viewmodel.koinViewModel
 }
 
 /**
- * The banner's «⋮» (the owner's pick «B» of three mockups): the beetle and the settings behind one button, so the name
- * of the game fits beside the badges. Почта - свой конверт рядом ([MailBadge]), у «⋮» поводов для отметки нет.
+ * «⋮» шапки: «Сообщить об ошибке» и настройки ([onSettings]; null - экраны до игры, где
+ * настроек нет) за одной кнопкой, чтобы имя игры уместилось рядом со значками. Почта - свой конверт рядом ([MailBadge]), у «⋮»
+ * поводов для отметки нет. Кнопок-жуков на экранах нет: отчёт - этот пункт, меню забега и аккорд громкости.
  */
-@Composable internal fun BannerMenu(settingsOpen: Boolean, onBug: () -> Unit, onSettings: () -> Unit) {
+@Composable internal fun BannerMenu(settingsOpen: Boolean, onBug: () -> Unit, onSettings: (() -> Unit)?) {
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) {
             Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = if (settingsOpen) GoldBright else Gold, modifier = Modifier.size(24.dp))
         }
-        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+        ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             fun pick(action: () -> Unit) {
                 open = false
                 action()
             }
             DropdownMenuItem(text = { Text(ui("bug.open")) }, onClick = { pick(onBug) }, leadingIcon = { Icon(Icons.Outlined.BugReport, null, tint = Gold) })
-            DropdownMenuItem(
-                text = { Text(ui("settings.title"), color = if (settingsOpen) GoldBright else Parchment) },
-                onClick = { pick(onSettings) },
-                leadingIcon = { Icon(Icons.Outlined.Settings, null, tint = Gold) },
-            )
+            onSettings?.let { settings ->
+                DropdownMenuItem(
+                    text = { Text(ui("settings.title"), color = if (settingsOpen) GoldBright else Parchment) },
+                    onClick = { pick(settings) },
+                    leadingIcon = { Icon(Icons.Outlined.Settings, null, tint = Gold) },
+                )
+            }
         }
     }
+}
+
+/** «⋮» шапки экранов до игры (вход, выбор и создание героя): тот же [BannerMenu], только с «Сообщить об ошибке». */
+@Composable internal fun ReportMenu() {
+    LocalBugReport.current?.let { BannerMenu(settingsOpen = false, onBug = it, onSettings = null) }
 }
 
 /**
@@ -170,7 +180,7 @@ import org.koin.compose.viewmodel.koinViewModel
             Icon(look.icon, look.label, tint = look.tint, modifier = Modifier.size(18.dp))
             if (link.waiting.isNotEmpty()) Text(link.waiting.size.toString(), color = look.tint, fontSize = 11.sp)
         }
-        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+        ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             Column(Modifier.widthIn(max = 280.dp).padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(look.label, color = look.tint, style = MaterialTheme.typography.titleSmall)
                 (state as? LinkState.Offline)?.let { Text(it.outage.hint, color = Parchment, style = MaterialTheme.typography.bodySmall) }

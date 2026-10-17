@@ -37,7 +37,7 @@ private enum class Exit(val label: String, val question: String) {
     var asking by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = Muted) }
-        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+        ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             DropdownMenuItem(
                 text = { Text(ui(way.label), color = LifeRed) },
                 enabled = !game.busy,

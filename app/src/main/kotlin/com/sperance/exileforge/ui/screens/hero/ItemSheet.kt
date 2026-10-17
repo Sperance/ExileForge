@@ -179,7 +179,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
                     QuietPill(true, square = true, onClick = { more = true }) {
                         Icon(Icons.Outlined.MoreHoriz, ui("common.more"), tint = GoldBright, modifier = Modifier.size(18.dp))
                     }
-                    DropdownMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
+                    ForgeMenu(expanded = more, onDismissRequest = { more = false }, containerColor = PanelRaised) {
                         if (instance.equipped && wornPlace != null) {
                             MenuLine(ForgeGlyphs.Helm, ui("hero.unequip"), can) {
                                 more = false
@@ -237,7 +237,7 @@ fun ItemSheet(game: GameUi, model: HeroViewModel, itemId: String, onDismiss: () 
             shape = DialogShape,
             tonalElevation = 0.dp,
             title = {
-                ChordOverDialog()
+                ChordOverWindow()
                 Text(ui("hero.worn_title"), color = Gold)
             },
             text = { Text(ui("hero.worn_note"), color = Parchment) },

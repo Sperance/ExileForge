@@ -84,7 +84,7 @@ val DialogShape = RoundedCornerShape(22.dp)
         shape = DialogShape,
         tonalElevation = 0.dp,
         title = {
-            ChordOverDialog()
+            ChordOverWindow()
             Text(title.uppercase(), style = MaterialTheme.typography.titleMedium)
         },
         text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp), content = body) },

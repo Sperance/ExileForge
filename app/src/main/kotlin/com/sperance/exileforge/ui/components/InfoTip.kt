@@ -92,6 +92,7 @@ data class Tip(val title: String, val body: String = "", val tint: Color = GoldB
     val grow = remember { Animatable(.4f) }
     LaunchedEffect(Unit) { grow.animateTo(1f, spring(dampingRatio = .7f, stiffness = 700f)) }
     Popup(popupPositionProvider = placing, onDismissRequest = onClose, properties = PopupProperties(focusable = true)) {
+        ChordOverWindow()
         val arrow = 7.dp
         val shape = RoundedCornerShape(10.dp)
         Box(

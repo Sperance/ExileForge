@@ -188,7 +188,7 @@ fun SkillTreePanel(
             MapButton(Icons.Outlined.Functions, ui("tree.totals_button")) { totalsOpen = true }
             Box {
                 MapButton(Icons.Outlined.MoreVert, ui("common.more")) { menuOpen = true }
-                DropdownMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = PanelRaised) {
+                ForgeMenu(menuOpen, onDismissRequest = { menuOpen = false }, containerColor = PanelRaised) {
                     DropdownMenuItem(text = { Text(ui("tree.details")) }, onClick = {
                         menuOpen = false
                         detailsOpen = true

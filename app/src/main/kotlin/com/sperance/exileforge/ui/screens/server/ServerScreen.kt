@@ -304,7 +304,7 @@ private enum class AccountPage(val title: String) { SIGN_IN("account.signin_sect
         tonalElevation = 0.dp,
         titleContentColor = Gold,
         title = {
-            ChordOverDialog()
+            ChordOverWindow()
             Text(ui("account.promo"))
         },
         text = {

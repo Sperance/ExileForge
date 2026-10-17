@@ -22,7 +22,7 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.data.settings.DEFAULT_SERVER
 import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.presentation.state.GameUi
-import com.sperance.exileforge.ui.components.BugAction
+import com.sperance.exileforge.ui.ReportMenu
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgePanel
@@ -59,8 +59,8 @@ import org.koin.compose.viewmodel.koinViewModel
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                BugAction()
                 LanguageCorner(game.lang, game.world.languages, vm::language)
+                ReportMenu()
             }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.size(84.dp).border(1.dp, Gold.copy(alpha = .5f), RoundedCornerShape(18.dp)), contentAlignment = Alignment.Center) {

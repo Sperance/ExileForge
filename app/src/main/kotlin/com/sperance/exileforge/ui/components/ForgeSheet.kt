@@ -83,7 +83,7 @@ fun ForgeSheet(
         dragHandle = dragHandle,
         contentWindowInsets = { WindowInsets(0.dp) },
     ) {
-        ChordOverDialog()
+        ChordOverWindow()
         Column(
             Modifier
                 .fillMaxWidth()

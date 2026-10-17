@@ -188,7 +188,7 @@ internal fun FullMap(run: ExpeditionRun, hud: RunHud, tick: Int, onClose: () -> 
     val world = run.world
     val map = world.map
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-        ChordOverDialog()
+        ChordOverWindow()
         Column(
             Modifier.fillMaxSize().background(Ink.copy(alpha = .96f)).statusBarsPadding().navigationBarsPadding().padding(12.dp)
                 .verticalScroll(rememberScrollState()),

@@ -26,6 +26,7 @@ import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.presentation.state.MAX_CHARACTERS
 import com.sperance.exileforge.presentation.state.view
 import com.sperance.exileforge.rules.text.NameCharset
+import com.sperance.exileforge.ui.ReportMenu
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
@@ -74,7 +75,10 @@ import org.koin.compose.viewmodel.koinViewModel
                     )
                 }
             }
-            LanguageButton(game.lang, game.world.languages, Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), enabled = !game.busy, onLanguage = vm::language)
+            Row(Modifier.align(Alignment.TopEnd).padding(top = 6.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                LanguageButton(game.lang, game.world.languages, enabled = !game.busy, onLanguage = vm::language)
+                ReportMenu()
+            }
             ToastHost(game, vm::dismissMessage, vm::dismissNotice, Modifier.align(Alignment.TopCenter).padding(top = 12.dp))
         }
     }
@@ -140,7 +144,6 @@ import org.koin.compose.viewmodel.koinViewModel
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(game.session.title, color = Muted, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f))
-                    BugAction()
                     ForgeTextButton(enabled = !game.busy, onClick = onLogout) { Text(ui("chars.sign_out")) }
                 }
             }
@@ -160,10 +163,10 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
     com.sperance.exileforge.ui.components.PrologueGate(always = true) { CreatingList(game, vm, onBack, onSignOut) }
 }
 
-/** Жук и на форме создания: это единственная страница до игры без пути к отчёту. */
+/** Форма создания героя: «⋮» с отчётом - в углу экрана, как у списка героев. */
 @Composable private fun ColumnScope.CreatingList(game: GameUi, vm: CharactersViewModel, onBack: () -> Unit, onSignOut: () -> Unit) {
     LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) { BugAction() } }
+        item { ScreenHeader(ui("chars.new"), ui("chars.name_and_class"), ForgeGlyphs.Exile) }
         item { CreateCharacterPanel(game, vm, canGoBack = game.session.characters.isNotEmpty(), onBack = onBack, onSignOut = onSignOut) }
     }
 }

@@ -69,7 +69,7 @@ internal enum class SettingsPage(val title: String) {
  */
 @Composable internal fun SettingsOverlay(onClose: () -> Unit) {
     androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-        ChordOverDialog()
+        ChordOverWindow()
         Box(Modifier.fillMaxSize().background(Ink).systemBarsPadding()) { SettingsScreen(onClose = onClose) }
     }
 }

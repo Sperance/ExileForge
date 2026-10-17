@@ -1,5 +1,6 @@
 package com.sperance.exileforge.ui.components
 
+import android.view.WindowManager
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -48,32 +48,28 @@ import com.sperance.exileforge.presentation.state.AppPhase
 import com.sperance.exileforge.presentation.state.GameUi
 import com.sperance.exileforge.ui.theme.*
 
-/** The beetle: a bug report from wherever the player is. */
-@Composable fun BugButton(modifier: Modifier = Modifier, tint: Color = Muted, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = modifier) { Icon(Icons.Outlined.BugReport, ui("bug.open"), tint = tint, modifier = Modifier.size(22.dp)) }
-}
-
-/** Who opens the report sheet: the app hands it down, so a screen's own header carries the beetle instead of a button floating over it. */
+/** Кто открывает лист отчёта: его отдаёт приложение - пункт «Сообщить об ошибке» меню шапки ([ReportMenu]) зовёт его; кнопок-жуков на экранах нет. */
 val LocalBugReport = staticCompositionLocalOf<(() -> Unit)?> { null }
 
-/** The beetle in a screen's header; nothing where no report can be opened. */
-@Composable fun BugAction(modifier: Modifier = Modifier, tint: Color = Muted) {
-    LocalBugReport.current?.let { BugButton(modifier, tint, it) }
-}
-
-/** Аккорд громкости приложения: его держит Activity; окна диалогов цепляются к нему сами ([ChordOverDialog]). */
+/** Аккорд громкости приложения: его держит Activity; окна диалогов и попапов цепляются к нему сами ([ChordOverWindow]). */
 val LocalVolumeChord = staticCompositionLocalOf<VolumeChord?> { null }
 
 /**
- * Аккорд громкости поверх окна диалога: композиция внутри `ForgeSheet`, `Dialog` или `AlertDialog` оборачивает callback
- * своего окна ([VolumeChord.attach]) - Громкость↑+↓ открывает отчёт и поверх диалога. Вне окна диалога ничего не делает.
+ * Аккорд громкости поверх своего окна: композиция внутри `ForgeSheet`, `Dialog` или `AlertDialog` оборачивает callback окна
+ * диалога, внутри всплывающего меню или попапа ([ForgeMenu], фокусный `Popup`) - слушает необработанные клавиши окна попапа
+ * ([VolumeChord.attach]); Громкость↑+↓ открывает отчёт и поверх них. В окне Activity ничего не делает - аккорд там её.
  */
-@Composable fun ChordOverDialog() {
+@Composable fun ChordOverWindow() {
     val chord = LocalVolumeChord.current ?: return
     val view = LocalView.current
     DisposableEffect(chord, view) {
-        val window = generateSequence(view.parent) { it.parent }.filterIsInstance<DialogWindowProvider>().firstOrNull()?.window
-        val detach = window?.let(chord::attach) ?: {}
+        val dialog = generateSequence(view.parent) { it.parent }.filterIsInstance<DialogWindowProvider>().firstOrNull()?.window
+        val popup = (view.rootView.layoutParams as? WindowManager.LayoutParams)?.type in WindowManager.LayoutParams.FIRST_SUB_WINDOW..WindowManager.LayoutParams.LAST_SUB_WINDOW
+        val detach = when {
+            dialog != null -> chord.attach(dialog)
+            popup -> chord.attach(view)
+            else -> ({})
+        }
         onDispose { detach() }
     }
 }

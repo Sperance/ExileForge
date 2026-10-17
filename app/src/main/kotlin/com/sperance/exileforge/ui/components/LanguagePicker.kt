@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -82,7 +81,7 @@ import com.sperance.exileforge.ui.theme.*
             Spacer(Modifier.width(6.dp))
             Text(current.short, color = Parchment, style = MaterialTheme.typography.labelLarge)
         }
-        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+        ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             offered.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.title, color = if (option == current) GoldBright else Parchment) },

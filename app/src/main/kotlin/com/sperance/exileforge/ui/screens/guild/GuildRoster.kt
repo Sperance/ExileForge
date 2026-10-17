@@ -10,7 +10,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.SwapVert
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -42,6 +41,7 @@ import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.ClassPortrait
 import com.sperance.exileforge.ui.components.CompactSearchField
 import com.sperance.exileforge.ui.components.FateMark
+import com.sperance.exileforge.ui.components.ForgeMenu
 import com.sperance.exileforge.ui.components.GuildRoleMark
 import com.sperance.exileforge.ui.components.MightLine
 import com.sperance.exileforge.ui.components.MutedText
@@ -123,7 +123,7 @@ internal fun GuildMember.named(query: String): Boolean = name.contains(query.tri
         ) {
             Icon(Icons.Outlined.SwapVert, ui("guild.sort"), tint = if (order != null) GoldBright else Muted, modifier = Modifier.size(20.dp))
         }
-        DropdownMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
+        ForgeMenu(open, onDismissRequest = { open = false }, containerColor = PanelRaised) {
             DropdownMenuItem(
                 text = { Text(ui("guild.sort_role"), color = if (order == null) GoldBright else Parchment) },
                 onClick = {

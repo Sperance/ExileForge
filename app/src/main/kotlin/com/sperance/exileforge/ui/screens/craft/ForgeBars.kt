@@ -125,7 +125,7 @@ import com.sperance.exileforge.ui.theme.*
             shape = DialogShape,
             tonalElevation = 0.dp,
             title = {
-                ChordOverDialog()
+                ChordOverWindow()
                 Text(ui("forge.quality_reset_title"), color = Gold)
             },
             text = { Text(ui("forge.quality_reset_note", lost), color = Parchment) },

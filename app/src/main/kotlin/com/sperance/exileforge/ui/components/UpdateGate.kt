@@ -197,7 +197,7 @@ class StartActions(val retry: () -> Unit, val release: () -> Unit, val checkFit:
 /** Заставка во весь экран: знак игры по центру, версия под ним, внизу - [content] окна; ни назад, ни касание мимо не закрывают. */
 @Composable private fun Splash(content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        ChordOverDialog()
+        ChordOverWindow()
         Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(PanelRaised, Ink), radius = SPLASH_GLOW)).systemBarsPadding()) {
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(BRAND, color = GoldBright, style = MaterialTheme.typography.headlineMedium, fontFamily = FontFamily.Serif, letterSpacing = 3.sp)
@@ -321,7 +321,7 @@ private const val CONTINUE_AFTER_MS = 15_000L
 /** A window nothing outside closes: no back, no tap beside it. */
 @Composable private fun Locked(content: @Composable ColumnScope.() -> Unit) {
     Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false)) {
-        ChordOverDialog()
+        ChordOverWindow()
         Column(
             Modifier.fillMaxWidth().padding(20.dp).background(PanelRaised, DialogShape).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),

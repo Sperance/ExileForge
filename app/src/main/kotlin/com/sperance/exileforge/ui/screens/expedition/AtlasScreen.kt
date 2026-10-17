@@ -226,7 +226,7 @@ internal val AtlasNode.branch: AtlasBranch get() = AtlasFog.branch(code)
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Outlined.MoreVert, ui("common.more"), tint = Sky.text) }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        ForgeMenu(expanded = open, onDismissRequest = { open = false }) {
             val entries = listOfNotNull(
                 Triple(ui("atlas.summary"), summary, onSummary),
                 Triple(ui("atlas.reset"), reset, onReset),

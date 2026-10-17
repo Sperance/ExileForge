@@ -346,7 +346,7 @@ private fun ControlRow(account: AccountUi, vm: ModerationViewModel, dossier: Dos
             maxLines = 1,
             modifier = Modifier.clip(shape).border(1.dp, Bronze, shape).clickable(enabled = enabled) { expanded = true }.padding(horizontal = 8.dp, vertical = 3.dp),
         )
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ForgeMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             options.forEach { (label, pick) ->
                 DropdownMenuItem(text = { Text(label) }, onClick = {
                     expanded = false

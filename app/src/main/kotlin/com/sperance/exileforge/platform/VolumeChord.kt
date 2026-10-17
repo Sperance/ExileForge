@@ -1,7 +1,10 @@
 package com.sperance.exileforge.platform
 
 import android.view.KeyEvent
+import android.view.View
+import android.view.ViewTreeObserver
 import android.view.Window
+import androidx.core.view.ViewCompat
 
 /**
  * Аккорд громкости: Громкость↑ и Громкость↓ нажаты вместе - лист отчёта об ошибке. Одиночное нажатие
@@ -9,7 +12,9 @@ import android.view.Window
  * держится, - аккорд: её нажатие и отпускание съедаются, громкость второй клавишей не меняется.
  *
  * Уровня приложения: клавиши окна Activity приходят из неё, окна диалога (лист `ForgeSheet`, `Dialog`, `AlertDialog`) -
- * через его обёрнутый callback ([attach]); [onChord] получает окно диалога, где сыгран аккорд (null - окно Activity). Окно, потерявшее фокус, сбрасывает состояние ([reset]): отпускание клавиши в чужом окне не оставит её «держащейся».
+ * через его обёрнутый callback ([attach] окна), окна всплывающего меню и попапа (`DropdownMenu`, `Popup`) - слушателем
+ * необработанных клавиш его вида ([attach] вида); [onChord] получает окно диалога, где сыгран аккорд (null - окно Activity или
+ * попапа). Окно, потерявшее фокус, сбрасывает состояние ([reset]): отпускание клавиши в чужом окне не оставит её «держащейся».
  */
 class VolumeChord(private val onChord: (top: Window?) -> Unit) {
     /** Время нажатия держащихся клавиш громкости по коду клавиши. */
@@ -60,6 +65,21 @@ class VolumeChord(private val onChord: (top: Window?) -> Unit) {
         val wrapped = ChordCallback(base, window, this)
         window.callback = wrapped
         return { if (window.callback === wrapped) window.callback = base }
+    }
+
+    /**
+     * Аккорд в окне попапа с видом [view] (у попапа нет своего `Window`): клавиши громкости, что не взял сам попап, идут сюда
+     * раньше системы; потеря фокуса окном сбрасывает аккорд. Вернёт отмену.
+     */
+    fun attach(view: View): () -> Unit {
+        val keys = ViewCompat.OnUnhandledKeyEventListenerCompat { _, event -> onKey(event) }
+        val focus = ViewTreeObserver.OnWindowFocusChangeListener { hasFocus -> if (!hasFocus) reset() }
+        ViewCompat.addOnUnhandledKeyEventListener(view, keys)
+        view.viewTreeObserver.addOnWindowFocusChangeListener(focus)
+        return {
+            ViewCompat.removeOnUnhandledKeyEventListener(view, keys)
+            if (view.viewTreeObserver.isAlive) view.viewTreeObserver.removeOnWindowFocusChangeListener(focus)
+        }
     }
 
     companion object {

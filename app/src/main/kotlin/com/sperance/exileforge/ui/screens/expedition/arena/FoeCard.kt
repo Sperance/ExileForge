@@ -75,7 +75,6 @@ import kotlin.math.sin
             }
             fight.rage?.let { RageMark(it) }
         }
-        BugAction(Modifier.align(Alignment.TopEnd))
     }
 }
 

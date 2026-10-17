@@ -37,14 +37,13 @@ import com.sperance.exileforge.core.app.TAB_SETTINGS
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.Link
 import com.sperance.exileforge.core.network.LinkState
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
-import com.sperance.exileforge.presentation.nav.Route
+import com.sperance.exileforge.ui.components.FeedbackViewModel
 import com.sperance.exileforge.ui.components.ForgeMenu
 import com.sperance.exileforge.ui.components.LocalBugReport
 import com.sperance.exileforge.ui.components.LocalMailOpen
 import com.sperance.exileforge.ui.components.UnreadBadge
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.screens.hero.HeroLine
 import com.sperance.exileforge.ui.screens.hero.rememberHeroHeader
 import com.sperance.exileforge.ui.theme.*

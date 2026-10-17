@@ -36,8 +36,8 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.rules.text.LocaleKey
+import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel
 

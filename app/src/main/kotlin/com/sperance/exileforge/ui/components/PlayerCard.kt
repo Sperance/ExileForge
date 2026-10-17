@@ -55,11 +55,10 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.CardModeration
 import com.sperance.exileforge.core.model.hero.PlayerCard
-import com.sperance.exileforge.presentation.admin.ModerationViewModel
-import com.sperance.exileforge.presentation.player.PlayerCardViewModel
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.hero.titleName
+import com.sperance.exileforge.ui.screens.server.ModerationViewModel
 import com.sperance.exileforge.ui.theme.Bronze
 import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Gold

@@ -22,12 +22,11 @@ import com.sperance.exileforge.core.app.TAB_TREE
 import com.sperance.exileforge.core.app.level
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.progress.ProgressViewModel
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.craft.CraftScreen
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.skills.GrimoireScreen
 import com.sperance.exileforge.ui.screens.tree.SkillTreeScreen
 import com.sperance.exileforge.ui.theme.*

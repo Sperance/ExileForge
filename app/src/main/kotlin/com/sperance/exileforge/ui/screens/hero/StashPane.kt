@@ -37,7 +37,6 @@ import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.sellLots
 import com.sperance.exileforge.data.settings.GuideStore
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.launch

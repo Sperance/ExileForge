@@ -9,13 +9,13 @@ import androidx.compose.ui.unit.dp
 import com.sperance.exileforge.core.app.AccountUi
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.AccountBinding
-import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeTextButton
 import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.inputs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.session.SessionViewModel
 import com.sperance.exileforge.ui.theme.Gold
 import kotlinx.serialization.json.*
 import org.koin.compose.viewmodel.koinViewModel

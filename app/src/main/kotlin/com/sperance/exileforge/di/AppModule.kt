@@ -58,33 +58,33 @@ import com.sperance.exileforge.core.world.WorldRepository
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.data.settings.GuideStore
 import com.sperance.exileforge.data.settings.ServerStore
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.admin.AdminViewModel
-import com.sperance.exileforge.presentation.admin.ModerationViewModel
-import com.sperance.exileforge.presentation.admin.NoticeViewModel
-import com.sperance.exileforge.presentation.app.BugDelivery
-import com.sperance.exileforge.presentation.app.StallWatchdog
-import com.sperance.exileforge.presentation.crafts.CraftsViewModel
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.features.UpdateViewModel
-import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
-import com.sperance.exileforge.presentation.forge.SmithyViewModel
-import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.hall.HallViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.history.HistoryViewModel
-import com.sperance.exileforge.presentation.market.MarketViewModel
-import com.sperance.exileforge.presentation.nav.Navigator
-import com.sperance.exileforge.presentation.player.PlayerCardViewModel
-import com.sperance.exileforge.presentation.progress.ProgressViewModel
-import com.sperance.exileforge.presentation.quests.QuestViewModel
-import com.sperance.exileforge.presentation.server.ServerViewModel
-import com.sperance.exileforge.presentation.session.CharactersViewModel
-import com.sperance.exileforge.presentation.session.FateViewModel
-import com.sperance.exileforge.presentation.session.SessionViewModel
-import com.sperance.exileforge.presentation.settings.SettingsViewModel
-import com.sperance.exileforge.presentation.skills.GrimoireViewModel
-import com.sperance.exileforge.presentation.tree.TreeViewModel
+import com.sperance.exileforge.platform.BugDelivery
+import com.sperance.exileforge.platform.StallWatchdog
+import com.sperance.exileforge.ui.ShellViewModel
+import com.sperance.exileforge.ui.components.FeedbackViewModel
+import com.sperance.exileforge.ui.components.PlayerCardViewModel
+import com.sperance.exileforge.ui.components.UpdateViewModel
+import com.sperance.exileforge.ui.nav.Navigator
+import com.sperance.exileforge.ui.screens.admin.AdminViewModel
+import com.sperance.exileforge.ui.screens.auction.MarketViewModel
+import com.sperance.exileforge.ui.screens.city.HistoryViewModel
+import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
+import com.sperance.exileforge.ui.screens.crafts.CraftsViewModel
+import com.sperance.exileforge.ui.screens.expedition.ExpeditionViewModel
+import com.sperance.exileforge.ui.screens.guild.GuildViewModel
+import com.sperance.exileforge.ui.screens.hall.HallViewModel
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
+import com.sperance.exileforge.ui.screens.progress.ProgressViewModel
+import com.sperance.exileforge.ui.screens.quests.QuestViewModel
+import com.sperance.exileforge.ui.screens.server.ModerationViewModel
+import com.sperance.exileforge.ui.screens.server.ServerViewModel
+import com.sperance.exileforge.ui.screens.server.SettingsViewModel
+import com.sperance.exileforge.ui.screens.session.CharactersViewModel
+import com.sperance.exileforge.ui.screens.session.FateViewModel
+import com.sperance.exileforge.ui.screens.session.NoticeViewModel
+import com.sperance.exileforge.ui.screens.session.SessionViewModel
+import com.sperance.exileforge.ui.screens.skills.GrimoireViewModel
+import com.sperance.exileforge.ui.screens.tree.TreeViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -104,8 +104,8 @@ import org.koin.dsl.module
 const val APP_SCOPE = "app"
 
 /**
- * Граф приложения: хранилища устройства, журнал запросов, HTTP-клиент процесса, репозитории ядра, сервисы
- * `presentation/app` и модели экранов.
+ * Граф приложения: хранилища устройства, журнал запросов, HTTP-клиент процесса, репозитории и сервисы ядра (`core/app` и
+ * фичи), службы платформы и модели экранов; то, что ядро просит у приложения (хранилище, навигация, устройство), - его интерфейсами.
  *
  * Один HTTP-клиент на процесс: пул соединений, потоки и TLS-сессии общие у всех серверов и обновлений. Сервисы приложения (сессия, связь,
  * герои аккаунта, прогрев, коды наград, запуск) зовут друг друга и поэтому ссылаются лениво. Проверка обновлений ждёт сервер игровой
@@ -152,9 +152,9 @@ val appModule = module {
     single { ContentLoader() }
     single { StartupTrace() }
     single { StallWatchdog(androidContext(), get(), get()) }
-    single { com.sperance.exileforge.presentation.app.CrashKeeper(androidContext()) }
+    single { com.sperance.exileforge.platform.CrashKeeper(androidContext()) }
     single { ReportTrail() }
-    single { com.sperance.exileforge.presentation.app.ReportEvidence(androidContext(), get(), get(), get(named(APP_SCOPE))) } bind ClientDevice::class
+    single { com.sperance.exileforge.platform.ReportEvidence(androidContext(), get(), get(), get(named(APP_SCOPE))) } bind ClientDevice::class
     single { WorldLoader(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get()) }
     single { LanguageRepository() }
     single { LinkRepository() }
@@ -169,7 +169,7 @@ val appModule = module {
     single { ConnectionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), lazy { get<SessionActions>() }, lazy { get<CharacterActions>() }, get()) }
     single { WarmupActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get()) }
     single { RedemptionActions(get(), get(), get(), get(), get(), get(named(APP_SCOPE))) }
-    single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get<StallWatchdog>(), get<com.sperance.exileforge.presentation.app.CrashKeeper>(), get()) }
+    single { AppStartup(get(), get(), get(), get(), get(), get(named(APP_SCOPE)), get(), get(), get(), get(), get(), get(), get(), get(), get(), get<StallWatchdog>(), get<com.sperance.exileforge.platform.CrashKeeper>(), get()) }
     viewModelOf(::ShellViewModel)
     viewModelOf(::AdminViewModel)
     viewModelOf(::ModerationViewModel)

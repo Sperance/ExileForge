@@ -45,7 +45,6 @@ import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.session.Activity
 import com.sperance.exileforge.core.session.Session
 import com.sperance.exileforge.core.world.World
-import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.rules.content.ActiveSlot
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.HeroSkills
@@ -70,6 +69,7 @@ import com.sperance.exileforge.rules.run.RunContext
 import com.sperance.exileforge.rules.sheet.FlaskKind
 import com.sperance.exileforge.ui.components.LocalMotion
 import com.sperance.exileforge.ui.screens.admin.AdminPanels
+import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.screens.expedition.AltarSheet
 import com.sperance.exileforge.ui.screens.expedition.FeatureSheet
 import com.sperance.exileforge.ui.screens.expedition.LevelUpScreen

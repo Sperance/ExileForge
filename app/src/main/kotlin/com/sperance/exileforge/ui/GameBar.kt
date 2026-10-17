@@ -54,10 +54,9 @@ import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.app.TAB_PROGRESS
 import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.solid
+import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.Ink

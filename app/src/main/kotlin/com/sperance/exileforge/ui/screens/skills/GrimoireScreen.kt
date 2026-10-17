@@ -35,7 +35,6 @@ import com.sperance.exileforge.core.display.classTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroSkills
 import com.sperance.exileforge.rules.content.Item

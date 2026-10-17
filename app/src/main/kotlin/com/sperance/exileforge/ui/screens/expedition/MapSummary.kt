@@ -51,7 +51,6 @@ import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.market.sellLots
 import com.sperance.exileforge.core.quests.QuestTurnIn
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.Inspect

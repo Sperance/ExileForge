@@ -45,7 +45,6 @@ import androidx.compose.ui.zIndex
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
-import com.sperance.exileforge.presentation.session.FateViewModel
 import com.sperance.exileforge.ui.components.AltarGlow
 import com.sperance.exileforge.ui.components.EmberField
 import com.sperance.exileforge.ui.components.FateInk

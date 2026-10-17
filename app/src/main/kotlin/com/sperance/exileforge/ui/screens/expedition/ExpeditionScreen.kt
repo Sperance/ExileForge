@@ -21,8 +21,6 @@ import com.sperance.exileforge.core.app.unlocked
 import com.sperance.exileforge.core.campaign.WorldMap
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.campaign.CampaignProgress
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.rules.content.CampaignFile
 import com.sperance.exileforge.rules.content.WorldGraph
 import com.sperance.exileforge.rules.content.WorldPoint
@@ -32,6 +30,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.world.WorldArt
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCamera
 import com.sperance.exileforge.ui.screens.expedition.world.WorldCanvas
+import com.sperance.exileforge.ui.screens.quests.QuestViewModel
 import com.sperance.exileforge.ui.screens.quests.StoryButton
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay

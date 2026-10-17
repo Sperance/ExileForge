@@ -1,0 +1,171 @@
+package com.sperance.exileforge.platform
+
+import android.app.Activity
+import android.app.Application
+import android.content.Context
+import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.os.SystemClock
+import com.sperance.exileforge.BuildConfig
+import com.sperance.exileforge.core.app.LeftReport
+import com.sperance.exileforge.core.app.LeftReports
+import com.sperance.exileforge.core.app.StartupTrace
+import com.sperance.exileforge.core.i18n.ui
+import com.sperance.exileforge.core.model.command.BugReportRequest
+import com.sperance.exileforge.core.session.CommandRunner
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
+
+/**
+ * Сторож главного потока. Фоновый поток раз в секунду ставит в очередь главного потока отметку; не выполнилась
+ * за [STALL_MS] - поток завис: его стек, шаги запуска ([StartupTrace]) и версия пишутся в файл. Завис намертво - отчёт
+ * всё равно на диске, и следующий запуск сам отправляет его баг-репортом ([pending]/[sent]). Одно зависание - один отчёт.
+ * Отправленный отчёт остаётся последним ([diagnostics]): игрок копирует его из окна запуска вместе со стеками всех потоков.
+ * Свёрнутое приложение сторож не будит: он ходит с запуска до первой паузы окна, дальше - только пока окно на экране ([awake]).
+ */
+class StallWatchdog(context: Context, private val trace: StartupTrace, private val commands: CommandRunner) : LeftReports {
+    private val file = File(context.filesDir, FILE)
+    private val last = File(context.filesDir, LAST_FILE)
+    private val main = Handler(Looper.getMainLooper())
+    private val app = context.applicationContext as? Application
+
+    @Volatile private var started = false
+
+    /** Окно на экране (или запуск ещё идёт): только тогда сторож шлёт отметки. */
+    @Volatile private var awake = true
+    private val gate = ReentrantLock()
+    private val woken = gate.newCondition()
+
+    fun start() {
+        if (started) return
+        started = true
+        app?.registerActivityLifecycleCallbacks(Presence())
+        Thread(::watch, "stall-watchdog").apply { isDaemon = true }.start()
+    }
+
+    private fun wake(on: Boolean) = gate.withLock {
+        awake = on
+        if (on) woken.signalAll()
+    }
+
+    /**
+     * Сторож проспал больше пары тиков - процесс стоял целиком (заморозка свёрнутого приложения): главный поток не виноват, отсчёт идёт
+     * заново.
+     */
+    private fun watch() {
+        while (true) {
+            gate.withLock { while (!awake) woken.await() }
+            val posted = SystemClock.uptimeMillis()
+            val answered = AtomicBoolean(false)
+            main.post { answered.set(true) }
+            var reported = false
+            var since = posted
+            var tick = posted
+            while (!answered.get()) {
+                Thread.sleep(TICK_MS)
+                val now = SystemClock.uptimeMillis()
+                if (now - tick > PAUSE_MS || !awake) since = now
+                tick = now
+                val stalled = now - since
+                if (!reported && stalled >= STALL_MS) {
+                    reported = true
+                    write(stalled)
+                }
+            }
+            Thread.sleep(TICK_MS)
+        }
+    }
+
+    /** Окна приложения: пауза любого усыпляет сторожа, возврат - будит. */
+    private inner class Presence : Application.ActivityLifecycleCallbacks {
+        override fun onActivityResumed(activity: Activity) = wake(true)
+        override fun onActivityPaused(activity: Activity) = wake(false)
+        override fun onActivityCreated(activity: Activity, state: Bundle?) = Unit
+        override fun onActivityStarted(activity: Activity) = Unit
+        override fun onActivityStopped(activity: Activity) = Unit
+        override fun onActivitySaveInstanceState(activity: Activity, state: Bundle) = Unit
+        override fun onActivityDestroyed(activity: Activity) = Unit
+    }
+
+    private fun write(stalled: Long) {
+        runCatching {
+            val stack = threads()
+            file.writeText("${BuildConfig.VERSION_NAME}\n$stalled\n${System.currentTimeMillis()}\n---\n$stack\n---\n${trace.journal()}")
+        }
+    }
+
+    /**
+     * Отчёт о прошлом зависании, ещё не отправленный; null - его нет.
+     *
+     * Краткая причина - верх стека главного потока - прямо в тексте отчёта.
+     */
+    private suspend fun report(): BugReportRequest? = withContext(Dispatchers.IO) {
+        val text = file.takeIf { it.isFile }?.readText() ?: return@withContext null
+        val head = text.substringBefore("\n---\n").lines()
+        val reason = text.substringAfter("\n---\n", "").lines().filter { it.isNotBlank() }.take(REASON_LINES)
+        BugReportRequest(
+            text = (listOf(ui("stall.title") + " ${head.getOrNull(1).orEmpty()} ms") + reason).joinToString("\n"),
+            screen = SCREEN,
+            context = mapOf("version" to head.getOrNull(0).orEmpty(), "stalledMs" to head.getOrNull(1).orEmpty(), "at" to head.getOrNull(2).orEmpty(), "auto" to "true"),
+        )
+    }
+
+    /** Отчёт о прошлом зависании, ещё не отправленный: ноль или один; ушедший стирается. */
+    override suspend fun pending(): List<LeftReport> = listOfNotNull(report()?.let { LeftReport(it, ::sent) })
+
+    private suspend fun sent() = withContext(Dispatchers.IO) {
+        last.delete()
+        if (!file.renameTo(last)) file.delete()
+    }
+
+    /**
+     * Журнал для разработчика: версия, шаги запуска, стеки всех потоков сейчас и отчёт о прошлом зависании, если он был.
+     * Стеки снимаются в момент вызова - зависший фон виден, пока окно запуска ещё отвечает.
+     */
+    fun diagnostics(): String = buildString {
+        appendLine("${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE}) uptime=${SystemClock.uptimeMillis()}ms at=${System.currentTimeMillis()}")
+        appendLine("--- start")
+        appendLine(trace.journal())
+        appendLine("--- commands")
+        appendLine(runCatching { commands.describe() }.getOrElse { it.toString() })
+        appendLine("--- threads")
+        appendLine(threads())
+        (file.takeIf { it.isFile } ?: last.takeIf { it.isFile })?.let { stall ->
+            appendLine("--- previous stall")
+            append(runCatching { stall.readText() }.getOrDefault(""))
+        }
+    }
+
+    /**
+     * Стеки потоков: главный первым, затем занятые. Простаивающие (ждут очередь, сообщений или сокета пула) сведены в одну
+     * строку именами: журнал, вставленный в чат, не обрезается на них.
+     */
+    private fun threads(): String {
+        val main = Looper.getMainLooper().thread
+        val (busy, idle) = Thread.getAllStackTraces().entries.partition { (thread, frames) -> thread === main || !resting(thread, frames) }
+        return busy.sortedWith(compareBy({ it.key !== main }, { it.key.name }))
+            .joinToString("\n") { (thread, frames) ->
+                "\"${thread.name}\" ${thread.state}" + frames.take(THREAD_FRAMES).joinToString("") { "\n  at $it" }
+            } + "\nidle: " + idle.joinToString(", ") { it.key.name }
+    }
+
+    private fun resting(thread: Thread, frames: Array<StackTraceElement>): Boolean = frames.isEmpty() ||
+        thread.state == Thread.State.WAITING || thread.state == Thread.State.TIMED_WAITING ||
+        frames.first().methodName == "nativePollOnce"
+
+    private companion object {
+        const val FILE = "stall.txt"
+        const val LAST_FILE = "stall-last.txt"
+        const val THREAD_FRAMES = 25
+        const val REASON_LINES = 4
+        const val SCREEN = "stall"
+        const val STALL_MS = 5_000L
+        const val TICK_MS = 1_000L
+        const val PAUSE_MS = 3 * TICK_MS
+    }
+}

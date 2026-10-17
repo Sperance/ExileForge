@@ -19,7 +19,6 @@ import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildView
-import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.rules.content.GuildGoalView
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.untilText

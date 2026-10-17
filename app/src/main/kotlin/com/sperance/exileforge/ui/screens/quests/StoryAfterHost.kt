@@ -6,11 +6,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.quests.QuestRepository
-import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.rules.content.QuestKind
 import com.sperance.exileforge.rules.text.LocaleKey
 import com.sperance.exileforge.ui.components.StoryScene
 import com.sperance.exileforge.ui.components.storyParagraphs
+import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
 

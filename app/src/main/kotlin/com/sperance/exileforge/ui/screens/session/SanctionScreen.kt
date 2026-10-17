@@ -18,7 +18,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.network.SanctionNotice
-import com.sperance.exileforge.presentation.admin.NoticeViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.listedAt
 import com.sperance.exileforge.ui.screens.server.categoryTitle

@@ -10,9 +10,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**

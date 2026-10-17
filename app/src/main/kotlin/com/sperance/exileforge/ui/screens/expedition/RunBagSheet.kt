@@ -42,7 +42,6 @@ import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.Inspect
 import com.sperance.exileforge.ui.components.ItemRow

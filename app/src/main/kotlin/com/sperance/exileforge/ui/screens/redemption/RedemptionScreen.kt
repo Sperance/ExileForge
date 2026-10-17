@@ -26,11 +26,11 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.command.RedemptionCode
 import com.sperance.exileforge.core.model.command.redemptionReward
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.rules.reward.RedemptionKind
 import com.sperance.exileforge.rules.reward.RedemptionReward
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted

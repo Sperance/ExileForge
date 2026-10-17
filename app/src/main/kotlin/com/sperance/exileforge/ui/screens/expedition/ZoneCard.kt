@@ -50,7 +50,6 @@ import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.ServerClock
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.rules.content.AtlasPoints
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.MapCode

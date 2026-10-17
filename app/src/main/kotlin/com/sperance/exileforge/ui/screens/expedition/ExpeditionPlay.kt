@@ -37,9 +37,7 @@ import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.quests.QuestViewModel
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.RunMenu
 import com.sperance.exileforge.ui.components.RunMenuItem
@@ -48,6 +46,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.LifeFlowSheet
 import com.sperance.exileforge.ui.screens.expedition.scene.ExpeditionScene
+import com.sperance.exileforge.ui.screens.quests.QuestViewModel
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel

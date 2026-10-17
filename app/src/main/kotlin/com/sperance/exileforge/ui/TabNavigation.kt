@@ -24,8 +24,8 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.IntOffset
 import androidx.navigation3.runtime.NavEntryDecorator
-import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.nav.barSlot
+import com.sperance.exileforge.ui.nav.Route
+import com.sperance.exileforge.ui.nav.barSlot
 import kotlin.math.roundToInt
 
 /** Длительность смены вкладки нижней панели: и экран, и шапка, и капсула кнопки. */

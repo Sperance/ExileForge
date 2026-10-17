@@ -52,13 +52,12 @@ import com.sperance.exileforge.core.model.guild.GuildCard
 import com.sperance.exileforge.core.model.guild.GuildInviteView
 import com.sperance.exileforge.core.model.guild.GuildMine
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.guild.GuildViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.rules.content.GuildMode
 import com.sperance.exileforge.rules.content.GuildRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.auction.untilText
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 

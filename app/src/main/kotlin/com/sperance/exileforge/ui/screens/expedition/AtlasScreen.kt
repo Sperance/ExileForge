@@ -40,13 +40,12 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.GoldBill
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.rules.content.AtlasNode
 import com.sperance.exileforge.rules.content.AtlasNodeKind
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Line
 import com.sperance.exileforge.rules.content.Orb
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.theme.*

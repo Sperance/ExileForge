@@ -14,13 +14,12 @@ import com.sperance.exileforge.core.display.itemDescription
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.forge.SmithyViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
 import com.sperance.exileforge.ui.icons.orbArt
+import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
 import com.sperance.exileforge.ui.theme.Rune

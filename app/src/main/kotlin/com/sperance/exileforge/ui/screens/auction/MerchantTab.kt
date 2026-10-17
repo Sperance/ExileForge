@@ -34,14 +34,13 @@ import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.core.model.trade.MerchantOffer
 import com.sperance.exileforge.core.model.trade.MerchantOrb
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.ItemInstance
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.OrbGlyph
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.hero.rememberWearChoice
 import com.sperance.exileforge.ui.screens.hero.wearTotals
 import com.sperance.exileforge.ui.theme.*

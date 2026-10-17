@@ -16,12 +16,12 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.rarityTitle
 import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.content.Slot
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.orbArt
+import com.sperance.exileforge.ui.screens.admin.AdminViewModel
 
 /**
  * Administrator tools for one hero's inventory.

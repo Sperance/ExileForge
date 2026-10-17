@@ -53,7 +53,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildStashEntry
 import com.sperance.exileforge.core.model.guild.GuildStashView
-import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.rules.content.GuildRole

@@ -32,8 +32,6 @@ import com.sperance.exileforge.core.forge.OrbChoice
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.trade.Cost
 import com.sperance.exileforge.core.model.trade.GoldBill
-import com.sperance.exileforge.presentation.forge.Smithy
-import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier
 import com.sperance.exileforge.ui.components.*

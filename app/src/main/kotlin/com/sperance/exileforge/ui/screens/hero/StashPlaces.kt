@@ -18,7 +18,6 @@ import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.character.sellPrice
 import com.sperance.exileforge.core.character.view
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 

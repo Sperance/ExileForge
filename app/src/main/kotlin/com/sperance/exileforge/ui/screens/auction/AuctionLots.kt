@@ -45,7 +45,6 @@ import com.sperance.exileforge.core.market.DealLedger
 import com.sperance.exileforge.core.market.Market
 import com.sperance.exileforge.core.model.auction.*
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.market.MarketViewModel
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.content.Rarity

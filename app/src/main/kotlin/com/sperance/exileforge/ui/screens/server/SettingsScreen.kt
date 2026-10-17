@@ -47,11 +47,9 @@ import com.sperance.exileforge.core.app.KeepScreen
 import com.sperance.exileforge.core.app.TextSize
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.sync.API_REVISION
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.server.ServerViewModel
-import com.sperance.exileforge.presentation.session.SessionViewModel
-import com.sperance.exileforge.presentation.settings.SettingsViewModel
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.session.SessionViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 

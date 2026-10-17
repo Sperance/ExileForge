@@ -9,7 +9,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.TAB_HERO
 import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.ui.components.PillTabs
 import org.koin.compose.viewmodel.koinViewModel
 

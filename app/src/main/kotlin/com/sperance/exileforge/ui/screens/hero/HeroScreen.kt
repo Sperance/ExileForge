@@ -24,13 +24,12 @@ import com.sperance.exileforge.core.hero.HeroPage
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.forge.SmithyViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.rules.content.FateEffects
 import com.sperance.exileforge.rules.content.FateLever
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
+import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import org.koin.compose.viewmodel.koinViewModel
 
 /**

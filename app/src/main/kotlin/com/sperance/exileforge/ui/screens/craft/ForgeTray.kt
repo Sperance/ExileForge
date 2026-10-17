@@ -37,7 +37,6 @@ import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.forge.HiddenOrb
 import com.sperance.exileforge.core.forge.OrbChoice
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.forge.Smithy
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb
 import com.sperance.exileforge.rules.roll.OrbApplier

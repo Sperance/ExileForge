@@ -9,7 +9,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.ui.components.ChordOverWindow
 import com.sperance.exileforge.ui.components.DialogShape
 import com.sperance.exileforge.ui.components.ForgeButton

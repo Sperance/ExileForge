@@ -13,7 +13,6 @@ import com.sperance.exileforge.core.app.AppMode
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.app.TAB_REDEMPTION
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.admin.AdminViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.screens.hero.AdminGrantPanel

@@ -7,12 +7,12 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.CompositionLocalProvider
 import com.sperance.exileforge.platform.FrameRateCap
+import com.sperance.exileforge.platform.NetworkWatch
 import com.sperance.exileforge.platform.VolumeChord
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.app.NetworkWatch
-import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.ForgeApp
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.LocalVolumeChord
+import com.sperance.exileforge.ui.components.UpdateViewModel
 import com.sperance.exileforge.ui.theme.ForgeTheme
 import org.koin.androidx.viewmodel.ext.android.viewModel
 import org.koin.core.parameter.parametersOf

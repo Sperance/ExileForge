@@ -24,7 +24,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.settings.SettingsViewModel
 import com.sperance.exileforge.rules.content.Achievement
 import com.sperance.exileforge.rules.content.Counter
 import com.sperance.exileforge.ui.components.Engraved
@@ -32,6 +31,7 @@ import com.sperance.exileforge.ui.components.MutedText
 import com.sperance.exileforge.ui.components.RelicSerif
 import com.sperance.exileforge.ui.components.relicName
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.screens.server.SettingsViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 

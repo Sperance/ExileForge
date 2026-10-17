@@ -21,7 +21,6 @@ import com.sperance.exileforge.core.app.DEFAULT_SERVER
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.Lang
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.ui.ReportMenu
 import com.sperance.exileforge.ui.components.ForgeButton
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton

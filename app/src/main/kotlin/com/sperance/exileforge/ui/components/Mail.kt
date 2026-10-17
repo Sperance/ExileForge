@@ -38,7 +38,6 @@ import com.sperance.exileforge.core.model.feedback.MailLink
 import com.sperance.exileforge.core.model.feedback.MailLinkKind
 import com.sperance.exileforge.core.model.feedback.MailMute
 import com.sperance.exileforge.core.model.feedback.MailQuota
-import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.rules.content.MailGate
 import com.sperance.exileforge.rules.content.MailRules
 import com.sperance.exileforge.ui.screens.auction.listedAt

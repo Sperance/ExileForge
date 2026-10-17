@@ -55,7 +55,6 @@ import com.sperance.exileforge.core.model.feedback.OwnReport
 import com.sperance.exileforge.core.model.feedback.ReportStatus
 import com.sperance.exileforge.core.model.feedback.Vote
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.feedback.FeedbackViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 

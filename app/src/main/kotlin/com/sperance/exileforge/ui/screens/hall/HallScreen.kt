@@ -22,8 +22,6 @@ import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.hall.HallPick
-import com.sperance.exileforge.presentation.hall.HallViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HallBoard
 import com.sperance.exileforge.rules.content.HallEntry

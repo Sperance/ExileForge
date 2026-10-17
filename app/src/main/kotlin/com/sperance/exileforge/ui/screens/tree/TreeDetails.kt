@@ -62,7 +62,6 @@ import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Op

@@ -18,12 +18,12 @@ import com.sperance.exileforge.core.display.mapTitle
 import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.TesterAccount
-import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.session.SessionViewModel
 import com.sperance.exileforge.rules.content.MAP_TEMPLATE
 import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.roll.ItemFactory
 import com.sperance.exileforge.ui.components.*
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
+import com.sperance.exileforge.ui.screens.session.SessionViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 

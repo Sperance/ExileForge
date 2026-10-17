@@ -22,7 +22,6 @@ import com.sperance.exileforge.core.character.unmetFor
 import com.sperance.exileforge.core.character.unmetNeeds
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.ui.components.ForgeOutlinedButton
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.components.ItemCard

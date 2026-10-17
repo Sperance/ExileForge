@@ -23,9 +23,8 @@ import com.sperance.exileforge.core.campaign.TrialPhase
 import com.sperance.exileforge.core.display.ItemView
 import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.rules.content.TrialKind
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.screens.expedition.arena.ArenaOverlay
 import com.sperance.exileforge.ui.screens.expedition.arena.FightLogSheet

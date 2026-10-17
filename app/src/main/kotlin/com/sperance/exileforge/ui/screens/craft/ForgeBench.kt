@@ -27,8 +27,6 @@ import com.sperance.exileforge.core.display.recipeText
 import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
-import com.sperance.exileforge.presentation.forge.Smithy
-import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Item
 import com.sperance.exileforge.rules.content.Omen

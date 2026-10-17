@@ -39,8 +39,6 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.regionTitle
 import com.sperance.exileforge.core.display.signedNumber
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.rules.content.Region
 import com.sperance.exileforge.rules.content.RiftRules
 import com.sperance.exileforge.rules.content.RushPlan
@@ -49,6 +47,7 @@ import com.sperance.exileforge.rules.content.TrialKind
 import com.sperance.exileforge.rules.content.TrialRules
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.BagIcon
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.hero.compactCount
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel

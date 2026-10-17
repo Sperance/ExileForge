@@ -40,7 +40,6 @@ import com.sperance.exileforge.core.app.StoryFold
 import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.quests.QuestViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.QuestBoard
 import com.sperance.exileforge.rules.content.StoryBooks

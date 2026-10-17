@@ -7,11 +7,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sperance.exileforge.core.app.GameUi
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
-import com.sperance.exileforge.presentation.nav.Route
 import com.sperance.exileforge.ui.components.StoneTab
 import com.sperance.exileforge.ui.components.StoneTabs
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
+import com.sperance.exileforge.ui.nav.Route
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.ModeHue
 import com.sperance.exileforge.ui.theme.Rune

@@ -44,8 +44,8 @@ import com.sperance.exileforge.core.model.command.BugReportRequest
 import com.sperance.exileforge.core.model.feedback.FeedbackKind
 import com.sperance.exileforge.data.settings.DraftStore
 import com.sperance.exileforge.platform.VolumeChord
-import com.sperance.exileforge.presentation.nav.Route
-import com.sperance.exileforge.presentation.nav.reportPlace
+import com.sperance.exileforge.ui.nav.Route
+import com.sperance.exileforge.ui.nav.reportPlace
 import com.sperance.exileforge.ui.theme.*
 
 /** Кто открывает лист отчёта: его отдаёт приложение - пункт «Сообщить об ошибке» меню шапки ([ReportMenu]) зовёт его; кнопок-жуков на экранах нет. */

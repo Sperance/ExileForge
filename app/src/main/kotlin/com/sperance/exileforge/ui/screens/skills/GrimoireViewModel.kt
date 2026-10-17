@@ -1,0 +1,35 @@
+package com.sperance.exileforge.ui.screens.skills
+
+import androidx.lifecycle.ViewModel
+import com.sperance.exileforge.core.app.GameSlice
+import com.sperance.exileforge.core.app.GameUi
+import com.sperance.exileforge.core.hero.HeroActions
+import com.sperance.exileforge.core.hero.HeroSync
+import com.sperance.exileforge.core.session.Activity
+import com.sperance.exileforge.core.session.CommandRunner
+import com.sperance.exileforge.ui.nav.Navigator
+import com.sperance.exileforge.ui.nav.Route
+import kotlinx.coroutines.flow.StateFlow
+
+/** Гримуар: книги, ячейки навыков, условия и пояс флаконов, руны умений; команды - общие действия героя. */
+class GrimoireViewModel(
+    private val hero: HeroActions,
+    private val sync: HeroSync,
+    commands: CommandRunner,
+    slice: GameSlice,
+    private val navigator: Navigator,
+) : ViewModel() {
+    /** Срез «игра» для экранов этой модели. */
+    val game: StateFlow<GameUi> = slice.ui
+    val activity: StateFlow<Activity> = commands.state
+
+    fun ensure() = sync.ensure()
+    fun learnSkill(code: String) = hero.learnSkill(code)
+    fun slotSkill(kind: String, index: Int, code: String?, condition: String? = null) = hero.slotSkill(kind, index, code, condition)
+    fun flaskCondition(index: Int, condition: String?) = hero.flaskCondition(index, condition)
+    fun exchangeBooks(books: List<String>, code: String) = hero.exchangeBooks(books, code)
+    fun socketRune(code: String, socket: Int, rune: String?) = hero.socketRune(code, socket, rune)
+
+    /** Ремёсла: ритуал тира умения - работа Зачарования. */
+    fun openCrafts() = navigator.open(Route.Crafts)
+}

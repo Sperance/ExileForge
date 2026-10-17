@@ -34,15 +34,14 @@ import com.sperance.exileforge.core.display.bodyPlaces
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.display.requirementReason
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.forge.SmithyViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.rules.content.Slot
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.ItemIcon
 import com.sperance.exileforge.ui.screens.auction.ListingSheet
+import com.sperance.exileforge.ui.screens.craft.SmithyViewModel
 import com.sperance.exileforge.ui.theme.*
 import org.koin.compose.viewmodel.koinViewModel
 

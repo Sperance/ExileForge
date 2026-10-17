@@ -3,7 +3,7 @@ package com.sperance.exileforge.ui.components
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.rememberUpdatedState
-import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.ui.ShellViewModel
 import kotlinx.coroutines.flow.filter
 import org.koin.compose.viewmodel.koinViewModel
 

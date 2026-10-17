@@ -43,8 +43,6 @@ import com.sperance.exileforge.core.display.SkillText
 import com.sperance.exileforge.core.display.itemTitle
 import com.sperance.exileforge.core.i18n.loc
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.rules.content.RiftLaw
 import com.sperance.exileforge.rules.content.RiftNodeKind
 import com.sperance.exileforge.rules.content.RiftRarity
@@ -58,6 +56,7 @@ import com.sperance.exileforge.rules.rift.RiftOffer
 import com.sperance.exileforge.rules.rift.RiftRest
 import com.sperance.exileforge.rules.rift.RiftRun
 import com.sperance.exileforge.rules.rift.RiftStage
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.RunMenu
 import com.sperance.exileforge.ui.components.RunMenuItem

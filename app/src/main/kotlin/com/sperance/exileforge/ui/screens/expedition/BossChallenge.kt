@@ -32,7 +32,6 @@ import com.sperance.exileforge.core.display.number
 import com.sperance.exileforge.core.display.phaseTitle
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.network.BossRecord
-import com.sperance.exileforge.presentation.expedition.ExpeditionViewModel
 import com.sperance.exileforge.rules.content.CombatRules
 import com.sperance.exileforge.rules.roll.RolledMonster
 import com.sperance.exileforge.ui.components.*

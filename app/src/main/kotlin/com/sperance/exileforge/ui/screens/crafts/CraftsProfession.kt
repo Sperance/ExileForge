@@ -61,8 +61,6 @@ import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.crafts.CraftsViewModel
-import com.sperance.exileforge.presentation.hero.HeroViewModel
 import com.sperance.exileforge.rules.content.JobInput
 import com.sperance.exileforge.rules.content.JobKind
 import com.sperance.exileforge.rules.content.Slot
@@ -75,6 +73,7 @@ import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.GlyphIcon
 import com.sperance.exileforge.ui.icons.ItemEmblem
 import com.sperance.exileforge.ui.icons.SpriteIcon
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.theme.*
 import kotlinx.coroutines.delay
 import org.koin.compose.viewmodel.koinViewModel

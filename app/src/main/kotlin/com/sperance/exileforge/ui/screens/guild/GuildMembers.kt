@@ -20,7 +20,6 @@ import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.guild.GuildMember
 import com.sperance.exileforge.core.model.guild.GuildView
 import com.sperance.exileforge.core.network.MemberCommand
-import com.sperance.exileforge.presentation.guild.GuildViewModel
 import com.sperance.exileforge.rules.content.GuildAction
 import com.sperance.exileforge.rules.content.GuildPolicy
 import com.sperance.exileforge.ui.components.*

@@ -38,13 +38,12 @@ import com.sperance.exileforge.core.display.slotTitle
 import com.sperance.exileforge.core.display.stampText
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.UniqueFind
-import com.sperance.exileforge.presentation.hero.HeroViewModel
-import com.sperance.exileforge.presentation.history.HistoryViewModel
 import com.sperance.exileforge.rules.content.ItemTemplate
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.icons.SpriteIcon
 import com.sperance.exileforge.ui.screens.hero.ChronicleScreen
+import com.sperance.exileforge.ui.screens.hero.HeroViewModel
 import com.sperance.exileforge.ui.screens.hero.chronicleDone
 import com.sperance.exileforge.ui.screens.hero.titleName
 import com.sperance.exileforge.ui.theme.*

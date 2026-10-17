@@ -24,7 +24,6 @@ import com.sperance.exileforge.core.model.fate.FateCard
 import com.sperance.exileforge.core.model.hero.HeroSummary
 import com.sperance.exileforge.core.network.SanctionKind
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.session.CharactersViewModel
 import com.sperance.exileforge.rules.text.NameCharset
 import com.sperance.exileforge.ui.ReportMenu
 import com.sperance.exileforge.ui.components.*
@@ -221,7 +220,7 @@ private fun accountFate(game: GameUi): FateCard? = game.index?.fates?.of(game.se
         }
     }
     if (appealing && sanction != null) {
-        val notices = koinViewModel<com.sperance.exileforge.presentation.admin.NoticeViewModel>()
+        val notices = koinViewModel<com.sperance.exileforge.ui.screens.session.NoticeViewModel>()
         AppealDialog(onDismiss = { appealing = false }) { text ->
             appealing = false
             notices.appeal(sanction.id, text)

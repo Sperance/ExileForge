@@ -73,7 +73,6 @@ import com.sperance.exileforge.core.model.crafts.WorkView
 import com.sperance.exileforge.core.model.crafts.job
 import com.sperance.exileforge.core.model.crafts.running
 import com.sperance.exileforge.core.session.Reads
-import com.sperance.exileforge.presentation.crafts.CraftsViewModel
 import com.sperance.exileforge.rules.content.CraftsRules
 import com.sperance.exileforge.rules.content.ItemCode
 import com.sperance.exileforge.rules.content.JobInput

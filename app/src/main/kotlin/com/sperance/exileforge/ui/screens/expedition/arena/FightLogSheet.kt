@@ -21,7 +21,7 @@ import com.sperance.exileforge.core.campaign.combat.Outcome
 import com.sperance.exileforge.core.campaign.run.FightReport
 import com.sperance.exileforge.core.display.monsterTitle
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.screens.expedition.CombatDetailSheet
 import com.sperance.exileforge.ui.theme.GoldBright

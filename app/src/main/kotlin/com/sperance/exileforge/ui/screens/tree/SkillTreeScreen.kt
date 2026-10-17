@@ -52,8 +52,6 @@ import com.sperance.exileforge.core.display.statPercent
 import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.plural
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.ShellViewModel
-import com.sperance.exileforge.presentation.tree.TreeViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.HeroClass
 import com.sperance.exileforge.rules.content.Op
@@ -64,6 +62,7 @@ import com.sperance.exileforge.rules.content.TakenNode
 import com.sperance.exileforge.rules.content.TreeAllocation
 import com.sperance.exileforge.rules.content.TreeNode
 import com.sperance.exileforge.rules.sheet.SheetCalculator
+import com.sperance.exileforge.ui.ShellViewModel
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.components.ForgeSheet
 import com.sperance.exileforge.ui.icons.ForgeGlyphs

@@ -21,8 +21,6 @@ import com.sperance.exileforge.core.forge.orbChoices
 import com.sperance.exileforge.core.i18n.ruleRefusal
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.core.model.hero.HeroView
-import com.sperance.exileforge.presentation.forge.Smithy
-import com.sperance.exileforge.presentation.forge.SmithyViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.Omen
 import com.sperance.exileforge.rules.content.Orb

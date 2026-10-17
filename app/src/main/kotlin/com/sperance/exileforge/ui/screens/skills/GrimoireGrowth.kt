@@ -46,7 +46,6 @@ import com.sperance.exileforge.core.display.professionTitle
 import com.sperance.exileforge.core.display.roman
 import com.sperance.exileforge.core.i18n.refusalText
 import com.sperance.exileforge.core.i18n.ui
-import com.sperance.exileforge.presentation.skills.GrimoireViewModel
 import com.sperance.exileforge.rules.content.ContentIndex
 import com.sperance.exileforge.rules.content.CoreStat
 import com.sperance.exileforge.rules.content.HeroSkills

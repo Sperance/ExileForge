@@ -40,8 +40,6 @@ import com.sperance.exileforge.core.session.Reach
 import com.sperance.exileforge.core.session.StartGate
 import com.sperance.exileforge.core.session.StartInput
 import com.sperance.exileforge.core.session.StartVerdict
-import com.sperance.exileforge.presentation.features.UpdateState
-import com.sperance.exileforge.presentation.features.UpdateViewModel
 import com.sperance.exileforge.ui.theme.*
 import com.sperance.exileforge.update.UpdateInstaller
 import kotlinx.coroutines.delay

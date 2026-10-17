@@ -5,6 +5,7 @@ import com.sperance.exileforge.core.i18n.phrase
 import com.sperance.exileforge.core.network.ApiFailure
 import com.sperance.exileforge.core.network.CommandQueued
 import com.sperance.exileforge.core.network.FailureState
+import com.sperance.exileforge.core.network.ForgeHttp
 import com.sperance.exileforge.core.network.refusalLine
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -58,8 +59,11 @@ class ConnectionEventsHub : ConnectionEvents {
     }
 }
 
-/** Что держал раннер дольше предела: [key] - `starting`, `task` или `read:<ключ>`; [details] - [CommandRunner.describe]. */
-data class Stall(val key: String, val details: String)
+/**
+ * Что держал раннер дольше предела: [key] - `starting`, `task` или `read:<ключ>`; [details] - [CommandRunner.describe]; [since] - когда
+ * работа началась (мс, часы стены).
+ */
+data class Stall(val key: String, val details: String, val since: Long)
 
 /** Куда уходят зависания раннера: тихий баг-репорт разработчику. */
 fun interface StallSink {
@@ -198,29 +202,31 @@ class CommandRunner(
      * её занятость сразу (отмена может дойти до неё позже), игроку - строка, разработчику - [Stall].
      */
     private fun guard(job: Job, key: String, release: () -> Unit) {
+        val since = System.currentTimeMillis()
         val watch = scope.launch {
             delay(limitMs)
             if (!job.isActive) return@launch
             val details = describe()
             job.cancel()
             release()
-            stalled(key, details)
+            stalled(Stall(key, details, since))
         }
         job.invokeOnCompletion { watch.cancel() }
     }
 
-    private fun stalled(key: String, details: String) {
+    private fun stalled(stall: Stall) {
         say(phrase("runtime.slow_server"), error = true)
-        runCatching { stalls.stalled(Stall(key, details)) }
+        runCatching { stalls.stalled(stall) }
     }
 
     init {
+        val since = System.currentTimeMillis()
         scope.launch {
             delay(limitMs)
             if (!state.value.starting) return@launch
             val details = describe()
             ready()
-            stalled(STARTING, details)
+            stalled(Stall(STARTING, details, since))
         }
     }
 
@@ -285,10 +291,16 @@ class CommandRunner(
 }
 
 /** Сколько кадров места вызова держит журнал раннера. */
-private const val ORIGIN_FRAMES = 10
+internal const val ORIGIN_FRAMES = 10
 
-/** Дольше этого старт, задача или видимое чтение не держат полосу, мс. */
-const val RUNNER_LIMIT_MS = 30_000L
+/** Запас сверх предела вызова: запрос, упёршийся в свой предел, успевает кончиться и лечь в журнал раньше сторожа, мс. */
+private const val RUNNER_GRACE_MS = 2_000L
+
+/**
+ * Дольше этого старт, задача или видимое чтение не держат полосу, мс: предел одного вызова ([ForgeHttp.CALL_MS], с его повтором) и
+ * запас - зависший запрос сторож не ловит, его кончает свой тайм-аут.
+ */
+const val RUNNER_LIMIT_MS = ForgeHttp.CALL_MS + RUNNER_GRACE_MS
 
 private const val STARTING = "starting"
 private const val TASK = "task"

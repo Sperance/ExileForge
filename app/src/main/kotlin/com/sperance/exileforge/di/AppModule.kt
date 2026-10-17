@@ -120,7 +120,7 @@ val appModule = module {
     single<HttpLink> { ForgeHttp.link }
     singleOf(::Navigator)
     single { ConnectionEventsHub() }
-    single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>(), StallReports(get(), get(named(APP_SCOPE)))) }
+    single { CommandRunner(get(named(APP_SCOPE)), get<ConnectionEventsHub>(), StallReports(get(), get(named(APP_SCOPE)), get())) }
     single { Notices() }
     single { GameEvents() }
     single { FeedbackRepository() }

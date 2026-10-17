@@ -8,6 +8,7 @@ import com.sperance.exileforge.core.campaign.combat.Battle
 import com.sperance.exileforge.core.campaign.combat.Blow
 import com.sperance.exileforge.core.campaign.combat.DamageType
 import com.sperance.exileforge.core.campaign.combat.EffectKind
+import com.sperance.exileforge.core.campaign.combat.PowerView
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.TimedEffect
 import com.sperance.exileforge.core.campaign.combat.afflict
@@ -97,6 +98,13 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
     val tally: Map<String, Int> get() = counts.toMap()
     private val stackCount = mutableMapOf<String, Int>()
     private val lastBeat = mutableMapOf<String, Double>()
+
+    /** Сколько раз каждая сила сработала в этом бою и когда последний раз, в секундах боя: плитки сил. */
+    private val fired = mutableMapOf<String, Int>()
+    private val firedAt = mutableMapOf<String, Double>()
+
+    /** Силы, что герой несёт и что действуют в бою: плитки боя. Набор вещей в бою не меняется - считается один раз. */
+    private val carried: List<Power> by lazy { book.powers.filter { it.fights && value(it) != 0.0 } }
     private var busy = false
     private var started = false
 
@@ -236,6 +244,8 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
         val chance = power.chance(value)
         if (chance < 100 && battle.random.nextDouble() * 100 >= chance) return
         if (power.cooldown != 0.0) readyAt[power.stat] = if (power.cooldown < 0) Double.MAX_VALUE else battle.time + power.cooldown
+        fired[power.stat] = (fired[power.stat] ?: 0) + 1
+        firedAt[power.stat] = battle.time
         busy = true
         try {
             var healed = 0.0
@@ -251,6 +261,31 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
             }
         } finally {
             busy = false
+        }
+    }
+
+    /**
+     * Силы героя плитками боя: постоянные - без счёта, силы-события - со вспышкой срабатывания ([FLASH] секунд), счётом
+     * «каждое N-е» (он несётся между боями захода) и перезарядкой.
+     */
+    fun views(): List<PowerView> = carried.map { power ->
+        if (power.lasting) {
+            PowerView(power.stat, value(power), standing = true)
+        } else {
+            val ready = readyAt[power.stat] ?: -1.0
+            val since = firedAt[power.stat]?.let { battle.time - it }
+            PowerView(
+                power.stat,
+                value(power),
+                standing = false,
+                flash = since?.let { (1 - it / FLASH).toFloat().coerceIn(0f, 1f) } ?: 0f,
+                fired = fired[power.stat] ?: 0,
+                every = power.checks.firstOrNull { it.check == PowerCheckKind.NTH }?.value?.toInt()?.coerceAtLeast(1) ?: 0,
+                count = counts[power.stat] ?: 0,
+                cooldown = power.cooldown.coerceAtLeast(0.0),
+                ready = if (ready == Double.MAX_VALUE) 0.0 else (ready - battle.time).coerceAtLeast(0.0),
+                spent = ready == Double.MAX_VALUE,
+            )
         }
     }
 
@@ -561,5 +596,14 @@ internal class PowerRunner(private val battle: Battle, private val book: PowerBo
 
         /** Events too frequent to log a line each. */
         val QUIET = setOf(PowerEvent.HIT, PowerEvent.HIT_TAKEN, PowerEvent.STANDING, PowerEvent.INFLICT)
+
+        /** Сколько секунд боя плитка силы-события вспыхивает после срабатывания: отображение, не баланс. */
+        const val FLASH = 1.2
     }
 }
+
+/** Сила действует в бою: событие боя, строки листа или правило слотов; силы карты, механик и Осквернения - нет. */
+private val Power.fights: Boolean get() = on != null || sheet.isNotEmpty() || slots != null
+
+/** Постоянная сила: строки листа и слотов или строки, пока держится условие, - без срабатываний. */
+private val Power.lasting: Boolean get() = on == null || on == PowerEvent.STANDING

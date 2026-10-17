@@ -77,7 +77,7 @@ import kotlin.math.sin
     fun flash() = strikeFlash(fight, frame.now(fight), Side.HERO, null)
     val shape = RoundedCornerShape(10.dp)
     val wash = fight.heroAilments.map { it.ailment }.maxByOrNull(::washAmount)
-    val timed = timedShelf(fight.heroHeld, fight.heroAilments, fight.heroEffects, fight.heroCharges)
+    val timed = timedShelf(fight.heroHeld, fight.heroAilments, fight.heroEffects, fight.heroCharges, fight.heroPowers)
     val lasting = lastingShelf(fight, mods)
     val openEffects = { effectsOpen = true }
     Column(

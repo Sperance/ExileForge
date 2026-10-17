@@ -8,16 +8,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -73,7 +69,7 @@ fun MightStanding.tint(): Color = when (this) {
 /**
  * Печать Мощи: кольцо, где дуга натиска ([MightReading.offenseShare], Ember) и стойкости (Rune) делят круг, ⚜ в середине.
  *
- * Мощь: печать - кольцо долей «натиск / стойкость» с ⚜ внутри; на листе героя - чип «⚜ 12.5k» с чертой долей, у врага - мелко с числом
+ * Мощь: печать - кольцо долей «натиск / стойкость» с ⚜ внутри; на листе героя - чип «⚜ 12.5k», у врага - мелко с числом
  * цвета его стойки, в списках - строка «⚜ 12.5k». Не прогноз боя.
  */
 @Composable fun MightSeal(reading: MightReading, modifier: Modifier = Modifier, size: Dp = 92.dp) {
@@ -93,36 +89,25 @@ fun MightStanding.tint(): Color = when (this) {
 }
 
 /**
- * Мощь героя на его листе: чип «⚜ 12.5k» высотой 28dp в строке с номером героя, под числом -
- * черта 2dp из долей натиска (Ember) и стойкости (Rune). Касание открывает разбор ([MightBreakdown]). [reading] null - Мощь ещё не
- * посчитана: «…» вместо числа, без черты и разбора; [defense] - из чего сложена стойкость, без него разбор без частей.
+ * Мощь героя на его листе: чип «⚜ 12.5k» высотой 28dp в строке с номером героя - одно число, без черты долей. Касание открывает
+ * разбор ([MightBreakdown]). [reading] null - Мощь ещё не посчитана: «…» вместо числа, без разбора; [defense] - из чего сложена
+ * стойкость, без него разбор без частей.
  */
 @Composable fun MightMark(reading: MightReading?, defense: MightDefense?, modifier: Modifier = Modifier) {
     var open by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(8.dp)
     Box(modifier) {
-        Column(
-            Modifier.height(MARK_HEIGHT).width(IntrinsicSize.Max).clip(shape).background(Panel).border(1.dp, Bronze, shape)
+        Row(
+            Modifier.height(MARK_HEIGHT).clip(shape).background(Panel).border(1.dp, Bronze, shape)
                 .clickable(enabled = reading != null, onClickLabel = ui("might.title")) { open = true }
-                .padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 3.dp),
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Text(MIGHT_GLYPH, color = Caution, fontSize = 12.sp, lineHeight = 14.sp)
-                Text(reading?.let { compactNumber(it.value) } ?: PENDING, color = GoldBright, fontSize = 13.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
-            }
-            Spacer(Modifier.weight(1f))
-            reading?.let { MightShares(it.offenseShare, Modifier.fillMaxWidth().height(2.dp)) }
+            Text(MIGHT_GLYPH, color = Caution, fontSize = 12.sp, lineHeight = 14.sp)
+            Text(reading?.let { compactNumber(it.value) } ?: PENDING, color = GoldBright, fontSize = 13.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
         }
         if (open && reading != null) TipCallout(Caution, onClose = { open = false }) { MightBreakdown(reading, defense) }
-    }
-}
-
-/** Двухцветная черта долей Мощи: натиск ([offense], Ember) слева, стойкость (Rune) справа, между ними просвет 1dp. */
-@Composable private fun MightShares(offense: Double, modifier: Modifier) {
-    val share = offense.toFloat().coerceIn(MIN_SHARE, 1 - MIN_SHARE)
-    Row(modifier.clip(RoundedCornerShape(1.dp)), horizontalArrangement = Arrangement.spacedBy(1.dp)) {
-        Box(Modifier.weight(share).fillMaxHeight().background(Ember))
-        Box(Modifier.weight(1 - share).fillMaxHeight().background(Rune))
     }
 }
 
@@ -141,7 +126,8 @@ private fun MightDefense.parts(): List<DefensePart> = listOf(
 /**
  * Разбор Мощи героя: «⚜ Мощь» и число целиком, формула «√ натиск × стойкость», натиск (урон в секунду) и стойкость
  * (эффективное здоровье) своими цветами; под стойкостью - её части из [defense] правил (`Might.defense`): здоровье и щит, мана перед
- * здоровьем, множители подавления и отражения, меньшего получаемого урона и пополнения (реген, вампиризм, флаконы). Внизу - «не прогноз боя».
+ * здоровьем, множители подавления и отражения, меньшего получаемого урона и пополнения (реген, вампиризм, флаконы). Под чертой - строка
+ * «Вне Мощи»: что Мощь не читает (условные строки, карта, гильдия, зелья), и «не прогноз боя».
  */
 @Composable private fun ColumnScope.MightBreakdown(reading: MightReading, defense: MightDefense?) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -160,7 +146,19 @@ private fun MightDefense.parts(): List<DefensePart> = listOf(
         }
     }
     HorizontalDivider(color = Bronze)
+    MightOutside()
     Text(ui("might.note"), color = Muted, style = MaterialTheme.typography.labelSmall)
+}
+
+/** Строка «Вне Мощи» разбора: пустое кольцо, имя и что Мощь не читает - словами словаря. */
+@Composable private fun MightOutside() {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.padding(top = 4.dp).size(8.dp).border(1.dp, Muted, CircleShape))
+        Column(Modifier.weight(1f)) {
+            Text(ui("might.outside"), color = Parchment, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+            Text(ui("might.outside_body"), color = Muted, style = MaterialTheme.typography.labelSmall)
+        }
+    }
 }
 
 /** Сторона Мощи в разборе: точка цвета [hue], имя, что она мерит, и короткое число. */
@@ -249,9 +247,6 @@ private const val PENDING = "…"
 
 /** Высота чипа Мощи в строке с номером героя. */
 private val MARK_HEIGHT = 28.dp
-
-/** Тоньше доли черта натиска и стойкости не бывает: обе стороны видны всегда. */
-private const val MIN_SHARE = .04f
 
 /** Метки частей стойкости в разборе: запас - сталь, мана перед здоровьем - бледная синь, меньший урон - лёд. */
 private val PoolHue = Color(0xFF5E7F95)

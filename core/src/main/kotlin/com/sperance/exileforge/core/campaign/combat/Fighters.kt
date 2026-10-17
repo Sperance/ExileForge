@@ -174,6 +174,33 @@ data class FlaskView(
 }
 
 /**
+ * Сила уникального предмета героя плиткой боя: [stat] - код силы, [value] - её ролл на листе. [standing] - постоянная (строки листа,
+ * силы слотов, строки «пока держится условие»): плитка на рельсе «на весь бой». Сила-событие - на временной полке: [flash] - доля
+ * вспышки срабатывания (1 - только что, 0 - нет), [fired] - сколько раз сработала за бой, [every] - «каждое N-е» (0 - без счёта) и
+ * [count] - счёт к нему, [cooldown] - перезарядка в секундах (0 - нет), [ready] - сколько секунд до готовности, [spent] - раз на бой и
+ * уже сработала.
+ */
+data class PowerView(
+    val stat: String,
+    val value: Double,
+    val standing: Boolean,
+    val flash: Float = 0f,
+    val fired: Int = 0,
+    val every: Int = 0,
+    val count: Int = 0,
+    val cooldown: Double = 0.0,
+    val ready: Double = 0.0,
+    val spent: Boolean = false,
+) {
+    /** Доля перезарядки, что ещё осталась: 1 - только что сработала или потрачена на бой, 0 - готова. */
+    val cooling: Float get() = when {
+        spent -> 1f
+        cooldown > 0 -> (ready / cooldown).toFloat().coerceIn(0f, 1f)
+        else -> 0f
+    }
+}
+
+/**
  * A buff or a curse on a fighter as its tile shows it: what, of which kind, and how much of it is left;
  * строки, что эффект кладёт ([lines], для листа эффектов), и [passive] - пассивное умение героя (аура, бонус) на весь бой.
  */

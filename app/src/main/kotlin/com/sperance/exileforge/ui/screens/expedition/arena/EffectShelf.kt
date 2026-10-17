@@ -43,6 +43,7 @@ import com.sperance.exileforge.core.display.statTitle
 import com.sperance.exileforge.core.i18n.locOr
 import com.sperance.exileforge.core.i18n.ui
 import com.sperance.exileforge.rules.content.Op
+import com.sperance.exileforge.rules.content.Rarity
 import com.sperance.exileforge.rules.sheet.SourceKind
 import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.icons.StatIcon
@@ -99,6 +100,11 @@ internal sealed interface Shelved {
     data class Mod(val mod: HeroMapMod) : Shelved {
         override val bearing: Bearing get() = Bearing.of(mod.harm)
     }
+
+    /** Сила уникального предмета героя: постоянная - на рельсе, сила-событие - на временной полке. */
+    data class Power(val view: PowerView) : Shelved {
+        override val bearing: Bearing get() = Bearing.BENEFIT
+    }
 }
 
 /**
@@ -110,17 +116,25 @@ internal data class ShelfRow(val title: String, val tint: Color, val source: Str
 /** Оглушение героя или врага: держится и это не заморозка. */
 internal fun stunned(held: Boolean, ailments: List<AilmentView>): Boolean = held && ailments.none { it.ailment == Ailment.FROZEN }
 
-/** Временная полка бойца: оглушение, недуги, эффекты с таймером, заряды. */
-internal fun timedShelf(held: Boolean, ailments: List<AilmentView>, effects: List<EffectView>, charges: List<ChargeView> = emptyList()): List<Shelved> = buildList {
+/** Временная полка бойца: оглушение, недуги, эффекты с таймером, заряды, силы-события героя - последними. */
+internal fun timedShelf(
+    held: Boolean,
+    ailments: List<AilmentView>,
+    effects: List<EffectView>,
+    charges: List<ChargeView> = emptyList(),
+    powers: List<PowerView> = emptyList(),
+): List<Shelved> = buildList {
     if (stunned(held, ailments)) add(Shelved.Stun)
     ailments.forEach { add(Shelved.Sick(it)) }
     effects.forEach { if (!it.lasting) add(Shelved.Effect(it)) }
     charges.forEach { add(Shelved.Charge(it)) }
+    powers.forEach { if (!it.standing) add(Shelved.Power(it)) }
 }
 
-/** Полка «на весь бой» героя: пассивные умения, носимые с начала баффы, строки карты и дары Предначертания. */
+/** Полка «на весь бой» героя: пассивные умения, постоянные силы уникалок, носимые с начала баффы, строки карты и дары Предначертания. */
 internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved> = buildList {
     fight.heroPassives.forEach { add(Shelved.Effect(it)) }
+    fight.heroPowers.forEach { if (it.standing) add(Shelved.Power(it)) }
     fight.heroEffects.forEach { if (it.lasting) add(Shelved.Effect(it)) }
     mods.forEach { add(Shelved.Mod(it)) }
     fight.heroFate.forEach { add(Shelved.Fate(it)) }
@@ -135,6 +149,7 @@ internal fun lastingShelf(fight: FightHud, mods: List<HeroMapMod>): List<Shelved
         is Shelved.Charge -> ChargeTile(item.view, item.bearing, side, tip)
         is Shelved.Fate -> FateTile(item.view, item.bearing, side, tip)
         is Shelved.Mod -> MapModTile(item.mod, item.bearing, side, tip)
+        is Shelved.Power -> PowerTile(item.view, item.bearing, side, tip)
     }
 }
 
@@ -203,7 +218,65 @@ internal fun Shelved.row(): ShelfRow = when (this) {
         mod.shifts.map { (stat, delta) -> effectText(stat, Op.ADD, delta) },
         null,
     )
+
+    is Shelved.Power -> ShelfRow(
+        statTitle(view.stat),
+        UniqueTint,
+        ui("fight.src.power"),
+        listOf(SkillText.statLine(view.stat, Op.ADD, view.value)) + powerFacts(view),
+        null,
+        powerState(view),
+    )
 }
+
+/** Цвет сил уникалок: цвет уникальной редкости. */
+private val UniqueTint: Color get() = rarityColor(Rarity.UNIQUE.name)
+
+/** Счёт силы-события строками листа: сколько раз сработала, счёт «каждое N-е», перезарядка. */
+private fun powerFacts(view: PowerView): List<String> = if (view.standing) {
+    emptyList()
+} else {
+    listOfNotNull(
+        ui("fight.power.fired", view.fired).takeIf { view.fired > 0 },
+        ui("fight.power.every", view.count % view.every, view.every).takeIf { view.every > 1 },
+        ui("fight.power.cooldown", fineNumber(view.cooldown)).takeIf { view.cooldown > 0 },
+    )
+}
+
+/** Что писать вместо срока у силы-события: потрачена на бой, секунды до готовности или «готова»; постоянная - весь бой (null). */
+private fun powerState(view: PowerView): String? = when {
+    view.standing -> null
+    view.spent -> ui("fight.power.spent")
+    view.ready > 0 -> ui("fight.fact_seconds", fineNumber(view.ready))
+    else -> ui("fight.power.ready")
+}
+
+/** Метка в углу плитки силы-события: счёт «каждое N-е» или сколько раз сработала; нечего считать - null. */
+private fun powerBadge(view: PowerView): String? = when {
+    view.standing -> null
+    view.every > 1 -> ui("fight.power.every_badge", view.count % view.every, view.every)
+    view.fired > 0 -> view.fired.toString()
+    else -> null
+}
+
+/**
+ * Сила уникального предмета: значок силы цветом уникальной редкости. У силы-события затемнение - оставшаяся перезарядка
+ * ([PowerView.cooling]), срабатывание - вспышка плитки ([PowerView.flash], отклик боя - всегда), в углу - [powerBadge].
+ */
+@Composable private fun PowerTile(view: PowerView, bearing: Bearing, side: Dp, tip: () -> Tip) {
+    val title = statTitle(view.stat)
+    Tipped(tip, Modifier.shelfTile(UniqueTint, bearing, side).semantics { contentDescription = title }) {
+        StatIcon(view.stat, UniqueTint, Modifier.fillMaxSize().padding(side / 6))
+        Box(Modifier.fillMaxWidth().fillMaxHeight(view.cooling).background(Color.Black.copy(alpha = .55f)))
+        if (view.flash > 0f) Box(Modifier.matchParentSize().background(GoldBright.copy(alpha = FLASH_ALPHA * view.flash)))
+        powerBadge(view)?.let { badge ->
+            Text(badge, color = Parchment, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 2.dp))
+        }
+    }
+}
+
+/** Яркость вспышки сработавшей силы в её начале. */
+private const val FLASH_ALPHA = .5f
 
 /** Имя эффекта: бафф правил - по виду, бафф дара - даром, глоток - флаконом, прочее - умением. */
 internal fun effectTitle(view: EffectView): String = when {

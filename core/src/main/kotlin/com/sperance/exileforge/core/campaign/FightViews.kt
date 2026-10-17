@@ -103,6 +103,7 @@ internal fun Battle.hud(
         strikes = strikes(STRIKE_LUNGES * rules.lunge),
         heroFlow = lifeFlow,
         heroPassives = passiveViews(),
+        heroPowers = powers.views(),
         time = time,
         beat = rules.lunge,
     )

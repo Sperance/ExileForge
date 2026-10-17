@@ -25,6 +25,7 @@ import com.sperance.exileforge.core.campaign.combat.HeroStance
 import com.sperance.exileforge.core.campaign.combat.HitKind
 import com.sperance.exileforge.core.campaign.combat.LifeFlow
 import com.sperance.exileforge.core.campaign.combat.Outcome
+import com.sperance.exileforge.core.campaign.combat.PowerView
 import com.sperance.exileforge.core.campaign.combat.RiftGuard
 import com.sperance.exileforge.core.campaign.combat.Side
 import com.sperance.exileforge.core.campaign.combat.SkillView
@@ -267,6 +268,8 @@ data class FightHud(
     val heroFlow: LifeFlow = LifeFlow.NONE,
     /** Пассивные умения героя на весь бой: ауры и бонусы на полке «на весь бой». */
     val heroPassives: List<EffectView> = emptyList(),
+    /** Силы уникальных предметов героя: постоянные - на рельсе, силы-события - на временной полке со вспышкой, счётом и перезарядкой. */
+    val heroPowers: List<PowerView> = emptyList(),
     /** Секунды боя, когда снят этот снимок: кадр двигает от них сцены ударов ([com.sperance.exileforge.core.campaign.FightPulse]). */
     val time: Double = 0.0,
     /** Выпад удара правил ([CombatRules.lunge]), секунды: мера сцен ударов, применения и выпада. */

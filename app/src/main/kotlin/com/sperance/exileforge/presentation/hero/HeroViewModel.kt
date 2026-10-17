@@ -75,6 +75,7 @@ class HeroViewModel(
 
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = hero.autoSell(rarity, groups)
     fun autoSellUnwearable(on: Boolean) = hero.autoSellUnwearable(on)
+    fun autoSellBelow(levels: Int, rarities: Set<Rarity>) = hero.autoSellBelow(levels, rarities)
 
     private val openPage = MutableStateFlow(HeroPage.CHARACTER)
 

@@ -173,6 +173,9 @@ class HeroClient internal constructor(private val http: Transport) {
     /** One row of the loot filter: the slot groups of [rarity] the merchant takes at once; none clears it. */
     suspend fun autoSell(heroId: String, rarity: Rarity, groups: Set<SlotGroup>): AutoSell = http.post("$HERO/autosell", heroQuery(heroId, "rarity" to rarity.name, "groups" to groups.joinToString(",") { it.name }))
 
+    /** Правило фильтра добычи «ниже героя»: вещи редкостей [rarities] на [levels] уровней и более ниже героя; ноль выключает. */
+    suspend fun autoSellBelow(heroId: String, levels: Int, rarities: Set<Rarity>): AutoSell = http.post("$HERO/autosell/below", heroQuery(heroId, "levels" to levels.toString(), "rarities" to rarities.joinToString(",") { it.name }))
+
     /** Правило фильтра добычи «всё, что герой не может носить». */
     suspend fun autoSellUnwearable(heroId: String, on: Boolean): AutoSell = http.post("$HERO/autosell/unwearable", heroQuery(heroId, "on" to on.toString()))
 

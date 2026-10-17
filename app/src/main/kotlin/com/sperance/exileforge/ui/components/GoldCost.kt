@@ -3,7 +3,9 @@ package com.sperance.exileforge.ui.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,10 +30,13 @@ import com.sperance.exileforge.core.model.trade.GoldBill
 import com.sperance.exileforge.ui.icons.ForgeGlyphs
 import com.sperance.exileforge.ui.theme.Abyss
 import com.sperance.exileforge.ui.theme.Bronze
+import com.sperance.exileforge.ui.theme.Caution
 import com.sperance.exileforge.ui.theme.Gold
 import com.sperance.exileforge.ui.theme.GoldBright
 import com.sperance.exileforge.ui.theme.LifeRed
 import com.sperance.exileforge.ui.theme.Muted
+import com.sperance.exileforge.ui.theme.Panel
+import com.sperance.exileforge.ui.theme.Parchment
 
 /**
  * Цена в золоте у места оплаты: монета, цена и
@@ -56,6 +61,29 @@ import com.sperance.exileforge.ui.theme.Muted
             fontSize = 12.sp,
             maxLines = 1,
         )
+    }
+}
+
+/**
+ * Счёт оплаты тремя ячейками «Есть · Спишется · Останется» (не хватает - третья «Не хватает» красным): тот же счёт [GoldBill],
+ * что строки подтверждения [goldLedger], там, где покупка раскрывается на месте, а не листом.
+ */
+@Composable fun GoldBillCells(bill: GoldBill, modifier: Modifier = Modifier) {
+    val cells = listOf(
+        Triple(ui("gold.have"), bill.have, Parchment),
+        Triple(ui("confirm.spend"), bill.price, Caution),
+        if (bill.affordable) Triple(ui("confirm.left"), bill.left, Parchment) else Triple(ui("gold.lacking"), bill.short, LifeRed),
+    )
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        cells.forEach { (label, gold, tint) ->
+            Column(Modifier.weight(1f).background(Panel, RoundedCornerShape(8.dp)).padding(vertical = 6.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(label, color = Muted, fontSize = 11.sp, maxLines = 1)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    Icon(ForgeGlyphs.Coins, null, tint = Gold, modifier = Modifier.size(12.dp))
+                    Text(compactNumber(gold.toDouble()), color = tint, fontWeight = FontWeight.SemiBold, fontSize = 13.5.sp, maxLines = 1)
+                }
+            }
+        }
     }
 }
 

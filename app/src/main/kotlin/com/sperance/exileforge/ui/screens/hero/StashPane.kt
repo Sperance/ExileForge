@@ -45,7 +45,7 @@ import org.koin.compose.koinInject
 
 /**
  * Тайник: сверху только порядок и фильтры, слева рейка мест со счётом,
- * справа список под названием выбранного пункта с фишкой мест и автопродажи - она открывает лист тайника ([StashSheet]).
+ * справа список под названием выбранного пункта с фишкой мест и автопродажи - она открывает окно тайника ([StashWindow]).
  * Удержание плитки включает режим выбора: у строк отметки, сверху быстрые наборы, снизу удерживаемая
  * кнопка с суммой; «Отмена» и системный «назад» выходят из него. Как продавать, говорит разовая плашка над списком
  * ([SELL_HINT], до закрытия или первого удержания на этом устройстве) и лист тайника.
@@ -72,7 +72,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
     val shelf = { draft: ItemFilter -> game.itemShelf(stash, ItemShelf.STASH, draft) { game.sellPrice(it.item) } }
     val visible = remember(stash, filter, hero.level, hero.stats, game.world) { shelf(filter) }
     val lines = rememberStashLines(game, visible)
-    val lots = remember(stash, hero.info.autoSell, hero.stats, hero.info.heroClass, game.index) { game.sellLots(stash) }
+    val lots = remember(stash, hero.info.autoSell, hero.stats, hero.info.heroClass, hero.level, game.index) { game.sellLots(stash) }
     val shown = remember(visible) { visible.mapTo(HashSet()) { it.id } }
     val pick = rememberSellPick(lots, shown)
     val selected = game.holding.selectedEquipment
@@ -142,7 +142,7 @@ internal fun StashPane(game: GameUi, model: HeroViewModel, onOpen: (String) -> U
         }
     }
     if (filtering) ItemFilterSheet(filterState, rail.map { it.first }, rarities, game.lang, count = { shelf(it).size }) { filtering = false }
-    if (sheet) StashSheet(hero.info.autoSell, lots, busy = game.busy, model, places = { StashFill(game, model) }) { sheet = false }
+    if (sheet) StashWindow(game, hero.info.autoSell, lots, model) { sheet = false }
 }
 
 /** Название пункта рейки над списком и сколько в нём видно. */

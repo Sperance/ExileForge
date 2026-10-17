@@ -1,22 +1,15 @@
 package com.sperance.exileforge.ui.screens.hero
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -30,58 +23,48 @@ import com.sperance.exileforge.ui.components.*
 import com.sperance.exileforge.ui.theme.*
 
 /**
- * The stash's places: how many items it holds of how many, the next pack of places
- * for gold up to the rules' ceiling, and the overflow — what came when the stash was full, waiting to be
- * taken in or sold. Past the overflow the merchant buys a drop himself; the rules say how far each goes.
- * Only items count against the places: orbs and the rest of the bag stack without a limit.
- *
- * The fill is a thin bar under the shelf's switch, across the width, in the error colour once full; its «+»
- * asks for the next pack with its price. The overflow stays in the list, since it is items to act on.
- *
- * Пилюля «24/60 +»: места тайника и следующая пачка за золото.
+ * Места тайника строкой-подвалом окна автопродажи: значок тайника, «412 / 600 · предел 5000» и кнопка следующей пачки
+ * «+50 · ◎ 17.9k»; нажатие раскрывает счёт «Есть · Спишется · Останется» ([GoldBillCells]) и кнопку покупки, не хватает золота -
+ * кнопка погашена и называет недостачу. Пачек больше нет - кнопки нет. Места занимают только вещи: сферы и прочее в сумке
+ * копятся без предела.
  */
-@Composable fun StashFill(game: GameUi, vm: HeroViewModel, modifier: Modifier = Modifier) {
+@Composable fun StashPlacesBar(game: GameUi, vm: HeroViewModel, modifier: Modifier = Modifier) {
     val hero = game.hero ?: return
     val rules = game.index?.rules?.stash ?: return
     val capacity = rules.capacity(hero.info.stashSlots)
     val held = hero.items.size
     val full = held >= capacity
-    val tint = if (full) MaterialTheme.colorScheme.error else Gold
     val price = rules.price(hero.info.stashSlots)
-    val label = ui("stash.places", held, capacity)
-    var buying by remember { mutableStateOf(false) }
-    Row(
-        modifier.height(32.dp).depthRaised(RoundedCornerShape(16.dp)).clip(RoundedCornerShape(16.dp)),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            ui("stash.places_chip", held, capacity),
-            color = if (full) tint else GoldBright,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelMedium,
-            maxLines = 1,
-            softWrap = false,
-            modifier = Modifier.semantics { contentDescription = label }.padding(horizontal = 10.dp),
-        )
-        if (price > 0) {
-            Box(
-                Modifier.size(32.dp).background(if (full) Brush.verticalGradient(listOf(tint, tint)) else PrimaryBrush).clickable(role = Role.Button, onClickLabel = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity))) { buying = true },
-                contentAlignment = Alignment.Center,
-            ) { Icon(Icons.Outlined.Add, null, tint = Ink, modifier = Modifier.size(18.dp)) }
+    val pack = minOf(rules.slotStep, rules.maxSlots - capacity)
+    val bill = game.goldBill(price) ?: return
+    var open by remember { mutableStateOf(false) }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        HorizontalDivider(color = PanelRaised)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Icon(Icons.Outlined.Inventory2, null, tint = Gold, modifier = Modifier.size(20.dp))
+            Text(
+                ui("stash.places_chip", held, capacity),
+                color = if (full) MaterialTheme.colorScheme.error else GoldBright,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+                modifier = Modifier.semantics { contentDescription = ui("stash.places", held, capacity) },
+            )
+            MutedText("· " + ui("stash.ceiling", rules.maxSlots), style = MaterialTheme.typography.labelSmall, modifier = Modifier.weight(1f))
+            if (price > 0) {
+                ForgeOutlinedButton(onClick = { open = !open }) {
+                    Text(ui("stash.pack", pack))
+                    Spacer(Modifier.width(6.dp))
+                    GoldPrice(price)
+                }
+            }
         }
-    }
-    if (buying) {
-        ConfirmSheet(
-            title = ui("stash.expand", minOf(rules.slotStep, rules.maxSlots - capacity)),
-            confirm = ui("stash.buy"),
-            subtitle = "$label · ${ui("stash.ceiling", rules.maxSlots)}",
-            onDismiss = { buying = false },
-            note = listOfNotNull(ui("stash.places_note"), ui("stash.full_hint", rules.overflowSlots).takeIf { full }).joinToString("\n"),
-            blocked = game.busy,
-            gold = game.goldBill(price),
-        ) {
-            buying = false
-            vm.expandStash()
+        if (open && price > 0) {
+            GoldBillCells(bill)
+            ForgeButton(onClick = {
+                open = false
+                vm.expandStash()
+            }, Modifier.fillMaxWidth(), enabled = bill.affordable && !game.busy) { Text(bill.payLabel(ui("stash.expand", pack))) }
+            MutedText(listOfNotNull(ui("stash.places_note"), ui("stash.full_hint", rules.overflowSlots).takeIf { full }).joinToString("\n"), style = MaterialTheme.typography.labelSmall)
         }
     }
 }

@@ -43,7 +43,7 @@ import com.sperance.exileforge.ui.theme.*
 
 /**
  * Фишка тайника в заголовке списка: «44/200» - места, значок автопродажи с числом включённых правил; нажатие
- * открывает лист тайника ([StashSheet]) - докупка мест и правила. Полный тайник - в красном.
+ * открывает окно тайника ([StashWindow]) - докупка мест и правила. Полный тайник - в красном.
  */
 @Composable
 internal fun StashChip(held: Int, capacity: Int, autoSellMarks: Int, onClick: () -> Unit) {

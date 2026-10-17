@@ -164,6 +164,9 @@ class HeroActions(
     fun resetTree() = heroCommand { id -> api.tree.reset(id) }
     fun autoSell(rarity: Rarity, groups: Set<SlotGroup>) = heroCommand { id -> api.hero.autoSell(id, rarity, groups) }
 
+    /** Правило автопродажи «ниже героя»: [levels] уровней и более для редкостей [rarities]; ноль выключает. */
+    fun autoSellBelow(levels: Int, rarities: Set<Rarity>) = heroCommand { id -> api.hero.autoSellBelow(id, levels, rarities) }
+
     /** Правило автопродажи «всё, что герой не может носить». */
     fun autoSellUnwearable(on: Boolean) = heroCommand { id -> api.hero.autoSellUnwearable(id, on) }
 

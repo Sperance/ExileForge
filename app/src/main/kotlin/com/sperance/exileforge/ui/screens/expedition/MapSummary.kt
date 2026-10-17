@@ -104,7 +104,7 @@ internal data class SummaryHead(val title: String, val hint: String, val accent:
     val hero = game.hero
     val run by vm.run.collectAsStateWithLifecycle()
     val back = hud.returnsToMap
-    val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, game.index, back) {
+    val lots = remember(tally.loot.equipment, hero?.items, hero?.info?.autoSell, hero?.stats, hero?.level, game.index, back) {
         val ids = tally.loot.equipment.mapTo(HashSet()) { it.id }
         if (hud.vaal && !back) ids += vm.outerLoot()
         game.sellLots(hero?.items.orEmpty().filter { it.id in ids }.mapNotNull { game.view(it) })
